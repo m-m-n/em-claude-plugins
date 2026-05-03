@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "em-claude-plugins",
+  "description": "Personal marketplace of Claude Code plugins maintained by em",
+  "owner": {
+    "name": "em"
+  },
+  "plugins": [
+    {
+      "name": "em-review",
+      "description": "Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Cross-model agreement scoring + opt-in auto-fix loop. Each reviewer is also usable standalone via /em-review:<perspective>.",
+      "author": {
+        "name": "em"
+      },
+      "category": "code-review",
+      "source": "./em-review"
+    }
+  ]
+}

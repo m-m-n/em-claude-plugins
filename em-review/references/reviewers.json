@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": 1,
+  "description": "Single-source-of-truth registry of all reviewers in the em-review plugin. The orchestrator reads this file to drive Phase 1 fan-out. The agent file at agents/<subagent_type without prefix>.md is authoritative for what each reviewer flags; entries here only carry routing/identity metadata.",
+  "reviewers": [
+    {
+      "id": "claude-security",
+      "source": "claude",
+      "perspective": "security",
+      "subagent_type": "em-review:multi-review-security",
+      "skill_name": "security",
+      "requires_spec": false,
+      "requires_codex": false
+    },
+    {
+      "id": "claude-performance",
+      "source": "claude",
+      "perspective": "performance",
+      "subagent_type": "em-review:multi-review-performance",
+      "skill_name": "performance",
+      "requires_spec": false,
+      "requires_codex": false
+    },
+    {
+      "id": "claude-architecture",
+      "source": "claude",
+      "perspective": "architecture",
+      "subagent_type": "em-review:multi-review-architecture",
+      "skill_name": "architecture",
+      "requires_spec": false,
+      "requires_codex": false
+    },
+    {
+      "id": "claude-spec",
+      "source": "claude",
+      "perspective": "spec",
+      "subagent_type": "em-review:multi-review-spec",
+      "skill_name": "spec",
+      "requires_spec": true,
+      "requires_codex": false
+    },
+    {
+      "id": "claude-comprehensive",
+      "source": "claude",
+      "perspective": "comprehensive",
+      "subagent_type": "em-review:multi-review-comprehensive",
+      "skill_name": "comprehensive",
+      "requires_spec": false,
+      "requires_codex": false
+    },
+    {
+      "id": "codex-security",
+      "source": "codex",
+      "perspective": "security",
+      "subagent_type": "em-review:multi-review-gpt-security",
+      "skill_name": "gpt.security",
+      "requires_spec": false,
+      "requires_codex": true
+    },
+    {
+      "id": "codex-performance",
+      "source": "codex",
+      "perspective": "performance",
+      "subagent_type": "em-review:multi-review-gpt-performance",
+      "skill_name": "gpt.performance",
+      "requires_spec": false,
+      "requires_codex": true
+    },
+    {
+      "id": "codex-architecture",
+      "source": "codex",
+      "perspective": "architecture",
+      "subagent_type": "em-review:multi-review-gpt-architecture",
+      "skill_name": "gpt.architecture",
+      "requires_spec": false,
+      "requires_codex": true
+    },
+    {
+      "id": "codex-spec",
+      "source": "codex",
+      "perspective": "spec",
+      "subagent_type": "em-review:multi-review-gpt-spec",
+      "skill_name": "gpt.spec",
+      "requires_spec": true,
+      "requires_codex": true
+    }
+  ]
+}

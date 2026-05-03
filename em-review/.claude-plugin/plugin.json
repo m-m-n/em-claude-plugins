@@ -1,0 +1,8 @@
+{
+  "name": "em-review",
+  "description": "Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Cross-model agreement scoring + opt-in single-pass auto-fix (batch preview → approve → atomic apply, modify-only, no commit). Each reviewer is also usable standalone via /em-review:<perspective>.",
+  "author": {
+    "name": "em"
+  },
+  "version": "0.1.8"
+}

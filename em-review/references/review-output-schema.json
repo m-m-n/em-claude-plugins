@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["findings", "summary", "skipped", "source"],
+  "additionalProperties": false,
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "line", "line_end", "severity", "category", "title", "description", "suggestion"],
+        "additionalProperties": false,
+        "properties": {
+          "file":        { "type": "string" },
+          "line":        { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+          "line_end":    { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+          "severity":    { "enum": ["critical", "high", "medium"] },
+          "category":    { "enum": ["security", "performance", "architecture", "spec", "comprehensive"] },
+          "title":       { "type": "string" },
+          "description": { "type": "string" },
+          "suggestion":  { "type": "string" }
+        }
+      }
+    },
+    "summary":  { "type": "string" },
+    "skipped":  { "type": "boolean" },
+    "source":   { "enum": ["claude", "codex"] }
+  }
+}
