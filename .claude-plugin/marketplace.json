@@ -14,6 +14,15 @@
       },
       "category": "code-review",
       "source": "./em-review"
+    },
+    {
+      "name": "em-sdd",
+      "description": "Spec-Driven Development (SDD) workflow orchestrator. Walks a feature through create-spec → create-plan → verify-plan → implement → check → verify, tracking progress in sdd.yaml. Each step is also usable standalone via /em-sdd:sdd.<step>.",
+      "author": {
+        "name": "em"
+      },
+      "category": "workflow",
+      "source": "./em-sdd"
     }
   ]
 }

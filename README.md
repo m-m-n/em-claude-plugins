@@ -24,6 +24,7 @@ Each plugin lives at the marketplace root as `./<plugin-name>/`. Adding a new pl
 | Plugin | Description |
 |--------|-------------|
 | [em-review](./em-review/) | Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Each reviewer is also usable standalone via `/em-review:<perspective>`. |
+| [em-sdd](./em-sdd/) | Spec-Driven Development workflow orchestrator. Drives `create-spec → create-plan → verify-plan → implement → check → verify` against `sdd.yaml`. Entry point `/em-sdd:sdd`; each step usable standalone via `/em-sdd:sdd.<step>`. |
 
 ## Adding this marketplace
 
@@ -35,6 +36,7 @@ Then install a specific plugin:
 
 ```
 /plugin install em-review@em-claude-plugins
+/plugin install em-sdd@em-claude-plugins
 ```
 
-The marketplace is named `em-claude-plugins`; the plugin within it is named `em-review` (becomes the slash-command namespace `/em-review:...`).
+The marketplace is named `em-claude-plugins`; each plugin's name becomes its slash-command namespace (`/em-review:...`, `/em-sdd:...`).
