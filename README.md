@@ -28,13 +28,7 @@ Each plugin lives at the marketplace root as `./<plugin-name>/`. Adding a new pl
 ## Adding this marketplace
 
 ```
-/plugin marketplace add /path/to/em-claude-plugins
-```
-
-…or by URL once published:
-
-```
-/plugin marketplace add <url-to-marketplace.json-source>
+/plugin marketplace add m-m-n/em-claude-plugins
 ```
 
 Then install a specific plugin:
