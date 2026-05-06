@@ -2,7 +2,7 @@
 
 Spec-Driven Development (SDD) workflow orchestrator for Claude Code.
 
-Walks a feature through `create-spec → create-plan → verify-plan → implement → check → verify`, tracking progress in `doc/tasks/{feature}/sdd.yaml`. Each step is also usable standalone via `/em-sdd:sdd.<step>`.
+Walks a feature through `create-spec → create-plan → verify-plan → implement → check → verify`, tracking progress in `doc/tasks/{feature}/sdd.yaml`. Per-step skills are invoked internally by the orchestrator and are not user-invocable.
 
 ## Commands
 
@@ -11,12 +11,6 @@ Walks a feature through `create-spec → create-plan → verify-plan → impleme
 | `/em-sdd:sdd` | Run the full workflow (resumes from `sdd.yaml` progress) |
 | `/em-sdd:sdd status` | Show current workflow state |
 | `/em-sdd:sdd update-spec` | Update SPEC.md and cascade to downstream artifacts |
-| `/em-sdd:sdd.1-create-spec` | Step 1: requirements + SPEC.md (interactive) |
-| `/em-sdd:sdd.2-create-plan` | Step 2: IMPLEMENTATION.md + VERIFICATION.md |
-| `/em-sdd:sdd.3-verify-plan` | Step 3: consistency / design review |
-| `/em-sdd:sdd.4-implement` | Step 4: TDD implementation |
-| `/em-sdd:sdd.5-check` | Step 5: build / test / format / static analysis |
-| `/em-sdd:sdd.6-verify` | Step 6: SPEC compliance / E2E / file structure |
 
 ## ⚠️ Trust boundary: sdd.yaml is executed
 

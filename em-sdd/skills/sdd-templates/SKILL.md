@@ -1,7 +1,7 @@
 ---
 name: sdd-templates
 description: SDD workflow document templates (requirements, spec, test readme, verification). Referenced by requirements-spec-creator and implementation-executor agents.
-disable-model-invocation: true
+user-invocable: false
 ---
 
 # SDD Document Templates

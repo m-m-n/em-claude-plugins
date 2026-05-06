@@ -1,7 +1,7 @@
 ---
 name: sdd.1-create-spec
 description: Interactively creates requirements documents and SPEC.md for feature implementation or modification
-disable-model-invocation: true
+user-invocable: false
 allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 ---
 

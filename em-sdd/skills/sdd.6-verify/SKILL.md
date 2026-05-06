@@ -1,7 +1,7 @@
 ---
 name: sdd.6-verify
 description: Comprehensive verification - file structure, SPEC compliance, E2E tests, security, performance
-disable-model-invocation: true
+user-invocable: false
 allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 ---
 

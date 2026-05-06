@@ -1,7 +1,7 @@
 ---
 name: sdd.2-create-plan
 description: Analyzes specifications and creates implementation plan with VERIFICATION.md
-disable-model-invocation: true
+user-invocable: false
 allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 ---
 

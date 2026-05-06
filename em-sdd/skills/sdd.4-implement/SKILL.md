@@ -1,7 +1,7 @@
 ---
 name: sdd.4-implement
 description: Implements based on the implementation plan (TDD-compatible, Go/other languages)
-disable-model-invocation: true
+user-invocable: false
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Task, AskUserQuestion
 ---
 

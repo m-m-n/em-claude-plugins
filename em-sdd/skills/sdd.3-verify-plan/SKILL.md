@@ -1,7 +1,7 @@
 ---
 name: sdd.3-verify-plan
 description: Performs consistency verification and design review of specifications and plans
-disable-model-invocation: true
+user-invocable: false
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 

@@ -14,7 +14,7 @@ SDD ワークフロー（create-spec → create-plan → verify-plan → impleme
 
 - 人間の判断が必要な場面は、下位 skill がそれぞれ `AskUserQuestion` で解決する。このオーケストレーターでは追加の確認を挟まない。
 - 途中で中断された場合は、次回 `/em-sdd:sdd` を実行すれば `sdd.yaml` から自然に再開される。
-- 全ての下位 skill（`sdd.1-create-spec` 等）は `disable-model-invocation: true` のため、ユーザーは `/em-sdd:sdd` 経由か `/em-sdd:sdd.<step>` を直接叩く形でのみ呼び出す。
+- 全ての下位 skill（`sdd.1-create-spec` 等）は `user-invocable: false` のため、ユーザーは `/em-sdd:sdd` 経由でのみ呼び出す。Skill tool 経由でこのオーケストレーターから起動される。
 
 ## 引数処理
 

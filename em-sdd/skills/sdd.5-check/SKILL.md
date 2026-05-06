@@ -1,7 +1,7 @@
 ---
 name: sdd.5-check
 description: Quick check - build, test, format, static analysis after implementation
-disable-model-invocation: true
+user-invocable: false
 allowed-tools: Task, Read, Glob, Grep, AskUserQuestion
 ---
 

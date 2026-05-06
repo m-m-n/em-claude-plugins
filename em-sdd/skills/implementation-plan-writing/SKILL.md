@@ -1,7 +1,7 @@
 ---
 name: implementation-plan-writing
 description: IMPLEMENTATION.md and VERIFICATION.md writing rules, templates, and self-verification checklists. Preloaded by implementation-planner agent.
-disable-model-invocation: true
+user-invocable: false
 ---
 
 # Implementation Plan Writing Guide
