@@ -80,30 +80,24 @@ Example:
   integration-tests                            pending
 ```
 
-## Step 5: Suggest Next Action
+## Step 5: Show Next Step
 
-Determine the next action based on workflow status:
+Find the first step with status != `completed` and report its `step-id` and current status. The wording must make clear that **the sdd orchestrator is responsible for running it**, not the user.
 
-1. Find the first step with status != `completed`:
-   - If `pending`: suggest running the corresponding `/em-sdd:sdd.*` command
-   - If `in_progress`: suggest continuing the step
-   - If `failed`: suggest retrying
-   - If `needs_update`: suggest re-running
+Output examples (Japanese):
 
-2. If all steps are `completed`:
-   ```
-   SDD workflow complete
-   ```
+- pending: `次のステップ: {step-id} (pending)。/em-sdd:sdd を実行すると sdd オーケストレータが続きから自走します。`
+- in_progress: `次のステップ: {step-id} (in_progress)。前回の実行が中断しています。/em-sdd:sdd を再実行すれば sdd オーケストレータが続きから再開します。`
+- failed: `次のステップ: {step-id} (failed)。原因を確認してから /em-sdd:sdd で再開してください。`
+- needs_update: `次のステップ: {step-id} (needs_update)。SPEC 変更等で再生成が必要です。/em-sdd:sdd で再実行すれば sdd オーケストレータが処理します。`
 
-Step-to-command mapping:
-| Step ID | Command |
-|---------|---------|
-| create-spec | /em-sdd:sdd.1-create-spec |
-| create-plan | /em-sdd:sdd.2-create-plan |
-| verify-plan | /em-sdd:sdd.3-verify-plan |
-| implement | /em-sdd:sdd.4-implement |
-| check | /em-sdd:sdd.5-check |
-| verify | /em-sdd:sdd.6-verify |
+If all steps are `completed`:
+
+```
+SDD workflow complete
+```
+
+**Do NOT** suggest running individual `/em-sdd:sdd.N-*` skills. They are `user-invocable: false` and are only meant to be invoked by the orchestrator. Users must always go through `/em-sdd:sdd`.
 
 ## Step 6: Show Requirements Summary (if present)
 

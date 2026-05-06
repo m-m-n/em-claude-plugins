@@ -382,7 +382,9 @@ Display completion summary:
 - `{path}/VERIFICATION.md`
 
 ### 🚀 次のステップ
-sdd.yaml の workflow から動的に次のステップを判定します。
+`/em-sdd:sdd` から呼ばれている場合、`sdd.yaml` から次のステップ (通常は `check`) が自動的に進行する。単独実行で中断した場合は `/em-sdd:sdd` を再実行すれば続きから再開される。
+
+**注**: 「次は /em-sdd:sdd.5-check を実行してください」のような手動実行誘導は出力しない。オーケストレータ実行時にユーザー判断待ちと誤解されてワークフローが停止する原因になる。
 ```
 
 ## Important Guidelines

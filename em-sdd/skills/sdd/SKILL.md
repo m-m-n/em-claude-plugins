@@ -8,13 +8,33 @@ allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion, Skill
 
 # SDD Orchestrator
 
-SDD ワークフロー（create-spec → create-plan → verify-plan → implement → check → verify）を統合的に実行する。`sdd.yaml` に記録された進捗から未完了ステップを判定し、連続して自動実行する。
+## 🎯 あなたの役割 (READ FIRST)
 
-## 設計方針
+あなたは **SDD オーケストレータ**。あなたの仕事は、SDD ワークフロー (create-spec → create-plan → verify-plan → implement → check → verify) を **`sdd.yaml` が「全 step completed」になるまで自走させること**。これ以外の責務はない。
 
-- 人間の判断が必要な場面は、下位 skill がそれぞれ `AskUserQuestion` で解決する。このオーケストレーターでは追加の確認を挟まない。
-- 途中で中断された場合は、次回 `/em-sdd:sdd` を実行すれば `sdd.yaml` から自然に再開される。
-- 全ての下位 skill（`sdd.1-create-spec` 等）は `user-invocable: false` のため、ユーザーは `/em-sdd:sdd` 経由でのみ呼び出す。Skill tool 経由でこのオーケストレーターから起動される。
+この skill が起動した瞬間、あなたは「コントローラ」として動く。Skill tool で各 step の sub-skill を呼び、戻ってきたら次の pending step を呼ぶ — それを `sdd.yaml` の status のみを根拠に淡々と繰り返す。
+
+### あなたが「ターンを終わらせていい」唯一の条件
+
+下記いずれかに**該当しない限り、ターンを終わらせてはならない**。Skill tool から戻ったあと黙ってユーザーに応答を返すのは違反。
+
+1. `workflow` 配列の全 step が `completed` (= 正常完了)
+2. ある step を 2 回連続で実行しても status が `pending` / `in_progress` から進まない (= スタック)
+3. ある step の status が `failed` または `needs_update` (= ユーザー介入が必要)
+4. `sdd.yaml` の YAML parse エラー (= リカバリ不能)
+
+この 4 条件のいずれにも当てはまらない場合、あなたは**必ず**次の sub-skill を Skill tool で呼ばねばならない。
+
+### あなたが**してはならない**こと
+
+- ❌ sub-skill の最終出力 (例: 「✅ 完了しました」「次のステップ: /em-sdd:sdd.X を実行してください」) を読んで「ユーザーが手動で次を叩くまで待とう」と判断する
+- ❌ 「念のため確認しますが進めてよいですか？」と AskUserQuestion を挟む
+- ❌ sub-skill の進捗報告をそのままユーザーへ転送して「次のアクションはユーザーが指示してください」と委ねる
+- ❌ sub-skill から戻った後、`sdd.yaml` を読み直さずにユーザーへ応答を返す
+
+これらは全部、自走ワークフローを破壊する。あなたが判断材料にしていいのは **`sdd.yaml` の status のみ**。sub-skill の自然言語出力ではない。
+
+---
 
 ## 引数処理
 
@@ -27,6 +47,8 @@ SDD ワークフロー（create-spec → create-plan → verify-plan → impleme
 | 空 | ワークフロー自動実行（引数なし）に進む |
 | その他（パス等） | ワークフロー自動実行（そのまま feature path として扱う）に進む |
 
+---
+
 ## ワークフロー自動実行
 
 ### Step A: feature directory の決定
@@ -35,48 +57,66 @@ SDD ワークフロー（create-spec → create-plan → verify-plan → impleme
 2. なければ Glob で `doc/tasks/*/sdd.yaml` を探す
    - 1件のみ見つかった場合: そのディレクトリを使う
    - 複数見つかった場合: `AskUserQuestion` で選択
-   - 0件の場合: 新規 feature とみなし、Skill tool で `em-sdd:sdd.1-create-spec` を引数なしで呼ぶ。完了後に `doc/tasks/*/sdd.yaml` を再探索して確定し、次のループに進む
+   - 0件の場合: 新規 feature とみなし、Skill tool で `em-sdd:sdd.1-create-spec` を引数なしで呼ぶ。完了後に `doc/tasks/*/sdd.yaml` を再探索して確定し、Step B へ進む
 
-### Step B: 次ステップ決定＆実行ループ
+### Step B: 自走ループ (これがあなたの主処理)
 
-以下を繰り返す:
+以下を、上記「ターンを終わらせていい唯一の条件」のどれかに該当するまで**繰り返す**。「Skill tool が完了した時点でターンを終わらせる」ではない。**Skill tool が完了したら次のイテレーションに入る**。
 
-1. `doc/tasks/{feature}/sdd.yaml` を Read
-   - YAML parse エラー: ユーザーに報告して終了
-2. `workflow` 配列を順に走査し、最初の `status != "completed"` エントリを見つける
-   - すべて `completed`: `SDD ワークフロー完了` と表示して終了
-3. ステップ ID を skill 名にマッピング:
+#### B.1 sdd.yaml を Read
 
-   | step id | skill |
-   |---------|-------|
-   | create-spec | `em-sdd:sdd.1-create-spec` |
-   | create-plan | `em-sdd:sdd.2-create-plan` |
-   | verify-plan | `em-sdd:sdd.3-verify-plan` |
-   | implement | `em-sdd:sdd.4-implement` |
-   | check | `em-sdd:sdd.5-check` |
-   | verify | `em-sdd:sdd.6-verify` |
+`doc/tasks/{feature}/sdd.yaml` を Read する。
+- YAML parse エラー: ユーザーに報告して終了 (停止条件 4)
 
-4. 実行開始を通知: `▶ {step-id} を実行します`（emoji は使わず `-> {step-id}` でもよい）
-5. Skill tool でその skill を呼ぶ。引数には feature directory のパスを渡す
-6. 呼び出しから戻ったら `sdd.yaml` を Read し直す
-7. 該当ステップの status を確認:
-   - `completed` → ループ継続（1. に戻る）
-   - `in_progress` のまま → スキル実行が早期終了した可能性。**同じステップを最大1回まで再実行する**（再試行カウンタはステップごとに保持）。再試行後も `in_progress` のままなら現在の status を報告して中断
-   - `failed` / `needs_update` → 「ユーザー判断で中断 or 何か問題発生」と解釈し、現在の status を報告してループを抜けて終了
+#### B.2 次の step を決定
 
-### Step C: 終了報告
+`workflow` 配列を順に走査し、最初の `status != "completed"` エントリを見つける。
+- 見つからない (全 completed): Step C の「全ステップ完了」を出力して終了 (停止条件 1)
 
-以下のいずれかを必ず出力して終わる:
+#### B.3 step ID を skill 名にマッピング
 
-- **全ステップ完了**: `SDD ワークフロー完了: {feature}`
-- **中断**: `{step-id} が {status} のため中断。再開するには /em-sdd:sdd を実行してください`
-- **エラー**: エラー内容とリカバリ案（YAML 不正なら `git restore` 案内など。下位 skill が既に案内している場合は重複させない）
+| step id | skill |
+|---------|-------|
+| create-spec | `em-sdd:sdd.1-create-spec` |
+| create-plan | `em-sdd:sdd.2-create-plan` |
+| verify-plan | `em-sdd:sdd.3-verify-plan` |
+| implement | `em-sdd:sdd.4-implement` |
+| check | `em-sdd:sdd.5-check` |
+| verify | `em-sdd:sdd.6-verify` |
+
+マッピング表に無い step id (旧ワークフローの `review` 等) はスキップして次の step に進む。
+
+#### B.4 sub-skill を呼ぶ
+
+1. 実行開始を 1 行通知: `-> {step-id} を実行します`
+2. Skill tool で対応する sub-skill を呼ぶ。引数には feature directory のパスを渡す (新規 feature の初回 `create-spec` のみ引数なし)
+
+#### B.5 Skill tool から戻ったら (← ここが事故りやすい)
+
+Skill tool 呼び出しが返ってきた瞬間、あなたは以下を**機械的に**実行する。sub-skill の自然言語出力に何が書いてあろうと関係ない。
+
+1. `sdd.yaml` を **Read し直す** (キャッシュではなく実ファイル)
+2. 該当 step の status を確認:
+   - `completed` → **B.1 に戻る** (ユーザーへの報告は出さない。次のイテレーションで次の pending を即実行)
+   - `in_progress` のまま → 同じ step を **最大 1 回**だけ再実行 (B.4 から)。再試行カウンタは step ごとに保持。再試行後も `in_progress` なら停止条件 2 として中断
+   - `pending` のまま → 上記と同じ扱い (sub-skill の guard で skip された可能性。1 回再試行)
+   - `failed` / `needs_update` → 停止条件 3 として中断
+3. 上記のいずれの分岐でも、ユーザーへの確認 (AskUserQuestion / 自由文での質問) は**挟まない**。各 sub-skill 内の guard が必要な確認を済ませている
+
+### Step C: 終了報告 (停止条件に該当した時のみ)
+
+以下のいずれかを 1〜2 行で出力してターンを終わる:
+
+- **全ステップ完了** (停止条件 1): `SDD ワークフロー完了: {feature}`
+- **スタック** (停止条件 2): `{step-id} が {status} のままです。sub-skill の出力を確認してください`
+- **中断** (停止条件 3): `{step-id} が {status} のため中断。再開するには /em-sdd:sdd を実行してください`
+- **エラー** (停止条件 4): YAML 不正の内容と `git restore` 等のリカバリ案 (sub-skill が既に案内している場合は重複させない)
+
+---
 
 ## 注意
 
 - **下位 skill の guard と干渉しない**: 各下位 skill は自前で完了済みステップの再実行確認などを行う。オーケストレーター側でそれを先回りしない。
-- **引数の渡し方**: ワークフロー skill の多くは `$ARGUMENTS` に feature path を期待しているため、`em-sdd:sdd.1-create-spec <path>` のように Skill tool 呼び出し時に引数を渡す。新規 feature の初回呼び出し時のみ引数なし。
-- **未知の step id**: マッピング表に無い step id（旧ワークフローの `review` 等）が見つかった場合は、そのステップをスキップして次に進む。
 - **sdd.status / sdd.update-spec の独立ルート**: `/em-sdd:sdd status` と `/em-sdd:sdd update-spec` はワークフロー実行ループに入らず、該当 skill を単発で呼ぶだけ。
 
 $ARGUMENTS

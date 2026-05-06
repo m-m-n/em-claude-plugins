@@ -146,7 +146,8 @@ For each FR / NFR ID in `sdd.yaml.requirements`:
 - Totals (phases, files, overall effort)
 - Requirements coverage: `populated: {N} / total: {M}` (uncovered IDs listed)
 - Open questions
-- Next steps (`/em-sdd:sdd.3-verify-plan`, `/em-sdd:sdd.4-implement`)
+
+**Do NOT print** "Next: run `/em-sdd:sdd.3-verify-plan`" style guidance. When invoked from the `/em-sdd:sdd` orchestrator the next step is decided dynamically from `sdd.yaml`; printing manual-invocation guidance causes the orchestrator to stop and wait for the user.
 
 ## Important Guidelines
 
