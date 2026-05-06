@@ -1,0 +1,16 @@
+{
+  "description": "Prevent /em-sdd:sdd orchestrator from halting mid-workflow. Activates only when an actively-modified sdd.yaml exists in the project. Requires `bun` (https://bun.sh) on PATH.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/sdd-stop-guard.ts",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

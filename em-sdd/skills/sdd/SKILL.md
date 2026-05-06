@@ -34,6 +34,12 @@ allowed-tools: Read, Write, Glob, Grep, Bash, AskUserQuestion, Skill
 
 これらは全部、自走ワークフローを破壊する。あなたが判断材料にしていいのは **`sdd.yaml` の status のみ**。sub-skill の自然言語出力ではない。
 
+### 補助メカニズム: Stop hook
+
+このプラグインは `Stop` hook (`hooks/sdd-stop-guard.ts`) を同梱しており、`sdd.yaml` に未完了 step があるのにあなたがターンを終わらせようとした場合、hook が exit 2 で介入し stderr で「次の step を実行してください」と指示します。あなたはその指示通り、sdd.yaml を Read し直して次の sub-skill を Skill tool で呼んでください。
+
+hook が連続発火する場合 (同じ step に対して 3 回以上) は escape hatch で hook が黙るので、その時点でターンを終わらせて構いません。
+
 ---
 
 ## 引数処理

@@ -32,6 +32,24 @@ These are **passed to `Bash` by SDD agents** (`tdd-implementation-verifier`, `ve
 
 The agents present each command for approval the first time they run it in a session, but you should still review `sdd.yaml` before working in an untrusted repo.
 
+## Auto-continuation (Stop hook)
+
+The plugin ships a `Stop` hook (`hooks/sdd-stop-guard.ts`) that prevents the orchestrator from halting mid-workflow. It activates only when an actively-modified `sdd.yaml` exists in `cwd/doc/tasks/*/` and there is a non-completed step that does not require user intervention (`failed` / `needs_update` are excluded).
+
+**Requirement**: `bun` must be on `$PATH`. Install via `curl -fsSL https://bun.sh/install | bash` if missing.
+
+Behavior:
+
+- When triggered, the hook exits with code 2 and feeds Claude an instruction to read `sdd.yaml` and invoke the next sub-skill.
+- Per `(session_id, step_id)` retry counter caps consecutive blocks at 3 (escape hatch to avoid infinite loops).
+- Outside SDD projects (no `sdd.yaml` in `cwd/doc/tasks/*/`) or when `sdd.yaml` was not touched within the last 10 minutes, the hook is a silent no-op.
+- Cold start ≈ 20ms (well under the 10s hook timeout).
+
+Tunables via env vars:
+
+- `EM_SDD_STOP_GUARD_RECENCY` — recency window in seconds (default `600`)
+- `EM_SDD_STOP_GUARD_MAX_RETRIES` — max consecutive blocks per step (default `3`)
+
 ## Out of scope (intentionally)
 
 - **E2E test framework** — em-sdd reads `e2e_test_command` from `sdd.yaml` if present, but does not bundle a framework. Choose Docker / Playwright / Cypress / tauri-driver as the project requires.
@@ -51,10 +69,13 @@ em-sdd/
 │   ├── tdd-implementation-verifier.md   # build/test runner (haiku)
 │   ├── verification-executor.md         # SPEC compliance / E2E / etc.
 │   └── spec-updater.md                  # spec change cascading
-└── skills/
-    ├── sdd/                             # main orchestrator
-    ├── sdd.1-create-spec/ … sdd.6-verify/
-    ├── sdd.status/ sdd.update-spec/
-    ├── sdd-templates/                   # 4 document templates
-    └── implementation-plan-writing/     # planning rules (preloaded by planner)
+├── skills/
+│   ├── sdd/                             # main orchestrator
+│   ├── sdd.1-create-spec/ … sdd.6-verify/
+│   ├── sdd.status/ sdd.update-spec/
+│   ├── sdd-templates/                   # 4 document templates
+│   └── implementation-plan-writing/     # planning rules (preloaded by planner)
+└── hooks/
+    ├── hooks.json                       # Stop hook registration
+    └── sdd-stop-guard.ts                # auto-continuation guard (Bun)
 ```
