@@ -21,7 +21,7 @@ The orchestrator (`/em-review:multi-review`):
 1. Collects `git diff`, falls back to whole-codebase mode in non-git directories, and locates `SPEC.md`.
 2. Launches all reviewers in a single turn (parallel).
 3. Aggregates, deduplicates, and scores by Claude-vs-GPT agreement.
-4. Runs an auto-fix loop (max 5 iterations) with regression detection.
+4. Runs a single-pass auto-fix **by default** (batch preview → approve → atomic apply, modify-only, no commit). Skip with `--report-only` to get findings without touching the working tree.
 5. Produces a final Japanese report.
 
 When no `SPEC.md` is found, the two spec reviewers are skipped and the orchestrator runs **7 reviewers** instead of 9.
@@ -32,7 +32,8 @@ When no `SPEC.md` is found, the two spec reviewers are skipped and the orchestra
 
 | Command | Behavior |
 |---------|----------|
-| `/em-review:multi-review` | Runs all 9 (or 7) reviewers in parallel, aggregates, fixes, reports. Inherits the main session context. |
+| `/em-review:multi-review` | Runs all 9 (or 7) reviewers in parallel, aggregates, runs auto-fix, reports. Inherits the main session context. |
+| `/em-review:multi-review --report-only` | Same as above but skips auto-fix entirely. Aliases: `--no-auto-fix`, `--no-fix`. |
 
 ### Individual reviewers (standalone)
 

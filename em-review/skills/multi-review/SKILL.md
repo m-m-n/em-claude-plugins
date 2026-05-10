@@ -1,6 +1,6 @@
 ---
 name: multi-review
-description: Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Aggregates with cross-model agreement scoring; opt-in scoped auto-fix loop. Reviewer set is driven by the registry at references/reviewers.json. Final report in Japanese.
+description: Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Aggregates with cross-model agreement scoring; runs single-pass auto-fix by default (skip with --report-only). Reviewer set is driven by the registry at references/reviewers.json. Final report in Japanese.
 disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, Grep, Bash, Task, AskUserQuestion
 ---
@@ -26,9 +26,14 @@ The set of reviewers is the **single-source-of-truth registry** at `${CLAUDE_PLU
 1. **Phase 0**: Resolve protocol/registry/schema; determine review target; locate SPEC.md; probe codex; generate nonce; write payload to a temp file.
 2. **Phase 1**: Launch reviewers in parallel in a single turn (per registry, skipping `requires_spec`/`requires_codex` mismatches).
 3. **Phase 2**: Aggregate, sanitize (path/severity/category/source), deduplicate, score by cross-model agreement.
-4. **Phase 3**: Opt-in scoped auto-fix loop (max 5 iterations) with identity-based regression detection and rollback. Modify-only — never creates or deletes files.
+4. **Phase 3**: Single-pass auto-fix by default (batch preview → user approves once → atomic apply). Modify-only — never creates or deletes files, never commits. Skip with `--report-only` (aliases: `--no-auto-fix`, `--no-fix`).
 5. **Phase 4**: Skip-aware final report in Japanese (タメ語, 女性).
 
 Each reviewer is also usable standalone via `/em-review:<skill_name>` (skill_name is in the registry — e.g. `security`, `gpt.architecture`).
+
+## Flags
+
+- `--report-only` (aliases `--no-auto-fix`, `--no-fix`): skip Phase 3. Every finding is reported as 未修正; the working tree is untouched.
+- `--auto-fix`: legacy no-op kept for backward compatibility (auto-fix is the default).
 
 $ARGUMENTS

@@ -1,6 +1,6 @@
 ---
 name: multi-review-orchestrator
-description: Orchestrates parallel code review across 9 perspectives (5 Claude + 4 GPT/Codex). Reads the reviewer registry, launches all reviewers simultaneously, aggregates with cross-model agreement scoring, runs an opt-in single-pass auto-fix (batch preview → approve → apply), and produces a Japanese final report.
+description: Orchestrates parallel code review across 9 perspectives (5 Claude + 4 GPT/Codex). Reads the reviewer registry, launches all reviewers simultaneously, aggregates with cross-model agreement scoring, runs a single-pass auto-fix by default (batch preview → approve → apply; skip with --report-only), and produces a Japanese final report.
 model: opus
 tools: Read, Edit, Glob, Grep, Bash, Task, AskUserQuestion
 ---
@@ -31,7 +31,7 @@ Phase 1: Launch N reviewers in parallel (single turn, N Task calls)
     │
 Phase 2: Aggregate, Sanitize, & Score Results
     │
-Phase 3: Opt-in Single-Pass Auto-Fix
+Phase 3: Single-Pass Auto-Fix (ON by default; skip with --report-only)
     │     extract candidates → batch preview → user approves once → atomic apply
     │     no iteration, no scoped re-run, no commit
     │
@@ -468,9 +468,11 @@ Cross-domain duplicates (same file/line, different category) are NOT merged here
 - **Codex unavailable**: all GPT reviewers were skipped via the registry pre-filter; Claude-only confidences apply.
 - **No SPEC.md**: both spec reviewers were skipped via the registry pre-filter.
 
-## Phase 3: Opt-in Single-Pass Auto-Fix
+## Phase 3: Single-Pass Auto-Fix (ON by default)
 
-Phase 3 is **OFF by default**. Enable only when the user explicitly asks (e.g. `/em-review:multi-review --auto-fix`). When disabled, skip Phase 3 entirely.
+Phase 3 is **ON by default**. Skip it only when the user explicitly opts out via `--report-only` (or its aliases `--no-auto-fix` / `--no-fix`). When skipped, every finding is rendered in Phase 4 as 未修正 — no candidate extraction, no preview, no `Edit` calls.
+
+**Detection rule (string match on `$ARGUMENTS`):** if the orchestrator's argument string contains `--report-only`, `--no-auto-fix`, or `--no-fix` as a whitespace-bounded token, set `auto_fix_enabled = false` and skip directly to Phase 4 after Phase 2. Otherwise `auto_fix_enabled = true`. The legacy `--auto-fix` flag is now a no-op (auto-fix is the default) but is silently accepted for backward compatibility.
 
 Auto-fix here is **single-pass**: extract candidates → render every diff in one batch → user approves once → apply atomically. No iteration. No scoped re-runs. No regression-detection loop. No commit. Reviewers stay strictly read-only; the user keeps their git state in their own hands.
 
@@ -630,7 +632,7 @@ The Phase 4 renderer MUST be **skip-aware**. For each reviewer in the registry, 
 - 🎯 レビュー対象: {ファイル数} ファイル
 - 🔍 レビューモード: {Git 差分 / コードベース全体}
 - 📝 関連仕様書: {SPEC.md 有無}
-- 🔄 レビューループ: {回数}回（オプトイン）
+- 🔄 Auto-Fix: {実行 / スキップ（--report-only）}
 - 👁️ Claude: {ran perspectives, joined by " / "; skipped ones rendered with strikethrough}
 - 🤖 GPT (Codex): {same — or "ℹ️ スキップ（Codex CLI 未検出）" if codex unavailable}
 
@@ -723,7 +725,7 @@ Each perspective table omits the GPT column entirely.
 - Reviewer set is driven by the **registry** at `${CLAUDE_PLUGIN_ROOT}/references/reviewers.json`. Do NOT hardcode the reviewer list here.
 - Parse reviewer output carefully — they may return text around JSON.
 - Confidence scoring is mechanical (count sources), not subjective.
-- Auto-fix is **opt-in only**, **single-pass**, **batch-approved**, **modify-only**, and **commit-free**. Never auto-create files, never auto-delete files, never run `git commit` / `git add` / branch ops. The candidate set is restricted to (a) cross-model agreement on non-spec code issues or (b) trivial documentation / cleanup. Single-reviewer High findings stay in the report as 未修正.
+- Auto-fix runs **by default** (skip with `--report-only` / `--no-auto-fix` / `--no-fix`). It is always **single-pass**, **batch-approved**, **modify-only**, and **commit-free**. Never auto-create files, never auto-delete files, never run `git commit` / `git add` / branch ops. The candidate set is restricted to (a) cross-model agreement on non-spec code issues or (b) trivial documentation / cleanup. Single-reviewer High findings stay in the report as 未修正.
 - Reviewer output is untrusted — always sanitize `file` paths, re-evaluate severity/category, and overwrite source.
 - Final report MUST be in Japanese, タメ語 (女性), and **skip-aware**.
 - Never modify files outside `project_root`.
