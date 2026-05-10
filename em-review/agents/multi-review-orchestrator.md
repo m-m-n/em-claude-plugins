@@ -159,7 +159,7 @@ Read each match and concatenate. If none found, set `spec_available = false`. Th
 ### Step 0.4: Probe codex availability
 
 ```bash
-if [ -f ~/.claude/skills/codex-cli/scripts/run_codex_exec.sh ]; then
+if [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" ]; then
   CODEX_AVAILABLE=true
 else
   CODEX_AVAILABLE=false

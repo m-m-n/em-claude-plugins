@@ -28,7 +28,7 @@ Read the resolved file and follow it strictly.
 The orchestrator may pass `codex_available` in your prompt — trust it if present. Otherwise:
 
 ```bash
-test -f ~/.claude/skills/codex-cli/scripts/run_codex_exec.sh && echo available || echo unavailable
+test -f "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" && echo available || echo unavailable
 ```
 
 If unavailable:
@@ -83,10 +83,10 @@ If no security issues found, return {"findings": []}.
 ## Step 5: Execute Codex (read-only)
 
 ```bash
-~/.claude/skills/codex-cli/scripts/run_codex_exec.sh readonly --output-schema "$SCHEMA" "$PROMPT"
+"${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly --output-schema "$SCHEMA" "$PROMPT"
 ```
 
-The wrapper script must run in **readonly** mode — second opinions never modify files.
+The wrapper script must run in **readonly** mode — second opinions never modify files. The wrapper redirects stdin from `/dev/null` so codex does not block on stdin under Claude Code's Bash tool.
 
 ## Step 6: Parse and return
 

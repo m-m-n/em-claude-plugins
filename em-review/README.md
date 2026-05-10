@@ -50,7 +50,7 @@ Each reviewer is also runnable on its own. They run in a forked context, so invo
 | `/em-review:gpt.architecture` | GPT/Codex · architecture |
 | `/em-review:gpt.spec` | GPT/Codex · spec compliance |
 
-GPT reviewers skip cleanly when the codex CLI wrapper (`~/.claude/skills/codex-cli/scripts/run_codex_exec.sh`) is not available.
+GPT reviewers require the [codex CLI](https://github.com/openai/codex) on `$PATH` and a configured `~/.codex/config.toml`. The plugin bundles its own wrapper at `${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh`, so no external skill is needed. When the codex CLI itself is missing, GPT reviewers skip cleanly.
 
 ## Investigation budget
 
@@ -118,9 +118,13 @@ Standalone use therefore goes through the same agent that the orchestrator invok
 em-review/
 ├── .claude-plugin/plugin.json
 ├── README.md                          (this file)
+├── scripts/
+│   └── run_codex_exec.sh              (bundled codex CLI wrapper, redirects stdin)
 ├── references/
 │   ├── review-protocol.md             (shared protocol, single source of truth)
-│   └── review-output-schema.json      (JSON Schema for findings)
+│   ├── review-output-schema.json      (JSON Schema for findings)
+│   ├── reviewers.json                 (reviewer registry)
+│   └── codex-cli.yaml                 (wrapper config: timeout, sandbox modes)
 ├── skills/
 │   ├── multi-review/SKILL.md          (orchestrator entry → /em-review:multi-review)
 │   ├── security/SKILL.md              (→ /em-review:security)

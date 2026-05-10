@@ -1,0 +1,22 @@
+# Codex CLI Configuration (em-review plugin SSOT)
+# Used by scripts/run_codex_exec.sh for flag and timeout defaults.
+#
+# Model is managed by the user's ~/.codex/config.toml (not overridden by wrapper).
+# Run `codex --help` or check Codex docs for the current model list.
+
+# Timeout in seconds (default; for open-ended investigations)
+timeout: 600
+
+# Common flags applied to all invocations
+common_flags:
+  - "--color never"
+  - "--skip-git-repo-check"
+
+# Sandbox mode presets
+sandbox_modes:
+  readonly:
+    flag: "-s read-only"
+    prompt_constraint: "Do NOT modify, create, or delete any files. Provide analysis and recommendations only."
+  readwrite:
+    flag: "-s workspace-write"
+    prompt_constraint: ""

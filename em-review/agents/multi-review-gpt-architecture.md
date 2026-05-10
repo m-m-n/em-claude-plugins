@@ -28,7 +28,7 @@ If still unresolved, **fail-closed**:
 Prefer orchestrator-supplied `codex_available`. Otherwise:
 
 ```bash
-test -f ~/.claude/skills/codex-cli/scripts/run_codex_exec.sh && echo available || echo unavailable
+test -f "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" && echo available || echo unavailable
 ```
 
 If unavailable:
@@ -78,7 +78,7 @@ If no architecture issues found, return {"findings": []}.
 ## Step 5: Execute Codex
 
 ```bash
-~/.claude/skills/codex-cli/scripts/run_codex_exec.sh readonly --output-schema "$SCHEMA" "$PROMPT"
+"${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly --output-schema "$SCHEMA" "$PROMPT"
 ```
 
 ## Step 6: Parse and return
