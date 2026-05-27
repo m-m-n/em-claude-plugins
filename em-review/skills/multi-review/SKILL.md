@@ -1,6 +1,6 @@
 ---
 name: multi-review
-description: Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Aggregates with cross-model agreement scoring; runs single-pass auto-fix by default (skip with --report-only). Reviewer set is driven by the registry at references/reviewers.json. Final report in Japanese.
+description: Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Aggregates with cross-model agreement scoring; runs bounded multi-loop auto-fix (≤ 3 iterations) by default. Directly-applicable diff suggestions auto-apply via the bundled em-review-editor sub-agent with batch approval; natural-language suggestions go through per-finding AskUserQuestion. Re-runs reviewers after every productive loop; loop-cap also runs a final re-review for accurate residual counts. Skip with --report-only. Reviewer set is driven by the registry at references/reviewers.json. Final report in Japanese.
 disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, Grep, Bash, Task, AskUserQuestion
 ---
@@ -23,11 +23,11 @@ The set of reviewers is the **single-source-of-truth registry** at `${CLAUDE_PLU
 
 ## Workflow Summary
 
-1. **Phase 0**: Resolve protocol/registry/schema; determine review target; locate SPEC.md; probe codex; generate nonce; write payload to a temp file.
+1. **Phase 0**: Resolve protocol/registry/schema; determine review target (diff or whole-codebase) + `changed_files`; locate SPEC.md; probe codex. The orchestrator does NOT materialize a diff/codebase payload — each reviewer fetches its own data inside its own sub-agent context via `git diff` / `Read`.
 2. **Phase 1**: Launch reviewers in parallel in a single turn (per registry, skipping `requires_spec`/`requires_codex` mismatches).
 3. **Phase 2**: Aggregate, sanitize (path/severity/category/source), deduplicate, score by cross-model agreement.
-4. **Phase 3**: Single-pass auto-fix by default (batch preview → user approves once → atomic apply). Modify-only — never creates or deletes files, never commits. Skip with `--report-only` (aliases: `--no-auto-fix`, `--no-fix`).
-5. **Phase 4**: Skip-aware final report in Japanese (タメ語, 女性).
+4. **Phase 3**: Multi-loop auto-fix (≤ 3 iterations) by default. Target = `severity ∈ {Critical, High}` AND `category != "spec"`. Candidates split into (a) **directly-applicable** — `suggestion` is a unified diff, dispatched after batch approval; (b) **needs-judgment** — natural-language suggestion, surfaced via per-finding `AskUserQuestion` so the user picks the approach before any edit. Each approved candidate dispatches to the bundled `em-review:em-review-editor` sub-agent (`Read`/`Edit` only, no Bash/git/formatters). Scope is verified via content-hash delta (`git hash-object` over the orchestrator's backup snapshots) — the editor's `files_modified` is informational. Loops 2/3 require approval for every NEW `stable_id` but allow same-id retry. After every productive loop (including loop 3), the orchestrator re-runs all reviewers — perspectives with modified findings get a `stable_id`-only preamble (no titles, no descriptions — closes the cross-context-injection path); others get a generic collateral-impact preamble. Modify-only, no commits. Skip with `--report-only` (aliases: `--no-auto-fix`, `--no-fix`).
+5. **Phase 4**: Skip-aware final report in Japanese (タメ語, 女性). Per-loop stats + termination reason included.
 
 Each reviewer is also usable standalone via `/em-review:<skill_name>` (skill_name is in the registry — e.g. `security`, `gpt.architecture`).
 

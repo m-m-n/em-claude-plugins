@@ -18,10 +18,10 @@ Runs up to **9 reviewers in parallel** against the current diff (or whole codeba
 
 The orchestrator (`/em-review:multi-review`):
 
-1. Collects `git diff`, falls back to whole-codebase mode in non-git directories, and locates `SPEC.md`.
+1. Determines `review_mode` (`diff` or `whole-codebase`) and the `changed_files` list, and locates `SPEC.md`. The orchestrator does NOT pre-materialize a diff payload — each reviewer fetches its own diff via `git diff HEAD -- <files>` (or `Read`s files in whole-codebase mode) inside its own sub-agent context.
 2. Launches all reviewers in a single turn (parallel).
 3. Aggregates, deduplicates, and scores by Claude-vs-GPT agreement.
-4. Runs a single-pass auto-fix **by default** (batch preview → approve → atomic apply, modify-only, no commit). Skip with `--report-only` to get findings without touching the working tree.
+4. Runs a **bounded multi-loop auto-fix (≤ 3 iterations) by default**. Target = `severity ∈ {Critical, High}` AND `category != "spec"`. Each candidate is classified by its `suggestion` shape: **directly-applicable** (unified diff present → one batch approval per loop) or **needs-judgment** (natural-language → per-finding `AskUserQuestion` so the user picks the approach). Approved candidates dispatch to the bundled `em-review:em-review-editor` sub-agent (`Read`/`Edit` only). Scope is verified via content-hash delta (`git hash-object` over the orchestrator's backup snapshots) — the editor's self-report is informational only. Loops 2/3 force approval on every new `stable_id`. After every productive loop (including loop 3), reviewers re-run with a `stable_id`-only preamble for perspectives whose findings were touched (no titles, no descriptions — no cross-context injection); others get a generic collateral-impact preamble. Modify-only, no commit. Skip the whole phase with `--report-only`.
 5. Produces a final Japanese report.
 
 When no `SPEC.md` is found, the two spec reviewers are skipped and the orchestrator runs **7 reviewers** instead of 9.
@@ -32,7 +32,7 @@ When no `SPEC.md` is found, the two spec reviewers are skipped and the orchestra
 
 | Command | Behavior |
 |---------|----------|
-| `/em-review:multi-review` | Runs all 9 (or 7) reviewers in parallel, aggregates, runs auto-fix, reports. Inherits the main session context. |
+| `/em-review:multi-review` | Runs all 9 (or 7) reviewers in parallel, aggregates, runs the multi-loop auto-fix (≤ 3 iterations, editor-sub-agent-driven), reports. Inherits the main session context. |
 | `/em-review:multi-review --report-only` | Same as above but skips auto-fix entirely. Aliases: `--no-auto-fix`, `--no-fix`. |
 
 ### Individual reviewers (standalone)

@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "em-review",
-      "description": "Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Cross-model agreement scoring + opt-in auto-fix loop. Each reviewer is also usable standalone via /em-review:<perspective>.",
+      "description": "Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Cross-model agreement scoring + bounded multi-loop auto-fix (≤ 3 iterations) using the bundled em-review-editor sub-agent (diff suggestions auto-apply, natural-language suggestions route through AskUserQuestion). Each reviewer is also usable standalone via /em-review:<perspective>.",
       "author": {
         "name": "em"
       },

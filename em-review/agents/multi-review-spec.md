@@ -25,7 +25,7 @@ Read the resolved file and follow it strictly.
 
 ## Spec Source Resolution
 
-The caller MUST pass `spec_payload_path` (the orchestrator does this when SPEC.md is found). If absent, locate SPEC.md yourself:
+The orchestrator passes `spec_path` in your prompt when SPEC.md exists. Read it directly via the `Read` tool. If the orchestrator did NOT pass `spec_path` (standalone invocation), locate SPEC.md yourself:
 
 ```bash
 ls doc/tasks/*/SPEC.md 2>/dev/null
@@ -39,6 +39,10 @@ If still no spec is found, **skip cleanly per protocol Skip Semantics**:
 ```json
 {"findings": [], "summary": "skipped: no SPEC.md found", "skipped": true, "source": "claude"}
 ```
+
+## Code Source Resolution
+
+Follow the **Diff Command Contract** in `references/review-protocol.md` (SSOT). When the orchestrator passes `diff_cmd_quoted`, run that string verbatim. In standalone mode, apply the same path-validation gate (reject leading `-`, newline, carriage return, NUL) and assemble the diff command via `printf '%q '`. For `review_mode == "whole-codebase"`, `Read` the listed `changed_files` within your 3-file investigation budget.
 
 ## What to flag (spec compliance only)
 
