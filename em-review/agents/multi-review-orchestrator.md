@@ -1,6 +1,6 @@
 ---
 name: multi-review-orchestrator
-description: Orchestrates parallel code review across 9 perspectives (5 Claude + 4 GPT/Codex). Reads the reviewer registry, launches all reviewers simultaneously, aggregates with cross-model agreement scoring, runs bounded multi-loop auto-fix (≤ 3 iterations) by default — directly-applicable diff suggestions auto-apply via the bundled em-review-editor sub-agent with batch approval, while natural-language suggestions go through per-finding AskUserQuestion. Skip with --report-only. Produces a Japanese final report.
+description: Orchestrates parallel code review across 9 perspectives (5 Claude + 4 GPT/Codex). Reads the reviewer registry, launches all reviewers simultaneously, aggregates with cross-model agreement scoring, runs bounded multi-loop auto-fix (≤ 3 iterations) by default — Critical/High findings with a directly-applicable diff and no cross-reviewer contradiction auto-apply via the bundled em-review-editor sub-agent without user approval, while contradictions (multiple reviewers proposing incompatible fixes at the same site) and natural-language / multi-alternative suggestions go through per-finding AskUserQuestion. Terminates when no Critical/High remain or after 3 loops. Skip with --report-only. Produces a Japanese final report.
 model: opus
 tools: Read, Edit, Glob, Grep, Bash, Task, AskUserQuestion
 ---
@@ -32,8 +32,10 @@ Phase 1: Launch N reviewers in parallel (single turn, N Task calls)
 Phase 2: Aggregate, Sanitize, & Score Results
     │
 Phase 3: Multi-Loop Auto-Fix (max 3 iterations, ON by default; skip with --report-only)
-    │     loop: extract Critical/High → classify (diff vs judgment) → batch preview (diff)
-    │           + AskUserQuestion per judgment finding → dispatch em-review:em-review-editor
+    │     loop: extract Critical/High → classify (auto-applicable / conflict / judgment)
+    │           → auto-dispatch auto-applicable (no user approval)
+    │           + AskUserQuestion per conflict (sibling proposals) and per judgment finding
+    │           → dispatch em-review:em-review-editor
     │           → verify via content-hash delta (git hash-object over BACKUP_DIR vs WT) → re-review if applied > 0
     │     exits when residual Critical/High = 0, loop cap reached, or no candidate path forward
     │     reviewers stay read-only; orchestrator never commits
@@ -429,7 +431,7 @@ title_normalized = sha256_hex(
 
 The 16-char SHA-256 prefix is the actual hash material; the natural-language form is normalized first so "Off-by-one" and "Off-by-one error 🐛" produce the same bucket. Using SHA-256 specifically (not MD5) avoids collision-prone hashing.
 
-#### `stable_id` and `coupling_id` formulas
+#### `stable_id`, `coupling_id`, and the `same_site` predicate
 
 ```
 line_bucket  = (line // 5)                # null line → bucket "null"
@@ -437,11 +439,20 @@ stable_id    = sha256_hex(file + "|" + title_normalized + "|" + line_bucket)[:16
 coupling_id  = sha256_hex(file + "|" + line_bucket)[:16]
 ```
 
-`coupling_id` groups findings on the same physical site regardless of category. Used in Step 2.4 dedupe and in Step 2.5 confidence scoring to surface the "Claude AND GPT both reported this" agreement signal. (Phase 3's auto-fix gate no longer consumes this — severity alone is the candidate criterion — but the score still appears in the Phase 4 report.)
+**`same_site(a, b)` — the single authoritative "same physical site" predicate.** Every consumer that needs same-site grouping (Step 2.4 dedupe, Step 2.5 multi-perspective bonus, Phase 3 Step 3.A.2 conflict detection) MUST use this one definition verbatim, so they can never disagree:
+
+```
+same_site(a, b) := a.file == b.file
+                   AND ( (a.line == null AND b.line == null)        # both unknown → file-only
+                         OR (a.line != null AND b.line != null
+                             AND abs(a.line - b.line) <= 5) )       # within ±5 lines
+```
+
+`coupling_id` is a **cheap, non-authoritative hash** of `(file, line_bucket)` used only to (a) shard findings for fast pairwise pre-filtering and (b) carry the cross-model agreement signal in Step 2.5. It is NOT the grouping authority: because it buckets by `line // 5`, two findings straddling a bucket boundary (e.g. line 14 vs line 16) get different `coupling_id`s yet are still `same_site`. **Never group on `coupling_id` equality alone** — always confirm with `same_site`. (Implementations may use `coupling_id` to shortlist candidate pairs, then apply `same_site` as the sole decider.)
 
 ### Step 2.4: Deduplicate
 
-Group findings by `(file, line_range, category)` where `line_range` = lines within ±5 of each other (in `diff` mode) OR `(file, category)` plus title token-overlap ≥ 50% (in `whole-codebase` mode, where the synthetic context lacks meaningful line correspondence).
+Group findings within the same `category` by the **`same_site` predicate (Step 2.3)** in `diff` mode — i.e. two same-category findings merge iff `same_site(a, b)` holds. In `whole-codebase` mode (where the synthetic context lacks meaningful line correspondence), fall back to `(file, category)` plus title token-overlap ≥ 50%. Phase 3 Step 3.A.2 calls the identical `same_site`, so the two consumers cannot diverge.
 
 For each group:
 - Merge into one finding.
@@ -449,7 +460,7 @@ For each group:
 - Accumulate all `sources`.
 - Take the max severity.
 
-Cross-domain duplicates (same file/line, different category) are NOT merged here but share a `coupling_id`. They count toward the multi-perspective bonus in Step 2.5's confidence scoring, surfacing cross-model agreement on the same physical site even when Claude and GPT chose different category labels. (`coupling_id` is no longer required by Phase 3's auto-fix gate — severity is sufficient — but the agreement signal still feeds the confidence score reported in Phase 4.)
+Cross-domain duplicates (same file/line, different category) are NOT merged here but share a `coupling_id`. They count toward the multi-perspective bonus in Step 2.5's confidence scoring, surfacing cross-model agreement on the same physical site even when Claude and GPT chose different category labels. The same physical-site grouping is also what Phase 3 Step 3.A.2 uses to detect cross-reviewer conflicts (and it reuses this ±5 line-overlap window, not the raw fixed bucket, so adjacent findings that straddle a bucket boundary are still grouped).
 
 ### Step 2.5: Confidence Scoring
 
@@ -474,13 +485,17 @@ Phase 3 is **ON by default**. Skip it only when the user explicitly opts out via
 
 **Detection rule (string match on `$ARGUMENTS`):** if the orchestrator's argument string contains `--report-only`, `--no-auto-fix`, or `--no-fix` as a whitespace-bounded token, set `auto_fix_enabled = false` and skip directly to Phase 4 after Phase 2. Otherwise `auto_fix_enabled = true`. The legacy `--auto-fix` flag is now a no-op (auto-fix is the default) but is silently accepted for backward compatibility.
 
-Phase 3 is a **bounded loop** (1 ≤ `loop_index` ≤ 3). Each iteration: extract Critical/High candidates → classify into directly-applicable vs needs-judgment → batch-approve diffs + AskUserQuestion per judgment-case → dispatch fixes to the `em-review:em-review-editor` sub-agent → verify via content-hash delta (`git hash-object` over BACKUP_DIR vs. working tree) → if anything was applied, **re-run all reviewers** and re-aggregate. The orchestrator keeps the main context lean by delegating every file modification to a fresh sub-agent — the main session retains decisions and state for the next iteration.
+Phase 3 is a **bounded loop** (1 ≤ `loop_index` ≤ 3). Each iteration: extract Critical/High candidates → classify into `auto-applicable` / `conflict` / `needs-judgment` → auto-dispatch the auto-applicable subset **without user approval** + AskUserQuestion per conflict group and per judgment finding → dispatch fixes to the `em-review:em-review-editor` sub-agent → verify via content-hash delta (`git hash-object` over BACKUP_DIR vs. working tree) → if anything was applied, **re-run all reviewers** and re-aggregate. The orchestrator keeps the main context lean by delegating every file modification to a fresh sub-agent — the main session retains decisions and state for the next iteration.
 
-**Targeting rule:** a finding becomes an auto-fix candidate when `severity ∈ {Critical, High}` AND `category != "spec"`. Cross-model agreement is NOT required. The candidate is then split by whether its `suggestion` is a directly-applicable unified diff or a natural-language description requiring user judgment.
+**Targeting rule:** a finding becomes an auto-fix candidate when `severity ∈ {Critical, High}` AND `category != "spec"`. Cross-model agreement is NOT required (severity alone is the gate). Candidates that meet this gate are then routed by classification:
+
+- **`auto-applicable`** — restricted to two purely-mechanical cases (Step 3.A.2): a **singleton** `shape = diff` finding, or a multi-candidate group of **byte-equivalent agreeing diffs** (cross-model agreement on the identical patch, collapsed to `min`). Must pass Step 3.B validation. Dispatched directly, no AskUserQuestion. This is the path the user explicitly delegated as "automatic". The orchestrator never uses fuzzy semantic judgment to put something on this path.
+- **`conflict`** — any other multi-candidate same-site group (±5 line-overlap, see Step 3.A.2): a diff coexisting with prose, non-byte-equivalent diffs, or divergent prose directives. AskUserQuestion is asked once per conflict group, offering each sibling proposal, an **`apply-all`** option when ≥ 2 diffs could coexist (independent fixes that merely landed near each other), and `skip`. Pick-one aborts the non-chosen siblings at selection; apply-all dispatches every member; skip aborts all (Step 3.A.2 lifecycle).
+- **`needs-judgment`** — a single finding whose `suggestion` is natural-language prose, multi-alternative (`Either (a) ... or (b) ...`), missing concrete pre-image, or describes a design-level change that the orchestrator cannot apply mechanically. AskUserQuestion is asked once per finding so the user picks the approach (or skips).
 
 **Loop termination (any of):**
 - After re-review, the resulting set has zero `severity ∈ {Critical, High}` non-spec findings → `clean`.
-- `applied_in_this_loop == 0` AND no further candidates remain that the user might approve → `no-progress`.
+- `applied_in_this_loop == 0` AND no further candidates remain that the user might pick differently → `no-progress`.
 - `loop_index == 3` → `loop-cap` (but a final re-review STILL runs before exiting if `applied_in_this_loop > 0`, so the residual count is accurate).
 
 Reviewers stay strictly read-only across every loop. The orchestrator never commits, never stages, never switches branches.
@@ -490,11 +505,10 @@ Reviewers stay strictly read-only across every loop. The orchestrator never comm
 Tracked across iterations in the main session:
 
 - `loop_index` — current iteration (1, 2, or 3).
-- `aborted_stable_ids` — `stable_id`s the editor returned `skipped` for, OR the user cancelled, in a prior loop. Excluded from subsequent candidate sets so the same unsolvable finding is not redispatched.
-- `approved_stable_ids` — `stable_id`s the user has previously approved (in any loop). Used in loop 2/3 to allow same-id retry without re-asking, while still forcing approval on every NEW `stable_id`.
+- `aborted_stable_ids` — the set of `stable_id`s excluded from all subsequent candidate sets. A `stable_id` enters this set when ANY of: the editor returned `skipped` / scope-violation for the dispatched member (only that member's id); the user explicitly skipped the whole site/finding (all `group_member_ids`); it was a **conflict loser** the user did NOT pick (aborted at selection time); it was a **satisfied sibling** of an `applied` fix (a merged-prose member or a non-chosen conflict sibling — aborted once the dispatched member applies; not applicable to conflict apply-all, where every member is dispatched). Note: a sibling whose dispatched member merely *failed* (skipped / validation-fail) is NOT aborted — it is left in play to re-group next loop (see Step 3.A.2 lifecycle). Once a `stable_id` is here, the same finding is never re-asked or re-dispatched. There is intentionally NO cross-loop "remembered choice" map and NO separate "candidate pool": a finding the user acted on is either applied (→ `fixed_history`) or aborted (→ here); everything else is simply re-derived next loop from `(Phase 2 set) − aborted_stable_ids`. A genuinely new finding at the same site (different `stable_id` because the reviewer gave it a new title/line) is treated as new and re-classified normally.
 - `fixed_history` — per-loop list of `{stable_id, file, line, severity, category, sources}` (note: NO `title` — see Step 3.G's cross-context-injection mitigation) for findings the editor reported `applied`. Used to build re-review prompts.
 - `applied_total` — cumulative applied count.
-- `loop_stats` — per-loop counters: `{candidates_diff, candidates_judgment, validation_dropped, user_skipped, user_cancelled, applied, editor_skipped, scope_violations}`.
+- `loop_stats` — per-loop counters: `{candidates_auto, candidates_conflict, candidates_judgment, validation_dropped, overlap_deferred, user_skipped, applied, editor_skipped, scope_violations}`. `validation_dropped` counts ONLY Step 3.B structural-validation failures (which demote/abort). `overlap_deferred` is a SEPARATE counter for Step 3.D step 3a deferrals (stale-line, NOT aborted — re-tried next loop); the two have different lifecycle meaning and must not be conflated.
 
 ### Step 3.A: Extract and classify candidates
 
@@ -506,16 +520,46 @@ For each finding from the current Phase 2 set (after sanitize / dedupe / score),
 - Suggestion is non-empty.
 - Target file (`finding.file`) is in `changed_files` (the diff surface; auto-fix never touches files outside the user's working set).
 
-Then classify each surviving candidate by `suggestion` shape:
+Let `surviving_candidates` = the set above.
 
-- **`directly-applicable`** — `suggestion` contains a unified-diff block: `--- a/<path>` + `+++ b/<path>` headers + at least one `@@ ... @@` hunk. The diff modifies exactly one file equal to `finding.file`, does not contain `/dev/null` (no creation / deletion), and does not add new top-level constructs (functions, classes, new package imports).
-- **`needs-judgment`** — everything else: natural-language prose, multi-alternative (`Either (a) ... or (b) ...`), missing concrete pre-image, mentions of new-file creation, design-level recommendations. These cannot be auto-applied without human input.
+**Step 3.A.1 — Per-candidate shape probe.** Tag each surviving candidate with `shape ∈ {diff, prose}`:
 
-Both classes proceed; only the path to user approval differs (Step 3.C).
+- `shape = diff` iff `suggestion` contains a unified-diff block: `--- a/<path>` + `+++ b/<path>` headers + at least one `@@ ... @@` hunk, AND `<path>` (after lexical normalization) equals `finding.file`, AND there is no `/dev/null` marker (no creation / deletion). Full validation runs in Step 3.B.
+- `shape = prose` otherwise (natural-language prose, multi-alternative `Either (a) ... or (b) ...`, numbered alternatives `1. ... 2. ...`, `Option A / Option B`, design-level recommendation, mentions of new-file creation, missing concrete pre-image, etc.).
 
-### Step 3.B: Validate the directly-applicable subset
+**Step 3.A.2 — Group same-site candidates and detect conflicts.** Group Critical/High candidates by the **`same_site` predicate defined in Step 2.3** — the single authority shared with Step 2.4 dedupe. Two candidates are in the same group iff `same_site(a, b)` holds (same file, lines within ±5, or both line-null → file-only). Do NOT re-derive the window here and do NOT group on `coupling_id` equality alone (that would miss bucket-boundary-straddling pairs); `coupling_id` is only a cheap pre-filter. Because both dedupe and conflict-detection call the identical `same_site`, "same site for dedupe" and "same site for conflict detection" can never diverge.
 
-For each `directly-applicable` candidate, parse the unified diff and assert:
+Each group carries a `group_member_ids` set (every member `stable_id`). For each group:
+
+- **Singleton group** (exactly one member): no conflict possible. Classification follows the member's `shape` (next step). Its dispatched id is its own `stable_id`.
+- **Multi-candidate group** (≥ 2 members): examine the members' `shape` and content. There are only TWO ways a multi-candidate group reaches the no-approval path — both rest on a **mechanical** test, never on fuzzy semantic judgment:
+  - **Merged-prose**: if **all** members are `shape = prose` AND their prescriptions are mutually compatible (same recommended action, e.g. all say "add input validation" with different wording), merge them into a single `needs-judgment` candidate with accumulated `sources` and the richest description. The merged candidate's **dispatched id is `min(group_member_ids)`** (deterministic — the lexicographically smallest member `stable_id`); all member `stable_id`s stay in `group_member_ids`. (This still goes through AskUserQuestion — `needs-judgment` — so it is NOT a no-approval path; it just collapses duplicate prose into one question.)
+  - **Agreeing diffs**: if ≥ 2 members are `shape = diff` and their post-image hunks are **byte-equivalent** (the same patch, modulo whitespace — e.g. Claude-security and GPT-security independently emitting the identical diff), this is the *strongest* auto-apply signal (cross-model agreement), NOT a conflict. Collapse them into one `auto-applicable` candidate: dispatched id = `min(group_member_ids)`, `sources` = union. Do NOT ask the user — byte-level agreement on the exact patch is precisely what the auto-apply path is for.
+  - **Conflict (everything else)**: ALL other multi-candidate groups are a **`conflict`**, resolved by a single AskUserQuestion in Step 3.C. This deliberately includes: a single `shape = diff` member coexisting with `shape = prose` members (the orchestrator does NOT try to guess whether the diff "satisfies" the prose — that fuzzy `absorb` heuristic is removed, because mis-guessing would auto-apply over a hidden contradiction); non-byte-equivalent diffs (even if they touch disjoint lines — the user decides via the `apply-all` option in Step 3.C); and any mix of divergent prose directives. The no-approval path is thus restricted to the two purely-mechanical cases above; anything requiring a judgment about whether two prescriptions agree goes to the user.
+
+**Group-member lifecycle (the SINGLE rule for `group_member_ids`).** Resolution is keyed on the content-derived `group_member_ids` set (deterministic each loop) and the per-group dispatched id defined above — never on an undefined "representative". There is intentionally **no separate "candidate pool" state**: the orchestrator's working set each loop is exactly `(current Phase 2 set) − aborted_stable_ids` (Step 3.A). "Returning a member to the pool" therefore means nothing more than *not* adding its `stable_id` to `aborted_stable_ids` — it is then naturally re-derived next loop from the unchanged-or-re-reviewed Phase 2 set. The matching rule per group type:
+
+- **Conflict — at user selection (Step 3.C), before dispatch:**
+  - User picked ONE sibling → add every **non-chosen** sibling `stable_id` to `aborted_stable_ids` immediately (the user explicitly rejected them). Only the chosen member proceeds to dispatch.
+  - User picked **apply-all** (the independent-fixes case — e.g. disjoint diffs that can coexist) → every member is dispatched sequentially (Step 3.D, in `min`-first order, with the same-loop overlap guard of Step 3.D step 3a re-validating each later diff against the post-edit file). No member is aborted at selection; each member's fate then follows its own editor outcome below.
+  - User picked **skip** → add ALL `group_member_ids` to `aborted_stable_ids` (the user declined the entire site).
+- **Editor `applied`** (agreeing-diffs collapse applied / merged-prose fix applied / a chosen conflict sibling applied) → add ALL remaining `group_member_ids` to `aborted_stable_ids` (satisfied / superseded). The dispatched member goes to `fixed_history`. **Exception — apply-all:** do NOT abort the siblings, because each is independently intended to apply; each dispatched member individually goes to `fixed_history` on its own `applied`.
+- **Editor `skipped` / scope-violation** → add ONLY the **dispatched id** to `aborted_stable_ids` (it was tried and failed; do not retry it). Do NOT abort the other members — they are simply left out of `aborted_stable_ids`, so next loop's Step 3.A re-derives them WITHOUT the failed member and re-groups/re-classifies (a skipped merged-prose / conflict winner re-forms among the survivors). Because the failed member IS aborted, the group is strictly smaller next loop, so progress is guaranteed even when `applied_in_this_loop == 0` and no re-review ran (the working set shrank by at least one).
+- **Step 3.B validation failure** → singleton diff demotes to `needs-judgment`; an agreeing-diffs collapse aborts ALL `group_member_ids` (byte-equivalent ⇒ all fail identically — see Step 3.B). There is no longer an absorbing-diff case (the `absorb` path was removed).
+
+This makes the working set monotonically shrink on every failed/declined dispatch, so the `applied == 0` path cannot loop forever re-attempting an identical group — it either makes progress (a smaller group re-classifies differently) or runs out of candidates and hits `no-progress` / `loop-cap`.
+
+**Step 3.A.3 — Final classification.** After grouping, each group resolves to exactly one dispatched candidate with one class:
+
+- **`auto-applicable`** — singleton group where `shape = diff`, OR a multi-candidate group of byte-equivalent agreeing diffs (collapsed to `min(group_member_ids)`). The diff still must pass Step 3.B validation before dispatch. On validation failure: a *singleton* diff is demoted to `needs-judgment`; an *agreeing-diffs* collapse aborts ALL `group_member_ids` (byte-equivalent, so the failure applies identically to every member — see Step 3.B). Dispatched in Step 3.C **without any user approval call**.
+- **`conflict`** — multi-candidate group flagged in Step 3.A.2's "Otherwise" branch. Routed through a single AskUserQuestion in Step 3.C that lists every sibling proposal.
+- **`needs-judgment`** — singleton group where `shape = prose`, OR a merged-prose multi-candidate group, OR a *singleton* diff candidate whose Step 3.B validation failed. Routed through per-finding AskUserQuestion in Step 3.C.
+
+This classification is **provisional** until Step 3.B runs. Finalize `loop_stats[loop_index].candidates_auto`, `candidates_conflict`, `candidates_judgment` **after Step 3.B** (so `candidates_auto` counts only diffs that survive validation; a demoted singleton diff lands in `candidates_judgment` and also increments `validation_dropped`). Count **groups, not raw candidates** — a conflict group or an agreeing-diffs group counts once.
+
+### Step 3.B: Validate the auto-applicable subset
+
+For each `auto-applicable` candidate (i.e. the diff that survived Step 3.A's classification, whether a singleton diff or an agreeing-diffs collapse), parse the unified diff and assert:
 
 - Exactly one `+++ b/<path>` header (paired with `--- a/<path>`).
 - `<path>` equals `finding.file` after lexical normalization.
@@ -523,31 +567,56 @@ For each `directly-applicable` candidate, parse the unified diff and assert:
 - Hunks reference only existing lines in the target file (no append-at-EOF hunk that introduces new top-level definitions).
 - The target file is **not a symlink** at validation time. Re-check at dispatch time too (Step 3.D's TOCTOU guard).
 
-If validation fails, reclassify the candidate as `needs-judgment` (because the user might still want to decide how to fix it). Increment `loop_stats[loop_index].validation_dropped`.
+If validation fails, the diff MUST NOT be auto-applied silently (silent auto-apply was the entire premise of skipping AskUserQuestion). Increment `loop_stats[loop_index].validation_dropped` and handle by group shape:
 
-### Step 3.C: Approval gate (dual track)
+- **Singleton diff**: demote to `needs-judgment` — the user may still want to decide how to fix it.
+- **Agreeing-diffs collapse** (≥ 2 byte-equivalent diffs collapsed to `min(group_member_ids)` in Step 3.A.2): add **ALL** `group_member_ids` to `aborted_stable_ids`. The members are byte-equivalent, so a structural-validation failure of the collapsed diff applies identically to every member — re-attempting any sibling next loop would fail the same way. Aborting only the dispatched id would leave equivalent siblings to re-collapse and re-fail on subsequent loops (wasting iterations), so abort the whole group at once. (A genuinely different fix the reviewers raise later gets a new `stable_id` and is handled fresh.)
 
-If both candidate lists are empty, skip to Step 3.F.
+### Step 3.C: Dispatch gate (triple track)
 
-**Track 1 — directly-applicable candidates** (batch approval):
+If all three classification lists (`auto-applicable`, `conflict`, `needs-judgment`) are empty, skip to Step 3.F.
 
-- **Loop 1**: render the full batch preview (file:line, sources, severity, category, short description, diff hunks) and call AskUserQuestion **exactly once** with `yes / select / cancel` (semantics unchanged: `yes` approves all, `select` opens per-candidate yes/no, `cancel` aborts the whole batch and marks all as `user_cancelled`).
-- **Loops 2 & 3**: partition the batch into `previously_approved` (`stable_id ∈ approved_stable_ids`) and `new_stable_ids` (introduced this loop). The previously-approved subset proceeds **without re-asking** (same-issue retry after editor adapt-and-skip). The `new_stable_ids` subset ALWAYS goes through AskUserQuestion with the same yes/select/cancel choices. There is no auto-approve fast-path in loops 2/3 — every new `stable_id` must be explicitly approved before dispatch.
+The orchestrator's contract is: **Critical/High auto-applicable findings get applied without user approval**; the only AskUserQuestion calls in Phase 3 are for contradictions the orchestrator cannot resolve mechanically (cross-reviewer conflicts at the same site, or natural-language / multi-alternative suggestions).
 
-Add every approved `stable_id` to `approved_stable_ids`. Add every cancelled `stable_id` to `aborted_stable_ids`.
+Before dispatch, the orchestrator emits **one informational message** (not an AskUserQuestion) summarizing the loop. Compute `N_auto` **after Step 3.B** so it counts only diffs that actually survive to auto-apply (validation-dropped diffs are excluded from `N_auto` and reported under judgment / validation-dropped):
 
-**Track 2 — needs-judgment candidates** (per-finding):
+```
+Loop {loop_index}/3: auto-applying {N_auto} Critical/High fixes (validation-dropped {N_dropped}), asking about {N_conflict} conflicts and {N_judgment} judgment cases.
+```
 
-For each `needs-judgment` candidate, call AskUserQuestion **once per finding** with options derived from the suggestion content (and always at least 4 entries):
+This is purely informational. The user can interrupt the session if they want to abort, but no approval call gates the auto-applicable subset.
 
-- The orchestrator best-effort-parses the suggestion for alternative markers (`Either (a) ... or (b) ...`, numbered lists `1. ... 2. ...`, `Option A: ... Option B: ...`). Each parsed alternative becomes one option in the AskUserQuestion choices. Truncate option labels to ~40 chars.
+> ⚠️ **Trust-boundary note (auto-applicable path).** `auto-applicable` diffs reach the working tree with NO human or semantic review of their CONTENT — Step 3.B validates only structure (single file == `finding.file`, no `/dev/null`, no symlink, hunks reference existing lines), not what the `+` lines actually do. Reviewer `suggestion` content is classified as untrusted by the protocol. Moreover the actual edit is performed by the `em-review-editor` LLM sub-agent (which receives the full finding payload, including prose `title`/`description`), and Step 3.E verifies only that `finding.file` changed — **NOT** that the resulting content is byte-identical to the Step 3.B-validated patch. So a `suggestion` mixing a valid diff with extra natural-language instructions could in principle steer the editor to a different edit in the same file. This whole class of risk is an accepted trade-off **only because the normal use case reviews the user's own changes — there is no path by which an untrusted third party's diff is reviewed here.** If that assumption ever changes (e.g. reviewing an untrusted contributor's branch), run with `--report-only` so nothing is applied unattended.
+
+**Track 1 — `auto-applicable` candidates** (NO user approval, auto-dispatch):
+
+Every `auto-applicable` candidate is dispatched directly to Step 3.D in sequential order. No AskUserQuestion. No batch preview. The Phase 4 report lists every auto-applied finding with its diff so the user can audit after the fact.
+
+If the user wants a preview-first workflow instead, they re-run with `--report-only` and review the report.
+
+**Track 2 — `conflict` candidates** (one AskUserQuestion per conflict group):
+
+A conflict group is any multi-candidate same-site group that is NOT a merged-prose or agreeing-diffs group (Step 3.A.2) — i.e. a single diff coexisting with prose, non-byte-equivalent diffs, or divergent prose directives. The orchestrator does NOT decide whether the members agree; the user does. Call AskUserQuestion **once** for the group:
+
+- One option per sibling proposal. Label = `{first source}: {first 40 chars of suggestion}`. Description = the trimmed suggestion content for that sibling (capped at ~200 chars; if `shape = diff`, include the first hunk header + a few `+`/`-` lines). Selecting exactly one is the "pick one" path.
+- Include an **`Apply all (they're independent / can coexist)`** option ONLY when **every** member is `shape = diff` (≥ 2 diffs). This is the resolution for the common false-conflict case where two reviewers fixed *different* problems that merely landed within ±5 lines — the user confirms they coexist rather than being forced to discard one. Selecting it dispatches every member sequentially (Step 3.D, `min`-first, overlap-guarded). Do NOT offer apply-all for groups that contain ANY prose member: prose has no mechanical apply and would be dispatched with no `user_chosen_approach` — instead the user picks a single option (and if they pick the prose member, that suggestion text becomes its `user_chosen_approach`). All-prose groups never reach here (they are merged-prose `needs-judgment`, Step 3.A.2).
+- ALWAYS include `Skip this site (mark 未修正)` as the last option. Selecting it adds ALL `group_member_ids` to `aborted_stable_ids` and increments `loop_stats[loop_index].user_skipped`.
+- The user's "Other" / freeform response is treated as `user_chosen_approach` and routed to the editor (the dispatched candidate then carries `shape = prose` semantics and uses the freeform text).
+
+Lifecycle by choice (per Step 3.A.2 "conflict at user selection"): **pick-one** aborts the non-chosen siblings at selection and dispatches the chosen member; **apply-all** dispatches every member with no selection-time abort (each follows its own editor outcome); **skip** aborts all. There is no cross-loop "remembered choice": if a dispatched fix fails, only that id is aborted and the next loop works from the remaining candidates — a genuinely new finding the reviewers raise at the same site (new `stable_id`) is treated as new.
+
+**Track 3 — `needs-judgment` candidates** (one AskUserQuestion per finding/group):
+
+For each `needs-judgment` candidate (a singleton prose finding, or a merged-prose group), call AskUserQuestion **once**:
+
+- Best-effort-parse the suggestion for alternative markers (`Either (a) ... or (b) ...`, numbered lists `1. ... 2. ...`, `Option A: ... Option B: ...`). Each parsed alternative becomes one option. Truncate labels to ~40 chars.
 - If no alternatives are detectable, present one option labeled `Apply the suggestion as-is (editor interprets)` whose `description` echoes the trimmed suggestion text.
-- ALWAYS include `Skip this finding (mark 未修正)` as the last option. This adds the `stable_id` to `aborted_stable_ids`.
-- The user's "Other" / freeform response is treated as `user_chosen_approach` passed verbatim to the editor (Step 3.D).
+- ALWAYS include `Skip this finding (mark 未修正)` as the last option. Selecting it adds the candidate's `stable_id` (and, for a merged-prose group, all `group_member_ids`) to `aborted_stable_ids` and increments `loop_stats[loop_index].user_skipped`.
+- The user's "Other" / freeform response is treated as `user_chosen_approach` passed verbatim to the editor.
 
-Cap the question count per loop at the candidate count — there is no batch UI for needs-judgment because each judgment is independent. If the candidate count is large (> 8), the orchestrator MAY emit a single pre-question `Process the {N} judgment-required findings now? yes / select-up-to-N / skip-all` to let the user defer or cap the batch.
+The chosen candidate proceeds to Step 3.D; group-member cleanup follows the Step 3.A.2 lifecycle on the editor outcome.
 
-Each approved or chosen needs-judgment candidate carries the user's choice forward as `user_chosen_approach` (string). Skipped ones add `stable_id` to `aborted_stable_ids` immediately.
+Cap the question count per loop at the conflict-group count + judgment-finding count — there is no batch UI for either, because each contradiction is independent. If the combined count is large (> 8), the orchestrator MAY emit a single pre-question `Process the {N} contradiction cases now? yes / select-up-to-N / skip-all` to let the user defer or cap the batch.
 
 ### Step 3.D: Dispatch fixes to `em-review:em-review-editor` sub-agents (SEQUENTIAL)
 
@@ -584,6 +653,7 @@ Before the first dispatch in each loop iteration:
 For each dispatch (one at a time):
 
 3. Re-check symlink status of the target immediately before issuing the `Task` (TOCTOU defense). If the target became a symlink between snapshot and dispatch, drop the candidate, restore the backup, and add `stable_id` to `aborted_stable_ids`.
+3a. **Same-loop overlap guard (defense-in-depth for ALL diff-shaped dispatches).** Step 3.A.2's ±5 grouping already routes overlapping findings into a single conflict group, so two *contradictory* diffs never both reach dispatch. But within a loop, an earlier authorized edit to a file shifts line numbers, so a later diff's hunk line refs may no longer match. This applies to **every diff-shaped dispatch regardless of class** — `auto-applicable` diffs, conflict-winner diffs the user picked (Step 3.C Track 2), and `Apply the suggestion as-is` judgment diffs (Track 3) all flow through this same sequential loop, and all are equally line-sensitive. Before dispatching ANY diff-shaped suggestion whose `finding.file` was already modified by an earlier dispatch in THIS loop iteration, re-verify the diff's pre-image hunk lines still exist at the stated positions in the current (post-earlier-edit) file. If they no longer match, do NOT dispatch: skip it for the current loop and increment `loop_stats[loop_index].overlap_deferred` (NOT `validation_dropped` — this is a transient stale-line deferral, not a structural failure). Do NOT abort the candidate's `stable_id` — leave it in play. The guard only ever fires when an earlier dispatch in THIS loop already modified the file, which means `applied_in_this_loop > 0`, so Step 3.F is guaranteed to run a re-review; next loop the reviewer re-derives the finding against the post-edit file with correct line numbers and it re-classifies normally. This is critical because Step 3.E's content-hash scope check only catches edits to OTHER files — it cannot detect a wrong-location edit INSIDE the authorized `finding.file` (it just sees the authorized file changed). The guard is the only thing preventing a stale-line diff from silently corrupting its own authorized target.
 4. Issue exactly one `Task(subagent_type="em-review:em-review-editor", prompt=...)`. Wait for it to return.
 5. Run Step 3.E for that single editor's return value (see below). Apply its outcome to state.
 6. Move to the next approved candidate.
@@ -598,7 +668,7 @@ target_file_abs: {realpath_canonicalized_absolute_path_to_finding.file}
 {JSON object: stable_id, severity, category, sources, title, description, suggestion}
 
 # User-chosen approach (when the suggestion required judgment)
-user_chosen_approach: {chosen string from Step 3.C Track 2, or empty for Track 1}
+user_chosen_approach: {chosen string from Step 3.C Track 2/3 (conflict/judgment), or empty for Track 1 (auto-applicable)}
 ```
 
 The agent's constraints (no git, no Bash, modify-only, JSON output) are owned by `em-review/agents/em-review-editor.md` — DO NOT re-emit them in every dispatch prompt (SSOT).
@@ -648,14 +718,14 @@ Run this **inline after each individual editor dispatch** (per Step 3.D step 5).
    The `-z` flag is mandatory: NUL-delimited unquoted paths so non-ASCII / whitespace-containing filenames compare correctly.
 
 3. **Classify the modification set** against the just-dispatched editor's authorized target (`{finding.file}`):
-   - **Authorized-only**: the only newly-modified path equals `finding.file` (and no new untracked file). If `status == "applied"`, add to `fixed_history[loop_index]`, increment `applied_in_this_loop`.
+   - **Authorized-only**: the only newly-modified path equals `finding.file` (and no new untracked file). If `status == "applied"`, add to `fixed_history[loop_index]`, increment `applied_in_this_loop`. **If the dispatched candidate belonged to a multi-candidate group** (agreeing-diffs collapse, merged-prose, or a chosen conflict sibling), apply the Step 3.A.2 group-member lifecycle "applied" branch now: add all OTHER `group_member_ids` to `aborted_stable_ids` (they are satisfied / superseded). **Exception:** if the group was resolved via conflict **apply-all**, do NOT abort the siblings — each is independently intended to apply and is dispatched in its own turn.
    - **Extra path(s)**: scope violation. For every unauthorized path:
      - If the path has a backup in `BACKUP_DIR`: `cp -p "$BACKUP_DIR/<path>" "$project_root/<path>"`.
      - If the path is a new untracked file (no backup): `rm -f -- "$project_root/<validated_relative_path>"` after re-running the lexical path validation (reject paths starting with `/`, containing `..`, leading `-`, NUL; realpath must stay under `project_root`). **NEVER use `git restore`**.
-     - Record `{stable_id, unauthorized_path, action_taken}` in `loop_stats[loop_index].scope_violations`.
+     - Record `{stable_id, unauthorized_path, action_taken}` in `loop_stats[loop_index].scope_violations`. Treat as a failed dispatch for lifecycle purposes (next bullet's "skipped / scope-violation" branch).
    - **No modification** (editor said `applied` but content hash is unchanged AND no new untracked file): treat as `skipped` (reason: `"editor reported applied but content hash unchanged"`). Genuine no-op edits are uncommon and almost always mean the editor's `Edit` call failed silently or the editor mis-applied the patch.
 
-4. **`status == "skipped"`**: add `stable_id` to `aborted_stable_ids`, increment `loop_stats[loop_index].editor_skipped`.
+4. **`status == "skipped"` or scope-violation (failed dispatch)**: add the dispatched candidate's `stable_id` to `aborted_stable_ids`, increment `loop_stats[loop_index].editor_skipped` (skipped) or it was already counted in `scope_violations`. **If the dispatched candidate belonged to a multi-candidate group**, apply the Step 3.A.2 lifecycle "skipped / scope-violation" branch: abort ONLY the dispatched id; do NOT abort the other members. They are left out of `aborted_stable_ids` and so re-derive next loop from the (unchanged-or-re-reviewed) Phase 2 set, re-grouping WITHOUT the now-aborted failed member. Because the group is strictly smaller, this guarantees progress even when `applied_in_this_loop == 0` (no separate "candidate pool" is persisted — the shrinking `aborted_stable_ids` filter is the whole mechanism).
 
 5. **Update the rolling baseline** AFTER classification, but only for paths that this dispatch was authorized to change. This ensures the next dispatch's per-dispatch delta won't re-attribute this dispatch's changes to it.
    ```bash
@@ -681,7 +751,7 @@ Evaluate in this order:
 2. After re-review (or skipping it when `applied == 0`):
    - If the re-aggregated set has zero `severity ∈ {Critical, High}` non-spec findings → terminate with reason `clean`.
    - Else if `loop_index == 3` → terminate with reason `loop-cap`.
-   - Else if `applied_in_this_loop == 0` AND there are no `needs-judgment` findings remaining that the user might pick differently → terminate with reason `no-progress`.
+   - Else if `applied_in_this_loop == 0` AND there are no `conflict` OR `needs-judgment` candidates remaining that the user might still resolve differently → terminate with reason `no-progress`. (Both classes are user-resolvable, so a pending conflict the user has not yet been asked about keeps the loop alive just as a pending judgment case does.)
    - Else → increment `loop_index` and return to Step 3.A with the new Phase 2 set.
 
 ### Step 3.G: Re-review (after any productive loop)
@@ -784,14 +854,17 @@ The Phase 4 renderer MUST be **skip-aware**. For each reviewer in the registry, 
 - 最終残存 Critical/High: {residual_count}（詳細は信頼度スコア付き統合結果セクションを参照）
 
 ### ループ別内訳
-| ループ | diff候補 | 判断候補 | 検証脱落 | ユーザー却下 | editor 適用 | editor スキップ | scope違反 |
-|--------|----------|----------|----------|--------------|-------------|-----------------|-----------|
-| 1 | X | Y | A | B | C | D | E |
-| 2 | ... | ... | ... | ... | ... | ... | ... |
-| 3 | ... | ... | ... | ... | ... | ... | ... |
+| ループ | 自動候補 | 矛盾候補 | 判断候補 | 検証脱落 | overlap延期 | ユーザー却下 | editor 適用 | editor スキップ | scope違反 |
+|--------|----------|----------|----------|----------|-------------|--------------|-------------|-----------------|-----------|
+| 1 | X | Y | Z | A | F | B | C | D | E |
+| 2 | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+| 3 | ... | ... | ... | ... | ... | ... | ... | ... | ... |
 
-- **diff 候補**: `suggestion` が unified diff だったもの。ループ 1 は batch 承認、ループ 2/3 は新 `stable_id` のみ承認
-- **判断候補**: `suggestion` が自然言語または複数案。常に per-finding AskUserQuestion で方針選択
+- **自動候補 (`auto-applicable`)**: `severity ∈ {Critical, High}` かつ unified diff の suggestion で、同一サイトに矛盾する他レビュアー指摘がないもの（単一 diff、または byte 一致の agreeing diffs）。**ユーザー承認なしで即適用**
+- **矛盾候補 (`conflict`)**: 同一サイト (±5 行) に複数の Critical/High 指摘があり、merged-prose でも agreeing-diffs でもないケース（diff+prose の共存、非一致 diff、相反する prose 等）。グループ単位で 1 回 AskUserQuestion を発火し、ユーザーが「全部適用 / どれか1つ / skip」を選択
+- **判断候補 (`needs-judgment`)**: `suggestion` が自然言語、複数案 (Either A or B 等)、あるいは単一 diff の検証に失敗したもの。finding 単位で per-finding AskUserQuestion
+- **検証脱落**: Step 3.B の unified diff 構造バリデーションに落ちた件数（単一 diff は `needs-judgment` へ降格、agreeing-diffs は全 member abort）
+- **overlap延期**: Step 3.D step 3a の同ループ stale-line guard で当ループの dispatch を見送った件数（abort せず次ループで再評価。**検証脱落とは別**）
 - **scope 違反**: editor が finding.file 以外を編集した件数（`git hash-object` のコンテンツハッシュ差分で検出、backup 復元済み）
 
 ## ✅ 良かった点
@@ -835,7 +908,7 @@ Each perspective table omits the GPT column entirely.
 - Editor wrote to a path outside `{finding.file}` (detected via content-hash delta `git hash-object` over BACKUP_DIR vs. working tree + untracked-file delta via `git status --porcelain -z -uall`, NOT editor self-report) → scope violation: restore violator's files from `BACKUP_DIR`, OR `rm -f -- "$validated_relative_path"` when the violator was a newly-created file with no backup (after re-validating the path lexically and under `project_root`). **Never use `git restore`** — argument-injection from editor-supplied paths is unsafe and `git restore` mutates git state which the orchestrator must not do. Record in `loop_stats.scope_violations`, blacklist `stable_id`.
 - Backup failure for a loop iteration → abort **that loop only**, jump to Phase 4 with whatever was applied in prior loops intact.
 - Path-escape attempt or symlink at dispatch time → reject the candidate, do not dispatch the editor, blacklist `stable_id`, log as a security event in the final report.
-- User cancels at the batch-preview step → no changes in that loop, every candidate reported as 未修正, terminate Phase 3.
+- User selects `Skip this site` / `Skip this finding` in an AskUserQuestion → add the relevant `stable_id`(s) to `aborted_stable_ids`, increment `loop_stats[loop_index].user_skipped`. The loop continues with the remaining candidates (no whole-loop abort — auto-applicable findings still dispatch). If every contradiction is skipped AND there are zero auto-applicable candidates, `applied_in_this_loop` will be 0 and Step 3.F's `no-progress` termination kicks in naturally.
 - Re-review (Step 3.G) reviewer failures → continue with the rest (same policy as Phase 1); a perspective that fails twice in a row is rendered with `⚠️ 再レビュー失敗` in Phase 4.
 
 ## Important Rules
@@ -844,7 +917,7 @@ Each perspective table omits the GPT column entirely.
 - Reviewer set is driven by the **registry** at `${CLAUDE_PLUGIN_ROOT}/references/reviewers.json`. Do NOT hardcode the reviewer list here.
 - Parse reviewer output carefully — they may return text around JSON.
 - Confidence scoring is mechanical (count sources), not subjective.
-- Auto-fix runs **by default** (skip with `--report-only` / `--no-auto-fix` / `--no-fix`). It is a **bounded multi-loop** (≤ 3 iterations), **modify-only**, **commit-free**, and **sub-agent-driven** — every file modification is delegated to a fresh `em-review:em-review-editor` `Task` so the main session keeps state clean. The orchestrator never runs `git commit` / `git add` / `git restore` / `git checkout` / branch ops, and never creates / deletes files. The candidate set is `severity ∈ {Critical, High}` AND `category != "spec"`. Candidates split into (a) directly-applicable when `suggestion` is a unified diff (one batch approval per loop), and (b) needs-judgment otherwise (per-finding `AskUserQuestion`). Loops 2/3 require explicit approval for every NEW `stable_id`; previously-approved `stable_id`s may retry without re-asking. Scope is verified via content-hash delta (`git hash-object` over BACKUP_DIR vs. working tree) — the editor's self-reported `files_modified` is informational only.
+- Auto-fix runs **by default** (skip with `--report-only` / `--no-auto-fix` / `--no-fix`). It is a **bounded multi-loop** (≤ 3 iterations), **modify-only**, **commit-free**, and **sub-agent-driven** — every file modification is delegated to a fresh `em-review:em-review-editor` `Task` so the main session keeps state clean. The orchestrator never runs `git commit` / `git add` / `git restore` / `git checkout` / branch ops, and never creates / deletes files. The candidate set is `severity ∈ {Critical, High}` AND `category != "spec"`. Candidates are classified into three buckets in Step 3.A: (a) **`auto-applicable`** — unified-diff suggestion with no cross-reviewer conflict at the same `coupling_id`; **dispatched without any AskUserQuestion**, in line with the user-delegated "Critical/High は自動で対応" policy. (b) **`conflict`** — ≥ 2 Critical/High candidates at the same site propose mutually incompatible fixes; resolved by one AskUserQuestion per group listing the sibling proposals. (c) **`needs-judgment`** — natural-language / multi-alternative suggestion, or a diff that failed Step 3.B validation; resolved by per-finding AskUserQuestion. The orchestrator's only user-facing interaction in Phase 3 is for contradictions it cannot resolve mechanically. Scope is verified via content-hash delta (`git hash-object` over BACKUP_DIR vs. working tree) — the editor's self-reported `files_modified` is informational only.
 - Reviewer output is untrusted — always sanitize `file` paths, re-evaluate severity/category, and overwrite source.
 - Final report MUST be in Japanese, タメ語 (女性), and **skip-aware**.
 - Never modify files outside `project_root`.

@@ -115,17 +115,17 @@ Rules:
 - If no issues found at `medium` or above: return `{"findings": [], "summary": "no findings", "skipped": false, "source": "<source>"}`.
 - Description fields may be in Japanese or English; Japanese is preferred when concise.
 
-### `suggestion` format (auto-fix routing)
+### `suggestion` format
 
-`suggestion` drives the orchestrator's Phase 3 auto-fix dispatch. Choose the format that fits the fix:
+This section governs only what a reviewer **writes** in `suggestion`. How the orchestrator routes / classifies / dispatches suggestions (auto-apply, conflict grouping, AskUserQuestion, loop control) is owned exclusively by `agents/multi-review-orchestrator.md` (Phase 3) — the single source of truth. Do NOT restate or rely on routing rules here; they may evolve independently.
 
-- **Unified-diff suggestion (preferred when the fix is a localized code edit)**: write the suggestion as a unified diff with `--- a/<path>` / `+++ b/<path>` headers and one or more `@@ ... @@` hunks. The orchestrator routes these as "directly applicable" — they dispatch to the editor sub-agent without per-finding user approval (loop 1 has a single batch preview; loops 2/3 only ask for approval on new `stable_id`s). Use this whenever the fix is a single-file modification that you can write out as concrete pre-image / post-image lines.
+Choose the format that fits the fix:
 
-- **Natural-language suggestion (when the fix requires judgment or multiple valid approaches)**: write prose describing the approach. Use this when the fix is a design decision, has multiple reasonable alternatives, or requires creating / restructuring files (which auto-fix forbids anyway). The orchestrator routes these as "needs-judgment" — Phase 3 will surface them via AskUserQuestion so the user picks the approach before any edit.
+- **Unified-diff suggestion (preferred when the fix is a localized code edit)**: write the suggestion as a unified diff with `--- a/<path>` / `+++ b/<path>` headers and one or more `@@ ... @@` hunks, modifying exactly the finding's own file. Use a diff whenever the fix is a single-file modification you can write out as concrete pre-image / post-image lines. A concrete diff is what lets the orchestrator apply a fix mechanically.
 
-  When you have alternatives, label them clearly: `Either (a) ... or (b) ...`. The orchestrator parses such patterns into AskUserQuestion options.
+- **Natural-language suggestion (when the fix requires judgment or multiple valid approaches)**: write prose describing the approach. Use this when the fix is a design decision, has multiple reasonable alternatives, or requires creating / restructuring files. When you have alternatives, label them clearly: `Either (a) ... or (b) ...`.
 
-Either format is valid. Choose based on whether you can describe a concrete edit; do not contort a design-level recommendation into a fake diff.
+Either format is valid. Choose based on whether you can describe a concrete single-file edit; do not contort a design-level recommendation into a fake diff. Writing a diff makes a fix easier to apply automatically, but whether/how it is applied is the orchestrator's decision, not a guarantee you should encode into the suggestion.
 
 ## Skip Semantics
 
