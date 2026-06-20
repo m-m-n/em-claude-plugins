@@ -11,6 +11,7 @@ Walks a feature through `create-spec → create-plan → verify-plan → impleme
 | `/em-sdd:sdd` | Run the full workflow (resumes from `sdd.yaml` progress) |
 | `/em-sdd:sdd status` | Show current workflow state |
 | `/em-sdd:sdd update-spec` | Update SPEC.md and cascade to downstream artifacts |
+| `/em-sdd:sdd remove-feature` | Remove a feature and cascade the deletion across docs + code residue |
 
 ## ⚠️ Trust boundary: sdd.yaml is executed
 
@@ -61,20 +62,24 @@ Tunables via env vars:
 
 ```
 em-sdd/
-├── agents/                              # 7 agents (all internal, no external deps)
+├── agents/                              # 8 agents (all internal, no external deps)
 │   ├── requirements-spec-creator.md     # interactive requirement gathering
 │   ├── implementation-planner.md        # IMPLEMENTATION.md + VERIFICATION.md
 │   ├── plan-consistency-verifier.md     # design review (Claude-only)
 │   ├── implementation-executor.md       # TDD execution
 │   ├── tdd-implementation-verifier.md   # build/test runner (haiku)
 │   ├── verification-executor.md         # SPEC compliance / E2E / etc.
-│   └── spec-updater.md                  # spec change cascading
+│   ├── spec-updater.md                  # spec change cascading
+│   └── feature-remover.md               # feature deletion cascading (docs + code)
 ├── skills/
 │   ├── sdd/                             # main orchestrator
 │   ├── sdd.1-create-spec/ … sdd.6-verify/
-│   ├── sdd.status/ sdd.update-spec/
+│   ├── sdd.status/ sdd.update-spec/ sdd.remove-feature/
 │   ├── sdd-templates/                   # 4 document templates
 │   └── implementation-plan-writing/     # planning rules (preloaded by planner)
+├── references/
+│   ├── command-execution-protocol.md    # sdd.yaml command approval gate
+│   └── feature-removal-checklist.md     # feature removal knowledge (preloaded by remover)
 └── hooks/
     ├── hooks.json                       # Stop hook registration
     └── sdd-stop-guard.ts                # auto-continuation guard (Bun)

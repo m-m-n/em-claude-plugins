@@ -1,8 +1,8 @@
 {
   "name": "em-sdd",
-  "description": "Spec-Driven Development (SDD) workflow orchestrator. Walks a feature through create-spec → create-plan → verify-plan → implement → check → verify, tracking progress in sdd.yaml. Includes /em-sdd:sdd.status and /em-sdd:sdd.update-spec for inspection and spec changes.",
+  "description": "Spec-Driven Development (SDD) workflow orchestrator. Walks a feature through create-spec → create-plan → verify-plan → implement → check → verify, tracking progress in sdd.yaml. Includes /em-sdd:sdd.status, /em-sdd:sdd.update-spec, and /em-sdd:sdd.remove-feature for inspection, spec changes, and feature removal.",
   "author": {
     "name": "em"
   },
-  "version": "0.1.5"
+  "version": "0.1.6"
 }
