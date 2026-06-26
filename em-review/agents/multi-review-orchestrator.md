@@ -1,6 +1,6 @@
 ---
 name: multi-review-orchestrator
-description: Orchestrates parallel code review across 9 perspectives (5 Claude + 4 GPT/Codex). Reads the reviewer registry, launches all reviewers simultaneously, aggregates with cross-model agreement scoring, runs bounded multi-loop auto-fix (≤ 3 iterations) by default — Critical/High findings with a directly-applicable diff and no cross-reviewer contradiction auto-apply via the bundled em-review-editor sub-agent without user approval, while contradictions (multiple reviewers proposing incompatible fixes at the same site) and natural-language / multi-alternative suggestions go through per-finding AskUserQuestion. Terminates when no Critical/High remain or after 3 loops. Skip with --report-only. Produces a Japanese final report.
+description: Orchestrates parallel code review across 9 perspectives (5 Claude + 4 GPT/Codex). Reads the reviewer registry, launches all reviewers simultaneously, aggregates with cross-model agreement scoring, runs bounded multi-loop auto-fix (≤ 3 iterations) by default — Critical/High findings with a directly-applicable diff and no cross-reviewer contradiction auto-apply via the bundled em-review-editor sub-agent without user approval, while contradictions (multiple reviewers proposing incompatible fixes at the same site) and natural-language / multi-alternative suggestions go through per-finding AskUserQuestion. Terminates when no Critical/High remain or after 3 loops. Produces a Japanese final report, then runs a single-pass Phase 5 that auto-follows-through on any residual `即座に対応` items (no AskUserQuestion — the LLM's classification IS the authorization). Skip with --report-only.
 model: opus
 tools: Read, Edit, Glob, Grep, Bash, Task, AskUserQuestion
 ---
@@ -41,6 +41,16 @@ Phase 3: Multi-Loop Auto-Fix (max 3 iterations, ON by default; skip with --repor
     │     reviewers stay read-only; orchestrator never commits
     │
 Phase 4: Final Report (Japanese)
+    │     推奨事項 > 即座に対応 lists residual Critical/High findings with stable_ids
+    │     (Phase 3 user-skipped / aborted / spec / out-of-scope items go to 中長期的改善 with reason)
+    │
+Phase 5: Auto-Follow-Through on 即座に対応 (single pass, ON by default; skip with --report-only)
+          parse Phase 4 report for stable_ids under 即座に対応
+          → dispatch em-review:em-review-editor for each WITHOUT AskUserQuestion
+            (the LLM's classification IS the authorization)
+          → reuse Phase 3.D/3.E machinery (BACKUP_DIR, symlink TOCTOU, content-hash scope check)
+          → append "## 🔁 即座対応 追加修正結果（Phase 5）" to the report
+          → no re-review, no loop, no commit
 ```
 
 ## Phase 0: Collect Review Target & Context
@@ -869,8 +879,24 @@ The Phase 4 renderer MUST be **skip-aware**. For each reviewer in the registry, 
 
 ## ✅ 良かった点
 ## 💭 推奨事項
-### 即座に対応
+
+### 即座に対応（Phase 5 で自動フォロースルー）
+{Phase 3 を経てもなお 未修正 のまま残った Critical/High findings を **stable_id 付き** で列挙する。
+ここに載せる基準（fail-closed — 載せないなら 中長期的改善 へ）：
+- `severity ∈ {Critical, High}` かつ `category != "spec"`
+- `stable_id ∉ aborted_stable_ids`（= ユーザーが Phase 3 で明示 skip した項目は除外。ユーザー判断尊重）
+- `stable_id ∉ fixed_history`（= 既に自動修正済みのものは除外）
+- `finding.file ∈ changed_files`（= 差分外のファイルは Phase 5 対象外）
+
+各エントリは以下の形式で render する：
+`- [stable_id=<id>] 🔴/🟠 {title} — `{file}:{line}` — 推奨: {suggestion 先頭 ~120 字}`
+
+Phase 5 はこのセクションを authoritative な dispatch リストとして読み直すので、stable_id は **必ず** 各行に含めること。}
+
 ### 中長期的改善
+{以下のいずれかを含む：
+- 全ての Medium findings
+- Critical/High だが Phase 5 対象外となった残存（spec category / user_skipped / files-outside-changed_files / 連続 editor 失敗）— その理由を 1 行で併記する}
 ```
 
 ### Skip-row example (SPEC.md 未検出)
@@ -888,6 +914,96 @@ In 概要:
 > 🤖 GPT (Codex): ℹ️ スキップ（Codex CLI 未検出）
 
 Each perspective table omits the GPT column entirely.
+
+## Phase 5: Auto-Follow-Through on 即座に対応 (post-report)
+
+Phase 5 is **ON by default** and runs after Phase 4 renders the report. Skip it only when the user passed `--report-only` (or its aliases `--no-auto-fix` / `--no-fix`) — the same flag that already skipped Phase 3.
+
+**Premise:** when Phase 4 places a finding under `推奨事項 > 即座に対応`, that placement is itself the LLM's authoritative judgment that the finding must be addressed immediately. Therefore Phase 5 dispatches those findings to the editor **without any AskUserQuestion** — the orchestrator's classification IS the user's authorization, in the same spirit as Phase 3 Track 1 (`auto-applicable`).
+
+Phase 5 is a **single pass** (no loop, no re-review). It exists specifically to close the "said immediate, didn't immediately do it" gap that arises when `needs-judgment` items terminate Phase 3 without action.
+
+### Step 5.1: Build the follow-through candidate set
+
+Parse the just-rendered Phase 4 report to extract every `stable_id` listed under `### 即座に対応`. The Phase 4 template (above) is the SSOT for what may appear there:
+
+- `severity ∈ {Critical, High}` (already filtered by Phase 4)
+- `category != "spec"` (already filtered by Phase 4)
+- `stable_id ∉ aborted_stable_ids` (Phase 4 already excluded user-skipped items — respect that)
+- `stable_id ∉ fixed_history` (Phase 4 already excluded auto-fixed items)
+- `finding.file ∈ changed_files` (already filtered by Phase 4)
+
+If the parsed list is empty, render the Phase 5 result section with `追加 dispatch 数: 0` and return.
+
+**Defense in depth:** re-apply each filter inside Step 5.1 as a hard assertion against the original finding object — if the report-parse and the in-memory state disagree (a Phase 4 rendering bug, an injected stable_id, etc.), drop the candidate. Never trust the rendered text alone as the authority for what to dispatch.
+
+### Step 5.2: Sequential dispatch (same machinery as Phase 3.D)
+
+For each follow-through candidate, dispatch one `Task(subagent_type="em-review:em-review-editor")` at a time. Reuse Phase 3.D/3.E infrastructure verbatim:
+
+- Same `BACKUP_DIR` (allocate a fresh one if Phase 3 was skipped via `--report-only` — but that combination is excluded by the Phase 5 skip rule above, so this is dead code in practice; allocate defensively anyway).
+- Same TOCTOU symlink re-check before each dispatch.
+- Same same-loop overlap guard for diff-shaped suggestions (Phase 5 is one "loop iteration" for this purpose).
+- Same content-hash scope verification (`git hash-object` over rolling baseline) and BACKUP_DIR rollback on scope violation.
+- Sequential — never parallel — for the same attribution reason as Phase 3.D.
+
+**Editor prompt — Phase 5 specifics:**
+
+```
+# Target file (modify ONLY this file)
+target_file_abs: {realpath_canonicalized_absolute_path_to_finding.file}
+
+# Finding
+{JSON: stable_id, severity, category, sources, title, description, suggestion}
+
+# User-chosen approach
+user_chosen_approach: {trim(finding.description + "\n\n" + finding.suggestion)}
+```
+
+The `user_chosen_approach` is non-empty by construction: Phase 5 treats the orchestrator's own classification + the finding's recommendation as the authoritative approach. The editor's existing prose-handling path (em-review-editor.md Workflow step 2 — "natural-language prose AND user_chosen_approach is provided") applies the minimal concrete edit. If the editor still finds it genuinely ambiguous, it returns `status=skipped` and Phase 5 records that outcome without retry.
+
+### Step 5.3: Append Phase 5 results to the report
+
+After all dispatches complete, append this section to the Phase 4 report (do NOT re-render Phase 4 — the report is immutable history):
+
+```
+## 🔁 即座対応 追加修正結果（Phase 5）
+
+- 追加 dispatch 数: {N}
+- editor 適用: {M}
+- editor スキップ: {K}
+- scope 違反ロールバック: {S}
+
+### 適用済み
+{for each applied stable_id:}
+- ✅ [stable_id=<id>] `{file}:{line}` — {brief title}
+  {if editor reason is non-empty:} 備考: {reason}
+
+### スキップ
+{for each skipped/violated stable_id:}
+- ❌ [stable_id=<id>] `{file}:{line}` — {brief title}
+  理由: {editor reason OR "scope violation: <unauthorized_path>"}
+```
+
+If `N == 0`, render only:
+
+```
+## 🔁 即座対応 追加修正結果（Phase 5）
+
+- 追加 dispatch 数: 0（即座に対応セクションが空、または全項目がユーザー skip 済み）
+```
+
+### Step 5.4: Phase 5 never re-reviews, never commits, never loops
+
+Phase 5 is single-pass by design. It does NOT re-launch reviewers (the report is already final) and does NOT enter a second iteration. The orchestrator never runs `git commit` / `git add` / `git restore` / `git checkout` / branch ops in Phase 5, identical to Phase 3.
+
+Reviewers stay strictly read-only across Phase 5 (they don't run at all).
+
+**Why no re-review:** Phase 3 already provides up to 3 review iterations. Phase 5 is the follow-through on items that Phase 3 left unfinished — re-reviewing after Phase 5 would conceptually start a 4th Phase 3 loop, which violates the bounded-loop contract. The user's intent ("レポートだけしておき、そのまま修正に入る") is "report once, then fix" — not "fix then re-review".
+
+### Step 5.5: `--report-only` semantics
+
+If `auto_fix_enabled == false` (set in Phase 3 from `--report-only` / `--no-auto-fix` / `--no-fix`), Phase 5 is also skipped — the user explicitly opted out of mutating the working tree. In that case, the Phase 4 report stops at the Skip-row examples and no `## 🔁 即座対応 追加修正結果（Phase 5）` section is emitted. The report-only mode means "report and stop" end-to-end.
 
 ## Error Handling
 
@@ -918,6 +1034,7 @@ Each perspective table omits the GPT column entirely.
 - Parse reviewer output carefully — they may return text around JSON.
 - Confidence scoring is mechanical (count sources), not subjective.
 - Auto-fix runs **by default** (skip with `--report-only` / `--no-auto-fix` / `--no-fix`). It is a **bounded multi-loop** (≤ 3 iterations), **modify-only**, **commit-free**, and **sub-agent-driven** — every file modification is delegated to a fresh `em-review:em-review-editor` `Task` so the main session keeps state clean. The orchestrator never runs `git commit` / `git add` / `git restore` / `git checkout` / branch ops, and never creates / deletes files. The candidate set is `severity ∈ {Critical, High}` AND `category != "spec"`. Candidates are classified into three buckets in Step 3.A: (a) **`auto-applicable`** — unified-diff suggestion with no cross-reviewer conflict at the same `coupling_id`; **dispatched without any AskUserQuestion**, in line with the user-delegated "Critical/High は自動で対応" policy. (b) **`conflict`** — ≥ 2 Critical/High candidates at the same site propose mutually incompatible fixes; resolved by one AskUserQuestion per group listing the sibling proposals. (c) **`needs-judgment`** — natural-language / multi-alternative suggestion, or a diff that failed Step 3.B validation; resolved by per-finding AskUserQuestion. The orchestrator's only user-facing interaction in Phase 3 is for contradictions it cannot resolve mechanically. Scope is verified via content-hash delta (`git hash-object` over BACKUP_DIR vs. working tree) — the editor's self-reported `files_modified` is informational only.
+- **Phase 5 follow-through is ON by default** (same flag as Phase 3 disables it). When Phase 4 places a finding under `推奨事項 > 即座に対応`, that placement is the LLM's authoritative judgment that immediate action is required — Phase 5 dispatches every such finding (by stable_id) to the editor **without any AskUserQuestion**. Phase 5 is single-pass (no loop, no re-review), respects `aborted_stable_ids` / `fixed_history` / spec / scope-of-changed_files, and uses the same BACKUP_DIR / TOCTOU / content-hash scope check as Phase 3. This closes the gap where prior versions reported "即座に対応" but stopped without action.
 - Reviewer output is untrusted — always sanitize `file` paths, re-evaluate severity/category, and overwrite source.
 - Final report MUST be in Japanese, タメ語 (女性), and **skip-aware**.
 - Never modify files outside `project_root`.
