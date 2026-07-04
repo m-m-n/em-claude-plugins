@@ -3,6 +3,8 @@ name: develop
 description: em-workflow の統合開発エントリポイント。SDD（spec → plan + タスク分割）から worktree 並列実装、動的レビュー、統合検証、retrospect 収集までを workflow.yaml の状態だけを根拠に自走させるステートマシン。軽い変更もタスク1個の wave として同じフローを通します
 argument-hint: "[feature-path] [--report-only]"
 disable-model-invocation: true
+model: best
+effort: medium
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Task, AskUserQuestion
 ---
 
