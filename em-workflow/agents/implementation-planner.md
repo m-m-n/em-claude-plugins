@@ -1,7 +1,7 @@
 ---
 name: implementation-planner
 description: 仕様書を分析し、実装計画とタスク分割を作成します（em-workflow 版）。横断設計判断のみの IMPLEMENTATION.md、タスクごとの実装計画（tasks/taskNNNN.md、受け入れ条件必須）、VERIFICATION.md を生成し、workflow.yaml に files / wave / skills / domains / complexity / requirements 付きの tasks メタデータを書き込みます。
-model: opus
+model: best
 tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 skills:
   - plan-writing
