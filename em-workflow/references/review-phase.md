@@ -186,7 +186,8 @@ Classification (mechanical only — never fuzzy semantic judgment):
 Dispatch:
 
 - **auto-applicable** → dispatch WITHOUT AskUserQuestion (one informational
-  line per loop: `Loop N/3: auto-applying X, asking Y conflicts / Z judgment`).
+  line per loop: `Loop N/3 ({sequential|wave-parallel}): auto-applying X,
+  asking Y conflicts / Z judgment`).
 - **conflict** → ONE AskUserQuestion per group: one option per sibling
   (+ `Apply all` only when every member is a diff, + always `Skip this
   site`). Pick-one aborts non-chosen siblings; skip aborts all members.
@@ -194,34 +195,68 @@ Dispatch:
   or `Apply as-is (editor interprets)` + `Skip`. Freeform answer becomes
   `user_chosen_approach`.
 
-Each approved candidate dispatches **sequentially** to
-`Task(subagent_type="em-workflow:review-editor")` with
-`target_file_abs` (realpath-canonicalized, under project_root) + the finding
-JSON + `user_chosen_approach`. Sequential dispatch is mandatory — scope
-attribution breaks under parallel editors.
+Each approved candidate dispatches to
+`Task(subagent_type="em-workflow:review-editor")` with `target_file_abs`
+(realpath-canonicalized, under project_root) + the finding JSON +
+`user_chosen_approach`. Dispatch mode is chosen per loop by the number of
+DISTINCT target files among the loop's approved candidates:
 
-Scope verification per dispatch (em-review mechanism, condensed):
+- **1 distinct file → sequential**: one dispatch at a time, per-dispatch
+  scope verification (below). Same-file candidates must never run
+  concurrently — per-editor hash attribution requires it.
+- **≥ 2 distinct files → wave-parallel**: group the approved candidates into
+  per-file lanes (within a lane, order by dispatched stable_id). Wave k = the
+  k-th candidate of every lane; all Task calls of one wave go in a SINGLE
+  message. Every target file within a wave is distinct by construction.
+  Scope verification is per WAVE (below); any violation reverts the whole
+  wave and re-runs it sequentially, restoring full per-editor attribution.
 
-- Before the loop's first dispatch: `BACKUP_DIR=$(mktemp -d)` (0700, trap
-  cleanup), snapshot all target files, snapshot untracked list
-  (`git status --porcelain -z -uall`), init rolling `current_hashes[rel]`
-  from backups via `git hash-object`.
-- Before each dispatch: re-check the target is not a symlink (TOCTOU).
-  Stale-line guard: if an earlier dispatch this loop already modified the
-  same file, re-verify the diff pre-image still matches; mismatch → defer to
-  next loop (do NOT abort the stable_id).
-- After each dispatch: re-hash all targets; the delta vs `current_hashes` is
-  this editor's modification set. Exactly `finding.file` and nothing else
-  (and no new untracked file) → authorized; update the rolling baseline.
-  Anything else → scope violation: restore from BACKUP_DIR (`cp -p`); a new
-  untracked violator file is moved to the trash after lexical re-validation
+Scope verification (em-review mechanism, condensed). Loop setup, both modes —
+before the loop's first dispatch: `BACKUP_DIR=$(mktemp -d)` (0700, trap
+cleanup), snapshot all target files, snapshot untracked list
+(`git status --porcelain -z -uall`), init rolling `current_hashes[rel]`
+from backups via `git hash-object`.
+
+Sequential mode, per dispatch:
+
+- Before: re-check the target is not a symlink (TOCTOU). Stale-line guard:
+  if an earlier dispatch this loop already modified the same file, re-verify
+  the diff pre-image still matches; mismatch → defer to next loop (do NOT
+  abort the stable_id).
+- After: re-hash all targets; the delta vs `current_hashes` is this editor's
+  modification set. Exactly `finding.file` and nothing else (and no new
+  untracked file) → authorized; update the rolling baseline. Anything else →
+  scope violation: restore from BACKUP_DIR (`cp -p`); a new untracked
+  violator file is moved to the trash after lexical re-validation
   (`gio trash --` — fallback `mv` into a `mktemp -d` holding dir; never
   `rm -f`, so the unauthorized content stays inspectable), abort the
   stable_id, count it. Editor said `applied` but hash unchanged → treat as
   skipped.
-- Editor `skipped`/violation → abort only the dispatched id (group siblings
-  re-derive next loop — the working set shrinks monotonically, guaranteeing
-  progress).
+
+Wave-parallel mode, per wave:
+
+- Before the wave: re-check every target in the wave is not a symlink
+  (TOCTOU). Stale-line guard per lane: if a previous wave modified the
+  lane's file, re-verify this candidate's diff pre-image still matches;
+  mismatch → defer that candidate to the next loop (later candidates in the
+  lane shift up one wave).
+- After ALL editors of the wave return: re-hash all targets ONCE; the delta
+  vs `current_hashes` is the wave's combined modification set. Authorized
+  iff (a) the delta ⊆ {targets whose editor reported `applied`}, (b) no new
+  untracked file, and (c) every editor's self-reported `files_modified` is
+  exactly `[own target]` on `applied` / `[]` on `skipped`. All hold → update
+  the rolling baseline; a lane that reported `applied` with an unchanged
+  target hash → treat as skipped.
+- Any condition fails → the violation cannot be attributed to one editor:
+  **revert & serialize**. Restore every file in the delta from BACKUP_DIR
+  (`cp -p`), trash new untracked violators (same `gio trash` rule), then
+  re-run ALL of this wave's candidates through sequential mode above — the
+  violator is caught and aborted individually there. Never abort stable_ids
+  at wave granularity.
+
+Both modes: editor `skipped`/violation → abort only the dispatched id (group
+siblings re-derive next loop — the working set shrinks monotonically,
+guaranteeing progress).
 
 develop-駆動 only: after each loop with `applied > 0`, commit the fixes in
 the integration worktree:
