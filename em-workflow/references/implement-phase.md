@@ -38,8 +38,10 @@ integration branch, materialized in its own worktree:
   completion (so the merged result carries the final records).
 - At develop completion the user is offered — via AskUserQuestion — a merge of
   the integration branch into `base_branch` (executed as a normal `git merge`
-  in the main working tree after a cleanliness check). Declining leaves the
-  integration branch in place for manual handling.
+  in the main working tree after a cleanliness check). After a successful
+  merge the integration branch is deleted (worktree removed first, then
+  `git branch -d`). Declining leaves the integration branch in place for
+  manual handling.
 
 ## Step I.0: Preconditions
 

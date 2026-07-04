@@ -21,7 +21,7 @@ em-sdd（SDD ワークフロー）と em-review（並列多観点レビュー）
 ```
 
 - 進捗の SSOT は `feature-docs/{feature}/workflow.yaml`（step 状態 + tasks メタデータ + review plan/サマリ + requirements マッピング）。スキーマは `references/workflow-schema.md`。
-- ユーザーのブランチには一切コミットしない。全ワークフローコミットは専用の `em-workflow/{feature}/integration` ブランチに載り、完了時にマージを提案する。
+- ユーザーのブランチには一切コミットしない。全ワークフローコミットは専用の `em-workflow/{feature}/integration` ブランチに載り、完了時にマージを提案する。マージ後は integration ブランチを削除する（マージしなかった場合は残す）。
 - 軽い変更もタスク 1 個 × wave 1 個として同じフローを通す（従来型モードは持たない）。
 
 ## コマンド
