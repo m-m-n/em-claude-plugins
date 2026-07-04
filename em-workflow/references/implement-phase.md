@@ -142,14 +142,15 @@ wave W's task count against the cap:
   chunks and chunk sizes) alongside the wave in the phase's per-wave stats
   (I.3).
 
-Before launching the wave, pre-approve non-allowlisted commands: evaluate
-each task's `project_commands` (build/test/format) in this wave against the
-command-execution-protocol.md allowlist. For each command string that does
-not match the allowlist, the orchestrator (which holds AskUserQuestion) runs
-the protocol's approval gate once and caches the accepted literal command
-string for the wave/session (no re-confirmation of the same string). Rejected
-commands are not added to `approved_commands` — the implementer refuses them
-per its existing behavior (worktree-task-workflow skill).
+Before launching the wave, verify every `project_commands` string
+(build/test/format) used by this wave is in the approval store
+(`bash_guard.py --list`; command-execution-protocol.md). Anything
+unapproved: run the protocol's approval gate now (AskUserQuestion →
+`--record`) — the PreToolUse hook denies unapproved workflow.yaml strings
+inside implementer worktrees, so approving up front avoids mid-wave
+failures. Commands the user rejects stay unapproved: the hook denies them
+and the implementer reports failure instead of working around it
+(worktree-task-workflow skill).
 
 Prompt payload per task:
 
@@ -166,7 +167,6 @@ project_commands:
   build: {workflow.yaml project.components.*.build_command}
   test: {...test_command}
   format: {...format_command}
-approved_commands: {literal command strings the orchestrator pre-approved above; empty if all project_commands are already allowlisted}
 expected_files: {tasks.{T}.files}
 ```
 

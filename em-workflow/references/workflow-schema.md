@@ -34,10 +34,10 @@ project:
   components:
     main:                          # one entry per buildable component
       language: {language}
-      build_command: "{cmd}"       # free-form shell — subject to the
-      test_command: "{cmd}"        # command-execution approval gate
-      format_command: "{cmd}"
-      e2e_test_command: "{cmd or empty}"
+      build_command: "{cmd}"       # free-form shell — MUST be a single-line
+      test_command: "{cmd}"        # scalar; user-approved via the approval
+      format_command: "{cmd}"      # gate and enforced verbatim by the
+      e2e_test_command: "{cmd or empty}"   # PreToolUse hook (see below)
 
 workflow:                          # fixed step sequence; orchestrator advances it
   - id: create-spec
@@ -101,6 +101,24 @@ requirements:                      # traceability SSOT (em-sdd pattern)
     tasks: [task0001]              # filled by implementation-planner
     tests: [TS-1]                  # VERIFICATION.md scenario IDs
 ```
+
+## Command approval store (outside the repository)
+
+The four `*_command` fields are repository-controlled shell strings. They
+run only after user approval, which lives in
+`~/.claude/em-workflow/approvals.json` — user-owned, never shipped by a
+clone — keyed by the repo's git common dir (shared across worktrees). The
+plugin's `PreToolUse` hook (`hooks/bash_guard.py`) enforces this on every
+Bash call: approved exact string → allow, declared-but-unapproved → deny.
+Details: `references/command-execution-protocol.md`.
+
+Schema consequences:
+
+- Command values MUST be single-line scalars (the hook's extractor is
+  line-based; a block-scalar command never gets an allow decision and falls
+  back to the normal permission prompt).
+- Editing a command string in workflow.yaml invalidates its approval — the
+  orchestrator re-runs the approval gate on the next hook deny.
 
 ## Sibling artifacts
 

@@ -71,10 +71,21 @@ Codex クロスバリデーションは強度の軸として分離: complexity h
 - Critical/High が未修正のままワークフローを完了させないゲートあり。
 - develop の最終フェーズが `retrospect.yaml` に痕跡（レビュー Critical/High、コンフリクトやり直し、files 予測ミス、裁量層の観点追加、declined findings）を自動収集し、`/em-workflow:retrospect` が横断分析 → **ユーザー承認付きで**スキル / ルール表へ還元する。自動追記はしない。
 
+## コマンド実行ガード（workflow.yaml 由来のシェル文字列）
+
+workflow.yaml の build / test / format / e2e コマンドはリポジトリ管理の自由記述シェルであり、悪意あるリポジトリでは RCE の入口になりうる。em-workflow は「LLM が提案し、hook が裁く」の分離で守る（詳細: `references/command-execution-protocol.md`）:
+
+1. **事前一括承認**: create-spec（または develop の Step A.5）が全コマンド文字列を出典フィールド・実体の説明つきで提示し、AskUserQuestion で一括承認。承認は `~/.claude/em-workflow/approvals.json`（リポジトリ外・ユーザー管理。git common dir をキーに同一リポジトリの全 worktree で共有）へ記録する
+2. **実行時強制**: プラグイン同梱の PreToolUse hook（`hooks/bash_guard.py`）が全 Bash コールを機械的に検査する — 承認済み文字列と完全一致 → allow、workflow.yaml 記載かつ未承認 → deny、禁止パターン（sudo / curl-pipe-shell / プロジェクト外 rm 等）→ 承認済みでも deny。hook は LLM ではなくコードなので、プロンプトインジェクションで判定を曲げられない
+3. workflow.yaml と無関係なコマンドには判定を出さない（Claude Code 標準の権限フローのまま）
+
+これにより develop 実行中の確認プロンプトは、開発するプロダクトに関する質問だけになる。
+
 ## 要件
 
 - git ≥ 2.40（`git merge-tree --write-tree --name-only`；2.38/2.39 は事前チェックで弾かれる）
 - flock（util-linux）— stock macOS には無いため別途インストールが必要
+- python3 — コマンド実行ガードの hook。無い環境では hook が非ブロッキングで抜け、コマンドごとの AskUserQuestion フォールバックゲートに切り替わる
 - Codex CLI（任意 — 無ければ GPT クロスバリデーションはクリーンにスキップ）
 
 ## 既存プラグインとの関係

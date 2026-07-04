@@ -126,6 +126,19 @@ the SSOT — do not invent fields):
 - `requirements`: one entry per FR/NFR from SPEC.md with `title`,
   `status: ok` (or `tbd` + `tbd_reason`), empty `tasks` / `tests`.
 
+### Phase 5.6: Command approval gate
+
+After writing workflow.yaml, run the approval gate from
+`${CLAUDE_PLUGIN_ROOT}/references/command-execution-protocol.md`: present
+every detected build / test / format / e2e command **verbatim** with its
+source field and one factual line on what it resolves to (e.g. which
+package.json script), collect bulk approval via AskUserQuestion
+(multiSelect), and record the approved strings with `bash_guard.py --record`.
+Do this even when detection was unambiguous — the user must see every
+command string once before anything may execute it. Commands the user does
+not approve stay in workflow.yaml but will be denied by the PreToolUse hook
+until approved.
+
 ## Output Format
 
 Report completion in Japanese: created file paths (REQUIREMENTS.md / SPEC.md /
