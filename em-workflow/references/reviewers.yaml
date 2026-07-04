@@ -1,0 +1,44 @@
+# reviewers.yaml - Review-perspective registry (em-workflow SSOT)
+#
+# Unlike em-review (one agent file per perspective), em-workflow uses TWO
+# generic reviewer agents (em-workflow:reviewer for Claude,
+# em-workflow:codex-reviewer for GPT/Codex) and injects the perspective as a
+# skill. This registry maps each perspective to its skill and skip rules.
+#
+# The review phase reads this file to drive fan-out:
+# - For each SELECTED perspective (per review-rules.yaml + discretion), launch
+#   em-workflow:reviewer with instructions to load `claude_skill` via the
+#   Skill tool.
+# - When codex cross-validation fires, ALSO launch em-workflow:codex-reviewer
+#   for each selected perspective with codex_supported: true. The codex
+#   reviewer loads the SAME perspective skill (plus its preloaded
+#   codex-prompting skill) and forwards the perspective brief to Codex CLI.
+#
+# requires_spec: perspective only runs when a SPEC.md is available.
+# codex_supported: whether the codex reviewer can cross-validate this
+#   perspective (comprehensive is Claude-only by design — its value is
+#   breadth inside one context, which does not translate to a second model).
+
+version: 1
+
+perspectives:
+  - perspective: security
+    claude_skill: review-security
+    requires_spec: false
+    codex_supported: true
+  - perspective: performance
+    claude_skill: review-performance
+    requires_spec: false
+    codex_supported: true
+  - perspective: architecture
+    claude_skill: review-architecture
+    requires_spec: false
+    codex_supported: true
+  - perspective: spec
+    claude_skill: review-spec
+    requires_spec: true
+    codex_supported: true
+  - perspective: comprehensive
+    claude_skill: review-comprehensive
+    requires_spec: false
+    codex_supported: false

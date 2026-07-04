@@ -23,6 +23,15 @@
       },
       "category": "workflow",
       "source": "./em-sdd"
+    },
+    {
+      "name": "em-workflow",
+      "description": "Unified SDD + parallel-implementation + dynamic-review workflow (successor to em-sdd + em-review). /em-workflow:develop drives spec → plan with task decomposition → wave-based parallel implementation in git worktrees → dynamic review selection (rule floor + discretion) → bounded auto-fix → retrospect collection. Skill-injected generic implementer/reviewer agents; review records persist per round.",
+      "author": {
+        "name": "em"
+      },
+      "category": "workflow",
+      "source": "./em-workflow"
     }
   ]
 }

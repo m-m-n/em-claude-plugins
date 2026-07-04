@@ -1,0 +1,45 @@
+# impl-skills.yaml - Implementation-skill registry (em-workflow SSOT)
+#
+# The implementation-planner reads this file and assigns each task a `skills`
+# list in workflow.yaml. The orchestrator passes those names to the implementer
+# agent, which loads them via the Skill tool at startup (dynamic injection).
+#
+# Classification axis: LAYER ONLY. No language axis, no work-type axis —
+# language knowledge lives in the model; language-specific skills are added
+# here only when a project forces a genuinely unusual usage pattern.
+# Build/test commands per language are resolved from workflow.yaml
+# project.components, not from skills.
+#
+# `skills` in workflow.yaml is a list, so composite injection is possible from
+# day one (e.g. [backend-impl, some-later-added-skill]).
+#
+# Fallback: a task matching NO entry gets an empty skills list and runs with
+# the implementer's preloaded discipline skills only. This is explicit and
+# expected — do not force-fit a layer skill onto a task that has none.
+#
+# Adding a skill = create skills/<name>/SKILL.md + add one entry here.
+
+version: 1
+
+skills:
+  - name: design-impl
+    layer: design
+    select_when: >-
+      The task's primary output is visual: UI design, styling, layout,
+      component appearance, theming, accessibility of rendered UI.
+  - name: frontend-impl
+    layer: frontend
+    select_when: >-
+      The task's primary output is client-side behavior: state management,
+      component structure/wiring, async data flow, event handling,
+      client-side routing.
+  - name: backend-impl
+    layer: backend
+    select_when: >-
+      The task's primary output is server-side or core-domain logic: API
+      endpoints, business rules, data access, transactions, background jobs.
+  - name: infra-impl
+    layer: infra
+    select_when: >-
+      The task's primary output is configuration or automation: CI pipelines,
+      build scripts, deployment config, tooling setup, environment wiring.

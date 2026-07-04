@@ -1,0 +1,10 @@
+# Codex CLI Configuration (em-workflow plugin)
+# Provides ONLY the timeout default sourced by scripts/run_codex_exec.sh.
+# All flags and sandbox presets are owned by the script itself — do not add
+# config here expecting the wrapper to pick it up.
+#
+# Model is managed by the user's ~/.codex/config.toml (not overridden by wrapper).
+# Run `codex --help` or check Codex docs for the current model list.
+
+# Timeout in seconds (default; for open-ended investigations)
+timeout: 600

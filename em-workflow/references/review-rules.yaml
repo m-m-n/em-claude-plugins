@@ -1,0 +1,58 @@
+# review-rules.yaml - Mechanical review-selection rule table (em-workflow SSOT)
+#
+# Layer 1 (mechanical floor): evaluated DETERMINISTICALLY against the tasks
+# metadata in workflow.yaml (domains / complexity). Input is ONLY the declared
+# metadata — never the diff. The result is the REQUIRED review set (the floor).
+#
+# Layer 2 (discretionary): the orchestrator may ADD perspectives after looking
+# at the integrated diff. It may NEVER remove anything the floor selected.
+# Every discretionary addition is recorded in workflow.yaml review.plan with
+# a reason (audit trail; feeds rule-table growth via /em-workflow:retrospect).
+#
+# Evaluation semantics:
+# - baseline perspectives are always included.
+# - A rule fires when ANY of its if_domains values appears in the UNION of
+#   all tasks' domains, or when if_complexity matches ANY task's complexity.
+# - require lists are unioned; duplicates collapse.
+# - spec_review: always → the spec perspective is unconditionally included
+#   (the SDD flow guarantees SPEC.md exists). In standalone /em-workflow:review
+#   without a SPEC.md, spec is dropped with a skip notice instead.
+#
+# Codex cross-validation (intensity axis, separate from perspective selection):
+# fires when ANY task has complexity: high, OR the FINAL selected set
+# (floor + Layer 2 discretionary additions) includes security. Layer 1
+# computes a provisional value from this table; the orchestrator re-evaluates
+# it after Layer 2 (review-phase.md R1), so a discretionarily-added security
+# perspective also fires it. When it fires, each selected perspective that
+# the codex reviewer supports is double-run (claude + codex) for agreement
+# scoring.
+#
+# domains vocabulary (fixed, 8 values — planner assigns from these only):
+#   auth / input-handling / data-persistence / external-io / concurrency /
+#   api-contract / ui / config-infra
+# complexity vocabulary: low / medium / high
+#
+# This table is expected to GROW through operation. Add rules; keep them
+# deterministic; never encode diff-content conditions here (that is Layer 2's
+# job).
+
+baseline: [comprehensive]
+
+rules:
+  - if_domains: [auth, input-handling]
+    require: [security]
+  - if_domains: [data-persistence]
+    require: [security, performance]
+  - if_domains: [concurrency, external-io]
+    require: [performance]
+  - if_domains: [api-contract]
+    require: [architecture]
+  - if_complexity: high
+    require: [architecture, comprehensive]
+
+spec_review: always
+
+codex_cross_validation:
+  when_any:
+    - complexity: high
+    - selected_perspective: security
