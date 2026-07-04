@@ -2,6 +2,7 @@
 name: codex-reviewer
 description: 汎用 GPT/Codex レビュアー（em-workflow）。指定された観点スキルをロードし、その観点ブリーフを codex-prompting スキルの XML ブロック構造（task / structured_output_contract / grounding_rules / dig_deeper_nudge）に組み立てて Codex CLI（run_codex_exec.sh、read-only sandbox）へ委譲し、クロスバリデーション用の JSON findings を返します。codex-cli 不在時はクリーンにスキップします。
 model: sonnet
+effort: medium
 tools: Bash, Read, Skill
 skills:
   - codex-prompting

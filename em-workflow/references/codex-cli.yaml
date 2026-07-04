@@ -3,7 +3,9 @@
 # All flags and sandbox presets are owned by the script itself — do not add
 # config here expecting the wrapper to pick it up.
 #
-# Model is managed by the user's ~/.codex/config.toml (not overridden by wrapper).
+# Model: the wrapper passes --ignore-user-config (auth is kept), so Codex
+# resolves its recommended default model (auto-track); the user's
+# ~/.codex/config.toml model pin does not apply to wrapper invocations.
 # Run `codex --help` or check Codex docs for the current model list.
 
 # Timeout in seconds (default; for open-ended investigations)

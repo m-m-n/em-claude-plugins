@@ -11,8 +11,11 @@
 #   -C DIR             Set working directory
 #   --output-schema F  Pass JSON Schema for structured output
 #
-# Model is determined by the user's ~/.codex/config.toml.
+# Model: --ignore-user-config skips ~/.codex/config.toml (auth is kept), so
+# with no -m flag Codex resolves its recommended default model (auto-track).
 # Timeout and flags are read from references/codex-cli.yaml.
+# Reasoning effort: readonly (review) mode forces xhigh via -c override;
+# readwrite mode runs with the model's default effort.
 
 set -euo pipefail
 
@@ -46,10 +49,12 @@ shift
 case "$MODE" in
   readonly)
     SANDBOX_FLAG=(-s read-only)
+    EFFORT_FLAG=(-c 'model_reasoning_effort="xhigh"')
     PROMPT_CONSTRAINT="IMPORTANT: Do NOT modify, create, or delete any files. Provide analysis and recommendations only."
     ;;
   readwrite)
     SANDBOX_FLAG=(-s workspace-write)
+    EFFORT_FLAG=()
     PROMPT_CONSTRAINT=""
     ;;
   *)
@@ -122,7 +127,9 @@ timeout "$TIMEOUT" codex exec \
   --color never \
   --skip-git-repo-check \
   --ignore-rules \
+  --ignore-user-config \
   "${SANDBOX_FLAG[@]}" \
+  "${EFFORT_FLAG[@]}" \
   "${WORKDIR_FLAG[@]}" \
   "${SCHEMA_FLAG[@]}" \
   "$FULL_PROMPT" </dev/null 2>&1 || exit_code=$?

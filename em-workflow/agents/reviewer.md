@@ -2,6 +2,7 @@
 name: reviewer
 description: 汎用 Claude レビュアー（em-workflow）。プロンプトで指定された観点スキル（review-security 等）を Skill tool でロードし、レビュープロトコル（fail-closed 解決・read-only・調査予算・JSON 出力契約）に従って単一観点のレビューを実行します。観点知識はスキル側、規律はこのエージェントとプロトコル側が持ちます。
 model: opus
+effort: xhigh
 tools: Read, Glob, Grep, Bash, Skill
 ---
 

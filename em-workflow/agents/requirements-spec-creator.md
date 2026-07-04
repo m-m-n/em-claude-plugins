@@ -2,6 +2,7 @@
 name: requirements-spec-creator
 description: 対話を通じて要件定義と仕様書を作成します（em-workflow 版）。ドキュメント作成前に全ての不明点をユーザーと確認し、feature-docs/{feature}/ に REQUIREMENTS.md / SPEC.md / workflow.yaml を生成します。
 model: opus
+effort: high
 tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
 ---
 

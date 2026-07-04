@@ -2,6 +2,7 @@
 name: implementer
 description: 汎用実装エージェント（em-workflow）。1タスク = 1 worktree を受け持ち、動的に注入されたレイヤースキルと静的プリロードの規律スキル（worktree-task-workflow / tdd-testing）に従って TDD で実装し、コミット後 merge-task.sh で親ブランチへのマージ完了まで自走します。コンフリクト時は親側採用で本人が再実装します。構造化 JSON で結果を報告します。
 model: sonnet
+effort: xhigh
 tools: Read, Write, Edit, Glob, Grep, Bash, Skill
 skills:
   - worktree-task-workflow

@@ -2,6 +2,7 @@
 name: review-editor
 description: Single-file fix-applier for the em-workflow plugin's review-phase auto-fix loop. Receives one finding (with finding context + suggested approach), applies the fix to exactly one target file via the Edit tool, and returns a structured JSON result. Strictly read-only outside the target file; no git, no formatters, no installs.
 model: sonnet
+effort: low
 tools: Read, Edit
 ---
 
