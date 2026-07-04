@@ -19,8 +19,9 @@ integration branch, materialized in its own worktree:
          └─ ...
 ```
 
-- Worktree root: `{project_root}/../{project_dirname}-em-workflow/{feature}/`
-  (sibling directory — keeps the project tree clean).
+- Worktree root: `{project_root}/.claude/worktrees/em-workflow/{feature}/`
+  (the Claude Code standard worktree location; the gitignore-guard pre-step
+  in I.1 ensures it is git-ignored in the main tree).
   - `integration/` — the integration worktree (created in Step I.1, kept until
     the develop run finishes)
   - `task0001/` … — per-task worktrees (created per wave, removed after merge)
@@ -78,10 +79,19 @@ integration branch, materialized in its own worktree:
 
 Skip if `parent_branch` already exists (resume case).
 
+**Pre-step — .gitignore guard**: dispatch
+`Task(subagent_type="em-workflow:gitignore-guard")` with `project_root`. It
+probes `git check-ignore` for `.claude/worktrees/` coverage and, only when
+not covered, appends `.claude/worktrees/` to the root `.gitignore` (creating
+the file if absent). The edit stays uncommitted — committing it is the
+user's choice; the develop completion merge tolerates exactly this diff. A
+`failed` report aborts the phase (un-ignored worktree contents would pollute
+`git status` in the main tree).
+
 ```bash
 BASE_COMMIT=$(git rev-parse HEAD)
 git branch "em-workflow/{feature}/integration" "$BASE_COMMIT"
-WT_ROOT="$(dirname "$(git rev-parse --show-toplevel)")/$(basename "$(git rev-parse --show-toplevel)")-em-workflow/{feature}"
+WT_ROOT="$(git rev-parse --show-toplevel)/.claude/worktrees/em-workflow/{feature}"
 mkdir -p "$WT_ROOT"
 git worktree add "$WT_ROOT/integration" "em-workflow/{feature}/integration"
 # Copy feature-docs into the integration worktree and commit them there:

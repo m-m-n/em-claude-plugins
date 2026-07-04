@@ -46,6 +46,7 @@ em-sdd（SDD ワークフロー）と em-review（並列多観点レビュー）
 | reviewer | 汎用 Claude レビュアー（観点はスキル注入） | — |
 | codex-reviewer | 汎用 GPT/Codex レビュアー（クロスバリデーション用） | codex-prompting |
 | review-editor | auto-fix 適用専用（Read/Edit のみの最小権限） | — |
+| gitignore-guard | implement 前処理。`.claude/worktrees/` の ignore を確認・追記（haiku） | — |
 
 ### 動的注入スキル
 
