@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "em-review",
-      "description": "Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Cross-model agreement scoring + bounded multi-loop auto-fix (≤ 3 iterations) using the bundled em-review-editor sub-agent (diff suggestions auto-apply, natural-language suggestions route through AskUserQuestion). Each reviewer is also usable standalone via /em-review:<perspective>.",
+      "description": "Standalone version of the em-workflow review phase. /em-review:review reviews the current git diff (whole codebase when no diff) with two-layer dynamic perspective selection, skill-injected generic reviewers (Claude + conditional GPT/Codex cross-validation), cross-model agreement scoring, and bounded auto-fix (≤ 3 loops, skip with --report-only). Never commits; records default to /tmp (--records <dir> to override). Also reviews GitHub PRs by number/URL (report-only).",
       "author": {
         "name": "em"
       },
@@ -16,17 +16,8 @@
       "source": "./em-review"
     },
     {
-      "name": "em-sdd",
-      "description": "Spec-Driven Development (SDD) workflow orchestrator. Walks a feature through create-spec → create-plan → verify-plan → implement → check → verify, tracking progress in sdd.yaml.",
-      "author": {
-        "name": "em"
-      },
-      "category": "workflow",
-      "source": "./em-sdd"
-    },
-    {
       "name": "em-workflow",
-      "description": "Unified SDD + parallel-implementation + dynamic-review workflow (successor to em-sdd + em-review). /em-workflow:develop drives spec → plan with task decomposition → wave-based parallel implementation in git worktrees → dynamic review selection (rule floor + discretion) → bounded auto-fix → retrospect collection. Skill-injected generic implementer/reviewer agents; review records persist per round.",
+      "description": "Unified SDD + parallel-implementation + dynamic-review workflow. /em-workflow:develop drives spec → plan with task decomposition → wave-based parallel implementation in git worktrees → dynamic review selection (rule floor + discretion) → bounded auto-fix → retrospect collection. Skill-injected generic implementer/reviewer agents; review records persist per round.",
       "author": {
         "name": "em"
       },

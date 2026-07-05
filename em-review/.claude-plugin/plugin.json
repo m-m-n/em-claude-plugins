@@ -1,8 +1,8 @@
 {
   "name": "em-review",
-  "description": "Parallel multi-perspective code review across 9 reviewers (5 Claude + 4 GPT/Codex). Cross-model agreement scoring + bounded multi-loop auto-fix (≤ 3 iterations) on by default. Directly-applicable diff suggestions auto-apply via the bundled em-review-editor sub-agent (Read/Edit only); natural-language suggestions go through per-finding AskUserQuestion. Scope is verified via content-hash delta (`git hash-object` over the orchestrator's backup snapshots). Modify-only, no commit; skip with --report-only. Each reviewer is also usable standalone via /em-review:<perspective>.",
+  "description": "Standalone version of the em-workflow review phase. /em-review:review reviews the current git diff (whole codebase when no diff) with two-layer dynamic perspective selection (rule floor + discretionary additions), skill-injected generic reviewers (Claude + conditional GPT/Codex cross-validation), cross-model agreement scoring, and bounded auto-fix (≤ 3 loops, skip with --report-only). Never commits; round records persist to /tmp/em-review/{repo-key}/ by default (--records <dir> to override) for nit-relitigation suppression across runs. Also reviews GitHub PRs by number/URL via gh pr diff (report-only).",
   "author": {
     "name": "em"
   },
-  "version": "0.4.1"
+  "version": "0.5.0"
 }

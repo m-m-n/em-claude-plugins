@@ -11,8 +11,11 @@
 #   -C DIR             Set working directory
 #   --output-schema F  Pass JSON Schema for structured output
 #
-# Model is determined by the user's ~/.codex/config.toml.
+# Model: --ignore-user-config skips ~/.codex/config.toml (auth is kept), so
+# with no -m flag Codex resolves its recommended default model (auto-track).
 # Timeout and flags are read from references/codex-cli.yaml.
+# Reasoning effort: readonly (review) mode forces xhigh via -c override;
+# readwrite mode runs with the model's default effort.
 
 set -euo pipefail
 
@@ -45,11 +48,13 @@ shift
 # Validate mode
 case "$MODE" in
   readonly)
-    SANDBOX_FLAG="-s read-only"
+    SANDBOX_FLAG=(-s read-only)
+    EFFORT_FLAG=(-c 'model_reasoning_effort="xhigh"')
     PROMPT_CONSTRAINT="IMPORTANT: Do NOT modify, create, or delete any files. Provide analysis and recommendations only."
     ;;
   readwrite)
-    SANDBOX_FLAG="-s workspace-write"
+    SANDBOX_FLAG=(-s workspace-write)
+    EFFORT_FLAG=()
     PROMPT_CONSTRAINT=""
     ;;
   *)
@@ -59,8 +64,8 @@ case "$MODE" in
 esac
 
 # Parse optional flags
-WORKDIR_FLAG=""
-SCHEMA_FLAG=""
+WORKDIR_FLAG=()
+SCHEMA_FLAG=()
 while [[ "${1:-}" == -* ]]; do
   case "$1" in
     -C)
@@ -68,7 +73,7 @@ while [[ "${1:-}" == -* ]]; do
         echo "ERROR: -C requires a directory argument" >&2
         exit 1
       fi
-      WORKDIR_FLAG="-C $2"
+      WORKDIR_FLAG=(-C "$2")
       shift 2
       ;;
     --output-schema)
@@ -76,7 +81,7 @@ while [[ "${1:-}" == -* ]]; do
         echo "ERROR: --output-schema requires a file argument" >&2
         exit 1
       fi
-      SCHEMA_FLAG="--output-schema $2"
+      SCHEMA_FLAG=(--output-schema "$2")
       shift 2
       ;;
     *)
@@ -109,16 +114,25 @@ fi
 # pipe (e.g. Claude Code's Bash tool). Without this, codex prints
 # "Reading additional input from stdin..." and hangs until EOF, producing
 # non-deterministic timeouts when multiple reviewers run in parallel.
-# shellcheck disable=SC2086
+# The `|| exit_code=$?` guard is required: under `set -e` an unguarded
+# non-zero exit (e.g. timeout's 124) would terminate the script before the
+# handler below ever runs, silencing the CODEX_TIMEOUT diagnostic.
+# --ignore-rules: the reviewed repository is untrusted input, but without
+# this flag codex loads project-local execpolicy `.rules` from the workdir,
+# letting the repo under review configure the reviewer's own execution
+# policy. Trade-off (deliberate, personal-use premise): user-level `.rules`
+# are skipped too — there is no flag that ignores only project rules.
+exit_code=0
 timeout "$TIMEOUT" codex exec \
   --color never \
   --skip-git-repo-check \
-  $SANDBOX_FLAG \
-  $WORKDIR_FLAG \
-  $SCHEMA_FLAG \
-  "$FULL_PROMPT" </dev/null 2>&1
-
-exit_code=$?
+  --ignore-rules \
+  --ignore-user-config \
+  "${SANDBOX_FLAG[@]}" \
+  "${EFFORT_FLAG[@]}" \
+  "${WORKDIR_FLAG[@]}" \
+  "${SCHEMA_FLAG[@]}" \
+  "$FULL_PROMPT" </dev/null 2>&1 || exit_code=$?
 
 if [[ $exit_code -eq 124 ]]; then
   echo "CODEX_TIMEOUT: Codex did not respond within ${TIMEOUT} seconds" >&2
