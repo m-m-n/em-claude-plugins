@@ -1,6 +1,6 @@
 # Review Phase Protocol (em-review)
 
-Read and executed inline by `/em-review:review`. The main session performs
+Read and executed inline by `/em-review:multi-review`. The main session performs
 the orchestration itself and issues all parallel `Task()` calls from its own
 context (each reviewer gets a fresh, independent context — the cross-model
 agreement signal depends on it).

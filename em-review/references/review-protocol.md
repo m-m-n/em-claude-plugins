@@ -20,7 +20,7 @@ schema, skip semantics, and safety constraints.
 
 ## Inputs (all reviewers)
 
-The dispatching orchestrator (the `/em-review:review` review phase) passes in
+The dispatching orchestrator (the `/em-review:multi-review` review phase) passes in
 the prompt:
 
 - `perspective` — one of the registry perspectives (references/reviewers.yaml)

@@ -24,7 +24,7 @@ Each plugin lives at the marketplace root as `./<plugin-name>/`. Adding a new pl
 | Plugin | Description |
 |--------|-------------|
 | [em-workflow](./em-workflow/) | Unified SDD + parallel-implementation + dynamic-review workflow. `/em-workflow:develop` drives spec → plan → wave-based parallel implementation in git worktrees → dynamic review → verify → retrospect. |
-| [em-review](./em-review/) | Standalone version of the em-workflow review phase. `/em-review:review` runs dynamically selected, skill-injected parallel reviewers (Claude + optional GPT/Codex cross-validation) with bounded auto-fix. Never commits. |
+| [em-review](./em-review/) | Standalone version of the em-workflow review phase. `/em-review:multi-review` runs dynamically selected, skill-injected parallel reviewers (Claude + optional GPT/Codex cross-validation) with bounded auto-fix. Never commits. |
 
 ### How the plugins relate
 
