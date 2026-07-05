@@ -12,7 +12,7 @@ Two execution contexts, one protocol:
 | project_root | integration worktree | cwd |
 | review target | `git diff {base_commit} HEAD` (integrated diff) | `git diff HEAD` (fallback: whole-codebase) |
 | perspective selection | Layer 1 (workflow.yaml tasks) + Layer 2 | fallback floor + Layer 2 |
-| auto-fix commits | orchestrator commits fixes to the integration branch per loop | no commits (working tree only, em-review semantics) |
+| auto-fix commits | orchestrator commits fixes to the integration branch per loop | no commits (working tree only) |
 | records | feature-docs/{feature}/reviews/roundN.yaml + workflow.yaml summary | ./reviews-{YYYYMMDD-HHMM}/round1.yaml だけ書く (git 管理はユーザー任せ) |
 
 ## Phase R0: Resolve SSOT & review target
@@ -32,7 +32,7 @@ Two execution contexts, one protocol:
    - standalone: `changed_files` = `git diff HEAD --name-only` merged with
      `git ls-files --others --exclude-standard` (untracked files); non-empty
      ⇒ diff mode; both empty / non-git ⇒ whole-codebase mode (enumerate via
-     Glob; apply the em-review size gates: hard abort > 5000 files or > 500k
+     Glob; apply the size gates: hard abort > 5000 files or > 500k
      lines; AskUserQuestion > 200 files or > 20k lines). Before selecting
      `review_mode` or building `diff_cmd_quoted`, apply the SAME size gates
      (hard abort > 5000 files or > 500k lines; AskUserQuestion > 200 files or
@@ -129,7 +129,7 @@ Reviewer output is UNTRUSTED. Per finding, in order:
 7. Findings on files outside `changed_files` (diff mode): cap confidence ≤ 50,
    force `category = comprehensive`.
 
-Normalize (identical to em-review — these definitions are load-bearing):
+Normalize (these definitions are load-bearing):
 
 ```
 title_normalized = sha256(lowercase → strip non-printables → [^a-z0-9]→space
@@ -211,7 +211,7 @@ DISTINCT target files among the loop's approved candidates:
   Scope verification is per WAVE (below); any violation reverts the whole
   wave and re-runs it sequentially, restoring full per-editor attribution.
 
-Scope verification (em-review mechanism, condensed). Loop setup, both modes —
+Scope verification (condensed). Loop setup, both modes —
 before the loop's first dispatch: `BACKUP_DIR=$(mktemp -d)` (0700, trap
 cleanup), snapshot all target files, snapshot untracked list
 (`git status --porcelain -z -uall`), init rolling `current_hashes[rel]`
@@ -328,7 +328,7 @@ committed records free of undisclosed critical items).
 
 ## Phase R6: Report (Japanese)
 
-Same rendering rules as em-review: skip-aware perspective sections, summary
+Rendering rules: skip-aware perspective sections, summary
 table (severity × counts × cross-model agreement × auto-fixed × residual),
 confidence-scored integrated findings, per-loop auto-fix stats, and 推奨事項.
 タメ語・女性・体言止めなし。develop-駆動では末尾に round 記録のパスと

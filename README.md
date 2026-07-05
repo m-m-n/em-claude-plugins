@@ -26,6 +26,10 @@ Each plugin lives at the marketplace root as `./<plugin-name>/`. Adding a new pl
 | [em-workflow](./em-workflow/) | Unified SDD + parallel-implementation + dynamic-review workflow. `/em-workflow:develop` drives spec → plan → wave-based parallel implementation in git worktrees → dynamic review → verify → retrospect. |
 | [em-review](./em-review/) | Standalone version of the em-workflow review phase. `/em-review:review` runs dynamically selected, skill-injected parallel reviewers (Claude + optional GPT/Codex cross-validation) with bounded auto-fix. Never commits. |
 
+### How the plugins relate
+
+em-workflow is the full development workflow; em-review is its review phase extracted (forked) into a standalone plugin for everyday reviews outside the SDD flow — quick diff reviews and GitHub PR reviews. Feature development driven by `/em-workflow:develop` already includes the same review protocol, so em-review is not needed there. Install either or both; they do not interfere.
+
 ## Adding this marketplace
 
 ```

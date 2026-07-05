@@ -1,11 +1,8 @@
 # workflow.yaml Schema (em-workflow SSOT)
 
 `feature-docs/{feature}/workflow.yaml` is the single state file for one feature's
-workflow run. It unifies what em-sdd split across `sdd.yaml` + `tasks.yaml`:
-step state, task metadata, the review plan/summary, and the requirements
-mapping. The path and name deliberately differ from em-sdd's
-`doc/tasks/*/sdd.yaml` so that em-sdd's Stop hook never misfires while both
-plugins coexist.
+workflow run: step state, task metadata, the review plan/summary, and the
+requirements mapping.
 
 ## Write ownership
 
@@ -90,7 +87,7 @@ review:                            # phase-state SUMMARY only (details: reviews/
   residual_critical_high: 0        # gate: workflow may not complete while > 0
   needs_rework: false              # true → send back to implement phase
 
-requirements:                      # traceability SSOT (em-sdd pattern)
+requirements:                      # traceability SSOT
   FR1:
     title: {title from SPEC.md}
     status: ok                     # ok | tbd | assumed | excluded
@@ -141,7 +138,7 @@ feature-docs/{feature}/
 ## Status semantics
 
 - The orchestrator decides the next step by scanning `workflow[]` for the
-  first entry with `status != completed` — identical to em-sdd's loop.
+  first entry with `status != completed`.
 - `tasks.*.status` transitions: `pending → in_progress` (orchestrator, at
   dispatch) `→ merged` (orchestrator, after the implementer reports its
   merge-task.sh success) or `→ failed`. A `failed` task resolves ONLY by

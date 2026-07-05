@@ -5,8 +5,8 @@ This document is the **single-source-of-truth** for every reviewer run by the
 reviewer). Every reviewer MUST resolve this file at Step 0 (fail-closed) and
 follow the rules below.
 
-Unlike em-review (one agent per perspective), em-workflow has **one generic
-reviewer agent per model source**; the perspective is injected as a skill:
+em-workflow has **one generic reviewer agent per model source**; the
+perspective is injected as a skill:
 
 - `em-workflow:reviewer` (Claude) — loads the perspective skill named in its
   prompt (e.g. `em-workflow:review-security`) via the Skill tool, then reviews.

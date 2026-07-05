@@ -127,8 +127,3 @@ em-review/
     ├── codex-reviewer.md              (汎用 GPT/Codex レビュアー)
     └── review-editor.md               (auto-fix 適用専用)
 ```
-
-## em-workflow との関係
-
-- em-workflow のレビューフェーズ（references/review-phase.md ほか）からのコピーで独立（fork）。em-workflow を通した機能開発では `/em-workflow:develop` のレビューステップが同じプロトコルを実行するため、このプラグインは不要。
-- em-review は「SDD を通さない diff / コードベースをすぐレビューしたい」ケース専用。併存しても干渉しない。

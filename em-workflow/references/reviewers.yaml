@@ -1,9 +1,9 @@
 # reviewers.yaml - Review-perspective registry (em-workflow SSOT)
 #
-# Unlike em-review (one agent file per perspective), em-workflow uses TWO
-# generic reviewer agents (em-workflow:reviewer for Claude,
-# em-workflow:codex-reviewer for GPT/Codex) and injects the perspective as a
-# skill. This registry maps each perspective to its skill and skip rules.
+# em-workflow uses TWO generic reviewer agents (em-workflow:reviewer for
+# Claude, em-workflow:codex-reviewer for GPT/Codex) and injects the
+# perspective as a skill. This registry maps each perspective to its skill
+# and skip rules.
 #
 # The review phase reads this file to drive fan-out:
 # - For each SELECTED perspective (per review-rules.yaml + discretion), launch
