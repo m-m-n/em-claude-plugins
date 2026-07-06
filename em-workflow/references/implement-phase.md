@@ -24,12 +24,12 @@ integration branch, materialized in its own worktree:
   in I.1 ensures it is git-ignored in the main tree).
   - `integration/` — the integration worktree (created in Step I.1, kept until
     the develop run finishes)
-  - `task0001/` … — per-task worktrees (created per wave, removed after merge)
+  - `task0001/` … — per-task worktrees (created per chunk, removed after merge)
 - `merge-task.sh` advances `refs/heads/em-workflow/{feature}/integration` via
   `update-ref` WITHOUT any checkout. This is only safe because the integration
-  branch's own worktree is never used for uncommitted work while waves run,
-  and the branch is never checked out in the user's main working tree.
-  **After each wave completes, refresh the integration worktree**:
+  branch's own worktree is never used for uncommitted work while task chunks
+  run, and the branch is never checked out in the user's main working tree.
+  **After each chunk completes, refresh the integration worktree**:
   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
   (safe: that worktree holds no uncommitted work by invariant).
 - The live `feature-docs/{feature}/` (workflow.yaml etc.) stays in the MAIN
@@ -46,7 +46,7 @@ integration branch, materialized in its own worktree:
 ## Step I.0: Preconditions
 
 1. Read `feature-docs/{feature}/workflow.yaml`. Require: `create-plan` step
-   `completed`, non-empty `tasks`, every task has `plan` / `files` / `wave` /
+   `completed`, non-empty `tasks`, every task has `plan` / `files` /
    `skills` / `domains` / `complexity`.
 2. **Fail-closed identifier validation gate**: `feature` MUST match
    `^[a-z0-9][a-z0-9-]*$` and every task id in `tasks` MUST match
@@ -59,12 +59,7 @@ integration branch, materialized in its own worktree:
    review-phase.md). Rationale: `feature` arrives from a cloned repository's
    directory name and task ids from repository-controlled workflow.yaml, so
    both are attacker-influenceable inputs.
-3. **Re-validate wave consistency mechanically** (do not trust the planner
-   blindly): for each wave, assert no file path appears in two different
-   tasks of that wave. On violation: report the collision and route back to
-   the planner (set `create-plan` to `needs_update`) — do NOT silently
-   reassign waves.
-4. Verify the environment merge-task.sh depends on:
+3. Verify the environment merge-task.sh depends on:
    - git ≥ 2.40, probed with the EXACT flag combination the script uses:
      `git merge-tree --write-tree --name-only HEAD HEAD` exits 0
      (`--name-only` landed in 2.40 — probing plain `--write-tree` would
@@ -72,7 +67,7 @@ integration branch, materialized in its own worktree:
    - `command -v flock` succeeds — flock is a util-linux tool, absent on
      stock macOS; without it every merge exits 2.
    On failure abort the phase with a clear message naming the missing piece.
-5. Resolve `MERGE_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/merge-task.sh`;
+4. Resolve `MERGE_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/merge-task.sh`;
    fail-closed with the same trusted-root fallback discipline as the review
    protocol (search `$HOME/.claude/plugins` / `$HOME/.claude/skills` with
    path filter `*/em-workflow/*/scripts/*`, never cwd).
@@ -107,22 +102,31 @@ Record in workflow.yaml: `base_branch`, `parent_branch`, and
 `workflow[implement].base_commit = $BASE_COMMIT`. Set `implement` status to
 `in_progress`.
 
-## Step I.2: Wave loop
+## Step I.2: Task loop (fully parallel, chunked by the cap)
 
-For each wave W in ascending order (only tasks with `status != merged`;
-`failed` tasks ARE re-selected so the I.2.a resume guard can pick up their
-kept worktree):
+There is NO ordering mechanism between tasks. Collect ALL tasks with
+`status != merged` in ascending task-id order (`failed` tasks ARE re-selected
+so the I.2.a resume guard can pick up their kept worktree) and split them
+into sequential chunks of at most `max_parallel_implementers` tasks
+(default: 6 — a hard cap on how many implementer `Task()` calls may run
+concurrently). File overlap between concurrent tasks is allowed: merge
+conflicts are an expected path, resolved by each implementer's
+parent-side-adoption protocol (worktree-task-workflow skill; merge-task.sh
+serializes concurrent merges via flock).
+
+For each chunk C in order:
 
 ### I.2.a: Create task worktrees
 
-For each task T in wave W:
+For each task T in chunk C:
 
 ```bash
 git worktree add -b "em-workflow/{feature}/{T}" "$WT_ROOT/{T}" \
     "em-workflow/{feature}/integration"
 ```
 
-Branch point = integration branch AT THIS MOMENT (includes all prior waves).
+Branch point = integration branch AT THIS MOMENT (includes every task merged
+so far).
 Set `tasks.{T}.status = in_progress`, `tasks.{T}.branch` in workflow.yaml.
 
 **Resume guard**: before running `git worktree add -b` for task T, check
@@ -137,29 +141,18 @@ that case:
   `git branch -D "em-workflow/{feature}/{T}"`, then recreate the worktree and
   branch from the current integration branch as above.
 
-### I.2.b: Launch implementers of the wave in bounded parallel chunks
+### I.2.b: Launch the chunk's implementers
 
-`max_parallel_implementers` (default: 4) is a hard cap on how many
-implementer `Task()` calls may run concurrently. Before launching, compare
-wave W's task count against the cap:
+Launch one `Task(subagent_type="em-workflow:implementer")` per task in
+chunk C, all in a SINGLE message (parallelism requirement). Never launch
+them one at a time.
 
-- Wave size ≤ `max_parallel_implementers`: launch one
-  `Task(subagent_type="em-workflow:implementer")` per task, all in a single
-  message (parallelism requirement), as before.
-- Wave size > `max_parallel_implementers`: split the wave's tasks into
-  sequential chunks of at most `max_parallel_implementers` tasks each,
-  preserving the wave's task ordering. Launch each chunk's `Task()` calls
-  together in one message, run I.2.c (collect completion reports) for that
-  chunk, and only then launch the next chunk. Report the chunking (number of
-  chunks and chunk sizes) alongside the wave in the phase's per-wave stats
-  (I.3).
-
-Before launching the wave, verify every `project_commands` string
-(build/test/format) used by this wave is in the approval store
+Before launching the chunk, verify every `project_commands` string
+(build/test/format) used by this chunk is in the approval store
 (`bash_guard.py --list`; command-execution-protocol.md). Anything
 unapproved: run the protocol's approval gate now (AskUserQuestion →
 `--record`) — the PreToolUse hook denies unapproved workflow.yaml strings
-inside implementer worktrees, so approving up front avoids mid-wave
+inside implementer worktrees, so approving up front avoids mid-chunk
 failures. Commands the user rejects stay unapproved: the hook denies them
 and the implementer reports failure instead of working around it
 (worktree-task-workflow skill).
@@ -195,7 +188,7 @@ Each implementer returns JSON:
 For each result:
 - `merged` → set `tasks.{T}.status = merged` in workflow.yaml.
 - `failed` → set `failed`, keep the worktree for diagnosis, and STOP after
-  this wave (do not launch later waves on a broken base). Surface the failure
+  this chunk (do not launch later chunks on a broken base). Surface the failure
   to the user with the implementer's notes; offer via AskUserQuestion:
   - **retry** — dispatch a fresh implementer on the kept worktree (I.2.a
     resume guard).
@@ -224,7 +217,7 @@ Trust-but-verify: confirm the merge actually happened —
 A `merged` report that fails this check is a `failed` task (never mark it
 merged on self-report alone).
 
-### I.2.d: Clean up wave worktrees
+### I.2.d: Clean up chunk worktrees
 
 For each successfully merged task:
 
@@ -240,15 +233,15 @@ git branch -D "em-workflow/{feature}/{T}"   # -D: merge already verified via
 ```
 
 Then refresh the integration worktree (see Branch & Worktree Model) and
-proceed to the next wave.
+proceed to the next chunk.
 
 ## Step I.3: Phase completion
 
 When every task is `merged`: set `implement` step `status = completed`,
 `completed_at_commit = $(git rev-parse "em-workflow/{feature}/integration")`.
 There is no other way to complete this phase — a non-merged task always
-resolves via retry, route-back-to-planning, or abort (I.2.c). Report per-wave
-stats (tasks, conflict retries, failures) in 1-3 lines and return control to
+resolves via retry, route-back-to-planning, or abort (I.2.c). Report overall
+stats (tasks, chunks, conflict retries, failures) in 1-3 lines and return control to
 the develop state machine (review phase follows; no test run here —
 integrated verification is the review/verify phases' job).
 

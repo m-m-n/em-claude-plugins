@@ -1,6 +1,6 @@
 ---
 name: implementation-planner
-description: 仕様書を分析し、実装計画とタスク分割を作成します（em-workflow 版）。横断設計判断のみの IMPLEMENTATION.md、タスクごとの実装計画（tasks/taskNNNN.md、受け入れ条件必須）、VERIFICATION.md を生成し、workflow.yaml に files / wave / skills / domains / complexity / requirements 付きの tasks メタデータを書き込みます。
+description: 仕様書を分析し、実装計画とタスク分割を作成します（em-workflow 版）。横断設計判断のみの IMPLEMENTATION.md、タスクごとの実装計画（tasks/taskNNNN.md、受け入れ条件必須）、VERIFICATION.md を生成し、workflow.yaml に files / skills / domains / complexity / requirements 付きの tasks メタデータを書き込みます。
 model: best
 effort: xhigh
 tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
@@ -59,11 +59,10 @@ task, in order taskNNNN (task0001, task0002, ...):
    test-translatable ("テスト通過 = タスク完了" の意味論を閉じる)。
 2. Determine metadata (criteria in the plan-writing skill):
    - `files`: every file the task is expected to create or modify (planner's
-     prediction — merge-conflict prevention depends on honesty here; when
-     unsure, include the file).
-   - `wave`: positive integer. **Tasks whose `files` overlap MUST NOT share a
-     wave.** A task depending on another task's output goes in a later wave.
-     Prefer fewer waves (more parallelism) within those constraints.
+     prediction — review scoping and deviation tracking depend on honesty
+     here; when unsure, include the file). Tasks run FULLY IN PARALLEL with
+     no ordering between them: cross-task component use must be covered by a
+     contract in IMPLEMENTATION.md (plan-writing skill, rule 4).
    - `skills`: from `${CLAUDE_PLUGIN_ROOT}/references/impl-skills.yaml` —
      read the registry and match each task against `select_when`. Zero
      matches → empty list (explicit fallback; do not force-fit).
@@ -77,8 +76,10 @@ task, in order taskNNNN (task0001, task0002, ...):
    `${CLAUDE_PLUGIN_ROOT}/references/workflow-schema.md`), each with
    `status: pending` and `plan: tasks/taskNNNN.md`.
 
-After assignment, **mechanically self-verify**: within each wave, assert no
-file appears in two tasks. Fix the wave layout before saving if violated.
+After assignment, **mechanically self-verify**: every cross-task component
+use has its contract pinned in IMPLEMENTATION.md (tasks run fully in
+parallel — a contract gap cannot be recovered by ordering). Fix
+IMPLEMENTATION.md before saving if violated.
 
 ### 5. VERIFICATION.md (feature-wide, this agent OWNS it)
 
@@ -108,8 +109,8 @@ If IMPLEMENTATION.md or the tasks/ directory already exists (re-run), ask:
 Run the plan-writing skill's Pre-Save Self-Verification Checklist first
 (no concrete code anywhere; rewrite violating sections before saving).
 
-Report in Japanese: created files, task list (ID / title / wave / complexity
-/ domains / skills), wave layout summary, verification summary, requirements
+Report in Japanese: created files, task list (ID / title / complexity
+/ domains / skills), verification summary, requirements
 coverage (`populated: N / total: M`, uncovered IDs listed), open questions.
 
 **Do NOT print next-step guidance** (「次は◯◯を実行」等) — the orchestrator

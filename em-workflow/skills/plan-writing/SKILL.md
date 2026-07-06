@@ -1,6 +1,6 @@
 ---
 name: plan-writing
-description: 実装計画・タスク分割の執筆規則（em-workflow implementation-planner 静的プリロード用）。コード禁止規則、薄い IMPLEMENTATION.md と VERIFICATION.md のテンプレート、タスク分割規則（worktree 独立性 / files 予測 / wave 割当）、complexity・domains の判定基準、保存前セルフチェックリストを定義します。
+description: 実装計画・タスク分割の執筆規則（em-workflow implementation-planner 静的プリロード用）。コード禁止規則、薄い IMPLEMENTATION.md と VERIFICATION.md のテンプレート、タスク分割規則（worktree 独立性 / files 予測 / インターフェース契約）、complexity・domains の判定基準、保存前セルフチェックリストを定義します。
 user-invocable: false
 ---
 
@@ -66,13 +66,16 @@ there.
    (roughly: one component, one endpoint group, one UI area). Split anything
    whose Acceptance Criteria exceed ~7 items.
 3. **`files` prediction is a contract**: list every file the task should
-   create or modify. Merge-conflict prevention (wave assignment) depends on
-   it — when unsure whether a task touches a file, INCLUDE it.
-4. **Wave assignment**:
-   - Tasks whose `files` sets intersect MUST be in different waves.
-   - A task consuming another task's output goes in a strictly later wave.
-   - Under those two constraints, minimize wave count (maximize parallelism).
-   - Verify mechanically before saving: per wave, no path in two tasks.
+   create or modify. Review scoping and deviation tracking depend on it —
+   when unsure whether a task touches a file, INCLUDE it.
+4. **Interface contracts instead of sequencing**: ALL tasks are implemented
+   fully in parallel — there is no ordering mechanism between tasks. When one
+   task's code uses a component another task builds, pin that component's
+   contract (signature, pre/postconditions) in IMPLEMENTATION.md Shared
+   Components so both sides implement against the contract independently.
+   File overlap between tasks is allowed — merge conflicts are resolved by
+   the implementer's parent-side-adoption protocol. Integration mismatches
+   surface in the review/verify phases and are resolved as new tasks.
 5. **Acceptance Criteria**: mandatory, objectively verifiable, test-
    translatable. They are the implementer's TDD contract ("テスト通過 =
    タスク完了").
@@ -162,10 +165,10 @@ traceability checks compare these as literal strings.
 - [ ] No language-specific code blocks, library API calls, or snippets
       anywhere (IMPLEMENTATION.md AND every task plan).
 - [ ] IMPLEMENTATION.md contains only cross-task content.
-- [ ] Every task: files / wave / skills / domains / complexity /
+- [ ] Every task: files / skills / domains / complexity /
       requirements all present in workflow.yaml.
-- [ ] Per wave: no file path appears in two tasks.
-- [ ] Dependency direction: no task consumes a same-or-later-wave output.
+- [ ] Every cross-task component use has its contract pinned in
+      IMPLEMENTATION.md Shared Components.
 - [ ] Every task plan has non-empty, verifiable Acceptance Criteria.
 - [ ] Every FR/NFR maps to ≥ 1 task and ≥ 1 test (or is flagged as a gap).
 - [ ] skills values exist in impl-skills.yaml; domains values in the 8-value

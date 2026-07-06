@@ -44,7 +44,7 @@ workflow:                          # fixed step sequence; orchestrator advances 
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
     status: pending
-  - id: implement                  # wave-parallel implementation, merge included
+  - id: implement                  # fully-parallel implementation, merge included
     status: pending
     base_commit: {sha}             # HEAD when the integration branch was created;
                                    # the review phase diffs base_commit..parent_branch
@@ -63,8 +63,8 @@ tasks:                             # written by implementation-planner; status b
     title: {short title}
     plan: tasks/task0001.md        # relative to feature-docs/{feature}/
     files:                         # files the task is EXPECTED to touch
-      - src/foo/bar.go             # (planner prediction; drives wave assignment)
-    wave: 1                        # tasks whose files overlap MUST NOT share a wave
+      - src/foo/bar.go             # (planner prediction; feeds review scoping
+                                   #   and deviation tracking)
     skills: [backend-impl]         # from references/impl-skills.yaml; may be []
     domains: [data-persistence]    # ⊆ the 8-value vocabulary in review-rules.yaml
     complexity: medium             # low | medium | high (criteria: planner skill)

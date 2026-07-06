@@ -66,8 +66,8 @@ Follow the `tdd-testing` skill: translate each Acceptance Criterion into
 failing tests first, then implement until green, refactor, repeat. Stay
 within the task plan's file scope (`expected_files`); needing a file outside
 it is a **deviation** — implement the minimal necessary change and record it
-in your report's `deviations` (the planner's files prediction feeds wave
-scheduling, so deviations matter).
+in your report's `deviations` (the planner's files prediction feeds review
+scoping and retrospect, so deviations matter).
 
 Run `project_commands.test` / `build` / `format` per the command-approval
 rules in `worktree-task-workflow`. All tests and the build must pass before

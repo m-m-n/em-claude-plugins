@@ -40,7 +40,7 @@ asked to skip), display in Japanese:
 
 **フェーズ**:
 1. create-spec  - 要件定義書・仕様書の作成 ← 現在
-2. create-plan  - 実装計画とタスク分割（wave / 複雑度 / ドメイン評価）
+2. create-plan  - 実装計画とタスク分割（複雑度 / ドメイン評価）
 3. implement    - worktree 並列実装（タスクごとにマージまで自走）
 4. review       - 動的レビュー選択 + 自動修正
 5. verify       - 統合検証
