@@ -81,6 +81,14 @@ there.
    タスク完了").
 6. Use `${CLAUDE_PLUGIN_ROOT}/references/templates/task-plan.md` verbatim as
    the structure.
+7. **Integration wiring must have an owner**: when a consumer task is
+   permitted to compile against a clearly-marked placeholder for a component
+   another task builds, exactly one task's plan (or a dedicated integration
+   task) must own replacing that placeholder with the real wiring, stated in
+   its Acceptance Criteria. "Integration wires it later" without an owning
+   task means nobody wires it until review.
+   (Evidence: braille-ar-overlay 2026-07-11 — MainActivity placeholder
+   reached review unwired; high findings b1f3fbd049a5cb53 / b1d63678861295ba)
 
 ## complexity criteria (low / medium / high)
 
