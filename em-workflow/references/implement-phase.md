@@ -178,6 +178,7 @@ task_id: {T}
 worktree_path: {absolute path to $WT_ROOT/{T}}
 task_plan_path: {absolute path to MAIN worktree's feature-docs/{feature}/tasks/{T}.md}
 implementation_md_path: {absolute path to MAIN worktree's feature-docs/{feature}/IMPLEMENTATION.md}
+lessons_path: {absolute path to MAIN worktree's feature-docs/LESSONS.md; OMIT this line when the file does not exist}
 parent_branch: em-workflow/{feature}/integration
 merge_script: {resolved MERGE_SCRIPT absolute path}
 skills_to_load: {tasks.{T}.skills, prefixed em-workflow: — e.g. ["em-workflow:backend-impl"]; may be empty}

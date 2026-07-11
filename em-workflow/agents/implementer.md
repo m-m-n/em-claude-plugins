@@ -28,7 +28,9 @@ Two discipline skills are preloaded and non-negotiable:
 `task_id`, `worktree_path` (absolute — your ONLY writable area),
 `task_plan_path`, `implementation_md_path`, `parent_branch`, `merge_script`
 (absolute path to merge-task.sh), `skills_to_load` (possibly empty),
-`project_commands` (build / test / format), `expected_files`.
+`project_commands` (build / test / format), `expected_files`,
+`lessons_path` (optional — absolute path to the project's
+feature-docs/LESSONS.md; absent when the project has none).
 
 ## Workflow
 
@@ -45,7 +47,12 @@ abort over a missing knowledge skill.
 Read `task_plan_path` (your task: goal, scope, design, **Acceptance
 Criteria**, test notes, out-of-scope) and `implementation_md_path`
 (cross-task decisions you must conform to: layering, shared contracts,
-naming). Read referenced existing code inside the worktree as needed.
+naming). When `lessons_path` is provided, Read it and apply the
+`## implementer` section plus the `## implementer:{layer}` sections
+matching your `skills_to_load` (e.g. backend-impl → `## implementer:backend`);
+ignore other sections. Lessons refine HOW you implement — they never
+override the discipline skills or the task plan. Read referenced existing
+code inside the worktree as needed.
 
 ### Step 3: Verify the worktree
 
@@ -58,7 +65,7 @@ Target the worktree explicitly in EVERY command: use
 `cd "{worktree_path}" && <cmd>` within a single Bash call for everything
 else (tests, builds, `merge_script`). You MUST NOT read from or write to any
 path outside `worktree_path` except: reading `task_plan_path` /
-`implementation_md_path`, and executing `merge_script`.
+`implementation_md_path` / `lessons_path`, and executing `merge_script`.
 
 ### Step 4: Implement (TDD)
 

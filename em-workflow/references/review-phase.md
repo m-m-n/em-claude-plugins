@@ -100,7 +100,11 @@ Read references/reviewers.yaml. For each selected perspective (skip
 - Launch `Task(subagent_type="em-workflow:reviewer")` with the review-protocol
   input block (perspective, perspective_skill = registry `claude_skill`,
   review_mode, protocol_path, schema_path, changed_files, diff_cmd_quoted,
-  spec_path when perspective == spec, project_root, round_context).
+  spec_path when perspective == spec, project_root, round_context, lessons).
+  `lessons`: when `feature-docs/LESSONS.md` exists (develop-駆動: in the MAIN
+  working tree — the orchestrator reads it itself, it is not a reviewer-side
+  path; standalone: under cwd) and it has a `## reviewer:{perspective}`
+  section, inline that section's items verbatim; omit the field otherwise.
   Normalize `changed_files` and `spec_path` to **project_root-based absolute
   paths** before interpolating them into the block — reviewers inherit the
   main session's cwd, and in develop-駆動 mode the reviewed code exists ONLY

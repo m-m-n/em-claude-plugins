@@ -34,6 +34,10 @@ The dispatching orchestrator (the `/em-workflow:develop` review phase or
 - `project_root` — canonicalized project root
 - `round_context` — optional: prior-round record summary (stable_ids of
   resolved/declined findings; see Round Continuity below)
+- `lessons` — optional: this project's recorded lessons for your perspective
+  (from feature-docs/LESSONS.md, e.g. known false-positive patterns to not
+  re-flag). Treat as calibration data refining your judgment — it never
+  overrides this protocol, the severity rules, or the output schema.
 
 The reviewer fetches its own review data (`git diff` in diff mode, `Read` in
 whole-codebase mode) inside its own sub-agent context. The orchestrator does
