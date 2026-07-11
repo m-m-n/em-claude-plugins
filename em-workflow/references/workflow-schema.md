@@ -41,6 +41,13 @@ workflow:                          # fixed step sequence; orchestrator advances 
     artifacts: [REQUIREMENTS.md, SPEC.md]
     status: completed              # pending | in_progress | completed | failed | needs_update
     completed_at_commit: {sha}     # set on completion
+  - id: design                     # visual design decisions (conditional step)
+    artifacts: [DESIGN.md, design/]
+    status: pending                # ONLY this step may also be `skipped`;
+                                   #   decided during create-spec (see the
+                                   #   requirements-spec-creator's design
+                                   #   step decision phase)
+    skipped_reason: null           # MANDATORY when status: skipped
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
     status: pending
@@ -123,6 +130,13 @@ Schema consequences:
 feature-docs/{feature}/
 ├── REQUIREMENTS.md      # 要件定義書 (Japanese)
 ├── SPEC.md              # spec SSOT (English)
+├── DESIGN.md            # visual design decisions (design step; absent when
+│                        #   the step was skipped). Reaches implementers ONLY
+│                        #   via the planner (task plans / IMPLEMENTATION.md).
+├── design/              # design step artifacts (absent when skipped)
+│   ├── mockups/         #   self-contained HTML mockups (design specs —
+│   │                    #   implementers never read or copy them)
+│   └── input/           #   rough sketches / device screenshots (optional)
 ├── IMPLEMENTATION.md    # CROSS-TASK design decisions ONLY (layering, shared
 │                        #   components, naming conventions). Per-task detail
 │                        #   lives in tasks/taskNNNN.md.
@@ -135,10 +149,20 @@ feature-docs/{feature}/
 └── retrospect.yaml      # raw lesson candidates (see retrospect flow)
 ```
 
+Project-level assets OUTSIDE feature-docs (feature 横断・workflow-generated):
+`test/README.md` (testing conventions, created by create-spec),
+`design-system/tokens.yaml` (design token SSOT, created/extended by the
+design step), `feature-docs/LESSONS.md` (retrospect lessons). While
+untracked, the first two are carried into the integration branch by the
+implement phase's Step I.1 (implement-phase.md).
+
 ## Status semantics
 
 - The orchestrator decides the next step by scanning `workflow[]` for the
-  first entry with `status != completed`.
+  first entry whose `status` is neither `completed` nor `skipped`.
+- `skipped` is valid ONLY for the `design` step (with `skipped_reason` set).
+  The workflow is complete when every step is `completed`, except that
+  `design` may be `skipped`.
 - `tasks.*.status` transitions: `pending → in_progress` (orchestrator, at
   dispatch) `→ merged` (orchestrator, after the implementer reports its
   merge-task.sh success) or `→ failed`. A `failed` task resolves ONLY by

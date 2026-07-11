@@ -35,10 +35,11 @@ integration branch, materialized in its own worktree:
 - The live `feature-docs/{feature}/` (workflow.yaml etc.) stays in the MAIN
   working tree, uncommitted, orchestrator-owned. It is copied + committed into
   the integration branch at phase start (Step I.1) and again at develop
-  completion (so the merged result carries the final records). An untracked
-  `test/README.md` (created by create-spec) is committed alongside at phase
-  start only (Step I.1) — that makes it visible in every task worktree and
-  carries it to `base_branch` via the completion merge.
+  completion (so the merged result carries the final records). Untracked
+  workflow-generated project docs (`test/README.md` from create-spec,
+  `design-system/` from the design step) are committed alongside at phase
+  start only (Step I.1) — that makes them visible in every task worktree and
+  carries them to `base_branch` via the completion merge.
 - At develop completion the user is offered — via AskUserQuestion — a merge of
   the integration branch into `base_branch` (executed as a normal `git merge`
   in the main working tree after a cleanliness check). After a successful
@@ -98,16 +99,17 @@ git worktree add "$WT_ROOT/integration" "em-workflow/{feature}/integration"
 mkdir -p "$WT_ROOT/integration/feature-docs"
 cp -r "feature-docs/{feature}" "$WT_ROOT/integration/feature-docs/"
 git -C "$WT_ROOT/integration" add feature-docs
-# Bring along test/README.md ONLY while untracked (i.e. created by
-# create-spec, not yet committed): tracked copies are already in
-# BASE_COMMIT, and user-modified tracked files are never committed on the
-# user's behalf.
-if [ -f "test/README.md" ] && \
-   ! git ls-files --error-unmatch "test/README.md" >/dev/null 2>&1; then
-  mkdir -p "$WT_ROOT/integration/test"
-  cp "test/README.md" "$WT_ROOT/integration/test/README.md"
-  git -C "$WT_ROOT/integration" add test/README.md
-fi
+# Bring along workflow-generated project docs (test/README.md from
+# create-spec, design-system/ from the design step) ONLY while untracked:
+# tracked copies are already in BASE_COMMIT, and user-modified tracked
+# files are never committed on the user's behalf. File-granular on purpose
+# — a partially-tracked design-system/ still gets its new files carried.
+git ls-files -z --others --exclude-standard -- test/README.md design-system/ |
+while IFS= read -r -d '' f; do
+  mkdir -p "$WT_ROOT/integration/$(dirname "$f")"
+  cp "$f" "$WT_ROOT/integration/$f"
+  git -C "$WT_ROOT/integration" add -- "$f"
+done
 git -C "$WT_ROOT/integration" commit -m "docs({feature}): SDD artifacts at implement start"
 ```
 

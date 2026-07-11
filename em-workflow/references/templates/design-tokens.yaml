@@ -1,0 +1,50 @@
+# design-tokens.yaml — schema + template for {project_root}/design-system/tokens.yaml
+# (em-workflow SSOT: the designer creates/extends tokens.yaml following these rules)
+#
+# Rules (MUST follow — for the designer agent and the /em-workflow:design command):
+#
+# - Location: {project_root}/design-system/tokens.yaml. PROJECT-WIDE asset,
+#   shared across features — NEVER under feature-docs/.
+# - Create this file ONLY when the project has NO design system. When a
+#   project-native system exists (Tailwind config, Compose Theme, CSS
+#   variables, consistently styled screens), that system stays the SSOT and
+#   this file must not be created.
+# - Naming: role-based only (primary / surface / on-surface). Value-based
+#   names (blue-500, gray-100) are FORBIDDEN — a theme swap must never
+#   require renaming tokens.
+# - Every token is a `value` + `description` pair. `description` states the
+#   usage AND the non-usage (「広い面には使わない」) — misuse prevention
+#   lives in the prohibition side. Never record history or rationale here
+#   (it rots); rationale belongs in the feature's DESIGN.md.
+# - `meta` is mandatory: the overall tone and the naming rule. It is the
+#   yardstick for extension decisions on later features.
+# - Extend, don't fork: when existing tokens cannot express a new need, ADD
+#   a token (or a variant). Hardcoded one-off values in mockups, task plans,
+#   or implementations are the top design-debt source — never mint them.
+# - Categories below are the starting set; add categories (elevation, radius,
+#   motion, ...) only when a feature actually needs them.
+
+meta:
+  tone: "{全体トーン。例: 落ち着いた寒色系。情報密度が高くても圧迫感を出さない}"
+  naming: "用途ベース（role-based）。値ベースの命名（blue-500 等）はしない"
+
+color:
+  primary:
+    value: "{#hex}"
+    description: "{例: 主要アクション（ボタン、リンク、フォーカス）。広い面には使わない}"
+  surface:
+    value: "{#hex}"
+    description: "{例: カード・パネルの背景}"
+  on-surface:
+    value: "{#hex}"
+    description: "{例: surface 上の本文テキスト。コントラスト 4.5:1 以上を維持}"
+
+typography:
+  body:
+    value: { size: "{16px}", line-height: "{1.6}" }
+    description: "{例: 本文の基準。読み下し主体の画面はこれを使う}"
+
+spacing:
+  unit:
+    value: "{8px}"
+    description: "{例: 全スペーシングはこの倍数。恣意的な中間値を作らない}"

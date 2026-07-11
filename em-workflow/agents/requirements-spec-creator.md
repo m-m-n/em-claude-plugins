@@ -40,11 +40,12 @@ asked to skip), display in Japanese:
 
 **フェーズ**:
 1. create-spec  - 要件定義書・仕様書の作成 ← 現在
-2. create-plan  - 実装計画とタスク分割（複雑度 / ドメイン評価）
-3. implement    - worktree 並列実装（タスクごとにマージまで自走）
-4. review       - 動的レビュー選択 + 自動修正
-5. verify       - 統合検証
-6. retrospect   - ふりかえり収集
+2. design       - デザイン決定（必要な場合のみ）
+3. create-plan  - 実装計画とタスク分割（複雑度 / ドメイン評価）
+4. implement    - worktree 並列実装（タスクごとにマージまで自走）
+5. review       - 動的レビュー選択 + 自動修正
+6. verify       - 統合検証
+7. retrospect   - ふりかえり収集
 ```
 
 ### Phase 0.5: Project Context Check
@@ -106,6 +107,23 @@ workflow.yaml `requirements` keys exactly; the requirements mapping and task
 traceability compare these IDs as literal strings. No Last-Updated / Change
 History sections.
 
+### Phase 5.4: Design Step Decision
+
+Decide whether this feature needs the `design` step (a designer resolves
+visual decisions into DESIGN.md BEFORE planning — implementers never invent
+design, so undecided looks must not reach the implement phase):
+
+- **Needed**: the feature requires visual decisions that the existing design
+  system / existing screens do not already answer — new screens, new
+  components' appearance, theming work, or a UI-visible feature in a project
+  with no design system.
+- **Not needed**: no visible UI, or the UI is fully determined by existing
+  patterns.
+
+When ambiguous, ask via AskUserQuestion. The outcome is recorded in
+Phase 5.5: design step `status: pending`, or `status: skipped` with a
+one-line `skipped_reason`.
+
 ### Phase 5.5: Generate workflow.yaml
 
 Create `feature-docs/{feature-name}/workflow.yaml` following the schema in
@@ -119,9 +137,10 @@ the SSOT — do not invent fields):
 - `project.components`: detect language / build / test / format / e2e
   commands from CLAUDE.md, package files (go.mod, package.json, composer.json,
   Cargo.toml), and test/README.md. Ask via AskUserQuestion when ambiguous.
-- `workflow`: the six steps (create-spec / create-plan / implement / review /
-  verify / retrospect), `create-spec` completed with
-  `completed_at_commit: $(git rev-parse HEAD)`, the rest pending.
+- `workflow`: the seven steps (create-spec / design / create-plan /
+  implement / review / verify / retrospect), `create-spec` completed with
+  `completed_at_commit: $(git rev-parse HEAD)`, `design` per the Phase 5.4
+  decision (`pending`, or `skipped` + `skipped_reason`), the rest pending.
 - `tasks`: empty map (populated by create-plan).
 - `review`: `{status: pending, rounds_completed: 0}`.
 - `requirements`: one entry per FR/NFR from SPEC.md with `title`,

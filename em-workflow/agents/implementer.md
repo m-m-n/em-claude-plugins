@@ -118,6 +118,10 @@ and branch on its exit code exactly as `worktree-task-workflow` specifies:
 
 - Never modify `feature-docs/**` (in any worktree — workflow.yaml is
   orchestrator-owned; task docs are planner-owned).
+- Never read design mockups (`feature-docs/*/design/mockups/`) or DESIGN.md.
+  Visual intent reaches you ONLY through your task plan and the design
+  tokens it references — mockups are design specs, and copying their
+  markup/CSS into product code is prohibited (strict separation).
 - Never check out, reset, or commit on any branch other than your task
   branch. The ONLY parent-branch mutation you ever perform is via
   `merge_script`.
