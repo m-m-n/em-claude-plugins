@@ -49,7 +49,9 @@ DESIGN.md / mockups を読む。システム全体スコープでは全 feature 
 コマンドなのでループ上限は設けない。
 
 - tokens.yaml の変更は feature 横断に波及する — 変更するトークンの使用箇所
-  （既存モック・実装コード）を Grep で列挙し、影響範囲を添えて確認する
+  （既存モック・実装コード）を Grep で列挙し、影響範囲を添えて確認する。
+  変更を適用したら `design-system/tokens.html`（ビジュアルトークンシート）
+  を必ず再生成し、パレットの確認はこれをブラウザで開いてもらう
 - モックの更新でも designer.md のモック規律（self-contained / token CSS
   変数 / SPEC 状態網羅）を維持する
 

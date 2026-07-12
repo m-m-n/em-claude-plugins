@@ -29,6 +29,7 @@ SHARED SSOT — the `/em-workflow:design` command follows these rules too.
 | Artifact | Location | Nature |
 |----------|----------|--------|
 | tokens.yaml | `{project_root}/design-system/tokens.yaml` | project-wide asset (feature 横断) |
+| tokens.html | `{project_root}/design-system/tokens.html` | generated visual token sheet |
 | DESIGN.md | `feature-docs/{feature}/DESIGN.md` | this feature's decision SSOT |
 | mockups | `feature-docs/{feature}/design/mockups/screen-{name}.html` | agreement medium |
 | input | `feature-docs/{feature}/design/input/` | rough sketches / device screenshots (optional) |
@@ -40,6 +41,15 @@ SHARED SSOT — the `/em-workflow:design` command follows these rules too.
   when the project has no design system; a project-native system (Tailwind
   config, Compose Theme, CSS variables, consistently styled screens) stays
   the SSOT and tokens.yaml must not be created alongside it.
+- **tokens.html**: a GENERATED, self-contained visual sheet of tokens.yaml,
+  for checking the palette itself in a browser: color swatches (name /
+  value / description each; render `on-*` tokens on their corresponding
+  surface so contrast is visible), typography samples, the spacing scale,
+  and the `meta` block. Regenerate it EVERY time tokens.yaml changes —
+  never hand-edit it (tokens.yaml is the SSOT); state that in a leading
+  HTML comment (`<!-- generated from tokens.yaml — edit the YAML, not
+  this file -->`). Do not create it when tokens.yaml does not exist
+  (project-native design systems bring their own preview tooling).
 - **Mockups**: self-contained single-file HTML (inline CSS, no external
   requests, no JS frameworks). Embed token values as CSS custom properties
   named after the token (`--color-primary`). One screen per file; represent
@@ -76,6 +86,8 @@ Whatever existing assets already answer is NOT a decision — record it as
 - em-workflow tokens exist → extend with missing tokens only.
 - Project-native system exists → do not create or modify tokens; reference
   the native system in DESIGN.md.
+- Created or extended tokens.yaml → regenerate `design-system/tokens.html`
+  per the artifact rules (never leave the sheet stale).
 
 ### D3: Mockups
 

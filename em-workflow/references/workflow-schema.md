@@ -151,10 +151,11 @@ feature-docs/{feature}/
 
 Project-level assets OUTSIDE feature-docs (feature 横断・workflow-generated):
 `test/README.md` (testing conventions, created by create-spec),
-`design-system/tokens.yaml` (design token SSOT, created/extended by the
-design step), `feature-docs/LESSONS.md` (retrospect lessons). While
-untracked, the first two are carried into the integration branch by the
-implement phase's Step I.1 (implement-phase.md).
+`design-system/` (tokens.yaml — the design token SSOT — plus tokens.html,
+a generated visual token sheet; created/extended by the design step),
+`feature-docs/LESSONS.md` (retrospect lessons). While untracked,
+`test/README.md` and `design-system/` are carried into the integration
+branch by the implement phase's Step I.1 (implement-phase.md).
 
 ## Status semantics
 
