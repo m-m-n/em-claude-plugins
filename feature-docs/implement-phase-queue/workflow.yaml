@@ -1,0 +1,183 @@
+schema_version: 1
+feature: implement-phase-queue
+created: 2026-07-15
+base_branch: main
+parent_branch: em-workflow/implement-phase-queue/integration
+
+project:
+  components:
+    main:
+      language: python+shell
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 0a209fe3b4ad227e8b6835d2ecd2c9ebc214b78c
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "UI を持たない（プロトコル文書 / hook スクリプト / shell スクリプトの変更のみ）"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: completed
+    completed_at_commit: 0a209fe3b4ad227e8b6835d2ecd2c9ebc214b78c
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks:
+  task0001:
+    title: "merge-task.sh journal append"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/scripts/merge-task.sh
+      - tests/test_merge_task_journal.py
+    skills: [infra-impl]
+    domains: [concurrency, external-io]
+    complexity: high
+    requirements: [FR2, FR3, NFR2, NFR4]
+    status: pending
+    notes: null
+  task0002:
+    title: "Stop hook (queue loop guard)"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/hooks/queue_stop_guard.py
+      - tests/test_queue_stop_guard.py
+    skills: [infra-impl]
+    domains: [input-handling, concurrency, config-infra]
+    complexity: high
+    requirements: [FR2, FR4, NFR1, NFR4]
+    status: pending
+    notes: null
+  task0003:
+    title: "PreToolUse launch guard"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/hooks/queue_launch_guard.py
+      - tests/test_queue_launch_guard.py
+    skills: [infra-impl]
+    domains: [input-handling, concurrency]
+    complexity: high
+    requirements: [FR2, FR5, NFR1, NFR2, NFR4]
+    status: pending
+    notes: null
+  task0004:
+    title: "SubagentStop failure net"
+    plan: tasks/task0004.md
+    files:
+      - em-workflow/hooks/queue_failure_net.py
+      - tests/test_queue_failure_net.py
+    skills: [infra-impl]
+    domains: [input-handling, concurrency]
+    complexity: high
+    requirements: [FR2, FR6, NFR1, NFR2, NFR4]
+    status: pending
+    notes: null
+  task0005:
+    title: "Protocol rewrite, hook wiring, docs"
+    plan: tasks/task0005.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/hooks/hooks.json
+      - em-workflow/references/workflow-schema.md
+      - em-workflow/README.md
+      - em-workflow/.claude-plugin/plugin.json
+      - tests/test_hooks_registration.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: medium
+    requirements: [FR1, FR7, FR8, NFR3]
+    status: pending
+    notes: null
+
+review:
+  status: pending
+  rounds_completed: 0
+
+requirements:
+  FR1:
+    title: "Queue execution loop (implement-phase.md Step I.2 rewrite)"
+    status: ok
+    tbd_reason: null
+    tasks: [task0005]
+    tests: [M-1]
+  FR2:
+    title: "Machine-written append-only journal (journal.jsonl)"
+    status: ok
+    tbd_reason: null
+    tasks: [task0001, task0002, task0003, task0004]
+    tests: [TS-1, TS-5, TS-6, TS-7, TS-9]
+  FR3:
+    title: "merge-task.sh journal append on merge success"
+    status: ok
+    tbd_reason: null
+    tasks: [task0001]
+    tests: [TS-1, TS-2]
+  FR4:
+    title: "Stop hook loop guard (exit 2, consecutive-block cap 3)"
+    status: ok
+    tbd_reason: null
+    tasks: [task0002]
+    tests: [TS-3, TS-4]
+  FR5:
+    title: "PreToolUse hook double-launch guard"
+    status: ok
+    tbd_reason: null
+    tasks: [task0003]
+    tests: [TS-5]
+  FR6:
+    title: "SubagentStop hook failure net"
+    status: ok
+    tbd_reason: null
+    tasks: [task0004]
+    tests: [TS-7]
+  FR7:
+    title: "Hook registration in hooks.json"
+    status: ok
+    tbd_reason: null
+    tasks: [task0005]
+    tests: [TS-8]
+  FR8:
+    title: "Documentation of journal / workflow.yaml role split"
+    status: ok
+    tbd_reason: null
+    tasks: [task0005]
+    tests: [M-2]
+  NFR1:
+    title: "No new runtime dependencies (stdlib-only hooks)"
+    status: ok
+    tbd_reason: null
+    tasks: [task0002, task0003, task0004]
+    tests: [M-3]
+  NFR2:
+    title: "Concurrency-safe journal appends (flock)"
+    status: ok
+    tbd_reason: null
+    tasks: [task0001, task0003, task0004]
+    tests: [TS-6]
+  NFR3:
+    title: "Resumability from workflow.yaml + journal + git state"
+    status: ok
+    tbd_reason: null
+    tasks: [task0005]
+    tests: [M-4]
+  NFR4:
+    title: "stdlib unittest test suite under tests/"
+    status: ok
+    tbd_reason: null
+    tasks: [task0001, task0002, task0003, task0004, task0005]
+    tests: [TS-1, TS-3, TS-5, TS-7, TS-8]
