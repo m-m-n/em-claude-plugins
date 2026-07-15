@@ -563,5 +563,39 @@ class TestConcurrentAppends(QueueFailureNetTestCase):
         self.assertEqual(seen_tasks, set(task_ids))
 
 
+class TestWorktreePathWithSpaces(QueueFailureNetTestCase):
+    """Review round 1 regression: a valid absolute worktree path containing
+    spaces must not evade failure recording (parser parity with
+    queue_launch_guard.py)."""
+
+    def test_spaced_worktree_path_appends_failed(self):
+        feature_dir = os.path.join(
+            self.tmp_dir, "dir with spaces", ".claude", "worktrees",
+            "em-workflow", "demo-feature",
+        )
+        worktree_path = os.path.join(feature_dir, "task0001")
+        os.makedirs(worktree_path, exist_ok=True)
+        journal_path = os.path.join(feature_dir, "journal.jsonl")
+        write_journal(journal_path, [
+            {"event": "launched", "task": "task0001", "at": "2026-07-15T09:00:00+09:00"},
+        ])
+
+        transcript = write_transcript(
+            self.tmp_dir, "sub.jsonl", assignment_block("task0001", worktree_path)
+        )
+        payload = base_payload(
+            agent_type="em-workflow:implementer", transcript_path=transcript
+        )
+
+        proc = run_hook_json(payload)
+
+        self.assertEqual(proc.returncode, 0)
+        lines = read_journal_lines(journal_path)
+        self.assertEqual(len(lines), 2)
+        appended = json.loads(lines[-1])
+        self.assertEqual(appended["event"], "failed")
+        self.assertEqual(appended["task"], "task0001")
+
+
 if __name__ == "__main__":
     unittest.main()

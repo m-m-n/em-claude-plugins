@@ -41,7 +41,9 @@ FAILED_REASON = "implementer stopped without a merged event"
 
 TASK_ASSIGNMENT_HEADER_RE = re.compile(r"^#\s*Task assignment\s*$", re.MULTILINE)
 TASK_ID_LINE_RE = re.compile(r"^task_id:\s*(\S+)\s*$", re.MULTILINE)
-WORKTREE_PATH_LINE_RE = re.compile(r"^worktree_path:\s*(\S+)\s*$", re.MULTILINE)
+# Same parser as queue_launch_guard.py (Task-identity discovery contract):
+# the path may contain internal spaces — capture the whole line remainder.
+WORKTREE_PATH_LINE_RE = re.compile(r"^worktree_path:\s*(\S.*?)\s*$", re.MULTILINE)
 TASK_ID_RE = re.compile(r"^task[0-9]+$")
 
 # Fields that might carry the initial prompt text directly (checked before
@@ -176,7 +178,10 @@ def append_failed_event(journal_path, task_id, reason):
         "reason": reason,
     }
     line = json.dumps(entry, ensure_ascii=False)
-    fd = os.open(journal_path, os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o644)
+    # O_NOFOLLOW: a symlink planted at the journal path must never redirect
+    # the append elsewhere (defense in depth, same as queue_launch_guard.py).
+    flags = os.O_CREAT | os.O_WRONLY | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(journal_path, flags, 0o644)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
         try:
@@ -205,7 +210,9 @@ def hook_main(data):
         return
     task_id, worktree_path = identity
 
-    journal_dir = os.path.dirname(worktree_path)
+    # Same derivation as queue_launch_guard.journal_path_for (Journal
+    # contract): dirname(normpath(worktree_path))/journal.jsonl.
+    journal_dir = os.path.dirname(os.path.normpath(worktree_path))
     if not os.path.isdir(journal_dir):
         return  # absent journal directory: fail-open, never fabricate state
     journal_path = os.path.join(journal_dir, "journal.jsonl")

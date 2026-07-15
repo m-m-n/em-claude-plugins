@@ -24,10 +24,11 @@ name, that has refillable work):
 Loop cap: a sidecar file (stop-guard-state.json, sibling of the journal)
 persists a fingerprint (the derived unlaunched+in-flight task-id sets) and a
 consecutive-block counter. Three consecutive blocks in the same derived
-state are allowed; a fourth stop in that same state does NOT block (warns
-on stderr and exits 0 instead) so the user can take over. Any state change
-resets the counter to 1. A non-blocking pass caused by hitting the cap
-clears the sidecar.
+state are allowed; every FURTHER stop in that same state does NOT block
+(warns on stderr and exits 0 instead) so the user stays in charge — the
+over-cap counter is persisted, so the guard never resumes blocking an
+unchanged state (FR4 "stop blocking … let the user take over"). Any state
+change resets the counter to 1 and re-arms blocking.
 
 Only Python stdlib is imported (NFR1).
 """
@@ -38,6 +39,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 MAX_PARALLEL_IMPLEMENTERS = 6  # SSOT duplicated per IMPLEMENTATION.md; also
                                 # pinned in implement-phase.md (task0005).
@@ -130,12 +132,22 @@ def task_ids_from_workflow(workflow_yaml_path):
 
 
 def read_journal(journal_path):
-    """Last event per task, or None if the journal file itself is unreadable
-    (absent — phase just started, or unopenable) — fail-open for this
-    feature (skip it) rather than assume every task is unlaunched."""
+    """Last event per task.
+
+    - Journal file absent but its directory exists (implement phase started,
+      no launch recorded yet): return {} — every declared task counts as
+      unlaunched, so a forgotten INITIAL launch is still caught (FR4).
+    - Journal directory absent (phase's worktree layout not created), or the
+      file exists but is unopenable: return None — the feature is not
+      evaluable; fail-open and skip it.
+    """
     try:
         with open(journal_path, encoding="utf-8", errors="replace") as fh:
             lines = fh.readlines()
+    except FileNotFoundError:
+        if os.path.isdir(os.path.dirname(journal_path)):
+            return {}
+        return None
     except OSError:
         return None
 
@@ -239,21 +251,36 @@ def read_sidecar(path):
 
 
 def write_sidecar(path, fingerprint, counter):
+    """Atomic sidecar write via a RANDOMIZED exclusive temp file.
+
+    mkstemp opens with O_CREAT|O_EXCL (never follows a pre-planted symlink,
+    never truncates an existing target) — a repository cannot predict the
+    temp name nor redirect the write. os.replace then swaps it in without
+    following symlinks at the destination.
+    """
+    tmp_path = None
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        tmp_path = path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as fh:
-            json.dump({"fingerprint": fingerprint, "counter": counter}, fh)
+        fd, tmp_path = tempfile.mkstemp(
+            dir=os.path.dirname(path), prefix=".stop-guard-state.", suffix=".tmp"
+        )
+        try:
+            os.write(
+                fd,
+                json.dumps({"fingerprint": fingerprint, "counter": counter}).encode("utf-8"),
+            )
+        finally:
+            os.close(fd)
         os.replace(tmp_path, path)
+        tmp_path = None
     except OSError:
         pass  # sidecar persistence is best-effort; never break the merge/turn
-
-
-def clear_sidecar(path):
-    try:
-        os.remove(path)
-    except OSError:
-        pass
+    finally:
+        if tmp_path is not None:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
 
 def hook_main():
@@ -297,7 +324,11 @@ def hook_main():
             counter = 1
 
         if counter > MAX_CONSECUTIVE_BLOCKS:
-            clear_sidecar(sidecar_path)
+            # Persist the over-cap counter: further stops in this SAME
+            # derived state keep passing (FR4 — the user has taken over).
+            # A real state change flips the fingerprint and resets the
+            # counter to 1 on its own, re-arming blocking.
+            write_sidecar(sidecar_path, result["fingerprint"], counter)
             print(
                 "queue_stop_guard: WARNING feature={feature} blocked {cap} "
                 "consecutive times in the same state; letting the turn end "

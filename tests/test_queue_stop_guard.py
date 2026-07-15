@@ -344,5 +344,50 @@ class TestQueueStopGuardStdlibOnly(unittest.TestCase):
                 self.assertIn(name, stdlib_names, f"{name} is not a stdlib module")
 
 
+class TestQueueStopGuardReviewRound1Regressions(unittest.TestCase):
+    """Review round 1 regressions (FR4)."""
+
+    def test_journal_file_absent_but_directory_present_blocks(self):
+        # The worktree layout exists (implement started) but no launch was
+        # ever recorded: every declared task is unlaunched — a forgotten
+        # INITIAL launch must be caught, not silently passed.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            fx.write_workflow("in_progress", ["task0001", "task0002"])
+            os.makedirs(fx.journal_dir)  # directory only; no journal.jsonl
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("task0001", result.stderr)
+            self.assertIn("task0002", result.stderr)
+
+    def test_stops_after_cap_keep_passing_in_same_state(self):
+        # FR4: once the cap is hit, the guard must NOT resume blocking the
+        # same unchanged state (the user has taken over) — only a real state
+        # change re-arms it.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            fx.write_workflow("in_progress", ["task0001", "task0002"])
+            fx.write_journal([])
+
+            for i in range(1, 4):
+                result = invoke_hook(tmp, DEFAULT_STDIN)
+                self.assertEqual(result.returncode, 2, f"block #{i} should block")
+
+            for i in range(4, 7):
+                result = invoke_hook(tmp, DEFAULT_STDIN)
+                self.assertEqual(
+                    result.returncode, 0,
+                    f"stop #{i} in the same state must keep passing after the cap",
+                )
+                self.assertIn("WARNING", result.stderr)
+
+            # A real state change re-arms blocking.
+            fx.write_journal([launched("task0001")])
+            after_change = invoke_hook(tmp, DEFAULT_STDIN)
+            self.assertEqual(after_change.returncode, 2)
+
+
 if __name__ == "__main__":
     unittest.main()

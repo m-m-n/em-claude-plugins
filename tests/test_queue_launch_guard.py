@@ -386,5 +386,63 @@ def _tmp_worktree():
         yield os.path.join(tmp_root, "task0001")
 
 
+class TestConcurrentLaunchAtomicity(unittest.TestCase):
+    """Review round 1 regression: the replay -> decide -> append sequence is
+    one flock critical section, so N concurrent launches for the SAME task
+    yield exactly one `launched` event and N-1 denials."""
+
+    def test_concurrent_same_task_launches_yield_one_launched_and_denials(self):
+        import threading
+
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(os.path.dirname(worktree_path), exist_ok=True)
+            stdin_text = json.dumps(task_payload("task0001", worktree_path))
+
+            n = 6
+            results = [None] * n
+            barrier = threading.Barrier(n)
+
+            def launch(i):
+                barrier.wait()
+                results[i] = run_hook(stdin_text)
+
+            threads = [threading.Thread(target=launch, args=(i,)) for i in range(n)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+            lines = read_journal_lines(worktree_path)
+            launched_lines = [l for l in lines if l.get("event") == "launched"]
+            self.assertEqual(
+                len(launched_lines), 1,
+                f"exactly one launched event expected, journal: {lines}",
+            )
+
+            denials = 0
+            for proc in results:
+                self.assertEqual(proc.returncode, 0)
+                if proc.stdout.strip():
+                    decision = json.loads(proc.stdout)
+                    self.assertEqual(
+                        decision["hookSpecificOutput"]["permissionDecision"], "deny"
+                    )
+                    denials += 1
+            self.assertEqual(denials, n - 1)
+
+
+class TestWorktreePathValidationConsistency(unittest.TestCase):
+    """Review round 1 regression: `..` segments are rejected (parser/validator
+    parity with queue_failure_net.py)."""
+
+    def test_dotdot_worktree_path_exits_zero_no_write(self):
+        with _tmp_worktree() as worktree_path:
+            evil = os.path.join(os.path.dirname(worktree_path), "..", "task0001")
+            proc = run_hook_payload(task_payload("task0001", evil))
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(proc.stdout.strip(), "")
+            self.assertEqual(read_journal_lines(worktree_path), [])
+
+
 if __name__ == "__main__":
     unittest.main()

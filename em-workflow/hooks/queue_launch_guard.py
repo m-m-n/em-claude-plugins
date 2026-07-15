@@ -11,7 +11,13 @@ per-feature journal (`journal.jsonl`) machine-written by:
     event is `merged` (terminal — always a mistake);
   - allowing every other em-workflow implementer launch (no events yet, or
     last event `failed` — the retry path) and appending exactly one
-    `launched` event under an exclusive flock before the call proceeds.
+    `launched` event before the call proceeds.
+
+The replay -> decide -> append sequence runs as ONE critical section under
+an exclusive flock on the journal file (atomic compare-and-append):
+concurrent PreToolUse invocations for the same task serialize on the lock,
+so exactly one of them observes "not in flight" and appends `launched`;
+the rest see that event and deny.
 
 Identity discovery (Task-identity discovery contract, IMPLEMENTATION.md):
 an invocation counts as an em-workflow implementer launch if and only if its
@@ -79,6 +85,7 @@ def valid_worktree_path(worktree_path):
         isinstance(worktree_path, str)
         and worktree_path.strip() != ""
         and os.path.isabs(worktree_path)
+        and ".." not in worktree_path.split("/")
     )
 
 
@@ -86,45 +93,60 @@ def journal_path_for(worktree_path):
     return os.path.join(os.path.dirname(os.path.normpath(worktree_path)), "journal.jsonl")
 
 
-def last_event_for_task(path, task_id):
-    """Replay the journal, returning the LAST event value for task_id.
+def open_journal_locked(path):
+    """Open (creating if absent) the journal with an exclusive flock held.
 
-    None means no events for this task (unlaunched) — including the
-    completely normal case where the journal file does not exist yet (the
-    task's first-ever launch). Malformed lines are skipped, never raised.
+    O_NOFOLLOW: a symlink planted at the journal path must never redirect
+    the append elsewhere (defense in depth; the path is validated upstream).
+    Caller unlocks and closes the returned fd.
     """
-    last_event = None
+    flags = os.O_RDWR | os.O_CREAT | os.O_APPEND
+    flags |= getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(path, flags, 0o644)
     try:
-        with open(path, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    entry = json.loads(line)
-                except ValueError:
-                    continue
-                if not isinstance(entry, dict) or entry.get("task") != task_id:
-                    continue
-                event = entry.get("event")
-                if isinstance(event, str):
-                    last_event = event
-    except FileNotFoundError:
-        return None
+        fcntl.flock(fd, fcntl.LOCK_EX)
+    except OSError:
+        os.close(fd)
+        raise
+    return fd
+
+
+def last_event_for_task_fd(fd, task_id):
+    """Replay the journal through an already-open fd, returning the LAST
+    event value for task_id. None means no events for this task
+    (unlaunched). Malformed lines are skipped, never raised."""
+    os.lseek(fd, 0, os.SEEK_SET)
+    chunks = []
+    while True:
+        chunk = os.read(fd, 65536)
+        if not chunk:
+            break
+        chunks.append(chunk)
+    content = b"".join(chunks).decode("utf-8", errors="replace")
+
+    last_event = None
+    for line in content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(entry, dict) or entry.get("task") != task_id:
+            continue
+        event = entry.get("event")
+        if isinstance(event, str):
+            last_event = event
     return last_event
 
 
-def append_launched(path, task_id):
+def append_launched_fd(fd, task_id):
+    """Append the launched line through the locked fd (O_APPEND)."""
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     line = json.dumps({"event": "launched", "task": task_id, "at": now}, ensure_ascii=False)
-    with open(path, "a", encoding="utf-8") as fh:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
-        try:
-            fh.write(line + "\n")
-            fh.flush()
-            os.fsync(fh.fileno())
-        finally:
-            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    os.write(fd, (line + "\n").encode("utf-8"))
+    os.fsync(fd)
 
 
 def emit_deny(reason, additional_context=None):
@@ -180,21 +202,30 @@ def hook_main():
             return 0  # fail-open: the orchestrator's own fail-closed gate governs real launches
 
         path = journal_path_for(worktree_path)
-        last_event = last_event_for_task(path, task_id)
 
-        if last_event == "launched":
-            deny_in_flight(task_id)
-            return 0
-        if last_event == "merged":
-            deny_already_merged(task_id)
-            return 0
+        # Atomic compare-and-append: replay -> decide -> append happen inside
+        # ONE flock critical section, so concurrent invocations for the same
+        # task cannot both observe "not in flight" and both append.
+        fd = open_journal_locked(path)
+        try:
+            last_event = last_event_for_task_fd(fd, task_id)
 
-        # No events, or last event "failed" (retry path): allow. Append the
-        # launched line BEFORE the subagent actually starts (D2 in
-        # IMPLEMENTATION.md); exit with no decision output so the normal
-        # permission flow proceeds.
-        append_launched(path, task_id)
-        return 0
+            if last_event == "launched":
+                deny_in_flight(task_id)
+                return 0
+            if last_event == "merged":
+                deny_already_merged(task_id)
+                return 0
+
+            # No events, or last event "failed" (retry path): allow. Append
+            # the launched line BEFORE the subagent actually starts (D2 in
+            # IMPLEMENTATION.md); exit with no decision output so the normal
+            # permission flow proceeds.
+            append_launched_fd(fd, task_id)
+            return 0
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
     except OSError:
         return 0  # unreadable/absent journal location: fail open, never crash
 

@@ -24,3 +24,4 @@ credentials*
 
 # Claude Code local
 .claude/settings.local.json
+__pycache__/

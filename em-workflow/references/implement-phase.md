@@ -144,9 +144,13 @@ journal (state derivation rule; never carry in-flight state across turns
 from memory) — read
 `{project_root}/.claude/worktrees/em-workflow/{feature}/journal.jsonl`
 line-by-line and reconcile with workflow.yaml `tasks.*.status`. Select
-unlaunched tasks (`status != merged`, ascending task-id order; `failed`
-tasks ARE re-selected so the resume guard below can pick up their kept
-worktree) up to `min(6 - in_flight_count, count(unlaunched))`.
+unlaunched tasks (no journal event yet and `status != merged`, ascending
+task-id order) up to `min(6 - in_flight_count, count(unlaunched))`.
+Tasks whose reconciled state is `failed` are NEVER selected here: a failure
+always routes through I.2.c's user decision first (FR1 — no automatic
+retry). Only after the user chooses "retry" is that task re-dispatched (on
+its kept worktree via the resume guard below); the launch guard then admits
+it because a post-`failed` launch is the legitimate retry path.
 
 For each selected task T, create its worktree:
 
