@@ -339,24 +339,29 @@ class TestMergeTaskJournal(unittest.TestCase):
             seen_tasks.add(event["task"])
         self.assertEqual(seen_tasks, set(task_ids))
 
-    # -- Review round 1 loop 2 regression: journal identity binding -----
-    # The terminal `merged` event is bound to THIS worktree's task and THIS
-    # feature's integration branch — a mismatched TASK_ID or PARENT_BRANCH
-    # argument merges normally but skips the journal append with a warning.
+    # -- Review round 1 loops 2-3 regression: journal identity binding --
+    # Inside the em-workflow worktree layout, TASK_ID must equal the
+    # worktree's task directory and PARENT_BRANCH must be this feature's
+    # integration branch. A mismatch aborts BEFORE any merge/ref update
+    # (exit 2) — an exit-0 merge with no `merged` event would make the
+    # failure net record a merged task as failed.
 
-    def test_mismatched_task_id_merges_but_skips_journal_append(self):
+    def test_mismatched_task_id_aborts_before_merge(self):
         feature = FEATURE
         task_id = "task0001"
         wt = self._add_task_worktree(feature, task_id)
         self._commit_file(wt, "feature.txt", "hello\n", "task0001: add feature file")
+        parent_before = self._git(self.main_repo, "rev-parse", PARENT_BRANCH).stdout.strip()
 
         result = self._run_merge(wt, "task0002")  # wrong task id on purpose
 
-        self.assertEqual(result.returncode, 0)
-        self.assertIn("journal append skipped", result.stderr)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("does not match", result.stderr)
         self.assertEqual(self._read_journal_lines(feature), [])
+        parent_after = self._git(self.main_repo, "rev-parse", PARENT_BRANCH).stdout.strip()
+        self.assertEqual(parent_before, parent_after)  # no ref update happened
 
-    def test_mismatched_parent_branch_feature_skips_journal_append(self):
+    def test_mismatched_parent_branch_feature_aborts_before_merge(self):
         feature = FEATURE
         task_id = "task0001"
         wt = self._add_task_worktree(feature, task_id)
@@ -364,12 +369,15 @@ class TestMergeTaskJournal(unittest.TestCase):
         # A different feature's integration branch, pointing at the same base.
         other_parent = "em-workflow/other-feat/integration"
         self._git(self.main_repo, "branch", other_parent, PARENT_BRANCH)
+        other_before = self._git(self.main_repo, "rev-parse", other_parent).stdout.strip()
 
         result = self._run_merge(wt, task_id, parent_branch=other_parent)
 
-        self.assertEqual(result.returncode, 0)
-        self.assertIn("journal append skipped", result.stderr)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("integration branch", result.stderr)
         self.assertEqual(self._read_journal_lines(feature), [])
+        other_after = self._git(self.main_repo, "rev-parse", other_parent).stdout.strip()
+        self.assertEqual(other_before, other_after)  # no ref update happened
 
 
 if __name__ == "__main__":

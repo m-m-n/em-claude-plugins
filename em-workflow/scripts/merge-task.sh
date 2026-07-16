@@ -52,21 +52,6 @@ append_merged_event() {
   workflow_dir_name=$(basename -- "$(dirname -- "$feature_dir")")
   [ "$workflow_dir_name" = "em-workflow" ] || return 0
 
-  # Identity binding: the terminal `merged` event must describe THIS
-  # worktree's task and THIS feature's integration branch. A mismatched
-  # TASK_ID or PARENT_BRANCH argument (LLM/argument mistake) must never
-  # publish a terminal event for a different task or feature — warn and
-  # skip the append instead (the orchestrator's git-state reconcile still
-  # sees the merge itself).
-  if [ "$task_dir_name" != "$TASK_ID" ]; then
-    echo "WARNING: journal append skipped: TASK_ID ($TASK_ID) does not match worktree task directory ($task_dir_name)" >&2
-    return 0
-  fi
-  if [ "$PARENT_BRANCH" != "em-workflow/$feature_name/integration" ]; then
-    echo "WARNING: journal append skipped: parent branch ($PARENT_BRANCH) is not this feature's integration branch (em-workflow/$feature_name/integration)" >&2
-    return 0
-  fi
-
   journal_path="$feature_dir/journal.jsonl"
   ts=$(date +"%Y-%m-%dT%H:%M:%S%:z") || return 0
   line=$(printf '{"event":"merged","task":"%s","commit":"%s","at":"%s"}' \
@@ -89,6 +74,31 @@ TASK_ID="${2:-}"
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
   || die "not inside a git work tree"
+
+# --- Identity binding (fail-closed, BEFORE any merge/ref update) ---
+# When this worktree sits inside the em-workflow layout
+# (.../em-workflow/{feature}/{taskNNNN}), the arguments MUST describe THIS
+# worktree's task and THIS feature's integration branch. A mismatch is a
+# caller mistake: aborting here (exit 2) preserves the invariant that every
+# exit-0 merge in the layout also gets its `merged` journal event — a merge
+# that succeeded but skipped the append would make the failure net record a
+# merged task as failed. Outside the layout (manual invocation, merge-only
+# tests) no binding applies.
+IB_WT_TOP=$(git rev-parse --show-toplevel 2>/dev/null) || IB_WT_TOP=""
+if [ -n "$IB_WT_TOP" ]; then
+  IB_TASK_DIR=$(basename -- "$IB_WT_TOP")
+  IB_FEATURE_DIR=$(dirname -- "$IB_WT_TOP")
+  IB_FEATURE=$(basename -- "$IB_FEATURE_DIR")
+  IB_WORKFLOW_DIR=$(basename -- "$(dirname -- "$IB_FEATURE_DIR")")
+  if [[ "$IB_TASK_DIR" =~ ^task[0-9]+$ ]] \
+     && [[ "$IB_FEATURE" =~ ^[a-z0-9][a-z0-9-]*$ ]] \
+     && [ "$IB_WORKFLOW_DIR" = "em-workflow" ]; then
+    [ "$IB_TASK_DIR" = "$TASK_ID" ] \
+      || die "TASK_ID ($TASK_ID) does not match this worktree's task directory ($IB_TASK_DIR)"
+    [ "$PARENT_BRANCH" = "em-workflow/$IB_FEATURE/integration" ] \
+      || die "parent branch ($PARENT_BRANCH) is not this feature's integration branch (em-workflow/$IB_FEATURE/integration)"
+  fi
+fi
 
 # --- Exclusive lock (shared across all worktrees via --git-common-dir) ---
 COMMON_DIR=$(git rev-parse --git-common-dir) || die "cannot resolve git common dir"
