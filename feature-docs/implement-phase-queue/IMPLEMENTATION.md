@@ -61,7 +61,12 @@ never read protocol documents.
   `launched` puts it back in flight — that is the retry path).
 - **Append discipline**: every writer appends exactly one line while holding
   an exclusive `flock` on the journal file itself, creating parent
-  directories/file if absent. No read-modify-write, ever.
+  directories/file if absent (opened with no-follow semantics — a symlink
+  planted at the journal path never redirects the write). No
+  read-modify-write, ever. The launch guard additionally runs its
+  replay → decide → append sequence as ONE critical section under that same
+  flock (atomic compare-and-append), so concurrent launches for the same
+  task serialize and exactly one appends `launched`.
 - Identifier validation before any path/derivation use: `feature` matches
   `^[a-z0-9][a-z0-9-]*$`, task ids match `^task[0-9]+$` (the implement
   phase's existing fail-closed gate, applied by every journal consumer).
@@ -77,7 +82,10 @@ containing `task_id: {taskNNNN}` and `worktree_path: {absolute path}` lines
   provides the type) or, failing that, its prompt/first user message
   contains a `# Task assignment` block with a valid `task_id:` line.
 - The journal path is derived from the `worktree_path` line: the journal is
-  `dirname(worktree_path)/journal.jsonl`. If either line is missing or
+  `dirname(normpath(worktree_path))/journal.jsonl` — byte-identical
+  derivation in both hooks. Validation is likewise identical in both hooks:
+  absolute path, `..` segments rejected, internal spaces allowed (the
+  parser captures the whole line remainder). If either line is missing or
   fails validation, the hook treats the agent as not-an-implementer and
   exits 0.
 
@@ -134,7 +142,13 @@ Affects: task0002, task0003, task0004, task0005.
 ### D4: merge-task.sh stays authoritative for "merged"
 
 Only merge success (both the real-merge paths and the already-merged
-idempotent path) appends `merged`. The idempotent path ("already contained
+idempotent path) appends `merged`. Identity binding is fail-closed and runs
+BEFORE any merge/ref update: inside the em-workflow worktree layout,
+`TASK_ID` must equal the worktree's task directory and the parent-branch
+argument must be `em-workflow/{feature}/integration` — a mismatch aborts
+(exit 2), preserving the invariant that every exit-0 merge in the layout
+also gets its `merged` event (an exit-0 merge without the event would make
+the failure net record a merged task as failed). The idempotent path ("already contained
 in parent") also appends, so a retry that discovers the merge already
 happened still closes the loop in the journal; readers tolerate duplicate
 `merged` lines for a task (last-event rule is unaffected). Affects:
