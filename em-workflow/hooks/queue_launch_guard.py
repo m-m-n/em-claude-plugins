@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""em-workflow queue launch guard: PreToolUse hook on `Task` calls.
+"""em-workflow queue launch guard: PreToolUse hook on subagent-launch calls.
+
+The subagent-launch tool is named `Agent` in current Claude Code versions
+and `Task` in older ones — the hook accepts BOTH tool names (and hooks.json
+registers the matcher `Task|Agent`). Matching only one name silently
+disables the guard on the other: the fail-open convention means no launched
+events get recorded and no double-launch is ever denied (observed in the
+wild on 2.1.211, where launches arrive as `Agent`).
 
 Deterministic net for the implement-phase work-queue loop
 (feature-docs/implement-phase-queue/IMPLEMENTATION.md). Keeps the
@@ -46,6 +53,10 @@ TASK_ID_LINE_RE = re.compile(r"(?m)^task_id:\s*(\S+)\s*$")
 WORKTREE_PATH_LINE_RE = re.compile(r"(?m)^worktree_path:\s*(\S.*?)\s*$")
 
 IMPLEMENTER_SUBAGENT_TYPE = "em-workflow:implementer"
+
+# The subagent-launch tool's name: `Agent` in current Claude Code versions,
+# `Task` in older ones. Both are guarded.
+LAUNCH_TOOL_NAMES = ("Task", "Agent")
 
 
 def extract_task_assignment(prompt):
@@ -185,7 +196,7 @@ def hook_main():
     except ValueError:
         return 0  # malformed stdin: no decision, normal permission flow
 
-    if not isinstance(data, dict) or data.get("tool_name") != "Task":
+    if not isinstance(data, dict) or data.get("tool_name") not in LAUNCH_TOOL_NAMES:
         return 0
 
     tool_input = data.get("tool_input")

@@ -55,9 +55,15 @@ def run_hook_payload(payload):
     return run_hook(json.dumps(payload))
 
 
-def task_payload(task_id, worktree_path, subagent_type="em-workflow:implementer", include_header=True):
+def task_payload(
+    task_id,
+    worktree_path,
+    subagent_type="em-workflow:implementer",
+    include_header=True,
+    tool_name="Task",
+):
     return {
-        "tool_name": "Task",
+        "tool_name": tool_name,
         "tool_input": {
             "subagent_type": subagent_type,
             "description": f"Implement {task_id}",
@@ -257,6 +263,43 @@ class TestNonImplementerCallsIgnored(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0)
         self.assertEqual(proc.stdout, "")
+
+
+class TestAgentToolNameSupported(unittest.TestCase):
+    """Regression (observed on Claude Code 2.1.211): the subagent-launch tool
+    is named `Agent` in current versions — the guard must treat it exactly
+    like `Task`, or it silently never records/denies anything (fail-open)."""
+
+    def test_first_launch_via_agent_tool_appends_launched(self):
+        with _tmp_worktree() as worktree_path:
+            proc = run_hook_payload(
+                task_payload("task0001", worktree_path, tool_name="Agent")
+            )
+
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(proc.stdout, "")  # allow: no decision output
+            lines = read_journal_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            self.assertEqual(lines[0]["event"], "launched")
+            self.assertEqual(lines[0]["task"], "task0001")
+
+    def test_in_flight_launch_via_agent_tool_is_denied(self):
+        with _tmp_worktree() as worktree_path:
+            write_journal(
+                worktree_path,
+                [{"event": "launched", "task": "task0001", "at": "2026-07-16T00:00:00+09:00"}],
+            )
+
+            proc = run_hook_payload(
+                task_payload("task0001", worktree_path, tool_name="Agent")
+            )
+
+            self.assertEqual(proc.returncode, 0)
+            decision = json.loads(proc.stdout)
+            self.assertEqual(
+                decision["hookSpecificOutput"]["permissionDecision"], "deny"
+            )
+            self.assertEqual(len(read_journal_lines(worktree_path)), 1)
 
 
 class TestFailOpen(unittest.TestCase):

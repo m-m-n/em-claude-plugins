@@ -213,7 +213,7 @@ plan itself. Command strings come from workflow.yaml and are subject to the
 implementer's command-approval discipline (worktree-task-workflow skill).
 
 **End the turn** immediately after launching — no polling, no synchronous
-wait. The PreToolUse(Task) launch guard (`queue_launch_guard.py`) records
+wait. The PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
 each allowed launch as a `launched` journal event as the call goes through
 (the only writer of `launched`); it also denies double-launching a task
 that is already in flight or already merged, as a net under the
@@ -305,8 +305,10 @@ post-mortem diagnosis, distinct from workflow.yaml's LLM-managed summary
   consecutive-block cap (3, tracked in a sidecar next to the journal)
   prevents it from wedging the session on unexpected state; exceeding the
   cap yields a warning and lets the turn end.
-- **PreToolUse(Task) launch guard** (`queue_launch_guard.py`) — fires on
-  every `Task()` call; identifies em-workflow implementer launches and
+- **PreToolUse(Task|Agent) launch guard** (`queue_launch_guard.py`) — fires on
+  every subagent-launch call (the tool is named `Agent` in current Claude
+  Code versions, `Task` in older ones — both are matched); identifies
+  em-workflow implementer launches and
   denies double-launching an already in-flight or already-merged task (a
   retry after `failed` is allowed). The sole writer of `launched` events.
 - **SubagentStop failure net** (`queue_failure_net.py`) — fires when any

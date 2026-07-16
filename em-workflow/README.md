@@ -74,7 +74,7 @@ Codex クロスバリデーションは強度の軸として分離: complexity h
 - 最大並列数（`max_parallel_implementers`、デフォルト 6）を上限に、完了通知駆動のワークキューとして全タスクを並列実行する（一括起動してまとめて待ち合わせるチャンク方式は廃止）。タスク間の順序制御は持たず、タスク間で使うコンポーネントの契約は IMPLEMENTATION.md に固定して両側が契約に対して独立に実装する。
 - 「実装完了 = 親ブランチへのマージ完了」。implementer 自身が `scripts/merge-task.sh`（flock 排他 + `merge-tree`/`commit-tree`/`update-ref` の checkout 不要マージ、exit code 0=完了 / 1=コンフリクト / 2=エラー）でマージまで行う。
 - files の重複は許容し、コンフリクトは通常パスとして扱う: 親側採用（`git checkout --theirs`）で本人が再実装 → 再マージ（1 タスクにつき最大 3 サイクル、超過は failed 報告）。
-- 進捗の実体は `journal.jsonl`（`launched`/`merged`/`failed` を機械が追記する raw ログ、追記専用で削除されない）。`workflow.yaml` は LLM が管理する要約 SSOT であり、スクリプト・hook が書き込むことはない。Stop / PreToolUse(Task) / SubagentStop の 3 つの hook がこのループの規律違反（起動漏れ・二重起動・失敗の見逃し）を機械的に検知するフェイルオープンなネットとして働く。
+- 進捗の実体は `journal.jsonl`（`launched`/`merged`/`failed` を機械が追記する raw ログ、追記専用で削除されない）。`workflow.yaml` は LLM が管理する要約 SSOT であり、スクリプト・hook が書き込むことはない。Stop / PreToolUse(Task|Agent) / SubagentStop の 3 つの hook がこのループの規律違反（起動漏れ・二重起動・失敗の見逃し）を機械的に検知するフェイルオープンなネットとして働く。
 
 ## レビュー記録と自己改善
 

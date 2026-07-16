@@ -31,7 +31,10 @@ HOOKS_JSON_PATH = PLUGIN_ROOT / "hooks" / "hooks.json"
 # (event, matcher or None for "no matcher filter", script filename)
 REQUIRED_ENTRIES = [
     ("PreToolUse", "Bash", "bash_guard.py"),
-    ("PreToolUse", "Task", "queue_launch_guard.py"),
+    # The subagent-launch tool is `Agent` in current Claude Code versions
+    # and `Task` in older ones — the matcher must cover both, or the guard
+    # silently never fires (fail-open) on one of them.
+    ("PreToolUse", "Task|Agent", "queue_launch_guard.py"),
     ("Stop", None, "queue_stop_guard.py"),
     ("SubagentStop", None, "queue_failure_net.py"),
 ]
@@ -119,11 +122,11 @@ class TestHooksJsonRegistersRequiredEntries(unittest.TestCase):
 
     def test_task_launch_guard_is_registered(self):
         matches = find_matching_hook_entries(
-            self.config, "PreToolUse", "Task", "queue_launch_guard.py"
+            self.config, "PreToolUse", "Task|Agent", "queue_launch_guard.py"
         )
         self.assertTrue(
             matches,
-            "PreToolUse(Task) entry referencing queue_launch_guard.py must be registered",
+            "PreToolUse(Task|Agent) entry referencing queue_launch_guard.py must be registered",
         )
 
     def test_stop_guard_is_registered(self):
@@ -204,7 +207,7 @@ class TestValidationDetectsBrokenConfigs(unittest.TestCase):
                             "hooks": [{"type": "command", "command": cmd("bash_guard.py")}],
                         },
                         {
-                            "matcher": "Task",
+                            "matcher": "Task|Agent",
                             "hooks": [
                                 {"type": "command", "command": cmd("queue_launch_guard.py")}
                             ],
