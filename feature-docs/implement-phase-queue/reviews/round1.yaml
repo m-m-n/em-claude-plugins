@@ -1,0 +1,345 @@
+round: 1
+executed_at: "2026-07-16T08:35:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 0a209fe3b4ad227e8b6835d2ecd2c9ebc214b78c
+  head_commit: c4443a09ec348c42dfe0991758684128ee23fdcf
+  changed_files:
+    - .gitignore
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/README.md
+    - em-workflow/hooks/hooks.json
+    - em-workflow/hooks/queue_failure_net.py
+    - em-workflow/hooks/queue_launch_guard.py
+    - em-workflow/hooks/queue_stop_guard.py
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/scripts/merge-task.sh
+    - em-workflow/skills/develop/SKILL.md
+    - test/README.md
+    - tests/test_hooks_registration.py
+    - tests/test_merge_task_journal.py
+    - tests/test_queue_failure_net.py
+    - tests/test_queue_launch_guard.py
+    - tests/test_queue_stop_guard.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  codex_cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: performance, source: codex, status: completed}
+  - {perspective: architecture, source: codex, status: completed}
+  - {perspective: spec, source: codex, status: completed}
+findings:
+  - stable_id: 13f7e99ede98279a
+    severity: high
+    category: performance
+    file: em-workflow/hooks/queue_launch_guard.py
+    line: 183
+    title: "Non-atomic launch check can start duplicate implementer agents"
+    description: "Journal replay ran before append_launched acquired the lock; concurrent PreToolUse hooks for the same task could both observe no launched event and both allow."
+    suggestion: "Hold one exclusive journal flock across replay -> decide -> append."
+    sources: [codex:performance]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1: open_journal_locked による原子的 compare-and-append に変更。TestConcurrentLaunchAtomicity で回帰固定"
+  - stable_id: d17175c6ea79b03a
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/queue_launch_guard.py
+    line: 182
+    title: "The duplicate-launch decision is not atomic with the append"
+    description: "Same race as 13f7e99ede98279a, architecture lens."
+    suggestion: "Same atomic critical-section fix."
+    sources: [codex:architecture]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1: 同上（同一サイト・別観点）"
+  - stable_id: f91dbb4c41f33150
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/queue_launch_guard.py
+    line: 182
+    title: "The double-launch decision is not atomic with the launched append"
+    description: "Same race, FR5 lens."
+    suggestion: "Same atomic critical-section fix."
+    sources: [codex:spec]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1: 同上"
+  - stable_id: ea83bbeba18360c5
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/queue_launch_guard.py
+    line: 192
+    title: "A preflight launched event can permanently consume a queue slot"
+    description: "An allowed launch whose Task() never runs leaves a stale launched line occupying a slot; no ack/lease/compensating event exists."
+    suggestion: "Two-phase reservation with confirmation or compensating events."
+    sources: [codex:architecture]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "IMPLEMENTATION.md D2 に文書化済みのトレードオフ。Stop hook の cap とオーケストレーターの git 実状態 reconcile で被害は有界。二相予約は watchdog（スコープ外）相当の再設計"
+  - stable_id: f088587f8e964071
+    severity: high
+    category: performance
+    file: em-workflow/references/implement-phase.md
+    line: 220
+    title: "Per-completion wake protocol multiplies orchestration cost"
+    description: "N completions produce N orchestrator wakes replaying an O(N) journal (O(N^2) aggregate) instead of ceil(N/6) batched continuations. Re-reported in loop 2 at line 224 (medium)."
+    suggestion: "Coalesce notifications per wake; incremental journal consumption."
+    sources: [codex:performance]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "通知駆動の逐次補充はこの機能の設計意図そのもの（チャンクバリア廃止の目的）。N はフィーチャあたりのタスク数で小さく有界。wake 時の通知合流は実運用上自然に起こる"
+  - stable_id: a76c82d6fe846149
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 280
+    title: "The Stop hook has repository-wide ambient authority"
+    description: "The Stop hook fires for any session in the checkout and can block a session that does not own the implement phase."
+    suggestion: "Bind the phase to an owning session id; fail open for others."
+    sources: [codex:architecture]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "既知の制約として受容。誤ブロックは同一状態 3 回の cap で有界（以降は警告のみ）。journal はセッション所有者情報を持たず、hook 入力の session 対応付けも安定 API がない"
+  - stable_id: 28f4c34a364e543d
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 186
+    title: "The Stop guard discards task status from the workflow SSOT"
+    description: "The guard derives state from the journal only; a merge whose journal append failed leaves a stale launched entry consuming capacity."
+    suggestion: "Reconcile with workflow.yaml task statuses."
+    sources: [codex:architecture]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "hook は net であり authority ではない（fail-open 規約）。journal 追記失敗は merge-task.sh が警告し、オーケストレーターの git 実状態 reconcile が正とする。cap により誤ブロックも有界"
+  - stable_id: f0d8de848b5bc938
+    severity: high
+    category: architecture
+    file: em-workflow/scripts/merge-task.sh
+    line: 42
+    title: "Terminal journal identity is not bound to the worktree and target branch"
+    description: "TASK_ID / PARENT_BRANCH arguments were not validated against the worktree's own task directory and feature; a mismatched argument could publish a terminal merged event for the wrong task/feature. (Initially reported medium, re-reported high in loop 2 as d911bfee2891f074.)"
+    suggestion: "Require task_dir_name == TASK_ID and PARENT_BRANCH == em-workflow/{feature}/integration."
+    sources: [codex:architecture]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 2 で journal 側束縛 → loop 3 で fail-closed 化（マージ前に exit 2）。TestJournalIdentityBinding 系 2 テストで回帰固定"
+  - stable_id: 40b9cb1cbbe0a45b
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_failure_net.py
+    line: 42
+    title: "Task-assignment parsing has drifted between the two hook consumers"
+    description: "failure net の worktree_path 正規表現が空白入り絶対パスを弾き、launch guard と非対称だった。"
+    suggestion: "Share one parser shape across both hooks."
+    sources: [codex:architecture]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1: 正規表現を launch guard と同形に統一。TestWorktreePathWithSpaces で回帰固定"
+  - stable_id: 1c3228bef5c4a863
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/queue_failure_net.py
+    line: 42
+    title: "Valid worktree paths containing spaces evade failure recording"
+    description: "Same site as 40b9cb1cbbe0a45b, FR6 lens."
+    suggestion: "Capture the whole line remainder."
+    sources: [codex:spec]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1: 同上"
+  - stable_id: e64b8c664f9263df
+    severity: high
+    category: spec
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 132
+    title: "A missing journal bypasses the initial forgotten-launch guard"
+    description: "journal 未作成（起動ゼロ）のフィーチャを『評価不能』としてスキップし、初回の全起動忘れを検知できなかった（FR4 違反）。"
+    suggestion: "Directory exists + file absent -> treat as empty journal (all unlaunched)."
+    sources: [codex:spec]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 1: read_journal がディレクトリ存在時の FileNotFoundError を空 journal として扱うよう修正。回帰テスト追加"
+  - stable_id: 59daf7742542d64a
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 147
+    title: "Failed tasks are automatically selected without the required user decision"
+    description: "起動フェーズが failed タスクを通常選択に含め、FR1 step 4 のユーザー判断境界（retry / route back / abort）をバイパスしていた。"
+    suggestion: "Exclude failed from ordinary selection; route through I.2.c."
+    sources: [codex:spec]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 1: 通常選択から failed を除外し、I.2.c の retry 経由のみ再投入と明記"
+  - stable_id: feac32595eb80c68
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 300
+    title: "Stop hook cap clears sidecar, so it re-blocks in the same unchanged state instead of staying passed"
+    description: "cap 超過時に sidecar を削除するため、同一状態で block→pass→block…と振動し FR4 の『ユーザーに委ねる』を満たさなかった。"
+    suggestion: "Persist the over-cap counter instead of clearing."
+    sources: [claude:spec]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "loop 1: カウンタ永続化に変更。5 回目以降も pass を回帰テストで固定"
+  - stable_id: 78d6f0ff347e2cb9
+    severity: medium
+    category: security
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 235
+    title: "Predictable temporary file follows repository-controlled symlinks"
+    description: "sidecar の一時ファイルが予測可能名 + symlink 追従で書かれていた。"
+    suggestion: "mkstemp (O_EXCL, randomized) + os.replace."
+    sources: [codex:security]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 1: tempfile.mkstemp + os.replace に変更"
+  - stable_id: f9231038d4b745e6
+    severity: medium
+    category: security
+    file: em-workflow/hooks/queue_launch_guard.py
+    line: 121
+    title: "Prompt-derived path permits writes outside the workflow journal"
+    description: "プロンプト由来 worktree_path の journal append が symlink 追従・`..` 許容だった。"
+    suggestion: "Validate layout; open with no-follow semantics."
+    sources: [codex:security]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 1: `..` 拒否 + O_NOFOLLOW で堅牢化（完全なレイアウト検証は fail-open 規約の範囲で不採用）。loop 2 の security 再レビューで解消確認済み"
+  - stable_id: e320fe21805291c5
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/queue_failure_net.py
+    line: 207
+    title: "SubagentStop ペイロードフィールド名への依存が実契約と未突合"
+    description: "agent_type / agent_transcript_path 等のフィールド名が実 Claude Code の SubagentStop 入力と一致しない場合、hook が無言の no-op になる。テストも同じ仮定でフィクスチャを自作している。"
+    suggestion: "実ペイロードを採取してフィールド名を確定し、実形フィクスチャのテストを追加する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: declined
+    resolution_reason: "task0004 実装者が公式 hooks ドキュメント（code.claude.com/docs/en/hooks.md）で agent_type / agent_transcript_path を確認済み。加えて型フィールド不在時は transcript スキャンへフォールバックし、未知形状は fail-open。リスクは IMPLEMENTATION.md Risk Assessment に記録済み"
+  - stable_id: 774d4d1a7eff0ff7
+    severity: medium
+    category: comprehensive
+    file: em-workflow/.claude-plugin/plugin.json
+    line: 3
+    title: "plugin.json の description が旧チャンク方式のまま"
+    description: "description が『chunked by max_parallel_implementers』のままでワークキュー化と矛盾。"
+    suggestion: "ワークキュー方式の記述に更新。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1: description をキュー方式（background launch / notification-driven refill / journal + 3 hooks）に更新"
+  - stable_id: 7ea75170608facd2
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_launch_guard.py
+    line: 413
+    title: "journal パス導出が 2 hook 間で非一致（normpath 有無）"
+    description: "launch guard は normpath あり、failure net はなし。末尾スラッシュ付きパスで別ファイルに分裂し得た。"
+    suggestion: "dirname(normpath(worktree_path))/journal.jsonl に統一。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1: failure net も normpath を使用。契約を IMPLEMENTATION.md に明文化"
+  - stable_id: 4c396db5ad6a83ad
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 24
+    title: "develop スキルのターン終了条件がキュー方式の待機を許さない"
+    description: "SPEC FR1 が要求するバックグラウンド起動後のターン終了が、develop スキルの網羅的ターン終了条件に存在しなかった（spec 観点報告・changed_files 外のため comprehensive に再分類、confidence 50 に cap）。"
+    suggestion: "完了通知待ちを合法なターン終了条件として追加。"
+    sources: [codex:spec]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 1: 条件 5 を追加。loop 2 で failed ドレイン待ち（FR1.4）も同条件に補完（153fc34c0f61a156）"
+  - stable_id: 65bc1c4c6a937fb7
+    severity: medium
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 91
+    title: "develop スキルの implement 行が旧チャンク方式の指示のまま"
+    description: "implement 行が『チャンクで並列 Task 起動』と旧方式を指示していた（changed_files 外のため comprehensive 再分類・confidence cap）。"
+    suggestion: "キュー方式の記述に更新。"
+    sources: [codex:spec]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 1: キューループの記述に更新"
+  - stable_id: 9eccf9a8d7bea701
+    severity: medium
+    category: security
+    file: em-workflow/scripts/merge-task.sh
+    line: 62
+    title: "Journal append (shell >>) follows symlinks"
+    description: "shell リダイレクトの journal 追記は O_NOFOLLOW を持たず、worktree 内コードが事前に symlink を置けば追従する。"
+    suggestion: "O_NOFOLLOW 相当のヘルパーで開く。"
+    sources: [codex:security]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "journal ディレクトリは repo 内容から生成されず、symlink を置くには既にユーザー権限でのコード実行が必要 — その攻撃者は任意ファイルへ直接書けるため symlink 迂回は新たな能力にならない"
+  - stable_id: 9309f85e867287e8
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 329
+    title: "Persisted block-cap state survives intervening non-actionable states"
+    description: "cap 到達後、failed 介在→retry で全く同一の fingerprint に戻ると stale な over-cap カウンタが継続し再武装しない。"
+    suggestion: "typed evaluation result / journal generation を fingerprint に含める。"
+    sources: [codex:architecture]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "retry は in-flight 集合を変えるため通常 fingerprint が変わり再武装する。厳密な同一状態復元は failed 処理でユーザー判断が介在した後で、既にユーザーが主導権を持つ局面"
+  - stable_id: 153fc34c0f61a156
+    severity: high
+    category: spec
+    file: em-workflow/skills/develop/SKILL.md
+    line: 24
+    title: "Failed-task draining cannot legally wait for completion notifications"
+    description: "FR1.4 のドレイン（failed 後、新規投入なしで in-flight の完了通知を待つ）がターン終了条件に含まれていなかった。"
+    suggestion: "ドレイン待ちを条件 5 に含める。"
+    sources: [codex:spec]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 2: 条件 5 を (a) 起動/補充直後 (b) failed ドレイン中の 2 形に拡張。loop 3 の spec 再レビューで解消確認済み"
+  - stable_id: a9a93e81704f08d2
+    severity: medium
+    category: spec
+    file: tests/test_queue_stop_guard.py
+    line: 133
+    title: "Required git-state reconciliation integration test is missing"
+    description: "SPEC の Integration Tests が挙げる『journal + git 混在状態からの in-flight 導出』テストが存在しない。"
+    suggestion: "throwaway git repo での reconcile テストを追加。"
+    sources: [codex:spec]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "reconcile はオーケストレーター（LLM）のプロトコル手順でスクリプト実装が存在せず、ユニットテスト対象がない。journal 由来の状態導出ロジックは stop guard テストが網羅済み"
+  - stable_id: a9fb813708932eed
+    severity: high
+    category: spec
+    file: em-workflow/scripts/merge-task.sh
+    line: 61
+    title: "Identity-mismatch skip lets a merge succeed without the mandatory merged journal event"
+    description: "loop 2 の束縛実装は append 内 skip だったため、exit-0 マージに merged イベントが付かないケースを作り、failure net がマージ済みタスクを failed 扱いにし得た（FR3 / Journal contract 違反）。"
+    suggestion: "束縛検証をマージ/ref 更新前の fail-closed（exit 2）に移す。"
+    sources: [codex:spec]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 3: 検証をスクリプト冒頭（マージ前）へ移動し exit 2 で中断。回帰テストを fail-closed 挙動に更新"
+auto_fix:
+  loops_run: 3
+  applied_total: 17
+  termination: loop-cap
+residual_critical_high: 0
+rework_required: false

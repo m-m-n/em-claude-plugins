@@ -27,6 +27,46 @@ set -uo pipefail
 
 die() { echo "ERROR: $*" >&2; exit 2; }
 
+# --- Journal append (best-effort; never turns a successful merge into a
+# failure — see IMPLEMENTATION.md "Journal contract" / D4). Journal home:
+# {feature-dir}/journal.jsonl, where {feature-dir} is the parent of the
+# CURRENT worktree's own top level, matching the
+# `.../em-workflow/{feature}/{taskNNNN}` layout. Any mismatch (wrong shape,
+# outside that layout, e.g. manual invocation or tests exercising only merge
+# behavior) skips the append silently — merging must not depend on it.
+append_merged_event() {
+  local event_commit="$1"
+  local wt_top task_dir_name feature_dir feature_name workflow_dir_name
+  local journal_path ts line status
+
+  [[ "$TASK_ID" =~ ^task[0-9]+$ ]] || return 0
+
+  wt_top=$(git rev-parse --show-toplevel 2>/dev/null) || return 0
+  task_dir_name=$(basename -- "$wt_top")
+  [[ "$task_dir_name" =~ ^task[0-9]+$ ]] || return 0
+
+  feature_dir=$(dirname -- "$wt_top")
+  feature_name=$(basename -- "$feature_dir")
+  [[ "$feature_name" =~ ^[a-z0-9][a-z0-9-]*$ ]] || return 0
+
+  workflow_dir_name=$(basename -- "$(dirname -- "$feature_dir")")
+  [ "$workflow_dir_name" = "em-workflow" ] || return 0
+
+  journal_path="$feature_dir/journal.jsonl"
+  ts=$(date +"%Y-%m-%dT%H:%M:%S%:z") || return 0
+  line=$(printf '{"event":"merged","task":"%s","commit":"%s","at":"%s"}' \
+           "$TASK_ID" "$event_commit" "$ts")
+
+  # Exclusive flock on the journal file itself (separate from the merge
+  # lock above; nested acquisition is fine) — one line, one write.
+  ( exec 8>>"$journal_path" && flock -x 8 && printf '%s\n' "$line" >&8 ) 2>/dev/null
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    echo "WARNING: failed to append merged event for $TASK_ID to $journal_path (exit $status)" >&2
+  fi
+  return 0
+}
+
 PARENT_BRANCH="${1:-}"
 TASK_ID="${2:-}"
 [ -n "$PARENT_BRANCH" ] && [ -n "$TASK_ID" ] \
@@ -34,6 +74,31 @@ TASK_ID="${2:-}"
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
   || die "not inside a git work tree"
+
+# --- Identity binding (fail-closed, BEFORE any merge/ref update) ---
+# When this worktree sits inside the em-workflow layout
+# (.../em-workflow/{feature}/{taskNNNN}), the arguments MUST describe THIS
+# worktree's task and THIS feature's integration branch. A mismatch is a
+# caller mistake: aborting here (exit 2) preserves the invariant that every
+# exit-0 merge in the layout also gets its `merged` journal event — a merge
+# that succeeded but skipped the append would make the failure net record a
+# merged task as failed. Outside the layout (manual invocation, merge-only
+# tests) no binding applies.
+IB_WT_TOP=$(git rev-parse --show-toplevel 2>/dev/null) || IB_WT_TOP=""
+if [ -n "$IB_WT_TOP" ]; then
+  IB_TASK_DIR=$(basename -- "$IB_WT_TOP")
+  IB_FEATURE_DIR=$(dirname -- "$IB_WT_TOP")
+  IB_FEATURE=$(basename -- "$IB_FEATURE_DIR")
+  IB_WORKFLOW_DIR=$(basename -- "$(dirname -- "$IB_FEATURE_DIR")")
+  if [[ "$IB_TASK_DIR" =~ ^task[0-9]+$ ]] \
+     && [[ "$IB_FEATURE" =~ ^[a-z0-9][a-z0-9-]*$ ]] \
+     && [ "$IB_WORKFLOW_DIR" = "em-workflow" ]; then
+    [ "$IB_TASK_DIR" = "$TASK_ID" ] \
+      || die "TASK_ID ($TASK_ID) does not match this worktree's task directory ($IB_TASK_DIR)"
+    [ "$PARENT_BRANCH" = "em-workflow/$IB_FEATURE/integration" ] \
+      || die "parent branch ($PARENT_BRANCH) is not this feature's integration branch (em-workflow/$IB_FEATURE/integration)"
+  fi
+fi
 
 # --- Exclusive lock (shared across all worktrees via --git-common-dir) ---
 COMMON_DIR=$(git rev-parse --git-common-dir) || die "cannot resolve git common dir"
@@ -50,6 +115,7 @@ HEAD_SHA=$(git rev-parse --verify HEAD) || die "cannot resolve HEAD"
 
 # Parent already contains us → nothing to do (retry after someone merged us).
 if git merge-base --is-ancestor "$HEAD_SHA" "$PARENT"; then
+  append_merged_event "$PARENT"
   echo "MERGED: $TASK_ID already contained in $PARENT_BRANCH"
   exit 0
 fi
@@ -58,6 +124,7 @@ fi
 if git merge-base --is-ancestor "$PARENT" "$HEAD_SHA"; then
   git update-ref "refs/heads/$PARENT_BRANCH" "$HEAD_SHA" "$PARENT" \
     || die "update-ref failed (fast-forward)"
+  append_merged_event "$HEAD_SHA"
   echo "MERGED: $TASK_ID -> $PARENT_BRANCH (fast-forward to $HEAD_SHA)"
   exit 0
 fi
@@ -86,5 +153,6 @@ COMMIT=$(git commit-tree "$TREE" -p "$PARENT" -p "$HEAD_SHA" \
 git update-ref "refs/heads/$PARENT_BRANCH" "$COMMIT" "$PARENT" \
   || die "update-ref failed (parent moved unexpectedly)"
 
+append_merged_event "$COMMIT"
 echo "MERGED: $TASK_ID -> $PARENT_BRANCH ($COMMIT)"
 exit 0

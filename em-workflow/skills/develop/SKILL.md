@@ -28,6 +28,13 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 2. ある step を 2 回連続で実行しても status が進まない（= スタック）
 3. ある step の status が `failed` / `needs_update`（= ユーザー介入が必要）
 4. workflow.yaml の YAML parse エラー（= リカバリ不能）
+5. implement フェーズでバックグラウンド implementer の完了通知を待つとき
+   （= キューループが定める正常な待機。次の 2 形がある:
+   (a) 起動/補充した直後、(b) failed 発生後のドレイン中 — 新規投入は
+   止めて in-flight の完了通知だけを待ち、全て回収してからユーザー三択を
+   出す。通知で起こされたら reconcile → 補充（ドレイン中は補充しない）→
+   また待つ。queue_stop_guard hook が「空きスロットがあるのに補充せず
+   終える」ターンだけを exit 2 で弾き、failed 存在時はブロックしない）
 
 これらに該当しない限り、フェーズ完了のたびに workflow.yaml を Read し直して
 **必ず**次の pending step を実行する。サブエージェントやフェーズプロトコルの
@@ -88,7 +95,7 @@ Read し直して次へ。step 実行前に
 | create-spec | `${CLAUDE_PLUGIN_ROOT}/agents/requirements-spec-creator.md` を Read してその指示にインラインで従う（対話フェーズ） |
 | design | `${CLAUDE_PLUGIN_ROOT}/agents/designer.md` を Read してその指示にインラインで従う（完全自律フェーズ — ユーザー確認なしで走り切り、迷ったら決めて DESIGN.md に根拠を記録。詰めは実機確認後の `/em-workflow:design`。`status: skipped` の場合はこの表に来ない） |
 | create-plan | `${CLAUDE_PLUGIN_ROOT}/agents/implementation-planner.md` を Read してその指示にインラインで従う。frontmatter の `skills:` にある `plan-writing` スキル（`${CLAUDE_PLUGIN_ROOT}/skills/plan-writing/SKILL.md`）も先に Read する |
-| implement | `${CLAUDE_PLUGIN_ROOT}/references/implement-phase.md` を Read してインライン実行（全タスクを最大並列数のチャンクで並列 Task 起動） |
+| implement | `${CLAUDE_PLUGIN_ROOT}/references/implement-phase.md` を Read してインライン実行（ワークキュー方式: 最大 6 タスクをバックグラウンド Task 起動 → ターンを終えて完了通知を待つ → journal + git 実状態から reconcile して空きスロットへ補充。同期 fan-out でのバリア待ちはしない） |
 | review | `${CLAUDE_PLUGIN_ROOT}/references/review-phase.md` を Read してインライン実行（develop-駆動モード、`--report-only` を伝播） |
 | verify | 下記「verify フェーズ」をインライン実行 |
 | retrospect | 下記「retrospect フェーズ」をインライン実行 |

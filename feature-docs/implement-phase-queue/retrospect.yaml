@@ -1,0 +1,36 @@
+feature: implement-phase-queue
+collected_at: "2026-07-16T19:29:38+09:00"
+session_ids: [b621f234-93a7-4d4f-aa83-0a6d0ff69e72]
+signals:
+  review_critical_high:
+    - {stable_id: 13f7e99ede98279a, category: performance, file: em-workflow/hooks/queue_launch_guard.py, title: "Non-atomic launch check can start duplicate implementer agents", resolution: fixed}
+    - {stable_id: d17175c6ea79b03a, category: architecture, file: em-workflow/hooks/queue_launch_guard.py, title: "The duplicate-launch decision is not atomic with the append", resolution: fixed}
+    - {stable_id: ea83bbeba18360c5, category: architecture, file: em-workflow/hooks/queue_launch_guard.py, title: "A preflight launched event can permanently consume a queue slot", resolution: declined}
+    - {stable_id: f088587f8e964071, category: performance, file: em-workflow/references/implement-phase.md, title: "Per-completion wake protocol multiplies orchestration cost", resolution: declined}
+    - {stable_id: a76c82d6fe846149, category: architecture, file: em-workflow/hooks/queue_stop_guard.py, title: "The Stop hook has repository-wide ambient authority", resolution: declined}
+    - {stable_id: f0d8de848b5bc938, category: architecture, file: em-workflow/scripts/merge-task.sh, title: "Terminal journal identity is not bound to the worktree and target branch", resolution: fixed}
+    - {stable_id: e64b8c664f9263df, category: spec, file: em-workflow/hooks/queue_stop_guard.py, title: "A missing journal bypasses the initial forgotten-launch guard", resolution: fixed}
+    - {stable_id: 59daf7742542d64a, category: spec, file: em-workflow/references/implement-phase.md, title: "Failed tasks are automatically selected without the required user decision", resolution: fixed}
+    - {stable_id: e320fe21805291c5, category: comprehensive, file: em-workflow/hooks/queue_failure_net.py, title: "SubagentStop payload field-name dependence untested against the real contract", resolution: declined}
+    - {stable_id: 4c396db5ad6a83ad, category: comprehensive, file: em-workflow/skills/develop/SKILL.md, title: "The outer orchestrator forbids the queue's required wait turns", resolution: fixed}
+    - {stable_id: 153fc34c0f61a156, category: spec, file: em-workflow/skills/develop/SKILL.md, title: "Failed-task draining cannot legally wait for completion notifications", resolution: fixed}
+    - {stable_id: a9fb813708932eed, category: spec, file: em-workflow/scripts/merge-task.sh, title: "Identity-mismatch skip lets a merge succeed without the mandatory merged journal event", resolution: fixed}
+  conflict_reworks: []
+  file_prediction_misses:
+    - {task: create-plan, files: ["em-workflow/skills/develop/SKILL.md"], note: "プランナーが develop スキル本体の更新を変更対象に含めず、レビュー（codex:spec）が発見。キュー方式はオーケストレーター指示書の変更を必然的に伴っていた"}
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - {stable_id: ea83bbeba18360c5, category: architecture, resolution_reason: "IMPLEMENTATION.md D2 に文書化済みのトレードオフ。cap + git reconcile で有界"}
+    - {stable_id: f088587f8e964071, category: performance, resolution_reason: "通知駆動の逐次補充は設計意図そのもの。N は小さく有界"}
+    - {stable_id: a76c82d6fe846149, category: architecture, resolution_reason: "既知の制約として受容。cap で誤ブロック有界。session 対応付けの安定 API なし"}
+    - {stable_id: 28f4c34a364e543d, category: architecture, resolution_reason: "hook は net であり authority ではない。git 実状態 reconcile が正"}
+    - {stable_id: e320fe21805291c5, category: comprehensive, resolution_reason: "実装者が公式 hooks docs でフィールド名確認済み + fail-open フォールバックあり。リスクは文書化済み"}
+    - {stable_id: 9eccf9a8d7bea701, category: security, resolution_reason: "symlink 設置にはユーザー権限のコード実行が必要で、新たな能力にならない"}
+    - {stable_id: 9309f85e867287e8, category: architecture, resolution_reason: "retry で fingerprint が変わり再武装。厳密な同一状態復元はユーザー判断介在後"}
+    - {stable_id: a9a93e81704f08d2, category: spec, resolution_reason: "reconcile は LLM プロトコル手順でスクリプト実装が存在せずテスト対象がない"}
+lessons_candidates:
+  - "planner: プロトコル文書（references/*.md）を書き換える機能は、その文書を実行する側のスキル/エージェント定義（skills/*/SKILL.md, agents/*.md）も変更対象になっていないか必ず突合する（SKILL.md の files 予測漏れ、4c396db5ad6a83ad / 153fc34c0f61a156）"
+  - "reviewer 校正: 単一観点 Claude レビュアー 4 体は round 1 で 0 件、実質的な指摘は codex クロスバリデーションと Claude comprehensive に集中した。codex_cross_validation の発火条件は維持する価値が高い"
+  - "auto-fix の教訓: loop 2 で入れた『検証失敗時に副作用だけスキップ』型の修正が『exit 0 ⟺ 端末イベント』不変条件を壊し loop 3 で fail-closed 化が必要になった（a9fb813708932eed）。ガードは副作用スキップではなく操作自体の中断（fail-closed）で入れる"
+  - "テスト環境: pytest/uv/pipx 不在の環境だったため stdlib unittest を採用。テスト戦略の確認は create-spec 段階の環境プローブで解決できた（良かったパターン）"

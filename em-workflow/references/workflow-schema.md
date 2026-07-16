@@ -157,6 +157,16 @@ a generated visual token sheet; created/extended by the design step),
 `test/README.md` and `design-system/` are carried into the integration
 branch by the implement phase's Step I.1 (implement-phase.md).
 
+Also outside feature-docs, under the worktree root: the implement phase's
+journal, `{project_root}/.claude/worktrees/em-workflow/{feature}/journal.jsonl`
+(sibling of the per-task worktree directories). Role split: `journal.jsonl`
+is a machine-written, append-only raw event log (`launched` / `merged` /
+`failed`; never rewritten or deleted; the primary source for post-mortem
+diagnosis), written only by `merge-task.sh` and the queue hooks — never by
+the orchestrator. `workflow.yaml` stays the LLM-managed summary and SSOT;
+no script or hook ever writes it. Details: implement-phase.md's Step I.2
+"Supporting cast" section and IMPLEMENTATION.md's Journal contract.
+
 ## Status semantics
 
 - The orchestrator decides the next step by scanning `workflow[]` for the

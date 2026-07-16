@@ -24,12 +24,14 @@ integration branch, materialized in its own worktree:
   in I.1 ensures it is git-ignored in the main tree).
   - `integration/` — the integration worktree (created in Step I.1, kept until
     the develop run finishes)
-  - `task0001/` … — per-task worktrees (created per chunk, removed after merge)
+  - `task0001/` … — per-task worktrees (created when a task is launched,
+    removed after its merge)
 - `merge-task.sh` advances `refs/heads/em-workflow/{feature}/integration` via
   `update-ref` WITHOUT any checkout. This is only safe because the integration
-  branch's own worktree is never used for uncommitted work while task chunks
-  run, and the branch is never checked out in the user's main working tree.
-  **After each chunk completes, refresh the integration worktree**:
+  branch's own worktree is never used for uncommitted work while task
+  implementers run, and the branch is never checked out in the user's main
+  working tree. **After every wake-phase reconcile that merges/cleans up
+  tasks, refresh the integration worktree**:
   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
   (safe: that worktree holds no uncommitted work by invariant).
 - The live `feature-docs/{feature}/` (workflow.yaml etc.) stays in the MAIN
@@ -117,23 +119,40 @@ Record in workflow.yaml: `base_branch`, `parent_branch`, and
 `workflow[implement].base_commit = $BASE_COMMIT`. Set `implement` status to
 `in_progress`.
 
-## Step I.2: Task loop (fully parallel, chunked by the cap)
+## Step I.2: Task loop (work queue, background launch + wake-phase refill)
 
-There is NO ordering mechanism between tasks. Collect ALL tasks with
-`status != merged` in ascending task-id order (`failed` tasks ARE re-selected
-so the I.2.a resume guard can pick up their kept worktree) and split them
-into sequential chunks of at most `max_parallel_implementers` tasks
-(default: 6 — a hard cap on how many implementer `Task()` calls may run
-concurrently). File overlap between concurrent tasks is allowed: merge
-conflicts are an expected path, resolved by each implementer's
-parent-side-adoption protocol (worktree-task-workflow skill; merge-task.sh
-serializes concurrent merges via flock).
+There is NO ordering mechanism between tasks. `max_parallel_implementers`
+(default: 6, `MAX_PARALLEL_IMPLEMENTERS` in IMPLEMENTATION.md) is a hard cap
+on how many implementer `Task()` calls may be in flight at once — the same
+constant the Stop hook enforces; both sites stay verbatim-identical. File
+overlap between concurrent tasks is allowed: merge conflicts are an expected
+path, resolved by each implementer's parent-side-adoption protocol
+(worktree-task-workflow skill; merge-task.sh serializes concurrent merges
+via flock).
 
-For each chunk C in order:
+The loop alternates two phases across turns: a **launch phase** (the turn
+ends immediately after launching) and a **wake phase** (entered when an
+implementer's `Task()` call returns / a subagent completion notification
+arrives). There is no synchronous fan-out-and-wait: the orchestrator never
+blocks a turn waiting on implementers; it launches, ends the turn, and
+reconciles on the next wake.
 
-### I.2.a: Create task worktrees
+### I.2.a: Launch phase
 
-For each task T in chunk C:
+Determine the in-flight set and the unlaunched task set by replaying the
+journal (state derivation rule; never carry in-flight state across turns
+from memory) — read
+`{project_root}/.claude/worktrees/em-workflow/{feature}/journal.jsonl`
+line-by-line and reconcile with workflow.yaml `tasks.*.status`. Select
+unlaunched tasks (no journal event yet and `status != merged`, ascending
+task-id order) up to `min(6 - in_flight_count, count(unlaunched))`.
+Tasks whose reconciled state is `failed` are NEVER selected here: a failure
+always routes through I.2.c's user decision first (FR1 — no automatic
+retry). Only after the user chooses "retry" is that task re-dispatched (on
+its kept worktree via the resume guard below); the launch guard then admits
+it because a post-`failed` launch is the legitimate retry path.
+
+For each selected task T, create its worktree:
 
 ```bash
 git worktree add -b "em-workflow/{feature}/{T}" "$WT_ROOT/{T}" \
@@ -141,14 +160,14 @@ git worktree add -b "em-workflow/{feature}/{T}" "$WT_ROOT/{T}" \
 ```
 
 Branch point = integration branch AT THIS MOMENT (includes every task merged
-so far).
-Set `tasks.{T}.status = in_progress`, `tasks.{T}.branch` in workflow.yaml.
+so far). Set `tasks.{T}.status = in_progress`, `tasks.{T}.branch` in
+workflow.yaml.
 
 **Resume guard**: before running `git worktree add -b` for task T, check
 whether `em-workflow/{feature}/{T}` and/or `$WT_ROOT/{T}` already exist (this
 happens on re-entry after a prior failed/interrupted run whose worktree was
-kept for diagnosis per I.2.c). Do NOT run `git worktree add -b` blindly in
-that case:
+kept for diagnosis per I.2.c, or an in-flight retry). Do NOT run
+`git worktree add -b` blindly in that case:
 - Retry on the same worktree (user chose "retry" in I.2.c): reuse the
   existing worktree as-is and re-launch the implementer against it.
 - Clean re-attempt (fresh implementer, no prior branch state to keep): first
@@ -156,23 +175,21 @@ that case:
   `git branch -D "em-workflow/{feature}/{T}"`, then recreate the worktree and
   branch from the current integration branch as above.
 
-### I.2.b: Launch the chunk's implementers
+Before launching, verify every `project_commands` string (build/test/format)
+used by the selected tasks is in the approval store (`bash_guard.py
+--list`; command-execution-protocol.md). Anything unapproved: run the
+protocol's approval gate now (AskUserQuestion → `--record`) — the PreToolUse
+hook denies unapproved workflow.yaml strings inside implementer worktrees,
+so approving up front avoids mid-launch failures. Commands the user rejects
+stay unapproved: the hook denies them and the implementer reports failure
+instead of working around it (worktree-task-workflow skill).
 
-Launch one `Task(subagent_type="em-workflow:implementer")` per task in
-chunk C, all in a SINGLE message (parallelism requirement). Never launch
-them one at a time.
+Launch each selected task as a BACKGROUND `Task(subagent_type="em-workflow:implementer")`
+call. Synchronous fan-out-and-wait for a batch of implementers is explicitly
+FORBIDDEN: it reintroduces the barrier this feature removes, and it starves
+the Stop hook of the turn-end event it needs to catch a forgotten refill.
 
-Before launching the chunk, verify every `project_commands` string
-(build/test/format) used by this chunk is in the approval store
-(`bash_guard.py --list`; command-execution-protocol.md). Anything
-unapproved: run the protocol's approval gate now (AskUserQuestion →
-`--record`) — the PreToolUse hook denies unapproved workflow.yaml strings
-inside implementer worktrees, so approving up front avoids mid-chunk
-failures. Commands the user rejects stay unapproved: the hook denies them
-and the implementer reports failure instead of working around it
-(worktree-task-workflow skill).
-
-Prompt payload per task:
+Prompt payload per task (unchanged):
 
 ```
 # Task assignment
@@ -195,61 +212,129 @@ Do NOT inline task-plan content into the prompt — the implementer Reads its
 plan itself. Command strings come from workflow.yaml and are subject to the
 implementer's command-approval discipline (worktree-task-workflow skill).
 
-### I.2.c: Collect completion reports
+**End the turn** immediately after launching — no polling, no synchronous
+wait. The PreToolUse(Task) launch guard (`queue_launch_guard.py`) records
+each allowed launch as a `launched` journal event as the call goes through
+(the only writer of `launched`); it also denies double-launching a task
+that is already in flight or already merged, as a net under the
+orchestrator's own bookkeeping.
 
-Each implementer returns JSON:
-`{"task_id", "status": "merged"|"failed", "merge_commit", "conflict_retries",
-"tests": "pass"|"fail", "deviations": [...], "notes"}`.
+### I.2.b: Wake phase (on completion notification)
 
-For each result:
-- `merged` → set `tasks.{T}.status = merged` in workflow.yaml.
-- `failed` → set `failed`, keep the worktree for diagnosis, and STOP after
-  this chunk (do not launch later chunks on a broken base). Surface the failure
-  to the user with the implementer's notes; offer via AskUserQuestion:
-  - **retry** — dispatch a fresh implementer on the kept worktree (I.2.a
-    resume guard).
-  - **route back to planning** — a task that cannot be implemented as planned
-    means the plan (or the spec behind it) is wrong; fix it upstream, not
-    here. Set `create-plan` to `needs_update`, set the `implement` step back
-    to `pending`, record the failure reason in `tasks.{T}.notes`, clean up
-    the failed task's worktree and branch (`git worktree remove --force
-    "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`), and end
-    the phase with a clear report. The develop state machine stops on
-    `needs_update` (stop condition 3); the next `/em-workflow:develop` run
-    re-enters the planner, which re-scopes the failed task (split it, change
-    the approach) — or, when a requirement itself must be dropped, routes
-    that change through the normal SPEC.md update path first. Merged tasks
-    keep their status; only the failed task is re-planned.
-  - **abort phase** — leave `implement` as `failed` for manual handling.
+Triggered whenever a launched implementer's `Task()` call returns.
 
-  There is NO skip option: a task is either merged, retried, or re-planned —
-  never dropped mid-phase. "実装完了 = 親ブランチへのマージ完了" admits no
-  carve-out; scope changes belong to the planning/spec layer, not to the
-  implement phase.
-- Malformed/missing report → treat as `failed`.
+1. **Reconcile** — replay the journal (last-event-per-task rule: no event →
+   unlaunched; `launched` → in-flight; `merged` → merged; `failed` →
+   failed) and cross-check against git actual state, trust-but-verify:
+   - Worktree/branch existence for tasks the journal claims are in-flight.
+   - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
+     for tasks the journal (or the implementer's own report) claims are
+     `merged` — a claim that fails this check is NOT merged; never mark a
+     task merged on self-report or journal entry alone.
+2. **Update workflow.yaml**: collect each returning implementer's
+   completion report — `{"task_id", "status": "merged"|"failed",
+   "merge_commit", "conflict_retries", "tests": "pass"|"fail",
+   "deviations": [...], "notes"}` (malformed/missing report → treat as
+   `failed`) — and set `tasks.{T}.status = merged` for every task verified
+   merged, `= failed` for every task whose last journal event is `failed`
+   or whose report is `failed`/malformed.
+3. **Clean up** every newly-merged task's worktree and branch:
+   ```bash
+   git worktree remove "$WT_ROOT/{T}"
+   git branch -D "em-workflow/{feature}/{T}"   # -D: merge already verified
+                                               # via merge-base --is-ancestor.
+                                               # -d would REFUSE here: the
+                                               # orchestrator's HEAD is
+                                               # base_branch, which does not
+                                               # contain the task branch (it
+                                               # was merged into integration,
+                                               # not base_branch).
+   ```
+   Then refresh the integration worktree (Branch & Worktree Model).
+4. **Refill**: if no task's reconciled status is `failed`, re-enter the
+   launch phase (I.2.a) with the freed slot(s) and any still-unlaunched
+   tasks, then end the turn again. If every task is now `merged`, proceed to
+   Step I.3.
 
-Trust-but-verify: confirm the merge actually happened —
-`git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`.
-A `merged` report that fails this check is a `failed` task (never mark it
-merged on self-report alone).
+### I.2.c: Failed handling
 
-### I.2.d: Clean up chunk worktrees
+The moment any task's reconciled status is `failed`: stop launching new
+tasks (do not refill), let already in-flight tasks drain (their wake
+notifications still arrive and are reconciled normally — a failure never
+rolls back or cancels siblings already running), then surface the failure
+to the user with the implementer's notes and offer, via AskUserQuestion:
 
-For each successfully merged task:
+- **retry** — dispatch a fresh implementer on the kept worktree (I.2.a
+  resume guard).
+- **route back to planning** — a task that cannot be implemented as planned
+  means the plan (or the spec behind it) is wrong; fix it upstream, not
+  here. Set `create-plan` to `needs_update`, set the `implement` step back
+  to `pending`, record the failure reason in `tasks.{T}.notes`, clean up
+  the failed task's worktree and branch (`git worktree remove --force
+  "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`), and end
+  the phase with a clear report. The develop state machine stops on
+  `needs_update` (stop condition 3); the next `/em-workflow:develop` run
+  re-enters the planner, which re-scopes the failed task (split it, change
+  the approach) — or, when a requirement itself must be dropped, routes
+  that change through the normal SPEC.md update path first. Merged tasks
+  keep their status; only the failed task is re-planned.
+- **abort phase** — leave `implement` as `failed` for manual handling.
 
-```bash
-git worktree remove "$WT_ROOT/{T}"
-git branch -D "em-workflow/{feature}/{T}"   # -D: merge already verified via
-                                            # merge-base --is-ancestor (I.2.c).
-                                            # -d would REFUSE here: the
-                                            # orchestrator's HEAD is base_branch,
-                                            # which does not contain the task
-                                            # branch (it was merged into
-                                            # integration, not base_branch).
-```
+There is NO skip option: a task is either merged, retried, or re-planned —
+never dropped mid-phase. "実装完了 = 親ブランチへのマージ完了" admits no
+carve-out; scope changes belong to the planning/spec layer, not to the
+implement phase.
 
-Then refresh the integration worktree (see Branch & Worktree Model) and
-proceed to the next chunk.
+### Supporting cast: journal, hooks, resume
+
+**Journal** (`journal.jsonl`, sibling of the per-task worktree directories
+under `.claude/worktrees/em-workflow/{feature}/`): a machine-written,
+append-only event log — `launched` / `merged` / `failed`, one JSON object
+per line, each carrying `task` and an RFC 3339 `at`. The orchestrator NEVER
+writes it; only `merge-task.sh` and the two hooks below append to it. The
+raw log is never rewritten or deleted — it is the primary source for
+post-mortem diagnosis, distinct from workflow.yaml's LLM-managed summary
+(full schema: IMPLEMENTATION.md's Journal contract).
+
+**The three hooks** (`em-workflow/hooks/`, wired in `hooks.json`):
+
+- **Stop hook** (`queue_stop_guard.py`) — fires when the orchestrator's turn
+  ends. Replays the journal and workflow.yaml; if refillable slots and
+  unlaunched tasks exist and no task has failed, it BLOCKS (exit 2) naming
+  the tasks to launch — catching a forgotten refill after a wake phase. A
+  consecutive-block cap (3, tracked in a sidecar next to the journal)
+  prevents it from wedging the session on unexpected state; exceeding the
+  cap yields a warning and lets the turn end.
+- **PreToolUse(Task) launch guard** (`queue_launch_guard.py`) — fires on
+  every `Task()` call; identifies em-workflow implementer launches and
+  denies double-launching an already in-flight or already-merged task (a
+  retry after `failed` is allowed). The sole writer of `launched` events.
+- **SubagentStop failure net** (`queue_failure_net.py`) — fires when any
+  subagent stops; for em-workflow implementers whose task has no `merged`
+  event yet, appends `failed` — turning a swallowed or crashed implementer
+  into a visible, actionable state instead of a silent stall. Always exits 0
+  (never blocks the stop).
+
+All three are fail-open nets, not authorities: on any unexpected state
+(missing files, unparsable input, no active feature) they exit 0 silently.
+The orchestrator protocol above plus the resume guard remain authoritative;
+a hook wrongly blocking the session is worse than missing one violation.
+
+**Stale-`launched` caveat**: the launch guard appends `launched` at allow
+time, before the subagent actually starts — if the `Task()` call is then
+allowed but never actually runs, a stale `launched` line can persist with no
+corresponding implementer in flight. This is bounded, never silently masked:
+the Stop hook's consecutive-block cap prevents an infinite blocking loop
+over a wedged slot, and the wake-phase git-state reconcile (worktree/branch
+existence check) catches it on the next reconcile pass.
+
+**Resume**: a `/em-workflow:develop` re-entry mid-implement rebuilds state
+from three sources, never from memory: workflow.yaml (`tasks.*.status`), the
+journal (last-event-per-task replay), and git actual state (worktree
+existence, `merge-base --is-ancestor`). The I.2.a resume guard governs
+worktree re-creation exactly as before; the wake-phase reconcile (I.2.b) is
+what re-derives in-flight/failed/merged classification on that first
+post-resume wake.
 
 ## Step I.3: Phase completion
 
@@ -257,7 +342,7 @@ When every task is `merged`: set `implement` step `status = completed`,
 `completed_at_commit = $(git rev-parse "em-workflow/{feature}/integration")`.
 There is no other way to complete this phase — a non-merged task always
 resolves via retry, route-back-to-planning, or abort (I.2.c). Report overall
-stats (tasks, chunks, conflict retries, failures) in 1-3 lines and return control to
+stats (tasks, conflict retries, failures) in 1-3 lines and return control to
 the develop state machine (review phase follows; no test run here —
 integrated verification is the review/verify phases' job).
 

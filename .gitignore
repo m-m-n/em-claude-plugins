@@ -25,3 +25,4 @@ credentials*
 # Claude Code local
 .claude/settings.local.json
 .claude/worktrees/
+__pycache__/
