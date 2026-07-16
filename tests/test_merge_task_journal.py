@@ -17,7 +17,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MERGE_SCRIPT = REPO_ROOT / "em-workflow" / "scripts" / "merge-task.sh"
 
-PARENT_BRANCH = "integration"
+FEATURE = "feat"
+PARENT_BRANCH = f"em-workflow/{FEATURE}/integration"
 
 # RFC 3339 with an explicit offset (or "Z"); we assert the *format*, not an
 # exact value, per the task plan's test notes.
@@ -143,7 +144,7 @@ class TestMergeTaskJournal(unittest.TestCase):
 
     def test_fast_forward_merge_appends_one_well_formed_merged_line(self):
         # references AC-1
-        feature = "feat-ff"
+        feature = FEATURE
         task_id = "task0001"
         wt = self._add_task_worktree(feature, task_id)
         self._commit_file(wt, "feature.txt", "hello\n", "task0001: add feature file")
@@ -165,7 +166,7 @@ class TestMergeTaskJournal(unittest.TestCase):
 
     def test_merge_commit_merge_appends_one_well_formed_merged_line(self):
         # references AC-2
-        feature = "feat-merge"
+        feature = FEATURE
         task_id = "task0002"
         wt = self._add_task_worktree(feature, task_id)
         self._commit_file(wt, "task-file.txt", "task change\n", "task0002: add task file")
@@ -200,7 +201,7 @@ class TestMergeTaskJournal(unittest.TestCase):
 
     def test_idempotent_already_merged_path_appends_merged_line_and_tolerates_duplicates(self):
         # references AC-3
-        feature = "feat-idem"
+        feature = FEATURE
         task_id = "task0003"
         wt = self._add_task_worktree(feature, task_id)
         self._commit_file(wt, "feature.txt", "hello\n", "task0003: add feature file")
@@ -226,7 +227,7 @@ class TestMergeTaskJournal(unittest.TestCase):
 
     def test_conflicting_merge_appends_nothing(self):
         # references AC-4 (conflict path)
-        feature = "feat-conflict"
+        feature = FEATURE
         task_id = "task0004"
         self._commit_file(
             self.main_repo, "shared.txt", "base line\n", "integration: add shared file"
@@ -247,7 +248,7 @@ class TestMergeTaskJournal(unittest.TestCase):
 
     def test_precondition_error_appends_nothing(self):
         # references AC-4 (error path)
-        feature = "feat-error"
+        feature = FEATURE
         task_id = "task0005"
         wt = self._add_task_worktree(feature, task_id)
         self._commit_file(wt, "feature.txt", "hello\n", "task0005: add feature file")
@@ -279,7 +280,7 @@ class TestMergeTaskJournal(unittest.TestCase):
         if hasattr(os, "geteuid") and os.geteuid() == 0:
             self.skipTest("cannot exercise an unwritable-directory failure as root")
 
-        feature = "feat-unwritable"
+        feature = FEATURE
         task_id = "task0007"
         wt = self._add_task_worktree(feature, task_id)
         self._commit_file(wt, "feature.txt", "hello\n", "task0007: add feature file")
@@ -301,7 +302,7 @@ class TestMergeTaskJournal(unittest.TestCase):
 
     def test_concurrent_merges_produce_no_torn_or_interleaved_journal_lines(self):
         # references AC-7
-        feature = "feat-concurrent"
+        feature = FEATURE
         task_ids = [f"task10{i:02d}" for i in range(5)]
         worktrees = []
         for i, task_id in enumerate(task_ids):
@@ -337,6 +338,38 @@ class TestMergeTaskJournal(unittest.TestCase):
             self.assertEqual(event["event"], "merged")
             seen_tasks.add(event["task"])
         self.assertEqual(seen_tasks, set(task_ids))
+
+    # -- Review round 1 loop 2 regression: journal identity binding -----
+    # The terminal `merged` event is bound to THIS worktree's task and THIS
+    # feature's integration branch — a mismatched TASK_ID or PARENT_BRANCH
+    # argument merges normally but skips the journal append with a warning.
+
+    def test_mismatched_task_id_merges_but_skips_journal_append(self):
+        feature = FEATURE
+        task_id = "task0001"
+        wt = self._add_task_worktree(feature, task_id)
+        self._commit_file(wt, "feature.txt", "hello\n", "task0001: add feature file")
+
+        result = self._run_merge(wt, "task0002")  # wrong task id on purpose
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("journal append skipped", result.stderr)
+        self.assertEqual(self._read_journal_lines(feature), [])
+
+    def test_mismatched_parent_branch_feature_skips_journal_append(self):
+        feature = FEATURE
+        task_id = "task0001"
+        wt = self._add_task_worktree(feature, task_id)
+        self._commit_file(wt, "feature.txt", "hello\n", "task0001: add feature file")
+        # A different feature's integration branch, pointing at the same base.
+        other_parent = "em-workflow/other-feat/integration"
+        self._git(self.main_repo, "branch", other_parent, PARENT_BRANCH)
+
+        result = self._run_merge(wt, task_id, parent_branch=other_parent)
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("journal append skipped", result.stderr)
+        self.assertEqual(self._read_journal_lines(feature), [])
 
 
 if __name__ == "__main__":

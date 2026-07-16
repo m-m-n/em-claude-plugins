@@ -28,10 +28,13 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 2. ある step を 2 回連続で実行しても status が進まない（= スタック）
 3. ある step の status が `failed` / `needs_update`（= ユーザー介入が必要）
 4. workflow.yaml の YAML parse エラー（= リカバリ不能）
-5. implement フェーズでバックグラウンド implementer を起動/補充した直後
-   （= 完了通知待ち。implement-phase.md のキューループが定める正常な待機。
-   通知で起こされたら reconcile → 補充 → また待つ。queue_stop_guard hook が
-   「空きスロットがあるのに補充せず終える」ターンだけを exit 2 で弾く）
+5. implement フェーズでバックグラウンド implementer の完了通知を待つとき
+   （= キューループが定める正常な待機。次の 2 形がある:
+   (a) 起動/補充した直後、(b) failed 発生後のドレイン中 — 新規投入は
+   止めて in-flight の完了通知だけを待ち、全て回収してからユーザー三択を
+   出す。通知で起こされたら reconcile → 補充（ドレイン中は補充しない）→
+   また待つ。queue_stop_guard hook が「空きスロットがあるのに補充せず
+   終える」ターンだけを exit 2 で弾き、failed 存在時はブロックしない）
 
 これらに該当しない限り、フェーズ完了のたびに workflow.yaml を Read し直して
 **必ず**次の pending step を実行する。サブエージェントやフェーズプロトコルの

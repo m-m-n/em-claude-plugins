@@ -52,6 +52,21 @@ append_merged_event() {
   workflow_dir_name=$(basename -- "$(dirname -- "$feature_dir")")
   [ "$workflow_dir_name" = "em-workflow" ] || return 0
 
+  # Identity binding: the terminal `merged` event must describe THIS
+  # worktree's task and THIS feature's integration branch. A mismatched
+  # TASK_ID or PARENT_BRANCH argument (LLM/argument mistake) must never
+  # publish a terminal event for a different task or feature — warn and
+  # skip the append instead (the orchestrator's git-state reconcile still
+  # sees the merge itself).
+  if [ "$task_dir_name" != "$TASK_ID" ]; then
+    echo "WARNING: journal append skipped: TASK_ID ($TASK_ID) does not match worktree task directory ($task_dir_name)" >&2
+    return 0
+  fi
+  if [ "$PARENT_BRANCH" != "em-workflow/$feature_name/integration" ]; then
+    echo "WARNING: journal append skipped: parent branch ($PARENT_BRANCH) is not this feature's integration branch (em-workflow/$feature_name/integration)" >&2
+    return 0
+  fi
+
   journal_path="$feature_dir/journal.jsonl"
   ts=$(date +"%Y-%m-%dT%H:%M:%S%:z") || return 0
   line=$(printf '{"event":"merged","task":"%s","commit":"%s","at":"%s"}' \
