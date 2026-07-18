@@ -81,6 +81,14 @@ The orchestrator inspects the integrated diff (develop-駆動) or the diff /
 file list (standalone) and MAY add perspectives NOT in the floor. It may
 NEVER remove a floor perspective. Every addition carries a one-line reason.
 
+Mandatory Layer-2 check — `license`: when the diff touches dependency
+manifests or lockfiles (`package.json`, `go.mod`, `Cargo.toml`,
+`pyproject.toml` / `requirements.txt`, `composer.json`, `Gemfile`,
+`build.gradle` / `pom.xml`, and their lockfiles) or adds vendored
+third-party source, ADD the `license` perspective. It is never in the floor
+(review-rules.yaml has no manifest signal), so this is the only path that
+selects it.
+
 After Layer 2 completes, **re-evaluate `codex_cross_validation` against the
 FINAL selected set** (floor ∪ discretionary): it fires when ANY task has
 `complexity: high` OR the final set includes `security`. A discretionary
@@ -100,7 +108,10 @@ Read references/reviewers.yaml. For each selected perspective (skip
 - Launch `Task(subagent_type="em-workflow:reviewer")` with the review-protocol
   input block (perspective, perspective_skill = registry `claude_skill`,
   review_mode, protocol_path, schema_path, changed_files, diff_cmd_quoted,
-  spec_path when perspective == spec, project_root, round_context, lessons).
+  spec_path when perspective == spec, project_license when perspective ==
+  license (develop-駆動: workflow.yaml `project.license`; standalone: detect
+  from `{project_root}/LICENSE*`, `none` when absent), project_root,
+  round_context, lessons).
   `lessons`: when `feature-docs/LESSONS.md` exists (develop-駆動: in the MAIN
   working tree — the orchestrator reads it itself, it is not a reviewer-side
   path; standalone: under cwd) and it has a `## reviewer:{perspective}`

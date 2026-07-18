@@ -42,3 +42,11 @@ perspectives:
     claude_skill: review-comprehensive
     requires_spec: false
     codex_supported: false
+  - perspective: license
+    # Layer-2-only: never selected by the mechanical floor (review-rules.yaml
+    # has no manifest signal). Added by discretion when the diff touches
+    # dependency manifests / lockfiles or adds vendored third-party code
+    # (review-phase.md R1 Layer 2).
+    claude_skill: review-license
+    requires_spec: false
+    codex_supported: false

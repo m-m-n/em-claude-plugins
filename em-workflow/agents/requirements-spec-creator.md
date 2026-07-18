@@ -134,6 +134,10 @@ the SSOT — do not invent fields):
 - `base_branch`: current branch (`git rev-parse --abbrev-ref HEAD`);
   `parent_branch`: `em-workflow/{feature}/integration` (created later by the
   implement phase)
+- `project.license`: detect the root LICENSE file and identify its SPDX id
+  per `${CLAUDE_PLUGIN_ROOT}/references/license-compat.md` (detection
+  section). No file → `none`. Text present but unidentifiable → ask via
+  AskUserQuestion instead of guessing.
 - `project.components`: detect language / build / test / format / e2e
   commands from CLAUDE.md, package files (go.mod, package.json, composer.json,
   Cargo.toml), and test/README.md. Ask via AskUserQuestion when ambiguous.

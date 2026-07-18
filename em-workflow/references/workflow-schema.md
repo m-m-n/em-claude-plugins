@@ -28,6 +28,11 @@ parent_branch: em-workflow/{feature}/integration
                                    # Branch & Worktree Model)
 
 project:
+  license: {SPDX id | none}        # root LICENSE file identified at create-spec
+                                   # (references/license-compat.md, detection).
+                                   # `none` = no LICENSE file. Constraint input for
+                                   # library selection (planner) and the license
+                                   # review perspective
   components:
     main:                          # one entry per buildable component
       language: {language}

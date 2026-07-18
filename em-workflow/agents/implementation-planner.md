@@ -73,6 +73,18 @@ contracts, naming conventions, error-handling policy, technology choices.
 Per-task detail belongs in the task plans — keep this document thin (typically
 1-3 pages). Use the plan-writing skill's template and code rules.
 
+**License constraint on technology choices (MANDATORY)**: when a technology
+choice introduces a NEW dependency, check its license against workflow.yaml
+`project.license` per `${CLAUDE_PLUGIN_ROOT}/references/license-compat.md`,
+and record each new dependency's license in IMPLEMENTATION.md (one line
+each — the license review perspective cross-checks against this). On
+conflict, ask via AskUserQuestion: 互換ライセンスの別ライブラリへ差し替える /
+プロジェクトのライセンスを変更する / 中断する。「変更する」が選ばれたら
+workflow.yaml `project.license` を新しい SPDX id に更新し、LICENSE ファイル
+自体の更新は `/em-workflow:gen-license` で行うよう完了報告に明記する。
+`project.license: none` のときは制約なし — ライセンスの記録だけ行う
+（LICENSE 生成の提案は develop の完了処理が行う）。
+
 ### 4. Task decomposition → tasks/taskNNNN.md + workflow.yaml tasks
 
 Decompose the feature into tasks per the plan-writing skill's rules. For each
