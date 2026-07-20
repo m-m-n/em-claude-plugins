@@ -210,6 +210,12 @@ Dispatch:
   or `Apply as-is (editor interprets)` + `Skip`. Freeform answer becomes
   `user_chosen_approach`.
 
+Batch mode (develop-駆動 only; the orchestrator propagates `--batch` —
+references/batch-mode.md decision table): no AskUserQuestion. **conflict**
+→ skip the site (abort all members; conflicting prescriptions are not
+mechanically resolvable). **needs-judgment** → auto-select `Apply as-is
+(editor interprets)`.
+
 Each approved candidate dispatches to
 `Task(subagent_type="em-workflow:review-editor")` with `target_file_abs`
 (realpath-canonicalized, under project_root) + the finding JSON +
@@ -340,6 +346,16 @@ policy).
 (`needs_rework: true`, route back to implement) / explicit user acceptance
 (recorded as `deferred` with reason — this is the opt-out that keeps
 committed records free of undisclosed critical items).
+
+Batch mode (develop-駆動 only): no offer — auto-rework with cap 1. When
+`batch.review_rework_count == 0` in workflow.yaml: synthesize rework tasks
+from the residual critical/high findings (batch-mode.md "Rework task
+synthesis"), increment the counter, set `needs_rework: true`, review step
+`pending`, implement step `pending`; the develop state machine re-enters
+implement. When the counter is already ≥ 1: mark each residual finding
+`resolution: deferred` with `resolution_reason: "batch mode: rework cap
+reached"` and complete the step — the round record keeps them visible for
+the human evaluator.
 
 ## Phase R6: Report (Japanese)
 

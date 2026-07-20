@@ -109,6 +109,12 @@ requirements:                      # traceability SSOT
                                    #   "外部APIが廃止済みのため今回スコープ外")
     tasks: [task0001]              # filled by implementation-planner
     tests: [TS-1]                  # VERIFICATION.md scenario IDs
+
+batch:                             # present only after a --batch run touched
+  review_rework_count: 0           #   this feature (references/batch-mode.md).
+  verify_rework_count: 0           # Rework counters ONLY — batch mode is
+                                   #   activated per-invocation by the --batch
+                                   #   flag, never by this block
 ```
 
 ## Command approval store (outside the repository)
@@ -190,4 +196,6 @@ no script or hook ever writes it. Details: implement-phase.md's Step I.2
   ("実装完了 = 親ブランチへのマージ完了").
 - `review.residual_critical_high > 0` blocks the workflow from completing:
   the orchestrator must either loop the review phase, route back to
-  implement (`needs_rework: true`), or get an explicit user decision.
+  implement (`needs_rework: true`), or get an explicit user decision. In
+  batch mode the "explicit user decision" arm is replaced by the capped
+  auto-rework + auto-defer rule (references/batch-mode.md decision table).

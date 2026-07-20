@@ -182,7 +182,9 @@ protocol's approval gate now (AskUserQuestion → `--record`) — the PreToolUse
 hook denies unapproved workflow.yaml strings inside implementer worktrees,
 so approving up front avoids mid-launch failures. Commands the user rejects
 stay unapproved: the hook denies them and the implementer reports failure
-instead of working around it (worktree-task-workflow skill).
+instead of working around it (worktree-task-workflow skill). Batch mode:
+auto-record instead of asking; refusal patterns still hard-fail
+(references/batch-mode.md decision table).
 
 Launch each selected task as a BACKGROUND `Task(subagent_type="em-workflow:implementer")`
 call. Synchronous fan-out-and-wait for a batch of implementers is explicitly
@@ -284,6 +286,13 @@ There is NO skip option: a task is either merged, retried, or re-planned —
 never dropped mid-phase. "実装完了 = 親ブランチへのマージ完了" admits no
 carve-out; scope changes belong to the planning/spec layer, not to the
 implement phase.
+
+Batch mode (references/batch-mode.md decision table): no AskUserQuestion —
+after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a
+resume guard). A task that fails a second time → **abort phase** (implement
+stays `failed`, report and stop; the external service cuts a follow-up
+task). Route-back-to-planning is never taken automatically. Track the
+retry-consumed state per task in `tasks.{T}.notes`.
 
 ### Supporting cast: journal, hooks, resume
 

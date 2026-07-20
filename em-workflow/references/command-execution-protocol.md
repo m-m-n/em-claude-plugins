@@ -88,6 +88,14 @@ requirements-spec-creator). Implementers never run this gate.
    unapproved — the hook will deny them; the phase that needs them must
    report that to the user instead of working around it.
 
+Batch mode (`/em-workflow:develop --batch`, references/batch-mode.md): steps
+4-5 are replaced by auto-approval — record every unapproved command via
+`--record` without asking. Step 3 (refusal patterns) is UNCHANGED: hard
+fail, never recorded. The run report MUST list every auto-approved string
+(audit trail). This trades the human decision for unattended operation —
+the deterministic hook, the refusal patterns, and verbatim execution remain
+in force.
+
 ## Verbatim execution rule
 
 The hook compares exact strings (after trimming). Agents MUST run approved

@@ -153,6 +153,21 @@ coverage (`populated: N / total: M`, uncovered IDs listed), open questions.
 **Do NOT print next-step guidance** (「次は◯◯を実行」等) — the orchestrator
 decides the next phase from workflow.yaml alone.
 
+## Batch Mode
+
+Active when the orchestrator runs `/em-workflow:develop --batch` (this file
+is executed inline in that context). `AskUserQuestion` is FORBIDDEN; the
+three interactive decisions resolve mechanically per
+`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md`:
+
+- TBD requirements (step 2): auto-select 仮定を置いて進める — set
+  `status: assumed`, write the assumption into the affected task plans, and
+  list it in the completion report.
+- License conflict (step 3): auto-select 互換ライセンスの別ライブラリへ
+  差し替える. No compatible alternative → abort the phase with a report
+  (never auto-relicense the project).
+- Existing IMPLEMENTATION.md / tasks/ (step 7): auto-select 更新（マージ）.
+
 ## Important Guidelines
 
 1. **Tasks must be worktree-independent**: a task is implementable from its
