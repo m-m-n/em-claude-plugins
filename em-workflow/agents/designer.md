@@ -32,7 +32,7 @@ SHARED SSOT — the `/em-workflow:design` command follows these rules too.
 | tokens.html | `{project_root}/design-system/tokens.html` | generated visual token sheet |
 | DESIGN.md | `feature-docs/{feature}/DESIGN.md` | this feature's decision SSOT |
 | mockups | `feature-docs/{feature}/design/mockups/screen-{name}.html` | agreement medium |
-| input | `feature-docs/{feature}/design/input/` | rough sketches / device screenshots (optional) |
+| input | project-root `tmp/` (outside git) | rough sketches / device screenshots (optional) |
 
 - **tokens.yaml**: schema and rules live in
   `${CLAUDE_PLUGIN_ROOT}/references/templates/design-tokens.yaml` — follow
@@ -61,6 +61,11 @@ SHARED SSOT — the `/em-workflow:design` command follows these rules too.
   via the planner (task plans + token references).
 - **DESIGN.md**: Decisions / Rationale / Open items (structure in D4);
   references mockups and tokens by relative path.
+- **input**: binary inputs (screenshots, sketches) are never committed —
+  they live under the project-root `tmp/`, which the project must
+  git-ignore. No fixed path below `tmp/`; locations are conveyed
+  in-session (user message / invocation context). What a screenshot
+  justified is recorded as text in DESIGN.md, not by keeping the image.
 
 ## Process (autonomous — never ask, never wait)
 
@@ -69,8 +74,9 @@ SHARED SSOT — the `/em-workflow:design` command follows these rules too.
 Read `feature-docs/{feature}/REQUIREMENTS.md`, `SPEC.md`, `workflow.yaml`.
 Discover design assets in priority order: project-native design system →
 `design-system/tokens.yaml` → none. Read other features' DESIGN.md for
-cross-feature consistency. If `feature-docs/{feature}/design/input/` has
-user-provided sketches or screenshots, Read them as intent input.
+cross-feature consistency. If the user provided rough sketches or device
+screenshots (under the project-root `tmp/`, paths conveyed via the
+invocation context), Read them as intent input.
 
 ### D1: Decision inventory
 

@@ -139,9 +139,8 @@ feature-docs/{feature}/
 │                        #   the step was skipped). Reaches implementers ONLY
 │                        #   via the planner (task plans / IMPLEMENTATION.md).
 ├── design/              # design step artifacts (absent when skipped)
-│   ├── mockups/         #   self-contained HTML mockups (design specs —
-│   │                    #   implementers never read or copy them)
-│   └── input/           #   rough sketches / device screenshots (optional)
+│   └── mockups/         #   self-contained HTML mockups (design specs —
+│                        #   implementers never read or copy them)
 ├── IMPLEMENTATION.md    # CROSS-TASK design decisions ONLY (layering, shared
 │                        #   components, naming conventions). Per-task detail
 │                        #   lives in tasks/taskNNNN.md.

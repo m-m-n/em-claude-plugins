@@ -37,8 +37,10 @@ DESIGN.md / mockups を読む。システム全体スコープでは全 feature 
 
 - 最初に「実機のスクリーンショットはある?」と確認する。あればパスを
   受け取って Read（画像）し、モック / トークンとの乖離を具体的に列挙する。
-  feature スコープではスクショを `feature-docs/{feature}/design/input/` に
-  コピーして変更根拠として保管する（システム全体スコープでは保管は任意）
+  スクショを手元に残す場合はプロジェクトルートの `tmp/` 配下に置く
+  （`tmp/` は git 管理外であること — バイナリは git 管理しない。配下の
+  パスは固定せず、セッション内のコンテキストで扱う）。変更根拠は Step 5
+  で DESIGN.md に言語化して残す
 - 言葉のフィードバックは、対象の成果物（どのトークン / どのモックのどの
   部分）へ翻訳してから認識合わせする
 
@@ -74,6 +76,7 @@ DESIGN.md / mockups を読む。システム全体スコープでは全 feature 
 - コード・スタイルファイル・workflow.yaml・SPEC.md・REQUIREMENTS.md に
   触れない
 - 書き込み先は `feature-docs/*/DESIGN.md`・`feature-docs/*/design/` 配下・
-  `design-system/` 配下のみ
+  `design-system/` 配下・プロジェクトルート `tmp/` 配下（スクショの一時
+  保管のみ）に限る
 
 $ARGUMENTS
