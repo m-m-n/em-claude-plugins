@@ -44,12 +44,14 @@ document is written; this phase never creates them itself.
   this phase — Step I.1's baseline commit and Step I.2.b's wake-phase
   commit): exit 4 means a concurrent `merge-task.sh` advanced the branch ref
   between that call site's last refresh and its commit attempt. Recovery:
-  refresh the integration worktree again (the `reset --hard` above), re-apply
-  the SAME intended state transition on top of the refreshed tree —
-  re-derived from source (the recorded base_commit, or the journal/report
-  facts), never a replay of a stale diff — and retry `commit-docs.sh` once. A
-  second exit 4 stops the phase immediately with a report naming the call
-  site and the task(s) involved; never loop unbounded.
+  refresh the integration worktree again (the `reset --hard` above), RE-CAPTURE
+  the tip (`git -C {integration_worktree} rev-parse HEAD`) and use the fresh
+  value as `commit-docs.sh`'s third argument on the retry, re-apply the SAME
+  intended state transition on top of the refreshed tree — re-derived from
+  source (the recorded base_commit, or the journal/report facts), never a
+  replay of a stale diff — and retry `commit-docs.sh` once. A second exit 4
+  stops the phase immediately with a report naming the call site and the
+  task(s) involved; never loop unbounded.
 - Every workflow artifact — `feature-docs/{feature}/` (REQUIREMENTS.md,
   SPEC.md, workflow.yaml, IMPLEMENTATION.md, VERIFICATION.md, tasks/,
   reviews/, retrospect.yaml), `test/README.md`, `design-system/` — is written
@@ -128,8 +130,9 @@ implement entry for the feature); on resume (implement already
 sent it back) the existing `base_commit` value is preserved unchanged, per
 batch-mode.md's rework rule. In all cases set `implement` status to
 `in_progress`; commit the update with
-`commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase start"`
-(exit-4 recovery: Branch & Worktree Model above).
+`commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase start" "$BASE_COMMIT"`
+(the third argument is `expected_base_tip`; exit-4 recovery: Branch &
+Worktree Model above).
 
 ## Step I.2: Task loop (work queue, background launch + wake-phase refill)
 
@@ -246,7 +249,8 @@ Triggered whenever a launched implementer's `Task()` call returns.
      `merged` — a claim that fails this check is NOT merged; never mark a
      task merged on self-report or journal entry alone.
 2. **Refresh the integration worktree FIRST** (Branch & Worktree Model):
-   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`.
+   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`,
+   then capture `RECONCILE_TIP=$(git -C {integration_worktree} rev-parse HEAD)`.
    Any reconcile that observed a ref advance means a concurrent
    `merge-task.sh` moved the branch tip via `update-ref` without touching
    this worktree — refreshing before step 3's edit is what keeps that edit
@@ -261,9 +265,9 @@ Triggered whenever a launched implementer's `Task()` call returns.
    or whose report is `failed`/malformed, on the worktree just refreshed in
    step 2, then commit:
    `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
-   phase reconcile"` (exit-4 recovery: Branch & Worktree Model above — on a
-   second exit 4, stop the wake phase with a report naming the task(s)
-   involved rather than looping).
+   phase reconcile" "$RECONCILE_TIP"` (exit-4 recovery: Branch & Worktree
+   Model above — on a second exit 4, stop the wake phase with a report
+   naming the task(s) involved rather than looping).
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
    git worktree remove "$WT_ROOT/{T}"

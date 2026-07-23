@@ -122,14 +122,21 @@ class TestImplementPhaseWakePhaseOrdering(unittest.TestCase):
 
     def test_step_i1_commit_references_exit4_recovery(self):
         self.assertIn(
-            '"docs({feature}): implement phase start"`\n'
-            "(exit-4 recovery: Branch & Worktree Model above).",
+            '"docs({feature}): implement phase start" "$BASE_COMMIT"`',
+            self.text,
+        )
+        self.assertIn(
+            "the third argument is `expected_base_tip`; exit-4 recovery",
             self.text,
         )
 
     def test_wake_phase_commit_references_exit4_recovery(self):
         self.assertIn(
-            'phase reconcile"` (exit-4 recovery: Branch & Worktree Model above',
+            'phase reconcile" "$RECONCILE_TIP"`',
+            self.wake_phase_section,
+        )
+        self.assertIn(
+            "(exit-4 recovery: Branch & Worktree",
             self.wake_phase_section,
         )
 
