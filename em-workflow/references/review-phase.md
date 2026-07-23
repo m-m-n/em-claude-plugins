@@ -287,13 +287,24 @@ stage arbitrary authorized source files named by the loop's findings), so
 acquire the lock, stage, and commit inside one critical section:
 
 ```bash
-GIT_COMMON_DIR=$(git -C {project_root} rev-parse --path-format=absolute --git-common-dir)
-exec 9>"$GIT_COMMON_DIR/em-workflow-merge.lock"
-flock 9
-git -C {project_root} add -A -- <authorized files>
-git -C {project_root} commit -m "fix({feature}): review round {round} loop {N}"
+PROJECT_ROOT="{project_root}"
+authorized_files=( {authorized files, one shell-quoted argv element per file} )
+GIT_COMMON_DIR=$(git -C "$PROJECT_ROOT" rev-parse --path-format=absolute --git-common-dir) || exit 1
+exec 9>"$GIT_COMMON_DIR/em-workflow-merge.lock" || exit 1
+flock 9 || exit 1
+git -C "$PROJECT_ROOT" add -A -- "${authorized_files[@]}" || exit 1
+git -C "$PROJECT_ROOT" commit -m "fix({feature}): review round {round} loop {N}" || exit 1
 # fd 9 closes (releasing the lock) when this shell/subshell exits
 ```
+
+Every step above is fail-fast (`||  exit 1`): a failure to resolve
+`GIT_COMMON_DIR`, open fd 9, acquire the lock, or stage files aborts
+the section before any commit runs, so the integration ref can never
+advance without the shared lock. `PROJECT_ROOT` is captured once into
+a quoted variable and referenced as `"$PROJECT_ROOT"`; authorized
+files are expanded from a bash array (`"${authorized_files[@]}"`),
+never via textual placeholder substitution, so filenames containing
+shell metacharacters cannot be interpreted as shell syntax.
 
 (`--path-format=absolute`, git ≥ 2.31, sidesteps the cwd-relative output
 `rev-parse --git-common-dir` can otherwise return under `-C`.)

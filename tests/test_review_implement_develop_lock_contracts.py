@@ -66,11 +66,11 @@ class TestReviewPhaseFixCommitHoldsSharedLock(unittest.TestCase):
         text = self.text
         lock_idx = text.index("flock 9")
         add_idx = text.index(
-            "git -C {project_root} add -A -- <authorized files>"
+            'git -C "$PROJECT_ROOT" add -A -- "${authorized_files[@]}" || exit 1'
         )
         commit_idx = text.index(
-            'git -C {project_root} commit -m "fix({feature}): review round '
-            '{round} loop {N}"'
+            'git -C "$PROJECT_ROOT" commit -m "fix({feature}): review round '
+            '{round} loop {N}" || exit 1'
         )
         self.assertLess(lock_idx, add_idx, "staging must happen AFTER acquiring the lock")
         self.assertLess(add_idx, commit_idx, "commit must happen after staging")
@@ -85,9 +85,9 @@ class TestReviewPhaseFixCommitHoldsSharedLock(unittest.TestCase):
     def test_only_the_locked_add_and_commit_lines_exist(self):
         lines = _bare_git_commit_or_add_lines(self.text)
         allowed = {
-            "git -C {project_root} add -A -- <authorized files>",
-            'git -C {project_root} commit -m "fix({feature}): review round '
-            '{round} loop {N}"',
+            'git -C "$PROJECT_ROOT" add -A -- "${authorized_files[@]}" || exit 1',
+            'git -C "$PROJECT_ROOT" commit -m "fix({feature}): review round '
+            '{round} loop {N}" || exit 1',
         }
         self.assertEqual(set(lines), allowed)
 
@@ -189,9 +189,9 @@ class TestNoIntegrationRefAdvanceOutsideSharedLock(unittest.TestCase):
         text = _read(REVIEW_PHASE_PATH)
         lines = _bare_git_commit_or_add_lines(text)
         allowed = {
-            "git -C {project_root} add -A -- <authorized files>",
-            'git -C {project_root} commit -m "fix({feature}): review round '
-            '{round} loop {N}"',
+            'git -C "$PROJECT_ROOT" add -A -- "${authorized_files[@]}" || exit 1',
+            'git -C "$PROJECT_ROOT" commit -m "fix({feature}): review round '
+            '{round} loop {N}" || exit 1',
         }
         for line in lines:
             self.assertIn(

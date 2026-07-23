@@ -8,7 +8,17 @@
 # the same lock file.
 #
 # Usage:
-#   ${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh <worktree-path> <message>
+#   ${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh <worktree-path> <message> [expected_base_tip]
+#
+#   expected_base_tip (optional): the branch tip the caller's worktree state
+#   was actually built on, captured at the caller's last refresh (e.g. right
+#   after its `git reset --hard`). When provided, this is the authoritative
+#   staleness check: after acquiring the lock, the current branch tip MUST
+#   equal expected_base_tip, or exit 4 fires. Callers SHOULD pass this
+#   argument — it closes the window between the caller's refresh+edit and
+#   this script's own BEFORE_TIP read, which the start-vs-under-lock check
+#   below cannot see. When omitted, only the secondary start-vs-under-lock
+#   check runs (kept for backwards compatibility).
 #
 # Exit codes (semantic — callers branch on these):
 #   0 = committed, or nothing to commit (no-op success; ref unchanged)
@@ -19,10 +29,12 @@
 #       failed); ref not advanced
 #   4 = stale worktree (a concurrent merge-task.sh advanced the branch ref
 #       via update-ref while this worktree's index/working tree still
-#       reflects the old tree) — detected by comparing the branch tip
-#       captured BEFORE this invocation acquired the shared lock against the
-#       tip observed immediately AFTER acquiring it; any divergence means an
-#       external ref move landed in that window. No git state touched.
+#       reflects the old tree) — detected either by comparing the current
+#       branch tip against the caller-supplied expected_base_tip (when given),
+#       or by comparing the branch tip captured BEFORE this invocation
+#       acquired the shared lock against the tip observed immediately AFTER
+#       acquiring it; any divergence means an external ref move landed in
+#       that window. No git state touched.
 #
 #       RECOVERY CONTRACT (binding on every caller): on exit 4 the caller
 #       MUST (1) refresh this worktree to the new branch tip (e.g. `git
@@ -57,9 +69,10 @@ die() {
 
 WORKTREE_PATH="${1:-}"
 MESSAGE="${2:-}"
+EXPECTED_BASE_TIP="${3:-}"
 
 [ -n "$WORKTREE_PATH" ] && [ -n "$MESSAGE" ] \
-  || die 1 "usage: commit-docs.sh <worktree-path> <message>"
+  || die 1 "usage: commit-docs.sh <worktree-path> <message> [expected_base_tip]"
 
 [ -d "$WORKTREE_PATH" ] \
   || die 1 "worktree path does not exist or is not a directory: $WORKTREE_PATH"
@@ -118,8 +131,14 @@ flock 9 || die 2 "cannot acquire commit lock"
 # that happened while we were waiting for the lock. ---
 AFTER_TIP=$(git -C "$WORKTREE_PATH" rev-parse HEAD 2>/dev/null) \
   || die 3 "cannot resolve worktree HEAD"
-[ "$BEFORE_TIP" = "$AFTER_TIP" ] \
-  || die 4 "branch tip advanced from $BEFORE_TIP to $AFTER_TIP while acquiring the lock (an external update-ref, e.g. a concurrent merge-task.sh) — reset this worktree to the new tip, re-apply the doc edits, and retry"
+
+if [ -n "$EXPECTED_BASE_TIP" ]; then
+  [ "$EXPECTED_BASE_TIP" = "$AFTER_TIP" ] \
+    || die 4 "branch tip is $AFTER_TIP but caller's worktree state was built on $EXPECTED_BASE_TIP (an external update-ref, e.g. a concurrent merge-task.sh) — reset this worktree to the new tip, re-apply the doc edits, and retry"
+else
+  [ "$BEFORE_TIP" = "$AFTER_TIP" ] \
+    || die 4 "branch tip advanced from $BEFORE_TIP to $AFTER_TIP while acquiring the lock (an external update-ref, e.g. a concurrent merge-task.sh) — reset this worktree to the new tip, re-apply the doc edits, and retry"
+fi
 
 # --- Stage + commit (inside the critical section) ---
 # Scoped to the workflow artifact paths per SPEC FR3 — never `git add -A`

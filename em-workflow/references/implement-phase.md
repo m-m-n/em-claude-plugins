@@ -120,8 +120,14 @@ BASE_COMMIT=$(git -C "$WT_ROOT/integration" rev-parse HEAD)
 
 `$BASE_COMMIT` is the integration branch's HEAD at implement start —
 everything create-spec, design, and create-plan already committed to it.
-Record in workflow.yaml: `workflow[implement].base_commit = $BASE_COMMIT`;
-set `implement` status to `in_progress`; commit the update with
+`base_commit` は初回のみ記録する — resume/rework 再突入では絶対に上書きしない。
+Record in workflow.yaml: only when `workflow[implement].base_commit` is
+absent/unset, set `workflow[implement].base_commit = $BASE_COMMIT` (first
+implement entry for the feature); on resume (implement already
+`in_progress`) or rework re-entry (implement `pending` after review/verify
+sent it back) the existing `base_commit` value is preserved unchanged, per
+batch-mode.md's rework rule. In all cases set `implement` status to
+`in_progress`; commit the update with
 `commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase start"`
 (exit-4 recovery: Branch & Worktree Model above).
 
