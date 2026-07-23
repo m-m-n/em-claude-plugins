@@ -128,15 +128,27 @@ class TestDesignerWorktreePaths(unittest.TestCase):
             "the D4 write phase must end with a commit-docs.sh call",
         )
 
-    def test_bash_tool_is_declared_for_commit_docs_invocation(self):
+    def test_designer_delegates_commit_to_orchestrator(self):
         tools_line = next(
             line for line in self.frontmatter.splitlines() if line.startswith("tools:")
         )
         tools = [t.strip() for t in tools_line.split(":", 1)[1].split(",")]
-        self.assertIn(
+        self.assertNotIn(
             "Bash",
             tools,
-            "designer.md must declare the Bash tool to invoke commit-docs.sh",
+            "designer.md must NOT declare the Bash tool; it defers "
+            "commit-docs.sh invocation to the orchestrator",
+        )
+        self.assertIn(
+            "Do not commit",
+            self.text,
+            "designer.md must state that it does not commit itself",
+        )
+        self.assertIn(
+            "commit-docs.sh",
+            self.text,
+            "designer.md must reference commit-docs.sh being run by the "
+            "orchestrator after this agent returns",
         )
 
     def test_no_stale_two_layer_model_wording_remains(self):

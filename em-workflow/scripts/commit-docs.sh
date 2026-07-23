@@ -17,9 +17,11 @@
 #   2 = lock failure (cannot open or acquire the shared lock file)
 #   3 = git failure (staging or commit itself failed); ref not advanced
 #   4 = stale worktree (a concurrent merge-task.sh advanced the branch ref
-#       past this worktree's HEAD before the lock was acquired); no git
-#       state touched — caller must reset the worktree to the new tip,
-#       re-apply the doc changes, and retry
+#       via update-ref while this worktree's index/working tree still
+#       reflects the old tree — detected via a non-artifact change in
+#       `git status --porcelain`, since HEAD-vs-branch-tip is always equal
+#       in an attached worktree); no git state touched — caller must reset
+#       the worktree to the new tip, re-apply the doc changes, and retry
 #
 # Concurrency: acquires an exclusive flock on the SAME lock file
 # merge-task.sh uses ($(git rev-parse --git-common-dir)/em-workflow-merge.lock)
@@ -82,24 +84,36 @@ exec 9>"$GIT_COMMON_DIR/em-workflow-merge.lock" || die 2 "cannot open lock file"
 flock 9 || die 2 "cannot acquire commit lock"
 
 # --- Stale-worktree check (inside the critical section): if a concurrent
-# merge-task.sh already advanced the branch ref past this worktree's HEAD,
-# committing here would build a tree on a stale parent and implicitly
-# revert the merged changes. Fail fast so the caller can reset + retry. ---
-CURRENT_BRANCH=$(git -C "$WORKTREE_PATH" rev-parse --abbrev-ref HEAD 2>/dev/null) \
-  || die 3 "cannot resolve current branch"
-WORKTREE_HEAD=$(git -C "$WORKTREE_PATH" rev-parse --verify HEAD 2>/dev/null) \
-  || die 3 "cannot resolve worktree HEAD"
-if [ "$CURRENT_BRANCH" != "HEAD" ]; then
-  BRANCH_TIP=$(git -C "$WORKTREE_PATH" rev-parse --verify "refs/heads/$CURRENT_BRANCH" 2>/dev/null) \
-    || die 3 "cannot resolve branch tip: $CURRENT_BRANCH"
-  [ "$WORKTREE_HEAD" = "$BRANCH_TIP" ] \
-    || die 4 "worktree HEAD ($WORKTREE_HEAD) is stale relative to branch $CURRENT_BRANCH tip ($BRANCH_TIP); a concurrent merge-task.sh advanced the ref — reset the worktree and retry"
-fi
-
-# --- Stage + commit (inside the critical section) ---
+# merge-task.sh already advanced the branch ref past this worktree's HEAD
+# via `git update-ref` (no checkout), the worktree's index/working tree is
+# still built on the OLD tree even though HEAD now resolves to the NEW
+# commit (HEAD is a symref to the same branch in an attached worktree, so
+# comparing HEAD to the branch tip is always equal and can never detect
+# this). Detect staleness instead by checking whether `git status
+# --porcelain` reports any changed/untracked path OUTSIDE the artifact
+# paths we're about to stage — that is the signature of an index left
+# behind by an externally advanced ref. Fail fast so the caller can reset
+# + retry, without staging or committing anything. ---
 # Scoped to the workflow artifact paths per SPEC FR3 — never `git add -A`,
 # which would sweep in unrelated build/test/format byproducts.
 ARTIFACT_PATHS=(feature-docs test/README.md design-system)
+
+STATUS_OUT=$(git -C "$WORKTREE_PATH" status --porcelain 2>/dev/null) \
+  || die 3 "cannot read worktree status"
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  path="${line:3}"
+  is_artifact=0
+  for p in "${ARTIFACT_PATHS[@]}"; do
+    case "$path" in
+      "$p"|"$p"/*) is_artifact=1; break ;;
+    esac
+  done
+  [ "$is_artifact" -eq 1 ] \
+    || die 4 "worktree has a non-artifact change outside ARTIFACT_PATHS ($path); the index is stale relative to an externally advanced branch ref (concurrent merge-task.sh) — reset the worktree to the branch tip, re-apply the doc edits, and retry"
+done <<< "$STATUS_OUT"
+
+# --- Stage + commit (inside the critical section) ---
 STAGE_PATHS=()
 for p in "${ARTIFACT_PATHS[@]}"; do
   [ -e "$WORKTREE_PATH/$p" ] && STAGE_PATHS+=("$p")

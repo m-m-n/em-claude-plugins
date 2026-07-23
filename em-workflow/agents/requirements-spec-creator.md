@@ -111,13 +111,21 @@ requirement's `status: tbd` with `tbd_reason` in workflow.yaml and leave its
 3. Create the branch and its worktree (skip branch/worktree creation when
    resuming an existing branch; if resuming and the worktree no longer
    exists at the conventional path, re-materialize it with the same
-   `git worktree add` command below):
+   `git worktree add` command below). BEFORE running `git worktree add`,
+   gate on `.claude/worktrees/` being ignored in the main tree — this keeps
+   the main tree's `git status` clean throughout spec/design/plan, not just
+   from implement Step I.1 onward:
    ```bash
    PROJECT_ROOT="$(git rev-parse --show-toplevel)"
    BASE_COMMIT=$(git rev-parse HEAD)
    git branch "em-workflow/{feature-name}/integration" "$BASE_COMMIT"
    WT="$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature-name}/integration"
    mkdir -p "$(dirname "$WT")"
+   if ! git -C "$PROJECT_ROOT" check-ignore -q .claude/worktrees/probe; then
+     # Dispatch em-workflow:gitignore-guard (same subagent implement Step I.1
+     # uses), or equivalently append the ignore rule idempotently:
+     printf '%s\n' '.claude/worktrees/' >> "$PROJECT_ROOT/.gitignore"
+   fi
    git worktree add "$WT" "em-workflow/{feature-name}/integration"
    ```
    `$WT` is the integration worktree. From here on, every artifact this
