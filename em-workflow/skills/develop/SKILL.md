@@ -95,7 +95,11 @@ hook の編集はコミットしない（コミットはユーザーの判断）
 
 feature-docs はもう main 作業ツリーを走査しない。存在する feature は
 `em-workflow/{feature}/integration` ブランチの有無で判定する（Discovery
-セマンティクス）。
+セマンティクス）。プロジェクトルートは最初にシェル変数へ捕捉する
+（`PROJECT_ROOT="$(git rev-parse --show-toplevel)"` —
+requirements-spec-creator.md Phase 3 と同じ安全なパターン。以降このステップの
+コマンド文字列は `$PROJECT_ROOT` を参照し、`{project_root}` をコマンド文字列に
+直接埋め込まない）。
 
 1. **feature 名の決定**
    - パス引数（引数処理参照）があれば、その末尾要素を feature 名とする
@@ -106,14 +110,15 @@ feature-docs はもう main 作業ツリーを走査しない。存在する fea
      補間より前に検証する）
    - 無ければ `em-workflow/*/integration` にマッチするブランチを列挙する
      （`git branch --list 'em-workflow/*/integration'`）
-     - 1件: そのブランチの feature を使う
+     - 1件: そのブランチの feature を使う（ブートストラップ状態は
+       2./3. で判定する）
      - 複数: AskUserQuestion で選択（batch: 推測せず中断報告 —
        batch-mode.md 決定表）
      - 0件: 新規 feature。create-spec フェーズから開始（workflow.yaml は
        create-spec が生成する）。完了後に再探索して確定（batch: タスク
        記述引数を create-spec の入力にする。タスク記述も無ければ中断報告）
 2. **worktree の確保**（既存 feature のときのみ）: `git worktree list` で
-   `{project_root}/.claude/worktrees/em-workflow/{feature}/integration` が
+   `"$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration"` が
    存在するか確認する
    - 存在する: そのまま使う
    - 存在しない（ブランチはあるが worktree が片付けられている —
@@ -123,8 +128,19 @@ feature-docs はもう main 作業ツリーを走査しない。存在する fea
      存在しない場合は再マテリアライズせず、新規 feature として
      create-spec フェーズに回す（上記 1. の「0件」ルート）。
      再マテリアライズするコマンドは引数を必ずクォートする:
-     `git worktree add "{project_root}/.claude/worktrees/em-workflow/{feature}/integration" "em-workflow/{feature}/integration"`
-3. 以降の全ステップで workflow.yaml / feature-docs/ 配下のドキュメントを
+     `git worktree add "$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration" "em-workflow/{feature}/integration"`
+3. **ブートストラップ状態の判定**（1. で 1 件マッチした既存 feature のみ対象。
+   複数/0件は上記で解決済み）: 確保した worktree 内の
+   `feature-docs/{feature}/workflow.yaml` の有無で分岐する:
+   - **存在する**（通常の再開）: そのまま Step A.5 → Step B へ進む
+   - **存在しない**（ブランチ + worktree だけが作られ、create-spec が
+     workflow.yaml を書き切る前に中断された状態）: 新規 feature 扱いには
+     せず、この既存ブランチ/worktree に対して create-spec フェーズへ直接
+     再突入する（requirements-spec-creator.md Phase 3 は既存ブランチの
+     検出・再利用ロジックを持つため、ここから二重にブランチが作られる
+     ことはない）。完了後は workflow.yaml が生成されているので、通常どおり
+     Step A.5 → Step B に合流する
+4. 以降の全ステップで workflow.yaml / feature-docs/ 配下のドキュメントを
    読み書きする対象は、この worktree 内の絶対パスになる（Step B 参照）
 
 ## Step A.5: コマンド承認ゲート（workflow.yaml が存在するとき必ず）
@@ -167,6 +183,17 @@ workflow.yaml か feature-docs/ 配下のドキュメントを Write/Edit する
 "docs({feature}): {更新内容の要約}"` を実行してコミットする。状態の根拠は
 変わらず **workflow.yaml の status のみ**（保存場所が main ツリーから
 worktree に移っただけ）。
+
+**exit-4 リカバリ**（commit-docs.sh の全呼び出し箇所で共通 — Step B のこの
+ドキュメントコミット、および下記の verify / retrospect フェーズのコミットを
+含む）: 戻り値 4（stale worktree — 並行する merge-task.sh がこの worktree の
+直近の refresh より後にブランチ ref を進めた）を受けたら、
+`git -C {integration worktree の絶対パス} reset --hard
+em-workflow/{feature}/integration` で最新 tip に refresh し、直前に書こう
+とした状態遷移（status 更新やドキュメント内容）を最新ツリーの上に
+re-derive して書き直し、`commit-docs.sh` を 1 回だけ再試行する。2 回目も
+exit 4 ならそこでフェーズを中断し、状況をユーザーに報告する（無限リトライ
+しない）。
 
 | step | 実行方法 |
 |------|----------|

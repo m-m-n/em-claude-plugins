@@ -40,6 +40,16 @@ document is written; this phase never creates them itself.
   (safe: the integration worktree never carries uncommitted state across
   turns — every workflow.yaml / document write, in every phase, is followed
   by a `commit-docs.sh` commit in the same step; NFR2).
+- **exit-4 recovery** (bounded; applies to every `commit-docs.sh` call site in
+  this phase — Step I.1's baseline commit and Step I.2.b's wake-phase
+  commit): exit 4 means a concurrent `merge-task.sh` advanced the branch ref
+  between that call site's last refresh and its commit attempt. Recovery:
+  refresh the integration worktree again (the `reset --hard` above), re-apply
+  the SAME intended state transition on top of the refreshed tree —
+  re-derived from source (the recorded base_commit, or the journal/report
+  facts), never a replay of a stale diff — and retry `commit-docs.sh` once. A
+  second exit 4 stops the phase immediately with a report naming the call
+  site and the task(s) involved; never loop unbounded.
 - Every workflow artifact — `feature-docs/{feature}/` (REQUIREMENTS.md,
   SPEC.md, workflow.yaml, IMPLEMENTATION.md, VERIFICATION.md, tasks/,
   reviews/, retrospect.yaml), `test/README.md`, `design-system/` — is written
@@ -112,7 +122,8 @@ BASE_COMMIT=$(git -C "$WT_ROOT/integration" rev-parse HEAD)
 everything create-spec, design, and create-plan already committed to it.
 Record in workflow.yaml: `workflow[implement].base_commit = $BASE_COMMIT`;
 set `implement` status to `in_progress`; commit the update with
-`commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase start"`.
+`commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase start"`
+(exit-4 recovery: Branch & Worktree Model above).
 
 ## Step I.2: Task loop (work queue, background launch + wake-phase refill)
 
@@ -228,14 +239,26 @@ Triggered whenever a launched implementer's `Task()` call returns.
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
      task merged on self-report or journal entry alone.
-2. **Update workflow.yaml**: collect each returning implementer's
-   completion report — `{"task_id", "status": "merged"|"failed",
+2. **Refresh the integration worktree FIRST** (Branch & Worktree Model):
+   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`.
+   Any reconcile that observed a ref advance means a concurrent
+   `merge-task.sh` moved the branch tip via `update-ref` without touching
+   this worktree — refreshing before step 3's edit is what keeps that edit
+   built on the CURRENT tip instead of a stale one a later commit could lose
+   work against.
+3. **Update workflow.yaml, then commit**: collect each returning
+   implementer's completion report — `{"task_id", "status": "merged"|"failed",
    "merge_commit", "conflict_retries", "tests": "pass"|"fail",
    "deviations": [...], "notes"}` (malformed/missing report → treat as
-   `failed`) — and set `tasks.{T}.status = merged` for every task verified
+   `failed`) — set `tasks.{T}.status = merged` for every task verified
    merged, `= failed` for every task whose last journal event is `failed`
-   or whose report is `failed`/malformed.
-3. **Clean up** every newly-merged task's worktree and branch:
+   or whose report is `failed`/malformed, on the worktree just refreshed in
+   step 2, then commit:
+   `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
+   phase reconcile"` (exit-4 recovery: Branch & Worktree Model above — on a
+   second exit 4, stop the wake phase with a report naming the task(s)
+   involved rather than looping).
+4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
    git worktree remove "$WT_ROOT/{T}"
    git branch -D "em-workflow/{feature}/{T}"   # -D: merge already verified
@@ -247,8 +270,7 @@ Triggered whenever a launched implementer's `Task()` call returns.
                                                # was merged into integration,
                                                # not base_branch).
    ```
-   Then refresh the integration worktree (Branch & Worktree Model).
-4. **Refill**: if no task's reconciled status is `failed`, re-enter the
+5. **Refill**: if no task's reconciled status is `failed`, re-enter the
    launch phase (I.2.a) with the freed slot(s) and any still-unlaunched
    tasks, then end the turn again. If every task is now `merged`, proceed to
    Step I.3.
