@@ -12,8 +12,10 @@ it — a workflow.yaml edited inside a task branch becomes a guaranteed merge
 conflict. This rule is restated in the `worktree-task-workflow` skill.
 
 Exception: the upstream agents (requirements-spec-creator, implementation-
-planner) create/extend the file when dispatched by the orchestrator — they run
-in the main checkout, not in a worktree.
+planner) create/extend the file when dispatched by the orchestrator — they
+run against the integration worktree (created at create-spec Phase 3) and
+commit each update via commit-docs.sh, exactly like every other feature-docs
+write.
 
 ## Full structure
 
@@ -163,9 +165,11 @@ Project-level assets OUTSIDE feature-docs (feature 横断・workflow-generated):
 `test/README.md` (testing conventions, created by create-spec),
 `design-system/` (tokens.yaml — the design token SSOT — plus tokens.html,
 a generated visual token sheet; created/extended by the design step),
-`feature-docs/LESSONS.md` (retrospect lessons). While untracked,
-`test/README.md` and `design-system/` are carried into the integration
-branch by the implement phase's Step I.1 (implement-phase.md).
+`feature-docs/LESSONS.md` (retrospect lessons). `test/README.md` and
+`design-system/` are written directly under the integration worktree at
+their project-relative paths and committed there by the step that creates
+or extends them (commit-docs.sh) — same as every feature-docs artifact;
+there is no separate carry-over step.
 
 Also outside feature-docs, under the worktree root: the implement phase's
 journal, `{project_root}/.claude/worktrees/em-workflow/{feature}/journal.jsonl`
