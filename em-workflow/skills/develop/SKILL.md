@@ -99,6 +99,11 @@ feature-docs はもう main 作業ツリーを走査しない。存在する fea
 
 1. **feature 名の決定**
    - パス引数（引数処理参照）があれば、その末尾要素を feature 名とする
+   - **fail-closed 識別子ゲート**: feature 名（パス引数由来・ブランチ由来を
+     問わず）は `^[a-z0-9][a-z0-9-]*$` にマッチしなければならない。
+     マッチしない場合はサニタイズや暗黙の変換をせず、明確なエラーで
+     **中断**する（この後の worktree 操作を含む、いかなるシェルコマンドへの
+     補間より前に検証する）
    - 無ければ `em-workflow/*/integration` にマッチするブランチを列挙する
      （`git branch --list 'em-workflow/*/integration'`）
      - 1件: そのブランチの feature を使う
@@ -112,9 +117,13 @@ feature-docs はもう main 作業ツリーを走査しない。存在する fea
    存在するか確認する
    - 存在する: そのまま使う
    - 存在しない（ブランチはあるが worktree が片付けられている —
-     前回セッションの手動クリーンアップ後の再開等）:
-     `git worktree add {project_root}/.claude/worktrees/em-workflow/{feature}/integration em-workflow/{feature}/integration`
-     で再マテリアライズする
+     前回セッションの手動クリーンアップ後の再開等）: 再マテリアライズは
+     対応する `em-workflow/{feature}/integration` ブランチが実在すると
+     確認できた場合のみ行う。パス引数由来の feature 名で対応ブランチが
+     存在しない場合は再マテリアライズせず、新規 feature として
+     create-spec フェーズに回す（上記 1. の「0件」ルート）。
+     再マテリアライズするコマンドは引数を必ずクォートする:
+     `git worktree add "{project_root}/.claude/worktrees/em-workflow/{feature}/integration" "em-workflow/{feature}/integration"`
 3. 以降の全ステップで workflow.yaml / feature-docs/ 配下のドキュメントを
    読み書きする対象は、この worktree 内の絶対パスになる（Step B 参照）
 

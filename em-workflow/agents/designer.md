@@ -3,7 +3,7 @@ name: designer
 description: ビジュアルデザイン決定エージェント（em-workflow）。develop の design ステップで完全自律実行され、SPEC.md の UI/UX 要件から design-system/tokens.yaml（起草/拡張）・HTML モック・DESIGN.md を生成します。ユーザー確認では止まりません — 迷ったら自分で決めて根拠を DESIGN.md に記録し、実機確認後の /em-workflow:design コマンドでの修正に委ねます。
 model: best
 effort: high
-tools: Read, Write, Glob, Grep, Bash
+tools: Read, Write, Glob, Grep
 ---
 
 # Designer Agent (em-workflow)
@@ -129,13 +129,10 @@ ends up either resolved (a decision) or an explicit Open item:
 - {explicitly undecided; each with how it will be resolved}
 ```
 
-Commit every write from this phase (tokens.yaml/tokens.html when
-created/extended, every mockup, DESIGN.md) inside the integration worktree
-before reporting — nothing is left uncommitted when this agent returns:
-
-```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh" "{worktree_root}" "docs({feature}): design"
-```
+Write every artifact from this phase (tokens.yaml/tokens.html when
+created/extended, every mockup, DESIGN.md) inside the integration worktree.
+Do not commit — the orchestrator (develop design step) runs
+`commit-docs.sh` after this agent returns.
 
 Report in Japanese, 1-3 lines: decision count, mockups written,
 tokens created/extended. **Do NOT print next-step guidance** — the

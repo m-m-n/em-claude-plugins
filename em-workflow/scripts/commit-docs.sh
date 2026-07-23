@@ -16,6 +16,10 @@
 #       no git state touched
 #   2 = lock failure (cannot open or acquire the shared lock file)
 #   3 = git failure (staging or commit itself failed); ref not advanced
+#   4 = stale worktree (a concurrent merge-task.sh advanced the branch ref
+#       past this worktree's HEAD before the lock was acquired); no git
+#       state touched — caller must reset the worktree to the new tip,
+#       re-apply the doc changes, and retry
 #
 # Concurrency: acquires an exclusive flock on the SAME lock file
 # merge-task.sh uses ($(git rev-parse --git-common-dir)/em-workflow-merge.lock)
@@ -77,9 +81,34 @@ GIT_DIR_ABS=$(cd "$GIT_DIR" 2>/dev/null && pwd -P) \
 exec 9>"$GIT_COMMON_DIR/em-workflow-merge.lock" || die 2 "cannot open lock file"
 flock 9 || die 2 "cannot acquire commit lock"
 
+# --- Stale-worktree check (inside the critical section): if a concurrent
+# merge-task.sh already advanced the branch ref past this worktree's HEAD,
+# committing here would build a tree on a stale parent and implicitly
+# revert the merged changes. Fail fast so the caller can reset + retry. ---
+CURRENT_BRANCH=$(git -C "$WORKTREE_PATH" rev-parse --abbrev-ref HEAD 2>/dev/null) \
+  || die 3 "cannot resolve current branch"
+WORKTREE_HEAD=$(git -C "$WORKTREE_PATH" rev-parse --verify HEAD 2>/dev/null) \
+  || die 3 "cannot resolve worktree HEAD"
+if [ "$CURRENT_BRANCH" != "HEAD" ]; then
+  BRANCH_TIP=$(git -C "$WORKTREE_PATH" rev-parse --verify "refs/heads/$CURRENT_BRANCH" 2>/dev/null) \
+    || die 3 "cannot resolve branch tip: $CURRENT_BRANCH"
+  [ "$WORKTREE_HEAD" = "$BRANCH_TIP" ] \
+    || die 4 "worktree HEAD ($WORKTREE_HEAD) is stale relative to branch $CURRENT_BRANCH tip ($BRANCH_TIP); a concurrent merge-task.sh advanced the ref — reset the worktree and retry"
+fi
+
 # --- Stage + commit (inside the critical section) ---
-git -C "$WORKTREE_PATH" add -A \
-  || die 3 "git add failed"
+# Scoped to the workflow artifact paths per SPEC FR3 — never `git add -A`,
+# which would sweep in unrelated build/test/format byproducts.
+ARTIFACT_PATHS=(feature-docs test/README.md design-system)
+STAGE_PATHS=()
+for p in "${ARTIFACT_PATHS[@]}"; do
+  [ -e "$WORKTREE_PATH/$p" ] && STAGE_PATHS+=("$p")
+done
+
+if [ "${#STAGE_PATHS[@]}" -gt 0 ]; then
+  git -C "$WORKTREE_PATH" add -A -- "${STAGE_PATHS[@]}" \
+    || die 3 "git add failed"
+fi
 
 if git -C "$WORKTREE_PATH" diff --cached --quiet; then
   echo "NOOP: nothing to commit in $WORKTREE_PATH"
