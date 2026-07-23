@@ -28,13 +28,20 @@ workflow:
     status: completed
     completed_at_commit: 3c185e6e70747b7680aa0aed814acca415762a4f
   - id: implement
-    status: pending
+    status: completed
+    completed_at_commit: a29a51bf3ae7ca54d2530c5277d4142245499d92
+    base_commit: 3c185e6e70747b7680aa0aed814acca415762a4f
   - id: review
-    status: pending
+    status: completed
+    completed_at_commit: cb2b30f17e94b7ae6f6f465b3738db5d7d96e28f
   - id: verify
-    status: pending
+    status: completed
+    result: pass
+    failed_items: []
+    notes: "126 tests pass; M-1 grep audit clean; M-4 version 0.1.22 confirmed. Manual M-2/M-3 covered by TS-5/contract-test proxies; real-world exercise occurs on the first v0.1.22 develop run"
   - id: retrospect
-    status: pending
+    status: completed
+    completed_at_commit: cb2b30f17e94b7ae6f6f465b3738db5d7d96e28f
 
 tasks:
   task0001:
@@ -47,8 +54,9 @@ tasks:
     domains: [concurrency, external-io]
     complexity: high
     requirements: [FR3, NFR2, NFR3, NFR4]
-    status: pending
+    status: merged
     notes: null
+    branch: em-workflow/integration-worktree-orchestration/task0001
   task0002:
     title: "create-spec agent rewrite (early worktree creation)"
     plan: tasks/task0002.md
@@ -58,8 +66,9 @@ tasks:
     domains: [config-infra]
     complexity: medium
     requirements: [FR1, FR2, NFR1]
-    status: pending
-    notes: null
+    status: merged
+    notes: "Fixed latent bug: completed_at_commit now resolves HEAD in the worktree. Flagged: gitignore-guard dispatch timing (implement Step I.1) vs earlier worktree creation in create-spec Phase 3 — review to assess"
+    branch: em-workflow/integration-worktree-orchestration/task0002
   task0003:
     title: "develop SKILL.md rewrite (discovery + Step C)"
     plan: tasks/task0003.md
@@ -69,8 +78,9 @@ tasks:
     domains: [config-infra, concurrency]
     complexity: high
     requirements: [FR4, FR5, FR2, NFR1, NFR2]
-    status: pending
+    status: merged
     notes: null
+    branch: em-workflow/integration-worktree-orchestration/task0003
   task0004:
     title: "references/ protocol updates (implement/review/batch/schema)"
     plan: tasks/task0004.md
@@ -83,8 +93,9 @@ tasks:
     domains: [config-infra, concurrency]
     complexity: high
     requirements: [FR2, FR6, NFR1, NFR2]
-    status: pending
+    status: merged
     notes: null
+    branch: em-workflow/integration-worktree-orchestration/task0004
   task0005:
     title: "planner/designer path updates, README, version bump"
     plan: tasks/task0005.md
@@ -97,12 +108,68 @@ tasks:
     domains: [config-infra]
     complexity: medium
     requirements: [FR6, FR7]
-    status: pending
-    notes: null
+    status: merged
+    notes: "File prediction miss: added tests/test_planner_designer_worktree_docs.py (not in expected files). Also added Bash to designer.md frontmatter for commit-docs.sh calls"
+  task0006:
+    title: "Rework: commit-docs.sh recovery contract + hardening + test alignment"
+    plan: tasks/task0006.md
+    files:
+      - em-workflow/scripts/commit-docs.sh
+      - tests/test_commit_docs.py
+    skills: [infra-impl]
+    domains: [concurrency, external-io]
+    complexity: high
+    requirements: [FR3, NFR2, NFR3, NFR4]
+    status: merged
+    notes: "Synthesized from review round 1 residuals: f5084f2afab5d3fe, 16702654a8c83434, cb2a99347619de01, e8313f5cad581a23, 33fb54f4ebe662f0, dee0a6aac12247d6, 1839533482c373b9, 0be68a14be06e869"
+    branch: em-workflow/integration-worktree-orchestration/task0006
+  task0007:
+    title: "Rework: lock-aware fix commits, wake-phase refresh, bootstrap resume"
+    plan: tasks/task0007.md
+    files:
+      - em-workflow/references/review-phase.md
+      - em-workflow/references/implement-phase.md
+      - em-workflow/skills/develop/SKILL.md
+    skills: [infra-impl]
+    domains: [config-infra, concurrency]
+    complexity: high
+    requirements: [FR4, FR5, FR6, NFR2, NFR3]
+    status: merged
+    notes: "Synthesized from review round 1 residuals: 2be071cdd65fe558, 454c5eba23d061ce, 32cc5c216645a7fb, 93f4c66b52b3ebf2. File prediction miss: added tests/test_review_implement_develop_lock_contracts.py (AC grep audit automation)"
+    branch: em-workflow/integration-worktree-orchestration/task0007
+  task0008:
+    title: "Rework: agent boundary wording, symlink-safe append, README consistency"
+    plan: tasks/task0008.md
+    files:
+      - em-workflow/agents/designer.md
+      - em-workflow/agents/requirements-spec-creator.md
+      - em-workflow/README.md
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: medium
+    requirements: [FR1, FR6, FR7, NFR1]
+    status: merged
+    notes: "Synthesized from review round 1 residuals: 4be72ffc99bb4e33, d86e39e805002f56, 56d0a31fd4ae5a58, 8f4e0dc87917e6a6"
+    branch: em-workflow/integration-worktree-orchestration/task0008
+    branch: em-workflow/integration-worktree-orchestration/task0005
 
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 2
+  needs_rework: false
+  perspectives:
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+    security: completed
+  residual_critical_high: 0
+  plan:
+    floor: [comprehensive, performance, architecture, spec]
+    discretionary:
+      - perspective: security
+        reason: "New shell script (commit-docs.sh) interpolates caller-supplied worktree paths and commit messages into git commands"
+    codex_cross_validation: true
 
 requirements:
   FR1:
