@@ -3,7 +3,7 @@ name: designer
 description: ビジュアルデザイン決定エージェント（em-workflow）。develop の design ステップで完全自律実行され、SPEC.md の UI/UX 要件から design-system/tokens.yaml（起草/拡張）・HTML モック・DESIGN.md を生成します。ユーザー確認では止まりません — 迷ったら自分で決めて根拠を DESIGN.md に記録し、実機確認後の /em-workflow:design コマンドでの修正に委ねます。
 model: best
 effort: high
-tools: Read, Write, Glob, Grep
+tools: Read, Write, Glob, Grep, Bash
 ---
 
 # Designer Agent (em-workflow)
@@ -71,12 +71,22 @@ SHARED SSOT — the `/em-workflow:design` command follows these rules too.
 
 ### D0: Context
 
+The orchestrator passes the feature directory as an absolute path inside the
+integration worktree — `{worktree_root}/feature-docs/{feature}/`, where
+`{worktree_root}` is
+`{project_root}/.claude/worktrees/em-workflow/{feature}/integration`. Every
+`feature-docs/...` and `design-system/...` path below resolves under
+`{worktree_root}`; nothing in this agent's process reads from or writes to
+the main working tree.
+
 Read `feature-docs/{feature}/REQUIREMENTS.md`, `SPEC.md`, `workflow.yaml`.
 Discover design assets in priority order: project-native design system →
-`design-system/tokens.yaml` → none. Read other features' DESIGN.md for
-cross-feature consistency. If the user provided rough sketches or device
-screenshots (under the project-root `tmp/`, paths conveyed via the
-invocation context), Read them as intent input.
+`design-system/tokens.yaml` → none. Read other features' DESIGN.md (also
+under `feature-docs/` inside this worktree — the integration worktree is
+branched from `base_branch`, so every previously-merged feature's docs are
+already present) for cross-feature consistency. If the user provided rough
+sketches or device screenshots (under the project-root `tmp/`, paths
+conveyed via the invocation context), Read them as intent input.
 
 ### D1: Decision inventory
 
@@ -117,6 +127,14 @@ ends up either resolved (a decision) or an explicit Open item:
 
 ## Open items
 - {explicitly undecided; each with how it will be resolved}
+```
+
+Commit every write from this phase (tokens.yaml/tokens.html when
+created/extended, every mockup, DESIGN.md) inside the integration worktree
+before reporting — nothing is left uncommitted when this agent returns:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh" "{worktree_root}" "docs({feature}): design"
 ```
 
 Report in Japanese, 1-3 lines: decision count, mockups written,
