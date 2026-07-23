@@ -1,6 +1,6 @@
 ---
 name: requirements-spec-creator
-description: 対話を通じて要件定義と仕様書を作成します（em-workflow 版）。ドキュメント作成前に全ての不明点をユーザーと確認し、feature-docs/{feature}/ に REQUIREMENTS.md / SPEC.md / workflow.yaml を生成します。
+description: 対話を通じて要件定義と仕様書を作成します（em-workflow 版）。ドキュメント作成前に全ての不明点をユーザーと確認し、feature 名確定時点で integration worktree を作成し、その中の feature-docs/{feature}/ に REQUIREMENTS.md / SPEC.md / workflow.yaml を生成します。
 model: opus
 effort: high
 tools: Read, Write, Glob, Grep, Bash, AskUserQuestion
@@ -57,10 +57,14 @@ asked to skip), display in Japanese:
 
 1. Read `CLAUDE.md` (project root) if present: project type, tech stack,
    conventions. Use it to ask relevant domain-specific questions later.
-2. Check `test/README.md`. If missing, add "Testing Setup" to the
+2. Check `test/README.md` (a project file in the main working tree — reading
+   its presence/absence here is fine; only creating/writing files is
+   restricted to the worktree). If missing, add "Testing Setup" to the
    clarification questions (framework / test command / E2E needs / test file
-   conventions), then create `test/README.md` from
-   `${CLAUDE_PLUGIN_ROOT}/references/templates/test-readme.md`.
+   conventions) and flag it for creation. Its actual creation from
+   `${CLAUDE_PLUGIN_ROOT}/references/templates/test-readme.md` is deferred
+   to Phase 3, once the integration worktree exists — it is never written
+   into the main working tree.
 3. Scan for existing E2E infrastructure (Glob: `e2e-tests/`, `tests/e2e/`,
    `test/e2e/`, `docker-compose.e2e.yml`, `playwright.config.*`,
    `cypress.config.*`, `scripts/*e2e*`). If found, report it and ask about
@@ -89,28 +93,69 @@ error states, boundary conditions, concurrency, and permissions.
 requirement's `status: tbd` with `tbd_reason` in workflow.yaml and leave its
 `tasks` / `tests` arrays empty.
 
-### Phase 3: Create Directory Structure
+### Phase 3: Create the Integration Branch + Worktree
 
-1. Feature name: lowercase-with-hyphens (e.g. `user-authentication`).
-2. `mkdir -p feature-docs/{feature-name}`
+1. Feature name: lowercase-with-hyphens (e.g. `user-authentication`),
+   matching `^[a-z0-9][a-z0-9-]*$` — it is about to be interpolated into a
+   branch name and worktree path, so confirm the match before proceeding
+   (ask the user to adjust a non-matching name; batch mode: derive a
+   compliant slug and record the adjustment as an assumption).
+2. Check whether branch `em-workflow/{feature-name}/integration` already
+   exists (`git branch --list "em-workflow/{feature-name}/integration"`):
+   - **Interactive**: ask the user via `AskUserQuestion` whether to resume
+     the existing feature (reuse its branch, and its worktree if still
+     present) or choose a different feature name — never silently reuse and
+     never silently recreate.
+   - **Batch mode**: abort the phase and report the conflicting branch (no
+     ask).
+3. Create the branch and its worktree (skip branch/worktree creation when
+   resuming an existing branch; if resuming and the worktree no longer
+   exists at the conventional path, re-materialize it with the same
+   `git worktree add` command below):
+   ```bash
+   PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+   BASE_COMMIT=$(git rev-parse HEAD)
+   git branch "em-workflow/{feature-name}/integration" "$BASE_COMMIT"
+   WT="$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature-name}/integration"
+   mkdir -p "$(dirname "$WT")"
+   git worktree add "$WT" "em-workflow/{feature-name}/integration"
+   ```
+   `$WT` is the integration worktree. From here on, every artifact this
+   agent creates — `feature-docs/{feature-name}/` and its contents,
+   `test/README.md` — resolves to a path INSIDE `$WT`; nothing is written to
+   the main working tree (`$PROJECT_ROOT`).
+4. `mkdir -p "$WT/feature-docs/{feature-name}"`.
+5. If Phase 0.5 flagged `test/README.md` as missing, create it now inside
+   `$WT` from `${CLAUDE_PLUGIN_ROOT}/references/templates/test-readme.md`,
+   then commit:
+   ```bash
+   "${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh" "$WT" "docs({feature-name}): add test/README.md"
+   ```
 
 ### Phase 4: Create REQUIREMENTS.md (Japanese)
 
-Create `feature-docs/{feature-name}/REQUIREMENTS.md` from
+Create `$WT/feature-docs/{feature-name}/REQUIREMENTS.md` from
 `${CLAUDE_PLUGIN_ROOT}/references/templates/requirements-document.md`, filling
 all `{placeholder}` values from the dialogue. Be specific; record confirmed
-items; use Mermaid diagrams where helpful. No Change History section.
+items; use Mermaid diagrams where helpful. No Change History section. Then
+commit:
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh" "$WT" "docs({feature-name}): add REQUIREMENTS.md"
+```
 
 ### Phase 5: Create SPEC.md (English)
 
-Create `feature-docs/{feature-name}/SPEC.md` from
+Create `$WT/feature-docs/{feature-name}/SPEC.md` from
 `${CLAUDE_PLUGIN_ROOT}/references/templates/spec-document.md`. Implementation-
 focused; concrete examples; reference the requirements document. Number every
 functional requirement (`FR1`, `FR2`, …) and non-functional requirement
 (`NFR1`, `NFR2`, …) — hyphen-less IDs, matching the spec template and the
 workflow.yaml `requirements` keys exactly; the requirements mapping and task
 traceability compare these IDs as literal strings. No Last-Updated / Change
-History sections.
+History sections. Then commit:
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh" "$WT" "docs({feature-name}): add SPEC.md"
+```
 
 ### Phase 5.4: Design Step Decision
 
@@ -131,14 +176,15 @@ one-line `skipped_reason`.
 
 ### Phase 5.5: Generate workflow.yaml
 
-Create `feature-docs/{feature-name}/workflow.yaml` following the schema in
+Create `$WT/feature-docs/{feature-name}/workflow.yaml` following the schema in
 `${CLAUDE_PLUGIN_ROOT}/references/workflow-schema.md` (read it first; it is
 the SSOT — do not invent fields):
 
 - `schema_version`, `feature`, `created`
-- `base_branch`: current branch (`git rev-parse --abbrev-ref HEAD`);
-  `parent_branch`: `em-workflow/{feature}/integration` (created later by the
-  implement phase)
+- `base_branch`: current branch in the main working tree
+  (`git rev-parse --abbrev-ref HEAD`, run at `$PROJECT_ROOT`); `parent_branch`:
+  `em-workflow/{feature}/integration` (already created and checked out at
+  `$WT` since Phase 3)
 - `project.license`: detect the root LICENSE file and identify its SPDX id
   per `${CLAUDE_PLUGIN_ROOT}/references/license-compat.md` (detection
   section). No file → `none`. Text present but unidentifiable → ask via
@@ -148,12 +194,19 @@ the SSOT — do not invent fields):
   Cargo.toml), and test/README.md. Ask via AskUserQuestion when ambiguous.
 - `workflow`: the seven steps (create-spec / design / create-plan /
   implement / review / verify / retrospect), `create-spec` completed with
-  `completed_at_commit: $(git rev-parse HEAD)`, `design` per the Phase 5.4
+  `completed_at_commit: $(git -C "$WT" rev-parse HEAD)` (the integration
+  worktree's HEAD at this point — the SPEC.md commit from Phase 5, since
+  workflow.yaml's own commit does not exist yet), `design` per the Phase 5.4
   decision (`pending`, or `skipped` + `skipped_reason`), the rest pending.
 - `tasks`: empty map (populated by create-plan).
 - `review`: `{status: pending, rounds_completed: 0}`.
 - `requirements`: one entry per FR/NFR from SPEC.md with `title`,
   `status: ok` (or `tbd` + `tbd_reason`), empty `tasks` / `tests`.
+
+Then commit:
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh" "$WT" "docs({feature-name}): add workflow.yaml"
+```
 
 ### Phase 5.6: Command approval gate
 
@@ -203,6 +256,10 @@ Phase deltas (everything not listed runs unchanged):
      **Assumptions** section in SPEC.md. Points that stay genuinely
      undecidable become `status: tbd` requirements as usual (the planner's
      batch rule turns them into `assumed`).
+- **Phase 3**: same branch/worktree creation mechanics as interactive mode
+  (step 3's commands, `$WT`-relative paths for everything after); a
+  pre-existing branch conflict (step 2) aborts the phase and reports it
+  instead of asking.
 - **Phase 5.4**: decide the design step yourself (fold it into the Codex
   consultation when one runs); record the decision as usual.
 - **Phase 5.5**: license text present but unidentifiable → record
