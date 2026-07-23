@@ -9,7 +9,10 @@ context.
 
 The workflow NEVER commits to, resets, or force-updates the user's branch or
 the user's main working tree. All workflow commits land on a dedicated
-integration branch, materialized in its own worktree:
+integration branch, materialized in its own worktree. This branch and
+worktree are a PRECONDITION of this phase: create-spec creates both at
+Phase 3, immediately after the feature name is confirmed and before any
+document is written; this phase never creates them itself.
 
 ```
 {base_branch}  (user's branch — untouched)
@@ -22,8 +25,9 @@ integration branch, materialized in its own worktree:
 - Worktree root: `{project_root}/.claude/worktrees/em-workflow/{feature}/`
   (the Claude Code standard worktree location; the gitignore-guard pre-step
   in I.1 ensures it is git-ignored in the main tree).
-  - `integration/` — the integration worktree (created in Step I.1, kept until
-    the develop run finishes)
+  - `integration/` — the integration worktree (created at create-spec
+    Phase 3; this phase only confirms it in Step I.1, kept until the develop
+    run finishes)
   - `task0001/` … — per-task worktrees (created when a task is launched,
     removed after its merge)
 - `merge-task.sh` advances `refs/heads/em-workflow/{feature}/integration` via
@@ -33,15 +37,18 @@ integration branch, materialized in its own worktree:
   working tree. **After every wake-phase reconcile that merges/cleans up
   tasks, refresh the integration worktree**:
   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
-  (safe: that worktree holds no uncommitted work by invariant).
-- The live `feature-docs/{feature}/` (workflow.yaml etc.) stays in the MAIN
-  working tree, uncommitted, orchestrator-owned. It is copied + committed into
-  the integration branch at phase start (Step I.1) and again at develop
-  completion (so the merged result carries the final records). Untracked
-  workflow-generated project docs (`test/README.md` from create-spec,
-  `design-system/` from the design step) are committed alongside at phase
-  start only (Step I.1) — that makes them visible in every task worktree and
-  carries them to `base_branch` via the completion merge.
+  (safe: the integration worktree never carries uncommitted state across
+  turns — every workflow.yaml / document write, in every phase, is followed
+  by a `commit-docs.sh` commit in the same step; NFR2).
+- Every workflow artifact — `feature-docs/{feature}/` (REQUIREMENTS.md,
+  SPEC.md, workflow.yaml, IMPLEMENTATION.md, VERIFICATION.md, tasks/,
+  reviews/, retrospect.yaml), `test/README.md`, `design-system/` — is written
+  directly at its project-relative path inside the integration worktree, each
+  write followed by a `commit-docs.sh` commit (`docs({feature}): {summary}`).
+  Nothing is ever written to the main working tree by the workflow (the sole
+  exceptions are the gitignore-guard `.gitignore` append and the final Step C
+  merge below). There is no separate main-tree copy of any artifact and no
+  copy/sync step at any phase boundary.
 - At develop completion the user is offered — via AskUserQuestion — a merge of
   the integration branch into `base_branch` (executed as a normal `git merge`
   in the main working tree after a cleanliness check). After a successful
@@ -57,8 +64,9 @@ integration branch, materialized in its own worktree:
 2. **Fail-closed identifier validation gate**: `feature` MUST match
    `^[a-z0-9][a-z0-9-]*$` and every task id in `tasks` MUST match
    `^task[0-9]+$`. Validate BEFORE any of these values are interpolated into
-   any shell command in Step I.1/I.2 (branch names, worktree paths, cp/rm
-   targets) — these validated values are the ONLY forms that may be
+   any shell command in Step I.1/I.2 (branch names, worktree paths, `git
+   worktree add`/`remove` and `git branch` targets) — these validated values
+   are the ONLY forms that may be
    interpolated there. A non-matching value ABORTS the phase with a clear
    error naming the offending value; never sanitize, never proceed (same
    fail-closed discipline as the changed_files path gate in
@@ -78,9 +86,13 @@ integration branch, materialized in its own worktree:
    protocol (search `$HOME/.claude/plugins` / `$HOME/.claude/skills` with
    path filter `*/em-workflow/*/scripts/*`, never cwd).
 
-## Step I.1: Create the integration branch (once per feature)
+## Step I.1: Confirm the integration worktree, record the implement baseline
 
-Skip if `parent_branch` already exists (resume case).
+The integration branch and its worktree already exist by this point (Branch
+& Worktree Model above) — created at create-spec Phase 3 and, on a resume
+where the branch survived but its worktree was removed, re-materialized by
+develop Step A's discovery. This step creates neither; it runs the
+gitignore guard and records the implement-phase baseline.
 
 **Pre-step — .gitignore guard**: dispatch
 `Task(subagent_type="em-workflow:gitignore-guard")` with `project_root`. It
@@ -92,32 +104,15 @@ user's choice; the develop completion merge tolerates exactly this diff. A
 `git status` in the main tree).
 
 ```bash
-BASE_COMMIT=$(git rev-parse HEAD)
-git branch "em-workflow/{feature}/integration" "$BASE_COMMIT"
 WT_ROOT="$(git rev-parse --show-toplevel)/.claude/worktrees/em-workflow/{feature}"
-mkdir -p "$WT_ROOT"
-git worktree add "$WT_ROOT/integration" "em-workflow/{feature}/integration"
-# Copy feature-docs into the integration worktree and commit them there:
-mkdir -p "$WT_ROOT/integration/feature-docs"
-cp -r "feature-docs/{feature}" "$WT_ROOT/integration/feature-docs/"
-git -C "$WT_ROOT/integration" add feature-docs
-# Bring along workflow-generated project docs (test/README.md from
-# create-spec, design-system/ from the design step) ONLY while untracked:
-# tracked copies are already in BASE_COMMIT, and user-modified tracked
-# files are never committed on the user's behalf. File-granular on purpose
-# — a partially-tracked design-system/ still gets its new files carried.
-git ls-files -z --others --exclude-standard -- test/README.md design-system/ |
-while IFS= read -r -d '' f; do
-  mkdir -p "$WT_ROOT/integration/$(dirname "$f")"
-  cp "$f" "$WT_ROOT/integration/$f"
-  git -C "$WT_ROOT/integration" add -- "$f"
-done
-git -C "$WT_ROOT/integration" commit -m "docs({feature}): SDD artifacts at implement start"
+BASE_COMMIT=$(git -C "$WT_ROOT/integration" rev-parse HEAD)
 ```
 
-Record in workflow.yaml: `base_branch`, `parent_branch`, and
-`workflow[implement].base_commit = $BASE_COMMIT`. Set `implement` status to
-`in_progress`.
+`$BASE_COMMIT` is the integration branch's HEAD at implement start —
+everything create-spec, design, and create-plan already committed to it.
+Record in workflow.yaml: `workflow[implement].base_commit = $BASE_COMMIT`;
+set `implement` status to `in_progress`; commit the update with
+`commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase start"`.
 
 ## Step I.2: Task loop (work queue, background launch + wake-phase refill)
 
@@ -197,9 +192,9 @@ Prompt payload per task (unchanged):
 # Task assignment
 task_id: {T}
 worktree_path: {absolute path to $WT_ROOT/{T}}
-task_plan_path: {absolute path to MAIN worktree's feature-docs/{feature}/tasks/{T}.md}
-implementation_md_path: {absolute path to MAIN worktree's feature-docs/{feature}/IMPLEMENTATION.md}
-lessons_path: {absolute path to MAIN worktree's feature-docs/LESSONS.md; OMIT this line when the file does not exist}
+task_plan_path: {absolute path to the integration worktree's feature-docs/{feature}/tasks/{T}.md}
+implementation_md_path: {absolute path to the integration worktree's feature-docs/{feature}/IMPLEMENTATION.md}
+lessons_path: {absolute path to the MAIN working tree's feature-docs/LESSONS.md; OMIT this line when the file does not exist — LESSONS.md is the one cross-feature artifact that stays outside the integration worktree}
 parent_branch: em-workflow/{feature}/integration
 merge_script: {resolved MERGE_SCRIPT absolute path}
 skills_to_load: {tasks.{T}.skills, prefixed em-workflow: — e.g. ["em-workflow:backend-impl"]; may be empty}

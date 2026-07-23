@@ -294,7 +294,10 @@ note), re-aggregate, then: zero residual critical/high non-spec → `clean`;
 
 ## Phase R5: Persist the round record
 
-Write `reviews/round{N}.yaml` (develop-駆動: under feature-docs/{feature}/;
+Write `reviews/round{N}.yaml` (develop-駆動: at
+`{project_root}/feature-docs/{feature}/reviews/round{N}.yaml` —
+project_root is the integration worktree per the mode table above, a
+committed worktree-resident path like every other feature-docs artifact;
 standalone: `./reviews-{timestamp}/round1.yaml`), N = prior rounds + 1:
 
 ```yaml
@@ -336,10 +339,13 @@ rework_required: false       # true → implement へ差し戻し
 ```
 
 develop-駆動: update workflow.yaml `review` block (rounds_completed,
-perspectives, residual_critical_high, needs_rework, status). The record
-files are committed to the integration branch together with the final
-feature-docs sync at develop completion ("レビュー記録はデフォルトでコミット"
-policy).
+perspectives, residual_critical_high, needs_rework, status), then commit
+both the round record and the workflow.yaml update in the same step —
+`commit-docs.sh {integration_worktree} "docs({feature}): review round {N}"`
+("レビュー記録はデフォルトでコミット" policy). There is no deferred
+end-of-run sync: each round's records and resolution updates land on the
+integration branch immediately, including the batch-mode rework/defer
+updates below.
 
 **Completion gate**: the review step may be marked `completed` ONLY when
 `residual_critical_high == 0`. Otherwise: offer another round / rework
