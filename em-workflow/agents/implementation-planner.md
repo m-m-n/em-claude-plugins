@@ -22,9 +22,15 @@ domains criteria, and the self-verification checklist. Follow them strictly.
 
 ## Inputs
 
-The orchestrator passes the feature directory (`feature-docs/{feature}/`).
-Read `workflow.yaml`, `SPEC.md`, `REQUIREMENTS.md` from it. If workflow.yaml
-is missing, abort and report (this agent never runs before create-spec).
+The orchestrator passes the feature directory as an absolute path inside the
+integration worktree — `{worktree_root}/feature-docs/{feature}/`, where
+`{worktree_root}` is
+`{project_root}/.claude/worktrees/em-workflow/{feature}/integration`. Every
+`feature-docs/{feature}/...` and `design-system/...` path mentioned below
+resolves under `{worktree_root}`; nothing in this agent's process reads from
+or writes to the main working tree. Read `workflow.yaml`, `SPEC.md`,
+`REQUIREMENTS.md` from it. If workflow.yaml is missing, abort and report
+(this agent never runs before create-spec).
 
 Also read `feature-docs/LESSONS.md` if it exists (project-level lessons
 recorded by past retrospect runs): apply its `## planner` section to your
@@ -33,7 +39,8 @@ refines HOW you plan, never overrides the rules of the plan-writing skill.
 
 Also read `feature-docs/{feature}/DESIGN.md` if it exists (visual design
 decisions from the design step), plus the token SSOT it references
-(`design-system/tokens.yaml` or the project-native design system). You are
+(`design-system/tokens.yaml` or the project-native design system, itself
+also resolved under `{worktree_root}` when present). You are
 their ONLY route to the implementers — mockups and DESIGN.md are design
 specs, never implementation references (strict separation):
 
@@ -145,6 +152,14 @@ If IMPLEMENTATION.md or the tasks/ directory already exists (re-run), ask:
 
 Run the plan-writing skill's Pre-Save Self-Verification Checklist first
 (no concrete code anywhere; rewrite violating sections before saving).
+
+Commit every write from this phase (IMPLEMENTATION.md, tasks/, workflow.yaml,
+VERIFICATION.md) inside the integration worktree before reporting — nothing
+is left uncommitted when this agent returns:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh" "{worktree_root}" "docs({feature}): create-plan"
+```
 
 Report in Japanese: created files, task list (ID / title / complexity
 / domains / skills), verification summary, requirements
