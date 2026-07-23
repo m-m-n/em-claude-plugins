@@ -1,0 +1,374 @@
+round: 1
+executed_at: "2026-07-23T19:45:20+09:00"
+scope:
+  review_mode: diff
+  base_commit: 3c185e6e70747b7680aa0aed814acca415762a4f
+  head_commit: 6c7bafbdfcae8cc9720c31c6b2c3668d3c964e9c
+  changed_files:
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/README.md
+    - em-workflow/agents/designer.md
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/agents/requirements-spec-creator.md
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/scripts/commit-docs.sh
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_commit_docs.py
+    - tests/test_planner_designer_worktree_docs.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary:
+    - perspective: security
+      reason: "New shell script (commit-docs.sh) interpolates caller-supplied worktree paths and commit messages into git commands"
+  codex_cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: codex, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: codex, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: codex, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+
+findings:
+  # ---- resolved during auto-fix loops 1-2 ----
+  - stable_id: 04f6de06dbf5bd07
+    severity: high
+    category: architecture
+    file: em-workflow/scripts/commit-docs.sh
+    line: 76
+    title: "The serialization helper can silently revert merged task implementations"
+    description: "flock serializes ref mutations only; a commit built from a stale index after merge-task.sh's update-ref advance reverts merged changes. Loop-1 fix added a HEAD-vs-tip guard that proved tautological (HEAD is a symref); loop-2 replaced it with a non-artifact-path status scan. Successor concerns tracked as f5084f2afab5d3fe / 16702654a8c83434."
+    suggestion: "See loop-2 fix and successor findings."
+    sources: [codex:architecture, claude:comprehensive, claude:spec, codex:spec]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: "loop 1 + loop 2 (real staleness detection, artifact-scoped staging)"
+  - stable_id: 3b64bae0e4abf422
+    severity: high
+    category: comprehensive
+    file: em-workflow/scripts/commit-docs.sh
+    line: 81
+    title: "commit-docs.sh が merge-task.sh のマージを暗黙リバートしうる（flock だけでは不十分）"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "loop 2 (same physical bug as 04f6de06dbf5bd07)"
+  - stable_id: 68c072a016394f39
+    severity: high
+    category: spec
+    file: em-workflow/scripts/commit-docs.sh
+    line: 81
+    title: "commit-docs.sh stages the entire worktree instead of workflow artifacts (FR3)"
+    sources: [claude:spec, codex:spec]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: "loop 1 (staging scoped to FR2 artifact paths)"
+  - stable_id: 697b112567e3ffea
+    severity: high
+    category: security
+    file: em-workflow/skills/develop/SKILL.md
+    line: 116
+    title: "Step A interpolates an externally-controllable feature name into git worktree add without the identifier-validation gate"
+    sources: [claude:security]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "loop 1 (fail-closed ^[a-z0-9][a-z0-9-]*$ gate before interpolation)"
+  - stable_id: b3923ee35648d49e
+    severity: high
+    category: security
+    file: em-workflow/skills/develop/SKILL.md
+    line: 100
+    title: "Unvalidated feature names are interpolated into shell commands"
+    sources: [codex:security]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1 + loop 2 (validation gate, quoting, branch-existence precondition)"
+  - stable_id: f395840056782229
+    severity: high
+    category: security
+    file: em-workflow/agents/designer.md
+    line: 6
+    title: "Designer receives unrestricted Bash while processing repository-controlled content"
+    sources: [codex:security]
+    confidence: 50
+    resolution: fixed
+    resolution_reason: "loop 1 (Bash removed; commit delegated to orchestrator; test aligned in loop 2)"
+  - stable_id: 9dc71bca81dca4f7
+    severity: medium
+    category: security
+    file: em-workflow/scripts/commit-docs.sh
+    line: 81
+    title: "Documentation commits stage every worktree change, including sensitive outputs"
+    sources: [codex:security]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1 (artifact-scoped staging)"
+  - stable_id: 332628ee62d237f1
+    severity: medium
+    category: spec
+    file: em-workflow/skills/develop/SKILL.md
+    line: 116
+    title: "develop Step A interpolates an argument-supplied feature name without the required fail-closed validation"
+    sources: [claude:spec]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "loop 1"
+  - stable_id: 6e5a67e2a6c637f1
+    severity: medium
+    category: spec
+    file: em-workflow/skills/develop/SKILL.md
+    line: 101
+    title: "Discovered feature names are interpolated before validation"
+    sources: [codex:spec]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1"
+  - stable_id: 29619166af3cf6b8
+    severity: medium
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 116
+    title: "develop Step A の worktree 再マテリアライズが feature 名を検証せず shell に補間"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "loop 1"
+  - stable_id: 17971fae1daf55a5
+    severity: high
+    category: architecture
+    file: em-workflow/agents/requirements-spec-creator.md
+    line: 121
+    title: "gitignore-guard timing lags the moved worktree-creation site (main tree dirty during spec→plan)"
+    sources: [claude:architecture, codex:architecture, codex:spec]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: "loop 2 (ignore-coverage gate before the first git worktree add)"
+  - stable_id: 2883b128368cfc54
+    severity: high
+    category: spec
+    file: em-workflow/agents/requirements-spec-creator.md
+    line: 121
+    title: "Integration worktree is created before the ignore guard runs"
+    sources: [codex:spec]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 2 (same site as 17971fae1daf55a5)"
+  - stable_id: 15eecc25786ccec8
+    severity: medium
+    category: architecture
+    file: em-workflow/skills/develop/SKILL.md
+    line: 100
+    title: "Branch-only discovery cannot recover the pre-workflow bootstrap state"
+    sources: [codex:architecture]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 1-2 discovery rewrite; residual lifecycle aspect re-raised as 32cc5c216645a7fb"
+  - stable_id: designer-test-defer-contract
+    severity: high
+    category: architecture
+    file: tests/test_planner_designer_worktree_docs.py
+    line: 131
+    title: "Designer commit-responsibility test encodes the obsolete direct-commit contract (deterministic failure)"
+    sources: [claude:architecture, codex:spec]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "loop 2 (test rewritten to the defer contract; passes)"
+
+  # ---- residual after loop cap (3 loops) ----
+  - stable_id: 2be071cdd65fe558
+    severity: high
+    category: spec
+    file: em-workflow/references/review-phase.md
+    line: 282
+    title: "Review-fix commits advance the integration ref without the shared lock (FR3)"
+    description: "The R4 auto-fix loop commits directly in the integration worktree without acquiring em-workflow-merge.lock, contradicting FR3/NFR3."
+    suggestion: "Route review-fix commits through a lock-aware path (flock wrapper or a commit helper capable of staging arbitrary authorized files)."
+    sources: [claude:spec, codex:spec]
+    confidence: 95
+    resolution: unresolved
+  - stable_id: f5084f2afab5d3fe
+    severity: high
+    category: architecture
+    file: em-workflow/scripts/commit-docs.sh
+    line: 112
+    title: "die-4 stale guard misfires on verify-phase byproducts and can deadlock the post-verify commit"
+    description: "Any non-artifact status entry (untracked build/test outputs, formatter-modified sources) triggers die 4; reset --hard does not remove untracked files, so retries never converge."
+    suggestion: "Detect ref movement directly (tip captured before lock vs after) instead of the byproduct-sensitive proxy; or exclude untracked/verify-owned paths and add git clean guidance."
+    sources: [claude:architecture, claude:comprehensive, claude:spec]
+    confidence: 90
+    resolution: unresolved
+  - stable_id: 16702654a8c83434
+    severity: high
+    category: architecture
+    file: em-workflow/scripts/commit-docs.sh
+    line: 19
+    title: "Exit-4 stale result has no recovery owner in any caller"
+    description: "Header mandates reset + reapply + retry but no protocol document implements that loop."
+    suggestion: "Define bounded exit-4 recovery in the orchestrator protocol (reset, re-read, reapply state transition, retry) or a shared wrapper."
+    sources: [codex:architecture]
+    confidence: 65
+    resolution: unresolved
+  - stable_id: 454c5eba23d061ce
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 231
+    title: "Wake-phase workflow.yaml updates occur before the stale integration worktree is refreshed"
+    description: "Wake phase edits workflow.yaml (and per Step B commits it) before the reset --hard refresh; after a merge-task ref advance this either die-4s or the later reset erases the update (NFR2)."
+    suggestion: "Refresh the integration worktree before reading/editing workflow.yaml after each ref advance; pair with the exit-4 recovery loop."
+    sources: [codex:spec]
+    confidence: 50
+    resolution: unresolved
+  - stable_id: 32cc5c216645a7fb
+    severity: high
+    category: architecture
+    file: em-workflow/skills/develop/SKILL.md
+    line: 96
+    title: "Branch presence is an incomplete feature-lifecycle state (branch without workflow.yaml has no resume route)"
+    description: "Interruption between create-spec Phase 3 (branch created) and Phase 5.5 (workflow.yaml written) leaves a discoverable branch that cannot enter Step B and is not routed back to create-spec."
+    suggestion: "Model discovery states explicitly: branch+workflow.yaml → resume; branch without workflow.yaml → resume incomplete create-spec deterministically."
+    sources: [codex:architecture]
+    confidence: 65
+    resolution: unresolved
+  - stable_id: 33fb54f4ebe662f0
+    severity: medium
+    category: spec
+    file: tests/test_commit_docs.py
+    line: 99
+    title: "TS1/success-path tests write outside artifact paths and stay red"
+    suggestion: "Write pending changes under feature-docs/{feature}/ so the success and git-failure paths are actually exercised; test the non-artifact die-4 separately."
+    sources: [claude:spec, codex:spec, claude:comprehensive]
+    confidence: 95
+    resolution: unresolved
+  - stable_id: dee0a6aac12247d6
+    severity: medium
+    category: spec
+    file: tests/test_commit_docs.py
+    line: 200
+    title: "TS4 concurrency test does not exercise merge-task.sh update-ref behavior"
+    suggestion: "Drive a real update-ref / merge-task.sh advance from outside the integration worktree; assert both commits survive with linear history."
+    sources: [claude:spec, codex:spec, claude:comprehensive]
+    confidence: 95
+    resolution: unresolved
+  - stable_id: 1839533482c373b9
+    severity: medium
+    category: spec
+    file: tests/test_commit_docs.py
+    line: 1
+    title: "TS5 develop-shaped integration test is missing"
+    suggestion: "Add the fixture-driven sequence (branch+worktree → doc commits → reset --hard) with clean-main and state-survival assertions."
+    sources: [claude:spec, codex:spec]
+    confidence: 95
+    resolution: unresolved
+  - stable_id: 0be68a14be06e869
+    severity: medium
+    category: comprehensive
+    file: tests/test_commit_docs.py
+    line: 195
+    title: "die-4 stale path has no faithful passing coverage"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+  - stable_id: cb2a99347619de01
+    severity: medium
+    category: spec
+    file: em-workflow/scripts/commit-docs.sh
+    line: 117
+    title: "Top-level artifact deletions are never staged"
+    suggestion: "Include tracked deletions under artifact roots (e.g. via git ls-files --deleted) when staging."
+    sources: [codex:spec]
+    confidence: 50
+    resolution: unresolved
+  - stable_id: e8313f5cad581a23
+    severity: medium
+    category: security
+    file: em-workflow/scripts/commit-docs.sh
+    line: 105
+    title: "Staged renames bypass the artifact-path allowlist"
+    suggestion: "Validate staged paths via git diff --cached --name-only -z --no-renames instead of parsing porcelain rename arrows."
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+  - stable_id: d86e39e805002f56
+    severity: medium
+    category: security
+    file: em-workflow/agents/requirements-spec-creator.md
+    line: 124
+    title: "Ignore-rule append follows a .gitignore symlink"
+    suggestion: "Reject symlink/non-regular .gitignore before the fallback append."
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+  - stable_id: 93f4c66b52b3ebf2
+    severity: medium
+    category: security
+    file: em-workflow/skills/develop/SKILL.md
+    line: 126
+    title: "project_root literal interpolation permits command substitution"
+    suggestion: "Capture PROJECT_ROOT via git rev-parse --show-toplevel into a shell variable and reference it, matching requirements-spec-creator Phase 3; align implementation-planner's {worktree_root} likewise."
+    sources: [claude:security, codex:security]
+    confidence: 95
+    resolution: unresolved
+  - stable_id: 4be72ffc99bb4e33
+    severity: medium
+    category: architecture
+    file: em-workflow/agents/designer.md
+    line: 79
+    title: "Designer read-boundary wording contradicts its tmp/ input contract"
+    suggestion: "State the boundary as WRITE-only (reads of user-provided tmp/ inputs allowed), matching requirements-spec-creator."
+    sources: [claude:architecture, codex:architecture]
+    confidence: 95
+    resolution: unresolved
+  - stable_id: 8f4e0dc87917e6a6
+    severity: medium
+    category: architecture
+    file: em-workflow/README.md
+    line: 33
+    title: "Advertised clean-main invariant vs .gitignore append exception wording"
+    suggestion: "Document the single .gitignore exception consistently in README/plugin.json."
+    sources: [codex:architecture]
+    confidence: 50
+    resolution: unresolved
+  - stable_id: 56d0a31fd4ae5a58
+    severity: medium
+    category: comprehensive
+    file: em-workflow/agents/requirements-spec-creator.md
+    line: 60
+    title: "test/README.md untracked-in-main is not carried into the worktree"
+    suggestion: "Use tracked-ness (git ls-files) for the Phase 0.5 presence check, or re-check inside the worktree at Phase 3."
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+  - stable_id: 94344ce04158d99f
+    severity: medium
+    category: performance
+    file: em-workflow/skills/develop/SKILL.md
+    line: 164
+    title: "Per-write commits multiply repository scans and hook executions"
+    sources: [codex:performance]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "cross-model disagreement: claude:performance assesses the write count as bounded and the cost negligible"
+  - stable_id: 44036345af317ef7
+    severity: medium
+    category: performance
+    file: em-workflow/scripts/commit-docs.sh
+    line: 84
+    title: "Git and hook work remains inside the shared merge lock"
+    sources: [codex:performance]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "cross-model disagreement: claude:performance assesses the locked section as comparable to merge-task.sh's own"
+
+auto_fix:
+  loops_run: 3
+  applied_total: 7
+  termination: loop-cap
+residual_critical_high: 5
+rework_required: true   # user chose rework at the completion gate; tasks task0006-task0008 synthesized

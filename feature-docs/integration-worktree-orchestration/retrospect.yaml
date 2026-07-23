@@ -1,0 +1,36 @@
+feature: integration-worktree-orchestration
+collected_at: "2026-07-23T21:13:18+09:00"
+session_ids: [0f4e41ec-0865-4dce-9e69-51434dcbdf89]
+signals:
+  review_critical_high:
+    - {stable_id: 04f6de06dbf5bd07, category: architecture, file: em-workflow/scripts/commit-docs.sh, title: "Silent revert of merged tasks (flock alone insufficient)", resolution: fixed}
+    - {stable_id: 3b64bae0e4abf422, category: comprehensive, file: em-workflow/scripts/commit-docs.sh, title: "Implicit revert race (same bug, cross-perspective)", resolution: fixed}
+    - {stable_id: 68c072a016394f39, category: spec, file: em-workflow/scripts/commit-docs.sh, title: "add -A vs FR3 artifact-path staging", resolution: fixed}
+    - {stable_id: 697b112567e3ffea, category: security, file: em-workflow/skills/develop/SKILL.md, title: "Step A unvalidated feature-name interpolation", resolution: fixed}
+    - {stable_id: b3923ee35648d49e, category: security, file: em-workflow/skills/develop/SKILL.md, title: "Unvalidated feature names (codex variant)", resolution: fixed}
+    - {stable_id: f395840056782229, category: security, file: em-workflow/agents/designer.md, title: "Unrestricted Bash on repository-controlled content", resolution: fixed}
+    - {stable_id: 17971fae1daf55a5, category: architecture, file: em-workflow/agents/requirements-spec-creator.md, title: "gitignore-guard timing lagged worktree creation", resolution: fixed}
+    - {stable_id: 2883b128368cfc54, category: spec, file: em-workflow/agents/requirements-spec-creator.md, title: "Worktree created before ignore guard", resolution: fixed}
+    - {stable_id: 2be071cdd65fe558, category: spec, file: em-workflow/references/review-phase.md, title: "Lock-less review-fix commits (FR3)", resolution: fixed}
+    - {stable_id: f5084f2afab5d3fe, category: architecture, file: em-workflow/scripts/commit-docs.sh, title: "die-4 guard misfired on verify byproducts", resolution: fixed}
+    - {stable_id: 16702654a8c83434, category: architecture, file: em-workflow/scripts/commit-docs.sh, title: "Exit-4 recovery had no owner", resolution: fixed}
+    - {stable_id: 454c5eba23d061ce, category: spec, file: em-workflow/references/implement-phase.md, title: "Wake-phase edit before refresh", resolution: fixed}
+    - {stable_id: 32cc5c216645a7fb, category: architecture, file: em-workflow/skills/develop/SKILL.md, title: "Bootstrap state without resume route", resolution: fixed}
+    - {stable_id: r2-cdsh-refresh-edit-window, category: comprehensive, file: em-workflow/scripts/commit-docs.sh, title: "refresh→edit window escaped die-4", resolution: fixed}
+    - {stable_id: r2-implement-base-commit-overwrite, category: architecture, file: em-workflow/references/implement-phase.md, title: "base_commit overwritten on re-entry", resolution: fixed}
+    - {stable_id: r2-review-fixcommit-injection, category: security, file: em-workflow/references/review-phase.md, title: "Fix-commit template injection + non-fail-closed lock", resolution: fixed}
+    - {stable_id: r2-wake-tip-unwired, category: comprehensive, file: em-workflow/references/implement-phase.md, title: "expected_base_tip unwired at call sites", resolution: fixed}
+  conflict_reworks: []
+  file_prediction_misses:
+    - {task: task0005, files: [tests/test_planner_designer_worktree_docs.py]}
+    - {task: task0007, files: [tests/test_review_implement_develop_lock_contracts.py]}
+  verification_failures: []
+  discretionary_perspectives:
+    - {perspective: security, reason: "New shell script (commit-docs.sh) interpolates caller-supplied worktree paths and commit messages into git commands"}
+  declined_findings: []
+lessons_candidates:
+  - "worktree の attached HEAD は symref なので HEAD vs branch-tip 比較は恒真式になる。checkout-free update-ref との race 検出は『caller が基準 tip を明示的に渡す』設計でしか閉じない(2ラウンドかけて収束した)"
+  - "review-editor の単一ファイル修正は、スクリプト引数↔caller 群のようなクロスファイル契約を一撃で閉じられない。契約変更系の fix は『SSOT 側』と『消費側の配線』を同じループで別 finding として明示的に出すと収束が速い"
+  - "プロトコル文書の契約を grep 監査する unittest(task0005/task0007 方式)は强力だが、auto-fix でテンプレ文字列が変わるたびに red になる。テンプレ変更の editor 指示に『監査テストの追随』を含めるか、監査を構造的なパターンマッチにするべき"
+  - "ステップの実行タイミングを前倒しする変更(worktree 作成の Phase 3 移動)は、その前提条件(gitignore-guard)も一緒に動かす必要がある — 2レビュアー+implementer が独立に同じ指摘をした"
+  - "batch(無人)モードの分岐は interactive の resume 経路と食い違いやすい(bootstrap 復旧 deadlock が deferred で残存)。resume 系の設計変更時は batch セクションを必ず突合する"
