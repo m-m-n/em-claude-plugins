@@ -57,9 +57,12 @@ asked to skip), display in Japanese:
 
 1. Read `CLAUDE.md` (project root) if present: project type, tech stack,
    conventions. Use it to ask relevant domain-specific questions later.
-2. Check `test/README.md` (a project file in the main working tree — reading
-   its presence/absence here is fine; only creating/writing files is
-   restricted to the worktree). If missing, add "Testing Setup" to the
+2. Check whether `test/README.md` is TRACKED in the main working tree (e.g.
+   `git ls-files --error-unmatch test/README.md`; a non-zero exit — including
+   the case where an untracked copy merely exists on disk — counts as
+   missing, since the new integration worktree only inherits tracked
+   content). Reading tracked-ness here is fine; only creating/writing files
+   is restricted to the worktree. If missing, add "Testing Setup" to the
    clarification questions (framework / test command / E2E needs / test file
    conventions) and flag it for creation. Its actual creation from
    `${CLAUDE_PLUGIN_ROOT}/references/templates/test-readme.md` is deferred
@@ -123,8 +126,16 @@ requirement's `status: tbd` with `tbd_reason` in workflow.yaml and leave its
    mkdir -p "$(dirname "$WT")"
    if ! git -C "$PROJECT_ROOT" check-ignore -q .claude/worktrees/probe; then
      # Dispatch em-workflow:gitignore-guard (same subagent implement Step I.1
-     # uses), or equivalently append the ignore rule idempotently:
-     printf '%s\n' '.claude/worktrees/' >> "$PROJECT_ROOT/.gitignore"
+     # uses), or equivalently append the ignore rule idempotently — but only
+     # when the append target is safe to write through: a symlink or other
+     # non-regular file at the root .gitignore path must abort instead of
+     # being written through (report this finding instead of continuing).
+     GITIGNORE="$PROJECT_ROOT/.gitignore"
+     if [ -L "$GITIGNORE" ] || { [ -e "$GITIGNORE" ] && [ ! -f "$GITIGNORE" ]; }; then
+       echo "ERROR: $GITIGNORE is a symlink or non-regular file — abort, do not append" >&2
+       exit 1
+     fi
+     printf '%s\n' '.claude/worktrees/' >> "$GITIGNORE"
    fi
    git worktree add "$WT" "em-workflow/{feature-name}/integration"
    ```

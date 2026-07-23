@@ -76,8 +76,11 @@ integration worktree — `{worktree_root}/feature-docs/{feature}/`, where
 `{worktree_root}` is
 `{project_root}/.claude/worktrees/em-workflow/{feature}/integration`. Every
 `feature-docs/...` and `design-system/...` path below resolves under
-`{worktree_root}`; nothing in this agent's process reads from or writes to
-the main working tree.
+`{worktree_root}`; this agent's boundary is WRITE-only — nothing it does
+writes to the main working tree. The one explicit read exception: rough
+sketches or device screenshots the user provided under the project-root
+`tmp/` (outside `{worktree_root}`, per the input artifact rule above) may be
+read as intent input.
 
 Read `feature-docs/{feature}/REQUIREMENTS.md`, `SPEC.md`, `workflow.yaml`.
 Discover design assets in priority order: project-native design system →
