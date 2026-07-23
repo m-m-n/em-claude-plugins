@@ -280,10 +280,27 @@ siblings re-derive next loop — the working set shrinks monotonically,
 guaranteeing progress).
 
 develop-駆動 only: after each loop with `applied > 0`, commit the fixes in
-the integration worktree:
-`git -C {project_root} add -A -- <authorized files> && git -C {project_root}
-commit -m "fix({feature}): review round {round} loop {N}"`. Standalone mode
-commits nothing, ever.
+the integration worktree under the SAME shared lock `commit-docs.sh` and
+`merge-task.sh` use — `commit-docs.sh` itself cannot be reused here (it
+stages only its fixed `ARTIFACT_PATHS` allowlist, while a fix commit must
+stage arbitrary authorized source files named by the loop's findings), so
+acquire the lock, stage, and commit inside one critical section:
+
+```bash
+GIT_COMMON_DIR=$(git -C {project_root} rev-parse --path-format=absolute --git-common-dir)
+exec 9>"$GIT_COMMON_DIR/em-workflow-merge.lock"
+flock 9
+git -C {project_root} add -A -- <authorized files>
+git -C {project_root} commit -m "fix({feature}): review round {round} loop {N}"
+# fd 9 closes (releasing the lock) when this shell/subshell exits
+```
+
+(`--path-format=absolute`, git ≥ 2.31, sidesteps the cwd-relative output
+`rev-parse --git-common-dir` can otherwise return under `-C`.)
+
+No bare `git add`/`git commit` against the integration worktree runs outside
+this locked section anywhere in this document. Standalone mode commits
+nothing, ever.
 
 Loop termination: re-run ALL selected reviewers after any productive loop
 (re-review preamble: per-perspective stable_id/file/line list only — no
