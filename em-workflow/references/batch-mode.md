@@ -42,7 +42,7 @@ for a human mid-run.
 | review R4 needs-judgment (one ask per finding) | Auto-select `Apply as-is (editor interprets)` |
 | review completion gate (residual critical/high > 0 → ask) | Auto-rework, cap 1: `batch.review_rework_count == 0` → synthesize rework tasks (below), increment the counter, set `review.needs_rework: true`, review step `pending`, implement step `pending`; the state machine re-enters implement. Counter already ≥ 1 → mark each residual finding `resolution: deferred` with `resolution_reason: "batch mode: rework cap reached"` and complete the step (the record keeps them visible for human evaluation) |
 | verify fail (rework-destination ask) | Auto-rework, cap 1: `batch.verify_rework_count == 0` → synthesize ONE rework task from `failed_items`, increment the counter, set verify `pending`, implement `pending`. Counter already ≥ 1 → verify stays `failed`, report, stop |
-| Step C merge proposal (AskUserQuestion) | Default: auto-merge into `base_branch` (cleanliness check: the gitignore-guard `.gitignore` line is the only tolerated exception — no evacuation/untracked-identity step remains; anything else dirty → abort with report, branch left in place). PR variant: when the task description or SPEC.md explicitly requests a pull request, do NOT merge locally — push the integration branch and open a PR against `base_branch` via `gh pr create` (title: feature name; body: run summary), leaving branch and worktree cleanup to the post-merge flow after the PR lands |
+| Step C completion choice (AskUserQuestion, 3-way: merge / keep branch / PR) | Auto-select ブランチを残す — never merge, never push, never open a PR. Remove the integration worktree per Step C.2 (no `--force`; a failing remove means uncommitted changes — abort with report, worktree and branch left in place). The integration branch stays: removing the worktree frees its checkout lock, so the human takes over from the main working tree (`git switch em-workflow/{feature}/integration`, then a local merge or `git push` + PR as they see fit) |
 
 ## Rework task synthesis
 
@@ -78,6 +78,9 @@ the `--batch` flag's job, per-invocation).
 
 The final report of a batch run MUST include, beyond the normal completion
 report: every auto-approved command string, every assumption recorded during
-create-spec/planning, auto-rework rounds consumed (review / verify), and any
-deferred findings with their stable_ids. The external service relays this to
-the human evaluator — it is the only confirmation surface batch mode has.
+create-spec/planning, auto-rework rounds consumed (review / verify), any
+deferred findings with their stable_ids, and the kept integration branch name
+with the take-over guidance (batch never merges — the human switches to the
+branch in the main working tree and merges locally or pushes + opens a PR).
+The external service relays this to the human evaluator — it is the only
+confirmation surface batch mode has.

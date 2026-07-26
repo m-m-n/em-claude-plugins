@@ -61,12 +61,13 @@ document is written; this phase never creates them itself.
   exceptions are the gitignore-guard `.gitignore` append and the final Step C
   merge below). There is no separate main-tree copy of any artifact and no
   copy/sync step at any phase boundary.
-- At develop completion the user is offered — via AskUserQuestion — a merge of
-  the integration branch into `base_branch` (executed as a normal `git merge`
-  in the main working tree after a cleanliness check). After a successful
-  merge the integration branch is deleted (worktree removed first, then
-  `git branch -d`). Declining leaves the integration branch in place for
-  manual handling.
+- At develop completion the user chooses — via AskUserQuestion — between
+  merging the integration branch into `base_branch` (a normal `git merge` in
+  the main working tree after a cleanliness check, then `git branch -d`),
+  keeping the branch (the batch default — no merge, no push, no PR), or
+  pushing it and opening a PR via `gh pr create`. In every variant the
+  integration worktree is removed first, freeing the branch for checkout from
+  the main working tree; only the merge variant deletes the branch.
 
 ## Step I.0: Preconditions
 

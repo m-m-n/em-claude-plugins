@@ -32,9 +32,9 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 - 進捗の SSOT は `feature-docs/{feature}/workflow.yaml`（step 状態 + tasks メタデータ + review plan/サマリ + requirements マッピング）。スキーマは `references/workflow-schema.md`。
 - ワークフロー成果物（REQUIREMENTS.md / SPEC.md / DESIGN.md / IMPLEMENTATION.md / VERIFICATION.md / tasks/ / reviews/ / retrospect.yaml を含む feature-docs/{feature}/ 一式、および test/README.md・design-system/）は integration worktree にのみ存在し、更新のたびに `commit-docs.sh` で integration ブランチへコミットされる。メインの作業ツリーは最終マージまで変更されない — 唯一の例外は `.claude/worktrees/` を無視させる gitignore-guard 相当の `.gitignore` 追記（create-spec Phase 3 または implement Step I.1 で発生）で、それ以外は `git status` が常にクリーンに保たれる。
 - 再開はブランチ起点: `em-workflow/*/integration` 形式のブランチを列挙して機能を発見し、そのブランチの workflow.yaml から状態を復元する。worktree が失われていてもブランチさえ残っていれば `git worktree add` で再作成して続行する。
-- ユーザーのブランチには一切コミットしない。全ワークフローコミットは専用の `em-workflow/{feature}/integration` ブランチに載り、完了時にマージを提案する。マージ後は integration ブランチを削除する（マージしなかった場合は残す）。
+- ユーザーのブランチには一切コミットしない。全ワークフローコミットは専用の `em-workflow/{feature}/integration` ブランチに載り、完了時に「base_branch にマージ / ブランチを残す / push + PR 作成」の三択を確認する（デフォルトはマージ。--batch は確認なしで「ブランチを残す」）。いずれの分岐でも integration worktree は片付ける — マージ時はブランチも削除し、それ以外はブランチを残してメイン作業ツリーから `git switch` できる状態にする。
 - 軽い変更もタスク 1 個として同じフローを通す（従来型モードは持たない）。
-- `--batch` で無人実行モードになる: 外部タスク管理サービス起点のヘッドレス起動（例: `claude -p "/em-workflow:develop --batch <タスク記述>"`）向けに、全ての AskUserQuestion ゲートを機械的既定値へ置き換えて完走する。要件の不明点は Codex 相談（最大 5 ターン、結論は Claude）で確定し、コマンド承認は自動記録（refusal パターンは従来どおり拒否）、review 残存 critical/high と verify 失敗はそれぞれ上限 1 回の自動 rework、完了時は base_branch へ自動マージ（タスク記述が PR 作成を明示していれば push + `gh pr create`）。決定表の SSOT は `references/batch-mode.md`。失敗時は隠さず停止して報告する — 差し戻しは外部サービス側で新タスクを切る運用。
+- `--batch` で無人実行モードになる: 外部タスク管理サービス起点のヘッドレス起動（例: `claude -p "/em-workflow:develop --batch <タスク記述>"`）向けに、全ての AskUserQuestion ゲートを機械的既定値へ置き換えて完走する。要件の不明点は Codex 相談（最大 5 ターン、結論は Claude）で確定し、コマンド承認は自動記録（refusal パターンは従来どおり拒否）、review 残存 critical/high と verify 失敗はそれぞれ上限 1 回の自動 rework、完了時はマージも PR 作成もせず integration worktree だけ片付けてブランチを残す（worktree が消えることで checkout ロックが外れ、メイン作業ツリーから `git switch` で取り込み — ローカルマージまたは push + PR 作成 — できる）。決定表の SSOT は `references/batch-mode.md`。失敗時は隠さず停止して報告する — 差し戻しは外部サービス側で新タスクを切る運用。
 
 ## コマンド
 

@@ -271,31 +271,44 @@ workflow.yaml・レビュー記録・retrospect.yaml は Step B / verify /
 retrospect の各更新でその都度 integration worktree に commit-docs.sh
 コミット済み。最終同期ステップは無い。
 
-1. **マージ提案**: AskUserQuestion —
-   「integration ブランチ `em-workflow/{feature}/integration` を
-   `{base_branch}` にマージする？」
-   （batch: 提案せず自動で「マージする」を選ぶ。クリーン確認規律は
-   下記と同一で、dirty なら中断報告。ただしタスク記述または SPEC.md が
-   PR 作成を明示している場合はローカルマージせず、integration ブランチを
-   push して `gh pr create` で `{base_branch}` への PR を作成し、
-   ブランチと worktree は残す — batch-mode.md 決定表）
-   - **マージする**: メイン作業ツリーがクリーンか確認する。workflow.yaml
-     も feature-docs/ 配下のドキュメントも worktree にのみコミットされ、
-     main 作業ツリーには存在しない（Step A/B 参照）ため、退避も
-     untracked の同一性チェックも不要。唯一許容する例外は
+1. **完了方式の決定**: AskUserQuestion —
+   「integration ブランチ `em-workflow/{feature}/integration` をどうする？」
+   の三択。デフォルト（推奨表示）は「`{base_branch}` にマージ」
+   （batch: 質問せず自動で「ブランチを残す」を選ぶ。マージ・push・
+   PR 作成のいずれも行わない — batch-mode.md 決定表）
+   - **`{base_branch}` にマージ**: メイン作業ツリーがクリーンか確認する。
+     workflow.yaml も feature-docs/ 配下のドキュメントも worktree にのみ
+     コミットされ、main 作業ツリーには存在しない（Step A/B 参照）ため、
+     退避も untracked の同一性チェックも不要。唯一許容する例外は
      gitignore-guard が追記した `.gitignore` の未コミット行
      （`.claude/worktrees/`）のみ: diff がその行だけなら許容してそのまま
      `git merge em-workflow/{feature}/integration` する（integration 側が
      `.gitignore` に触れる場合は git 自身が中断するので安全）。それ以外の
      dirty（未コミットの変更・untracked ファイルを問わず）は退避を試みず
      報告して中断する
-   - **しない**: ブランチを残す旨と手動マージ手順を 1-2 行で案内
-2. **worktree / ブランチ掃除**: `git worktree remove` で integration
-   worktree を削除。Step 1 でマージした場合は続けて
-   `git branch -d "em-workflow/{feature}/integration"` でブランチも削除する
-   （マージしなかった場合はブランチを残す）
+   - **ブランチを残す**: マージ・push・PR 作成のいずれもしない。worktree の
+     片付け（下記 2.）だけ行い、取り込みはメイン作業ツリーでのユーザーの
+     操作（ローカルマージ / `git push` + PR 作成）に委ねる
+   - **PR を作成**: ローカルマージはせず、integration ブランチを push して
+     `gh pr create` で `{base_branch}` への PR を作成する（title: feature
+     名 / body: 実行サマリ）。ブランチ削除は PR が land した後のユーザー
+     操作に委ねる
+2. **worktree / ブランチ掃除**: いずれの分岐でも `git worktree remove` で
+   integration worktree を削除する（`--force` は使わない。ドキュメントは
+   Step B の規律で全てコミット済みのため worktree はクリーンなはず —
+   remove が失敗したら未コミットの変更が残っている合図なので、worktree と
+   ブランチを残したまま報告して中断する）。「`{base_branch}` にマージ」を
+   選んだ場合のみ続けて
+   `git branch -d "em-workflow/{feature}/integration"` でブランチも削除する。
+   「ブランチを残す」「PR を作成」ではブランチを残す — worktree が消えた
+   ことで checkout ロックが外れ、メイン作業ツリーから
+   `git switch em-workflow/{feature}/integration` できる
 3. 終了報告: `em-workflow 完了: {feature}`（タスク数 / レビュー
-   ラウンド数 / 残存 findings を 1-3 行で添える）。workflow.yaml
+   ラウンド数 / 残存 findings を 1-3 行で添える）。ブランチを残した分岐
+   では、ブランチ名と「メインツリーで
+   `git switch em-workflow/{feature}/integration` して確認、取り込みは
+   ローカルマージまたは `git push` + PR 作成」の案内を 1-2 行添える
+   （PR を作成した場合は PR URL を添える）。workflow.yaml
    `project.license` が `none` の場合は
    `LICENSE が無いから /em-workflow:gen-license の実行をおすすめするよ`
    を 1 行添える。batch: batch-mode.md「Reporting」の監査項目
