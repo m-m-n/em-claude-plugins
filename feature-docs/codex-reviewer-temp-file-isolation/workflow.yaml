@@ -33,9 +33,17 @@ workflow:
   - id: review
     status: pending
   - id: verify
-    status: pending
-    result: null
+    status: completed
+    result: pass
     failed_items: []
+    notes: >-
+      TS-1..TS-7 は tests/test_codex_reviewer_temp_file_isolation.py で自動検証、
+      `python3 -m unittest discover -s tests` は 147 件全て pass。TS-8 は手動確認済み
+      （em-workflow 0.1.23→0.1.24 / em-review 0.5.1→0.5.2）。SC-3 は
+      run_codex_exec.sh が統合 diff に含まれないことで確認。両プラグインの discipline 節は
+      プラグイン名 1 語を除いて完全一致。build / format コマンドは未設定のため対象外。
+      統合 diff には task0001 の deviation（tests/test_planner_designer_worktree_docs.py の
+      既存 failure 修正）が 1 ファイル分含まれる — 記録済みの想定内。
   - id: retrospect
     status: pending
 
