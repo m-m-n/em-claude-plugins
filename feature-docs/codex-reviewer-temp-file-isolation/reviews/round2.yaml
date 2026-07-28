@@ -1,0 +1,124 @@
+round: 2
+executed_at: "2026-07-29T08:35:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 236dcf52f7d2e4e7613b1592e30031ed4ee3eed8
+  head_commit: cb55d24ce1a2f8bbe179990763f7f5cb6f9742b9
+  changed_files:
+    - em-review/.claude-plugin/plugin.json
+    - em-review/agents/codex-reviewer.md
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/agents/codex-reviewer.md
+    - tests/test_codex_reviewer_temp_file_isolation.py
+    - tests/test_planner_designer_worktree_docs.py
+plan:
+  floor: [comprehensive, performance, spec]
+  discretionary:
+    - perspective: security
+      reason: "diff が一時ファイル生成の規約そのものを定めており、予測可能パス・シンボリックリンク攻撃（CWE-377 系）の観点が直接該当するため"
+  codex_cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: performance, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: spec, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: security, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+round1_resolution_check:
+  note: >-
+    round 1 の 5 件（36899c2852f97ad4 / aaf9e2f8255166a5 / d38afcf39e01e430 /
+    44f7e4a68ab67c34 / c532f70ba6f34009）は comprehensive・spec の両観点が該当箇所で
+    解消を確認。いずれも round 2 では再報告されていない。
+findings:
+  - stable_id: 30b2e1ce37f4489d
+    severity: medium
+    category: comprehensive
+    file: em-workflow/agents/codex-reviewer.md
+    line: 86
+    title: "節のスコープ・skip メッセージは session scratchpad を指すのに、唯一の mktemp 例は scratchpad 外の `${TMPDIR:-/tmp}` を指している"
+    description: >-
+      round 1 の `$SCRATCHPAD_DIR` 未定義は解消されたが、差し替えが新しい不整合を持ち込んだ。
+      節のスコープ文は「writes any file into the session scratchpad」、skip summary は
+      `skipped: scratchpad temp file unavailable` と対象を scratchpad と宣言しているのに、
+      唯一の具体例が指すのは scratchpad ではない `${TMPDIR:-/tmp}`。Claude Code の
+      サブエージェントには「一時ファイルは /tmp ではなく session scratchpad を使え」という
+      harness 指示が常時入るため実行時に衝突し、`${TMPDIR:-/tmp}` での失敗が
+      "scratchpad temp file unavailable" と報告されて調査を誤誘導する。SPEC の
+      Security Considerations「Temp files stay inside the session scratchpad」とも食い違う。
+    suggestion: >-
+      例とスコープの指すディレクトリを一致させる。(a) scratchpad を第一候補、TMPDIR//tmp を
+      フォールバックにしたガード付きの形にする、または (b) スコープ文・危険説明・skip summary
+      から scratchpad を外して「一時ファイル全般」に統一する。(b) は両 agent 定義 + SPEC の
+      Error Handling 表 + テストの TEMP_FILE_SKIP_SUMMARY の同時更新が必要。
+    sources: [claude:comprehensive, claude:spec]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "medium severity: R4 auto-fix ゲート（critical/high のみ）の対象外。batch の rework 上限（1）は round 1 で消費済みのため、人間の評価者判断に委ねる"
+  - stable_id: c28aef1e5a19b2ae
+    severity: medium
+    category: spec
+    file: em-workflow/agents/codex-reviewer.md
+    line: 86
+    title: "mktemp の例が session scratchpad の外（${TMPDIR:-/tmp}）を指しており、節の自己記述および SPEC の格納先要件と矛盾"
+    description: >-
+      SPEC FR1 は「any temp file the agent writes into the session scratchpad」を対象と規定し、
+      Security Considerations も格納先を session scratchpad と明示している。一方 SPEC の
+      Assumptions A1 は `${TMPDIR:-/tmp}` を例示しており、SPEC 自体が内部矛盾している。
+      実装は A1 に一致するが FR1 / Security Considerations とは食い違う。衝突回避という
+      主目的自体は `/tmp` でも mktemp により満たされるため機能破壊ではない。
+    suggestion: >-
+      成果物優先なら両エージェント定義の例を scratchpad 第一候補のガード付き形へ変更する。
+      SPEC 優先なら FR1 と Security Considerations を A1 に合わせて改め、節の scratchpad
+      表現と skip summary も一貫した語に揃える。
+    sources: [claude:spec, claude:comprehensive]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "medium severity: R4 auto-fix ゲート（critical/high のみ）の対象外。batch の rework 上限（1）は round 1 で消費済みのため、人間の評価者判断に委ねる"
+  - stable_id: d0b0fbbf20d5da37
+    severity: medium
+    category: comprehensive
+    file: tests/test_codex_reviewer_temp_file_isolation.py
+    line: 100
+    title: "`GUARDED_VAR_FORM` が `${TMPDIR:-}` を通すため、round 1 の F-1 と同じ欠陥を回帰ガードが検出できない"
+    description: >-
+      `GUARDED_VAR_FORM` のデフォルト部が `.*` なので空文字を許し、`${TMPDIR:-}` が検査を
+      通過する。この形は TMPDIR 未設定時に `mktemp "/codex-reviewer-prompt.XXXXXX"` へ展開され、
+      round 1 の F-1 が指摘した挙動そのものになる。`${TMPDIR:-$SCRATCH}` のような入れ子の
+      非ガード参照も通過する。加えて `_extract_mktemp_template` が `search` で最初の 1 件しか
+      取らないため、節に非準拠例が追記されても検査対象から外れる。
+    suggestion: >-
+      デフォルト部を非空リテラルに限定する（`[^$}]+`）。あわせて `finditer` で節内の全
+      テンプレートを検査し、`${TMPDIR:-}` を偽入力とする回帰テストを 1 本足す。
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "medium severity: R4 auto-fix ゲート（critical/high のみ）の対象外。batch の rework 上限（1）は round 1 で消費済みのため、人間の評価者判断に委ねる"
+  - stable_id: 4184c0c99bf3e8ea
+    severity: medium
+    category: comprehensive
+    file: tests/test_planner_designer_worktree_docs.py
+    line: 204
+    title: "同一コミット内で baseline 比較に直した検査を、こちらでは完全一致のまま 0.1.24 に付け替えて再武装している"
+    description: >-
+      `test_version_bumped_exactly_one_patch_from_0_1_21` は完全一致の期待値を 0.1.24 に
+      付け替えただけで、脆さの構造が残っている。同じコミット内の
+      tests/test_codex_reviewer_temp_file_isolation.py は round 1 の F-4 を受けて baseline
+      超過比較に直しているため、リポジトリ内に同じ検査の流儀が 2 つ並ぶ。メソッド名も
+      実際の検査内容と食い違っている。
+    suggestion: >-
+      baseline 超過比較に揃える（タプル比較ヘルパを共通化して両ファイルから参照）か、
+      version 検査を 1 箇所へ集約する。いずれの場合もメソッド名を実態に合わせて改名する。
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "medium severity: R4 auto-fix ゲート（critical/high のみ）の対象外。batch の rework 上限（1）は round 1 で消費済みのため、人間の評価者判断に委ねる"
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+  note: >-
+    R4 の候補ゲート（severity ∈ {critical, high} かつ category != spec）に合致する finding が
+    ゼロ。round 2 の findings は全て medium。
+residual_critical_high: 0
+rework_required: false

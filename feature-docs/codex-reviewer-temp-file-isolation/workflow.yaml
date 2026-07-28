@@ -73,10 +73,10 @@ tasks:
     branch: em-workflow/codex-reviewer-temp-file-isolation/task0002
 
 review:
-  status: in_progress
-  rounds_completed: 1
-  residual_critical_high: 1
-  needs_rework: true
+  status: completed
+  rounds_completed: 2
+  residual_critical_high: 0
+  needs_rework: false
   perspectives:
     comprehensive: completed
     performance: completed
