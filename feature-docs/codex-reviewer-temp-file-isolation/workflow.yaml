@@ -25,7 +25,7 @@ workflow:
     skipped_reason: "UI を持たない — エージェント定義 Markdown とテストのみの変更"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: in_progress
   - id: implement
     status: pending
     base_commit: 15a18e90c8e19fb5ad40aa1a9aedecba72065a00
