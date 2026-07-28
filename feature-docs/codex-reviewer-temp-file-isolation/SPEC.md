@@ -65,6 +65,10 @@ the same perspective.
 - **FR6:** The rule is scoped so that an agent that passes the prompt directly as
   an argument (no temp file at all) remains compliant — uniqueness is required
   only when a temp file is actually used.
+- **FR7:** A structural test under `tests/` asserts FR1–FR6 over both agent
+  definition files, following the documentation-task test pattern already used
+  by `tests/test_review_implement_develop_lock_contracts.py` and
+  `tests/test_planner_designer_worktree_docs.py`.
 
 ### Non-Functional Requirements
 
@@ -122,14 +126,20 @@ em-review/
 ## Test Scenarios
 
 ### Unit Tests
-
-Not applicable — the change is prose in agent definitions, with no executable
-unit under test.
+- [ ] `tests/test_codex_reviewer_temp_file_isolation.py` asserts, for BOTH
+      `em-workflow/agents/codex-reviewer.md` and
+      `em-review/agents/codex-reviewer.md`: a temp-file discipline section
+      exists, it names `mktemp` with an `XXXXXX` template, it forbids fixed
+      names, it states per-invocation (not per-perspective) uniqueness, and it
+      defines the fail-closed skip on creation failure.
+- [ ] The same test asserts the `run_codex_exec.sh` invocation line is unchanged
+      in both files (no prompt-file flag introduced).
+- [ ] `python3 -m unittest discover -s tests` passes with no regressions.
 
 ### Integration Tests
-- [ ] Both `codex-reviewer.md` files contain a temp-file discipline section that
-      names `mktemp` and forbids fixed / perspective-only names.
-- [ ] Neither file's `run_codex_exec.sh` invocation line changed.
+
+Not applicable — there is no runnable integration surface for agent-definition
+prose beyond the structural test above.
 
 ### E2E Tests
 **Existing E2E tests**: None
@@ -183,9 +193,11 @@ environment):
   has one home (NFR2).
 - **A3:** Both plugins' `plugin.json` versions get a patch bump, per the
   repository's version-management convention in `CLAUDE.md`.
-- **A4:** No automated test is added. The repository has no test harness that
-  asserts on agent-definition prose, and adding one is outside the task's stated
-  scope.
+- **A4:** A structural `unittest` test is added (FR7) even though the task
+  description did not ask for one, because the repository already tests
+  documentation-only changes this way (`test_review_implement_develop_lock_contracts.py`,
+  `test_planner_designer_worktree_docs.py`) and `test/README.md` mandates
+  `tests/test_*.py` as the verification surface.
 
 ## Open Questions
 
