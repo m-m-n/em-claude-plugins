@@ -69,13 +69,13 @@ Assemble `$PROMPT` with the four blocks from the `codex-prompting` skill:
 The file list goes inline as path strings; Codex fetches diff/file contents
 itself inside its read-only sandbox.
 
-## Temp-file discipline (only if writing the prompt to disk)
+## Temp-file discipline (only if writing a file to disk)
 
-This applies only when an em-workflow `codex-reviewer` instance writes the
-assembled `$PROMPT` into a temp file inside the session scratchpad before
-invoking the wrapper. Passing `$PROMPT` straight to `run_codex_exec.sh` as a
-shell variable, the way Step 5 below does, touches no file and needs no temp
-file at all.
+This applies whenever an em-workflow `codex-reviewer` instance writes any
+file into the session scratchpad before invoking the wrapper — the
+assembled `$PROMPT`, a schema copy, or an intermediate output. Passing
+`$PROMPT` straight to `run_codex_exec.sh` as a shell variable, the way Step
+5 below does, touches no file and needs no temp file at all.
 
 If you do write one: parallel `codex-reviewer` instances dispatched from the
 same message share the session scratchpad directory. A fixed name lets a
@@ -85,7 +85,7 @@ the result with your own perspective.
 
 Allocate the path with `mktemp` using a template whose random part is the
 `XXXXXX` placeholder, e.g.
-`mktemp "$SCRATCHPAD_DIR/codex-reviewer-prompt.XXXXXX"`. `mktemp` creates the
+`mktemp "${TMPDIR:-/tmp}/codex-reviewer-prompt.XXXXXX"`. `mktemp` creates the
 file as part of allocating the name, so a path is never handed out twice —
 a name computed from the PID or `$RANDOM` cannot make that guarantee,
 because computing the candidate name and creating the file are separate
@@ -97,7 +97,7 @@ Fixed names (`prompt.txt`) and perspective-derived names
 perspective, so even a retry of the same perspective gets a fresh path.
 
 If `mktemp` allocation fails, return the standard skip object —
-`{"findings": [], "summary": "skipped: temp-file allocation failed", "skipped": true, "source": "codex"}`
+`{"findings": [], "summary": "skipped: scratchpad temp file unavailable", "skipped": true, "source": "codex"}`
 — rather than falling back to a shared or fixed path.
 
 ## Step 5: Execute Codex
