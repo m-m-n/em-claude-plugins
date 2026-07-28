@@ -1,0 +1,135 @@
+round: 1
+executed_at: "2026-07-29T08:20:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 236dcf52f7d2e4e7613b1592e30031ed4ee3eed8
+  head_commit: 58bef66e040cf2669b4126737724640cd6ae9826
+  changed_files:
+    - em-review/.claude-plugin/plugin.json
+    - em-review/agents/codex-reviewer.md
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/agents/codex-reviewer.md
+    - tests/test_codex_reviewer_temp_file_isolation.py
+    - tests/test_planner_designer_worktree_docs.py
+plan:
+  floor: [comprehensive, performance, spec]
+  discretionary:
+    - perspective: security
+      reason: "diff が一時ファイル生成の規約そのものを定めており、予測可能パス・シンボリックリンク攻撃（CWE-377 系）の観点が直接該当するため"
+  codex_cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: performance, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: spec, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: security, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+findings:
+  - stable_id: 36899c2852f97ad4
+    severity: high
+    category: spec
+    file: em-workflow/agents/codex-reviewer.md
+    line: 86
+    title: "mktemp テンプレートの `$SCRATCHPAD_DIR` が未定義で、FR3 の「発明せずに従える具体機構」を満たしていない"
+    description: >-
+      SPEC FR3 は「エージェントが定義どおりに実行すれば準拠パスを発明せずに得られる」ことを
+      要求しているが、実装が示す `mktemp "$SCRATCHPAD_DIR/codex-reviewer-prompt.XXXXXX"` の
+      `SCRATCHPAD_DIR` は両プラグインのどこにも定義がなく、環境変数としても export されない。
+      未設定変数が空展開して `mktemp "/codex-reviewer-prompt.XXXXXX"` になり、ルート直下への
+      作成失敗 → FR5 の fail-closed 経路で `skipped: true` を返す。つまり temp ファイル経路を
+      選んだ codex レビューが常時スキップになり、その観点のレビューが黙って失われる。
+      em-review/agents/codex-reviewer.md にも同一文面。
+      オーケストレーターが実物を確認して事実と検証済み。
+    suggestion: >-
+      両ファイルの例を自己完結した形に直す。SPEC の A1 どおり
+      `mktemp "${TMPDIR:-/tmp}/codex-reviewer-prompt.XXXXXX"` にするか、scratchpad ディレクトリを
+      使い続けるならその値の入手元を同じ節で明示し、未設定時のフォールバックを書く。
+    sources: [claude:spec, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "batch auto-rework round 1 で task0002 に差し戻し"
+  - stable_id: aaf9e2f8255166a5
+    severity: medium
+    category: spec
+    file: em-workflow/agents/codex-reviewer.md
+    line: 72
+    title: "規律の適用範囲が `$PROMPT` の temp ファイルだけに狭められており、FR1 が列挙する schema copy / intermediate output を覆っていない"
+    description: >-
+      SPEC FR1 は「scratchpad に書く any temp file（Codex prompt / schema copy /
+      intermediate output）」を対象にしている。実装は見出しと冒頭文で対象を `$PROMPT` の
+      temp ファイル 1 種類に `only` で限定しており、schema コピーや中間出力を固定名で書くことが
+      文面上むしろ許容される。FR6 が求めるスコープは「temp ファイルを使わないなら適用外」で
+      あって「プロンプト以外は適用外」ではない。
+    suggestion: >-
+      見出しと冒頭文を FR1 の列挙に合わせて広げ、`$PROMPT` は例示に降格する。FR6 のスコープ
+      （temp ファイルを使わないなら適用外）は維持する。テストにも schema/intermediate が
+      対象である旨のアサーションを足す。
+    sources: [claude:spec, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "batch auto-rework round 1 で task0002 に差し戻し"
+  - stable_id: d38afcf39e01e430
+    severity: medium
+    category: spec
+    file: em-workflow/agents/codex-reviewer.md
+    line: 99
+    title: "失敗時 skip オブジェクトの summary が SPEC の Error Handling 表と一致していない"
+    description: >-
+      SPEC の Error Handling 表は `skipped: scratchpad temp file unavailable` をリテラルで
+      規定しているが、実装は `skipped: temp-file allocation failed` を書いている。成果物が
+      散文そのものである機能で、SSOT と出荷物が別文字列を持っている状態。
+    suggestion: >-
+      両 agent 定義を SPEC 表どおりの文字列に揃えるか、SPEC 表を実装文字列に更新して
+      FR5 の曖昧な `skipped: ...` も同じ文字列に確定させる。テストに summary 文字列の
+      アサーションを 1 本足してドリフトを検出できるようにする。
+    sources: [claude:spec, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "batch auto-rework round 1 で task0002 に差し戻し"
+  - stable_id: 44f7e4a68ab67c34
+    severity: medium
+    category: comprehensive
+    file: tests/test_codex_reviewer_temp_file_isolation.py
+    line: 49
+    title: "plugin.json のバージョンを 2 つのテストファイルが別々にハードコードし、次のパッチ bump で両方壊れる"
+    description: >-
+      `EXPECTED_PLUGIN_VERSIONS` が em-workflow 0.1.24 を完全一致で固定する一方、
+      tests/test_planner_designer_worktree_docs.py も同じ値を独立に固定している。この変更自身の
+      コメントが「無関係な bump がテストを壊した」経緯を記録しているのに、同じ結合を 1 つ
+      増やしている。AC-7 の要求は patch-bumped であって特定リテラルではない。
+    suggestion: >-
+      リテラル一致をやめ、baseline より進んでいることを検査する（バージョンをタプル比較）。
+      または期待値を 1 箇所に集約して両テストから参照させる。
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "batch auto-rework round 1 で task0002 に差し戻し"
+  - stable_id: c532f70ba6f34009
+    severity: medium
+    category: comprehensive
+    file: tests/test_codex_reviewer_temp_file_isolation.py
+    line: 288
+    title: "TestValidationDetectsRegressions の 2 テストが本番チェックを一切通らない恒真アサーション"
+    description: >-
+      クラスの docstring は「上の検査が意味のある形で落ちることの証明」と宣言しているが、
+      `test_wrong_version_bump_is_detected` はローカル dict リテラルと定数を比べるだけ、
+      `test_prompt_file_flag_introduction_is_detected` は `str.replace` の結果を確認するだけで、
+      どちらもプロダクション側が壊れても失敗しない。
+    suggestion: >-
+      実際の検査関数を偽データに対して走らせる形に書き換える（検査をヘルパ関数へ抽出し
+      `assertRaises` で落ちることを確認する）。書き換えられないなら 2 テストを削除し
+      docstring を実態に合わせる。
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "batch auto-rework round 1 で task0002 に差し戻し"
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-candidates
+  note: >-
+    R4 の候補ゲート（severity ∈ {critical, high} かつ category != spec）に合致する finding が
+    ゼロ。唯一の high は category: spec のため auto-fix 対象外で、残りは medium。
+residual_critical_high: 1
+rework_required: true

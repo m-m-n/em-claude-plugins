@@ -27,7 +27,7 @@ workflow:
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
     status: completed
   - id: implement
-    status: completed
+    status: pending
     completed_at_commit: 5ce6a89877db27bacf49cc8c850b4b66bf468945
     base_commit: 236dcf52f7d2e4e7613b1592e30031ed4ee3eed8
   - id: review
@@ -56,10 +56,31 @@ tasks:
     status: merged
     notes: "deviation: tests/test_planner_designer_worktree_docs.py の既存 failure（plugin.json version 期待値のドリフト）を併せて修正"
     branch: em-workflow/codex-reviewer-temp-file-isolation/task0001
+  task0002:
+    title: "review round 1 rework"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/agents/codex-reviewer.md
+      - em-review/agents/codex-reviewer.md
+      - tests/test_codex_reviewer_temp_file_isolation.py
+      - feature-docs/codex-reviewer-temp-file-isolation/SPEC.md
+    skills: [infra-impl]
+    domains: [config-infra, concurrency]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR5, FR7]
+    status: pending
+    notes: null
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
+  residual_critical_high: 1
+  needs_rework: true
+  perspectives:
+    comprehensive: completed
+    performance: completed
+    spec: completed
+    security: completed
   plan:
     floor: [comprehensive, performance, spec]
     discretionary:
@@ -140,5 +161,5 @@ requirements:
     tests: [TS-3]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 0
