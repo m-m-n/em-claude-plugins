@@ -27,7 +27,8 @@ workflow:
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
     status: completed
   - id: implement
-    status: in_progress
+    status: completed
+    completed_at_commit: 5ce6a89877db27bacf49cc8c850b4b66bf468945
     base_commit: 236dcf52f7d2e4e7613b1592e30031ed4ee3eed8
   - id: review
     status: pending
@@ -52,8 +53,8 @@ tasks:
     domains: [config-infra, concurrency]
     complexity: medium
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, NFR1, NFR2, NFR3]
-    status: in_progress
-    notes: null
+    status: merged
+    notes: "deviation: tests/test_planner_designer_worktree_docs.py の既存 failure（plugin.json version 期待値のドリフト）を併せて修正"
     branch: em-workflow/codex-reviewer-temp-file-isolation/task0001
 
 review:
