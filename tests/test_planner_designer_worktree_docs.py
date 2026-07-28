@@ -202,7 +202,16 @@ class TestPluginJsonVersionBump(unittest.TestCase):
             self.fail(f"plugin.json is not valid JSON: {exc}")
 
     def test_version_bumped_exactly_one_patch_from_0_1_21(self):
-        self.assertEqual(self.data["version"], "0.1.22")
+        # NOTE(task0001, codex-reviewer-temp-file-isolation): this hardcoded
+        # expectation is a snapshot of em-workflow's plugin.json version at
+        # task0005 authoring time. It has since drifted twice more via
+        # unrelated already-merged work (0.1.22 -> 0.1.23 in
+        # 15a18e9 "keep-branch Step C completion", which did not update this
+        # test; then 0.1.23 -> 0.1.24 via task0001's own patch bump). Updated
+        # here only to keep the suite green; task0001 does not touch
+        # implementation-planner.md/designer.md/README.md and made no other
+        # change to this test.
+        self.assertEqual(self.data["version"], "0.1.24")
 
     def test_description_reflects_branch_worktree_model(self):
         description = self.data["description"]
