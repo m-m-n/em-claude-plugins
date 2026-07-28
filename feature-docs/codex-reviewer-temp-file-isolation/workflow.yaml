@@ -58,8 +58,14 @@ tasks:
     branch: em-workflow/codex-reviewer-temp-file-isolation/task0001
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor: [comprehensive, performance, spec]
+    discretionary:
+      - perspective: security
+        reason: "diff が一時ファイル生成の規約そのものを定めており、予測可能パス・シンボリックリンク攻撃（CWE-377 系）の観点が直接該当するため"
+    codex_cross_validation: true
 
 requirements:
   FR1:
