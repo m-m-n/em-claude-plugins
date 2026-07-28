@@ -45,7 +45,7 @@ workflow:
       統合 diff には task0001 の deviation（tests/test_planner_designer_worktree_docs.py の
       既存 failure 修正）が 1 ファイル分含まれる — 記録済みの想定内。
   - id: retrospect
-    status: pending
+    status: completed
 
 tasks:
   task0001:
