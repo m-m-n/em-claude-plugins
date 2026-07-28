@@ -1,0 +1,58 @@
+feature: codex-reviewer-temp-file-isolation
+collected_at: "2026-07-29T08:36:00+09:00"
+session_ids: [f484cad2-34e1-4f8b-a48a-d7c887745b15]
+signals:
+  review_critical_high:
+    - stable_id: 36899c2852f97ad4
+      category: spec
+      file: em-workflow/agents/codex-reviewer.md
+      title: "mktemp テンプレートの `$SCRATCHPAD_DIR` が未定義で、FR3 の「発明せずに従える具体機構」を満たしていない"
+      resolution: unresolved
+      note: "round 1 で検出 → task0002 に差し戻し → round 2 で解消確認"
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0001
+      files: [tests/test_planner_designer_worktree_docs.py]
+      note: >-
+        expected_files 外。task0001 の変更が plugin.json のバージョンを上げたことで、
+        別テストがハードコードしていた期待値と衝突した。implementer が baseline で既存
+        failure であることを確認したうえで併せて修正。
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: security
+      reason: "diff が一時ファイル生成の規約そのものを定めており、予測可能パス・シンボリックリンク攻撃（CWE-377 系）の観点が直接該当するため"
+  declined_findings: []
+  deferred_findings:
+    - stable_id: 30b2e1ce37f4489d
+      category: comprehensive
+      file: em-workflow/agents/codex-reviewer.md
+      resolution_reason: "medium severity: R4 auto-fix ゲート対象外 + batch rework 上限消費済み"
+    - stable_id: c28aef1e5a19b2ae
+      category: spec
+      file: em-workflow/agents/codex-reviewer.md
+      resolution_reason: "medium severity: R4 auto-fix ゲート対象外 + batch rework 上限消費済み"
+    - stable_id: d0b0fbbf20d5da37
+      category: comprehensive
+      file: tests/test_codex_reviewer_temp_file_isolation.py
+      resolution_reason: "medium severity: R4 auto-fix ゲート対象外 + batch rework 上限消費済み"
+    - stable_id: 4184c0c99bf3e8ea
+      category: comprehensive
+      file: tests/test_planner_designer_worktree_docs.py
+      resolution_reason: "medium severity: R4 auto-fix ゲート対象外 + batch rework 上限消費済み"
+lessons_candidates:
+  - >-
+    R4 の auto-fix ゲートは `category != spec` を含むため、spec 観点の high は
+    auto-fix に一切乗らず必ず rework 経由になる。この feature では唯一の high が
+    spec だったので、auto-fix ループが 1 度も回らないまま rework 上限を消費した。
+  - >-
+    このタスクの修正対象（codex-reviewer の一時ファイル規約）は、review フェーズが
+    codex-reviewer を並行起動するときの前提そのもの。今回は codex CLI 不在で
+    codex-reviewer が全て skip されたため、修正の効果を同じ run 内で実地検証できていない。
+  - >-
+    プラグインの plugin.json バージョンを複数のテストが独立にハードコードする構造が
+    残っている。round 1 の F-4 で片方は baseline 比較に直したが、もう片方は完全一致の
+    まま値だけ付け替えられ、round 2 で再指摘された（4184c0c99bf3e8ea）。
+  - >-
+    「session scratchpad に書く」と宣言した規約の具体例が `${TMPDIR:-/tmp}` を指す、という
+    スコープと例の食い違いが round 2 で 2 観点から指摘された（30b2e1ce37f4489d /
+    c28aef1e5a19b2ae）。round 1 の指摘を潰す修正が別の不整合を生んだ形。
