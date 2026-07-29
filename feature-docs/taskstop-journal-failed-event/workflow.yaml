@@ -51,8 +51,9 @@ tasks:
     domains: [input-handling, external-io, concurrency, config-infra]
     complexity: high
     requirements: [FR3, FR5, FR6, NFR1, NFR2, NFR3, NFR4, NFR5]
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/taskstop-journal-failed-event/task0001
   task0002:
     title: "TaskStop journal failed recorder hook"
     plan: tasks/task0002.md
@@ -64,8 +65,9 @@ tasks:
     domains: [input-handling, external-io, concurrency, config-infra]
     complexity: high
     requirements: [FR2, FR3, FR4, FR5, FR6, NFR1, NFR2, NFR3, NFR4, NFR5]
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/taskstop-journal-failed-event/task0002
   task0003:
     title: "Documentation and registration consistency"
     plan: tasks/task0003.md
@@ -78,8 +80,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR1, FR6, FR7, NFR3, NFR5]
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/taskstop-journal-failed-event/task0003
 
 review:
   status: pending
