@@ -1,0 +1,135 @@
+schema_version: 1
+feature: taskstop-journal-failed-event
+created: 2026-07-29
+base_branch: main
+parent_branch: em-workflow/taskstop-journal-failed-event/integration
+
+project:
+  license: none
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 55f20842a0a3169e4e8583d4517f1e80c885c9e2
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "hook スクリプトとドキュメントのみの変更で、ユーザーに見える UI 面が無いため"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: 15a18e90c8e19fb5ad40aa1a9aedecba72065a00
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+
+requirements:
+  FR1:
+    title: "Empirically determine the hook events and payload shapes fired by TaskStop"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: "Append one journal `failed` event on a TaskStop-initiated implementer stop"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: "Resolve the stopped harness agent identifier to an em-workflow task and journal path"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: "Idempotency with the existing SubagentStop failure net"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: "Fail-open on every unresolvable or abnormal state (exit 0, no journal write)"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: "Register the new hook in hooks.json following the existing entry form"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: "Update implement-phase.md and workflow-schema.md to match the implemented journal writer set"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "Reliability: hooks stay fail-open nets, never block a stop, never raise"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "Security: task_id / worktree path validation and O_NOFOLLOW file opens"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "Compatibility: Python 3.14 stdlib only; graceful degradation on unsupported harness versions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "Concurrency: flock-protected replay-decide-append; no cross-task mutation"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "Testability: subprocess-driven unittest coverage in the repository-root tests/ directory"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
