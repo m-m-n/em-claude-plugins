@@ -51,7 +51,7 @@ tasks:
     domains: [input-handling, external-io, concurrency, config-infra]
     complexity: high
     requirements: [FR3, FR5, FR6, NFR1, NFR2, NFR3, NFR4, NFR5]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/taskstop-journal-failed-event/task0001
   task0002:
