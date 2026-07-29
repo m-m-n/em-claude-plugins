@@ -26,11 +26,15 @@ or `Agent` tool:
      `queue_launch_guard.py`'s existing implementation).
   2. Extract and validate `task_id` / `worktree_path` from that block.
      Invalid values -> no action.
-  3. Extract every recoverable harness agent-identifier candidate from
-     `tool_response`: all matching structured identifier fields when the
-     result is an object, plus an identifier embedded in the result's text.
-     Failing to find any -> no action (IMPLEMENTATION.md D3 -- the live
-     payload shape is unverified in this environment).
+  3. Extract the harness agent-identifier candidate(s) from `tool_response`:
+     every matching structured identifier field, when the result is an
+     object. ONLY when none is found does an identifier embedded in the
+     result's text (a plain string or block-list `content`) get used as a
+     fallback -- tool-result text is the subagent's own untrusted final
+     output and is never promoted into the candidate list alongside a
+     trusted structured field (task0005 F-1). Failing to find any -> no
+     action (IMPLEMENTATION.md D3 -- the live payload shape is unverified in
+     this environment).
   4. Derive the journal directory: dirname(normpath(worktree_path)) (Journal-
      directory derivation, IMPLEMENTATION.md -- identical to the derivation
      already used by both existing queue hooks). If it does not exist -> no
@@ -140,25 +144,38 @@ def journal_dir_for(worktree_path):
     return os.path.dirname(os.path.normpath(worktree_path))
 
 
-def _text_from_content_blocks(content):
-    if not isinstance(content, list):
-        return None
-    parts = [
-        block.get("text")
-        for block in content
-        if isinstance(block, dict) and isinstance(block.get("text"), str)
-    ]
-    return "\n".join(parts) if parts else None
+def _text_from_content(content):
+    """Text extraction from a tool_response `content` field, tolerating
+    either of two observed shapes (IMPLEMENTATION.md D3 / task0005 F-2): a
+    block list (each block's `text` joined), or a plain string (the
+    ordinary shape of a bare-string tool result -- the gap that used to
+    make this hook a permanent no-op, F-2)."""
+    if isinstance(content, str):
+        return content if content.strip() else None
+    if isinstance(content, list):
+        parts = [
+            block.get("text")
+            for block in content
+            if isinstance(block, dict) and isinstance(block.get("text"), str)
+        ]
+        return "\n".join(parts) if parts else None
+    return None
 
 
 def extract_agent_identifiers(tool_response):
-    """Recover all recoverable harness agent-identifier candidates from a
-    PostToolUse `tool_response` of unverified shape (IMPLEMENTATION.md D3):
+    """Recover the harness agent-identifier candidate(s) from a PostToolUse
+    `tool_response` of unverified shape (IMPLEMENTATION.md D3):
       - every structured identifier field present, when the result is an
-        object, in STRUCTURED_ID_FIELDS order;
-      - plus an identifier embedded in the result's text (either a
-        top-level string result, or the joined text of a `content` block
-        list).
+        object, in STRUCTURED_ID_FIELDS order and with duplicates removed;
+      - ONLY when no structured field was found at all: fall back to an
+        identifier embedded in the result's text (a top-level string
+        result, or the `content` field of an object result, whether a
+        block list or a plain string).
+    Free-text is never consulted when a structured field is present
+    (task0005 F-1): tool result text is the subagent's own final output --
+    attacker-influenceable, untrusted data -- and must never be promoted
+    into the join key alongside a trusted structured field.
+
     Returns a list of distinct candidate strings, in discovery order (the
     first element is the representative value, unchanged from the previous
     single-value selection rule). Returns an empty list when nothing
@@ -177,7 +194,12 @@ def extract_agent_identifiers(tool_response):
             if isinstance(value, str) and value.strip():
                 add(value.strip())
 
-        text = _text_from_content_blocks(tool_response.get("content"))
+        if candidates:
+            # F-1: a trusted structured field was found -- the free-text
+            # path is a fallback ONLY, never promoted alongside it.
+            return candidates
+
+        text = _text_from_content(tool_response.get("content"))
         if text:
             match = EMBEDDED_ID_RE.search(text)
             if match:

@@ -101,6 +101,16 @@ def embedded_text_result(agent_id):
     }
 
 
+def content_string_result(agent_id):
+    """A `content` field that is a plain string rather than a block list --
+    the ordinary shape of a tool result whose type is a bare string
+    (task0005 F-2)."""
+    return {
+        "status": "completed",
+        "content": f"Implementer finished. agentId: {agent_id}",
+    }
+
+
 def index_path_for(worktree_path):
     return os.path.join(os.path.dirname(worktree_path), "agents.jsonl")
 
@@ -146,6 +156,7 @@ class TestFirstLaunchAppendsIndexEntry(unittest.TestCase):
             self.assertEqual(len(lines), 1)
             entry = lines[0]
             self.assertEqual(entry["agent_id"], "agent-xyz-001")
+            self.assertEqual(entry["agent_ids"], ["agent-xyz-001"])
             self.assertEqual(entry["task"], "task0001")
             self.assertEqual(entry["worktree_path"], worktree_path)
             assert_rfc3339_with_offset(entry["at"])
@@ -473,7 +484,12 @@ class TestHooksJsonRegistersAgentIndexEntry(unittest.TestCase):
 
 class TestAgentIdentifierRecoveredFromBothLayouts(unittest.TestCase):
     """AC-10: the agent identifier is recovered both from a structured
-    result field and from an identifier embedded in result text."""
+    result field and from an identifier embedded in result text.
+
+    Also covers task0005 AC-3: an identifier is recovered from each of the
+    three text-bearing shapes -- an object whose content is a block list, an
+    object whose content is a plain string, and a plain-string result --
+    verified as three separate cases below."""
 
     def test_structured_field_is_recovered(self):
         with _tmp_worktree() as worktree_path:
@@ -488,6 +504,7 @@ class TestAgentIdentifierRecoveredFromBothLayouts(unittest.TestCase):
             self.assertEqual(lines[0]["agent_id"], "agent-struct-1")
 
     def test_embedded_text_identifier_is_recovered(self):
+        """task0005 AC-3, case: object result, content is a block list."""
         with _tmp_worktree() as worktree_path:
             os.makedirs(worktree_path, exist_ok=True)
             payload = post_tool_use_payload(
@@ -499,9 +516,24 @@ class TestAgentIdentifierRecoveredFromBothLayouts(unittest.TestCase):
             self.assertEqual(len(lines), 1)
             self.assertEqual(lines[0]["agent_id"], "agent-embedded-2")
 
+    def test_content_plain_string_identifier_is_recovered(self):
+        """task0005 AC-3 / F-2, case: object result, content is a plain
+        string (the commonest tool-result shape, and the one that used to
+        make the whole recorder a permanent no-op)."""
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            payload = post_tool_use_payload(
+                "task0001", worktree_path, content_string_result("agent-content-str-4")
+            )
+            proc = run_hook_payload(payload)
+            self.assertEqual(proc.returncode, 0)
+            lines = read_index_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            self.assertEqual(lines[0]["agent_id"], "agent-content-str-4")
+
     def test_plain_string_result_with_embedded_identifier_is_recovered(self):
-        """Extra layout tolerance: tool_response itself is a plain string
-        (not an object) carrying the embedded identifier."""
+        """task0005 AC-3, case: tool_response itself is a plain string (not
+        an object) carrying the embedded identifier."""
         with _tmp_worktree() as worktree_path:
             os.makedirs(worktree_path, exist_ok=True)
             payload = post_tool_use_payload(
@@ -512,6 +544,149 @@ class TestAgentIdentifierRecoveredFromBothLayouts(unittest.TestCase):
             lines = read_index_lines(worktree_path)
             self.assertEqual(len(lines), 1)
             self.assertEqual(lines[0]["agent_id"], "agent-plain-3")
+
+
+class TestStructuredFieldSuppressesFreeTextCandidate(unittest.TestCase):
+    """task0005 AC-1 (F-1 security regression guard): when the launch result
+    carries at least one structured identifier field, no identifier
+    harvested from free-text is recorded -- the candidate list contains
+    ONLY structured-field values, even when the free-text carries a
+    DIFFERENT, attacker-influenceable value."""
+
+    def test_freetext_identifier_absent_when_structured_field_present(self):
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            tool_response = {
+                "status": "completed",
+                "agentId": "agent-trusted",
+                "content": [
+                    {"type": "text", "text": "Report: agentId: agent-forged-evil"}
+                ],
+            }
+            payload = post_tool_use_payload("task0001", worktree_path, tool_response)
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            lines = read_index_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            entry = lines[0]
+            self.assertEqual(entry["agent_ids"], ["agent-trusted"])
+            self.assertEqual(entry["agent_id"], "agent-trusted")
+            self.assertNotIn("agent-forged-evil", json.dumps(entry))
+
+
+class TestRepresentativeMatchesFirstCandidate(unittest.TestCase):
+    """task0005 AC-5: the recorded representative identifier (`agent_id`)
+    always equals the first element of the recorded candidate list
+    (`agent_ids`), asserted in a multi-candidate case."""
+
+    def test_representative_is_first_of_agent_ids_list(self):
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            tool_response = {
+                "status": "completed",
+                "agentId": "agent-first",
+                "taskId": "agent-second",
+                "content": [{"type": "text", "text": "Done."}],
+            }
+            payload = post_tool_use_payload("task0001", worktree_path, tool_response)
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            lines = read_index_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            entry = lines[0]
+            self.assertGreater(len(entry["agent_ids"]), 1)
+            self.assertEqual(entry["agent_id"], entry["agent_ids"][0])
+            self.assertEqual(entry["agent_ids"][0], "agent-first")
+
+
+class TestMultipleStructuredSpellingsAllRecorded(unittest.TestCase):
+    """task0005 AC-6: a launch result carrying two distinct structured
+    identifier spellings with DIFFERENT values records both, in discovery
+    order, with duplicates removed. Without this test, removing the
+    candidate-list feature entirely still leaves the suite green (F-3)."""
+
+    def test_two_distinct_structured_fields_both_recorded_in_order(self):
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            tool_response = {
+                "status": "completed",
+                "agentId": "agent-alpha",
+                "agent_id": "agent-alpha",  # duplicate value -> must collapse
+                "taskId": "agent-beta",  # distinct spelling, distinct value
+                "content": [{"type": "text", "text": "Done."}],
+            }
+            payload = post_tool_use_payload("task0001", worktree_path, tool_response)
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            lines = read_index_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            entry = lines[0]
+            self.assertEqual(entry["agent_ids"], ["agent-alpha", "agent-beta"])
+            self.assertEqual(entry["agent_id"], "agent-alpha")
+
+
+class TestEmbeddedPatternDoesNotMatchTaskAssignmentLine(unittest.TestCase):
+    """task0005 AC-7 (design constraint): the embedded-text identifier
+    pattern still does not match a task-assignment-style task id line --
+    implementer prompts always contain a literal `task_id: task0001` line,
+    which must never be misread as an agent identifier."""
+
+    def test_task_assignment_style_line_is_not_misread_as_agent_id(self):
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            tool_response = {
+                "status": "completed",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "# Task assignment\n"
+                            "task_id: task0001\n"
+                            "worktree_path: /some/path/task0001\n"
+                        ),
+                    }
+                ],
+            }
+            payload = post_tool_use_payload("task0001", worktree_path, tool_response)
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(read_index_lines(worktree_path), [])
+
+
+class TestSymlinkAtIndexPathIsRefused(unittest.TestCase):
+    """task0005 AC-8: with the index path replaced by a symlink to a file
+    outside the feature directory, the hook exits 0 and the link target
+    stays unwritten (O_NOFOLLOW defense in depth, Agent index contract)."""
+
+    def test_symlink_index_path_is_not_followed(self):
+        with tempfile.TemporaryDirectory() as tmp_root:
+            feature_dir = os.path.join(tmp_root, "feature")
+            worktree_path = os.path.join(feature_dir, "task0001")
+            os.makedirs(worktree_path, exist_ok=True)
+
+            outside_dir = os.path.join(tmp_root, "outside")
+            os.makedirs(outside_dir, exist_ok=True)
+            target_path = os.path.join(outside_dir, "target.jsonl")
+            original_content = "sentinel\n"
+            with open(target_path, "w", encoding="utf-8") as fh:
+                fh.write(original_content)
+
+            index_path = os.path.join(feature_dir, "agents.jsonl")
+            os.symlink(target_path, index_path)
+
+            payload = post_tool_use_payload(
+                "task0001", worktree_path, structured_result("agent-sym-1")
+            )
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            self.assertTrue(os.path.islink(index_path))
+            with open(target_path, encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), original_content)
 
 
 class TestStdlibOnly(unittest.TestCase):
