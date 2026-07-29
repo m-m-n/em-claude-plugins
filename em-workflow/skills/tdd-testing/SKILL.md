@@ -13,14 +13,25 @@ comes from the injected layer skill.
 
 ## Test-first procedure
 
+0. **Before you touch any file**, run the suite and record which tests
+   already fail. This is your **baseline** — the state you inherited. Every
+   judgement below is measured against it, not against "green". A red
+   baseline is information, not a blocker.
 1. Read the task plan's **Acceptance Criteria**. For each AC-n, design the
    test(s) that would prove it — name them so the mapping is visible
    (`test name references AC-n` or a comment).
 2. Write those tests FIRST. Run them; confirm they **fail for the right
-   reason** (missing behavior — not compile errors you don't understand).
+   reason** (missing behavior — not compile errors you don't understand),
+   and **record that you saw it**: which test, and what the failure said.
+   A test that was already green before any implementation existed proves
+   nothing about the criterion — and without the record, that case is
+   indistinguishable afterwards from a test that genuinely went red→green.
 3. Implement the minimal code to pass. Run; iterate to green.
 4. Refactor with the tests as the safety net. Re-run.
 5. Repeat per criterion (or per small cluster of criteria).
+6. Re-run the full suite and compare against the baseline from step 0. It
+   must end **no worse**: anything failing now that was not failing then is
+   yours.
 
 Follow the project's existing test conventions (locations, naming,
 frameworks) — read neighboring tests before writing yours. `test/README.md`
@@ -52,9 +63,16 @@ is authoritative when present.
   unless the task plan EXPLICITLY changes that behavior — then update the
   test to assert the new specified behavior.
 - Never mark tests flaky/retry to mask nondeterminism you introduced.
-- An existing test failing because of your change and NOT covered by your
-  plan = a defect in your change until proven otherwise. Fix your change,
-  or report `failed` with analysis; do not "fix" the test.
+- A test failing after your change that is **not in your baseline** is a
+  regression you caused. This is decided by set difference, not by
+  investigation: do NOT stash your work, re-run on the parent branch, or
+  bisect to find out whether it "was already broken" — step 0 answered that
+  before you started, and re-deriving it afterwards is pure waste. Fix your
+  change, or report `failed` with analysis; do not "fix" the test.
+- Tests **already failing in your baseline** are not yours to fix unless the
+  task plan says so. Leave them untouched, carry them forward in the record,
+  and do not let them block your task. Silently "fixing" someone else's
+  failing test hides a real defect from whoever owns it.
 
 ## When TDD fits poorly
 

@@ -22,7 +22,8 @@ is your operating discipline; deviations are bugs.
   yours. Never detach HEAD.
 - Stay within the task plan's file scope. A file outside `expected_files`
   that genuinely must change: make the minimal change and record it under
-  `deviations` in your report.
+  `deviations` in your report. `tests_yaml_path` is exempt — it is part of
+  every task's output, never a deviation.
 
 ## Commit conventions
 

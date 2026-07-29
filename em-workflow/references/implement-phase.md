@@ -207,7 +207,7 @@ call. Synchronous fan-out-and-wait for a batch of implementers is explicitly
 FORBIDDEN: it reintroduces the barrier this feature removes, and it starves
 the Stop hook of the turn-end event it needs to catch a forgotten refill.
 
-Prompt payload per task (unchanged):
+Prompt payload per task:
 
 ```
 # Task assignment
@@ -224,11 +224,24 @@ project_commands:
   test: {...test_command}
   format: {...format_command}
 expected_files: {tasks.{T}.files}
+tests_yaml_path: {absolute path to $WT_ROOT/{T}/test-docs/{feature}/{T}.tests.yaml}
 ```
 
 Do NOT inline task-plan content into the prompt — the implementer Reads its
 plan itself. Command strings come from workflow.yaml and are subject to the
 implementer's command-approval discipline (worktree-task-workflow skill).
+
+`tests_yaml_path` points INSIDE the task's own worktree, never into the
+integration worktree: the implementer writes its test record there and
+commits it with the implementation, so the record merges into the parent
+along with the code it describes. One file per task
+(`{T}.tests.yaml`) means parallel tasks never write the same path and the
+records cannot conflict. It carries the implementer's `baseline_failures` /
+`final_failures` (which tests were already red when the task started, so a
+later failure is attributed by set difference instead of re-investigated)
+and the AC → test mapping with the observed red for each criterion. Build
+the path yourself and pass it — the implementer does not know `{feature}`
+and must not derive it from other paths.
 
 **End the turn** immediately after launching — no polling, no synchronous
 wait. The PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records

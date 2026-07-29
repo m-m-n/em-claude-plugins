@@ -29,6 +29,8 @@ Two discipline skills are preloaded and non-negotiable:
 `task_plan_path`, `implementation_md_path`, `parent_branch`, `merge_script`
 (absolute path to merge-task.sh), `skills_to_load` (possibly empty),
 `project_commands` (build / test / format), `expected_files`,
+`tests_yaml_path` (absolute — always inside `worktree_path`; the file you
+write in Step 4c and commit with your implementation),
 `lessons_path` (optional — absolute path to the project's
 feature-docs/LESSONS.md; absent when the project has none).
 
@@ -69,6 +71,26 @@ path outside `worktree_path` except: reading `task_plan_path` /
 
 ### Step 4: Implement (TDD)
 
+Run `project_commands.test` / `build` / `format` per the command-approval
+rules in `worktree-task-workflow` throughout this step.
+
+#### 4a. Record the baseline BEFORE you touch anything
+
+Before creating or editing a single file, run `project_commands.test` in the
+worktree and collect the names of the tests that fail. That set is your
+**baseline**: the state of the suite as you inherited it.
+
+This run is mandatory. Without it you cannot attribute a later failure, and
+reconstructing the answer afterwards — stashing, re-running on the parent,
+bisecting — is exactly the waste this step exists to prevent.
+
+A non-empty baseline does NOT stop you. Parallel tasks merging into the
+parent can leave it transiently red, and someone else's failing test is not
+yours to diagnose. Record it and continue: what you are accountable for is
+the DIFFERENCE you cause, not the absolute state.
+
+#### 4b. Implement
+
 Follow the `tdd-testing` skill: translate each Acceptance Criterion into
 failing tests first, then implement until green, refactor, repeat. Stay
 within the task plan's file scope (`expected_files`); needing a file outside
@@ -76,14 +98,53 @@ it is a **deviation** — implement the minimal necessary change and record it
 in your report's `deviations` (the planner's files prediction feeds review
 scoping and retrospect, so deviations matter).
 
-Run `project_commands.test` / `build` / `format` per the command-approval
-rules in `worktree-task-workflow`. All tests and the build must pass before
-you proceed.
+When you run a newly written test and watch it fail, keep that observation:
+which test failed and what the failure said. You need it in 4c, and a test
+that was already green before you implemented anything proves nothing.
+
+The build must pass, and the suite must end no worse than your baseline —
+`final_failures` minus `baseline_failures` MUST be empty — before you
+proceed. Any test failing now that was not failing in 4a is a regression you
+caused: fix your change (never the test), or report `failed`.
+
+#### 4c. Write the test record
+
+Write `tests_yaml_path` (create parent directories as needed):
+
+```yaml
+task_id: task0005
+baseline_failures: []          # from 4a — what was already red when you started
+final_failures: []             # after implementation; must be ⊆ baseline_failures
+acceptance_tests:
+  AC-1:
+    tests: [parser::tests::rejects_empty]
+    red_confirmed: true        # you watched it fail before the implementation existed
+    red_reason: "assertion failed: expected Err, got Ok"
+  AC-2:
+    tests: [parser::tests::handles_bom, TestParseUTF16]
+    red_confirmed: true
+    red_reason: "undefined method handle_bom"
+```
+
+Every Acceptance Criterion in your task plan gets an entry, including ones
+whose verifiable outcome is a build or a lint check rather than a test
+(`tests: []` with the outcome named in `red_reason`).
+
+`red_confirmed: false` means the test passed before you wrote any
+implementation — it is not proving what the criterion claims. Rewrite the
+test so it actually fails first. If you cannot (the behavior genuinely
+pre-existed, the criterion is a refactor with no observable change), leave
+it `false`, say why in `red_reason`, and carry it into your report's
+`notes`. Never write `true` for a red you did not observe: this file is the
+evidence a later failure gets attributed with, and a fabricated entry
+poisons every task that reads it afterwards.
 
 ### Step 5: Commit
 
 Commit per the conventions in `worktree-task-workflow` (small logical
-commits are fine; everything committed, working tree clean).
+commits are fine; everything committed, working tree clean). `tests_yaml_path`
+is part of the task's output — it ships in the same commits as the
+implementation it describes, not as a separate bookkeeping commit.
 
 ### Step 6: Merge (and the conflict loop)
 
@@ -96,6 +157,11 @@ and branch on its exit code exactly as `worktree-task-workflow` specifies:
   (merge parent into your branch, adopt the parent side for conflicted
   files, re-implement your change on top, re-test, commit, retry the merge).
   Bounded: after **3** failed conflict cycles, stop and report `failed`.
+  Merging the parent in brings other tasks' changes with it, so the suite
+  you re-test against is a NEW inheritance: re-run the suite right after
+  adopting the parent side and replace `baseline_failures` with that result,
+  then update `final_failures` from the post-re-implementation run. The
+  subset rule is re-evaluated against the refreshed baseline.
 - `2` → error. Diagnose (uncommitted changes? missing branch?); fix what is
   yours to fix and retry once; otherwise report `failed`.
 
@@ -108,11 +174,20 @@ and branch on its exit code exactly as `worktree-task-workflow` specifies:
   "merge_commit": "<sha or null>",
   "conflict_retries": 0,
   "tests": "pass" | "fail",
+  "baseline_failures": ["<test already failing before you started, from 4a>"],
+  "regressions": ["<test failing now that was not in the baseline>"],
+  "unconfirmed_reds": ["AC-3: <why the test could not be made to fail first>"],
   "deviations": ["<file outside expected_files + why>", "..."],
   "skills_loaded": ["em-workflow:backend-impl"],
   "notes": "<short; on failure: what blocked you, conflicting files if any>"
 }
 ```
+
+`regressions` non-empty means `status: failed` — you do not merge a task
+that breaks tests it did not inherit broken. `tests: "pass"` means "no
+regressions", not "the whole suite is green": a task that inherits a red
+baseline and adds nothing to it still reports `pass`, with the inherited
+failures visible in `baseline_failures`.
 
 ## Hard constraints
 
