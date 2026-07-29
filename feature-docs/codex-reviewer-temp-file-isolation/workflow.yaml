@@ -1,0 +1,175 @@
+schema_version: 1
+feature: codex-reviewer-temp-file-isolation
+created: 2026-07-29
+base_branch: main
+parent_branch: em-workflow/codex-reviewer-temp-file-isolation/integration
+
+project:
+  license: none
+  components:
+    main:
+      language: markdown+python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: c9d20c8887709f7a7540c8094e8c3428511ba3ea
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "UI を持たない — エージェント定義 Markdown とテストのみの変更"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: completed
+  - id: implement
+    status: completed
+    completed_at_commit: a33113c41f52b062291223160cb4f75ad446b720
+    base_commit: 236dcf52f7d2e4e7613b1592e30031ed4ee3eed8
+  - id: review
+    status: completed
+    completed_at_commit: bf598e1f7855182fa85348b3807780a2af0f31e0
+  - id: verify
+    status: completed
+    result: pass
+    failed_items: []
+    notes: >-
+      TS-1..TS-7 は tests/test_codex_reviewer_temp_file_isolation.py で自動検証、
+      `python3 -m unittest discover -s tests` は 147 件全て pass。TS-8 は手動確認済み
+      （em-workflow 0.1.23→0.1.24 / em-review 0.5.1→0.5.2）。SC-3 は
+      run_codex_exec.sh が統合 diff に含まれないことで確認。両プラグインの discipline 節は
+      プラグイン名 1 語を除いて完全一致。build / format コマンドは未設定のため対象外。
+      統合 diff には task0001 の deviation（tests/test_planner_designer_worktree_docs.py の
+      既存 failure 修正）が 1 ファイル分含まれる — 記録済みの想定内。
+  - id: retrospect
+    status: completed
+
+tasks:
+  task0001:
+    title: "codex-reviewer temp-file discipline in both plugins"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/agents/codex-reviewer.md
+      - em-review/agents/codex-reviewer.md
+      - tests/test_codex_reviewer_temp_file_isolation.py
+      - em-workflow/.claude-plugin/plugin.json
+      - em-review/.claude-plugin/plugin.json
+    skills: [infra-impl]
+    domains: [config-infra, concurrency]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, NFR1, NFR2, NFR3]
+    status: merged
+    notes: "deviation: tests/test_planner_designer_worktree_docs.py の既存 failure（plugin.json version 期待値のドリフト）を併せて修正"
+    branch: em-workflow/codex-reviewer-temp-file-isolation/task0001
+  task0002:
+    title: "review round 1 rework"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/agents/codex-reviewer.md
+      - em-review/agents/codex-reviewer.md
+      - tests/test_codex_reviewer_temp_file_isolation.py
+      - feature-docs/codex-reviewer-temp-file-isolation/SPEC.md
+    skills: [infra-impl]
+    domains: [config-infra, concurrency]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR5, FR7]
+    status: merged
+    notes: "review round 1 の findings 5 件を全て解消。テスト 147 件グリーン"
+    branch: em-workflow/codex-reviewer-temp-file-isolation/task0002
+
+review:
+  status: completed
+  rounds_completed: 2
+  residual_critical_high: 0
+  needs_rework: false
+  perspectives:
+    comprehensive: completed
+    performance: completed
+    spec: completed
+    security: completed
+  plan:
+    floor: [comprehensive, performance, spec]
+    discretionary:
+      - perspective: security
+        reason: "diff が一時ファイル生成の規約そのものを定めており、予測可能パス・シンボリックリンク攻撃（CWE-377 系）の観点が直接該当するため"
+    codex_cross_validation: true
+
+requirements:
+  FR1:
+    title: "em-workflow codex-reviewer.md states per-invocation-unique scratchpad temp paths"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-1]
+  FR2:
+    title: "em-review codex-reviewer.md carries the same rule"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-2]
+  FR3:
+    title: "The rule names mktemp with a template as the concrete mechanism"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-3]
+  FR4:
+    title: "Fixed names and perspective-only names are explicitly forbidden"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-4]
+  FR5:
+    title: "Temp-file creation failure is handled fail-closed via the skip object"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-5]
+  FR6:
+    title: "Rule applies only when a temp file is actually used"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-1, TS-2]
+  FR7:
+    title: "Structural unittest asserts FR1-FR6 over both agent definitions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-7]
+  NFR1:
+    title: "Compatibility: run_codex_exec.sh interface unchanged"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-6]
+  NFR2:
+    title: "Maintainability: agent definitions are the single source of truth"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-6]
+  NFR3:
+    title: "Security: temp paths are not predictable fixed locations"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-3]
+
+batch:
+  review_rework_count: 1
+  verify_rework_count: 0
