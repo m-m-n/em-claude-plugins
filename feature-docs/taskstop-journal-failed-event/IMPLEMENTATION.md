@@ -55,7 +55,7 @@ writer; nothing in layer 2 or 3 reads layer 1.
 
 | Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
 |-----------|----------------|------------------------------|---------------|
-| Agent index file | Map a harness agent identifier to an em-workflow task identity | See "Agent index contract" below | task0001 (writer), task0002 (reader) |
+| Agent index file | Map a per-launch candidate list of harness agent identifiers to an em-workflow task identity | See "Agent index contract" below | task0001 (writer), task0002 (reader) |
 | Journal append discipline | Add one `failed` line without duplicating an existing terminal event | Pre: journal directory exists; the task's last event is neither `merged` nor `failed`. Post: exactly one `failed` line for that task is appended, written under an exclusive whole-file lock, with fields `event` / `task` / `at` / `reason`. On any precondition failure: no write, no error surfaced | task0002 |
 | Task-identity discovery | Decide whether a subagent launch belongs to em-workflow and extract its identity | Pre: an agent-launch tool input. Post: returns a task identifier matching `^task[0-9]+$` and an absolute worktree path containing no `..` segment, or nothing. Identical acceptance rules to `queue_launch_guard.py`'s existing implementation | task0001 |
 | Journal-directory derivation | Locate a feature's journal from a task worktree path | Pre: validated absolute worktree path. Post: the parent directory of the normalized worktree path; the journal is the `journal.jsonl` entry inside it. Identical to the derivation already used by both existing hooks | task0001, task0002 |
@@ -65,18 +65,33 @@ writer; nothing in layer 2 or 3 reads layer 1.
 - **Location**: a file named `agents.jsonl` in the feature's worktree root directory —
   the same directory that holds `journal.jsonl`, i.e. the parent of the per-task
   worktree directories. One index per feature.
-- **Format**: append-only JSONL. One object per launch, carrying at minimum: the
-  harness agent identifier, the em-workflow task identifier, the task worktree path,
-  and an RFC 3339 timestamp with offset.
+- **Format**: append-only JSONL. One object per launch, carrying at minimum: a
+  candidate list of every distinct harness agent-identifier string recoverable
+  from the launch response (`agent_ids`, in discovery order) — the exact
+  identifier field the harness's launch response carries is unverified (D3), so
+  more than one candidate may be present — plus a single representative value
+  (`agent_id`) that MUST equal `agent_ids[0]`, the em-workflow task identifier,
+  the task worktree path, and an RFC 3339 timestamp with offset. The
+  representative-equals-first-candidate invariant is load-bearing: a reader that
+  only understands the single-value field depends on it to fall back correctly
+  (see Read discipline below).
 - **Write discipline**: appended under an exclusive whole-file lock, opened with the
   symlink-refusing open flag, permissions `0o644`, created if absent. The containing
   directory is never created by the index writer — an absent directory means the
   launch is not an em-workflow implementer launch in a live feature, and the writer
   no-ops.
-- **Read discipline**: the reader scans index files for entries whose agent identifier
-  matches, and uses the LAST such entry (a harness identifier could in principle be
-  reused; last-wins matches the journal's own last-event-wins replay convention).
-  Malformed lines are skipped, never raised.
+- **Read discipline**: a lookup identifier matches an entry if it equals ANY element
+  of that entry's `agent_ids` candidate list. Only entries written before the
+  `agent_ids` field existed (older entries with no candidate list at all) fall back
+  to matching the single representative key instead — an entry that has a
+  candidate list is never matched by its representative value alone. Among all
+  matching entries, the reader uses the LAST one (a harness identifier could in
+  principle be reused; last-wins matches the journal's own last-event-wins replay
+  convention) — UNLESS a later entry exists for the same (feature, task) pair
+  (written under a different identifier, e.g. a retry/relaunch), in which case the
+  matched entry is superseded: it is treated as stale and the reader no-ops rather
+  than attribute the stop to a launch that has already been relaunched. Malformed
+  lines are skipped, never raised.
 - **Discovery from the reader side**: the stop-side hook input does not name the
   feature. The reader determines the search root by walking up from the hook input's
   working directory to the nearest ancestor containing an
