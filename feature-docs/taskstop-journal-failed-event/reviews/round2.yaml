@@ -1,0 +1,112 @@
+round: 2
+executed_at: "2026-07-29T10:45:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 8897404785270ff4a0bedf1c2fcaba35794132ce
+  head_commit: ee032a216a6f00b2bc9c9f86447480e3fa330bfa
+  changed_files:
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/README.md
+    - em-workflow/hooks/hooks.json
+    - em-workflow/hooks/queue_agent_index.py
+    - em-workflow/hooks/queue_failure_net.py
+    - em-workflow/hooks/queue_taskstop_net.py
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/workflow-schema.md
+    - tests/test_hooks_registration.py
+    - tests/test_planner_designer_worktree_docs.py
+    - tests/test_queue_agent_index.py
+    - tests/test_queue_taskstop_net.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  codex_cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: security, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: performance, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: architecture, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: spec, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+findings:
+  - stable_id: bac949ae3b146100
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 190
+    title: "封じ込めチェックが symlink 経路差で正当なエントリを破棄し、recorder が恒久 no-op になる"
+    description: "rework で追加された封じ込めチェックは、index 側（hook の cwd から walk-up した実パス）とエントリ側（オーケストレーターが git toplevel から組んだ文字列）を symlink を解決せず文字列一致で比較する。同一物理ディレクトリでも綴りが違えば該当エントリは wholesale で無視され、recorder はそのプロジェクトで恒久 no-op になる。レビュアーが実測で再現: cwd が実パスなら failed が付き、同じディレクトリへの symlink 経由の cwd では何も書かれない。プロジェクトルートが symlink 経由で到達可能な環境（macOS の /tmp→/private/tmp、automount、~/work→/mnt/... 等）で発火する。rework が持ち込んだリグレッション。"
+    suggestion: "比較の両辺を realpath で解決する。F-1 の防御は落ちず、むしろ強くなる（タスク worktree 自体が symlink の場合、realpath はリンク先へ解決するため親が feature ディレクトリと一致せず拒否される）。symlink 経由の cwd で happy path が解決することを assert する回帰テストを追加する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "review round 2 medium。auto-fix は critical/high のみが対象、batch rework 上限も消費済みのため未修正。PR レビュー時の最優先フォローアップ"
+  - stable_id: 7bbaf9499b5d4e3f
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 109
+    title: "MAX_AGENT_IDS_LEN が別ファイルの定数長をハードコードしており、ドリフト検知が無い"
+    description: "reader の上限値は writer の構造化フィールド数を別ファイルにハードコードした値で、両者を結ぶ assertion もテストも無い。将来 writer 側に綴りを追加すると、正当なエントリが上限に引っかかって無視され recorder が静かに no-op になる。加えて導出コメント「4 structured + 1 embedded = 5」は誤り — embedded fallback は構造化フィールドと排他なので正当な writer が出しうる最大長は 4。"
+    suggestion: "writer 側に候補数上限の定数を置き、両モジュールを import して reader の上限がそれ以上であることを assert する回帰テストを追加する。導出コメントも排他性に合わせて訂正する。"
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "review round 2 medium"
+  - stable_id: d439566a3ac0507d
+    severity: medium
+    category: comprehensive
+    file: em-workflow/README.md
+    line: 85
+    title: "README / implement-phase.md が TaskStop→failed 記録を無条件の保証として書いており、best-effort 契約と矛盾する"
+    description: "README に追加された記述は無条件の断定になっているが、workflow-schema.md は索引の不在が recorder を no-op に劣化させるだけと明記し、実装も識別子未解決・索引欠如・曖昧・stale のいずれでも黙って no-op する fail-open 設計。オーケストレーター LLM がこれらを SSOT として読むため、failed が無いことを「まだ生きている」と誤解して wake フェーズの git 実状態 reconcile を省く経路ができる。"
+    suggestion: "両ファイルとも「解決できた場合は記録される、できなければ従来どおり reconcile が受け持つ」と両分岐を書く形に直す。"
+    sources: [claude:comprehensive]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "changed_files 外のため confidence 50 に制限。review round 2 medium"
+  - stable_id: 30e88bc1da9039b4
+    severity: medium
+    category: architecture
+    file: feature-docs/taskstop-journal-failed-event/IMPLEMENTATION.md
+    line: 88
+    title: "Agent index contract (SSOT) が last-wins のままで、reader の ambiguity refusal / cap / containment が未記載"
+    description: "契約は「マッチした中で最後のものを使う」と書き、その根拠として identifier 使い回しを挙げているが、reader は round 1 F-2 対応で複数の (feature, task) にまたがるマッチを解決失敗にする。契約が規定する唯一の last-wins 適用シナリオでコードは逆に振る舞う。加えて candidate-list 上限と feature 封じ込めという 2 つの破棄規則が契約に一切書かれていない。ドキュメント通りに 2 つ目の reader を書くと round 1 で塞いだ誤帰属と封じ込め欠落が復活する。"
+    suggestion: "Read discipline を実装に合わせて書き直す。last-wins は単一の (feature, task) に収まるマッチ集合内でのみ適用されること、複数にまたがる場合は解決失敗であること、および matching 前の 2 つの破棄規則を明記する。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "review round 2 medium"
+  - stable_id: fc61abce81029d31
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 109
+    title: "Reader が writer のフィールド数由来の上限をハードコードしており、機械的な結合も SSOT 記載も無い"
+    description: "上限値は writer の構造化フィールド数から導かれた数値だが、両者を結ぶ機械的手段が無く、契約にも登場しない。task0006 が同種の重複プリミティブ（ヘッダ正規表現）には実定数を突き合わせるテストを入れたのに対し、この feature が新規に持ち込んだ writer↔reader の数値結合には同等のガードが無く非対称。"
+    suggestion: "cap を writer 側の定数から導出可能にし、両モジュールを import して整合を assert するテストを追加する。"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "review round 2 medium"
+  - stable_id: 93ef63e1cf1af029
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/queue_failure_net.py
+    line: 47
+    title: "queue_failure_net.py の identity discovery 規則が変更されており、US3 の「変更なし」要求に反する"
+    description: "SPEC は 4 箇所（Objectives / US3 AC / File Structure / Success Criteria）でこのファイルの挙動を byte-for-byte 不変と宣言しているが、task0006 がタスク割り当てヘッダ正規表現を launch guard の綴りへ狭めた。レビュアーが実測で外形的差分を確認: 空白 2 個・空白なしのヘッダは変更前は failed を記録したが現在は無反応。退行方向は「failed が記録されなくなる」側で、この feature が解消しようとしている stale launched を生む向き。SPEC の A1 再解釈条項は IMPLEMENTATION.md が A1 代替分岐を明示的に破棄済みのため適用できない。実害は限定的（正規のプロンプト生成経路は単一スペースを出す）。"
+    suggestion: "変更自体は round 1 F-4 への妥当な対応なので巻き戻さず、SPEC.md の 4 箇所に「ヘッダ正規表現の統一は例外として許容し、既存の failure net テストが未修正で通ることをもって非退行とみなす」旨を追記し、IMPLEMENTATION.md の「not behaviorally modified」も訂正する。"
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "review round 2 medium。SPEC 層の変更はオーケストレーターの裁量外のため記録に留める"
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
