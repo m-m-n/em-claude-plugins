@@ -147,12 +147,15 @@ def find_task_identity(worktrees_root, identifier):
     agents.jsonl is append-only: a re-launched task gets a brand-new entry
     (new agent identifier) while the old identifier's entry stays put. So a
     match on `identifier` only names the CURRENT in-flight launch of its
-    task if no later entry (by the same stable order) exists for that same
-    task under a different identifier. If a later entry for the same task
-    exists, the matched entry is stale -- return None (no-op) rather than
-    attribute a stop to a launch that's already been superseded."""
+    task if no later entry (by the same stable order, WITHIN THE SAME
+    FEATURE's agents.jsonl -- task_id is only unique per feature, not
+    globally) exists for that same task under a different identifier. If a
+    later entry for the same (feature, task_id) exists, the matched entry
+    is stale -- return None (no-op) rather than attribute a stop to a
+    launch that's already been superseded."""
     match = None
     match_pos = None
+    match_key = None
     last_task_pos = {}
     pos = 0
     for feature_dir in sorted(glob.glob(os.path.join(worktrees_root, "*"))):
@@ -177,15 +180,16 @@ def find_task_identity(worktrees_root, identifier):
             pos += 1
             task_id = entry.get(ENTRY_TASK_ID_KEY)
             if isinstance(task_id, str) and task_id:
-                last_task_pos[task_id] = pos
+                last_task_pos[(index_path, task_id)] = pos
             if entry_agent_identifier(entry) != identifier:
                 continue
             match = (task_id, entry.get("worktree_path"))
             match_pos = pos
+            match_key = (index_path, task_id)
     if match is None:
         return None
     task_id = match[0]
-    if isinstance(task_id, str) and task_id and last_task_pos.get(task_id) != match_pos:
+    if isinstance(task_id, str) and task_id and last_task_pos.get(match_key) != match_pos:
         return None  # a later launch of the same task exists: stale match
     return match
 
