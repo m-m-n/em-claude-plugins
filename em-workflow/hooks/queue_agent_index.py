@@ -71,8 +71,15 @@ LAUNCH_TOOL_NAMES = ("Task", "Agent")
 # Structured tool_response fields that might carry the harness's own agent
 # identifier, checked in this order (IMPLEMENTATION.md D3 -- unverified
 # payload shape; `agentId` is the field Claude Code's documented PostToolUse
-# schema uses for a completed Agent-tool call).
-STRUCTURED_ID_FIELDS = ("agentId", "agent_id")
+# schema uses for a completed Agent-tool call, and is the spelling confirmed
+# empirically). `taskId`/`task_id` are accepted too, symmetric with the
+# TaskStop recorder's HARNESS_ID_FIELD = "task_id" (queue_taskstop_net.py),
+# so that a payload using the harness's own "task_id" naming still joins.
+# This widening is confined to structured fields; EMBEDDED_ID_RE below is
+# deliberately NOT widened to task[_-]?id, since implementer prompts always
+# contain a literal `task_id: task0001` line that would otherwise be
+# misread as an agent identifier.
+STRUCTURED_ID_FIELDS = ("agentId", "agent_id", "taskId", "task_id")
 
 # Fallback: an identifier embedded in freeform result text, e.g.
 # `agentId: a4d2c8f1e0b3a297` or `agent_id="a4d2c8f1e0b3a297"`.
