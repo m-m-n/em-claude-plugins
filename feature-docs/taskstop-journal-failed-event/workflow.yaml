@@ -34,9 +34,10 @@ workflow:
   - id: review
     status: pending
   - id: verify
-    status: pending
-    result: null
+    status: completed
+    result: pass
     failed_items: []
+    notes: "217 tests green (python3 -m unittest discover -s tests)。TS-1/2/3/5/7/9/10/11/12/13 を実フック直接実行で評価し全て pass。MV-1 (PostToolUse の実 payload 採取) はセッションを跨がないと実施不可のため未消化のまま持ち越し"
   - id: retrospect
     status: pending
 
