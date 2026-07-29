@@ -142,8 +142,19 @@ def find_task_identity(worktrees_root, identifier):
     """Scan every feature's agents.jsonl under worktrees_root for entries
     whose agent identifier matches `identifier`; return the (task_id,
     worktree_path) of the LAST such entry (stable directory then line
-    order), or None. Malformed lines/files are skipped, never raised."""
+    order), or None. Malformed lines/files are skipped, never raised.
+
+    agents.jsonl is append-only: a re-launched task gets a brand-new entry
+    (new agent identifier) while the old identifier's entry stays put. So a
+    match on `identifier` only names the CURRENT in-flight launch of its
+    task if no later entry (by the same stable order) exists for that same
+    task under a different identifier. If a later entry for the same task
+    exists, the matched entry is stale -- return None (no-op) rather than
+    attribute a stop to a launch that's already been superseded."""
     match = None
+    match_pos = None
+    last_task_pos = {}
+    pos = 0
     for feature_dir in sorted(glob.glob(os.path.join(worktrees_root, "*"))):
         if not os.path.isdir(feature_dir):
             continue
@@ -163,9 +174,19 @@ def find_task_identity(worktrees_root, identifier):
                 continue
             if not isinstance(entry, dict):
                 continue
+            pos += 1
+            task_id = entry.get(ENTRY_TASK_ID_KEY)
+            if isinstance(task_id, str) and task_id:
+                last_task_pos[task_id] = pos
             if entry_agent_identifier(entry) != identifier:
                 continue
-            match = (entry.get(ENTRY_TASK_ID_KEY), entry.get("worktree_path"))
+            match = (task_id, entry.get("worktree_path"))
+            match_pos = pos
+    if match is None:
+        return None
+    task_id = match[0]
+    if isinstance(task_id, str) and task_id and last_task_pos.get(task_id) != match_pos:
+        return None  # a later launch of the same task exists: stale match
     return match
 
 
