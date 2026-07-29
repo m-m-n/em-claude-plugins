@@ -25,7 +25,7 @@ workflow:
     skipped_reason: "hook スクリプトとドキュメントのみの変更で、ユーザーに見える UI 面が無いため"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: in_progress
+    status: completed
   - id: implement
     status: pending
     base_commit: 15a18e90c8e19fb5ad40aa1a9aedecba72065a00
@@ -38,7 +38,47 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "Agent index writer hook"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/hooks/queue_agent_index.py
+      - em-workflow/hooks/hooks.json
+      - tests/test_queue_agent_index.py
+    skills: [infra-impl]
+    domains: [input-handling, external-io, concurrency, config-infra]
+    complexity: high
+    requirements: [FR3, FR5, FR6, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+  task0002:
+    title: "TaskStop journal failed recorder hook"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/hooks/queue_taskstop_net.py
+      - em-workflow/hooks/hooks.json
+      - tests/test_queue_taskstop_net.py
+    skills: [infra-impl]
+    domains: [input-handling, external-io, concurrency, config-infra]
+    complexity: high
+    requirements: [FR2, FR3, FR4, FR5, FR6, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+  task0003:
+    title: "Documentation and registration consistency"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/references/workflow-schema.md
+      - em-workflow/.claude-plugin/plugin.json
+      - tests/test_hooks_registration.py
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR1, FR6, FR7, NFR3, NFR5]
+    status: pending
+    notes: null
 
 review:
   status: pending
@@ -50,85 +90,85 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: []
   FR2:
     title: "Append one journal `failed` event on a TaskStop-initiated implementer stop"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-1, TS-9, TS-17]
   FR3:
     title: "Resolve the stopped harness agent identifier to an em-workflow task and journal path"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002]
+    tests: [TS-5, TS-15, TS-16]
   FR4:
     title: "Idempotency with the existing SubagentStop failure net"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-2, TS-3]
   FR5:
     title: "Fail-open on every unresolvable or abnormal state (exit 0, no journal write)"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002]
+    tests: [TS-4, TS-5, TS-6, TS-7, TS-8]
   FR6:
     title: "Register the new hook in hooks.json following the existing entry form"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-13]
   FR7:
     title: "Update implement-phase.md and workflow-schema.md to match the implemented journal writer set"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-13]
   NFR1:
     title: "Reliability: hooks stay fail-open nets, never block a stop, never raise"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002]
+    tests: [TS-7]
   NFR2:
     title: "Security: task_id / worktree path validation and O_NOFOLLOW file opens"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002]
+    tests: [TS-8]
   NFR3:
     title: "Compatibility: Python 3.14 stdlib only; graceful degradation on unsupported harness versions"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-12, TS-13]
   NFR4:
     title: "Concurrency: flock-protected replay-decide-append; no cross-task mutation"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002]
+    tests: [TS-10, TS-14]
   NFR5:
     title: "Testability: subprocess-driven unittest coverage in the repository-root tests/ directory"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-12, TS-13]
 
 batch:
   review_rework_count: 0
