@@ -28,9 +28,8 @@ workflow:
     status: completed
     completed_at_commit: d6b185318ae0ab15cc18b76ffddb58efce980da9
   - id: implement
-    status: completed
+    status: pending
     base_commit: 8897404785270ff4a0bedf1c2fcaba35794132ce
-    completed_at_commit: 32d59f6229155696bcc9dd7e3ee5197a21e390df
   - id: review
     status: pending
   - id: verify
@@ -85,13 +84,64 @@ tasks:
     notes: null
     branch: em-workflow/taskstop-journal-failed-event/task0003
 
+  task0004:
+    title: "Rework: recorder containment, ambiguity refusal, missing tests"
+    plan: tasks/task0004.md
+    files:
+      - em-workflow/hooks/queue_taskstop_net.py
+      - tests/test_queue_taskstop_net.py
+    skills: [infra-impl]
+    domains: [input-handling, external-io, concurrency, config-infra]
+    complexity: high
+    requirements: [FR2, FR3, FR4, FR5, NFR1, NFR2, NFR4, NFR5]
+    status: pending
+    notes: "review round 1 residual (security high 封じ込め欠落) からの rework"
+  task0005:
+    title: "Rework: index writer trust boundary and payload-shape coverage"
+    plan: tasks/task0005.md
+    files:
+      - em-workflow/hooks/queue_agent_index.py
+      - tests/test_queue_agent_index.py
+    skills: [infra-impl]
+    domains: [input-handling, external-io, concurrency, config-infra]
+    complexity: high
+    requirements: [FR3, FR5, NFR1, NFR2, NFR3, NFR5]
+    status: pending
+    notes: "review round 1 residual からの rework"
+  task0006:
+    title: "Rework: contract documentation, manifest, primitive drift"
+    plan: tasks/task0006.md
+    files:
+      - feature-docs/taskstop-journal-failed-event/IMPLEMENTATION.md
+      - em-workflow/references/workflow-schema.md
+      - em-workflow/references/implement-phase.md
+      - em-workflow/README.md
+      - em-workflow/.claude-plugin/plugin.json
+      - em-workflow/hooks/queue_agent_index.py
+      - em-workflow/hooks/queue_failure_net.py
+      - tests/test_hooks_registration.py
+    skills: []
+    domains: [config-infra]
+    complexity: medium
+    requirements: [FR6, FR7, NFR3, NFR5]
+    status: pending
+    notes: "review round 1 residual からの rework"
+
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
     codex_cross_validation: true
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 1
+  needs_rework: true
 
 requirements:
   FR1:
@@ -180,5 +230,5 @@ requirements:
     tests: [TS-12, TS-13]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 0

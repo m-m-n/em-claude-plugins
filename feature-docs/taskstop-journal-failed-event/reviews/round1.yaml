@@ -1,0 +1,242 @@
+round: 1
+executed_at: "2026-07-29T10:20:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 8897404785270ff4a0bedf1c2fcaba35794132ce
+  head_commit: e41290f
+  changed_files:
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/hooks.json
+    - em-workflow/hooks/queue_agent_index.py
+    - em-workflow/hooks/queue_taskstop_net.py
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/workflow-schema.md
+    - tests/test_hooks_registration.py
+    - tests/test_planner_designer_worktree_docs.py
+    - tests/test_queue_agent_index.py
+    - tests/test_queue_taskstop_net.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  codex_cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed, passes: 4}
+  - {perspective: security, source: claude, status: completed, passes: 4}
+  - {perspective: performance, source: claude, status: completed, passes: 4}
+  - {perspective: architecture, source: claude, status: completed, passes: 4}
+  - {perspective: spec, source: claude, status: completed, passes: 4}
+  - {perspective: security, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: performance, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: architecture, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+  - {perspective: spec, source: codex, status: skipped, skip_reason: "codex-cli unavailable"}
+findings:
+  - stable_id: 121d23f6af581caa
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 241
+    title: "停止された agent が「そのタスクの現在の in-flight 起動」かを検証せずに failed を追記する"
+    description: "agents.jsonl は追記専用で、同じタスクが再起動されると新しい agent_id の行が増えるだけで古い行は無効化されない。停止済み ID への TaskStop が再発行されると、稼働中の別起動のタスクに failed が記録され、launch guard が retry を許すため二重起動に至る。"
+    suggestion: "identifier に一致した最後の行と、その task に対する最後の行の位置を比較し、前者が古ければ stale として no-op にする。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1"
+  - stable_id: 331e660680663071
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 141
+    title: "stale-index ガードが task_id を feature 横断のグローバルキーとして扱い、別 feature の同番タスクと衝突する"
+    description: "loop 1 で入った staleness ガードの回帰。task ID は feature ごとに task0001 から振り直されるため、辞書順で後ろの feature に同名 task があると正当なマッチが stale と誤判定され、failed が一切書かれない。feature を 2 本回した時点で恒常的に無効化される。"
+    suggestion: "staleness キーを (index ファイル, task_id) の複合キーにスコープする。"
+    sources: [claude:architecture, claude:comprehensive, claude:spec]
+    confidence: 90
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2 (3 観点が独立検出、spec は実フックを直接実行して再現)"
+  - stable_id: 467c8f79d1981c2a
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/queue_agent_index.py
+    line: 75
+    title: "index writer と TaskStop recorder が join キーのフィールド名を取り違えており、実 payload では索引が空のまま機能しない可能性がある"
+    description: "writer は agentId / agent_id しか拾わず、reader は task_id を見る。launch 応答が task_id 綴りなら索引は永久に空で、recorder は常に no-op になり feature が丸ごと無言で死ぬ。"
+    suggestion: "writer の構造化フィールド許容集合を reader 側と対称にする。EMBEDDED_ID_RE は広げない（implementer プロンプトの task_id: task0001 を誤採取するため）。"
+    sources: [claude:comprehensive, claude:spec]
+    confidence: 85
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2"
+  - stable_id: 97d73bbe501dca93
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 66
+    title: "agents.jsonl の join key が両側で別々に定義され、優先順位が非対称"
+    description: "writer は候補の先頭一致で 1 つだけ保存し、reader は task_id だけを見る。tool_response が agentId と task_id を異なる値で両方持つ形状だと恒久的に不一致になり、fail-open のため失敗したことすら検知できない。"
+    suggestion: "1 launch = 1 エントリを維持したまま、エントリ内に識別子候補をリストとして全て保持し、reader は候補集合のいずれかとの一致で照合する。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3 (writer/reader 協調の 2 レーン wave)"
+  - stable_id: 6032700df40ac760
+    severity: high
+    category: security
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 297
+    title: "agents.jsonl 由来の worktree_path に封じ込め検査がなく、任意ディレクトリへの journal.jsonl 追記が起きる"
+    description: "index 由来の worktree_path は絶対パス・.. 無しの検査しか通らず、worktrees_root 配下であることを確認していない。既存 2 フックの worktree_path はその場の prompt 由来だが、本フックだけはディスク上の JSONL を書き込み先の権威にしている。loop 3 の候補集合照合で 1 エントリが複数値と一致しうるようになり、到達容易性が上がった。"
+    suggestion: "エントリから導出した journal ディレクトリが、そのエントリを読み出した feature ディレクトリと一致することを要求する（agents.jsonl と journal.jsonl は同一ディレクトリという既存契約なので等値検査で足りる）。あわせて候補リストの要素数に上限を設ける。"
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "auto-fix の loop cap (3) 到達により未修正。rework task0004 で対応"
+  - stable_id: 6d0c5ccd67d93ffd
+    severity: medium
+    category: security
+    file: em-workflow/hooks/queue_agent_index.py
+    line: 86
+    title: "サブエージェント自由文由来の識別子が常時 agent_ids に永続化され、照合キーとして採用される"
+    description: "loop 3 以降、構造化フィールドがあってもテキスト由来の候補が並記され、reader がいずれか一致で採用するため偽装値が常に有効な join key になる。"
+    suggestion: "自由文由来の候補は「構造化フィールドが 1 つも取れなかったとき」のみのフォールバックに戻す。"
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "rework task0005 で対応"
+  - stable_id: 2355eb9f2327cffd
+    severity: medium
+    category: architecture
+    file: em-workflow/references/workflow-schema.md
+    line: 191
+    title: "agents.jsonl の join 契約が SSOT のどこにも無く、2 つのフックの docstring にしか存在しない"
+    description: "候補リスト・代表値不変条件 (agent_ids[0] == agent_id)・stale 抑止のいずれも IMPLEMENTATION.md の Agent index contract と references の記述に反映されていない。契約から再実装すると 3 ループかけて潰した join 非対称バグを再導入する。"
+    suggestion: "IMPLEMENTATION.md の Agent index contract と workflow-schema.md / implement-phase.md の該当段落を、候補集合・代表値不変条件・stale 抑止を含む形に更新する。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "rework task0006 で対応"
+  - stable_id: 3e7963126d25e878
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_agent_index.py
+    line: 61
+    title: "Task-identity / journal プリミティブの 4 コピー目を追加し、SSOT が要求する identical が実際には不一致"
+    description: "ASSIGNMENT_HEADER_RE が queue_launch_guard.py では '^# Task assignment\\\\s*$'、queue_agent_index.py / queue_failure_net.py では '^#\\\\s*Task assignment\\\\s*$' で既に乖離。'#  Task assignment' は index 側だけが受理し、launched が無いタスクに failed が書かれうる。"
+    suggestion: "hooks/ に共有モジュールを置いてプリミティブを集約する。最小対応でも正規表現を 4 ファイルで揃え、一致を検証するテストを追加する。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "rework task0006 で対応"
+  - stable_id: dcc4fae717379ff2
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 166
+    title: "候補リスト join に曖昧性検出が無く、診断レイヤが権威ログの別タスクに failed を書きうる"
+    description: "候補フィールドが launch ごとに一意である保証は無い。task_id が親タスク/セッション側の ID だった場合、同一セッションの全 launch エントリが同じ候補値を持ち、last-wins で別タスクに failed が書かれうる。"
+    suggestion: "identifier が 2 つ以上の異なる (index ファイル, task) に跨ってマッチしたら last-wins で選ばず no-op にする。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "rework task0004 で対応"
+  - stable_id: 774d4d1a7eff0ff7
+    severity: medium
+    category: architecture
+    file: em-workflow/.claude-plugin/plugin.json
+    line: 3
+    title: "plugin.json の description のフック構成が実装とドリフト"
+    description: "description は 'Stop/PreToolUse/SubagentStop guard hooks' のままで、PostToolUse 2 本と agents.jsonl が未記載。同じ diff で implement-phase.md と workflow-schema.md は更新済み。"
+    suggestion: "description のフック列挙を実体に合わせるか、件数・イベント列挙をやめて references へ委譲する。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "rework task0006 で対応"
+  - stable_id: 44e706c4f9c907ca
+    severity: medium
+    category: comprehensive
+    file: em-workflow/README.md
+    line: 85
+    title: "README の hook 説明が 3 つのままで、新規 2 フックが反映されていない"
+    description: "README:85 は 'Stop / PreToolUse(Task|Agent) / SubagentStop の 3 つの hook' のままで、個数・列挙・検知対象のいずれも実体と食い違う。task0003 の担当ファイルに README が含まれていなかった計画側の欠落。"
+    suggestion: "件数を書かない形に置き換え、agents.jsonl が journal とは別の診断用索引である旨を 1 文添える。"
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "changed_files 外のため confidence 50 に制限。rework task0006 で対応"
+  - stable_id: 4289aebae3f594ec
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_agent_index.py
+    line: 143
+    title: "tool_response の content が文字列のとき識別子を回収できず、機能全体が恒久的な no-op に落ちる"
+    description: "_text_from_content_blocks は content が list のときしかテキストを返さない。dict でラップされた文字列 content という最もありふれた形だけが穴として残っている。"
+    suggestion: "content が str の場合もテキストとして扱う。"
+    sources: [claude:comprehensive, claude:spec]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "rework task0005 で対応"
+  - stable_id: 0275df51984093c7
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 216
+    title: "staleness ガードと feature スコープ判定が完全に未テスト"
+    description: "loop 2 で入れた複合キーのスコープ規則にテストが 1 本も無く、ガードを丸ごと削除しても 194 テストは全緑のまま通る。"
+    suggestion: "stale 分岐・current 分岐・feature スコープの 3 ケースを追加する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "rework task0004 で対応"
+  - stable_id: de76b12fbbdf9e24
+    severity: medium
+    category: comprehensive
+    file: tests/test_queue_taskstop_net.py
+    line: 102
+    title: "loop 3 で入れた agent_ids 候補リスト結合そのものにテストが無い"
+    description: "writer 側は agent_ids を assert せず、reader 側の fixture は agent_ids を出さないため常にレガシー経路を通る。writer から agent_ids を落としても reader の list 分岐を消しても 194 テストは全緑。"
+    suggestion: "writer に複数候補ケース、reader に非代表候補での一致・非一致ケース、相互運用テストの拡張を追加する。"
+    sources: [claude:comprehensive, claude:spec]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "rework task0004 / task0005 で対応"
+  - stable_id: 81b4168d97bc8391
+    severity: medium
+    category: spec
+    file: tests/test_queue_taskstop_net.py
+    line: 266
+    title: "FR4「両ライターが同一 stop で発火しても failed は 1 行」の統合テストが未実装"
+    description: "queue_failure_net.py を実際に走らせるテストが 1 本も無く、SPEC が統合テストとして明示的に要求しているシナリオが無検証。"
+    suggestion: "両フックを順に走らせる統合テストを両順序で追加する。"
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "rework task0004 で対応"
+  - stable_id: e3801f241ef9ab4c
+    severity: medium
+    category: spec
+    file: tests/test_queue_taskstop_net.py
+    line: 416
+    title: "SPEC Edge Case の symlink 拒否（O_NOFOLLOW）シナリオが未検証"
+    description: "getattr(os, 'O_NOFOLLOW', 0) はフラグが静かに 0 に縮退しうる書き方で、落ちても他のどのテストも落ちない。VERIFICATION.md は「アサート済み」と記載している。"
+    suggestion: "両フックについて、対象ファイルを外部への symlink にした状態で exit 0 かつリンク先が未書き込みであることを assert する。"
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "rework task0004 / task0005 で対応"
+  - stable_id: b1c440fa3cef8629
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/queue_taskstop_net.py
+    line: 61
+    title: "FR1 が禁じた「推測した payload 形状に対する実装」のまま トリガと識別子フィールドが確定していない"
+    description: "PostToolUse がこの 2 ツールに対して発火するか、payload の外側の器の形状は本環境では確認できていない。起動側が agentId: <値> を返し同一値で TaskStop が成功することは実測済みだが、PostToolUse イベント自体の発火は未観測。fail-open のため regression にはならないが、外れると feature 全体が silent no-op になる。"
+    suggestion: "hooks 登録後の新規セッションで実 payload を採取し IMPLEMENTATION.md に記録する（VERIFICATION.md の MV-1）。"
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "MV-1 として持ち越し。実環境の payload 採取はセッションを跨がないと不可能"
+auto_fix:
+  loops_run: 3
+  applied_total: 4
+  termination: loop-cap
+residual_critical_high: 1
+rework_required: true
