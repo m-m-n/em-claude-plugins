@@ -34,7 +34,7 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 - 再開はブランチ起点: `em-workflow/*/integration` 形式のブランチを列挙して機能を発見し、そのブランチの workflow.yaml から状態を復元する。worktree が失われていてもブランチさえ残っていれば `git worktree add` で再作成して続行する。
 - ユーザーのブランチには一切コミットしない。全ワークフローコミットは専用の `em-workflow/{feature}/integration` ブランチに載り、完了時に「base_branch にマージ / ブランチを残す / push + PR 作成」の三択を確認する（デフォルトはマージ。--batch は確認なしで「ブランチを残す」）。いずれの分岐でも integration worktree は片付ける — マージ時はブランチも削除し、それ以外はブランチを残してメイン作業ツリーから `git switch` できる状態にする。
 - 軽い変更もタスク 1 個として同じフローを通す（従来型モードは持たない）。
-- `--batch` で無人実行モードになる: 外部タスク管理サービス起点のヘッドレス起動（例: `claude -p "/em-workflow:develop --batch <タスク記述>"`）向けに、全ての AskUserQuestion ゲートを機械的既定値へ置き換えて完走する。要件の不明点は Codex 相談（最大 5 ターン、結論は Claude）で確定し、コマンド承認は自動記録（refusal パターンは従来どおり拒否）、review 残存 critical/high と verify 失敗はそれぞれ上限 1 回の自動 rework、完了時はマージも PR 作成もせず integration worktree だけ片付けてブランチを残す（worktree が消えることで checkout ロックが外れ、メイン作業ツリーから `git switch` で取り込み — ローカルマージまたは push + PR 作成 — できる）。決定表の SSOT は `references/batch-mode.md`。失敗時は隠さず停止して報告する — 差し戻しは外部サービス側で新タスクを切る運用。
+- `--batch` で無人実行モードになる: 外部タスク管理サービス起点のヘッドレス起動（例: `claude -p "/em-workflow:develop --batch <タスク記述>"`）向けに、全ての AskUserQuestion ゲートを機械的既定値へ置き換えて完走する。要件の不明点は Codex 相談（最大 5 ターン、結論は Claude）で確定し、コマンド承認は自動記録（refusal パターンは従来どおり拒否）、review 残存 critical/high と verify 失敗はそれぞれ上限 1 回の自動 rework、完了時はマージも PR 作成もせず integration worktree だけ片付けてブランチを残す（worktree が消えることで checkout ロックが外れ、メイン作業ツリーから `git switch` で取り込み — ローカルマージまたは push + PR 作成 — できる）。決定表の SSOT は `references/batch-mode.md`。決定表に無いゲート（未知の選択肢）に出くわしたら同じ Codex 相談ループにフォールバックし、決まらなければ副作用の小さい側を選んで報告に記録する。失敗時は隠さず停止して報告する — 差し戻しは外部サービス側で新タスクを切る運用。
 
 ## コマンド
 
