@@ -5,6 +5,14 @@ feature-docs/taskstop-journal-failed-event/tasks/task0002.md); test names
 reference the AC they exercise. The hook is invoked exactly as Claude Code
 would invoke it: JSON on stdin, decisions read from exit code / journal
 side-effects.
+
+Also covers task0004's rework Acceptance Criteria (see
+feature-docs/taskstop-journal-failed-event/tasks/task0004.md, round 1
+residual findings F-1 through F-5): containment of index-supplied worktree
+paths, ambiguity refusal across distinct tasks, staleness/feature-scope
+regression coverage, a both-writers integration scenario, and the symlink
+edge case. Those test classes are grouped near the end of this file and are
+named/referenced by their own AC-n.
 """
 
 import json
@@ -121,6 +129,63 @@ def stop_payload(cwd, input_id=None, result_id=None, tool_name=STOP_TOOL_NAME):
     if result_id is not None:
         payload["tool_response"]["task_id"] = result_id
     return payload
+
+
+# --- AC-8 (task0004): driving the REAL queue_failure_net.py SubagentStop
+# net alongside this recorder. Construction mirrors
+# tests/test_queue_failure_net.py's own helpers (assignment_block /
+# write_transcript / base_payload) verbatim in shape, per Test Notes
+# ("reuse that construction rather than inventing a new one") -- duplicated
+# here rather than imported, since no test file in this suite imports
+# another (test/README.md's "Test File Organization" gives each test file
+# no installable-package structure to import through).
+FAILURE_NET_IMPLEMENTER_TYPE = "em-workflow:implementer"
+
+
+def failure_net_assignment_block(task_id, worktree_path):
+    return (
+        "# Task assignment\n"
+        f"task_id: {task_id}\n"
+        f"worktree_path: {worktree_path}\n"
+        "task_plan_path: /repo/feature-docs/demo/tasks/{task_id}.md\n"
+        "implementation_md_path: /repo/feature-docs/demo/IMPLEMENTATION.md\n"
+        "parent_branch: em-workflow/demo/integration\n"
+        "merge_script: /repo/em-workflow/scripts/merge-task.sh\n"
+        "skills_to_load: []\n"
+        "project_commands:\n"
+        '  build: ""\n'
+        '  test: ""\n'
+        '  format: ""\n'
+        "expected_files: []\n"
+    )
+
+
+def failure_net_write_transcript(tmp_dir, name, first_user_text):
+    path = os.path.join(tmp_dir, name)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(
+            json.dumps({"type": "user", "message": {"role": "user", "content": first_user_text}})
+            + "\n"
+        )
+        fh.write(
+            json.dumps({"type": "assistant", "message": {"role": "assistant", "content": "ok"}})
+            + "\n"
+        )
+    return path
+
+
+def failure_net_payload(agent_type, transcript_path):
+    return {
+        "session_id": "sess-1",
+        "transcript_path": "/nonexistent/main-session.jsonl",
+        "cwd": "/tmp",
+        "hook_event_name": "SubagentStop",
+        "stop_hook_active": False,
+        "agent_id": "agent-1",
+        "last_assistant_message": "done",
+        "agent_type": agent_type,
+        "agent_transcript_path": transcript_path,
+    }
 
 
 class QueueTaskStopNetTestCase(unittest.TestCase):
@@ -605,11 +670,19 @@ class TestRetryPathReopensAfterStop(QueueTaskStopNetTestCase):
         self.assertEqual(launch_guard_lines[-1]["task"], "task0030")
 
 
-class TestLastMatchingEntryWins(QueueTaskStopNetTestCase):
-    """AC-10: two agent-index entries for the same identifier -> the LAST
-    one determines the task."""
+class TestAmbiguousIdentifierAcrossTasksRefused(QueueTaskStopNetTestCase):
+    """AC-3 / F-2 (task0004 rework): when the stop identifier matches
+    entries belonging to two or more distinct (feature index, task) pairs,
+    the hook writes nothing and exits 0 -- resolution failure, not
+    last-wins.
 
-    def test_last_index_entry_for_identifier_wins(self):
+    This supersedes the "last matching entry wins" behavior this same test
+    class asserted before round 1's finding F-2: a reused harness
+    identifier (e.g. a parent task/session ID) could match every launch
+    entry sharing it, and picking the last one risked writing `failed`
+    against an unrelated, still-running task."""
+
+    def test_identifier_matching_two_tasks_in_same_feature_appends_nothing(self):
         feature = "demo"
         feature_dir = make_feature(self.tmp_dir, feature)
         first_worktree = make_worktree(feature_dir, "task0040")
@@ -636,7 +709,32 @@ class TestLastMatchingEntryWins(QueueTaskStopNetTestCase):
         lines = [json.loads(l) for l in read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))]
         by_task = {entry["task"]: entry["event"] for entry in lines}
         self.assertEqual(by_task["task0040"], "launched")  # unaffected
-        self.assertEqual(by_task["task0041"], "failed")  # last entry's task
+        self.assertEqual(by_task["task0041"], "launched")  # unaffected -- NOT marked failed
+
+    def test_identifier_matching_tasks_across_two_features_appends_nothing(self):
+        feature_a = make_feature(self.tmp_dir, "feature-a")
+        feature_b = make_feature(self.tmp_dir, "feature-b")
+        worktree_a = make_worktree(feature_a, "task0042")
+        worktree_b = make_worktree(feature_b, "task0042")
+        write_journal(
+            feature_a, [{"event": "launched", "task": "task0042", "at": "2026-01-01T00:00:00+00:00"}]
+        )
+        write_journal(
+            feature_b, [{"event": "launched", "task": "task0042", "at": "2026-01-01T00:00:00+00:00"}]
+        )
+        write_agent_index(feature_a, [index_entry("agent-cross-feature", "task0042", worktree_a)])
+        write_agent_index(feature_b, [index_entry("agent-cross-feature", "task0042", worktree_b)])
+        payload = stop_payload(self.tmp_dir, input_id="agent-cross-feature")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines_a = read_journal_lines(os.path.join(feature_a, "journal.jsonl"))
+        lines_b = read_journal_lines(os.path.join(feature_b, "journal.jsonl"))
+        self.assertEqual(len(lines_a), 1)
+        self.assertEqual(len(lines_b), 1)
+        self.assertEqual(json.loads(lines_a[0])["event"], "launched")
+        self.assertEqual(json.loads(lines_b[0])["event"], "launched")
 
 
 class TestIdentifierRecoveryPaths(QueueTaskStopNetTestCase):
@@ -833,6 +931,342 @@ class TestConcurrentAppends(QueueTaskStopNetTestCase):
             if entry.get("event") == "failed":
                 failed_tasks.add(entry.get("task"))
         self.assertEqual(failed_tasks, set(task_ids))
+
+
+# --- task0004 rework: round 1 residual findings F-1 through F-5 ------------
+
+
+class TestContainmentRefusesEntryOutsideFeatureDirectory(QueueTaskStopNetTestCase):
+    """AC-1 / F-1 (task0004): an agents.jsonl entry whose worktree_path does
+    NOT resolve to a child of the feature directory that entry was read
+    from is ignored outright -- no journal write anywhere, exit 0. Round
+    1's residual high: an entry could otherwise redirect the append to any
+    existing directory on disk."""
+
+    def test_worktree_path_outside_owning_feature_directory_is_ignored(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        # An existing directory that is NOT feature_dir -- the attack
+        # target: tmp_dir itself exists and is writable, but is not where
+        # this agents.jsonl lives.
+        outside_worktree = os.path.join(self.tmp_dir, "task0099")
+        write_agent_index(
+            feature_dir, [index_entry("agent-outside", "task0099", outside_worktree)]
+        )
+        payload = stop_payload(self.tmp_dir, input_id="agent-outside")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        self.assertFalse(os.path.isfile(os.path.join(self.tmp_dir, "journal.jsonl")))
+        self.assertFalse(os.path.isdir(os.path.join(self.tmp_dir, "task0099")))
+        self.assertFalse(os.path.isfile(os.path.join(feature_dir, "journal.jsonl")))
+
+
+class TestContainmentHappyPathUnaffected(QueueTaskStopNetTestCase):
+    """AC-2 / F-1 (task0004): a normal entry (worktree directly inside its
+    own feature directory) still resolves after the containment check --
+    the happy path is not regressed."""
+
+    def test_worktree_inside_its_own_feature_directory_still_resolves(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0098")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0098", "at": "2026-01-01T00:00:00+00:00"}],
+        )
+        write_agent_index(feature_dir, [index_entry("agent-contained", "task0098", worktree_path)])
+        payload = stop_payload(self.tmp_dir, input_id="agent-contained")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines = read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(json.loads(lines[-1]).get("event"), "failed")
+
+
+class TestCandidateListCapIgnoresImplausibleEntry(QueueTaskStopNetTestCase):
+    """AC-4 / F-1 (task0004): an agents.jsonl entry whose `agent_ids`
+    candidate list is longer than the legitimate writer
+    (queue_agent_index.py: 4 structured fields + 1 embedded fallback = 5)
+    could ever produce is ignored wholesale, exit 0."""
+
+    def test_oversized_candidate_list_entry_is_ignored(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0100")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0100", "at": "2026-01-01T00:00:00+00:00"}],
+        )
+        oversized_entry = {
+            "agent_id": "agent-primary",
+            "agent_ids": ["agent-primary", "id-2", "id-3", "id-4", "id-5", "target-id"],
+            "task": "task0100",
+            "worktree_path": worktree_path,
+            "at": "2026-01-01T00:00:00+00:00",
+        }
+        write_agent_index(feature_dir, [oversized_entry])
+        payload = stop_payload(self.tmp_dir, input_id="target-id")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines = read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        self.assertEqual(len(lines), 1)  # unchanged: no failed line appended
+
+
+class TestStalenessGuardRegression(QueueTaskStopNetTestCase):
+    """AC-5 / F-3 (task0004): two agents.jsonl entries for the SAME task in
+    one feature index (a re-launch). Stopping via the EARLIER identifier
+    finds nothing (superseded); stopping via the LATER identifier appends
+    exactly one failure event. Round 1 loop 2 added this guard with zero
+    test coverage; this closes that gap."""
+
+    def test_stop_via_earlier_identifier_of_relaunched_task_appends_nothing(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0120")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0120", "at": "2026-01-01T00:10:00+00:00"}],
+        )
+        write_agent_index(
+            feature_dir,
+            [
+                index_entry("agent-early", "task0120", worktree_path, at="2026-01-01T00:00:00+00:00"),
+                index_entry("agent-late", "task0120", worktree_path, at="2026-01-01T00:10:00+00:00"),
+            ],
+        )
+        payload = stop_payload(self.tmp_dir, input_id="agent-early")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines = read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        self.assertEqual(len(lines), 1)  # unchanged -- stale match, no-op
+
+    def test_stop_via_later_identifier_of_relaunched_task_appends_failed(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0121")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0121", "at": "2026-01-01T00:10:00+00:00"}],
+        )
+        write_agent_index(
+            feature_dir,
+            [
+                index_entry("agent-early2", "task0121", worktree_path, at="2026-01-01T00:00:00+00:00"),
+                index_entry("agent-late2", "task0121", worktree_path, at="2026-01-01T00:10:00+00:00"),
+            ],
+        )
+        payload = stop_payload(self.tmp_dir, input_id="agent-late2")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines = read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(json.loads(lines[-1]).get("event"), "failed")
+
+
+class TestFeatureScopeRegression(QueueTaskStopNetTestCase):
+    """AC-6 / F-3 (task0004): two feature directories each hold an entry
+    for the same task id. Stopping the agent recorded in the
+    alphabetically earlier feature appends exactly one failure event to
+    THAT feature's journal and leaves the other feature's journal
+    untouched. Must fail if the staleness key stops being scoped per
+    feature index (round 1 loop 1 introduced that defect; loop 2 fixed it;
+    this is the regression sentinel)."""
+
+    def test_stop_in_earlier_feature_only_affects_that_features_journal(self):
+        feature_a = make_feature(self.tmp_dir, "feature-a")
+        feature_b = make_feature(self.tmp_dir, "feature-b")
+        worktree_a = make_worktree(feature_a, "task0130")
+        worktree_b = make_worktree(feature_b, "task0130")
+        write_journal(
+            feature_a, [{"event": "launched", "task": "task0130", "at": "2026-01-01T00:00:00+00:00"}]
+        )
+        write_journal(
+            feature_b, [{"event": "launched", "task": "task0130", "at": "2026-01-01T00:00:00+00:00"}]
+        )
+        write_agent_index(feature_a, [index_entry("agent-feature-a", "task0130", worktree_a)])
+        write_agent_index(feature_b, [index_entry("agent-feature-b", "task0130", worktree_b)])
+        payload = stop_payload(self.tmp_dir, input_id="agent-feature-a")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines_a = read_journal_lines(os.path.join(feature_a, "journal.jsonl"))
+        lines_b = read_journal_lines(os.path.join(feature_b, "journal.jsonl"))
+        self.assertEqual(len(lines_a), 2)
+        self.assertEqual(json.loads(lines_a[-1]).get("event"), "failed")
+        self.assertEqual(len(lines_b), 1)
+        self.assertEqual(json.loads(lines_b[-1]).get("event"), "launched")
+
+
+class TestCandidateListJoinCoverage(QueueTaskStopNetTestCase):
+    """AC-7 (task0004): an entry's non-representative candidate resolves
+    when the stop uses that value; an identifier absent from the list
+    resolves to nothing; entries with no candidate list still resolve
+    through the legacy representative key."""
+
+    def test_non_representative_candidate_resolves(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0110")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0110", "at": "2026-01-01T00:00:00+00:00"}],
+        )
+        entry = {
+            "agent_id": "agent-primary",
+            "agent_ids": ["agent-primary", "agent-secondary"],
+            "task": "task0110",
+            "worktree_path": worktree_path,
+            "at": "2026-01-01T00:00:00+00:00",
+        }
+        write_agent_index(feature_dir, [entry])
+        payload = stop_payload(self.tmp_dir, input_id="agent-secondary")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines = read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(json.loads(lines[-1]).get("event"), "failed")
+
+    def test_identifier_absent_from_candidate_list_resolves_to_nothing(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0111")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0111", "at": "2026-01-01T00:00:00+00:00"}],
+        )
+        entry = {
+            "agent_id": "agent-primary",
+            "agent_ids": ["agent-primary", "agent-secondary"],
+            "task": "task0111",
+            "worktree_path": worktree_path,
+            "at": "2026-01-01T00:00:00+00:00",
+        }
+        write_agent_index(feature_dir, [entry])
+        payload = stop_payload(self.tmp_dir, input_id="agent-not-in-list")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines = read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        self.assertEqual(len(lines), 1)
+
+    def test_entry_without_candidate_list_resolves_via_legacy_key(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0112")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0112", "at": "2026-01-01T00:00:00+00:00"}],
+        )
+        write_agent_index(feature_dir, [index_entry("agent-legacy", "task0112", worktree_path)])
+        payload = stop_payload(self.tmp_dir, input_id="agent-legacy")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines = read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(json.loads(lines[-1]).get("event"), "failed")
+
+
+class TestBothWritersLeaveExactlyOneFailedLine(QueueTaskStopNetTestCase):
+    """AC-8 / F-4 (task0004): driving queue_failure_net.py's SubagentStop
+    net and this recorder for the SAME task, in BOTH orders, leaves exactly
+    one `failed` line for it -- SPEC.md's Integration Tests scenario,
+    previously unexercised against the real other writer."""
+
+    def _prepare_task(self, task_id):
+        feature_dir = make_feature(self.tmp_dir, "demo")
+        worktree_path = make_worktree(feature_dir, task_id)
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": task_id, "at": "2026-01-01T00:00:00+00:00"}],
+        )
+        write_agent_index(feature_dir, [index_entry(f"agent-{task_id}", task_id, worktree_path)])
+        journal_path = os.path.join(feature_dir, "journal.jsonl")
+        return worktree_path, journal_path
+
+    def test_taskstop_then_subagentstop_leaves_one_failed_line(self):
+        task_id = "task0095"
+        worktree_path, journal_path = self._prepare_task(task_id)
+
+        taskstop_result = run_hook_json(stop_payload(self.tmp_dir, input_id=f"agent-{task_id}"))
+        self.assertEqual(taskstop_result.returncode, 0)
+
+        transcript_path = failure_net_write_transcript(
+            self.tmp_dir,
+            f"{task_id}-transcript.jsonl",
+            failure_net_assignment_block(task_id, worktree_path),
+        )
+        subagent_stop_result = run_hook_json(
+            failure_net_payload(FAILURE_NET_IMPLEMENTER_TYPE, transcript_path),
+            hook_path=FAILURE_NET_PATH,
+        )
+        self.assertEqual(subagent_stop_result.returncode, 0)
+
+        lines = [json.loads(l) for l in read_journal_lines(journal_path)]
+        failed_lines = [e for e in lines if e.get("task") == task_id and e.get("event") == "failed"]
+        self.assertEqual(len(failed_lines), 1)
+
+    def test_subagentstop_then_taskstop_leaves_one_failed_line(self):
+        task_id = "task0096"
+        worktree_path, journal_path = self._prepare_task(task_id)
+
+        transcript_path = failure_net_write_transcript(
+            self.tmp_dir,
+            f"{task_id}-transcript.jsonl",
+            failure_net_assignment_block(task_id, worktree_path),
+        )
+        subagent_stop_result = run_hook_json(
+            failure_net_payload(FAILURE_NET_IMPLEMENTER_TYPE, transcript_path),
+            hook_path=FAILURE_NET_PATH,
+        )
+        self.assertEqual(subagent_stop_result.returncode, 0)
+
+        taskstop_result = run_hook_json(stop_payload(self.tmp_dir, input_id=f"agent-{task_id}"))
+        self.assertEqual(taskstop_result.returncode, 0)
+
+        lines = [json.loads(l) for l in read_journal_lines(journal_path)]
+        failed_lines = [e for e in lines if e.get("task") == task_id and e.get("event") == "failed"]
+        self.assertEqual(len(failed_lines), 1)
+
+
+class TestSymlinkJournalPathRefused(QueueTaskStopNetTestCase):
+    """AC-9 / F-5 (task0004): journal.jsonl path replaced by a symlink
+    pointing outside the feature directory -- O_NOFOLLOW must refuse the
+    open, so the link target is never written and the hook still exits 0
+    (SPEC.md Edge Cases)."""
+
+    def test_symlinked_journal_path_is_refused_link_target_unwritten(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0097")
+        write_agent_index(feature_dir, [index_entry("agent-symlink", "task0097", worktree_path)])
+
+        outside_target = os.path.join(self.tmp_dir, "outside-target.jsonl")
+        self.assertFalse(os.path.isfile(outside_target))
+        journal_path = os.path.join(feature_dir, "journal.jsonl")
+        os.symlink(outside_target, journal_path)
+
+        payload = stop_payload(self.tmp_dir, input_id="agent-symlink")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        self.assertFalse(os.path.isfile(outside_target))
 
 
 if __name__ == "__main__":
