@@ -26,18 +26,22 @@ or `Agent` tool:
      `queue_launch_guard.py`'s existing implementation).
   2. Extract and validate `task_id` / `worktree_path` from that block.
      Invalid values -> no action.
-  3. Extract the harness agent identifier from `tool_response`: a structured
-     identifier field when the result is an object, otherwise an identifier
-     embedded in the result's text. Failing to find one -> no action
-     (IMPLEMENTATION.md D3 -- the live payload shape is unverified in this
-     environment).
+  3. Extract every recoverable harness agent-identifier candidate from
+     `tool_response`: all matching structured identifier fields when the
+     result is an object, plus an identifier embedded in the result's text.
+     Failing to find any -> no action (IMPLEMENTATION.md D3 -- the live
+     payload shape is unverified in this environment).
   4. Derive the journal directory: dirname(normpath(worktree_path)) (Journal-
      directory derivation, IMPLEMENTATION.md -- identical to the derivation
      already used by both existing queue hooks). If it does not exist -> no
      action; this hook NEVER creates it.
-  5. Append one entry to `agents.jsonl` in that directory under an exclusive
-     whole-file lock (Agent index contract): symlink-refusing open, `0o644`,
-     created if absent.
+  5. Append exactly one entry to `agents.jsonl` in that directory under an
+     exclusive whole-file lock (Agent index contract): symlink-refusing
+     open, `0o644`, created if absent. The entry carries both `agent_id`
+     (the representative candidate, unchanged priority order) and
+     `agent_ids` (every distinct candidate found), so a reader preferring a
+     different join key can still match without this hook ever writing
+     more than one line per launch.
 
 Fail-open convention: this hook is a net, not an authority. ALWAYS exits 0,
 enforced by a top-level catch-all in main(), mirroring
@@ -147,51 +151,68 @@ def _text_from_content_blocks(content):
     return "\n".join(parts) if parts else None
 
 
-def extract_agent_identifier(tool_response):
-    """Recover the harness's own agent identifier from a PostToolUse
-    `tool_response` of unverified shape (IMPLEMENTATION.md D3):
-      - a structured identifier field, when the result is an object;
-      - otherwise, an identifier embedded in the result's text (either a
+def extract_agent_identifiers(tool_response):
+    """Recover all recoverable harness agent-identifier candidates from a
+    PostToolUse `tool_response` of unverified shape (IMPLEMENTATION.md D3):
+      - every structured identifier field present, when the result is an
+        object, in STRUCTURED_ID_FIELDS order;
+      - plus an identifier embedded in the result's text (either a
         top-level string result, or the joined text of a `content` block
         list).
-    Returns None when nothing recoverable is found (fail-open, no action).
-    Non-string structured values are never coerced -- only a genuine string
-    field counts.
+    Returns a list of distinct candidate strings, in discovery order (the
+    first element is the representative value, unchanged from the previous
+    single-value selection rule). Returns an empty list when nothing
+    recoverable is found (fail-open, no action). Non-string structured
+    values are never coerced -- only a genuine string field counts.
     """
+    candidates = []
+
+    def add(value):
+        if value not in candidates:
+            candidates.append(value)
+
     if isinstance(tool_response, dict):
         for field in STRUCTURED_ID_FIELDS:
             value = tool_response.get(field)
             if isinstance(value, str) and value.strip():
-                return value.strip()
+                add(value.strip())
 
         text = _text_from_content_blocks(tool_response.get("content"))
         if text:
             match = EMBEDDED_ID_RE.search(text)
             if match:
-                return match.group(1)
-        return None
+                add(match.group(1))
+        return candidates
 
     if isinstance(tool_response, str) and tool_response.strip():
         match = EMBEDDED_ID_RE.search(tool_response)
         if match:
-            return match.group(1)
-        return None
+            add(match.group(1))
+        return candidates
 
-    return None
+    return candidates
 
 
 def now_rfc3339():
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-def append_index_entry(journal_dir, agent_id, task_id, worktree_path):
+def append_index_entry(journal_dir, agent_ids, task_id, worktree_path):
     """Append one entry to `agents.jsonl` under an exclusive whole-file lock
     (Agent index contract, IMPLEMENTATION.md): symlink-refusing open,
     `0o644`, created if absent. The containing directory is NEVER created
-    here -- the caller has already confirmed it exists."""
+    here -- the caller has already confirmed it exists.
+
+    `agent_ids` is the full list of distinct identifier candidates found in
+    this launch's tool_response (discovery order); the entry's `agent_id`
+    field keeps the previous representative-value contract (first element
+    of `agent_ids`) while `agent_ids` preserves every candidate so a reader
+    with a different join-key preference can still match. Exactly one line
+    is written per launch -- candidates are never split across entries."""
     path = os.path.join(journal_dir, "agents.jsonl")
     entry = {
-        "agent_id": agent_id,
+        "agent_id": agent_ids[0],
+        "agent_ids": list(agent_ids),
         "task": task_id,
         "worktree_path": worktree_path,
         "at": now_rfc3339(),
@@ -227,15 +248,15 @@ def hook_main(data):
     if not valid_task_id(task_id) or not valid_worktree_path(worktree_path):
         return  # fail-open: invalid identity, discarded rather than repaired
 
-    agent_id = extract_agent_identifier(data.get("tool_response"))
-    if agent_id is None:
+    agent_ids = extract_agent_identifiers(data.get("tool_response"))
+    if not agent_ids:
         return  # no recoverable agent identifier: fail-open, no action
 
     journal_dir = journal_dir_for(worktree_path)
     if not os.path.isdir(journal_dir):
         return  # absent journal directory: fail-open, never create it
 
-    append_index_entry(journal_dir, agent_id, task_id, worktree_path)
+    append_index_entry(journal_dir, agent_ids, task_id, worktree_path)
 
 
 def main():

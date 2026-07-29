@@ -27,8 +27,14 @@ event JSON):
      the nearest ancestor containing `.claude/worktrees/em-workflow`
      (Agent index contract's read discipline, IMPLEMENTATION.md).
   3. Scan every feature directory's `agents.jsonl` one level below that
-     root for entries whose agent identifier matches; the LAST such entry
-     (across the whole scan, in a stable directory/line order) wins.
+     root for entries that match: an entry matches if the recovered
+     identifier equals any element of the entry's `agent_ids` candidate
+     list (queue_agent_index.py records every distinct identifier
+     candidate seen in the launch's tool_response, not just one), falling
+     back to the single representative-key match (`agent_id`/`agentId`)
+     for older entries written before `agent_ids` existed. The LAST
+     matching entry (across the whole scan, in a stable directory/line
+     order) wins.
   4. Validate the entry's task identifier / worktree path (same rules as
      `queue_launch_guard.py`'s Task-identity discovery contract).
   5. Derive the journal directory from the worktree path (Journal contract:
@@ -65,7 +71,9 @@ STOP_TOOL_NAME = "TaskStop"
 # on tool_response as the fallback location (IMPLEMENTATION.md D3).
 HARNESS_ID_FIELD = "task_id"
 
-# The agent index entry's key for the harness agent identifier. `agent_id`
+# Fallback keys for an agents.jsonl entry's representative harness agent
+# identifier, used only when the entry lacks the `agent_ids` candidate-list
+# field (older entries, written before that contract existed). `agent_id`
 # is what queue_agent_index.py (task0001, the index's writer) actually
 # stores; `agentId` is accepted defensively too, since IMPLEMENTATION.md's
 # "Agent index contract" fixes the field's presence, not its exact name.
@@ -130,19 +138,38 @@ def find_worktrees_root(cwd):
         current = parent
 
 
-def entry_agent_identifier(entry):
+def entry_matches_identifier(entry, identifier):
+    """True iff `identifier` matches this agents.jsonl entry.
+
+    queue_agent_index.py (the index's writer) stores, alongside the
+    representative `agent_id`, a new `agent_ids` field: a list of every
+    distinct identifier candidate recovered from the launch's
+    tool_response, in discovery order (`agent_id` always equals
+    `agent_ids[0]`). When `agent_ids` is present as a list, `identifier`
+    matches if it equals ANY string element of that list (non-string
+    elements and empty strings are ignored). Older entries written before
+    this contract change lack `agent_ids` entirely, so this falls back to
+    the single representative-key match (AGENT_ID_KEYS) in that case."""
+    agent_ids = entry.get("agent_ids")
+    if isinstance(agent_ids, list):
+        return any(
+            isinstance(value, str) and value and value == identifier
+            for value in agent_ids
+        )
     for key in AGENT_ID_KEYS:
         value = entry.get(key)
-        if isinstance(value, str) and value:
-            return value
-    return None
+        if isinstance(value, str) and value and value == identifier:
+            return True
+    return False
 
 
 def find_task_identity(worktrees_root, identifier):
     """Scan every feature's agents.jsonl under worktrees_root for entries
-    whose agent identifier matches `identifier`; return the (task_id,
-    worktree_path) of the LAST such entry (stable directory then line
-    order), or None. Malformed lines/files are skipped, never raised.
+    that match `identifier` (see entry_matches_identifier: any element of
+    the entry's `agent_ids` candidate list, or its representative key as a
+    fallback for older entries); return the (task_id, worktree_path) of
+    the LAST such entry (stable directory then line order), or None.
+    Malformed lines/files are skipped, never raised.
 
     agents.jsonl is append-only: a re-launched task gets a brand-new entry
     (new agent identifier) while the old identifier's entry stays put. So a
@@ -181,7 +208,7 @@ def find_task_identity(worktrees_root, identifier):
             task_id = entry.get(ENTRY_TASK_ID_KEY)
             if isinstance(task_id, str) and task_id:
                 last_task_pos[(index_path, task_id)] = pos
-            if entry_agent_identifier(entry) != identifier:
+            if not entry_matches_identifier(entry, identifier):
                 continue
             match = (task_id, entry.get("worktree_path"))
             match_pos = pos
