@@ -33,8 +33,21 @@ standard `timeout: 15`). This is meaningful at any merge order -- run before
 task0001/task0002 merge, it validates the four pre-existing entries; run
 after, it validates all six -- without ever needing to know in advance how
 many hooks or which filenames are registered.
+
+Covers taskstop-journal-failed-event task0006 Acceptance Criteria AC-5/AC-6
+(review round 1 F-4): `queue_launch_guard.py`, `queue_failure_net.py`, and
+`queue_agent_index.py` each declare their own copy of the task-assignment
+header regex (a shared identity primitive with no single source of truth --
+the permanent fix, extracting it into a shared module, is deliberately out
+of scope for this task). `TestTaskAssignmentHeaderPatternIsIdentical` below
+extracts the actual constant from each hook's source (by importing the
+module, not by hardcoding an expected pattern string) and asserts all three
+compiled regexes are identical in both pattern text and flags, so a future
+edit to any one copy that silently diverges from the others fails the suite
+instead of only surfacing as a runtime accept/reject mismatch between hooks.
 """
 
+import importlib.util
 import json
 import re
 import tempfile
@@ -416,6 +429,95 @@ class TestValidateHookEntryShapeDetectsMalformedEntries(unittest.TestCase):
             any("referenced script file does not exist" in e for e in errors),
             errors,
         )
+
+
+HOOKS_DIR = PLUGIN_ROOT / "hooks"
+
+# Each hook's own attribute NAME for its task-assignment header regex
+# differs (`ASSIGNMENT_HEADER_RE` vs `TASK_ASSIGNMENT_HEADER_RE`) even
+# though task0006 AC-5 requires the compiled regex VALUE to be identical
+# across all three. This maps filename -> attribute name only -- it never
+# hardcodes the pattern text itself, which is instead read from the
+# real source below.
+HEADER_REGEX_ATTR_BY_FILE = {
+    "queue_launch_guard.py": "ASSIGNMENT_HEADER_RE",
+    "queue_agent_index.py": "ASSIGNMENT_HEADER_RE",
+    "queue_failure_net.py": "TASK_ASSIGNMENT_HEADER_RE",
+}
+
+
+def load_hook_module(filename):
+    """Import a hook script purely to read its module-level constants.
+
+    `spec.loader.exec_module` runs the module body (so top-level constants
+    like the header regex are bound) but never `main()` -- that only runs
+    under `if __name__ == "__main__":`, and the module name used here is
+    never `"__main__"`.
+    """
+    path = HOOKS_DIR / filename
+    spec = importlib.util.spec_from_file_location(f"_hook_under_test_{filename}", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestTaskAssignmentHeaderPatternIsIdentical(unittest.TestCase):
+    """task0006 AC-5/AC-6 (review round 1 F-4): the task-assignment header
+    regex is an identity primitive copy-pasted independently into three
+    hook files, with no shared module as the single source of truth
+    (extracting one is deliberately out of scope for this task -- see
+    task0006.md Design notes). This test extracts each file's ACTUAL
+    constant (never a hardcoded expected pattern string) and asserts all
+    three are byte-identical in both pattern text and flags, so a future
+    edit that silently diverges one copy from the others fails the suite
+    instead of only surfacing as a runtime accept/reject mismatch between
+    the launch guard and the other two hooks."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.patterns = {
+            filename: getattr(load_hook_module(filename), attr)
+            for filename, attr in HEADER_REGEX_ATTR_BY_FILE.items()
+        }
+
+    def test_all_three_hooks_declare_the_header_regex(self):
+        for filename in HEADER_REGEX_ATTR_BY_FILE:
+            self.assertIsNotNone(self.patterns.get(filename))
+
+    def test_header_regex_pattern_text_is_identical_across_hooks(self):
+        pattern_texts = {name: regex.pattern for name, regex in self.patterns.items()}
+        self.assertEqual(
+            len(set(pattern_texts.values())), 1,
+            f"task-assignment header regex pattern text diverges: {pattern_texts}",
+        )
+
+    def test_header_regex_flags_are_identical_across_hooks(self):
+        flag_values = {name: regex.flags for name, regex in self.patterns.items()}
+        self.assertEqual(
+            len(set(flag_values.values())), 1,
+            f"task-assignment header regex flags diverge: {flag_values}",
+        )
+
+    def test_header_regex_uses_the_launch_guards_single_space_spelling(self):
+        """The launch guard is the reference spelling (task0006 Design
+        notes: "他の 2 ファイルをそちらの綴りに揃える"): a literal single
+        space after `#`, not a `\\s*`-tolerant one. A header with zero or
+        two spaces must be rejected by every one of the three regexes, and
+        the canonical single-space header must be accepted by all three."""
+        for filename, regex in self.patterns.items():
+            with self.subTest(filename=filename):
+                self.assertIsNone(
+                    regex.search("#Task assignment\n"),
+                    f"{filename} wrongly accepts a header with no space after '#'",
+                )
+                self.assertIsNone(
+                    regex.search("#  Task assignment\n"),
+                    f"{filename} wrongly accepts a header with 2 spaces after '#'",
+                )
+                self.assertIsNotNone(
+                    regex.search("# Task assignment\n"),
+                    f"{filename} wrongly rejects the launch guard's single-space spelling",
+                )
 
 
 if __name__ == "__main__":
