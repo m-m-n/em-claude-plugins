@@ -341,12 +341,12 @@ retry-consumed state per task in `tasks.{T}.notes`.
 under `.claude/worktrees/em-workflow/{feature}/`): a machine-written,
 append-only event log — `launched` / `merged` / `failed`, one JSON object
 per line, each carrying `task` and an RFC 3339 `at`. The orchestrator NEVER
-writes it; only `merge-task.sh` and the two hooks below append to it. The
-raw log is never rewritten or deleted — it is the primary source for
-post-mortem diagnosis, distinct from workflow.yaml's LLM-managed summary
-(full schema: IMPLEMENTATION.md's Journal contract).
+writes it; only `merge-task.sh` and the journal-writing hooks below append
+to it. The raw log is never rewritten or deleted — it is the primary source
+for post-mortem diagnosis, distinct from workflow.yaml's LLM-managed
+summary (full schema: IMPLEMENTATION.md's Journal contract).
 
-**The three hooks** (`em-workflow/hooks/`, wired in `hooks.json`):
+**The hooks** (`em-workflow/hooks/`, wired in `hooks.json`):
 
 - **Stop hook** (`queue_stop_guard.py`) — fires when the orchestrator's turn
   ends. Replays the journal and workflow.yaml; if refillable slots and
@@ -354,31 +354,66 @@ post-mortem diagnosis, distinct from workflow.yaml's LLM-managed summary
   the tasks to launch — catching a forgotten refill after a wake phase. A
   consecutive-block cap (3, tracked in a sidecar next to the journal)
   prevents it from wedging the session on unexpected state; exceeding the
-  cap yields a warning and lets the turn end.
+  cap yields a warning and lets the turn end. Does not write the journal.
 - **PreToolUse(Task|Agent) launch guard** (`queue_launch_guard.py`) — fires on
   every subagent-launch call (the tool is named `Agent` in current Claude
   Code versions, `Task` in older ones — both are matched); identifies
   em-workflow implementer launches and
   denies double-launching an already in-flight or already-merged task (a
   retry after `failed` is allowed). The sole writer of `launched` events.
+- **Agent index writer** (`queue_agent_index.py`) — fires on the same
+  subagent-launch call as the launch guard above, after the tool completes.
+  For em-workflow implementer launches it appends one entry to that
+  feature's agent index (`agents.jsonl`, a sibling of `journal.jsonl`),
+  mapping every harness agent-identifier candidate it can recover from the
+  launch response (the exact identifier field the response carries is
+  unverified, so more than one candidate may be recorded per entry) to the
+  launched task id and worktree path. It writes ONLY the agent index — it
+  never touches `journal.jsonl` — and is fail-open exactly like every hook
+  here: an unrecognized launch, an unparsable input, or a missing feature
+  directory is a silent no-op. The index is diagnostic plumbing, not a
+  second journal (workflow-schema.md states this explicitly); it exists
+  solely so the stop-tool recorder below can resolve a stop back to a task
+  (full matching/staleness rule: IMPLEMENTATION.md's Agent index contract).
 - **SubagentStop failure net** (`queue_failure_net.py`) — fires when any
   subagent stops; for em-workflow implementers whose task has no `merged`
   event yet, appends `failed` — turning a swallowed or crashed implementer
   into a visible, actionable state instead of a silent stall. Always exits 0
   (never blocks the stop).
+- **Stop-tool recorder** (`queue_taskstop_net.py`) — fires after the
+  orchestrator's `TaskStop` tool call completes. A stop delivered through
+  this tool does NOT reach the `SubagentStop` failure net above — this was
+  confirmed empirically before this feature was planned: two implementers
+  were launched identically into a throwaway journal, one stopped via the
+  `TaskStop` tool and the other left to complete naturally; only the
+  naturally-completed one produced a `SubagentStop`-triggered `failed`
+  append, while the `TaskStop`-stopped one left only its `launched` line
+  with no failure ever recorded (full probe table: IMPLEMENTATION.md's
+  Investigation result). The recorder closes exactly that gap: it resolves
+  the stopped agent to a task via the agent index above, replays the
+  journal for that task, and appends `failed` only when the last event is
+  not already terminal — idempotent with the failure net, so at most one
+  `failed` line ever results for a given task regardless of which of the
+  two writers fires (or if, on some future harness version, both do). Its
+  reason string is distinct from the failure net's so a post-mortem can
+  tell a deliberate stop from a swallowed crash.
 
-All three are fail-open nets, not authorities: on any unexpected state
-(missing files, unparsable input, no active feature) they exit 0 silently.
-The orchestrator protocol above plus the resume guard remain authoritative;
-a hook wrongly blocking the session is worse than missing one violation.
+All of the hooks above are fail-open nets, not authorities: on any
+unexpected state (missing files, unparsable input, no active feature) they
+exit 0 silently. The orchestrator protocol above plus the resume guard
+remain authoritative; a hook wrongly blocking the session is worse than
+missing one violation.
 
 **Stale-`launched` caveat**: the launch guard appends `launched` at allow
 time, before the subagent actually starts — if the `Task()` call is then
 allowed but never actually runs, a stale `launched` line can persist with no
 corresponding implementer in flight. This is bounded, never silently masked:
 the Stop hook's consecutive-block cap prevents an infinite blocking loop
-over a wedged slot, and the wake-phase git-state reconcile (worktree/branch
-existence check) catches it on the next reconcile pass.
+over a wedged slot, the wake-phase git-state reconcile (worktree/branch
+existence check) catches it on the next reconcile pass, and — specifically
+for the deliberate-stop case — the stop-tool recorder appends `failed` as
+soon as the `TaskStop` call completes, closing the gap before a reconcile
+pass is even needed.
 
 **Resume**: a `/em-workflow:develop` re-entry mid-implement rebuilds state
 from three sources, never from memory: workflow.yaml (`tasks.*.status`), the
