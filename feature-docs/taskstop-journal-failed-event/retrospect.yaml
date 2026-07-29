@@ -1,0 +1,87 @@
+feature: taskstop-journal-failed-event
+collected_at: "2026-07-29T10:42:00+09:00"
+session_ids: [41066395-851d-4571-b4f8-435efe204e7c]
+signals:
+  review_critical_high:
+    - stable_id: 121d23f6af581caa
+      category: comprehensive
+      file: em-workflow/hooks/queue_taskstop_net.py
+      title: "停止された agent が「そのタスクの現在の in-flight 起動」かを検証せずに failed を追記する"
+      resolution: fixed
+    - stable_id: 331e660680663071
+      category: architecture
+      file: em-workflow/hooks/queue_taskstop_net.py
+      title: "stale-index ガードが task_id を feature 横断のグローバルキーとして扱い、別 feature の同番タスクと衝突する"
+      resolution: fixed
+    - stable_id: 467c8f79d1981c2a
+      category: comprehensive
+      file: em-workflow/hooks/queue_agent_index.py
+      title: "index writer と TaskStop recorder が join キーのフィールド名を取り違えている"
+      resolution: fixed
+    - stable_id: 97d73bbe501dca93
+      category: architecture
+      file: em-workflow/hooks/queue_taskstop_net.py
+      title: "agents.jsonl の join key が両側で別々に定義され、優先順位が非対称"
+      resolution: fixed
+    - stable_id: 6032700df40ac760
+      category: security
+      file: em-workflow/hooks/queue_taskstop_net.py
+      title: "agents.jsonl 由来の worktree_path に封じ込め検査がなく、任意ディレクトリへの journal.jsonl 追記が起きる"
+      resolution: fixed
+  conflict_reworks:
+    - task: task0002
+      retries: 1
+  file_prediction_misses:
+    - task: task0003
+      files: [tests/test_planner_designer_worktree_docs.py]
+      note: "expected_files 外。既に HEAD で壊れていたバージョン固定アサーションを、AC「全スイート通過」を満たすため修正"
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+lessons_candidates:
+  - id: L1
+    area: planner
+    note: >-
+      task0003 の担当ファイル集合に em-workflow/README.md を入れ忘れた。実装フェーズで
+      hook を 3 本から 5 本に増やしたのに、hook 構成を数え上げているドキュメントは
+      references/ 配下の 2 ファイルだけだと想定していた。結果 README のドリフトが
+      round 1 で 2 観点から、round 2 でも再度指摘された。計画時に「この事実を重複保持
+      している箇所」を grep で機械的に洗い出す手順があれば防げた。
+  - id: L2
+    area: review-phase
+    note: >-
+      productive loop のたびに全レビュアーを再実行するという規律が、loop 1 の auto-fix が
+      持ち込んだ high 退行（feature 横断の task ID 衝突）を捕まえた。再実行しない設計
+      だったら退行を含んだままラウンドが閉じていた。この規律のコストは高いが、実際に
+      価値を出した実例として記録する。
+  - id: L3
+    area: review-phase
+    note: >-
+      auto-fix が 3 ループとも「直したが別の問題を増やす」方向に働いた。loop 1 は退行を
+      入れ、loop 3 の照合面拡大は security の到達容易性を上げた（loop 2 で medium だった
+      指摘が loop 3 後に high へ格上げされた）。単一ファイル・テスト不可の editor で
+      構造的な修正を当てることの限界を示している。high の構造的修正は auto-fix ではなく
+      rework へ回す判断基準を持つ価値があるかもしれない。
+  - id: L4
+    area: planner
+    note: >-
+      FR1 を「実装前に切り分ける調査要件」として立てたが、タスクは並列実行で順序が無い
+      ため、調査タスクの結果を他タスクが待てない。今回はオーケストレーターが計画段階で
+      probe を 2 本流して自分で決着させた（TaskStop では SubagentStop が発火しないことを
+      実証）。調査要件は計画フェーズで消化する前提で書くべきで、タスクに落とすべきでは
+      なかった。
+  - id: L5
+    area: orchestrator
+    note: >-
+      base_commit を create-spec 時点で「ブランチ作成時の HEAD」として書いてしまい、
+      implement-phase.md I.1 が意図する「implement 開始時の integration HEAD」と食い違った。
+      I.1 の「既に set なら上書きしない」ルールに素直に従うと、レビュー diff に
+      feature-docs のコミットが全部混ざる。workflow-schema.md の base_commit の説明文と
+      implement-phase.md I.1 の記述が噛み合っていない可能性がある。
+  - id: L6
+    area: reviewer
+    note: >-
+      複数のレビュアーが「実際にフックを直接実行して再現/反証する」ところまで踏み込んだ
+      （spec が feature 横断衝突を再現、comprehensive が symlink 経路差の退行を再現、
+      security が修正の十分性を権限昇格の観点から論証）。コード読みだけの指摘より
+      明らかに精度が高く、誤検知も少なかった。

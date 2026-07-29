@@ -1,4 +1,5 @@
-"""Tests for em-workflow/hooks/hooks.json registration (task0005).
+"""Tests for em-workflow/hooks/hooks.json registration (task0005; extended by
+taskstop-journal-failed-event task0003).
 
 Covers task0005 Acceptance Criteria AC-3 and AC-4:
 
@@ -17,8 +18,36 @@ expected to fail for those three filenames -- that is not a defect in this
 task's own deliverable (the wiring in hooks.json), which is covered
 independently by TestHooksJsonRegistersRequiredEntries and
 TestValidationDetectsBrokenConfigs.
+
+Covers taskstop-journal-failed-event task0003 Acceptance Criteria AC-7 and
+AC-8: hooks.json gains two further registrations from sibling tasks
+(`queue_agent_index.py` from task0001, `queue_taskstop_net.py` from
+task0002) added under whatever tool-call event they wire up to. Rather than
+hardcoding those filenames here (which task0003's own Test Notes call out as
+brittle -- it would need editing every time a further hook is added), the
+`TestEveryRegisteredHookIsWellFormed` class below is driven entirely from
+hooks.json's actual parsed contents: it walks every hook entry under every
+event, whatever they are, and asserts each one individually is well-formed
+(referenced script exists, plugin-root-relative `python3` command form,
+standard `timeout: 15`). This is meaningful at any merge order -- run before
+task0001/task0002 merge, it validates the four pre-existing entries; run
+after, it validates all six -- without ever needing to know in advance how
+many hooks or which filenames are registered.
+
+Covers taskstop-journal-failed-event task0006 Acceptance Criteria AC-5/AC-6
+(review round 1 F-4): `queue_launch_guard.py`, `queue_failure_net.py`, and
+`queue_agent_index.py` each declare their own copy of the task-assignment
+header regex (a shared identity primitive with no single source of truth --
+the permanent fix, extracting it into a shared module, is deliberately out
+of scope for this task). `TestTaskAssignmentHeaderPatternIsIdentical` below
+extracts the actual constant from each hook's source (by importing the
+module, not by hardcoding an expected pattern string) and asserts all three
+compiled regexes are identical in both pattern text and flags, so a future
+edit to any one copy that silently diverges from the others fails the suite
+instead of only surfacing as a runtime accept/reject mismatch between hooks.
 """
 
+import importlib.util
 import json
 import re
 import tempfile
@@ -95,6 +124,64 @@ def validate_hooks_config(config, plugin_root):
     return errors
 
 
+# Standard shape every hook registration in this plugin must follow
+# (worktree-task-workflow / IMPLEMENTATION.md Conventions: "Registration").
+STANDARD_HOOK_TIMEOUT = 15
+_PLUGIN_ROOT_PYTHON3_COMMAND_RE = re.compile(
+    r'^python3 "\$\{CLAUDE_PLUGIN_ROOT\}"/hooks/[A-Za-z0-9_.-]+\.py$'
+)
+
+
+def iter_all_hook_commands(config):
+    """Yield (event, matcher, hook_dict) for every command-hook entry
+    registered anywhere in a parsed hooks.json config, regardless of event
+    name or matcher value.
+
+    This deliberately does NOT enumerate a fixed list of expected events or
+    scripts -- it walks whatever the manifest currently declares, so it
+    stays meaningful as further hooks (and possibly further event types,
+    e.g. a PostToolUse entry from a sibling task) are registered without
+    needing this test to be edited.
+    """
+    for event, groups in config.get("hooks", {}).items():
+        for group in groups:
+            matcher = group.get("matcher")
+            for hook in group.get("hooks", []):
+                yield event, matcher, hook
+
+
+def validate_hook_entry_shape(hook, plugin_root):
+    """Validate a single hook-command dict's registration shape:
+
+    - its `command` uses the plugin-root-relative `python3` form
+      (`python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/<name>.py`, verbatim shape);
+    - its `timeout` equals the standard value (STANDARD_HOOK_TIMEOUT);
+    - the script file its command references exists on disk under
+      plugin_root.
+
+    Returns a list of human-readable error strings; empty means valid.
+    """
+    errors = []
+    command = hook.get("command", "")
+    if not _PLUGIN_ROOT_PYTHON3_COMMAND_RE.match(command):
+        errors.append(
+            f"command does not use the plugin-root-relative python3 form: {command!r}"
+        )
+    if hook.get("timeout") != STANDARD_HOOK_TIMEOUT:
+        errors.append(
+            f"timeout is not the standard {STANDARD_HOOK_TIMEOUT}: "
+            f"{hook.get('timeout')!r} (command={command!r})"
+        )
+    script_path = extract_script_path(command, plugin_root)
+    if script_path is None:
+        errors.append(
+            f"command does not reference a resolvable script path: {command!r}"
+        )
+    elif not script_path.is_file():
+        errors.append(f"referenced script file does not exist: {script_path}")
+    return errors
+
+
 class TestHooksJsonIsValidJson(unittest.TestCase):
     def test_hooks_json_is_valid_json(self):
         raw = HOOKS_JSON_PATH.read_text()
@@ -161,6 +248,55 @@ class TestReferencedScriptFilesExist(unittest.TestCase):
         errors = validate_hooks_config(self.config, PLUGIN_ROOT)
         missing = [e for e in errors if e.startswith("referenced script file")]
         self.assertEqual(missing, [], "\n".join(missing))
+
+
+class TestEveryRegisteredHookIsWellFormed(unittest.TestCase):
+    """taskstop-journal-failed-event task0003 AC-7/AC-8: manifest-driven
+    assertions covering EVERY hook entry hooks.json currently declares --
+    including any registrations added by sibling tasks in this feature --
+    rather than a hardcoded list of hook filenames or event names.
+
+    Meaningful at any merge order: whatever hooks.json currently contains is
+    exactly what gets validated, so this suite is green before task0001 and
+    task0002 merge their own entries (validating today's four) and remains
+    green afterwards (validating all of them, whatever count that ends up
+    being)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.config = json.loads(HOOKS_JSON_PATH.read_text())
+        cls.entries = list(iter_all_hook_commands(cls.config))
+
+    def test_at_least_the_four_baseline_hooks_are_registered(self):
+        self.assertGreaterEqual(
+            len(self.entries),
+            4,
+            "hooks.json must register at least the four baseline hooks "
+            "(bash_guard, queue_launch_guard, queue_stop_guard, queue_failure_net)",
+        )
+
+    def test_every_registered_hook_command_is_well_formed(self):
+        errors = []
+        for event, matcher, hook in self.entries:
+            for err in validate_hook_entry_shape(hook, PLUGIN_ROOT):
+                errors.append(f"[event={event!r} matcher={matcher!r}] {err}")
+        self.assertEqual(errors, [], "\n".join(errors))
+
+    def test_no_duplicate_script_registered_twice_under_the_same_event(self):
+        # A copy/merge-conflict artifact (e.g. a hook entry pasted in twice
+        # by a parent-side-adoption re-implementation) would otherwise pass
+        # every other check here silently.
+        seen = {}
+        duplicates = []
+        for event, matcher, hook in self.entries:
+            script_path = extract_script_path(hook.get("command", ""), PLUGIN_ROOT)
+            key = (event, str(script_path))
+            if key in seen:
+                duplicates.append(key)
+            seen[key] = True
+        self.assertEqual(
+            duplicates, [], f"script(s) registered more than once under the same event: {duplicates}"
+        )
 
 
 class TestValidationDetectsBrokenConfigs(unittest.TestCase):
@@ -231,6 +367,157 @@ class TestValidationDetectsBrokenConfigs(unittest.TestCase):
             ]
             self.assertEqual(len(missing_script_errors), 1)
             self.assertIn("queue_stop_guard.py", missing_script_errors[0])
+
+
+class TestValidateHookEntryShapeDetectsMalformedEntries(unittest.TestCase):
+    """AC-7's three checks (script existence, command form, standard
+    timeout), proven independently with fabricated fixtures so a future
+    regression in any single check is caught even if the real hooks.json
+    happens to be well-formed in the other two respects."""
+
+    def _well_formed_hook(self, name="queue_launch_guard.py"):
+        return {
+            "type": "command",
+            "command": f'python3 "${{CLAUDE_PLUGIN_ROOT}}"/hooks/{name}',
+            "timeout": STANDARD_HOOK_TIMEOUT,
+        }
+
+    def test_well_formed_entry_produces_no_errors(self):
+        errors = validate_hook_entry_shape(self._well_formed_hook(), PLUGIN_ROOT)
+        self.assertEqual(errors, [])
+
+    def test_wrong_timeout_is_detected(self):
+        hook = self._well_formed_hook()
+        hook["timeout"] = 30
+        errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
+        self.assertTrue(
+            any("timeout is not the standard" in e for e in errors),
+            errors,
+        )
+
+    def test_missing_timeout_is_detected(self):
+        hook = self._well_formed_hook()
+        del hook["timeout"]
+        errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
+        self.assertTrue(
+            any("timeout is not the standard" in e for e in errors),
+            errors,
+        )
+
+    def test_non_plugin_root_relative_command_is_detected(self):
+        hook = self._well_formed_hook()
+        hook["command"] = "python3 hooks/queue_launch_guard.py"
+        errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
+        self.assertTrue(
+            any("plugin-root-relative python3 form" in e for e in errors),
+            errors,
+        )
+
+    def test_non_python3_command_is_detected(self):
+        hook = self._well_formed_hook()
+        hook["command"] = 'python "${CLAUDE_PLUGIN_ROOT}"/hooks/queue_launch_guard.py'
+        errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
+        self.assertTrue(
+            any("plugin-root-relative python3 form" in e for e in errors),
+            errors,
+        )
+
+    def test_missing_script_file_is_detected(self):
+        hook = self._well_formed_hook(name="does_not_exist_anywhere.py")
+        errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
+        self.assertTrue(
+            any("referenced script file does not exist" in e for e in errors),
+            errors,
+        )
+
+
+HOOKS_DIR = PLUGIN_ROOT / "hooks"
+
+# Each hook's own attribute NAME for its task-assignment header regex
+# differs (`ASSIGNMENT_HEADER_RE` vs `TASK_ASSIGNMENT_HEADER_RE`) even
+# though task0006 AC-5 requires the compiled regex VALUE to be identical
+# across all three. This maps filename -> attribute name only -- it never
+# hardcodes the pattern text itself, which is instead read from the
+# real source below.
+HEADER_REGEX_ATTR_BY_FILE = {
+    "queue_launch_guard.py": "ASSIGNMENT_HEADER_RE",
+    "queue_agent_index.py": "ASSIGNMENT_HEADER_RE",
+    "queue_failure_net.py": "TASK_ASSIGNMENT_HEADER_RE",
+}
+
+
+def load_hook_module(filename):
+    """Import a hook script purely to read its module-level constants.
+
+    `spec.loader.exec_module` runs the module body (so top-level constants
+    like the header regex are bound) but never `main()` -- that only runs
+    under `if __name__ == "__main__":`, and the module name used here is
+    never `"__main__"`.
+    """
+    path = HOOKS_DIR / filename
+    spec = importlib.util.spec_from_file_location(f"_hook_under_test_{filename}", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestTaskAssignmentHeaderPatternIsIdentical(unittest.TestCase):
+    """task0006 AC-5/AC-6 (review round 1 F-4): the task-assignment header
+    regex is an identity primitive copy-pasted independently into three
+    hook files, with no shared module as the single source of truth
+    (extracting one is deliberately out of scope for this task -- see
+    task0006.md Design notes). This test extracts each file's ACTUAL
+    constant (never a hardcoded expected pattern string) and asserts all
+    three are byte-identical in both pattern text and flags, so a future
+    edit that silently diverges one copy from the others fails the suite
+    instead of only surfacing as a runtime accept/reject mismatch between
+    the launch guard and the other two hooks."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.patterns = {
+            filename: getattr(load_hook_module(filename), attr)
+            for filename, attr in HEADER_REGEX_ATTR_BY_FILE.items()
+        }
+
+    def test_all_three_hooks_declare_the_header_regex(self):
+        for filename in HEADER_REGEX_ATTR_BY_FILE:
+            self.assertIsNotNone(self.patterns.get(filename))
+
+    def test_header_regex_pattern_text_is_identical_across_hooks(self):
+        pattern_texts = {name: regex.pattern for name, regex in self.patterns.items()}
+        self.assertEqual(
+            len(set(pattern_texts.values())), 1,
+            f"task-assignment header regex pattern text diverges: {pattern_texts}",
+        )
+
+    def test_header_regex_flags_are_identical_across_hooks(self):
+        flag_values = {name: regex.flags for name, regex in self.patterns.items()}
+        self.assertEqual(
+            len(set(flag_values.values())), 1,
+            f"task-assignment header regex flags diverge: {flag_values}",
+        )
+
+    def test_header_regex_uses_the_launch_guards_single_space_spelling(self):
+        """The launch guard is the reference spelling (task0006 Design
+        notes: "他の 2 ファイルをそちらの綴りに揃える"): a literal single
+        space after `#`, not a `\\s*`-tolerant one. A header with zero or
+        two spaces must be rejected by every one of the three regexes, and
+        the canonical single-space header must be accepted by all three."""
+        for filename, regex in self.patterns.items():
+            with self.subTest(filename=filename):
+                self.assertIsNone(
+                    regex.search("#Task assignment\n"),
+                    f"{filename} wrongly accepts a header with no space after '#'",
+                )
+                self.assertIsNone(
+                    regex.search("#  Task assignment\n"),
+                    f"{filename} wrongly accepts a header with 2 spaces after '#'",
+                )
+                self.assertIsNotNone(
+                    regex.search("# Task assignment\n"),
+                    f"{filename} wrongly rejects the launch guard's single-space spelling",
+                )
 
 
 if __name__ == "__main__":
