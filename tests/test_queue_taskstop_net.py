@@ -21,6 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 HOOK_PATH = REPO_ROOT / "em-workflow" / "hooks" / "queue_taskstop_net.py"
 LAUNCH_GUARD_PATH = REPO_ROOT / "em-workflow" / "hooks" / "queue_launch_guard.py"
 FAILURE_NET_PATH = REPO_ROOT / "em-workflow" / "hooks" / "queue_failure_net.py"
+AGENT_INDEX_WRITER_PATH = REPO_ROOT / "em-workflow" / "hooks" / "queue_agent_index.py"
 
 STOP_TOOL_NAME = "TaskStop"
 RFC3339_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$")
@@ -99,7 +100,10 @@ def write_agent_index(feature_dir, entries):
 
 
 def index_entry(agent_id, task_id, worktree_path, at="2026-01-01T00:00:00+00:00", key="agent_id"):
-    return {key: agent_id, "task_id": task_id, "worktree_path": worktree_path, "at": at}
+    """Matches queue_agent_index.py's (task0001) actual agents.jsonl entry
+    shape: the em-workflow task identifier is stored under the key `task`,
+    not `task_id`."""
+    return {key: agent_id, "task": task_id, "worktree_path": worktree_path, "at": at}
 
 
 def stop_payload(cwd, input_id=None, result_id=None, tool_name=STOP_TOOL_NAME):
@@ -735,6 +739,55 @@ class TestHooksJsonRegistration(QueueTaskStopNetTestCase):
             hook.get("command"),
             'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/queue_taskstop_net.py',
         )
+
+
+class TestRealAgentIndexWriterInterop(QueueTaskStopNetTestCase):
+    """End-to-end interop with the ACTUAL agent-index writer
+    (queue_agent_index.py, task0001) rather than a hand-built fixture --
+    proves the two hooks agree on the agents.jsonl entry shape (the field
+    key for the em-workflow task identifier is `task`, not `task_id`)."""
+
+    def test_stop_resolves_via_the_real_agent_index_writer(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0070")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0070", "at": "2026-01-01T00:00:00+00:00"}],
+        )
+
+        launch_payload = {
+            "tool_name": "Agent",
+            "tool_input": {
+                "subagent_type": "em-workflow:implementer",
+                "description": "Implement task0070",
+                "prompt": (
+                    "# Task assignment\n"
+                    "task_id: task0070\n"
+                    f"worktree_path: {worktree_path}\n"
+                ),
+            },
+            "tool_response": {
+                "status": "async_launched",
+                "agentId": "a4d2c8f1e0b3a297",
+                "description": "Implement task0070",
+            },
+        }
+        writer_result = run_hook_json(launch_payload, hook_path=AGENT_INDEX_WRITER_PATH)
+        self.assertEqual(writer_result.returncode, 0)
+        index_path = os.path.join(feature_dir, "agents.jsonl")
+        self.assertTrue(os.path.isfile(index_path), "agent index writer produced no file")
+
+        stop_result = run_hook_json(
+            stop_payload(self.tmp_dir, input_id="a4d2c8f1e0b3a297")
+        )
+
+        self.assertEqual(stop_result.returncode, 0)
+        lines = read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        self.assertEqual(len(lines), 2)
+        appended = json.loads(lines[-1])
+        self.assertEqual(appended.get("event"), "failed")
+        self.assertEqual(appended.get("task"), "task0070")
 
 
 class TestConcurrentAppends(QueueTaskStopNetTestCase):

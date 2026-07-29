@@ -65,11 +65,15 @@ STOP_TOOL_NAME = "TaskStop"
 # on tool_response as the fallback location (IMPLEMENTATION.md D3).
 HARNESS_ID_FIELD = "task_id"
 
-# The agent index entry's key for the harness agent identifier is not
-# pinned down by a shared schema (IMPLEMENTATION.md "Agent index contract"
-# fixes the field's presence, not its exact name) -- both spellings are
-# accepted defensively.
+# The agent index entry's key for the harness agent identifier. `agent_id`
+# is what queue_agent_index.py (task0001, the index's writer) actually
+# stores; `agentId` is accepted defensively too, since IMPLEMENTATION.md's
+# "Agent index contract" fixes the field's presence, not its exact name.
 AGENT_ID_KEYS = ("agent_id", "agentId")
+
+# queue_agent_index.py stores the em-workflow task identifier under the key
+# `task` (not `task_id`) in each agents.jsonl entry.
+ENTRY_TASK_ID_KEY = "task"
 
 TASK_ID_RE = re.compile(r"^task[0-9]+$")
 
@@ -161,7 +165,7 @@ def find_task_identity(worktrees_root, identifier):
                 continue
             if entry_agent_identifier(entry) != identifier:
                 continue
-            match = (entry.get("task_id"), entry.get("worktree_path"))
+            match = (entry.get(ENTRY_TASK_ID_KEY), entry.get("worktree_path"))
     return match
 
 
