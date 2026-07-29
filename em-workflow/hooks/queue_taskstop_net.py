@@ -27,14 +27,31 @@ event JSON):
      the nearest ancestor containing `.claude/worktrees/em-workflow`
      (Agent index contract's read discipline, IMPLEMENTATION.md).
   3. Scan every feature directory's `agents.jsonl` one level below that
-     root for entries that match: an entry matches if the recovered
-     identifier equals any element of the entry's `agent_ids` candidate
-     list (queue_agent_index.py records every distinct identifier
-     candidate seen in the launch's tool_response, not just one), falling
-     back to the single representative-key match (`agent_id`/`agentId`)
-     for older entries written before `agent_ids` existed. The LAST
-     matching entry (across the whole scan, in a stable directory/line
-     order) wins.
+     root for entries that match. Before matching, each entry is checked
+     for plausibility and discarded wholesale (never matched, never
+     tracked) if either check fails:
+       - candidate-list cap: `agent_ids`, when present, must not exceed
+         MAX_AGENT_IDS_LEN elements -- longer than the legitimate writer
+         (queue_agent_index.py) could ever produce for one launch (round 1
+         finding F-1's candidate-list cap).
+       - containment: the entry's `worktree_path` must normalize to a
+         direct child of the feature directory this SAME `agents.jsonl`
+         lives in (the agents.jsonl/journal.jsonl same-directory contract).
+         An entry failing this could otherwise redirect the journal append
+         to any existing directory on disk (round 1 finding F-1, the
+         residual high).
+     A surviving entry matches if the recovered identifier equals any
+     element of its `agent_ids` candidate list (queue_agent_index.py
+     records every distinct identifier candidate seen in the launch's
+     tool_response, not just one), falling back to the single
+     representative-key match (`agent_id`/`agentId`) for older entries
+     written before `agent_ids` existed.
+     If the surviving matches span two or more distinct (agents.jsonl,
+     task) pairs, the identifier is ambiguous -- resolution fails (no-op),
+     never last-wins (round 1 finding F-2: a reused/shared identifier, e.g.
+     a parent task or session ID, must never let one launch's stop mark a
+     DIFFERENT task `failed`). Otherwise the LAST matching entry for that
+     one pair (stable scan order) wins.
   4. Validate the entry's task identifier / worktree path (same rules as
      `queue_launch_guard.py`'s Task-identity discovery contract).
   5. Derive the journal directory from the worktree path (Journal contract:
@@ -82,6 +99,14 @@ AGENT_ID_KEYS = ("agent_id", "agentId")
 # queue_agent_index.py stores the em-workflow task identifier under the key
 # `task` (not `task_id`) in each agents.jsonl entry.
 ENTRY_TASK_ID_KEY = "task"
+
+# queue_agent_index.py's STRUCTURED_ID_FIELDS lists 4 structured
+# tool_response fields it can pull a candidate from, plus one more slot for
+# its embedded-text fallback (EMBEDDED_ID_RE) -- a genuine `agent_ids` list
+# therefore never exceeds 4 + 1 = 5 elements. An entry claiming more is not
+# something the legitimate writer could have produced (round 1 finding F-1's
+# candidate-list cap).
+MAX_AGENT_IDS_LEN = 5
 
 TASK_ID_RE = re.compile(r"^task[0-9]+$")
 
@@ -138,6 +163,35 @@ def find_worktrees_root(cwd):
         current = parent
 
 
+def candidate_list_within_cap(entry):
+    """False iff `entry['agent_ids']` is a list longer than the legitimate
+    writer (queue_agent_index.py) could ever produce for one launch
+    (MAX_AGENT_IDS_LEN). An entry failing this is ignored wholesale by the
+    caller -- never matched, never tracked for staleness (round 1 finding
+    F-1's candidate-list cap; entries without a list-shaped `agent_ids`
+    pass through unaffected, since AGENT_ID_KEYS fallback matching does not
+    consult this field's length at all)."""
+    agent_ids = entry.get("agent_ids")
+    if isinstance(agent_ids, list) and len(agent_ids) > MAX_AGENT_IDS_LEN:
+        return False
+    return True
+
+
+def entry_contained_in_feature(index_path, worktree_path):
+    """True iff `worktree_path` normalizes to a direct child of the feature
+    directory that owns `index_path` (its agents.jsonl) -- the
+    agents.jsonl/journal.jsonl same-directory contract (Agent index
+    contract, IMPLEMENTATION.md). An entry failing this check could
+    otherwise redirect a journal append to any existing directory on disk
+    and must never be trusted, matching or not (round 1 finding F-1, the
+    residual high)."""
+    if not valid_worktree_path(worktree_path):
+        return False
+    feature_dir = os.path.normpath(os.path.dirname(index_path))
+    journal_dir = os.path.normpath(os.path.dirname(os.path.normpath(worktree_path)))
+    return journal_dir == feature_dir
+
+
 def entry_matches_identifier(entry, identifier):
     """True iff `identifier` matches this agents.jsonl entry.
 
@@ -168,21 +222,34 @@ def find_task_identity(worktrees_root, identifier):
     that match `identifier` (see entry_matches_identifier: any element of
     the entry's `agent_ids` candidate list, or its representative key as a
     fallback for older entries); return the (task_id, worktree_path) of
-    the LAST such entry (stable directory then line order), or None.
-    Malformed lines/files are skipped, never raised.
+    the resolved entry, or None. Malformed lines/files are skipped, never
+    raised.
 
-    agents.jsonl is append-only: a re-launched task gets a brand-new entry
-    (new agent identifier) while the old identifier's entry stays put. So a
-    match on `identifier` only names the CURRENT in-flight launch of its
-    task if no later entry (by the same stable order, WITHIN THE SAME
-    FEATURE's agents.jsonl -- task_id is only unique per feature, not
-    globally) exists for that same task under a different identifier. If a
-    later entry for the same (feature, task_id) exists, the matched entry
-    is stale -- return None (no-op) rather than attribute a stop to a
-    launch that's already been superseded."""
-    match = None
-    match_pos = None
-    match_key = None
+    Two plausibility checks run BEFORE matching, per entry, and an entry
+    failing either is ignored wholesale -- it is never matched and never
+    counted toward staleness tracking, exactly as if the line were absent:
+      - candidate_list_within_cap: an implausibly long `agent_ids` (round 1
+        finding F-1's cap).
+      - entry_contained_in_feature: a `worktree_path` that does not
+        normalize to a child of the feature directory this agents.jsonl
+        lives in (round 1 finding F-1, the residual high).
+
+    Ambiguity refusal (round 1 finding F-2): if the surviving matches span
+    two or more distinct (agents.jsonl path, task_id) pairs, `identifier`
+    is ambiguous across genuinely different tasks -- resolution fails
+    (None), never last-wins. A reused/shared identifier (e.g. a parent
+    task/session ID) must never let one launch's stop mark a DIFFERENT
+    task `failed`.
+
+    Staleness (unchanged from before F-1/F-2): agents.jsonl is
+    append-only, so a re-launched task gets a brand-new entry (new agent
+    identifier) while the old identifier's entry stays put. Once a single
+    (agents.jsonl, task_id) pair is resolved, the LAST matching entry for
+    that pair (stable scan order) is used only if no later entry for that
+    SAME pair (task_id is only unique per feature, not globally) exists
+    under a different identifier; otherwise the match is stale -- return
+    None rather than attribute a stop to a launch already superseded."""
+    matches = []  # [(index_path, task_id, worktree_path, pos), ...]
     last_task_pos = {}
     pos = 0
     for feature_dir in sorted(glob.glob(os.path.join(worktrees_root, "*"))):
@@ -204,21 +271,30 @@ def find_task_identity(worktrees_root, identifier):
                 continue
             if not isinstance(entry, dict):
                 continue
+            if not candidate_list_within_cap(entry):
+                continue  # implausible candidate list: ignore wholesale
+            worktree_path = entry.get("worktree_path")
+            if not entry_contained_in_feature(index_path, worktree_path):
+                continue  # not contained in the feature dir it came from
             pos += 1
             task_id = entry.get(ENTRY_TASK_ID_KEY)
             if isinstance(task_id, str) and task_id:
                 last_task_pos[(index_path, task_id)] = pos
             if not entry_matches_identifier(entry, identifier):
                 continue
-            match = (task_id, entry.get("worktree_path"))
-            match_pos = pos
-            match_key = (index_path, task_id)
-    if match is None:
+            matches.append((index_path, task_id, worktree_path, pos))
+
+    if not matches:
         return None
-    task_id = match[0]
-    if isinstance(task_id, str) and task_id and last_task_pos.get(match_key) != match_pos:
+
+    distinct_pairs = {(index_path, task_id) for index_path, task_id, _, _ in matches}
+    if len(distinct_pairs) > 1:
+        return None  # ambiguous across distinct tasks: resolution failure
+
+    index_path, task_id, worktree_path, match_pos = matches[-1]
+    if isinstance(task_id, str) and task_id and last_task_pos.get((index_path, task_id)) != match_pos:
         return None  # a later launch of the same task exists: stale match
-    return match
+    return task_id, worktree_path
 
 
 def open_journal_locked(path):
