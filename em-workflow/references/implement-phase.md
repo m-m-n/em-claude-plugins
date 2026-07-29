@@ -352,13 +352,16 @@ summary (full schema: IMPLEMENTATION.md's Journal contract).
   subagent-launch call as the launch guard above, after the tool completes.
   For em-workflow implementer launches it appends one entry to that
   feature's agent index (`agents.jsonl`, a sibling of `journal.jsonl`),
-  mapping the harness's own agent identifier to the launched task id and
-  worktree path. It writes ONLY the agent index — it never touches
-  `journal.jsonl` — and is fail-open exactly like every hook here: an
-  unrecognized launch, an unparsable input, or a missing feature directory
-  is a silent no-op. The index is diagnostic plumbing, not a second journal
-  (workflow-schema.md states this explicitly); it exists solely so the stop-
-  tool recorder below can resolve a stop back to a task.
+  mapping every harness agent-identifier candidate it can recover from the
+  launch response (the exact identifier field the response carries is
+  unverified, so more than one candidate may be recorded per entry) to the
+  launched task id and worktree path. It writes ONLY the agent index — it
+  never touches `journal.jsonl` — and is fail-open exactly like every hook
+  here: an unrecognized launch, an unparsable input, or a missing feature
+  directory is a silent no-op. The index is diagnostic plumbing, not a
+  second journal (workflow-schema.md states this explicitly); it exists
+  solely so the stop-tool recorder below can resolve a stop back to a task
+  (full matching/staleness rule: IMPLEMENTATION.md's Agent index contract).
 - **SubagentStop failure net** (`queue_failure_net.py`) — fires when any
   subagent stops; for em-workflow implementers whose task has no `merged`
   event yet, appends `failed` — turning a swallowed or crashed implementer

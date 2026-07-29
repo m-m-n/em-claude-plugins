@@ -59,7 +59,12 @@ import sys
 from datetime import datetime
 
 TASK_ID_RE = re.compile(r"^task[0-9]+$")
-ASSIGNMENT_HEADER_RE = re.compile(r"^#\s*Task assignment\s*$", re.MULTILINE)
+# Byte-identical to queue_launch_guard.py's ASSIGNMENT_HEADER_RE (and
+# queue_failure_net.py's TASK_ASSIGNMENT_HEADER_RE) -- task0006 F-4: these
+# had drifted (this file previously tolerated 0+ spaces after `#`) so a
+# header the launch guard rejected could still be accepted here, producing
+# an index entry with no matching `launched` event.
+ASSIGNMENT_HEADER_RE = re.compile(r"(?m)^# Task assignment\s*$")
 TASK_ID_LINE_RE = re.compile(r"^task_id:\s*(\S+)\s*$", re.MULTILINE)
 # Same parser as queue_launch_guard.py / queue_failure_net.py (Task-identity
 # discovery contract): the path may contain internal spaces -- capture the
