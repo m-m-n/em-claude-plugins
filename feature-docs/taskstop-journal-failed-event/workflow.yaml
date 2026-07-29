@@ -28,8 +28,9 @@ workflow:
     status: completed
     completed_at_commit: d6b185318ae0ab15cc18b76ffddb58efce980da9
   - id: implement
-    status: in_progress
+    status: completed
     base_commit: 8897404785270ff4a0bedf1c2fcaba35794132ce
+    completed_at_commit: 5dac4d3366da96e66e8b2e2a82a10d080e27b927
   - id: review
     status: pending
   - id: verify
@@ -94,7 +95,7 @@ tasks:
     domains: [input-handling, external-io, concurrency, config-infra]
     complexity: high
     requirements: [FR2, FR3, FR4, FR5, NFR1, NFR2, NFR4, NFR5]
-    status: in_progress
+    status: merged
     branch: em-workflow/taskstop-journal-failed-event/task0004
     notes: "review round 1 residual (security high 封じ込め欠落) からの rework"
   task0005:
