@@ -86,8 +86,12 @@ tasks:
     branch: em-workflow/taskstop-journal-failed-event/task0003
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    codex_cross_validation: true
 
 requirements:
   FR1:
