@@ -132,8 +132,8 @@ tasks:
     notes: "review round 1 residual からの rework"
 
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
@@ -144,8 +144,8 @@ review:
     performance: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 1
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 
 requirements:
   FR1:
