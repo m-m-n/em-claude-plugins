@@ -39,7 +39,12 @@ from datetime import datetime
 IMPLEMENTER_AGENT_TYPE = "em-workflow:implementer"
 FAILED_REASON = "implementer stopped without a merged event"
 
-TASK_ASSIGNMENT_HEADER_RE = re.compile(r"^#\s*Task assignment\s*$", re.MULTILINE)
+# Byte-identical to queue_launch_guard.py's ASSIGNMENT_HEADER_RE (and
+# queue_agent_index.py's ASSIGNMENT_HEADER_RE) -- task0006 F-4: these had
+# drifted (this file previously tolerated 0+ spaces after `#`), so a header
+# spelling the launch guard would reject as "not an implementer launch"
+# could still be accepted here as a valid task assignment.
+TASK_ASSIGNMENT_HEADER_RE = re.compile(r"(?m)^# Task assignment\s*$")
 TASK_ID_LINE_RE = re.compile(r"^task_id:\s*(\S+)\s*$", re.MULTILINE)
 # Same parser as queue_launch_guard.py (Task-identity discovery contract):
 # the path may contain internal spaces — capture the whole line remainder.

@@ -189,15 +189,20 @@ ever writes it. Details: implement-phase.md's Step I.2 "Supporting cast"
 section and IMPLEMENTATION.md's Journal contract.
 
 The same worktree-root directory also holds `agents.jsonl`, the agent
-index — a separate diagnostic mapping from a harness agent identifier to
-the em-workflow task identity that launched it, written by
+index — a separate diagnostic mapping, per launch, from a candidate list of
+harness agent-identifier strings (the exact identifier field the harness's
+launch response carries is unverified, so `queue_agent_index.py` records
+every candidate it can recover rather than a single one) to the
+em-workflow task identity that launched it, written by
 `queue_agent_index.py` at launch and read by `queue_taskstop_net.py` at
 stop. It is NOT part of the journal contract above and must never be
 treated as a second authoritative state file: it carries no status
 semantics of its own, may be absent or stale, and its absence only
 degrades the stop-tool recorder to a no-op. `journal.jsonl` alone is the
 authoritative raw-event record; `agents.jsonl` exists solely to make a
-stop resolvable back to a task.
+stop resolvable back to a task. Full contract (candidate-list format,
+matching rule, staleness/supersede rule): IMPLEMENTATION.md's Agent index
+contract.
 
 ## Status semantics
 
