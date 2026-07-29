@@ -80,7 +80,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR1, FR6, FR7, NFR3, NFR5]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/taskstop-journal-failed-event/task0003
 
