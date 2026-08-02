@@ -378,20 +378,37 @@ integration branch immediately, including the batch-mode rework/defer
 updates below.
 
 **Completion gate**: the review step may be marked `completed` ONLY when
-`residual_critical_high == 0`. Otherwise: offer another round / rework
-(`needs_rework: true`, route back to implement) / explicit user acceptance
-(recorded as `deferred` with reason — this is the opt-out that keeps
-committed records free of undisclosed critical items).
+`residual_critical_high == 0`. Otherwise: offer another round / rework /
+explicit user acceptance (recorded as `deferred` with reason — this is the
+opt-out that keeps committed records free of undisclosed critical items).
+
+Rework path (interactive): when the user selects rework, follow the fixed
+ordering `references/rework-task-synthesis.md` Section 10 states for
+review-sourced rework — the orchestrator writes `review.needs_rework = true`
+and `review.status = pending` directly to workflow.yaml FIRST (this write is
+the orchestrator's own; it is NEVER carried inside a worker patch), THEN
+dispatches rework-planner, THEN validates and applies rework-planner's patch
+(`tasks_patch` + `step_patches` + `preserve`). `implement` returning to
+`pending` is carried inside that patch's `step_patches` in the last step —
+it is never a separate write, and it never happens before the patch has
+registered at least one pending rework task
+(`references/rework-task-synthesis.md` Invariant 1). Task synthesis itself —
+grouping, task ID allocation, metadata derivation, verification coverage,
+and the rest of the invariants — is defined once in
+`references/rework-task-synthesis.md`; this document does not restate it.
 
 Batch mode (develop-駆動 only): no offer — auto-rework with cap 1. When
-`batch.review_rework_count == 0` in workflow.yaml: synthesize rework tasks
-from the residual critical/high findings (batch-mode.md "Rework task
-synthesis"), increment the counter, set `needs_rework: true`, review step
-`pending`, implement step `pending`; the develop state machine re-enters
-implement. When the counter is already ≥ 1: mark each residual finding
-`resolution: deferred` with `resolution_reason: "batch mode: rework cap
-reached"` and complete the step — the round record keeps them visible for
-the human evaluator.
+`batch.review_rework_count == 0` in workflow.yaml: follow the SAME ordering
+as the interactive path above (`references/rework-task-synthesis.md`
+Section 10) — write `review.needs_rework = true` and `review.status =
+pending` directly, dispatch rework-planner to synthesize rework tasks from
+the residual critical/high findings per `references/rework-task-synthesis.md`,
+then validate and apply its patch (`implement` returning to `pending` is
+carried inside that patch, exactly as in the interactive path — never a
+separate write here either), and increment the counter. When the counter is
+already ≥ 1: mark each residual finding `resolution: deferred` with
+`resolution_reason: "batch mode: rework cap reached"` and complete the step
+— the round record keeps them visible for the human evaluator.
 
 ## Phase R6: Report (Japanese)
 
