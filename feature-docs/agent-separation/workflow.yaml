@@ -73,7 +73,7 @@ tasks:
     complexity: high
     requirements:
     - FR12
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0002
   task0003:
