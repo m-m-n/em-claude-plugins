@@ -1,0 +1,121 @@
+task_id: task0008
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_validate_worker_output.TestCLIInterface.test_all_five_kind_values_are_declared
+      - tests.test_validate_worker_output.TestCLIInterface.test_worker_and_input_are_mandatory
+      - tests.test_validate_worker_output.TestCLIInterface.test_all_auxiliary_arguments_declared
+      - tests.test_validate_worker_output.TestCLIInterface.test_unknown_kind_is_an_execution_error
+      - tests.test_validate_worker_output.TestCLIInterface.test_unknown_worker_is_an_execution_error
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by removing em-workflow/scripts/validate-worker-output.py
+      entirely and re-running this test file: the module-level
+      importlib.util.spec_from_file_location/exec_module load in the test
+      file raised FileNotFoundError before any test body ran, failing every
+      test in the file (including all of these). Restoring the script made
+      all tests pass again. The CLI itself did not exist before
+      implementation, so "accepts the five --kind values" and "rejects an
+      unknown --kind as an execution error" could not have passed.
+  AC-2:
+    tests:
+      - tests.test_validate_worker_output.TestExitCodes.test_valid_input_exits_0
+      - tests.test_validate_worker_output.TestExitCodes.test_validation_failure_exits_1_with_json_detail_on_stdout
+      - tests.test_validate_worker_output.TestExitCodes.test_pyyaml_missing_exits_2_naming_pyyaml
+    red_confirmed: true
+    red_reason: >-
+      Same module-removal experiment as AC-1 (script absent -> import
+      failure -> every test in the file fails). Additionally, the
+      PyYAML-missing simulation (fake yaml.py shadowed via PYTHONPATH) was
+      smoke-tested manually against the script before it was wired into the
+      formal test file, and initially failed with the wrong message until
+      the `import yaml` try/except + exit-2 message was added to main().
+  AC-3:
+    tests:
+      - tests.test_validate_worker_output.TestInputEnvelopeMandatoryForWorkerResult.test_missing_input_envelope_exits_2_for_every_worker
+    red_confirmed: true
+    red_reason: >-
+      Before the `--input-envelope` mandatory-for-worker-result check was
+      added to main(), a manual smoke-test invocation with --kind
+      worker-result and no --input-envelope proceeded to the (then
+      nonexistent) validator instead of exiting 2; the check was added
+      specifically to make this exit 2, and the module-removal experiment
+      (AC-1) independently confirms the whole test would fail without the
+      script.
+  AC-4:
+    tests:
+      - tests.test_validate_worker_output.TestModeEchoAndAnalystModeExclusivity.test_missing_mode_echo_fails_validation
+      - tests.test_validate_worker_output.TestModeEchoAndAnalystModeExclusivity.test_mismatched_mode_echo_fails_validation
+      - tests.test_validate_worker_output.TestModeEchoAndAnalystModeExclusivity.test_design_system_detection_with_full_mode_payload_keys_fails_validation
+      - tests.test_validate_worker_output.TestModeEchoAndAnalystModeExclusivity.test_valid_full_mode_completed_passes
+      - tests.test_validate_worker_output.TestModeEchoAndAnalystModeExclusivity.test_valid_design_system_detection_completed_passes
+    red_confirmed: true
+    red_reason: >-
+      Manually invoked the script (before this test file existed) against
+      the "design_system_detection result containing resolved_requirements/
+      project_detection" case and observed it PASS (exit 0) before the
+      mode-branching payload-exclusivity logic existed in
+      validate_worker_result -- i.e. the criterion's failure mode was
+      silently accepted until the WORKER_CAPABILITIES table and mode_echo
+      branch were implemented. After implementation the same input produces
+      the expected "payload-forbidden" error (exit 1).
+  AC-5:
+    tests:
+      - tests.test_validate_worker_output.TestDryRunApplyRejections.test_stale_input_digest_rejected
+      - tests.test_validate_worker_output.TestDryRunApplyRejections.test_stale_workflow_blob_rejected
+      - tests.test_validate_worker_output.TestDryRunApplyRejections.test_expected_mismatch_rejected
+      - tests.test_validate_worker_output.TestDryRunApplyRejections.test_duplicate_patch_id_with_differing_content_rejected
+      - tests.test_validate_worker_output.TestDryRunApplyRejections.test_replace_all_after_implementation_started_rejected
+      - tests.test_validate_worker_output.TestDryRunApplyRejections.test_append_rework_missing_mandatory_preserve_path_rejected
+      - tests.test_validate_worker_output.TestDryRunApplyRejections.test_valid_dry_run_apply_passes_for_both_operations
+    red_confirmed: true
+    red_reason: >-
+      _validate_dry_run_apply did not exist until implemented; the
+      fixture-corpus self-check tool (ad hoc, mirroring this test file)
+      caught concrete red failures while the dry-run-apply fixtures were
+      being built, e.g. the "expected mismatch" branch had no fixture at
+      all on the first pass and the corpus-wide self-check only covered
+      five of the six AC-5 conditions until it was added, and a duplicate
+      patch_id fixture without differing content initially raced the
+      idempotency comparison.
+  AC-6:
+    tests:
+      - tests.test_validate_worker_output.TestFixtureCoverageValidAndInvalidPerBranch.test_every_group_has_a_valid_and_an_invalid_case
+      - tests.test_validate_worker_output.TestFixtureCoverageValidAndInvalidPerBranch.test_the_two_analyst_modes_are_covered_separately
+    red_confirmed: true
+    red_reason: >-
+      Before em-workflow/references/fixtures/ was generated, this test's
+      discover_fixture_cases() yielded an empty set and
+      `self.assertTrue(groups, ...)` failed outright; the two-analyst-modes
+      assertion likewise failed against an empty group set. Confirmed by
+      running the check against the repository state prior to fixture
+      generation (empty fixtures/ directory).
+  AC-7:
+    tests:
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+    red_confirmed: true
+    red_reason: >-
+      Same as AC-6: an empty (or partially built) fixtures/ directory made
+      `assertTrue(cases, ...)` fail, and during iterative fixture
+      construction the ad hoc self-check script (mirroring this test)
+      caught real exit-code mismatches (e.g. implementation-planner
+      valid-completed initially failed with a write_policy violation before
+      its envelope's allowed_write_roots was corrected; question-packet
+      supersedes/valid-supersedes initially failed before the supersedes
+      cross-packet-reference rule was relaxed to match design-input.md
+      5.9's semantics) before the corpus and validator converged.
+notes: >-
+  Additional edge-case and depth tests not tied to a single numbered AC:
+  TestExtendOnlyComparability (design-input.md 5.4.2's alias/merge-key
+  uncomparable rule -- a genuine red was observed here: the first
+  implementation used `yaml.AliasNode`, which does not exist in PyYAML's
+  composed Node API, and raised AttributeError until rewritten to detect
+  alias reuse via node object identity); TestSymlinkedWrittenArtifact and
+  TestTaskPlanFilesBulletBacktickEdgeCases (Test Notes edge cases);
+  TestFixtureBranchesDerivedFromDesignInput (the Test Notes' "coverage test
+  that parses the branch table" -- parses design-input.md 5.11.5 and 5.6.3
+  rather than hardcoding the vocabulary, mirroring test_workflow_patch_doc.py's
+  pattern); TestReworkIndexNewScenariosRequireTestsAppend (direct unit test
+  closing a fixture-corpus gap for one internal cross-check branch).
