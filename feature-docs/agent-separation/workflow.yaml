@@ -311,8 +311,8 @@ tasks:
     - NFR1
     - NFR5
     - NFR6
-    status: failed
-    notes: 'transient: implementer terminated by an upstream API stream stall; worktree kept, retry #1 dispatched'
+    status: in_progress
+    notes: 'retry #1 in flight (previous attempt killed by an upstream API stream stall; journal failed event recorded via the taskstop recorder hook)'
     branch: em-workflow/agent-separation/task0013
   task0014:
     title: プラグイン不変条件チェックスクリプト
@@ -330,8 +330,8 @@ tasks:
     - FR30
     - NFR6
     - NFR7
-    status: failed
-    notes: 'transient: implementer terminated by an upstream API stream stall; worktree kept, retry #1 dispatched'
+    status: in_progress
+    notes: 'retry #1 in flight (previous attempt killed by an upstream API stream stall; journal failed event recorded via the taskstop recorder hook)'
     branch: em-workflow/agent-separation/task0014
 review:
   status: pending
