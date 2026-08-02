@@ -1616,7 +1616,7 @@ review フェーズの auto-fix ループは、複数の review-editor が integ
 |---|---|---|
 | HEAD SHA | `git rev-parse HEAD` | stale 判定 |
 | index の blob ID と mode | `git ls-files -s -z` | scope 判定 |
-| working tree の存在種別と内容 | tracked path を列挙し、通常ファイル・symlink は `git hash-object --` でハッシュ、不在はその種別を記録 | scope 判定 |
+| working tree の存在種別と内容 | dispatch 前は取得しない。clean 前提により index の blob ID が tracked 作業ツリーの identity を兼ねる。dispatch 後、`git status --porcelain -z -uall` と index/working tree の比較が変更ありと報告した path だけを `git hash-object --` でハッシュし、不在はその種別を記録する | scope 判定 |
 | untracked ファイル一覧 | `git status --porcelain -z -uall` | scope 判定 |
 | `extend_only` 対象のキー集合 | `design-system/tokens.yaml` を parse | scope 判定 |
 
