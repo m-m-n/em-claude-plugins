@@ -1,0 +1,31 @@
+{
+  "active_request_id": null,
+  "answers": {
+    "requirement.fr4.tbd-resolution": {
+      "answer_mode": "not-a-real-mode",
+      "answered_at": "2026-08-02T16:00:00+09:00",
+      "freeform": null,
+      "normalized_answer": "x",
+      "packet_id": "create-plan-q0001",
+      "question_id": "requirement.fr4.tbd-resolution",
+      "resolution_note": null,
+      "selected_option_ids": [],
+      "source": "user"
+    }
+  },
+  "artifacts": [],
+  "base_revision": "a3c91f2",
+  "feature": "example",
+  "generation": 1,
+  "last_error": null,
+  "last_input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "packets": {},
+  "patches": [],
+  "phase": "create-plan",
+  "progress_fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "resolved_input_cache": {},
+  "schema_version": 1,
+  "stale_redispatch_count": 0,
+  "status": "awaiting_answers",
+  "worker_runs": []
+}

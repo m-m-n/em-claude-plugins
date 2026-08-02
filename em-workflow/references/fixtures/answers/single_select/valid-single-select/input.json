@@ -1,0 +1,15 @@
+[
+  {
+    "answer_mode": "single_select",
+    "answered_at": "2026-08-02T16:00:00+09:00",
+    "freeform": null,
+    "normalized_answer": "chose option A",
+    "packet_id": "create-plan-q0001",
+    "question_id": "q.single",
+    "resolution_note": null,
+    "selected_option_ids": [
+      "opt-a"
+    ],
+    "source": "user"
+  }
+]

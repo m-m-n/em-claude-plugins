@@ -1,0 +1,29 @@
+{
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "iteration": 1,
+  "packet_id": "create-plan-q0001",
+  "phase": "create-plan",
+  "questions": [
+    {
+      "answer_mode": "multi_select",
+      "blocking": true,
+      "category": "tbd-resolution",
+      "depends_on": [],
+      "evidence": [],
+      "gate_id": "create-plan.tbd-resolution",
+      "header": "Question",
+      "on_unanswered": "block",
+      "options": [],
+      "priority": "high",
+      "prompt": "A question needing an answer.",
+      "question_id": "q.multi-bad",
+      "supersedes": [],
+      "why_needed": "Needed to proceed."
+    }
+  ],
+  "schema_version": 1,
+  "worker": "implementation-planner"
+}

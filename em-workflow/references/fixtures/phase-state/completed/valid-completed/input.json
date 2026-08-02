@@ -1,0 +1,25 @@
+{
+  "active_request_id": null,
+  "answers": {},
+  "artifacts": [
+    {
+      "path": "feature-docs/example/IMPLEMENTATION.md",
+      "produced_by": "create-plan-run-0002",
+      "sha256": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "base_revision": "a3c91f2",
+  "feature": "example",
+  "generation": 1,
+  "last_error": null,
+  "last_input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "packets": {},
+  "patches": [],
+  "phase": "create-plan",
+  "progress_fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "resolved_input_cache": {},
+  "schema_version": 1,
+  "stale_redispatch_count": 0,
+  "status": "completed",
+  "worker_runs": []
+}
