@@ -7,15 +7,14 @@ requirements mapping.
 ## Write ownership
 
 **Only the orchestrator (the `/em-workflow:develop` main session) writes
-workflow.yaml.** Implementer agents work inside worktrees and MUST NOT touch
+workflow.yaml.** No exception: every Task-dispatched worker
+(requirements-analyst, spec-writer, implementation-planner, rework-planner,
+designer) is read-only with respect to this file — a worker that needs it
+changed returns a structured result (and, for the two planners, a
+`workflow_patch`, see `references/workflow-patch.md`) for the orchestrator to
+apply itself. Implementer agents work inside worktrees and MUST NOT touch
 it — a workflow.yaml edited inside a task branch becomes a guaranteed merge
 conflict. This rule is restated in the `worktree-task-workflow` skill.
-
-Exception: the upstream agents (requirements-spec-creator, implementation-
-planner) create/extend the file when dispatched by the orchestrator — they
-run against the integration worktree (created at create-spec Phase 3) and
-commit each update via commit-docs.sh, exactly like every other feature-docs
-write.
 
 ## Full structure
 
@@ -35,6 +34,14 @@ project:
                                    # `none` = no LICENSE file. Constraint input for
                                    # library selection (planner) and the license
                                    # review perspective
+  design_system:                   # confirmed once at create-spec (11a) and
+                                   # never re-detected afterward — design and
+                                   # create-plan read it as-is
+                                   # (references/contracts/designer-contract.md)
+    kind: {project_native | em_workflow | none}
+    paths: [...]                  # project_native: the native design-system's
+                                   # own files (read-only input to design);
+                                   # em_workflow / none: empty
   components:
     main:                          # one entry per buildable component
       language: {language}
@@ -51,9 +58,10 @@ workflow:                          # fixed step sequence; orchestrator advances 
   - id: design                     # visual design decisions (conditional step)
     artifacts: [DESIGN.md, design/]
     status: pending                # ONLY this step may also be `skipped`;
-                                   #   decided during create-spec (see the
-                                   #   requirements-spec-creator's design
-                                   #   step decision phase)
+                                   #   decided during create-spec (see
+                                   #   requirements-analyst's design-step
+                                   #   recommendation, confirmed by the
+                                   #   orchestrator)
     skipped_reason: null           # MANDATORY when status: skipped
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
@@ -80,7 +88,9 @@ tasks:                             # written by implementation-planner; status b
       - src/foo/bar.go             # (planner prediction; feeds review scoping
                                    #   and deviation tracking)
     skills: [backend-impl]         # from references/impl-skills.yaml; may be []
-    domains: [data-persistence]    # ⊆ the 8-value vocabulary in review-rules.yaml
+    domains: [data-persistence]    # ⊆ the vocabulary in
+                                   # references/review-rules.yaml — that file
+                                   # is the domains vocabulary SSOT
     complexity: medium             # low | medium | high (criteria: planner skill)
     requirements: [FR1]            # SPEC.md requirement IDs this task implements
     status: pending                # pending | in_progress | merged | failed
@@ -137,6 +147,26 @@ Schema consequences:
 - Editing a command string in workflow.yaml invalidates its approval — the
   orchestrator re-runs the approval gate on the next hook deny.
 
+## `completed_at_commit` (rule R2)
+
+**Normative definition**: `completed_at_commit` is the HEAD **immediately
+before** the commit that sets a step's `status` to `completed`.
+
+**Applies to all seven `workflow[]` steps** — create-spec, design,
+create-plan, implement, review, verify, retrospect — uniformly. A step may
+produce zero or more artifact commits before its completion; the
+status-completion commit is always a **separate commit** from any of them:
+
+```
+… : the step's artifact commit(s) (zero or more)
+X  : the last of the above (or, if none, the prior phase's tip)
+Y  : workflow.yaml status = completed, completed_at_commit = X
+```
+
+`completed_at_commit` always names `X`, never `Y` (the completion commit
+itself). For `implement`, `X` is the integration branch tip after every
+task has merged (a chain of merge commits, not a single artifact commit).
+
 ## Sibling artifacts
 
 ```
@@ -154,6 +184,9 @@ feature-docs/{feature}/
 │                        #   lives in tasks/taskNNNN.md.
 ├── VERIFICATION.md      # feature-wide integrated verification items
 ├── workflow.yaml        # this file
+├── phase-state/         # create-spec.yaml / create-plan.yaml / rework.yaml —
+│                        #   dialogue history + worker-run state, kept OUT of
+│                        #   workflow.yaml (references/phase-state.md)
 ├── tasks/
 │   └── task0001.md      # per-task plan + Acceptance Criteria (mandatory)
 ├── reviews/
