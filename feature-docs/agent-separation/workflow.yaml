@@ -384,7 +384,7 @@ tasks:
     - FR11
     - NFR4
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0016
     provenance:
@@ -532,10 +532,10 @@ tasks:
     requirements:
     - FR30
     - NFR6
-    status: pending
+    status: in_progress
     notes: 'held back deliberately: its repository-level assertion only becomes satisfiable once the sibling rework tasks have merged. Scope extended after task0017 merged: the gate-identifier extraction
       heuristic reports six referenced identifiers as unreferenced.'
-    branch: null
+    branch: em-workflow/agent-separation/task0021
     provenance:
       source: review
       review_round: 1
