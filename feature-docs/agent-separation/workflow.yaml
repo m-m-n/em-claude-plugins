@@ -275,8 +275,8 @@ tasks:
     - FR17
     - FR32
     - FR1
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'deviation: also updated tests/test_review_implement_develop_lock_contracts.py (stale assertion on the deleted create-spec agent name)'
     branch: em-workflow/agent-separation/task0012
   task0013:
     title: スキーマ・参照・テンプレート更新と旧定義削除
