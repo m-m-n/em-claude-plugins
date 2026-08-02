@@ -352,7 +352,7 @@ tasks:
     - FR22
     - FR31
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0015
     provenance:
