@@ -17,8 +17,11 @@ This document does not restate the shapes it builds on — it cites them:
   `references/contracts/planner-contract.md`.
 - Workflow patch structure and its sixteen application rules:
   `references/workflow-patch.md`.
-- `input_digest` (rule R1) and `completed_at_commit` (rule R2):
-  design-input.md 5.0.
+- `input_digest` (rule R1) and the seven validation layers:
+  `references/contracts/worker-envelope.md` (provenance: design-input.md 5.0
+  R1, 5.11.2).
+- `completed_at_commit` (rule R2): `references/workflow-schema.md`
+  (provenance: design-input.md 5.0 R2).
 - The clean-worktree precondition and the post-dispatch scope comparison:
   `references/phases/create-spec-phase.md` ("Scope verification") —
   identical here, so it is not repeated in this document.
@@ -88,7 +91,8 @@ that order, never from memory.
 
 `Task(subagent_type="em-workflow:implementation-planner")`, with:
 
-- `input_digest` (design-input.md 5.0 R1), computed from
+- `input_digest` (rule R1, `references/contracts/worker-envelope.md`;
+  provenance: design-input.md 5.0 R1), computed from
   `references/contracts/planner-contract.md`'s `digest_inputs`.
 - A `workflow.yaml` snapshot.
 - The source documents: SPEC.md, REQUIREMENTS.md, and DESIGN.md when
@@ -123,9 +127,10 @@ index, and the proposed workflow patch — `tasks_patch`,
 
 ## 8. Validation
 
-The seven validation layers defined in design-input.md 5.11.2 — not
-restated in full here, but the split between them matters for section 9
-below: `scripts/validate-worker-output.py` implements layers 1 (syntax), 2
+The seven validation layers, defined in full in
+`references/contracts/worker-envelope.md` (provenance: design-input.md
+5.11.2) — not restated in full here, but the split between them matters for
+section 9 below: `scripts/validate-worker-output.py` implements layers 1 (syntax), 2
 (structure), 3 (revision) and 6 (cross-artifact) — the script's own
 docstring states this. Layers 4 (scope verification), 5 (artifact
 verification) and 7 (state-machine postconditions) are **deliberately not
@@ -179,20 +184,22 @@ python3 scripts/validate-worker-output.py \
     --workflow {workflow.yaml} \
     --registries {references-dir} \
     --feature-dir {feature-docs/{feature}} \
+    --phase-state {phase-state/create-plan.yaml} \
     --digest-source {digest-source.json} \
     --dry-run-apply
 ```
 
 `--input-envelope` is mandatory for `--kind worker-result` — the script
-exits 2 without it. `--workflow`, `--registries` and `--feature-dir` are
-optional in the script's own argument parser, but each one that is omitted
-here silently narrows validation rather than failing loudly: dropping
-`--workflow` skips the requirement-existence check, dropping `--registries`
-skips the vocabulary check, and dropping `--feature-dir` skips the
-Acceptance-Criteria, files-union and Shared-Components checks together
+exits 2 without it. `--workflow`, `--registries`, `--feature-dir` and
+`--phase-state` are optional in the script's own argument parser, but each
+one that is omitted here silently narrows validation rather than failing loudly:
+dropping `--workflow` skips the requirement-existence check, dropping
+`--registries` skips the vocabulary check, dropping `--feature-dir` skips
+the Acceptance-Criteria, files-union and Shared-Components checks together
 (all three are read from the task plan and IMPLEMENTATION.md files under
-`--feature-dir`). Running anything less than the invocation above is a
-coverage regression, not a smaller valid invocation.
+`--feature-dir`), and dropping `--phase-state` skips the
+duplicate-patch-identifier idempotency check. Running anything less than the
+invocation above is a coverage regression, not a smaller valid invocation.
 
 ## 10. Atomic patch application
 
