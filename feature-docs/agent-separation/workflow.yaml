@@ -112,7 +112,7 @@ tasks:
     - FR1
     - FR2
     - FR26
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0004
   task0005:
@@ -213,9 +213,9 @@ tasks:
     - FR21
     - FR23
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0009
   task0010:
     title: 既存 worker 定義の改修（designer / implementation-planner）
     plan: tasks/task0010.md
