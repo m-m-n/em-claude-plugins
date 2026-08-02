@@ -352,9 +352,9 @@ tasks:
     - FR22
     - FR31
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0015
     provenance:
       source: review
       review_round: 1
@@ -384,9 +384,9 @@ tasks:
     - FR11
     - NFR4
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0016
     provenance:
       source: review
       review_round: 1
@@ -422,9 +422,9 @@ tasks:
     - FR27
     - FR29
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0017
     provenance:
       source: review
       review_round: 1
@@ -481,9 +481,9 @@ tasks:
     - FR20
     - NFR1
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0019
     provenance:
       source: review
       review_round: 1
@@ -507,9 +507,9 @@ tasks:
     - FR13
     - FR32
     - NFR9
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0020
     provenance:
       source: review
       review_round: 1
@@ -533,7 +533,7 @@ tasks:
     - FR30
     - NFR6
     status: pending
-    notes: null
+    notes: 'held back deliberately: its repository-level assertion only becomes satisfiable once the sibling rework tasks have merged'
     branch: null
     provenance:
       source: review
