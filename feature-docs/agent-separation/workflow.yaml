@@ -193,7 +193,7 @@ tasks:
     - FR11
     - NFR5
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0008
   task0009:
