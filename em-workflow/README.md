@@ -29,12 +29,13 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 
 - develop 開始時（Step 0）に git-setup ゲートが走る: gitleaks の存在を確認し、gitleaks pre-commit hook を冪等セットアップする。gitleaks が無ければワークフローはその場で中断する（自動コミット中のシークレット混入をコミット時点で止めるため）。
 - ライセンス整合はワークフロー横断の制約として扱う: create-spec が既存 LICENSE を `project.license`（SPDX id、無ければ `none`）として workflow.yaml に記録し、create-plan は新規ライブラリ選定をこの制約と突き合わせる（矛盾したら「差し替え / ライセンス変更」をユーザーに確認）。diff が依存マニフェストに触れたら review が license 観点を裁量層で追加する。互換性判定の SSOT は `references/license-compat.md`。LICENSE が無いプロジェクトでは完了報告で `/em-workflow:gen-license` を提案する。
-- 進捗の SSOT は `feature-docs/{feature}/workflow.yaml`（step 状態 + tasks メタデータ + review plan/サマリ + requirements マッピング）。スキーマは `references/workflow-schema.md`。
+- 進捗の SSOT は `feature-docs/{feature}/workflow.yaml`（step 状態 + tasks メタデータ + review plan/サマリ + requirements マッピング）。スキーマは `references/workflow-schema.md`。書き込むのはオーケストレーターのみ — Task dispatch される各 worker（requirements-analyst / spec-writer / implementation-planner / rework-planner / designer）は read-only で、必要な変更は構造化された結果（2 種の planner は workflow patch）として返す。
+- 各 phase（create-spec / create-plan / rework 合成）の対話履歴と worker 実行状態は `feature-docs/{feature}/phase-state/`（create-spec.yaml / create-plan.yaml / rework.yaml）に置き、`workflow.yaml` には持たせない（`references/phase-state.md`）。
 - ワークフロー成果物（REQUIREMENTS.md / SPEC.md / DESIGN.md / IMPLEMENTATION.md / VERIFICATION.md / tasks/ / reviews/ / retrospect.yaml を含む feature-docs/{feature}/ 一式、および test/README.md・design-system/）は integration worktree にのみ存在し、更新のたびに `commit-docs.sh` で integration ブランチへコミットされる。メインの作業ツリーは最終マージまで変更されない — 唯一の例外は `.claude/worktrees/` を無視させる gitignore-guard 相当の `.gitignore` 追記（create-spec Phase 3 または implement Step I.1 で発生）で、それ以外は `git status` が常にクリーンに保たれる。
 - 再開はブランチ起点: `em-workflow/*/integration` 形式のブランチを列挙して機能を発見し、そのブランチの workflow.yaml から状態を復元する。worktree が失われていてもブランチさえ残っていれば `git worktree add` で再作成して続行する。
 - ユーザーのブランチには一切コミットしない。全ワークフローコミットは専用の `em-workflow/{feature}/integration` ブランチに載り、完了時に「base_branch にマージ / ブランチを残す / push + PR 作成」の三択を確認する（デフォルトはマージ。--batch は確認なしで「ブランチを残す」）。いずれの分岐でも integration worktree は片付ける — マージ時はブランチも削除し、それ以外はブランチを残してメイン作業ツリーから `git switch` できる状態にする。
 - 軽い変更もタスク 1 個として同じフローを通す（従来型モードは持たない）。
-- `--batch` で無人実行モードになる: 外部タスク管理サービス起点のヘッドレス起動（例: `claude -p "/em-workflow:develop --batch <タスク記述>"`）向けに、全ての AskUserQuestion ゲートを機械的既定値へ置き換えて完走する。要件の不明点は Codex 相談（最大 5 ターン、結論は Claude）で確定し、コマンド承認は自動記録（refusal パターンは従来どおり拒否）、review 残存 critical/high と verify 失敗はそれぞれ上限 1 回の自動 rework、完了時はマージも PR 作成もせず integration worktree だけ片付けてブランチを残す（worktree が消えることで checkout ロックが外れ、メイン作業ツリーから `git switch` で取り込み — ローカルマージまたは push + PR 作成 — できる）。決定表の SSOT は `references/batch-mode.md`。決定表に無いゲート（未知の選択肢）に出くわしたら同じ Codex 相談ループにフォールバックし、決まらなければ副作用の小さい側を選んで報告に記録する。失敗時は隠さず停止して報告する — 差し戻しは外部サービス側で新タスクを切る運用。
+- `--batch` で無人実行モードになる: 外部タスク管理サービス起点のヘッドレス起動（例: `claude -p "/em-workflow:develop --batch <タスク記述>"`）向けに、全ての AskUserQuestion ゲートを機械的既定値へ置き換えて完走する。要件の不明点は Codex 相談（最大 5 ターン、結論は Claude）で確定し、コマンド承認は自動記録（refusal パターンは従来どおり拒否）、review 残存 critical/high と verify 失敗はそれぞれ上限 1 回の自動 rework、完了時はマージも PR 作成もせず integration worktree だけ片付けてブランチを残す（worktree が消えることで checkout ロックが外れ、メイン作業ツリーから `git switch` で取り込み — ローカルマージまたは push + PR 作成 — できる）。各ゲートの既定回答は question packet の `gate_id` をキーに `references/batch-policies.yaml`（gate ごとの決定表 SSOT）を引く。policy に無い `gate_id` は `references/question-resolution.md` の未収載ゲート fallback（同じ Codex 相談ループ、決まらなければ副作用の小さい側を選択）に従うが、仕様変更・セキュリティ・ライセンス・不可逆判断のゲートは未収載なら安全側で中断する（fail-closed）。gate_id を経由しない残りの batch 判断（git-setup 失敗、feature 選定、レビュー diff サイズゲート、コマンド承認 hook のフォールバック等）は `references/batch-mode.md` に残る。失敗時は隠さず停止して報告する — 差し戻しは外部サービス側で新タスクを切る運用。
 
 ## コマンド
 
@@ -47,17 +48,19 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 | `/em-workflow:git-setup` | git ローカル設定の冪等セットアップ（gitleaks pre-commit hook）。develop の Step 0 と同じ手順を単体実行する |
 | `/em-workflow:gen-license [ライセンスID] [--analyze-only]` | 依存ライセンス分析 → 互換ライセンス選定 → LICENSE 生成。既存 LICENSE の変更（relicense）にも使い、workflow.yaml の `project.license` があれば同期する |
 
-## アーキテクチャ: エージェント 9 枚 + スキル注入
+## アーキテクチャ: エージェント 11 枚 + スキル注入
 
-エージェント markdown を減らし、知識はスキルとして注入する（「規律は静的プリロード、ドメイン知識は動的注入」）。
+エージェント markdown を減らし、知識はスキルとして注入する（「規律は静的プリロード、ドメイン知識は動的注入」）。オーケストレーターが唯一の状態書き込み者・唯一の AskUserQuestion 呼び出し元であり、それ以外の worker はすべて Task dispatch され、構造化された結果（question packet または workflow patch）を返すのみで workflow.yaml を直接書かない。
 
 ### エージェント
 
 | エージェント | 役割 | 静的プリロード |
 |-------------|------|---------------|
-| requirements-spec-creator | 対話で REQUIREMENTS.md / SPEC.md / workflow.yaml を作成 | — |
+| requirements-analyst | create-spec の調査・質問候補生成（プロジェクト規約・ライセンス・デザインシステム候補検出） | — |
+| spec-writer | requirements-analyst の確定結果と 2 種のテンプレートから REQUIREMENTS.md / SPEC.md を執筆 | — |
 | designer | design ステップを完全自律実行（tokens.yaml / HTML モック / DESIGN.md を生成） | — |
-| implementation-planner | タスク分割 + domains / complexity / skills 割当 | plan-writing |
+| implementation-planner | タスク分割 + domains / complexity / skills 割当。workflow patch を提案（workflow.yaml へ直接書き込まない） | plan-writing |
+| rework-planner | review findings / verify failed_items から追加タスクのみを計画。既存計画は書き換えず、workflow patch（`append_rework`）を提案 | — |
 | implementer | 1 タスク = 1 worktree。TDD 実装からマージ完了まで自走 | worktree-task-workflow, tdd-testing |
 | reviewer | 汎用 Claude レビュアー（観点はスキル注入） | — |
 | codex-reviewer | 汎用 GPT/Codex レビュアー（クロスバリデーション用） | codex-prompting |
@@ -106,4 +109,5 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 - flock（util-linux）— stock macOS には無いため別途インストールが必要
 - gitleaks — develop 開始時の git-setup ゲートが存在チェックし、無ければワークフローを中断する（pre-commit hook でのシークレットスキャンに使用）
 - python3 — コマンド実行ガードの hook。無い環境では hook が非ブロッキングで抜け、コマンドごとの AskUserQuestion フォールバックゲートに切り替わる
+- python3 + PyYAML — 同梱の検証スクリプト（`scripts/validate-worker-output.py` / `scripts/check-plugin-invariants.py`）が使う実行時依存。テストコードはこの依存を使わず標準ライブラリのみで動く（`test/README.md`）。環境によっては `python3` の非対話実行に `Bash(python3:*)` 権限エントリの追加が必要
 - Codex CLI（任意 — 無ければ GPT クロスバリデーションはクリーンにスキップ）
