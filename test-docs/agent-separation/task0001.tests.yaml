@@ -1,0 +1,96 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeDocExists.test_file_exists
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeApplicability.test_documents_every_applicable_worker
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeApplicability.test_documents_every_non_applicable_worker
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeFields.test_documents_every_input_field
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeFields.test_documents_every_output_field
+    red_confirmed: true
+    red_reason: >-
+      Before worker-envelope.md existed, TestWorkerEnvelopeDocExists.test_file_exists
+      failed with AssertionError (path.is_file() is False), and every other
+      class in this group failed at setUpClass with FileNotFoundError reading
+      the same missing path.
+  AC-2:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeStatusValues.test_defines_all_six_status_values
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeStatusValues.test_documents_mandatory_and_forbidden_columns
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeStatusValues.test_needs_user_input_requires_question_packet
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeStatusValues.test_completed_requires_payload
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised FileNotFoundError for worker-envelope.md before the
+      document existed; after the document was created, an intermediate draft
+      still failed test_needs_user_input_requires_question_packet because the
+      first "needs_user_input" occurrence in that draft was inside the
+      question_packet output-field row rather than the status table row, so
+      the assertion window did not reach the status table's own
+      question_packet mention.
+  AC-3:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeRules.test_states_mode_echo_rule
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeRules.test_states_written_artifacts_digest_rule
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeRules.test_states_read_restriction_rule
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeRules.test_states_exclusivity_assumption_and_its_interval
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised FileNotFoundError before the document existed; after
+      creation, an intermediate draft still failed
+      test_states_exclusivity_assumption_and_its_interval because the Markdown
+      hard-wrap split "scope snapshot" across a line break, so the raw-text
+      substring check for that two-word phrase did not match.
+  AC-4:
+    tests:
+      - tests.test_worker_contract_docs.TestQuestionPacketDocExists.test_file_exists
+      - tests.test_worker_contract_docs.TestQuestionPacketFields.test_documents_identifier_patterns
+      - tests.test_worker_contract_docs.TestQuestionPacketFields.test_documents_size_limits
+      - tests.test_worker_contract_docs.TestQuestionPacketFields.test_documents_every_category_value
+      - tests.test_worker_contract_docs.TestQuestionPacketFields.test_documents_per_question_fields
+      - tests.test_worker_contract_docs.TestQuestionPacketFields.test_states_packet_is_question_request_only
+    red_confirmed: true
+    red_reason: >-
+      Before question-packet-schema.md existed, test_file_exists failed with
+      AssertionError and every other class in this group failed at setUpClass
+      with FileNotFoundError; after the document was created, an intermediate
+      draft still failed test_documents_per_question_fields on the 'priority'
+      field because per-question fields were only rendered as combined
+      dotted/bracketed tokens (e.g. `questions[].priority`), which does not
+      satisfy an exact standalone `priority` backtick-token match.
+  AC-5:
+    tests:
+      - tests.test_worker_contract_docs.TestQuestionPacketAnswerRules.test_documents_answer_object_fields
+      - tests.test_worker_contract_docs.TestQuestionPacketAnswerRules.test_documents_source_vocabulary
+      - tests.test_worker_contract_docs.TestQuestionPacketAnswerRules.test_documents_all_seven_consistency_rules
+      - tests.test_worker_contract_docs.TestQuestionPacketAnswerRules.test_marks_rules_one_through_five_as_machine_verified
+      - tests.test_worker_contract_docs.TestQuestionPacketAnswerRules.test_options_map_onto_ask_user_question
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised FileNotFoundError for question-packet-schema.md before
+      the document existed.
+  AC-6:
+    tests:
+      - tests.test_worker_contract_docs.TestQuestionPacketOnUnanswered.test_states_no_on_unanswered_value_converts_to_assumption
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised FileNotFoundError before the document existed; after
+      creation, an intermediate draft still failed this assertion because the
+      Markdown hard-wrap put a line break between "an" and "assumption"
+      inside the exact sentence being asserted.
+  AC-7:
+    tests:
+      - tests.test_worker_contract_docs.TestNoRestatedSiblingSsotContent.test_neither_doc_restates_workflow_patch_internals
+      - tests.test_worker_contract_docs.TestNoRestatedSiblingSsotContent.test_neither_doc_restates_phase_state_internals
+      - tests.test_worker_contract_docs.TestNoRestatedSiblingSsotContent.test_neither_doc_restates_write_policy_internal_actions
+      - tests.test_worker_contract_docs.TestNoRestatedSiblingSsotContent.test_neither_doc_has_a_workflow_patch_application_rules_heading
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised FileNotFoundError before both documents existed; after
+      creation, an intermediate draft of worker-envelope.md still failed
+      test_neither_doc_restates_write_policy_internal_actions because its
+      introductory paragraph spelled out the literal token `expect_digest`
+      (owned by design-input.md 5.4.2 / the per-worker contracts) while
+      explaining what it deliberately does not restate.
