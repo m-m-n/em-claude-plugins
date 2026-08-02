@@ -311,8 +311,9 @@ tasks:
     - NFR1
     - NFR5
     - NFR6
-    status: in_progress
-    notes: 'retry #1 in flight (previous attempt killed by an upstream API stream stall; journal failed event recorded via the taskstop recorder hook)'
+    status: merged
+    notes: 'retry #1 succeeded. deviations: edited em-workflow/README.md instead of the marketplace-root README.md; left license-compat.md / impl-skills.yaml / templates/task-plan.md / skills/design/SKILL.md
+      unedited (already satisfied AC-4)'
     branch: em-workflow/agent-separation/task0013
   task0014:
     title: プラグイン不変条件チェックスクリプト
