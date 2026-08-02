@@ -1,0 +1,54 @@
+task_id: task0026
+baseline_failures: []          # 761 tests, all green, run before any edit (stashed the
+                                # premature phase-state.md edit first to get a clean read)
+final_failures: []             # 765 tests, all green (761 baseline + 4 new)
+acceptance_tests:
+  AC-1:
+    tests: [tests.test_phase_state_doc.TestBackfillCrossProductDelegation.test_no_step_loops_back_to_an_earlier_question]
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit doc, assertNotIn("return to step 2", section) failed
+      because that exact phrase was present in backfill step 5.
+  AC-2:
+    tests: [tests.test_phase_state_doc.TestBackfillCrossProductDelegation.test_owning_contract_cross_product_table_is_named]
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit doc, assertIn("references/contracts/designer-contract.md",
+      section) failed -- the backfill section named neither the file nor the table.
+  AC-3:
+    tests: [tests.test_phase_state_doc.TestBackfillCrossProductDelegation.test_ordinary_check_runs_at_next_step_entry_not_inside_backfill]
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit doc, assertIn("next step entry", section) failed --
+      the old step 5 said "return to step 2", not "runs at the next step entry".
+  AC-4:
+    tests: [tests.test_phase_state_doc.TestBackfillCrossProductDelegation.test_both_abort_outcomes_traceable_without_restating_the_table]
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit doc, assertIn("reclassification gate", section) failed
+      -- the old step 5 named neither outcome by name.
+  AC-5:
+    tests:
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_backfill_section_present_with_step_b_placement
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_backfill_placement_rationale_is_stated
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_backfill_interrupted_answer_loss_is_stated
+    red_confirmed: false
+    red_reason: >-
+      AC-5 requires these pre-existing statements to remain unchanged -- there is
+      no new behavior to drive red-green on. These three pre-existing tests passed
+      before my edit (they cover content outside step 5, which I did not touch)
+      and still pass after it, which is the observable proof nothing here
+      regressed. Left untouched: the Step B placement list, its "Why not set
+      in_progress first" rationale, and the "Interrupted backfill" answer-loss
+      note.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-6 is a meta-criterion about the test file itself (it asserts AC-1
+      through AC-3, and still asserts every schema/recovery element it
+      currently covers) rather than a product behavior a single test can
+      red/green. Verified by running the full file: all 4 new tests plus all
+      37 pre-existing tests in tests/test_phase_state_doc.py pass (41 total),
+      and the full suite (765 tests) has no regressions from the 761-test
+      baseline.
