@@ -76,17 +76,32 @@ to create-spec) is already applied — in that order, never from memory.
 
 ## 5. Analyst dispatch loop
 
-1. Compute `input_digest` (design-input.md 5.0 R1) from
-   `references/contracts/analyst-contract.md`'s `digest_inputs` list.
-2. Dispatch `requirements-analyst` with `analysis_mode: full`.
-3. Validate the result (`scripts/validate-worker-output.py`,
+1. Resolve every glob-derived category (E2E discovery, design-system
+   candidates) at the point `references/contracts/analyst-contract.md`
+   names as the resolution point (before dispatch, into
+   `resolved_input_paths`). **This resolution is cached**
+   (`resolved_input_cache`, `references/phase-state.md`) and is reused
+   as-is on every iteration of this loop unless one of that document's
+   three re-resolution triggers fired since the last resolution: a new
+   phase run started; a worker's `written_artifacts` reported a path under
+   a candidate glob; or the last `commit-docs.sh` call returned exit 4 and
+   the worktree was refreshed. An analyst clarification round that hits
+   none of these three re-reads nothing and re-scans nothing — it reuses
+   the cached paths and digests.
+2. Compute `input_digest` (design-input.md 5.0 R1) from
+   `references/contracts/analyst-contract.md`'s `digest_inputs` list, using
+   the resolved (possibly cached) paths from step 1.
+3. `Task(subagent_type="em-workflow:requirements-analyst")`, with input
+   `analysis_mode: full`.
+4. Validate the result (`scripts/validate-worker-output.py`,
    design-input.md 5.11.2's validation layers).
-4. If the result is `needs_user_input`: normalize the packet (section 6),
+5. If the result is `needs_user_input`: normalize the packet (section 6),
    deduplicate and prioritize it (`references/question-resolution.md`),
    present it via `AskUserQuestion`, persist every answer to phase-state
    immediately (section 3, step 4), then re-dispatch with the answers folded
-   in.
-5. Repeat until the result is `status: completed`.
+   in — step 1 applies again on this re-dispatch, so the cache is consulted
+   before any re-scan.
+6. Repeat until the result is `status: completed`.
 
 ## 6. Question normalization
 
@@ -113,9 +128,10 @@ unlisted-gate fallback. Not restated here.
 
 ## 9. Spec writer dispatch
 
-- requirements-analyst's `completed` payload (`resolved_requirements`) is
-  passed as spec-writer's fixed input — spec-writer never re-derives or
-  invents requirement content of its own.
+- `Task(subagent_type="em-workflow:spec-writer")`, once
+  requirements-analyst's `completed` payload (`resolved_requirements`) and
+  `write_policy` are ready — passed as spec-writer's fixed input;
+  spec-writer never re-derives or invents requirement content of its own.
 - `write_policy` is built per the per-target decision procedure in
   `references/contracts/spec-writer-contract.md` ("How the orchestrator
   chooses each target's action before dispatch"): a target that does not yet
@@ -349,27 +365,74 @@ The second case is an inherent limit of snapshot-based detection without
 OS-level writer identification; it is covered by adherence to the
 assumption above, not by the mechanism itself.
 
+### Pre-dispatch containment validation
+
+Before dispatching a worker, validate every `write_policy.targets` path and
+every `allowed_write_roots` entry against the containment rules —
+the same rules the post-dispatch comparison applies below, run here
+against the *intended* targets rather than against an observed change set:
+
+- Reject any target or root that is an absolute path, or whose
+  project-root-relative form contains a `..` segment.
+- Reject any target or root where the path itself, or any segment beneath
+  it, is a symlink (`lstat` every segment; a `realpath` resolution that
+  lands outside the project root is rejected outright).
+- Reject any target or root that collides with another on a
+  case-insensitive filesystem, even though comparison elsewhere is
+  case-sensitive.
+
+A target or root that fails this check is a plan-time defect: abort before
+dispatch and report the offending path. Do not launch the worker and rely
+on the post-dispatch comparison to catch it instead — it cannot.
+
+**This pre-dispatch check and the post-dispatch comparison below are not
+interchangeable; the latter is an audit, not the primary control.** The
+post-dispatch comparison only ever inspects the integration worktree's own
+index and working tree. A worker write that goes through a symlink hop to
+a location outside the worktree, or straight to an absolute path outside
+it, never enters that index or working tree — so the comparison has
+nothing to compare and cannot detect it, let alone undo it. Validating
+containment before dispatch is the only point at which such an escape can
+be prevented; once it has happened, a write made outside the worktree
+cannot be recovered by anything the post-dispatch comparison does.
+
 ### Pre-dispatch snapshot
 
 | What | How | Use |
 |---|---|---|
 | HEAD SHA | `git rev-parse HEAD` | Staleness |
 | Index blob IDs and modes | `git ls-files -s -z` | Scope |
-| Working-tree content for tracked paths | Hash regular files and symlinks with `git hash-object --`; record the kind for anything absent | Scope |
 | Untracked files | `git status --porcelain -z -uall` | Scope |
 | `extend_only` target key sets | Parse `design-system/tokens.yaml` | Scope |
 
-A symlink is stored by git as a blob (the link string itself), so
-`git hash-object` also detects a change to what the link points at.
+**No whole-tree working-tree-content hashing pass runs here.** The
+precondition above already guarantees the tracked working tree matches the
+index, so the index blob IDs captured by `git ls-files -s -z` already carry
+the same identity a content hash would recompute for every tracked path —
+hashing the entire checkout a second time before dispatch is redundant
+work on top of that guarantee. Content hashing with `git hash-object --`
+still happens, but only in the post-dispatch comparison below, and only
+for the paths that comparison already knows changed — never for the whole
+tree. A symlink is stored by git as a blob (the link string itself), so
+`git hash-object` on a changed symlink path also detects a change to what
+the link points at.
 
 ### Post-dispatch comparison (in this order)
 
 1. **Compute the worker's change set** — always, regardless of whether HEAD
    moved.
-   - Diff the snapshot's index / working-tree / untracked lists against the
-     current state.
-   - Deletions, mode changes, and kind changes (file ⇔ symlink ⇔ absent) all
-     count as differences.
+   - Run `git status --porcelain -z -uall` (untracked and ignored-aware) and
+     compare the index (`git ls-files -s -z`, re-read) and the working tree
+     against the snapshot's recorded blob IDs, modes, and existence kinds to
+     find every path that changed. This step alone already reports
+     deletions, mode changes, and kind changes (file ⇔ symlink ⇔ absent) —
+     none of those require reading file content.
+   - **Content hashing with `git hash-object --` is applied only to the
+     paths this comparison already reports as changed** — never to the
+     whole tracked tree. Combined with dropping the pre-dispatch
+     working-tree hash (above), this is what brings the cost of scope
+     verification down from O(repository bytes) to O(changed paths) per
+     dispatch.
    - The HEAD layer is **never** part of this comparison.
 2. **Judge permitted scope.** Split changed paths by whether they existed at
    snapshot time; each half has its own rule.
