@@ -1,0 +1,20 @@
+{
+  "blocking_reason": null,
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "mode_echo": "full",
+  "payload": {
+    "resolved_requirements": {}
+  },
+  "question_packet": null,
+  "report": "done",
+  "request_id": "run-0001",
+  "schema_version": 1,
+  "status": "completed",
+  "warnings": [],
+  "worker": "requirements-analyst",
+  "workflow_patch": null,
+  "written_artifacts": []
+}

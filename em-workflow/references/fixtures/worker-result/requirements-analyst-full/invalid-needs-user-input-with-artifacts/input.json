@@ -1,0 +1,69 @@
+{
+  "blocking_reason": null,
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "mode_echo": "full",
+  "payload": {},
+  "question_packet": {
+    "input_revision": {
+      "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "workflow_blob": "8f17c04"
+    },
+    "iteration": 1,
+    "packet_id": "create-plan-q0001",
+    "phase": "create-spec",
+    "questions": [
+      {
+        "answer_mode": "select_or_freeform",
+        "blocking": true,
+        "category": "tbd-resolution",
+        "depends_on": [],
+        "evidence": [
+          {
+            "detail": "FR4 marked TBD",
+            "line": 42,
+            "path": "feature-docs/example/SPEC.md"
+          }
+        ],
+        "gate_id": "create-plan.tbd-resolution",
+        "header": "FR4 Retry",
+        "on_unanswered": "block",
+        "options": [
+          {
+            "description": "Assume a reasonable default",
+            "label": "Assume a default",
+            "option_id": "assume",
+            "recommended": true
+          },
+          {
+            "description": "Exclude FR4 from scope",
+            "label": "Exclude",
+            "option_id": "exclude"
+          }
+        ],
+        "priority": "high",
+        "prompt": "FR4 retry count is undecided. How to proceed?",
+        "question_id": "requirement.fr4.tbd-resolution",
+        "supersedes": [],
+        "why_needed": "The retry count affects task split and VERIFICATION scenario count."
+      }
+    ],
+    "schema_version": 1,
+    "worker": "requirements-analyst"
+  },
+  "report": "done",
+  "request_id": "run-0001",
+  "schema_version": 1,
+  "status": "needs_user_input",
+  "warnings": [],
+  "worker": "requirements-analyst",
+  "workflow_patch": null,
+  "written_artifacts": [
+    {
+      "path": "feature-docs/example/REQUIREMENTS.md",
+      "sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ]
+}
