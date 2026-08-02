@@ -1,7 +1,7 @@
 # test/README.md テンプレート
 
-このファイルは `requirements-spec-creator` エージェントの Phase 0.5 で使用されるテンプレートです。
-ユーザーのテスティングセットアップ回答から `{placeholder}` を埋めてください。
+このファイルは `spec-writer` worker が test/README.md 生成に使用するテンプレートです。
+requirements-analyst が収集したテスティングセットアップの調査結果から `{placeholder}` を埋めてください。
 
 ---
 

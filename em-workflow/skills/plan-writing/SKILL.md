@@ -107,6 +107,11 @@ review floor and codex cross-validation — under-rating weakens review).
 
 ## domains criteria (assign every value that materially applies)
 
+**Vocabulary SSOT**: `references/review-rules.yaml`, not this list. The
+descriptions below are judgment CRITERIA for assigning domains to a task;
+the set of valid domain values itself lives only in `review-rules.yaml`.
+When the two disagree on the value set, `review-rules.yaml` wins.
+
 - `auth` — authentication/authorization logic, sessions, tokens, permissions.
 - `input-handling` — parsing/validating external input (user, API, file).
 - `data-persistence` — DB schema/queries, storage formats, migrations.

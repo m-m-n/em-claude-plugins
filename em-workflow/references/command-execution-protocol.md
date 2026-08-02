@@ -65,8 +65,14 @@ python3 ${CLAUDE_PLUGIN_ROOT}/hooks/bash_guard.py --remove --project-dir {projec
 
 ## Approval gate (orchestrator / create-spec)
 
-Run by agents that hold `AskUserQuestion` (the orchestrator and
-requirements-spec-creator). Implementers never run this gate.
+`gate_id: create-spec.command-approval`. Run ONLY by the orchestrator — the
+sole caller of `AskUserQuestion` in the workflow. No Task-dispatched worker
+(requirements-analyst, spec-writer, implementation-planner, rework-planner,
+designer) calls it directly: a worker that cannot resolve something itself
+returns a `question_packet` (`references/question-packet-schema.md`) in its
+result, and the orchestrator is the one that turns that packet into an
+`AskUserQuestion` call, including this gate. Implementers never run this
+gate either.
 
 1. Resolve every command string from `workflow.yaml` `project.components`
    (build / test / format / e2e). Trim surrounding whitespace; skip empty.

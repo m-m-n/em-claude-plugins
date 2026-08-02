@@ -1,0 +1,127 @@
+task_id: task0013
+baseline_failures: []          # `python3 -m unittest discover -s tests` on the
+                                # inherited state (previous implementer's
+                                # uncommitted partial edits already applied):
+                                # 511 tests, all passing.
+final_failures: []             # same command after this task's edits: 536
+                                # tests (25 new in test_reference_sweep.py),
+                                # all passing. 536 - 511 = 25 == the new file.
+
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_reference_sweep.TestWorkflowSchemaWriteOwnership.test_no_upstream_agent_write_exception_remains
+      - tests.test_reference_sweep.TestWorkflowSchemaWriteOwnership.test_documents_phase_state_sibling
+      - tests.test_reference_sweep.TestWorkflowSchemaWriteOwnership.test_defines_completed_at_commit_normatively_as_rule_r2
+      - tests.test_reference_sweep.TestWorkflowSchemaWriteOwnership.test_completed_at_commit_applies_to_all_seven_steps
+    red_confirmed: true
+    red_reason: >-
+      Verified by stashing all task0013 edits (git stash -u) and re-running
+      the freshly-written test file against the pre-task committed
+      workflow-schema.md. It still contained the literal phrase "Exception:
+      the upstream agents" (write-ownership carve-out) -> failed
+      test_no_upstream_agent_write_exception_remains. It had no
+      "phase-state/" line in Sibling artifacts -> failed
+      test_documents_phase_state_sibling. It had no
+      "`completed_at_commit` (rule R2)" heading at all -> both
+      test_defines_completed_at_commit_normatively_as_rule_r2 and
+      test_completed_at_commit_applies_to_all_seven_steps errored with
+      ValueError (substring not found) from the _section() helper. Popped
+      the stash afterward and confirmed all four went green.
+
+  AC-2:
+    tests:
+      - tests.test_reference_sweep.TestWorkflowSchemaDesignSystemAndDomainsSsot.test_documents_design_system_two_fields
+      - tests.test_reference_sweep.TestWorkflowSchemaDesignSystemAndDomainsSsot.test_documents_three_kind_values
+      - tests.test_reference_sweep.TestWorkflowSchemaDesignSystemAndDomainsSsot.test_names_domains_vocabulary_ssot
+    red_confirmed: true
+    red_reason: >-
+      Same stash-revert method. Pre-task workflow-schema.md had no
+      "design_system:" key at all -> test_documents_design_system_two_fields
+      and test_documents_three_kind_values both errored (ValueError,
+      substring not found). The domains: line comment already named
+      review-rules.yaml but did not say "SSOT" -> failed
+      test_names_domains_vocabulary_ssot on the missing "SSOT" assertion
+      specifically. All three green after the edit.
+
+  AC-3:
+    tests:
+      - tests.test_reference_sweep.TestOldAgentDeleted.test_requirements_spec_creator_file_absent
+      - tests.test_reference_sweep.TestOldAgentDeleted.test_no_task_owned_file_references_old_agent_name
+    red_confirmed: true
+    red_reason: >-
+      Pre-task, em-workflow/agents/requirements-spec-creator.md existed
+      (test_requirements_spec_creator_file_absent failed) and several
+      task-owned files (command-execution-protocol.md, the three retargeted
+      templates, workflow-schema.md's write-ownership exception clause)
+      still named it, so test_no_task_owned_file_references_old_agent_name
+      failed with a non-empty offenders list. Both green after deleting the
+      file and rewriting the header references.
+
+  AC-4:
+    tests:
+      - tests.test_reference_sweep.TestTemplateAndRegistryHeaderRetargets.test_template_headers_name_a_currently_existing_worker
+      - tests.test_reference_sweep.TestTemplateAndRegistryHeaderRetargets.test_license_compat_names_a_currently_existing_worker
+      - tests.test_reference_sweep.TestTemplateAndRegistryHeaderRetargets.test_impl_skills_registry_names_a_currently_existing_worker
+      - tests.test_reference_sweep.TestTemplateAndRegistryHeaderRetargets.test_task_plan_structural_markers_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Mixed, reported honestly: test_template_headers_name_a_currently_existing_worker
+      genuinely went red -> green (its three subTests each failed pre-task:
+      requirements-document.md / spec-document.md / test-readme.md all
+      named "requirements-spec-creator" in their header, not "spec-writer").
+      The other three tests in this AC
+      (test_license_compat_names_a_currently_existing_worker,
+      test_impl_skills_registry_names_a_currently_existing_worker,
+      test_task_plan_structural_markers_unchanged) passed BEFORE this task
+      touched anything and stayed green -- license-compat.md and
+      impl-skills.yaml never mentioned the old agent name in their git
+      history (grepped `git log -p --all`, zero hits) and already named
+      "implementation-planner"; task-plan.md's header already named
+      "implementation-planner" too. No edit was needed or made to those
+      three files. Their tests are included for AC-4 coverage but do not
+      individually prove a red->green transition; see the implementer
+      report's notes for the same disclosure.
+
+  AC-5:
+    tests:
+      - tests.test_reference_sweep.TestReadmePyYamlAndPermissionNote.test_em_workflow_readme_states_pyyaml_prerequisite
+      - tests.test_reference_sweep.TestReadmePyYamlAndPermissionNote.test_em_workflow_readme_states_python_execution_permission_note
+      - tests.test_reference_sweep.TestReadmePyYamlAndPermissionNote.test_test_readme_scopes_no_external_dependency_rule_to_test_code
+    red_confirmed: true
+    red_reason: >-
+      Pre-task em-workflow/README.md contained no "PyYAML" or
+      "Bash(python3:*)" substring (both failed with AssertionError: not
+      found). test/README.md's Test Framework section read "Python standard
+      library `unittest` (Python 3.14, no external dependencies)" with no
+      "scoped to test code" wording and no PyYAML mention -> failed. All
+      three green after the edits.
+
+  AC-6:
+    tests:
+      - tests.test_reference_sweep.TestPluginManifest.test_version_is_strictly_greater_than_baseline
+      - tests.test_reference_sweep.TestPluginManifest.test_description_mentions_new_worker_composition
+      - tests.test_reference_sweep.TestPluginManifest.test_plugin_json_is_valid_json
+      - tests.test_reference_sweep.TestPluginManifest.test_version_not_bumped_would_be_detected
+    red_confirmed: true
+    red_reason: >-
+      Pre-task plugin.json version was "0.1.27", exactly equal to
+      BASELINE_PLUGIN_VERSION, so the strict-greater-than assertion failed.
+      Its description contained none of "requirements-analyst" /
+      "spec-writer" / "rework-planner" (each subTest failed). Green after
+      bumping to 0.1.28 and adding the worker-composition sentence.
+      test_plugin_json_is_valid_json and test_version_not_bumped_would_be_detected
+      are structural/self-proving checks (valid JSON already true pre-task;
+      the forged-equal-version meta-check is self-contained) and are listed
+      for completeness rather than as red->green evidence.
+
+  AC-7:
+    tests:
+      - tests.test_reference_sweep.TestGatePolicyAndDomainsSsotReferences.test_plan_writing_skill_names_review_rules_as_domains_ssot
+      - tests.test_reference_sweep.TestGatePolicyAndDomainsSsotReferences.test_command_execution_protocol_names_the_gate_identifier
+    red_confirmed: true
+    red_reason: >-
+      Pre-task plan-writing/SKILL.md's "## domains criteria" section had no
+      "review-rules.yaml" mention (failed). command-execution-protocol.md
+      had no "create-spec.command-approval" string anywhere (failed). Both
+      green after the edits.
