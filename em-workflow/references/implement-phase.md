@@ -98,6 +98,17 @@ document is written; this phase never creates them itself.
    fail-closed with the same trusted-root fallback discipline as the review
    protocol (search `$HOME/.claude/plugins` / `$HOME/.claude/skills` with
    path filter `*/em-workflow/*/scripts/*`, never cwd).
+5. **Rework re-entry precondition**: when this phase is entered because
+   review or verify sent `implement` back to `pending` (rework, not a fresh
+   first pass), require at least one task in `tasks` whose
+   `status == pending` — this is Invariant 1 of
+   `references/rework-task-synthesis.md`: the synthesis step that flips
+   `implement` to `pending` never does so without registering a pending
+   rework task alongside it. Entering this phase with every task `merged`
+   (or otherwise none `pending`) is therefore a protocol error, not a fresh
+   idle state to wait out: ABORT the phase immediately with a clear report
+   naming the offending workflow.yaml state, rather than looping through
+   Step I.2 with nothing to launch.
 
 ## Step I.1: Confirm the integration worktree, record the implement baseline
 
