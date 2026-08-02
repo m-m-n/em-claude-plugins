@@ -140,7 +140,8 @@ absent/unset, set `workflow[implement].base_commit = $BASE_COMMIT` (first
 implement entry for the feature); on resume (implement already
 `in_progress`) or rework re-entry (implement `pending` after review/verify
 sent it back) the existing `base_commit` value is preserved unchanged, per
-batch-mode.md's rework rule. In all cases set `implement` status to
+`references/rework-task-synthesis.md` Section 10 point 3 / Section 11
+Invariant 5. In all cases set `implement` status to
 `in_progress`; commit the update with
 `commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase start" "$BASE_COMMIT"`
 (the third argument is `expected_base_tip`; exit-4 recovery: Branch &
@@ -211,7 +212,9 @@ so approving up front avoids mid-launch failures. Commands the user rejects
 stay unapproved: the hook denies them and the implementer reports failure
 instead of working around it (worktree-task-workflow skill). Batch mode:
 auto-record instead of asking; refusal patterns still hard-fail
-(references/batch-mode.md decision table).
+(`references/batch-policies.yaml`'s `create-spec.command-approval` entry —
+the same approval gate, regardless of which phase's task launch triggers
+it).
 
 Launch each selected task as a BACKGROUND `Task(subagent_type="em-workflow:implementer")`
 call. Synchronous fan-out-and-wait for a batch of implementers is explicitly
@@ -339,7 +342,8 @@ never dropped mid-phase. "実装完了 = 親ブランチへのマージ完了" a
 carve-out; scope changes belong to the planning/spec layer, not to the
 implement phase.
 
-Batch mode (references/batch-mode.md decision table): no AskUserQuestion —
+Batch mode (`references/batch-mode.md`'s Non-packet gates table,
+`implement.failed-task`): no AskUserQuestion —
 after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a
 resume guard). A task that fails a second time → **abort phase** (implement
 stays `failed`, report and stop; the external service cuts a follow-up
