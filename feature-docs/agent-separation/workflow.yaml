@@ -93,7 +93,7 @@ tasks:
     - FR32
     - NFR3
     - NFR9
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0003
   task0004:
@@ -231,9 +231,9 @@ tasks:
     - FR17
     - FR18
     - NFR1
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0010
   task0011:
     title: フェーズプロトコル 2 件（create-spec / create-plan）と scope 検証
     plan: tasks/task0011.md
