@@ -1,0 +1,15 @@
+{
+  "allowed_write_roots": [],
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "mode": "interactive",
+  "phase": "rework",
+  "request_id": "env-run-0001",
+  "resolved_input_paths": {},
+  "schema_version": 1,
+  "write_policy": {
+    "targets": []
+  }
+}

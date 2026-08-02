@@ -1,0 +1,51 @@
+{
+  "base_input_digest": "sha256:bfc475ee26b7f24ede30218c16bb478202b51363ebb5a494e2dd375140fa37b4",
+  "base_workflow_blob": "8f17c04",
+  "operation": "append_rework",
+  "patch_id": "rework-p0001",
+  "preserve": [],
+  "requirements_patch": null,
+  "schema_version": 1,
+  "step_patches": [
+    {
+      "expected": {
+        "status": "completed"
+      },
+      "set": {
+        "status": "pending"
+      },
+      "step_id": "implement"
+    }
+  ],
+  "tasks_patch": {
+    "entries": {
+      "task0002": {
+        "complexity": "medium",
+        "domains": [
+          "auth"
+        ],
+        "files": [
+          "src/auth.go"
+        ],
+        "initial_status": "pending",
+        "plan": "tasks/task0002.md",
+        "provenance": {
+          "review_round": 2,
+          "source": "review",
+          "source_ids": [
+            "abc123"
+          ]
+        },
+        "requirements": [
+          "FR1"
+        ],
+        "skills": [
+          "backend-impl"
+        ],
+        "title": "Fix auth bypass"
+      }
+    },
+    "expected_next_task_id": "task0002",
+    "mode": "append"
+  }
+}
