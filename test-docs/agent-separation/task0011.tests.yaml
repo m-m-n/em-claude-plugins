@@ -1,0 +1,54 @@
+task_id: task0011
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_phase_protocols.TestFilesExist.test_create_spec_phase_doc_exists
+      - tests.test_phase_protocols.TestFilesExist.test_create_plan_phase_doc_exists
+      - tests.test_phase_protocols.TestCreateSpecSectionCoverageAndOrder.test_every_section_title_present
+      - tests.test_phase_protocols.TestCreateSpecSectionCoverageAndOrder.test_sections_appear_in_design_order
+      - tests.test_phase_protocols.TestCreatePlanSectionCoverageAndOrder.test_every_section_title_present
+      - tests.test_phase_protocols.TestCreatePlanSectionCoverageAndOrder.test_sections_appear_in_design_order
+    red_confirmed: true
+    red_reason: "FileNotFoundError: create-spec-phase.md / create-plan-phase.md did not exist"
+  AC-2:
+    tests:
+      - tests.test_phase_protocols.TestCreateSpecBootstrapAndPersistence.test_worktree_created_immediately_after_feature_name_fixed
+      - tests.test_phase_protocols.TestCreateSpecBootstrapAndPersistence.test_every_answer_persisted_before_redispatch
+    red_confirmed: true
+    red_reason: "FileNotFoundError: create-spec-phase.md did not exist"
+  AC-3:
+    tests:
+      - tests.test_phase_protocols.TestCreateSpecTerminationAndLoopStop.test_no_fixed_round_limit
+      - tests.test_phase_protocols.TestCreateSpecTerminationAndLoopStop.test_progress_fingerprint_stop_conditions
+      - tests.test_phase_protocols.TestCreateSpecTerminationAndLoopStop.test_three_way_stalled_gate
+      - tests.test_phase_protocols.TestCreateSpecTerminationAndLoopStop.test_automatic_assumption_conversion_prohibited
+    red_confirmed: true
+    red_reason: "FileNotFoundError: create-spec-phase.md did not exist"
+  AC-4:
+    tests:
+      - tests.test_phase_protocols.TestCreateSpecDesignSystemDetermination.test_runs_even_when_design_is_skipped
+      - tests.test_phase_protocols.TestCreateSpecDesignSystemDetermination.test_zero_candidate_exception_stated
+    red_confirmed: true
+    red_reason: "FileNotFoundError: create-spec-phase.md did not exist"
+  AC-5:
+    tests:
+      - tests.test_phase_protocols.TestCreatePlanPreconditions.test_design_system_cross_product_check_precondition
+      - tests.test_phase_protocols.TestCreatePlanPreconditions.test_reclassification_branch_leaves_step_status_unchanged
+    red_confirmed: true
+    red_reason: "FileNotFoundError: create-plan-phase.md did not exist"
+  AC-6:
+    tests:
+      - tests.test_phase_protocols.TestScopeVerificationCleanPreconditionAndChangeSet.test_clean_worktree_precondition_no_automatic_cleaning
+      - tests.test_phase_protocols.TestScopeVerificationCleanPreconditionAndChangeSet.test_change_set_from_index_and_working_tree_only
+      - tests.test_phase_protocols.TestScopeVerificationCleanPreconditionAndChangeSet.test_post_dispatch_order_change_set_before_head_and_reason
+    red_confirmed: true
+    red_reason: "FileNotFoundError: create-spec-phase.md did not exist"
+  AC-7:
+    tests:
+      - tests.test_phase_protocols.TestScopeVerificationPathRulesAndTrash.test_path_normalization_and_containment_rules
+      - tests.test_phase_protocols.TestScopeVerificationPathRulesAndTrash.test_symlink_and_case_rules
+      - tests.test_phase_protocols.TestScopeVerificationPathRulesAndTrash.test_abort_when_trash_tool_unavailable
+    red_confirmed: true
+    red_reason: "FileNotFoundError: create-spec-phase.md did not exist"
