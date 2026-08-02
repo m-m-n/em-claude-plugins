@@ -1,0 +1,58 @@
+task_id: task0015
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_phase_protocols.TestExplicitTaskDispatchForm.test_create_spec_dispatches_requirements_analyst_explicitly
+      - tests.test_phase_protocols.TestExplicitTaskDispatchForm.test_create_spec_dispatches_spec_writer_explicitly
+      - tests.test_phase_protocols.TestExplicitTaskDispatchForm.test_create_plan_dispatches_implementation_planner_explicitly
+      - tests.test_phase_protocols.TestExplicitTaskDispatchForm.test_no_prose_only_dispatch_sentence_remains
+      - tests.test_phase_protocols.TestExplicitTaskDispatchForm.test_dispatch_form_matches_the_pattern_used_for_design_step
+    red_confirmed: true
+    red_reason: "AssertionError: 'Task(subagent_type=\"em-workflow:requirements-analyst\")' / '...spec-writer\")' / '...implementation-planner\")' not found in the pre-edit documents, which only had the prose form (\"Dispatch `requirements-analyst` with ...\", \"Dispatch `implementation-planner` with:\")"
+  AC-2:
+    tests:
+      - tests.test_phase_protocols.TestCreatePlanCrossProductTwoBranches.test_two_branches_are_explicitly_distinguished
+      - tests.test_phase_protocols.TestCreatePlanCrossProductTwoBranches.test_none_with_tokens_present_branch_goes_to_reclassify_gate
+      - tests.test_phase_protocols.TestCreatePlanCrossProductTwoBranches.test_em_workflow_yaml_absent_html_present_branch_aborts
+      - tests.test_phase_protocols.TestCreatePlanCrossProductTwoBranches.test_abort_branch_does_not_reuse_the_reclassify_gate
+    red_confirmed: true
+    red_reason: "AssertionError: the pre-edit create-plan-phase.md routed both design-system inconsistencies through the single reclassification-gate branch; none of 'These two cases are not the same branch', the em_workflow/tokens.yaml-absent abort text, or 'aborts create-plan dispatch outright' were present"
+  AC-3:
+    tests:
+      - tests.test_phase_protocols.TestScopeVerificationSnapshotCost.test_whole_tree_hashing_row_is_gone
+      - tests.test_phase_protocols.TestScopeVerificationSnapshotCost.test_changed_path_limitation_is_present
+      - tests.test_phase_protocols.TestScopeVerificationSnapshotCost.test_deletions_mode_and_kind_changes_remain_detectable
+    red_confirmed: true
+    red_reason: "AssertionError: the pre-edit pre-dispatch snapshot table still contained the 'Working-tree content for tracked paths' row (whole-tree git hash-object pass) and had no changed-path-only hashing statement"
+  AC-4:
+    tests:
+      - tests.test_phase_protocols.TestScopeVerificationPreDispatchContainment.test_pre_dispatch_containment_section_exists_before_snapshot
+      - tests.test_phase_protocols.TestScopeVerificationPreDispatchContainment.test_containment_rules_cover_absolute_paths_dotdot_symlinks_case
+      - tests.test_phase_protocols.TestScopeVerificationPreDispatchContainment.test_post_dispatch_comparison_cannot_recover_out_of_worktree_write
+    red_confirmed: true
+    red_reason: "AssertionError: no 'Pre-dispatch containment validation' section existed before the pre-edit 'Pre-dispatch snapshot' section, and the post-dispatch-is-an-audit / cannot-recover statements were absent (the scoped containment-rules test was rewritten to slice only the new section, since the same vocabulary already existed in the pre-existing post-dispatch containment rules)"
+  AC-5:
+    tests:
+      - tests.test_phase_protocols.TestAnalystDispatchLoopCacheReuse.test_resolved_input_cache_is_named
+      - tests.test_phase_protocols.TestAnalystDispatchLoopCacheReuse.test_three_re_resolution_triggers_are_named
+      - tests.test_phase_protocols.TestAnalystDispatchLoopCacheReuse.test_cache_reuse_applies_again_on_redispatch
+    red_confirmed: true
+    red_reason: "AssertionError: the pre-edit Analyst dispatch loop never mentioned resolved_input_cache, the three re-resolution triggers, or cache reuse on re-dispatch"
+  AC-6:
+    tests:
+      - tests.test_phase_protocols.TestCreatePlanValidatorImplementedSubset.test_section_8_states_the_layer_split
+      - tests.test_phase_protocols.TestCreatePlanValidatorImplementedSubset.test_section_9_marks_unimplemented_invariants_as_human_review
+      - tests.test_phase_protocols.TestCreatePlanValidatorImplementedSubset.test_optional_arguments_silently_narrow_validation
+      - tests.test_phase_protocols.TestCreatePlanValidatorImplementedSubset.test_canonical_validator_invocation_is_recorded
+    red_confirmed: true
+    red_reason: "AssertionError: the pre-edit section 8 claimed all seven validation layers were 'rendered by scripts/validate-worker-output.py' with no script/orchestrator split, and section 9 listed all eight invariants as machine-checked with no human-review carve-out and no canonical CLI invocation recorded"
+  AC-7:
+    tests:
+      - tests.test_phase_protocols.TestCreateSpecSectionCoverageAndOrder.test_every_section_title_present
+      - tests.test_phase_protocols.TestCreateSpecSectionCoverageAndOrder.test_sections_appear_in_design_order
+      - tests.test_phase_protocols.TestCreatePlanSectionCoverageAndOrder.test_every_section_title_present
+      - tests.test_phase_protocols.TestCreatePlanSectionCoverageAndOrder.test_sections_appear_in_design_order
+    red_confirmed: false
+    red_reason: "These are task0011's pre-existing section-coverage tests, unchanged by this task; they were already green before this task's edits (the task plan requires they 'keep passing', not that they go red-green here). AC-7 (assertions for AC-1..AC-6 plus continued section coverage) is otherwise satisfied by the six red-confirmed entries above, which are the new assertions this task adds."
