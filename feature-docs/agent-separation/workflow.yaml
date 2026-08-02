@@ -151,7 +151,7 @@ tasks:
     requirements:
     - FR4
     - FR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0006
   task0007:
@@ -193,9 +193,9 @@ tasks:
     - FR11
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0008
   task0009:
     title: 新規 worker 定義 3 件（analyst / spec-writer / rework-planner）
     plan: tasks/task0009.md
