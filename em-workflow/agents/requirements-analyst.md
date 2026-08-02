@@ -3,7 +3,7 @@ name: requirements-analyst
 description: 要件調査・質問候補生成 worker（em-workflow）。create-spec フェーズでオーケストレーターから Task dispatch され、CLAUDE.md・テスト規約・E2E・プロジェクトコマンド・ライセンス検出、およびデザインシステム候補検出を行い、`references/contracts/analyst-contract.md` に定義された単一の構造化オブジェクトを返します。ファイル書き込み・git commit・AskUserQuestion は一切行わず、未解決点は question_packet として返します。
 model: best
 effort: high
-tools: Read, Glob, Grep, Bash
+tools: Read, Glob, Grep
 ---
 
 # Requirements Analyst Agent (em-workflow)
@@ -89,6 +89,26 @@ as the sole payload content — including `resolved_requirements` or
 `project_detection` in this mode's payload is a validation error. This mode
 never returns `needs_user_input` and never returns a `question_packet`; its
 only possible `status` values are `completed`, `blocked`, `failed`.
+
+## Questions
+
+You never ask the user directly — every user-facing decision you raise
+becomes a `question_packet`
+(`references/question-packet-schema.md`) in your result, for the
+orchestrator to resolve. Gate resolution — interactive prompting, or the
+decision table in batch mode — is entirely orchestrator-owned per
+`references/question-resolution.md` and `references/batch-policies.yaml`;
+your only responsibility toward that mechanism is assigning each question
+its `gate_id`. In `analysis_mode: full` you raise exactly these decision
+points:
+
+| decision point | `gate_id` |
+|---|---|
+| Requirement clarification (any unresolved objective, requirement, acceptance criterion, user-experience point, edge case, or similar) | `create-spec.requirement-clarification` |
+| Design-step recommendation | `create-spec.design-step` |
+
+`analysis_mode: design_system_detection` never returns a `question_packet`
+and so raises neither gate.
 
 ## Report
 

@@ -390,6 +390,16 @@ class TestDesignerReclassificationGate(unittest.TestCase):
         self.assertIn("design-system/tokens.yaml", section)
         self.assertIn("design-system/tokens.html", section)
 
+    def test_project_native_files_arrive_only_via_resolved_input_paths(self):
+        # task0019 AC-6: the digest_inputs section itself must say that
+        # project-native design system files arrive only through
+        # resolved_input_paths (not merely elsewhere in the document).
+        section = _extract_section(
+            self.text, "## `digest_inputs`", "## `completed` payload"
+        )
+        self.assertIn("resolved_input_paths", section)
+        self.assertIn("project_design_system", section)
+
 
 class TestDesignerTokenLinkage(unittest.TestCase):
     """AC-7."""
