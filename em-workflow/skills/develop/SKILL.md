@@ -97,7 +97,7 @@ feature-docs はもう main 作業ツリーを走査しない。存在する fea
 `em-workflow/{feature}/integration` ブランチの有無で判定する（Discovery
 セマンティクス）。プロジェクトルートは最初にシェル変数へ捕捉する
 （`PROJECT_ROOT="$(git rev-parse --show-toplevel)"` —
-requirements-spec-creator.md Phase 3 と同じ安全なパターン。以降このステップの
+`references/phases/create-spec-phase.md` と同じ安全なパターン。以降このステップの
 コマンド文字列は `$PROJECT_ROOT` を参照し、`{project_root}` をコマンド文字列に
 直接埋め込まない）。
 
@@ -136,7 +136,7 @@ requirements-spec-creator.md Phase 3 と同じ安全なパターン。以降こ�
    - **存在しない**（ブランチ + worktree だけが作られ、create-spec が
      workflow.yaml を書き切る前に中断された状態）: 新規 feature 扱いには
      せず、この既存ブランチ/worktree に対して create-spec フェーズへ直接
-     再突入する（requirements-spec-creator.md Phase 3 は既存ブランチの
+     再突入する（`references/phases/create-spec-phase.md` は既存ブランチの
      検出・再利用ロジックを持つため、ここから二重にブランチが作られる
      ことはない）。完了後は workflow.yaml が生成されているので、通常どおり
      Step A.5 → Step B に合流する
@@ -170,12 +170,39 @@ workflow.yaml は integration worktree 内の
 配下の他ドキュメントも同様に worktree 内のパスを指す）。
 
 workflow.yaml を Read → `workflow[]` の最初の `status` が `completed` でも
-`skipped` でもない step を特定 → 下表のフェーズを実行 → workflow.yaml を
-Read し直して次へ。step 実行前に
-その step を `in_progress` に更新し、フェーズ完了時に `completed`（+
-`completed_at_commit`）へ更新するのはあなた（オーケストレーター）の責務
-（`skipped` は create-spec が設定する。design 以外の step に `skipped` が
-あったら YAML エラー扱いで停止）。
+`skipped` でもない step を特定 → **design-system backfill 判定**（下記）→
+下表のフェーズを実行 → workflow.yaml を Read し直して次へ。
+
+**design-system backfill**（step 特定の直後・`in_progress` 更新の**前**に
+判定する）:
+
+1. 選択した step が `design` または `create-plan` で、かつ workflow.yaml に
+   `project.design_system` が未設定なら、backfill を実行する
+   - requirements-analyst を `analysis_mode: design_system_detection` で
+     dispatch し、design system 候補を得る
+   - 候補を提示して `kind` と `paths` を確定する（interactive:
+     `gate_id: create-spec.design-system` で AskUserQuestion。候補ゼロでも
+     質問して `none` を明示させる。batch: `references/batch-policies.yaml`
+     の同 gate に従う）
+   - 確定した値を workflow.yaml `project.design_system` へ書き、
+     commit-docs.sh で `docs({feature}): backfill design_system` として
+     コミットする
+2. backfill を実行したら、workflow.yaml を**読み直して step 特定からやり直す**
+   （その step の status はまだ変更しない）
+3. backfill が不要（未設定ではない、または対象 step でない）なら、そのまま
+   下表のフェーズへ進む
+
+**`in_progress` へ先に更新しない理由**: backfill の質問中にセッションが
+切れると、step が `in_progress` のまま phase-state も無い状態になり、
+再開判定では扱えなくなるため。backfill は 1 度だけ行う（以降は通常の
+解決規則に従う）。
+
+以上を経て、step 実行前にその step を `in_progress` に更新し、フェーズ完了時に
+`completed`（+ `completed_at_commit`）へ更新するのはあなた（オーケストレーター）
+の責務（`skipped` は create-spec が設定する。design 以外の step に `skipped` が
+あったら YAML エラー扱いで停止）。`completed_at_commit` の規範的定義:
+その step の `status` を `completed` へ更新するコミットを作る**直前の HEAD**
+（規則 R2。全 7 step に適用し、意味は変更しない）。
 
 workflow.yaml か feature-docs/ 配下のドキュメントを Write/Edit するたび
 （`in_progress` / `completed` への status 更新を含む）、その場で
@@ -197,9 +224,9 @@ exit 4 ならそこでフェーズを中断し、状況をユーザーに報告�
 
 | step | 実行方法 |
 |------|----------|
-| create-spec | `${CLAUDE_PLUGIN_ROOT}/agents/requirements-spec-creator.md` を Read してその指示にインラインで従う（対話フェーズ。batch: 同ファイルの Batch Mode セクションに従い、ユーザー対話の代わりにタスク記述 + Codex 相談で書き切る） |
-| design | `${CLAUDE_PLUGIN_ROOT}/agents/designer.md` を Read してその指示にインラインで従う（完全自律フェーズ — ユーザー確認なしで走り切り、迷ったら決めて DESIGN.md に根拠を記録。詰めは実機確認後の `/em-workflow:design`。`status: skipped` の場合はこの表に来ない） |
-| create-plan | `${CLAUDE_PLUGIN_ROOT}/agents/implementation-planner.md` を Read してその指示にインラインで従う。frontmatter の `skills:` にある `plan-writing` スキル（`${CLAUDE_PLUGIN_ROOT}/skills/plan-writing/SKILL.md`）も先に Read する |
+| create-spec | `${CLAUDE_PLUGIN_ROOT}/references/phases/create-spec-phase.md` に従う（対話フェーズ。batch: 同ファイルの Batch Mode セクションに従い、ユーザー対話の代わりにタスク記述 + Codex 相談で書き切る） |
+| design | 下記「design ステップ分岐」に従う（完全自律フェーズ — ユーザー確認なしで走り切り、迷ったら決めて DESIGN.md に根拠を記録。詰めは実機確認後の `/em-workflow:design`。`status: skipped` の場合はこの表に来ない） |
+| create-plan | `${CLAUDE_PLUGIN_ROOT}/references/phases/create-plan-phase.md` に従う。frontmatter の `skills:` にある `plan-writing` スキル（`${CLAUDE_PLUGIN_ROOT}/skills/plan-writing/SKILL.md`）も先に Read する |
 | implement | `${CLAUDE_PLUGIN_ROOT}/references/implement-phase.md` を Read してインライン実行（ワークキュー方式: 最大 6 タスクをバックグラウンド Task 起動 → ターンを終えて完了通知を待つ → journal + git 実状態から reconcile して空きスロットへ補充。同期 fan-out でのバリア待ちはしない） |
 | review | `${CLAUDE_PLUGIN_ROOT}/references/review-phase.md` を Read してインライン実行（develop-駆動モード、`--report-only` / `--batch` を伝播） |
 | verify | 下記「verify フェーズ」をインライン実行 |
@@ -208,6 +235,41 @@ exit 4 ならそこでフェーズを中断し、状況をユーザーに報告�
 `${CLAUDE_PLUGIN_ROOT}` が解決しない場合は `$HOME/.claude/plugins` /
 `$HOME/.claude/skills` 配下のみを Glob（`**/em-workflow/*/references/...`）で
 探索する。cwd からは決して読まない。
+
+### design ステップ分岐
+
+designer を dispatch する**直前**に、design-system の直積検査を行う
+（`references/contracts/designer-contract.md` の `kind` ×
+token 実在の対応表に対する検査。この検査は create-plan の precondition
+（`references/phases/create-plan-phase.md`）でも同じ表に対して独立に行う —
+design 専用の phase protocol は作らないため、ここが design 側の実施箇所）。
+
+1. workflow.yaml `project.design_system` の `kind` / `paths` を読む
+2. integration worktree で `design-system/tokens.yaml` /
+   `design-system/tokens.html` の実在を確認する
+3. `kind` と実在状態の組み合わせを `designer-contract.md` の対応表と照合する
+   - **`kind: none` かつどちらかのファイルが実在する場合**: 通常の dispatch
+     を中断し、同 contract が定義する**再分類ゲート**（design と create-plan
+     の両エントリで共有・その場で実行し create-spec へは戻らない）を実行する。
+     ゲートは workflow.yaml の `project.design_system` を更新して
+     commit-docs.sh で `docs({feature}): reclassify design_system` として
+     コミットしたのち、**この design step の事前条件から再開する（status は
+     変更しない）** — 1 に戻る
+   - **`kind: em_workflow` かつ yaml が無く html だけ実在する場合**: 不整合
+     として dispatch を中止する。該当パスを報告し、html の削除または yaml の
+     復元をユーザーに促してターンを終える（要ユーザー介入。再開時にこの
+     分岐から再実行する）
+   - 上記いずれにも該当しなければ、`designer-contract.md` の対応表どおりに
+     `write_policy`（`targets` / `allowed_write_roots`）を組み立てる
+4. `Task(subagent_type="em-workflow:designer")` を、確定した `design_inputs`
+   （requirements_path / spec_path / workflow_path / design_token_template）
+   と `write_policy` を渡して dispatch する。designer は完全自律で question
+   packet も workflow patch も返さない
+5. 完了後、成果物（DESIGN.md / 更新された `design-system/` 配下 /
+   mockup）を検証し、design step の `status` と `completed_at_commit`
+   （規則 R2）を設定して commit-docs.sh でコミットする
+   （`payload.design_summary`: decisions_count / open_items / tokens /
+   mockups をレポートに反映）
 
 ### verify フェーズ
 
@@ -229,12 +291,25 @@ integration worktree（implement-phase.md の Branch & Worktree Model 参照）�
    （`result: pass|fail`、失敗項目リスト）→ Step B の規律どおり
    commit-docs.sh でコミット
 5. fail → verify を `failed` にし、AskUserQuestion で差し戻し先を確認
-   （implement へ rework / review へ / 中断）。pass → `completed`
+   （implement へ rework / review へ / 中断）。「implement へ rework」を
+   選んだ場合は `${CLAUDE_PLUGIN_ROOT}/references/rework-task-synthesis.md`
+   Section 10 が定める verify 由来の遷移に従う（`needs_rework` は review
+   専用フィールドのため書かない — Section 10 の step 1 は行わず step 2 から
+   始める）:
+   `Task(subagent_type="em-workflow:rework-planner")` を dispatch し、
+   検証・適用した patch の
+   `step_patches` の中で implement / verify を `pending` に戻す（新しい
+   rework task が 1 件以上 workflow.yaml へ登録されるまで戻さない — 同
+   SSOT Invariant 1）。タスク合成の中身（grouping / task ID 割当 /
+   metadata 導出 / 検証カバレッジ等）は同 SSOT が定義し、ここでは繰り返さ
+   ない。pass → `completed`
    （batch: 確認せず自動 rework。`batch.verify_rework_count == 0` なら
-   failed_items から rework タスクを合成して implement / verify を
-   `pending` に戻しカウンタを +1、既に 1 以上なら `failed` のまま報告して
-   停止 — batch-mode.md「Rework task synthesis」）。いずれの分岐も
-   workflow.yaml 更新後に commit-docs.sh でコミットする
+   interactive と同じ手順で rework-planner を dispatch し、
+   `${CLAUDE_PLUGIN_ROOT}/references/rework-task-synthesis.md` に従って
+   patch を検証・適用して implement / verify を `pending` に戻し
+   （`implement` の `pending` 復帰は同 patch の中で行う — 別書き込みには
+   しない）カウンタを +1、既に 1 以上なら `failed` のまま報告して停止）。
+   いずれの分岐も workflow.yaml 更新後に commit-docs.sh でコミットする
 
 ### retrospect フェーズ（収集は自動・承認不要）
 

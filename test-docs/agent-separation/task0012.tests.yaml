@@ -1,0 +1,107 @@
+task_id: task0012
+baseline_failures: []          # 394/394 passing before any change (4a)
+final_failures: []             # 425/425 passing after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_develop_skill_rewiring.TestNoInlineAgentDefinitionWording.test_inline_agent_definition_phrase_is_absent
+      - tests.test_develop_skill_rewiring.TestNoInlineAgentDefinitionWording.test_deleted_create_spec_agent_name_is_absent
+      - tests.test_develop_skill_rewiring.TestNoInlineAgentDefinitionWording.test_create_spec_and_create_plan_point_at_phase_protocols
+      - tests.test_develop_skill_rewiring.TestNoInlineAgentDefinitionWording.test_design_row_points_at_task_dispatch_branch
+    red_confirmed: true
+    red_reason: >-
+      Against the original SKILL.md: "インラインで従う" was present in the
+      create-spec/design/create-plan rows (assertNotIn failed);
+      "requirements-spec-creator" was present 3 times (assertNotIn failed);
+      "references/phases/create-spec-phase.md" and
+      "references/phases/create-plan-phase.md" were absent (assertIn
+      failed); and the design-row test raised ValueError (substring
+      "### design ステップ分岐" not found) because that subsection did not
+      exist yet.
+  AC-2:
+    tests:
+      - tests.test_develop_skill_rewiring.TestDesignStepDispatchAndCrossProductCheck.test_designer_subagent_type_dispatched_as_task
+      - tests.test_develop_skill_rewiring.TestDesignStepDispatchAndCrossProductCheck.test_cross_product_check_precedes_task_dispatch
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised ValueError("substring not found") for the marker
+      "### design ステップ分岐" against the original SKILL.md -- the design
+      step branch subsection and the Task(subagent_type="em-workflow:designer")
+      dispatch line did not exist yet (the old row read agents/designer.md
+      inline instead).
+  AC-3:
+    tests:
+      - tests.test_develop_skill_rewiring.TestDesignStepDispatchAndCrossProductCheck.test_none_with_tokens_case_runs_reclassification_gate
+      - tests.test_develop_skill_rewiring.TestDesignStepDispatchAndCrossProductCheck.test_reclassification_gate_resumes_without_changing_status
+      - tests.test_develop_skill_rewiring.TestDesignStepDispatchAndCrossProductCheck.test_em_workflow_yaml_missing_html_present_case_aborts
+      - tests.test_develop_skill_rewiring.TestDesignStepDispatchAndCrossProductCheck.test_both_inconsistent_combinations_are_distinct_from_normal_path
+    red_confirmed: true
+    red_reason: >-
+      Same setUpClass ValueError as AC-2 (the "### design ステップ分岐"
+      section, which contains the kind x token-existence check, the two
+      abort combinations and the reclassification-gate reference, did not
+      exist in the original file).
+  AC-4:
+    tests:
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_ssot_referenced_from_both_branches
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_rework_planner_is_the_named_worker
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_synthesis_mechanics_are_not_restated_inline
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_old_thin_batch_mode_reference_is_replaced
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_interactive_three_way_choice_is_retained
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_batch_counter_cap_is_retained
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_pending_rework_task_invariant_is_stated
+    red_confirmed: true
+    red_reason: >-
+      Against the original SKILL.md the verify step's interactive branch
+      said only "implement へ rework / review へ / 中断" with no SSOT
+      reference, and the batch branch said "failed_items から rework タスク
+      を合成" inline plus the stale "batch-mode.md「Rework task synthesis」"
+      citation. test_ssot_referenced_from_both_branches,
+      test_rework_planner_is_the_named_worker,
+      test_synthesis_mechanics_are_not_restated_inline (assertNotIn found
+      the old inline phrase),  test_old_thin_batch_mode_reference_is_replaced
+      (assertNotIn found the stale citation) and
+      test_pending_rework_task_invariant_is_stated (new sentence, not
+      present at all) all failed for the right reason.
+      test_interactive_three_way_choice_is_retained passed even against the
+      original -- that enumeration ("implement へ rework / review へ /
+      中断") was never removed, only extended, so this is a genuine
+      retention guard rather than new-behaviour proof.
+      test_batch_counter_cap_is_retained failed against the original too,
+      but only incidentally: its last assertIn ("`failed` のまま報告して
+      停止", written as one unbroken phrase) did not match the original's
+      line-wrapped "報告して\n   停止" -- the substance (counter check,
+      +1, cap-reached message) was already present and unchanged. Both are
+      kept in this task's suite as regression guards for the retained
+      batch/interactive decision behaviour AC-4 requires.
+  AC-5:
+    tests:
+      - tests.test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_backfill_section_precedes_in_progress_update_instruction
+      - tests.test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_backfill_targets_design_and_create_plan_only
+      - tests.test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_backfill_restarts_step_selection_after_completing
+      - tests.test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_backfill_does_not_change_status_before_restart
+      - tests.test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_rationale_for_ordering_is_stated
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised ValueError("substring not found") for the marker
+      "### design ステップ分岐" (used as the Step B section's end boundary)
+      against the original SKILL.md, because neither that subsection nor
+      the design-system backfill branch existed yet -- the original Step B
+      intro went straight from step selection to the in_progress update
+      with no backfill text in between.
+  AC-6:
+    tests:
+      - tests.test_develop_skill_rewiring.TestCommitSemanticsWordingAndExit4Recovery.test_completed_at_commit_states_normative_rule
+      - tests.test_develop_skill_rewiring.TestCommitSemanticsWordingAndExit4Recovery.test_completed_at_commit_meaning_is_unchanged
+      - tests.test_develop_skill_rewiring.TestCommitSemanticsWordingAndExit4Recovery.test_exit4_recovery_discipline_is_retained
+    red_confirmed: true
+    red_reason: >-
+      assertIn failed for "その step の `status` を `completed` へ更新する
+      コミットを作る**直前の HEAD**" and for "（規則 R2。全 7 step に適用し、
+      意味は変更しない）。" -- the original sentence only said "更新するのは
+      あなた（オーケストレーター）の責務" with no normative HEAD/R2 wording.
+      test_exit4_recovery_discipline_is_retained passed even against the
+      original (the exit-4 paragraph was never touched), which is the
+      expected/desired invariant for a "retained" element rather than a
+      changed one -- kept in this task's suite as the regression guard for
+      that invariant.
