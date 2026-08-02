@@ -1,0 +1,100 @@
+task_id: task0010
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_refitted_worker_agents.TestDesignerAC1EnvelopeAndResolvedInputPaths.test_states_design_inputs_field
+      - tests.test_refitted_worker_agents.TestDesignerAC1EnvelopeAndResolvedInputPaths.test_states_discovered_inputs_arrive_via_resolved_input_paths
+      - tests.test_refitted_worker_agents.TestDesignerAC1EnvelopeAndResolvedInputPaths.test_references_designer_contract_by_path
+    red_confirmed: true
+    red_reason: >-
+      Original designer.md described the D0 Context as "the orchestrator
+      passes the feature directory..." with self-directed discovery ("Discover
+      design assets in priority order...") and never mentioned `design_inputs`,
+      `resolved_input_paths`, or the designer contract path. All three
+      assertions failed against that content (AssertionError: substring not
+      found) before the D0 rewrite.
+  AC-2:
+    tests:
+      - tests.test_refitted_worker_agents.TestDesignerAC2NoPacketNoPatchNeverCommitsReadOnlyWorkflow.test_states_it_returns_neither_packet_nor_patch
+      - tests.test_refitted_worker_agents.TestDesignerAC2NoPacketNoPatchNeverCommitsReadOnlyWorkflow.test_states_reason_workflow_patch_carries_no_new_information
+      - tests.test_refitted_worker_agents.TestDesignerAC2NoPacketNoPatchNeverCommitsReadOnlyWorkflow.test_states_never_commits
+      - tests.test_refitted_worker_agents.TestDesignerAC2NoPacketNoPatchNeverCommitsReadOnlyWorkflow.test_states_workflow_yaml_read_only
+    red_confirmed: true
+    red_reason: >-
+      Original designer.md had no Output section, no mention of
+      `question_packet` / `workflow_patch`, and its Boundaries section said
+      "Never modify SPEC.md / REQUIREMENTS.md / workflow.yaml" (not the
+      literal "workflow.yaml is read-only" / "This agent never commits"
+      phrasing the new tests require). All four assertions failed
+      (AssertionError) before the Output/Boundaries rewrite.
+  AC-3:
+    tests:
+      - tests.test_refitted_worker_agents.TestDesignerAC3WritePolicyAndDesignSystemNotAllowedRoot.test_states_targets_for_design_md_and_two_token_files
+      - tests.test_refitted_worker_agents.TestDesignerAC3WritePolicyAndDesignSystemNotAllowedRoot.test_states_design_system_root_not_allowed_write_root
+    red_confirmed: true
+    red_reason: >-
+      Original designer.md never described `write_policy.targets` or
+      `allowed_write_roots` at all (no path-level write policy existed in the
+      pre-refit prompt). Both assertions failed (AssertionError: substring not
+      found) before the Boundaries "Write-policy scope" bullet was added.
+  AC-4:
+    tests:
+      - tests.test_refitted_worker_agents.TestFrontmatterParsesAndHasNoAskUserQuestion.test_planner_tools_list_has_no_ask_user_question
+      - tests.test_refitted_worker_agents.TestPlannerAC4NoAskUserQuestionAnywhere.test_ask_user_question_absent_from_whole_file
+    red_confirmed: true
+    red_reason: >-
+      Original implementation-planner.md frontmatter listed
+      "tools: Read, Write, Glob, Grep, Bash, AskUserQuestion" and the body
+      instructed calling AskUserQuestion in three places (steps 2, 3 and the
+      Batch Mode section). Both assertions failed against that content before
+      AskUserQuestion was removed from the tool list and every body mention.
+  AC-5:
+    tests:
+      - tests.test_refitted_worker_agents.TestPlannerAC5QuestionPacketAndWorkflowPatch.test_three_decision_points_named
+      - tests.test_refitted_worker_agents.TestPlannerAC5QuestionPacketAndWorkflowPatch.test_states_question_packet_replaces_direct_asking
+      - tests.test_refitted_worker_agents.TestPlannerAC5QuestionPacketAndWorkflowPatch.test_states_workflow_patch_replaces_direct_workflow_yaml_write
+      - tests.test_refitted_worker_agents.TestPlannerAC5QuestionPacketAndWorkflowPatch.test_never_sets_branch_notes_running_status_or_completed_at_commit
+    red_confirmed: true
+    red_reason: >-
+      Original implementation-planner.md had no `gate_id` values, no
+      "Questions" section, no `question_packet` concept, and step 4/6 wrote
+      directly into workflow.yaml's `tasks` / `requirements` rather than a
+      `workflow_patch`; it also never stated the branch/notes/running-status/
+      completed_at_commit prohibition. All four assertions failed
+      (AssertionError) before the Questions/Output sections were added.
+  AC-6:
+    tests:
+      - tests.test_refitted_worker_agents.TestPlannerAC6NoCommitInvocationGateSSOTAndDomainsSSOT.test_no_commit_docs_sh_invocation
+      - tests.test_refitted_worker_agents.TestPlannerAC6NoCommitInvocationGateSSOTAndDomainsSSOT.test_states_never_commits
+      - tests.test_refitted_worker_agents.TestPlannerAC6NoCommitInvocationGateSSOTAndDomainsSSOT.test_references_gate_policy_ssot_instead_of_per_gate_batch_handling
+      - tests.test_refitted_worker_agents.TestPlannerAC6NoCommitInvocationGateSSOTAndDomainsSSOT.test_names_review_rules_yaml_as_domains_ssot
+    red_confirmed: true
+    red_reason: >-
+      Original implementation-planner.md step 8 invoked
+      "${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh" directly (the literal
+      "scripts/commit-docs.sh" substring was present, so the NotIn assertion
+      failed) and its "## Batch Mode" section spelled out per-gate
+      "auto-select" three-way handling with no reference to
+      question-resolution.md / batch-policies.yaml; it also never stated
+      "this file is the domains vocabulary SSOT" verbatim. All four
+      assertions failed before step 8 and the Batch Mode section were
+      rewritten.
+  AC-7:
+    tests:
+      - tests.test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_has_no_task_assignment_heading
+      - tests.test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_has_no_task_assignment_heading
+      - tests.test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_retains_model_and_effort
+      - tests.test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_retains_model_and_effort
+    red_confirmed: false
+    red_reason: >-
+      This criterion asserts an absence (no "# Task assignment" heading) and
+      a preservation (model/effort unchanged) that were already true in the
+      original files -- there is no implementation change that could have
+      made these red first without violating the criterion itself. Verified
+      instead by direct inspection: `grep -n "# Task assignment"` on both
+      files returns no match, and the frontmatter `model`/`effort` lines are
+      untouched by the diff (git diff shows only the `tools`/description
+      lines changing for the planner; the designer's frontmatter block is
+      unchanged entirely).
