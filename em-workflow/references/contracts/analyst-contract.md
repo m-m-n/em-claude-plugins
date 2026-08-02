@@ -58,6 +58,20 @@ known_feature_name: example-feature
 - `known_feature_name` — the feature name already resolved by the
   orchestrator, when known.
 
+requirements-analyst may also receive the common envelope's `prior_analysis`
+field (`references/contracts/worker-envelope.md`), populated on a
+re-dispatch within the same clarification loop:
+
+- When `prior_analysis` is present and its `input_digest` still matches the
+  current dispatch's `input_revision.input_digest`, continue from
+  `prior_analysis.content` rather than re-deriving the analysis from
+  scratch — re-investigate only the inputs whose digests changed since that
+  content was produced, and carry every other already-resolved conclusion
+  forward unchanged.
+- When `prior_analysis` is absent, or its `input_digest` no longer matches,
+  perform the full investigation from the supplied inputs, exactly as on a
+  first dispatch.
+
 ## `analysis_snapshot` (returned with `status: needs_user_input`)
 
 When requirements-analyst cannot proceed without user clarification, its

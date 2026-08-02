@@ -244,6 +244,28 @@ class TestReworkPlannerContract(unittest.TestCase):
         self.assertIn("requirements_patch", section)
         self.assertIn("tests_append", section)
 
+    # task0024 AC-7 (bs10 half)
+    def test_check_three_depends_on_a_supplied_baseline(self):
+        section = _extract_section(
+            self.text,
+            "The validation script (5.11.1) performs these four checks:",
+            "## `payload.shared_contract_rationale`",
+        )
+        lowered = section.lower()
+        self.assertIn("baseline", lowered)
+        self.assertIn("depends", lowered)
+        # the dependency statement must not be a stray mention elsewhere --
+        # anchor on it following the four-item checklist.
+        numbered = re.findall(r"^(\d+)\. ", section, re.MULTILINE)
+        self.assertEqual(numbered, ["1", "2", "3", "4"])
+        baseline_idx = section.lower().index("baseline")
+        check_four_idx = section.index("4. ")
+        self.assertGreater(
+            baseline_idx,
+            check_four_idx,
+            "the baseline dependency statement must follow the four numbered checks",
+        )
+
     def test_spec_change_returns_question_not_tasks(self):
         section = _extract_section(
             self.text,
