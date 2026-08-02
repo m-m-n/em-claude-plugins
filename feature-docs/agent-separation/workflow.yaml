@@ -58,9 +58,9 @@ tasks:
     requirements:
     - FR3
     - FR14
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0001
   task0002:
     title: workflow patch 契約
     plan: tasks/task0002.md
@@ -73,9 +73,9 @@ tasks:
     complexity: high
     requirements:
     - FR12
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0002
   task0003:
     title: phase-state 契約と互換規則
     plan: tasks/task0003.md
@@ -93,9 +93,9 @@ tasks:
     - FR32
     - NFR3
     - NFR9
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0003
   task0004:
     title: rework 合成 SSOT と implement / review 参照の修正
     plan: tasks/task0004.md
@@ -112,9 +112,9 @@ tasks:
     - FR1
     - FR2
     - FR26
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0004
   task0005:
     title: question 解決規則と batch policies
     plan: tasks/task0005.md
@@ -134,9 +134,9 @@ tasks:
     - FR16
     - FR24
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0005
   task0006:
     title: create-spec 側 worker 契約（analyst / spec-writer）
     plan: tasks/task0006.md
@@ -151,9 +151,9 @@ tasks:
     requirements:
     - FR4
     - FR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0006
   task0007:
     title: 計画・デザイン側 worker 契約（planner / rework-planner / designer）
     plan: tasks/task0007.md
