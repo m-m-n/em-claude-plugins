@@ -663,5 +663,163 @@ class TestCreatePlanValidatorImplementedSubset(unittest.TestCase):
         )
 
 
+class TestRuleCitationsRepointedToShippedDocs(unittest.TestCase):
+    """task0025 rework round 2 AC-1 (bs7): rule R1's normalization procedure,
+    rule R2, and the seven-layer validation table now live in
+    worker-envelope.md / workflow-schema.md respectively. Neither protocol
+    may resolve a mention of them to design-input.md alone; design-input.md
+    may still be named as provenance."""
+
+    # Matches every citation form the pre-rework documents used to resolve
+    # rule R1 ("design-input.md 5.0" / "design-input.md 5.0 R1"), rule R2
+    # ("design-input.md 5.0 R2") and the validation layers
+    # ("design-input.md 5.11.2") directly to the design document.
+    DESIGN_MENTION_RE = re.compile(r"design-input\.md 5\.(?:0(?:\s+R[12])?|11\.2)")
+
+    @classmethod
+    def setUpClass(cls):
+        cls.spec_text = _read(CREATE_SPEC_PATH)
+        cls.plan_text = _read(CREATE_PLAN_PATH)
+
+    def test_regex_matches_the_old_bare_resolution_forms(self):
+        # Sanity check on the regex itself, so the assertion below cannot
+        # vacuously pass against a pattern that no longer matches anything.
+        self.assertTrue(self.DESIGN_MENTION_RE.search("design-input.md 5.0."))
+        self.assertTrue(self.DESIGN_MENTION_RE.search("design-input.md 5.0 R1)"))
+        self.assertTrue(self.DESIGN_MENTION_RE.search("design-input.md 5.0 R2)"))
+        self.assertTrue(self.DESIGN_MENTION_RE.search("design-input.md 5.11.2)"))
+
+    def test_worker_envelope_and_workflow_schema_are_cited_in_both_protocols(self):
+        for text in (self.spec_text, self.plan_text):
+            self.assertIn("references/contracts/worker-envelope.md", text)
+            self.assertIn("references/workflow-schema.md", text)
+
+    def test_no_mention_resolves_a_rule_or_validation_layer_to_design_doc_alone(self):
+        for label, text in (
+            ("create-spec-phase.md", self.spec_text),
+            ("create-plan-phase.md", self.plan_text),
+        ):
+            matches = list(self.DESIGN_MENTION_RE.finditer(text))
+            self.assertTrue(matches, f"{label} lost its design-input.md citations entirely")
+            for match in matches:
+                start = max(0, match.start() - 60)
+                end = min(len(text), match.end() + 20)
+                window = text[start:end].lower()
+                self.assertIn(
+                    "provenance",
+                    window,
+                    f"{label} resolves {text[match.start():match.end()]!r} "
+                    "directly to design-input.md without provenance framing",
+                )
+
+
+class TestAnalystRedispatchPassesPriorAnalysis(unittest.TestCase):
+    """task0025 rework round 2 AC-2 (bs5, dispatch half): the analyst
+    re-dispatch step (inside "## 5. Analyst dispatch loop") passes
+    `prior_analysis` with both its `content` and `input_digest` members, and
+    states that the field is omitted when the digest no longer matches."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_SPEC_PATH)
+        start = _first_index(cls.text, "## 5. Analyst dispatch loop")
+        end = cls.text.index("## 6. Question normalization")
+        cls.section = cls.text[start:end]
+
+    def test_prior_analysis_field_named_in_the_dispatch_loop_section(self):
+        self.assertIn("prior_analysis", self.section)
+
+    def test_both_members_named(self):
+        self.assertIn("`content`", self.section)
+        self.assertIn("`input_digest`", self.section)
+
+    def test_populated_on_every_redispatch(self):
+        self.assertIn("every analyst re-dispatch", self.section.lower())
+
+    def test_omission_on_digest_mismatch_stated(self):
+        lowered = self.section.lower()
+        self.assertIn("longer matches the current", lowered)
+        self.assertIn("omitted", lowered)
+
+
+class TestScopeVerificationCandidateDerivedEnumeration(unittest.TestCase):
+    """task0025 rework round 2 AC-3/AC-4 (bs14): the pre-dispatch snapshot no
+    longer lists every tracked entry, the post-dispatch comparison derives
+    its candidates from the untracked-file status and the tracked
+    index-versus-working-tree comparison instead, and deletions, mode
+    changes and file/symlink/absent transitions remain detectable."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_SPEC_PATH)
+
+    def test_whole_index_listing_row_is_gone(self):
+        self.assertNotIn(
+            "Index blob IDs and modes | `git ls-files -s -z`", self.text
+        )
+
+    def test_no_whole_index_listing_pass_wording_present(self):
+        self.assertIn(
+            "whole-index blob-id/mode listing pass runs here either",
+            self.text.lower(),
+        )
+
+    def test_candidates_derived_from_status_and_index_comparison(self):
+        self.assertIn(
+            "Enumerate candidates from two changes-proportional sources",
+            self.text,
+        )
+        self.assertIn("a whole-index listing of every tracked entry", self.text)
+
+    def test_blob_ids_and_modes_queried_only_for_candidates(self):
+        self.assertIn(
+            "blob identifiers and modes are likewise queried", self.text
+        )
+
+    def test_deletions_mode_and_kind_changes_still_detectable(self):
+        # Already asserted by TestScopeVerificationSnapshotCost (task0015);
+        # re-asserted here because this task rewrites the surrounding
+        # sentence and the phrase must survive that rewrite unchanged.
+        self.assertIn(
+            "deletions, mode changes, and kind changes (file ⇔ symlink ⇔ absent)",
+            self.text,
+        )
+
+
+class TestCreatePlanCanonicalInvocationIncludesPhaseState(unittest.TestCase):
+    """task0025 rework round 2 AC-5 (bs10, invocation half): the canonical
+    `implementation-planner` validator invocation includes `--phase-state`,
+    and the accompanying silently-narrowing-omission list names it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_PLAN_PATH)
+
+    def test_invocation_includes_phase_state_argument(self):
+        self.assertIn("--phase-state {phase-state/create-plan.yaml}", self.text)
+
+    def test_omission_list_names_phase_state(self):
+        self.assertIn("dropping `--phase-state` skips the", self.text)
+        self.assertIn("duplicate-patch-identifier idempotency check", self.text)
+
+
+class TestCreateSpecCompletedPayloadKeyReference(unittest.TestCase):
+    """task0025 rework round 2 AC-6 (bs1, stray reference): the design-system
+    zero-candidate exception in section 11a describes requirements-analyst's
+    *completed* payload, whose key is the bare `design_system_candidates` --
+    not the needs_user_input payload's nested
+    `analysis_snapshot.design_system_candidates`."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_SPEC_PATH)
+
+    def test_stray_analysis_snapshot_prefixed_key_is_gone(self):
+        self.assertNotIn("analysis_snapshot.design_system_candidates", self.text)
+
+    def test_bare_completed_payload_key_is_used_instead(self):
+        self.assertIn("completed-payload `design_system_candidates`", self.text)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -15,8 +15,11 @@ This document does not restate the shapes it builds on — it cites them:
 - `requirements-analyst` / `spec-writer` input and output contracts:
   `references/contracts/analyst-contract.md`,
   `references/contracts/spec-writer-contract.md`.
-- `input_digest` (rule R1) and `completed_at_commit` (rule R2):
-  design-input.md 5.0.
+- `input_digest` (rule R1) and the seven validation layers:
+  `references/contracts/worker-envelope.md` (provenance: design-input.md 5.0
+  R1, 5.11.2).
+- `completed_at_commit` (rule R2): `references/workflow-schema.md`
+  (provenance: design-input.md 5.0 R2).
 - Command approval: `references/command-execution-protocol.md`.
 
 ## 1. Purpose and ownership
@@ -88,19 +91,29 @@ to create-spec) is already applied — in that order, never from memory.
    the worktree was refreshed. An analyst clarification round that hits
    none of these three re-reads nothing and re-scans nothing — it reuses
    the cached paths and digests.
-2. Compute `input_digest` (design-input.md 5.0 R1) from
+2. Compute `input_digest` (rule R1, `references/contracts/worker-envelope.md`;
+   provenance: design-input.md 5.0 R1) from
    `references/contracts/analyst-contract.md`'s `digest_inputs` list, using
    the resolved (possibly cached) paths from step 1.
 3. `Task(subagent_type="em-workflow:requirements-analyst")`, with input
    `analysis_mode: full`.
 4. Validate the result (`scripts/validate-worker-output.py`,
-   design-input.md 5.11.2's validation layers).
+   `references/contracts/worker-envelope.md`'s Validation layers table;
+   provenance: design-input.md 5.11.2).
 5. If the result is `needs_user_input`: normalize the packet (section 6),
    deduplicate and prioritize it (`references/question-resolution.md`),
    present it via `AskUserQuestion`, persist every answer to phase-state
    immediately (section 3, step 4), then re-dispatch with the answers folded
    in — step 1 applies again on this re-dispatch, so the cache is consulted
-   before any re-scan.
+   before any re-scan. The re-dispatch's input additionally carries
+   `prior_analysis`, with `content` (the previous round's
+   `analysis_snapshot`) and `input_digest` (the digest of the input that
+   produced it) — populated on every analyst re-dispatch within this
+   clarification loop, so a high-effort analyst continues from what it
+   already found instead of rebuilding it from scratch. When that digest no
+   longer matches the current `input_digest`, `prior_analysis` is omitted
+   instead: the prior findings were derived from an input that has since
+   changed, so they are not safe to hand back as a starting point.
 6. Repeat until the result is `status: completed`.
 
 ## 6. Question normalization
@@ -178,7 +191,7 @@ Deriving `kind: none` from `skipped` would silently hide a real,
 already-existing design system from the planner and the design step.
 
 - **Exception**: if the design step is `skipped` **and**
-  requirements-analyst's `analysis_snapshot.design_system_candidates`
+  requirements-analyst's completed-payload `design_system_candidates`
   reported zero candidates, the orchestrator may record `kind: none`
   without asking the user — there is nothing to draft, so no downstream
   harm follows from skipping confirmation.
@@ -195,7 +208,8 @@ already-existing design system from the planner and the design step.
   candidates → `none`).
 - Once confirmed here, neither the `design` step nor `create-plan`
   re-searches for it — both read `project.design_system` from `workflow.yaml`
-  only (design-input.md 5.0 R1).
+  only (rule R1, `references/contracts/worker-envelope.md`; provenance:
+  design-input.md 5.0 R1).
 
 ## 12. Command approval gate
 
@@ -400,20 +414,21 @@ cannot be recovered by anything the post-dispatch comparison does.
 
 | What | How | Use |
 |---|---|---|
-| HEAD SHA | `git rev-parse HEAD` | Staleness |
-| Index blob IDs and modes | `git ls-files -s -z` | Scope |
+| HEAD SHA | `git rev-parse HEAD` | Staleness, and the pinned tree baseline the post-dispatch comparison below diffs against |
 | Untracked files | `git status --porcelain -z -uall` | Scope |
 | `extend_only` target key sets | Parse `design-system/tokens.yaml` | Scope |
 
-**No whole-tree working-tree-content hashing pass runs here.** The
-precondition above already guarantees the tracked working tree matches the
-index, so the index blob IDs captured by `git ls-files -s -z` already carry
-the same identity a content hash would recompute for every tracked path —
-hashing the entire checkout a second time before dispatch is redundant
-work on top of that guarantee. Content hashing with `git hash-object --`
-still happens, but only in the post-dispatch comparison below, and only
-for the paths that comparison already knows changed — never for the whole
-tree. A symlink is stored by git as a blob (the link string itself), so
+**No whole-tree working-tree-content hashing pass runs here, and no
+whole-index blob-ID/mode listing pass runs here either.** The precondition
+above already guarantees the tracked working tree matches the index, which
+in turn matches the tree at the pinned HEAD SHA — so that single SHA already
+pins every tracked path's baseline identity, and a separate `git ls-files -s
+-z` listing of the whole tracked set would add nothing before dispatch on
+top of what git already durably records at that commit. Both blob-ID/mode
+lookup and content hashing (`git hash-object --`) happen only in the
+post-dispatch comparison below, and only for the candidate paths that
+comparison has already enumerated — never for the whole tracked set. A
+symlink is stored by git as a blob (the link string itself), so
 `git hash-object` on a changed symlink path also detects a change to what
 the link points at.
 
@@ -421,19 +436,29 @@ the link points at.
 
 1. **Compute the worker's change set** — always, regardless of whether HEAD
    moved.
-   - Run `git status --porcelain -z -uall` (untracked and ignored-aware) and
-     compare the index (`git ls-files -s -z`, re-read) and the working tree
-     against the snapshot's recorded blob IDs, modes, and existence kinds to
-     find every path that changed. This step alone already reports
+   - Enumerate candidates from two changes-proportional sources, never from
+     a whole-index listing of every tracked entry: `git status --porcelain
+     -z -uall` (untracked and ignored-aware) for untracked paths, and the
+     index-versus-working-tree comparison against the snapshot's pinned HEAD
+     SHA — not the live `HEAD` ref, which may have moved — for tracked
+     paths. That tracked-path comparison reports each candidate's old and
+     new blob IDs and modes directly, so this step alone already reports
      deletions, mode changes, and kind changes (file ⇔ symlink ⇔ absent) —
      none of those require reading file content.
    - **Content hashing with `git hash-object --` is applied only to the
      paths this comparison already reports as changed** — never to the
-     whole tracked tree. Combined with dropping the pre-dispatch
-     working-tree hash (above), this is what brings the cost of scope
-     verification down from O(repository bytes) to O(changed paths) per
-     dispatch.
-   - The HEAD layer is **never** part of this comparison.
+     whole tracked tree, and blob identifiers and modes are likewise queried
+     only for those same candidate paths, never for the whole tracked set.
+     Combined with dropping the pre-dispatch working-tree hash and the
+     pre-dispatch whole-index listing (above), this is what brings the cost
+     of scope verification down from O(repository bytes) to O(changed paths)
+     per dispatch.
+   - The HEAD layer is **never** part of this comparison — meaning the live,
+     possibly-moved `HEAD` ref, not the pinned SHA captured before dispatch.
+     That pinned SHA is fixed reference data; diffing against it is diffing
+     against the recorded baseline, exactly as diffing against a table of
+     recorded blob IDs would be. An external commit advancing the branch tip
+     is never folded into the candidate set this step enumerates.
 2. **Judge permitted scope.** Split changed paths by whether they existed at
    snapshot time; each half has its own rule.
    - The changed-path set must equal the set of paths the worker listed in
