@@ -1,0 +1,69 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_workflow_patch_doc.TestWorkflowPatchDocExists.test_file_exists
+      - tests.test_workflow_patch_doc.TestOperationModeMatrix.test_both_operations_appear_bound_to_their_tasks_patch_mode
+    red_confirmed: true
+    red_reason: >-
+      Before em-workflow/references/workflow-patch.md existed, the whole
+      module raised FileNotFoundError in setUpClass for every test class
+      that reads DOC_PATH, and test_file_exists failed with
+      "AssertionError: False is not true : ... must exist (AC-1)".
+  AC-2:
+    tests:
+      - tests.test_workflow_patch_doc.TestTasksPatchContract.test_append_provenance_and_expected_next_task_id_documented
+      - tests.test_workflow_patch_doc.TestTasksPatchContract.test_replace_all_permission_conditions_section_present
+    red_confirmed: true
+    red_reason: >-
+      Same FileNotFoundError in setUpClass before the doc existed (module
+      moved aside and re-run to confirm; DOC_PATH.is_file() was False).
+  AC-3:
+    tests:
+      - tests.test_workflow_patch_doc.TestStepPatchesContract.test_addressed_by_step_id_not_array_index
+      - tests.test_workflow_patch_doc.TestStepPatchesContract.test_only_status_field_settable
+      - tests.test_workflow_patch_doc.TestStepPatchesContract.test_base_commit_and_completed_at_commit_not_worker_settable
+    red_confirmed: true
+    red_reason: >-
+      Same FileNotFoundError in setUpClass before the doc existed. Also
+      caught a real bug during red/green iteration: the first assertion for
+      test_addressed_by_step_id_not_array_index used the literal substring
+      "array index", but Markdown line-wrapping in the doc split the phrase
+      across a line break ("array\nindex"), so it failed with
+      "'array index' not found in ..." even though the doc documented the
+      rule -- fixed by matching `array[\s-]+index` instead of a literal
+      space-separated substring.
+  AC-4:
+    tests:
+      - tests.test_workflow_patch_doc.TestPreserveVocabulary.test_complete_preserve_vocabulary_present
+      - tests.test_workflow_patch_doc.TestPreserveVocabulary.test_append_rework_mandatory_preserve_includes_base_commit
+      - tests.test_workflow_patch_doc.TestPreserveVocabulary.test_no_preserve_path_outside_permitted_vocabulary
+    red_confirmed: true
+    red_reason: >-
+      Same FileNotFoundError in setUpClass before the doc existed. Also
+      caught a real bug during red/green iteration: the fixture's
+      append_rework_mandatory_preserve() initially searched the whole 5.5
+      section unscoped and matched the earlier operation/mode matrix row
+      (`append_rework` bound to mode `append`) instead of the 5.5.4
+      mandatory-preserve table row, so the assertion failed with
+      "'workflow.implement.base_commit' not found in ['append']" even with
+      the doc present -- fixed by scoping the search to the 5.5.4
+      subsection.
+  AC-5:
+    tests:
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rule_count_matches_design_input
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rules_are_ordered_one_through_sixteen
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_single_write_application_rule_present
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rule_r2_commit_sequence_present
+    red_confirmed: true
+    red_reason: >-
+      Same FileNotFoundError in setUpClass before the doc existed.
+  AC-6:
+    tests:
+      - tests.test_workflow_patch_doc.TestOwnershipBoundaryAndDomainsSSOT.test_project_and_review_summary_are_orchestrator_updated
+      - tests.test_workflow_patch_doc.TestOwnershipBoundaryAndDomainsSSOT.test_domains_ssot_is_review_rules_yaml
+    red_confirmed: true
+    red_reason: >-
+      Same FileNotFoundError in setUpClass before the doc existed.
