@@ -1,0 +1,84 @@
+task_id: task0018
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_codex_consultation_by_position
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_record_tbd_by_position
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_consultation_precedes_record_tbd_by_position
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-rework doc, test_classification_precedes_codex_consultation_by_position
+      and test_classification_precedes_record_tbd_by_position raised ValueError
+      (substring not found: "Classify before doing anything else") since the
+      classification step did not exist yet; test_codex_consultation_precedes_record_tbd_by_position
+      already passed on the pre-existing sequence (unchanged relative order),
+      so it is a sanity check on surrounding structure rather than new-behavior
+      evidence for AC-1.
+  AC-2:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_abort_ignores_on_unanswered_value
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_abort_ignores_gate_listing_elsewhere
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_abort_ignores_codex_mapping
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_none_of_three_can_override
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: the phrases stating "regardless of the on_unanswered
+      value / gate listing elsewhere / Codex mapping" and "none of those
+      three can override this step" were absent from the pre-rework doc,
+      whose fail-closed rule sat inside the on_unanswered=block branch with
+      no such regardless-of language.
+  AC-3:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_names_category_values
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_names_explicit_gate_list
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_names_irreversible_assumption_signal
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: backticked category values ("`spec-change`",
+      "`security`", "`license`"), the "explicit fail-closed gate list"
+      phrase, and the "assumptions[] / related_question_ids / reversible:
+      false" irreversible-assumption signal were all absent from the
+      pre-rework doc, which only named the four categories in prose with
+      no mechanical definition.
+  AC-4:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_worker_set_fields_not_trusted_alone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_validator_cross_check_referenced
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_validator_rule_not_restated
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: "trusted alone", "cross-checks", "task0016" and
+      "scripts/validate-worker-output.py" did not appear anywhere in the
+      pre-rework doc, which never mentioned that category/on_unanswered
+      are worker-set or validator-checked.
+  AC-5:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_section_present
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_availability_probe
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_wrapper_invocation
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_one_turn_per_call
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_trajectory_judgement
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_five_turn_ceiling
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_decision_stays_with_claude
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_output_untrusted
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_availability_precedes_wrapper_invocation
+    red_confirmed: true
+    red_reason: >-
+      AssertionError / ValueError: the pre-rework doc had no "### Codex
+      consultation procedure" section at all (the old unlisted-gate
+      fallback only said "Pass ... to Codex" with no invocation method,
+      turn cap, or availability probe), so every element assertion and
+      the section-lookup helper itself failed.
+  AC-6:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_codex_consultation_by_position
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_record_tbd_by_position
+    red_confirmed: true
+    red_reason: >-
+      This criterion is about how AC-1 is verified (index comparison
+      within the document, not mere presence) rather than a separate
+      document behavior, so it shares AC-1's red tests: both raised
+      ValueError against the pre-rework doc because index() could not
+      find the classification marker to compare positions against.
