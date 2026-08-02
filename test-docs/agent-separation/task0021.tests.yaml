@@ -1,0 +1,108 @@
+task_id: task0021
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+    red_confirmed: true
+    red_reason: >-
+      Before the fix, running the new test against this worktree's real
+      repository root produced: "AssertionError: 1 != 0" with
+      "[FAIL] stale_references" (17 offenders, all under
+      feature-docs/integration-worktree-orchestration/**, test-docs/** and
+      tests/**) and "[FAIL] gate_id_coverage" (6 offenders: "in
+      batch-policies.yaml but never referenced: create-plan.existing-files,
+      create-plan.license-conflict, create-plan.tbd-resolution,
+      create-spec.artifact-overwrite, create-spec.design-step,
+      create-spec.requirement-clarification").
+
+  AC-2:
+    tests:
+      - tests.test_reference_sweep.TestOldAgentDeleted.test_no_file_under_the_plugin_directory_references_old_agent_name
+    red_confirmed: true
+    red_reason: >-
+      The real repository already had no stale reference left under
+      em-workflow/ (a sibling task had already fixed batch-mode.md), so red
+      was reproduced by temporarily re-injecting the exact historical defect
+      (reviews/round1.yaml finding as2): appending "See
+      agents/requirements-spec-creator.md for the old flow." to
+      em-workflow/references/batch-mode.md, a file outside task0013's old
+      TASK_OWNED_FILES allowlist. The widened test then failed with
+      "AssertionError: Lists differ: ['em-workflow/references/batch-mode.md']
+      != []"; the injected line was reverted immediately after (confirmed via
+      `git status` showing the file clean again) and never committed.
+
+  AC-3:
+    tests:
+      - tests.test_check_plugin_invariants.TestStaleReferences.test_allows_historical_quotation_in_a_different_features_feature_docs
+      - tests.test_check_plugin_invariants.TestStaleReferences.test_allows_an_absence_asserting_test_literal_in_test_docs
+      - tests.test_check_plugin_invariants.TestStaleReferences.test_allows_an_absence_asserting_test_literal_in_the_tests_directory
+      - tests.test_check_plugin_invariants.TestStaleReferences.test_still_fails_under_the_plugin_directory_even_though_other_roots_are_allowed
+    red_confirmed: true
+    red_reason: >-
+      The three "allows_*" cases each failed under the pre-fix single-prefix
+      exclusion (feature-docs/agent-separation only), e.g.
+      "AssertionError: False is not true :
+      [\"feature-docs/some-other-feature/REQUIREMENTS.md: contains
+      'requirements-spec-creator'\"]" for the other-feature case, and the
+      analogous message for the test-docs and tests/ literal cases. The
+      fourth case (an occurrence under em-workflow/ must still fail) already
+      passed under the pre-fix code too, since the old narrower exclusion
+      also never covered em-workflow/ -- it is a negative control proving
+      the widening does not regress that guarantee, not new red-green
+      evidence by itself.
+
+  AC-4:
+    tests:
+      - tests.test_check_plugin_invariants.TestSinglePassTraversal.test_iter_repo_files_invoked_once_when_both_checks_run_together
+      - tests.test_check_plugin_invariants.TestSinglePassTraversal.test_each_check_remains_independently_callable_with_its_own_traversal
+    red_confirmed: true
+    red_reason: >-
+      The single-pass test failed pre-fix with "AssertionError: 2 != 1 :
+      expected a single shared traversal" (run_all_checks previously called
+      check_agent_dispatch_parity and check_stale_references separately, each
+      invoking iter_repo_files once). The standalone-callability companion
+      test already passed pre-fix (each check already did exactly one
+      traversal when called alone) -- it is a regression guard for the
+      refactor, not evidence of the as22 defect itself.
+
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Non-regression criterion, not a new behavior to red-green: verified by
+      running the pre-existing 31 tests in
+      tests/test_check_plugin_invariants.py (unmodified by this task) both
+      before and after the fix via
+      `python3 -m unittest tests.test_check_plugin_invariants -v`, all 31
+      passing in both runs.
+
+  AC-6:
+    tests:
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_identifier_referenced_without_a_nearby_gate_id_phrase_is_not_unreferenced
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_mention_inside_the_policy_file_itself_does_not_count_as_a_reference
+    red_confirmed: true
+    red_reason: >-
+      The proximity-heuristic-replacement case failed pre-fix with
+      "AssertionError: False is not true : ['in batch-policies.yaml but
+      never referenced: create-plan.license-conflict']" (a table row naming
+      the gate id in agents/implementation-planner.md, with no "gate ID"
+      phrase nearby, was not recognized). The self-mention exclusion case
+      already passed pre-fix too (the old extraction never read
+      batch-policies.yaml at all, so it already reported an entry mentioned
+      only inside the policy file as unused) -- it is a defensive test
+      documenting a specific design rule, not new red-green evidence by
+      itself.
+
+  AC-7:
+    tests:
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+    red_confirmed: true
+    red_reason: >-
+      Same evidence as AC-1 for the "checker exits cleanly" half. The "full
+      test suite passes" half was verified by running
+      `python3 -m unittest discover -s tests` after all changes: 761 tests,
+      0 failures (baseline before this task's changes, recorded in 4a, was
+      752 tests, 0 failures -- 9 new tests added by this task, no
+      regressions).
