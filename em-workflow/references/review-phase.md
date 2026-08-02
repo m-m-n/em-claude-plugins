@@ -210,11 +210,13 @@ Dispatch:
   or `Apply as-is (editor interprets)` + `Skip`. Freeform answer becomes
   `user_chosen_approach`.
 
-Batch mode (develop-駆動 only; the orchestrator propagates `--batch` —
-references/batch-mode.md decision table): no AskUserQuestion. **conflict**
-→ skip the site (abort all members; conflicting prescriptions are not
-mechanically resolvable). **needs-judgment** → auto-select `Apply as-is
-(editor interprets)`.
+Batch mode (develop-駆動 only; the orchestrator propagates `--batch`): no
+AskUserQuestion. **conflict** → skip the site (abort all members;
+conflicting prescriptions are not mechanically resolvable —
+`references/batch-mode.md`'s Non-packet gates table, gate
+`review.auto-fix-conflict`). **needs-judgment** → auto-select `Apply as-is
+(editor interprets)` (`references/batch-mode.md`'s Non-packet gates table,
+gate `review.auto-fix-judgment`).
 
 Each approved candidate dispatches to
 `Task(subagent_type="em-workflow:review-editor")` with `target_file_abs`
