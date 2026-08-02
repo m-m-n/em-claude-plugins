@@ -1,0 +1,95 @@
+task_id: task0024
+baseline_failures: []          # 761 tests, all passing before this task started
+final_failures: []             # 785 tests, all passing after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeStatusTablePayloadCorrection.test_needs_user_input_forbidden_set_matches_design_exactly
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeStatusTablePayloadCorrection.test_needs_user_input_no_longer_forbids_payload
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeStatusTablePayloadCorrection.test_needs_user_input_still_forbids_artifacts_patch_and_blocking_reason
+    red_confirmed: true
+    red_reason: >-
+      Before the fix, worker-envelope.md's needs_user_input row still listed
+      `payload` in Forbidden. test_needs_user_input_forbidden_set_matches_design_exactly
+      failed with a set mismatch (rendered set included 'payload', design-derived
+      set did not) and test_needs_user_input_no_longer_forbids_payload failed with
+      "'payload' unexpectedly found". The third test (artifacts/patch/blocking_reason
+      still forbidden) was already true before and after -- it guards the half of
+      AC-1 that must NOT change.
+  AC-2:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeStatusTablePayloadCorrection.test_other_non_completed_statuses_still_forbid_payload
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeStatusTablePayloadCorrection.test_completed_status_unchanged
+    red_confirmed: false
+    red_reason: >-
+      This criterion asserts an invariant that must NOT change (payload stays
+      forbidden for blocked/invalid_input/stale_input/failed, and completed is
+      unaffected). Both tests passed before this task's edits too, since the
+      envelope's rows for those four statuses were never touched -- there is no
+      observable behavior change to watch go red. Verified by inspection that the
+      corresponding table rows are byte-for-byte unchanged (git diff shows only the
+      needs_user_input row and the Source paragraph changed).
+  AC-3:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopePriorAnalysisField.test_documents_prior_analysis_with_both_members
+      - tests.test_worker_contract_docs.TestWorkerEnvelopePriorAnalysisField.test_states_a_numeric_size_bound
+      - tests.test_worker_contract_docs.TestWorkerEnvelopePriorAnalysisField.test_states_requirements_analyst_only
+    red_confirmed: true
+    red_reason: >-
+      Before the fix, worker-envelope.md had no `### \`prior_analysis\`` heading at
+      all: test_documents_prior_analysis_with_both_members failed with "substring
+      not found", and test_states_a_numeric_size_bound / test_states_requirements_analyst_only
+      errored (ValueError from text.index) since the anchor heading did not exist.
+  AC-4:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopePriorAnalysisField.test_analyst_contract_states_reuse_on_matching_digest
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_documents_prior_analysis_reuse_on_matching_digest
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_documents_full_re_derivation_when_absent_or_mismatched
+      - tests.test_new_worker_agents.TestRequirementsAnalystSpecifics.test_states_prior_analysis_reuse_on_matching_digest
+      - tests.test_new_worker_agents.TestRequirementsAnalystSpecifics.test_states_full_investigation_when_absent_or_mismatched
+    red_confirmed: true
+    red_reason: >-
+      Before the fix, neither analyst-contract.md nor requirements-analyst.md
+      mentioned `prior_analysis` at all; all five tests failed with "substring
+      'prior_analysis' / 'continue from' / 'full investigation' not found".
+  AC-5:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeUntrustedInputSection.test_has_the_section
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeUntrustedInputSection.test_states_data_not_instructions_rule
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeUntrustedInputSection.test_states_refusal_of_role_shape_gate_and_category_direction
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeUntrustedInputSection.test_states_reporting_duty
+    red_confirmed: true
+    red_reason: >-
+      Before the fix, worker-envelope.md had no "## Untrusted-Input Handling"
+      heading; the whole TestWorkerEnvelopeUntrustedInputSection class errored in
+      setUpClass (text.index raised ValueError looking for that heading), which
+      covers every test method in the class including these four.
+  AC-6:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeUntrustedInputSection.test_every_worker_prompt_references_the_section
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeUntrustedInputSection.test_no_worker_prompt_restates_the_section
+      - tests.test_new_worker_agents.TestRequirementsAnalystCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestSpecWriterCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestReworkPlannerCommonRules.test_common_worker_rules
+      - tests.test_refitted_worker_agents.TestUntrustedInputReferenceAC6.test_designer_references_the_section
+      - tests.test_refitted_worker_agents.TestUntrustedInputReferenceAC6.test_planner_references_the_section
+      - tests.test_refitted_worker_agents.TestUntrustedInputReferenceAC6.test_neither_file_restates_the_section
+    red_confirmed: true
+    red_reason: >-
+      Before the fix, none of the five worker prompts mentioned "Untrusted-Input
+      Handling"; test_every_worker_prompt_references_the_section and the three
+      _assert_common_worker_rules-based common_worker_rules tests failed with
+      "'Untrusted-Input Handling' not found", and the two designer/planner
+      reference tests failed the same way. The two "does not restate" tests
+      (test_no_worker_prompt_restates_the_section, test_neither_file_restates_the_section)
+      were already true before the fix too (the old prompts contained none of the
+      envelope's distinctive sentences either, since neither existed yet) -- they
+      guard the "does not restate" half of AC-6 going forward.
+  AC-7:
+    tests:
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_check_three_depends_on_a_supplied_baseline
+    red_confirmed: true
+    red_reason: >-
+      Before the fix, rework-planner-contract.md's four-check section contained
+      no mention of "baseline" or "depends"; the test failed with "'baseline' not
+      found in ...".

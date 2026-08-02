@@ -66,6 +66,17 @@ COMMON_NO_DISCOVERY_SUBSTRING = (
 COMMON_NO_ASK_SUBSTRING = "you have no `AskUserQuestion` tool and never ask the user directly"
 COMMON_SINGLE_OUTPUT_SUBSTRING = "single structured object conforming to the common worker envelope"
 
+# task0024 AC-6 (bs12): every worker prompt references the envelope's
+# Untrusted-Input Handling section rather than restating it.
+UNTRUSTED_INPUT_REFERENCE_SUBSTRING = "Untrusted-Input Handling"
+# Sentences distinctive to worker-envelope.md's own rendering of the rule;
+# a worker prompt containing any of these would be restating the section.
+DISTINCTIVE_ENVELOPE_UNTRUSTED_INPUT_SENTENCES = (
+    "untrusted attacker-influenceable data",
+    "ignore previous instructions",
+    "reports that as a fact in its result",
+)
+
 FORBIDDEN_TASK_ASSIGNMENT_HEADING = re.compile(r"^# Task assignment\b", re.MULTILINE)
 
 
@@ -176,6 +187,24 @@ def _assert_common_worker_rules(testcase, path, contract_ref):
         f"{path.name}: missing the never-asks-the-user statement",
     )
 
+    # task0024 AC-6
+    testcase.assertIn(
+        UNTRUSTED_INPUT_REFERENCE_SUBSTRING,
+        norm_text,
+        f"{path.name}: missing the Untrusted-Input Handling section reference",
+    )
+    testcase.assertIn(
+        ENVELOPE_REF,
+        text,
+        f"{path.name}: untrusted-input reference must point at worker-envelope.md by path",
+    )
+    for sentence in DISTINCTIVE_ENVELOPE_UNTRUSTED_INPUT_SENTENCES:
+        testcase.assertNotIn(
+            sentence,
+            norm_text,
+            f"{path.name}: must not restate the envelope's untrusted-input wording ({sentence!r})",
+        )
+
     # AC-4
     testcase.assertIsNone(
         FORBIDDEN_TASK_ASSIGNMENT_HEADING.search(text),
@@ -259,6 +288,19 @@ class TestRequirementsAnalystSpecifics(unittest.TestCase):
             "never a silently-adopted assumption",
             self.text,
         )
+
+    # task0024 AC-4 (bs5)
+    def test_states_prior_analysis_reuse_on_matching_digest(self):
+        self.assertIn("prior_analysis", self.text)
+        lowered = self.text.lower()
+        self.assertIn("continue from", lowered)
+        self.assertIn("re-investigate", lowered)
+        self.assertIn("input_digest", self.text)
+
+    def test_states_full_investigation_when_absent_or_mismatched(self):
+        lowered = self.text.lower()
+        self.assertIn("absent", lowered)
+        self.assertIn("full investigation", lowered)
 
 
 class TestRequirementsAnalystToolGrantAndGateTable(unittest.TestCase):
