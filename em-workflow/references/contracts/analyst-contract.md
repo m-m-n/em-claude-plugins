@@ -161,6 +161,25 @@ does not decide the project's `kind`** (`project_native` / `em_workflow` /
 `none`). That decision belongs to the orchestrator-driven create-spec
 procedure (design-input.md 5.0 R1, 5.7 step 11a).
 
+## Gate identifiers
+
+requirements-analyst never asks the user directly; every user-facing
+decision it raises is expressed as a `question_packet` question whose
+`gate_id` joins it to a batch policy in `references/batch-policies.yaml`.
+`analysis_mode: full` raises exactly these decision points:
+
+| decision point | `gate_id` |
+|---|---|
+| Requirement clarification (any unresolved objective, functional or non-functional requirement, acceptance criterion, user-experience point, edge case, security constraint, or similar) | `create-spec.requirement-clarification` |
+| Design-step recommendation | `create-spec.design-step` |
+
+`analysis_mode: design_system_detection` never returns a `question_packet`
+(see above) and so raises neither gate. Gate resolution itself —
+interactive prompting, or the decision table in batch mode — is entirely
+orchestrator-owned per `references/question-resolution.md` and
+`references/batch-policies.yaml`; this worker's only responsibility toward
+that mechanism is assigning each question its `gate_id`.
+
 ## Exclusivity assumption
 
 During its dispatch window, requirements-analyst assumes exclusive access to

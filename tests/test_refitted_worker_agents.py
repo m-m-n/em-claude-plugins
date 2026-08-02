@@ -89,6 +89,24 @@ class TestFrontmatterParsesAndHasNoAskUserQuestion(unittest.TestCase):
         self.assertNotIn("AskUserQuestion", _tools_list(frontmatter))
 
 
+class TestPlannerToolGrant(unittest.TestCase):
+    """task0019 AC-7: the planner no longer grants a shell tool it never
+    uses (its only Bash use, the commit-docs.sh call, was already removed),
+    and still declares that it never writes workflow.yaml directly or
+    commits."""
+
+    def test_planner_tools_does_not_grant_bash(self):
+        frontmatter, _ = _split_frontmatter(_read(PLANNER_PATH))
+        self.assertNotIn(
+            "Bash",
+            _tools_list(frontmatter),
+            "implementation-planner.md must not grant Bash",
+        )
+
+    def test_planner_still_states_never_commits(self):
+        self.assertIn("This agent never commits", _read(PLANNER_PATH))
+
+
 class TestAC7ForbiddenHeadingAndRetainedFrontmatter(unittest.TestCase):
     def test_designer_has_no_task_assignment_heading(self):
         self.assertNotIn(FORBIDDEN_HEADING, _read(DESIGNER_PATH))
