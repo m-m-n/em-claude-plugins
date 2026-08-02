@@ -568,7 +568,7 @@ tasks:
     - FR27
     - NFR4
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0022
     provenance:
