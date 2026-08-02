@@ -413,9 +413,15 @@ backfill's own once-only guard (see below); step 4 MAY delete
    (top candidate → `project_native`; none → `none`).
 4. Write the resolved value to `workflow.yaml` and commit via
    `commit-docs.sh` with message `docs({feature}): backfill design_system`.
-5. If the `kind` × token-existence cross-product table finds an
-   inconsistency (e.g. `kind: none` but tokens actually exist on disk),
-   return to step 2 and re-confirm.
+5. Backfill itself never re-checks the cross-product and never returns to
+   step 2 or any earlier step. `references/contracts/designer-contract.md`
+   owns the `project.design_system.kind` × token-existence table that
+   performs this check; it runs at the next step entry — the first
+   `design` or `create-plan` execution after this commit, per
+   `references/phases/create-plan-phase.md`'s preconditions — not inside
+   backfill. That table's two abort rows resolve to distinct outcomes
+   there (one opens the reclassification gate, the other aborts dispatch
+   outright and waits for the user); this procedure does not restate them.
 
 Backfill runs **at most once** per feature; afterward the ordinary
 resolution rule applies.
