@@ -28,6 +28,15 @@ This is a documentation task (Test Notes: verification is by structural /
 textual assertion over the markdown), following the pattern established by
 tests/test_rework_synthesis_contract.py (task0004) and
 tests/test_review_implement_develop_lock_contracts.py.
+
+task0022 rework (round2.yaml finding bs3 — correcting round1's "presenter"
+criterion to gate-identifier presence) adds:
+
+- AC-5 (task0022.md): the `--batch` argument-processing entry states the
+  jurisdiction split as gate-identifier presence, not as "packet gates vs
+  everything else routed by which step presents them" — and so no longer
+  contradicts Step A.5's own `create-spec.command-approval` routing to
+  `batch-policies.yaml`.
 """
 
 import re
@@ -319,6 +328,56 @@ class TestRetainedElementsSurviveTheRewrite(unittest.TestCase):
         self.assertIn("にマージ", self.text)
         self.assertIn("ブランチを残す", self.text)
         self.assertIn("PR を作成", self.text)
+
+
+class TestBatchArgumentJurisdictionByGateIdentifier(unittest.TestCase):
+    """task0022 AC-5 (round2.yaml bs3): the `--batch` argument-processing
+    entry states the gate-resolution jurisdiction as gate-identifier
+    presence, never as "who presents the gate", and no longer contradicts
+    Step A.5's own routing of `create-spec.command-approval` to
+    `batch-policies.yaml`."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(SKILL_PATH)
+        cls.section = _section(cls.text, "## 引数処理", "## Step 0")
+
+    def test_jurisdiction_stated_as_gate_id_presence(self):
+        self.assertIn("`gate_id` を持つか", self.section)
+        self.assertIn("gate_id` を持つゲートは", self.section)
+        self.assertIn("gate_id` を\n  一切持たないゲート", self.section)
+
+    def test_jurisdiction_not_stated_as_presenter(self):
+        # The old wording routed "Step A / A.5 / 各フェーズ / Step C" as a
+        # block to batch-mode.md regardless of gate_id presence. That
+        # phrase must be gone.
+        self.assertNotIn(
+            "それ以外のゲート\n  （Step A / A.5 / 各フェーズ / Step C）は "
+            "batch-mode.md の Non-packet",
+            self.section,
+        )
+
+    def test_criterion_phrase_present(self):
+        self.assertIn("「誰が提示するか」ではなく「`gate_id` を持つか」", self.section)
+
+    def test_artifact_overwrite_and_command_approval_cited_as_gate_id_examples(self):
+        self.assertIn("create-spec.command-approval", self.section)
+        self.assertIn("{phase}.artifact-overwrite", self.section)
+
+    def test_does_not_contradict_step_a5_command_approval_routing(self):
+        step_a5_section = _section(
+            self.text,
+            "## Step A.5",
+            "## Step B",
+        )
+        self.assertIn("batch-policies.yaml", step_a5_section)
+        self.assertIn("create-spec.command-approval", step_a5_section)
+        # The argument-processing section must route the SAME gate to the
+        # SAME document, not to batch-mode.md's Non-packet table.
+        self.assertIn(
+            "gate_id` を持つゲートは `references/question-resolution.md` の",
+            self.section,
+        )
 
 
 class TestDevelopSkillRewiringAssertionsCanFail(unittest.TestCase):

@@ -1,0 +1,172 @@
+task_id: task0022
+baseline_failures: []
+final_failures: []
+# Round 2 rework (feature-docs/agent-separation/reviews/round2.yaml findings
+# bs2, bs3, bs6, bs8): corrects round1's "presenter" jurisdiction criterion
+# (who raises a gate) to the criterion this plan states as normative
+# (gate-identifier presence). This required rewriting several pre-existing
+# assertions in tests/test_batch_policies.py and
+# tests/test_question_resolution_doc.py that encoded the old, superseded
+# criterion:
+#   - test_batch_policies.py: RELOCATED_NON_PACKET_GATES (8 entries, wrongly
+#     including design.artifact-overwrite / create-plan.artifact-overwrite)
+#     replaced by NON_PACKET_GATES (6 entries, the TRUE no-gate_id-anywhere
+#     set) + ARTIFACT_OVERWRITE_FAMILY (3 entries, now all in
+#     batch-policies.yaml as one SSOT). Every test name built on the old
+#     "relocated" framing was renamed to "non_packet" and re-asserted
+#     against the corrected set.
+#   - test_question_resolution_doc.py: test_classification_precedes_codex_
+#     consultation_by_position, test_classification_precedes_record_tbd_
+#     by_position and test_codex_procedure_precedes_record_tbd_by_position
+#     assumed the fail-closed classification lives INSIDE the Unlisted-gate
+#     fallback section (round1's placement). AC-4 hoists it into its own
+#     "## Fail-closed classification" section above BOTH branches, so those
+#     three tests were replaced with position tests against the new section
+#     (test_classification_section_precedes_batch_resolution_sequence,
+#     test_classification_precedes_any_policy_lookup,
+#     test_classification_precedes_unlisted_gate_fallback,
+#     test_fallback_references_classification_rather_than_restating).
+#     test_validator_cross_check_referenced dropped its "task0016" assertion
+#     (bs8: that attribution does not exist in the distributed plugin) and
+#     gained a companion test asserting no task00NN pattern remains.
+# All renamed/replaced tests were re-verified as red against the pre-rework
+# git HEAD blobs (git show HEAD:<path>) before this rework's edits, not
+# merely re-labeled; see each entry's red_reason below.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_jurisdiction_premise_states_identifier_presence
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_intro_no_longer_claims_packet_presenter_split
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_artifact_overwrite_family_no_longer_a_table_row
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_scope_stated_as_identifier_presence_not_presenter
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_never_claims_all_entries_are_worker_packets
+      - tests.test_develop_skill_rewiring.TestBatchArgumentJurisdictionByGateIdentifier.test_jurisdiction_stated_as_gate_id_presence
+      - tests.test_develop_skill_rewiring.TestBatchArgumentJurisdictionByGateIdentifier.test_jurisdiction_not_stated_as_presenter
+      - tests.test_develop_skill_rewiring.TestBatchArgumentJurisdictionByGateIdentifier.test_criterion_phrase_present
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_jurisdiction_stated_as_identifier_presence_not_presenter
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_jurisdiction_does_not_turn_on_presenter
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-rework blobs: batch-mode.md's intro said "This
+      document covers the batch gates that never pass through a worker's
+      question packet" (presenter framing) and its Non-packet gates section
+      claimed "None of the gates below... carries a gate_id... none appears
+      in batch-policies.yaml" while printing design.artifact-overwrite and
+      create-plan.artifact-overwrite rows, both of which DO carry a gate_id
+      — so the new "identifier presence" phrasing and the row-removal
+      assertion were both false (AssertionError / substring not found).
+      batch-policies.yaml's header said "Scope: this file covers ONLY the
+      gates expressed as question packets", contradicted by its own
+      create-spec.artifact-overwrite entry (orchestrator-raised); the new
+      header text was absent. develop/SKILL.md's --batch argument-processing
+      routed "Step A / A.5 / 各フェーズ / Step C" as a block to
+      batch-mode.md's table regardless of gate_id, contradicting Step A.5's
+      own create-spec.command-approval routing to batch-policies.yaml; the
+      corrected criterion phrase「誰が提示するか」ではなく「`gate_id` を持つか」
+      was absent. question-resolution.md had no cross-reference to
+      orchestrator-opened gates at all; the "jurisdiction below never turns
+      on which one happened" sentence did not exist.
+  AC-2:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_artifact_overwrite_family_all_present_as_one_ssot
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_artifact_overwrite_family_shares_identical_semantics
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_artifact_overwrite_family_no_longer_a_table_row
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_never_claims_all_entries_are_worker_packets
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-rework blobs: batch-policies.yaml held only
+      create-spec.artifact-overwrite (KeyError on design.artifact-overwrite
+      / create-plan.artifact-overwrite lookups), and batch-mode.md's table
+      DID print `| \`design.artifact-overwrite\` ... |` and
+      `| \`create-plan.artifact-overwrite\` ... |` rows (regex row-match
+      succeeded, so assertIsNone failed) — the family was split across two
+      files, and the header's "ONLY... question packets" claim was
+      contradicted by its own held entries.
+  AC-3:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_entry_condition_covers_both_packet_and_orchestrator_opened
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_answer_formed_without_a_packet_is_described
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_packet_means_direct_action_not_redispatch
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: the pre-rework Batch resolution sequence's step 1 read
+      "The worker returns status: needs_user_input with a packet" with no
+      alternative branch for an orchestrator-opened gate, so "the
+      orchestrator raises the question directly outside any" was absent;
+      step 5/7 said "Build the answer object..." / "Re-dispatch the worker
+      using the same shape used in interactive mode" unconditionally, with
+      no packet_id-is-null or direct-action wording for the no-packet case.
+  AC-4:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_section_precedes_batch_resolution_sequence
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_any_policy_lookup
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_precedes_unlisted_gate_fallback
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_classification_applies_regardless_of_listing
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_fallback_references_classification_rather_than_restating
+    red_confirmed: true
+    red_reason: >-
+      ValueError: the pre-rework doc had no "## Fail-closed classification"
+      heading at all — the classification lived as step 2 inside "##
+      Unlisted-gate fallback" (round1's placement, per round2.yaml bs2: a
+      LISTED gate's Batch resolution sequence never consulted it), so
+      `self.text.index("## Fail-closed classification")` raised ValueError
+      for every position-based assertion, and the "regardless of whether
+      that gate_id turns out to have an entry" / "this fallback does not
+      re-classify" phrasing did not exist.
+  AC-5:
+    tests:
+      - tests.test_develop_skill_rewiring.TestBatchArgumentJurisdictionByGateIdentifier.test_does_not_contradict_step_a5_command_approval_routing
+      - tests.test_develop_skill_rewiring.TestBatchArgumentJurisdictionByGateIdentifier.test_artifact_overwrite_and_command_approval_cited_as_gate_id_examples
+      - tests.test_develop_skill_rewiring.TestBatchArgumentJurisdictionByGateIdentifier.test_jurisdiction_stated_as_gate_id_presence
+      - tests.test_develop_skill_rewiring.TestBatchArgumentJurisdictionByGateIdentifier.test_jurisdiction_not_stated_as_presenter
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: the pre-rework --batch argument-processing text routed
+      "それ以外のゲート（Step A / A.5 / 各フェーズ / Step C）は batch-mode.md
+      の Non-packet gates 表に従う" — literally sending Step A.5's own
+      command-approval gate through the non-packet table — while Step A.5's
+      own section text routed the SAME gate_id to batch-policies.yaml, a
+      direct self-contradiction (round2.yaml bs3). The corrected phrasing
+      ("gate_id` を持つゲートは... references/question-resolution.md") was
+      absent, so both the presence and the absence assertions failed.
+  AC-6:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ceiling_bounds_per_packet_not_per_question
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_packet_batching_stated_in_fallback_sequence
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_history_is_capped_or_summarized_not_resent_in_full
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_per_command_fallback_cache_referenced
+      - tests.test_batch_policies.TestPerCommandFallbackLiteralStringCache.test_batch_row_states_a_literal_string_cache
+      - tests.test_batch_policies.TestPerCommandFallbackLiteralStringCache.test_batch_row_references_the_interactive_cache
+      - tests.test_batch_policies.TestPerCommandFallbackLiteralStringCache.test_interactive_side_defines_a_literal_string_cache
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: the pre-rework Codex consultation procedure's step 3
+      said "includes the FULL prior exchange... every prompt already sent
+      and every reply already received" (unbounded growth) with no mention
+      of batching a packet's questions into one consultation and no
+      per-packet ceiling statement; the batch-mode.md per-command approval
+      fallback row said only "Codex consultation, falling back to the
+      minimum-side-effect option" with no literal-string cache or reference
+      to command-execution-protocol.md's existing interactive cache
+      (round2.yaml bs6). "per literal command string" and "interactive
+      fallback" were both absent from that row.
+  AC-7:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_feature_docs_task_identifier_cited
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_cross_check_attributed_to_the_packet_schema
+      - tests.test_question_resolution_doc.TestQuestionPacketSchemaCategoryBlockingConstraint.test_constraint_states_the_three_categories_require_block
+      - tests.test_question_resolution_doc.TestQuestionPacketSchemaCategoryBlockingConstraint.test_enforcing_script_named
+      - tests.test_question_resolution_doc.TestQuestionPacketSchemaCategoryBlockingConstraint.test_no_feature_docs_task_identifier_cited
+    red_confirmed: true
+    red_reason: >-
+      re.search(r"task\d{4}") found a match in the pre-rework
+      question-resolution.md ("task0016 adds that check") and in
+      question-packet-schema.md ("...question-resolution.md, task0005),
+      the workflow patch structure...") — round2.yaml bs8: both cite a
+      feature-docs task identifier that does not exist in the distributed
+      plugin. Separately, question-packet-schema.md's `on_unanswered`
+      section never stated the category-to-blocking constraint the
+      validator actually enforces (`BLOCKING_REQUIRED_CATEGORIES` in
+      scripts/validate-worker-output.py) — the "A question whose `category`
+      is `spec-change`, `security`, or `license` must carry `on_unanswered:
+      block`" sentence was absent, so the constraint assertion failed too.

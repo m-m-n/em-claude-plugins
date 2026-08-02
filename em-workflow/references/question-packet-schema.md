@@ -7,11 +7,11 @@ lives in `scripts/validate-worker-output.py`, backed by fixtures under
 `references/fixtures/` (design-input.md 10.5).
 
 This document does not restate the batch gate-resolution table (owned by
-`references/batch-policies.yaml` and `references/question-resolution.md`,
-task0005), the workflow patch structure (`references/workflow-patch.md`,
-design-input.md 5.5), or the phase-state persistence schema
-(`references/phase-state.md`, design-input.md 5.6). The `gate_id` field
-below is a join key into the batch-policy SSOT, not a copy of it.
+`references/batch-policies.yaml` and `references/question-resolution.md`),
+the workflow patch structure (`references/workflow-patch.md`, design-input.md
+5.5), or the phase-state persistence schema (`references/phase-state.md`,
+design-input.md 5.6). The `gate_id` field below is a join key into the
+batch-policy SSOT, not a copy of it.
 
 ## The packet is question-request-only
 
@@ -93,6 +93,14 @@ automatically. In interactive mode, an unanswered blocking
 question is never silently downgraded into an assumption; `record_tbd` and
 `use_batch_policy` are the only non-`block` values, and neither one is an
 assumption.
+
+A question whose `category` is `spec-change`, `security`, or `license` must
+carry `on_unanswered: block` — a question in one of those categories can
+never be left to resolve as `record_tbd` or `use_batch_policy`.
+`scripts/validate-worker-output.py` enforces this constraint mechanically
+and rejects a packet where it does not hold;
+`references/question-resolution.md`'s fail-closed classification states the
+resolution-time rule this constraint backs.
 
 ## Mapping onto AskUserQuestion
 
