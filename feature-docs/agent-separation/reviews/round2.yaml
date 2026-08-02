@@ -1,0 +1,446 @@
+round: 2
+executed_at: "2026-08-03T03:40:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: b6f3bc089d15dc7fa623a1c86af87256cc26eb9b
+  head_commit: f6d4c5140fb44b0c3fd0b7e308dbd6af11ff0ab2
+  changed_files_count: 205
+  note: >-
+    Re-review of the whole feature diff after the round-1 rework re-entered the
+    implement phase and merged seven tasks. At this commit 761 tests pass and
+    check-plugin-invariants.py exits 0.
+plan:
+  floor: [comprehensive, spec, security, performance, architecture]
+  discretionary: []
+  codex_cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: performance, source: codex, status: completed}
+  - perspective: architecture
+    source: codex
+    status: skipped
+    skip_reason: "round 1's codex architecture run exceeded its budget without a verdict; not re-dispatched"
+  - perspective: spec
+    source: codex
+    status: skipped
+    skip_reason: "round 1's codex spec reviewer returned without a verdict; not re-dispatched"
+
+round1_verification:
+  confirmed_fixed:
+    - as6   # segment-wise containment — re-ran both original escapes
+    - as7   # Bash removed from analyst and planner
+    - as9   # pre-dispatch containment validation present
+    - as12  # whole-tree hashing removed; deletions/mode/kind still detected
+    - as13  # exclusions + extension allowlist shipped
+    - as16  # plan path containment, symlink segments, size limit — escapes re-run
+    - as22  # single shared traversal, pinned by tests, measured 0.14s
+    - as23  # backfill discovery persisted
+  fixed_but_incomplete: [as8, as11, as17, as20, as21, as6, as14, as10, as3]
+  note: >-
+    Every round-1 finding's target site was inspected. The eight above hold. The
+    rest were fixed at the site they were reported against but left an adjacent
+    gap, which the findings below record. No round-1 finding regressed.
+
+findings:
+  - stable_id: bs1-payload-contract-collision
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/contracts/analyst-contract.md
+    line: 61
+    title: "The new payload prohibition contradicts the analyst contract, so every clarification round fails validation"
+    description: >-
+      as21's fix forbids a non-empty payload on any status except completed
+      (validate-worker-output.py:1204-1208). analyst-contract.md:61-64 and
+      agents/requirements-analyst.md:79 instruct the analyst to return
+      payload.analysis_snapshot together with status needs_user_input. The two
+      cannot both hold. Measured: adding analysis_snapshot to the
+      valid-needs-user-input fixture yields exit 1 with "status
+      'needs_user_input' forbids a non-empty payload". requirements-analyst is
+      create-spec's principal worker and the clarification loop is the main
+      success path, so a worker behaving exactly as its contract requires is
+      rejected at every round. The existing fixtures use an empty payload, which
+      is why 761 tests and the invariant checker both stay green. Related drift:
+      create-spec-phase.md:181 refers to analysis_snapshot.design_system_candidates
+      when describing the completed payload, whose key is design_system_candidates.
+    suggestion: >-
+      Decide which side is normative and make the other follow. Either treat the
+      envelope's status table as SSOT and move the analyst's interim findings into
+      the question packet's summary / confirmed_facts / assumptions, or record a
+      per-worker exception in the envelope status table and make the validator's
+      prohibition per-worker via the capability table. Fix the create-spec-phase.md
+      reference either way, and add an analyst + needs_user_input + analysis_snapshot
+      fixture.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+
+  - stable_id: bs2-fail-closed-listed-path
+    severity: high
+    category: security
+    file: em-workflow/references/question-resolution.md
+    line: 53
+    title: "The fail-closed classification sits inside the unlisted-gate branch, so listed gates settle sensitive questions unchecked"
+    description: >-
+      Reported independently by four reviewers. The classification added for as8
+      lives in the Unlisted-gate fallback section, which is entered only when the
+      gate is absent from the policy file. The sibling Batch resolution sequence
+      looks the gate up and applies its option without consulting category or the
+      reversible flag. Two independent consequences follow. First, the analyst can
+      raise only create-spec.requirement-clarification and create-spec.design-step,
+      both listed, and the former is defined by analyst-contract.md:173 as the gate
+      for any unresolved point including security constraints — so a security or
+      licensing question in create-spec always takes the listed path and settles via
+      codex_consultation or record_tbd, and NFR4 never applies there. Second,
+      gate_id remains an unbound worker-chosen string (validate-worker-output.py:588
+      checks non-empty only), so any sensitive question can be laundered through any
+      permissive listed gate. Both spoofs were reproduced through the real validator
+      and exit 0: a rework-planner packet with phase rework, category security and
+      gate_id create-spec.design-step, and one with category spec-change and gate_id
+      create-plan.tbd-resolution. The promise that leaving rework.spec-change
+      unlisted forces an abort is bypassable by naming another gate. The
+      category-to-blocking cross-check added by as8 is inert on the listed path,
+      which never reads on_unanswered.
+    suggestion: >-
+      Hoist the classification above both branches — immediately after step 1 of the
+      Batch resolution sequence — and have the fallback reference it rather than
+      restate it. Independently, bind gate_id in the validator to a registry keyed by
+      gate identifier giving the permitted worker, phase, category and option ids.
+      Neither half suffices alone.
+    sources: [claude:security, claude:comprehensive, claude:architecture, codex:security]
+    confidence: 95
+    resolution: unresolved
+
+  - stable_id: bs3-gate-jurisdiction-criterion
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-mode.md
+    line: 38
+    title: "The batch gate split used the wrong criterion, leaving one gate family in two SSOTs with no path to either"
+    description: >-
+      The rework divided gates by who presents them rather than by whether they
+      carry a gate identifier, and the resulting text is false in both directions.
+      batch-mode.md:38-40 claims none of its rows carries a gate identifier at its
+      originating site, yet spec-writer-contract.md:118-124 has the orchestrator
+      raise a question with gate_id {phase}.artifact-overwrite, and the two moved
+      rows print a gate identifier and speak of the packet. The
+      {phase}.artifact-overwrite family is now split, create-spec's policy in
+      batch-policies.yaml and design's and create-plan's in the batch-mode table.
+      Conversely batch-policies.yaml's header restricts it to packet-borne gates
+      while five of its entries are orchestrator-presented, including
+      create-spec.feature-identity, the very first gate of a batch run. The
+      operative consequence is that question-resolution.md's batch sequence is the
+      only procedure that resolves a gate identifier and it has no hop into the
+      batch-mode table, so design and create-plan artifact-overwrite never reach the
+      documented preserve_and_reuse and fall through to Codex consultation — which,
+      if the suggestion maps to overwrite, produces exactly the silent overwrite the
+      policy file promises never happens. The eight moved identifiers are also
+      outside the invariant checker's scan, so they now receive no vocabulary check.
+      The same wrong criterion is fixed in develop/SKILL.md:59-64's argument
+      processing, which routes Step A.5 and every phase gate to the batch-mode table
+      while that same file's Step A.5 was repointed to batch-policies.yaml, so an
+      orchestrator following the entry rule loses auto_record and the refusal-pattern
+      hard fail.
+    suggestion: >-
+      Restate the criterion as gate-identifier presence rather than presenter, apply
+      it consistently across batch-mode.md, batch-policies.yaml's header,
+      develop/SKILL.md's argument processing and question-resolution.md's batch
+      sequence, and bring the artifact-overwrite family back under one SSOT. This
+      orchestrator's own rework instruction recommended the wrong direction; the
+      criterion above supersedes it.
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+
+  - stable_id: bs4-backfill-cross-product
+    severity: high
+    category: spec
+    file: em-workflow/references/phase-state.md
+    line: 416
+    title: "The design-system backfill never received the cross-product branch split, so it can still loop"
+    description: >-
+      as10's split landed in create-plan-phase.md, develop/SKILL.md and
+      designer-contract.md's reclassify step, but not in the backfill procedure that
+      is FR32's legacy-path source of truth. Its step 5 keeps one rule for both abort
+      rows and returns to the create-spec.design-system gate. For the row where the
+      source token file is absent and its generated sheet present, that is precisely
+      the non-termination the owning contract forbids: re-settling the kind cannot
+      restore a missing file, so the same inconsistency reappears. In batch the gate
+      resolves to top_candidate_or_none, which with zero candidates yields the same
+      value that produced the inconsistency, so the loop never breaks — whereas the
+      reclassify gate's batch default is em_workflow specifically so that it does.
+    suggestion: >-
+      Replace backfill step 5 with a pointer to the owning table's two outcomes and
+      state that backfill itself never loops back to the earlier step.
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+
+  - stable_id: bs5-analysis-not-reused
+    severity: high
+    category: performance
+    file: em-workflow/references/contracts/analyst-contract.md
+    line: 33
+    title: "Clarification rounds still rebuild the whole analysis; only the glob cache half of as14 was fixed"
+    description: >-
+      Reported independently by both models. The glob half is genuinely fixed — the
+      resolution point now cites the cache and its three re-resolution triggers. The
+      analysis half is untouched: the envelope has no field carrying a prior
+      analysis, prior_packets carries questions only, and phase-state keeps digests
+      rather than bodies. analysis_snapshot is defined solely as output. So a
+      high-effort analyst re-reads the full digest input set — project instructions,
+      licence, package manifests, test conventions, resolved end-to-end paths, up to
+      500 files or 5 MB of design-system candidates, and the existing requirements
+      and specification documents — and re-derives the same conclusions on every
+      round, across roughly a dozen rounds per phase.
+    suggestion: >-
+      Add a size-bounded prior-analysis input to the envelope keyed by the unchanged
+      input digest, persist its normalized form, and require the analyst to continue
+      from it rather than rebuild, invalidating only when the corresponding inputs
+      change.
+    sources: [claude:performance, codex:performance]
+    confidence: 95
+    resolution: unresolved
+
+  - stable_id: bs6-codex-consultation-budget
+    severity: high
+    category: performance
+    file: em-workflow/references/question-resolution.md
+    line: 119
+    title: "The newly written Codex consultation has no total budget and multiplies per question and per command"
+    description: >-
+      Introduced by the round-1 rework itself: one task wrote the consultation loop
+      as substance and another made create-spec.requirement-clarification reachable,
+      and that gate carries action codex_consultation and is the analyst's most
+      frequent. The procedure runs once per question with a five-turn ceiling, so a
+      batch create-spec of up to thirty-two questions can launch the wrapper up to a
+      hundred and sixty times sequentially. Step 3 re-sends the entire prior exchange
+      each turn, so tokens grow quadratically within one consultation. A second
+      amplifier: the batch per-command approval fallback points at the same
+      procedure, and unlike the interactive side it defines no literal-string cache,
+      so each command string can cost five more launches. No total budget, no
+      per-packet batching and no result reuse are defined anywhere.
+    suggestion: >-
+      Give the consultation a per-phase budget, or batch a packet's unresolved
+      questions into one consultation; add the literal-string cache to the batch
+      per-command fallback; and cap or summarize the re-sent history.
+    sources: [claude:performance]
+    confidence: 60
+    resolution: unresolved
+
+  - stable_id: bs7-r1-citations-not-repointed
+    severity: medium
+    category: architecture
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 18
+    title: "R1 and R2 are shipped now, but the phase protocols still resolve them to the undistributed design document"
+    description: >-
+      as11's rework wrote rule R1's normalization procedure and the validation-layer
+      table into worker-envelope.md, and FR25 had already put rule R2 into
+      workflow-schema.md. The citation lists that as11 was reported against were not
+      updated: create-spec-phase.md:18-19 and create-plan-phase.md:20-21 still name
+      design-input.md 5.0 as where to resolve both rules, as do create-spec-phase.md
+      :91, :97, :198, create-plan-phase.md:91, :126 and analyst-contract.md:124.
+      Neither protocol cites worker-envelope.md at all. Since an installed plugin has
+      no feature-docs directory, the named resolution target does not exist at
+      runtime even though the rule is shipped two files away. worker-envelope.md
+      already models the correct phrasing, treating the design document as provenance
+      that is not required reading.
+    suggestion: >-
+      Repoint every one of those citations to worker-envelope.md and
+      workflow-schema.md, keeping the design-document section numbers as provenance.
+    sources: [claude:architecture, claude:spec]
+    confidence: 75
+    resolution: unresolved
+
+  - stable_id: bs8-schema-missing-constraint
+    severity: medium
+    category: architecture
+    file: em-workflow/references/question-packet-schema.md
+    line: 89
+    title: "The validator enforces a packet constraint that the packet schema never states"
+    description: >-
+      The validator rejects a question whose category is specification change,
+      security or licensing unless its unanswered behaviour is blocking, but the
+      packet-shape source of truth — which question-resolution.md explicitly
+      designates — never mentions the rule, so a schema-conforming packet hard-fails
+      validation. question-resolution.md attributes the rule to a feature-docs task
+      identifier that does not exist in the distributed plugin, so a reader cannot
+      trace where it is enforced.
+    suggestion: >-
+      State the constraint in the packet schema's unanswered-behaviour section and
+      replace the task-identifier attribution with the script's own path.
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+
+  - stable_id: bs9-validator-type-guards
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 777
+    title: "The type-guard fix reached only written artifacts; patches and phase-state still raise on malformed input"
+    description: >-
+      as6 was fixed inside the written-artifact normalizer alone. Measured: a task
+      patch entry whose value is a string raises at validate_task_entry, and a
+      worker-run list containing a string raises inside phase-state validation; both
+      exit 1 with empty output, breaking the documented contract that exit 1 carries
+      machine-readable detail. Workflow patches are unvalidated planner output, so
+      the path is reachable. The answers list already has a guard that the equivalent
+      phase-state loop lacks.
+    suggestion: >-
+      Guard every element of the patch entries, step patches, preserve list,
+      worker runs, patches, packets, answers and resolved-input cache, and wrap the
+      top-level dispatch so an unexpected exception exits 2 with a message rather
+      than 1 with nothing. Add an invalid fixture for both kinds.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+
+  - stable_id: bs10-invocation-gaps
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/phases/create-plan-phase.md
+    line: 174
+    title: "Two validator invocations silently narrow the checks they claim to perform"
+    description: >-
+      The canonical invocation added for as20 omits the phase-state argument, so the
+      duplicate-patch-identifier idempotency check never runs, and the accompanying
+      list of silently-narrowing omissions names only three arguments. Separately the
+      rework-planner contract states its four checks unconditionally, but the check
+      that new scenarios exist in the verification document's diff runs only when
+      both the feature directory and a baseline directory are supplied; without the
+      baseline it degrades to existence in the current document, which the planner
+      itself wrote. The baseline argument appears in no document under the plugin
+      directory, and the rework route has no canonical invocation at all.
+    suggestion: >-
+      Add the phase-state argument to the canonical invocation and to its omission
+      list, write a canonical invocation for the rework route including the baseline
+      directory, and make the validator error rather than degrade when new scenarios
+      are declared without a baseline.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+
+  - stable_id: bs11-checker-self-reference
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/check-plugin-invariants.py
+    line: 427
+    title: "The gate coverage check scans itself, so its own comments mark two gates as referenced forever"
+    description: >-
+      The reference direction excludes only the policy file, not the checker, and the
+      checker's own comments mention two gate identifiers. Those two would stay
+      reported as referenced even if every other document dropped them. The
+      stale-reference check already maintains a self-exclusion set that this
+      direction does not use.
+    suggestion: >-
+      Apply the same self-exclusion set to this direction, and add a synthetic case
+      where a policy key appears only in the checker's own comments.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+
+  - stable_id: bs12-worker-untrusted-input
+    severity: medium
+    category: security
+    file: em-workflow/agents/requirements-analyst.md
+    line: 36
+    title: "No worker prompt or contract carries an untrusted-input clause, while the reviewers' protocol does"
+    description: >-
+      The analyst reads project instructions, test conventions, package manifests,
+      the licence and design-system candidate files from a cloned repository, all
+      attacker-influenceable, and the other four workers receive content from the
+      same sources. A search across the agent definitions, the contracts and the
+      phase protocols finds no statement that file content is data rather than
+      instruction. The same plugin's review protocol gives reviewers exactly that
+      protection, so the asymmetry is stark, and injected content steering a gate
+      identifier or category connects directly to the listed-path hole above.
+    suggestion: >-
+      Add one untrusted-input section to the envelope contract and have each worker
+      prompt reference it, mirroring the reviewers' wording.
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+
+  - stable_id: bs13-fr31-text-vs-behaviour
+    severity: medium
+    category: spec
+    file: feature-docs/agent-separation/SPEC.md
+    line: 0
+    title: "FR31 and the design document still mandate the snapshot row that as12 deliberately removed"
+    description: >-
+      FR31 requires the pre-dispatch snapshot to capture working-tree content hashes,
+      and the design document's snapshot table carries the same row, but the shipped
+      protocol now states that no whole-tree content hashing pass runs. as12's own
+      suggestion said the design section needed the same correction and it was never
+      made. The engineering direction is sound — the clean-worktree precondition
+      makes the index blob identifiers carry the same identity — so the requirement
+      text is what should move.
+    suggestion: >-
+      Amend FR31 and the design document's snapshot table to drop the row and record
+      the clean-worktree rationale the protocol already states.
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+
+  - stable_id: bs14-index-enumeration-cost
+    severity: medium
+    category: performance
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 399
+    title: "The snapshot still enumerates the whole index twice per dispatch"
+    description: >-
+      Content hashing is now limited to changed paths, but the pre-dispatch snapshot
+      still lists every tracked entry and the post-dispatch comparison repeats it, so
+      a worker touching one file still pays work proportional to the tracked set
+      twice. The Claude reviewer judged as12 essentially fixed because the expensive
+      half is gone; the Codex reviewer rated the remainder high. Index listing is far
+      cheaper than content hashing, so this is real but smaller than the original.
+    suggestion: >-
+      Keep the head tree as the baseline and enumerate candidates from the porcelain
+      status and the index-versus-working-tree comparison, querying blob identifiers
+      and modes only for those candidates.
+    sources: [codex:performance]
+    confidence: 50
+    resolution: unresolved
+
+  - stable_id: bs15-runtime-write-enforcement
+    severity: medium
+    category: security
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 368
+    title: "Write containment is validated before dispatch but not enforced per tool call"
+    description: >-
+      The pre-dispatch control validates the declared targets and roots; it does not
+      constrain each write the worker performs. A worker that ignores its policy and
+      writes to an undeclared absolute path outside the worktree leaves a mutation
+      the comparison cannot see and the snapshot cannot restore, as the protocol
+      itself acknowledges. Recorded as a known limitation rather than a regression:
+      as9's own suggestion stated that tool-call-time or operating-system enforcement
+      is the complete fix and is outside this feature's scope.
+    suggestion: >-
+      Out of scope here. If it is taken up later, enforce the policy at tool-call
+      time through a pre-use guard or a sandbox and keep the comparison as auditing.
+    sources: [codex:security]
+    confidence: 50
+    resolution: deferred
+    resolution_reason: >-
+      Known limitation, explicitly scoped out when as9 was raised; the complete fix
+      needs a mechanism this feature does not introduce.
+
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: skipped
+  skip_reason: >-
+    Same judgment as round 1. These findings need coordinated edits across files
+    owned by different tasks and accompanying test changes, neither of which the
+    single-file editor can produce.
+
+residual_critical_high: 6
+rework_required: true
