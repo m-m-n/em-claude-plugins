@@ -1,0 +1,57 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_dedup_rule_same_question_id
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_dedup_rule_supersedes
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_dedup_rule_gate_evidence_field_match
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_dedup_rule_no_prose_judgment
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_dedup_rule_answered_never_represented
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_dedup_rules_appear_in_order
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_priority_sort_blocking_first
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_priority_sort_priority_levels_in_order
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_priority_sort_category_order
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_depends_on_deferral
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_presentation_limits_are_numeric
+    red_confirmed: true
+    red_reason: "question-resolution.md did not exist; setUpClass raised FileNotFoundError before any test in the class could run"
+  AC-2:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_batch_resolution_sequence_present
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_missing_option_id_is_protocol_error
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_label_matching_forbidden_as_substitute
+    red_confirmed: true
+    red_reason: "question-resolution.md did not exist; setUpClass raised FileNotFoundError before any test in the class could run"
+  AC-3:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_unlisted_gate_fallback_present
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_fail_closed_categories_named
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_intentional_behaviour_change_stated
+    red_confirmed: true
+    red_reason: "question-resolution.md did not exist; setUpClass raised FileNotFoundError before any test in the class could run"
+  AC-4:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_parses_as_yaml
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_gate_id_set_matches_design_input_listing
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_rework_spec_change_absent
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_every_entry_has_an_action
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_select_entries_carry_an_option_id
+    red_confirmed: true
+    red_reason: "batch-policies.yaml did not exist; setUpClass raised FileNotFoundError before any test in the class could run"
+  AC-5:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_documents_preserve_and_reuse_meaning
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_documents_on_unavailable_abort_meaning
+    red_confirmed: true
+    red_reason: "batch-policies.yaml did not exist; setUpClass raised FileNotFoundError before any test in the class could run"
+  AC-6:
+    tests:
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_migrated_section_headings_are_gone
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_no_rework_synthesis_body
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_no_codex_fallback_procedural_detail
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_references_the_three_new_documents
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original
+    red_confirmed: true
+    red_reason: "With batch-policies.yaml/question-resolution.md absent, setUpClass raised FileNotFoundError. Separately, with those two files restored but batch-mode.md reverted to its pre-edit content, test_migrated_section_headings_are_gone failed with AssertionError ('## Fallback for gates not in the table' unexpectedly found) and test_references_the_three_new_documents failed (new reference paths absent) — both confirmed against the real pre-edit file, not just the setUpClass error"
