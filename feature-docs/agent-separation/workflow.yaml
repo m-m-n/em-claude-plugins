@@ -213,7 +213,7 @@ tasks:
     - FR21
     - FR23
     - NFR7
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0009
   task0010:
@@ -330,9 +330,9 @@ tasks:
     - FR30
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0014
 review:
   status: pending
   rounds_completed: 0
