@@ -173,10 +173,14 @@ class TestSkillStepABootstrapStates(unittest.TestCase):
             self.assertIn("$PROJECT_ROOT", line)
 
     def test_branch_without_workflow_yaml_state_routes_to_create_spec(self):
+        # task0012 replaced the old create-spec agent reference
+        # (agents/requirements-spec-creator.md, deleted by task0013) with
+        # the new create-spec phase protocol document -- the existing
+        # branch detection/reuse logic this test guards now lives there.
         section = self.step_a_section
         self.assertIn("feature-docs/{feature}/workflow.yaml", section)
         self.assertIn("create-spec フェーズへ直接", section)
-        self.assertIn("requirements-spec-creator.md Phase 3", section)
+        self.assertIn("references/phases/create-spec-phase.md", section)
 
     def test_three_bootstrap_states_are_all_present(self):
         section = self.step_a_section
