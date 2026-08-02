@@ -533,7 +533,8 @@ tasks:
     - FR30
     - NFR6
     status: pending
-    notes: 'held back deliberately: its repository-level assertion only becomes satisfiable once the sibling rework tasks have merged'
+    notes: 'held back deliberately: its repository-level assertion only becomes satisfiable once the sibling rework tasks have merged. Scope extended after task0017 merged: the gate-identifier extraction
+      heuristic reports six referenced identifiers as unreferenced.'
     branch: null
     provenance:
       source: review
@@ -541,6 +542,7 @@ tasks:
       source_ids:
       - as2
       - as22
+      - gate-id-extraction-false-negative
 review:
   status: pending
   rounds_completed: 1
