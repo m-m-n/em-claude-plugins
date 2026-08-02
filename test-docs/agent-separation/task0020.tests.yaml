@@ -1,0 +1,87 @@
+task_id: task0020
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_phase_state_doc.TestDiscoveryExclusionsAndExtensionAllowlist.test_every_exclusion_root_from_design_input_appears
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: exclusion roots from design-input.md missing from
+      phase-state.md: ['.claude/worktrees/', '.git/', '.gitignore',
+      'node_modules/', 'vendor/'] -- none of the exclusion roots existed in
+      the shipped discovery rules before this task.
+  AC-2:
+    tests:
+      - tests.test_phase_state_doc.TestDiscoveryExclusionsAndExtensionAllowlist.test_every_extension_from_design_input_appears
+      - tests.test_phase_state_doc.TestDiscoveryExclusionsAndExtensionAllowlist.test_filtering_before_caps_is_stated_during_enumeration
+    red_confirmed: true
+    red_reason: >-
+      test_every_extension_from_design_input_appears:
+      AssertionError: extensions from design-input.md missing from
+      phase-state.md: ['.css', '.js', '.json', '.kt', '.scss', '.ts',
+      '.yml']. test_filtering_before_caps_is_stated_during_enumeration:
+      AssertionError: 'enumeration' not found in the resolved_input_cache
+      section -- no exclusion/extension/enumeration-ordering statement
+      existed before this task.
+  AC-3:
+    tests:
+      - tests.test_phase_state_doc.TestResolvedInputCache.test_discovery_caps_with_mode_specific_handling_present
+    red_confirmed: false
+    red_reason: >-
+      This criterion requires the pre-existing file-count/size cap table
+      and its interactive/unattended behaviours to remain unchanged, so
+      there is no observable change to make it red first -- the test
+      already passed before this task began (the cap table was shipped by
+      task0003) and continues to pass, untouched, after this task's edits.
+      Verified by re-reading the "Discovery caps" table's text before and
+      after: byte-identical except for its position relative to the new
+      exclusion/extension bullet inserted immediately above it.
+  AC-4:
+    tests:
+      - tests.test_phase_state_doc.TestBackfillDiscoveryPersistence.test_backfill_discovery_persistence_subsection_present
+      - tests.test_phase_state_doc.TestBackfillDiscoveryPersistence.test_persisted_fields_cover_paths_digests_generation_digest_and_truncation
+    red_confirmed: true
+    red_reason: >-
+      test_backfill_discovery_persistence_subsection_present:
+      AssertionError: 'Backfill discovery persistence' not found in the
+      backfill section text. test_persisted_fields_cover_...: ValueError
+      from .index("Backfill discovery persistence") -- the substring did
+      not exist, so setUp raised before the field checks could even run.
+      Neither the persistence subsection nor its schema fields
+      (generation_digest / paths / digests / truncated) existed anywhere
+      in phase-state.md before this task.
+  AC-5:
+    tests:
+      - tests.test_phase_state_doc.TestBackfillDiscoveryPersistence.test_ordinary_resume_reuses_persisted_discovery_without_repeating_search
+      - tests.test_phase_state_doc.TestBackfillDiscoveryPersistence.test_interrupted_answer_loss_is_scoped_to_the_answer_not_discovery
+    red_confirmed: true
+    red_reason: >-
+      test_ordinary_resume_reuses_...: ValueError from
+      .index("Backfill discovery persistence") in setUp -- the resume-reuse
+      statement did not exist. test_interrupted_answer_loss_is_scoped_...:
+      AssertionError: 'discovery result' not found in the Interrupted
+      backfill paragraph -- it only scoped the loss to the answer
+      implicitly, with no explicit statement that the discovery result is
+      a separate, persisted concern.
+  AC-6:
+    tests:
+      - tests.test_phase_state_doc.TestDiscoveryExclusionsAndExtensionAllowlistParsing.test_parser_extracts_the_known_exclusion_roots_and_extensions
+      - tests.test_phase_state_doc.TestDiscoveryExclusionsAndExtensionAllowlistParsing.test_parser_flags_a_missing_exclusion_root
+      - tests.test_phase_state_doc.TestDiscoveryExclusionsAndExtensionAllowlist.test_every_exclusion_root_from_design_input_appears
+      - tests.test_phase_state_doc.TestDiscoveryExclusionsAndExtensionAllowlist.test_every_extension_from_design_input_appears
+      - tests.test_phase_state_doc.TestBackfillDiscoveryPersistence.test_persisted_fields_cover_paths_digests_generation_digest_and_truncation
+      - tests.test_phase_state_doc.TestBackfillDiscoveryPersistence.test_ordinary_resume_reuses_persisted_discovery_without_repeating_search
+    red_confirmed: true
+    red_reason: >-
+      AC-6 requires the test file itself to assert AC-1/AC-2/AC-4/AC-5 by
+      deriving the exclusion/extension lists from design-input.md rather
+      than restating them. The parser helper
+      (_design_discovery_exclusions_and_extensions) and its two dedicated
+      unit tests are new in this task; test_parser_flags_a_missing_exclusion_root
+      was red for a real bug in its own first draft (backticks placed after
+      the marker phrase, so the parser found nothing -- AssertionError:
+      Lists differ: [] != ['.git/']), confirming the parser can fail
+      meaningfully before it was fixed. The AC-1/AC-2/AC-4/AC-5 tests listed
+      above are the same reds already recorded there, which is what
+      satisfies AC-6's assertion requirement.

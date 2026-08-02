@@ -31,6 +31,28 @@ tied to the normative source rather than to hand-picked field names.
 Follows the pattern established by
 tests/test_review_implement_develop_lock_contracts.py (task0007) and
 tests/test_planner_designer_worktree_docs.py (task0005).
+
+Extended for task0020 (review round1 rework, findings as13 / as23; see
+feature-docs/agent-separation/tasks/task0020.md):
+
+- AC-1: the discovery rules name every exclusion root the design defines.
+- AC-2: the discovery rules name the directory-enumeration extension
+  allowlist and state that filtering happens during enumeration, before
+  files count toward either limit.
+- AC-3: the existing file-count/size cap and its interactive/unattended
+  behaviours remain unchanged -- covered by the pre-existing
+  TestResolvedInputCache.test_discovery_caps_with_mode_specific_handling_present.
+- AC-4: the document defines where a backfill's discovery result is
+  persisted, covering the resolved paths, their digests, the generation
+  digest and the truncation flag.
+- AC-5: the document states that an ordinary resume reuses the persisted
+  backfill discovery rather than repeating the search, stated in the
+  backfill section itself (not only the general cache section).
+
+The exclusion-root and extension-allowlist test data (below) is derived by
+parsing design-input.md's own "design system 候補の探索" sentence, so the
+assertions track the normative source rather than a hand-copied duplicate
+(Test Notes for task0020).
 """
 
 import re
@@ -99,6 +121,32 @@ def _enum_tokens(yaml_block):
             if _IDENT_RE.match(part):
                 tokens.add(part)
     return tokens
+
+
+def _design_discovery_exclusions_and_extensions(design_text):
+    """(exclusion_roots, extensions) as parsed from design-input.md's
+    "design system 候補の探索" sentence -- the normative source for
+    NFR9's exclusion list and directory-enumeration extension allowlist.
+
+    The sentence reads (line ~239):
+      `node_modules/`, `vendor/`, `.git/`, `.claude/worktrees/`,
+      `.gitignore` ... `` 対象拡張子（`.yaml` / `.yml` / ... / `.kt`）... ``
+
+    Both groups are backticked identifiers, so extraction is a matter of
+    locating the two anchor phrases and pulling the backtick tokens out of
+    each -- no field names are hand-copied here.
+    """
+    marker = "対象は除外する。"
+    idx = design_text.index(marker)
+    line_start = design_text.rfind("\n", 0, idx) + 1
+    exclusion_line = design_text[line_start:idx]
+    exclusions = re.findall(r"`([^`]+)`", exclusion_line)
+
+    ext_start = design_text.index("対象拡張子（", idx)
+    ext_end = design_text.index("）のファイルだけを列挙する", ext_start)
+    ext_block = design_text[ext_start:ext_end]
+    extensions = re.findall(r"`([^`]+)`", ext_block)
+    return exclusions, extensions
 
 
 def _numbered_steps(text):
@@ -424,6 +472,118 @@ class TestResolvedInputCache(unittest.TestCase):
         interactive_idx = section.index("interactive")
         batch_idx = section.index("| batch")
         self.assertLess(interactive_idx, batch_idx)
+
+
+class TestDiscoveryExclusionsAndExtensionAllowlistParsing(unittest.TestCase):
+    """Proof the design-input.md parser used below works, and can fail
+    meaningfully (tdd-testing discipline: a test that can never fail is
+    not a test)."""
+
+    def test_parser_extracts_the_known_exclusion_roots_and_extensions(self):
+        design_text = (
+            "候補探索は `node_modules/`、`vendor/`、`.git/`、"
+            "`.claude/worktrees/`、`.gitignore` 対象は除外する。"
+            "対象拡張子（`.yaml` / `.yml` / `.kt`）のファイルだけを列挙する。"
+        )
+        exclusions, extensions = _design_discovery_exclusions_and_extensions(design_text)
+        self.assertEqual(
+            exclusions, ["node_modules/", "vendor/", ".git/", ".claude/worktrees/", ".gitignore"]
+        )
+        self.assertEqual(extensions, [".yaml", ".yml", ".kt"])
+
+    def test_parser_flags_a_missing_exclusion_root(self):
+        exclusions, _ = _design_discovery_exclusions_and_extensions(
+            "候補探索は `node_modules/`、`.git/` 対象は除外する。"
+            "対象拡張子（`.yaml`）のファイルだけを列挙する。"
+        )
+        missing = sorted(e for e in exclusions if e not in "only node_modules/ is present here")
+        self.assertEqual(missing, [".git/"])
+
+
+class TestDiscoveryExclusionsAndExtensionAllowlist(unittest.TestCase):
+    """AC-1: the discovery rules name every exclusion root the design
+    defines.
+    AC-2: the discovery rules name the directory-enumeration extension
+    allowlist and state that filtering happens during enumeration, before
+    files count toward either limit."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        design_text = _read(DESIGN_INPUT_PATH)
+        cls.exclusions, cls.extensions = _design_discovery_exclusions_and_extensions(design_text)
+        idx = cls.text.index("### resolved_input_cache")
+        end = cls.text.index("## Update, commit, and exit-4 recovery")
+        cls.section = cls.text[idx:end]
+
+    def test_parser_found_a_plausible_exclusion_and_extension_set(self):
+        self.assertGreaterEqual(len(self.exclusions), 4)
+        self.assertGreaterEqual(len(self.extensions), 5)
+
+    def test_every_exclusion_root_from_design_input_appears(self):
+        missing = sorted(e for e in self.exclusions if e not in self.section)
+        self.assertEqual(
+            missing, [], f"exclusion roots from design-input.md missing from phase-state.md: {missing}"
+        )
+
+    def test_every_extension_from_design_input_appears(self):
+        missing = sorted(e for e in self.extensions if e not in self.section)
+        self.assertEqual(
+            missing, [], f"extensions from design-input.md missing from phase-state.md: {missing}"
+        )
+
+    def test_filtering_before_caps_is_stated_during_enumeration(self):
+        section = self.section
+        self.assertIn("enumeration", section.lower())
+        caps_idx = section.index("Discovery caps")
+        # the exclusion/extension rule must be stated ahead of the caps
+        # table, and must itself say filtering precedes the count.
+        enumeration_idx = section.lower().index("enumeration")
+        self.assertLess(enumeration_idx, caps_idx)
+        self.assertIn("never counts toward", section.lower())
+
+
+class TestBackfillDiscoveryPersistence(unittest.TestCase):
+    """AC-4: the document defines where a backfill's discovery result is
+    persisted, covering the resolved paths, their digests, the generation
+    digest and the truncation flag.
+    AC-5: the document states that an ordinary resume reuses the persisted
+    backfill discovery rather than repeating the search -- stated in the
+    backfill section itself, not only the general resolved_input_cache
+    section."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        idx = cls.text.index("### project.design_system backfill")
+        cls.backfill_section = cls.text[idx:]
+
+    def test_backfill_discovery_persistence_subsection_present(self):
+        self.assertIn("Backfill discovery persistence", self.backfill_section)
+
+    def test_persisted_fields_cover_paths_digests_generation_digest_and_truncation(self):
+        idx = self.backfill_section.index("Backfill discovery persistence")
+        sub = self.backfill_section[idx : idx + 1500]
+        self.assertIn("paths", sub)
+        self.assertIn("digests", sub)
+        self.assertIn("generation_digest", sub)
+        self.assertIn("truncated", sub)
+
+    def test_ordinary_resume_reuses_persisted_discovery_without_repeating_search(self):
+        idx = self.backfill_section.index("Backfill discovery persistence")
+        sub = self.backfill_section[idx : idx + 1500]
+        self.assertIn("resume", sub.lower())
+        self.assertIn("reuse", sub.lower())
+        self.assertIn("re-dispatching the analyst", sub)
+
+    def test_interrupted_answer_loss_is_scoped_to_the_answer_not_discovery(self):
+        # Keep the pre-existing "answer lost on resume" trade-off intact,
+        # but make explicit that it is about the answer, not the discovery
+        # result (task0020 design note).
+        idx = self.backfill_section.index("Interrupted backfill")
+        sub = self.backfill_section[idx : idx + 900]
+        self.assertIn("lost", sub.lower())
+        self.assertIn("discovery result", sub.lower())
 
 
 if __name__ == "__main__":

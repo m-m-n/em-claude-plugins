@@ -11,13 +11,18 @@ derived input-resolution cache all live here instead.
 feature-docs/{feature}/phase-state/
 ├── create-spec.yaml
 ├── create-plan.yaml
-└── rework.yaml
+├── rework.yaml
+└── backfill.yaml            # present only while a project.design_system
+                              # backfill's discovery result is unresolved
+                              # into workflow.yaml (see "Backfill discovery
+                              # persistence" below)
 ```
 
 One file per phase. These files are committed to the integration branch like
 every other feature-docs artifact. `commit-docs.sh`'s `ARTIFACT_PATHS`
 (`scripts/commit-docs.sh:147`) already stages the whole `feature-docs`
-directory, so **no script change is required** to persist them.
+directory, so **no script change is required** to persist them — this
+applies equally to `backfill.yaml`, which is not tied to any single phase.
 
 ## Schema
 
@@ -161,6 +166,15 @@ apply to it).
   Each entry MUST carry `generation_digest`, `resolved_at_generation`,
   `paths`, `digests`, `truncated`; `resolved_at_generation` MUST be `<=` the
   current `generation`.
+- **Discovery exclusions and extension allowlist**: `design_system_candidates`
+  resolution excludes `node_modules/`, `vendor/`, `.git/`,
+  `.claude/worktrees/`, and any path covered by `.gitignore`. A directory
+  match is not expanded to every file beneath it — only files with one of
+  the extensions `.yaml`, `.yml`, `.json`, `.css`, `.scss`, `.ts`, `.js`,
+  `.kt` are enumerated (images, fonts and build output do not inform
+  candidate detection). Both filters apply **during enumeration**, so an
+  excluded path or a non-matching extension never counts toward the
+  discovery caps below.
 - **Discovery caps**: resolution stops once it has found 500 files or 5 MB
   total, and records `truncated: true`. Handling is the same across every
   path that resolves candidates, and takes priority over that path's normal
@@ -345,12 +359,53 @@ onward remains) never runs this backfill.
 session ends before the `workflow.yaml` commit, the answer is lost (this
 procedure has no phase-state of its own to persist it in). Resume re-asks
 the same question — a single selection, so re-asking is cheap enough that
-no dedicated persistence is added.
+no dedicated persistence is added. This loss is scoped to the **answer**
+only, and is an accepted trade-off about it; the **discovery result** that
+produced the candidates being asked about is a separate concern, persisted
+as described next, and is not re-run on resume.
+
+### Backfill discovery persistence
+
+Step 1 of the backfill procedure below dispatches the analyst before
+`design` or `create-plan`'s own phase-state necessarily exists — the
+backfill runs ahead of both — so its discovery result has no phase file of
+its own to live in. It is written to
+`feature-docs/{feature}/phase-state/backfill.yaml` immediately after step 1
+completes, via `commit-docs.sh`, before step 2 or step 3 asks or decides
+anything:
+
+```yaml
+schema_version: 1
+feature: example-feature
+design_system_candidates:
+  generation_digest: sha256:...
+  paths:
+    - src/design-system/tokens.ts
+  digests:
+    src/design-system/tokens.ts: sha256:...
+  truncated: false
+```
+
+Same fields as a `resolved_input_cache` entry (`generation_digest`, `paths`,
+`digests`, `truncated`) — it is the same kind of derived value, just kept
+outside any single phase-state file because backfill is not owned by one
+phase.
+
+An **ordinary resume** that finds `backfill.yaml` present and
+`project.design_system` still unset reuses its `design_system_candidates`
+rather than re-dispatching the analyst, and proceeds directly to step 2
+(interactive) or step 3 (batch) below — the discovery itself is not
+repeated. `backfill.yaml` becomes moot once `workflow.yaml` carries
+`project.design_system`, since that field — not the file's presence — is
+backfill's own once-only guard (see below); step 4 MAY delete
+`backfill.yaml` in the same `commit-docs.sh` call that writes
+`workflow.yaml`, but leaving it in place is harmless.
 
 **Backfill procedure:**
 
 1. Dispatch `requirements-analyst` with `analysis_mode:
-   design_system_detection` to get `design_system_candidates`.
+   design_system_detection` to get `design_system_candidates`, then persist
+   it as described above.
 2. interactive: present the candidates under gate ID
    `create-spec.design-system`; ask for `kind` and `paths` even when there
    are zero candidates (forcing an explicit `none`).
