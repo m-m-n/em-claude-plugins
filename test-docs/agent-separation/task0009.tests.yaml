@@ -1,0 +1,71 @@
+task_id: task0009
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_new_worker_agents.TestRequirementsAnalystCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestSpecWriterCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestReworkPlannerCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestFrontmatterValidationCatchesMissingKeys.test_missing_effort_key_fails
+      - tests.test_new_worker_agents.TestFrontmatterValidationCatchesMissingKeys.test_missing_model_key_fails
+      - tests.test_new_worker_agents.TestFrontmatterValidationCatchesMissingKeys.test_askuserquestion_in_tools_is_detected
+    red_confirmed: true
+    red_reason: >-
+      Before the three agent files existed, TestFilesExist and every
+      setUpClass reading them failed with FileNotFoundError (10
+      failures/errors observed by temporarily moving the three new files
+      out of em-workflow/agents/ and re-running
+      tests.test_new_worker_agents). _assert_common_worker_rules's
+      frontmatter-key/AskUserQuestion checks could not even run at that
+      point since the files were absent.
+  AC-2:
+    tests:
+      - tests.test_new_worker_agents.TestRequirementsAnalystCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestSpecWriterCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestReworkPlannerCommonRules.test_common_worker_rules
+    red_confirmed: true
+    red_reason: "Same FileNotFoundError as AC-1 (files did not exist yet); the contract-path / single-structured-output substring assertions inside _assert_common_worker_rules never reached execution."
+  AC-3:
+    tests:
+      - tests.test_new_worker_agents.TestRequirementsAnalystCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestSpecWriterCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestReworkPlannerCommonRules.test_common_worker_rules
+    red_confirmed: true
+    red_reason: "Same FileNotFoundError as AC-1; the read-only/no-commit/no-discovery substring assertions never reached execution."
+  AC-4:
+    tests:
+      - tests.test_new_worker_agents.TestRequirementsAnalystCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestSpecWriterCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestReworkPlannerCommonRules.test_common_worker_rules
+      - tests.test_new_worker_agents.TestFrontmatterValidationCatchesMissingKeys.test_task_assignment_heading_is_detected
+    red_confirmed: true
+    red_reason: "Same FileNotFoundError as AC-1 for the three real-file checks; the forbidden-heading regex assertion never reached execution against the real files (the fabricated-text detector test uses only synthetic text and was green from the start, since it is a proof-of-mechanism test, not an AC-verifying one)."
+  AC-5:
+    tests:
+      - tests.test_new_worker_agents.TestRequirementsAnalystSpecifics.test_documents_both_analysis_mode_values
+      - tests.test_new_worker_agents.TestRequirementsAnalystSpecifics.test_documents_payload_difference_between_modes
+      - tests.test_new_worker_agents.TestRequirementsAnalystSpecifics.test_documents_restricted_status_set_for_backfill_mode
+      - tests.test_new_worker_agents.TestRequirementsAnalystSpecifics.test_states_detects_without_deciding_kind
+      - tests.test_new_worker_agents.TestRequirementsAnalystSpecifics.test_requires_mode_echo
+      - tests.test_new_worker_agents.TestRequirementsAnalystSpecifics.test_unresolved_points_become_questions_not_assumptions
+    red_confirmed: true
+    red_reason: "setUpClass itself raised FileNotFoundError reading requirements-analyst.md before it existed, failing every test in this class with an ERROR (observed in the same temporarily-moved-files run as AC-1)."
+  AC-6:
+    tests:
+      - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_states_never_invents_requirements_or_assumptions
+      - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_states_digest_disagreement_yields_blocked
+      - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_never_returns_question_packet
+      - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_documents_write_policy_actions
+      - tests.test_new_worker_agents.TestSpecWriterSpecifics.test_documents_targets_vs_allowed_write_roots_split
+    red_confirmed: true
+    red_reason: "setUpClass raised FileNotFoundError reading spec-writer.md before it existed, failing every test in this class with an ERROR (same observed run as AC-1)."
+  AC-7:
+    tests:
+      - tests.test_new_worker_agents.TestReworkPlannerSpecifics.test_states_plans_only_additional_tasks
+      - tests.test_new_worker_agents.TestReworkPlannerSpecifics.test_emits_coverage_declaration
+      - tests.test_new_worker_agents.TestReworkPlannerSpecifics.test_emits_shared_contract_rationale
+      - tests.test_new_worker_agents.TestReworkPlannerSpecifics.test_proposes_patch_instead_of_writing_workflow_yaml
+      - tests.test_new_worker_agents.TestReworkPlannerSpecifics.test_returns_question_for_spec_change
+    red_confirmed: true
+    red_reason: "setUpClass raised FileNotFoundError reading rework-planner.md before it existed, failing every test in this class with an ERROR (same observed run as AC-1)."
