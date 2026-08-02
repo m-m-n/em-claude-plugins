@@ -26,14 +26,21 @@ Covers task0013 Acceptance Criteria
   domains vocabulary source; `command-execution-protocol.md` names the
   command-approval gate identifier.
 
-Scoping note (task0013.md Test Notes): AC-3's "no file in the repository
-mentions its name" is, read literally, a whole-repository invariant that
-only holds once every sibling task (task0009, task0011, ...) has merged its
-replacement workers -- this worktree alone cannot prove that. Per the Test
-Notes this task's own assertions are scoped to (a) the absence of the
-deleted file itself, and (b) the files THIS task owns/edits. The full
-repository-wide zero-occurrence check is deferred to the invariant script
-(task0014).
+Scoping note (task0013.md Test Notes, superseded by task0021 AC-2): AC-3's
+"no file in the repository mentions its name" was, read literally, a
+whole-repository invariant that only held once every sibling task
+(task0009, task0011, ...) had merged its replacement workers -- this
+worktree alone could not prove that at task0013 time. task0013 therefore
+scoped its own sweep to (a) the absence of the deleted file itself, and (b)
+TASK_OWNED_FILES, the files task0013 itself owned/edited -- which is exactly
+what let a stale reference in batch-mode.md (owned by a different task) go
+undetected (feature-docs/agent-separation/reviews/round1.yaml finding as2).
+
+task0021 widens the sweep from that allowlist to the whole plugin directory
+(`test_no_file_under_the_plugin_directory_references_old_agent_name`),
+superseding the narrower TASK_OWNED_FILES check. The repository-wide sweep
+(this feature's own historical feature-docs/test-docs/tests literals
+included) remains check-plugin-invariants.py's job.
 
 All text assertions read raw file text (`Path.read_text`) rather than
 parsed Markdown structure, so a stale reference hidden inside a code fence
@@ -41,6 +48,7 @@ or a comment still fails the check (task0013.md Test Notes edge case).
 """
 
 import json
+import os
 import unittest
 from pathlib import Path
 
@@ -68,25 +76,6 @@ TEST_README_PATH = REPO_ROOT / "test" / "README.md"
 # The pre-task0013 committed version (feature-docs/agent-separation/tasks/
 # task0013.md AC-6): the version must compare strictly greater than this.
 BASELINE_PLUGIN_VERSION = "0.1.27"
-
-# Every file this task reads/writes per its Scope section. Used for the
-# scoped stale-reference sweep (see module docstring's Scoping note).
-TASK_OWNED_FILES = [
-    WORKFLOW_SCHEMA_PATH,
-    COMMAND_EXECUTION_PROTOCOL_PATH,
-    LICENSE_COMPAT_PATH,
-    IMPL_SKILLS_PATH,
-    TEMPLATES_DIR / "requirements-document.md",
-    TEMPLATES_DIR / "spec-document.md",
-    TEMPLATES_DIR / "test-readme.md",
-    TEMPLATES_DIR / "task-plan.md",
-    PLAN_WRITING_SKILL_PATH,
-    DESIGN_SKILL_PATH,
-    EM_WORKFLOW_README_PATH,
-    ROOT_README_PATH,
-    PLUGIN_JSON_PATH,
-    TEST_README_PATH,
-]
 
 STRUCTURAL_MARKERS = [
     "## Goal",
@@ -117,6 +106,18 @@ def _version_tuple(version_string):
     return tuple(int(part) for part in version_string.split("."))
 
 
+def _iter_plugin_directory_files(plugin_root):
+    for dirpath, _dirnames, filenames in os.walk(plugin_root):
+        for filename in filenames:
+            yield Path(dirpath) / filename
+
+
+# check-plugin-invariants.py necessarily contains OLD_AGENT_NAME as its own
+# STALE_AGENT_NAME constant -- it is the detection target that script's
+# check_stale_references() searches for, not a stale reference itself.
+SELF_EXCLUDED_PLUGIN_FILE = PLUGIN_ROOT / "scripts" / "check-plugin-invariants.py"
+
+
 class TestOldAgentDeleted(unittest.TestCase):
     """AC-3."""
 
@@ -126,12 +127,22 @@ class TestOldAgentDeleted(unittest.TestCase):
             f"{OLD_AGENT_PATH} must be deleted by task0013",
         )
 
-    def test_no_task_owned_file_references_old_agent_name(self):
-        offenders = [
-            str(path.relative_to(REPO_ROOT))
-            for path in TASK_OWNED_FILES
-            if OLD_AGENT_NAME in _read(path)
-        ]
+    def test_no_file_under_the_plugin_directory_references_old_agent_name(self):
+        # task0021 AC-2 (reviews/round1.yaml finding as2): widened from
+        # task0013's TASK_OWNED_FILES allowlist -- which excluded
+        # batch-mode.md, the very file that still carried the stale
+        # reference -- to the whole plugin directory (em-workflow/), so
+        # nothing new can slip past the same way.
+        offenders = []
+        for path in _iter_plugin_directory_files(PLUGIN_ROOT):
+            if path == SELF_EXCLUDED_PLUGIN_FILE:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            if OLD_AGENT_NAME in text:
+                offenders.append(str(path.relative_to(REPO_ROOT)))
         self.assertEqual(
             offenders,
             [],

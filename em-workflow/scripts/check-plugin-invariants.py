@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Repository invariant checker for the em-workflow plugin (task0014).
+"""Repository invariant checker for the em-workflow plugin (task0014,
+enforcement fixed by task0021).
 
 Renders design-input.md 9.1 (automated verification table) and
 IMPLEMENTATION.md D4: seven independent checks assert properties that only
@@ -9,9 +10,12 @@ forbidden `# Task assignment` heading, fixture branch coverage, and
 `input_digest` reproducibility). No task worktree contains that integrated
 state, which is exactly why every check below is a pure function of an
 explicit root path: the unit tests exercise them against small synthetic
-trees built in temporary directories (tests/test_check_plugin_invariants.py),
-and the authoritative run against the real repository happens once, at the
-verify phase (recorded in VERIFICATION.md) -- not here.
+trees built in temporary directories (tests/test_check_plugin_invariants.py)
+AND, since task0021, against the real repository root once every other task
+has merged (reviews/round1.yaml finding as2) -- that repository-level case is
+the run this docstring used to defer entirely to the verify phase; it now
+runs here too, in addition to the verify-phase run recorded in
+VERIFICATION.md.
 
 CLI contract (IMPLEMENTATION.md "Script exit codes"):
     check-plugin-invariants.py <repository-root>
@@ -55,38 +59,102 @@ class CheckResult:
 # Noise directories skipped everywhere a check walks the tree. `.claude`
 # covers `.claude/worktrees/...` -- nested sibling-task checkouts that would
 # otherwise multiply every match when this script is eventually run for real
-# against the integration branch (out of scope for this task, but the
-# exclusion costs nothing here and avoids that trap).
-EXCLUDED_DIR_NAMES = {".git", ".claude", "node_modules", "__pycache__"}
+# against the integration branch. `fixtures` is this feature's own generated
+# fixture corpus (references/fixtures/, ~190 files as of this task) -- data
+# for validate-worker-output.py's tests, never a dispatch reference or a
+# stale-name mention (as22: reading it twice, once per text check, was pure
+# waste). `vendor`/`dist`/`build` are the usual dependency/build directories
+# named by design (none exist in this repository today; excluded so a future
+# one never gets swept for free).
+EXCLUDED_DIR_NAMES = {
+    ".git",
+    ".claude",
+    "node_modules",
+    "__pycache__",
+    "fixtures",
+    "vendor",
+    "dist",
+    "build",
+}
 
-# This script's own source, and its own test file, necessarily contain the
-# literal strings check_stale_references() searches for (they are the
-# detection targets, spelled out as constants / test fixtures below). Both
-# are excluded from that scan so the checker never flags itself.
+# This script's own source contains the literal strings check_stale_
+# references() searches for (they are the detection targets, spelled out as
+# constants below) -- excluded so the checker never flags itself. The test
+# file is additionally listed for the same reason it always was: it is
+# scanned for agent_dispatch_parity's `subagent_type=...` extraction too
+# (SCAN_ROOTS covers "tests"), and its fixture literals name fictional
+# agents ("orphan", "ghost", ...) that must never be read as real dispatch
+# references against this repository's actual em-workflow/agents/.
 SELF_EXCLUDED_RELATIVE_PATHS = {
     os.path.join("em-workflow", "scripts", "check-plugin-invariants.py"),
     os.path.join("tests", "test_check_plugin_invariants.py"),
 }
 
+# Roots (relative to the repository root) that agent_dispatch_parity and
+# stale_references ever need to read (as22): the plugin itself, plus this
+# feature's own historical/process records, whose full rationale sits next
+# to STALE_REFERENCES_ALLOWED_ROOTS below. Nothing outside these four names
+# (other plugins, the marketplace root, the singular `test/` directory) has
+# ever matched either check's patterns.
+SCAN_ROOTS = ("em-workflow", "feature-docs", "test-docs", "tests")
 
-def iter_repo_files(root, exclude_paths=frozenset()):
+# Extensions either check's patterns can ever match against -- prose and
+# code, never the generated JSON fixtures or other binary/asset formats
+# (as22).
+SCAN_EXTENSIONS = (".md", ".py", ".yaml", ".yml")
+
+# Bound on an individual file read (as22 "bound individual reads"). No
+# legitimate target of either check -- hand-authored prose, code, or YAML --
+# approaches this size; a file that does is skipped outright (treated as
+# "unreadable") rather than decoded partially, which could otherwise cut a
+# multi-byte UTF-8 sequence at the boundary or silently miss a match past
+# the cutoff.
+MAX_READ_BYTES = 2_000_000
+
+
+def _first_path_segment(rel):
+    """The top-level directory name of a root-relative path, e.g.
+    "feature-docs" out of "feature-docs/agent-separation/design-input.md"."""
+    return rel.split(os.sep, 1)[0]
+
+
+def iter_repo_files(root, scan_roots=None, extensions=None, exclude_paths=frozenset()):
     """Yield (absolute_path, path_relative_to_root) for every file under
-    root, skipping EXCLUDED_DIR_NAMES directories and exclude_paths."""
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in EXCLUDED_DIR_NAMES]
-        for filename in filenames:
-            path = os.path.join(dirpath, filename)
-            rel = os.path.relpath(path, root)
-            if rel in exclude_paths:
-                continue
-            yield path, rel
+    root, skipping EXCLUDED_DIR_NAMES directories and exclude_paths.
+
+    scan_roots, if given, restricts the walk to those top-level directories
+    (relative to root) instead of the whole tree -- e.g. SCAN_ROOTS -- so a
+    directory neither check can ever match against (another plugin, a
+    generated fixture corpus, ...) is never walked at all (as22).
+
+    extensions, if given, restricts yielded files to those whose name ends
+    in one of the given suffixes -- skips binary and irrelevant text formats
+    no check here ever needs to read.
+    """
+    walk_roots = [root] if scan_roots is None else [os.path.join(root, r) for r in scan_roots]
+    for walk_root in walk_roots:
+        if not os.path.isdir(walk_root):
+            continue
+        for dirpath, dirnames, filenames in os.walk(walk_root):
+            dirnames[:] = [d for d in dirnames if d not in EXCLUDED_DIR_NAMES]
+            for filename in filenames:
+                if extensions is not None and not filename.endswith(tuple(extensions)):
+                    continue
+                path = os.path.join(dirpath, filename)
+                rel = os.path.relpath(path, root)
+                if rel in exclude_paths:
+                    continue
+                yield path, rel
 
 
 def read_text(path):
-    """Best-effort UTF-8 text read. Returns None for anything unreadable or
-    non-text (binary fixture files, permission errors) -- a check simply
-    skips a file it cannot read rather than treating that as an error."""
+    """Best-effort UTF-8 text read. Returns None for anything unreadable,
+    non-text (binary fixture files, permission errors), or larger than
+    MAX_READ_BYTES (as22) -- a check simply skips a file it cannot or need
+    not read rather than treating that as an error."""
     try:
+        if os.path.getsize(path) > MAX_READ_BYTES:
+            return None
         with open(path, "r", encoding="utf-8") as fh:
             return fh.read()
     except (UnicodeDecodeError, OSError):
@@ -107,31 +175,8 @@ SUBAGENT_TYPE_REF_RE = re.compile(
 
 
 def check_agent_dispatch_parity(root):
-    name = "agent_dispatch_parity"
-    agents_dir = os.path.join(root, "em-workflow", "agents")
-    if not os.path.isdir(agents_dir):
-        return CheckResult(name, False, [f"agents directory not found: {agents_dir}"])
-
-    definitions = {
-        os.path.splitext(fname)[0]
-        for fname in os.listdir(agents_dir)
-        if fname.endswith(".md")
-    }
-
-    referenced = set()
-    for path, _rel in iter_repo_files(root, exclude_paths=SELF_EXCLUDED_RELATIVE_PATHS):
-        text = read_text(path)
-        if text is None:
-            continue
-        for match in SUBAGENT_TYPE_REF_RE.finditer(text):
-            referenced.add(match.group(1))
-
-    undispatched = sorted(definitions - referenced)
-    dangling = sorted(referenced - definitions)
-
-    offenders = [f"undispatched definition: {n}" for n in undispatched]
-    offenders += [f"dispatch of missing definition: {n}" for n in dangling]
-    return CheckResult(name, not offenders, offenders)
+    agent_result, _stale_result = _agent_dispatch_and_stale_reference_scan(root)
+    return agent_result
 
 
 # ---------------------------------------------------------------------------
@@ -143,28 +188,89 @@ STALE_AGENT_NAME = "requirements-spec-creator"
 # this feature replaces with Task-dispatch (skills/develop/SKILL.md today).
 STALE_INLINE_PHRASE = "Read してインラインで従う"
 
-# This feature's own design and planning documents legitimately quote both
-# terms historically (e.g. describing the problem being fixed, or D6's
-# transitional-inconsistency note) -- task0014.md Design section.
-STALE_REFERENCES_ALLOWED_PREFIX = os.path.join("feature-docs", "agent-separation")
+# Top-level directories (relative to the repository root) that legitimately
+# still name the deleted agent or the stale inline-execution phrase, and
+# must therefore never be excused wholesale -- narrowed instead to exactly
+# these two categories (task0021, reviews/round1.yaml finding as2):
+#
+# - "feature-docs": every feature's planning/design/review record, past or
+#   present, is history by construction -- not just this feature's own
+#   (design-input.md, task plans, retrospectives quoting the name they
+#   describe replacing), but ANY other completed feature's records too
+#   (e.g. feature-docs/integration-worktree-orchestration/**), which is
+#   exactly what the previous single-feature prefix missed.
+# - "test-docs" / "tests": a test (or its recorded test-run evidence) that
+#   asserts the deleted name's absence must contain that name as a literal
+#   to search for -- that is the whole point of the assertion.
+#
+# Deliberately NOT included: "em-workflow" (the plugin directory itself --
+# the one thing this check exists to police) and anything else at the
+# repository root (another plugin, the marketplace root, `test/`) that has
+# never had a legitimate reason to mention either string.
+STALE_REFERENCES_ALLOWED_ROOTS = frozenset({"feature-docs", "test-docs", "tests"})
 
 
 def check_stale_references(root):
-    name = "stale_references"
-    offenders = []
-    for path, rel in iter_repo_files(root, exclude_paths=SELF_EXCLUDED_RELATIVE_PATHS):
-        if rel == STALE_REFERENCES_ALLOWED_PREFIX or rel.startswith(
-            STALE_REFERENCES_ALLOWED_PREFIX + os.sep
-        ):
-            continue
+    _agent_result, stale_result = _agent_dispatch_and_stale_reference_scan(root)
+    return stale_result
+
+
+def _agent_dispatch_and_stale_reference_scan(root):
+    """Computes agent_dispatch_parity and stale_references together from a
+    single tree traversal (task0021, reviews/round1.yaml finding as22: the
+    two checks previously walked and read the repository independently,
+    doubling both costs). Each check function above still calls this and
+    discards the half it does not need, so both remain independently
+    callable with correct results on their own (task0014's AC-2) -- the
+    single-traversal win applies when both are needed together, which is
+    exactly what run_all_checks() does below instead of calling the two
+    check functions separately."""
+    agent_name = "agent_dispatch_parity"
+    stale_name = "stale_references"
+
+    agents_dir = os.path.join(root, "em-workflow", "agents")
+    if os.path.isdir(agents_dir):
+        definitions = {
+            os.path.splitext(fname)[0]
+            for fname in os.listdir(agents_dir)
+            if fname.endswith(".md")
+        }
+        agent_result = None
+    else:
+        definitions = None
+        agent_result = CheckResult(agent_name, False, [f"agents directory not found: {agents_dir}"])
+
+    referenced = set()
+    stale_offenders = []
+    for path, rel in iter_repo_files(
+        root,
+        scan_roots=SCAN_ROOTS,
+        extensions=SCAN_EXTENSIONS,
+        exclude_paths=SELF_EXCLUDED_RELATIVE_PATHS,
+    ):
         text = read_text(path)
         if text is None:
             continue
+
+        for match in SUBAGENT_TYPE_REF_RE.finditer(text):
+            referenced.add(match.group(1))
+
+        if _first_path_segment(rel) in STALE_REFERENCES_ALLOWED_ROOTS:
+            continue
         if STALE_AGENT_NAME in text:
-            offenders.append(f"{rel}: contains {STALE_AGENT_NAME!r}")
+            stale_offenders.append(f"{rel}: contains {STALE_AGENT_NAME!r}")
         if STALE_INLINE_PHRASE in text:
-            offenders.append(f"{rel}: contains stale inline-execution phrase")
-    return CheckResult(name, not offenders, offenders)
+            stale_offenders.append(f"{rel}: contains stale inline-execution phrase")
+
+    if agent_result is None:
+        undispatched = sorted(definitions - referenced)
+        dangling = sorted(referenced - definitions)
+        offenders = [f"undispatched definition: {n}" for n in undispatched]
+        offenders += [f"dispatch of missing definition: {n}" for n in dangling]
+        agent_result = CheckResult(agent_name, not offenders, offenders)
+
+    stale_result = CheckResult(stale_name, not stale_offenders, stale_offenders)
+    return agent_result, stale_result
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +363,26 @@ def find_gate_scan_files(root):
     return paths
 
 
+def _iter_plugin_files(root, exclude_path=None):
+    """Every file under the plugin directory (em-workflow/), skipping the
+    usual noise directories, and never yielding `exclude_path`. Used by
+    check_gate_id_coverage's vocabulary scan (task0021 AC-6): wider than
+    find_gate_scan_files()'s phase-protocol-only scope, because a real gate
+    ID can legitimately be declared in a contract, an agent prompt, or
+    references/batch-mode.md -- none of which that narrower scope visits."""
+    plugin_dir = os.path.join(root, "em-workflow")
+    if not os.path.isdir(plugin_dir):
+        return
+    exclude_norm = os.path.normpath(exclude_path) if exclude_path else None
+    for dirpath, dirnames, filenames in os.walk(plugin_dir):
+        dirnames[:] = [d for d in dirnames if d not in EXCLUDED_DIR_NAMES]
+        for filename in filenames:
+            path = os.path.join(dirpath, filename)
+            if exclude_norm is not None and os.path.normpath(path) == exclude_norm:
+                continue
+            yield path
+
+
 def check_gate_id_coverage(root):
     name = "gate_id_coverage"
     policy_path = os.path.join(root, "em-workflow", "references", "batch-policies.yaml")
@@ -287,12 +413,38 @@ def check_gate_id_coverage(root):
         )
     policy_ids = set(gate_policies.keys())
 
-    scanned_ids = set()
+    # Direction 1 (AC-6): a policy id counts as referenced wherever its
+    # exact string occurs anywhere under the plugin directory, except
+    # inside the policy file itself -- being a key in its own policy is not
+    # a reference to itself. This replaces the "gate ID" / "gate_id"
+    # proximity heuristic below for known vocabulary, since that heuristic
+    # is exactly what missed six real, unproximate mentions (analyst
+    # contract and prompt, batch-mode table, planner prompt, and a
+    # create-spec-phase.md table row with no "gate ID" phrase nearby).
+    referenced_vocab_ids = set()
+    if policy_ids:
+        plugin_texts = []
+        for path in _iter_plugin_files(root, exclude_path=policy_path):
+            text = read_text(path)
+            if text is not None:
+                plugin_texts.append(text)
+        for gid in policy_ids:
+            if any(gid in text for text in plugin_texts):
+                referenced_vocab_ids.add(gid)
+
+    # Direction 2: an identifier extracted from the narrower phase-protocol
+    # scan scope that is not (yet) a policy key at all -- these can only be
+    # recognized by shape plus disambiguation (the explicit `gate_id: <id>`
+    # form, or bare-span proximity to a "gate ID" mention), since nothing
+    # declares them as vocabulary the way a policy key does.
+    extracted_ids = set()
     for path in find_gate_scan_files(root):
         text = read_text(path)
         if text is None:
             continue
-        scanned_ids |= extract_gate_ids_from_text(text)
+        extracted_ids |= extract_gate_ids_from_text(text)
+
+    scanned_ids = extracted_ids | referenced_vocab_ids
 
     policy_ids -= INTENTIONALLY_UNLISTED_GATE_IDS
     scanned_ids -= INTENTIONALLY_UNLISTED_GATE_IDS
@@ -564,9 +716,13 @@ def check_digest_reproducibility():
 
 
 def run_all_checks(root):
+    # agent_dispatch_parity and stale_references come from one shared scan
+    # (as22) rather than each check function being invoked separately, which
+    # would repeat the identical tree walk and file reads.
+    agent_result, stale_result = _agent_dispatch_and_stale_reference_scan(root)
     return [
-        check_agent_dispatch_parity(root),
-        check_stale_references(root),
+        agent_result,
+        stale_result,
         check_gate_id_coverage(root),
         check_domains_vocabulary_parity(root),
         check_forbidden_task_assignment_heading(root),
