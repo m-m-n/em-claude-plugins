@@ -14,8 +14,7 @@
         "new_scenarios": [],
         "rationale": "TS-3 already covers the boundary"
       }
-    },
-    "shared_contract_rationale": "No new shared contract; task0007 only touches src/auth.go, which no other task declares."
+    }
   },
   "question_packet": null,
   "report": "done",

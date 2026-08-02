@@ -113,6 +113,11 @@ ANSWER_MODE_VALUES = {"single_select", "multi_select", "freeform", "select_or_fr
 
 ON_UNANSWERED_VALUES = {"block", "record_tbd", "use_batch_policy"}
 
+#  as8 (validator half): categories where NFR4 requires batch mode to abort
+# rather than guess. A worker must not be able to disable that abort by
+# choosing record_tbd / use_batch_policy for one of these categories.
+BLOCKING_REQUIRED_CATEGORIES = {"spec-change", "security", "license"}
+
 ANSWER_SOURCE_VALUES = {
     "user",
     "batch-decision-table",
@@ -204,7 +209,11 @@ WORKER_CAPABILITIES = {
     "rework-planner": {
         "_default": dict(
             allowed_statuses=set(STATUS_VALUES),
-            required_payload={"rework_index"},
+            # shared_contract_rationale: rework-planner-contract.md:126 /
+            # design-input.md 5.4.4 -- IMPLEMENTATION.md update-or-not is
+            # not machine-judgeable, so the judgement rationale is always
+            # required as a human-readable audit trail (as5).
+            required_payload={"rework_index", "shared_contract_rationale"},
             forbidden_payload=set(),
             has_workflow_patch=True,
         ),
@@ -291,6 +300,32 @@ def is_preserve_path_allowed(path):
     if path in PRESERVE_EXACT:
         return True
     return any(p.match(path) for p in PRESERVE_PATTERNS)
+
+
+def path_segments(path):
+    """Normalized posix-style segments for an already-safe relative path
+    (see is_safe_relative_path). Empty and `.` segments (e.g. from a
+    trailing slash) are dropped so they never participate in containment
+    comparison."""
+    return [p for p in path.replace("\\", "/").split("/") if p not in ("", ".")]
+
+
+def path_is_contained_in_root(path, root):
+    """5.11.3 / as6: `path` is contained in directory `root` only when
+    root's segments are a STRICT prefix of path's segments. This is
+    deliberately never a string-prefix comparison (`path.startswith(root)`),
+    which wrongly admits a sibling directory whose name extends the root's
+    name as a substring (`feature-docs/example2` is not contained in
+    `feature-docs/example`; `feature-docs/example/design/mockups-evil` is
+    not contained in `.../mockups`). Absolute paths, `..` segments, NUL
+    bytes and non-string inputs are rejected on either side."""
+    if not is_safe_relative_path(path) or not is_safe_relative_path(root):
+        return False
+    path_parts = path_segments(path)
+    root_parts = path_segments(root)
+    if not root_parts:
+        return True
+    return path_parts[: len(root_parts)] == root_parts and len(path_parts) > len(root_parts)
 
 
 # ---------------------------------------------------------------------------
@@ -464,24 +499,32 @@ def load_domains_vocabulary(registries_dir):
     vocabulary itself lives only in a header comment there (no task in this
     feature adds a machine-readable `domains:` key to that file -- see
     IMPLEMENTATION.md 6.2). Parse the comment block rather than duplicating
-    the list as a script-side constant, so this stays a single SSOT."""
+    the list as a script-side constant, so this stays a single SSOT.
+
+    as15: the block must terminate the SAME way
+    check-plugin-invariants.py's extract_domains_from_review_rules() does --
+    on the next `... vocabulary` marker line (e.g. `# complexity
+    vocabulary: ...`) -- otherwise this parser keeps consuming past the
+    domains block and absorbs complexity values ('low' / 'medium' / 'high')
+    into the domain vocabulary."""
     path = registries_dir / "review-rules.yaml"
     text = load_yaml_or_json(path, "registries/review-rules.yaml")
     tokens = []
     in_block = False
     for line in text.splitlines():
-        if "domains vocabulary" in line:
-            in_block = True
-            continue
-        if not in_block:
-            continue
         stripped = line.strip()
+        if not in_block:
+            if "domains vocabulary" in stripped.lower():
+                in_block = True
+            continue
         if not stripped.startswith("#"):
             break
         content = stripped.lstrip("#").strip()
-        if "/" not in content:
+        if not content:
             break
-        tokens.extend(t.strip() for t in content.split("/"))
+        if "vocabulary" in content.lower():
+            break
+        tokens.extend(t.strip() for t in content.split("/") if t.strip())
     return {t for t in tokens if re.fullmatch(r"[a-z][a-z-]*", t)}
 
 
@@ -575,6 +618,16 @@ def validate_question(q, index):
     on_unanswered = q.get("on_unanswered")
     if on_unanswered not in ON_UNANSWERED_VALUES:
         errors.append(err("on_unanswered", f"{p}.on_unanswered must be one of {sorted(ON_UNANSWERED_VALUES)}"))
+    category = q.get("category")
+    if category in BLOCKING_REQUIRED_CATEGORIES and on_unanswered != "block":
+        errors.append(
+            err(
+                "on_unanswered",
+                f"{p}.on_unanswered must be 'block' when category is {category!r} "
+                "(NFR4 fail-closed: a worker cannot disable the batch abort for "
+                "spec-change / security / license questions)",
+            )
+        )
     for did in q.get("depends_on") or []:
         if not isinstance(did, str):
             errors.append(err("depends_on", f"{p}.depends_on entries must be strings"))
@@ -1057,6 +1110,35 @@ def validate_phase_state(data):
 # --kind worker-result (5.3, 5.4)
 # ---------------------------------------------------------------------------
 
+def _normalize_written_artifacts(raw):
+    """Type-checks `written_artifacts` and each entry's `path` (as6): a
+    written_artifacts value that is not a list is a validation error rather
+    than being silently iterated per-character (a bare string passed as the
+    whole value), and an entry that is not a mapping/string, or a mapping
+    missing a usable string `path`, is a validation error rather than a
+    traceback (the previous code called `.startswith` on a `None` path).
+    Returns (list[str] of usable paths, list[error])."""
+    if raw is None:
+        return [], []
+    if not isinstance(raw, list):
+        return [], [err("written_artifacts", "written_artifacts must be a list")]
+    errors = []
+    paths = []
+    for i, artifact in enumerate(raw):
+        if isinstance(artifact, dict):
+            path = artifact.get("path")
+        elif isinstance(artifact, str):
+            path = artifact
+        else:
+            errors.append(err("written_artifacts", f"written_artifacts[{i}] must be a mapping with a 'path' key"))
+            continue
+        if not isinstance(path, str) or not path:
+            errors.append(err("written_artifacts", f"written_artifacts[{i}] is missing a usable 'path'"))
+            continue
+        paths.append(path)
+    return paths, errors
+
+
 def validate_worker_result(
     data,
     worker,
@@ -1094,7 +1176,9 @@ def validate_worker_result(
 
     question_packet = data.get("question_packet")
     blocking_reason = data.get("blocking_reason")
-    written_artifacts = data.get("written_artifacts") or []
+    written_artifacts_raw = data.get("written_artifacts")
+    written_artifacts, written_artifacts_errors = _normalize_written_artifacts(written_artifacts_raw)
+    errors.extend(written_artifacts_errors)
     workflow_patch = data.get("workflow_patch")
     mode_echo = data.get("mode_echo")
     payload = data.get("payload") or {}
@@ -1105,7 +1189,7 @@ def validate_worker_result(
             errors.append(err("exclusivity", "needs_user_input requires question_packet"))
         else:
             errors.extend(prefix_errors(validate_question_packet(question_packet), "question_packet"))
-        if written_artifacts:
+        if written_artifacts_raw:
             errors.append(err("exclusivity", "needs_user_input forbids written_artifacts"))
         if workflow_patch:
             errors.append(err("exclusivity", "needs_user_input forbids workflow_patch"))
@@ -1115,9 +1199,13 @@ def validate_worker_result(
         if question_packet:
             errors.append(err("exclusivity", f"status {status!r} forbids question_packet"))
 
+    # as21 / worker-envelope.md: `completed` is the only status that carries
+    # a payload; the other five must carry none.
     if status == "completed":
         if not payload:
             errors.append(err("payload", "completed requires a non-empty payload"))
+    elif payload:
+        errors.append(err("payload", f"status {status!r} forbids a non-empty payload"))
     if status in ("blocked", "invalid_input", "failed"):
         if not blocking_reason:
             errors.append(err("blocking_reason", f"status {status!r} requires blocking_reason"))
@@ -1165,15 +1253,14 @@ def validate_worker_result(
             if target.get("action") not in WRITE_POLICY_ACTIONS:
                 errors.append(err("write_policy", f"input envelope write_policy.targets[{path!r}].action is not one of {sorted(WRITE_POLICY_ACTIONS)}"))
         allowed_roots = envelope.get("allowed_write_roots") or []
-        for artifact in written_artifacts:
-            path = artifact.get("path") if isinstance(artifact, dict) else artifact
+        for path in written_artifacts:
             if path in targets_by_path:
                 continue
-            if any(path.startswith(root) for root in allowed_roots):
+            if any(path_is_contained_in_root(path, root) for root in allowed_roots):
                 continue
             errors.append(err("write_policy", f"written_artifacts path {path!r} is covered by neither write_policy.targets nor allowed_write_roots"))
         # regenerate co-occurrence (5.4.2)
-        artifact_paths = {a.get("path") if isinstance(a, dict) else a for a in written_artifacts}
+        artifact_paths = set(written_artifacts)
         for target in write_policy.get("targets", []):
             if target.get("action") == "regenerate" and target.get("path") in artifact_paths:
                 source = target.get("source")
@@ -1181,7 +1268,7 @@ def validate_worker_result(
                     errors.append(err("regenerate", f"written_artifacts includes regenerate target {target.get('path')!r} without its source {source!r}"))
 
     # --- tokens.yaml / tokens.html co-occurrence (5.4.5), unconditional ---
-    artifact_paths = {a.get("path") if isinstance(a, dict) else a for a in written_artifacts}
+    artifact_paths = set(written_artifacts)
     has_yaml = any(p and p.endswith("design-system/tokens.yaml") for p in artifact_paths)
     has_html = any(p and p.endswith("design-system/tokens.html") for p in artifact_paths)
     if has_yaml != has_html:
@@ -1214,6 +1301,44 @@ def validate_worker_result(
     return errors
 
 
+# as16: task-plan reads exceeding this size are rejected before the content
+# is loaded into memory. Task plans are short prose documents (the template
+# is a handful of KB); this bound is generous headroom, not a tight fit.
+MAX_PLAN_READ_BYTES = 1_000_000
+
+
+def _resolve_contained_relative_path(base_dir, rel_path):
+    """Resolves an untrusted, patch-supplied relative path under `base_dir`
+    (as16: the `plan` field arrives in the workflow patch, which is worker
+    output). Rejects absolute paths and `..` segments lexically, rejects a
+    symlink at ANY path segment -- including the final component -- BEFORE
+    the target is ever opened (`is_file`/`read_text` themselves follow
+    symlinks), and independently re-checks that the resolved real path
+    still sits inside `base_dir`'s resolved real path as defense in depth
+    beyond the lexical check. Returns (Path, None) on success, or
+    (None, message) on rejection."""
+    if not is_safe_relative_path(rel_path):
+        return None, f"{rel_path!r} is not a safe project-relative path (must be relative, no '..')"
+    segments = path_segments(rel_path)
+    if not segments:
+        return None, f"{rel_path!r} does not name a file"
+    current = base_dir
+    for segment in segments:
+        current = current / segment
+        if current.is_symlink():
+            return None, f"path segment {current} is a symlink"
+    try:
+        base_real = base_dir.resolve(strict=False)
+        target_real = current.resolve(strict=False)
+    except OSError as exc:
+        return None, f"cannot resolve path {current}: {exc}"
+    try:
+        target_real.relative_to(base_real)
+    except ValueError:
+        return None, f"resolved path {target_real} escapes {base_real}"
+    return current, None
+
+
 def _validate_task_plans_against_patch(workflow_patch, feature_dir):
     errors = []
     entries = (workflow_patch.get("tasks_patch") or {}).get("entries") or {}
@@ -1224,9 +1349,25 @@ def _validate_task_plans_against_patch(workflow_patch, feature_dir):
         plan_rel = entry.get("plan")
         if not plan_rel:
             continue
-        plan_path = feature_dir / plan_rel
+        plan_path, path_error = _resolve_contained_relative_path(feature_dir, plan_rel)
+        if path_error is not None:
+            errors.append(err("task-plan-path", f"{task_id}: {path_error}"))
+            continue
         if not plan_path.is_file():
             errors.append(err("task-plan-missing", f"{task_id}: plan file {plan_path} not found"))
+            continue
+        try:
+            plan_size = plan_path.stat().st_size
+        except OSError as exc:
+            errors.append(err("task-plan-missing", f"{task_id}: cannot stat plan file {plan_path}: {exc}"))
+            continue
+        if plan_size > MAX_PLAN_READ_BYTES:
+            errors.append(
+                err(
+                    "task-plan-too-large",
+                    f"{task_id}: plan file {plan_path} is {plan_size} bytes, exceeding the {MAX_PLAN_READ_BYTES} byte limit",
+                )
+            )
             continue
         plan_text = plan_path.read_text(encoding="utf-8")
         plan_files, parse_errors = extract_task_plan_files(plan_text)
@@ -1279,6 +1420,17 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
         req_patch = workflow_patch.get("requirements_patch") or {}
         for rpatch in (req_patch.get("entries") or {}).values():
             tests_append_all.update((rpatch.get("set") or {}).get("tests_append") or [])
+
+    # as5: rework_index completeness must be verified in BOTH directions
+    # against the tasks the patch actually creates -- an empty (or merely
+    # incomplete) rework_index previously passed unnoticed because nothing
+    # ever compared its keys to tasks_patch.entries.
+    created_task_ids = set(((workflow_patch or {}).get("tasks_patch") or {}).get("entries") or {})
+    index_task_ids = set(rework_index)
+    for task_id in sorted(created_task_ids - index_task_ids):
+        errors.append(err("rework-index", f"{task_id}: created by tasks_patch but missing from rework_index"))
+    for task_id in sorted(index_task_ids - created_task_ids):
+        errors.append(err("rework-index", f"{task_id}: present in rework_index but not created by tasks_patch"))
 
     for task_id, ri in rework_index.items():
         covered = ri.get("covered_by_existing") or []
