@@ -1,0 +1,56 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_phase_state_doc.TestPhaseStateDocExistsAndRendersSchemaFaithfully.test_phase_state_doc_exists
+      - tests.test_phase_state_doc.TestPhaseStateDocExistsAndRendersSchemaFaithfully.test_every_schema_key_from_design_input_5_6_appears
+      - tests.test_phase_state_doc.TestPhaseStateDocExistsAndRendersSchemaFaithfully.test_every_enum_token_from_design_input_5_6_appears
+    red_confirmed: true
+    red_reason: "FileNotFoundError: em-workflow/references/phase-state.md did not exist (setUpClass errored reading it)"
+  AC-2:
+    tests:
+      - tests.test_phase_state_doc.TestWorkerRunStatusTransitions.test_transition_table_lists_worker_return_transitions
+      - tests.test_phase_state_doc.TestWorkerRunStatusTransitions.test_discarded_stale_is_stated_as_terminal
+      - tests.test_phase_state_doc.TestWorkerRunStatusTransitions.test_active_request_id_retention_exception_present
+    red_confirmed: true
+    red_reason: "FileNotFoundError: em-workflow/references/phase-state.md did not exist (setUpClass errored reading it)"
+  AC-3:
+    tests:
+      - tests.test_phase_state_doc.TestExit4RecoveryProcedures.test_both_recovery_procedures_present_as_distinct_sections
+      - tests.test_phase_state_doc.TestExit4RecoveryProcedures.test_phase_state_recovery_is_a_numbered_sequence
+      - tests.test_phase_state_doc.TestExit4RecoveryProcedures.test_artifact_commit_recovery_orders_record_before_redispatch
+      - tests.test_phase_state_doc.TestExit4RecoveryProcedures.test_staging_reason_for_the_ordering_is_stated
+    red_confirmed: true
+    red_reason: "FileNotFoundError: em-workflow/references/phase-state.md did not exist (setUpClass errored reading it)"
+  AC-4:
+    tests:
+      - tests.test_phase_state_doc.TestConsecutiveRetryLimit.test_states_the_cap_is_one_consecutive_occurrence
+      - tests.test_phase_state_doc.TestConsecutiveRetryLimit.test_counter_value_at_each_point_is_stated
+    red_confirmed: true
+    red_reason: "FileNotFoundError: em-workflow/references/phase-state.md did not exist (setUpClass errored reading it)"
+  AC-5:
+    tests:
+      - tests.test_phase_state_doc.TestResumeDecisionTable.test_every_top_level_status_is_covered
+      - tests.test_phase_state_doc.TestResumeDecisionTable.test_dispatching_splits_on_discarded_stale_active_run
+      - tests.test_phase_state_doc.TestResumeDecisionTable.test_workflow_yaml_wins_when_ahead
+    red_confirmed: true
+    red_reason: "FileNotFoundError: em-workflow/references/phase-state.md did not exist (setUpClass errored reading it)"
+  AC-6:
+    tests:
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_legacy_compatibility_table_covers_upstream_states
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_backfill_section_present_with_step_b_placement
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_backfill_placement_rationale_is_stated
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_backfill_interrupted_answer_loss_is_stated
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_unknown_schema_version_abort_rule_is_stated
+    red_confirmed: true
+    red_reason: "FileNotFoundError: em-workflow/references/phase-state.md did not exist (setUpClass errored reading it)"
+  AC-7:
+    tests:
+      - tests.test_phase_state_doc.TestResolvedInputCache.test_generation_digest_is_the_invalidation_signal_not_head
+      - tests.test_phase_state_doc.TestResolvedInputCache.test_three_re_resolution_triggers_present
+      - tests.test_phase_state_doc.TestResolvedInputCache.test_reset_conditions_present
+      - tests.test_phase_state_doc.TestResolvedInputCache.test_discovery_caps_with_mode_specific_handling_present
+    red_confirmed: true
+    red_reason: "FileNotFoundError: em-workflow/references/phase-state.md did not exist (setUpClass errored reading it)"
