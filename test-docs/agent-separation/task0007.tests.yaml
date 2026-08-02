@@ -1,0 +1,103 @@
+task_id: task0007
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_worker_contracts_planning.TestContractFilesExistAndReferenceSharedModels.test_all_three_files_exist
+      - tests.test_worker_contracts_planning.TestContractFilesExistAndReferenceSharedModels.test_all_three_reference_the_common_envelope_by_path
+      - tests.test_worker_contracts_planning.TestContractFilesExistAndReferenceSharedModels.test_all_three_reference_the_write_policy_model_by_path
+    red_confirmed: true
+    red_reason: >-
+      All three contract docs were written before the test module. Confirmed
+      red honestly by temporarily moving the three files aside
+      (planner-contract.md, rework-planner-contract.md,
+      designer-contract.md -> *.bak) and re-running the module: every test
+      failed or errored -- test_all_three_files_exist failed with
+      "AssertionError: False is not true : .../planner-contract.md must
+      exist", and every other test/class raised FileNotFoundError in
+      _read()/setUpClass. Files were restored afterward and the full suite
+      re-run green.
+  AC-2:
+    tests:
+      - tests.test_worker_contracts_planning.TestPlannerContract.test_planning_inputs_fields_documented
+      - tests.test_worker_contracts_planning.TestPlannerContract.test_single_packet_question_bundling_rule_documented
+      - tests.test_worker_contracts_planning.TestPlannerContract.test_completed_output_triple_documented
+      - tests.test_worker_contracts_planning.TestPlannerContract.test_prohibition_list_complete
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun as AC-1: TestPlannerContract.setUpClass raised
+      FileNotFoundError for planner-contract.md before the file existed at
+      that path, failing every test in the class.
+  AC-3:
+    tests:
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_rework_source_documents_both_source_types
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_document_update_scope_table_present
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_rework_index_mandatory_and_both_empty_prohibited
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_rework_index_four_validation_checks_present
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun as AC-1: TestReworkPlannerContract.setUpClass
+      raised FileNotFoundError for rework-planner-contract.md before the
+      file existed.
+  AC-4:
+    tests:
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_spec_change_returns_question_not_tasks
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_five_step_orchestrator_sequence_present
+    red_confirmed: true
+    red_reason: >-
+      Same FileNotFoundError as AC-3. Also caught two real bugs during the
+      normal red/green iteration before the aside-and-rerun check: (a)
+      test_five_step_orchestrator_sequence_present originally anchored on
+      the literal string "the orchestrator's follow-up sequence is fixed to
+      these five steps:", which raised ValueError: substring not found
+      because Markdown line-wrapping split "the" and "orchestrator's" across
+      a line break -- fixed by anchoring on the "## Specification-change
+      transition" heading instead; (b)
+      test_gate_executed_in_place_not_returning_to_create_spec (a
+      designer-contract test, listed under AC-6) failed for the same
+      line-wrap reason and was fixed with a whitespace-tolerant regex.
+  AC-5:
+    tests:
+      - tests.test_worker_contracts_planning.TestDesignerContractAutonomy.test_states_neither_question_packet_nor_workflow_patch
+      - tests.test_worker_contracts_planning.TestDesignerContractAutonomy.test_no_question_packet_path_described
+      - tests.test_worker_contracts_planning.TestDesignerKindTable.test_designer_contract_has_matching_row_for_every_combination
+      - tests.test_worker_contracts_planning.TestDesignerKindTable.test_abort_rows_match_between_design_input_and_contract
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun as AC-1: TestDesignerContractAutonomy.setUpClass
+      and TestDesignerKindTable.setUpClass raised FileNotFoundError for
+      designer-contract.md before the file existed. Also caught a real bug
+      during the normal red/green iteration before the aside-and-rerun
+      check: test_no_question_packet_path_described failed with
+      "AssertionError: 'needs_user_input' unexpectedly found" against the
+      first draft of the doc's Responsibility section, which named the
+      excluded status literally -- fixed by rewording to describe the
+      exclusion by counting/enumerating the envelope's five non-question
+      statuses instead of naming the excluded one.
+  AC-6:
+    tests:
+      - tests.test_worker_contracts_planning.TestDesignerReclassificationGate.test_gate_id_present
+      - tests.test_worker_contracts_planning.TestDesignerReclassificationGate.test_gate_executed_in_place_not_returning_to_create_spec
+      - tests.test_worker_contracts_planning.TestDesignerReclassificationGate.test_gate_shared_between_design_and_create_plan
+      - tests.test_worker_contracts_planning.TestDesignerReclassificationGate.test_cross_product_check_not_design_step_specific
+      - tests.test_worker_contracts_planning.TestDesignerReclassificationGate.test_project_native_excludes_two_token_files_from_digest_inputs
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun FileNotFoundError as AC-5. Also caught a real bug
+      during the normal red/green iteration:
+      test_gate_executed_in_place_not_returning_to_create_spec initially
+      asserted the literal substring "does **not** return to create-spec",
+      which failed because Markdown line-wrapping split "not" and "return"
+      across a line break -- fixed with a whitespace-tolerant regex
+      (`does \*\*not\*\*\s+return to create-spec`).
+  AC-7:
+    tests:
+      - tests.test_worker_contracts_planning.TestDesignerTokenLinkage.test_regenerate_source_relationship_documented
+      - tests.test_worker_contracts_planning.TestDesignerTokenLinkage.test_bidirectional_verification_documented
+      - tests.test_worker_contracts_planning.TestDesignerTokenLinkage.test_replace_authorized_never_applies
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun FileNotFoundError as AC-5/AC-6:
+      TestDesignerTokenLinkage.setUpClass raised FileNotFoundError for
+      designer-contract.md before the file existed.
