@@ -33,10 +33,11 @@ workflow:
   status: completed
   completed_at_commit: 37e893c9bb3916e898ca37d8f71c5f1f2c28433a
 - id: implement
-  status: in_progress
+  status: completed
   base_commit: b6f3bc089d15dc7fa623a1c86af87256cc26eb9b
+  completed_at_commit: 4e1b8c71772c20b2dc27a4deccdccb8811a8b0c3
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -532,7 +533,7 @@ tasks:
     requirements:
     - FR30
     - NFR6
-    status: in_progress
+    status: merged
     notes: 'held back deliberately: its repository-level assertion only becomes satisfiable once the sibling rework tasks have merged. Scope extended after task0017 merged: the gate-identifier extraction
       heuristic reports six referenced identifiers as unreferenced.'
     branch: em-workflow/agent-separation/task0021
@@ -544,7 +545,7 @@ tasks:
       - as22
       - gate-id-extraction-false-negative
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 1
   plan:
     floor:
