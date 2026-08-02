@@ -1,0 +1,92 @@
+# em-workflow batch policy SSOT.
+#
+# Scope: this file covers ONLY the gates expressed as question packets — a
+# worker returns `status: needs_user_input` with a packet whose questions
+# carry a `gate_id` (references/question-packet-schema.md). Batch decisions
+# that never pass through a question packet (git-setup failure, feature
+# selection, the review diff-size gate, the command-approval hook fallback,
+# and similar) stay in `references/batch-mode.md` — they have no packet to
+# key off, so there is nothing here to look up for them.
+#
+# `rework.spec-change` is intentionally NOT listed below. An unlisted
+# `gate_id` falls through to the unlisted-gate fallback in
+# `references/question-resolution.md`, whose fail-closed rule aborts a
+# specification-change gate rather than guessing an answer for it.
+#
+# `preserve_and_reuse` (used by every `*.artifact-overwrite` gate): on a
+# digest mismatch against an existing artifact, re-dispatch the worker with
+# that target's write_policy action set to `preserve` (the worker reads the
+# existing file, it does not rewrite it) and let the worker continue from
+# it. If the existing artifact fails the worker's postconditions, the
+# worker reports `blocked` and the phase aborts. So `preserve_and_reuse`
+# means "treat the existing artifact as authoritative" — it can end in
+# either a successful continuation or an abort, never a silent overwrite.
+#
+# `on_unavailable: abort`: abort the phase when the packet does not
+# actually offer the option this policy names (e.g. the worker never listed
+# `preserve_and_reuse` among its options) — never fall back to a different
+# option by guessing.
+
+gate_policies:
+  create-spec.feature-identity:
+    action: select
+    option_id: derive_from_task_description
+  create-spec.requirement-clarification:
+    action: codex_consultation
+    record_as_assumption: true
+    unresolved: record_tbd
+  create-spec.design-step:
+    action: select
+    option_id: decide_autonomously
+  create-spec.design-system:
+    action: select
+    option_id: top_candidate_or_none    # candidate present -> project_native, none -> none
+  design-system.reclassify:
+    action: select
+    option_id: em_workflow              # token exists, so "none" would be wrong
+  create-spec.artifact-overwrite:
+    action: select
+    option_id: preserve_and_reuse
+    on_unavailable: abort
+  create-spec.command-approval:
+    action: auto_record
+    refusal_patterns: hard_fail
+  create-spec.stalled:
+    action: select
+    option_id: record_tbd
+  create-plan.tbd-resolution:
+    action: select
+    option_id: assume
+  create-plan.license-conflict:
+    action: select
+    option_id: compatible_alternative
+    on_unavailable: abort
+  create-plan.existing-files:
+    action: select
+    option_id: merge
+  create-plan.artifact-overwrite:
+    action: select
+    option_id: preserve_and_reuse
+    on_unavailable: abort
+  design.artifact-overwrite:
+    action: select
+    option_id: preserve_and_reuse
+    on_unavailable: abort
+  implement.failed-task:
+    action: retry_once
+    on_exhausted: abort
+  review.auto-fix-conflict:
+    action: select
+    option_id: skip_site
+  review.auto-fix-judgment:
+    action: select
+    option_id: apply_as_is
+  review.residual-critical-high:
+    action: rework_once
+    on_exhausted: defer
+  verify.failed:
+    action: rework_once
+    on_exhausted: abort
+  develop.completion:
+    action: select
+    option_id: keep_branch
