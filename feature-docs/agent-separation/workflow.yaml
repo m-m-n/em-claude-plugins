@@ -445,7 +445,7 @@ tasks:
     requirements:
     - FR15
     - NFR4
-    status: pending
+    status: merged
     notes: null
     branch: null
     provenance:
