@@ -33,8 +33,9 @@ workflow:
   status: completed
   completed_at_commit: 37e893c9bb3916e898ca37d8f71c5f1f2c28433a
 - id: implement
-  status: in_progress
+  status: completed
   base_commit: b6f3bc089d15dc7fa623a1c86af87256cc26eb9b
+  completed_at_commit: 8d0da2b5c39a7026b622600d9bc57d34a3386605
 - id: review
   status: pending
 - id: verify
@@ -331,8 +332,8 @@ tasks:
     - FR30
     - NFR6
     - NFR7
-    status: in_progress
-    notes: 'retry #1 in flight (previous attempt killed by an upstream API stream stall; journal failed event recorded via the taskstop recorder hook)'
+    status: merged
+    notes: 'retry #1 succeeded'
     branch: em-workflow/agent-separation/task0014
 review:
   status: pending
