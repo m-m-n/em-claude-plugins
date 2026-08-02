@@ -6,15 +6,7 @@
   },
   "mode_echo": null,
   "payload": {
-    "rework_index": {
-      "task0007": {
-        "covered_by_existing": [
-          "TS-3"
-        ],
-        "new_scenarios": [],
-        "rationale": "TS-3 already covers the boundary"
-      }
-    },
+    "rework_index": {},
     "shared_contract_rationale": "No new shared contract; task0007 only touches src/auth.go, which no other task declares."
   },
   "question_packet": null,

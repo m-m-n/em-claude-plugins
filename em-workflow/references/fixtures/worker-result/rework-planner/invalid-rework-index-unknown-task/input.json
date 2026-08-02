@@ -15,7 +15,7 @@
         "rationale": "TS-3 already covers the boundary"
       }
     },
-    "shared_contract_rationale": "No new shared contract; task0007 only touches src/auth.go, which no other task declares."
+    "shared_contract_rationale": "No new shared contract."
   },
   "question_packet": null,
   "report": "done",
@@ -34,43 +34,9 @@
     ],
     "requirements_patch": null,
     "schema_version": 1,
-    "step_patches": [
-      {
-        "expected": {},
-        "set": {
-          "status": "pending"
-        },
-        "step_id": "implement"
-      }
-    ],
+    "step_patches": [],
     "tasks_patch": {
-      "entries": {
-        "task0007": {
-          "complexity": "medium",
-          "domains": [
-            "auth"
-          ],
-          "files": [
-            "src/auth.go"
-          ],
-          "initial_status": "pending",
-          "plan": "tasks/task0007.md",
-          "provenance": {
-            "review_round": 2,
-            "source": "review",
-            "source_ids": [
-              "abc123"
-            ]
-          },
-          "requirements": [
-            "FR1"
-          ],
-          "skills": [
-            "backend-impl"
-          ],
-          "title": "Fix auth bypass"
-        }
-      },
+      "entries": {},
       "expected_next_task_id": "task0007",
       "mode": "append"
     }
