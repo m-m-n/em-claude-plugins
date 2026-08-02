@@ -170,7 +170,7 @@ tasks:
     - FR6
     - FR7
     - FR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0007
   task0008:
@@ -311,9 +311,9 @@ tasks:
     - NFR1
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0013
   task0014:
     title: プラグイン不変条件チェックスクリプト
     plan: tasks/task0014.md
