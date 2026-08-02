@@ -3,17 +3,26 @@
 # Scope: this file covers ONLY the gates expressed as question packets — a
 # worker returns `status: needs_user_input` with a packet whose questions
 # carry a `gate_id` (references/question-packet-schema.md). Batch decisions
-# that never pass through a question packet (git-setup failure, feature
+# that never pass through a question packet — git-setup failure, feature
 # selection, the review diff-size gate, the command-approval hook fallback,
-# and similar) stay in `references/batch-mode.md` — they have no packet to
-# key off, so there is nothing here to look up for them.
+# and the eight orchestrator-opened gates that carry no gate_id at their
+# originating site (implement.failed-task, review.auto-fix-conflict,
+# review.auto-fix-judgment, review.residual-critical-high, verify.failed,
+# develop.completion, design.artifact-overwrite,
+# create-plan.artifact-overwrite) — stay in
+# `references/batch-mode.md`'s Non-packet gates table. They have no packet
+# to key off, so there is nothing here to look up for them.
 #
 # `rework.spec-change` is intentionally NOT listed below. An unlisted
 # `gate_id` falls through to the unlisted-gate fallback in
 # `references/question-resolution.md`, whose fail-closed rule aborts a
 # specification-change gate rather than guessing an answer for it.
 #
-# `preserve_and_reuse` (used by every `*.artifact-overwrite` gate): on a
+# `preserve_and_reuse` (used by every `*.artifact-overwrite` gate — only
+# `create-spec.artifact-overwrite` is a policy entry here;
+# `design.artifact-overwrite` and `create-plan.artifact-overwrite` carry the
+# SAME semantics but live in `references/batch-mode.md`'s Non-packet gates
+# table instead, since neither originates as a question packet): on a
 # digest mismatch against an existing artifact, re-dispatch the worker with
 # that target's write_policy action set to `preserve` (the worker reads the
 # existing file, it does not rewrite it) and let the worker continue from
@@ -64,29 +73,3 @@ gate_policies:
   create-plan.existing-files:
     action: select
     option_id: merge
-  create-plan.artifact-overwrite:
-    action: select
-    option_id: preserve_and_reuse
-    on_unavailable: abort
-  design.artifact-overwrite:
-    action: select
-    option_id: preserve_and_reuse
-    on_unavailable: abort
-  implement.failed-task:
-    action: retry_once
-    on_exhausted: abort
-  review.auto-fix-conflict:
-    action: select
-    option_id: skip_site
-  review.auto-fix-judgment:
-    action: select
-    option_id: apply_as_is
-  review.residual-critical-high:
-    action: rework_once
-    on_exhausted: defer
-  verify.failed:
-    action: rework_once
-    on_exhausted: abort
-  develop.completion:
-    action: select
-    option_id: keep_branch

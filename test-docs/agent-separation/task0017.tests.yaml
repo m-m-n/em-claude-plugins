@@ -1,0 +1,77 @@
+task_id: task0017
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_gate_id_set_matches_design_input_minus_relocated
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_relocated_gates_absent_from_policy_file
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_relocated_gates_not_also_left_in_policy_file
+      - tests.test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit batch-policies.yaml (all 19 design-input.md
+      gates, including the eight non-packet ones): "AssertionError:
+      'implement.failed-task' unexpectedly found in {...}" and the
+      design-input-minus-relocated set comparison failed with the eight
+      relocated ids present on the actual side.
+  AC-2:
+    tests:
+      - tests.test_batch_policies.TestNoStaleDecisionTableReference.test_no_decision_table_phrase_in_owned_files
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit files: "AssertionError: 'decision table'
+      unexpectedly found in ... implement-phase.md" (and review-phase.md,
+      SKILL.md) — all three cited "references/batch-mode.md decision
+      table" / "batch-mode.md 決定表" before the repoint.
+  AC-3:
+    tests:
+      - tests.test_batch_policies.TestCatchAllYieldsToDocumentedDefaults.test_catch_all_explicitly_yields
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit batch-mode.md: "AssertionError: 'NEVER
+      overrides' not found in ..." — the old catch-all paragraph had no
+      yield-to-documented-defaults clause at all.
+  AC-4:
+    tests:
+      - tests.test_batch_policies.TestNoStaleAgentReference.test_requirements_spec_creator_absent
+      - tests.test_batch_policies.TestNoStaleAgentReference.test_diff_size_gate_row_repoints_to_unlisted_gate_fallback
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit batch-mode.md: "AssertionError:
+      'requirements-spec-creator' unexpectedly found in ..." (both the
+      whole-file check and the diff-size-gate-row-scoped check, which also
+      failed the `question-resolution.md` / `unlisted-gate fallback`
+      row-scoped assertions since the row still named the deleted agent).
+  AC-5:
+    tests:
+      - tests.test_batch_policies.TestPluginDescriptionReflectsGateJurisdiction.test_does_not_overclaim_batch_mode_alone
+      - tests.test_batch_policies.TestPluginDescriptionReflectsGateJurisdiction.test_names_both_gate_jurisdiction_documents
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit plugin.json: the forbidden substring "every
+      AskUserQuestion gate resolves mechanically per
+      references/batch-mode.md" was present verbatim, and the description
+      never mentioned "batch-policies.yaml" — both assertions failed.
+  AC-6:
+    tests:
+      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_relocated_gates_referenced_only_outside_the_policy_file
+      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_packet_gates_named_within_owned_files_have_policy_entries
+      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_known_external_only_entries_are_still_declared_in_policy
+      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_intentional_exception_excluded_from_both_directions
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-edit files: the relocated-gates-outside-policy check
+      failed ("'implement.failed-task' unexpectedly found in {...}") and
+      the packet-gates-named-within-owned-files check failed because
+      implement-phase.md / SKILL.md still said "batch-mode.md decision
+      table" instead of the literal `create-spec.command-approval` gate
+      id.
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      AC-7 is the meta-criterion that tests/test_batch_policies.py itself
+      asserts AC-1/AC-4/AC-6 over owned files; its evidence is the full set
+      of tests listed above existing in that file and having been
+      red-confirmed individually. No separate test targets AC-7 itself.

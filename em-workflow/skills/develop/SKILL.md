@@ -33,7 +33,8 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
    (a) 起動/補充した直後、(b) failed 発生後のドレイン中 — 新規投入は
    止めて in-flight の完了通知だけを待ち、全て回収してからユーザー三択を
    出す（batch: 三択の代わりにタスクごと 1 回だけ自動 retry、2 回目の
-   failed で中断 — batch-mode.md 決定表）。通知で起こされたら reconcile
+   failed で中断 — `batch-mode.md` の Non-packet gates 表、
+   `implement.failed-task`）。通知で起こされたら reconcile
    → 補充（ドレイン中は補充しない）→
    また待つ。queue_stop_guard hook が「空きスロットがあるのに補充せず
    終える」ターンだけを exit 2 で弾き、failed 存在時はブロックしない）
@@ -56,8 +57,11 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 - `--report-only`（別名 `--no-auto-fix`, `--no-fix`）: review フェーズの
   auto-fix をスキップするフラグとして保持し、review フェーズに引き渡す
 - `--batch`: 無人実行モード。**最初に**
-  `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` を Read し、以降の全
-  ゲート（Step A / A.5 / 各フェーズ / Step C）にその決定表を適用する。
+  `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` を Read する。question
+  packet 経由のゲートは `references/question-resolution.md` の batch 解決
+  手順 + `references/batch-policies.yaml` に従い、それ以外のゲート
+  （Step A / A.5 / 各フェーズ / Step C）は batch-mode.md の Non-packet
+  gates 表に従う。
   batch モード中は AskUserQuestion を一切呼ばない。workflow.yaml が存在
   するのに `batch` ブロックが無ければ作成する（カウンタ永続化のみ —
   モード判定は常にこのフラグ）
@@ -113,7 +117,7 @@ feature-docs はもう main 作業ツリーを走査しない。存在する fea
      - 1件: そのブランチの feature を使う（ブートストラップ状態は
        2./3. で判定する）
      - 複数: AskUserQuestion で選択（batch: 推測せず中断報告 —
-       batch-mode.md 決定表）
+       `batch-mode.md` の Non-packet gates 表）
      - 0件: 新規 feature。create-spec フェーズから開始（workflow.yaml は
        create-spec が生成する）。完了後に再探索して確定（batch: タスク
        記述引数を create-spec の入力にする。タスク記述も無ければ中断報告）
@@ -155,7 +159,8 @@ Step B に入る前に、`${CLAUDE_PLUGIN_ROOT}/references/command-execution-pro
    （package.json のどのスクリプトに解決されるか等）を提示して
    AskUserQuestion（multiSelect）で一括承認 → `--record` で記録
    （batch: 提示せず自動 `--record`。refusal パターンは従来どおり hard
-   fail。自動承認した文字列は終了報告に列挙する — batch-mode.md 決定表）
+   fail。自動承認した文字列は終了報告に列挙する —
+   `batch-policies.yaml` の `create-spec.command-approval`）
 4. 全て承認済みなら何も出さずに Step B へ
 
 以降のフェーズで PreToolUse hook の deny（未承認）に遭遇したら、承認後に
@@ -350,7 +355,8 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
    「integration ブランチ `em-workflow/{feature}/integration` をどうする？」
    の三択。デフォルト（推奨表示）は「`{base_branch}` にマージ」
    （batch: 質問せず自動で「ブランチを残す」を選ぶ。マージ・push・
-   PR 作成のいずれも行わない — batch-mode.md 決定表）
+   PR 作成のいずれも行わない — `batch-mode.md` の Non-packet gates 表、
+   `develop.completion`）
    - **`{base_branch}` にマージ**: メイン作業ツリーがクリーンか確認する。
      workflow.yaml も feature-docs/ 配下のドキュメントも worktree にのみ
      コミットされ、main 作業ツリーには存在しない（Step A/B 参照）ため、
