@@ -261,6 +261,31 @@ class TestRequirementsAnalystSpecifics(unittest.TestCase):
         )
 
 
+class TestRequirementsAnalystToolGrantAndGateTable(unittest.TestCase):
+    """task0019 AC-7 (tool grant) and AC-4 (prompt-side gate table)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.raw_text = _read(ANALYST_PATH)
+        cls.frontmatter_text, cls.body_text = _split_frontmatter(cls.raw_text)
+        cls.frontmatter = _parse_flat_frontmatter(cls.frontmatter_text)
+        cls.normalized = _normalize_ws(cls.raw_text)
+
+    def test_tools_does_not_grant_bash(self):
+        tools = [t.strip() for t in self.frontmatter["tools"].split(",")]
+        self.assertNotIn(
+            "Bash",
+            tools,
+            "requirements-analyst.md must not grant Bash (never writes, "
+            "never commits)",
+        )
+
+    def test_documents_gate_identifier_table(self):
+        self.assertIn("gate_id", self.normalized)
+        self.assertIn("create-spec.requirement-clarification", self.normalized)
+        self.assertIn("create-spec.design-step", self.normalized)
+
+
 class TestSpecWriterSpecifics(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

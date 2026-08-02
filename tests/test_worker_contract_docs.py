@@ -233,6 +233,68 @@ class DesignInputFixtures:
         )
         return confirmed
 
+    @classmethod
+    def section_r1(cls):
+        return _section(cls.text(), "#### 規則 R1", "#### 規則 R2")
+
+    @classmethod
+    def section_validation_layers(cls):
+        return _section(cls.text(), "#### 5.11.2", "#### 5.11.3")
+
+    @classmethod
+    def digest_source_structural_keys(cls):
+        """The `digest_source` object's structural field names
+        (design-input.md 5.0 R1), confirmed present in the design text so
+        this list cannot drift from it. Excludes `value_inputs`'s
+        worker-specific example keys (`task_description` /
+        `resolved_requirements` / `rework_source`), which are illustrative
+        content, not structure owned by the common envelope."""
+        candidates = {
+            "digest_source",
+            "worker",
+            "mode",
+            "workflow_blob",
+            "digest_inputs",
+            "value_inputs",
+            "answers_digest",
+            "write_policy_digest",
+        }
+        section = cls.section_r1()
+        confirmed = {token for token in candidates if token in section}
+        assert confirmed == candidates, (
+            "digest_source structural keys drifted from design-input.md "
+            f"5.0 R1: missing {candidates - confirmed}"
+        )
+        return confirmed
+
+    @classmethod
+    def digest_normalization_separator_literal(cls):
+        match = re.search(r"区切りを\s*`([^`]+)`", cls.section_r1())
+        assert match, (
+            "expected the normalization separator literal in design-input.md "
+            "5.0 R1"
+        )
+        return match.group(1)
+
+    @classmethod
+    def validation_layer_owner_kind(cls):
+        """{layer_number: 'script'|'orchestrator'}, derived from
+        design-input.md 5.11.2's table so worker-envelope.md's rendering
+        cannot silently drift from the design."""
+        section = cls.section_validation_layers()
+        rows = re.findall(r"^\|\s*(\d+)\s*\|(.+?)\|(.+?)\|\s*$", section, re.MULTILINE)
+        assert len(rows) == 7, f"expected seven validation layer rows, got {len(rows)}"
+        result = {}
+        for num, _name, owner in rows:
+            owner = owner.strip()
+            if "スクリプト" in owner:
+                result[int(num)] = "script"
+            elif "オーケストレーター" in owner:
+                result[int(num)] = "orchestrator"
+            else:
+                raise AssertionError(f"unrecognized owner cell: {owner!r}")
+        return result
+
 
 class TestDesignInputFixturesSelfCheck(unittest.TestCase):
     """Proves the parsing helpers above actually derive non-trivial values
@@ -262,6 +324,38 @@ class TestDesignInputFixturesSelfCheck(unittest.TestCase):
         self.assertIn("request_id", fields)
         self.assertIn("resolved_input_paths", fields)
         self.assertIn("e2e", fields)
+
+    def test_digest_source_structural_keys_parses_eight_keys(self):
+        keys = DesignInputFixtures.digest_source_structural_keys()
+        self.assertEqual(
+            keys,
+            {
+                "digest_source",
+                "worker",
+                "mode",
+                "workflow_blob",
+                "digest_inputs",
+                "value_inputs",
+                "answers_digest",
+                "write_policy_digest",
+            },
+        )
+
+    def test_digest_normalization_separator_literal_parses(self):
+        self.assertEqual(
+            DesignInputFixtures.digest_normalization_separator_literal(),
+            '(",", ":")',
+        )
+
+    def test_validation_layer_owner_kind_parses_seven_layers(self):
+        owners = DesignInputFixtures.validation_layer_owner_kind()
+        self.assertEqual(len(owners), 7)
+        self.assertEqual(owners[1], "script")
+        self.assertEqual(owners[4], "orchestrator")
+        self.assertEqual(owners[7], "orchestrator")
+        self.assertEqual(
+            {v for v in owners.values()}, {"script", "orchestrator"}
+        )
 
     def test_envelope_output_fields_include_known_keys(self):
         fields = DesignInputFixtures.envelope_output_fields()
@@ -441,6 +535,116 @@ class TestWorkerEnvelopeRules(unittest.TestCase):
         self.assertIn("verification", normalized)
 
 
+class TestWorkerEnvelopeDigestRuleIsShipped(unittest.TestCase):
+    """task0019 AC-1: the envelope contract states rule R1's normalization
+    procedure and the `digest_source` structure in full, without requiring
+    the reader to open design-input.md."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(ENVELOPE_DOC_PATH)
+
+    def test_states_every_digest_source_structural_key(self):
+        for key in sorted(DesignInputFixtures.digest_source_structural_keys()):
+            self.assertTrue(
+                _has_exact_token(self.text, key),
+                f"worker-envelope.md must state digest_source key {key!r}",
+            )
+
+    def test_states_the_normalization_separator_literal(self):
+        literal = DesignInputFixtures.digest_normalization_separator_literal()
+        self.assertIn(
+            literal,
+            self.text,
+            "worker-envelope.md must state the exact JSON separator literal "
+            "from design-input.md 5.0 R1",
+        )
+
+    def test_states_sort_ascending_non_ascii_and_sha256(self):
+        lowered = self.text.lower()
+        self.assertIn("ascending", lowered)
+        self.assertIn("sha256", lowered)
+        self.assertIn("non-ascii", lowered)
+
+    def test_states_recomputation_and_comparison_timing(self):
+        # The staleness guarantee depends on dispatch-time and return-time
+        # computation using the identical procedure; this must be stated,
+        # not left implicit.
+        normalized = re.sub(r"\s+", " ", self.text.lower())
+        self.assertIn("before dispatch", normalized)
+        self.assertIn("recomputes", normalized)
+        self.assertIn("stale", normalized)
+
+    def test_input_digest_field_row_points_inside_this_document(self):
+        # task0019 AC-3: the input_revision.input_digest row must resolve
+        # within this document (a self-contained "below"), not only to
+        # design-input.md.
+        idx = self.text.index("`input_revision`.`input_digest`")
+        window = self.text[idx : idx + 200]
+        self.assertIn("below", window)
+        self.assertIn("## Rule R1", self.text)
+
+
+class TestWorkerEnvelopeValidationLayers(unittest.TestCase):
+    """task0019 AC-2: the envelope contract states which validation layers
+    belong to the script and which to the orchestrator."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(ENVELOPE_DOC_PATH)
+
+    def test_has_a_validation_layers_section(self):
+        self.assertIn("## Validation layers", self.text)
+
+    def test_layer_owner_split_matches_design(self):
+        expected = DesignInputFixtures.validation_layer_owner_kind()
+        section = _section(self.text, "## Validation layers", "## Output fields")
+        rows = re.findall(
+            r"^\|\s*(\d+)\s*\|(.+?)\|(.+?)\|\s*$", section, re.MULTILINE
+        )
+        self.assertEqual(len(rows), 7, "expected seven rendered validation layer rows")
+        actual = {}
+        for num, _name, owner in rows:
+            owner = owner.strip()
+            if "Script" in owner:
+                actual[int(num)] = "script"
+            elif "Orchestrator" in owner:
+                actual[int(num)] = "orchestrator"
+            else:
+                self.fail(f"unrecognized owner cell in worker-envelope.md: {owner!r}")
+        self.assertEqual(expected, actual)
+
+
+class TestNoDesignDocRequiredForNormativeContent(unittest.TestCase):
+    """task0019 AC-3 (scoped to this task's shipped files): no in-scope
+    contract document instructs the reader to open design-input.md to
+    resolve a rule; design-document mentions are citations alongside
+    content stated in the shipped file itself, never the sole destination."""
+
+    IN_SCOPE_FILES = (
+        ENVELOPE_DOC_PATH,
+        PACKET_DOC_PATH,
+        REPO_ROOT / "em-workflow" / "references" / "contracts" / "analyst-contract.md",
+        REPO_ROOT / "em-workflow" / "references" / "contracts" / "designer-contract.md",
+    )
+
+    BANNED_PATTERNS = (
+        re.compile(r"see design-input\.md.*for (the|its) (rule|procedure)", re.IGNORECASE),
+        re.compile(r"read design-input\.md", re.IGNORECASE),
+        re.compile(r"consult design-input\.md", re.IGNORECASE),
+    )
+
+    def test_no_file_instructs_reading_design_doc_to_resolve_a_rule(self):
+        for path in self.IN_SCOPE_FILES:
+            text = _read(path)
+            for pattern in self.BANNED_PATTERNS:
+                self.assertIsNone(
+                    pattern.search(text),
+                    f"{path.name} must not instruct the reader to open "
+                    "design-input.md to resolve a rule",
+                )
+
+
 class TestQuestionPacketDocExists(unittest.TestCase):
     def test_file_exists(self):
         self.assertTrue(
@@ -495,6 +699,32 @@ class TestQuestionPacketFields(unittest.TestCase):
         lowered = self.text.lower()
         self.assertIn("status", lowered)
         self.assertIn("does not", lowered)
+
+
+class TestQuestionPacketGateIdOwnership(unittest.TestCase):
+    """task0019 AC-5: the `gate_id` ownership statement names files that
+    actually hold gate identifiers. `references/question-resolution.md`
+    holds none (it is the resolution procedure, not an identifier
+    registry) and must not be named as an owner of the ID set."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PACKET_DOC_PATH)
+
+    def _gate_id_row(self):
+        idx = self.text.index("`questions[]`.`gate_id`")
+        row_end = self.text.index("\n", idx)
+        return self.text[idx:row_end]
+
+    def test_does_not_name_question_resolution_as_an_id_owner(self):
+        self.assertNotIn("question-resolution.md", self._gate_id_row())
+
+    def test_names_batch_policies_as_the_batch_handling_owner(self):
+        self.assertIn("batch-policies.yaml", self._gate_id_row())
+
+    def test_names_worker_contracts_as_where_identifiers_originate(self):
+        row = self._gate_id_row()
+        self.assertIn("contract", row.lower())
 
 
 class TestQuestionPacketAnswerRules(unittest.TestCase):
