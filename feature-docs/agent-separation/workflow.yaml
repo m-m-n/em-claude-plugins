@@ -1,0 +1,333 @@
+schema_version: 1
+feature: agent-separation
+created: 2026-08-02
+base_branch: main
+parent_branch: em-workflow/agent-separation/integration
+
+project:
+  license: none
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 406894b3464e92fe003157c512e4ce7fc1710c70
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "Markdown プロトコル・エージェント定義・Python 検証スクリプトのみの変更で、ユーザーに見える UI 面が無いため"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+
+requirements:
+  FR1:
+    title: "rework タスク合成の共通 SSOT (references/rework-task-synthesis.md) を新設し 4 経路から参照する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: "implement-phase.md に rework 再入場の事前条件 (pending task 必須) を追加する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: "worker 共通エンベロープ契約 (references/contracts/worker-envelope.md) を新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: "requirements-analyst の入出力契約 (analyst-contract.md) を新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: "spec-writer の入出力契約 (spec-writer-contract.md) と write_policy モデルを新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: "implementation-planner の入出力契約 (planner-contract.md) を新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: "rework-planner の入出力契約 (rework-planner-contract.md) を新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: "designer の入出力契約 (designer-contract.md) と design_system 分岐表を新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: "scripts/validate-worker-output.py を実装する (Python 3 + PyYAML、5 kind、終了コード 0/1/2)"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: "references/fixtures/ に valid / invalid fixture を分岐網羅で用意する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: "tests/test_validate_worker_output.py で fixture 実行を unittest に載せる"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR12:
+    title: "references/workflow-patch.md に限定 patch 形式と適用規則を定義する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR13:
+    title: "references/phase-state.md に phase-state のスキーマ・冪等性・再開判定・exit 4 リカバリを定義する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR14:
+    title: "references/question-packet-schema.md に question packet と answer の契約を定義する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR15:
+    title: "references/question-resolution.md に interactive / batch 共通の解決手順を定義する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR16:
+    title: "references/batch-policies.yaml を gate ID ベース batch 意思決定の SSOT として新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR17:
+    title: "designer.md を構造化入出力へ改修し design step を Task dispatch 化する (直積検査 + 再分類ゲート含む)"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR18:
+    title: "implementation-planner.md を question packet + workflow patch 方式へ改修する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR19:
+    title: "references/phases/create-plan-phase.md を新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR20:
+    title: "agents/requirements-analyst.md を新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR21:
+    title: "agents/spec-writer.md を新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR22:
+    title: "references/phases/create-spec-phase.md を新設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR23:
+    title: "agents/rework-planner.md を新設し rework SSOT の execution adapter として接続する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR24:
+    title: "references/batch-mode.md を整理し question packet 経由のゲートと重複記述を移設する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR25:
+    title: "references/workflow-schema.md を更新する (単一 writer / phase-state sibling / 規則 R2 / project.design_system / domains SSOT)"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR26:
+    title: "残りの references / templates / skills の参照を新契約・新 worker 名へ更新する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR27:
+    title: "skills/develop/SKILL.md を phase protocol 経由の Task dispatch へ再配線し design_system backfill 分岐を追加する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR28:
+    title: "requirements-spec-creator.md と旧参照・旧記述を削除する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR29:
+    title: "README.md と plugin.json を更新する (worker 構成 / phase-state / PyYAML 前提 / version bump)"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR30:
+    title: "設計書 9.1 の自動検証項目を実行可能な形で提供する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR31:
+    title: "scope 検証手順 (clean 前提 / snapshot / 2 層差分 / 違反除去 / stale 処理) をフェーズプロトコルへ実装する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR32:
+    title: "既存 feature の互換性と project.design_system の backfill を実装する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "Ownership: workflow.yaml の書き手をオーケストレーターに一元化する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "Dialogue fidelity: 固定ラウンド上限なし・自動 assumption 化なし・停止時 3 択"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "Resumability: phase-state から再開でき回答済み質問を再提示しない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "Batch fail-closed: AskUserQuestion 0 回、仕様変更・セキュリティ・ライセンス・不可逆操作は中断"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "Runtime dependencies: PyYAML 必須・gio 任意を README と test/README.md に反映する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: "Single source of truth: 各規則の SSOT を 1 箇所に固定し値を複写しない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: "Hook compatibility: 新 worker prompt に '# Task assignment' 見出しを使わない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR8:
+    title: "Path safety: 正規化・containment・symlink 拒否・case-sensitive 比較"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR9:
+    title: "Discovery cost: glob 解決のキャッシュと 500 ファイル / 5 MB 上限"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
