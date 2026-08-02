@@ -123,6 +123,14 @@ The validation script (5.11.1) performs these four checks:
 4. If `new_scenarios` is non-empty, the same IDs also appear in the
    `workflow_patch`'s `requirements_patch.entries.*.set.tests_append`.
 
+Check 3 depends on a supplied baseline: it establishes "really added" only
+by diffing the rework-planner's `VERIFICATION.md` against a baseline copy of
+that document, so it can determine newness only when both the feature
+directory and a baseline directory are supplied to the validator. Without a
+baseline, newness cannot be established from the current document alone —
+the rework-planner itself wrote it, so its mere presence there proves
+nothing.
+
 ## `payload.shared_contract_rationale`
 
 Whether `IMPLEMENTATION.md` needed extending is not mechanically checkable,

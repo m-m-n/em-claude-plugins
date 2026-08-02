@@ -188,6 +188,19 @@ class TestAnalystContract(unittest.TestCase):
         self.assertIn("create-spec.design-step", section)
         self.assertIn("references/batch-policies.yaml", section)
 
+    # task0024 AC-4 (bs5)
+    def test_documents_prior_analysis_reuse_on_matching_digest(self):
+        self.assertIn("prior_analysis", self.text)
+        lowered = self.text.lower()
+        self.assertIn("continue from", lowered)
+        self.assertIn("re-investigate", lowered)
+        self.assertIn("input_digest", self.text)
+
+    def test_documents_full_re_derivation_when_absent_or_mismatched(self):
+        lowered = self.text.lower()
+        self.assertIn("absent", lowered)
+        self.assertIn("full investigation", lowered)
+
 
 class TestSpecWriterContract(unittest.TestCase):
     @classmethod

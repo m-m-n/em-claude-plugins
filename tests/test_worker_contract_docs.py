@@ -295,6 +295,49 @@ class DesignInputFixtures:
                 raise AssertionError(f"unrecognized owner cell: {owner!r}")
         return result
 
+    # Closed vocabulary translating design-input.md 5.3's Japanese-listed
+    # forbidden-field terms into the English field tokens the shipped
+    # documents use.
+    _FORBIDDEN_JP_TERM_MAP = {
+        "成果物": "written_artifacts",
+        "patch": "workflow_patch",
+        "blocking_reason": "blocking_reason",
+        "question_packet": "question_packet",
+    }
+
+    @classmethod
+    def status_forbidden_terms(cls):
+        """{status: frozenset(english forbidden tokens)}, derived from
+        design-input.md 5.3's own `status` の値と制約 table by translating
+        each row's explicit "X・Y・Z は禁止" clause through
+        `_FORBIDDEN_JP_TERM_MAP`. A row that never uses 禁止 (invalid_input,
+        stale_input, failed) yields an empty set -- design is silent there,
+        it does not assert an empty prohibition."""
+        text = cls.text()
+        header_idx = text.index("| status | 意味 | 制約 |")
+        table_text = text[header_idx:]
+        lines = table_text.splitlines()
+        result = {}
+        for line in lines[1:]:
+            if not line.startswith("|"):
+                break
+            if "---" in line:
+                continue
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            status = cells[0].strip("`")
+            constraint = cells[2] if len(cells) > 2 else ""
+            match = re.search(r"([^。]+)は禁止", constraint)
+            if not match:
+                result[status] = frozenset()
+                continue
+            terms = [t.strip().strip("`") for t in match.group(1).split("・")]
+            result[status] = frozenset(
+                cls._FORBIDDEN_JP_TERM_MAP[t]
+                for t in terms
+                if t in cls._FORBIDDEN_JP_TERM_MAP
+            )
+        return result
+
 
 class TestDesignInputFixturesSelfCheck(unittest.TestCase):
     """Proves the parsing helpers above actually derive non-trivial values
@@ -393,6 +436,26 @@ class TestDesignInputFixturesSelfCheck(unittest.TestCase):
 
     def test_consistency_rule_count_is_seven(self):
         self.assertEqual(DesignInputFixtures.consistency_rule_count(), 7)
+
+    def test_status_forbidden_terms_parses_needs_user_input_row(self):
+        # task0024 AC-1/AC-2: design-input.md 5.3's needs_user_input row
+        # explicitly forbids written_artifacts/workflow_patch/blocking_reason
+        # and says nothing about payload -- this is the design fact the
+        # payload-prohibition correction rests on.
+        terms = DesignInputFixtures.status_forbidden_terms()
+        self.assertEqual(
+            terms["needs_user_input"],
+            {"written_artifacts", "workflow_patch", "blocking_reason"},
+        )
+        self.assertNotIn("payload", terms["needs_user_input"])
+        self.assertEqual(terms["completed"], {"question_packet"})
+        self.assertEqual(terms["blocked"], {"question_packet"})
+        # design's wording for these three rows never uses 禁止 at all --
+        # its silence is not evidence of an empty prohibition, only that
+        # design does not encode one explicitly here.
+        self.assertEqual(terms["invalid_input"], frozenset())
+        self.assertEqual(terms["stale_input"], frozenset())
+        self.assertEqual(terms["failed"], frozenset())
 
 
 class TestExactTokenHelperSelfCheck(unittest.TestCase):
@@ -499,6 +562,194 @@ class TestWorkerEnvelopeStatusValues(unittest.TestCase):
         idx = self.text.index("| `completed`")
         window = self.text[idx : idx + 400]
         self.assertIn("payload", window)
+
+
+def _rendered_status_forbidden_terms(text):
+    r"""{status: frozenset(backtick tokens)}, parsed from worker-envelope.md's
+    own rendered `## \`status\` values and field constraints` table."""
+    section = _section(
+        text,
+        "## `status` values and field constraints",
+        "Re-dispatch behavior",
+    )
+    rows = re.findall(
+        r"^\|\s*`([a-z_]+)`\s*\|([^|]*)\|([^|]*)\|([^|]*)\|\s*$",
+        section,
+        re.MULTILINE,
+    )
+    assert rows, "expected to find the rendered status table rows"
+    return {status: frozenset(_backtick_tokens(forbidden)) for status, _meaning, _mandatory, forbidden in rows}
+
+
+class TestWorkerEnvelopeStatusTablePayloadCorrection(unittest.TestCase):
+    """task0024 AC-1/AC-2 (bs1/bs3 half): the status table no longer
+    forbids a payload on `needs_user_input`, while every other non-completed
+    status keeps forbidding it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(ENVELOPE_DOC_PATH)
+        cls.rendered = _rendered_status_forbidden_terms(cls.text)
+
+    # AC-1
+    def test_needs_user_input_forbidden_set_matches_design_exactly(self):
+        # design-input.md 5.3 fully and explicitly enumerates this row's
+        # forbidden set (成果物・patch・blocking_reason は禁止) and says
+        # nothing about payload -- an exact match is the correct assertion,
+        # not a subset check.
+        design_expected = DesignInputFixtures.status_forbidden_terms()[
+            "needs_user_input"
+        ]
+        self.assertEqual(self.rendered["needs_user_input"], design_expected)
+
+    def test_needs_user_input_no_longer_forbids_payload(self):
+        self.assertNotIn("payload", self.rendered["needs_user_input"])
+
+    def test_needs_user_input_still_forbids_artifacts_patch_and_blocking_reason(self):
+        for token in ("written_artifacts", "workflow_patch", "blocking_reason"):
+            self.assertIn(token, self.rendered["needs_user_input"])
+
+    # AC-2
+    def test_other_non_completed_statuses_still_forbid_payload(self):
+        other_statuses = [
+            status
+            for status in DesignInputFixtures.status_values()
+            if status not in ("needs_user_input", "completed")
+        ]
+        # sanity: this must be the known three-status set, not vacuous
+        self.assertEqual(
+            set(other_statuses), {"blocked", "invalid_input", "stale_input", "failed"}
+        )
+        for status in other_statuses:
+            self.assertIn(
+                "payload",
+                self.rendered[status],
+                f"{status!r} must still forbid payload (AC-2)",
+            )
+
+    def test_completed_status_unchanged(self):
+        self.assertEqual(self.rendered["completed"], {"question_packet"})
+
+
+class TestWorkerEnvelopePriorAnalysisField(unittest.TestCase):
+    """task0024 AC-3/AC-4 (bs5): the envelope defines `prior_analysis` with
+    `content` and `input_digest`, and states its size bound; the analyst's
+    contract states the reuse rule on top of it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(ENVELOPE_DOC_PATH)
+
+    def test_documents_prior_analysis_with_both_members(self):
+        self.assertTrue(_has_exact_token(self.text, "prior_analysis"))
+        idx = self.text.index("### `prior_analysis`")
+        section = self.text[idx : idx + 2000]
+        self.assertIn("content", section)
+        self.assertIn("input_digest", section)
+
+    def test_states_a_numeric_size_bound(self):
+        idx = self.text.index("### `prior_analysis`")
+        section = self.text[idx : idx + 2000]
+        lowered = section.lower()
+        self.assertIn("size bound", lowered)
+        self.assertRegex(section, r"\d+\s*KB")
+
+    def test_states_requirements_analyst_only(self):
+        idx = self.text.index("### `prior_analysis`")
+        section = self.text[idx : idx + 2000]
+        self.assertIn("requirements-analyst", section)
+        self.assertIn("only", section)
+
+    def test_analyst_contract_states_reuse_on_matching_digest(self):
+        analyst_text = _read(
+            REPO_ROOT
+            / "em-workflow"
+            / "references"
+            / "contracts"
+            / "analyst-contract.md"
+        )
+        self.assertIn("prior_analysis", analyst_text)
+        lowered = analyst_text.lower()
+        self.assertIn("continue from", lowered)
+        self.assertIn("re-investigate", lowered)
+        self.assertIn("input_digest", analyst_text)
+
+
+class TestWorkerEnvelopeUntrustedInputSection(unittest.TestCase):
+    """task0024 AC-5/AC-6 (bs12): the envelope has an untrusted-input
+    section covering the data-not-instructions rule, the refusal to take
+    role/shape/gate/category direction from content, and the reporting
+    duty; every worker prompt references it and none restates it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(ENVELOPE_DOC_PATH)
+        idx = cls.text.index("## Untrusted-Input Handling")
+        cls.section = cls.text[idx:]
+
+    def test_has_the_section(self):
+        self.assertIn("## Untrusted-Input Handling", self.text)
+
+    def test_states_data_not_instructions_rule(self):
+        lowered = self.section.lower()
+        self.assertIn("untrusted", lowered)
+        self.assertIn("data to analyse", lowered)
+        self.assertIn("never commands to follow", lowered)
+
+    def test_states_refusal_of_role_shape_gate_and_category_direction(self):
+        self.assertIn("role", self.section.lower())
+        self.assertIn("output shape", self.section)
+        self.assertIn("gate_id", self.section)
+        self.assertIn("category", self.section)
+        self.assertIn("never obeyed", self.section)
+
+    def test_states_reporting_duty(self):
+        self.assertIn("injection", self.section.lower())
+        self.assertIn("`report`", self.section)
+
+    AGENT_PATHS = (
+        REPO_ROOT / "em-workflow" / "agents" / "requirements-analyst.md",
+        REPO_ROOT / "em-workflow" / "agents" / "spec-writer.md",
+        REPO_ROOT / "em-workflow" / "agents" / "rework-planner.md",
+        REPO_ROOT / "em-workflow" / "agents" / "designer.md",
+        REPO_ROOT / "em-workflow" / "agents" / "implementation-planner.md",
+    )
+
+    # Sentences distinctive to the envelope's own rendering of the rule;
+    # a worker prompt containing any of these would be restating the
+    # section rather than referencing it (NFR6).
+    DISTINCTIVE_ENVELOPE_SENTENCES = (
+        "untrusted attacker-influenceable data",
+        "ignore previous instructions",
+        "reports that as a fact in its result",
+    )
+
+    def test_every_worker_prompt_references_the_section(self):
+        for path in self.AGENT_PATHS:
+            text = _read(path)
+            normalized = re.sub(r"\s+", " ", text)
+            self.assertIn(
+                "Untrusted-Input Handling",
+                normalized,
+                f"{path.name} must reference the Untrusted-Input Handling section",
+            )
+            self.assertIn(
+                "references/contracts/worker-envelope.md",
+                text,
+                f"{path.name} must reference worker-envelope.md by path",
+            )
+
+    def test_no_worker_prompt_restates_the_section(self):
+        for path in self.AGENT_PATHS:
+            text = _read(path)
+            normalized = re.sub(r"\s+", " ", text)
+            for sentence in self.DISTINCTIVE_ENVELOPE_SENTENCES:
+                self.assertNotIn(
+                    sentence,
+                    normalized,
+                    f"{path.name} must not restate the envelope's untrusted-input "
+                    f"wording ({sentence!r})",
+                )
 
 
 class TestWorkerEnvelopeRules(unittest.TestCase):

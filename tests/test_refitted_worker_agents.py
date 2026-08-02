@@ -38,6 +38,16 @@ PLANNER_PATH = PLUGIN_ROOT / "agents" / "implementation-planner.md"
 
 FORBIDDEN_HEADING = "# Task assignment"
 
+# task0024 AC-6 (bs12): both refitted worker prompts reference the
+# envelope's Untrusted-Input Handling section rather than restating it.
+UNTRUSTED_INPUT_REFERENCE_SUBSTRING = "Untrusted-Input Handling"
+ENVELOPE_REF = "references/contracts/worker-envelope.md"
+DISTINCTIVE_ENVELOPE_UNTRUSTED_INPUT_SENTENCES = (
+    "untrusted attacker-influenceable data",
+    "ignore previous instructions",
+    "reports that as a fact in its result",
+)
+
 
 def _read(path):
     return path.read_text(encoding="utf-8")
@@ -105,6 +115,36 @@ class TestPlannerToolGrant(unittest.TestCase):
 
     def test_planner_still_states_never_commits(self):
         self.assertIn("This agent never commits", _read(PLANNER_PATH))
+
+
+class TestUntrustedInputReferenceAC6(unittest.TestCase):
+    """task0024 AC-6 (bs12): designer.md and implementation-planner.md both
+    reference the envelope's Untrusted-Input Handling section by path and
+    do not restate its distinctive wording."""
+
+    def test_designer_references_the_section(self):
+        text = _read(DESIGNER_PATH)
+        normalized = re.sub(r"\s+", " ", text)
+        self.assertIn(UNTRUSTED_INPUT_REFERENCE_SUBSTRING, normalized)
+        self.assertIn(ENVELOPE_REF, text)
+
+    def test_planner_references_the_section(self):
+        text = _read(PLANNER_PATH)
+        normalized = re.sub(r"\s+", " ", text)
+        self.assertIn(UNTRUSTED_INPUT_REFERENCE_SUBSTRING, normalized)
+        self.assertIn(ENVELOPE_REF, text)
+
+    def test_neither_file_restates_the_section(self):
+        for path in (DESIGNER_PATH, PLANNER_PATH):
+            text = _read(path)
+            normalized = re.sub(r"\s+", " ", text)
+            for sentence in DISTINCTIVE_ENVELOPE_UNTRUSTED_INPUT_SENTENCES:
+                self.assertNotIn(
+                    sentence,
+                    normalized,
+                    f"{path.name} must not restate the envelope's "
+                    f"untrusted-input wording ({sentence!r})",
+                )
 
 
 class TestAC7ForbiddenHeadingAndRetainedFrontmatter(unittest.TestCase):
