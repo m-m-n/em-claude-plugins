@@ -37,7 +37,7 @@ workflow:
   base_commit: b6f3bc089d15dc7fa623a1c86af87256cc26eb9b
   completed_at_commit: 8d0da2b5c39a7026b622600d9bc57d34a3386605
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -336,8 +336,20 @@ tasks:
     notes: 'retry #1 succeeded'
     branch: em-workflow/agent-separation/task0014
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - spec
+    - security
+    - performance
+    - architecture
+    discretionary: []
+    codex_cross_validation: true
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: rework タスク合成の共通 SSOT (references/rework-task-synthesis.md) を新設し 4 経路から参照する
