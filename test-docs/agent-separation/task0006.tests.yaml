@@ -1,0 +1,50 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_worker_contracts_create_spec.TestFilesExist.test_analyst_contract_exists
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_references_common_envelope_by_path
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_documents_additional_input_fields
+    red_confirmed: true
+    red_reason: "FileNotFoundError: analyst-contract.md did not exist"
+  AC-2:
+    tests:
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_documents_analysis_snapshot_fields
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_documents_full_mode_completed_payload
+    red_confirmed: true
+    red_reason: "FileNotFoundError: analyst-contract.md did not exist"
+  AC-3:
+    tests:
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_documents_design_system_detection_mode_exclusivity
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_documents_restricted_status_set
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_documents_digest_inputs_for_both_modes
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_states_analyst_detects_without_deciding_kind
+    red_confirmed: true
+    red_reason: "FileNotFoundError: analyst-contract.md did not exist"
+  AC-4:
+    tests:
+      - tests.test_worker_contracts_create_spec.TestFilesExist.test_spec_writer_contract_exists
+      - tests.test_worker_contracts_create_spec.TestSpecWriterContract.test_references_common_envelope_by_path
+      - tests.test_worker_contracts_create_spec.TestSpecWriterContract.test_documents_all_six_write_policy_actions
+      - tests.test_worker_contracts_create_spec.TestSpecWriterContract.test_documents_expect_digest_requirement
+    red_confirmed: true
+    red_reason: "FileNotFoundError: spec-writer-contract.md did not exist"
+  AC-5:
+    tests:
+      - tests.test_worker_contracts_create_spec.TestSpecWriterContract.test_documents_targets_vs_allowed_write_roots_split
+    red_confirmed: true
+    red_reason: "FileNotFoundError: spec-writer-contract.md did not exist"
+  AC-6:
+    tests:
+      - tests.test_worker_contracts_create_spec.TestSpecWriterContract.test_documents_completed_payload
+      - tests.test_worker_contracts_create_spec.TestSpecWriterContract.test_documents_all_four_postconditions
+    red_confirmed: true
+    red_reason: "FileNotFoundError: spec-writer-contract.md did not exist"
+  AC-7:
+    tests:
+      - tests.test_worker_contracts_create_spec.TestNoRestatement.test_analyst_contract_does_not_restate_envelope_fields
+      - tests.test_worker_contracts_create_spec.TestNoRestatement.test_spec_writer_contract_does_not_restate_envelope_fields
+    red_confirmed: true
+    red_reason: "FileNotFoundError: contract files did not exist"
