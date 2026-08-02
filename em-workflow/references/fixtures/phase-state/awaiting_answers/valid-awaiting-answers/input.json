@@ -1,0 +1,30 @@
+{
+  "active_request_id": null,
+  "answers": {},
+  "artifacts": [],
+  "base_revision": "a3c91f2",
+  "feature": "example",
+  "generation": 1,
+  "last_error": null,
+  "last_input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "packets": {
+    "create-plan-q0001": {
+      "issued_at": "2026-08-02T15:50:00+09:00",
+      "questions": [
+        {
+          "question_id": "requirement.fr4.tbd-resolution",
+          "status": "issued"
+        }
+      ],
+      "status": "issued"
+    }
+  },
+  "patches": [],
+  "phase": "create-plan",
+  "progress_fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "resolved_input_cache": {},
+  "schema_version": 1,
+  "stale_redispatch_count": 0,
+  "status": "awaiting_answers",
+  "worker_runs": []
+}

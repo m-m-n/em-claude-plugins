@@ -1,0 +1,31 @@
+{
+  "blocking_reason": null,
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "mode_echo": null,
+  "payload": {
+    "assumptions_written": [],
+    "spec_index": {
+      "requirements": [
+        {
+          "id": "FR1",
+          "status": "ok",
+          "tbd_reason": null,
+          "title": "x"
+        }
+      ],
+      "test_scenarios": []
+    }
+  },
+  "question_packet": null,
+  "report": "done",
+  "request_id": "run-0001",
+  "schema_version": 1,
+  "status": "completed",
+  "warnings": [],
+  "worker": "spec-writer",
+  "workflow_patch": null,
+  "written_artifacts": []
+}

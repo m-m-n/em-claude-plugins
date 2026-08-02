@@ -1,0 +1,16 @@
+{
+  "allowed_write_roots": [],
+  "analysis_mode": "full",
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "mode": "interactive",
+  "phase": "create-plan",
+  "request_id": "env-run-0001",
+  "resolved_input_paths": {},
+  "schema_version": 1,
+  "write_policy": {
+    "targets": []
+  }
+}
