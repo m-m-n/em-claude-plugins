@@ -47,21 +47,33 @@ This document does not restate the shapes it builds on — it cites them:
   (design-input.md 5.4.5): the combination of `kind` and whether
   `design-system/tokens.yaml` / `tokens.html` actually exist on disk must be
   one of the design's permitted combinations, not one of its two
-  inconsistent cases (`kind: none` with tokens actually present, or
-  `kind: em_workflow` with `tokens.yaml` absent but `tokens.html` present).
+  inconsistent cases. **These two cases are not the same branch** — each
+  routes to a different outcome, and only one of them opens a gate:
 
-  If the cross-product check finds an inconsistency, the planner is **not**
-  dispatched. Instead the orchestrator runs the reclassification gate
-  (design-input.md 5.4.5, `gate_id: design-system.reclassify`): re-detect
-  design-system candidates via `requirements-analyst` with `analysis_mode:
-  design_system_detection`, resolve `kind` and `paths` again (interactive:
-  ask the user; batch: `references/batch-policies.yaml`'s
-  `design-system.reclassify` entry), and commit the updated
-  `project.design_system` to `workflow.yaml`, **without changing the
-  `create-plan` step's status** — after that commit lands, the orchestrator
-  restarts from these preconditions, re-reading `workflow.yaml` and
-  re-checking the cross-product table before deciding whether to dispatch
-  the planner.
+  - **`kind: none` with either token file actually present**: the planner
+    is **not** dispatched. Instead the orchestrator runs the
+    reclassification gate (design-input.md 5.4.5, `gate_id:
+    design-system.reclassify`): re-detect design-system candidates via
+    `requirements-analyst` with `analysis_mode: design_system_detection`,
+    resolve `kind` and `paths` again (interactive: ask the user; batch:
+    `references/batch-policies.yaml`'s `design-system.reclassify` entry),
+    and commit the updated `project.design_system` to `workflow.yaml`,
+    **without changing the `create-plan` step's status** — after that
+    commit lands, the orchestrator restarts from these preconditions,
+    re-reading `workflow.yaml` and re-checking the cross-product table
+    before deciding whether to dispatch the planner.
+  - **`kind: em_workflow` with `design-system/tokens.yaml` absent and
+    `tokens.html` present**: the planner is **not** dispatched, and the
+    reclassification gate above is **not** run for this case — recomputing
+    `kind` from candidates cannot restore a missing source file, so
+    settling `kind` again through that gate would leave `tokens.yaml`
+    still absent and re-enter this exact same inconsistency the next time
+    the cross-product table is checked, never terminating. Instead the
+    orchestrator **aborts create-plan dispatch outright**: it reports the
+    offending paths (`design-system/tokens.yaml` missing,
+    `design-system/tokens.html` present) and waits for the user to either
+    delete the stale `tokens.html` or restore `tokens.yaml` before
+    re-entering this phase.
 
 ## 3. Reconcile on entry
 
@@ -74,7 +86,7 @@ that order, never from memory.
 
 ## 4. Planner dispatch
 
-Dispatch `implementation-planner` with:
+`Task(subagent_type="em-workflow:implementation-planner")`, with:
 
 - `input_digest` (design-input.md 5.0 R1), computed from
   `references/contracts/planner-contract.md`'s `digest_inputs`.
@@ -111,24 +123,76 @@ index, and the proposed workflow patch — `tasks_patch`,
 
 ## 8. Validation
 
-The seven validation layers defined in design-input.md 5.11.2 (rendered by
-`scripts/validate-worker-output.py`) — not restated here.
+The seven validation layers defined in design-input.md 5.11.2 — not
+restated in full here, but the split between them matters for section 9
+below: `scripts/validate-worker-output.py` implements layers 1 (syntax), 2
+(structure), 3 (revision) and 6 (cross-artifact) — the script's own
+docstring states this. Layers 4 (scope verification), 5 (artifact
+verification) and 7 (state-machine postconditions) are **deliberately not
+implemented in the script**; they are the orchestrator's own responsibility
+(Bash), run outside it. A check belonging to a layer neither side
+implements does not happen at all.
 
-## 9. Planning invariants (machine-checked)
+## 9. Planning invariants — the validator-implemented subset, and human review for the rest
 
-The validation script mechanically checks:
+Of the invariants a planning result could in principle be checked against,
+`scripts/validate-worker-output.py` mechanically implements only the
+following. This list is restricted to what the script actually does, not
+to every invariant that would be desirable:
 
-- Every task plan has Acceptance Criteria.
+- Every task plan has a non-empty Acceptance Criteria section.
 - A task's `files` and its task plan's Files section agree as a union.
-- `skills` / `domains` / `complexity` match their registered vocabularies.
-- Every requirement ID referenced anywhere already exists in
-  `workflow.yaml`.
-- Task/test mapping references resolve consistently.
+- `skills` / `domains` / `complexity` match their registered vocabularies —
+  **only when `--registries` is supplied**; the check silently does not run
+  if it is omitted, it does not fail.
+- A task's declared `requirements` already exist in `workflow.yaml` —
+  **only when `--workflow` is supplied**; likewise silently skipped, not
+  failed, when omitted.
 - Shared contracts between parallel tasks are documented in
-  IMPLEMENTATION.md.
+  IMPLEMENTATION.md, checked as: whenever more than one task declares the
+  same file in `files`, IMPLEMENTATION.md must contain a `## Shared
+  Components` section. This is a deliberate approximation of "a shared
+  contract exists where one is needed" (same-file overlap is neither
+  necessary nor sufficient for that), not a defect to fix in this task.
+
+The following are named as planning invariants but are **not implemented
+by the script** — they remain human review only, with no automated gate
+blocking on them:
+
+- Task/test mapping references resolve consistently outside the rework
+  path (the script's rework-index coverage check exists, but it applies
+  only to `rework-planner` output, not to a fresh `implementation-planner`
+  patch).
 - No `excluded` or `tbd` requirement has a task assigned to it.
 - When `design` is `completed`, VERIFICATION.md includes a manual visual
   comparison step.
+
+**Canonical validator invocation** for an `implementation-planner` result,
+covering every invariant above that the script can check:
+
+```
+python3 scripts/validate-worker-output.py \
+    --kind worker-result \
+    --worker implementation-planner \
+    --input {worker-output.json} \
+    --input-envelope {dispatch-input.json} \
+    --workflow {workflow.yaml} \
+    --registries {references-dir} \
+    --feature-dir {feature-docs/{feature}} \
+    --digest-source {digest-source.json} \
+    --dry-run-apply
+```
+
+`--input-envelope` is mandatory for `--kind worker-result` — the script
+exits 2 without it. `--workflow`, `--registries` and `--feature-dir` are
+optional in the script's own argument parser, but each one that is omitted
+here silently narrows validation rather than failing loudly: dropping
+`--workflow` skips the requirement-existence check, dropping `--registries`
+skips the vocabulary check, and dropping `--feature-dir` skips the
+Acceptance-Criteria, files-union and Shared-Components checks together
+(all three are read from the task plan and IMPLEMENTATION.md files under
+`--feature-dir`). Running anything less than the invocation above is a
+coverage regression, not a smaller valid invocation.
 
 ## 10. Atomic patch application
 

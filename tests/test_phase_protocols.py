@@ -422,5 +422,246 @@ class TestNoRestatedSiblingSsotContent(unittest.TestCase):
             )
 
 
+class TestExplicitTaskDispatchForm(unittest.TestCase):
+    """task0015 AC-1: all three dispatch sites name their subagent type in
+    the explicit Task form, matching the form
+    `Task(subagent_type="em-workflow:<name>")` used for the design step in
+    skills/develop/SKILL.md (e.g. `Task(subagent_type="em-workflow:designer")`).
+
+    This test only checks the two phase documents this task owns. The
+    repository-wide dispatch-set/agent-definition-set parity check is
+    task0021's `check-plugin-invariants.py agent_dispatch_parity` and is not
+    asserted here (Test Notes)."""
+
+    TASK_DISPATCH_RE = re.compile(r'Task\(subagent_type="em-workflow:([a-z-]+)"\)')
+
+    @classmethod
+    def setUpClass(cls):
+        cls.spec_text = _read(CREATE_SPEC_PATH)
+        cls.plan_text = _read(CREATE_PLAN_PATH)
+
+    def test_create_spec_dispatches_requirements_analyst_explicitly(self):
+        self.assertIn(
+            'Task(subagent_type="em-workflow:requirements-analyst")',
+            self.spec_text,
+        )
+
+    def test_create_spec_dispatches_spec_writer_explicitly(self):
+        self.assertIn(
+            'Task(subagent_type="em-workflow:spec-writer")',
+            self.spec_text,
+        )
+
+    def test_create_plan_dispatches_implementation_planner_explicitly(self):
+        self.assertIn(
+            'Task(subagent_type="em-workflow:implementation-planner")',
+            self.plan_text,
+        )
+
+    def test_no_prose_only_dispatch_sentence_remains(self):
+        # The old prose form this replaces ("Dispatch requirements-analyst
+        # with" / "Dispatch implementation-planner with:") must be gone from
+        # the sites this task fixes.
+        self.assertNotIn("Dispatch `requirements-analyst`", self.spec_text)
+        self.assertNotIn("Dispatch `implementation-planner`", self.plan_text)
+
+    def test_dispatch_form_matches_the_pattern_used_for_design_step(self):
+        # Sanity check on the regex itself: it must actually match the form
+        # skills/develop/SKILL.md uses for the design step, so this test
+        # cannot vacuously pass against a form that looks similar but isn't.
+        design_dispatch_line = 'Task(subagent_type="em-workflow:designer")'
+        self.assertRegex(design_dispatch_line, self.TASK_DISPATCH_RE)
+        spec_matches = set(self.TASK_DISPATCH_RE.findall(self.spec_text))
+        plan_matches = set(self.TASK_DISPATCH_RE.findall(self.plan_text))
+        self.assertIn("requirements-analyst", spec_matches)
+        self.assertIn("spec-writer", spec_matches)
+        self.assertIn("implementation-planner", plan_matches)
+
+
+class TestCreatePlanCrossProductTwoBranches(unittest.TestCase):
+    """task0015 AC-2: create-plan-phase.md defines two distinct cross-product
+    branches, and the token-source-absent case (`kind: em_workflow` with
+    `tokens.yaml` absent and `tokens.html` present) aborts with the offending
+    paths instead of entering the reclassification gate."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_PLAN_PATH)
+
+    def test_two_branches_are_explicitly_distinguished(self):
+        self.assertIn("These two cases are not the same branch", self.text)
+
+    def test_none_with_tokens_present_branch_goes_to_reclassify_gate(self):
+        self.assertIn(
+            "`kind: none` with either token file actually present",
+            self.text,
+        )
+        self.assertIn("design-system.reclassify", self.text)
+
+    def test_em_workflow_yaml_absent_html_present_branch_aborts(self):
+        self.assertIn(
+            "`kind: em_workflow` with `design-system/tokens.yaml` absent and",
+            self.text,
+        )
+        self.assertIn("aborts create-plan dispatch outright", self.text)
+        self.assertIn(
+            "offending paths (`design-system/tokens.yaml` missing,",
+            self.text,
+        )
+
+    def test_abort_branch_does_not_reuse_the_reclassify_gate(self):
+        self.assertIn(
+            "reclassification gate above is **not** run for this case",
+            self.text,
+        )
+
+
+class TestScopeVerificationSnapshotCost(unittest.TestCase):
+    """task0015 AC-3: the pre-dispatch snapshot no longer hashes every
+    tracked path; content hashing is limited to paths reported as changed,
+    and deletions, mode changes and kind changes remain detectable."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_SPEC_PATH)
+
+    def test_whole_tree_hashing_row_is_gone(self):
+        self.assertNotIn("Working-tree content for tracked paths", self.text)
+        self.assertIn(
+            "No whole-tree working-tree-content hashing pass runs here",
+            self.text,
+        )
+
+    def test_changed_path_limitation_is_present(self):
+        self.assertIn(
+            "Content hashing with `git hash-object --` is applied only to the",
+            self.text,
+        )
+
+    def test_deletions_mode_and_kind_changes_remain_detectable(self):
+        self.assertIn(
+            "deletions, mode changes, and kind changes (file ⇔ symlink ⇔ absent)",
+            self.text,
+        )
+
+
+class TestScopeVerificationPreDispatchContainment(unittest.TestCase):
+    """task0015 AC-4: the scope procedure validates targets and allowed
+    roots before launching and states that post-dispatch comparison cannot
+    recover an out-of-worktree write."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_SPEC_PATH)
+
+    def test_pre_dispatch_containment_section_exists_before_snapshot(self):
+        containment_idx = _first_index(
+            self.text, "### Pre-dispatch containment validation"
+        )
+        snapshot_idx = _first_index(self.text, "### Pre-dispatch snapshot")
+        self.assertLess(containment_idx, snapshot_idx)
+        self.containment_section = self.text[containment_idx:snapshot_idx]
+
+    def test_containment_rules_cover_absolute_paths_dotdot_symlinks_case(self):
+        # Scoped to the pre-dispatch containment section itself (not the
+        # whole document) so this test actually exercises the new
+        # before-dispatch validation rather than the pre-existing
+        # post-dispatch containment rules, which already covered the same
+        # vocabulary.
+        containment_idx = _first_index(
+            self.text, "### Pre-dispatch containment validation"
+        )
+        snapshot_idx = _first_index(self.text, "### Pre-dispatch snapshot")
+        section = self.text[containment_idx:snapshot_idx]
+        lowered = section.lower()
+        self.assertIn("absolute path", lowered)
+        self.assertIn("`..` segment", section)
+        self.assertIn("symlink", lowered)
+        self.assertIn("case-insensitive filesystem", lowered)
+
+    def test_post_dispatch_comparison_cannot_recover_out_of_worktree_write(self):
+        self.assertIn("the latter is an audit, not the primary control", self.text)
+        self.assertIn(
+            "cannot be recovered by anything the post-dispatch comparison does",
+            self.text,
+        )
+
+
+class TestAnalystDispatchLoopCacheReuse(unittest.TestCase):
+    """task0015 AC-5: the analyst dispatch loop states that glob-derived
+    categories come from the cached resolution unless a documented
+    re-resolution trigger fired."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_SPEC_PATH)
+
+    def test_resolved_input_cache_is_named(self):
+        self.assertIn("resolved_input_cache", self.text)
+
+    def test_three_re_resolution_triggers_are_named(self):
+        self.assertIn(
+            "re-resolution triggers fired since the last resolution",
+            self.text,
+        )
+
+    def test_cache_reuse_applies_again_on_redispatch(self):
+        self.assertIn("the cache is consulted", self.text)
+
+
+class TestCreatePlanValidatorImplementedSubset(unittest.TestCase):
+    """task0015 AC-6: create-plan-phase.md section 9 lists only the
+    invariants the validator implements, marks the others as human review,
+    states the layer split, and records the canonical validator
+    invocation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_PLAN_PATH)
+
+    def test_section_8_states_the_layer_split(self):
+        self.assertIn(
+            "implements layers 1 (syntax), 2",
+            self.text,
+        )
+        self.assertIn("orchestrator's own responsibility", self.text)
+
+    def test_section_9_marks_unimplemented_invariants_as_human_review(self):
+        self.assertIn("validator-implemented subset", self.text)
+        self.assertIn("remain human review only", self.text)
+        # The three invariants task0015's design says are absent from the
+        # script must appear in the human-review list, not the checked list.
+        self.assertIn(
+            "Task/test mapping references resolve consistently outside the rework",
+            self.text,
+        )
+        self.assertIn(
+            "No `excluded` or `tbd` requirement has a task assigned to it.",
+            self.text,
+        )
+        self.assertIn(
+            "VERIFICATION.md includes a manual visual",
+            self.text,
+        )
+        self.assertIn(
+            "comparison step.",
+            self.text,
+        )
+
+    def test_optional_arguments_silently_narrow_validation(self):
+        self.assertIn(
+            "silently narrows validation rather than failing loudly",
+            self.text,
+        )
+
+    def test_canonical_validator_invocation_is_recorded(self):
+        self.assertIn("Canonical validator invocation", self.text)
+        self.assertIn("validate-worker-output.py", self.text)
+        self.assertIn("--dry-run-apply", self.text)
+        self.assertIn(
+            "coverage regression, not a smaller valid invocation", self.text
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
