@@ -58,7 +58,7 @@ tasks:
     requirements:
     - FR3
     - FR14
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0001
   task0002:
@@ -275,9 +275,9 @@ tasks:
     - FR17
     - FR32
     - FR1
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0012
   task0013:
     title: スキーマ・参照・テンプレート更新と旧定義削除
     plan: tasks/task0013.md
