@@ -53,6 +53,27 @@ The exclusion-root and extension-allowlist test data (below) is derived by
 parsing design-input.md's own "design system 候補の探索" sentence, so the
 assertions track the normative source rather than a hand-copied duplicate
 (Test Notes for task0020).
+
+Extended for task0026 (review round2 rework, finding bs4-backfill-cross-product;
+see feature-docs/agent-separation/tasks/task0026.md):
+
+- AC-1: the backfill procedure no longer contains a step that returns to
+  its own earlier question on detecting a cross-product inconsistency.
+- AC-2: the backfill names `references/contracts/designer-contract.md` and
+  its `project.design_system.kind` × token-existence table as where both
+  abort rows are handled.
+- AC-3: the document states that the ordinary cross-product check runs at
+  the next step entry (`design` or `create-plan`) rather than inside the
+  backfill.
+- AC-4: both abort rows and their distinct outcomes (reclassification gate
+  vs. abort-and-wait) are traceable from the backfill section without the
+  section restating the owning table's rows (no duplicated markdown table
+  syntax).
+- AC-5 (unchanged statements) is covered by the pre-existing
+  `test_backfill_section_present_with_step_b_placement`,
+  `test_backfill_placement_rationale_is_stated`, and
+  `test_backfill_interrupted_answer_loss_is_stated` below, which continue
+  to pass unmodified.
 """
 
 import re
@@ -584,6 +605,53 @@ class TestBackfillDiscoveryPersistence(unittest.TestCase):
         sub = self.backfill_section[idx : idx + 900]
         self.assertIn("lost", sub.lower())
         self.assertIn("discovery result", sub.lower())
+
+
+class TestBackfillCrossProductDelegation(unittest.TestCase):
+    """task0026, finding bs4-backfill-cross-product.
+
+    AC-1: the backfill no longer contains a step that returns to its own
+    earlier question on detecting an inconsistency.
+    AC-2: the backfill names the owning contract's cross-product table as
+    where both abort rows are handled.
+    AC-3: the document states that the ordinary cross-product check runs at
+    the next step entry rather than inside the backfill.
+    AC-4: both abort rows and their distinct outcomes are traceable from the
+    backfill section without restating the table.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        idx = cls.text.index("**Backfill procedure:**")
+        end = cls.text.index("**Unknown `schema_version`**")
+        cls.section = cls.text[idx:end]
+
+    def test_no_step_loops_back_to_an_earlier_question(self):
+        # This is the exact wording the looping step used to carry; its
+        # absence is the observable proof the loop was removed.
+        self.assertNotIn("return to step 2", self.section)
+        self.assertIn("never returns to", self.section)
+
+    def test_owning_contract_cross_product_table_is_named(self):
+        self.assertIn("references/contracts/designer-contract.md", self.section)
+        self.assertIn("project.design_system.kind", self.section)
+        self.assertIn("token-existence table", self.section)
+
+    def test_ordinary_check_runs_at_next_step_entry_not_inside_backfill(self):
+        self.assertIn("next step entry", self.section)
+        self.assertIn("not inside", self.section.lower())
+        self.assertIn("references/phases/create-plan-phase.md", self.section)
+
+    def test_both_abort_outcomes_traceable_without_restating_the_table(self):
+        self.assertIn("reclassification gate", self.section)
+        self.assertIn("aborts dispatch", self.section.lower())
+        self.assertIn("waits for the user", self.section.lower())
+        # Guard against a second copy of the owning table: no duplicated
+        # markdown table syntax (the actual row-by-row conditions) inside
+        # the backfill section.
+        self.assertNotIn("|", self.section)
+        self.assertNotIn("tokens.html` present", self.section)
 
 
 if __name__ == "__main__":
