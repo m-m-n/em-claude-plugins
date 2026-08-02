@@ -32,12 +32,36 @@ pattern in test_workflow_patch_doc.py).
 
 Edge cases (Test Notes): a task-plan Files bullet with zero/two
 backtick-quoted paths (fixtures under worker-result/implementation-planner);
-a symlink-valued written_artifacts path (TestSymlinkedWrittenArtifact, built
-at test time -- not committed as a fixture, see that class's docstring); an
-extend_only target whose YAML contains an alias or merge key
+an extend_only target whose YAML contains an alias or merge key
 (TestExtendOnlyComparability, direct unit test of the pure helper --
 see that function's docstring in the script for why it is not wired to a
 --kind path).
+
+task0016 (review round1 rework) added coverage for as5, as6, as8 (validator
+half), as15, as16, as17 and as21 -- see feature-docs/agent-separation/
+reviews/round1.yaml for the reproductions these classes pin:
+
+- AC-1 / as6: TestWrittenArtifactsContainment, TestPathContainmentHelper --
+  segment-wise written_artifacts containment (replaces string-prefix
+  matching), malformed entries and a non-list written_artifacts no longer
+  crash.
+- AC-2 / as5: TestReworkIndexTaskCoverageDirect, TestReworkIndexCoverage --
+  rework_index completeness verified against tasks_patch.entries in both
+  directions; shared_contract_rationale is a required payload key.
+- AC-3 / as15: TestDomainsVocabularyParse -- the domains vocabulary parser
+  no longer absorbs the complexity vocabulary comment that follows it.
+- AC-4 / as16: TestPlanPathContainment (formerly TestSymlinkedWrittenArtifact
+  -- the symlink case now asserts REJECTION instead of successful read,
+  per the task's explicit behaviour change) -- absolute paths, `..`
+  segments, symlink segments and oversized reads are all rejected before
+  the plan file is opened.
+- AC-5 / as8 (validator half): TestQuestionCategoryForcesBlockingUnanswered
+  -- spec-change/security/license questions must set on_unanswered: block.
+- AC-6 / as21: TestStatusPayloadExclusivity -- the five non-completed
+  statuses forbid a non-empty payload.
+- AC-7 / as21: TestFixtureCoverageDerivedFromCapabilityTable, replacing the
+  weak substring check in TestFixtureBranchesDerivedFromDesignInput for
+  kind worker-result (see that test's inline comment).
 """
 
 import importlib.util
@@ -451,6 +475,15 @@ class TestFixtureBranchesDerivedFromDesignInput(unittest.TestCase):
 
     def test_every_parsed_branch_token_has_at_least_one_fixture(self):
         for kind in VWO.KINDS:
+            if kind == "worker-result":
+                # as21: this substring-anywhere-in-the-kind check is too weak
+                # for worker-result -- it is satisfied by ANY worker's
+                # fixture mentioning a status token, regardless of which
+                # worker actually needs it. Superseded by
+                # TestFixtureCoverageDerivedFromCapabilityTable, which reads
+                # each fixture's own `status` field and checks it against
+                # the worker/mode it actually belongs to.
+                continue
             branch_tokens = self.fixture.branch_tokens_for_kind(kind)
             kind_dir = FIXTURES_ROOT / kind
             all_paths_normalized = [
@@ -498,107 +531,435 @@ class TestExtendOnlyComparability(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Edge case: a symlink-valued path in written_artifacts
+# as16 / AC-4: the `plan` field in a workflow_patch tasks_patch entry is
+# untrusted worker output joined to --feature-dir. Absolute paths, `..`
+# segments and symlink segments must be rejected before the file is ever
+# opened, and an oversized plan file must be rejected before it is read in
+# full. Built in temporary directories at test-run time per the Test
+# Notes -- the committed fixture corpus never carries a symlink object.
 # ---------------------------------------------------------------------------
 
-class TestSymlinkedWrittenArtifact(unittest.TestCase):
-    """Test Notes: "a symlink-valued path in written_artifacts". Built in a
-    temporary directory at test-run time rather than committed as a static
-    fixture, so the repository's fixture corpus never carries an actual
-    symlink object (portability / binary-files-in-git concern)."""
+class TestPlanPathContainment(unittest.TestCase):
+    def _make_feature_dir(self, tmp_path):
+        feature_dir = tmp_path / "feature-dir"
+        tasks_dir = feature_dir / "tasks"
+        tasks_dir.mkdir(parents=True)
+        return feature_dir, tasks_dir
 
-    def test_task_plan_reached_through_a_symlink_is_read_correctly(self):
+    @staticmethod
+    def _valid_plan_text():
+        return (
+            "# Task Plan: task0001 -- Something\n\n"
+            "## Goal\n\nDeliver something.\n\n"
+            "## Requirements\n\nFR1\n\n"
+            "## Scope\n\n"
+            "### Files to Create\n"
+            "- `src/a.go` -- main file\n\n"
+            "### Files to Modify\n\n"
+            "## Design\n\nNotes.\n\n"
+            "## Acceptance Criteria (MANDATORY)\n\n"
+            "- [ ] AC-1: something is delivered\n\n"
+            "## Test Notes\n\nNotes.\n\n"
+            "## Out of Scope\n\nNone.\n"
+        )
+
+    def _run(self, feature_dir, plan_rel, tmp_path):
+        result_obj = {
+            "schema_version": 1,
+            "request_id": "run-0001",
+            "worker": "implementation-planner",
+            "status": "completed",
+            "input_revision": {"workflow_blob": "8f17c04", "input_digest": "sha256:" + "a" * 64},
+            "question_packet": None,
+            "blocking_reason": None,
+            "written_artifacts": [
+                {"path": "feature-docs/example/tasks/task0001.md", "sha256": "sha256:" + "e" * 64},
+            ],
+            "workflow_patch": {
+                "schema_version": 1,
+                "patch_id": "create-plan-p0001",
+                "base_input_digest": "sha256:" + "a" * 64,
+                "base_workflow_blob": "8f17c04",
+                "operation": "replace_planning",
+                "tasks_patch": {
+                    "mode": "replace_all",
+                    "entries": {
+                        "task0001": {
+                            "title": "Something",
+                            "plan": plan_rel,
+                            "files": ["src/a.go"],
+                            "skills": ["backend-impl"],
+                            "domains": ["api-contract"],
+                            "complexity": "medium",
+                            "requirements": ["FR1"],
+                            "initial_status": "pending",
+                        }
+                    },
+                },
+                "requirements_patch": None,
+                "step_patches": [],
+                "preserve": [],
+            },
+            "mode_echo": None,
+            "payload": {"task_index": {"task0001": {"title": "Something"}}},
+            "warnings": [],
+            "report": "done",
+        }
+        envelope_obj = {
+            "schema_version": 1,
+            "request_id": "env-run-0001",
+            "phase": "create-plan",
+            "mode": "interactive",
+            "input_revision": {"workflow_blob": "8f17c04", "input_digest": "sha256:" + "a" * 64},
+            "write_policy": {"targets": []},
+            "allowed_write_roots": ["feature-docs/example/"],
+            "resolved_input_paths": {},
+        }
+        input_path = tmp_path / "input.json"
+        envelope_path = tmp_path / "envelope.json"
+        input_path.write_text(json.dumps(result_obj), encoding="utf-8")
+        envelope_path.write_text(json.dumps(envelope_obj), encoding="utf-8")
+
+        return run_cli(
+            [
+                "--kind", "worker-result",
+                "--worker", "implementation-planner",
+                "--input", str(input_path),
+                "--input-envelope", str(envelope_path),
+                "--feature-dir", str(feature_dir),
+            ]
+        )
+
+    def test_plan_reached_through_a_symlink_segment_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-            feature_dir = tmp_path / "feature-dir"
-            tasks_dir = feature_dir / "tasks"
-            tasks_dir.mkdir(parents=True)
+            feature_dir, tasks_dir = self._make_feature_dir(tmp_path)
             real_plan = tasks_dir / "_real_task0001.md"
-            real_plan.write_text(
-                "# Task Plan: task0001 -- Something\n\n"
-                "## Goal\n\nDeliver something.\n\n"
-                "## Requirements\n\nFR1\n\n"
-                "## Scope\n\n"
-                "### Files to Create\n"
-                "- `src/a.go` -- main file\n\n"
-                "### Files to Modify\n\n"
-                "## Design\n\nNotes.\n\n"
-                "## Acceptance Criteria (MANDATORY)\n\n"
-                "- [ ] AC-1: something is delivered\n\n"
-                "## Test Notes\n\nNotes.\n\n"
-                "## Out of Scope\n\nNone.\n",
-                encoding="utf-8",
-            )
+            real_plan.write_text(self._valid_plan_text(), encoding="utf-8")
             symlink_plan = tasks_dir / "task0001.md"
             os.symlink(real_plan.name, symlink_plan)
             self.assertTrue(symlink_plan.is_symlink())
 
-            result_obj = {
-                "schema_version": 1,
-                "request_id": "run-0001",
-                "worker": "implementation-planner",
-                "status": "completed",
-                "input_revision": {"workflow_blob": "8f17c04", "input_digest": "sha256:" + "a" * 64},
-                "question_packet": None,
-                "blocking_reason": None,
-                "written_artifacts": [
-                    {"path": "feature-docs/example/tasks/task0001.md", "sha256": "sha256:" + "e" * 64},
-                ],
-                "workflow_patch": {
-                    "schema_version": 1,
-                    "patch_id": "create-plan-p0001",
-                    "base_input_digest": "sha256:" + "a" * 64,
-                    "base_workflow_blob": "8f17c04",
-                    "operation": "replace_planning",
-                    "tasks_patch": {
-                        "mode": "replace_all",
-                        "entries": {
-                            "task0001": {
-                                "title": "Something",
-                                "plan": "tasks/task0001.md",
-                                "files": ["src/a.go"],
-                                "skills": ["backend-impl"],
-                                "domains": ["api-contract"],
-                                "complexity": "medium",
-                                "requirements": ["FR1"],
-                                "initial_status": "pending",
-                            }
-                        },
-                    },
-                    "requirements_patch": None,
-                    "step_patches": [],
-                    "preserve": [],
-                },
-                "mode_echo": None,
-                "payload": {"task_index": {"task0001": {"title": "Something"}}},
-                "warnings": [],
-                "report": "done",
-            }
-            envelope_obj = {
-                "schema_version": 1,
-                "request_id": "env-run-0001",
-                "phase": "create-plan",
-                "mode": "interactive",
-                "input_revision": {"workflow_blob": "8f17c04", "input_digest": "sha256:" + "a" * 64},
-                "write_policy": {"targets": []},
-                "allowed_write_roots": ["feature-docs/example/"],
-                "resolved_input_paths": {},
-            }
-            input_path = tmp_path / "input.json"
-            envelope_path = tmp_path / "envelope.json"
-            input_path.write_text(json.dumps(result_obj), encoding="utf-8")
-            envelope_path.write_text(json.dumps(envelope_obj), encoding="utf-8")
+            result = self._run(feature_dir, "tasks/task0001.md", tmp_path)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("symlink", result.stdout.lower())
 
-            result = run_cli(
-                [
-                    "--kind", "worker-result",
-                    "--worker", "implementation-planner",
-                    "--input", str(input_path),
-                    "--input-envelope", str(envelope_path),
-                    "--feature-dir", str(feature_dir),
-                ]
-            )
+    def test_plan_without_a_symlink_is_still_read_correctly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature_dir, tasks_dir = self._make_feature_dir(tmp_path)
+            (tasks_dir / "task0001.md").write_text(self._valid_plan_text(), encoding="utf-8")
+
+            result = self._run(feature_dir, "tasks/task0001.md", tmp_path)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_absolute_plan_path_is_rejected(self):
+        # Asserts the SPECIFIC "task-plan-path" rejection code, not merely
+        # exit 1 -- the pre-fix code also exits 1 for "/etc/passwd" on a
+        # system where that file exists, but only by coincidence: pathlib's
+        # `/` operator discards the left operand for an absolute right
+        # operand, so it reads the real /etc/passwd and fails on a files-
+        # mismatch ("task-plan-files-mismatch"), never recognizing the path
+        # itself as unsafe.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature_dir, tasks_dir = self._make_feature_dir(tmp_path)
+            (tasks_dir / "task0001.md").write_text(self._valid_plan_text(), encoding="utf-8")
+
+            result = self._run(feature_dir, "/etc/passwd", tmp_path)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("task-plan-path", result.stdout)
+
+    def test_plan_path_escaping_feature_dir_via_parent_segments_is_rejected(self):
+        # Same coincidence risk as the absolute-path case above: the OS
+        # resolves `..` when the pre-fix code calls `.is_file()`, so it
+        # would also happen to read the outside file and fail on a
+        # files-mismatch rather than rejecting the path itself. Assert the
+        # specific rejection code to discriminate the real fix.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature_dir, tasks_dir = self._make_feature_dir(tmp_path)
+            (tasks_dir / "task0001.md").write_text(self._valid_plan_text(), encoding="utf-8")
+            (tmp_path / "outside.md").write_text("secret", encoding="utf-8")
+
+            result = self._run(feature_dir, "../outside.md", tmp_path)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("task-plan-path", result.stdout)
+
+    def test_oversized_plan_file_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature_dir, tasks_dir = self._make_feature_dir(tmp_path)
+            (tasks_dir / "task0001.md").write_text("x" * (VWO.MAX_PLAN_READ_BYTES + 1), encoding="utf-8")
+
+            result = self._run(feature_dir, "tasks/task0001.md", tmp_path)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("task-plan-too-large", result.stdout)
+
+
+class TestPathContainmentHelper(unittest.TestCase):
+    """as6: direct unit tests of the pure segment-comparison helper,
+    reproducing both measured escapes without going through the CLI."""
+
+    def test_sibling_directory_is_not_contained(self):
+        self.assertFalse(VWO.path_is_contained_in_root("feature-docs/example2/evil.md", "feature-docs/example"))
+
+    def test_substring_name_is_not_contained(self):
+        self.assertFalse(
+            VWO.path_is_contained_in_root(
+                "feature-docs/example/design/mockups-evil/x.html",
+                "feature-docs/example/design/mockups",
+            )
+        )
+
+    def test_nested_path_is_contained(self):
+        self.assertTrue(VWO.path_is_contained_in_root("feature-docs/example/tasks/task0001.md", "feature-docs/example"))
+
+    def test_traversal_path_is_rejected(self):
+        self.assertFalse(VWO.path_is_contained_in_root("feature-docs/example/../../etc/passwd", "feature-docs/example"))
+
+    def test_trailing_slash_root_still_matches(self):
+        self.assertTrue(VWO.path_is_contained_in_root("feature-docs/example/IMPLEMENTATION.md", "feature-docs/example/"))
+
+
+class TestWrittenArtifactsContainment(unittest.TestCase):
+    """as6: fixture-driven end-to-end coverage. Segment-wise containment
+    replaces the previous string-prefix comparison that admitted a
+    sibling-directory escape and a substring-name escape; malformed
+    entries and a non-list written_artifacts must produce a
+    machine-readable error instead of a traceback / silent per-character
+    iteration."""
+
+    def _run(self, case_name):
+        case_dir = FIXTURES_ROOT / "worker-result" / "designer" / case_name
+        return run_cli(build_case_args("worker-result", "designer", case_dir))
+
+    def test_sibling_directory_escape_is_rejected(self):
+        result = self._run("invalid-written-artifact-sibling-directory-escape")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("write_policy", result.stdout)
+
+    def test_traversal_escape_is_rejected(self):
+        result = self._run("invalid-written-artifact-traversal")
+        self.assertEqual(result.returncode, 1)
+
+    def test_substring_name_escape_is_rejected(self):
+        result = self._run("invalid-written-artifact-substring-name-escape")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("write_policy", result.stdout)
+
+    def test_entry_missing_path_is_a_validation_error_not_a_traceback(self):
+        result = self._run("invalid-written-artifact-missing-path")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, "")
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["errors"])
+
+    def test_non_list_written_artifacts_is_a_validation_error_not_a_crash(self):
+        # Asserts the SPECIFIC "must be a list" error (exactly one), not
+        # merely "some error occurred" -- the pre-fix code also exits 1
+        # here, but only by coincidence (it silently iterates the string
+        # per character, and each single-character "path" happens to fail
+        # containment against every allowed root).
+        result = self._run("invalid-written-artifacts-not-a-list")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, "")
+        payload = json.loads(result.stdout)
+        self.assertEqual(len(payload["errors"]), 1)
+        self.assertIn("must be a list", payload["errors"][0]["message"])
+
+    def test_contained_path_in_allowed_root_is_accepted(self):
+        result = self._run("valid-written-artifact-in-allowed-root")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+
+# ---------------------------------------------------------------------------
+# as15 / AC-3: the domains vocabulary parser must stop at the domains block
+# boundary the same way check-plugin-invariants.py does, so it never
+# absorbs the complexity vocabulary comment that follows it.
+# ---------------------------------------------------------------------------
+
+class TestDomainsVocabularyParse(unittest.TestCase):
+    def test_real_review_rules_yaml_yields_exactly_the_eight_documented_domains(self):
+        vocab = VWO.load_domains_vocabulary(REPO_ROOT / "em-workflow" / "references")
+        self.assertEqual(
+            vocab,
+            {
+                "auth",
+                "input-handling",
+                "data-persistence",
+                "external-io",
+                "concurrency",
+                "api-contract",
+                "ui",
+                "config-infra",
+            },
+        )
+
+    def test_domain_declaring_a_complexity_value_is_rejected(self):
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / "invalid-domain-is-complexity-value"
+        result = run_cli(build_case_args("workflow-patch", "replace_planning", case_dir))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("domains", result.stdout)
+
+
+# ---------------------------------------------------------------------------
+# as8 (validator half) / AC-5: a question whose category is spec-change,
+# security or licensing must carry on_unanswered: block, so a worker cannot
+# silently choose record_tbd/use_batch_policy and defeat the batch abort.
+# ---------------------------------------------------------------------------
+
+class TestQuestionCategoryForcesBlockingUnanswered(unittest.TestCase):
+    def _run(self, case_name):
+        case_dir = FIXTURES_ROOT / "question-packet" / "category-fail-closed" / case_name
+        return run_cli(build_case_args("question-packet", "category-fail-closed", case_dir))
+
+    def test_security_question_with_non_blocking_unanswered_is_rejected(self):
+        result = self._run("invalid-security-record-tbd")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("on_unanswered", result.stdout)
+
+    def test_security_question_with_blocking_unanswered_is_accepted(self):
+        result = self._run("valid-security-blocking")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_all_three_fail_closed_categories_are_rejected_directly(self):
+        for category in ("spec-change", "security", "license"):
+            with self.subTest(category=category):
+                q = {
+                    "question_id": "q.test",
+                    "gate_id": "gate.x",
+                    "category": category,
+                    "priority": "high",
+                    "blocking": True,
+                    "prompt": "p",
+                    "header": "h",
+                    "answer_mode": "freeform",
+                    "options": [],
+                    "why_needed": "w",
+                    "on_unanswered": "record_tbd",
+                }
+                errors = VWO.validate_question(q, 0)
+                messages = " ".join(e["message"] for e in errors)
+                self.assertIn("on_unanswered", messages)
+
+    def test_other_categories_do_not_force_blocking(self):
+        q = {
+            "question_id": "q.test",
+            "gate_id": "gate.x",
+            "category": "testing",
+            "priority": "high",
+            "blocking": False,
+            "prompt": "p",
+            "header": "h",
+            "answer_mode": "freeform",
+            "options": [],
+            "why_needed": "w",
+            "on_unanswered": "record_tbd",
+        }
+        errors = VWO.validate_question(q, 0)
+        self.assertEqual(errors, [])
+
+
+# ---------------------------------------------------------------------------
+# as21 / AC-6: worker-envelope.md forbids `payload` on the five non-completed
+# statuses; the validator never enforced that.
+# ---------------------------------------------------------------------------
+
+class TestStatusPayloadExclusivity(unittest.TestCase):
+    def test_blocked_with_nonempty_payload_is_rejected(self):
+        case_dir = FIXTURES_ROOT / "worker-result" / "requirements-analyst-full" / "invalid-blocked-with-payload"
+        result = run_cli(build_case_args("worker-result", "requirements-analyst-full", case_dir))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("payload", result.stdout)
+
+    def test_every_non_completed_status_forbids_payload_directly(self):
+        base = dict(
+            schema_version=1,
+            worker="designer",
+            request_id="run-0001",
+            input_revision={"input_digest": "sha256:" + "a" * 64},
+            question_packet=None,
+            workflow_patch=None,
+            mode_echo=None,
+            written_artifacts=[],
+        )
+        for status in ("blocked", "invalid_input", "stale_input", "failed"):
+            with self.subTest(status=status):
+                data = dict(base, status=status, blocking_reason="x", payload={"design_summary": {}})
+                errors = VWO.validate_worker_result(data, "designer")
+                messages = " ".join(e["message"] for e in errors)
+                self.assertIn("payload", messages)
+
+    def test_completed_still_requires_a_non_empty_payload(self):
+        data = dict(
+            schema_version=1,
+            worker="designer",
+            request_id="run-0001",
+            input_revision={"input_digest": "sha256:" + "a" * 64},
+            question_packet=None,
+            workflow_patch=None,
+            mode_echo=None,
+            written_artifacts=[],
+            status="completed",
+            blocking_reason=None,
+            payload={},
+        )
+        errors = VWO.validate_worker_result(data, "designer")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("non-empty payload", messages)
+
+
+# ---------------------------------------------------------------------------
+# as21 / AC-7: fixture coverage generated from WORKER_CAPABILITIES (the
+# capability table) instead of checking that a status token merely appears
+# SOMEWHERE under fixtures/worker-result/ (see
+# TestFixtureBranchesDerivedFromDesignInput, which skips worker-result for
+# exactly this reason).
+# ---------------------------------------------------------------------------
+
+class TestFixtureCoverageDerivedFromCapabilityTable(unittest.TestCase):
+    @staticmethod
+    def _group_dir_name(worker, mode_key):
+        if worker == "requirements-analyst":
+            # Fixture directories use kebab-case even though the mode_key
+            # itself (WORKER_CAPABILITIES / mode_echo) is snake_case.
+            return f"requirements-analyst-{mode_key.replace('_', '-')}"
+        return worker
+
+    @staticmethod
+    def _valid_fixture_statuses(group_dir):
+        """Maps each valid-* case dir under group_dir to the `status` read
+        from its OWN input file -- not from the directory name -- so this
+        cannot be satisfied by a differently-named worker's fixture."""
+        statuses = set()
+        if not group_dir.is_dir():
+            return statuses
+        for case_dir in sorted(group_dir.iterdir()):
+            if not case_dir.is_dir() or not case_dir.name.startswith("valid-"):
+                continue
+            input_path = _companion(case_dir, "input")
+            if input_path is None:
+                continue
+            data, _ = VWO.parse_yaml_text(input_path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                statuses.add(data.get("status"))
+        return statuses
+
+    def test_every_worker_and_permitted_status_pair_has_a_valid_fixture(self):
+        for worker, modes in VWO.WORKER_CAPABILITIES.items():
+            for mode_key, caps in modes.items():
+                group = self._group_dir_name(worker, mode_key)
+                group_dir = FIXTURES_ROOT / "worker-result" / group
+                statuses_present = self._valid_fixture_statuses(group_dir)
+                for status in sorted(caps["allowed_statuses"]):
+                    with self.subTest(worker=worker, mode=mode_key, status=status):
+                        self.assertIn(
+                            status,
+                            statuses_present,
+                            f"no valid-* fixture under {group_dir} declares status {status!r} "
+                            f"(worker={worker!r}, mode={mode_key!r})",
+                        )
 
 
 # ---------------------------------------------------------------------------
@@ -640,18 +1001,90 @@ class TestTaskPlanFilesBulletBacktickEdgeCases(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestReworkIndexNewScenariosRequireTestsAppend(unittest.TestCase):
+    # Both cases now declare task0007 in tasks_patch.entries too: as5's
+    # coverage fix (TestReworkIndexTaskCoverageDirect below) rejects a
+    # rework_index entry naming a task tasks_patch never created, so these
+    # workflow_patch fixtures must create the task they index to isolate
+    # the tests_append cross-check this class exists to cover.
     def test_new_scenario_missing_from_tests_append_is_rejected(self):
         rework_index = {"task0007": {"covered_by_existing": [], "new_scenarios": ["TS-9"], "rationale": "new case"}}
-        workflow_patch = {"requirements_patch": {"mode": "merge_entries", "entries": {"FR1": {"expected": {}, "set": {"tests_append": []}}}}}
+        workflow_patch = {
+            "tasks_patch": {"entries": {"task0007": {}}},
+            "requirements_patch": {"mode": "merge_entries", "entries": {"FR1": {"expected": {}, "set": {"tests_append": []}}}},
+        }
         errors = VWO._validate_rework_index(rework_index, workflow_patch, envelope=None, feature_dir=None, baseline_dir=None)
         messages = " ".join(e["message"] for e in errors)
         self.assertIn("tests_append", messages)
 
     def test_new_scenario_present_in_tests_append_is_accepted(self):
         rework_index = {"task0007": {"covered_by_existing": [], "new_scenarios": ["TS-9"], "rationale": "new case"}}
-        workflow_patch = {"requirements_patch": {"mode": "merge_entries", "entries": {"FR1": {"expected": {}, "set": {"tests_append": ["TS-9"]}}}}}
+        workflow_patch = {
+            "tasks_patch": {"entries": {"task0007": {}}},
+            "requirements_patch": {"mode": "merge_entries", "entries": {"FR1": {"expected": {}, "set": {"tests_append": ["TS-9"]}}}},
+        }
         errors = VWO._validate_rework_index(rework_index, workflow_patch, envelope=None, feature_dir=None, baseline_dir=None)
         self.assertEqual(errors, [])
+
+
+# ---------------------------------------------------------------------------
+# as5 / AC-2: rework_index completeness against tasks_patch.entries, in both
+# directions, plus shared_contract_rationale as a required payload key.
+# ---------------------------------------------------------------------------
+
+class TestReworkIndexTaskCoverageDirect(unittest.TestCase):
+    """Direct unit tests of the pure coverage-comparison helper: reproduces
+    as5's exact measured regression ("replacing the valid-completed
+    fixture's rework_index with {} while task0007 remains in tasks_patch
+    still exits 0") and its mirror image."""
+
+    def test_task_created_but_absent_from_index_is_rejected(self):
+        workflow_patch = {"tasks_patch": {"entries": {"task0007": {}}}}
+        errors = VWO._validate_rework_index({}, workflow_patch, envelope=None, feature_dir=None, baseline_dir=None)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("task0007", messages)
+        self.assertIn("missing from rework_index", messages)
+
+    def test_index_names_a_task_not_created_is_rejected(self):
+        rework_index = {"task0099": {"covered_by_existing": [], "new_scenarios": [], "rationale": "x"}}
+        workflow_patch = {"tasks_patch": {"entries": {}}}
+        errors = VWO._validate_rework_index(rework_index, workflow_patch, envelope=None, feature_dir=None, baseline_dir=None)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("task0099", messages)
+        self.assertIn("not created by tasks_patch", messages)
+
+    def test_fully_covered_index_matching_created_tasks_is_accepted(self):
+        rework_index = {"task0007": {"covered_by_existing": ["TS-3"], "new_scenarios": [], "rationale": "x"}}
+        workflow_patch = {"tasks_patch": {"entries": {"task0007": {}}}}
+        envelope = {"verification_index": {"TS-3": ["FR1"]}}
+        errors = VWO._validate_rework_index(rework_index, workflow_patch, envelope=envelope, feature_dir=None, baseline_dir=None)
+        self.assertEqual(errors, [])
+
+
+class TestReworkIndexCoverage(unittest.TestCase):
+    """Fixture-driven end-to-end coverage for the same rule via the CLI."""
+
+    def _run(self, case_name):
+        case_dir = FIXTURES_ROOT / "worker-result" / "rework-planner" / case_name
+        return run_cli(build_case_args("worker-result", "rework-planner", case_dir))
+
+    def test_created_task_missing_from_rework_index_is_rejected(self):
+        result = self._run("invalid-rework-index-missing-task-entry")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("task0007", result.stdout)
+
+    def test_rework_index_naming_an_uncreated_task_is_rejected(self):
+        result = self._run("invalid-rework-index-unknown-task")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("task0007", result.stdout)
+
+    def test_missing_shared_contract_rationale_is_rejected(self):
+        result = self._run("invalid-missing-shared-contract-rationale")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("shared_contract_rationale", result.stdout)
+
+    def test_valid_completed_with_full_coverage_and_rationale_passes(self):
+        result = self._run("valid-completed")
+        self.assertEqual(result.returncode, 0, result.stdout)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,18 @@
+{
+  "blocking_reason": "existing VERIFICATION.md digest mismatch",
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "mode_echo": null,
+  "payload": {},
+  "question_packet": null,
+  "report": "done",
+  "request_id": "run-0001",
+  "schema_version": 1,
+  "status": "blocked",
+  "warnings": [],
+  "worker": "rework-planner",
+  "workflow_patch": null,
+  "written_artifacts": []
+}

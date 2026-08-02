@@ -1,0 +1,138 @@
+task_id: task0016
+baseline_failures: []          # 632 tests, all passing, before any change (step 4a)
+final_failures: []             # 664 tests, all passing, after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - TestPathContainmentHelper.test_sibling_directory_is_not_contained
+      - TestPathContainmentHelper.test_substring_name_is_not_contained
+      - TestPathContainmentHelper.test_nested_path_is_contained
+      - TestPathContainmentHelper.test_traversal_path_is_rejected
+      - TestPathContainmentHelper.test_trailing_slash_root_still_matches
+      - TestWrittenArtifactsContainment.test_sibling_directory_escape_is_rejected
+      - TestWrittenArtifactsContainment.test_traversal_escape_is_rejected
+      - TestWrittenArtifactsContainment.test_substring_name_escape_is_rejected
+      - TestWrittenArtifactsContainment.test_entry_missing_path_is_a_validation_error_not_a_traceback
+      - TestWrittenArtifactsContainment.test_non_list_written_artifacts_is_a_validation_error_not_a_crash
+      - TestWrittenArtifactsContainment.test_contained_path_in_allowed_root_is_accepted
+    red_confirmed: true
+    red_reason: >-
+      Reverted only the script (fixtures/tests kept) and reran: the 5
+      TestPathContainmentHelper cases raised AttributeError (path_is_contained_in_root
+      did not exist yet). test_sibling_directory_escape_is_rejected /
+      test_traversal_escape_is_rejected / test_substring_name_escape_is_rejected
+      failed with "0 != 1" (string-prefix matching let both escapes through).
+      test_entry_missing_path... failed because stdout carried a Python traceback
+      instead of empty stderr + JSON detail (AttributeError on None.startswith).
+      test_non_list_written_artifacts... failed len(errors)==28 != 1 (the bare
+      string was iterated per character, one bogus error per char, instead of one
+      clear "must be a list" error).
+  AC-2:
+    tests:
+      - TestReworkIndexTaskCoverageDirect.test_task_created_but_absent_from_index_is_rejected
+      - TestReworkIndexTaskCoverageDirect.test_index_names_a_task_not_created_is_rejected
+      - TestReworkIndexTaskCoverageDirect.test_fully_covered_index_matching_created_tasks_is_accepted
+      - TestReworkIndexCoverage.test_created_task_missing_from_rework_index_is_rejected
+      - TestReworkIndexCoverage.test_rework_index_naming_an_uncreated_task_is_rejected
+      - TestReworkIndexCoverage.test_missing_shared_contract_rationale_is_rejected
+      - TestReworkIndexCoverage.test_valid_completed_with_full_coverage_and_rationale_passes
+    red_confirmed: true
+    red_reason: >-
+      Direct helper tests failed: "'task0007' not found in ''" (missing-task
+      case) and "'not created by tasks_patch' not found in ..." (unknown-task
+      case) -- the old _validate_rework_index never compared rework_index keys
+      against tasks_patch.entries in either direction. Fixture-level: before
+      WORKER_CAPABILITIES["rework-planner"]["_default"]["required_payload"]
+      gained shared_contract_rationale, the worker-result/rework-planner/
+      valid-completed fixture itself exited 1 with payload-missing:
+      ['shared_contract_rationale'] (observed directly, not via stash) --
+      confirming the requirement is now enforced; the coverage fixtures
+      (invalid-rework-index-missing-task-entry / -unknown-task /
+      invalid-missing-shared-contract-rationale) all exited 0 under the
+      reverted script.
+  AC-3:
+    tests:
+      - TestDomainsVocabularyParse.test_real_review_rules_yaml_yields_exactly_the_eight_documented_domains
+      - TestDomainsVocabularyParse.test_domain_declaring_a_complexity_value_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      test_real_review_rules_yaml_yields... failed: "Items in the first set
+      but not the second: 'high', 'medium'" (the parser absorbed the
+      complexity-vocabulary comment). test_domain_declaring_a_complexity_value_is_rejected
+      exited 0 under the reverted script (domains:[high] validated) vs. exit 1
+      after the fix -- confirmed by direct before/after CLI invocation against
+      the same fixture.
+  AC-4:
+    tests:
+      - TestPlanPathContainment.test_plan_reached_through_a_symlink_segment_is_rejected
+      - TestPlanPathContainment.test_plan_without_a_symlink_is_still_read_correctly
+      - TestPlanPathContainment.test_absolute_plan_path_is_rejected
+      - TestPlanPathContainment.test_plan_path_escaping_feature_dir_via_parent_segments_is_rejected
+      - TestPlanPathContainment.test_oversized_plan_file_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      test_plan_reached_through_a_symlink_segment_is_rejected failed "0 != 1"
+      under the reverted script (this test used to assert the OPPOSITE --
+      successful read through the symlink -- and was rewritten per the task's
+      explicit behaviour change). test_oversized_plan_file_is_rejected raised
+      AttributeError (MAX_PLAN_READ_BYTES did not exist). test_absolute_plan_path_is_rejected
+      and test_plan_path_escaping_feature_dir_via_parent_segments_is_rejected
+      were tightened to assert the specific "task-plan-path" rejection code
+      (not just exit 1) after discovering the reverted script also exits 1 for
+      those inputs BY COINCIDENCE (pathlib's `/` discards the left operand for
+      an absolute right operand / the OS resolves ".." in .is_file(), so the
+      old code reads real content and fails on an unrelated files-mismatch);
+      with that stronger assertion both genuinely fail against the reverted
+      script ("task-plan-path" absent from stdout).
+  AC-5:
+    tests:
+      - TestQuestionCategoryForcesBlockingUnanswered.test_security_question_with_non_blocking_unanswered_is_rejected
+      - TestQuestionCategoryForcesBlockingUnanswered.test_security_question_with_blocking_unanswered_is_accepted
+      - TestQuestionCategoryForcesBlockingUnanswered.test_all_three_fail_closed_categories_are_rejected_directly
+      - TestQuestionCategoryForcesBlockingUnanswered.test_other_categories_do_not_force_blocking
+    red_confirmed: true
+    red_reason: >-
+      test_security_question_with_non_blocking_unanswered_is_rejected failed
+      "0 != 1" under the reverted script. test_all_three_fail_closed_categories...
+      failed "'on_unanswered' not found in ''" for all three subTests
+      (spec-change / security / license) -- validate_question() never
+      cross-checked category against on_unanswered before the fix.
+  AC-6:
+    tests:
+      - TestStatusPayloadExclusivity.test_blocked_with_nonempty_payload_is_rejected
+      - TestStatusPayloadExclusivity.test_every_non_completed_status_forbids_payload_directly
+      - TestStatusPayloadExclusivity.test_completed_still_requires_a_non_empty_payload
+    red_confirmed: true
+    red_reason: >-
+      test_blocked_with_nonempty_payload_is_rejected failed "0 != 1" under the
+      reverted script. test_every_non_completed_status_forbids_payload_directly
+      failed "'payload' not found in ''" for blocked/invalid_input/stale_input/
+      failed -- the old code only ever checked payload for status ==
+      "completed" and never forbade it for the other five statuses.
+  AC-7:
+    tests:
+      - TestFixtureCoverageDerivedFromCapabilityTable.test_every_worker_and_permitted_status_pair_has_a_valid_fixture
+      - TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+    red_confirmed: true
+    red_reason: >-
+      Not script-version-dependent (this AC's red axis is FIXTURE existence,
+      not validator logic): before the 16 new valid-status fixtures were added
+      (spec-writer/designer/implementation-planner/rework-planner each only
+      had completed [+ needs_user_input where applicable]), this test failed
+      with "no valid-* fixture ... declares status 'blocked'" (and
+      invalid_input/stale_input/failed) for each of those four workers --
+      exactly as21's "cover two of six statuses" / "no blocked, invalid_input,
+      stale_input, or failed case" measurement describes. It is green now that
+      every (worker, mode, allowed-status) pair in WORKER_CAPABILITIES has a
+      matching valid-* fixture whose OWN status field (not directory name)
+      confirms it, replacing the old test's weaker "token appears somewhere
+      under fixtures/worker-result/" check (see the inline comment added to
+      TestFixtureBranchesDerivedFromDesignInput skipping kind worker-result).
+notes: >-
+  Also updated TestReworkIndexNewScenariosRequireTestsAppend (task0008's
+  original test): its two synthetic workflow_patch fixtures now include
+  tasks_patch.entries.task0007 so the new coverage cross-check (AC-2) does not
+  fire spuriously alongside the tests_append check each test is actually
+  targeting -- confirmed necessary because the coverage fix, applied without
+  this update, made test_new_scenario_present_in_tests_append_is_accepted fail
+  with an unrelated extra error.
