@@ -1,29 +1,41 @@
 """Structural assertions for em-workflow/references/question-resolution.md.
 
 Pre-existing coverage (kept passing per this task's Test Notes, not tied to
-task0018's own acceptance criteria):
+this task's own acceptance criteria):
 - deduplication rules in order, the priority sort, `depends_on` deferral,
   and the presentation limits.
 - the batch resolution sequence, including that a missing option ID is a
   protocol error and label matching may not substitute for it.
+- the Codex consultation procedure's substance (availability probe, wrapper
+  invocation, one turn per call, trajectory judgement, turn ceiling, who
+  decides, untrusted-output rule) and the fail-closed classification's
+  content (category values, explicit gate list, irreversible-assumption
+  signal, cross-check reference, intentional behaviour-change note).
 
-task0018 acceptance criteria (fail-closed ordering + Codex procedure,
-review round1 findings as8 / as4):
-- AC-1: the fail-closed classification appears before the Codex
-  consultation and before the record-as-TBD branch, in document order.
-- AC-2: the abort applies to all four categories regardless of the
-  unanswered behaviour value, the gate's listing, or whether a Codex
-  suggestion maps to an existing option.
-- AC-3: the classification is stated mechanically — category values, the
-  explicit gate identifier list, and the irreversible-assumption signal.
-- AC-4: the document states that the worker-set category and unanswered
-  behaviour are cross-checked by the validator, referencing it rather than
-  restating the rule.
-- AC-5: the Codex consultation procedure is present as substance —
-  availability probe, wrapper invocation, one turn per call, trajectory
-  judgement, turn ceiling, who decides, untrusted-output rule.
-- AC-6: the ordering is asserted via document position comparisons, not
-  merely presence.
+task0022 acceptance criteria (round2.yaml findings bs2, bs3, bs6, bs8 —
+correcting round1's "presenter" criterion to gate-identifier presence):
+
+- AC-1: the document states the jurisdiction as gate-identifier presence
+  (a `gate_id` resolves the same way whether packet-borne or
+  orchestrator-opened), not as "packet vs non-packet by presenter".
+- AC-3: the Batch resolution sequence's entry condition covers an
+  orchestrator-opened gate (no worker packet) and states how an answer is
+  formed in that case (`packet_id` null, direct action instead of
+  re-dispatch).
+- AC-4 (bs2): the fail-closed classification is hoisted into its own
+  section, appearing before ANY policy lookup — so it applies to a listed
+  `gate_id` exactly as it applies to an unlisted one — and the
+  Unlisted-gate fallback references it rather than restating it.
+- AC-6 (bs6): the Codex consultation carries a bound independent of
+  question count (packet-level batching, not one consultation per
+  question), and the re-sent history is capped/summarized rather than
+  growing every turn.
+- AC-7 (bs8): no feature-docs task identifier (`task00NN`) is cited as the
+  attribution for the category/on_unanswered cross-check; the citation
+  instead points at `references/question-packet-schema.md`, which states
+  the constraint AND names the enforcing script itself (a second,
+  independent assertion below covers question-packet-schema.md's own
+  text, since AC-7 spans both documents).
 """
 
 import os
@@ -33,6 +45,9 @@ import unittest
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOC_PATH = os.path.join(
     REPO_ROOT, "em-workflow", "references", "question-resolution.md"
+)
+SCHEMA_DOC_PATH = os.path.join(
+    REPO_ROOT, "em-workflow", "references", "question-packet-schema.md"
 )
 
 
@@ -126,45 +141,119 @@ class TestQuestionResolutionDoc(unittest.TestCase):
     def test_label_matching_forbidden_as_substitute(self):
         self.assertIn("label matching is never substituted", self.text)
 
-    # --- AC-1 / AC-6: fail-closed classification precedes Codex          --
-    # --- consultation and the record-as-TBD branch, by document position --
+    # --- AC-1: jurisdiction stated as gate-identifier presence -------------
+    # --- (round2 bs3: the criterion is identifier presence, never who     --
+    # --- presents the gate)                                               --
 
-    def _fallback_section(self):
-        marker = "## Unlisted-gate fallback"
+    def test_jurisdiction_stated_as_identifier_presence_not_presenter(self):
+        self.assertIn(
+            "whether a worker returned it inside a question", self.norm
+        )
+        self.assertIn(
+            "packet or the orchestrator raised the question directly "
+            "outside of any",
+            self.norm,
+        )
+
+    def test_artifact_overwrite_family_named_as_orchestrator_opened_example(self):
+        self.assertIn("{phase}.artifact-overwrite", self.text)
+        self.assertIn(
+            "references/contracts/spec-writer-contract.md", self.text
+        )
+
+    def test_jurisdiction_does_not_turn_on_presenter(self):
+        self.assertIn(
+            "the jurisdiction below never turns on which one happened",
+            self.norm,
+        )
+
+    # --- AC-3: batch resolution sequence covers orchestrator-opened gates -
+
+    def _batch_sequence_section(self):
+        marker = "## Batch resolution sequence"
         self.assertIn(marker, self.text)
-        return self.text.split(marker, 1)[1]
+        end_marker = "## Unlisted-gate fallback"
+        start = self.text.index(marker)
+        end = self.text.index(end_marker, start)
+        return self.text[start:end]
 
-    def test_classification_precedes_codex_consultation_by_position(self):
-        section = self._fallback_section()
-        classify_idx = section.index("Classify before doing anything else")
-        codex_idx = section.index("Pass the question's `prompt`")
-        self.assertLess(
-            classify_idx,
-            codex_idx,
-            "fail-closed classification must appear before the Codex "
-            "consultation step in document order",
+    def test_entry_condition_covers_both_packet_and_orchestrator_opened(self):
+        section = self._batch_sequence_section()
+        self.assertIn("status: needs_user_input", section)
+        self.assertIn(
+            "the orchestrator raises the question directly outside any",
+            section,
         )
 
-    def test_classification_precedes_record_tbd_by_position(self):
-        section = self._fallback_section()
-        classify_idx = section.index("Classify before doing anything else")
-        record_tbd_idx = section.index("record_tbd` → generate a TBD answer")
-        self.assertLess(
-            classify_idx,
-            record_tbd_idx,
-            "fail-closed classification must appear before the "
-            "record-as-TBD branch in document order",
+    def test_answer_formed_without_a_packet_is_described(self):
+        section = self._batch_sequence_section()
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn("`packet_id` is null", norm_section)
+        self.assertIn(
+            "`question_id` is the gate's own `gate_id`", norm_section
         )
 
-    def test_codex_consultation_precedes_record_tbd_by_position(self):
-        # Sanity check on the surrounding structure: the fallback sequence
-        # itself is unchanged in relative order (Codex before record_tbd).
-        section = self._fallback_section()
-        codex_idx = section.index("Pass the question's `prompt`")
-        record_tbd_idx = section.index("record_tbd` → generate a TBD answer")
-        self.assertLess(codex_idx, record_tbd_idx)
+    def test_no_packet_means_direct_action_not_redispatch(self):
+        section = self._batch_sequence_section()
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn(
+            "the orchestrator instead acts on the decision directly at the",
+            norm_section,
+        )
+        self.assertIn("rather than re-dispatching a worker turn", norm_section)
 
-    # --- AC-2: abort applies regardless of the three overriding signals ---
+    # --- AC-4 (bs2): classification hoisted above BOTH branches -----------
+
+    def test_classification_section_precedes_batch_resolution_sequence(self):
+        classify_idx = self.text.index("## Fail-closed classification")
+        sequence_idx = self.text.index("## Batch resolution sequence")
+        self.assertLess(
+            classify_idx,
+            sequence_idx,
+            "the classification section must precede the batch resolution "
+            "sequence in document order",
+        )
+
+    def test_classification_precedes_any_policy_lookup(self):
+        classify_idx = self.text.index("## Fail-closed classification")
+        lookup_idx = self.text.index(
+            "Look up the `gate_id` in `references/batch-policies.yaml`."
+        )
+        self.assertLess(
+            classify_idx,
+            lookup_idx,
+            "the classification must precede the policy-table lookup, so "
+            "a LISTED gate is classified too",
+        )
+
+    def test_classification_precedes_unlisted_gate_fallback(self):
+        classify_idx = self.text.index("## Fail-closed classification")
+        fallback_idx = self.text.index("## Unlisted-gate fallback")
+        self.assertLess(classify_idx, fallback_idx)
+
+    def test_classification_applies_regardless_of_listing(self):
+        self.assertIn(
+            "regardless of whether that `gate_id` turns out to have an "
+            "entry in",
+            self.norm,
+        )
+        self.assertIn(
+            "this is what makes a listed gate classified too", self.norm.lower()
+        )
+
+    def test_fallback_references_classification_rather_than_restating(self):
+        marker = "## Unlisted-gate fallback"
+        section = self.text.split(marker, 1)[1]
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn(
+            "the fail-closed classification above has already run",
+            norm_section.lower(),
+        )
+        self.assertIn(
+            "this fallback does not re-classify and does not restate the "
+            "rule",
+            norm_section,
+        )
 
     def test_fail_closed_categories_named(self):
         # The four fail-closed categories must all be named together.
@@ -193,9 +282,8 @@ class TestQuestionResolutionDoc(unittest.TestCase):
 
     def test_abort_ignores_codex_mapping(self):
         self.assertIn(
-            "regardless of whether a Codex suggestion in step 3 would "
-            "have mapped onto one of the question's existing "
-            "`option_id`s",
+            "regardless of whether a Codex suggestion would have mapped "
+            "onto one of the question's existing `option_id`s",
             self.norm,
         )
 
@@ -209,7 +297,7 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         self.assertIn("not a regression", self.text)
         self.assertIn("continue-on-success-path", self.text)
 
-    # --- AC-3: the classification is stated mechanically ------------------
+    # --- classification is stated mechanically -----------------------------
 
     def test_classification_names_category_values(self):
         for value in ["`spec-change`", "`security`", "`license`"]:
@@ -225,8 +313,7 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         self.assertIn("reversible: false", self.text)
         self.assertIn("irreversible operation", self.norm)
 
-    # --- AC-4: worker-set fields are cross-checked by the validator, ------
-    # --- referenced rather than restated -----------------------------------
+    # --- worker-set fields are cross-checked by the validator ---------------
 
     def test_worker_set_fields_not_trusted_alone(self):
         self.assertIn("trusted alone", self.norm)
@@ -234,12 +321,27 @@ class TestQuestionResolutionDoc(unittest.TestCase):
     def test_validator_cross_check_referenced(self):
         self.assertIn("scripts/validate-worker-output.py", self.text)
         self.assertIn("cross-checks", self.norm)
-        self.assertIn("task0016", self.text)
 
     def test_validator_rule_not_restated(self):
         self.assertIn("does not restate the check itself", self.norm)
 
-    # --- AC-5: the Codex consultation procedure is present as substance ---
+    # --- AC-7 (bs8): no feature-docs task identifier; schema cited instead -
+
+    def test_no_feature_docs_task_identifier_cited(self):
+        self.assertIsNone(
+            re.search(r"task\d{4}", self.text),
+            "question-resolution.md must not attribute a rule to a "
+            "feature-docs task identifier that does not exist in the "
+            "distributed plugin (round2.yaml bs8)",
+        )
+
+    def test_cross_check_attributed_to_the_packet_schema(self):
+        self.assertIn("references/question-packet-schema.md", self.text)
+        self.assertIn(
+            "states the constraint this check enforces", self.norm
+        )
+
+    # --- AC-6 (bs6): consultation budget independent of question count ----
 
     def test_codex_procedure_section_present(self):
         self.assertIn("### Codex consultation procedure", self.text)
@@ -267,6 +369,18 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         norm_section = re.sub(r"\s+", " ", section)
         self.assertIn("prior exchange", norm_section)
 
+    def test_history_is_capped_or_summarized_not_resent_in_full(self):
+        section = self._codex_procedure_section()
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn("compressed to its concluding", norm_section)
+        self.assertIn(
+            "caps the prompt size instead of letting it grow with every "
+            "turn",
+            norm_section,
+        )
+        # The old unbounded wording must be gone.
+        self.assertNotIn("includes the FULL", self.text)
+
     def test_codex_procedure_trajectory_judgement(self):
         section = self._codex_procedure_section()
         self.assertIn("Trajectory judgement", section)
@@ -279,6 +393,31 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         self.assertIn("Five-turn ceiling", section)
         norm_section = re.sub(r"\s+", " ", section)
         self.assertIn("five turns total", norm_section)
+
+    def test_ceiling_bounds_per_packet_not_per_question(self):
+        section = self._codex_procedure_section()
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn("bounds the total launches per packet", norm_section)
+        self.assertIn("not per question", norm_section)
+
+    def test_packet_batching_stated_in_fallback_sequence(self):
+        marker = "## Unlisted-gate fallback"
+        section = self.text.split(marker, 1)[1]
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn(
+            "batch every unresolved question from the same packet",
+            norm_section.lower(),
+        )
+        self.assertIn(
+            "bounds the total number of consultations to one per packet "
+            "rather than one per question",
+            norm_section,
+        )
+
+    def test_per_command_fallback_cache_referenced(self):
+        section = self._codex_procedure_section()
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn("per-command approval fallback", norm_section)
 
     def test_codex_procedure_decision_stays_with_claude(self):
         section = self._codex_procedure_section()
@@ -303,6 +442,39 @@ class TestQuestionResolutionDoc(unittest.TestCase):
     def test_resolution_basis_recorded(self):
         self.assertIn("resolution_note", self.text)
         self.assertIn("run report", self.text)
+
+
+class TestQuestionPacketSchemaCategoryBlockingConstraint(unittest.TestCase):
+    """AC-7 (round2.yaml bs8): the packet-shape SSOT (question-packet-
+    schema.md) states the category-to-blocking constraint itself and names
+    the enforcing script, instead of leaving the rule undocumented at its
+    own source of truth and attributed elsewhere to a feature-docs task
+    identifier that does not exist in the distributed plugin."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(SCHEMA_DOC_PATH, encoding="utf-8") as fh:
+            cls.text = fh.read()
+        cls.norm = re.sub(r"\s+", " ", cls.text)
+
+    def test_constraint_states_the_three_categories_require_block(self):
+        self.assertIn(
+            "A question whose `category` is `spec-change`, `security`, or "
+            "`license` must carry `on_unanswered: block`",
+            self.norm,
+        )
+
+    def test_enforcing_script_named(self):
+        self.assertIn("scripts/validate-worker-output.py", self.text)
+        self.assertIn("enforces this constraint", self.norm)
+
+    def test_no_feature_docs_task_identifier_cited(self):
+        self.assertIsNone(
+            re.search(r"task\d{4}", self.text),
+            "question-packet-schema.md must not attribute ownership to a "
+            "feature-docs task identifier that does not exist in the "
+            "distributed plugin (round2.yaml bs8)",
+        )
 
 
 if __name__ == "__main__":

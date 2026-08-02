@@ -57,11 +57,15 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 - `--report-only`（別名 `--no-auto-fix`, `--no-fix`）: review フェーズの
   auto-fix をスキップするフラグとして保持し、review フェーズに引き渡す
 - `--batch`: 無人実行モード。**最初に**
-  `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` を Read する。question
-  packet 経由のゲートは `references/question-resolution.md` の batch 解決
-  手順 + `references/batch-policies.yaml` に従い、それ以外のゲート
-  （Step A / A.5 / 各フェーズ / Step C）は batch-mode.md の Non-packet
-  gates 表に従う。
+  `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` を Read する。ゲートの
+  管轄は「誰が提示するか」ではなく「`gate_id` を持つか」で決まる —
+  worker がパケットで返したか orchestrator が直接開いたか（例: Step A.5
+  の `create-spec.command-approval`、`{phase}.artifact-overwrite` 系）を
+  問わず、`gate_id` を持つゲートは `references/question-resolution.md` の
+  batch 解決手順 + `references/batch-policies.yaml` に従う。`gate_id` を
+  一切持たないゲート（Step 0 / Step A の feature 選択 / review diff-size
+  ゲート / command-approval hook fallback 等）だけが batch-mode.md の
+  Non-packet gates 表に従う。
   batch モード中は AskUserQuestion を一切呼ばない。workflow.yaml が存在
   するのに `batch` ブロックが無ければ作成する（カウンタ永続化のみ —
   モード判定は常にこのフラグ）
