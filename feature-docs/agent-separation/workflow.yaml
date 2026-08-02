@@ -134,7 +134,7 @@ tasks:
     - FR16
     - FR24
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0005
   task0006:
@@ -255,9 +255,9 @@ tasks:
     - NFR3
     - NFR8
     - NFR9
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0011
   task0012:
     title: develop skill の再配線
     plan: tasks/task0012.md
