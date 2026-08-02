@@ -1,26 +1,42 @@
 """Tests for em-workflow/references/batch-policies.yaml, batch-mode.md and
-the referrer sites that cite them (task0017 — round1.yaml findings as3/as4).
+the referrer sites that cite them.
 
-- AC-1: the eight orchestrator-opened, non-packet gates (implement.failed-
-  task, review.auto-fix-conflict, review.auto-fix-judgment,
-  review.residual-critical-high, verify.failed, develop.completion,
-  design.artifact-overwrite, create-plan.artifact-overwrite) live in exactly
-  one place — `references/batch-mode.md`'s Non-packet gates table — and are
-  absent from `references/batch-policies.yaml`, matching the scope both
-  documents' own headers/preambles state.
-- AC-2: none of this task's owned files still names the deleted "batch-
-  mode.md decision table".
-- AC-3: batch-mode.md's general non-packet fallback explicitly yields to any
+task0022 rework (round2.yaml findings bs2, bs3, bs6, bs8 — correcting
+round1's "presenter" criterion to gate-identifier presence):
+
+- AC-1: every document that states the jurisdiction states it as
+  gate-identifier presence — a `gate_id`-carrying gate resolves per
+  `batch-policies.yaml` whether a worker returned it in a packet or the
+  orchestrator raised it directly; a gate with NO `gate_id` at all resolves
+  per `batch-mode.md`'s Non-packet gates table. No statement claims the
+  Non-packet gates table's rows lack identifiers while the table prints
+  ones that carry them.
+- AC-2 (bs3): the `{phase}.artifact-overwrite` family (create-spec, design,
+  create-plan) lives in exactly one source of truth —
+  `batch-policies.yaml` — because all three carry a `gate_id`, even though
+  every one of them is orchestrator-raised rather than packet-borne. The
+  policy file's scope header is true of every entry it holds (no entry
+  contradicts the header's own claim about who raises it).
+- AC-6 (bs6): the per-command approval fallback row states a literal-string
+  cache, matching the interactive side's cache in
+  command-execution-protocol.md.
+
+Retained from the pre-rework version of this test (not tied to this task's
+own acceptance criteria):
+- the six TRUE non-packet gates (no `gate_id` at all) live in exactly one
+  place — `batch-mode.md`'s Non-packet gates table — and are absent from
+  `batch-policies.yaml`.
+- no owned file still names the deleted "batch-mode.md decision table" or
+  the deleted `requirements-spec-creator` agent.
+- batch-mode.md's general non-packet fallback explicitly yields to any
   default a phase protocol or batch-policies.yaml already states.
-- AC-4: no owned file contains the string `requirements-spec-creator`.
-- AC-5: plugin.json's description reflects that gate resolution splits
-  across batch-policies.yaml (packet gates) and batch-mode.md (non-packet
-  gates), rather than claiming every gate resolves per batch-mode.md alone.
-- AC-6: gate-identifier coverage between batch-policies.yaml and this task's
+- plugin.json's description reflects that gate resolution splits across
+  batch-policies.yaml and batch-mode.md, rather than claiming every gate
+  resolves per batch-mode.md alone.
+- gate-identifier coverage between batch-policies.yaml and this task's
   other owned documents, scoped to what is decidable without reading files
-  sibling rework tasks are concurrently editing (create-spec-phase.md,
-  create-plan-phase.md, contracts/*.md, question-resolution.md, etc. — the
-  repository-wide version of this check is task0021's).
+  sibling tasks own (create-spec-phase.md, create-plan-phase.md,
+  contracts/*.md, etc.).
 
 The YAML parsing below is a hand-rolled parser for the restricted subset
 batch-policies.yaml actually uses (one top-level `gate_policies:` key,
@@ -45,6 +61,12 @@ DESIGN_PATH = os.path.join(
 BATCH_MODE_PATH = os.path.join(
     REPO_ROOT, "em-workflow", "references", "batch-mode.md"
 )
+QUESTION_RESOLUTION_PATH = os.path.join(
+    REPO_ROOT, "em-workflow", "references", "question-resolution.md"
+)
+COMMAND_EXECUTION_PROTOCOL_PATH = os.path.join(
+    REPO_ROOT, "em-workflow", "references", "command-execution-protocol.md"
+)
 IMPLEMENT_PHASE_PATH = os.path.join(
     REPO_ROOT, "em-workflow", "references", "implement-phase.md"
 )
@@ -58,46 +80,56 @@ PLUGIN_JSON_PATH = os.path.join(
     REPO_ROOT, "em-workflow", ".claude-plugin", "plugin.json"
 )
 
-# Every file this task owns (task0017's `expected_files`, minus this test
-# file itself). AC-2, AC-4 and AC-6 are scoped to exactly this set.
+# Every file this task owns (task0022's `expected_files`, minus this test
+# file itself). AC-2 and the retained coverage checks are scoped to this
+# set, plus IMPLEMENT_PHASE_PATH / REVIEW_PHASE_PATH which are read-only
+# verification sites (owned by a sibling task, not edited here).
 OWNED_DOC_PATHS = [
     POLICY_PATH,
     BATCH_MODE_PATH,
-    IMPLEMENT_PHASE_PATH,
-    REVIEW_PHASE_PATH,
+    QUESTION_RESOLUTION_PATH,
     SKILL_PATH,
 ]
 
-# The eight non-packet gates task0017 relocates from batch-policies.yaml
-# back to batch-mode.md's Non-packet gates table, per
-# feature-docs/agent-separation/reviews/round1.yaml finding as3. Hardcoded
-# from the round record rather than derived from the files under test, so
-# the relocation assertions below are not tautological.
-RELOCATED_NON_PACKET_GATES = [
+READ_ONLY_REFERRER_PATHS = [IMPLEMENT_PHASE_PATH, REVIEW_PHASE_PATH]
+
+# The six gates that carry NO `gate_id` at all anywhere — round1 relocated
+# these from batch-policies.yaml to batch-mode.md's Non-packet gates table,
+# and round2 confirms the relocation stands under the corrected criterion
+# (feature-docs/agent-separation/reviews/round2.yaml, bs3): they never carry
+# a gate_id, packet-borne or otherwise, so there is nothing for
+# batch-policies.yaml to key off.
+NON_PACKET_GATES = [
     "implement.failed-task",
     "review.auto-fix-conflict",
     "review.auto-fix-judgment",
     "review.residual-critical-high",
     "verify.failed",
     "develop.completion",
+]
+
+# The `{phase}.artifact-overwrite` family: round1 wrongly split this across
+# batch-policies.yaml (create-spec only) and batch-mode.md (design,
+# create-plan), reasoning by presenter (orchestrator-raised => non-packet
+# table) rather than by gate-identifier presence. round2 (bs3) corrects
+# this: all three carry a `gate_id` (spec-writer-contract.md raises
+# `gate_id: {phase}.artifact-overwrite` for every phase), so all three now
+# live in batch-policies.yaml as one source of truth.
+ARTIFACT_OVERWRITE_FAMILY = [
+    "create-spec.artifact-overwrite",
     "design.artifact-overwrite",
     "create-plan.artifact-overwrite",
 ]
 
 # gate_ids intentionally left unlisted in batch-policies.yaml per its own
 # header comment: `rework.spec-change` falls through to the unlisted-gate
-# fallback by design. AC-6's "one documented intentional exception excluded
-# from both directions".
+# fallback by design, even though it DOES carry a gate_id (it is not a
+# non-packet gate — it is a deliberate fail-closed omission).
 INTENTIONAL_FALLBACK_EXCEPTION = "rework.spec-change"
 
-# gate_ids that remain in batch-policies.yaml (packet gates) but whose only
-# referrer is a file this task does not own (create-spec-phase.md,
-# create-plan-phase.md) — sibling rework tasks edit those concurrently, so
-# AC-6's coverage check here does not assert anything about them (task0021
-# does the repository-wide version). Two packet gates ARE also named inside
-# this task's owned files (create-spec.design-system in SKILL.md,
-# create-spec.command-approval in SKILL.md/implement-phase.md); those are
-# asserted directly below instead of listed here.
+# gate_ids that remain in batch-policies.yaml (packet-or-orchestrator gates)
+# but whose only referrer is a file this task does not own (create-spec-
+# phase.md, create-plan-phase.md) — sibling tasks own those concurrently.
 KNOWN_EXTERNAL_ONLY_PACKET_GATES = {
     "create-spec.feature-identity",
     "create-spec.requirement-clarification",
@@ -108,6 +140,8 @@ KNOWN_EXTERNAL_ONLY_PACKET_GATES = {
     "create-plan.license-conflict",
     "create-plan.existing-files",
     "design-system.reclassify",
+    "design.artifact-overwrite",
+    "create-plan.artifact-overwrite",
 }
 
 
@@ -186,27 +220,41 @@ class TestBatchPoliciesYaml(unittest.TestCase):
         self.assertIsInstance(self.gate_policies, dict)
         self.assertGreater(len(self.gate_policies), 0)
 
-    def test_gate_id_set_matches_design_input_minus_relocated(self):
+    def test_gate_id_set_matches_design_input_minus_non_packet(self):
         # design-input.md 5.9's own illustrative example still lists all
         # nineteen gates (it is fixed, out-of-scope reference material this
-        # task cannot edit); the corrected jurisdiction — the direction both
-        # this file's header and question-resolution.md's batch resolution
-        # sequence already state — removes exactly the eight relocated
-        # non-packet gates from batch-policies.yaml. AC-1.
-        expected = set(self.design_gate_policies.keys()) - set(
-            RELOCATED_NON_PACKET_GATES
-        )
+        # task cannot edit); the corrected jurisdiction removes exactly the
+        # six TRUE non-packet gates (no gate_id anywhere) from
+        # batch-policies.yaml. The artifact-overwrite family stays, since
+        # every member carries a gate_id.
+        expected = set(self.design_gate_policies.keys()) - set(NON_PACKET_GATES)
         self.assertEqual(set(self.gate_policies.keys()), expected)
 
-    def test_relocated_gates_absent_from_policy_file(self):
-        # AC-1 / AC-6 direction 1: none of the eight relocated gates is a
-        # batch-policies.yaml entry.
-        for gate_id in RELOCATED_NON_PACKET_GATES:
+    def test_non_packet_gates_absent_from_policy_file(self):
+        for gate_id in NON_PACKET_GATES:
             self.assertNotIn(
                 gate_id,
                 self.gate_policies,
-                f"{gate_id} must live only in batch-mode.md's Non-packet gates table",
+                f"{gate_id} carries no gate_id at all and must live only in "
+                "batch-mode.md's Non-packet gates table",
             )
+
+    def test_artifact_overwrite_family_all_present_as_one_ssot(self):
+        # AC-2 (bs3): all three phases, one file.
+        for gate_id in ARTIFACT_OVERWRITE_FAMILY:
+            self.assertIn(
+                gate_id,
+                self.gate_policies,
+                f"{gate_id} carries a gate_id and must live in "
+                "batch-policies.yaml, not be split off to batch-mode.md",
+            )
+
+    def test_artifact_overwrite_family_shares_identical_semantics(self):
+        for gate_id in ARTIFACT_OVERWRITE_FAMILY:
+            attrs = self.gate_policies[gate_id]
+            self.assertEqual(attrs.get("action"), "select")
+            self.assertEqual(attrs.get("option_id"), "preserve_and_reuse")
+            self.assertEqual(attrs.get("on_unavailable"), "abort")
 
     def test_rework_spec_change_absent(self):
         self.assertNotIn(INTENTIONAL_FALLBACK_EXCEPTION, self.gate_policies)
@@ -239,6 +287,37 @@ class TestBatchPoliciesYaml(unittest.TestCase):
         self.assertIn("question packet", header.lower())
         self.assertIn("batch-mode.md", header)
 
+    # --- AC-1 (bs3): scope stated as gate-identifier presence --------------
+
+    def _norm_yaml_comment_header(self, header):
+        # Each header line is a `# ...` YAML comment; strip the leading
+        # marker per line before collapsing whitespace, otherwise a `#`
+        # character is left stranded mid-sentence at every line wrap.
+        stripped_lines = [
+            re.sub(r"^#\s?", "", line) for line in header.splitlines()
+        ]
+        return re.sub(r"\s+", " ", " ".join(stripped_lines)).strip()
+
+    def test_scope_stated_as_identifier_presence_not_presenter(self):
+        header = self.policy_text.split("gate_policies:", 1)[0]
+        norm = self._norm_yaml_comment_header(header)
+        self.assertIn(
+            "whether a worker returned it inside a", norm
+        )
+        self.assertIn(
+            "or the orchestrator raised the question directly outside of "
+            "any packet",
+            norm,
+        )
+
+    def test_header_never_claims_all_entries_are_worker_packets(self):
+        # AC-2: the header must not contradict the artifact-overwrite
+        # entries it holds by claiming everything here is packet-borne.
+        header = self.policy_text.split("gate_policies:", 1)[0]
+        self.assertNotIn(
+            "ONLY the gates expressed as question packets", header
+        )
+
 
 class TestGateIdSetComparisonIsSymmetric(unittest.TestCase):
     """Edge case from the task plan: a gate ID present in one side but not
@@ -258,7 +337,8 @@ class TestGateIdSetComparisonIsSymmetric(unittest.TestCase):
             self.assertEqual(actual, expected)
 
 
-# Packet gates: expected as batch-policies.yaml entries, keyed by gate_id.
+# Packet-or-orchestrator gates: expected as batch-policies.yaml entries,
+# keyed by gate_id (all carry a gate_id, regardless of who raises them).
 PACKET_GATE_COVERAGE = [
     ("Command approval gate", "create-spec.command-approval"),
     ("create-spec interactive clarification", "create-spec.requirement-clarification"),
@@ -266,12 +346,14 @@ PACKET_GATE_COVERAGE = [
     ("planner TBD resolution", "create-plan.tbd-resolution"),
     ("planner license conflict", "create-plan.license-conflict"),
     ("planner existing-files re-run", "create-plan.existing-files"),
+    ("create-spec artifact-overwrite precondition", "create-spec.artifact-overwrite"),
+    ("design artifact-overwrite precondition", "design.artifact-overwrite"),
+    ("create-plan artifact-overwrite precondition", "create-plan.artifact-overwrite"),
 ]
 
-# Non-packet gates: expected as literal gate-ID (or descriptive keyword)
-# mentions inside batch-mode.md, NEVER as batch-policies.yaml entries. The
-# eight task0017 relocates are included here, restoring the coverage the
-# pre-rework version of this test wrongly required in the policy file.
+# TRUE non-packet gates: no gate_id anywhere. Expected as literal gate-ID
+# (or descriptive keyword) mentions inside batch-mode.md, NEVER as
+# batch-policies.yaml entries.
 NON_PACKET_GATE_COVERAGE = [
     ("Step 0 git-setup", "git-setup"),
     ("Step A feature selection", "feature selection"),
@@ -283,8 +365,6 @@ NON_PACKET_GATE_COVERAGE = [
     ("review completion gate", "review.residual-critical-high"),
     ("verify fail", "verify.failed"),
     ("Step C completion choice", "develop.completion"),
-    ("design artifact-overwrite precondition", "design.artifact-overwrite"),
-    ("create-plan artifact-overwrite precondition", "create-plan.artifact-overwrite"),
 ]
 
 
@@ -328,24 +408,63 @@ class TestBatchModeMdMigration(unittest.TestCase):
                 f"{label!r} no longer retained in batch-mode.md",
             )
 
-    def test_relocated_gates_not_also_left_in_policy_file(self):
-        # AC-1: exactly one place. A relocated gate id must not be present
-        # on both sides at once.
-        for gate_id in RELOCATED_NON_PACKET_GATES:
+    def test_non_packet_gates_not_also_left_in_policy_file(self):
+        # AC-1: exactly one place, per gate.
+        for gate_id in NON_PACKET_GATES:
             self.assertIn(gate_id, self.text)
             self.assertNotIn(gate_id, self.gate_policies)
 
+    def test_artifact_overwrite_family_no_longer_a_table_row(self):
+        # AC-2 (bs3): the family must NOT be split back into batch-mode.md's
+        # Non-packet gates table — each carries a gate_id, so each lives
+        # only in batch-policies.yaml as one source of truth. batch-mode.md
+        # may still mention the family's name in prose (pointing the reader
+        # at the policy file), but never as a `| ... |` table row of its
+        # own.
+        for gate_id in ARTIFACT_OVERWRITE_FAMILY:
+            row_match = re.search(
+                rf"^\|\s*`{re.escape(gate_id)}`.*\|$", self.text, re.MULTILINE
+            )
+            self.assertIsNone(
+                row_match,
+                f"{gate_id} must not be a batch-mode.md table row anymore "
+                "(round2.yaml bs3: it carries a gate_id, so it belongs to "
+                "batch-policies.yaml as one source of truth)",
+            )
+
     def test_rework_spec_change_not_named_in_batch_mode(self):
-        # AC-6's "one documented intentional exception excluded from both
-        # directions": rework.spec-change resolves via the unlisted-gate
-        # fallback (question-resolution.md), not via a batch-mode.md row.
+        # rework.spec-change resolves via the unlisted-gate fallback
+        # (question-resolution.md), not via a batch-mode.md row.
         self.assertNotIn(INTENTIONAL_FALLBACK_EXCEPTION, self.text)
+
+    def test_jurisdiction_premise_states_identifier_presence(self):
+        # AC-1: the "Non-packet gates" section and the top-level intro must
+        # not claim presenter-based jurisdiction.
+        norm = re.sub(r"\s+", " ", self.text)
+        self.assertIn(
+            "None of the gates below carries a `gate_id` at its "
+            "originating site",
+            norm,
+        )
+        self.assertIn(
+            "the split is by identifier presence, not by whether a "
+            "worker or the orchestrator raises the gate",
+            norm,
+        )
+
+    def test_intro_no_longer_claims_packet_presenter_split(self):
+        norm = re.sub(r"\s+", " ", self.text)
+        self.assertNotIn(
+            "this document covers the batch gates that never pass through "
+            "a worker's question packet",
+            norm.lower(),
+        )
 
 
 class TestCatchAllYieldsToDocumentedDefaults(unittest.TestCase):
-    """AC-3: the general non-packet fallback in batch-mode.md must not be
-    able to override a default a phase protocol or batch-policies.yaml
-    already states for its own gate."""
+    """The general non-packet fallback in batch-mode.md must not be able to
+    override a default a phase protocol or batch-policies.yaml already
+    states for its own gate."""
 
     @classmethod
     def setUpClass(cls):
@@ -369,10 +488,17 @@ class TestCatchAllYieldsToDocumentedDefaults(unittest.TestCase):
         self.assertIn("Codex consultation", paragraph)
         self.assertIn("minimum-side-effect", paragraph)
 
+    def test_catch_all_row_count_matches_shrunk_table(self):
+        # Table shrank from twelve to ten rows once the artifact-overwrite
+        # family moved out (AC-2).
+        paragraph = self._catch_all_paragraph()
+        self.assertIn("ten rows above", paragraph)
+        self.assertNotIn("twelve rows above", paragraph)
+
 
 class TestNoStaleDecisionTableReference(unittest.TestCase):
-    """AC-2: no owned file names the deleted batch-mode.md decision table
-    (the pre-restructure single table that has since split into
+    """No owned file names the deleted batch-mode.md decision table (the
+    pre-restructure single table that has since split into
     batch-policies.yaml + batch-mode.md's much smaller Non-packet gates
     table)."""
 
@@ -393,8 +519,7 @@ class TestNoStaleDecisionTableReference(unittest.TestCase):
 
 
 class TestNoStaleAgentReference(unittest.TestCase):
-    """AC-4: no owned file names the deleted requirements-spec-creator
-    agent (round1.yaml finding as4)."""
+    """No owned file names the deleted requirements-spec-creator agent."""
 
     def test_requirements_spec_creator_absent(self):
         for path in OWNED_DOC_PATHS + [PLUGIN_JSON_PATH]:
@@ -421,9 +546,41 @@ class TestNoStaleAgentReference(unittest.TestCase):
         self.assertIn("unlisted-gate fallback", row)
 
 
+class TestPerCommandFallbackLiteralStringCache(unittest.TestCase):
+    """AC-6 (bs6): the batch per-command approval fallback caches its
+    resolution per literal command string, matching the interactive side's
+    existing per-literal-string cache."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(BATCH_MODE_PATH, encoding="utf-8") as fh:
+            cls.text = fh.read()
+        with open(COMMAND_EXECUTION_PROTOCOL_PATH, encoding="utf-8") as fh:
+            cls.interactive_text = fh.read()
+
+    def _per_command_row(self):
+        match = re.search(r"^\|.*Per-command approval fallback.*\|$", self.text, re.MULTILINE)
+        self.assertIsNotNone(match, "per-command approval fallback row not found")
+        return match.group(0)
+
+    def test_interactive_side_defines_a_literal_string_cache(self):
+        # Sanity check on the fixture: the interactive side really does
+        # define this, so the batch row can genuinely "match" it.
+        self.assertIn("per-literal-string", self.interactive_text)
+
+    def test_batch_row_states_a_literal_string_cache(self):
+        row = self._per_command_row()
+        self.assertIn("per literal command string", row)
+
+    def test_batch_row_references_the_interactive_cache(self):
+        row = self._per_command_row()
+        self.assertIn("command-execution-protocol.md", row)
+        self.assertIn("interactive fallback", row)
+
+
 class TestPluginDescriptionReflectsGateJurisdiction(unittest.TestCase):
-    """AC-5: plugin.json's description must not claim every batch gate
-    resolves per batch-mode.md alone."""
+    """plugin.json's description must not claim every batch gate resolves
+    per batch-mode.md alone."""
 
     @classmethod
     def setUpClass(cls):
@@ -446,33 +603,33 @@ class TestPluginDescriptionReflectsGateJurisdiction(unittest.TestCase):
 
 
 class TestGateIdCoverageWithinOwnedFiles(unittest.TestCase):
-    """AC-6, scoped per AC-7 to the files task0017 owns. The repository-wide
-    bidirectional gate-ID coverage check (spanning create-spec-phase.md,
-    create-plan-phase.md, contracts/*.md and question-resolution.md, all
-    edited concurrently by sibling rework tasks) is task0021's."""
+    """Scoped to the files task0022 owns. The repository-wide bidirectional
+    gate-ID coverage check (spanning create-spec-phase.md,
+    create-plan-phase.md, contracts/*.md, all edited concurrently by
+    sibling tasks) is out of this task's scope."""
 
     @classmethod
     def setUpClass(cls):
         with open(POLICY_PATH, encoding="utf-8") as fh:
             cls.gate_policies = parse_gate_policies(fh.read())
         cls.other_owned_text = ""
-        for path in (BATCH_MODE_PATH, IMPLEMENT_PHASE_PATH, REVIEW_PHASE_PATH, SKILL_PATH):
+        for path in (BATCH_MODE_PATH, SKILL_PATH) + tuple(READ_ONLY_REFERRER_PATHS):
             with open(path, encoding="utf-8") as fh:
                 cls.other_owned_text += "\n" + fh.read()
 
-    def test_relocated_gates_referenced_only_outside_the_policy_file(self):
-        for gate_id in RELOCATED_NON_PACKET_GATES:
+    def test_non_packet_gates_referenced_only_outside_the_policy_file(self):
+        for gate_id in NON_PACKET_GATES:
             self.assertNotIn(gate_id, self.gate_policies)
             self.assertIn(
                 gate_id,
                 self.other_owned_text,
-                f"{gate_id} has no referrer among task0017's owned documents",
+                f"{gate_id} has no referrer among task0022's owned documents",
             )
 
     def test_packet_gates_named_within_owned_files_have_policy_entries(self):
-        # The two packet gates this task's non-yaml owned files actually
-        # name (the rest of batch-policies.yaml's entries are referenced
-        # only from files this task does not own, per
+        # The packet-or-orchestrator gates this task's non-yaml owned files
+        # actually name (the rest of batch-policies.yaml's entries are
+        # referenced only from files this task does not own, per
         # KNOWN_EXTERNAL_ONLY_PACKET_GATES, and are out of scope here).
         for gate_id in ("create-spec.design-system", "create-spec.command-approval"):
             self.assertIn(gate_id, self.other_owned_text)
