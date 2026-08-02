@@ -4,7 +4,12 @@ This document provides guidelines for AI agents when writing and executing tests
 
 ## Test Framework
 
-Python standard library `unittest` (Python 3.14, no external dependencies).
+Python standard library `unittest` (Python 3.14). This "no external
+dependencies" rule is scoped to test code: tests never import a
+third-party package and never assume one is installed. It does not extend
+to the plugin's runtime scripts — `em-workflow/scripts/validate-worker-output.py`
+and `em-workflow/scripts/check-plugin-invariants.py` depend on PyYAML,
+which is a runtime dependency of the plugin, not a test dependency.
 
 ## Test Execution
 

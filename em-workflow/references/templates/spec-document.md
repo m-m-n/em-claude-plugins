@@ -1,7 +1,7 @@
 # SPEC.md テンプレート
 
-このファイルは `requirements-spec-creator` エージェントの Phase 5 で使用されるテンプレートです。
-`{placeholder}` をユーザーとの対話で収集した情報で埋めてください。
+このファイルは `spec-writer` worker が SPEC.md 生成に使用するテンプレートです。
+`{placeholder}` を requirements-analyst が確定した構造化要件で埋めてください。
 
 ---
 
