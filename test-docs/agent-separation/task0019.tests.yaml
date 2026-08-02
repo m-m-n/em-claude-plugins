@@ -1,0 +1,118 @@
+task_id: task0019
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeDigestRuleIsShipped.test_states_every_digest_source_structural_key
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeDigestRuleIsShipped.test_states_the_normalization_separator_literal
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeDigestRuleIsShipped.test_states_sort_ascending_non_ascii_and_sha256
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeDigestRuleIsShipped.test_states_recomputation_and_comparison_timing
+    red_confirmed: true
+    red_reason: >-
+      Confirmed red by stashing the em-workflow/ document edits (git stash
+      push, keeping the new test module) and re-running against the
+      original worker-envelope.md. test_states_every_digest_source_structural_key
+      failed: "AssertionError: False is not true : worker-envelope.md must
+      state digest_source key 'answers_digest'" (the key was absent as an
+      inline-code token). test_states_the_normalization_separator_literal,
+      test_states_sort_ascending_non_ascii_and_sha256 and
+      test_states_recomputation_and_comparison_timing all failed with
+      AssertionError: the separator literal, "ascending"/"non-ascii", and
+      "before dispatch"/"recomputes"/"stale" were nowhere in the original
+      document, which only cited "rule R1" without stating it. Changes
+      restored afterward (git stash pop) and the full suite re-run green.
+  AC-2:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeValidationLayers.test_has_a_validation_layers_section
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeValidationLayers.test_layer_owner_split_matches_design
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun as AC-1. test_has_a_validation_layers_section
+      failed: "AssertionError: '## Validation layers' not found in
+      [original worker-envelope.md text]". test_layer_owner_split_matches_design
+      errored with ValueError from `_section()` (the "## Validation
+      layers" heading it searches for did not exist yet).
+  AC-3:
+    tests:
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeDigestRuleIsShipped.test_input_digest_field_row_points_inside_this_document
+      - tests.test_worker_contract_docs.TestNoDesignDocRequiredForNormativeContent.test_no_file_instructs_reading_design_doc_to_resolve_a_rule
+    red_confirmed: true
+    red_reason: >-
+      test_input_digest_field_row_points_inside_this_document (the test
+      that actually exercises as11's defect) failed against the original
+      text: the `input_revision`.`input_digest` row said only "computed
+      per rule R1" with no "below" pointer, and no "## Rule R1" heading
+      existed anywhere in the document -- confirmed via the same
+      aside-and-rerun. test_no_file_instructs_reading_design_doc_to_resolve_a_rule
+      is a regression guard against a directive phrasing
+      ("read/see .. design-input.md for the rule/procedure") that never
+      existed in the four in-scope files either before or after this
+      task's changes, so red_confirmed does not apply to that individual
+      test -- it is included because it guards the same AC going forward,
+      not because it proved a defect here. This task's scope covers only
+      the four shipped files it modifies (worker-envelope.md,
+      analyst-contract.md, designer-contract.md,
+      question-packet-schema.md); create-spec-phase.md and
+      create-plan-phase.md, which as11 also names, are owned by a
+      different task and out of this task's file scope.
+  AC-4:
+    tests:
+      - tests.test_worker_contracts_create_spec.TestAnalystContract.test_documents_gate_identifier_table
+      - tests.test_new_worker_agents.TestRequirementsAnalystToolGrantAndGateTable.test_documents_gate_identifier_table
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun. test_documents_gate_identifier_table
+      (test_worker_contracts_create_spec) errored with ValueError from
+      `_extract_section()` (the "## Gate identifiers" heading did not
+      exist in analyst-contract.md). test_documents_gate_identifier_table
+      (test_new_worker_agents) failed: "AssertionError: 'gate_id' not
+      found in [original requirements-analyst.md text]" -- the word
+      gate_id did not appear anywhere in the prompt.
+  AC-5:
+    tests:
+      - tests.test_worker_contract_docs.TestQuestionPacketGateIdOwnership.test_does_not_name_question_resolution_as_an_id_owner
+      - tests.test_worker_contract_docs.TestQuestionPacketGateIdOwnership.test_names_worker_contracts_as_where_identifiers_originate
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun, against the original `gate_id` row: "Join key
+      to a batch policy; the full gate ID set is owned by
+      `references/batch-policies.yaml` and
+      `references/question-resolution.md`, not restated here".
+      test_does_not_name_question_resolution_as_an_id_owner failed because
+      question-resolution.md WAS present in that row.
+      test_names_worker_contracts_as_where_identifiers_originate failed
+      because the word "contract" did not appear in that row.
+  AC-6:
+    tests:
+      - tests.test_worker_contracts_planning.TestDesignerReclassificationGate.test_project_native_files_arrive_only_via_resolved_input_paths
+    red_confirmed: true
+    red_reason: >-
+      Failed against the original designer-contract.md `digest_inputs`
+      section: "AssertionError: 'resolved_input_paths' not found in
+      [section text]". Note: the sibling (pre-existing) test
+      test_project_native_excludes_two_token_files_from_digest_inputs was
+      already green before this task -- designer-contract.md already
+      stated the token-exclusion rule from task0007's original
+      implementation, contrary to review finding as19's description. This
+      task's actual gap, confirmed by the new test above, was narrower:
+      the digest_inputs section did not state that project-native files
+      arrive only via `resolved_input_paths.project_design_system`, which
+      is now added.
+  AC-7:
+    tests:
+      - tests.test_new_worker_agents.TestRequirementsAnalystToolGrantAndGateTable.test_tools_does_not_grant_bash
+      - tests.test_refitted_worker_agents.TestPlannerToolGrant.test_planner_tools_does_not_grant_bash
+      - tests.test_refitted_worker_agents.TestPlannerToolGrant.test_planner_still_states_never_commits
+    red_confirmed: true
+    red_reason: >-
+      test_tools_does_not_grant_bash failed: "AssertionError: 'Bash'
+      unexpectedly found in ['Read', 'Glob', 'Grep', 'Bash']".
+      test_planner_tools_does_not_grant_bash failed: "AssertionError:
+      'Bash' unexpectedly found in ['Read', 'Write', 'Glob', 'Grep',
+      'Bash']". Both frontmatter `tools:` lines dropped Bash to fix this.
+      test_planner_still_states_never_commits was already true before this
+      task (the "This agent never commits" sentence predates this
+      change) -- it is a regression guard proving the tool-grant removal
+      did not disturb the existing never-commits statement, not a
+      red-confirmed addition.

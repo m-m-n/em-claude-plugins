@@ -170,7 +170,11 @@ each `optional_visual_inputs` file, this contract document itself.
 **`project_native` exclusion**: when `project.design_system.kind:
 project_native`, `design-system/tokens.yaml` and `design-system/tokens.html`
 are excluded from `digest_inputs` (they are not judgment inputs when the
-project has its own design system, even if leftover files exist).
+project has its own design system, even if leftover files exist). Under
+`project_native`, the project's own design-system files that DO enter
+`digest_inputs` (`each project-native design system file`, above) arrive
+only through `resolved_input_paths.project_design_system` — the designer
+never discovers them itself (see "Additional input" above).
 
 ## `completed` payload
 

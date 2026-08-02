@@ -50,6 +50,12 @@ def _read(path):
     return path.read_text(encoding="utf-8")
 
 
+def _extract_section(text, start_heading, end_heading):
+    start = text.index(start_heading)
+    end = text.index(end_heading, start)
+    return text[start:end]
+
+
 def _extract_analysis_snapshot_fields(design_text):
     """Pull the backtick-quoted field names out of the design-input.md 5.4.1
     sentence describing payload.analysis_snapshot, so the expected
@@ -171,6 +177,16 @@ class TestAnalystContract(unittest.TestCase):
         lowered = self.text.lower()
         self.assertIn("does not decide", lowered)
         self.assertIn("kind", lowered)
+
+    # task0019 AC-4
+    def test_documents_gate_identifier_table(self):
+        section = _extract_section(
+            self.text, "## Gate identifiers", "## Exclusivity assumption"
+        )
+        self.assertIn("gate_id", section)
+        self.assertIn("create-spec.requirement-clarification", section)
+        self.assertIn("create-spec.design-step", section)
+        self.assertIn("references/batch-policies.yaml", section)
 
 
 class TestSpecWriterContract(unittest.TestCase):

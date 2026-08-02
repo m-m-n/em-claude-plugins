@@ -57,7 +57,7 @@ by the packet's absence or by an empty `questions` array.
 | `assumptions[]`.`related_question_ids` | Related `question_id` values |
 | `questions` | 1 to 32 question objects |
 | `questions[]`.`question_id` | Question identifier (see pattern above) |
-| `questions[]`.`gate_id` | Join key to a batch policy; the full gate ID set is owned by `references/batch-policies.yaml` and `references/question-resolution.md`, not restated here |
+| `questions[]`.`gate_id` | Join key to a batch policy. Batch handling of a `gate_id` is owned by `references/batch-policies.yaml`. The gate identifiers themselves are defined at their point of origin — each worker's own contract or agent prompt (its decision-point-to-`gate_id` table, e.g. `references/contracts/analyst-contract.md`, `agents/implementation-planner.md`) or the phase protocol that opens an orchestrator-side gate — not restated here |
 | `questions[]`.`category` | One of the `category` vocabulary values below |
 | `questions[]`.`priority` | `critical` \| `high` \| `normal` \| `low` |
 | `questions[]`.`blocking` | Boolean |
