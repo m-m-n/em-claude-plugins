@@ -507,7 +507,7 @@ tasks:
     - FR13
     - FR32
     - NFR9
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0020
     provenance:
