@@ -1,0 +1,115 @@
+task_id: task0014
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_check_plugin_invariants.TestCli.test_exit_0_when_all_checks_pass
+      - tests.test_check_plugin_invariants.TestCli.test_exit_1_when_a_check_fails
+      - tests.test_check_plugin_invariants.TestCli.test_exit_2_when_repository_root_does_not_exist
+      - tests.test_check_plugin_invariants.TestCli.test_exit_2_when_no_argument_given
+    red_confirmed: true
+    red_reason: >-
+      Before em-workflow/scripts/check-plugin-invariants.py existed, the
+      whole test module failed to load (`load_script_module()`'s
+      `importlib.util` call raised FileNotFoundError at module-import time,
+      before unittest could collect a single test), so none of the four CLI
+      tests -- nor any other test in the file -- could run at all.
+  AC-2:
+    tests:
+      - tests.test_check_plugin_invariants.TestAllSevenChecksExist.test_seven_check_functions_are_independently_callable
+    red_confirmed: true
+    red_reason: >-
+      Same module-import failure as AC-1 (script did not exist yet); after
+      creation, this passed on the first run since all seven check_* names
+      were defined together with the module.
+  AC-3:
+    tests:
+      - tests.test_check_plugin_invariants.TestAgentDispatchParity.test_fails_on_an_undispatched_definition
+      - tests.test_check_plugin_invariants.TestStaleReferences.test_fails_on_the_removed_agent_name_outside_the_feature_docs
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_fails_when_a_referenced_gate_is_missing_from_policy
+      - tests.test_check_plugin_invariants.TestDomainsVocabularyParity.test_fails_when_review_rules_has_an_extra_value
+      - tests.test_check_plugin_invariants.TestForbiddenTaskAssignmentHeading.test_fails_when_an_agent_has_the_heading
+      - tests.test_check_plugin_invariants.TestFixtureBranchCoverage.test_fails_when_a_kind_has_no_fixture
+    red_confirmed: true
+    red_reason: >-
+      Same module-import failure as AC-1 for the initial collection; in
+      addition, test_fails_when_a_referenced_gate_is_missing_from_policy hit
+      a genuine post-creation red: `yaml.safe_load("gate_policies:\n")`
+      returns `{"gate_policies": None}` (a key with no children parses as
+      None, not `{}`), so `check_gate_id_coverage` returned the offender
+      "batch-policies.yaml has no top-level `gate_policies` mapping" instead
+      of reporting the missing gate ID -- fixed by treating an explicit
+      `None` value as an empty mapping while still rejecting a genuinely
+      absent key.
+  AC-4:
+    tests:
+      - tests.test_check_plugin_invariants.TestAgentDispatchParity.test_fails_on_an_undispatched_definition
+      - tests.test_check_plugin_invariants.TestAgentDispatchParity.test_fails_on_a_dispatch_of_a_missing_definition
+    red_confirmed: true
+    red_reason: >-
+      Same module-import failure as AC-1 (script did not exist yet); both
+      passed on the first run against the completed script.
+  AC-5:
+    tests:
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_fails_when_a_referenced_gate_is_missing_from_policy
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_fails_when_policy_has_an_entry_never_referenced
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_documented_intentional_exception_excluded_both_directions
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_gate_id_differing_only_by_case_is_not_treated_as_a_match
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_unrelated_dotted_backtick_token_is_not_mistaken_for_a_gate_id
+    red_confirmed: true
+    red_reason: >-
+      test_fails_when_a_referenced_gate_is_missing_from_policy hit the
+      yaml-None red described under AC-3. test_unrelated_dotted_backtick_token_is_not_mistaken_for_a_gate_id
+      was added after its corresponding fix (the "gate ID" proximity
+      requirement in extract_gate_ids_from_text, added once a smoke run
+      against the real repository showed `go.mod` / `project.components`
+      being misread as gate IDs); to confirm it red rather than assume it,
+      the proximity check was temporarily reverted to the earlier
+      "any dotted backtick span counts" extraction and the test was
+      re-run in isolation -- it failed with
+      "['referenced but missing from batch-policies.yaml: go.mod',
+      'referenced but missing from batch-policies.yaml: project.components',
+      ...]" as expected, then the fix was restored and the full suite
+      re-verified green. The remaining three tests in this list only
+      exercised the shared module-import failure described under AC-1
+      (they passed on the first run once the script existed, without an
+      individually-observed red beyond that collection failure).
+  AC-6:
+    tests:
+      - tests.test_check_plugin_invariants.TestAgentDispatchParity.test_passes_when_every_definition_is_dispatched_and_vice_versa
+      - tests.test_check_plugin_invariants.TestAgentDispatchParity.test_fails_on_an_undispatched_definition
+      - tests.test_check_plugin_invariants.TestStaleReferences.test_passes_when_no_stale_reference_exists
+      - tests.test_check_plugin_invariants.TestStaleReferences.test_fails_on_the_removed_agent_name_outside_the_feature_docs
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_passes_when_referenced_and_policy_sets_match
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_fails_when_a_referenced_gate_is_missing_from_policy
+      - tests.test_check_plugin_invariants.TestDomainsVocabularyParity.test_passes_when_sets_match
+      - tests.test_check_plugin_invariants.TestDomainsVocabularyParity.test_fails_when_review_rules_has_an_extra_value
+      - tests.test_check_plugin_invariants.TestForbiddenTaskAssignmentHeading.test_passes_when_no_agent_has_the_heading
+      - tests.test_check_plugin_invariants.TestForbiddenTaskAssignmentHeading.test_fails_when_an_agent_has_the_heading
+      - tests.test_check_plugin_invariants.TestFixtureBranchCoverage.test_passes_when_every_kind_has_a_fixture
+      - tests.test_check_plugin_invariants.TestFixtureBranchCoverage.test_fails_when_a_kind_has_no_fixture
+      - tests.test_check_plugin_invariants.TestDigestReproducibility.test_check_passes
+      - tests.test_check_plugin_invariants.TestDigestReproducibility.test_compute_input_digest_changes_with_real_content_change
+    red_confirmed: true
+    red_reason: >-
+      One passing-branch and one failing-branch test per check, all built
+      against synthetic trees in tempfile.TemporaryDirectory() (never the
+      real repository). Every test in this list shares the AC-1
+      module-import-failure red described above; the two GateIdCoverage /
+      FixtureBranchCoverage-adjacent entries additionally benefited from the
+      concrete bugs described under AC-3/AC-5.
+  AC-7:
+    tests:
+      - tests.test_check_plugin_invariants.TestDigestReproducibility.test_check_passes
+      - tests.test_check_plugin_invariants.TestDigestReproducibility.test_compute_input_digest_is_stable_across_key_order
+      - tests.test_check_plugin_invariants.TestDigestReproducibility.test_compute_input_digest_changes_with_real_content_change
+    red_confirmed: true
+    red_reason: >-
+      Same module-import failure as AC-1 (script did not exist yet); all
+      three passed on the first run against the completed script. The third
+      test (changes_with_real_content_change) is what proves
+      compute_input_digest actually discriminates content rather than being
+      a stub that always returns the same value -- not required by AC-7's
+      literal wording, but the only way the "computes it twice and compares"
+      claim isn't vacuous.
