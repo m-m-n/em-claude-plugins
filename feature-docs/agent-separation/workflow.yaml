@@ -481,7 +481,7 @@ tasks:
     - FR20
     - NFR1
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/agent-separation/task0019
     provenance:
