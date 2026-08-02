@@ -1,0 +1,125 @@
+task_id: task0025
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_phase_protocols.TestRuleCitationsRepointedToShippedDocs.test_regex_matches_the_old_bare_resolution_forms
+      - tests.test_phase_protocols.TestRuleCitationsRepointedToShippedDocs.test_worker_envelope_and_workflow_schema_are_cited_in_both_protocols
+      - tests.test_phase_protocols.TestRuleCitationsRepointedToShippedDocs.test_no_mention_resolves_a_rule_or_validation_layer_to_design_doc_alone
+    red_confirmed: true
+    red_reason: >-
+      Confirmed red by stashing this task's edits (git stash push -u,
+      keeping the original create-spec-phase.md / create-plan-phase.md /
+      test_phase_protocols.py), running the new test methods against the
+      original text, then restoring (git stash pop). Against the original
+      files, test_worker_envelope_and_workflow_schema_are_cited_in_both_protocols
+      failed because neither file mentioned
+      "references/contracts/worker-envelope.md" at all, and
+      test_no_mention_resolves_a_rule_or_validation_layer_to_design_doc_alone
+      found four bare (non-provenance) matches in create-spec-phase.md
+      ("design-input.md 5.0", "design-input.md 5.0 R1" x2,
+      "design-input.md 5.11.2") and three in create-plan-phase.md, each
+      with no "provenance" wording in its surrounding window. Verified
+      directly with a standalone script comparing the pre- and post-edit
+      file text (all four/three matches flagged bad before, zero after).
+  AC-2:
+    tests:
+      - tests.test_phase_protocols.TestAnalystRedispatchPassesPriorAnalysis.test_prior_analysis_field_named_in_the_dispatch_loop_section
+      - tests.test_phase_protocols.TestAnalystRedispatchPassesPriorAnalysis.test_both_members_named
+      - tests.test_phase_protocols.TestAnalystRedispatchPassesPriorAnalysis.test_populated_on_every_redispatch
+      - tests.test_phase_protocols.TestAnalystRedispatchPassesPriorAnalysis.test_omission_on_digest_mismatch_stated
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun as AC-1. Against the original
+      create-spec-phase.md, "## 5. Analyst dispatch loop"'s step 5 (the
+      re-dispatch step) contained no mention of `prior_analysis` at all --
+      confirmed via `"prior_analysis" in original_text` returning False --
+      so every one of these four tests, which all assert substrings inside
+      that field's description, would fail (three via assertIn against
+      absent substrings, one — test_prior_analysis_field_named — directly
+      on the field name itself).
+  AC-3:
+    tests:
+      - tests.test_phase_protocols.TestScopeVerificationCandidateDerivedEnumeration.test_whole_index_listing_row_is_gone
+      - tests.test_phase_protocols.TestScopeVerificationCandidateDerivedEnumeration.test_no_whole_index_listing_pass_wording_present
+      - tests.test_phase_protocols.TestScopeVerificationCandidateDerivedEnumeration.test_candidates_derived_from_status_and_index_comparison
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun. test_whole_index_listing_row_is_gone would have
+      failed against the original text (assertNotIn) because the row
+      "Index blob IDs and modes | `git ls-files -s -z`" was present in the
+      original Pre-dispatch snapshot table (confirmed: substring present in
+      original, absent after the edit). test_no_whole_index_listing_pass_wording_present
+      and test_candidates_derived_from_status_and_index_comparison failed
+      because their asserted phrases ("whole-index blob-id/mode listing
+      pass runs here either", "Enumerate candidates from two
+      changes-proportional sources", "a whole-index listing of every
+      tracked entry") did not exist anywhere in the original document --
+      confirmed absent via direct substring search before, present after.
+  AC-4:
+    tests:
+      - tests.test_phase_protocols.TestScopeVerificationCandidateDerivedEnumeration.test_blob_ids_and_modes_queried_only_for_candidates
+      - tests.test_phase_protocols.TestScopeVerificationCandidateDerivedEnumeration.test_deletions_mode_and_kind_changes_still_detectable
+    red_confirmed: false
+    red_reason: >-
+      test_blob_ids_and_modes_queried_only_for_candidates targets new
+      wording ("blob identifiers and modes are likewise queried") that was
+      absent from the original text and present after -- that part is a
+      genuine red-to-green transition, confirmed the same way as AC-3.
+      test_deletions_mode_and_kind_changes_still_detectable, however,
+      re-asserts a phrase ("deletions, mode changes, and kind changes (file
+      symlink absent)") that was ALREADY present verbatim in the original
+      document (it predates this task, from task0015) and is already
+      covered by the pre-existing TestScopeVerificationSnapshotCost test.
+      It never went red under this task's changes; it is included here as
+      a regression guard proving the bs14 rewrite of the surrounding
+      sentence did not disturb that existing guarantee. Marking the whole
+      AC false rather than splitting per-test since one of its two tests
+      did not observe a red state.
+  AC-5:
+    tests:
+      - tests.test_phase_protocols.TestCreatePlanCanonicalInvocationIncludesPhaseState.test_invocation_includes_phase_state_argument
+      - tests.test_phase_protocols.TestCreatePlanCanonicalInvocationIncludesPhaseState.test_omission_list_names_phase_state
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun. test_invocation_includes_phase_state_argument
+      failed against the original create-plan-phase.md: the canonical
+      invocation's argument list had no `--phase-state` line at all
+      (confirmed substring absent). test_omission_list_names_phase_state
+      failed because the omission list only named `--workflow`,
+      `--registries` and `--feature-dir`, with no `--phase-state` sentence
+      at all -- confirmed absent before, present after.
+  AC-6:
+    tests:
+      - tests.test_phase_protocols.TestCreateSpecCompletedPayloadKeyReference.test_stray_analysis_snapshot_prefixed_key_is_gone
+      - tests.test_phase_protocols.TestCreateSpecCompletedPayloadKeyReference.test_bare_completed_payload_key_is_used_instead
+    red_confirmed: true
+    red_reason: >-
+      Same aside-and-rerun. test_stray_analysis_snapshot_prefixed_key_is_gone
+      (assertNotIn) failed against the original text because
+      "analysis_snapshot.design_system_candidates" WAS present there (the
+      design-system determination section's zero-candidate exception).
+      test_bare_completed_payload_key_is_used_instead failed because the
+      corrected phrasing "completed-payload `design_system_candidates`"
+      did not exist in the original text at all -- confirmed absent
+      before, present after via direct substring search.
+  AC-7:
+    tests:
+      - tests.test_phase_protocols.TestCreateSpecSectionCoverageAndOrder.test_every_section_title_present
+      - tests.test_phase_protocols.TestCreateSpecSectionCoverageAndOrder.test_sections_appear_in_design_order
+      - tests.test_phase_protocols.TestCreatePlanSectionCoverageAndOrder.test_every_section_title_present
+      - tests.test_phase_protocols.TestCreatePlanSectionCoverageAndOrder.test_sections_appear_in_design_order
+    red_confirmed: false
+    red_reason: >-
+      These are the pre-existing (task0011) section-coverage and ordering
+      tests named in the task's Test Notes as the ones that "must keep
+      passing." This rework changes only prose inside existing sections
+      (citations, one dispatch-loop sentence, the snapshot/comparison
+      wording, one exception's key name, one canonical invocation) -- it
+      adds and removes no `## `-level heading, so there is no new red state
+      for this AC to confirm. Verified instead as a non-regression: these
+      four tests were green before this task's edits (part of the 761
+      pre-existing baseline) and remain green after (part of the 777
+      final total), confirmed by running the full suite both before any
+      edit (git stash) and after.
