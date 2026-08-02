@@ -1,0 +1,630 @@
+round: 1
+executed_at: "2026-08-03T01:05:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: b6f3bc089d15dc7fa623a1c86af87256cc26eb9b
+  head_commit: cf3138b86b8d56039465a70463834b05560ccfaf
+  changed_files_count: 196
+  changed_files_note: >-
+    All files changed between the implement base_commit and review HEAD, excluding
+    feature-docs/agent-separation/**. 132 of the 196 are new fixture files under
+    em-workflow/references/fixtures/.
+plan:
+  floor: [comprehensive, spec, security, performance, architecture]
+  discretionary: []
+  codex_cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: performance, source: codex, status: completed}
+  - perspective: architecture
+    source: codex
+    status: failed
+    skip_reason: "codex run exceeded its 10-minute budget (exit 143) without producing a verdict"
+  - perspective: spec
+    source: codex
+    status: failed
+    skip_reason: "the reviewer agent returned without a verdict; the codex process outlived it and its output could not be collected"
+
+findings:
+  - stable_id: as1-dispatch-trio
+    severity: critical
+    category: spec
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 81
+    title: "requirements-analyst / spec-writer / implementation-planner are never Task-dispatched"
+    description: >-
+      No `subagent_type="em-workflow:requirements-analyst"`, `:spec-writer` or
+      `:implementation-planner` reference exists anywhere in the repository. The three
+      dispatch sites are prose only — create-spec-phase.md:81 ("Dispatch
+      requirements-analyst with analysis_mode: full"), create-spec-phase.md:114
+      (spec-writer) and create-plan-phase.md:77 ("Dispatch implementation-planner
+      with:") — whereas designer (skills/develop/SKILL.md:264) and rework-planner
+      (:299) use the explicit Task form. Without a subagent_type there is no way to
+      launch them through the Task tool, so the orchestrator falls back to reading the
+      definition and following it inline — precisely the execution form this feature
+      exists to remove, and one that also discards the frontmatter model/effort
+      settings and the queue hooks' subagent index. The feature's own
+      check-plugin-invariants.py reports agent_dispatch_parity FAIL for exactly these
+      three definitions.
+    suggestion: >-
+      Rewrite the three dispatch sites in the explicit form used by the design step:
+      Task(subagent_type="em-workflow:requirements-analyst"),
+      Task(subagent_type="em-workflow:spec-writer"),
+      Task(subagent_type="em-workflow:implementation-planner"). Completion condition:
+      check-plugin-invariants.py exits 0 for agent_dispatch_parity.
+    sources: [claude:spec, claude:architecture, claude:comprehensive]
+    confidence: 85
+    resolution: unresolved
+
+  - stable_id: as2-invariants-never-run
+    severity: high
+    category: spec
+    file: tests/test_check_plugin_invariants.py
+    line: 76
+    title: "FR30's automated checks are never run against the real repository"
+    description: >-
+      Every case in test_check_plugin_invariants.py runs the checker against synthetic
+      trees built in temporary directories; REPO_ROOT is defined at line 37 and never
+      used as a target. test_reference_sweep.py scans only the TASK_OWNED_FILES
+      allowlist (74-89), which excludes batch-mode.md. This is why 632 unit tests pass
+      while `check-plugin-invariants.py .` exits 1 on the same tree: FR30's checks
+      exist but are not enforced as invariants, so TS-7 through TS-11 are not actually
+      satisfied.
+    suggestion: >-
+      Add a repository-level case asserting exit 0 against REPO_ROOT, and widen the
+      stale-reference sweep from the task allowlist to all of em-workflow/. Adjust the
+      checker's allowed-prefix set so other features' feature-docs and this feature's
+      own test literals do not self-trigger.
+    sources: [claude:spec, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+
+  - stable_id: as3-batch-gate-jurisdiction
+    severity: high
+    category: spec
+    file: em-workflow/references/batch-policies.yaml
+    line: 75
+    title: "Non-packet gates were moved into batch-policies.yaml while their referrers still point at the deleted decision table"
+    description: >-
+      FR16, US3 and the file's own header restrict batch-policies.yaml to gates
+      expressed as question packets, and question-resolution.md's batch sequence is
+      packet-triggered (step 1 = a worker returns needs_user_input). Eight
+      orchestrator-owned gates were nevertheless moved into it — implement.failed-task,
+      review.auto-fix-conflict, review.auto-fix-judgment, review.residual-critical-high,
+      verify.failed, develop.completion, design.artifact-overwrite,
+      create-plan.artifact-overwrite — none of which carries a gate_id at its
+      originating site. Meanwhile eight referrers still name the deleted "batch-mode.md
+      decision table" (implement-phase.md:143, 214, 342; review-phase.md:214, ~400;
+      skills/develop/SKILL.md:36, 158, 353). Worse, the catch-all left at
+      batch-mode.md:48-51 actively claims jurisdiction over non-packet gates absent
+      from its four-row table, so at batch runtime implement's documented
+      "retry once then abort", review R4's skip-site / apply-as-is, and Step C's
+      keep-branch are replaced by a Codex consultation — turning a documented abort
+      into a swallowed failure. check-plugin-invariants.py reports gate_id_coverage
+      FAIL for 14 identifiers.
+    suggestion: >-
+      Pick one jurisdiction and apply it consistently: either move the eight
+      non-packet gates back to batch-mode.md's Non-packet gates table and leave the
+      referrers valid, or keep them in batch-policies.yaml, annotate each originating
+      site with its gate_id, extend question-resolution.md's batch sequence to cover
+      orchestrator-opened gates, and repoint the eight referrers. Either way, narrow
+      the batch-mode.md catch-all so it cannot override a default that a phase
+      protocol or policy file already defines. Completion condition: gate_id_coverage
+      exits 0.
+    sources: [claude:spec, claude:architecture, claude:comprehensive]
+    confidence: 85
+    resolution: unresolved
+
+  - stable_id: as4-stale-agent-reference
+    severity: high
+    category: spec
+    file: em-workflow/references/batch-mode.md
+    line: 45
+    title: "batch-mode.md still cites the deleted requirements-spec-creator, and the Codex procedure it pointed to no longer exists anywhere"
+    description: >-
+      Line 45 names `agents/requirements-spec-creator.md` as the source of the Codex
+      consultation procedure for the review diff-size gate, and line 46 leans on that
+      row for the command-approval fallback. The file was deleted by this change, and
+      the concrete procedure it carried (availability probe, run_codex_exec.sh readonly
+      invocation, one turn per call, trajectory judgement at turn 3, five-turn cap,
+      final decision stays with Claude, output untrusted) went with it.
+      question-resolution.md:68-89, the stated destination, only says "Pass ... to
+      Codex" — no invocation method, no turn cap, no availability probe. Both
+      non-packet fallback gates therefore have no executable procedure anywhere in the
+      plugin, and stale_references FAILs on this line.
+    suggestion: >-
+      Write the Codex consultation loop into question-resolution.md's unlisted-gate
+      fallback as substance, then repoint batch-mode.md:45-46 at it. The string
+      requirements-spec-creator must not remain under em-workflow/.
+    sources: [claude:spec, claude:architecture, claude:comprehensive]
+    confidence: 85
+    resolution: unresolved
+
+  - stable_id: as5-rework-index-unverified
+    severity: high
+    category: comprehensive
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 1261
+    title: "rework_index completeness is never verified — an empty index passes"
+    description: >-
+      _validate_rework_index() iterates rework_index.items() and never checks that
+      every task in workflow_patch.tasks_patch.entries appears as a key.
+      WORKER_CAPABILITIES["rework-planner"].required_payload only tests key presence,
+      so `rework_index: {}` validates. Measured: replacing the valid-completed
+      fixture's rework_index with {} while task0007 remains in tasks_patch still exits
+      0. This is the single machine guarantee behind acceptance condition 8.1 and
+      rework-task-synthesis.md §12's first rule. payload.shared_contract_rationale,
+      required by rework-planner-contract.md:126, is likewise absent from
+      required_payload and unverified.
+    suggestion: >-
+      Pass the tasks_patch entry keys into _validate_rework_index() and error when
+      set(entries) - set(rework_index) is non-empty (and on unknown task ids in the
+      other direction). Add shared_contract_rationale to required_payload. Add an
+      invalid fixture pinning the regression.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+
+  - stable_id: as6-prefix-containment
+    severity: high
+    category: security
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 1167
+    title: "written_artifacts containment uses string prefix matching, allowing sibling-directory escape and traversal"
+    description: >-
+      The check is `any(path.startswith(root) for root in allowed_roots)`. NFR8 and
+      create-spec-phase.md:388-401 require segment-wise containment and rejection of
+      `..`. Measured with allowed_write_roots=["feature-docs/example"]: both
+      `feature-docs/example2/evil.md` and
+      `feature-docs/example/../../../../.claude/settings.json` exit 0. A second
+      measured case: allowed root "feature-docs/example/design/mockups" (no trailing
+      slash) accepts "feature-docs/example/design/mockups-evil/x.html". The file's own
+      is_safe_relative_path() (275-287) is applied only to tasks_patch.files. Since
+      the orchestrator-side scope procedure is prose, this script is the only
+      machine-enforced layer. Related: an entry whose dict lacks a "path" key raises
+      AttributeError and exits 1 with empty stdout, breaking the documented
+      "exit 1 = JSON detail on stdout" contract; written_artifacts itself is not
+      type-checked, so a bare string is iterated per character.
+    suggestion: >-
+      Normalize to project-relative segments, reject absolute paths, `..`, NUL and
+      non-string entries, and compare segment lists against each allowed root. Add
+      invalid fixtures for sibling escape and traversal.
+    sources: [claude:security, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+
+  - stable_id: as7-bash-on-readonly-workers
+    severity: high
+    category: security
+    file: em-workflow/agents/requirements-analyst.md
+    line: 6
+    title: "Workers declared never to write or commit are granted Bash, which lets a commit defeat scope verification"
+    description: >-
+      requirements-analyst declares "You never write a file, never make a commit" yet
+      its frontmatter grants Bash; implementation-planner keeps Bash after this change
+      removed its only Bash use (the commit-docs.sh call). No contract documents any
+      Bash use for either. Beyond least-privilege, this defeats the scope procedure: a
+      worker running `git add -A && git commit` in the integration worktree leaves the
+      index and working tree clean, so the change-set comparison sees nothing; HEAD has
+      moved, so the procedure declares staleness and runs `reset --hard
+      em-workflow/{feature}/integration` — but that ref now points at the worker's own
+      commit, so "discard the worker's output" does not happen and unvalidated content
+      lands permanently on the integration branch. phase-state.md's exit-4 recovery
+      uses the same reset target.
+    suggestion: >-
+      Drop Bash from requirements-analyst and implementation-planner (analyst needs
+      only Read/Glob/Grep), or document a concrete Bash use in their contracts and add
+      worker-authored-commit detection to the scope procedure.
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+
+  - stable_id: as8-batch-fail-open
+    severity: high
+    category: security
+    file: em-workflow/references/question-resolution.md
+    line: 68
+    title: "The batch unlisted-gate fallback is not fail-closed for specification, security, licensing or irreversible decisions"
+    description: >-
+      NFR4 requires batch mode to abort rather than guess for those four categories,
+      but the abort rule sits at step 7, inside the on_unanswered=block branch. Two
+      routes reach a decision before it. First, the Codex consultation at steps 2-4
+      settles the gate as soon as its suggestion maps to an existing option_id — which
+      includes rework.spec-change, the gate batch-policies.yaml deliberately leaves
+      unlisted precisely so it aborts; the document itself calls Codex output untrusted
+      two lines earlier. Second, step 6's record_tbd silently produces a TBD answer for
+      a security or licensing question. Both `category` and `on_unanswered` are
+      worker-set fields and validate_question() (539-584) never cross-checks them, so a
+      single worker-chosen value disables the guarantee. Codex additionally observes
+      that gate_id is not bound to the emitting worker, phase, category or permitted
+      options, so an injected worker can label a sensitive question with a permissive
+      existing gate ID and supply that policy's expected option.
+    suggestion: >-
+      Classify the decision before policy lookup and before any Codex consultation, and
+      abort immediately for all four categories regardless of gate listing or
+      on_unanswered. Add a validator cross-check forcing on_unanswered=block for
+      category in {spec-change, security, license}, and bind gate_id to a
+      phase/worker-scoped registry.
+    sources: [claude:security, codex:security]
+    confidence: 95
+    resolution: unresolved
+
+  - stable_id: as9-post-hoc-containment
+    severity: high
+    category: security
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 365
+    title: "Scope containment is enforced only after dispatch and cannot catch writes outside the worktree"
+    description: >-
+      Path containment and symlink checks run after the worker returns, against
+      snapshots limited to the integration worktree. A worker that writes through a
+      symlink or straight to an absolute path outside the worktree, and omits the path
+      from written_artifacts, produces a mutation the index/working-tree/untracked
+      comparison cannot see and the snapshot cannot restore; deleting a detected
+      symlink afterwards does not undo the external write.
+    suggestion: >-
+      Validate every write_policy target and allowed root with lstat/realpath before
+      launching — rejecting absolute paths, `..`, case collisions and symlink segments
+      — and treat the post-dispatch comparison as auditing rather than the primary
+      control. An OS-level sandbox denying writes outside the worktree is the complete
+      fix but is outside this feature's scope.
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+
+  - stable_id: as10-cross-product-loop
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/phases/create-plan-phase.md
+    line: 53
+    title: "create-plan routes both design-system inconsistencies to the reclassify gate, which cannot terminate for one of them"
+    description: >-
+      create-plan-phase.md sends both inconsistent combinations to the reclassification
+      gate, but design-input.md 5.4.5, designer-contract.md:114 and
+      skills/develop/SKILL.md:258-261 all define `kind: em_workflow` with tokens.yaml
+      absent and tokens.html present as an abort awaiting user intervention, with only
+      the `kind: none` case going to the gate. Three documents agree and create-plan
+      disagrees. The consequence is non-termination: the gate settles kind, commits,
+      and returns to re-check the cross-product table, but tokens.yaml is still absent,
+      so the same inconsistency reappears; in batch the default option writes back the
+      same kind, so commit → re-check → gate repeats indefinitely. develop/SKILL.md's
+      escape (report the paths, end the turn) has no counterpart in create-plan.
+    suggestion: >-
+      Split the precondition into the two branches the other three documents define:
+      `kind: none` with tokens present goes to design-system.reclassify; `kind:
+      em_workflow` with yaml absent and html present aborts with the offending paths.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+
+  - stable_id: as11-r1-ssot-unshipped
+    severity: high
+    category: architecture
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 18
+    title: "The input_digest normalization rule (R1) lives only in feature-docs, which is not shipped with the plugin"
+    description: >-
+      R1's normalization procedure — sort keys, separators (",", ":"), do not escape
+      non-ASCII, then sha256 — appears nowhere under em-workflow/. create-spec-phase.md
+      :18-19, create-plan-phase.md:21 and :79, and worker-envelope.md:54 all defer to
+      "design-input.md 5.0 R1", whose only copy is
+      feature-docs/agent-separation/design-input.md. The marketplace source is
+      ./em-workflow, so an installed plugin has no feature-docs directory and the
+      orchestrator cannot resolve the rule it is required to apply. R1 works only if
+      dispatch-time and return-time recomputation follow the same procedure, so an
+      unreadable procedure means staleness detection silently stops working. The
+      companion rule R2 was correctly absorbed into workflow-schema.md; only R1 was
+      left behind. The seven validation layers cited by create-plan-phase.md:114 have
+      the same problem.
+    suggestion: >-
+      Write R1's normalization rule and digest_source structure into
+      references/contracts/worker-envelope.md, and the validation-layer table into the
+      same file or a new validation section. Leave design-input.md references as
+      provenance notes, never as the resolution target for normative content.
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+
+  - stable_id: as12-scope-hash-cost
+    severity: high
+    category: performance
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 356
+    title: "Scope verification hashes the entire checkout twice per worker dispatch"
+    description: >-
+      The pre-dispatch snapshot enumerates every tracked path and hashes its content
+      with git hash-object, and the post-dispatch comparison recomputes the same set,
+      so each dispatch reads the repository roughly twice. The procedure applies to
+      every dispatch of all five workers, so an analyst clarification loop multiplies
+      it by the number of rounds. The pre-dispatch hashing is also redundant: the same
+      document's clean-worktree precondition guarantees the tracked working tree
+      matches the index, so the blob IDs already captured by `git ls-files -s -z` carry
+      the same identity, and step 3 restores from those very blobs. NFR9 caps glob
+      discovery at 500 files / 5 MB while this unbounded whole-tree hashing sits beside
+      it, orders of magnitude larger on a big repository.
+    suggestion: >-
+      Drop the working-tree-content row from the snapshot and rely on the index blob
+      IDs, then hash only the paths that `git status --porcelain -z -uall` and
+      `git diff-files` report as changed. Deletions, mode changes and file/symlink kind
+      changes stay detectable, and cost falls from O(repository bytes) to O(changed
+      paths). design-input.md 5.11.3 needs the same correction.
+    sources: [claude:performance, codex:performance]
+    confidence: 95
+    resolution: unresolved
+
+  - stable_id: as13-discovery-rules-unshipped
+    severity: high
+    category: performance
+    file: em-workflow/references/phase-state.md
+    line: 164
+    title: "NFR9's exclusion list and extension allowlist never reached any shipped protocol document"
+    description: >-
+      Of NFR9's three cost controls, only the 500-file / 5 MB cap was written into
+      phase-state.md. The exclusions (node_modules/, vendor/, .git/, .claude/worktrees/,
+      gitignored paths) and the directory-enumeration allowlist (.yaml, .yml, .json,
+      .css, .scss, .ts, .js, .kt) exist only in design-input.md and feature-docs.
+      analyst-contract.md:133-137 instructs the orchestrator to resolve every
+      glob-derived category before dispatch without supplying a pattern set, an
+      exclusion list or an extension filter. In a JavaScript or TypeScript project —
+      exactly where design-system candidates exist — `**/tailwind.config.*`,
+      `**/design-system/` and `**/tokens.json` match heavily inside node_modules, and
+      an asset-heavy directory match enumerates images, fonts and build output. The cap
+      is then reached on noise, and the documented behaviour at the cap is to abort in
+      batch mode, so a cost problem becomes a functional stop.
+    suggestion: >-
+      Add the exclusion roots and the extension allowlist to the shipped discovery
+      rules (phase-state.md's discovery caps, or the candidate-category table in
+      analyst-contract.md with phase-state.md referencing it), and apply the filter
+      while enumerating so filtered files never count toward either limit.
+    sources: [claude:performance, codex:performance]
+    confidence: 95
+    resolution: unresolved
+
+  - stable_id: as14-analysis-not-reused
+    severity: high
+    category: performance
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 83
+    title: "Each analyst clarification round re-resolves globs and re-derives the whole analysis"
+    description: >-
+      Two distinct losses share this site. First, the dispatch loop never mentions
+      resolved_input_cache, and analyst-contract.md:133 tells the orchestrator to
+      resolve every glob-derived category before dispatch with no cache exception, so
+      the cache rule that phase-state.md:150-153 defines is never reached from the
+      place resolution actually happens. Second, the input envelope has no field
+      carrying the prior analysis_snapshot and phase-state retains only the output
+      digest, so each round re-reads and re-classifies up to 500 files / 5 MB of
+      candidates and re-derives the same conclusions. Size management allows on the
+      order of 32 questions per phase, so both costs multiply across rounds.
+    suggestion: >-
+      State at the resolution point that glob-derived categories come from
+      resolved_input_cache unless one of phase-state.md's three re-resolution triggers
+      fired, and add a bounded prior-analysis field to the envelope keyed by the
+      unchanged input digest so later rounds refine rather than rebuild.
+    sources: [claude:performance, codex:performance]
+    confidence: 95
+    resolution: unresolved
+
+  - stable_id: as15-domains-vocabulary-parse
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 462
+    title: "The domains vocabulary parser absorbs complexity values, so domains:[high] validates"
+    description: >-
+      load_domains_vocabulary() keeps consuming comment lines that contain "/" past the
+      domains block, so it swallows "# complexity vocabulary: low / medium / high".
+      Measured output is ['api-contract','auth','concurrency','config-infra',
+      'data-persistence','external-io','high','input-handling','medium','ui'] — the
+      eight real domains plus 'medium' and 'high' (with 'low' dropped). A task declaring
+      domains:[high] therefore passes validation while matching no if_domains rule, so
+      its required review perspectives never fire. check-plugin-invariants.py's
+      extract_domains_from_review_rules() stops correctly on the word "vocabulary" —
+      two implementations of the same parse disagree.
+    suggestion: >-
+      Give load_domains_vocabulary() the same terminator, ideally by sharing one helper
+      between the two scripts, and add an invalid fixture rejecting domains:[high].
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+
+  - stable_id: as16-plan-path-traversal
+    severity: medium
+    category: security
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 1224
+    title: "The task-plan path from an untrusted patch is joined to feature_dir without containment checks"
+    description: >-
+      The `plan` field arrives in the workflow patch, which is untrusted worker output,
+      and is joined directly to feature_dir. An absolute value replaces the base path,
+      `..` segments escape it, and is_file/read_text follow symlinks, so the validator
+      can be steered into reading any regular file the orchestrator can reach. Parsed
+      bullet text may then surface in validation error output, and a very large target
+      can exhaust memory.
+    suggestion: >-
+      Require plan to be a normalized relative path under feature_dir, reject absolute
+      paths and `..`, compare resolved segments against feature_dir, reject symlink
+      segments before is_file/read_text, and impose a size limit.
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+
+  - stable_id: as17-gate-id-spoofing
+    severity: medium
+    category: security
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 545
+    title: "gate_id is not bound to the emitting worker, phase, category or permitted options"
+    description: >-
+      validate_question() checks only that gate_id is non-empty and validates category
+      independently. Batch resolution selects a policy purely by gate_id, so an injected
+      worker can label a security-sensitive question with a permissive existing gate ID
+      and include that policy's expected option ID, bypassing the intended handling
+      without user review.
+    suggestion: >-
+      Define a phase- and worker-scoped gate registry with allowed categories and
+      option IDs, and reject packets whose gate_id, category or options do not match it.
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+
+  - stable_id: as18-analyst-gate-ids-missing
+    severity: medium
+    category: spec
+    file: em-workflow/references/contracts/analyst-contract.md
+    line: 29
+    title: "The analyst has no decision-point to gate_id mapping, so its batch policies are unreachable"
+    description: >-
+      The word gate_id does not appear in analyst-contract.md or
+      agents/requirements-analyst.md at all, although the analyst is the sole producer
+      of create-spec question packets. implementation-planner.md:205-210 carries exactly
+      such a table for its three gates. Consequently batch-policies.yaml's
+      create-spec.requirement-clarification and create-spec.design-step are unreachable
+      entries, and a batch create-spec falls into the unlisted-gate fallback on every
+      clarification question. question-packet-schema.md:60 compounds this by naming
+      question-resolution.md as an owner of the gate ID set, which contains none.
+    suggestion: >-
+      Add a decision-point to gate_id table to analyst-contract.md and
+      agents/requirements-analyst.md in the planner's format, and correct
+      question-packet-schema.md:60's ownership statement.
+    sources: [claude:spec, claude:architecture]
+    confidence: 75
+    resolution: unresolved
+
+  - stable_id: as19-designer-digest-exception
+    severity: medium
+    category: architecture
+    file: em-workflow/references/contracts/designer-contract.md
+    line: 163
+    title: "designer-contract omits the project_native digest_inputs exception that planner-contract states"
+    description: >-
+      Under kind: project_native the two em-workflow token files must be excluded from
+      digest_inputs for both designer and planner. planner-contract.md:76-83 states the
+      exception; designer-contract.md:163-168 lists both files unconditionally — and
+      designer-contract is the document that owns the kind × token cross-product table,
+      so the exception is missing from its own owner. A leftover em-workflow token file
+      therefore enters designer's input_digest under project_native, and a change to
+      that one irrelevant file forces a stale re-dispatch.
+    suggestion: >-
+      Add the exception to designer-contract.md's digest_inputs section, stating that
+      under project_native the token files are excluded from the digest and are not
+      used as decision inputs, and that project-native files arrive only through
+      resolved_input_paths.project_design_system.
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+
+  - stable_id: as20-planning-invariants-overclaimed
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/phases/create-plan-phase.md
+    line: 117
+    title: "Half the invariants advertised as machine-checked are not implemented, and optional CLI arguments silently disable others"
+    description: >-
+      Section 9 lists eight planning invariants as mechanically checked; the validator
+      implements four. Absent are the prohibition on assigning tasks to excluded or tbd
+      requirements, the manual visual-comparison requirement when design is completed,
+      and task/test mapping consistency outside the rework path. Of the four
+      implemented, the vocabulary check runs only with --registries and the requirement
+      check only with --workflow; both no-op silently when omitted. Section 8 presents
+      all seven validation layers as the script's responsibility while the script's own
+      docstring states layers 4, 5 and 7 are deliberately not implemented there, and no
+      document shows the canonical invocation, so an orchestrator that drops an
+      optional argument loses checks without any signal.
+    suggestion: >-
+      Restrict section 9 to the implemented invariants and mark the rest as human
+      review (or implement them), state the layer split in section 8, and record the
+      canonical CLI invocation in both phase protocols with a note that omitting an
+      optional argument silently narrows validation.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+
+  - stable_id: as21-fixture-coverage-weak
+    severity: medium
+    category: comprehensive
+    file: tests/test_validate_worker_output.py
+    line: 452
+    title: "Fixture branch coverage is weaker than the design requires, leaving most worker statuses untested"
+    description: >-
+      test_every_parsed_branch_token_has_at_least_one_fixture extracts backticked tokens
+      from the coverage table and only checks that each appears somewhere in a fixture
+      path, so requirements-analyst fixtures alone satisfy it for every worker. In
+      practice spec-writer and designer have two fixtures each and no blocked,
+      invalid_input, stale_input or failed case; implementation-planner and
+      rework-planner cover two of six statuses. check_fixture_branch_coverage is weaker
+      still, passing on one fixture per kind. Separately, worker-envelope.md forbids
+      payload on five statuses and the validator never enforces that, so the
+      contract-versus-implementation agreement that fixtures are supposed to guarantee
+      does not hold.
+    suggestion: >-
+      Generate the worker × permitted-status product from WORKER_CAPABILITIES and
+      assert a valid fixture for each pair, add the missing valid fixtures and
+      exclusivity-violation invalid fixtures, and implement the per-status payload
+      prohibition in the validator.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+
+  - stable_id: as22-invariant-double-scan
+    severity: medium
+    category: performance
+    file: em-workflow/scripts/check-plugin-invariants.py
+    line: 121
+    title: "The invariant checker walks and reads the whole repository twice"
+    description: >-
+      check_agent_dispatch_parity and check_stale_references each call
+      iter_repo_files(root) and read_text on every file, so the verify step performs two
+      complete tree walks and two full content reads, including vendored and generated
+      UTF-8 files, since only a small directory exclusion set is defined. Large files are
+      allocated twice.
+    suggestion: >-
+      Traverse once and run both text checks per file, restrict scanning to relevant
+      extensions and roots, exclude common vendor and build directories, and
+      stream or size-limit individual reads.
+    sources: [codex:performance]
+    confidence: 50
+    resolution: unresolved
+
+  - stable_id: as23-backfill-cache-gap
+    severity: medium
+    category: performance
+    file: em-workflow/references/phase-state.md
+    line: 344
+    title: "An interrupted design-system backfill re-runs the whole discovery on resume"
+    description: >-
+      The backfill path is deliberately given no phase-state persistence, yet it
+      dispatches the analyst to perform candidate discovery. A session that ends after
+      discovery but before the choice is committed repeats the full `**/` search on
+      resume even though none of the three re-resolution triggers fired, and it has
+      nowhere durable to keep the generation digest or the truncation flag.
+    suggestion: >-
+      Persist the resolved paths, digests, generation digest and truncation flag before
+      asking, either in a durable backfill state or attached to the pending
+      design/create-plan phase state, and reuse them on an ordinary resume.
+    sources: [codex:performance]
+    confidence: 50
+    resolution: unresolved
+
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: skipped
+  skip_reason: >-
+    R4 was skipped by orchestrator judgment. The candidate gate admits most of these
+    findings, but the review-editor applies a single-file edit and cannot author the
+    accompanying tests that this repository's convention requires, and several findings
+    need coordinated edits across files owned by different tasks (the batch gate
+    jurisdiction alone spans batch-policies.yaml, batch-mode.md and eight referrers).
+    Applying single-file patches would lower the residual count without making the
+    shipped invariant checker pass. The completion gate's rework arm is the correct
+    mechanism, so the findings are routed back to implement as scoped rework tasks with
+    their own tests.
+
+residual_critical_high: 14
+rework_required: true

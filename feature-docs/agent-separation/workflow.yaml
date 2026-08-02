@@ -33,11 +33,10 @@ workflow:
   status: completed
   completed_at_commit: 37e893c9bb3916e898ca37d8f71c5f1f2c28433a
 - id: implement
-  status: completed
+  status: pending
   base_commit: b6f3bc089d15dc7fa623a1c86af87256cc26eb9b
-  completed_at_commit: 8d0da2b5c39a7026b622600d9bc57d34a3386605
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -335,9 +334,216 @@ tasks:
     status: merged
     notes: 'retry #1 succeeded'
     branch: em-workflow/agent-separation/task0014
+  task0015:
+    title: フェーズプロトコルの dispatch 形式・分岐・検証コスト修正
+    plan: tasks/task0015.md
+    files:
+    - em-workflow/references/phases/create-spec-phase.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - tests/test_phase_protocols.py
+    skills: []
+    domains:
+    - api-contract
+    - external-io
+    - concurrency
+    complexity: high
+    requirements:
+    - FR19
+    - FR22
+    - FR31
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - as1
+      - as9
+      - as10
+      - as12
+      - as14
+      - as20
+  task0016:
+    title: 検証スクリプトの実効性修正
+    plan: tasks/task0016.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/fixtures/
+    - tests/test_validate_worker_output.py
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR9
+    - FR10
+    - FR11
+    - NFR4
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - as5
+      - as6
+      - as15
+      - as16
+      - as17
+      - as21
+      - as8
+  task0017:
+    title: batch ゲートの管轄整理と宙吊り参照の解消
+    plan: tasks/task0017.md
+    files:
+    - em-workflow/references/batch-policies.yaml
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/review-phase.md
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/.claude-plugin/plugin.json
+    - tests/test_batch_policies.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - api-contract
+    complexity: high
+    requirements:
+    - FR16
+    - FR24
+    - FR26
+    - FR27
+    - FR29
+    - NFR4
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - as3
+      - as4
+  task0018:
+    title: batch の fail-closed 順序と Codex 相談手順の実体化
+    plan: tasks/task0018.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - tests/test_question_resolution_doc.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR15
+    - NFR4
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - as8
+      - as4
+  task0019:
+    title: 契約とエージェント定義の欠落補完
+    plan: tasks/task0019.md
+    files:
+    - em-workflow/references/contracts/worker-envelope.md
+    - em-workflow/references/contracts/analyst-contract.md
+    - em-workflow/references/contracts/designer-contract.md
+    - em-workflow/references/question-packet-schema.md
+    - em-workflow/agents/requirements-analyst.md
+    - em-workflow/agents/implementation-planner.md
+    - tests/test_worker_contract_docs.py
+    - tests/test_worker_contracts_create_spec.py
+    - tests/test_worker_contracts_planning.py
+    - tests/test_new_worker_agents.py
+    - tests/test_refitted_worker_agents.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR8
+    - FR18
+    - FR20
+    - NFR1
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - as7
+      - as11
+      - as18
+      - as19
+  task0020:
+    title: 探索コスト規則の出荷と backfill キャッシュ
+    plan: tasks/task0020.md
+    files:
+    - em-workflow/references/phase-state.md
+    - tests/test_phase_state_doc.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR13
+    - FR32
+    - NFR9
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - as13
+      - as23
+  task0021:
+    title: 不変条件チェックの実効化
+    plan: tasks/task0021.md
+    files:
+    - em-workflow/scripts/check-plugin-invariants.py
+    - tests/test_check_plugin_invariants.py
+    - tests/test_reference_sweep.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - input-handling
+    complexity: medium
+    requirements:
+    - FR30
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - as2
+      - as22
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -347,9 +553,14 @@ review:
     - architecture
     discretionary: []
     codex_cross_validation: true
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+    comprehensive: completed
+    spec: completed
+    security: completed
+    performance: completed
+    architecture: completed
+  residual_critical_high: 14
+  needs_rework: true
 requirements:
   FR1:
     title: rework タスク合成の共通 SSOT (references/rework-task-synthesis.md) を新設し 4 経路から参照する
@@ -381,6 +592,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0019
     tests:
     - TS-1
   FR4:
@@ -390,6 +602,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0006
+    - task0019
     tests:
     - TS-4
   FR5:
@@ -426,6 +639,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0007
+    - task0019
     tests:
     - TS-25
   FR9:
@@ -435,6 +649,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0008
+    - task0016
     tests:
     - TS-1
     - TS-2
@@ -449,6 +664,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0008
+    - task0016
     tests:
     - TS-1
   FR11:
@@ -458,6 +674,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0008
+    - task0016
     tests:
     - TS-1
   FR12:
@@ -476,6 +693,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0003
+    - task0020
     tests:
     - TS-5
     - TS-28
@@ -495,6 +713,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0005
+    - task0018
     tests:
     - TS-13
   FR16:
@@ -504,6 +723,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0005
+    - task0017
     tests:
     - TS-9
     - TS-13
@@ -528,6 +748,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0010
+    - task0019
     tests:
     - TS-12
   FR19:
@@ -537,6 +758,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0011
+    - task0015
     tests:
     - TS-19
   FR20:
@@ -546,6 +768,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0009
+    - task0019
     tests:
     - TS-12
   FR21:
@@ -565,6 +788,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0011
+    - task0015
     tests:
     - TS-18
   FR23:
@@ -584,6 +808,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0005
+    - task0017
     tests:
     - TS-13
   FR25:
@@ -604,6 +829,7 @@ requirements:
     tasks:
     - task0004
     - task0013
+    - task0017
     tests:
     - TS-8
     - TS-10
@@ -614,6 +840,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0012
+    - task0017
     tests:
     - TS-12
     - TS-16
@@ -635,6 +862,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0013
+    - task0017
     tests:
     - TS-8
   FR30:
@@ -644,6 +872,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0014
+    - task0021
     tests:
     - TS-7
     - TS-8
@@ -657,6 +886,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0011
+    - task0015
     tests:
     - TS-23
     - TS-24
@@ -670,6 +900,7 @@ requirements:
     tasks:
     - task0003
     - task0012
+    - task0020
     tests:
     - TS-26
     - TS-27
@@ -681,6 +912,7 @@ requirements:
     tasks:
     - task0010
     - task0013
+    - task0019
     tests:
     - TS-12
   NFR2:
@@ -710,6 +942,9 @@ requirements:
     excluded_reason: null
     tasks:
     - task0005
+    - task0016
+    - task0017
+    - task0018
     tests:
     - TS-13
     - TS-22
@@ -732,6 +967,8 @@ requirements:
     tasks:
     - task0013
     - task0014
+    - task0019
+    - task0021
     tests:
     - TS-10
   NFR7:
@@ -752,6 +989,8 @@ requirements:
     tasks:
     - task0008
     - task0011
+    - task0015
+    - task0016
     tests:
     - TS-23
     - TS-29
@@ -763,5 +1002,6 @@ requirements:
     tasks:
     - task0003
     - task0011
+    - task0020
     tests:
     - TS-26
