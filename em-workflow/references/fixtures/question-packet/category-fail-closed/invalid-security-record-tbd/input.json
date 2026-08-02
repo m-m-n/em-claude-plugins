@@ -1,0 +1,38 @@
+{
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "iteration": 1,
+  "packet_id": "create-spec-q0001",
+  "phase": "create-spec",
+  "questions": [
+    {
+      "answer_mode": "single_select",
+      "blocking": true,
+      "category": "security",
+      "depends_on": [],
+      "evidence": [],
+      "gate_id": "create-spec.security-review",
+      "header": "Auth Scope",
+      "on_unanswered": "record_tbd",
+      "options": [
+        {
+          "option_id": "opt-mfa",
+          "label": "Require MFA"
+        },
+        {
+          "option_id": "opt-no-mfa",
+          "label": "Skip MFA"
+        }
+      ],
+      "priority": "critical",
+      "prompt": "Should MFA be required for this endpoint?",
+      "question_id": "security.mfa-required",
+      "supersedes": [],
+      "why_needed": "Determines the auth boundary."
+    }
+  ],
+  "schema_version": 1,
+  "worker": "requirements-analyst"
+}

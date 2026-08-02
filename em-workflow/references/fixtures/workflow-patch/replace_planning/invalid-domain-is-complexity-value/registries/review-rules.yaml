@@ -1,0 +1,9 @@
+# Minimal synthetic registry fixture for as15: the complexity line
+# immediately follows the domain list, with no blank line between them.
+#
+# domains vocabulary (fixed, 8 values — planner assigns from these only):
+#   auth / input-handling / data-persistence / external-io / concurrency /
+#   api-contract / ui / config-infra
+# complexity vocabulary: low / medium / high
+
+baseline: [comprehensive]
