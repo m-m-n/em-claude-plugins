@@ -170,9 +170,9 @@ tasks:
     - FR6
     - FR7
     - FR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/agent-separation/task0007
   task0008:
     title: worker 出力検証スクリプトと fixture とテスト
     plan: tasks/task0008.md
