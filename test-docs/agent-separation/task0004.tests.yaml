@@ -1,0 +1,47 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTExistsAndStructure.test_file_exists
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTExistsAndStructure.test_all_thirteen_sections_present_in_order
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTExistsAndStructure.test_names_four_applicable_routes
+    red_confirmed: true
+    red_reason: "AssertionError: expected file to exist (rework-task-synthesis.md did not exist yet; file was moved aside to confirm this before creating it)"
+  AC-2:
+    tests:
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_invariant_list_has_eleven_items
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_states_pending_task_precondition_invariant
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_states_base_commit_preservation_invariant
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_states_interactive_batch_parity_invariant
+    red_confirmed: true
+    red_reason: "setUpClass errored: rework-task-synthesis.md did not exist (file moved aside for the red check)"
+  AC-3:
+    tests:
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTCoverageRules.test_states_rework_index_structure
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTCoverageRules.test_forbids_rework_task_with_both_fields_empty
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTCoverageRules.test_states_four_machine_checkable_validation_rules
+    red_confirmed: true
+    red_reason: "setUpClass errored: rework-task-synthesis.md did not exist (file moved aside for the red check)"
+  AC-4:
+    tests:
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTStateTransition.test_states_review_sourced_ordering
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTStateTransition.test_states_verify_sourced_omits_needs_rework_step
+    red_confirmed: true
+    red_reason: "setUpClass errored: rework-task-synthesis.md did not exist (file moved aside for the red check)"
+  AC-5:
+    tests:
+      - tests.test_rework_synthesis_contract.TestImplementPhaseReworkPrecondition.test_states_pending_task_precondition
+      - tests.test_rework_synthesis_contract.TestImplementPhaseReworkPrecondition.test_references_rework_synthesis_ssot
+      - tests.test_rework_synthesis_contract.TestImplementPhaseReworkPrecondition.test_regression_precondition_stated_before_launch_selection
+      - tests.test_rework_synthesis_contract.TestImplementPhaseReworkPrecondition.test_completed_at_commit_wording_is_unchanged
+    red_confirmed: true
+    red_reason: "test_states_pending_task_precondition and test_references_rework_synthesis_ssot: AssertionError (precondition text absent before edit); test_regression_precondition_stated_before_launch_selection: ValueError substring not found (precondition text absent). test_completed_at_commit_wording_is_unchanged was already true before this task's edit (it asserts the existing Step I.3 sentence is preserved verbatim, not a new behavior) -- see notes."
+  AC-6:
+    tests:
+      - tests.test_rework_synthesis_contract.TestReviewPhaseReworkReferences.test_references_ssot_from_two_distinct_locations
+      - tests.test_rework_synthesis_contract.TestReviewPhaseReworkReferences.test_documents_needs_rework_update_ordering
+      - tests.test_rework_synthesis_contract.TestReviewPhaseReworkReferences.test_old_thin_batch_mode_reference_is_replaced
+    red_confirmed: true
+    red_reason: "test_references_ssot_from_two_distinct_locations and test_documents_needs_rework_update_ordering: AssertionError (exact new phrasing absent before edit). test_old_thin_batch_mode_reference_is_replaced: initially passed vacuously due to a line-wrap mismatch in the naive substring check; fixed to whitespace-normalize before asserting, re-confirmed red (AssertionError: old phrase found) against the pre-edit file, then green after the rewrite."
