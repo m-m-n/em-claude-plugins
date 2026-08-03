@@ -33,10 +33,11 @@ workflow:
   status: completed
   completed_at_commit: 37e893c9bb3916e898ca37d8f71c5f1f2c28433a
 - id: implement
-  status: in_progress
+  status: completed
   base_commit: b6f3bc089d15dc7fa623a1c86af87256cc26eb9b
+  completed_at_commit: 895b81e180b53b866a5b9bf982c62e9123b75c0d
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -717,7 +718,7 @@ tasks:
     requirements:
     - FR30
     - NFR6
-    status: in_progress
+    status: merged
     notes: 'held back: repository-level assertions become satisfiable only after siblings merge'
     branch: em-workflow/agent-separation/task0027
     provenance:
@@ -726,7 +727,7 @@ tasks:
       source_ids:
       - bs11
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 2
   plan:
     floor:
