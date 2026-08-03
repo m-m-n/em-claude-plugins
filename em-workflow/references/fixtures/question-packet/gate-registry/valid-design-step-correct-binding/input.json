@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "packet_id": "create-spec-q0003",
+  "phase": "create-spec",
+  "worker": "requirements-analyst",
+  "iteration": 1,
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "questions": [
+    {
+      "question_id": "design.step.recommendation",
+      "gate_id": "create-spec.design-step",
+      "category": "design-step",
+      "priority": "normal",
+      "blocking": false,
+      "prompt": "Should a design step run for this feature?",
+      "header": "design step",
+      "answer_mode": "single_select",
+      "options": [
+        {"option_id": "decide_autonomously", "label": "Decide autonomously"},
+        {"option_id": "ask_user", "label": "Ask the user"}
+      ],
+      "why_needed": "matches the registered worker, phase, category and option_id for this gate",
+      "on_unanswered": "record_tbd"
+    }
+  ]
+}

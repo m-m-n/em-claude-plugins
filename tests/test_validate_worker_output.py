@@ -1000,6 +1000,13 @@ class TestTaskPlanFilesBulletBacktickEdgeCases(unittest.TestCase):
 # helper's branch.
 # ---------------------------------------------------------------------------
 
+def _write_verification_md(dir_path, scenario_ids):
+    dir_path.mkdir(parents=True, exist_ok=True)
+    lines = ["### Test Scenarios from SPEC.md", ""]
+    lines.extend(f"- {tid}: something" for tid in scenario_ids)
+    (dir_path / "VERIFICATION.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 class TestReworkIndexNewScenariosRequireTestsAppend(unittest.TestCase):
     # Both cases now declare task0007 in tasks_patch.entries too: as5's
     # coverage fix (TestReworkIndexTaskCoverageDirect below) rejects a
@@ -1012,17 +1019,97 @@ class TestReworkIndexNewScenariosRequireTestsAppend(unittest.TestCase):
             "tasks_patch": {"entries": {"task0007": {}}},
             "requirements_patch": {"mode": "merge_entries", "entries": {"FR1": {"expected": {}, "set": {"tests_append": []}}}},
         }
+        # bs10 (round 2): this case now ALSO carries the "no --baseline-dir"
+        # error (feature_dir/baseline_dir are both None), but assertIn only
+        # requires "tests_append" to appear SOMEWHERE in the combined
+        # messages, so the additional error does not affect this assertion.
         errors = VWO._validate_rework_index(rework_index, workflow_patch, envelope=None, feature_dir=None, baseline_dir=None)
         messages = " ".join(e["message"] for e in errors)
         self.assertIn("tests_append", messages)
 
     def test_new_scenario_present_in_tests_append_is_accepted(self):
+        # bs10 (round 2): a real feature_dir/baseline_dir pair is now
+        # required to isolate the tests_append cross-check this test exists
+        # for -- without one, the baseline-requirement rule (see
+        # TestReworkIndexRequiresBaselineForNewScenarios below) would itself
+        # reject this case, which is not what this test is about.
         rework_index = {"task0007": {"covered_by_existing": [], "new_scenarios": ["TS-9"], "rationale": "new case"}}
         workflow_patch = {
             "tasks_patch": {"entries": {"task0007": {}}},
             "requirements_patch": {"mode": "merge_entries", "entries": {"FR1": {"expected": {}, "set": {"tests_append": ["TS-9"]}}}},
         }
-        errors = VWO._validate_rework_index(rework_index, workflow_patch, envelope=None, feature_dir=None, baseline_dir=None)
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature_dir = tmp_path / "feature-dir"
+            baseline_dir = tmp_path / "baseline-dir"
+            _write_verification_md(feature_dir, ["TS-9"])
+            _write_verification_md(baseline_dir, [])
+            errors = VWO._validate_rework_index(
+                rework_index, workflow_patch, envelope=None, feature_dir=feature_dir, baseline_dir=baseline_dir
+            )
+        self.assertEqual(errors, [])
+
+
+# ---------------------------------------------------------------------------
+# bs10 (round 2, validator half) / AC-5: declaring new_scenarios without a
+# --baseline-dir must be an error, not a silent degradation to "the
+# identifier exists in the current document" (which the rework-planner
+# itself wrote, so it proves nothing).
+# ---------------------------------------------------------------------------
+
+class TestReworkIndexRequiresBaselineForNewScenarios(unittest.TestCase):
+    def _rework_index_and_patch(self):
+        rework_index = {"task0007": {"covered_by_existing": [], "new_scenarios": ["TS-9"], "rationale": "new case"}}
+        workflow_patch = {
+            "tasks_patch": {"entries": {"task0007": {}}},
+            "requirements_patch": {"mode": "merge_entries", "entries": {"FR1": {"expected": {}, "set": {"tests_append": ["TS-9"]}}}},
+        }
+        return rework_index, workflow_patch
+
+    def test_new_scenarios_without_baseline_dir_is_rejected_even_with_feature_dir(self):
+        rework_index, workflow_patch = self._rework_index_and_patch()
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature_dir = tmp_path / "feature-dir"
+            _write_verification_md(feature_dir, ["TS-9"])
+            errors = VWO._validate_rework_index(
+                rework_index, workflow_patch, envelope=None, feature_dir=feature_dir, baseline_dir=None
+            )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("baseline", messages.lower())
+
+    def test_new_scenarios_without_baseline_dir_is_rejected_with_no_feature_dir_either(self):
+        rework_index, workflow_patch = self._rework_index_and_patch()
+        errors = VWO._validate_rework_index(
+            rework_index, workflow_patch, envelope=None, feature_dir=None, baseline_dir=None
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("baseline", messages.lower())
+
+    def test_new_scenarios_with_baseline_dir_is_not_rejected_for_baseline_reasons(self):
+        rework_index, workflow_patch = self._rework_index_and_patch()
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature_dir = tmp_path / "feature-dir"
+            baseline_dir = tmp_path / "baseline-dir"
+            _write_verification_md(feature_dir, ["TS-9"])
+            _write_verification_md(baseline_dir, [])
+            errors = VWO._validate_rework_index(
+                rework_index, workflow_patch, envelope=None, feature_dir=feature_dir, baseline_dir=baseline_dir
+            )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("baseline", messages.lower())
+
+    def test_covered_by_existing_only_needs_no_baseline_dir(self):
+        # A task that only claims covered_by_existing (no new_scenarios) has
+        # nothing to verify against a baseline diff, so this rule must not
+        # fire for it.
+        rework_index = {"task0007": {"covered_by_existing": ["TS-3"], "new_scenarios": [], "rationale": "x"}}
+        workflow_patch = {"tasks_patch": {"entries": {"task0007": {}}}}
+        envelope = {"verification_index": {"TS-3": ["FR1"]}}
+        errors = VWO._validate_rework_index(
+            rework_index, workflow_patch, envelope=envelope, feature_dir=None, baseline_dir=None
+        )
         self.assertEqual(errors, [])
 
 
@@ -1085,6 +1172,342 @@ class TestReworkIndexCoverage(unittest.TestCase):
     def test_valid_completed_with_full_coverage_and_rationale_passes(self):
         result = self._run("valid-completed")
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_new_scenarios_without_baseline_dir_is_rejected_via_cli(self):
+        result = self._run("invalid-new-scenarios-without-baseline")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("baseline", result.stdout.lower())
+
+
+# ---------------------------------------------------------------------------
+# bs2 (round 2, security/comprehensive) / AC-1, AC-2: gate registry binding.
+# gate_id was previously checked for non-emptiness only, so any listed gate
+# could be attached to any worker/phase/category/option combination. Both
+# measured spoofs from feature-docs/agent-separation/reviews/round2.yaml are
+# reproduced here (via fixtures run through the real CLI) and must now be
+# rejected; a correctly-bound packet must still pass.
+# ---------------------------------------------------------------------------
+
+class TestGateRegistryBinding(unittest.TestCase):
+    def _run(self, case_name):
+        case_dir = FIXTURES_ROOT / "question-packet" / "gate-registry" / case_name
+        return run_cli(build_case_args("question-packet", "gate-registry", case_dir))
+
+    def test_worker_phase_and_category_spoof_is_rejected(self):
+        # bs2 reproduction 1: "a rework-planner packet with phase rework,
+        # category security and gate_id create-spec.design-step" -- measured
+        # to exit 0 before this fix.
+        result = self._run("invalid-worker-phase-category-spoof")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("registered to worker", messages)
+        self.assertIn("registered to phase", messages)
+        self.assertIn("requires category", messages)
+
+    def test_category_laundered_through_unrelated_gate_is_rejected(self):
+        # bs2 reproduction 2: "category spec-change and gate_id
+        # create-plan.tbd-resolution" -- measured to exit 0 before this fix.
+        result = self._run("invalid-category-mismatch-tbd-resolution")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("requires category 'tbd-resolution'", messages)
+
+    def test_correctly_bound_gate_passes(self):
+        result = self._run("valid-design-step-correct-binding")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+
+class TestGateRegistryDerivation(unittest.TestCase):
+    """Direct unit tests of the derivation helpers, against the plugin's own
+    real references/ directory (same precedent as
+    TestDomainsVocabularyParse's real-file test above) -- these are the
+    plugin's committed reference documents, not test/case-specific fixtures,
+    so reading them directly is not a hermeticity violation."""
+
+    REFERENCES_DIR = REPO_ROOT / "em-workflow" / "references"
+
+    def test_category_derived_from_gate_id_suffix(self):
+        self.assertEqual(VWO._category_for_gate_id("create-spec.design-step"), "design-step")
+        self.assertEqual(VWO._category_for_gate_id("create-plan.tbd-resolution"), "tbd-resolution")
+        # "requirement-clarification" is not a CATEGORY_VALUES member, so no
+        # category is derived (the analyst contract states this gate covers
+        # many categories, not one).
+        self.assertIsNone(VWO._category_for_gate_id("create-spec.requirement-clarification"))
+        self.assertIsNone(VWO._category_for_gate_id("not-a-gate-id"))
+
+    def test_phase_derived_from_gate_id_prefix(self):
+        self.assertEqual(VWO._phase_for_gate_id("create-spec.design-step"), "create-spec")
+        self.assertEqual(VWO._phase_for_gate_id("create-plan.tbd-resolution"), "create-plan")
+        # "design-system" is not a PHASE_VALUES member.
+        self.assertIsNone(VWO._phase_for_gate_id("design-system.reclassify"))
+
+    def test_analyst_contract_gates_are_worker_and_phase_attributed(self):
+        registry = VWO.build_gate_registry(self.REFERENCES_DIR)
+        entry = registry.get("create-spec.design-step")
+        self.assertIsNotNone(entry, "expected create-spec.design-step in the derived registry")
+        self.assertEqual(entry["worker"], "requirements-analyst")
+        self.assertEqual(entry["phase"], "create-spec")
+        self.assertEqual(entry["category"], "design-step")
+        self.assertEqual(entry["required_option_id"], "decide_autonomously")
+
+    def test_gate_with_no_contract_table_attribution_is_worker_unconstrained(self):
+        # create-plan.tbd-resolution is listed in batch-policies.yaml but no
+        # contract attributes it to a specific worker via a "## Gate
+        # identifiers" table, so worker/phase/option stay unconstrained --
+        # only its suffix-derived category is bound. This is also what
+        # keeps the existing fixture corpus (which reuses this gate_id
+        # across several different workers as a generic placeholder) green.
+        registry = VWO.build_gate_registry(self.REFERENCES_DIR)
+        entry = registry.get("create-plan.tbd-resolution")
+        self.assertIsNotNone(entry)
+        self.assertIsNone(entry["worker"])
+        self.assertIsNone(entry["phase"])
+        self.assertIsNone(entry["required_option_id"])
+        self.assertEqual(entry["category"], "tbd-resolution")
+
+    def test_missing_references_dir_yields_empty_registry(self):
+        self.assertEqual(VWO.build_gate_registry(None), {})
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(VWO.build_gate_registry(Path(tmp) / "does-not-exist"), {})
+
+
+# ---------------------------------------------------------------------------
+# bs9 (round 2, comprehensive) / AC-3: every element of the patch entries,
+# step patches, preserve list, worker runs, patches, packets, answers and
+# resolved_input_cache must produce a machine-readable error for a malformed
+# element, never a traceback. The two reproductions the round record names
+# are covered end-to-end via fixtures (TestFixtureCorpusDataDriven already
+# runs them); the remaining structures this finding also names are covered
+# directly here against the pure validation functions.
+# ---------------------------------------------------------------------------
+
+class TestMalformedElementsProduceMachineReadableErrors(unittest.TestCase):
+    def test_task_patch_entry_as_string_is_rejected_not_a_crash(self):
+        # bs9 reproduction 1 (fixture-driven end-to-end coverage also exists
+        # at workflow-patch/replace_planning/invalid-task-entry-not-a-mapping).
+        patch = {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "replace_planning",
+            "tasks_patch": {"mode": "replace_all", "entries": {"task0001": "not-a-mapping"}},
+            "requirements_patch": None,
+            "step_patches": [],
+            "preserve": [],
+        }
+        errors = VWO.validate_workflow_patch(patch)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("must be a mapping", messages)
+
+    def test_worker_run_as_string_is_rejected_not_a_crash(self):
+        # bs9 reproduction 2 (fixture-driven end-to-end coverage also exists
+        # at phase-state/completed/invalid-worker-run-not-a-mapping).
+        data = dict(
+            schema_version=1, feature="example", phase="create-plan", status="completed",
+            generation=1, worker_runs=["not-a-mapping"], patches=[], packets={}, answers={},
+            resolved_input_cache={},
+        )
+        errors = VWO.validate_phase_state(data)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("must be a mapping", messages)
+
+    def test_step_patches_entry_as_string_is_rejected_not_a_crash(self):
+        patch = {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "replace_planning",
+            "tasks_patch": {"mode": "replace_all", "entries": {}},
+            "requirements_patch": None,
+            "step_patches": ["not-a-mapping"],
+            "preserve": [],
+        }
+        errors = VWO.validate_workflow_patch(patch)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("step_patches[0] must be a mapping", messages)
+
+    def test_preserve_entry_as_dict_is_rejected_not_a_crash(self):
+        patch = {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "replace_planning",
+            "tasks_patch": {"mode": "replace_all", "entries": {}},
+            "requirements_patch": None,
+            "step_patches": [],
+            "preserve": [{"not": "a string"}],
+        }
+        errors = VWO.validate_workflow_patch(patch)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("preserve entry", messages)
+        self.assertIn("must be a string", messages)
+
+    def test_phase_state_patches_entry_as_string_is_rejected_not_a_crash(self):
+        data = dict(
+            schema_version=1, feature="example", phase="create-plan", status="completed",
+            generation=1, worker_runs=[], patches=["not-a-mapping"], packets={}, answers={},
+            resolved_input_cache={},
+        )
+        errors = VWO.validate_phase_state(data)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("patches[0] must be a mapping", messages)
+
+    def test_phase_state_packet_value_as_string_is_rejected_not_a_crash(self):
+        data = dict(
+            schema_version=1, feature="example", phase="create-plan", status="completed",
+            generation=1, worker_runs=[], patches=[], packets={"create-plan-q0001": "not-a-mapping"},
+            answers={}, resolved_input_cache={},
+        )
+        errors = VWO.validate_phase_state(data)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("packets[create-plan-q0001] must be a mapping", messages)
+
+    def test_phase_state_answer_value_as_string_is_rejected_not_a_crash(self):
+        # bs9: "the answers list already has a guard that the equivalent
+        # phase-state loop lacks" -- this is the phase-state loop.
+        data = dict(
+            schema_version=1, feature="example", phase="create-plan", status="completed",
+            generation=1, worker_runs=[], patches=[], packets={},
+            answers={"requirement.fr4.tbd-resolution": "not-a-mapping"}, resolved_input_cache={},
+        )
+        errors = VWO.validate_phase_state(data)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("answers[requirement.fr4.tbd-resolution] must be a mapping", messages)
+
+    def test_resolved_input_cache_entry_as_string_is_rejected_not_a_crash(self):
+        data = dict(
+            schema_version=1, feature="example", phase="create-plan", status="completed",
+            generation=1, worker_runs=[], patches=[], packets={}, answers={},
+            resolved_input_cache={"design_system_candidates": "not-a-mapping"},
+        )
+        errors = VWO.validate_phase_state(data)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("resolved_input_cache[design_system_candidates] must be a mapping", messages)
+
+
+# ---------------------------------------------------------------------------
+# bs9 / AC-4: an unexpected exception (one the structural guards above do
+# not specifically name) must exit 2 with a message on stderr, never exit 1
+# with an empty stdout.
+# ---------------------------------------------------------------------------
+
+class TestUnexpectedExceptionExitsTwoWithMessage(unittest.TestCase):
+    def test_non_mapping_workflow_during_dry_run_apply_exits_2_not_1_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            patch = {
+                "schema_version": 1,
+                "patch_id": "create-plan-p0001",
+                "base_input_digest": "sha256:" + "a" * 64,
+                "base_workflow_blob": "8f17c04",
+                "operation": "replace_planning",
+                "tasks_patch": {"mode": "replace_all", "entries": {}},
+                "requirements_patch": None,
+                "step_patches": [],
+                "preserve": [],
+            }
+            input_path = tmp_path / "input.json"
+            workflow_path = tmp_path / "workflow.json"
+            digest_source_path = tmp_path / "digest-source.json"
+            input_path.write_text(json.dumps(patch), encoding="utf-8")
+            # A non-mapping workflow.yaml (a bare list) reaches
+            # `workflow.get(...)` deep inside the dry-run-apply machinery,
+            # which is not one of the structures bs9 explicitly names --
+            # this demonstrates the exit-2 safety net catches genuinely
+            # unanticipated shapes too, not just the enumerated ones.
+            workflow_path.write_text(json.dumps([1, 2, 3]), encoding="utf-8")
+            digest_source_path.write_text(json.dumps({"workflow_blob": "8f17c04"}), encoding="utf-8")
+
+            result = run_cli(
+                [
+                    "--kind", "workflow-patch",
+                    "--worker", "implementation-planner",
+                    "--input", str(input_path),
+                    "--workflow", str(workflow_path),
+                    "--digest-source", str(digest_source_path),
+                    "--dry-run-apply",
+                ]
+            )
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertTrue(result.stderr.strip(), "expected a message on stderr")
+
+
+# ---------------------------------------------------------------------------
+# bs1 (round 2, comprehensive) / AC-6: the envelope's status table forbids
+# `artifacts`, a `patch` and `blocking_reason` on `needs_user_input` -- it
+# does NOT forbid `payload`, and the analyst contract requires
+# `needs_user_input` to carry `payload.analysis_snapshot`. The payload
+# prohibition added last round wrongly extended to this one status; it must
+# still hold for the other four non-completed statuses.
+# ---------------------------------------------------------------------------
+
+class TestNeedsUserInputPayloadExemption(unittest.TestCase):
+    def _base(self, status, payload):
+        return dict(
+            schema_version=1,
+            worker="requirements-analyst",
+            request_id="run-0001",
+            input_revision={"input_digest": "sha256:" + "a" * 64},
+            question_packet={
+                "schema_version": 1,
+                "packet_id": "create-spec-q0001",
+                "phase": "create-spec",
+                "worker": "requirements-analyst",
+                "iteration": 1,
+                "input_revision": {"input_digest": "sha256:" + "a" * 64},
+                "questions": [
+                    {
+                        "question_id": "q.x",
+                        "gate_id": "create-spec.requirement-clarification",
+                        "category": "other",
+                        "priority": "high",
+                        "blocking": True,
+                        "prompt": "p",
+                        "header": "h",
+                        "answer_mode": "freeform",
+                        "options": [],
+                        "why_needed": "w",
+                        "on_unanswered": "record_tbd",
+                    }
+                ],
+            },
+            workflow_patch=None,
+            mode_echo="full",
+            written_artifacts=[],
+            status=status,
+            blocking_reason=None,
+            payload=payload,
+        )
+
+    def test_needs_user_input_with_non_empty_payload_is_no_longer_rejected_for_payload(self):
+        data = self._base("needs_user_input", {"analysis_snapshot": {"feature_name_candidate": "x"}})
+        errors = VWO.validate_worker_result(data, "requirements-analyst")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("forbids a non-empty payload", messages)
+
+    def test_other_non_completed_statuses_still_forbid_payload(self):
+        for status in ("blocked", "invalid_input", "stale_input", "failed"):
+            with self.subTest(status=status):
+                data = self._base(status, {"analysis_snapshot": {}})
+                data["question_packet"] = None
+                data["blocking_reason"] = "x"
+                errors = VWO.validate_worker_result(data, "requirements-analyst")
+                messages = " ".join(e["message"] for e in errors)
+                self.assertIn("forbids a non-empty payload", messages)
+
+    def test_fixture_analyst_needs_user_input_with_analysis_snapshot_passes(self):
+        case_dir = (
+            FIXTURES_ROOT / "worker-result" / "requirements-analyst-full"
+            / "valid-needs-user-input-with-analysis-snapshot"
+        )
+        result = run_cli(build_case_args("worker-result", "requirements-analyst-full", case_dir))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
