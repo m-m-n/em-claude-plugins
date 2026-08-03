@@ -40,11 +40,15 @@ workflow:
   status: completed
   completed_at_commit: 43b91e9e9f347ff01e7cad49e63fd039b4c67148
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  completed_at_commit: 633f9d6852b9d5b84dbd908f1b5b0fc49b42878b
+  notes: 'Automatable scope (TS-1..TS-11): 865/865 tests pass; check-plugin-invariants.py exits 0 on all 7 checks. Manual scope (TS-12..TS-30): not exercised — the plugin''s target of this feature is the
+    plugin itself, and design-input.md 10.1 states that until this whole change lands the plugin does not operate. Manual verification is deferred to a human evaluator using a throwaway repository per VERIFICATION.md
+    ''Manual Testing'' section.'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: worker 共通エンベロープと question packet / answer 契約
