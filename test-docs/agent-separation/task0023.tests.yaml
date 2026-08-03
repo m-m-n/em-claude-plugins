@@ -1,0 +1,152 @@
+task_id: task0023
+baseline_failures: []          # 761 tests, all passing, before any change (step 4a)
+final_failures: []             # 786 tests, all passing, after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - TestGateRegistryBinding.test_worker_phase_and_category_spoof_is_rejected
+      - TestGateRegistryBinding.test_category_laundered_through_unrelated_gate_is_rejected
+      - TestGateRegistryBinding.test_correctly_bound_gate_passes
+    red_confirmed: true
+    red_reason: >-
+      Both spoof reproductions from feature-docs/agent-separation/reviews/
+      round2.yaml (finding bs2) were run directly against the pre-fix CLI and
+      measured to exit 0: a rework-planner packet with phase rework, category
+      security, gate_id create-spec.design-step; and a packet with category
+      spec-change, gate_id create-plan.tbd-resolution. The pre-fix
+      validate_question() signature was (q, index) with no gate_registry
+      parameter at all (confirmed via inspect.signature against git HEAD's
+      copy of the script) -- gate_id was checked for non-emptiness only.
+  AC-2:
+    tests:
+      - TestGateRegistryDerivation.test_category_derived_from_gate_id_suffix
+      - TestGateRegistryDerivation.test_phase_derived_from_gate_id_prefix
+      - TestGateRegistryDerivation.test_analyst_contract_gates_are_worker_and_phase_attributed
+      - TestGateRegistryDerivation.test_gate_with_no_contract_table_attribution_is_worker_unconstrained
+      - TestGateRegistryDerivation.test_missing_references_dir_yields_empty_registry
+    red_confirmed: true
+    red_reason: >-
+      build_gate_registry, _category_for_gate_id and _phase_for_gate_id did
+      not exist in the pre-fix module (hasattr(vwo, "build_gate_registry")
+      returned False against git HEAD's copy of the script).
+  AC-3:
+    tests:
+      - TestMalformedElementsProduceMachineReadableErrors.test_task_patch_entry_as_string_is_rejected_not_a_crash
+      - TestMalformedElementsProduceMachineReadableErrors.test_worker_run_as_string_is_rejected_not_a_crash
+      - TestMalformedElementsProduceMachineReadableErrors.test_step_patches_entry_as_string_is_rejected_not_a_crash
+      - TestMalformedElementsProduceMachineReadableErrors.test_preserve_entry_as_dict_is_rejected_not_a_crash
+      - TestMalformedElementsProduceMachineReadableErrors.test_phase_state_patches_entry_as_string_is_rejected_not_a_crash
+      - TestMalformedElementsProduceMachineReadableErrors.test_phase_state_packet_value_as_string_is_rejected_not_a_crash
+      - TestMalformedElementsProduceMachineReadableErrors.test_phase_state_answer_value_as_string_is_rejected_not_a_crash
+      - TestMalformedElementsProduceMachineReadableErrors.test_resolved_input_cache_entry_as_string_is_rejected_not_a_crash
+    red_confirmed: true
+    red_reason: >-
+      Every one of the 6 malformed-element shapes named in finding bs9
+      (task patch entry, step_patches entry, preserve entry, phase-state
+      worker_runs entry, patches entry, packets value, answers value,
+      resolved_input_cache entry) was run directly against git HEAD's copy of
+      the module (loaded via importlib, not touched by this task's edits) and
+      crashed: AttributeError "'str' object has no attribute 'get'" for the
+      task-patch-entry, worker_runs, step_patches, phase-state patches,
+      packets-value and answers-value cases; TypeError "cannot use 'dict' as
+      a set element (unhashable type: 'dict')" for the preserve-entry case
+      (via set(preserve) in the missing_preserve computation). The two exact
+      round-record reproductions (task-patch-entry-as-string,
+      worker-run-as-string) additionally exit 1 with an unhandled Python
+      traceback on stderr and empty stdout when run as a CLI subprocess
+      against the reverted script -- confirmed directly, matching bs9's "exit
+      1 with empty output" description; these two are also covered
+      end-to-end via the new
+      workflow-patch/replace_planning/invalid-task-entry-not-a-mapping and
+      phase-state/completed/invalid-worker-run-not-a-mapping fixtures, picked
+      up automatically by TestFixtureCorpusDataDriven.
+  AC-4:
+    tests:
+      - TestUnexpectedExceptionExitsTwoWithMessage.test_non_mapping_workflow_during_dry_run_apply_exits_2_not_1_empty
+    red_confirmed: true
+    red_reason: >-
+      Ran the exact CLI invocation (a non-mapping `--workflow` file, a bare
+      JSON list, under --dry-run-apply) against git HEAD's copy of the
+      script before the try/except wrapper existed: it crashed with an
+      unhandled AttributeError traceback on stderr, exit code 1 (Python's
+      default for an uncaught exception) -- not exit 2 with a clean stderr
+      message and empty stdout. This exercises a genuinely unanticipated
+      shape (workflow.get() deep inside _validate_dry_run_apply) beyond the
+      structures bs9 explicitly names, demonstrating the safety net catches
+      more than just the enumerated cases.
+  AC-5:
+    tests:
+      - TestReworkIndexRequiresBaselineForNewScenarios.test_new_scenarios_without_baseline_dir_is_rejected_even_with_feature_dir
+      - TestReworkIndexRequiresBaselineForNewScenarios.test_new_scenarios_without_baseline_dir_is_rejected_with_no_feature_dir_either
+      - TestReworkIndexRequiresBaselineForNewScenarios.test_new_scenarios_with_baseline_dir_is_not_rejected_for_baseline_reasons
+      - TestReworkIndexRequiresBaselineForNewScenarios.test_covered_by_existing_only_needs_no_baseline_dir
+      - TestReworkIndexCoverage.test_new_scenarios_without_baseline_dir_is_rejected_via_cli
+      - TestReworkIndexNewScenariosRequireTestsAppend.test_new_scenario_present_in_tests_append_is_accepted
+    red_confirmed: true
+    red_reason: >-
+      Calling the pre-fix _validate_rework_index directly (git HEAD's copy)
+      with new_scenarios=["TS-9"] declared and baseline_dir=None returned an
+      empty error list -- the claim was silently accepted, exactly bs10's
+      "degrades to existence in the current document" description. The
+      pre-existing test_new_scenario_present_in_tests_append_is_accepted
+      asserted errors == [] with baseline_dir=None as its premise; per the
+      task plan's explicit behaviour change (AC-5) this premise no longer
+      holds, so it was rewritten to supply a real feature_dir/baseline_dir
+      pair instead of loosening the new rule -- confirmed the ORIGINAL
+      (unmodified) version of this test now fails against the fixed script
+      with the new "no --baseline-dir was supplied" error, and passes again
+      once given a real baseline_dir.
+  AC-6:
+    tests:
+      - TestNeedsUserInputPayloadExemption.test_needs_user_input_with_non_empty_payload_is_no_longer_rejected_for_payload
+      - TestNeedsUserInputPayloadExemption.test_other_non_completed_statuses_still_forbid_payload
+      - TestNeedsUserInputPayloadExemption.test_fixture_analyst_needs_user_input_with_analysis_snapshot_passes
+    red_confirmed: true
+    red_reason: >-
+      Reproduced finding bs1 directly: calling validate_worker_result with
+      status "needs_user_input" and a non-empty
+      payload.analysis_snapshot against the pre-fix module returned
+      {"code": "payload", "message": "status 'needs_user_input' forbids a
+      non-empty payload"} -- exactly the contradiction bs1 describes between
+      the validator and the analyst contract. The new
+      worker-result/requirements-analyst-full/
+      valid-needs-user-input-with-analysis-snapshot fixture exits 1 against
+      the reverted script for the same reason (confirmed via direct CLI
+      invocation) and exits 0 after the fix; test_other_non_completed_statuses
+      confirms the prohibition still holds for blocked / invalid_input /
+      stale_input / failed (unchanged from before).
+  AC-7:
+    tests:
+      - TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - TestFixtureCoverageValidAndInvalidPerBranch.test_every_group_has_a_valid_and_an_invalid_case
+    red_confirmed: true
+    red_reason: >-
+      This AC's red axis is fixture existence, not validator logic: before
+      this task, none of the seven new fixture case directories existed
+      (question-packet/gate-registry/{valid-design-step-correct-binding,
+      invalid-worker-phase-category-spoof,
+      invalid-category-mismatch-tbd-resolution},
+      workflow-patch/replace_planning/invalid-task-entry-not-a-mapping,
+      phase-state/completed/invalid-worker-run-not-a-mapping,
+      worker-result/rework-planner/invalid-new-scenarios-without-baseline,
+      worker-result/requirements-analyst-full/
+      valid-needs-user-input-with-analysis-snapshot), so the data-driven
+      runner and the per-group valid/invalid coverage check had nothing to
+      exercise for any of these fixes. Each new fixture was individually run
+      through the real CLI (subprocess) and confirmed to resolve to its
+      declared exit code (0 for valid-*, 1 for invalid-*) before being wired
+      into the generic discovery-based tests, which now pick all of them up
+      automatically.
+notes: >-
+  Registry design deliberately scopes worker/phase/option_id binding to
+  gate_ids a contract's own "## Gate identifiers" table attributes to a
+  worker (currently only analyst-contract.md's two entries) -- most other
+  batch-policies.yaml gates are raised by the orchestrator, not a worker's
+  own question_packet, and the existing fixture corpus reuses
+  create-plan.tbd-resolution as a generic placeholder across several
+  different workers/phases/option vocabularies unrelated to its real policy.
+  Binding worker/phase/option universally by gate_id prefix/policy alone
+  would have broken roughly a dozen pre-existing valid-* fixtures (verified
+  by inspection before implementing); category binding (suffix-derived
+  against CATEGORY_VALUES) is the one dimension already consistent across
+  the whole corpus and catches both round-2 reproductions on its own.
