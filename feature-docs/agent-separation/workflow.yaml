@@ -37,9 +37,10 @@ workflow:
   base_commit: b6f3bc089d15dc7fa623a1c86af87256cc26eb9b
   completed_at_commit: 895b81e180b53b866a5b9bf982c62e9123b75c0d
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 43b91e9e9f347ff01e7cad49e63fd039b4c67148
 - id: verify
-  status: pending
+  status: in_progress
   result: null
   failed_items: []
 - id: retrospect
@@ -727,8 +728,8 @@ tasks:
       source_ids:
       - bs11
 review:
-  status: in_progress
-  rounds_completed: 2
+  status: completed
+  rounds_completed: 3
   plan:
     floor:
     - comprehensive
@@ -744,8 +745,9 @@ review:
     security: completed
     performance: completed
     architecture: completed
-  residual_critical_high: 6
-  needs_rework: true
+  residual_critical_high: 4
+  needs_rework: false
+  completed_at_commit: 43b91e9e9f347ff01e7cad49e63fd039b4c67148
 requirements:
   FR1:
     title: rework タスク合成の共通 SSOT (references/rework-task-synthesis.md) を新設し 4 経路から参照する
