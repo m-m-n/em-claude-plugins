@@ -363,22 +363,24 @@ def find_gate_scan_files(root):
     return paths
 
 
-def _iter_plugin_files(root, exclude_path=None):
+def _iter_plugin_files(root, exclude_paths=frozenset()):
     """Every file under the plugin directory (em-workflow/), skipping the
-    usual noise directories, and never yielding `exclude_path`. Used by
-    check_gate_id_coverage's vocabulary scan (task0021 AC-6): wider than
-    find_gate_scan_files()'s phase-protocol-only scope, because a real gate
-    ID can legitimately be declared in a contract, an agent prompt, or
-    references/batch-mode.md -- none of which that narrower scope visits."""
+    usual noise directories, and never yielding a path in `exclude_paths`
+    (paths relative to `root`, matching iter_repo_files's exclude_paths
+    convention). Used by check_gate_id_coverage's vocabulary scan (task0021
+    AC-6): wider than find_gate_scan_files()'s phase-protocol-only scope,
+    because a real gate ID can legitimately be declared in a contract, an
+    agent prompt, or references/batch-mode.md -- none of which that
+    narrower scope visits."""
     plugin_dir = os.path.join(root, "em-workflow")
     if not os.path.isdir(plugin_dir):
         return
-    exclude_norm = os.path.normpath(exclude_path) if exclude_path else None
     for dirpath, dirnames, filenames in os.walk(plugin_dir):
         dirnames[:] = [d for d in dirnames if d not in EXCLUDED_DIR_NAMES]
         for filename in filenames:
             path = os.path.join(dirpath, filename)
-            if exclude_norm is not None and os.path.normpath(path) == exclude_norm:
+            rel = os.path.relpath(path, root)
+            if rel in exclude_paths:
                 continue
             yield path
 
@@ -416,15 +418,23 @@ def check_gate_id_coverage(root):
     # Direction 1 (AC-6): a policy id counts as referenced wherever its
     # exact string occurs anywhere under the plugin directory, except
     # inside the policy file itself -- being a key in its own policy is not
-    # a reference to itself. This replaces the "gate ID" / "gate_id"
+    # a reference to itself -- and except inside this checker's own source
+    # (SELF_EXCLUDED_RELATIVE_PATHS, the same self-exclusion set
+    # check_stale_references already maintains, reviews/round2.yaml finding
+    # bs11): this script's own comments name gate IDs as examples
+    # (`create-spec.design-system`, `design-system.reclassify`), and without
+    # this exclusion those two would be reported as referenced even if every
+    # other document dropped them. This replaces the "gate ID" / "gate_id"
     # proximity heuristic below for known vocabulary, since that heuristic
     # is exactly what missed six real, unproximate mentions (analyst
     # contract and prompt, batch-mode table, planner prompt, and a
     # create-spec-phase.md table row with no "gate ID" phrase nearby).
     referenced_vocab_ids = set()
     if policy_ids:
+        policy_rel = os.path.relpath(policy_path, root)
+        exclude_paths = SELF_EXCLUDED_RELATIVE_PATHS | {policy_rel}
         plugin_texts = []
-        for path in _iter_plugin_files(root, exclude_path=policy_path):
+        for path in _iter_plugin_files(root, exclude_paths=exclude_paths):
             text = read_text(path)
             if text is not None:
                 plugin_texts.append(text)
