@@ -48,7 +48,7 @@ workflow:
     plugin itself, and design-input.md 10.1 states that until this whole change lands the plugin does not operate. Manual verification is deferred to a human evaluator using a throwaway repository per VERIFICATION.md
     ''Manual Testing'' section.'
 - id: retrospect
-  status: in_progress
+  status: completed
 tasks:
   task0001:
     title: worker 共通エンベロープと question packet / answer 契約

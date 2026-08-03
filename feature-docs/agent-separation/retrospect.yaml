@@ -1,0 +1,237 @@
+feature: agent-separation
+collected_at: '2026-08-03T06:35:00+09:00'
+session_ids:
+- 43a147aa-0489-4b6e-ab8b-4bd0eb448167
+- 79427ba5-d0ae-460a-9ebe-ac67fcb76155
+- 338bbafd-4c4d-4109-b186-ab69043af2ed
+signals:
+  review_critical_high:
+  - stable_id: as1-dispatch-trio
+    category: spec
+    file: em-workflow/references/phases/create-spec-phase.md
+    title: requirements-analyst / spec-writer / implementation-planner are never Task-dispa
+    resolution: unresolved
+    round: 1
+  - stable_id: as2-invariants-never-run
+    category: spec
+    file: tests/test_check_plugin_invariants.py
+    title: FR30's automated checks are never run against the real repository
+    resolution: unresolved
+    round: 1
+  - stable_id: as3-batch-gate-jurisdiction
+    category: spec
+    file: em-workflow/references/batch-policies.yaml
+    title: Non-packet gates were moved into batch-policies.yaml while their referrers still
+    resolution: unresolved
+    round: 1
+  - stable_id: as4-stale-agent-reference
+    category: spec
+    file: em-workflow/references/batch-mode.md
+    title: batch-mode.md still cites the deleted requirements-spec-creator, and the Codex p
+    resolution: unresolved
+    round: 1
+  - stable_id: as5-rework-index-unverified
+    category: comprehensive
+    file: em-workflow/scripts/validate-worker-output.py
+    title: rework_index completeness is never verified — an empty index passes
+    resolution: unresolved
+    round: 1
+  - stable_id: as6-prefix-containment
+    category: security
+    file: em-workflow/scripts/validate-worker-output.py
+    title: written_artifacts containment uses string prefix matching, allowing sibling-dire
+    resolution: unresolved
+    round: 1
+  - stable_id: as7-bash-on-readonly-workers
+    category: security
+    file: em-workflow/agents/requirements-analyst.md
+    title: 'Workers declared never to write or commit are granted Bash, which lets a commit '
+    resolution: unresolved
+    round: 1
+  - stable_id: as8-batch-fail-open
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: The batch unlisted-gate fallback is not fail-closed for specification, security,
+    resolution: unresolved
+    round: 1
+  - stable_id: as9-post-hoc-containment
+    category: security
+    file: em-workflow/references/phases/create-spec-phase.md
+    title: Scope containment is enforced only after dispatch and cannot catch writes outsid
+    resolution: unresolved
+    round: 1
+  - stable_id: as10-cross-product-loop
+    category: comprehensive
+    file: em-workflow/references/phases/create-plan-phase.md
+    title: create-plan routes both design-system inconsistencies to the reclassify gate, wh
+    resolution: unresolved
+    round: 1
+  - stable_id: as11-r1-ssot-unshipped
+    category: architecture
+    file: em-workflow/references/phases/create-spec-phase.md
+    title: The input_digest normalization rule (R1) lives only in feature-docs, which is no
+    resolution: unresolved
+    round: 1
+  - stable_id: as12-scope-hash-cost
+    category: performance
+    file: em-workflow/references/phases/create-spec-phase.md
+    title: Scope verification hashes the entire checkout twice per worker dispatch
+    resolution: unresolved
+    round: 1
+  - stable_id: as13-discovery-rules-unshipped
+    category: performance
+    file: em-workflow/references/phase-state.md
+    title: NFR9's exclusion list and extension allowlist never reached any shipped protocol
+    resolution: unresolved
+    round: 1
+  - stable_id: as14-analysis-not-reused
+    category: performance
+    file: em-workflow/references/phases/create-spec-phase.md
+    title: Each analyst clarification round re-resolves globs and re-derives the whole anal
+    resolution: unresolved
+    round: 1
+  - stable_id: bs1-payload-contract-collision
+    category: comprehensive
+    file: em-workflow/references/contracts/analyst-contract.md
+    title: The new payload prohibition contradicts the analyst contract, so every clarifica
+    resolution: unresolved
+    round: 2
+  - stable_id: bs2-fail-closed-listed-path
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: The fail-closed classification sits inside the unlisted-gate branch, so listed g
+    resolution: unresolved
+    round: 2
+  - stable_id: bs3-gate-jurisdiction-criterion
+    category: architecture
+    file: em-workflow/references/batch-mode.md
+    title: The batch gate split used the wrong criterion, leaving one gate family in two SS
+    resolution: unresolved
+    round: 2
+  - stable_id: bs4-backfill-cross-product
+    category: spec
+    file: em-workflow/references/phase-state.md
+    title: 'The design-system backfill never received the cross-product branch split, so it '
+    resolution: unresolved
+    round: 2
+  - stable_id: bs5-analysis-not-reused
+    category: performance
+    file: em-workflow/references/contracts/analyst-contract.md
+    title: 'Clarification rounds still rebuild the whole analysis; only the glob cache half '
+    resolution: unresolved
+    round: 2
+  - stable_id: bs6-codex-consultation-budget
+    category: performance
+    file: em-workflow/references/question-resolution.md
+    title: The newly written Codex consultation has no total budget and multiplies per ques
+    resolution: unresolved
+    round: 2
+  - stable_id: cs1-listed-consultation-unbounded
+    category: comprehensive
+    file: em-workflow/references/question-resolution.md
+    title: Codex consultation batching lives inside the unlisted-gate fallback, so the anal
+    resolution: deferred
+    round: 3
+  - stable_id: cs3-analyst-listed-gate-unbound
+    category: security
+    file: em-workflow/scripts/validate-worker-output.py
+    title: 'The analyst''s most-used gate is unbound in the registry, so a security question '
+    resolution: deferred
+    round: 3
+  - stable_id: cs4-planner-family-unbound
+    category: security
+    file: em-workflow/scripts/validate-worker-output.py
+    title: Compound gate identifiers and worker-raised planner gates escape registry bindin
+    resolution: deferred
+    round: 3
+  - stable_id: cs5-prior-analysis-digest-gate
+    category: performance
+    file: em-workflow/references/contracts/worker-envelope.md
+    title: 'The prior_analysis reuse is inert because the digest gate includes the answers, '
+    resolution: deferred
+    round: 3
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0012
+    files:
+    - tests/test_review_implement_develop_lock_contracts.py
+    note: stale assertion on the deleted create-spec agent name updated to reference the replacement doc
+  - task: task0013
+    files:
+    - em-workflow/README.md (planned as README.md)
+    note: planner listed marketplace-root README.md; actual FR29 content belongs to em-workflow/README.md — implementer corrected
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  deferred_findings:
+  - stable_id: bs15-runtime-write-enforcement
+    category: security
+    severity: medium
+    file: em-workflow/references/phases/create-spec-phase.md
+    title: Write containment is validated before dispatch but not enforced per tool call
+  - stable_id: cs1-listed-consultation-unbounded
+    category: comprehensive
+    severity: high
+    file: em-workflow/references/question-resolution.md
+    title: Codex consultation batching lives inside the unlisted-gate fallback, so the analyst's principal list
+  - stable_id: cs2-index-scan-residual
+    category: performance
+    severity: medium
+    file: em-workflow/references/phases/create-spec-phase.md
+    title: The snapshot no longer hashes the whole tree, but git status and the index/tree comparison still tra
+  - stable_id: cs3-analyst-listed-gate-unbound
+    category: security
+    severity: high
+    file: em-workflow/scripts/validate-worker-output.py
+    title: The analyst's most-used gate is unbound in the registry, so a security question tagged with any othe
+  - stable_id: cs4-planner-family-unbound
+    category: security
+    severity: high
+    file: em-workflow/scripts/validate-worker-output.py
+    title: Compound gate identifiers and worker-raised planner gates escape registry binding by two paths
+  - stable_id: cs5-prior-analysis-digest-gate
+    category: performance
+    severity: high
+    file: em-workflow/references/contracts/worker-envelope.md
+    title: The prior_analysis reuse is inert because the digest gate includes the answers, which change every c
+  - stable_id: cs6-prior-analysis-not-persisted
+    category: comprehensive
+    severity: medium
+    file: em-workflow/references/phase-state.md
+    title: prior_analysis exists only in memory; a session that resumes between rounds forces a full analyst re
+  - stable_id: cs7-artifact-overwrite-scope-overlap
+    category: architecture
+    severity: medium
+    file: em-workflow/agents/implementation-planner.md
+    title: 'IMPLEMENTATION.md is claimed by both create-plan.existing-files and create-plan.artifact-overwrite, '
+  - stable_id: cs8-write-policy-citation
+    category: architecture
+    severity: medium
+    file: em-workflow/references/contracts/worker-envelope.md
+    title: The write-policy citation in the envelope still points at the unshipped design document, the same sh
+  - stable_id: cs9-resolved-input-paths-undocumented
+    category: architecture
+    severity: medium
+    file: em-workflow/references/phases/create-plan-phase.md
+    title: The orchestrator-side resolved_input_paths procedure is documented only for create-spec, leaving des
+  batch_mode:
+    review_rework_count: 1
+    verify_rework_count: 0
+lessons_candidates:
+- topic: orchestrator planning error — batch gate jurisdiction
+  note: 'round-1 task0017 plan told the implementer to split batch gates by ''who presents them''; the correct criterion was ''gate_id presence''. Cost: two full review rounds. Rework via task0022 unified
+    it. Retrospect: an orchestrator directive that supersedes the design''s own criterion should require a written justification and a cross-check pass.'
+- topic: validator scope limits accumulate — gate registry
+  note: 'task0023 explicitly scoped the gate registry to gates whose contract carries a Gate identifiers table (only analyst''s). Two independent round-3 reviewers found spoofs via other routes: category-suffix
+    that isn''t a category name (requirement-clarification, license-conflict), and gate declarations in agents/*.md that were never scanned. Retrospect: enumeration-based defenses need an explicit ''and
+    everything not enumerated defaults to deny'' rule, or they accumulate holes at every scope decision.'
+- topic: rework 'envelope-only' fixes — bs5 prior_analysis
+  note: 'bs5''s fix added the envelope field but left the digest gate keyed on the full input_digest (which includes answers_digest). Every clarification round changes answers, so the gate always fires
+    and the field is omitted. The reword compiled and passed 865 tests but delivered zero cost reduction. Retrospect: ''add a field'' fixes should include a fixture that pins the field''s actual use, not
+    just its schema presence.'
+- topic: SPEC vs shipped-protocol drift after rework
+  note: 'bs13 amended FR31 for the working-tree-hash row; task0025''s independent bs14 fix also removed the pre-dispatch index-listing pass but only from the shipped protocol. Round 3 caught the residual.
+    Retrospect: when a rework changes what the shipped protocol does, the orchestrator should audit the SPEC.md line that mandated the old behaviour in the SAME turn, not the next round.'
+- topic: deferred/limitation acknowledgement in task-plan output
+  note: 'task0023 documented its own scope limit inline in the script (lines 427-452) and in tests.yaml. Round 3 reviewers cited that comment when confirming the finding was ''known scope limit not fresh
+    regression''. Retrospect: explicit self-acknowledged limitations shortened round-3 attribution and should be a template for future partial fixes.'
