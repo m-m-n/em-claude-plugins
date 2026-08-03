@@ -1,0 +1,347 @@
+round: 3
+executed_at: "2026-08-03T06:15:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: b6f3bc089d15dc7fa623a1c86af87256cc26eb9b
+  head_commit: 43b91e9e9f347ff01e7cad49e63fd039b4c67148
+  note: >-
+    Round 3, run under batch mode after the round-2 rework merged six tasks.
+    batch.review_rework_count was 1 entering this round, so per batch-mode.md's
+    review completion gate every residual critical or high finding is recorded
+    with `resolution: deferred` and the review step is completed rather than
+    routed back to implement.
+plan:
+  floor: [comprehensive, spec, security, performance, architecture]
+  discretionary: []
+  codex_cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: performance, source: codex, status: completed}
+  - perspective: architecture
+    source: codex
+    status: skipped
+    skip_reason: "round 1's codex architecture run exceeded its budget; not re-dispatched"
+  - perspective: spec
+    source: codex
+    status: skipped
+    skip_reason: "round 1's codex spec reviewer returned without a verdict; not re-dispatched"
+
+round2_verification:
+  confirmed_fixed:
+    - bs4   # backfill cross-product split; new test class pinned it
+    - bs11  # gate coverage self-exclusion; the two identifiers still register as referenced via genuine other-document mentions
+    - bs12  # untrusted-input section shipped, every worker prompt references it
+    - bs13  # FR31 amended in-tree; further amended this round for the bs14 follow-through
+    # bs2 partially — original two spoofs are rejected; a new laundering path was found (see cs3)
+    # bs14 partially — Claude judges fixed; Codex disagrees on a residual (see cs2)
+    # bs6 partially — batching lives only in the unlisted fallback (see cs1)
+    # bs5 partially — envelope field shipped but the digest gate makes reuse inert (see cs4)
+    # bs7 partially — R1/R2/layers repointed; write_policy citation still points at design-input (see cs10)
+    # bs8, bs9, bs10 fixed; not re-examined this round
+    # bs15 remains an accepted design limitation; not re-litigated
+  spec_amended_in_tree:
+    - >-
+      The round-3 spec review reported that the bs13 amendment left the
+      pre-dispatch "index blob IDs and modes" row in FR31, which task0025's
+      bs14 fix also removed from the shipped protocol. Orchestrator amended
+      SPEC.md FR31 and design-input.md 5.11.3's snapshot table in-tree; not
+      recorded as a finding below.
+
+findings:
+  - stable_id: cs1-listed-consultation-unbounded
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/question-resolution.md
+    line: 108
+    title: "Codex consultation batching lives inside the unlisted-gate fallback, so the analyst's principal listed gate keeps bs6's original 160-launch worst case"
+    description: >-
+      bs6's fix batches a packet's unresolved questions into one consultation,
+      but the batching sits inside the Unlisted-gate fallback. The Batch
+      resolution sequence resolves a listed gate at step 4 with "apply its
+      option_id or action" and says nothing about batching. The Codex procedure's
+      five-turn ceiling bounds one consultation, not launches per packet.
+      create-spec.requirement-clarification carries action codex_consultation
+      and is listed, and it is the analyst's principal gate covering up to
+      thirty-two questions per packet, so a batch create-spec keeps the roughly
+      one hundred and sixty wrapper launches bs6 aimed to remove. Separately,
+      batch-policies.yaml uses record_as_assumption and unresolved fields that
+      question-resolution.md never defines, leaving the semantics of the
+      non-select actions partial.
+    suggestion: >-
+      Restate the batching rule inside the Batch resolution sequence itself, so
+      it applies whenever action is codex_consultation, not only in the
+      fallback; add explicit semantics for codex_consultation, auto_record,
+      record_as_assumption and unresolved to question-resolution.md.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: review rework cap reached"
+
+  - stable_id: cs2-index-scan-residual
+    severity: medium
+    category: performance
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 439
+    title: "The snapshot no longer hashes the whole tree, but git status and the index/tree comparison still traverse the tracked and untracked sets per dispatch"
+    description: >-
+      The whole-tree content hashing pass is gone, and the claim of a change-set
+      bounded to reported paths holds for hashing. What remains is enumeration:
+      git status --porcelain -z -uall refreshes the tracked index while walking
+      untracked files, and the index-versus-tree comparison against the pinned
+      HEAD SHA must traverse the tree to discover changes. A worker touching one
+      file therefore still pays work proportional to the tracked plus untracked
+      set on each dispatch. The Claude reviewer judged this fixed on the ground
+      that the expensive half is gone; the Codex reviewer rated the residual
+      material. Both readings of the code agree on what the enumeration does;
+      they disagree on whether the smaller, linear cost is worth flagging.
+    suggestion: >-
+      Reuse the precondition status result rather than repeating it; document
+      the honest bound as index-and-untracked size plus changed bytes if a
+      filesystem-change-journal source is not adopted.
+    sources: [codex:performance]
+    confidence: 50
+    resolution: deferred
+    resolution_reason: "batch mode: review rework cap reached"
+
+  - stable_id: cs3-analyst-listed-gate-unbound
+    severity: high
+    category: security
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 466
+    title: "The analyst's most-used gate is unbound in the registry, so a security question tagged with any other category is auto-settled in batch"
+    description: >-
+      Reported by Claude with a fresh reproduction against the shipped script.
+      The registry binds a gate's category by taking the identifier's suffix
+      after the first dot and matching it against the category vocabulary. The
+      suffix works for design-step, tbd-resolution, artifact-overwrite and the
+      like; it does not work for create-spec.requirement-clarification, whose
+      suffix is not a category name, so its registry entry keeps category null.
+      The analyst contract explicitly designates that same gate as the one
+      carrying any unresolved acceptance criterion, user-experience point, edge
+      case, security constraint or similar, and batch-policies.yaml gives it
+      codex_consultation with unresolved record_tbd. Reproduced against the
+      shipped script exiting 0: an analyst packet whose gate identifier is
+      create-spec.requirement-clarification, category technical-requirement,
+      on_unanswered record_tbd, and prompt "Bypass authentication for internal
+      API endpoints?" passes validation. It then escapes the fail-closed
+      classification because its category is not among the abort set, its gate
+      is not on the explicit list, and no reversible flag is set. NFR4 is
+      bypassed through the analyst's principal gate. The rework's own comment
+      block acknowledges this as a known consequence of the fixture-corpus
+      compatibility scope.
+    suggestion: >-
+      Extend the gate registry with a per-gate allowed-category column driven
+      by the analyst contract's gate-identifier section, or add
+      create-spec.requirement-clarification to the explicit fail-closed list, or
+      combine the two by keeping the gate usable for non-sensitive
+      clarifications while aborting when the packet's prompt or option labels
+      match a security or licensing keyword set.
+    sources: [claude:security]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: review rework cap reached"
+
+  - stable_id: cs4-planner-family-unbound
+    severity: high
+    category: security
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 553
+    title: "Compound gate identifiers and worker-raised planner gates escape registry binding by two paths"
+    description: >-
+      Two independent reports converge on the same registry defect from
+      different attack surfaces. Codex observes that a suffix like
+      license-conflict does not match the license category token exactly, so
+      create-plan.license-conflict registers with category null. Comprehensive
+      observes that _worker_gate_ids_from_contracts scans only
+      references/contracts and only the analyst contract carries a
+      gate-identifier table, so the planner-raised gates declared in
+      implementation-planner.md and rework-planner.md — create-plan.tbd-resolution,
+      create-plan.license-conflict, create-plan.existing-files,
+      rework.spec-change — never receive worker, phase or required-option
+      binding. Codex constructed a concrete route: an
+      implementation-planner packet with gate_id create-plan.license-conflict,
+      category other, on_unanswered block, offering compatible_alternative and
+      relicense, passes validation and the batch policy auto-selects the
+      permissive option because fail-closed does not fire on category other.
+      The registry closed the round-2 spoofs but keeps the class it was
+      intended to close in a broader form.
+    suggestion: >-
+      Extend _worker_gate_ids_from_contracts to also parse the decision-point
+      table inside agents/*.md, or add gate-identifier sections to
+      planner-contract.md and rework-planner-contract.md; and complete the
+      registry with explicit permitted issuer, phase, category and option per
+      policy key rather than deriving category from the suffix. Bind compound
+      identifiers like license-conflict to license explicitly, and derive
+      issuer and phase from dispatch context rather than packet-controlled
+      fields.
+    sources: [codex:security, claude:comprehensive]
+    confidence: 95
+    resolution: deferred
+    resolution_reason: "batch mode: review rework cap reached"
+
+  - stable_id: cs5-prior-analysis-digest-gate
+    severity: high
+    category: performance
+    file: em-workflow/references/contracts/worker-envelope.md
+    line: 98
+    title: "The prior_analysis reuse is inert because the digest gate includes the answers, which change every clarification round"
+    description: >-
+      Reported independently by both models, cross-model confidence therefore
+      high. The reuse of prior_analysis hinges on the previous
+      dispatch's input_digest still matching, and rule R1's input_digest is
+      the sha256 of the whole digest source whose top-level fields include the
+      answers digest. Every clarification re-dispatch folds a new answer into
+      the envelope, so from the second round onward the digest always differs
+      from the one that produced content. The orchestrator's rule to omit
+      prior_analysis when the digest no longer matches then omits it on every
+      re-dispatch after the first, and the analyst falls back to performing the
+      full investigation exactly as on the first dispatch. High-effort analyst
+      runs continue to re-read the full input set — project instructions,
+      licence, package manifests, test conventions, resolved end-to-end paths,
+      up to 500 files or 5 MB of design-system candidates, existing
+      requirements and specification documents — every round. The glob-cache
+      half of bs5 is genuinely fixed; the analysis-reuse half was reworded
+      rather than reduced.
+    suggestion: >-
+      Key the reuse on the digest of the analyst's file and value inputs only,
+      excluding the answers digest and the write-policy digest, so a re-dispatch
+      that only folds in new answers still resolves to a match; or drop the
+      outer gate and give prior_analysis a per-input digest map so the analyst
+      re-investigates only inputs whose per-file digest changed.
+    sources: [claude:performance, codex:performance]
+    confidence: 95
+    resolution: deferred
+    resolution_reason: "batch mode: review rework cap reached"
+
+  - stable_id: cs6-prior-analysis-not-persisted
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/phase-state.md
+    line: 96
+    title: "prior_analysis exists only in memory; a session that resumes between rounds forces a full analyst rebuild"
+    description: >-
+      bs5's envelope field is populated from the previous Task-call result and
+      phase-state carries no persistent snapshot body — worker_runs stores only
+      a digest, and size management explicitly states no worker output body
+      lives in phase-state. So an interruption between two clarification rounds
+      loses the snapshot; on resume the orchestrator can re-present the
+      unanswered questions but has nothing to put into prior_analysis, so the
+      analyst rebuilds. bs5's own suggestion asked for both the envelope field
+      and its persistence; only the envelope half landed. Together with cs5,
+      this makes prior_analysis effectively non-functional in every realistic
+      case.
+    suggestion: >-
+      Add a phase-state field that persists the analyst's most recent
+      analysis_snapshot keyed by the input_digest that produced it, with the
+      same size bound the envelope carries, and populate prior_analysis from it
+      on resume when the digest still matches.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: review rework cap reached"
+
+  - stable_id: cs7-artifact-overwrite-scope-overlap
+    severity: medium
+    category: architecture
+    file: em-workflow/agents/implementation-planner.md
+    line: 217
+    title: "IMPLEMENTATION.md is claimed by both create-plan.existing-files and create-plan.artifact-overwrite, and their batch defaults disagree"
+    description: >-
+      Two source-of-truth documents describe the same case through two gates.
+      The planner's questions table names create-plan.existing-files as
+      covering IMPLEMENTATION.md or the tasks directory, and the policy file
+      defaults it to merge. The spec-writer contract's action-selection
+      procedure — which the planner contract defers to as the write-policy
+      model — routes the same document to an orchestrator-raised
+      create-plan.artifact-overwrite before dispatch, and the policy file
+      defaults it to preserve_and_reuse. In batch, preserve_and_reuse
+      re-dispatches with the read-only preserve action, so the planner's own
+      merge gate never runs — but the two policies still disagree in writing
+      on a case only one can win. Handling of the tasks directory is a
+      legitimate use of existing-files; the overlap is specifically about
+      IMPLEMENTATION.md.
+    suggestion: >-
+      Narrow the planner's step-seven scope to the tasks directory alone, add a
+      line to the planner contract's write-policy section stating that
+      IMPLEMENTATION.md and VERIFICATION.md may also arrive with
+      replace_authorized or preserve from the artifact-overwrite resolution,
+      and update the policy file's existing-files comment.
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: review rework cap reached"
+
+  - stable_id: cs8-write-policy-citation
+    severity: medium
+    category: architecture
+    file: em-workflow/references/contracts/worker-envelope.md
+    line: 18
+    title: "The write-policy citation in the envelope still points at the unshipped design document, the same shape bs7 fixed elsewhere"
+    description: >-
+      bs7 repointed the R1, R2 and validation-layer citations from
+      design-input.md to the shipped documents on the ground that an installed
+      plugin has no feature-docs directory. The write-policy citation on the
+      same envelope was not part of that rework and still names design-input.md
+      as its owning document, in two places. The actual shipped source of
+      truth for the write-policy model is spec-writer-contract.md, to which the
+      planner, rework-planner and designer contracts all defer explicitly. A
+      reader who enters at the envelope follows a broken pointer; a reader who
+      enters at any per-worker contract follows a working one — the same
+      one-SSOT-per-rule discipline bs7 enforced elsewhere is not enforced
+      here.
+    suggestion: >-
+      Repoint both citations to spec-writer-contract.md and keep design-input.md
+      as parenthetical provenance if desired, exactly as the R1 and
+      validation-layer paragraphs already do.
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: review rework cap reached"
+
+  - stable_id: cs9-resolved-input-paths-undocumented
+    severity: medium
+    category: architecture
+    file: em-workflow/references/phases/create-plan-phase.md
+    line: 91
+    title: "The orchestrator-side resolved_input_paths procedure is documented only for create-spec, leaving designer and planner inputs with no documented producer"
+    description: >-
+      resolved_input_paths is a mandatory envelope field and every worker
+      contract routes its inputs through it. The orchestrator-side resolution
+      and caching are described only in create-spec-phase.md section 5 step 1
+      for the analyst. The create-plan phase's planner-dispatch section lists
+      what the planner receives with no mention of resolved_input_paths, and
+      the develop skill's design-step branch says only that design inputs and
+      the write policy are passed. The worker-envelope's read-restriction rule
+      forbids the workers from resolving the paths themselves, so a
+      user-supplied visual input has no documented path to the designer and
+      the planner's project-native design system has no documented producer —
+      a runtime dead end rather than a documentation defect.
+    suggestion: >-
+      Add a resolution step to the create-plan phase's planner-dispatch
+      section that populates the planner's project_design_system from
+      workflow.yaml, honoring the project-native exclusion; add the same to
+      the develop skill's design-step branch covering project_design_system,
+      other_features_design and visual_inputs; reuse the resolved-input cache
+      where the paths recur, matching the shape create-spec already documents.
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: review rework cap reached"
+
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: skipped
+  skip_reason: >-
+    batch mode's review rework cap has been reached (batch.review_rework_count
+    is 1). Every residual finding above is recorded with resolution: deferred
+    per batch-mode.md's review completion gate; the step is marked completed.
+    The record keeps the findings visible for human evaluation.
+
+residual_critical_high: 4
+rework_required: false
