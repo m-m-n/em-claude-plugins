@@ -1,0 +1,87 @@
+{
+  "blocking_reason": null,
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "mode_echo": null,
+  "payload": {
+    "rework_index": {
+      "task0007": {
+        "covered_by_existing": [],
+        "new_scenarios": ["TS-9"],
+        "rationale": "new boundary case added for the fix"
+      }
+    },
+    "shared_contract_rationale": "No new shared contract; task0007 only touches src/auth.go, which no other task declares."
+  },
+  "question_packet": null,
+  "report": "done",
+  "request_id": "run-0001",
+  "schema_version": 1,
+  "status": "completed",
+  "warnings": [],
+  "worker": "rework-planner",
+  "workflow_patch": {
+    "base_input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "base_workflow_blob": "8f17c04",
+    "operation": "append_rework",
+    "patch_id": "rework-p0001",
+    "preserve": [
+      "workflow.implement.base_commit"
+    ],
+    "requirements_patch": {
+      "mode": "merge_entries",
+      "entries": {
+        "FR1": {
+          "expected": {},
+          "set": {
+            "tests_append": ["TS-9"]
+          }
+        }
+      }
+    },
+    "schema_version": 1,
+    "step_patches": [
+      {
+        "expected": {},
+        "set": {
+          "status": "pending"
+        },
+        "step_id": "implement"
+      }
+    ],
+    "tasks_patch": {
+      "entries": {
+        "task0007": {
+          "complexity": "medium",
+          "domains": [
+            "auth"
+          ],
+          "files": [
+            "src/auth.go"
+          ],
+          "initial_status": "pending",
+          "plan": "tasks/task0007.md",
+          "provenance": {
+            "review_round": 2,
+            "source": "review",
+            "source_ids": [
+              "abc123"
+            ]
+          },
+          "requirements": [
+            "FR1"
+          ],
+          "skills": [
+            "backend-impl"
+          ],
+          "title": "Fix auth bypass"
+        }
+      },
+      "expected_next_task_id": "task0007",
+      "mode": "append"
+    }
+  },
+  "written_artifacts": []
+}
