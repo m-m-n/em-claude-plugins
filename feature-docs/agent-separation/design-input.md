@@ -1614,18 +1614,17 @@ review フェーズの auto-fix ループは、複数の review-editor が integ
 
 | 対象 | 取得方法 | 用途 |
 |---|---|---|
-| HEAD SHA | `git rev-parse HEAD` | stale 判定 |
-| index の blob ID と mode | `git ls-files -s -z` | scope 判定 |
-| working tree の存在種別と内容 | dispatch 前は取得しない。clean 前提により index の blob ID が tracked 作業ツリーの identity を兼ねる。dispatch 後、`git status --porcelain -z -uall` と index/working tree の比較が変更ありと報告した path だけを `git hash-object --` でハッシュし、不在はその種別を記録する | scope 判定 |
+| HEAD SHA | `git rev-parse HEAD` | stale 判定 + 事後比較のベースライン（clean 前提により、この単一の SHA が pin する tree が全 tracked path の baseline identity を兼ねる） |
 | untracked ファイル一覧 | `git status --porcelain -z -uall` | scope 判定 |
 | `extend_only` 対象のキー集合 | `design-system/tokens.yaml` を parse | scope 判定 |
 
-symlink は git が blob として格納するため、`git hash-object` はリンク文字列をハッシュする。これでリンク先の変更も検出できる。
+**dispatch 前に index の blob ID/mode 全列挙も working tree 全ハッシュも走らせない。** clean 前提が tracked 作業ツリー = index = pinned HEAD tree を保証するため、pin した HEAD SHA が全 tracked path の baseline identity を担う。blob ID・mode の照会と `git hash-object --` によるハッシュは、dispatch 後の比較で候補として列挙されたパスに対してのみ走らせる。symlink は git が blob として格納するため、`git hash-object` はリンク文字列をハッシュする。これでリンク先の変更も検出できる。
 
 **dispatch 後の比較（この順序で実行する）**
 
 1. **worker の変更集合を求める**（HEAD の移動有無に関わらず必ず実行）
-   - snapshot の index / working tree / untracked 一覧と現在の状態を比較する
+   - 候補の列挙は変化量に比例するソースだけから行う: `git status --porcelain -z -uall` と、pin した pre-dispatch HEAD tree に対する `git diff-index` 相当の index/working tree 比較。tracked セット全体の列挙は絶対に走らせない
+   - 列挙された候補についてだけ blob ID・mode を照会し、必要なら `git hash-object --` でハッシュする
    - 削除・mode 変更・存在種別の変化（file ⇔ symlink ⇔ absent）も差分として扱う
    - HEAD 層は**比較に含めない**
 2. **許可範囲を判定する**
@@ -1644,7 +1643,7 @@ symlink は git が blob として格納するため、`git hash-object` はリ�
    - root 自体および配下の各セグメントが symlink である場合、その path は violation として扱う（symlink 経由の root 外書き込みを防ぐ）
    - 比較は case-sensitive で行う。case-insensitive filesystem 上で正規化後のパスが衝突した場合は violation として扱う
 3. **違反があれば除去する**
-   - tracked ファイルは snapshot の blob から index と working tree の両方へ復元する（dispatch 前が clean であるため、両者の復元先は同一の blob になる）
+   - tracked ファイルは pin した pre-dispatch HEAD tree の blob から index と working tree の両方へ復元する（dispatch 前が clean であるため、両者の復元先は同一の blob になる）
    - 新規 untracked の violator は `gio trash --` で退避する。`gio` が使えない場合は**削除も移動もせず**、対象パスを列挙してフェーズを中断する
 4. **HEAD が動いていたかを判定する**（stale 判定）
    - 動いていなければ、違反なしなら成功、違反ありなら 3 の後にフェーズ中断
