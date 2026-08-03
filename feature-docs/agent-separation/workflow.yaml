@@ -598,8 +598,9 @@ tasks:
     - FR11
     - NFR4
     - NFR8
-    status: in_progress
-    notes: null
+    status: merged
+    notes: gate registry deliberately binds worker/phase/option only for gates whose contract carries a Gate identifiers table (currently analyst); category binding applies more broadly. Both round-2 spoofs
+      are caught by category binding alone. Reasoning in tests.yaml.
     branch: em-workflow/agent-separation/task0023
     provenance:
       source: review
@@ -716,9 +717,9 @@ tasks:
     requirements:
     - FR30
     - NFR6
-    status: pending
+    status: in_progress
     notes: 'held back: repository-level assertions become satisfiable only after siblings merge'
-    branch: null
+    branch: em-workflow/agent-separation/task0027
     provenance:
       source: review
       review_round: 2
