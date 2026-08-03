@@ -407,6 +407,46 @@ class TestGateIdCoverage(unittest.TestCase):
                 result.offenders,
             )
 
+    def test_mention_inside_the_checkers_own_file_does_not_count_as_a_reference(self):
+        # task0027 AC-1/AC-2 (reviews/round2.yaml finding bs11): the
+        # reference direction excludes only the policy file, not the
+        # checker itself, so a gate id named solely inside the checker's own
+        # comments would be reported as referenced forever -- surviving
+        # even if every real document dropped it. Build a synthetic tree
+        # where the checker's own (copied) source is the ONLY place the
+        # gate id occurs; it must still be reported unreferenced.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_policy(root, ["test-ns.self-only-gate"])
+            write(
+                root / "em-workflow" / "scripts" / "check-plugin-invariants.py",
+                "# This comment names test-ns.self-only-gate as an example.\n",
+            )
+            result = cpi.check_gate_id_coverage(str(root))
+            self.assertFalse(result.passed)
+            self.assertTrue(
+                any("test-ns.self-only-gate" in o for o in result.offenders),
+                result.offenders,
+            )
+
+    def test_real_repository_gate_ids_named_in_the_checkers_comments_are_still_referenced(self):
+        # task0027 AC-3: `create-spec.design-system` and
+        # `design-system.reclassify` are the two policy keys the checker's
+        # own comments happen to name as literal substrings (Test Notes).
+        # After excluding the checker's own file from the reference scan,
+        # both must still be reported as referenced against the real
+        # repository, because other documents genuinely reference them --
+        # distinguishing a genuine reference from the self-match this task
+        # removes.
+        result = cpi.check_gate_id_coverage(str(REPO_ROOT))
+        unreferenced = [o for o in result.offenders if "never referenced" in o]
+        self.assertFalse(
+            any("create-spec.design-system" in o for o in unreferenced), unreferenced
+        )
+        self.assertFalse(
+            any("design-system.reclassify" in o for o in unreferenced), unreferenced
+        )
+
 
 class TestDomainsVocabularyParity(unittest.TestCase):
     def test_passes_when_sets_match(self):

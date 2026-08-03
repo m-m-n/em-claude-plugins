@@ -1,0 +1,54 @@
+task_id: task0027
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not independently testable as a standalone behavior: it is the
+      mechanism AC-2 observes. AC-2's test proves the reference direction
+      now excludes the checker itself; there is no separate observable
+      outcome for AC-1 beyond that. Verified by code inspection: Direction 1
+      of check_gate_id_coverage now builds exclude_paths from
+      SELF_EXCLUDED_RELATIVE_PATHS (the same set check_stale_references
+      uses) plus the policy file's own relative path, and passes it to
+      _iter_plugin_files.
+  AC-2:
+    tests: [tests.test_check_plugin_invariants.TestGateIdCoverage.test_mention_inside_the_checkers_own_file_does_not_count_as_a_reference]
+    red_confirmed: true
+    red_reason: >-
+      Before the fix: AssertionError: True is not false (result.passed was
+      True) -- a synthetic policy key named only inside a copy of the
+      checker's own file at em-workflow/scripts/check-plugin-invariants.py
+      was wrongly reported as referenced.
+  AC-3:
+    tests: [tests.test_check_plugin_invariants.TestGateIdCoverage.test_real_repository_gate_ids_named_in_the_checkers_comments_are_still_referenced]
+    red_confirmed: false
+    red_reason: >-
+      This test already passed before the implementation change: measured
+      directly (script run against the real repository comparing the
+      reference direction with and without the checker's own file included)
+      that `create-spec.design-system` and `design-system.reclassify` --
+      the two policy keys the checker's own comments name as examples --
+      already have genuine references elsewhere in the plugin today, so
+      removing the self-match does not flip them. The criterion is a
+      regression guard (the self-exclusion must not remove a genuine
+      reference), not a behavior that was broken pre-fix; AC-2's synthetic
+      test is what proves the removal actually happened.
+  AC-4:
+    tests: [tests.test_check_plugin_invariants.TestGateIdCoverage, tests.test_check_plugin_invariants.TestStaleReferences, tests.test_check_plugin_invariants.TestAgentDispatchParity]
+    red_confirmed: false
+    red_reason: >-
+      Regression check on pre-existing synthetic cases, not a new behavior
+      to red first; all pre-existing cases for both directions (and the
+      sibling stale-reference/dispatch-parity checks sharing the same
+      exclusion-set convention) continued to pass unmodified after the
+      change.
+  AC-5:
+    tests: [tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root]
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing test (task0021), asserts CLI exit 0 against the real
+      repository root; passed before and after this task's change (also
+      confirmed by manually running `check-plugin-invariants.py .`, exit 0).
