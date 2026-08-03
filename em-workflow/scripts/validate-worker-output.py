@@ -424,6 +424,145 @@ def extract_verification_scenario_ids(markdown_text):
 
 
 # ---------------------------------------------------------------------------
+# Gate registry (bs2, round 2, validator half): binds a question's `gate_id`
+# to the worker, phase, category and option identifiers permitted for it, so
+# a worker cannot launder a sensitive question through a permissive gate_id
+# borrowed from an unrelated decision point. Two independent derivations
+# combine, neither one restating a table this script does not own (AC-2):
+#
+# 1. category -- a gate_id's suffix (the part after its first '.') is
+#    checked against CATEGORY_VALUES, this script's own vocabulary constant.
+#    When the suffix names an existing category exactly, that is the only
+#    category a question carrying this gate_id may declare. This needs no
+#    document parsing.
+# 2. worker + phase + required option_id -- derived ONLY for gate_ids that a
+#    contract's own "## Gate identifiers" section attributes to that
+#    worker (currently analyst-contract.md's two entries). A gate_id
+#    without such an attribution stays worker/phase-unconstrained: most
+#    gate_policies entries in batch-policies.yaml are raised by the
+#    ORCHESTRATOR rather than any worker's own question_packet
+#    (spec-writer-contract.md's `{phase}.artifact-overwrite`,
+#    designer-contract.md's `design-system.reclassify`), so binding them to
+#    a specific worker here would be a guess this script cannot verify, not
+#    a derivation. batch-policies.yaml's `option_id` (present when a gate's
+#    action is `select`) is likewise only enforced for worker-attributed
+#    gates -- the wider fixture corpus reuses other gate_ids as a generic
+#    placeholder across many option vocabularies unrelated to the real
+#    policy, so enforcing it universally would reject those, not the
+#    laundering this registry exists to catch.
+# ---------------------------------------------------------------------------
+
+CONTRACT_FILE_TO_WORKER = {
+    "analyst-contract.md": "requirements-analyst",
+    "spec-writer-contract.md": "spec-writer",
+    "planner-contract.md": "implementation-planner",
+    "rework-planner-contract.md": "rework-planner",
+    "designer-contract.md": "designer",
+}
+
+GATE_ID_SHAPE_RE = re.compile(r"^[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*$")
+
+
+def _category_for_gate_id(gate_id):
+    if not isinstance(gate_id, str) or "." not in gate_id:
+        return None
+    suffix = gate_id.split(".", 1)[1]
+    return suffix if suffix in CATEGORY_VALUES else None
+
+
+def _phase_for_gate_id(gate_id):
+    if not isinstance(gate_id, str) or "." not in gate_id:
+        return None
+    prefix = gate_id.split(".", 1)[0]
+    return prefix if prefix in PHASE_VALUES else None
+
+
+def _worker_gate_ids_from_contracts(contracts_dir):
+    """Parses each contract's own "## Gate identifiers" section (currently
+    only analyst-contract.md has one) for gate_id-shaped backtick tokens,
+    attributing each to that file's worker via CONTRACT_FILE_TO_WORKER.
+    Missing contracts_dir / files are tolerated (returns {}) -- this is a
+    best-effort enrichment on top of the category-only binding above, not a
+    hard dependency."""
+    result = {}
+    if contracts_dir is None or not contracts_dir.is_dir():
+        return result
+    for path in sorted(contracts_dir.glob("*.md")):
+        worker = CONTRACT_FILE_TO_WORKER.get(path.name)
+        if worker is None:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        section = extract_markdown_section(_strip_noise(text), "## Gate identifiers", ("## ",))
+        if section is None:
+            continue
+        for token in _BACKTICK_RE.findall(section):
+            if GATE_ID_SHAPE_RE.match(token):
+                result[token] = worker
+    return result
+
+
+def _gate_option_ids_from_policies(references_dir):
+    """references/batch-policies.yaml's gate_policies -- when a gate's
+    action is `select` and it names an option_id, question-resolution.md
+    rule 4 requires that option_id to actually be among the question's own
+    options[].option_id. Returns {gate_id: option_id}."""
+    result = {}
+    if references_dir is None:
+        return result
+    path = references_dir / "batch-policies.yaml"
+    if not path.is_file():
+        return result
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return result
+    data, parse_err = parse_yaml_text(text)
+    if parse_err or not isinstance(data, dict):
+        return result
+    for gate_id, policy in (data.get("gate_policies") or {}).items():
+        if isinstance(policy, dict) and policy.get("action") == "select" and policy.get("option_id"):
+            result[gate_id] = policy["option_id"]
+    return result
+
+
+def build_gate_registry(references_dir):
+    """Combines the two derivations above into one gate_id -> constraint
+    mapping. `references_dir` is the plugin's own `em-workflow/references/`
+    directory (contains `batch-policies.yaml` and `contracts/`). Returns {}
+    when references_dir is None or does not exist -- callers degrade to no
+    gate-registry enforcement rather than erroring, since this is a
+    defense-in-depth check layered on top of the existing structural rules."""
+    if references_dir is None:
+        return {}
+    option_ids = _gate_option_ids_from_policies(references_dir)
+    worker_by_gate = _worker_gate_ids_from_contracts(references_dir / "contracts")
+
+    gate_ids = set(option_ids) | set(worker_by_gate)
+    policies_path = references_dir / "batch-policies.yaml"
+    if policies_path.is_file():
+        try:
+            data, parse_err = parse_yaml_text(policies_path.read_text(encoding="utf-8"))
+        except OSError:
+            data, parse_err = None, "unreadable"
+        if not parse_err and isinstance(data, dict):
+            gate_ids |= set((data.get("gate_policies") or {}).keys())
+
+    registry = {}
+    for gate_id in gate_ids:
+        worker = worker_by_gate.get(gate_id)
+        registry[gate_id] = dict(
+            worker=worker,
+            phase=_phase_for_gate_id(gate_id) if worker else None,
+            category=_category_for_gate_id(gate_id),
+            required_option_id=option_ids.get(gate_id) if worker else None,
+        )
+    return registry
+
+
+# ---------------------------------------------------------------------------
 # extend_only comparability (design-input.md 5.4.2)
 #
 # The worker itself is the one that performs the extend_only key-preservation
@@ -579,14 +718,57 @@ def next_task_id_after(workflow):
 # --kind question-packet
 # ---------------------------------------------------------------------------
 
-def validate_question(q, index):
+def validate_question(q, index, *, gate_registry=None, packet_phase=None, packet_worker=None):
     errors = []
     p = f"questions[{index}]"
     qid = q.get("question_id")
     if not isinstance(qid, str) or not QUESTION_ID_RE.match(qid):
         errors.append(err("question_id", f"{p}.question_id must match {QUESTION_ID_RE.pattern}"))
-    if not q.get("gate_id"):
+    gate_id = q.get("gate_id")
+    if not gate_id:
         errors.append(err("gate_id", f"{p}.gate_id is required"))
+    elif gate_registry:
+        # bs2 (round 2): gate_id was previously checked for non-emptiness
+        # only, so any question could carry ANY listed gate_id regardless
+        # of who actually raises it, in what phase, for what category, or
+        # with what options -- laundering a sensitive question through a
+        # permissive gate. Reject a mismatch on any bound dimension.
+        entry = gate_registry.get(gate_id)
+        if entry is not None:
+            if entry["worker"] is not None and packet_worker is not None and packet_worker != entry["worker"]:
+                errors.append(
+                    err(
+                        "gate_id",
+                        f"{p}.gate_id {gate_id!r} is registered to worker {entry['worker']!r}, "
+                        f"not {packet_worker!r}",
+                    )
+                )
+            if entry["phase"] is not None and packet_phase is not None and packet_phase != entry["phase"]:
+                errors.append(
+                    err(
+                        "gate_id",
+                        f"{p}.gate_id {gate_id!r} is registered to phase {entry['phase']!r}, "
+                        f"not {packet_phase!r}",
+                    )
+                )
+            if entry["category"] is not None and q.get("category") != entry["category"]:
+                errors.append(
+                    err(
+                        "gate_id",
+                        f"{p}.gate_id {gate_id!r} requires category {entry['category']!r}, "
+                        f"got {q.get('category')!r}",
+                    )
+                )
+            if entry["required_option_id"] is not None:
+                option_ids = {o.get("option_id") for o in (q.get("options") or []) if isinstance(o, dict)}
+                if entry["required_option_id"] not in option_ids:
+                    errors.append(
+                        err(
+                            "gate_id",
+                            f"{p}.gate_id {gate_id!r} requires option_id "
+                            f"{entry['required_option_id']!r} to be offered among options",
+                        )
+                    )
     if q.get("category") not in CATEGORY_VALUES:
         errors.append(err("category", f"{p}.category must be one of the fixed vocabulary"))
     if q.get("priority") not in PRIORITY_VALUES:
@@ -637,7 +819,7 @@ def validate_question(q, index):
     return errors
 
 
-def validate_question_packet(data):
+def validate_question_packet(data, *, gate_registry=None):
     if not isinstance(data, dict):
         return [err("structure", "question packet must be a mapping")]
     errors = []
@@ -670,9 +852,15 @@ def validate_question_packet(data):
     questions = data.get("questions") or []
     if not (1 <= len(questions) <= 32):
         errors.append(err("questions", "questions must have 1-32 entries"))
+    packet_phase = data.get("phase")
+    packet_worker = data.get("worker")
     seen_ids = set()
     for i, q in enumerate(questions):
-        errors.extend(validate_question(q, i))
+        errors.extend(
+            validate_question(
+                q, i, gate_registry=gate_registry, packet_phase=packet_phase, packet_worker=packet_worker
+            )
+        )
         qid = q.get("question_id")
         if qid in seen_ids:
             errors.append(err("question_id", f"duplicate question_id {qid!r} within packet"))
@@ -769,23 +957,39 @@ def validate_answers_list(data, packet=None):
 # --kind workflow-patch (5.5)
 # ---------------------------------------------------------------------------
 
+def _as_checked_list(container, key, p, field_label, errors):
+    """bs9 (round 2): returns `container.get(key)` coerced to a list for
+    iteration, appending a machine-readable error (instead of raising) when
+    the value is present but not actually a list -- e.g. a bare string,
+    which would otherwise be iterated silently per-character."""
+    value = container.get(key)
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        errors.append(err(field_label, f"{p}.{field_label} must be a list"))
+        return []
+    return value
+
+
 def validate_task_entry(task_id, entry, mode, registries, workflow):
     errors = []
     p = f"tasks_patch.entries[{task_id}]"
+    if not isinstance(entry, dict):
+        return [err("tasks_patch.entries", f"{p} must be a mapping")]
     if not TASK_ID_RE.match(task_id):
         errors.append(err("task_id", f"{task_id!r} must match {TASK_ID_RE.pattern}"))
-    files = entry.get("files") or []
+    files = _as_checked_list(entry, "files", p, "files", errors)
     for f in files:
         if not is_safe_relative_path(f):
             errors.append(err("files", f"{p}.files entry {f!r} is not a safe project-relative path"))
-    skills = entry.get("skills") or []
+    skills = _as_checked_list(entry, "skills", p, "skills", errors)
     if registries is not None:
         allowed_skills = registries.get("skills")
         if allowed_skills is not None:
             for s in skills:
                 if s not in allowed_skills:
                     errors.append(err("skills", f"{p}.skills entry {s!r} is not registered in impl-skills.yaml"))
-    domains = entry.get("domains") or []
+    domains = _as_checked_list(entry, "domains", p, "domains", errors)
     if registries is not None:
         allowed_domains = registries.get("domains")
         if allowed_domains is not None:
@@ -794,7 +998,7 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
                     errors.append(err("domains", f"{p}.domains entry {d!r} is not in review-rules.yaml vocabulary"))
     if entry.get("complexity") not in COMPLEXITY_VALUES:
         errors.append(err("complexity", f"{p}.complexity must be one of {sorted(COMPLEXITY_VALUES)}"))
-    requirements = entry.get("requirements") or []
+    requirements = _as_checked_list(entry, "requirements", p, "requirements", errors)
     if workflow is not None:
         known = workflow_requirement_ids(workflow)
         for r in requirements:
@@ -806,6 +1010,8 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
         provenance = entry.get("provenance")
         if not provenance:
             errors.append(err("provenance", f"{p}.provenance is required for append"))
+        elif not isinstance(provenance, dict):
+            errors.append(err("provenance", f"{p}.provenance must be a mapping"))
         elif provenance.get("source") not in ("review", "verify"):
             errors.append(err("provenance", f"{p}.provenance.source must be 'review' or 'verify'"))
     return errors
@@ -846,16 +1052,29 @@ def validate_workflow_patch(
         errors.append(err("tasks_patch", "expected_next_task_id is required when mode is append"))
 
     entries = tasks_patch.get("entries") or {}
+    if not isinstance(entries, dict):
+        errors.append(err("tasks_patch.entries", "tasks_patch.entries must be a mapping"))
+        entries = {}
     for task_id, entry in entries.items():
         errors.extend(validate_task_entry(task_id, entry, mode, registries, workflow))
 
     requirements_patch = data.get("requirements_patch")
     if requirements_patch is not None:
-        if requirements_patch.get("mode") != "merge_entries":
+        if not isinstance(requirements_patch, dict):
+            errors.append(err("requirements_patch", "requirements_patch must be a mapping"))
+            requirements_patch = {}
+        if requirements_patch and requirements_patch.get("mode") != "merge_entries":
             errors.append(err("requirements_patch", "requirements_patch.mode must be 'merge_entries'"))
-        for fr_id, rpatch in (requirements_patch.get("entries") or {}).items():
+        rp_entries = requirements_patch.get("entries") or {}
+        if not isinstance(rp_entries, dict):
+            errors.append(err("requirements_patch", "requirements_patch.entries must be a mapping"))
+            rp_entries = {}
+        for fr_id, rpatch in rp_entries.items():
             if not REQUIREMENT_ID_RE.match(fr_id):
                 errors.append(err("requirements_patch", f"{fr_id!r} must match {REQUIREMENT_ID_RE.pattern}"))
+            if not isinstance(rpatch, dict):
+                errors.append(err("requirements_patch", f"requirements_patch.entries[{fr_id}] must be a mapping"))
+                continue
             set_block = rpatch.get("set") or {}
             for k in set_block:
                 if k not in REQUIREMENTS_PATCH_SET_KEYS:
@@ -865,7 +1084,13 @@ def validate_workflow_patch(
     if step_patches is None:
         errors.append(err("step_patches", "step_patches is required (an empty list is permitted when no step transition is proposed)"))
         step_patches = []
+    elif not isinstance(step_patches, list):
+        errors.append(err("step_patches", "step_patches must be a list"))
+        step_patches = []
     for i, sp in enumerate(step_patches):
+        if not isinstance(sp, dict):
+            errors.append(err("step_patches", f"step_patches[{i}] must be a mapping"))
+            continue
         if not sp.get("step_id"):
             errors.append(err("step_patches", f"step_patches[{i}].step_id is required"))
         set_block = sp.get("set") or {}
@@ -878,11 +1103,19 @@ def validate_workflow_patch(
     if preserve is None:
         errors.append(err("preserve", "preserve is required"))
         preserve = []
+    elif not isinstance(preserve, list):
+        errors.append(err("preserve", "preserve must be a list"))
+        preserve = []
+    preserve_strs = []
     for p in preserve:
+        if not isinstance(p, str):
+            errors.append(err("preserve", f"preserve entry {p!r} must be a string"))
+            continue
+        preserve_strs.append(p)
         if not is_preserve_path_allowed(p):
             errors.append(err("preserve", f"preserve path {p!r} is not in the permitted vocabulary"))
     required_preserve = REQUIRED_PRESERVE_BY_OPERATION.get(operation, set())
-    missing_preserve = required_preserve - set(preserve)
+    missing_preserve = required_preserve - set(preserve_strs)
     if missing_preserve:
         errors.append(err("preserve", f"operation {operation} requires preserve to include {sorted(missing_preserve)}"))
 
@@ -959,6 +1192,8 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state):
     if phase_state is not None:
         patch_id = data.get("patch_id")
         for existing_patch in phase_state.get("patches", []) or []:
+            if not isinstance(existing_patch, dict):
+                continue
             if existing_patch.get("patch_id") == patch_id:
                 same = (
                     existing_patch.get("base_input_digest") == data.get("base_input_digest")
@@ -975,6 +1210,8 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state):
         return errors
 
     for p in data.get("preserve") or []:
+        if not isinstance(p, str):
+            continue  # already reported by the structural preserve-list check above
         before = get_preserve_value(workflow, p)
         after = get_preserve_value(new_workflow, p)
         if before != after:
@@ -1061,8 +1298,15 @@ def validate_phase_state(data):
     if not isinstance(data.get("generation"), int):
         errors.append(err("generation", "generation must be an integer"))
 
+    worker_runs = data.get("worker_runs") or []
+    if not isinstance(worker_runs, list):
+        errors.append(err("worker_runs", "worker_runs must be a list"))
+        worker_runs = []
     seen_request_ids = {}
-    for i, run in enumerate(data.get("worker_runs") or []):
+    for i, run in enumerate(worker_runs):
+        if not isinstance(run, dict):
+            errors.append(err("worker_runs", f"worker_runs[{i}] must be a mapping"))
+            continue
         rid = run.get("request_id")
         if not rid:
             errors.append(err("worker_runs", f"worker_runs[{i}].request_id is required"))
@@ -1072,26 +1316,53 @@ def validate_phase_state(data):
             errors.append(err("worker_runs", f"duplicate request_id {rid!r} in worker_runs"))
         seen_request_ids[rid] = run
 
-    for i, p in enumerate(data.get("patches") or []):
+    patches = data.get("patches") or []
+    if not isinstance(patches, list):
+        errors.append(err("patches", "patches must be a list"))
+        patches = []
+    for i, p in enumerate(patches):
+        if not isinstance(p, dict):
+            errors.append(err("patches", f"patches[{i}] must be a mapping"))
+            continue
         pid = p.get("patch_id")
         if not isinstance(pid, str) or not PATCH_ID_RE.match(pid):
             errors.append(err("patches", f"patches[{i}].patch_id must match {PATCH_ID_RE.pattern}"))
         if p.get("status") not in PATCH_STATUS_VALUES:
             errors.append(err("patches", f"patches[{i}].status must be one of {sorted(PATCH_STATUS_VALUES)}"))
 
-    for packet_id, packet in (data.get("packets") or {}).items():
+    packets = data.get("packets") or {}
+    if not isinstance(packets, dict):
+        errors.append(err("packets", "packets must be a mapping"))
+        packets = {}
+    for packet_id, packet in packets.items():
         if not isinstance(packet_id, str) or not PACKET_ID_RE.match(packet_id):
             errors.append(err("packets", f"packets key {packet_id!r} must match {PACKET_ID_RE.pattern}"))
+        if not isinstance(packet, dict):
+            errors.append(err("packets", f"packets[{packet_id}] must be a mapping"))
+            continue
         if packet.get("status") not in PACKET_STATUS_VALUES:
             errors.append(err("packets", f"packets[{packet_id}].status must be one of {sorted(PACKET_STATUS_VALUES)}"))
 
-    for question_id, answer in (data.get("answers") or {}).items():
+    answers = data.get("answers") or {}
+    if not isinstance(answers, dict):
+        errors.append(err("answers", "answers must be a mapping"))
+        answers = {}
+    for question_id, answer in answers.items():
+        if not isinstance(answer, dict):
+            errors.append(err("answers", f"answers[{question_id}] must be a mapping"))
+            continue
         errors.extend(prefix_errors(validate_answer(answer), f"answers[{question_id}]"))
 
     resolved_cache = data.get("resolved_input_cache")
     if resolved_cache is not None:
+        if not isinstance(resolved_cache, dict):
+            errors.append(err("resolved_input_cache", "resolved_input_cache must be a mapping"))
+            resolved_cache = {}
         generation = data.get("generation")
         for category, cache in resolved_cache.items():
+            if not isinstance(cache, dict):
+                errors.append(err("resolved_input_cache", f"resolved_input_cache[{category}] must be a mapping"))
+                continue
             for field in ("generation_digest", "resolved_at_generation", "paths", "digests", "truncated"):
                 if field not in cache:
                     errors.append(err("resolved_input_cache", f"resolved_input_cache[{category}] is missing {field!r}"))
@@ -1153,6 +1424,7 @@ def validate_worker_result(
     feature_dir=None,
     baseline_dir=None,
     dry_run=False,
+    gate_registry=None,
 ):
     if not isinstance(data, dict):
         return [err("structure", "worker result must be a mapping")]
@@ -1188,7 +1460,11 @@ def validate_worker_result(
         if not question_packet:
             errors.append(err("exclusivity", "needs_user_input requires question_packet"))
         else:
-            errors.extend(prefix_errors(validate_question_packet(question_packet), "question_packet"))
+            errors.extend(
+                prefix_errors(
+                    validate_question_packet(question_packet, gate_registry=gate_registry), "question_packet"
+                )
+            )
         if written_artifacts_raw:
             errors.append(err("exclusivity", "needs_user_input forbids written_artifacts"))
         if workflow_patch:
@@ -1199,12 +1475,19 @@ def validate_worker_result(
         if question_packet:
             errors.append(err("exclusivity", f"status {status!r} forbids question_packet"))
 
-    # as21 / worker-envelope.md: `completed` is the only status that carries
-    # a payload; the other five must carry none.
+    # as21 / worker-envelope.md: `completed` is the only status that
+    # REQUIRES a payload. bs1 (round 2): the envelope's status table forbids
+    # `artifacts`, a `patch` and `blocking_reason` on `needs_user_input` --
+    # it does NOT forbid `payload`, and the analyst contract requires
+    # `needs_user_input` to carry `payload.analysis_snapshot` (its interim
+    # findings survive into the next clarification round). So
+    # `needs_user_input` is exempt from the forbids-payload rule below; the
+    # other four non-completed statuses (`blocked`, `invalid_input`,
+    # `stale_input`, `failed`) still forbid a non-empty payload.
     if status == "completed":
         if not payload:
             errors.append(err("payload", "completed requires a non-empty payload"))
-    elif payload:
+    elif status != "needs_user_input" and payload:
         errors.append(err("payload", f"status {status!r} forbids a non-empty payload"))
     if status in ("blocked", "invalid_input", "failed"):
         if not blocking_reason:
@@ -1403,17 +1686,22 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
     errors = []
     verification_index = (envelope or {}).get("verification_index") or {}
 
+    # bs10 (round 2, validator half): without a baseline directory there is
+    # nothing to diff VERIFICATION.md against, so "new" cannot be verified --
+    # the previous fallback ("the identifier exists in the current document")
+    # degrades to trusting the rework-planner's own claim, since the planner
+    # is the one that just wrote that document. `new_ids_in_doc` is therefore
+    # only ever computed when a baseline IS supplied; the per-task loop below
+    # turns a declared `new_scenarios` with no baseline into a hard error
+    # instead of silently accepting it.
     new_ids_in_doc = None
-    if feature_dir is not None:
+    if feature_dir is not None and baseline_dir is not None:
         vpath = feature_dir / "VERIFICATION.md"
         if vpath.is_file():
             after_ids = extract_verification_scenario_ids(vpath.read_text(encoding="utf-8"))
-            if baseline_dir is not None:
-                bpath = baseline_dir / "VERIFICATION.md"
-                before_ids = extract_verification_scenario_ids(bpath.read_text(encoding="utf-8")) if bpath.is_file() else set()
-                new_ids_in_doc = after_ids - before_ids
-            else:
-                new_ids_in_doc = after_ids
+            bpath = baseline_dir / "VERIFICATION.md"
+            before_ids = extract_verification_scenario_ids(bpath.read_text(encoding="utf-8")) if bpath.is_file() else set()
+            new_ids_in_doc = after_ids - before_ids
 
     tests_append_all = set()
     if workflow_patch is not None:
@@ -1440,7 +1728,16 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
         for cid in covered:
             if cid not in verification_index:
                 errors.append(err("rework-index", f"{task_id}: covered_by_existing {cid!r} not in verification_index"))
-        if new_ids_in_doc is not None:
+        if new_sc and baseline_dir is None:
+            errors.append(
+                err(
+                    "rework-index",
+                    f"{task_id}: new_scenarios is declared but no --baseline-dir was supplied; "
+                    "the claim that these scenarios are new (rather than pre-existing) cannot be "
+                    "verified against a VERIFICATION.md diff",
+                )
+            )
+        elif new_ids_in_doc is not None:
             for nid in new_sc:
                 if nid not in new_ids_in_doc:
                     errors.append(err("rework-index", f"{task_id}: new_scenarios {nid!r} is not a new VERIFICATION.md scenario"))
@@ -1531,39 +1828,51 @@ def main(argv=None):
 
     feature_dir = args.feature_dir
     baseline_dir = args.baseline_dir
+    gate_registry = build_gate_registry(Path(__file__).resolve().parent.parent / "references")
 
-    if args.kind == "worker-result":
-        errors = validate_worker_result(
-            data,
-            args.worker,
-            envelope=envelope,
-            packet=packet,
-            answers=answers,
-            workflow=workflow,
-            registries=registries,
-            phase_state=phase_state,
-            digest_source=digest_source,
-            feature_dir=feature_dir,
-            baseline_dir=baseline_dir,
-            dry_run=args.dry_run_apply,
-        )
-    elif args.kind == "question-packet":
-        errors = validate_question_packet(data)
-    elif args.kind == "answers":
-        errors = validate_answers_list(data, packet=packet)
-    elif args.kind == "workflow-patch":
-        errors = validate_workflow_patch(
-            data,
-            workflow=workflow,
-            registries=registries,
-            digest_source=digest_source,
-            phase_state=phase_state,
-            dry_run=args.dry_run_apply,
-        )
-    elif args.kind == "phase-state":
-        errors = validate_phase_state(data)
-    else:  # pragma: no cover - argparse `choices` already prevents this
-        print(f"execution error: unknown --kind {args.kind!r}", file=sys.stderr)
+    # bs9 (round 2): every structural guard above catches the malformed-input
+    # shapes design-input.md names explicitly. This wrapper is the safety
+    # net for whatever it does NOT name: an unexpected exception here is an
+    # execution error (exit 2, message on stderr), never exit 1 with an
+    # empty stdout -- exit 1 must always carry the JSON error detail the
+    # contract promises.
+    try:
+        if args.kind == "worker-result":
+            errors = validate_worker_result(
+                data,
+                args.worker,
+                envelope=envelope,
+                packet=packet,
+                answers=answers,
+                workflow=workflow,
+                registries=registries,
+                phase_state=phase_state,
+                digest_source=digest_source,
+                feature_dir=feature_dir,
+                baseline_dir=baseline_dir,
+                dry_run=args.dry_run_apply,
+                gate_registry=gate_registry,
+            )
+        elif args.kind == "question-packet":
+            errors = validate_question_packet(data, gate_registry=gate_registry)
+        elif args.kind == "answers":
+            errors = validate_answers_list(data, packet=packet)
+        elif args.kind == "workflow-patch":
+            errors = validate_workflow_patch(
+                data,
+                workflow=workflow,
+                registries=registries,
+                digest_source=digest_source,
+                phase_state=phase_state,
+                dry_run=args.dry_run_apply,
+            )
+        elif args.kind == "phase-state":
+            errors = validate_phase_state(data)
+        else:  # pragma: no cover - argparse `choices` already prevents this
+            print(f"execution error: unknown --kind {args.kind!r}", file=sys.stderr)
+            return 2
+    except Exception as exc:  # noqa: BLE001 -- last-resort exit-2 safety net
+        print(f"execution error: unexpected exception during --kind {args.kind!r} validation: {exc}", file=sys.stderr)
         return 2
 
     if errors:
