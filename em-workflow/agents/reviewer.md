@@ -21,7 +21,7 @@ injected skill defines what to flag.
    with path filter `*/em-workflow/*/references/*` — never the cwd.
 
 If unresolved, return
-`{"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "source": "claude"}`
+`{"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "skip_reason": "protocol_unresolved", "source": "claude"}`
 and stop.
 
 Read the resolved protocol and follow it strictly — it defines inputs, target
@@ -34,7 +34,7 @@ untrusted-input handling. This agent file adds only the steps below.
 Load `perspective_skill` (e.g. `em-workflow:review-security`) with the Skill
 tool. It defines **what to flag / what NOT to flag** for this run. If loading
 fails, fail-closed:
-`{"findings": [], "summary": "skipped: perspective skill unresolved", "skipped": true, "source": "claude"}`.
+`{"findings": [], "summary": "skipped: perspective skill unresolved", "skipped": true, "skip_reason": "skill_unresolved", "source": "claude"}`.
 
 Load ONLY the orchestrator-named skill — never additional perspectives (your
 category discipline depends on it).

@@ -1,22 +1,34 @@
 # reviewers.yaml - Review-perspective registry (em-review SSOT)
 #
-# em-review uses TWO generic reviewer agents (em-review:reviewer for Claude,
-# em-review:codex-reviewer for GPT/Codex) and injects the perspective as a
-# skill. This registry maps each perspective to its skill and skip rules.
+# em-review uses a Claude generic reviewer agent (em-review:reviewer) plus
+# one cross-validation reviewer agent per provider (em-review:codex-reviewer
+# for GPT/Codex; vertex-review:vertex-reviewer for Vertex AI MaaS — an
+# independently-installed plugin) and injects the perspective as a skill.
+# This registry maps each perspective to its skill and provider chain.
 #
 # The review phase reads this file to drive fan-out:
 # - For each SELECTED perspective (per review-rules.yaml + discretion), launch
 #   em-review:reviewer with instructions to load `claude_skill` via the
 #   Skill tool.
-# - When codex cross-validation fires, ALSO launch em-review:codex-reviewer
-#   for each selected perspective with codex_supported: true. The codex
-#   reviewer loads the SAME perspective skill (plus its preloaded
-#   codex-prompting skill) and forwards the perspective brief to Codex CLI.
+# - When cross-validation fires (review-rules.yaml), ALSO launch ONE
+#   cross-model reviewer per selected perspective: the FIRST provider in that
+#   perspective's `cross_validation` chain that is available (codex_available
+#   / vertex_available, per review-phase.md Phase R0). No available provider
+#   in the chain → no cross-model run for that perspective; the Claude
+#   reviewer output stands alone.
+# - A codex-reviewer result carrying `skip_reason: rate_limited` triggers a
+#   Phase R2b fallback dispatch to the next available provider in the chain.
+#   This is the only runtime (as opposed to availability-based) fallback.
 #
 # requires_spec: perspective only runs when a SPEC.md is available.
-# codex_supported: whether the codex reviewer can cross-validate this
-#   perspective (comprehensive is Claude-only by design — its value is
-#   breadth inside one context, which does not translate to a second model).
+# cross_validation: ordered provider preference for this perspective (first
+#   available provider wins; empty = Claude-only by design — comprehensive's
+#   value is breadth inside one context, which a second model can't add).
+#   security lists codex first (existing track record) with vertex as the
+#   rate-limit fallback; the other perspectives list vertex first (cost) with
+#   codex as the fallback when vertex-review is not installed — so an
+#   environment without vertex-review behaves exactly as before this
+#   registry gained provider ordering.
 
 version: 1
 
@@ -24,20 +36,20 @@ perspectives:
   - perspective: security
     claude_skill: review-security
     requires_spec: false
-    codex_supported: true
+    cross_validation: [codex, vertex]
   - perspective: performance
     claude_skill: review-performance
     requires_spec: false
-    codex_supported: true
+    cross_validation: [vertex, codex]
   - perspective: architecture
     claude_skill: review-architecture
     requires_spec: false
-    codex_supported: true
+    cross_validation: [vertex, codex]
   - perspective: spec
     claude_skill: review-spec
     requires_spec: true
-    codex_supported: true
+    cross_validation: [vertex, codex]
   - perspective: comprehensive
     claude_skill: review-comprehensive
     requires_spec: false
-    codex_supported: false
+    cross_validation: []

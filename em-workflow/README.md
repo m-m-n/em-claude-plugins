@@ -21,7 +21,7 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
     │                  進捗は journal.jsonl（機械書き込み専用の追記ログ）で追跡し、
     │                  workflow.yaml（LLM 管理の要約 SSOT）と役割を分離する
     ├─ review        機械層 (review-rules.yaml × タスク宣言) + 裁量層で観点を動的選択
-    │                  観点スキル注入型の汎用レビュアーを並列起動（条件により Codex 二重化）
+    │                  観点スキル注入型の汎用レビュアーを並列起動（条件によりクロスモデル二重化）
     │                  bounded auto-fix (≤ 3 ループ) → reviews/roundN.yaml に記録
     ├─ verify        VERIFICATION.md に基づく統合検証（ビルド / テスト / E2E）
     └─ retrospect    つまずきの痕跡を retrospect.yaml へ自動収集（判断は手動コマンドで）
@@ -65,6 +65,8 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 | reviewer | 汎用 Claude レビュアー（観点はスキル注入） | — |
 | codex-reviewer | 汎用 GPT/Codex レビュアー（クロスバリデーション用） | codex-prompting |
 | review-editor | auto-fix 適用専用（Read/Edit のみの最小権限） | — |
+
+クロスモデル検証には上記に加えて `vertex-review:vertex-reviewer` も使われる。em-workflow 本体ではなく、別途インストールする `vertex-review` プラグイン（Vertex AI MaaS）が提供するエージェントで、未インストールでも em-workflow は変わらず動作する（後述）。
 | gitignore-guard | implement 前処理。`.claude/worktrees/` の ignore を確認・追記（haiku） | — |
 | git-setup-guard | develop の Step 0。gitleaks の存在確認 + gitleaks pre-commit hook の冪等設置。gitleaks 不在なら中断を報告（haiku） | — |
 
@@ -78,7 +80,7 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 1. **機械層**: workflow.yaml の tasks 宣言（domains / complexity）だけを入力に `references/review-rules.yaml` を決定的に評価し、必須観点セット（フロア）を出す。comprehensive は常時、spec は SDD 経由なら常時。
 2. **裁量層**: オーケストレーターが統合 diff を見て観点を**追加のみ**できる（削除不可）。追加理由は review plan に記録され、retrospect でルール表育成の材料になる。diff が依存マニフェスト / lockfile に触れる、または vendored コードを追加する場合の `license` 観点の追加は必須（license は裁量層でのみ選択される）。
 
-Codex クロスバリデーションは強度の軸として分離: complexity high のタスクを含む、または security が選ばれた場合に発動。
+クロスモデル検証は強度の軸として分離: complexity high のタスクを含む、または security が選ばれた場合に発動。選択された各観点は `reviewers.yaml` の `cross_validation`（プロバイダ優先順位リスト）のうち利用可能な最初のプロバイダで claude + それ で二重実行される。security は `[codex, vertex]`（Codex 優先、レート制限時のみ Vertex へフォールバック）、他の観点は `[vertex, codex]`（Vertex 優先、未インストール時は Codex へフォールバック）。
 
 ## マージ戦略（worktree 並列）
 
@@ -110,4 +112,5 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 - gitleaks — develop 開始時の git-setup ゲートが存在チェックし、無ければワークフローを中断する（pre-commit hook でのシークレットスキャンに使用）
 - python3 — コマンド実行ガードの hook。無い環境では hook が非ブロッキングで抜け、コマンドごとの AskUserQuestion フォールバックゲートに切り替わる
 - python3 + PyYAML — 同梱の検証スクリプト（`scripts/validate-worker-output.py` / `scripts/check-plugin-invariants.py`）が使う実行時依存。テストコードはこの依存を使わず標準ライブラリのみで動く（`test/README.md`）。環境によっては `python3` の非対話実行に `Bash(python3:*)` 権限エントリの追加が必要
-- Codex CLI（任意 — 無ければ GPT クロスバリデーションはクリーンにスキップ）
+- Codex CLI（任意 — 無ければ security 観点のクロスバリデーションは vertex-review 導入時のみ Vertex に回る。両方無ければクリーンにスキップ）
+- `vertex-review` プラグイン（任意 — 別リポジトリからインストールする独立プラグイン。無くても performance/architecture/spec 観点は今まで通り Codex とのクロスバリデーションで動作する）

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["findings", "summary", "skipped", "source"],
+  "required": ["findings", "summary", "skipped", "skip_reason", "source"],
   "additionalProperties": false,
   "properties": {
     "findings": {
@@ -22,8 +22,9 @@
         }
       }
     },
-    "summary":  { "type": "string" },
-    "skipped":  { "type": "boolean" },
-    "source":   { "enum": ["claude", "codex"] }
+    "summary":     { "type": "string" },
+    "skipped":     { "type": "boolean" },
+    "skip_reason": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+    "source":      { "enum": ["claude", "codex", "vertex"] }
   }
 }

@@ -105,7 +105,7 @@ review:                            # phase-state SUMMARY only (details: reviews/
     discretionary:                 # Layer-2 additions (add-only; reason mandatory)
       - perspective: performance
         reason: "統合 diff にホットループへの変更が含まれるため"
-    codex_cross_validation: true   # per review-rules.yaml codex_cross_validation
+    cross_validation: true         # per review-rules.yaml cross_validation
   perspectives:                    # per-perspective completion in the latest round
     security: completed            # pending | completed | skipped | failed
   residual_critical_high: 0        # gate: workflow may not complete while > 0

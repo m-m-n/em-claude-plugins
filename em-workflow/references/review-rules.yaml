@@ -18,14 +18,14 @@
 #   (the SDD flow guarantees SPEC.md exists). In standalone /em-workflow:review
 #   without a SPEC.md, spec is dropped with a skip notice instead.
 #
-# Codex cross-validation (intensity axis, separate from perspective selection):
-# fires when ANY task has complexity: high, OR the FINAL selected set
-# (floor + Layer 2 discretionary additions) includes security. Layer 1
+# Cross-model validation (intensity axis, separate from perspective
+# selection): fires when ANY task has complexity: high, OR the FINAL selected
+# set (floor + Layer 2 discretionary additions) includes security. Layer 1
 # computes a provisional value from this table; the orchestrator re-evaluates
 # it after Layer 2 (review-phase.md R1), so a discretionarily-added security
-# perspective also fires it. When it fires, each selected perspective that
-# the codex reviewer supports is double-run (claude + codex) for agreement
-# scoring.
+# perspective also fires it. When it fires, each selected perspective whose
+# reviewers.yaml `cross_validation` chain has an available provider is
+# double-run (claude + that provider) for agreement scoring.
 #
 # domains vocabulary (fixed, 8 values — planner assigns from these only):
 #   auth / input-handling / data-persistence / external-io / concurrency /
@@ -52,7 +52,7 @@ rules:
 
 spec_review: always
 
-codex_cross_validation:
+cross_validation:
   when_any:
     - complexity: high
     - selected_perspective: security

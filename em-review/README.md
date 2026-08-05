@@ -11,10 +11,11 @@ em-workflow のレビューフェーズのスタンドアロン版。SDD を通�
     │
     ├─ R0  引数解析・records_base 解決（デフォルト /tmp/em-review/{repo-key}/）
     │        SSOT 解決（fail-closed）・レビュー対象決定（diff / whole-codebase / pr-diff + サイズゲート）
-    │        パス検証 → diff_cmd_quoted 構築、SPEC.md 探索、codex 可用性プローブ、
+    │        パス検証 → diff_cmd_quoted 構築、SPEC.md 探索、codex / vertex 可用性プローブ、
     │        {records_base}/reviews-*/round*.yaml から round_context 構築（nit 蒸し返し防止）
     ├─ R1  観点選択（2 層: 機械フロア + 裁量追加のみ）
-    ├─ R2  ファンアウト（1 メッセージで N 並列 Task、条件により Codex 二重化）
+    ├─ R2  ファンアウト（1 メッセージで N 並列 Task、条件によりクロスモデル二重化）
+    ├─ R2b Codex レート制限時のみ Vertex へフォールバック
     ├─ R3  集約・サニタイズ・クロスモデル一致スコアリング
     ├─ R4  bounded auto-fix（≤ 3 ループ、--report-only でスキップ、PR モードは常にスキップ、コミットなし）
     ├─ R5  {records_base}/reviews-{YYYYMMDD-HHMM}/round1.yaml へ記録
@@ -42,6 +43,8 @@ em-workflow のレビューフェーズのスタンドアロン版。SDD を通�
 | codex-reviewer | 汎用 GPT/Codex レビュアー（クロスバリデーション用） | codex-prompting |
 | review-editor | auto-fix 適用専用（Read/Edit のみの最小権限） | — |
 
+クロスモデル検証には上記に加えて `vertex-review:vertex-reviewer` も使われる。これは em-review 本体ではなく、別途インストールする `vertex-review` プラグイン（Vertex AI MaaS）が提供するエージェント。未インストールでも em-review は変わらず動作する（後述）。
+
 ### 観点スキル（レジストリ `references/reviewers.yaml`）
 
 `review-security` / `review-performance` / `review-architecture` / `review-spec` / `review-comprehensive`。
@@ -53,16 +56,16 @@ spec 観点は SPEC.md が見つかったときだけ実行される（不在時
 1. **機械層**: 通常はフロア = `baseline`（comprehensive）+（SPEC.md があれば spec）。cwd に em-workflow の `feature-docs/{feature}/workflow.yaml` があり tasks が現在の diff をカバーしていれば、その domains / complexity 宣言で `references/review-rules.yaml` を決定的に評価してもよい。
 2. **裁量層**: オーケストレーターが diff を見て観点を**追加のみ**できる（削除不可）。追加理由は round 記録に残る。
 
-Codex クロスバリデーションは強度の軸として分離: complexity high のタスクを含む（workflow.yaml 併用時）、または最終選択セットに security が入った場合に発動し、`codex_supported: true` の観点が claude + codex で二重実行される。
+クロスモデル検証は強度の軸として分離: complexity high のタスクを含む（workflow.yaml 併用時）、または最終選択セットに security が入った場合に発動し、選択された各観点は `reviewers.yaml` の `cross_validation`（プロバイダ優先順位リスト）のうち利用可能な最初のプロバイダで claude + それ で二重実行される。security は `[codex, vertex]`（Codex 優先、レート制限時のみ Vertex へフォールバック）、他の観点は `[vertex, codex]`（Vertex 優先、未インストール時は Codex へフォールバック）。
 
 ## 信頼度スコアリング
 
 | 状況 | スコア |
 |------|--------|
-| Claude + Codex 一致（同一観点・同一サイト ±5 行） | 95 |
+| Claude + クロスモデル（Codex/Vertex）一致（同一観点・同一サイト ±5 行） | 95 |
 | Claude のみ | 60 |
-| Codex のみ | 50 |
-| spec — Claude のみ（codex スキップ時） | 70 |
+| クロスモデルのみ | 50 |
+| spec — Claude のみ（クロスモデル未実行時） | 70 |
 | comprehensive（設計上 Claude のみ） | 65 |
 | 複数観点が同一サイトを指摘 | +15（上限 100） |
 
@@ -96,7 +99,8 @@ Codex クロスバリデーションは強度の軸として分離: complexity h
 ## 要件
 
 - git（無くても whole-codebase モードで動作する）
-- Codex CLI（任意 — 無ければ GPT クロスバリデーションはクリーンにスキップ）
+- Codex CLI（任意 — 無ければ security 観点のクロスバリデーションは vertex-review 導入時のみ Vertex に回る。両方無ければクリーンにスキップ）
+- `vertex-review` プラグイン（任意 — 別リポジトリからインストールする独立プラグイン。無くても performance/architecture/spec 観点は今まで通り Codex とのクロスバリデーションで動作する）
 - gh CLI（任意 — PR レビュー時のみ必須）
 
 ## ファイル構成
