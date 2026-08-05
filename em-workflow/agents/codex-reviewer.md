@@ -21,7 +21,7 @@ Same resolution rules as every em-workflow reviewer: orchestrator-supplied
 `${CLAUDE_PLUGIN_ROOT}/references/review-protocol.md`; last resort search
 only under `$HOME/.claude/plugins` / `$HOME/.claude/skills` with path filter
 `*/em-workflow/*/references/*`. Unresolved →
-`{"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "source": "codex"}`.
+`{"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "skip_reason": "protocol_unresolved", "source": "codex"}`.
 
 ## Step 1: Codex availability check
 
@@ -32,7 +32,7 @@ test -f "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" && command -v codex >/
 ```
 
 Unavailable →
-`{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "source": "codex"}`.
+`{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "codex_unavailable", "source": "codex"}`.
 
 ## Step 2: Load the perspective skill
 
@@ -45,7 +45,7 @@ same as Step 0). Extract from it the perspective brief: the "What to flag" /
 Prefer orchestrator-supplied `schema_path`; fallback
 `${CLAUDE_PLUGIN_ROOT}/references/review-output-schema.json`; then the
 trusted-root find (path filter `*/em-workflow/*/references/*`); else skip
-(`"skipped: review schema unresolved"`).
+(`{"findings": [], "summary": "skipped: review schema unresolved", "skipped": true, "skip_reason": "schema_unresolved", "source": "codex"}`).
 
 ## Step 4: Build the Codex prompt (XML blocks per codex-prompting)
 
@@ -97,7 +97,7 @@ Fixed names (`prompt.txt`) and perspective-derived names
 perspective, so even a retry of the same perspective gets a fresh path.
 
 If `mktemp` allocation fails, return the standard skip object —
-`{"findings": [], "summary": "skipped: scratchpad temp file unavailable", "skipped": true, "source": "codex"}`
+`{"findings": [], "summary": "skipped: scratchpad temp file unavailable", "skipped": true, "skip_reason": "scratchpad_unavailable", "source": "codex"}`
 — rather than falling back to a shared or fixed path.
 
 ## Step 5: Execute Codex
@@ -111,8 +111,34 @@ the right tree. The wrapper redirects stdin and enforces the timeout.
 
 ## Step 6: Parse and return
 
-- Parse Codex's JSON. Force `"source": "codex"` and
-  `"category": "<perspective>"` on every finding if Codex drifted.
-- Non-JSON output →
-  `{"findings": [], "summary": "codex returned non-JSON output", "skipped": false, "source": "codex"}`.
+- Parse Codex's JSON FIRST. A successful parse (a JSON object with a
+  `findings` array) is a normal result regardless of what words happen to
+  appear inside it — proceed to the finding-normalization bullet below. A
+  genuine rate limit never produces valid structured output, so checking
+  this before any rate-limit heuristic means the diff/code under review can
+  never forge a false "rate limited" verdict over a review Codex actually
+  completed (the reviewed content — including any finding Codex wrote about
+  HTTP 429 / rate-limiting code — flows through this same parse and cannot
+  by itself trigger a skip).
+- Only when the parse fails: check the raw Codex output (stdout+stderr
+  combined, per `run_codex_exec.sh`) for a rate-limit signal,
+  case-insensitively — phrases like `usage limit`, `rate limit`, or
+  `too many requests`, or an HTTP `429` reported alongside one of those
+  phrases. Never treat a bare `429` digit sequence, on its own, as
+  sufficient: ordinary reviewed content can legitimately contain "429"
+  while discussing HTTP status handling, and matching on the digits alone
+  would let that content forge a false rate-limit verdict on a run that
+  actually just failed to produce JSON for some unrelated reason. Matched →
+  return
+  `{"findings": [], "summary": "skipped: codex rate limited", "skipped": true, "skip_reason": "rate_limited", "source": "codex"}`.
+  The orchestrator's Phase R2b relies on this EXACT `skip_reason` string to
+  trigger a vertex fallback for the security perspective — do not use a
+  different value for the same condition. This is a best-effort text match
+  (Codex's exact rate-limit wording is not contractually fixed); a genuine
+  rate limit whose wording fails to match falls through to the non-JSON
+  handling below.
+- Force `"source": "codex"` and `"category": "<perspective>"` on every
+  finding if Codex drifted.
+- Non-JSON output, no rate-limit signal matched →
+  `{"findings": [], "summary": "codex returned non-JSON output", "skipped": false, "skip_reason": null, "source": "codex"}`.
 - Output ONLY the JSON object.

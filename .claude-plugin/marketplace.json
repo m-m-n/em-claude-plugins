@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "em-review",
-      "description": "Standalone version of the em-workflow review phase. /em-review:multi-review reviews the current git diff (whole codebase when no diff) with two-layer dynamic perspective selection, skill-injected generic reviewers (Claude + conditional GPT/Codex cross-validation), cross-model agreement scoring, and bounded auto-fix (≤ 3 loops, skip with --report-only). Never commits; records default to /tmp (--records <dir> to override). Also reviews GitHub PRs by number/URL (report-only).",
+      "description": "Standalone version of the em-workflow review phase. /em-review:multi-review reviews the current git diff (whole codebase when no diff) with two-layer dynamic perspective selection, skill-injected generic reviewers (Claude + conditional cross-model validation via GPT/Codex and, when the separately-installed vertex-review plugin is present, Vertex AI MaaS), cross-model agreement scoring, and bounded auto-fix (≤ 3 loops, skip with --report-only). Never commits; records default to /tmp (--records <dir> to override). Also reviews GitHub PRs by number/URL (report-only).",
       "author": {
         "name": "em"
       },
@@ -17,7 +17,7 @@
     },
     {
       "name": "em-workflow",
-      "description": "Unified SDD + parallel-implementation + dynamic-review workflow. /em-workflow:develop drives a git-setup gate (gitleaks pre-commit hook; aborts when gitleaks is absent) → spec → plan with task decomposition → wave-based parallel implementation in git worktrees → dynamic review selection (rule floor + discretion) → bounded auto-fix → retrospect collection. Skill-injected generic implementer/reviewer agents; review records persist per round. License consistency runs as a cross-workflow constraint (project license recorded at spec time, checked at library selection, reviewed on manifest changes). /em-workflow:git-setup and /em-workflow:gen-license also run standalone.",
+      "description": "Unified SDD + parallel-implementation + dynamic-review workflow. /em-workflow:develop drives a git-setup gate (gitleaks pre-commit hook; aborts when gitleaks is absent) → spec → plan with task decomposition → wave-based parallel implementation in git worktrees → dynamic review selection (rule floor + discretion) → bounded auto-fix → retrospect collection. Skill-injected generic implementer/reviewer agents (Claude + conditional cross-model validation via GPT/Codex and, when the separately-installed vertex-review plugin is present, Vertex AI MaaS); review records persist per round. License consistency runs as a cross-workflow constraint (project license recorded at spec time, checked at library selection, reviewed on manifest changes). /em-workflow:git-setup and /em-workflow:gen-license also run standalone.",
       "author": {
         "name": "em"
       },

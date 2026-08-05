@@ -1,6 +1,6 @@
 ---
 name: multi-review
-description: 並列多観点コードレビューのエントリポイント（em-review）。em-workflow レビューフェーズのスタンドアロン版です。現在の git diff（なければコードベース全体）、または GitHub PR（番号 / URL 指定、report-only 固定）を対象に、baseline +（SPEC.md があれば spec）+ 裁量層で観点を動的選択し、観点スキル注入型の汎用レビュアー（+ 条件により Codex クロスバリデーション）を並列起動、bounded auto-fix（≤ 3 ループ、--report-only でスキップ）とレビュー記録の書き出し（デフォルト /tmp 配下、--records <dir> で変更可）まで行います。コミットは一切しません
+description: 並列多観点コードレビューのエントリポイント（em-review）。em-workflow レビューフェーズのスタンドアロン版です。現在の git diff（なければコードベース全体）、または GitHub PR（番号 / URL 指定、report-only 固定）を対象に、baseline +（SPEC.md があれば spec）+ 裁量層で観点を動的選択し、観点スキル注入型の汎用レビュアー（+ 条件によりクロスモデル検証 — Codex、および別途 vertex-review プラグインが導入済みなら Vertex AI）を並列起動、bounded auto-fix（≤ 3 ループ、--report-only でスキップ）とレビュー記録の書き出し（デフォルト /tmp 配下、--records <dir> で変更可）まで行います。コミットは一切しません
 argument-hint: "[PR番号|PR URL] [--report-only] [--records <dir>]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, Grep, Bash, Task, AskUserQuestion
@@ -33,8 +33,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/references/review-phase.md` and execute it inline:
   with tasks covering the current diff, you MAY use its domains/complexity
   for the full Layer-1 evaluation instead. Layer 2 (discretionary additions
   from the diff) always applies — additions only, with reasons.
-- Codex cross-validation per review-rules.yaml (`codex_cross_validation`),
-  subject to codex availability.
+- Cross-model validation per review-rules.yaml (`cross_validation`), subject
+  to per-perspective provider availability (reviewers.yaml `cross_validation`
+  chain).
 - Auto-fix: ON by default, ≤ 3 loops; skip with `--report-only` (aliases
   `--no-auto-fix`, `--no-fix`); ALWAYS skipped in PR mode (the PR's code is
   not in the working tree). **em-review never commits** — fixes stay in the

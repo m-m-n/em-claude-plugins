@@ -1,9 +1,10 @@
 # em-review Review Protocol
 
 This document is the **single-source-of-truth** for every reviewer run by the
-`em-review` plugin (the generic Claude reviewer and the generic GPT/Codex
-reviewer). Every reviewer MUST resolve this file at Step 0 (fail-closed) and
-follow the rules below.
+`em-review` plugin (the generic Claude reviewer, the generic GPT/Codex
+reviewer, and — when the separately-installed `vertex-review` plugin is
+present — its Vertex AI reviewer). Every reviewer MUST resolve this file at
+Step 0 (fail-closed) and follow the rules below.
 
 em-review has **one generic reviewer agent per model source**; the
 perspective is injected as a skill:
@@ -13,6 +14,11 @@ perspective is injected as a skill:
 - `em-review:codex-reviewer` (GPT/Codex) — loads the same perspective skill,
   builds an XML-block prompt per its preloaded `codex-prompting` skill, and
   delegates to Codex CLI via the wrapper script.
+- `vertex-review:vertex-reviewer` (Vertex AI MaaS, optional) — a separately
+  installed plugin that reads this SAME protocol file (it ships no
+  `references/` of its own, to avoid drifting from this SSOT) and follows it
+  identically; loads the same perspective skill and embeds the schema in its
+  own prompt since Vertex AI has no `--output-schema` flag.
 
 The perspective skill owns WHAT to flag / WHAT NOT to flag. This protocol owns
 everything else: input handling, target resolution, budget, severity, output
@@ -61,9 +67,10 @@ semantics:
    `*/em-review/*/references/*` — **NEVER** the cwd.
 4. If none resolve, return:
    ```json
-   {"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "source": "claude"}
+   {"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "skip_reason": "protocol_unresolved", "source": "claude"}
    ```
-   (or `"codex"`) and stop. Do NOT proceed without the protocol.
+   (`"source"` is whichever this reviewer is — `"codex"` / `"vertex"`) and
+   stop. Do NOT proceed without the protocol.
 
 The same fail-closed pattern applies to `schema_path`, `perspective_skill`
 (unloadable skill → skip), and `spec_path` (spec perspective).
@@ -146,20 +153,21 @@ Every reviewer outputs **ONLY** a JSON object matching
   ],
   "summary": "1-2 sentence overall note",
   "skipped": false,
-  "source": "claude|codex"
+  "skip_reason": null,
+  "source": "claude|codex|vertex"
 }
 ```
 
 Rules:
 
 - ALL root-level fields and ALL finding fields MUST be present (`null` for
-  unknown `line` / `line_end`) — required for OpenAI structured-output
-  compatibility.
+  unknown `line` / `line_end`, and for `skip_reason` whenever `skipped` is
+  `false`) — required for OpenAI structured-output compatibility.
 - `category` MUST equal the injected `perspective`.
 - `file` MUST be relative to the project root — never absolute, no `..`
   segments, no NUL. If a relative path cannot be resolved, omit the finding.
 - No findings at `medium`+ → `{"findings": [], "summary": "no findings",
-  "skipped": false, "source": "<source>"}`.
+  "skipped": false, "skip_reason": null, "source": "<source>"}`.
 - Descriptions may be Japanese or English; concise Japanese preferred.
 
 ### `suggestion` format
@@ -190,12 +198,20 @@ When the orchestrator passes `round_context` (previous runs' records from
 
 ## Skip Semantics
 
+Every skip object sets `skip_reason` to a short machine-stable
+`snake_case` string; non-skip output sets it to `null`. Known values:
+
 - **Spec perspective** with no readable SPEC.md:
-  `{"findings": [], "summary": "skipped: no SPEC.md found", "skipped": true, "source": "<source>"}`
+  `{"findings": [], "summary": "skipped: no SPEC.md found", "skipped": true, "skip_reason": "no_spec", "source": "<source>"}`
 - **Codex reviewer** when the wrapper script is unavailable:
-  `{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "source": "codex"}`
+  `{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "codex_unavailable", "source": "codex"}`
+- **Codex reviewer** when Codex itself reports a rate limit:
+  `{"findings": [], "summary": "skipped: codex rate limited", "skipped": true, "skip_reason": "rate_limited", "source": "codex"}`
+  — the review phase's Phase R2b relies on this exact value to fall back to
+  Vertex for the security perspective.
 - **Any reviewer** with unresolved protocol/schema/skill (Step 0):
-  `{"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "source": "<source>"}`
+  `{"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "skip_reason": "protocol_unresolved", "source": "<source>"}`
+  (`"skill_unresolved"` / `"schema_unresolved"` for the other two gates).
 
 The orchestrator treats `skipped: true` as a non-failure and renders
 `⏭️ SKIPPED (理由)`.
