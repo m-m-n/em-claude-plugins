@@ -24,8 +24,8 @@
 # computes a provisional value from this table; the orchestrator re-evaluates
 # it after Layer 2 (review-phase.md R1), so a discretionarily-added security
 # perspective also fires it. When it fires, each selected perspective whose
-# reviewers.yaml `cross_validation` chain has an available provider is
-# double-run (claude + that provider) for agreement scoring.
+# reviewers.yaml `cross_validation` chain has an available harness entry is
+# double-run (claude + that entry's model) for agreement scoring.
 #
 # domains vocabulary (fixed, 8 values — planner assigns from these only):
 #   auth / input-handling / data-persistence / external-io / concurrency /

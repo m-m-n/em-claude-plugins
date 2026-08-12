@@ -3,22 +3,27 @@
 This document is the **single-source-of-truth** for every reviewer run by the
 `em-workflow` plugin (the generic Claude reviewer, the generic GPT/Codex
 reviewer, and — when the separately-installed `vertex-review` plugin is
-present — its Vertex AI reviewer). Every reviewer MUST resolve this file at
-Step 0 (fail-closed) and follow the rules below.
+present — its LiteLLM-harness reviewer). Every reviewer MUST resolve this
+file at Step 0 (fail-closed) and follow the rules below.
 
-em-workflow has **one generic reviewer agent per model source**; the
-perspective is injected as a skill:
+em-workflow has **one generic reviewer agent per harness**; the perspective
+is injected as a skill and, for the litellm harness, the model is injected as
+an input:
 
 - `em-workflow:reviewer` (Claude) — loads the perspective skill named in its
   prompt (e.g. `em-workflow:review-security`) via the Skill tool, then reviews.
 - `em-workflow:codex-reviewer` (GPT/Codex) — loads the same perspective skill,
   builds an XML-block prompt per its preloaded `codex-prompting` skill, and
-  delegates to Codex CLI via the wrapper script.
-- `vertex-review:vertex-reviewer` (Vertex AI MaaS, optional) — a separately
+  delegates to Codex CLI via the wrapper script. The model is Codex's own
+  recommended default; this harness takes no `model` input.
+- `vertex-review:vertex-reviewer` (LiteLLM harness, optional) — a separately
   installed plugin that reads this SAME protocol file (it ships no
   `references/` of its own, to avoid drifting from this SSOT) and follows it
-  identically; loads the same perspective skill and embeds the schema in its
-  own prompt since Vertex AI has no `--output-schema` flag.
+  identically; loads the same perspective skill and delegates to
+  `codex exec -p litellm -m <model>`, which fronts Vertex AI MaaS and Meta
+  Muse behind one proxy. It runs the model named in its `model` input and
+  never chooses one itself — WHICH model each perspective gets is decided by
+  the orchestrator from references/reviewers.yaml.
 
 The perspective skill owns WHAT to flag / WHAT NOT to flag. This protocol owns
 everything else: input handling, target resolution, budget, severity, output
@@ -32,6 +37,10 @@ The dispatching orchestrator (the `/em-workflow:develop` review phase or
 - `perspective` — one of the registry perspectives (references/reviewers.yaml)
 - `perspective_skill` — the skill to load via the Skill tool (fail-closed: if
   the Skill tool cannot load it, return the skip object below)
+- `model` — litellm-harness reviewer ONLY, and always present for it: the
+  model name to pass to `codex exec -p litellm -m <model>`, verbatim. Absent
+  or unknown to the harness → skip with `harness_unavailable`; never
+  substitute a default. Other reviewers do not receive this field.
 - `review_mode` — `"diff"` or `"whole-codebase"`
 - `protocol_path`, `schema_path` — resolved SSOT paths
 - `changed_files` — path list (validated by the orchestrator)
@@ -67,7 +76,7 @@ semantics:
    ```json
    {"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "skip_reason": "protocol_unresolved", "source": "claude"}
    ```
-   (`"source"` is whichever this reviewer is — `"codex"` / `"vertex"`) and
+   (`"source"` is whichever this reviewer is — `"codex"` / `"litellm"`) and
    stop. Do NOT proceed without the protocol.
 
 The same fail-closed pattern applies to `schema_path`, `perspective_skill`
@@ -145,7 +154,7 @@ Every reviewer outputs **ONLY** a JSON object matching
   "summary": "1-2 sentence overall note",
   "skipped": false,
   "skip_reason": null,
-  "source": "claude|codex|vertex"
+  "source": "claude|codex|litellm"
 }
 ```
 
@@ -194,15 +203,33 @@ Every skip object sets `skip_reason` to a short machine-stable
 
 - **Spec perspective** with no readable SPEC.md:
   `{"findings": [], "summary": "skipped: no SPEC.md found", "skipped": true, "skip_reason": "no_spec", "source": "<source>"}`
-- **Codex reviewer** when the wrapper script is unavailable:
-  `{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "codex_unavailable", "source": "codex"}`
-- **Codex reviewer** when Codex itself reports a rate limit:
+- **Any cross-model reviewer** when its harness cannot be reached at all
+  (codex: wrapper script or CLI missing; litellm: proxy down, `-p litellm`
+  profile broken, `model` absent or unknown):
+  `{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "harness_unavailable", "source": "codex"}`
+- **Any cross-model reviewer** when the upstream reports a rate limit
+  (Codex's own limit, or a Vertex 429 surfaced through LiteLLM):
   `{"findings": [], "summary": "skipped: codex rate limited", "skipped": true, "skip_reason": "rate_limited", "source": "codex"}`
-  — the review phase's Phase R2b relies on this exact value to fall back to
-  Vertex for the security perspective.
+- **litellm reviewer** when the harness budget is spent (LiteLLM's monthly
+  virtual-key cap — surfaces as 400/401 `ExceededBudget`):
+  `{"findings": [], "summary": "skipped: litellm budget exhausted", "skipped": true, "skip_reason": "budget_exhausted", "source": "litellm"}`
+
+  These three `skip_reason` values are the **retryable** set: the review
+  phase's Phase R2b walks the perspective's fallback chain on exactly these
+  strings, and on nothing else. Emit them verbatim.
 - **Any reviewer** with unresolved protocol/schema/skill (Step 0):
   `{"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "skip_reason": "protocol_unresolved", "source": "<source>"}`
   (`"skill_unresolved"` / `"schema_unresolved"` for the other two gates).
+- **Any cross-model reviewer** that cannot allocate its own scratchpad temp
+  files: `skip_reason: "scratchpad_unavailable"`.
+- **litellm reviewer** when the assembled prompt still exceeds the model's
+  context after dropping investigation files and whole-file contents:
+  `skip_reason: "review_data_too_large"` — sending a truncated diff would
+  read as a clean review.
+
+  These last two are NOT retryable, like every value outside the three above:
+  the next entry in the chain would hit the same local failure or be handed
+  the same oversized data.
 
 The orchestrator treats `skipped: true` as a non-failure and renders
 `⏭️ SKIPPED (理由)`.
@@ -212,7 +239,8 @@ The orchestrator treats `skipped: true` as a non-failure and renders
 - No `git commit`, `git checkout`, `git stash`, `git reset`, branch switches.
 - No formatter / linter runs that modify files.
 - No `Write` / `Edit` of project files.
-- No network calls except the codex wrapper (codex reviewer only).
+- No network calls except the cross-model harness invocation (codex wrapper /
+  `codex exec -p litellm`, each in its own reviewer only).
 - Allowed read-only git: `git diff`, `git diff HEAD`, `git rev-parse`,
   `git status --porcelain`, `git log`.
 

@@ -32,7 +32,7 @@ test -f "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" && command -v codex >/
 ```
 
 Unavailable →
-`{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "codex_unavailable", "source": "codex"}`.
+`{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "harness_unavailable", "source": "codex"}`.
 
 ## Step 2: Load the perspective skill
 
@@ -132,7 +132,7 @@ the right tree. The wrapper redirects stdin and enforces the timeout.
   return
   `{"findings": [], "summary": "skipped: codex rate limited", "skipped": true, "skip_reason": "rate_limited", "source": "codex"}`.
   The orchestrator's Phase R2b relies on this EXACT `skip_reason` string to
-  trigger a vertex fallback for the security perspective — do not use a
+  advance the perspective's cross-model fallback chain — do not use a
   different value for the same condition. This is a best-effort text match
   (Codex's exact rate-limit wording is not contractually fixed); a genuine
   rate limit whose wording fails to match falls through to the non-JSON

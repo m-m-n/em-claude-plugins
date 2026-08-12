@@ -32,10 +32,10 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 - 進捗の SSOT は `feature-docs/{feature}/workflow.yaml`（step 状態 + tasks メタデータ + review plan/サマリ + requirements マッピング）。スキーマは `references/workflow-schema.md`。書き込むのはオーケストレーターのみ — Task dispatch される各 worker（requirements-analyst / spec-writer / implementation-planner / rework-planner / designer）は read-only で、必要な変更は構造化された結果（2 種の planner は workflow patch）として返す。
 - 各 phase（create-spec / create-plan / rework 合成）の対話履歴と worker 実行状態は `feature-docs/{feature}/phase-state/`（create-spec.yaml / create-plan.yaml / rework.yaml）に置き、`workflow.yaml` には持たせない（`references/phase-state.md`）。
 - ワークフロー成果物（REQUIREMENTS.md / SPEC.md / DESIGN.md / IMPLEMENTATION.md / VERIFICATION.md / tasks/ / reviews/ / retrospect.yaml を含む feature-docs/{feature}/ 一式、および test/README.md・design-system/）は integration worktree にのみ存在し、更新のたびに `commit-docs.sh` で integration ブランチへコミットされる。メインの作業ツリーは最終マージまで変更されない — 唯一の例外は `.claude/worktrees/` を無視させる gitignore-guard 相当の `.gitignore` 追記（create-spec Phase 3 または implement Step I.1 で発生）で、それ以外は `git status` が常にクリーンに保たれる。
-- 再開はブランチ起点: `em-workflow/*/integration` 形式のブランチを列挙して機能を発見し、そのブランチの workflow.yaml から状態を復元する。worktree が失われていてもブランチさえ残っていれば `git worktree add` で再作成して続行する。
+- 再開は feature 名の明示起点: `/em-workflow:develop <feature 名>` で `em-workflow/{feature}/integration` ブランチを解決し、そのブランチの workflow.yaml から状態を復元する。worktree が失われていてもブランチさえ残っていれば `git worktree add` で再作成して続行する。feature 名を渡さない起動は常に新規 feature（create-spec から開始）で、既存ブランチの列挙・推測はしない — 対話ではメインコンテキストの議論が、`--batch` ではタスク記述引数が create-spec の入力になる。
 - ユーザーのブランチには一切コミットしない。全ワークフローコミットは専用の `em-workflow/{feature}/integration` ブランチに載り、完了時に「base_branch にマージ / ブランチを残す / push + PR 作成」の三択を確認する（デフォルトはマージ。--batch は確認なしで「ブランチを残す」）。いずれの分岐でも integration worktree は片付ける — マージ時はブランチも削除し、それ以外はブランチを残してメイン作業ツリーから `git switch` できる状態にする。
 - 軽い変更もタスク 1 個として同じフローを通す（従来型モードは持たない）。
-- `--batch` で無人実行モードになる: 外部タスク管理サービス起点のヘッドレス起動（例: `claude -p "/em-workflow:develop --batch <タスク記述>"`）向けに、全ての AskUserQuestion ゲートを機械的既定値へ置き換えて完走する。要件の不明点は Codex 相談（最大 5 ターン、結論は Claude）で確定し、コマンド承認は自動記録（refusal パターンは従来どおり拒否）、review 残存 critical/high と verify 失敗はそれぞれ上限 1 回の自動 rework、完了時はマージも PR 作成もせず integration worktree だけ片付けてブランチを残す（worktree が消えることで checkout ロックが外れ、メイン作業ツリーから `git switch` で取り込み — ローカルマージまたは push + PR 作成 — できる）。各ゲートの既定回答は question packet の `gate_id` をキーに `references/batch-policies.yaml`（gate ごとの決定表 SSOT）を引く。policy に無い `gate_id` は `references/question-resolution.md` の未収載ゲート fallback（同じ Codex 相談ループ、決まらなければ副作用の小さい側を選択）に従うが、仕様変更・セキュリティ・ライセンス・不可逆判断のゲートは未収載なら安全側で中断する（fail-closed）。gate_id を経由しない残りの batch 判断（git-setup 失敗、feature 選定、レビュー diff サイズゲート、コマンド承認 hook のフォールバック等）は `references/batch-mode.md` に残る。失敗時は隠さず停止して報告する — 差し戻しは外部サービス側で新タスクを切る運用。
+- `--batch` で無人実行モードになる: 外部タスク管理サービス起点のヘッドレス起動（例: `claude -p "/em-workflow:develop --batch <タスク記述>"`）向けに、全ての AskUserQuestion ゲートを機械的既定値へ置き換えて完走する。要件の不明点は Codex 相談（最大 5 ターン、結論は Claude）で確定し、コマンド承認は自動記録（refusal パターンは従来どおり拒否）、review 残存 critical/high と verify 失敗はそれぞれ上限 1 回の自動 rework、完了時はマージも PR 作成もせず integration worktree だけ片付けてブランチを残す（worktree が消えることで checkout ロックが外れ、メイン作業ツリーから `git switch` で取り込み — ローカルマージまたは push + PR 作成 — できる）。各ゲートの既定回答は question packet の `gate_id` をキーに `references/batch-policies.yaml`（gate ごとの決定表 SSOT）を引く。policy に無い `gate_id` は `references/question-resolution.md` の未収載ゲート fallback（同じ Codex 相談ループ、決まらなければ副作用の小さい側を選択）に従うが、仕様変更・セキュリティ・ライセンス・不可逆判断のゲートは未収載なら安全側で中断する（fail-closed）。gate_id を経由しない残りの batch 判断（git-setup 失敗、feature 解決、レビュー diff サイズゲート、コマンド承認 hook のフォールバック等）は `references/batch-mode.md` に残る。失敗時は隠さず停止して報告する — 差し戻しは外部サービス側で新タスクを切る運用。
 
 ## コマンド
 
@@ -66,7 +66,7 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 | codex-reviewer | 汎用 GPT/Codex レビュアー（クロスバリデーション用） | codex-prompting |
 | review-editor | auto-fix 適用専用（Read/Edit のみの最小権限） | — |
 
-クロスモデル検証には上記に加えて `vertex-review:vertex-reviewer` も使われる。em-workflow 本体ではなく、別途インストールする `vertex-review` プラグイン（Vertex AI MaaS）が提供するエージェントで、未インストールでも em-workflow は変わらず動作する（後述）。
+クロスモデル検証には上記に加えて `vertex-review:vertex-reviewer` も使われる。em-workflow 本体ではなく、別途インストールする `vertex-review` プラグインが提供するエージェントで、`codex exec -p litellm -m <model>` 経由で Vertex AI MaaS と Meta Muse を 1 本の LiteLLM proxy の裏に束ねる。未インストールでも em-workflow は変わらず動作する（後述）。
 | gitignore-guard | implement 前処理。`.claude/worktrees/` の ignore を確認・追記（haiku） | — |
 | git-setup-guard | develop の Step 0。gitleaks の存在確認 + gitleaks pre-commit hook の冪等設置。gitleaks 不在なら中断を報告（haiku） | — |
 
@@ -80,7 +80,18 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 1. **機械層**: workflow.yaml の tasks 宣言（domains / complexity）だけを入力に `references/review-rules.yaml` を決定的に評価し、必須観点セット（フロア）を出す。comprehensive は常時、spec は SDD 経由なら常時。
 2. **裁量層**: オーケストレーターが統合 diff を見て観点を**追加のみ**できる（削除不可）。追加理由は review plan に記録され、retrospect でルール表育成の材料になる。diff が依存マニフェスト / lockfile に触れる、または vendored コードを追加する場合の `license` 観点の追加は必須（license は裁量層でのみ選択される）。
 
-クロスモデル検証は強度の軸として分離: complexity high のタスクを含む、または security が選ばれた場合に発動。選択された各観点は `reviewers.yaml` の `cross_validation`（プロバイダ優先順位リスト）のうち利用可能な最初のプロバイダで claude + それ で二重実行される。security は `[codex, vertex]`（Codex 優先、レート制限時のみ Vertex へフォールバック）、他の観点は `[vertex, codex]`（Vertex 優先、未インストール時は Codex へフォールバック）。
+クロスモデル検証は強度の軸として分離: complexity high のタスクを含む、または security が選ばれた場合に発動。選択された各観点は `reviewers.yaml` の `cross_validation` チェーンのうち利用可能な最初のエントリで claude + それ で二重実行される。
+
+ハーネス（どのモデルが存在し、どう到達するか）は vertex-review 側の責務、**観点ごとのモデル選択は em-workflow 側の責務**。`reviewers.yaml` が渡した `model` をレビュアーはそのまま `-m` に流す。
+
+| 観点 | チェーン（1st → 2nd → 3rd） |
+|------|------------------------------|
+| security | codex → litellm/muse-spark |
+| performance / spec | litellm/vertex-deepseek-v3.2 → litellm/muse-spark → codex |
+| architecture | litellm/vertex-glm-5 → litellm/muse-spark → codex |
+| comprehensive / license | （なし。Claude 専用） |
+
+R2b はスキップ理由が retryable なときだけチェーンを進める。`rate_limited` は次のエントリへ、`budget_exhausted` / `harness_unavailable` は**別ハーネス**の次エントリへ飛ぶ（litellm のエントリは仮想キー 1 本の月次予算を共有するため、モデルを変えても同じく落ちる）。フォールバックは 1 観点につき最大 2 ホップ。
 
 ## マージ戦略（worktree 並列）
 
@@ -112,5 +123,5 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 - gitleaks — develop 開始時の git-setup ゲートが存在チェックし、無ければワークフローを中断する（pre-commit hook でのシークレットスキャンに使用）
 - python3 — コマンド実行ガードの hook。無い環境では hook が非ブロッキングで抜け、コマンドごとの AskUserQuestion フォールバックゲートに切り替わる
 - python3 + PyYAML — 同梱の検証スクリプト（`scripts/validate-worker-output.py` / `scripts/check-plugin-invariants.py`）が使う実行時依存。テストコードはこの依存を使わず標準ライブラリのみで動く（`test/README.md`）。環境によっては `python3` の非対話実行に `Bash(python3:*)` 権限エントリの追加が必要
-- Codex CLI（任意 — 無ければ security 観点のクロスバリデーションは vertex-review 導入時のみ Vertex に回る。両方無ければクリーンにスキップ）
-- `vertex-review` プラグイン（任意 — 別リポジトリからインストールする独立プラグイン。無くても performance/architecture/spec 観点は今まで通り Codex とのクロスバリデーションで動作する）
+- Codex CLI（任意 — ただし litellm ハーネスも `codex exec` を使うため、無ければクロスバリデーションは全滅してクリーンにスキップされる）
+- `vertex-review` プラグイン + LiteLLM ハーネス（任意 — 別リポジトリからインストールする独立プラグイン。`LITELLM_API_KEY` と `~/.codex/litellm.config.toml` が揃って初めて `litellm_available` になる。無ければ全観点がチェーン末尾の Codex エントリに落ちる）
