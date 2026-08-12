@@ -25,6 +25,6 @@
     "summary":     { "type": "string" },
     "skipped":     { "type": "boolean" },
     "skip_reason": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-    "source":      { "enum": ["claude", "codex", "vertex"] }
+    "source":      { "enum": ["claude", "codex", "litellm"] }
   }
 }

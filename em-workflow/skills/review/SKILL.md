@@ -1,6 +1,6 @@
 ---
 name: review
-description: 単体レビューのエントリポイント（em-workflow）。SDD を通さない日常レビューを吸収します。workflow.yaml 不在時は baseline（comprehensive + SPEC.md があれば spec）+ 裁量層の追加観点で動作し、選択された観点ごとに汎用レビュアー（+ 条件によりクロスモデル検証 — Codex、および別途 vertex-review プラグインが導入済みなら Vertex AI）を並列起動、bounded auto-fix（≤ 3 ループ、--report-only でスキップ）とレビュー記録の書き出しまで行います。コミットは一切しません
+description: 単体レビューのエントリポイント（em-workflow）。SDD を通さない日常レビューを吸収します。workflow.yaml 不在時は baseline（comprehensive + SPEC.md があれば spec）+ 裁量層の追加観点で動作し、選択された観点ごとに汎用レビュアー（+ 条件によりクロスモデル検証 — Codex、および別途 vertex-review プラグインが導入済みなら LiteLLM 経由の Vertex AI / Muse）を並列起動、bounded auto-fix（≤ 3 ループ、--report-only でスキップ）とレビュー記録の書き出しまで行います。コミットは一切しません
 argument-hint: "[--report-only]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, Grep, Bash, Task, AskUserQuestion

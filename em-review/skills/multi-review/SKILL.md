@@ -1,6 +1,6 @@
 ---
 name: multi-review
-description: 並列多観点コードレビューのエントリポイント（em-review）。em-workflow レビューフェーズのスタンドアロン版です。現在の git diff（なければコードベース全体）、または GitHub PR（番号 / URL 指定、report-only 固定）を対象に、baseline +（SPEC.md があれば spec）+ 裁量層で観点を動的選択し、観点スキル注入型の汎用レビュアー（+ 条件によりクロスモデル検証 — Codex、および別途 vertex-review プラグインが導入済みなら Vertex AI）を並列起動、bounded auto-fix（≤ 3 ループ、--report-only でスキップ）とレビュー記録の書き出し（デフォルト /tmp 配下、--records <dir> で変更可）まで行います。コミットは一切しません
+description: 並列多観点コードレビューのエントリポイント（em-review）。em-workflow レビューフェーズのスタンドアロン版です。現在の git diff（なければコードベース全体）、または GitHub PR（番号 / URL 指定、report-only 固定）を対象に、baseline +（SPEC.md があれば spec）+ 裁量層で観点を動的選択し、観点スキル注入型の汎用レビュアー（+ 条件によりクロスモデル検証 — Codex、および別途 vertex-review プラグインが導入済みなら LiteLLM 経由の Vertex AI / Muse）を並列起動、bounded auto-fix（≤ 3 ループ、--report-only でスキップ）とレビュー記録の書き出し（デフォルト /tmp 配下、--records <dir> で変更可）まで行います。コミットは一切しません
 argument-hint: "[PR番号|PR URL] [--report-only] [--records <dir>]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, Grep, Bash, Task, AskUserQuestion

@@ -63,7 +63,7 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
   の `create-spec.command-approval`、`{phase}.artifact-overwrite` 系）を
   問わず、`gate_id` を持つゲートは `references/question-resolution.md` の
   batch 解決手順 + `references/batch-policies.yaml` に従う。`gate_id` を
-  一切持たないゲート（Step 0 / Step A の feature 選択 / review diff-size
+  一切持たないゲート（Step 0 / Step A の feature 解決 / review diff-size
   ゲート / command-approval hook fallback 等）だけが batch-mode.md の
   Non-packet gates 表に従う。
   batch モード中は AskUserQuestion を一切呼ばない。workflow.yaml が存在
@@ -71,12 +71,14 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
   モード判定は常にこのフラグ）
 - パス引数（存在するディレクトリ、または feature 名の文字列）: 末尾要素を
   feature 名として扱う。main 作業ツリーのディレクトリとして中身を読むこと
-  はしない — Step A の Discovery でその feature 名に対応する
-  `em-workflow/{feature}/integration` ブランチ + worktree に解決する
+  はしない — Step A でその feature 名に対応する
+  `em-workflow/{feature}/integration` ブランチ + worktree に解決する。
+  **既存 feature の再開はこの引数を渡す経路のみ**
 - 存在するファイルを指す引数（--batch 時）: Read してタスク記述として扱う
 - その他の自由テキスト（--batch 時）: そのままタスク記述として扱う
-  （feature 未存在時の batch create-spec の入力になる）
-- 引数なし: Step A の探索へ
+  （batch create-spec の入力になる）
+- パス引数なし: 常に新規 feature として Step A の create-spec ルートへ
+  （既存ブランチの列挙・推測はしない）
 
 ## Step 0: git-setup ゲート（workflow 開始時に毎回）
 
@@ -99,32 +101,34 @@ pre-commit hook を冪等セットアップする。JSON 報告の status で分
 
 hook の編集はコミットしない（コミットはユーザーの判断）。
 
-## Step A: feature の決定（Discovery）
+## Step A: feature の決定
 
-feature-docs はもう main 作業ツリーを走査しない。存在する feature は
-`em-workflow/{feature}/integration` ブランチの有無で判定する（Discovery
-セマンティクス）。プロジェクトルートは最初にシェル変数へ捕捉する
+feature-docs はもう main 作業ツリーを走査しない。feature の実在は
+パス引数で指定された名前に対応する `em-workflow/{feature}/integration`
+ブランチの有無で判定する（既存ブランチの列挙は行わない — 引数なしの起動は
+常に新規 feature）。プロジェクトルートは最初にシェル変数へ捕捉する
 （`PROJECT_ROOT="$(git rev-parse --show-toplevel)"` —
 `references/phases/create-spec-phase.md` と同じ安全なパターン。以降このステップの
 コマンド文字列は `$PROJECT_ROOT` を参照し、`{project_root}` をコマンド文字列に
 直接埋め込まない）。
 
 1. **feature 名の決定**
-   - パス引数（引数処理参照）があれば、その末尾要素を feature 名とする
-   - **fail-closed 識別子ゲート**: feature 名（パス引数由来・ブランチ由来を
-     問わず）は `^[a-z0-9][a-z0-9-]*$` にマッチしなければならない。
+   - パス引数（引数処理参照）があれば、その末尾要素を feature 名とする。
+     **既存 feature の再開はこの経路のみ**
+   - **fail-closed 識別子ゲート**: feature 名は
+     `^[a-z0-9][a-z0-9-]*$` にマッチしなければならない。
      マッチしない場合はサニタイズや暗黙の変換をせず、明確なエラーで
      **中断**する（この後の worktree 操作を含む、いかなるシェルコマンドへの
      補間より前に検証する）
-   - 無ければ `em-workflow/*/integration` にマッチするブランチを列挙する
-     （`git branch --list 'em-workflow/*/integration'`）
-     - 1件: そのブランチの feature を使う（ブートストラップ状態は
-       2./3. で判定する）
-     - 複数: AskUserQuestion で選択（batch: 推測せず中断報告 —
-       `batch-mode.md` の Non-packet gates 表）
-     - 0件: 新規 feature。create-spec フェーズから開始（workflow.yaml は
-       create-spec が生成する）。完了後に再探索して確定（batch: タスク
-       記述引数を create-spec の入力にする。タスク記述も無ければ中断報告）
+   - パス引数が無ければ **新規 feature**。既存ブランチの列挙・推測は
+     一切しない（再開したいユーザーは feature 名を明示する）。create-spec
+     フェーズから開始し（workflow.yaml は create-spec が生成する）、完了後に
+     再探索して確定する。create-spec に渡すタスク記述は:
+     - 対話: メインコンテキストの直前の議論から組み立てる。この skill は
+       メインセッションでインライン実行されるため、何を作るかは会話に
+       載っている。載っていなければ AskUserQuestion で尋ねる
+     - batch: タスク記述引数を使う。タスク記述も無ければ中断報告
+       （`batch-mode.md` の Non-packet gates 表）
 2. **worktree の確保**（既存 feature のときのみ）: `git worktree list` で
    `"$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration"` が
    存在するか確認する
@@ -134,11 +138,13 @@ feature-docs はもう main 作業ツリーを走査しない。存在する fea
      対応する `em-workflow/{feature}/integration` ブランチが実在すると
      確認できた場合のみ行う。パス引数由来の feature 名で対応ブランチが
      存在しない場合は再マテリアライズせず、新規 feature として
-     create-spec フェーズに回す（上記 1. の「0件」ルート）。
+     create-spec フェーズに回す（上記 1. の新規 feature ルート。ただし
+     タスク記述は引数の feature 名ではなく、対話なら会話文脈、batch なら
+     タスク記述引数から取る）。
      再マテリアライズするコマンドは引数を必ずクォートする:
      `git worktree add "$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration" "em-workflow/{feature}/integration"`
-3. **ブートストラップ状態の判定**（1. で 1 件マッチした既存 feature のみ対象。
-   複数/0件は上記で解決済み）: 確保した worktree 内の
+3. **ブートストラップ状態の判定**（1. でパス引数から解決した既存 feature の
+   み対象。新規 feature ルートは上記で解決済み）: 確保した worktree 内の
    `feature-docs/{feature}/workflow.yaml` の有無で分岐する:
    - **存在する**（通常の再開）: そのまま Step A.5 → Step B へ進む
    - **存在しない**（ブランチ + worktree だけが作られ、create-spec が
