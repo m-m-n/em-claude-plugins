@@ -36,9 +36,9 @@ workflow:
   status: completed
   completed_at_commit: c7a655b3349728eeaf5d3b4bbeb83d22266ef73c
 - id: implement
-  status: in_progress
+  status: completed
   base_commit: ca1a189c2e69d4a656e0878a7efb5eb2a5892261
-  completed_at_commit: 3de3a9be65bd8d49565641eae83decf2c2048c53
+  completed_at_commit: 8fd3fbbc2a43b678e17b516dd0e99e7400e494dc
 - id: review
   status: pending
 - id: verify
@@ -137,7 +137,7 @@ tasks:
     - FR8
     - NFR1
     - NFR3
-    status: in_progress
+    status: merged
     notes:
     branch: em-workflow/create-plan-status-conflict/task0004
 review:
