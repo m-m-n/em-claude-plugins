@@ -31,7 +31,8 @@ workflow:
     status: completed
     completed_at_commit: 33262c83caa7093fadfe2c1646b2d83ac7213621
   - id: implement
-    status: in_progress
+    status: completed
+    completed_at_commit: d94785327ffd00bfb60232c1add06ef1b8f86c5e
     base_commit: 7bf309cf42a8a45ce88d925aedf9c13dd1a17953
   - id: review
     status: pending
@@ -53,7 +54,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, NFR1, NFR2, NFR3, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/implement-routeback-gate/task0001
   task0002:
