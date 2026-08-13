@@ -356,7 +356,10 @@ PACKET_GATE_COVERAGE = [
 # batch-policies.yaml entries.
 NON_PACKET_GATE_COVERAGE = [
     ("Step 0 git-setup", "git-setup"),
-    ("Step A feature selection", "feature selection"),
+    # A later rewrite of batch-mode.md's Step A row renamed this concept
+    # from "feature selection" to "feature resolution" -- the keyword below
+    # tracks the current wording, not the withdrawn one.
+    ("Step A feature resolution", "feature resolution"),
     ("review phase diff-size gate", "diff-size gate"),
     ("command-approval hook fallback (python3 missing)", "PreToolUse hook is inactive"),
     ("implement I.2.c failed task", "implement.failed-task"),

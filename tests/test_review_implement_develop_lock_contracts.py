@@ -141,11 +141,16 @@ class TestImplementPhaseWakePhaseOrdering(unittest.TestCase):
         )
 
 
-class TestSkillStepABootstrapStates(unittest.TestCase):
+class TestSkillStepAFeatureResolutionAndBootstrapStates(unittest.TestCase):
     """AC-3: SKILL.md Step A defines the branch-without-workflow.yaml state
     with a deterministic route back into create-spec, and its shell
     templates reference the project root via a captured shell variable (no
-    literal {project_root} inside command text)."""
+    literal {project_root} inside command text).
+
+    Also guards (commit b68221d): Step A's old 0/1/N-hit branch-enumeration
+    bootstrap states were replaced with explicit feature-name resolution --
+    a path argument is the only resume route, and its absence always means
+    a new feature with no enumeration or guessing over existing branches."""
 
     @classmethod
     def setUpClass(cls):
@@ -182,14 +187,25 @@ class TestSkillStepABootstrapStates(unittest.TestCase):
         self.assertIn("create-spec フェーズへ直接", section)
         self.assertIn("references/phases/create-spec-phase.md", section)
 
-    def test_three_bootstrap_states_are_all_present(self):
+    def test_explicit_feature_name_resolution_replaces_branch_enumeration(self):
+        # commit b68221d replaced Step A's old 0/1/N-hit branch-enumeration
+        # bootstrap states with explicit feature-name resolution: a path
+        # argument is the only resume route, and its absence always means a
+        # new feature -- existing branches are never enumerated or guessed
+        # from. This test guards the behaviour that took the old wording's
+        # place, not the withdrawn enumeration itself.
         section = self.step_a_section
-        # (a) branch + workflow.yaml -> resume Step B
+        # (a) branch + workflow.yaml -> resume Step B (unchanged)
         self.assertIn("Step A.5 → Step B へ進む", section)
-        # (b) branch without workflow.yaml -> resume the incomplete create-spec
+        # (b) branch without workflow.yaml -> resume the incomplete
+        # create-spec (unchanged)
         self.assertIn("中断された状態", section)
-        # (c) zero branches -> new feature
-        self.assertIn("0件: 新規 feature", section)
+        # (c) a path argument is the only route to resuming an existing
+        # feature; its absence always resolves to a new feature, with no
+        # enumeration or guessing over existing branches
+        self.assertIn("既存 feature の再開はこの経路のみ", section)
+        self.assertIn("パス引数が無ければ **新規 feature**", section)
+        self.assertIn("既存ブランチの列挙・推測は", section)
 
 
 class TestNoIntegrationRefAdvanceOutsideSharedLock(unittest.TestCase):
