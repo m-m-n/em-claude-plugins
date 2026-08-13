@@ -71,10 +71,16 @@ tasks:
     branch: em-workflow/implement-routeback-gate/task0002
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
-  perspectives: {}
+  plan:
+    floor: [comprehensive, architecture, spec]
+    discretionary: []
+    cross_validation: false
+  perspectives:
+    comprehensive: pending
+    architecture: pending
+    spec: pending
   residual_critical_high: 0
   needs_rework: false
 
