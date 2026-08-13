@@ -1,17 +1,77 @@
 schema_version: 1
 feature: implement-routeback-gate
 phase: create-spec
-status: initialized
+status: awaiting_answers
 generation: 1
-base_revision: 42df907f2599b4b1199ee870d9fb0514a8973d38
-last_input_digest: null
-active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+base_revision: 3d3c90060f5aff16f3fe54fa2f5b09a6da90c96d
+last_input_digest: "sha256:91b1e735c8ed1e092fb14626a1f568c0824d1a2daf9294d0669635f05bf8e00f"
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-14T06:59:00+09:00"
+    questions:
+      - question_id: routeback.fix-direction
+        status: answered
+      - question_id: routeback.merged-task-terminal
+        status: answered
+      - question_id: routeback.adjacent-findings-scope
+        status: answered
+answers:
+  routeback.fix-direction:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-14T06:59:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [a_keep_auto_reentry]
+    freeform: null
+    normalized_answer: "自動再エントリを成立させる。route-back のシーケンスに failed タスクの status を pending へ戻す（notes の失敗理由は保持）を明示し、その書き戻しを create-plan 再エントリ前に commit-docs.sh でコミットする。ゲート条件は「merged なタスクが 1 件も無いこと」に言い換える。変更は implement-phase.md 内で完結させる。"
+    resolution_note: "batch policy create-spec.requirement-clarification -> codex_consultation. Codex は a_keep_auto_reentry を選択（settled carve-out を保ちつつ既存 replace_all 契約を到達可能にする）。orchestrator が option_id への写像を確認。"
+  routeback.merged-task-terminal:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-14T06:59:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [terminal_failed_stop3]
+    freeform: null
+    normalized_answer: "merged タスクが存在する場合は自動再エントリを適用せず、implement を failed のまま残して develop の停止条件 3 でユーザーへ制御を返す。所有 SSOT（rework-task-synthesis.md / workflow-patch.md）は変更しない。"
+    resolution_note: "batch policy create-spec.requirement-clarification -> codex_consultation. Codex は terminal_failed_stop3 を選択（未定義の rework 起動源を発明しない）。"
+  routeback.adjacent-findings-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-14T06:59:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [plus_delegation]
+    freeform: null
+    normalized_answer: "タスク記述の 2 件に加え、arch-implementphase-delegation（同一段落内の委譲先の名指しズレ）も修正する。cmp-exemption-slice-widened（テストスライス）はスコープ外。"
+    resolution_note: "batch policy create-spec.requirement-clarification -> codex_consultation. Codex は plus_delegation を選択。"
+  create-spec.design-step:
+    packet_id: null
+    answered_at: "2026-08-14T06:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "design step は skipped。protocol markdown のみの変更で UI 表示面を持たず、design-system 候補も 0 件。"
+    resolution_note: "batch policy create-spec.design-step -> select decide_autonomously"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: discarded_stale
+    input_digest: "sha256:91b1e735c8ed1e092fb14626a1f568c0824d1a2daf9294d0669635f05bf8e00f"
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: needs_user_input
+    input_digest: "sha256:91b1e735c8ed1e092fb14626a1f568c0824d1a2daf9294d0669635f05bf8e00f"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
