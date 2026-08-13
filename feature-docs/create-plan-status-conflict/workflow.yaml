@@ -64,7 +64,7 @@ tasks:
     - FR8
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes:
     branch: em-workflow/create-plan-status-conflict/task0001
   task0002:
