@@ -22,6 +22,16 @@ running code. Per the Test Notes, the expected vocabularies/counts are
 derived by parsing design-input.md 5.5 rather than hard-coded, so this test
 does not become a second, independently-drifting copy of the same table
 (NFR6 applies to tests too).
+
+task0003 (feature-docs/create-plan-status-conflict/tasks/task0003.md) adds
+TestReplaceAllPermissionConditionsPinned below, covering that task's AC-2:
+the `replace_all` permission-conditions section is pinned precisely (exactly
+two permitted create-plan entry statuses, the tasks-empty-or-all-pending
+floor, application rule 5 still pointing at the section) so an accidental
+future relaxation of `workflow-patch.md` -- which this feature's D1 requires
+to stay byte-identical -- fails loudly. Scoped to the permission-conditions
+section and the application-rule list so an occurrence of the same words
+elsewhere in the document cannot satisfy them.
 """
 
 import re
@@ -275,6 +285,63 @@ class TestOwnershipBoundaryAndDomainsSSOT(unittest.TestCase):
 
     def test_domains_ssot_is_review_rules_yaml(self):
         self.assertIn("references/review-rules.yaml", self.text)
+
+
+class TestReplaceAllPermissionConditionsPinned(unittest.TestCase):
+    """task0003 AC-2: the `replace_all` permission conditions are pinned
+    precisely, scoped to their own section (and, for rule 5, to the
+    application-rule list) rather than to a substring match anywhere in the
+    document. `workflow-patch.md` is frozen by this feature (IMPLEMENTATION.md
+    D1); these assertions are the regression guard that makes a future
+    relaxation of the section fail loudly instead of silently."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### `replace_all` permission conditions",
+            "### `append` requirements",
+        )
+        cls.doc_rules_section = _extract_section(
+            cls.text, "## Application rules", "## Ownership boundary"
+        )
+
+    def test_exactly_two_create_plan_entry_statuses_are_permitted(self):
+        statuses = re.findall(
+            r"the `create-plan` step is `([a-z_]+)`", self.section
+        )
+        self.assertEqual(
+            set(statuses),
+            {"pending", "needs_update"},
+            "the permitted create-plan entry statuses must be exactly "
+            "pending and needs_update",
+        )
+        self.assertEqual(
+            len(statuses),
+            2,
+            "no third create-plan entry status may be listed as permitted",
+        )
+
+    def test_tasks_empty_or_all_pending_condition_still_required(self):
+        # The security floor (5.5.1's first condition): must not silently
+        # widen or disappear.
+        self.assertIn("`tasks` is empty", self.section)
+        self.assertRegex(
+            self.section,
+            r"every existing task's `status` is `pending`",
+        )
+
+    def test_application_rule_5_still_refers_to_the_permission_conditions(self):
+        match = re.search(
+            r"^5\. (.*?)(?=^\d+\. )",
+            self.doc_rules_section,
+            re.DOTALL | re.MULTILINE,
+        )
+        self.assertIsNotNone(match, "expected application rule 5 to exist")
+        rule_text = match.group(1)
+        self.assertIn("replace_all", rule_text)
+        self.assertIn("permission conditions", rule_text.lower())
 
 
 if __name__ == "__main__":

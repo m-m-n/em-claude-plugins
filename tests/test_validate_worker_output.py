@@ -62,6 +62,22 @@ reviews/round1.yaml for the reproductions these classes pin:
 - AC-7 / as21: TestFixtureCoverageDerivedFromCapabilityTable, replacing the
   weak substring check in TestFixtureBranchesDerivedFromDesignInput for
   kind worker-result (see that test's inline comment).
+
+task0003 (feature-docs/create-plan-status-conflict/tasks/task0003.md) adds
+TestReplaceAllCreatePlanEntryStatus below, pinning the (frozen,
+IMPLEMENTATION.md D1) validator's `replace_all` dry-run-apply permission
+check against the create-plan step's entry status:
+
+- AC-3: a new `invalid-replace-all-create-plan-in-progress` fixture makes
+  the check reject the patch with the `replace-all-not-permitted`
+  identifier, attributed to the create-plan step's `in_progress` status.
+- AC-4: the same patch shape passes (exit 0) for both `pending` (the
+  existing `valid-dry-run-apply` fixture, asserted here by name rather than
+  only via the combined both-operations sweep) and `needs_update` (new
+  `valid-replace-all-create-plan-needs-update` fixture).
+- AC-5: the `in_progress` rejection carries exactly one error identifier --
+  no staleness, vocabulary, or expected-mismatch entry rides along, so the
+  regression cannot pass for the wrong reason.
 """
 
 import importlib.util
@@ -1507,6 +1523,58 @@ class TestNeedsUserInputPayloadExemption(unittest.TestCase):
             / "valid-needs-user-input-with-analysis-snapshot"
         )
         result = run_cli(build_case_args("worker-result", "requirements-analyst-full", case_dir))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+# ---------------------------------------------------------------------------
+# task0003 (feature-docs/create-plan-status-conflict): pins the frozen
+# validate-worker-output.py replace_all/create-plan permission check with
+# regression fixtures. AC-3/AC-4/AC-5.
+# ---------------------------------------------------------------------------
+
+class TestReplaceAllCreatePlanEntryStatus(unittest.TestCase):
+    """The validator's dry-run application (5.5.5 rule 5 /
+    _validate_dry_run_apply) rejects replace_all unless the create-plan
+    step's entry status is pending or needs_update. This class pins that
+    behaviour without touching the validator (IMPLEMENTATION.md D1)."""
+
+    def _run(self, case_name):
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / case_name
+        return run_cli(build_case_args("workflow-patch", "replace_planning", case_dir))
+
+    def test_create_plan_in_progress_rejected_with_replace_all_not_permitted(self):
+        # AC-3
+        result = self._run("invalid-replace-all-create-plan-in-progress")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertIn("replace-all-not-permitted", codes)
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("in_progress", messages)
+
+    def test_create_plan_in_progress_rejected_for_exactly_one_reason(self):
+        # AC-5: removing the permission check from consideration, every
+        # other validation layer is satisfied -- assert on the set of
+        # reported error identifiers, not just their count, so the test
+        # cannot pass because the fixture happens to be wrong in two ways.
+        result = self._run("invalid-replace-all-create-plan-in-progress")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-not-permitted"})
+
+    def test_create_plan_needs_update_passes(self):
+        # AC-4
+        result = self._run("valid-replace-all-create-plan-needs-update")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_create_plan_pending_passes(self):
+        # AC-4 (Test Notes): the existing pending case is exercised today
+        # only as part of TestDryRunApplyRejections's combined
+        # both-operations sweep; this scenario-named assertion means a
+        # future change to that combined test cannot silently drop the
+        # pending branch.
+        result = self._run("valid-dry-run-apply")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
