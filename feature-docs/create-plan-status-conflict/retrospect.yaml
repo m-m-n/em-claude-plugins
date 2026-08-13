@@ -1,0 +1,30 @@
+feature: create-plan-status-conflict
+collected_at: "2026-08-14T01:55:00+09:00"
+session_ids: [unknown]
+signals:
+  review_critical_high:
+    - {stable_id: merged-skillmd-stopcond3, category: comprehensive, file: em-workflow/skills/develop/SKILL.md, title: "create-plan を needs_update のまま実行する例外が停止条件 3 と衝突", resolution: fixed}
+    - {stable_id: merged-skillmd-carveout-unobservable, category: comprehensive, file: em-workflow/skills/develop/SKILL.md, title: "carve-out が workflow.yaml から判定不能な経緯で分岐", resolution: fixed}
+    - {stable_id: merged-implementphase-ssot-drift, category: comprehensive, file: em-workflow/references/implement-phase.md, title: "SKILL.md と implement-phase.md I.2.c の SSOT ドリフト", resolution: fixed}
+    - {stable_id: cmp-stopcond3-universal-claim, category: comprehensive, file: em-workflow/skills/develop/SKILL.md, title: "carve-out の全称の断言が rework spec-change の create-spec 再突入を到達不能に", resolution: fixed}
+    - {stable_id: sec-createspec-carveout-unconsumed, category: security, file: em-workflow/skills/develop/SKILL.md, title: "未消費判定が fail-open でユーザー介入ゲートを迂回しうる", resolution: fixed}
+    - {stable_id: cmp-phasestate-spec-change-schema-missing, category: comprehensive, file: em-workflow/references/phase-state.md, title: "判別子が依拠する rework.yaml 記録が phase-state スキーマに不在", resolution: fixed}
+    - {stable_id: cmp-spec-change-record-lifecycle, category: comprehensive, file: em-workflow/references/phase-state.md, title: "2 回目以降の spec-change が consumed: true に阻まれる", resolution: fixed}
+    - {stable_id: merged-createplanphase-legacy-no-status-owner, category: architecture, file: em-workflow/references/phases/create-plan-phase.md, title: "phase-state 不在 legacy 分岐だけ status 解決の所有者が不在", resolution: fixed}
+    - {stable_id: cmp-carveout-vs-inprogress-for-createspec, category: comprehensive, file: em-workflow/skills/develop/SKILL.md, title: "carve-out と in_progress 更新規律が create-spec で矛盾", resolution: fixed}
+    - {stable_id: arch-routeback-gate-ignores-failed, category: architecture, file: em-workflow/references/implement-phase.md, title: "route-back ゲートが failed タスクを無視し replace_all 許可条件と衝突", resolution: deferred}
+    - {stable_id: cmp-routeback-rework-append-deadend, category: comprehensive, file: em-workflow/references/implement-phase.md, title: "merged タスク時の逃がし先 rework append に implement 由来のトリガーが不在", resolution: deferred}
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - {id: TS-5, note: "初回 verify で 902 tests / 5 failures。5 件は base_commit 時点でも同一に失敗する陳腐化した doc assertion で本 feature の回帰ではなかったが、AC5 が無条件の文言のため fail と判定し、batch の verify auto-rework（cap 1）で task0005 を合成して解消した"}
+    - {id: AC5, note: "TS-5 と同一。rework 後に 902 tests / 0 failures で pass"}
+  discretionary_perspectives:
+    - {perspective: none, reason: "round 1-2 は機械層のフロア（comprehensive / spec / security / architecture）のみ。依存マニフェスト・vendored コードに触れないため license は追加しなかった"}
+    - {perspective: "round 3 は comprehensive + spec に絞った", reason: "task0005 の差分がテストアサーションの再照準のみで、security / architecture の追加価値が無いと判断した"}
+  declined_findings: []
+lessons_candidates:
+  - "auto-fix ループが SSOT ドキュメント群の 1 ファイルだけを直すと、隣接ドキュメントとの整合が次ラウンドで新たな high として出てくる連鎖が起きた（round 1 loop 1→2→3、round 2 loop 1→2→3 で毎回発生）。review-editor が単一ファイル拘束であることと、プロトコル文書が相互参照で成立していることの構造的な噛み合わせの悪さ。"
+  - "review round 1 で create-plan-phase.md §3 に対する medium 指摘が 2 ラウンドにわたり未修正のまま残った。auto-fix 候補ゲートが critical/high のみのため、medium の SSOT 矛盾は rework 経路にも乗らず deferred にもならず unresolved のまま完了する。"
+  - "初回 verify の失敗が本 feature と無関係な既存の陳腐化テスト 5 件だった。実装フェーズの baseline_failures 記録が全タスクで一致していたため回帰でないことは即座に判別できたが、SPEC の AC が『スイート全通』を無条件に要求していたためスコープ外の修正（task0005）を feature 内に取り込むことになった。AC の書き方（無条件の全通 vs baseline 差分ゼロ）の選択が、後段のスコープに直接効く。"
+  - "batch の rework cap（review 1 / verify 1）は、SSOT ドキュメント間の矛盾のように「直すたびに隣が壊れる」種類の問題に対しては早期に枯渇する。今回は round 2 で cap に達し、high 2 件を deferred として残した。"
