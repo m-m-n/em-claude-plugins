@@ -240,9 +240,12 @@ create-plan フェーズの planner は、その step がエントリした時�
 再発火しない。
 
 あるフェーズプロトコルが、そのフェーズを自動的に再エントリさせるために
-設定した `needs_update` は、この停止条件の停止理由にしない。フェーズは
-その `needs_update` を保持したまま実行され、実行前に値を書き換えたり
-`pending` に戻したりしない。該当する遷移は現時点で厳密に次の 2 つで、
+設定した `needs_update` は、この停止条件の停止理由にしない。この除外が
+及ぶのは停止条件 3 の評価だけであり、status 更新の規律は Step B の通常
+シーケンス（例外は create-plan のみ）に従う。フェーズはその `needs_update`
+を停止理由として扱わずに実行されるが、これは「保持したまま実行され」を
+理由に停止条件を回避する目的で `pending` に戻すことを認めるものではない。
+該当する遷移は現時点で厳密に次の 2 つで、
 それぞれ所有ドキュメントを明記する:
 - create-plan の route back to planning —
   `references/implement-phase.md`（I.2.c）が create-plan を

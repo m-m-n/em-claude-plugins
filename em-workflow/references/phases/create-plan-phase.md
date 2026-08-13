@@ -91,27 +91,31 @@ that order, never from memory.
 exemption (`skills/develop/SKILL.md`), develop no longer writes
 `in_progress` to the `create-plan` step; finding it `in_progress` on entry
 can therefore only happen for a `workflow.yaml` written before that
-exemption existed (legacy). When `phase-state/create-plan.yaml` is absent
-for such a `workflow.yaml`, this is the Legacy feature compatibility case
-`references/phase-state.md` owns, and its write-policy handling (asking
-about overwrite interactively; `preserve_and_reuse` in batch) applies as
-written there — not restated here. Otherwise, resolve the status before any
-dispatch decision, based on whether the proposed patch has already been
-applied:
+exemption existed (legacy). Resolve the status before any dispatch
+decision and before branching on whether `phase-state/create-plan.yaml`
+is present, based on whether the proposed patch has already been applied:
 
 - **Patch not applied**: reset the step to `pending`, and commit that reset
   with `commit-docs.sh`. This reset only reconciles status so that
   `replace_all`'s permission conditions are met; it is not itself a
-  dispatch decision. What happens after the reset is committed — applying
-  the pending patch, re-dispatching the planner, or re-presenting an
-  unanswered question — is decided by `references/phase-state.md`'s Resume
-  decision table and this document's completion section (section 11,
-  below). If that decision is to dispatch the planner, the reset MUST be
-  committed before the planner is dispatched.
-- **Patch already applied**: perform no reset. Only the transition to
-  `completed` is carried out, per this document's completion section
-  (section 11, below) and `references/phase-state.md`'s Resume decision
-  table row for an already-applied patch (`applying_patch`, applied).
+  dispatch decision.
+- **Patch already applied**: perform no reset.
+
+With the status resolved, branch on `phase-state/create-plan.yaml`. When it
+is absent for such a `workflow.yaml`, this is the Legacy feature
+compatibility case `references/phase-state.md` owns, and its write-policy
+handling (asking about overwrite interactively; `preserve_and_reuse` in
+batch) applies as written there — not restated here; the status reset above
+still applies regardless of that write-policy outcome. Otherwise, what
+happens next — applying the pending patch, re-dispatching the planner, or
+re-presenting an unanswered question — is decided by
+`references/phase-state.md`'s Resume decision table and this document's
+completion section (section 11, below). If that decision is to dispatch the
+planner, the reset (when applicable) MUST be committed before the planner
+is dispatched. For the already-applied-patch branch, only the transition to
+`completed` is carried out, per section 11 below and `references/phase-state.md`'s
+Resume decision table row for an already-applied patch (`applying_patch`,
+applied).
 
 ## 4. Planner dispatch
 
