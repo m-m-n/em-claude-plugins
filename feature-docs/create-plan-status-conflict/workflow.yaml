@@ -40,7 +40,7 @@ workflow:
   base_commit: ca1a189c2e69d4a656e0878a7efb5eb2a5892261
   completed_at_commit: 8fd3fbbc2a43b678e17b516dd0e99e7400e494dc
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result:
@@ -141,7 +141,7 @@ tasks:
     notes:
     branch: em-workflow/create-plan-status-conflict/task0004
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 1
   plan:
     floor:
@@ -157,7 +157,7 @@ review:
     security: completed
     architecture: completed
   residual_critical_high: 1
-  needs_rework: true
+  needs_rework: false
 requirements:
   FR1:
     title: create-plan を Step B の pre-dispatch in_progress 更新から除外する
