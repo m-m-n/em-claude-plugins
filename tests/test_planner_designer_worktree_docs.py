@@ -181,7 +181,15 @@ class TestReadmeWorktreeModel(unittest.TestCase):
         self.assertIn("integration worktree", self.text)
 
     def test_describes_branch_based_resume(self):
-        self.assertIn("em-workflow/*/integration", self.text)
+        # commit b68221d rewrote this section: resume is no longer a `*`
+        # glob match over existing branches -- it resolves the integration
+        # branch from an explicit feature name instead. Assert the
+        # structural relationship (explicit-name resolution, the concrete
+        # `{feature}` placeholder, no enumeration/guessing) rather than the
+        # withdrawn glob literal.
+        self.assertIn("feature 名の明示起点", self.text)
+        self.assertIn("em-workflow/{feature}/integration", self.text)
+        self.assertIn("既存ブランチの列挙・推測はしない", self.text)
 
     def test_no_untracked_in_main_wording_remains(self):
         self.assertNotIn("未追跡", self.text)

@@ -155,13 +155,18 @@ class TestAC7ForbiddenHeadingAndRetainedFrontmatter(unittest.TestCase):
         self.assertNotIn(FORBIDDEN_HEADING, _read(PLANNER_PATH))
 
     def test_designer_retains_model_and_effort(self):
+        # commit 7c63189 (pin explicit models for every skill and agent)
+        # replaced the alias "best" with the explicit model id "opus"; the
+        # field itself, and its accompanying effort field, must survive.
         frontmatter, _ = _split_frontmatter(_read(DESIGNER_PATH))
-        self.assertEqual(_frontmatter_field(frontmatter, "model"), "best")
+        self.assertEqual(_frontmatter_field(frontmatter, "model"), "opus")
         self.assertEqual(_frontmatter_field(frontmatter, "effort"), "high")
 
     def test_planner_retains_model_and_effort(self):
+        # Same cause as test_designer_retains_model_and_effort, for
+        # implementation-planner.md.
         frontmatter, _ = _split_frontmatter(_read(PLANNER_PATH))
-        self.assertEqual(_frontmatter_field(frontmatter, "model"), "best")
+        self.assertEqual(_frontmatter_field(frontmatter, "model"), "opus")
         self.assertEqual(_frontmatter_field(frontmatter, "effort"), "xhigh")
 
 
