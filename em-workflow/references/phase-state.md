@@ -77,6 +77,12 @@ resolved_input_cache:          # derived cache of dynamic-input resolution (see 
       src/design-system/tokens.ts: sha256:...
     truncated: false                # true once the 500-file / 5 MB discovery cap was hit
 last_error: null
+spec_change:                   # `phase: rework` only.
+  reason: "…"                  #   rework's spec-change gate records this
+  finding_stable_id: abc123    #   when the user chooses to change SPEC
+  recorded_at_commit: a3c91f2…
+  consumed: false              #   orchestrator sets true once this record
+                               #   has grounded one create-spec dispatch
 ```
 
 Every top-level field:
@@ -100,6 +106,7 @@ Every top-level field:
 | `stale_redispatch_count` | See "Consecutive retry limit". |
 | `resolved_input_cache` | See "resolved_input_cache" below. |
 | `last_error` | `null`, or the last recorded phase-state/artifact-commit failure. |
+| `spec_change` | `reason`, `finding_stable_id`, `recorded_at_commit`, `consumed` — the interruption reason and finding's `stable_id` that rework's spec-change transition records, and the flag the orchestrator sets `true` once that record has grounded one `create-spec` dispatch (regardless of that dispatch's outcome). Present only when `phase: rework`. Written by rework's spec-change transition; `consumed` is written by the orchestrator. Which `needs_update` this grounds, and when it triggers a stop, is `skills/develop/SKILL.md` Step B's rule, not restated here. |
 
 ## ID uniqueness and idempotency
 
