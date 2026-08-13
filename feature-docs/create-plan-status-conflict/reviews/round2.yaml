@@ -1,0 +1,143 @@
+round: 2
+executed_at: "2026-08-14T01:05:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: ca1a189c2e69d4a656e0878a7efb5eb2a5892261
+  head_commit: d4a53709e2ffff4446493cce9b00b24f3e9d142b
+  changed_files:
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/DRY_RUN_APPLY
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/digest-source.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/workflow.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/DRY_RUN_APPLY
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/digest-source.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/workflow.json
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/create-plan-status-conflict/task0001.tests.yaml
+    - test-docs/create-plan-status-conflict/task0002.tests.yaml
+    - test-docs/create-plan-status-conflict/task0003.tests.yaml
+    - test-docs/create-plan-status-conflict/task0004.tests.yaml
+    - tests/test_develop_skill_rewiring.py
+    - tests/test_phase_protocols.py
+    - tests/test_phase_state_doc.py
+    - tests/test_validate_worker_output.py
+    - tests/test_workflow_patch_doc.py
+plan:
+  floor: [comprehensive, spec, security, architecture]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+findings:
+  - stable_id: sec-createspec-carveout-unconsumed
+    severity: high
+    category: security
+    file: em-workflow/skills/develop/SKILL.md
+    line: 264
+    title: "create-spec の停止条件 3 除外が「未消費」を機械的に判定できず、ユーザー介入ゲートを恒久的に無効化しうる"
+    description: "除外が依拠する phase-state/rework.yaml の記録に消費・クリアの定義が所有 SSOT のどこにも無く、残存記録によって本物のユーザー介入ゲート（create-spec.stalled 選択肢 3）が fail-open に迂回されうる。security / architecture / comprehensive の 3 観点が同一箇所で検出。"
+    suggestion: "消費のタイミングを dispatch 時点へ前倒しし、判別に使うフィールドを phase-state.md 所有の consumed として名指しで参照する。"
+    sources: [claude:security, claude:architecture, claude:comprehensive]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: "auto-applied round 2 loop 1（SKILL.md の消費定義を dispatch 時点へ前倒し + phase-state.md に spec_change スキーマを追加）"
+  - stable_id: cmp-spec-change-record-lifecycle
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/phase-state.md
+    line: 109
+    title: "2 回目以降の spec-change 遷移が consumed: true に阻まれて自動再エントリしない"
+    description: "spec_change が単一レコードかつ consumed が片方向フラグのため、2 回目の spec-change 遷移でレコードが consumed のまま残り、rework 側 SSOT が fixed と宣言している「必ず create-spec へ再エントリする」契約を満たせない。"
+    suggestion: "レコードは spec-change 遷移のたびに書き直され、新規レコードは常に未消費であることを明記し、ID uniqueness の content-invariance 対象外であることも示す。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "auto-applied round 2 loop 2"
+  - stable_id: merged-createplanphase-legacy-no-status-owner
+    severity: high
+    category: architecture
+    file: em-workflow/references/phases/create-plan-phase.md
+    line: 94
+    title: "phase-state 不在の legacy 分岐だけ status 解決の所有者が居らず、replace_all が構造的に拒否され続ける"
+    description: "§3 が legacy ケースを phase-state.md の Legacy 表へ丸ごと委譲する一方、委譲先は step status に触れないため、legacy な create-plan: in_progress かつ phase-state 不在の feature では status を pending に落とす主体がどの SSOT にも存在しない。architecture / comprehensive の 2 観点が検出。"
+    suggestion: "status の reset を phase-state の有無に先行して無条件で適用し、その後に write-policy / Resume decision table へ分岐する。"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: "auto-applied round 2 loop 3"
+  - stable_id: cmp-carveout-vs-inprogress-for-createspec
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 243
+    title: "carve-out の「needs_update を保持したまま実行」が create-spec で通常の in_progress 更新規律と矛盾する"
+    description: "carve-out が列挙 2 遷移の両方に対して status の書き換えを禁じる一方、in_progress 例外は create-plan だけに限定されているため、create-spec に対して相反する指示が並んでいた。"
+    suggestion: "carve-out の適用範囲を停止条件 3 の評価に限定し、status 更新の規律は通常シーケンスに従うと明示する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "auto-applied round 2 loop 3"
+  - stable_id: arch-routeback-gate-ignores-failed
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 328
+    line_end: 345
+    title: "route back to planning のゲートが failed タスクを無視しており、replace_all 許可条件と衝突したまま"
+    description: "loop 3 で新設したゲート文は「every existing task is still pending (i.e. none has merged yet)」と書いているが、I.2.c はまさに reconciled status が failed になった瞬間に発火するため、この条件は文字通りには決して成立しない。括弧の注記どおり「merged が無ければよい」と読んだ場合も、route-back のシーケンスが failed タスクの status を pending に戻さないため、planner が出せる唯一の replace_planning / replace_all が workflow-patch.md の許可条件に抵触し、validate-worker-output.py に必ず拒否される。停止条件 3 の carve-out により develop は停止しなくなったので、理由の分かる停止が返らないまま停止条件 2（スタック検出）まで planner を再 dispatch する。architecture / comprehensive の 2 観点が同一箇所で検出。"
+    suggestion: "ゲート条件を「merged なタスクが 1 つも無いこと」に書き直し、create-plan を needs_update にする前に failed タスクの status を pending へ戻す（notes の失敗理由は保持）ことを明示して、replace_all 許可条件が実際に満たされるようにする。あるいは自動再エントリ自体を諦め、SKILL.md 側の carve-out 列挙から route back to planning を外して両ドキュメントの整合を取る。"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 95
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（review_rework_count = 1、auto-fix loop も 3/3 到達）。loop 3 の implement-phase.md 変更が導入した残存欠陥であり、フォローアップタスクとして起票する。"
+  - stable_id: cmp-routeback-rework-append-deadend
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 340
+    line_end: 345
+    title: "merged タスクがある場合の逃がし先「rework path (append)」に implement 失敗からのトリガーが存在せず、implement の status も未定義"
+    description: "loop 3 で追加した「If any task has already merged … hand the additional scope to the rework path (append) instead」は実在しない経路を指している。rework-task-synthesis.md §10 が定義する rework の起動源は Review-sourced と Verify-sourced の 2 つだけで、implement フェーズの task 失敗から rework に入る遷移は定義されていない。append の各エントリは provenance.source が review | verify 必須のため、implement 失敗由来のタスクは値を持てない。加えてこの分岐は implement step をどの status で残すか指定しておらず、直下の invariant「NO skip option」とも衝突する。"
+    suggestion: "この分岐の終端状態を具体化する。implement を failed のまま残して停止条件 3 でユーザーに返すと書き切るか、implement 失敗を rework の第 3 の起動源として所有 SSOT（rework-task-synthesis.md §10 と workflow-patch.md の provenance.source 値域）に追加する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached。loop 3 の implement-phase.md 変更が導入した残存欠陥であり、フォローアップタスクとして起票する。"
+  - stable_id: arch-implementphase-delegation
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 333
+    title: "I.2.c の委譲先の名指しが所有ブロックとずれている"
+    description: "I.2.c は停止条件 3 の precedence を「Step B の create-plan exemption が所有する」と書くが、実際に所有しているのは隣接する「停止条件 3 との優先関係」ブロック。両ブロックが隣接しているのが緩和要因。"
+    suggestion: "委譲先の名指しを「停止条件 3 との優先関係」ブロックに変える。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補ゲート（critical/high）に該当しない"
+  - stable_id: cmp-exemption-slice-widened
+    severity: medium
+    category: comprehensive
+    file: tests/test_develop_skill_rewiring.py
+    line: 486
+    title: "carve-out ブロック追加で exemption_section スライスが広がり、「create-plan が唯一の例外」ガードが空振りする"
+    description: "exemption_section は CREATE_PLAN_EXEMPTION_MARKER 〜 STEP_B_COMMIT_DISCIPLINE_MARKER で切り出すため carve-out ブロックも含まれ、スライス内の「だけ」が 3 箇所になった結果、例外文自体を削除しても assertIn が通る。"
+    suggestion: "スライス終端を STOP_CONDITION_3_LABEL に変更するか、例外文そのものを空白除去比較で照合する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補ゲートに該当しない"
+auto_fix:
+  loops_run: 3
+  applied_total: 6
+  termination: loop-cap
+residual_critical_high: 2
+rework_required: false
