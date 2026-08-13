@@ -106,7 +106,7 @@ Every top-level field:
 | `stale_redispatch_count` | See "Consecutive retry limit". |
 | `resolved_input_cache` | See "resolved_input_cache" below. |
 | `last_error` | `null`, or the last recorded phase-state/artifact-commit failure. |
-| `spec_change` | `reason`, `finding_stable_id`, `recorded_at_commit`, `consumed` — the interruption reason and finding's `stable_id` that rework's spec-change transition records, and the flag the orchestrator sets `true` once that record has grounded one `create-spec` dispatch (regardless of that dispatch's outcome). Present only when `phase: rework`. Written by rework's spec-change transition; `consumed` is written by the orchestrator. Which `needs_update` this grounds, and when it triggers a stop, is `skills/develop/SKILL.md` Step B's rule, not restated here. |
+| `spec_change` | `reason`, `finding_stable_id`, `recorded_at_commit`, `consumed` — the interruption reason and finding's `stable_id` that rework's spec-change transition records, and the flag the orchestrator sets `true` once that record has grounded one `create-spec` dispatch (regardless of that dispatch's outcome). Present only when `phase: rework`. Written by rework's spec-change transition; `consumed` is written by the orchestrator. Every occurrence of rework's spec-change transition writes this record afresh, **replacing** any previous record including its `consumed` value — a newly written record is always unconsumed. Which `needs_update` this grounds, and when it triggers a stop, is `skills/develop/SKILL.md` Step B's rule, not restated here. |
 
 ## ID uniqueness and idempotency
 
@@ -122,6 +122,10 @@ content matches, it is a no-op; if it diverges, it is a **protocol error**.
 - `worker_runs` follows the same rule, **except that its `status` field
   alone may be updated** along the transitions below (any other field
   differing is a protocol error).
+- `spec_change` is **not** subject to this content-invariance rule: each
+  occurrence of rework's spec-change transition replaces the record wholesale
+  (see the `spec_change` row above), which is expected overwrite behavior,
+  not a protocol error.
 
 ### worker_runs[].status transitions
 
