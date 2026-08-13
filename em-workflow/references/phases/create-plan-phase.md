@@ -87,6 +87,20 @@ phase-state's `last_input_digest`, the artifact bodies against their
 recorded digests, and whether the proposed patch is already applied — in
 that order, never from memory.
 
+**Interrupted `in_progress` on entry.** If `workflow.yaml`'s `create-plan`
+step is found `in_progress` on entry, resolve it before any dispatch
+decision, based on whether the proposed patch has already been applied:
+
+- **Patch not applied**: reset the step to `pending`, and commit that reset
+  with `commit-docs.sh` before dispatching the planner — the reset MUST be
+  committed before the planner is dispatched. This follows the commit
+  discipline `skills/develop/SKILL.md` Step B owns for the create-plan
+  exemption; not restated here.
+- **Patch already applied**: perform no reset. Only the transition to
+  `completed` is carried out, per this document's completion section
+  (section 11, below) and `references/phase-state.md`'s Resume decision
+  table row for an already-applied patch (`applying_patch`, applied).
+
 ## 4. Planner dispatch
 
 `Task(subagent_type="em-workflow:implementation-planner")`, with:
