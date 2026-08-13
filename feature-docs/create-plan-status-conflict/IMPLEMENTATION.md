@@ -143,3 +143,49 @@ in parallel would produce a pointless merge conflict.
       reads only the `implement` step and task statuses), and EC3's two
       sources already agree; both remain as verification items rather than
       open design questions.
+
+## Rework Round 1 (review finding `cmp-stopcond3-universal-claim`)
+
+Appended by the review-sourced rework of round 1. Everything above this
+heading is unchanged; S4 and D6 below extend the Shared Components and
+Cross-task Design Decisions sections respectively, because task0004 edits a
+document whose cross-task contracts (S1, S3, D2, D3) are stated there.
+
+### S4 — Automatic-re-entry carve-out
+
+| Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
+|---|---|---|---|
+| **S4 automatic-re-entry carve-out** | Separates the `needs_update` values that mean "a user must intervene" from those a phase protocol set in order to have its phase re-entered automatically | Precondition: Step B has selected a step whose status is `needs_update`. Postcondition: the loop stops (stop condition 3) UNLESS the owning phase protocol prescribes automatic re-entry for the transition that set it — today exactly the create-plan route back to planning (`references/implement-phase.md`) and the create-spec rework spec-change transition (`references/rework-task-synthesis.md` §10, `references/contracts/rework-planner-contract.md`), the latter distinguished from a `create-spec.stalled` abort by an unconsumed spec-change record in `phase-state/rework.yaml`. In the carve-out case the phase is executed with the entry status unchanged | task0004 states it; it generalizes the precedence note task0001 introduced |
+
+S4 is orthogonal to **S1**: S1 governs which step skips the pre-dispatch
+`in_progress` update (create-plan, and only create-plan), while S4 governs
+which `needs_update` values stop the develop loop. Widening either one into
+the other is a contract violation — in particular, S4's generalization must
+never be read as making a second step exempt under S1.
+
+S4 is stated in `skills/develop/SKILL.md` by **citation** of the two owning
+documents, under the same rule-5 citation discipline as **S3**: the rework
+spec-change transition's five steps and per-step status assignments belong to
+`references/rework-task-synthesis.md` / `references/contracts/rework-planner-contract.md`
+and are never reproduced in Step B. Both documents are frozen for this feature
+(NFR1 names `rework-task-synthesis.md` explicitly): the fix makes SKILL.md
+consistent with them, never the reverse.
+
+### D6 — Sequential rework inherits task0001's file set
+
+D3's "one document, one paired test file, one task" partition exists to keep
+tasks running in parallel worktrees conflict-free. task0004 is a rework task
+dispatched after task0001 … task0003 are all `merged`, and it is the only
+pending task, so it inherits — rather than shares — task0001's pair:
+
+| Document | Paired test file | Owning task after rework round 1 |
+|---|---|---|
+| `skills/develop/SKILL.md` | `tests/test_develop_skill_rewiring.py` | task0004 (inherited from the merged task0001) |
+
+Consequence: task0004 may edit both files, and must keep every pre-existing
+assertion in that test file passing (task0001's acceptance criteria remain in
+force). No other document or test file changes owner, and D1's freeze on
+`references/workflow-patch.md` and `scripts/validate-worker-output.py` stands
+unchanged. D5 also stands: the version bump remains task0003's single
+0.1.34 → 0.1.35 change, and this rework ships inside the same feature merge
+without a second bump.

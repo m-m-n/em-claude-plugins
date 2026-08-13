@@ -7,7 +7,7 @@
 **IMPLEMENTATION.md**: `feature-docs/create-plan-status-conflict/IMPLEMENTATION.md`
 
 This document covers the INTEGRATED verification of the merged feature branch.
-Per-task acceptance criteria live in `tasks/task0001.md` … `tasks/task0003.md`.
+Per-task acceptance criteria live in `tasks/task0001.md` … `tasks/task0004.md`.
 
 ## Build Verification
 
@@ -37,6 +37,7 @@ Per-task acceptance criteria live in `tasks/task0001.md` … `tasks/task0003.md`
 | TS-3 | The `replace_all` permission conditions in `references/workflow-patch.md` still permit exactly `pending` and `needs_update`, with the tasks-empty-or-all-pending condition intact | Assertions in `tests/test_workflow_patch_doc.py` pass; the document is unmodified by the feature | Unit (doc assertion) |
 | TS-4 | Validating a `replace_all` patch with dry-run application against a workflow whose create-plan step is `in_progress` is rejected; the same patch shape passes for `pending` and for `needs_update` | Rejected case: exit 1 with the `replace-all-not-permitted` identifier attributed to the create-plan step status. Permitted cases: exit 0 | Integration (CLI + fixtures) |
 | TS-5 | Full test-suite run after all tasks are merged | `python3 -m unittest discover -s tests` exits 0 | Integration |
+| TS-6 | Step B in `skills/develop/SKILL.md` states stop condition 3's carve-out in generalized terms — a `needs_update` set by a transition whose owning phase protocol prescribes automatic re-entry does not stop the loop — enumerating both qualifying transitions (create-plan route back to planning; the create-spec rework spec-change transition) with their owning documents cited, stating the negative `create-spec.stalled` case and its `phase-state/rework.yaml` discriminator, and no longer containing the universal claim that the condition refers to steps other than create-plan. The create-plan `in_progress` exemption keeps its create-plan-only scope, and the spec-change transition is cited rather than restated | Doc assertions in `tests/test_develop_skill_rewiring.py` pass, including the absence assertion on the removed sentence and every pre-existing assertion in that file | Unit (doc assertion) |
 
 ## Code Quality Verification
 
@@ -63,18 +64,18 @@ Per-task acceptance criteria live in `tasks/task0001.md` … `tasks/task0003.md`
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-1 |
+| FR1 | task0001, task0004 | TS-1; TS-6 (the `in_progress` exemption keeps its create-plan-only scope while the stop-condition carve-out generalizes) |
 | FR2 | task0001 | TS-1 (entry-status preservation stated in Step B), TS-4 (both permitted entry statuses actually accepted) |
-| FR3 | task0001 | TS-1 |
+| FR3 | task0001, task0004 | TS-1; TS-6 (the rationale block's wording no longer over-claims) |
 | FR4 | task0003 | TS-3 + M-2 (document unmodified) |
 | FR5 | task0003 | TS-4 + M-2 (validator unmodified) |
 | FR6 | task0002 | TS-2 |
-| FR7 | task0002 | TS-5 + M-1 (plugin-wide cross-read) |
-| FR8 | task0001, task0002, task0003 | TS-1, TS-2, TS-3, TS-4, TS-5 |
+| FR7 | task0002, task0004 | TS-5 + M-1 (plugin-wide cross-read); TS-6 + M-9 (SKILL.md no longer contradicts the rework SSOTs) |
+| FR8 | task0001, task0002, task0003, task0004 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6 |
 | FR9 | task0003 | TS-5 + AC6 inspection |
-| NFR1 | task0003 | TS-5 + M-2 (no diff on the rework path: `append_rework` conditions, the validator's append branch, `references/rework-task-synthesis.md`) |
+| NFR1 | task0003, task0004 | TS-5 + M-2 (no diff on the rework path: `append_rework` conditions, the validator's append branch, `references/rework-task-synthesis.md`); M-9 (`references/rework-task-synthesis.md` still absent from the integrated diff after the rework) |
 | NFR2 | task0003 | TS-4 (validator decision logic still behaves identically), TS-5 + M-2 (diff limited to documents, tests, fixtures and the version) |
-| NFR3 | task0001, task0002 | TS-1, TS-2 (rule-5 conditions referenced, never copied; existing must-not-restate assertions still pass) |
+| NFR3 | task0001, task0002, task0004 | TS-1, TS-2 (rule-5 conditions referenced, never copied; existing must-not-restate assertions still pass); TS-6 (the spec-change transition is cited, never restated) |
 | NFR4 | task0001, task0002 | TS-4 for the mechanical part; M-4 for an actual unattended run |
 
 ## E2E Testing
@@ -120,6 +121,14 @@ under manual testing.
 - [ ] M-8 (EC5): Confirm no other mechanism depends on the create-plan step
       being `in_progress` — in particular the queue-related hooks, which are
       expected to read only the `implement` step and task statuses.
+- [ ] M-9 (FR7, NFR1, review finding `cmp-stopcond3-universal-claim`):
+      Cross-read `skills/develop/SKILL.md` Step B against
+      `references/rework-task-synthesis.md` §10 and
+      `references/contracts/rework-planner-contract.md`'s Specification-change
+      transition, and confirm (a) the create-spec `needs_update` those
+      documents prescribe is reachable — Step B executes create-spec instead of
+      stopping — while (b) the `create-spec.stalled` abort still stops the
+      loop, and (c) neither rework document was modified by this feature.
 
 Mockup visual comparison is not applicable: the design step is `skipped`
 (no visual element or UI in this feature).
@@ -140,7 +149,7 @@ Mockup visual comparison is not applicable: the design step is `skipped`
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1 … TS-5) | 5 | 5 | 0 | 0 |
+| Test scenarios (TS-1 … TS-6) | 6 | 6 | 0 | 0 |
 | Success criteria (AC1 … AC6) | 6 | 4 | 0 | 2 (AC2, AC4 partially manual) |
-| Manual checks (M-1 … M-8) | 8 | 0 | 0 | 8 |
+| Manual checks (M-1 … M-9) | 9 | 0 | 0 | 9 |
 | Security checks | 3 | 2 | 0 | 1 |
