@@ -64,9 +64,9 @@ tasks:
     - FR8
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes:
-    branch:
+    branch: em-workflow/create-plan-status-conflict/task0001
   task0002:
     title: create-plan-phase 3 interrupt recovery and the phase-state consistency fix
     plan: tasks/task0002.md
@@ -85,9 +85,9 @@ tasks:
     - FR8
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes:
-    branch:
+    branch: em-workflow/create-plan-status-conflict/task0002
   task0003:
     title: Pin the frozen consumer side (rule 5 + validator) and bump the plugin version
     plan: tasks/task0003.md
@@ -116,9 +116,9 @@ tasks:
     - FR9
     - NFR1
     - NFR2
-    status: pending
+    status: in_progress
     notes:
-    branch:
+    branch: em-workflow/create-plan-status-conflict/task0003
 review:
   status: pending
   rounds_completed: 0
