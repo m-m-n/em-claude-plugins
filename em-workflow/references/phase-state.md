@@ -336,8 +336,10 @@ because the orchestrator never explores for it outside this procedure (see
 never searches at dispatch time).
 
 **Placement inside develop's Step B.** Step B normally runs "select the
-first incomplete step → set it `in_progress` → execute the phase". Backfill
-is inserted **between the first and second of those**:
+first incomplete step → set it `in_progress` → execute the phase" — except
+for `create-plan`, which `skills/develop/SKILL.md` Step B exempts from that
+update (that document owns the exemption and its rationale; not restated
+here). Backfill is inserted **between the first and second of those**:
 
 1. Read `workflow.yaml` and select the first incomplete step.
 2. If the selected step is `design` or `create-plan` and
@@ -345,8 +347,11 @@ is inserted **between the first and second of those**:
    step `in_progress`.
 3. After backfill completes, **re-read `workflow.yaml` and restart step
    selection from step 1**.
-4. If backfill is unnecessary (or already done), proceed to set the step
-   `in_progress` and execute the phase as normal.
+4. If backfill is unnecessary (or already done), proceed with Step B's
+   normal sequence for the selected step and execute the phase as normal —
+   `skills/develop/SKILL.md` Step B decides whether that sequence sets the
+   step `in_progress` (it does for every step except the `create-plan`
+   exemption above).
 
 **Why not set `in_progress` first**: if the session ends while the backfill
 question is unanswered, a step stuck `in_progress` with no phase-state
