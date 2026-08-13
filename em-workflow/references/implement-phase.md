@@ -327,8 +327,9 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
 - **route back to planning** — a task that cannot be implemented as planned
   means the plan (or the spec behind it) is wrong; fix it upstream, not
   here. This automatic re-entry applies only when no task has status
-  `merged` and no task is still `in_progress` — the absence of any
-  `merged` task and of any still-draining task. The failure reason for
+  `merged` — the absence of any `merged` task; the drain above has
+  already retired every `in_progress` sibling by this point. The
+  failure reason for
   each failed task is recorded in that task's `tasks.{T}.notes` and
   stays there. Before touching workflow.yaml, capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
@@ -339,9 +340,8 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   which is exactly what makes the planner's `replace_planning`
   operation admissible on re-entry
   (`references/workflow-patch.md`'s `replace_all` permission
-  conditions: `tasks` empty, or every existing task's `status` is
-  `pending`; a leftover `in_progress`/`merged`/`failed` task makes
-  `replace_all` a protocol error). Clean up each of those failed
+  conditions own the full condition set and the protocol-error rule —
+  not restated here). Clean up each of those failed
   tasks' worktrees and branches next (`git worktree remove --force
   "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`, for
   every {T} just reset), then commit the write-back against the
