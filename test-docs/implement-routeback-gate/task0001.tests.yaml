@@ -1,0 +1,89 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implement_routeback_gate.TestRouteBackResetsFailedTaskAndPreservesNotes.test_failed_task_status_is_reset_to_pending
+      - tests.test_implement_routeback_gate.TestRouteBackResetsFailedTaskAndPreservesNotes.test_failure_reason_stays_recorded_in_notes
+      - tests.test_implement_routeback_gate.TestRouteBackResetsFailedTaskAndPreservesNotes.test_status_reset_create_plan_and_implement_are_one_write_set
+      - tests.test_implement_routeback_gate.TestRouteBackResetsFailedTaskAndPreservesNotes.test_status_reset_cites_workflow_patch_as_owner_without_restating
+    red_confirmed: true
+    red_reason: >-
+      Pre-edit: "tasks.{T}.status" was not present in the I.2.c section at
+      all (AssertionError: 'tasks.{T}.status' not found in <section>), and
+      the ordered-write-set assertion failed the same way -- the failed
+      task's status was never reset to pending, only create-plan/implement
+      were touched.
+  AC-2:
+    tests:
+      - tests.test_implement_routeback_gate.TestRouteBackCommitsTheWriteBack.test_commit_docs_sh_call_present_with_expected_tip_and_recovery_pointer
+      - tests.test_implement_routeback_gate.TestRouteBackCommitsTheWriteBack.test_commit_follows_status_writes_and_precedes_end_of_phase_report
+      - tests.test_implement_routeback_gate.TestRouteBackCommitsTheWriteBack.test_cleanup_precedes_commit_unambiguously
+    red_confirmed: true
+    red_reason: >-
+      Pre-edit: "commit-docs.sh" did not occur anywhere in the I.2.c
+      section (AssertionError: 'commit-docs.sh' not found in <section>) --
+      the route-back write-back was never committed. The two ordering
+      tests errored with ValueError (substring not found) for the same
+      reason: there was nothing to order against.
+  AC-3:
+    tests:
+      - tests.test_implement_routeback_gate.TestExit4RecoveryEnumeratesRouteBackCommit.test_exit4_bullet_names_all_three_call_sites
+    red_confirmed: true
+    red_reason: >-
+      Pre-edit: "Step I.2.c's route-back commit" was absent from the exit-4
+      recovery bullet's enumeration (AssertionError: not found in
+      <Branch & Worktree Model section>) -- only Step I.1's and Step
+      I.2.b's commits were named.
+  AC-4:
+    tests:
+      - tests.test_implement_routeback_gate.TestGateIsAbsenceOfMergedTask.test_gate_expressed_as_no_merged_task
+      - tests.test_implement_routeback_gate.TestGateIsAbsenceOfMergedTask.test_old_falsifiable_phrasing_is_gone
+    red_confirmed: true
+    red_reason: >-
+      Pre-edit: "no task has status `merged`" was absent, and the
+      self-falsifying phrase "every existing task is still `pending`" was
+      still present in the normalized section text (AssertionError:
+      unexpectedly found).
+  AC-5:
+    tests:
+      - tests.test_implement_routeback_gate.TestMergedTaskBranchHasDefinedTerminal.test_implement_stays_failed
+      - tests.test_implement_routeback_gate.TestMergedTaskBranchHasDefinedTerminal.test_control_returns_via_stop_condition_3
+      - tests.test_implement_routeback_gate.TestMergedTaskBranchHasDefinedTerminal.test_no_rework_or_append_handoff
+    red_confirmed: true
+    red_reason: >-
+      Pre-edit: the merged-task branch pointed at the undefined rework/
+      `append` handoff instead of the failed+stop-condition-3 terminal --
+      "implement` stays `failed`" and "stop condition 3" were both absent
+      from that branch's text, and "rework"/"append" were present
+      (AssertionError on all three assertions).
+  AC-6:
+    tests:
+      - tests.test_implement_routeback_gate.TestDelegationCitesStopCondition3Clause.test_names_stop_condition_3_precedence_clause
+      - tests.test_implement_routeback_gate.TestDelegationCitesStopCondition3Clause.test_no_longer_attributes_precedence_to_create_plan_exemption
+    red_confirmed: true
+    red_reason: >-
+      Pre-edit: "Step B's stop-condition-3 precedence clause" was absent,
+      and the old mis-citation "create-plan exemption owns that
+      precedence" was still present (AssertionError on both, verified
+      against the whitespace-normalized section so the document's own
+      line-wrapping could not hide either phrase).
+  AC-7:
+    tests:
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_heading_is_byte_identical
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_batch_mode_paragraph_is_byte_identical
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_no_bare_git_commit_or_add_lines
+      - tests.test_review_implement_develop_lock_contracts (unchanged, run in full)
+      - tests.test_develop_skill_rewiring (unchanged, run in full)
+    red_confirmed: false
+    red_reason: >-
+      AC-7 asserts invariants (heading/batch-mode-paragraph byte-identity,
+      no bare `git commit`/`git add -A` line, and the two named regression
+      suites passing unchanged) that must hold both before and after this
+      task's edit -- there is no new behavior here to observe going from
+      red to green. These three assertions were green before any edit
+      (confirmed by the same pre-edit run that produced the AC-1..AC-6 red
+      results above) and remained green after; the file-set-containment
+      part of AC-7 is enforced by this task's own scope discipline (git
+      status shows only the two expected files touched), not by a test.

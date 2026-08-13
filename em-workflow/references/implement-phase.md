@@ -41,8 +41,9 @@ document is written; this phase never creates them itself.
   turns — every workflow.yaml / document write, in every phase, is followed
   by a `commit-docs.sh` commit in the same step; NFR2).
 - **exit-4 recovery** (bounded; applies to every `commit-docs.sh` call site in
-  this phase — Step I.1's baseline commit and Step I.2.b's wake-phase
-  commit): exit 4 means a concurrent `merge-task.sh` advanced the branch ref
+  this phase — Step I.1's baseline commit, Step I.2.b's wake-phase commit,
+  and Step I.2.c's route-back commit): exit 4 means a concurrent
+  `merge-task.sh` advanced the branch ref
   between that call site's last refresh and its commit attempt. Recovery:
   refresh the integration worktree again (the `reset --hard` above), RE-CAPTURE
   the tip (`git -C {integration_worktree} rev-parse HEAD`) and use the fresh
@@ -325,24 +326,35 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   resume guard).
 - **route back to planning** — a task that cannot be implemented as planned
   means the plan (or the spec behind it) is wrong; fix it upstream, not
-  here. This automatic re-entry applies only when every existing task is
-  still `pending` (i.e. none has merged yet): set `create-plan` to
-  `needs_update`, set the `implement` step back to `pending`, record the
-  failure reason in `tasks.{T}.notes`, clean up the failed task's worktree
-  and branch (`git worktree remove --force "$WT_ROOT/{T}"`; `git branch -D
-  "em-workflow/{feature}/{T}"`), and end the phase with a clear report. The
-  develop state machine does **not** stop on this `needs_update` —
-  `skills/develop/SKILL.md` Step B's create-plan exemption owns that
-  precedence and dispatches the planner with the step still `needs_update`
-  (not restated here). The planner re-scopes the failed task (split it,
-  change the approach) — or, when a requirement itself must be dropped,
-  routes that change through the normal SPEC.md update path first. Merged
-  tasks keep their status; only the failed task is re-planned. If any task
-  has already merged, this automatic re-entry does not apply: the planner's
-  only available operation, `replace_planning`, cannot be applied once a
-  merged task exists (see `references/workflow-patch.md`'s `replace_all`
-  permission conditions), so report the phase and hand the additional
-  scope to the rework path (`append`) instead.
+  here. This automatic re-entry applies only when no task has status
+  `merged` — the absence of any `merged` task. The failure reason is
+  recorded in `tasks.{T}.notes` and stays there. Before touching
+  workflow.yaml, capture `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration"
+  rev-parse HEAD)`, then make one ordered workflow.yaml write set: set
+  `create-plan` to `needs_update`, set the `implement` step back to
+  `pending`, and set the failed task's `tasks.{T}.status` back to
+  `pending` — this last write is what makes the planner's
+  `replace_planning` operation admissible on re-entry
+  (`references/workflow-patch.md`'s `replace_all` permission conditions).
+  Clean up the failed task's worktree and branch next (`git worktree
+  remove --force "$WT_ROOT/{T}"`; `git branch -D
+  "em-workflow/{feature}/{T}"`), then commit the write-back against the
+  integration worktree: `commit-docs.sh "$WT_ROOT/integration"
+  "docs({feature}): implement route back to planning" "$ROUTEBACK_TIP"`
+  (exit-4 recovery: Branch & Worktree Model above). End the phase with a
+  clear report; create-plan re-enters afterwards. The develop state
+  machine does **not** stop on this `needs_update` —
+  `skills/develop/SKILL.md` Step B's stop-condition-3 precedence clause
+  ("停止条件 3 との優先関係") owns that precedence and dispatches the
+  planner with the step still `needs_update` (not restated here). The
+  planner re-scopes the failed task (split it, change the approach) — or,
+  when a requirement itself must be dropped, routes that change through
+  the normal SPEC.md update path first. Merged tasks keep their status;
+  only the failed task is re-planned. If any task has already merged, this
+  automatic re-entry does not apply: `create-plan` is NOT set to
+  `needs_update`, `implement` stays `failed`, and the phase reports and
+  returns control to the user via develop's stop condition 3 — the same
+  terminal as the "abort phase" option below.
 - **abort phase** — leave `implement` as `failed` for manual handling.
 
 There is NO skip option: a task is either merged, retried, or re-planned —
