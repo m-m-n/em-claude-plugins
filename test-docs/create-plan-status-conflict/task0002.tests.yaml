@@ -1,0 +1,94 @@
+task_id: task0002
+baseline_failures:
+  - test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original
+  - test_planner_designer_worktree_docs.TestReadmeWorktreeModel.test_describes_branch_based_resume
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_retains_model_and_effort
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_retains_model_and_effort
+  - test_review_implement_develop_lock_contracts.TestSkillStepABootstrapStates.test_three_bootstrap_states_are_all_present
+final_failures:
+  - test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original
+  - test_planner_designer_worktree_docs.TestReadmeWorktreeModel.test_describes_branch_based_resume
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_retains_model_and_effort
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_retains_model_and_effort
+  - test_review_implement_develop_lock_contracts.TestSkillStepABootstrapStates.test_three_bootstrap_states_are_all_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_phase_protocols.TestCreatePlanInterruptedInProgressRecovery.test_patch_not_applied_branch_resets_to_pending_before_dispatch
+      - tests.test_phase_protocols.TestCreatePlanInterruptedInProgressRecovery.test_both_branches_readable_from_section_3_alone
+    red_confirmed: true
+    red_reason: >
+      Before the edit, section 3 (Reconcile on entry) of
+      create-plan-phase.md had no interrupted-in_progress rule at all:
+      AssertionError: 'Patch not applied' not found in the section-3 slice.
+  AC-2:
+    tests:
+      - tests.test_phase_protocols.TestCreatePlanInterruptedInProgressRecovery.test_patch_applied_branch_has_no_reset_and_only_transitions_to_completed
+      - tests.test_phase_protocols.TestCreatePlanInterruptedInProgressRecovery.test_completed_branch_points_at_completion_section_and_resume_table
+    red_confirmed: true
+    red_reason: >
+      Same missing-rule failure as AC-1: 'Patch already applied' and
+      'section 11' were both absent from the section-3 slice before the
+      edit.
+  AC-3:
+    tests:
+      - tests.test_phase_protocols.TestCreatePlanSectionCoverageAndOrder.test_sections_appear_in_design_order
+      - tests.test_phase_protocols.TestCreatePlanSectionCoverageAndOrder.test_every_section_title_present
+      - tests.test_phase_protocols.TestNoRestatedSiblingSsotContent.test_neither_doc_restates_workflow_patch_application_rules
+      - tests.test_phase_protocols.TestNoRestatedSiblingSsotContent.test_neither_doc_restates_question_packet_internal_fields
+    red_confirmed: true
+    red_reason: >
+      Genuinely observed red during implementation, not fabricated: an
+      earlier draft of the new §3 paragraph used the literal substring
+      "Completion or failure" (the title of design-input.md 5.8 item 11),
+      which made that title's first occurrence land inside section 3,
+      before the real "## 11. Completion or failure" heading, and broke
+      test_sections_appear_in_design_order (AssertionError: Lists differ,
+      position 5478 out of order). Reworded to "this document's completion
+      section (section 11, below)" to avoid the collision; re-run confirmed
+      green. This is direct evidence the ordering/no-restate tests catch a
+      violation of AC-3's preservation constraints.
+  AC-4:
+    tests:
+      - tests.test_phase_state_doc.TestBackfillStepBExemptionCitation.test_unconditional_in_progress_update_phrasing_is_gone
+      - tests.test_phase_state_doc.TestBackfillStepBExemptionCitation.test_points_at_step_b_owner_for_the_create_plan_exemption
+      - tests.test_phase_state_doc.TestBackfillStepBExemptionCitation.test_does_not_restate_the_exemption_rationale
+    red_confirmed: true
+    red_reason: >
+      Before the edit: AssertionError: 'skills/develop/SKILL.md' not found
+      in the backfill placement section (the section only described Step
+      B's generic sequence and unconditionally said "proceed to set the
+      step `in_progress`").
+  AC-5:
+    tests:
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_backfill_section_present_with_step_b_placement
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_backfill_placement_rationale_is_stated
+      - tests.test_phase_state_doc.TestLegacyCompatibility.test_backfill_interrupted_answer_loss_is_stated
+      - tests.test_phase_state_doc.TestBackfillCrossProductDelegation.test_both_abort_outcomes_traceable_without_restating_the_table
+    red_confirmed: false
+    red_reason: >
+      Preservation criterion: these are pre-existing tests that were
+      already green in the 4a baseline and asserted content this task does
+      not intend to remove (heading, Step B mention, 4-step sequence,
+      placement rationale, interrupted-backfill statement, no-duplicated-
+      table constraint). They were never expected to go red for this task;
+      verified they remain green in the post-implementation full-suite run.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      This criterion is about the existence and quality of the AC-1/AC-2
+      (tests/test_phase_protocols.py) and AC-4 (tests/test_phase_state_doc.py)
+      test additions themselves, not a separate assertion. Satisfied by the
+      red-then-green evidence recorded under AC-1, AC-2, and AC-4 above.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Verified by running "python3 -m unittest discover -s tests" from the
+      repository root (872 tests; 5 failures, all identical to the 4a
+      baseline set above; 0 regressions) and by `git status`/`git diff`
+      showing only em-workflow/references/phases/create-plan-phase.md,
+      em-workflow/references/phase-state.md, tests/test_phase_protocols.py
+      and tests/test_phase_state_doc.py modified -- exactly this task's
+      expected_files, nothing outside it.

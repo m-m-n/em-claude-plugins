@@ -74,6 +74,14 @@ see feature-docs/agent-separation/tasks/task0026.md):
   `test_backfill_placement_rationale_is_stated`, and
   `test_backfill_interrupted_answer_loss_is_stated` below, which continue
   to pass unmodified.
+
+Extended for task0002 (create-plan-status-conflict, FR7; see
+feature-docs/create-plan-status-conflict/tasks/task0002.md):
+
+- AC-4: the `project.design_system backfill` section no longer asserts the
+  pre-dispatch `in_progress` update as unconditional for its target steps,
+  and points at `skills/develop/SKILL.md` Step B as the owner of the
+  create-plan exemption.
 """
 
 import re
@@ -605,6 +613,46 @@ class TestBackfillDiscoveryPersistence(unittest.TestCase):
         sub = self.backfill_section[idx : idx + 900]
         self.assertIn("lost", sub.lower())
         self.assertIn("discovery result", sub.lower())
+
+
+class TestBackfillStepBExemptionCitation(unittest.TestCase):
+    """task0002 AC-4 (feature-docs/create-plan-status-conflict/tasks/
+    task0002.md): the backfill section no longer states the pre-dispatch
+    `in_progress` update as applying unconditionally to its target steps
+    (design, create-plan), and points at `skills/develop/SKILL.md` Step B as
+    the owner of the create-plan exemption -- without restating that
+    exemption's rationale text (single ownership).
+
+    The negative assertion is scoped to the backfill placement section
+    (before "**Backfill procedure:**", which is a separate subsection) so an
+    unrelated legitimate occurrence of the phrase elsewhere in the document
+    cannot make it vacuously pass."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        idx = cls.text.index("### project.design_system backfill")
+        end = cls.text.index("**Backfill procedure:**")
+        cls.section = cls.text[idx:end]
+
+    def test_unconditional_in_progress_update_phrasing_is_gone(self):
+        self.assertNotIn(
+            "proceed to set the step `in_progress` and execute the phase as normal",
+            self.section,
+        )
+
+    def test_points_at_step_b_owner_for_the_create_plan_exemption(self):
+        self.assertIn("skills/develop/SKILL.md", self.section)
+        self.assertIn("Step B", self.section)
+        self.assertIn("create-plan", self.section)
+        self.assertIn("exempt", self.section.lower())
+
+    def test_does_not_restate_the_exemption_rationale(self):
+        # The rationale ("why") lives in skills/develop/SKILL.md Step B, not
+        # here -- this section may point at it but must not reproduce the
+        # reasoning text itself.
+        self.assertNotIn("replace-all-not-permitted", self.section)
+        self.assertNotIn("replace_all", self.section)
 
 
 class TestBackfillCrossProductDelegation(unittest.TestCase):
