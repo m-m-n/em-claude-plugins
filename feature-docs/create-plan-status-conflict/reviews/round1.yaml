@@ -1,0 +1,142 @@
+round: 1
+executed_at: "2026-08-14T00:20:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: ca1a189c2e69d4a656e0878a7efb5eb2a5892261
+  head_commit: ebae2af200871d8a89bb83ca013b40966fd5dd04
+  changed_files:
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/DRY_RUN_APPLY
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/digest-source.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/workflow.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/DRY_RUN_APPLY
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/digest-source.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/workflow.json
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/create-plan-status-conflict/task0001.tests.yaml
+    - test-docs/create-plan-status-conflict/task0002.tests.yaml
+    - test-docs/create-plan-status-conflict/task0003.tests.yaml
+    - tests/test_develop_skill_rewiring.py
+    - tests/test_phase_protocols.py
+    - tests/test_phase_state_doc.py
+    - tests/test_validate_worker_output.py
+    - tests/test_workflow_patch_doc.py
+plan:
+  floor: [comprehensive, spec, security, architecture]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+findings:
+  - stable_id: merged-skillmd-stopcond3
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 230
+    title: "create-plan を needs_update のまま実行する例外が Step B の停止条件 3 と衝突している"
+    description: "Step B の create-plan 例外がエントリ status を保持する一方、停止条件 3 は needs_update をユーザー介入待ちとして扱うため、route back to planning からの再計画経路が planner を dispatch する前に止まり得た。architecture / comprehensive の 2 観点が独立に同一箇所で検出。"
+    suggestion: "停止条件 3 に create-plan の carve-out を明記する。"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1（停止条件 3 の注記と Step B の優先関係ブロックを追加）"
+  - stable_id: merged-skillmd-carveout-unobservable
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 236
+    title: "loop 1 の carve-out が workflow.yaml から判定不能な「経緯」で分岐している"
+    description: "loop 1 が追加した優先関係ブロックの最終文が「フェーズ実行の結果として needs_update に進んだ場合」を停止側に残したため、同一の観測可能状態に相反する 2 つの指示が並び、route back to planning 経路が永久に planner へ再入できなくなっていた。architecture / comprehensive / spec の 3 観点が一致。"
+    suggestion: "停止条件 3 から create-plan の needs_update を全面的に除外し、status だけで判定できる形にする。"
+    sources: [claude:architecture, claude:comprehensive, claude:spec]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2（spec 観点が提示した diff を採用）"
+  - stable_id: merged-implementphase-ssot-drift
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 332
+    title: "loop 2 の書き換えが implement-phase.md I.2.c の未更新記述と正面衝突する"
+    description: "SKILL.md Step B が「create-plan の needs_update では停止しない」と定める一方、implement-phase.md I.2.c は「develop state machine stops on needs_update (stop condition 3)」と述べたままで、同一状態に対して逆の規則を持っていた。architecture / comprehensive / spec の 3 観点が一致し、修正先も同一に特定。"
+    suggestion: "I.2.c の該当 2 文を、停止判定の所有権を SKILL.md Step B に委ねる形へ書き換える。"
+    sources: [claude:architecture, claude:comprehensive, claude:spec]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（comprehensive 観点が提示した diff を採用）"
+  - stable_id: cmp-stopcond3-universal-claim
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 240
+    title: "停止条件 3 の carve-out が「create-plan 以外は停止する」と断言し、rework spec-change の create-spec 再突入を到達不能にしている"
+    description: "追加された「停止条件 3 が意味する『ユーザー介入が必要な needs_update』は create-plan 以外の step を指す」は全称の規範として読める。しかし references/rework-task-synthesis.md と references/contracts/rework-planner-contract.md は rework の spec-change ゲート後の遷移として create-spec を needs_update にし「The develop state machine re-enters at create-spec」と規定しているため、Step B が create-spec(needs_update) を選んだ時点で停止条件 3 が発火し、再実行しても同じ停止になるデッドロックが仕様として固定される。本 diff が create-plan について解いたのと同型の矛盾を、もう片方について逆向きに明文化してしまっている。"
+    suggestion: "carve-out を一般化する — 「フェーズプロトコルが自動再突入を規定している遷移（create-plan の route back to planning、create-spec の rework spec-change 遷移）が設定した needs_update では停止しない」と書き、rework-task-synthesis.md / rework-planner-contract.md を被参照側として明示する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "loop cap (3/3) 到達により round 1 では未修正。batch auto-rework の対象。"
+  - stable_id: arch-createplanphase-entrystatus
+    severity: medium
+    category: architecture
+    file: em-workflow/references/phases/create-plan-phase.md
+    line: 94
+    title: "中断 in_progress の復旧が無条件に pending へリセットし、needs_update のエントリ status を失う"
+    description: "§3 の復旧規則がパッチ未適用時に無条件で pending へ倒すため、needs_update（明示的 re-plan）で入った run の唯一のマーカーが復元不能に失われる。SKILL.md Step B の「エントリ status を上書きしない」規定と表面上ぶつかる。あわせて、末尾の commit discipline の参照先が Step B の例外ブロックではなく汎用コミット規律である点も指摘された。"
+    suggestion: "phase-state にエントリ status を記録して復元するか、無条件 pending を維持する根拠と情報損失の受容を §3 に明記する。"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補ゲート（critical/high）に該当しない"
+  - stable_id: cmp-createplanphase-resume
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/phases/create-plan-phase.md
+    line: 94
+    title: "§3 の interrupted in_progress 分岐が Resume decision table / §11 の再開経路を潰す"
+    description: "分岐キーが「パッチ適用済みか否か」の 2 値しかなく、phase-state.md の Resume decision table（awaiting_answers / applying_patch(未適用)）より粗い。文字どおり従うと検証済みの artifacts と提案済みパッチを捨てて planner を再実行することになる。"
+    suggestion: "分岐を Resume decision table の行に合わせ、「planner を dispatch する場合は、その前に」へ緩める。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補ゲートに該当しない"
+  - stable_id: cmp-canary-tautology
+    severity: medium
+    category: comprehensive
+    file: tests/test_develop_skill_rewiring.py
+    line: 533
+    title: "canary テストが自己言及リテラルの assertIn で、証明対象のガードを一切通らない"
+    description: "test_copied_permission_condition_sentence_is_detected は自分で組み立てた fake_section に同じリテラルが含まれることを assertIn するだけで構造上落ちない。本番アサーションが依存する定数 WORKFLOW_PATCH_CONDITION_SENTENCES を通らないため、定数が workflow-patch.md からドリフトしても検出できない。"
+    suggestion: "定数が workflow-patch.md の本文と一致することを assert する 1 本を足し、canary を本番と同じ定数経路を通す形にする。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補ゲートに該当しない"
+  - stable_id: spec-ac5-suite-not-green
+    severity: medium
+    category: spec
+    file: test-docs/create-plan-status-conflict/task0003.tests.yaml
+    line: 8
+    title: "AC5 / TS-5「テストスイートが全通する」が未達（既存 5 件の失敗が継続）"
+    description: "SPEC AC5 は「python3 -m unittest discover -s tests passes in full」と無条件に書いているが、実測は 889 tests / 5 failures。5 件はいずれも本 feature の変更対象と無関係な既存の失敗で、3 タスクの tests.yaml が baseline_failures と final_failures に同一集合として記録済み（回帰ゼロ）。SPEC の文言と実測が食い違っている。"
+    suggestion: "既存 5 件を本 feature で解消するか、AC5 / TS-5 を「baseline に対して新規 failure が無いこと」へ改めて 5 件を別 feature として起票する。"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "spec カテゴリは auto-fix 候補ゲートから除外される"
+auto_fix:
+  loops_run: 3
+  applied_total: 3
+  termination: loop-cap
+residual_critical_high: 1
+rework_required: true

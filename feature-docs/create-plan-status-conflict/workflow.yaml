@@ -121,8 +121,8 @@ tasks:
     notes:
     branch: em-workflow/create-plan-status-conflict/task0003
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -131,9 +131,13 @@ review:
     - architecture
     discretionary: []
     cross_validation: true
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+    comprehensive: completed
+    spec: completed
+    security: completed
+    architecture: completed
+  residual_critical_high: 1
+  needs_rework: true
 requirements:
   FR1:
     title: create-plan を Step B の pre-dispatch in_progress 更新から除外する
