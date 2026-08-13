@@ -50,6 +50,31 @@ task0001 (create-plan-status-conflict) adds:
   permission-condition reason and the `phase-state/create-plan.yaml`
   recovery reason) and cites `references/workflow-patch.md` for the
   permission conditions without reproducing that document's condition text.
+
+task0004 (create-plan-status-conflict rework round 1, finding
+`cmp-stopcond3-universal-claim`) adds:
+
+- AC-1: the universal claim sentence ("stop condition 3's `needs_update`
+  carve-out means any step other than create-plan") no longer occurs
+  anywhere in the file.
+- AC-2: Step B states the generalized carve-out — a `needs_update` set by a
+  transition whose owning phase protocol prescribes automatic re-entry is
+  not a stop-condition-3 stop reason, and the phase runs with that status
+  unchanged.
+- AC-3: the block enumerates both qualifying transitions, citing
+  `references/implement-phase.md` for the create-plan route back to
+  planning and both `references/rework-task-synthesis.md` and
+  `references/contracts/rework-planner-contract.md` for the create-spec
+  spec-change transition.
+- AC-4: the block states the negative case (the `needs_update` set by
+  `create-spec.stalled`'s abort option still stops the loop) and the
+  discriminator that separates it from the spec-change case (an unconsumed
+  record in `phase-state/rework.yaml`).
+- AC-5: bullet 3 of the "ターンを終わらせていい唯一の条件" list is
+  restated in generalized terms and points at the Step B block.
+- AC-6: the create-plan `in_progress` exemption remains create-plan-only.
+- AC-7: the spec-change transition is cited, never restated with per-step
+  status assignments.
 """
 
 import re
@@ -96,6 +121,23 @@ WORKFLOW_PATCH_CONDITION_SENTENCES = (
     "the `create-plan` step is `needs_update` (an explicit re-plan)",
 )
 
+# task0004 (rework round 1, finding cmp-stopcond3-universal-claim): the
+# label opening the stop-condition-3 carve-out block, already distinct from
+# both CREATE_PLAN_EXEMPTION_RATIONALE_LABEL and the backfill-ordering
+# label ("`in_progress` へ先に更新しない理由"), so it is reused rather than
+# replaced by a new label.
+STOP_CONDITION_3_LABEL = "**停止条件 3 との優先関係**"
+
+# The universal claim round 1 added and this rework removes: it makes the
+# create-spec spec-change re-entry (which also sets a `needs_update`)
+# unreachable because it reads as scoping the carve-out to "any step other
+# than create-plan" being covered, when create-plan is in fact the ONE step
+# explicitly named as covered by the old sentence.
+UNIVERSAL_CLAIM_SENTENCE = (
+    "停止条件 3 が意味する「ユーザー介入が必要な `needs_update`」は "
+    "create-plan 以外の step を指す"
+)
+
 
 def _read(path):
     if not path.is_file():
@@ -107,6 +149,14 @@ def _section(text, start_marker, end_marker):
     start = text.index(start_marker)
     end = text.index(end_marker, start)
     return text[start:end]
+
+
+def _strip_ws(text):
+    # Strip ALL whitespace (not collapse to one space): Japanese prose in
+    # this document hard-wraps without a space at the break point, so
+    # collapsing to a single space would inject whitespace the source
+    # never had and break substring matches that span a wrap.
+    return re.sub(r"\s+", "", text)
 
 
 class TestNoInlineAgentDefinitionWording(unittest.TestCase):
@@ -493,6 +543,113 @@ class TestCreatePlanInProgressExemption(unittest.TestCase):
         self.assertIn("phase-state/create-plan.yaml", self.exemption_section)
 
 
+class TestStopCondition3AutomaticReentryCarveOut(unittest.TestCase):
+    """task0004 (rework round 1, finding cmp-stopcond3-universal-claim)
+    AC-1 through AC-7: the universal claim that stop condition 3's
+    `needs_update` carve-out means "any step other than create-plan" is
+    replaced by a generalized carve-out — a `needs_update` set by a
+    transition whose owning phase protocol prescribes automatic re-entry is
+    not a stop reason — enumerating both qualifying transitions (create-plan
+    route back to planning, create-spec spec-change), naming the
+    create-spec.stalled abort as the still-stopping negative case, and
+    stating the unconsumed phase-state/rework.yaml record as the
+    discriminator between the two create-spec `needs_update` meanings."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(SKILL_PATH)
+        cls.step_b_section = _section(
+            cls.text, "## Step B: 自走ループ", "### design ステップ分岐"
+        )
+        cls.carve_out_section = _section(
+            cls.step_b_section,
+            STOP_CONDITION_3_LABEL,
+            CREATE_PLAN_EXEMPTION_RATIONALE_LABEL,
+        )
+
+    def test_universal_claim_sentence_is_absent_from_whole_file(self):
+        # AC-1: a pure absence assertion over the whole file. Strip all
+        # whitespace (not just collapse it) before comparing: the source
+        # markdown hard-wraps Japanese prose without inserting spaces at
+        # the wrap point, so collapsing whitespace to a single space would
+        # itself inject a stray space the original text never had.
+        self.assertNotIn(_strip_ws(UNIVERSAL_CLAIM_SENTENCE), _strip_ws(self.text))
+
+    def test_generalized_carve_out_is_stated(self):
+        # AC-2
+        self.assertIn("自動的に再エントリさせるために", self.carve_out_section)
+        self.assertIn("この停止条件の停止理由にしない", self.carve_out_section)
+        self.assertIn("保持したまま実行され", self.carve_out_section)
+
+    def test_both_qualifying_transitions_enumerated_with_owning_documents(self):
+        # AC-3
+        self.assertIn("references/implement-phase.md", self.carve_out_section)
+        self.assertIn("route back to planning", self.carve_out_section)
+        self.assertIn(
+            "references/rework-task-synthesis.md", self.carve_out_section
+        )
+        self.assertIn(
+            "references/contracts/rework-planner-contract.md",
+            self.carve_out_section,
+        )
+        self.assertIn("spec-change", self.carve_out_section)
+
+    def test_enumeration_is_stated_as_exhaustive(self):
+        # AC-3 / Design "exhaustive enumeration": guard against a rewrite
+        # that lists the two transitions without stating exhaustiveness.
+        self.assertIn("網羅的", self.carve_out_section)
+
+    def test_negative_case_still_stops_the_loop(self):
+        # AC-4 (negative case)
+        self.assertIn("create-spec.stalled", self.carve_out_section)
+        self.assertIn("選択肢 3", self.carve_out_section)
+        self.assertIn("正真正銘のユーザー介入待ち", self.carve_out_section)
+
+    def test_discriminator_names_unconsumed_rework_yaml_record(self):
+        # AC-4 (discriminator)
+        self.assertIn("phase-state/rework.yaml", self.carve_out_section)
+        self.assertIn("未消費", self.carve_out_section)
+        self.assertIn("stable_id", self.carve_out_section)
+
+    def test_bullet_3_is_generalized_and_points_at_the_step_b_block(self):
+        # AC-5
+        turn_end_section = _section(
+            self.text,
+            "### ターンを終わらせていい唯一の条件",
+            "これらに該当しない限り",
+        )
+        bullet_3_start = turn_end_section.index("3. ")
+        bullet_4_start = turn_end_section.index("4. ")
+        bullet_3 = turn_end_section[bullet_3_start:bullet_4_start]
+        self.assertNotIn("create-plan", bullet_3)
+        self.assertIn(STOP_CONDITION_3_LABEL, bullet_3)
+
+    def test_in_progress_exemption_still_create_plan_only(self):
+        # AC-6 regression guard: the neighbouring exemption block (which now
+        # sits next to a carve-out block that also discusses create-spec)
+        # still names create-plan as the sole step exempt from the
+        # pre-dispatch `in_progress` update, and the carve-out block itself
+        # says nothing about a second step skipping that update.
+        exemption_section = _section(
+            self.step_b_section,
+            CREATE_PLAN_EXEMPTION_MARKER,
+            STEP_B_COMMIT_DISCIPLINE_MARKER,
+        )
+        self.assertIn("create-plan", exemption_section)
+        self.assertIn("だけ", exemption_section)
+        self.assertNotIn("in_progress を経ない", self.carve_out_section)
+        self.assertNotIn("in_progress に更新", self.carve_out_section)
+
+    def test_spec_change_transition_cited_not_restated_with_per_step_statuses(self):
+        # AC-7: the citation is present (checked above); no sentence
+        # assigns statuses to implement / review as part of describing the
+        # spec-change transition inside this block (create-plan's own
+        # status assignment is legitimate — it belongs to the OTHER
+        # transition, the create-plan route back to planning, per AC-3).
+        self.assertNotIn("implement を", self.carve_out_section)
+        self.assertNotIn("review を", self.carve_out_section)
+
+
 class TestDevelopSkillRewiringAssertionsCanFail(unittest.TestCase):
     """Proof that the structural checks above fail meaningfully, per the
     tdd-testing discipline (a test that can never fail is not a test)."""
@@ -542,6 +699,44 @@ class TestDevelopSkillRewiringAssertionsCanFail(unittest.TestCase):
             "the `create-plan` step is `pending` (first planning pass)",
             fake_section,
         )
+
+    def test_universal_claim_matcher_detects_the_old_wording(self):
+        # task0004 AC-1/AC-8: the exact sentence round 1 added must be
+        # caught by the assertNotIn check, including when a hard line-wrap
+        # splits it mid-sentence the way the real document does.
+        fake_text = (
+            "停止条件 3 が意味する「ユーザー\n"
+            "介入が必要な `needs_update`」は create-plan 以外の step を指す。"
+        )
+        self.assertIn(_strip_ws(UNIVERSAL_CLAIM_SENTENCE), _strip_ws(fake_text))
+
+    def test_missing_second_transition_citation_is_detected(self):
+        # task0004 AC-3/AC-8: a carve-out block naming only the create-plan
+        # transition (omitting the rework spec-change transition) must fail
+        # the rework-task-synthesis.md presence check.
+        fake_section = (
+            "route back to planning — `references/implement-phase.md`"
+            "（I.2.c）が create-plan を `needs_update` に設定する遷移のみ"
+        )
+        self.assertNotIn("references/rework-task-synthesis.md", fake_section)
+
+    def test_missing_discriminator_is_detected(self):
+        # task0004 AC-4/AC-8: stating the negative case without the
+        # unconsumed-record discriminator must fail the phase-state/rework
+        # .yaml presence check.
+        fake_section = "create-spec.stalled の選択肢 3 は停止条件 3 を発火する。"
+        self.assertNotIn("phase-state/rework.yaml", fake_section)
+
+    def test_bullet_3_still_naming_create_plan_is_detected(self):
+        # task0004 AC-5/AC-8: a bullet 3 that still names create-plan
+        # specifically (instead of the generalized carve-out) must fail
+        # the create-plan-absence check.
+        fake_bullet_3 = (
+            "3. ある step の status が `failed` / `needs_update`（ただし "
+            "create-plan step が `needs_update` のまま dispatch される "
+            "Step B の例外中は、この条件では停止しない）\n"
+        )
+        self.assertIn("create-plan", fake_bullet_3)
 
 
 if __name__ == "__main__":
