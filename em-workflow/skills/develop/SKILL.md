@@ -238,9 +238,10 @@ create-plan step 自身の status は、停止条件 3（`needs_update` = ユー
 介入が必要）の停止理由にしない。停止条件 3 は Step B がこれから実行する
 step を特定した時点で 1 度評価され、create-plan フェーズ実行中に例外で
 保持された `needs_update` では再発火しない。停止条件 3 が意味する「ユーザー
-介入が必要な `needs_update`」は、create-plan 以外の step、または create-plan
-がフェーズ実行の結果として `needs_update` に進んだ場合（route back to
-planning 等）を指す。
+介入が必要な `needs_update`」は create-plan 以外の step を指す。create-plan
+が `needs_update` で Step B に入った場合は — route back to planning
+（`references/implement-phase.md` I.2.c）が設定したものを含め — 停止せず、
+その status のまま planner を dispatch する。
 
 **create-plan が `in_progress` を経ない理由**（design-system backfill と
 は別の理由）:
