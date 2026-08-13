@@ -3,7 +3,6 @@ feature: create-plan-status-conflict
 created: 2026-08-13
 base_branch: main
 parent_branch: em-workflow/create-plan-status-conflict/integration
-
 project:
   license: none
   design_system:
@@ -12,138 +11,249 @@ project:
   components:
     main:
       language: python
-      build_command: ""
-      test_command: "python3 -m unittest discover -s tests"
-      format_command: ""
-      e2e_test_command: ""
-
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
 workflow:
-  - id: create-spec
-    artifacts: [REQUIREMENTS.md, SPEC.md]
-    status: completed
-    completed_at_commit: 10104336978ff9cc1850125f966abe6818271ab5
-  - id: design
-    artifacts: [DESIGN.md, design/]
-    status: skipped
-    skipped_reason: "視覚要素・UI を一切持たない、プラグイン内 SSOT ドキュメントとテストの変更のため"
-  - id: create-plan
-    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 10104336978ff9cc1850125f966abe6818271ab5
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 視覚要素・UI を一切持たない、プラグイン内 SSOT ドキュメントとテストの変更のため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: c7a655b3349728eeaf5d3b4bbeb83d22266ef73c
+- id: implement
+  status: pending
+  base_commit:
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result:
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks:
+  task0001:
+    title: 'Step B: create-plan exemption from the pre-dispatch in_progress update'
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_develop_skill_rewiring.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR8
+    - NFR3
+    - NFR4
     status: pending
-  - id: implement
+    notes:
+    branch:
+  task0002:
+    title: create-plan-phase 3 interrupt recovery and the phase-state consistency fix
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/phase-state.md
+    - tests/test_phase_protocols.py
+    - tests/test_phase_state_doc.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: high
+    requirements:
+    - FR6
+    - FR7
+    - FR8
+    - NFR3
+    - NFR4
     status: pending
-    base_commit: null
-  - id: review
+    notes:
+    branch:
+  task0003:
+    title: Pin the frozen consumer side (rule 5 + validator) and bump the plugin version
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/workflow.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/digest-source.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress/DRY_RUN_APPLY
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/workflow.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/digest-source.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update/DRY_RUN_APPLY
+    - tests/test_validate_worker_output.py
+    - tests/test_workflow_patch_doc.py
+    - em-workflow/.claude-plugin/plugin.json
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR4
+    - FR5
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
     status: pending
-  - id: verify
-    status: pending
-    result: null
-    failed_items: []
-  - id: retrospect
-    status: pending
-
-tasks: {}
-
+    notes:
+    branch:
 review:
   status: pending
   rounds_completed: 0
-  plan: null
+  plan:
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
-
 requirements:
   FR1:
     title: create-plan を Step B の pre-dispatch in_progress 更新から除外する
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-1]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   FR2:
     title: 例外は入口 status を保存し、needs_update 分岐を到達可能に保つ
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-4]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-1
   FR3:
     title: 例外の根拠を Step B に明記する
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-1]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   FR4:
     title: workflow-patch.md rule 5 は変更しない
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-3]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0003
+    tests:
+    - TS-3
   FR5:
     title: validator の許可条件は変更しない（挙動は更新後の仕様と一致済み）
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-4]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0003
+    tests:
+    - TS-4
   FR6:
     title: 中断復旧規則を create-plan-phase.md の Reconcile on entry に追加する
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-2]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0002
+    tests:
+    - TS-2
   FR7:
     title: プラグイン内の記述整合
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-5]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0002
+    tests:
+    - TS-5
   FR8:
     title: テストの更新・追加
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-1, TS-2, TS-3, TS-4, TS-5]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
   FR9:
     title: プラグイン version bump
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-5]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0003
+    tests:
+    - TS-5
   NFR1:
     title: スコープ外の維持
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-5]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0003
+    tests:
+    - TS-5
   NFR2:
     title: 実行時ロジックの非変更
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-4, TS-5]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0003
+    tests:
+    - TS-4
+    - TS-5
   NFR3:
     title: SSOT 所有境界の保持
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-5]
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-5
   NFR4:
     title: 無人実行での完走
     status: ok
-    tbd_reason: null
-    excluded_reason: null
-    tasks: []
-    tests: [TS-4]
-
+    tbd_reason:
+    excluded_reason:
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-4
 batch:
   review_rework_count: 0
   verify_rework_count: 0
