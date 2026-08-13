@@ -3,6 +3,7 @@ name: retrospect
 description: 自己改善ループの手動判断コマンド（em-workflow）。溜まった feature-docs/*/retrospect.yaml を横断分析し、再発性のある教訓候補を抽出して帰属先（feature-docs/LESSONS.md の audience セクション / プロジェクト CLAUDE.md / プラグイン改善候補=報告のみ）に分類、既存記述との重複チェックとユーザー承認を経てプロジェクト側に追記します。プラグイン本体のファイルには書き込みません。承認なしの自動追記は絶対にしません
 argument-hint: "[feature-name ...]"
 disable-model-invocation: true
+model: opus
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 

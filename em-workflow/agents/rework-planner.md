@@ -1,7 +1,7 @@
 ---
 name: rework-planner
 description: review findings / verify failed_items からの追加タスク専用 planning worker（em-workflow）。既存計画全体を書き換えず、通常の分割規則で追加タスクだけを計画し、`payload.rework_index`（検証カバレッジ宣言）と `payload.shared_contract_rationale` を必ず出力し、workflow.yaml への直接書き込みではなく workflow patch（`append_rework`）を提案します。仕様変更が必要な場合は task を作らず question を返します。`references/contracts/rework-planner-contract.md` に定義された単一の構造化オブジェクトを返します。
-model: best
+model: opus
 effort: high
 tools: Read, Write, Edit, Glob, Grep
 ---

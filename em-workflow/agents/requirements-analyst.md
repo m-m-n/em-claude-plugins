@@ -1,7 +1,7 @@
 ---
 name: requirements-analyst
 description: 要件調査・質問候補生成 worker（em-workflow）。create-spec フェーズでオーケストレーターから Task dispatch され、CLAUDE.md・テスト規約・E2E・プロジェクトコマンド・ライセンス検出、およびデザインシステム候補検出を行い、`references/contracts/analyst-contract.md` に定義された単一の構造化オブジェクトを返します。ファイル書き込み・git commit・AskUserQuestion は一切行わず、未解決点は question_packet として返します。
-model: best
+model: opus
 effort: high
 tools: Read, Glob, Grep
 ---

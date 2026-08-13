@@ -3,6 +3,7 @@ name: design
 description: "デザイン詰めの手動対話コマンド（em-workflow）。実機確認後のフィードバックや実機スクリーンショットをもとに、design-system/tokens.yaml・feature-docs/{feature}/DESIGN.md・HTML モックを合意ループで更新します。コードには触れません — 実装への反映は /em-workflow:develop に委ねます。引数で feature を指定、引数なしは対象を確認します（デフォルト: システム全体）"
 argument-hint: "[feature-name]"
 disable-model-invocation: true
+model: opus
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
 

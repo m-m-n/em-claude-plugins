@@ -3,6 +3,7 @@ name: git-setup
 description: git リポジトリのローカル設定を冪等にセットアップする。現在の設定項目は gitleaks pre-commit hook の設置。設定済みの項目は何もしない
 context: fork
 disable-model-invocation: true
+model: haiku
 allowed-tools: Bash, Read, Edit, Write
 ---
 
