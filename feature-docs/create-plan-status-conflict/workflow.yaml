@@ -36,9 +36,9 @@ workflow:
   status: completed
   completed_at_commit: c7a655b3349728eeaf5d3b4bbeb83d22266ef73c
 - id: implement
-  status: in_progress
+  status: completed
   base_commit: ca1a189c2e69d4a656e0878a7efb5eb2a5892261
-  completed_at_commit: 8fd3fbbc2a43b678e17b516dd0e99e7400e494dc
+  completed_at_commit: b3eca06471efa607c980385ae84c6196500e9e9a
 - id: review
   status: pending
   completed_at_commit: eb5d8fe6280b7090ebe9ed10d6d2d4506fd0c512
@@ -160,7 +160,7 @@ tasks:
     complexity: medium
     requirements:
     - FR8
-    status: in_progress
+    status: merged
     notes:
     branch: em-workflow/create-plan-status-conflict/task0005
 review:
