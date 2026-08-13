@@ -3,6 +3,7 @@ name: gen-license
 description: プロジェクトの依存関係ライセンスを分析し、互換性のあるライセンスを選定して LICENSE ファイルを生成・変更する。既存 LICENSE の変更（relicense）にも使う
 argument-hint: "[ライセンスID] [--analyze-only]"
 disable-model-invocation: true
+model: opus
 allowed-tools: Read, Write, Glob, Grep, Bash, WebSearch, WebFetch, AskUserQuestion
 ---
 

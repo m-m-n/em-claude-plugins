@@ -1,7 +1,7 @@
 ---
 name: designer
 description: ビジュアルデザイン決定エージェント（em-workflow）。develop の design ステップで完全自律実行され、SPEC.md の UI/UX 要件から design-system/tokens.yaml（起草/拡張）・HTML モック・DESIGN.md を生成します。ユーザー確認では止まりません — 迷ったら自分で決めて根拠を DESIGN.md に記録し、実機確認後の /em-workflow:design コマンドでの修正に委ねます。
-model: best
+model: opus
 effort: high
 tools: Read, Write, Glob, Grep
 ---
