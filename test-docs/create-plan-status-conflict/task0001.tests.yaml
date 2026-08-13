@@ -1,0 +1,53 @@
+task_id: task0001
+baseline_failures:
+  - test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original
+  - test_planner_designer_worktree_docs.TestReadmeWorktreeModel.test_describes_branch_based_resume
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_retains_model_and_effort
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_retains_model_and_effort
+  - test_review_implement_develop_lock_contracts.TestSkillStepABootstrapStates.test_three_bootstrap_states_are_all_present
+final_failures:
+  - test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original
+  - test_planner_designer_worktree_docs.TestReadmeWorktreeModel.test_describes_branch_based_resume
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_retains_model_and_effort
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_retains_model_and_effort
+  - test_review_implement_develop_lock_contracts.TestSkillStepABootstrapStates.test_three_bootstrap_states_are_all_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_develop_skill_rewiring.TestCreatePlanInProgressExemption.test_exemption_block_follows_the_generic_in_progress_sentence
+      - test_develop_skill_rewiring.TestCreatePlanInProgressExemption.test_exemption_names_create_plan_as_the_sole_exempt_step
+      - test_develop_skill_rewiring.TestCreatePlanInProgressExemption.test_exemption_advances_to_completed_only_after_patch_and_commit
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found (CREATE_PLAN_EXEMPTION_MARKER absent from Step B before implementation)"
+  AC-2:
+    tests:
+      - test_develop_skill_rewiring.TestCreatePlanInProgressExemption.test_entry_status_preservation_names_both_statuses
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found (same exemption_section extraction failure as AC-1, since the block did not exist yet)"
+  AC-3:
+    tests:
+      - test_develop_skill_rewiring.TestCreatePlanInProgressExemption.test_rationale_label_is_distinct_from_backfill_label
+      - test_develop_skill_rewiring.TestCreatePlanInProgressExemption.test_rationale_cites_workflow_patch_rule_5_without_reproducing_it
+      - test_develop_skill_rewiring.TestCreatePlanInProgressExemption.test_rationale_cites_phase_state_create_plan_recovery
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found (same exemption_section extraction failure as AC-1, since the block did not exist yet)"
+  AC-4:
+    tests:
+      - test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_backfill_section_precedes_in_progress_update_instruction
+      - test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_backfill_targets_design_and_create_plan_only
+      - test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_backfill_restarts_step_selection_after_completing
+      - test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_backfill_does_not_change_status_before_restart
+      - test_develop_skill_rewiring.TestBackfillBranchOrderingAndRationale.test_rationale_for_ordering_is_stated
+    red_confirmed: false
+    red_reason: "pre-existing tests (not authored by this task); this task does not touch the backfill block, so these were already green before and after — the criterion is that they stay green through this task's edit, not a new red-to-green transition"
+  AC-5:
+    tests:
+      - test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_missing_create_plan_exemption_marker_is_detected
+      - test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_missing_entry_status_preservation_is_detected
+      - test_develop_skill_rewiring.TestDevelopSkillRewiringAssertionsCanFail.test_copied_permission_condition_sentence_is_detected
+    red_confirmed: false
+    red_reason: "these are canary tests over synthetic fake_section strings (proving the production assertions in TestCreatePlanInProgressExemption can fail), following the file's existing 'assertions can fail' pattern — they pass immediately by construction and were never meant to go red; the class they extend already existed before this task"
+  AC-6:
+    tests: []
+    red_reason: "verified by running python3 -m unittest discover -s tests (full suite) and git status after implementation, not by a dedicated test"
+notes: "AC-4's listed tests are the pre-existing Step B backfill assertions this task must not break; they are included for traceability, not as new red-confirmed work. AC-5's canary tests intentionally cannot go red by themselves (they assert against literal fake strings, same as the file's pre-existing TestDevelopSkillRewiringAssertionsCanFail tests) -- the real red observation for the AC-1/AC-2/AC-3 assertions they demonstrate is the setUpClass ValueError recorded above."
