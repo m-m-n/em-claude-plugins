@@ -1,0 +1,49 @@
+{
+  "feature": "example",
+  "project": {
+    "license": "MIT"
+  },
+  "requirements": {
+    "FR1": {
+      "status": "ok",
+      "tasks": [],
+      "tests": [],
+      "title": "x"
+    }
+  },
+  "schema_version": 1,
+  "tasks": {},
+  "workflow": [
+    {
+      "completed_at_commit": "aaa",
+      "id": "create-spec",
+      "status": "completed"
+    },
+    {
+      "id": "design",
+      "skipped_reason": "no UI",
+      "status": "skipped"
+    },
+    {
+      "id": "create-plan",
+      "status": "needs_update"
+    },
+    {
+      "base_commit": "deadbeef",
+      "id": "implement",
+      "status": "pending"
+    },
+    {
+      "id": "review",
+      "status": "pending"
+    },
+    {
+      "id": "verify",
+      "status": "pending"
+    },
+    {
+      "id": "retrospect",
+      "status": "pending"
+    }
+  ]
+}
