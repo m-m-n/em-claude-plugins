@@ -605,11 +605,15 @@ class TestStopCondition3AutomaticReentryCarveOut(unittest.TestCase):
         self.assertIn("選択肢 3", self.carve_out_section)
         self.assertIn("正真正銘のユーザー介入待ち", self.carve_out_section)
 
-    def test_discriminator_names_unconsumed_rework_yaml_record(self):
+    def test_discriminator_names_consumed_rework_yaml_record(self):
         # AC-4 (discriminator)
         self.assertIn("phase-state/rework.yaml", self.carve_out_section)
-        self.assertIn("未消費", self.carve_out_section)
+        self.assertIn("consumed", self.carve_out_section)
         self.assertIn("stable_id", self.carve_out_section)
+        # 消費が dispatch 時点で起きること（completed 到達を条件にする表現に
+        # 戻っていないこと）を固定するガード。
+        self.assertIn("dispatch", self.carve_out_section)
+        self.assertIn("消費される", self.carve_out_section)
 
     def test_bullet_3_is_generalized_and_points_at_the_step_b_block(self):
         # AC-5

@@ -263,9 +263,14 @@ create-plan フェーズの planner は、その step がエントリした時�
 `phase-state/rework.yaml` に置く: spec-change 遷移はその所有 SSOT の定めに
 従い、中断理由と finding の `stable_id` を同ファイルへ記録する。この除外が
 create-spec の `needs_update` に適用されるのは、その記録が存在し、かつ
-未消費の間だけであり、記録が無ければ停止する。記録は、それが引き起こした
-create-spec の実行によって消費される — その実行が `completed` に達した
-あとに設定された `needs_update` は、この記録の対象外。
+`consumed`（`phase-state/rework.yaml` のスキーマは `references/phase-state.md`
+が所有する）でない間だけであり、記録が無ければ停止する。記録は、それを
+根拠に create-spec を 1 度 dispatch した時点で消費される（同ファイルの
+当該記録を `consumed` にして `commit-docs.sh` でコミットする）。その
+create-spec 実行が `completed` に達したか `needs_update` / `failed` で
+終わったかは問わない。結果として、`create-spec.stalled` 選択肢 3 の中断
+直後は記録が必ず消費済みになっているため、停止条件 3 は通常どおり発火
+してユーザーへ制御が返る。
 
 **create-plan が `in_progress` を経ない理由**（design-system backfill と
 は別の理由）:
