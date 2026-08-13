@@ -219,6 +219,27 @@ workflow.yaml を Read → `workflow[]` の最初の `status` が `completed` �
 その step の `status` を `completed` へ更新するコミットを作る**直前の HEAD**
 （規則 R2。全 7 step に適用し、意味は変更しない）。
 
+**例外: create-plan は先に `in_progress` を経ない**。create-plan step
+だけは、上記の「step 実行前に `in_progress` に更新する」規律の対象外。
+create-plan フェーズの planner は、その step がエントリした時点の
+`status`（`pending` または `needs_update`）のまま dispatch され、
+フェーズが完了して初めて（提案されたパッチの適用とコミットの両方が
+成功して初めて）`completed`（+ `completed_at_commit`、規則 R2）へ進む。
+どちらかが失敗した場合、status は進めない。
+
+この例外はエントリ status を上書きしない: `pending`（初回の planning）
+で入った場合は `pending` のまま planner を dispatch し、`needs_update`
+（明示的な re-plan）で入った場合は `needs_update` のまま dispatch する。
+
+**create-plan が `in_progress` を経ない理由**（design-system backfill と
+は別の理由）:
+- `replace_all` パッチは create-plan がこの 2 つのエントリ status の
+  いずれかである間しか許可されない —
+  `references/workflow-patch.md` の `replace_all` 許可条件・適用規則 5
+  参照
+- create-plan の割り込みリカバリは `phase-state/create-plan.yaml` が
+  担うため、再開判定のために `in_progress` マーカーを必要としない
+
 workflow.yaml か feature-docs/ 配下のドキュメントを Write/Edit するたび
 （`in_progress` / `completed` への status 更新を含む）、その場で
 `${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh {integration worktree の絶対パス}
