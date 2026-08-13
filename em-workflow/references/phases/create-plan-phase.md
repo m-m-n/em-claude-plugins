@@ -87,15 +87,27 @@ phase-state's `last_input_digest`, the artifact bodies against their
 recorded digests, and whether the proposed patch is already applied — in
 that order, never from memory.
 
-**Interrupted `in_progress` on entry.** If `workflow.yaml`'s `create-plan`
-step is found `in_progress` on entry, resolve it before any dispatch
-decision, based on whether the proposed patch has already been applied:
+**Interrupted `in_progress` on entry.** Since Step B's create-plan
+exemption (`skills/develop/SKILL.md`), develop no longer writes
+`in_progress` to the `create-plan` step; finding it `in_progress` on entry
+can therefore only happen for a `workflow.yaml` written before that
+exemption existed (legacy). When `phase-state/create-plan.yaml` is absent
+for such a `workflow.yaml`, this is the Legacy feature compatibility case
+`references/phase-state.md` owns, and its write-policy handling (asking
+about overwrite interactively; `preserve_and_reuse` in batch) applies as
+written there — not restated here. Otherwise, resolve the status before any
+dispatch decision, based on whether the proposed patch has already been
+applied:
 
 - **Patch not applied**: reset the step to `pending`, and commit that reset
-  with `commit-docs.sh` before dispatching the planner — the reset MUST be
-  committed before the planner is dispatched. This follows the commit
-  discipline `skills/develop/SKILL.md` Step B owns for the create-plan
-  exemption; not restated here.
+  with `commit-docs.sh`. This reset only reconciles status so that
+  `replace_all`'s permission conditions are met; it is not itself a
+  dispatch decision. What happens after the reset is committed — applying
+  the pending patch, re-dispatching the planner, or re-presenting an
+  unanswered question — is decided by `references/phase-state.md`'s Resume
+  decision table and this document's completion section (section 11,
+  below). If that decision is to dispatch the planner, the reset MUST be
+  committed before the planner is dispatched.
 - **Patch already applied**: perform no reset. Only the transition to
   `completed` is carried out, per this document's completion section
   (section 11, below) and `references/phase-state.md`'s Resume decision
