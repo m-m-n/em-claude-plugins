@@ -1,20 +1,39 @@
 schema_version: 1
 feature: create-plan-status-conflict
 phase: create-plan
-status: dispatching
+status: completed
 generation: 1
-base_revision: "5b3ae35c1130e97f33a6b488ee0dc4adf679d3e8"
+base_revision: "c7a655b3349728eeaf5d3b4bbeb83d22266ef73c"
 last_input_digest: "sha256:6dbc61e70cffccf19d766ad5512ee9d09af5237da80790b164a0d5b157e2f1a9"
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
   - request_id: create-plan-run-0001
-    status: dispatched
+    status: completed
     input_digest: "sha256:6dbc61e70cffccf19d766ad5512ee9d09af5237da80790b164a0d5b157e2f1a9"
-    output_digest: null
-artifacts: []
-patches: []
+    output_digest: "sha256:6dbc61e70cffccf19d766ad5512ee9d09af5237da80790b164a0d5b157e2f1a9"
+artifacts:
+  - path: feature-docs/create-plan-status-conflict/IMPLEMENTATION.md
+    sha256: "sha256:2d2b2494a729f2461d90768221550e9634bb48acf04b2fae0a22f3cc010da7e6"
+    produced_by: create-plan-run-0001
+  - path: feature-docs/create-plan-status-conflict/VERIFICATION.md
+    sha256: "sha256:0de452afdae13f8830a1fbb3095aae9713c6128e153dc536077631b8c9549d51"
+    produced_by: create-plan-run-0001
+  - path: feature-docs/create-plan-status-conflict/tasks/task0001.md
+    sha256: "sha256:85a841ce89f9d8897ec9a68684ad15c6a728fbd7b8e6097354081e3234760293"
+    produced_by: create-plan-run-0001
+  - path: feature-docs/create-plan-status-conflict/tasks/task0002.md
+    sha256: "sha256:5ad3f550dd9e48862b12d4f96f255d45b012f88a4378a5b4cdbd6b6c2791d281"
+    produced_by: create-plan-run-0001
+  - path: feature-docs/create-plan-status-conflict/tasks/task0003.md
+    sha256: "sha256:6d04061083afe2623b7e3da7af9cfb4864b9bd37d70b76f4dcc4d591edd4ef3b"
+    produced_by: create-plan-run-0001
+patches:
+  - patch_id: create-plan-status-conflict-p0001
+    status: applied
+    base_input_digest: "sha256:6dbc61e70cffccf19d766ad5512ee9d09af5237da80790b164a0d5b157e2f1a9"
+    base_workflow_blob: "b2345971100a7c95671c113dd476f7e8e9e4f1b7"
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
