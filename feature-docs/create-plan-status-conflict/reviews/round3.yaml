@@ -1,0 +1,27 @@
+round: 3
+executed_at: "2026-08-14T01:45:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: eb5d8fe6280b7090ebe9ed10d6d2d4506fd0c512
+  head_commit: 914789550dbc3b814fc44718d226487895bc8324
+  note: "verify 由来の rework task0005 のみを対象にした差分レビュー。round 1-2 で審査済みの範囲は base を round 2 head に置くことで除外している"
+  changed_files:
+    - tests/test_refitted_worker_agents.py
+    - tests/test_planner_designer_worktree_docs.py
+    - tests/test_batch_policies.py
+    - tests/test_review_implement_develop_lock_contracts.py
+plan:
+  floor: [comprehensive, spec]
+  discretionary: []
+  cross_validation: false
+  note: "task0005 の domains は [api-contract, config-infra]、complexity: medium。security / architecture は本差分（テストアサーションの再照準のみ）に対する追加価値が無いと判断して裁量で見送った。cross_validation は complexity high のタスクが無く security も選ばれていないため未発動"
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+findings: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false

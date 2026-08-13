@@ -40,7 +40,7 @@ workflow:
   base_commit: ca1a189c2e69d4a656e0878a7efb5eb2a5892261
   completed_at_commit: b3eca06471efa607c980385ae84c6196500e9e9a
 - id: review
-  status: pending
+  status: completed
   completed_at_commit: eb5d8fe6280b7090ebe9ed10d6d2d4506fd0c512
 - id: verify
   status: pending
@@ -165,7 +165,7 @@ tasks:
     branch: em-workflow/create-plan-status-conflict/task0005
 review:
   status: completed
-  rounds_completed: 2
+  rounds_completed: 3
   plan:
     floor:
     - comprehensive
@@ -177,8 +177,6 @@ review:
   perspectives:
     comprehensive: completed
     spec: completed
-    security: completed
-    architecture: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
