@@ -1,11 +1,11 @@
 schema_version: 1
 feature: implement-routeback-gate
 phase: create-spec
-status: awaiting_answers
+status: completed
 generation: 1
 base_revision: 3d3c90060f5aff16f3fe54fa2f5b09a6da90c96d
 last_input_digest: "sha256:91b1e735c8ed1e092fb14626a1f568c0824d1a2daf9294d0669635f05bf8e00f"
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -63,7 +63,21 @@ worker_runs:
     status: needs_user_input
     input_digest: "sha256:91b1e735c8ed1e092fb14626a1f568c0824d1a2daf9294d0669635f05bf8e00f"
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:1be6baee82a72bc0cf5c4e2e9c086c35b541fc4eb0277b9f45a898914ed1e44e"
+    output_digest: null
+  - request_id: create-spec-run-0004
+    status: completed
+    input_digest: "sha256:6a7852b017c125edce266ec3fd64ec27aa4ad69cb745c8315f4371b659256b03"
+    output_digest: null
+artifacts:
+  - path: feature-docs/implement-routeback-gate/REQUIREMENTS.md
+    sha256: null
+    produced_by: create-spec-run-0004
+  - path: feature-docs/implement-routeback-gate/SPEC.md
+    sha256: null
+    produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
