@@ -31,6 +31,14 @@ executable code, so verification is structural/textual against the rendered
 documents. Per the task's Test Notes, the expected section vocabulary is
 parsed out of design-input.md itself (not hand-copied here) so a document
 that drifts from the design fails these tests.
+
+Extended for task0002 (create-plan-status-conflict; see
+feature-docs/create-plan-status-conflict/tasks/task0002.md):
+
+- AC-1/AC-2: create-plan-phase.md section 3 (Reconcile on entry) states the
+  interrupted-`in_progress`-on-entry recovery rule, both branches (patch not
+  applied -> reset to `pending` and commit before dispatch; patch already
+  applied -> no reset, only the `completed` transition).
 """
 
 import re
@@ -801,6 +809,46 @@ class TestCreatePlanCanonicalInvocationIncludesPhaseState(unittest.TestCase):
     def test_omission_list_names_phase_state(self):
         self.assertIn("dropping `--phase-state` skips the", self.text)
         self.assertIn("duplicate-patch-identifier idempotency check", self.text)
+
+
+class TestCreatePlanInterruptedInProgressRecovery(unittest.TestCase):
+    """task0002 AC-1/AC-2: section 3 (Reconcile on entry) states the
+    interrupted-in_progress recovery rule with both branches, readable from
+    section 3 alone."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_PLAN_PATH)
+        start = _first_index(cls.text, "## 3. Reconcile on entry")
+        end = cls.text.index("## 4. Planner dispatch")
+        cls.section = cls.text[start:end]
+
+    def test_patch_not_applied_branch_resets_to_pending_before_dispatch(self):
+        self.assertIn("Patch not applied", self.section)
+        lowered = self.section.lower()
+        self.assertIn("in_progress", self.section)
+        self.assertIn("reset", lowered)
+        self.assertIn("`pending`", self.section)
+        self.assertIn("committed", lowered)
+
+    def test_patch_applied_branch_has_no_reset_and_only_transitions_to_completed(
+        self,
+    ):
+        self.assertIn("Patch already applied", self.section)
+        lowered = self.section.lower()
+        self.assertIn("no reset", lowered)
+        self.assertIn("completed", lowered)
+
+    def test_completed_branch_points_at_completion_section_and_resume_table(self):
+        lowered = self.section.lower()
+        self.assertIn("section 11", lowered)
+        self.assertIn("resume decision table", lowered)
+
+    def test_both_branches_readable_from_section_3_alone(self):
+        # Both branch labels and their outcomes must be findable inside the
+        # section-3 slice itself, not merely elsewhere in the document.
+        self.assertIn("Patch not applied", self.section)
+        self.assertIn("Patch already applied", self.section)
 
 
 class TestCreateSpecCompletedPayloadKeyReference(unittest.TestCase):
