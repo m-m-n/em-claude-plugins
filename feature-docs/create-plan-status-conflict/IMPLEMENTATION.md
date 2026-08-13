@@ -189,3 +189,51 @@ force). No other document or test file changes owner, and D1's freeze on
 unchanged. D5 also stands: the version bump remains task0003's single
 0.1.34 → 0.1.35 change, and this rework ships inside the same feature merge
 without a second bump.
+
+## Rework Round 2 (verify failed items `TS-5` / `AC5`)
+
+Appended by the verify-sourced rework. Everything above this heading is
+unchanged. D7 below extends the Cross-task Design Decisions section, because
+task0005 brings four repository-root test files that no existing task owns
+into the feature, and one of them asserts on a document D3 already assigns to
+another task.
+
+### D7 — Verify-sourced rework: fix direction and test-file ownership
+
+**Fix direction.** The five suite failures are stale assertions: each pins text
+that an intentional, already-merged change replaced, and all five fail
+identically at `workflow[implement].base_commit` (`ca1a189`), so none is this
+feature's regression. The production documents and agent files are correct as
+they stand. Every fix therefore runs **test → current production text**, never
+the reverse. Where an assertion still guards something meaningful, it is
+re-expressed against the current text; where the guarded behaviour no longer
+exists at all, it is replaced by an assertion over the behaviour that took its
+place. Deleting, skipping or hollowing out an assertion to reach exit 0 is a
+contract violation, not a fix. This is a strict extension of **D1**'s
+producer-side-only principle: D1 froze the consumer side of the create-plan
+contradiction; D7 freezes the production side of every assertion this rework
+touches.
+
+**Test-file ownership.** D3's "one document, one paired test file, one task"
+partition is extended, not amended:
+
+| Production artifact (frozen, read-only) | Paired test file | Owning task |
+|---|---|---|
+| `em-workflow/agents/designer.md`, `em-workflow/agents/implementation-planner.md` | `tests/test_refitted_worker_agents.py` | task0005 |
+| `em-workflow/README.md` | `tests/test_planner_designer_worktree_docs.py` | task0005 |
+| `em-workflow/references/batch-mode.md` | `tests/test_batch_policies.py` | task0005 |
+| `em-workflow/skills/develop/SKILL.md` (Step A) | `tests/test_review_implement_develop_lock_contracts.py` | task0005 |
+
+The last row is the only place this rework meets an existing task: D3 and D6
+give `em-workflow/skills/develop/SKILL.md` and
+`tests/test_develop_skill_rewiring.py` to task0004. The boundary is by
+**document section and by test file**, and it is asymmetric — task0005 owns a
+second test file that *reads* SKILL.md's Step A, while the document itself
+stays task0004's and is not in task0005's file set at all. task0005 must
+therefore not edit SKILL.md, and must leave every assertion in
+`tests/test_develop_skill_rewiring.py` (Step B) untouched. Since task0001 …
+task0004 are all `merged` and task0005 is the only pending task, this is a
+sequential inheritance of read access, not a parallel share.
+
+D5 continues to stand: task0005 touches only repository-root `tests/`, nothing
+under `em-workflow/`, so FR9's single 0.1.34 → 0.1.35 bump is not revisited.

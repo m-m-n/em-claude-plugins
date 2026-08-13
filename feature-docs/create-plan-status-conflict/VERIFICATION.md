@@ -7,7 +7,7 @@
 **IMPLEMENTATION.md**: `feature-docs/create-plan-status-conflict/IMPLEMENTATION.md`
 
 This document covers the INTEGRATED verification of the merged feature branch.
-Per-task acceptance criteria live in `tasks/task0001.md` … `tasks/task0004.md`.
+Per-task acceptance criteria live in `tasks/task0001.md` … `tasks/task0005.md`.
 
 ## Build Verification
 
@@ -38,6 +38,7 @@ Per-task acceptance criteria live in `tasks/task0001.md` … `tasks/task0004.md`
 | TS-4 | Validating a `replace_all` patch with dry-run application against a workflow whose create-plan step is `in_progress` is rejected; the same patch shape passes for `pending` and for `needs_update` | Rejected case: exit 1 with the `replace-all-not-permitted` identifier attributed to the create-plan step status. Permitted cases: exit 0 | Integration (CLI + fixtures) |
 | TS-5 | Full test-suite run after all tasks are merged | `python3 -m unittest discover -s tests` exits 0 | Integration |
 | TS-6 | Step B in `skills/develop/SKILL.md` states stop condition 3's carve-out in generalized terms — a `needs_update` set by a transition whose owning phase protocol prescribes automatic re-entry does not stop the loop — enumerating both qualifying transitions (create-plan route back to planning; the create-spec rework spec-change transition) with their owning documents cited, stating the negative `create-spec.stalled` case and its `phase-state/rework.yaml` discriminator, and no longer containing the universal claim that the condition refers to steps other than create-plan. The create-plan `in_progress` exemption keeps its create-plan-only scope, and the spec-change transition is cited rather than restated | Doc assertions in `tests/test_develop_skill_rewiring.py` pass, including the absence assertion on the removed sentence and every pre-existing assertion in that file | Unit (doc assertion) |
+| TS-7 | The five stale doc assertions found by the verify phase are retargeted at the current production text rather than deleted or weakened: the two agent-frontmatter assertions compare against the model value the agent files carry, the README assertion describes branch-based resume as the README now expresses it, the batch-mode coverage union names only concepts that document retains (each dropped concept noted with its new owner), and the Step A assertion guards explicit feature-name resolution instead of the removed 0/1/N-hit bootstrap states. No unconditional pass, no new skip/expectedFailure, no deleted test beyond the one prescribed substitution, and no production document, agent file, script or hook modified | Reading `tests/test_refitted_worker_agents.py`, `tests/test_planner_designer_worktree_docs.py`, `tests/test_batch_policies.py` and `tests/test_review_implement_develop_lock_contracts.py` against the integrated diff shows each assertion re-expressed against current text, and each fails when the guarded production text is perturbed | Unit (doc assertion) + diff inspection |
 
 ## Code Quality Verification
 
@@ -57,7 +58,7 @@ Per-task acceptance criteria live in `tasks/task0001.md` … `tasks/task0004.md`
 | AC2 | Step B and rule 5 do not contradict each other | TS-1 + TS-3, plus the manual cross-read item M-1 below |
 | AC3 | The validator's behaviour matches the updated specification without a functional change | TS-4 passes with `references/workflow-patch.md` and `scripts/validate-worker-output.py` unmodified (M-2) |
 | AC4 | §3 alone is sufficient to follow the recovery procedure | TS-2 for machine-checkable presence; M-3 for sufficiency |
-| AC5 | `python3 -m unittest discover -s tests` passes in full | TS-5 |
+| AC5 | `python3 -m unittest discover -s tests` passes in full | TS-5; TS-7 confirms the five stale assertions were retargeted rather than removed to reach exit 0 |
 | AC6 | The plugin version is bumped | Inspect `em-workflow/.claude-plugin/plugin.json` (0.1.35) and confirm the root `.claude-plugin/marketplace.json` is unmodified |
 
 ### Functional Requirements Coverage
@@ -71,7 +72,7 @@ Per-task acceptance criteria live in `tasks/task0001.md` … `tasks/task0004.md`
 | FR5 | task0003 | TS-4 + M-2 (validator unmodified) |
 | FR6 | task0002 | TS-2 |
 | FR7 | task0002, task0004 | TS-5 + M-1 (plugin-wide cross-read); TS-6 + M-9 (SKILL.md no longer contradicts the rework SSOTs) |
-| FR8 | task0001, task0002, task0003, task0004 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6 |
+| FR8 | task0001, task0002, task0003, task0004, task0005 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-7 |
 | FR9 | task0003 | TS-5 + AC6 inspection |
 | NFR1 | task0003, task0004 | TS-5 + M-2 (no diff on the rework path: `append_rework` conditions, the validator's append branch, `references/rework-task-synthesis.md`); M-9 (`references/rework-task-synthesis.md` still absent from the integrated diff after the rework) |
 | NFR2 | task0003 | TS-4 (validator decision logic still behaves identically), TS-5 + M-2 (diff limited to documents, tests, fixtures and the version) |
@@ -129,6 +130,15 @@ under manual testing.
       documents prescribe is reachable — Step B executes create-spec instead of
       stopping — while (b) the `create-spec.stalled` abort still stops the
       loop, and (c) neither rework document was modified by this feature.
+- [ ] M-10 (AC5, TS-7, verify failed items TS-5 / AC5): Confirm that the five
+      stale assertions task0005 retargeted were invalidated by commits outside
+      this feature (all five fail identically at
+      `workflow[implement].base_commit` `ca1a189`), and that the integrated
+      diff contains no change to `em-workflow/agents/designer.md`,
+      `em-workflow/agents/implementation-planner.md`, `em-workflow/README.md`,
+      `em-workflow/references/batch-mode.md` or
+      `em-workflow/skills/develop/SKILL.md` made in order to satisfy one of
+      them — the fix direction stayed test → current reality.
 
 Mockup visual comparison is not applicable: the design step is `skipped`
 (no visual element or UI in this feature).
@@ -149,7 +159,7 @@ Mockup visual comparison is not applicable: the design step is `skipped`
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1 … TS-6) | 6 | 6 | 0 | 0 |
+| Test scenarios (TS-1 … TS-7) | 7 | 6 | 0 | 1 (TS-7's diff-inspection half, carried as M-10) |
 | Success criteria (AC1 … AC6) | 6 | 4 | 0 | 2 (AC2, AC4 partially manual) |
-| Manual checks (M-1 … M-9) | 9 | 0 | 0 | 9 |
+| Manual checks (M-1 … M-10) | 10 | 0 | 0 | 10 |
 | Security checks | 3 | 2 | 0 | 1 |
