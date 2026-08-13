@@ -37,6 +37,19 @@ criterion to gate-identifier presence) adds:
   everything else routed by which step presents them" — and so no longer
   contradicts Step A.5's own `create-spec.command-approval` routing to
   `batch-policies.yaml`.
+
+task0001 (create-plan-status-conflict) adds:
+
+- AC-1: Step B states that create-plan is the sole step exempt from the
+  pre-dispatch `in_progress` update, and that it advances to `completed`
+  only after the phase completes (patch applied and commit succeeded).
+- AC-2: Step B states that the exemption preserves the entry status, and
+  names both entry statuses (`pending`, `needs_update`) as what the planner
+  is dispatched with.
+- AC-3: the exemption carries both reasons (the `replace_all`
+  permission-condition reason and the `phase-state/create-plan.yaml`
+  recovery reason) and cites `references/workflow-patch.md` for the
+  permission conditions without reproducing that document's condition text.
 """
 
 import re
@@ -55,6 +68,33 @@ INLINE_AGENT_PHRASE = "インラインで従う"
 # task0012's own edge case: no residual reference may remain in this file,
 # even though the repository-wide sweep belongs to task0013.
 DELETED_AGENT_NAME = "requirements-spec-creator"
+
+# task0001 (create-plan-status-conflict): the bold-label marker that opens
+# the create-plan `in_progress` exemption block, placed after the generic
+# pre-dispatch `in_progress` sentence so it narrows rather than replaces it
+# (IMPLEMENTATION.md D2).
+CREATE_PLAN_EXEMPTION_MARKER = "**例外: create-plan は先に `in_progress` を経ない**"
+
+# The exemption's own rationale label, distinct from the design-system
+# backfill's "`in_progress` へ先に更新しない理由" label so the two "why we
+# skip `in_progress`" explanations in this section are never confused for
+# one another.
+CREATE_PLAN_EXEMPTION_RATIONALE_LABEL = "**create-plan が `in_progress` を経ない理由**"
+
+# The paragraph that immediately follows the exemption block in Step B,
+# used as the section's end marker.
+STEP_B_COMMIT_DISCIPLINE_MARKER = (
+    "workflow.yaml か feature-docs/ 配下のドキュメントを Write/Edit するたび"
+)
+
+# workflow-patch.md's `replace_all` permission-condition sentences (5.5.1 /
+# application rule 5). Step B must cite this document, never reproduce
+# these sentences (S3 rule-5 citation discipline, IMPLEMENTATION.md).
+WORKFLOW_PATCH_CONDITION_SENTENCES = (
+    "`tasks` is empty, OR every existing task's `status` is `pending`",
+    "the `create-plan` step is `pending` (first planning pass)",
+    "the `create-plan` step is `needs_update` (an explicit re-plan)",
+)
 
 
 def _read(path):
@@ -380,6 +420,79 @@ class TestBatchArgumentJurisdictionByGateIdentifier(unittest.TestCase):
         )
 
 
+class TestCreatePlanInProgressExemption(unittest.TestCase):
+    """task0001 AC-1, AC-2, AC-3: Step B states that create-plan is the sole
+    step exempt from the pre-dispatch `in_progress` update, preserves its
+    entry status into planner dispatch, and carries both reasons for the
+    exemption via a citation (never a restatement) of workflow-patch.md's
+    `replace_all` permission conditions."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(SKILL_PATH)
+        cls.step_b_section = _section(
+            cls.text, "## Step B: 自走ループ", "### design ステップ分岐"
+        )
+        cls.exemption_section = _section(
+            cls.step_b_section,
+            CREATE_PLAN_EXEMPTION_MARKER,
+            STEP_B_COMMIT_DISCIPLINE_MARKER,
+        )
+
+    def test_exemption_block_follows_the_generic_in_progress_sentence(self):
+        # AC-1 placement (IMPLEMENTATION.md D2): the exemption narrows the
+        # generic sentence, so it must be described after it.
+        generic_idx = self.step_b_section.index(
+            "以上を経て、step 実行前にその step を `in_progress` に更新し"
+        )
+        exemption_idx = self.step_b_section.index(CREATE_PLAN_EXEMPTION_MARKER)
+        self.assertLess(generic_idx, exemption_idx)
+
+    def test_exemption_names_create_plan_as_the_sole_exempt_step(self):
+        # AC-1: create-plan is stated as THE exception, not merely an
+        # exception among several.
+        self.assertIn("create-plan", self.exemption_section)
+        self.assertIn("だけ", self.exemption_section)
+
+    def test_exemption_advances_to_completed_only_after_patch_and_commit(self):
+        # AC-1: advances to `completed` only once the phase has finished —
+        # the proposed patch applied AND the commit succeeded — and does
+        # not advance if either fails.
+        self.assertIn("completed", self.exemption_section)
+        self.assertIn("規則 R2", self.exemption_section)
+        self.assertIn("コミット", self.exemption_section)
+        self.assertIn("失敗", self.exemption_section)
+
+    def test_entry_status_preservation_names_both_statuses(self):
+        # AC-2: the exemption never overwrites the entry status, and both
+        # statuses the planner may be dispatched with are named.
+        self.assertIn("`pending`", self.exemption_section)
+        self.assertIn("`needs_update`", self.exemption_section)
+        self.assertIn("上書きしない", self.exemption_section)
+
+    def test_rationale_label_is_distinct_from_backfill_label(self):
+        # Test Notes edge case: the two "why we skip `in_progress`"
+        # explanations (backfill, create-plan) must not share a label, or
+        # an assertion on the shared label alone could not tell them apart.
+        self.assertIn(
+            CREATE_PLAN_EXEMPTION_RATIONALE_LABEL, self.exemption_section
+        )
+        self.assertNotIn(
+            "**`in_progress` へ先に更新しない理由**", self.exemption_section
+        )
+
+    def test_rationale_cites_workflow_patch_rule_5_without_reproducing_it(self):
+        # AC-3: the reference is present; the copied condition text is not.
+        self.assertIn("workflow-patch.md", self.exemption_section)
+        self.assertIn("適用規則 5", self.exemption_section)
+        for sentence in WORKFLOW_PATCH_CONDITION_SENTENCES:
+            self.assertNotIn(sentence, self.exemption_section)
+
+    def test_rationale_cites_phase_state_create_plan_recovery(self):
+        # AC-3: the second reason — interrupt recovery ownership.
+        self.assertIn("phase-state/create-plan.yaml", self.exemption_section)
+
+
 class TestDevelopSkillRewiringAssertionsCanFail(unittest.TestCase):
     """Proof that the structural checks above fail meaningfully, per the
     tdd-testing discipline (a test that can never fail is not a test)."""
@@ -400,6 +513,35 @@ class TestDevelopSkillRewiringAssertionsCanFail(unittest.TestCase):
         backfill_idx = fake_section.index("backfill")
         in_progress_idx = fake_section.index("in_progress")
         self.assertGreater(backfill_idx, in_progress_idx)
+
+    def test_missing_create_plan_exemption_marker_is_detected(self):
+        # task0001 AC-1/AC-5: a Step B section without the exemption block
+        # must not contain its opening marker.
+        fake_section = (
+            "以上を経て、step 実行前にその step を `in_progress` に更新し"
+            "、フェーズ完了時に `completed` へ更新する。"
+        )
+        self.assertNotIn(CREATE_PLAN_EXEMPTION_MARKER, fake_section)
+
+    def test_missing_entry_status_preservation_is_detected(self):
+        # task0001 AC-2/AC-5: a rewrite that always dispatches create-plan
+        # as `in_progress` (dropping entry-status preservation) must fail
+        # the `needs_update` presence check.
+        fake_section = "create-plan は常に `in_progress` で dispatch される。"
+        self.assertNotIn("`needs_update`", fake_section)
+
+    def test_copied_permission_condition_sentence_is_detected(self):
+        # task0001 AC-3/AC-5: reproducing workflow-patch.md's condition
+        # enumeration instead of citing it must be caught by the
+        # assertNotIn checks in TestCreatePlanInProgressExemption.
+        fake_section = (
+            "the `create-plan` step is `pending` (first planning pass), OR "
+            "the `create-plan` step is `needs_update` (an explicit re-plan)"
+        )
+        self.assertIn(
+            "the `create-plan` step is `pending` (first planning pass)",
+            fake_section,
+        )
 
 
 if __name__ == "__main__":
