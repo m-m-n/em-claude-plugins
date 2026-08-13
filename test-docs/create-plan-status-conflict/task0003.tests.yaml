@@ -1,0 +1,90 @@
+task_id: task0003
+baseline_failures:
+  - test_coverage_union_matches_original (test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original)
+  - test_describes_branch_based_resume (test_planner_designer_worktree_docs.TestReadmeWorktreeModel.test_describes_branch_based_resume)
+  - test_designer_retains_model_and_effort (test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_retains_model_and_effort)
+  - test_planner_retains_model_and_effort (test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_retains_model_and_effort)
+  - test_three_bootstrap_states_are_all_present (test_review_implement_develop_lock_contracts.TestSkillStepABootstrapStates.test_three_bootstrap_states_are_all_present)
+final_failures:
+  - test_coverage_union_matches_original (test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original)
+  - test_describes_branch_based_resume (test_planner_designer_worktree_docs.TestReadmeWorktreeModel.test_describes_branch_based_resume)
+  - test_designer_retains_model_and_effort (test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_retains_model_and_effort)
+  - test_planner_retains_model_and_effort (test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_retains_model_and_effort)
+  - test_three_bootstrap_states_are_all_present (test_review_implement_develop_lock_contracts.TestSkillStepABootstrapStates.test_three_bootstrap_states_are_all_present)
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not a code test: verified by `git diff --stat` showing no entry for
+      em-workflow/references/workflow-patch.md or
+      em-workflow/scripts/validate-worker-output.py at the end of this task
+      (both files are frozen per IMPLEMENTATION.md D1 and were never opened
+      for edit).
+  AC-2:
+    tests:
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_exactly_two_create_plan_entry_statuses_are_permitted
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_tasks_empty_or_all_pending_condition_still_required
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_application_rule_5_still_refers_to_the_permission_conditions
+    red_confirmed: false
+    red_reason: >-
+      workflow-patch.md is frozen (D1) and already states this content
+      unmodified, so these pinning assertions pass immediately against the
+      unedited document -- there is no implementation change to go red
+      against. Verified the assertions are not vacuous by mutating an
+      in-memory copy of the section text (widened to a third create-plan
+      status, dropped the tasks-empty-or-pending condition, and rule 5 no
+      longer mentioning "permission conditions") and confirming each
+      mutation makes the corresponding assertion fail.
+  AC-3:
+    tests:
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_in_progress_rejected_with_replace_all_not_permitted
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: .../fixtures/workflow-patch/replace_planning/invalid-replace-all-create-plan-in-progress
+      has no input.* file -- the fixture case directory did not exist yet
+      when the test was first run.
+  AC-4:
+    tests:
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_needs_update_passes
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_pending_passes
+    red_confirmed: true
+    red_reason: >-
+      test_create_plan_needs_update_passes: AssertionError: .../fixtures/workflow-patch/replace_planning/valid-replace-all-create-plan-needs-update
+      has no input.* file (new fixture case directory did not exist yet).
+      test_create_plan_pending_passes targets the pre-existing
+      valid-dry-run-apply fixture and the validator's already-correct
+      (frozen) behaviour, so it passed on first run -- it adds a
+      scenario-named regression guard per the Test Notes rather than new
+      behaviour, and was not expected to go red.
+  AC-5:
+    tests:
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_in_progress_rejected_for_exactly_one_reason
+    red_confirmed: true
+    red_reason: >-
+      Same missing-fixture AssertionError as AC-3 (fixture case directory
+      did not exist yet); once the fixture was added the test asserted the
+      error-code set equals exactly {"replace-all-not-permitted"}.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not a code test: verified by `python3 -c "import json;
+      json.load(open('em-workflow/.claude-plugin/plugin.json'))"` (valid
+      JSON) plus a direct read confirming version "0.1.35", and `git diff
+      --stat` showing no entry for the root .claude-plugin/marketplace.json.
+      Existing strictly-greater-than-baseline version assertions in
+      tests/test_reference_sweep.py (baseline 0.1.27) and
+      tests/test_codex_reviewer_temp_file_isolation.py (baseline 0.1.23)
+      already cover the bump without modification, per the task plan.
+  AC-7:
+    tests:
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+    red_confirmed: false
+    red_reason: >-
+      This is the pre-existing generic fixture sweep (not written by this
+      task); it automatically discovers the two new fixture case
+      directories by directory name and was already green before this task
+      touched anything. The two new fixture cases exercise it as an
+      independent second check beyond the dedicated AC-3/AC-4/AC-5 tests,
+      per the Test Notes.
