@@ -27,8 +27,9 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
    可（完了処理まで済ませた後）
 2. ある step を 2 回連続で実行しても status が進まない（= スタック）
 3. ある step の status が `failed` / `needs_update`（= ユーザー介入が必要。
-   ただし create-plan step が `needs_update` のまま dispatch される Step B の
-   例外中は、この条件では停止しない — 詳細は Step B の例外説明を参照）
+   ただし、フェーズプロトコルがそのフェーズの自動再エントリのために設定した
+   `needs_update` の間はこの条件では停止しない — 詳細は Step B の
+   「**停止条件 3 との優先関係**」参照）
 4. workflow.yaml の YAML parse エラー（= リカバリ不能）
 5. implement フェーズでバックグラウンド implementer の完了通知を待つとき
    （= キューループが定める正常な待機。次の 2 形がある:
@@ -233,15 +234,38 @@ create-plan フェーズの planner は、その step がエントリした時�
 で入った場合は `pending` のまま planner を dispatch し、`needs_update`
 （明示的な re-plan）で入った場合は `needs_update` のまま dispatch する。
 
-**停止条件 3 との優先関係**: この例外で `needs_update` のまま保持される
-create-plan step 自身の status は、停止条件 3（`needs_update` = ユーザー
-介入が必要）の停止理由にしない。停止条件 3 は Step B がこれから実行する
-step を特定した時点で 1 度評価され、create-plan フェーズ実行中に例外で
-保持された `needs_update` では再発火しない。停止条件 3 が意味する「ユーザー
-介入が必要な `needs_update`」は create-plan 以外の step を指す。create-plan
-が `needs_update` で Step B に入った場合は — route back to planning
-（`references/implement-phase.md` I.2.c）が設定したものを含め — 停止せず、
-その status のまま planner を dispatch する。
+**停止条件 3 との優先関係**: 停止条件 3 は Step B がこれから実行する step を
+特定した時点で、その step の `failed` / `needs_update` status に対して
+1 度評価される。step 自身のフェーズ実行中に意図的に保持された status では
+再発火しない。
+
+あるフェーズプロトコルが、そのフェーズを自動的に再エントリさせるために
+設定した `needs_update` は、この停止条件の停止理由にしない。フェーズは
+その `needs_update` を保持したまま実行され、実行前に値を書き換えたり
+`pending` に戻したりしない。該当する遷移は現時点で厳密に次の 2 つで、
+それぞれ所有ドキュメントを明記する:
+- create-plan の route back to planning —
+  `references/implement-phase.md`（I.2.c）が create-plan を
+  `needs_update` に設定する遷移
+- rework の spec-change 遷移 — `references/rework-task-synthesis.md`
+  §10 と `references/contracts/rework-planner-contract.md` の
+  Specification-change transition が create-spec を `needs_update` に
+  設定し、develop のステートマシンが create-spec で再エントリすることを
+  要求する遷移
+
+この列挙は、所有 SSOT 自身がフェーズの自動再エントリを明記している遷移
+だけが対象という構成上の理由で網羅的であり、他の遷移はこの除外の対象外。
+
+一方、`create-spec.stalled` の選択肢 3（create-spec を `needs_update` として
+中断する）が設定する `needs_update` は正真正銘のユーザー介入待ちであり、
+停止条件 3 はそこでは通常どおり発火する。workflow.yaml 単独では create-spec
+の 2 つの `needs_update` を区別できないため、両者を分ける根拠は
+`phase-state/rework.yaml` に置く: spec-change 遷移はその所有 SSOT の定めに
+従い、中断理由と finding の `stable_id` を同ファイルへ記録する。この除外が
+create-spec の `needs_update` に適用されるのは、その記録が存在し、かつ
+未消費の間だけであり、記録が無ければ停止する。記録は、それが引き起こした
+create-spec の実行によって消費される — その実行が `completed` に達した
+あとに設定された `needs_update` は、この記録の対象外。
 
 **create-plan が `in_progress` を経ない理由**（design-system backfill と
 は別の理由）:
