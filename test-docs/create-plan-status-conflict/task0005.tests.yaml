@@ -1,0 +1,40 @@
+task_id: task0005
+baseline_failures:
+  - test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original
+  - test_planner_designer_worktree_docs.TestReadmeWorktreeModel.test_describes_branch_based_resume
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_retains_model_and_effort
+  - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_retains_model_and_effort
+  - test_review_implement_develop_lock_contracts.TestSkillStepABootstrapStates.test_three_bootstrap_states_are_all_present
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_reason: "4a baseline run (python3 -m unittest discover -s tests, from the repository root of this worktree, before any edit) reproduced exactly 902 tests / 5 failures matching baseline_failures above -- identical in name and count to the pre-declared assignment. After retargeting all five assertions, the identical full-suite command exits 0 with 902 tests, 0 failures, 0 errors, 0 newly-skipped tests."
+  AC-2:
+    tests:
+      - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_designer_retains_model_and_effort
+      - test_refitted_worker_agents.TestAC7ForbiddenHeadingAndRetainedFrontmatter.test_planner_retains_model_and_effort
+    red_confirmed: true
+    red_reason: "Observed in the 4a baseline: AssertionError: 'opus' != 'best' for both tests (designer's effort 'high', planner's effort 'xhigh' were already correct -- only the model literal was stale). Commit 7c63189 had already replaced the alias 'best' with the explicit id 'opus' in both agent files' frontmatter. Retargeted both assertions to 'opus'; after retargeting, local perturbation (temporarily set designer's model to 'sonnet', separately planner's effort to 'high', each reverted via git checkout before commit) reconfirmed each assertion still fails when the frontmatter field changes."
+  AC-3:
+    tests:
+      - test_planner_designer_worktree_docs.TestReadmeWorktreeModel.test_describes_branch_based_resume
+    red_confirmed: true
+    red_reason: "Observed in the 4a baseline: AssertionError: 'em-workflow/*/integration' not found in README.md. Commit b68221d rewrote the resume paragraph to explicit feature-name resolution using the concrete `em-workflow/{feature}/integration` placeholder, so the withdrawn glob literal never matches. Retargeted to assert the structural relationship the paragraph now expresses ('feature 名の明示起点', the `{feature}` placeholder branch pattern, and 'existing branches are never enumerated/guessed' -- 既存ブランチの列挙・推測はしない). Local perturbation (replacing the no-enumeration phrase, reverted via git checkout before commit) reconfirmed the test still fails if the README stops describing branch-based resume."
+  AC-4:
+    tests:
+      - test_batch_policies.TestBatchModeMdMigration.test_coverage_union_matches_original
+    red_confirmed: true
+    red_reason: "Observed in the 4a baseline: AssertionError: 'feature selection' not found in batch-mode.md. A later rewrite of the Step A non-packet-gate row renamed the concept from 'feature selection' to 'feature resolution' without dropping it -- the concept is retained in changed form, not removed, so no in-file provenance note (per AC-4's 'concept removed from the required set' clause) is warranted. Retargeted the required keyword from 'feature selection' to 'feature resolution'. Local perturbation (renaming the row's heading to 'Step A feature pick', reverted via git checkout before commit) reconfirmed the test still fails if the concept disappears from batch-mode.md."
+  AC-5:
+    tests:
+      - test_review_implement_develop_lock_contracts.TestSkillStepAFeatureResolutionAndBootstrapStates.test_explicit_feature_name_resolution_replaces_branch_enumeration
+    red_confirmed: true
+    red_reason: "Observed in the 4a baseline: AssertionError: '0件: 新規 feature' not found in SKILL.md Step A. Commit b68221d replaced the old 0/1/N-hit branch-enumeration bootstrap states with explicit feature-name resolution -- the guarded behaviour is gone entirely, not merely reworded, so per the task plan this is the one substitution case: renamed the class (TestSkillStepABootstrapStates -> TestSkillStepAFeatureResolutionAndBootstrapStates) and the test method (test_three_bootstrap_states_are_all_present -> test_explicit_feature_name_resolution_replaces_branch_enumeration), kept the two still-valid bootstrap assertions (workflow.yaml present -> Step A.5/Step B; workflow.yaml absent -> resume the interrupted create-spec), and replaced the removed third assertion with coverage of the behaviour that took its place: a path argument is the only resume route ('既存 feature の再開はこの経路のみ'), its absence always resolves to a new feature ('パス引数が無ければ **新規 feature**'), and existing branches are never enumerated or guessed from ('既存ブランチの列挙・推測は'). Local perturbation (rewording the resume-route sentence, reverted via git checkout before commit) reconfirmed the new assertions still fail."
+  AC-6:
+    tests: []
+    red_reason: "Verified by inspecting `git diff` across the four owned test files: no `skip`/`expectedFailure` decorator was added, no assertion was loosened into an unconditional pass or a bare file-existence substitute for a content check, and no test method or class was deleted without the AC-5-prescribed substitution (old test_three_bootstrap_states_are_all_present/TestSkillStepABootstrapStates were renamed and had their still-valid sub-assertions carried forward, not dropped)."
+  AC-7:
+    tests: []
+    red_reason: "Verified by `git status --porcelain` at every checkpoint during implementation: only the four declared test files (tests/test_refitted_worker_agents.py, tests/test_planner_designer_worktree_docs.py, tests/test_batch_policies.py, tests/test_review_implement_develop_lock_contracts.py) ever show as modified. Each of the five local perturbations made to the frozen production files (em-workflow/agents/designer.md, em-workflow/agents/implementation-planner.md, em-workflow/README.md, em-workflow/references/batch-mode.md, em-workflow/skills/develop/SKILL.md) for red-confirmation was reverted with `git checkout --` before proceeding, with `git status --porcelain` on that path confirmed empty (byte-identical to pre-task state) immediately after each revert."
+notes: "Baseline was pre-declared in the task invocation as exactly these 5 failures out of 902 tests; the mandatory 4a run before any edit reproduced that set exactly, confirming zero prior drift. All five are stale-documentation assertions per the task's provenance (VERIFY TS-5/AC5, IMPLEMENTATION.md D7): each pinned a literal or structure that an intentional, already-merged commit (7c63189 or b68221d) had replaced. Fix direction was test -> current production text in every case; no production document, agent file, script or hook was modified. Failures 1-4 were re-expressed against the current text (rewrite); failure 5's guarded behaviour (0/1/N-hit branch enumeration) no longer exists at all, so it was replaced by substitution per the task plan's explicit instruction, with the class and test renamed to state what they now guard. Final full-suite run: 902 tests, 0 failures, 0 errors, exit code 0."
