@@ -1,17 +1,64 @@
 schema_version: 1
 feature: create-plan-status-conflict
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: null
-last_input_digest: null
+base_revision: "301c9fcc86efd4e6e2f1097eccf8ad9adf654cb0"
+last_input_digest: "sha256:47c30bb0389a66b1ada3989dbaa0c63e45fb5cb02d5b34f6de3972106ff8c2f4"
 active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-13T22:52:00+09:00"
+    questions:
+      - question_id: requirement.status-conflict-direction
+        status: answered
+      - question_id: requirement.existing-in-progress-recovery
+        status: answered
+      - question_id: design-step.decision
+        status: answered
+answers:
+  requirement.status-conflict-direction:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-13T22:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [exempt-create-plan]
+    freeform: null
+    normalized_answer: "develop SKILL.md Step B を例外化する。create-plan は dispatch 前に in_progress にせず pending のまま実行し、patch 適用後に completed へ進める。workflow-patch.md rule 5 と validator の許可条件は変更しない。"
+    resolution_note: "gate create-spec.requirement-clarification -> batch-policies.yaml action: codex_consultation。Codex は exempt-create-plan を結論とし、in_progress の意味づけを保ちつつ pending / needs_update 両分岐が到達可能になる点を根拠に挙げた。requirements-analyst の推奨およびタスク記述の申し送り（案(b)を優先検討）とも一致。record_as_assumption: true。"
+  requirement.existing-in-progress-recovery:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-13T22:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [reconcile-resets]
+    freeform: null
+    normalized_answer: "create-plan-phase.md の Reconcile on entry に、patch 未適用のまま in_progress で中断していた場合は create-plan を pending に戻してから dispatch する規則を追加する。"
+    resolution_note: "gate create-spec.requirement-clarification -> codex_consultation。Codex は reconcile-resets を結論とし、validator を恒久的に緩めずに無人実行へ決定的な復旧経路を与える点を根拠に挙げた。record_as_assumption: true。"
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-13T22:52:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "requirements-analyst の推奨（skip）を採用する。"
+    resolution_note: "gate create-spec.design-step -> batch-policies.yaml option_id: decide_autonomously。"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:47c30bb0389a66b1ada3989dbaa0c63e45fb5cb02d5b34f6de3972106ff8c2f4"
+    output_digest: "sha256:pending"
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
