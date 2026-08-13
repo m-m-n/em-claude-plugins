@@ -26,7 +26,9 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 1. `workflow` 配列の全 step が `completed`、ただし design のみ `skipped` も
    可（完了処理まで済ませた後）
 2. ある step を 2 回連続で実行しても status が進まない（= スタック）
-3. ある step の status が `failed` / `needs_update`（= ユーザー介入が必要）
+3. ある step の status が `failed` / `needs_update`（= ユーザー介入が必要。
+   ただし create-plan step が `needs_update` のまま dispatch される Step B の
+   例外中は、この条件では停止しない — 詳細は Step B の例外説明を参照）
 4. workflow.yaml の YAML parse エラー（= リカバリ不能）
 5. implement フェーズでバックグラウンド implementer の完了通知を待つとき
    （= キューループが定める正常な待機。次の 2 形がある:
@@ -230,6 +232,15 @@ create-plan フェーズの planner は、その step がエントリした時�
 この例外はエントリ status を上書きしない: `pending`（初回の planning）
 で入った場合は `pending` のまま planner を dispatch し、`needs_update`
 （明示的な re-plan）で入った場合は `needs_update` のまま dispatch する。
+
+**停止条件 3 との優先関係**: この例外で `needs_update` のまま保持される
+create-plan step 自身の status は、停止条件 3（`needs_update` = ユーザー
+介入が必要）の停止理由にしない。停止条件 3 は Step B がこれから実行する
+step を特定した時点で 1 度評価され、create-plan フェーズ実行中に例外で
+保持された `needs_update` では再発火しない。停止条件 3 が意味する「ユーザー
+介入が必要な `needs_update`」は、create-plan 以外の step、または create-plan
+がフェーズ実行の結果として `needs_update` に進んだ場合（route back to
+planning 等）を指す。
 
 **create-plan が `in_progress` を経ない理由**（design-system backfill と
 は別の理由）:
