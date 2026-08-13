@@ -1,0 +1,35 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      No automated assertion is possible: pinning a literal plugin version in
+      the suite would fail in the sibling task0001 worktree and would have to
+      be edited on every future bump (IMPLEMENTATION.md D3). Verified by
+      direct inspection instead: em-workflow/.claude-plugin/plugin.json's
+      `version` field reads "0.1.36", the file parses as valid JSON
+      (python3 -c "import json; json.load(open(path))" succeeds), and
+      `git diff` shows a single-line change (0.1.35 -> 0.1.36) with every
+      other field and the file's formatting untouched.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      No automated assertion; verified by inspecting `git diff --stat` and
+      `git status --porcelain` in the task worktree, both of which show
+      exactly one changed file: em-workflow/.claude-plugin/plugin.json. The
+      root .claude-plugin/marketplace.json and every other file under
+      em-workflow/ are untouched.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      This criterion is a regression guard over the existing suite, not new
+      behavior with an observable red state. The full suite
+      (python3 -m unittest discover -s tests) was already green (902/902,
+      baseline_failures: []) before the version bump and remained green
+      (902/902, final_failures: []) after it, with no test file added or
+      modified.
