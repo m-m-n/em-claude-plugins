@@ -28,7 +28,8 @@ workflow:
     skipped_reason: "プロトコル markdown と plugin.json の version のみの変更で UI 表示面を持たず、design-system 候補も 0 件のため"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 33262c83caa7093fadfe2c1646b2d83ac7213621
   - id: implement
     status: pending
     base_commit: null
@@ -41,7 +42,32 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "I.2.c route-back gate correction + document-contract tests"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_implement_routeback_gate.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, NFR1, NFR2, NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: "em-workflow plugin patch version bump (0.1.35 -> 0.1.36)"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR7, FR9, NFR1, NFR3]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -57,92 +83,92 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR2:
     title: "The route-back write-back is committed before create-plan re-entry"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-2]
   FR3:
     title: "The exit-4 recovery enumeration covers the new call site"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-3]
   FR4:
     title: "The gate is restated as \"no merged task exists\""
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4]
   FR5:
     title: "Merged-task branch terminates at `failed` + develop stop condition 3"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-5]
   FR6:
     title: "Delegation citation names the clause that owns the precedence"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-6]
   FR7:
     title: "Change containment"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-7, TS-8]
+    tasks: [task0001, task0002]
+    tests: [TS-7, TS-8, TS-12]
   FR8:
     title: "Batch-mode paragraph stays intact"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-7]
+    tasks: [task0001]
+    tests: [TS-7, TS-9]
   FR9:
     title: "Plugin version patch bump"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-8]
+    tasks: [task0002]
+    tests: [TS-8, TS-10, TS-12]
   NFR1:
     title: "Existing test contracts preserved"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-7, TS-8]
   NFR2:
     title: "SSOT non-duplication"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-6]
   NFR3:
     title: "Documentation-only change"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-7]
+    tasks: [task0001, task0002]
+    tests: [TS-7, TS-12]
   NFR4:
     title: "Local style consistency"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-7]
+    tasks: [task0001]
+    tests: [TS-7, TS-11]
 
 batch:
   review_rework_count: 0
