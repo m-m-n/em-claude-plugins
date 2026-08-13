@@ -1,0 +1,21 @@
+schema_version: 1
+feature: create-plan-status-conflict
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: "5b3ae35c1130e97f33a6b488ee0dc4adf679d3e8"
+last_input_digest: "sha256:6dbc61e70cffccf19d766ad5512ee9d09af5237da80790b164a0d5b157e2f1a9"
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: "sha256:6dbc61e70cffccf19d766ad5512ee9d09af5237da80790b164a0d5b157e2f1a9"
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
