@@ -43,9 +43,13 @@ workflow:
   status: completed
   completed_at_commit: eb5d8fe6280b7090ebe9ed10d6d2d4506fd0c512
 - id: verify
-  status: in_progress
-  result:
-  failed_items: []
+  status: failed
+  result: fail
+  failed_items:
+  - id: TS-5
+    note: python3 -m unittest discover -s tests が exit 0 にならない（902 tests / 5 failures）。5 件はいずれも base_commit ca1a189 時点でも同一に失敗しており本 feature の回帰ではないが、AC5 は無条件の文言のため未達
+  - id: AC5
+    note: TS-5 と同一。SPEC の AC5『python3 -m unittest discover -s tests passes in full』が満たされていない
 - id: retrospect
   status: pending
 tasks:
