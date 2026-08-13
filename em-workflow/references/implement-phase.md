@@ -325,18 +325,24 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   resume guard).
 - **route back to planning** — a task that cannot be implemented as planned
   means the plan (or the spec behind it) is wrong; fix it upstream, not
-  here. Set `create-plan` to `needs_update`, set the `implement` step back
-  to `pending`, record the failure reason in `tasks.{T}.notes`, clean up
-  the failed task's worktree and branch (`git worktree remove --force
-  "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`), and end
-  the phase with a clear report. The develop state machine does **not**
-  stop on this `needs_update` — `skills/develop/SKILL.md` Step B's
-  create-plan exemption owns that precedence and dispatches the planner
-  with the step still `needs_update` (not restated here). The planner
-  re-scopes the failed task (split it, change the approach) — or, when a
-  requirement itself must be dropped, routes
-  that change through the normal SPEC.md update path first. Merged tasks
-  keep their status; only the failed task is re-planned.
+  here. This automatic re-entry applies only when every existing task is
+  still `pending` (i.e. none has merged yet): set `create-plan` to
+  `needs_update`, set the `implement` step back to `pending`, record the
+  failure reason in `tasks.{T}.notes`, clean up the failed task's worktree
+  and branch (`git worktree remove --force "$WT_ROOT/{T}"`; `git branch -D
+  "em-workflow/{feature}/{T}"`), and end the phase with a clear report. The
+  develop state machine does **not** stop on this `needs_update` —
+  `skills/develop/SKILL.md` Step B's create-plan exemption owns that
+  precedence and dispatches the planner with the step still `needs_update`
+  (not restated here). The planner re-scopes the failed task (split it,
+  change the approach) — or, when a requirement itself must be dropped,
+  routes that change through the normal SPEC.md update path first. Merged
+  tasks keep their status; only the failed task is re-planned. If any task
+  has already merged, this automatic re-entry does not apply: the planner's
+  only available operation, `replace_planning`, cannot be applied once a
+  merged task exists (see `references/workflow-patch.md`'s `replace_all`
+  permission conditions), so report the phase and hand the additional
+  scope to the rework path (`append`) instead.
 - **abort phase** — leave `implement` as `failed` for manual handling.
 
 There is NO skip option: a task is either merged, retried, or re-planned —
