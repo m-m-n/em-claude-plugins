@@ -65,7 +65,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR7, FR9, NFR1, NFR3]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/implement-routeback-gate/task0002
 
