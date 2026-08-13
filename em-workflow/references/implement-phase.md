@@ -175,6 +175,16 @@ from memory) — read
 line-by-line and reconcile with workflow.yaml `tasks.*.status`. Select
 unlaunched tasks (no journal event yet and `status != merged`, ascending
 task-id order) up to `min(6 - in_flight_count, count(unlaunched))`.
+Recycled task id: workflow.yaml's status wins over a stale journal event
+here — a task whose workflow.yaml `status` is `pending` while the
+journal's last event for that id is `launched` or `failed` counts as
+**unlaunched**, not in-flight or failed. Reason: I.2.c's route back to
+planning is the only writer that resets a task's status to `pending`,
+and the planner's `replace_all` re-numbers tasks from `task0001`, so
+that combination only ever arises when a re-planned task inherited a
+retired id's journal events. The journal itself stays append-only (see
+Supporting cast below) — only the interpretation of its events is
+scoped by this rule.
 Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
@@ -271,7 +281,10 @@ Triggered whenever a launched implementer's `Task()` call returns.
 
 1. **Reconcile** — replay the journal (last-event-per-task rule: no event →
    unlaunched; `launched` → in-flight; `merged` → merged; `failed` →
-   failed) and cross-check against git actual state, trust-but-verify:
+   failed — except that a task whose workflow.yaml `status` is `pending`
+   is unlaunched regardless of its journal events, the recycled-task-id
+   rule in I.2.a above) and cross-check against git actual state,
+   trust-but-verify:
    - Worktree/branch existence for tasks the journal claims are in-flight.
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
@@ -355,8 +368,7 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   planner with the step still `needs_update` (not restated here). The
   planner re-scopes the failed task (split it, change the approach) — or,
   when a requirement itself must be dropped, routes that change through
-  the normal SPEC.md update path first. Merged tasks keep their status;
-  only the failed task is re-planned. If any task has already merged, this
+  the normal SPEC.md update path first. If any task has already merged, this
   automatic re-entry does not apply: `create-plan` is NOT set to
   `needs_update`, `implement` stays `failed`, and the phase reports and
   returns control to the user via develop's stop condition 3 — the same
