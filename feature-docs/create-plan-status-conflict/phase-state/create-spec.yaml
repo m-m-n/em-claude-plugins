@@ -1,10 +1,10 @@
 schema_version: 1
 feature: create-plan-status-conflict
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: "301c9fcc86efd4e6e2f1097eccf8ad9adf654cb0"
-last_input_digest: "sha256:47c30bb0389a66b1ada3989dbaa0c63e45fb5cb02d5b34f6de3972106ff8c2f4"
+base_revision: "10104336978ff9cc1850125f966abe6818271ab5"
+last_input_digest: "sha256:1ffdfab0d8582da32ee7c519471bd6687e1d7d16421ca49b35a1ad29a794a07b"
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -49,8 +49,22 @@ worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
     input_digest: "sha256:47c30bb0389a66b1ada3989dbaa0c63e45fb5cb02d5b34f6de3972106ff8c2f4"
-    output_digest: "sha256:pending"
-artifacts: []
+    output_digest: "sha256:47c30bb0389a66b1ada3989dbaa0c63e45fb5cb02d5b34f6de3972106ff8c2f4"
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: "sha256:eaa507375603fbc348aa2fc07ca8565c033101862f5ce57f4e5ec50f555b85fa"
+    output_digest: "sha256:eaa507375603fbc348aa2fc07ca8565c033101862f5ce57f4e5ec50f555b85fa"
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:1ffdfab0d8582da32ee7c519471bd6687e1d7d16421ca49b35a1ad29a794a07b"
+    output_digest: "sha256:1ffdfab0d8582da32ee7c519471bd6687e1d7d16421ca49b35a1ad29a794a07b"
+artifacts:
+  - path: feature-docs/create-plan-status-conflict/REQUIREMENTS.md
+    sha256: "sha256:0652ebc3dbacb94375bb87752834a9fe5e7052199df66eacbfe7d1af00f2bbf0"
+    produced_by: create-spec-run-0003
+  - path: feature-docs/create-plan-status-conflict/SPEC.md
+    sha256: "sha256:9af996d7f86431705125735ec11e14b54ccc5d112850646e306adc59025aeab5"
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
