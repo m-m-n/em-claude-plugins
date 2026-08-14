@@ -1,14 +1,18 @@
 schema_version: 1
 feature: recycled-task-id-consistency
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: 17d603b29d09cb9bfbe242b74c937452816b7bcc
-last_input_digest: null
-active_request_id: null
+base_revision: 8d26446bdda1c179a171e8abf815d2fccbffe100
+last_input_digest: sha256:362b1307b8b7b530fb71d446cefd785d74afed56aff1e85bd1beb07c6f8d56c2
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:362b1307b8b7b530fb71d446cefd785d74afed56aff1e85bd1beb07c6f8d56c2
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
