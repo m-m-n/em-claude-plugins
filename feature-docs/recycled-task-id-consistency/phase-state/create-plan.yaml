@@ -3,19 +3,23 @@ feature: recycled-task-id-consistency
 phase: create-plan
 status: dispatching
 generation: 1
-base_revision: aa951b8ba80a8a9f819d15522fdf49c8746db52d
-last_input_digest: sha256:37e12ed8f83ccf99286cd50ab4e48ff87fdbe7a3c317e68bfe82d0a88870a5db
-active_request_id: create-plan-run-0001
+base_revision: fd96354f08477d6e35601cd5d110b86a1684f513
+last_input_digest: sha256:cf17778ef9a2c52508e3412e072b51a2df319fdf38c4fb137f7305ed54c54a12
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
   - request_id: create-plan-run-0001
-    status: dispatched
+    status: invalid_input
     input_digest: sha256:37e12ed8f83ccf99286cd50ab4e48ff87fdbe7a3c317e68bfe82d0a88870a5db
+    output_digest: null
+  - request_id: create-plan-run-0002
+    status: dispatched
+    input_digest: sha256:cf17778ef9a2c52508e3412e072b51a2df319fdf38c4fb137f7305ed54c54a12
     output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: "create-plan-run-0001: layer-6 cross-artifact validation failed - task0002.md Files bullets carry multiple backtick-quoted tokens, so files-union does not match tasks_patch"
