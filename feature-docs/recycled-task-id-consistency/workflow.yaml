@@ -1,0 +1,154 @@
+schema_version: 1
+feature: recycled-task-id-consistency
+created: 2026-08-15
+base_branch: main
+parent_branch: em-workflow/recycled-task-id-consistency/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: "Markdown / YAML / Python"
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 5f897970684bff35daf806e8f664a724b9ecbdef
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "成果物は protocol markdown・feature-docs 成果物・JSON の version フィールド・Python unittest のみで、UI 面もレンダリング出力も無く、design-system 候補もゼロ（gate create-spec.design-step = skip）。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: 17d603b29d09cb9bfbe242b74c937452816b7bcc
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "I.2.b step 3's write-back keys off the step-1 reconciled state"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR2:
+    title: "One normative statement of the recycled-task-id rule, cited by the other three sites"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  FR3:
+    title: "I.2.c route-back precondition: every reset task has a terminal journal last event"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR4:
+    title: "A non-terminal last event is a defined terminal outcome, not an undefined path"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR5:
+    title: "The `pending` + journal `launched` pair is shown to be unreachable"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR6:
+    title: "The rule's scope is stated as orchestrator-only"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  FR7:
+    title: "Requirements, ACs and test scenarios live in this feature's documents"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: "Change containment"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: "Plugin version bump to 0.1.37 in both registries"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11]
+  NFR1:
+    title: "Existing document-contract test anchors survive unchanged"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7, TS-8, TS-9, TS-10, TS-11]
+  NFR2:
+    title: "SSOT non-duplication"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "Documentation-only change"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "Local style consistency"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "Tests are Python unittest document-contract assertions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
