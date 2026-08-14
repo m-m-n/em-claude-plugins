@@ -359,9 +359,10 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   `merged` — the absence of any `merged` task; the drain above has
   already retired every `in_progress` sibling by this point. In addition
   to that gate — never instead of it — route-back is admissible only when
-  every task whose status it would reset to `pending` has a terminal
-  journal last event (`merged` or `failed`), checked by replaying the
-  journal. Refresh the integration worktree first (`git -C
+  every task in the current plan whose journal carries any event has a
+  terminal journal last event (`merged` or `failed`) — the planner's
+  `replace_all` recycles every id, not only the failed ones — checked by
+  replaying the journal. Refresh the integration worktree first (`git -C
   "$WT_ROOT/integration"
   reset --hard em-workflow/{feature}/integration`), then capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
@@ -369,13 +370,15 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   `needs_update`, set the `implement` step back to `pending`, record
   each failed task's failure reason (the implementer's report
   `notes`) in `tasks.{T}.notes`, and set
-  **every** failed task's `tasks.{T}.status` back to `pending` — the
-  result is that no task is left `merged` or `in_progress` or `failed`,
+  **every** task whose status is not already `pending` (each failed
+  task, and any residual `in_progress` task) `tasks.{T}.status` back to
+  `pending` — the result is that no task is left `merged` or
+  `in_progress` or `failed`,
   which is exactly what makes the planner's `replace_planning`
   operation admissible on re-entry
   (`references/workflow-patch.md`'s `replace_all` permission
   conditions own the full condition set and the protocol-error rule —
-  not restated here). Clean up each of those failed
+  not restated here). Clean up each of those reset
   tasks' worktrees and branches next (`git worktree remove --force
   "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`, for
   every {T} just reset), then commit the write-back against the
@@ -394,9 +397,10 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   `needs_update`, `implement` stays `failed`, and the phase reports and
   returns control to the user via develop's stop condition 3 — the same
   terminal as the "abort phase" option below. If instead no task has
-  status `merged` but some task whose status route-back would reset has a
-  non-terminal journal last event (`launched`, or no journal event at
-  all), route-back is likewise INAPPLICABLE: no part of the write set
+  status `merged` but some task in the current plan whose journal carries
+  any event has a non-terminal journal last event (`launched`), route-back
+  is likewise INAPPLICABLE — a task with no journal event at all has
+  nothing to inherit and never blocks route-back: no part of the write set
   runs — no `create-plan` = `needs_update`, no `implement` = `pending`, no
   task status reset to `pending` — and no worktree or branch cleanup and
   no route-back commit occur; `implement` stays `failed`, and the phase
