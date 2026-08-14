@@ -203,4 +203,4 @@ requirements:
 
 batch:
   review_rework_count: 0
-  verify_rework_count: 0
+  verify_rework_count: 1
