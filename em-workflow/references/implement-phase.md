@@ -177,14 +177,19 @@ unlaunched tasks (no journal event yet and `status != merged`, ascending
 task-id order) up to `min(6 - in_flight_count, count(unlaunched))`.
 Recycled task id: workflow.yaml's status wins over a stale journal event
 here — a task whose workflow.yaml `status` is `pending` while the
-journal's last event for that id is `launched` or `failed` counts as
-**unlaunched**, not in-flight or failed. Reason: I.2.c's route back to
-planning is the only writer that resets a task's status to `pending`,
-and the planner's `replace_all` re-numbers tasks from `task0001`, so
-that combination only ever arises when a re-planned task inherited a
-retired id's journal events. The journal itself stays append-only (see
-Supporting cast below) — only the interpretation of its events is
-scoped by this rule.
+journal's last event for that id is `failed` counts as **unlaunched**, not
+failed. This carve-out is deliberately scoped to `failed` only, to stay
+consistent with `queue_launch_guard.py`, which reads only the journal's
+last event (never workflow.yaml) and allows a post-`failed` launch as the
+legitimate retry path. A task whose journal last event is `launched` is
+always in-flight, regardless of workflow.yaml `status` — never reinterpret
+it as unlaunched, since the launch guard would deny that launch. Reason:
+I.2.c's route back to planning is the only writer that resets a task's
+status to `pending`, and the planner's `replace_all` re-numbers tasks from
+`task0001`, so the `pending` + `failed` combination only ever arises when a
+re-planned task inherited a retired id's journal events. The journal itself
+stays append-only (see Supporting cast below) — only the interpretation of
+its events is scoped by this rule.
 Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
@@ -281,10 +286,11 @@ Triggered whenever a launched implementer's `Task()` call returns.
 
 1. **Reconcile** — replay the journal (last-event-per-task rule: no event →
    unlaunched; `launched` → in-flight; `merged` → merged; `failed` →
-   failed — except that a task whose workflow.yaml `status` is `pending`
-   is unlaunched regardless of its journal events, the recycled-task-id
-   rule in I.2.a above) and cross-check against git actual state,
-   trust-but-verify:
+   failed — except that a task whose journal last event is `failed` AND
+   whose workflow.yaml `status` is `pending` is unlaunched instead, the
+   recycled-task-id rule in I.2.a above; a `launched` last event is always
+   in-flight regardless of workflow.yaml `status`) and cross-check against
+   git actual state, trust-but-verify:
    - Worktree/branch existence for tasks the journal claims are in-flight.
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
