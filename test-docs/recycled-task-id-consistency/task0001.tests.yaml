@@ -1,0 +1,113 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestWakePhaseWriteBackKeyedOffReconciledState.test_reconciled_state_phrasing_present
+      - tests.test_recycled_task_id_consistency.TestWakePhaseWriteBackKeyedOffReconciledState.test_journal_only_phrasing_absent
+      - tests.test_recycled_task_id_consistency.TestWakePhaseWriteBackKeyedOffReconciledState.test_merged_half_unchanged
+      - tests.test_recycled_task_id_consistency.TestWakePhaseWriteBackKeyedOffReconciledState.test_report_failed_or_malformed_clause_survives
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, test_reconciled_state_phrasing_present failed
+      (AssertionError: 'step 1 reconciled state is `failed`' not found) and
+      test_journal_only_phrasing_absent failed (AssertionError: 'for every
+      task whose last journal event is `failed`' unexpectedly found in the
+      I.2.b section).
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleStaysSingleSource.test_i2a_normative_statement_present
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleStaysSingleSource.test_i2b_step1_citation_present
+    red_confirmed: false
+    red_reason: >-
+      Both cited sentences already existed verbatim before this task's edit
+      (they are not touched by any FR here). This test was green at
+      baseline. AC-2's "no site states a differing condition" half is what
+      TS-1's red (AC-1, above) actually enforces -- I.2.b step 3 was the one
+      site that restated a per-task classification condition off the raw
+      journal event instead of citing I.2.a, and removing that restatement
+      is exactly the AC-1 edit.
+  AC-3:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestRouteBackPreconditionRequiresTerminalEvent.test_precondition_names_terminal_event_with_merged_and_failed
+      - tests.test_recycled_task_id_consistency.TestRouteBackPreconditionRequiresTerminalEvent.test_precondition_precedes_ordered_write_set
+      - tests.test_recycled_task_id_consistency.TestRouteBackPreconditionRequiresTerminalEvent.test_existing_merged_gate_survives
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, test_precondition_names_terminal_event_with_merged_and_failed
+      failed (AssertionError: 'terminal journal last event (`merged` or
+      `failed`)' not found) and test_precondition_precedes_ordered_write_set
+      errored with ValueError: substring not found (same missing phrase),
+      since the I.2.c bullet had no terminal-journal-last-event precondition
+      at all.
+  AC-4:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_inapplicable_branch_states_implement_stays_failed
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_inapplicable_branch_cites_stop_condition_3_and_abort_phase
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_inapplicable_branch_names_no_partial_write
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_no_rework_or_append_anywhere_in_i2c
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, test_inapplicable_branch_states_implement_stays_failed
+      failed (AssertionError: 'INAPPLICABLE' not found),
+      test_inapplicable_branch_names_no_partial_write failed (AssertionError:
+      'no part of the write set runs' not found), and
+      test_inapplicable_branch_cites_stop_condition_3_and_abort_phase errored
+      with ValueError: substring not found for 'INAPPLICABLE' (the branch did
+      not exist yet, so this test could not accidentally pass against the
+      pre-existing merged-task branch's own stop-condition-3 text --
+      confirmed by anchoring the assertion on the new 'INAPPLICABLE' token).
+      test_no_rework_or_append_anywhere_in_i2c was already green (a
+      regression guard, not a red-then-green criterion) and stayed green.
+  AC-5:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_present
+      - tests.test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_retained_in_flight_sentence_survives
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, test_unreachability_sentence_present errored with
+      ValueError: substring not found ("Given I.2.c's route-back
+      precondition" was absent). test_retained_in_flight_sentence_survives
+      was already green (asserts the pre-existing, untouched in-flight
+      sentence survives) and stayed green.
+  AC-6:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_scope_sentence_names_all_four_hooks
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_scope_sentence_states_status_never_consulted
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_scope_sentence_governs_only_orchestrator_interpretation
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_no_never_reads_workflow_yaml_claim_anywhere
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, test_scope_sentence_names_all_four_hooks failed
+      (AssertionError: '`queue_stop_guard.py`' not found in the I.2.a
+      section -- that hook is only named in Supporting cast pre-edit),
+      test_scope_sentence_states_status_never_consulted failed
+      (AssertionError: 'never consult `tasks.{T}.status`' not found), and
+      test_scope_sentence_governs_only_orchestrator_interpretation failed
+      (AssertionError: "governs only the orchestrator's interpretation of
+      the journal" not found). test_no_never_reads_workflow_yaml_claim_anywhere
+      was already green (the forbidden phrase never existed) and stayed
+      green.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Outcome-based, not a red-then-green criterion: the full suite (925
+      tests, including the six named protected modules) was already green
+      at the 4a baseline and stays green (957 tests) after this task's
+      edit and new module. The no-bare-git-commit-line invariant is
+      verified by the untouched
+      tests/test_implement_routeback_gate.py::TestContainmentAndInvariants::test_no_bare_git_commit_or_add_lines,
+      not re-asserted here to avoid duplicating another module's ownership.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Satisfied by this module's own existence, discovery under `python3 -m
+      unittest discover -s tests`, and structure (TS-1 .. TS-10 classes
+      above plus TestValidationDetectsRegressions, which supplies one
+      negative-proof test per new matcher: the removed journal-only
+      write-back phrasing, the "never read workflow.yaml" absence, the new
+      precondition phrase, and the rework/append absence). Not
+      independently testable by a test within the module itself.
