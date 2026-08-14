@@ -341,13 +341,14 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   means the plan (or the spec behind it) is wrong; fix it upstream, not
   here. This automatic re-entry applies only when no task has status
   `merged` — the absence of any `merged` task; the drain above has
-  already retired every `in_progress` sibling by this point. The
-  failure reason for
-  each failed task is recorded in that task's `tasks.{T}.notes` and
-  stays there. Before touching workflow.yaml, capture
+  already retired every `in_progress` sibling by this point. Refresh
+  the integration worktree first (`git -C "$WT_ROOT/integration"
+  reset --hard em-workflow/{feature}/integration`), then capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
   then make one ordered workflow.yaml write set: set `create-plan` to
-  `needs_update`, set the `implement` step back to `pending`, and set
+  `needs_update`, set the `implement` step back to `pending`, record
+  each failed task's failure reason (the implementer's report
+  `notes`) in `tasks.{T}.notes`, and set
   **every** failed task's `tasks.{T}.status` back to `pending` — the
   result is that no task is left `merged` or `in_progress` or `failed`,
   which is exactly what makes the planner's `replace_planning`
