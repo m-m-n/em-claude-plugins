@@ -1,0 +1,62 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recycled_task_id_version_bump.TestPluginManifestVersion.test_version_is_0_1_37
+    red_confirmed: true
+    red_reason: "AssertionError: '0.1.36' != '0.1.37' (plugin.json still carried the pre-bump version)"
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_0_1_37
+      - tests.test_recycled_task_id_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+    red_confirmed: true
+    red_reason: >-
+      test_em_workflow_entry_version_is_0_1_37: AssertionError: None != '0.1.37'
+      (the em-workflow marketplace entry had no version key yet). The sibling
+      test_em_review_entry_has_no_version_key passed from the start -- the
+      em-review entry never had a version key, so this is a standing guard
+      against editing the wrong entry rather than a red->green transition;
+      recorded honestly rather than claimed as observed-red.
+  AC-3:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Verifiable outcome is discovery, not a single assertion: before this
+      task the module file did not exist, so `python3 -m unittest discover -s
+      tests` collected 925 tests with none from this module. After creating
+      it, the same command collects 933 tests (the 8 new ones, including the
+      AC-1/AC-2 assertions), confirming the module is discovered from the
+      repository root and asserts AC-1/AC-2 by parsing both registries as
+      JSON.
+  AC-4:
+    tests:
+      - tests.test_recycled_task_id_version_bump.TestImplementPhaseHasNoBareGitCommitLines.test_no_bare_git_commit_or_add_lines
+    red_confirmed: false
+    red_reason: >-
+      Per the task plan's own Test Notes, this is a regression guard that is
+      green from the start: implement-phase.md already has zero bare
+      `git commit` / `git add -A` lines before this task's edits (all commits
+      route through commit-docs.sh), and task0002 does not write that file.
+      The behavior predates this task; there was nothing to observe going red.
+  AC-5:
+    tests:
+      - tests.test_recycled_task_id_version_bump.TestValidationDetectsRegressions.test_version_matcher_flags_forged_pre_bump_manifest
+      - tests.test_recycled_task_id_version_bump.TestValidationDetectsRegressions.test_bare_commit_line_matcher_flags_an_unlocked_commit
+      - tests.test_recycled_task_id_version_bump.TestValidationDetectsRegressions.test_bare_commit_line_matcher_ignores_prose_mentioning_commit
+    red_confirmed: false
+    red_reason: >-
+      These are self-validating negative-proof tests for the module's own
+      matcher logic (they assert the matcher correctly flags/ignores forged
+      samples, independent of the version-bump implementation), so they were
+      never expected to fail before the implementation existed -- consistent
+      with AC-4's framing. The full-suite half of AC-5 (925 baseline tests
+      plus this module's 8, all green, no pre-existing module modified) is
+      confirmed by the `python3 -m unittest discover -s tests` run recorded
+      above (925 -> 933, OK).
+notes: >-
+  AC-2's em-review guard test and AC-4/AC-5's negative-proof and invariant
+  tests were green from the start by design (they assert invariants this
+  task must not break, not behavior this task introduces) -- red_confirmed
+  is left false for those rather than fabricated as true.
