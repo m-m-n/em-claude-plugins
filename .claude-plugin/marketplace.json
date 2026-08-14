@@ -22,7 +22,8 @@
         "name": "em"
       },
       "category": "workflow",
-      "source": "./em-workflow"
+      "source": "./em-workflow",
+      "version": "0.1.37"
     }
   ]
 }
