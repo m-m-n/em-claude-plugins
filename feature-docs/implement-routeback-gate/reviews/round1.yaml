@@ -1,0 +1,207 @@
+round: 1
+executed_at: "2026-08-14T23:54:56+09:00"
+scope:
+  review_mode: diff
+  base_commit: 7bf309cf42a8a45ce88d925aedf9c13dd1a17953
+  head_commit: adfab8fdad7e8ffa35a02c4de442dae96839bd30
+  changed_files:
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/implement-routeback-gate/task0001.tests.yaml
+    - test-docs/implement-routeback-gate/task0002.tests.yaml
+    - tests/test_implement_routeback_gate.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+findings:
+  - stable_id: 07ac115f5b8b8647
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 344
+    title: "route-back の write set から notes 記録命令が消え、かつ ROUTEBACK_TIP を worktree refresh なしに capture している"
+    description: "変更前の route-back は `record the failure reason in tasks.{T}.notes` という命令を持っていたが受動的な事実記述に退化し、implement-phase.md 内に失敗理由を notes に書く手順が存在しなくなっていた。あわせて I.2.b が明示している refresh → capture → edit → commit の順序が I.2.c の ROUTEBACK_TIP capture には無く、stale な worktree の上に write set が載る経路が残っていた。同一サイトの 2 件（fa3a7dfead6600cc）を統合したもの。"
+    suggestion: "write set に notes 記録を命令形で戻し、ROUTEBACK_TIP capture の前に integration worktree の refresh を明記する。"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1"
+  - stable_id: 14b32a49dbc63762
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 343
+    title: "route-back ゲートが consumer(`replace_all`) の許可条件より弱く、拒否時の復旧経路が無い"
+    description: "ゲートは merged の不在だけを条件にしていたが、consumer 側の `replace_all` 許可条件は全既存タスクが `pending` であることを要求する。"
+    suggestion: "ゲートを consumer の許可条件と同型にする。"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "loop 1 の編集で解消（architecture 再レビューが line 343 の解消を確認）"
+  - stable_id: 8dfb47fd98fc18fd
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 351
+    title: "NFR2（SSOT 非重複）に反して replace_all の許可条件を I.2.c に書き写している"
+    description: "`references/workflow-patch.md` が所有する `replace_all` 許可条件を否定形で本文に複製しており、二重管理点になっていた。"
+    suggestion: "ステータス列挙を落とし、参照のみに戻す。"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "loop 1 後の spec 再レビューで再報告されず解消を確認"
+  - stable_id: 5908d70749ab9bfd
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 178
+    title: "recycled-task-id ルールが journal の冗長性を外すが、I.2.a の in_progress 書き込みにコミット箇所が定義されていない"
+    description: "loop 1 では同一サイトの architecture 指摘と処方が発散したため conflict として skip。loop 2 で 641a2463e105ddd0 として再導出され解消された。"
+    suggestion: "規則の適用条件を journal 最終イベントが `failed` の場合に限定する。"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "loop 1 は review.auto-fix-conflict によりサイト skip、loop 2 で 641a2463e105ddd0 として適用"
+  - stable_id: 92b0909900d07521
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 178
+    title: "recycled-task-id ルールが launch guard フック（consumer）の契約と矛盾する"
+    description: "loop 1 では同一サイトの comprehensive 指摘と処方が発散したため conflict として skip。loop 2 で cf55eff25fd3a324 として再導出され解消された。"
+    suggestion: "`launched` ケースを規則から外し、`pending` × journal `failed` のみを再解釈対象にする。"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "loop 1 は review.auto-fix-conflict によりサイト skip、loop 2 で適用"
+  - stable_id: c2873647b15bcfed
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 178
+    title: "I.2.a/I.2.b に仕様外の「Recycled task id」規則が追加されている"
+    description: "SPEC の Architecture が列挙する編集箇所（exit-4 bullet と I.2.c）の外にある I.2.a / I.2.b step 1 に規範規則が追加されている。loop 2 後は 7c0eda59343b7164 として medium に降格して残存。"
+    suggestion: "SPEC に要件として起票するか、編集範囲を SPEC どおりに戻す。"
+    sources: [claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "spec 観点は auto-fix 対象外（R4 candidate gate）。loop 2 後に 7c0eda59343b7164（medium）として残存"
+  - stable_id: 641a2463e105ddd0
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 178
+    title: "recycled-task-id 規則が launch guard フックと矛盾し、かつ I.2.a の未コミット in_progress 書き込みと衝突する"
+    description: "workflow.yaml `status` が `pending` なら journal 最終イベント `launched` でも unlaunched とみなす規則が、journal のみで判定する `queue_launch_guard.py` の deny 条件と矛盾し、該当 id が恒久的に起動不能になる。また I.2.a の `in_progress` 書き込みは commit-docs.sh の call site 列挙に含まれず、未コミットのまま reset --hard で破棄され得るため、規則の前提「pending + launched は recycled id でのみ生じる」が通常運転で破れる。"
+    suggestion: "`launched` を規則から外し、`pending` × journal `failed` のみを再解釈対象にする。I.2.b step 1 の carve-out も同様に揃える。"
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2"
+  - stable_id: cf55eff25fd3a324
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 178
+    title: "Recycled-task-id 再解釈ルールが launch guard フックと矛盾（SSOT と consumer のドリフト）"
+    description: "641a2463e105ddd0 と同一サイト・同一欠陥の architecture 観点からの報告。"
+    suggestion: "規則のスコープを `failed` のみに狭める、または全 consumer の契約に格上げする。"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2（architecture 再レビューが解消を確認）"
+  - stable_id: 5a411145e4a7916b
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 185
+    title: "recycled-task-id ルールがオーケストレーター側だけに適用され、journal を読む hook 群と契約がずれる"
+    description: "`queue_launch_guard.py` / `queue_stop_guard.py` は workflow.yaml を読まないため、規則の「解釈のみをスコープする」宣言が hook に届かない。"
+    suggestion: "規則の適用範囲を狭めるか、hook 側にも同じ判定を実装する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 2 の narrowing で launch guard と整合、再レビューで再報告されず"
+  - stable_id: 11fb7f7126a090af
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 350
+    title: "implementer report の `notes` を永続化する所有ステップが無いまま I.2.c に書き込みを割り当てている"
+    description: "report を受け取る I.2.b step 3 が notes を永続化しないため、ターン境界をまたぐ I.2.c が report を参照できない。"
+    suggestion: "I.2.b step 3 の write set に `tasks.{T}.notes = report.notes` を加える。"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium のため R4 candidate gate 対象外。loop 2 後の再レビューでは再報告されなかったが、根本原因（step 3 が notes を書かない）は未修正"
+  - stable_id: 959b154d5dd590de
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 311
+    title: "I.2.b step 3 の write-back が I.2.a の recycled-task-id carve-out を打ち消す"
+    description: "loop 2 の carve-out は step 1（Reconcile）にのみ入り、step 3 は journal 単独ルール（`= failed` for every task whose last journal event is `failed`）のまま。step 1 で unlaunched と分類された recycled task が同じ wake の step 3 で `failed` に書き戻され、carve-out が無効化される。"
+    suggestion: "step 3 の条件を「step-1 reconciled state が `failed`」に変更する（unified diff 提示あり）。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium のため R4 candidate gate 対象外（critical/high のみが auto-fix 候補）"
+  - stable_id: 275a213b95f1b9d6
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 184
+    title: "carve-out を `failed` 限定に絞った結果、`pending` + journal `launched` の組が解決不能になった"
+    description: "loop 2 の narrowing の副作用。journal 最終イベントが `launched` のまま workflow.yaml が `failed` になったタスクが route-back で再採番されると、常に in-flight 扱いで launch されず、launch guard も deny するため自動復帰不能になる。"
+    suggestion: "route-back 側で reset 対象タスクの journal 最終イベントが terminal であることを事前検証するか、journal が in-flight と主張するが worktree/branch が無いケースの結末を明記する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium のため R4 candidate gate 対象外"
+  - stable_id: dea5d39775bbf8ed
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 348
+    title: "route-back のゲートは `merged` しか見ないのに、宣言する事後条件は `in_progress` / `failed` の不在まで含む"
+    description: "ゲートは merged の不在のみを評価し write set は failed のみ `pending` に戻すが、本文は「no task is left `merged` or `in_progress` or `failed`」と宣言している。`in_progress` が滞留した状態で route-back すると、コミット済み・worktree 削除済みの回復不能な中間状態で `replace_all` が拒否される。"
+    suggestion: "適用条件に in-flight ゼロ / `in_progress` 不在を加えるか、write set の対象を `merged` 以外の全タスクに広げる。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため R4 candidate gate 対象外"
+  - stable_id: 052d6f06419e0bdf
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 368
+    title: "I.2.c を exit-4 コールサイトとして列挙したが、汎用リカバリはゲートを再評価せず同じ遷移を再適用する"
+    description: "このコールサイトで exit 4 が起きたということは ROUTEBACK_TIP 取得後にタスクのマージが着地した＝ゲートが事後的に無効化されたことを意味するが、汎用リカバリはゲート再評価を求めていない。"
+    suggestion: "コールサイト固有の但し書き（refresh 後にゲートを再評価し、merged が現れたら merged-task terminal へ落ちる）を付ける。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため R4 candidate gate 対象外"
+  - stable_id: 7c0eda59343b7164
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 289
+    title: "SPEC の編集範囲外に追加された recycled-task-id 規則が I.2.b step 3 と矛盾したまま"
+    description: "SPEC の Architecture が列挙する編集箇所は exit-4 bullet と I.2.c のみで、FR1〜FR9 のいずれも I.2.a の launch 選択規則や I.2.b step 1 の reconcile 規則の改訂を要求していない。加えて追記は I.2.b step 3 と矛盾したままである（959b154d5dd590de と同根）。"
+    suggestion: "編集範囲を SPEC どおりに戻すか、SPEC/REQUIREMENTS に要件を追加したうえで step 3 にも同じ carve-out を明記する。"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "spec 観点は R4 candidate gate 対象外（category != spec が候補条件）かつ medium"
+auto_fix:
+  loops_run: 2
+  applied_total: 2
+  termination: clean
+residual_critical_high: 0
+rework_required: false
