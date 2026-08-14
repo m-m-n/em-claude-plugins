@@ -1,0 +1,29 @@
+schema_version: 1
+feature: recycled-task-id-consistency
+phase: rework
+status: failed
+generation: 1
+base_revision: 016ce7266f4e63bbf68b66aadee53144e0f54d57
+last_input_digest: null
+active_request_id: null
+packets:
+  rework-q0001:
+    status: issued
+    issued_at: "2026-08-15T02:05:00+09:00"
+    questions:
+      - question_id: rework.spec-change.fr8-declared-file-set
+        status: issued
+answers: {}
+worker_runs:
+  - request_id: rework-run-0001
+    status: needs_user_input
+    input_digest: null
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: "verify 由来 rework: rework-planner が gate_id rework.spec-change（category: spec-change）を返した。references/question-resolution.md の fail-closed 分類により batch では policy 参照・Codex 相談の前に中断する。仕様変更（SPEC.md FR8 / AC-8 の宣言ファイル集合に test-docs/{feature}/** を追加）はユーザー判断が要る"
+# spec_change は記録しない: 仕様変更の遷移は選択されておらず、create-spec への
+# 再突入根拠にはならない。develop の停止条件 3 が通常どおり発火する。
