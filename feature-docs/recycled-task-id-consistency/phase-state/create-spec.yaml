@@ -1,11 +1,11 @@
 schema_version: 1
 feature: recycled-task-id-consistency
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
-base_revision: 10d1a8262e4c75e7c9ca3f6d00a6e7271e549275
-last_input_digest: sha256:362b1307b8b7b530fb71d446cefd785d74afed56aff1e85bd1beb07c6f8d56c2
-active_request_id: create-spec-run-0001
+10d1a8262e4c75e7c9ca3f6d00a6e7271e549275
+last_input_digest: sha256:eeb48641aeede1fc34b7938a615bd95656ffa70aa54b0f2763d28a67402f0873
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -82,6 +82,10 @@ worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
     input_digest: sha256:362b1307b8b7b530fb71d446cefd785d74afed56aff1e85bd1beb07c6f8d56c2
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: sha256:eeb48641aeede1fc34b7938a615bd95656ffa70aa54b0f2763d28a67402f0873
     output_digest: null
 artifacts: []
 patches: []
