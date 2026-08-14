@@ -1,0 +1,46 @@
+feature: implement-routeback-gate
+collected_at: "2026-08-14T23:57:38+09:00"
+session_ids: ["01a000a6-d4b2-7000-b55b-1711970d9617"]
+signals:
+  review_critical_high:
+    - stable_id: 07ac115f5b8b8647
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "route-back の write set から notes 記録命令が消え、かつ ROUTEBACK_TIP を worktree refresh なしに capture している"
+      resolution: fixed
+    - stable_id: 5908d70749ab9bfd
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "recycled-task-id ルールが I.2.a の未コミット in_progress 書き込みと衝突する"
+      resolution: fixed
+    - stable_id: 92b0909900d07521
+      category: architecture
+      file: em-workflow/references/implement-phase.md
+      title: "recycled-task-id ルールが launch guard フックの契約と矛盾する"
+      resolution: fixed
+    - stable_id: c2873647b15bcfed
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: "I.2.a/I.2.b に仕様外の「Recycled task id」規則が追加されている"
+      resolution: unresolved
+    - stable_id: 641a2463e105ddd0
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "recycled-task-id 規則が launch guard フックと矛盾し、かつ未コミット in_progress と衝突する"
+      resolution: fixed
+    - stable_id: cf55eff25fd3a324
+      category: architecture
+      file: em-workflow/references/implement-phase.md
+      title: "Recycled-task-id 再解釈ルールが launch guard フックと矛盾（SSOT と consumer のドリフト）"
+      resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+lessons_candidates:
+  - "review auto-fix ループが SPEC の編集範囲外に規範規則を追加した（I.2.a の recycled-task-id 段落は round 1 loop 3 の auto-fix が導入したもので、どの FR にも対応しない）。auto-fix editor に SPEC の編集範囲を渡していないため、fix が新しい scope 違反を生む経路が開いている。"
+  - "同一サイトで観点ごとに処方が発散すると batch は review.auto-fix-conflict でサイトごと skip する。今回は次ループで処方が収束して適用できたが、収束しなければ high が residual として残り auto-rework を消費する。"
+  - "document-contract テスト（TS-1/TS-2）がトークン出現位置しか見ないため、命令形が受動的な事実記述に退化しても緑のまま通った。auto-fix による意味の退化を検出できない。"
+  - "前回セッションが review auto-fix ループ途中（editor 適用済み・未コミット）で落ち、統合 worktree に未コミット差分が残った。review-phase.md にはフェーズ入口の clean 前提が無く、再開時の扱いがプロトコルで未定義。"
+  - "medium 止まりの findings は R4 candidate gate（critical/high のみ）から外れるため、有効な unified diff を持つ指摘でも自動適用されずラウンドを終える。"
