@@ -1,11 +1,11 @@
 schema_version: 1
 feature: recycled-task-id-consistency
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 10d1a8262e4c75e7c9ca3f6d00a6e7271e549275
 last_input_digest: sha256:699f599211bfd84b997f1d7b4591a1c39fc2ac4a5cab7c5e7d0f040cd999b67a
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -88,10 +88,16 @@ worker_runs:
     input_digest: sha256:eeb48641aeede1fc34b7938a615bd95656ffa70aa54b0f2763d28a67402f0873
     output_digest: sha256:c420467c0b89a394adaaf1412806c438036d9311bef8a7b492115dc725090fb5
   - request_id: create-spec-run-0003
-    status: dispatched
+    status: completed
     input_digest: sha256:699f599211bfd84b997f1d7b4591a1c39fc2ac4a5cab7c5e7d0f040cd999b67a
-    output_digest: null
-artifacts: []
+    output_digest: sha256:b80a8b4ab8f7a48813aa948387e527a7ad87ab1c0ca041794beb7b0d749f05e0
+artifacts:
+  - path: feature-docs/recycled-task-id-consistency/REQUIREMENTS.md
+    sha256: sha256:3c0312ca84bbd4cc83af157d420642323fabce88cbb413df5d98e436c3de9521
+    produced_by: create-spec-run-0003
+  - path: feature-docs/recycled-task-id-consistency/SPEC.md
+    sha256: sha256:b80a8b4ab8f7a48813aa948387e527a7ad87ab1c0ca041794beb7b0d749f05e0
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:872b43e81ffceaf3a8dd963df3e14e3a3aefd32da49ccd356a70cee1843df8d1
 stale_redispatch_count: 0
