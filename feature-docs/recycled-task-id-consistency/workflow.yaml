@@ -35,7 +35,8 @@ workflow:
     completed_at_commit: db28418b6ef8cbe2f456f09f019f18e8cf0f187f
     base_commit: b73c6e69e4ee81519d0e6f7f8f6a03ec06b5db24
   - id: review
-    status: pending
+    status: completed
+    completed_at_commit: c2a72d1190e7bd3ff9b539a0a5bbbb238a98e93f
   - id: verify
     status: pending
     result: null
@@ -73,15 +74,20 @@ tasks:
     branch: em-workflow/recycled-task-id-consistency/task0002
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor: [comprehensive, performance, architecture, spec]
     discretionary:
       - perspective: security
         reason: "diff は implement-phase.md のプロトコル本文を書き換えており、その本文が branch 名 / worktree パスのシェル補間に対する fail-closed 識別子ゲート（I.0）と、route-back の `git worktree remove --force` / `git branch -D` という破壊的クリーンアップの発火条件を規定しているため"
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+    security: completed
   residual_critical_high: 0
   needs_rework: false
 
