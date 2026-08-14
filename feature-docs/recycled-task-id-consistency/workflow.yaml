@@ -67,7 +67,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR7, FR8, FR9, NFR1, NFR3, NFR5]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/recycled-task-id-consistency/task0002
 
