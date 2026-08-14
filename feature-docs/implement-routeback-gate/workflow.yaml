@@ -1,7 +1,7 @@
 schema_version: 1
 feature: implement-routeback-gate
 created: 2026-08-14
-base_branch: em-workflow/create-plan-status-conflict/integration
+base_branch: main
 parent_branch: em-workflow/implement-routeback-gate/integration
 
 project:
@@ -35,7 +35,7 @@ workflow:
     completed_at_commit: d94785327ffd00bfb60232c1add06ef1b8f86c5e
     base_commit: 7bf309cf42a8a45ce88d925aedf9c13dd1a17953
   - id: review
-    status: pending
+    status: in_progress
   - id: verify
     status: pending
     result: null
