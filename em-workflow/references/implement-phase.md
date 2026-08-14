@@ -187,9 +187,19 @@ it as unlaunched, since the launch guard would deny that launch. Reason:
 I.2.c's route back to planning is the only writer that resets a task's
 status to `pending`, and the planner's `replace_all` re-numbers tasks from
 `task0001`, so the `pending` + `failed` combination only ever arises when a
-re-planned task inherited a retired id's journal events. The journal itself
-stays append-only (see Supporting cast below) — only the interpretation of
-its events is scoped by this rule.
+re-planned task inherited a retired id's journal events. Given I.2.c's
+route-back precondition below, which admits only tasks with a terminal
+journal last event, and the planner's `replace_all` renumbering from
+`task0001` that is the sole source of any recycled id, a re-numbered task
+can only ever inherit a retired id's terminal events — so workflow.yaml
+`status: pending` combined with journal last event `launched` can never
+arise. This recycled-task-id rule governs only the orchestrator's
+interpretation of the journal: `queue_launch_guard.py`,
+`queue_stop_guard.py`, `queue_failure_net.py` and `queue_taskstop_net.py`
+derive a task's state from the journal's last event alone and never
+consult `tasks.{T}.status` (see 'Supporting cast: journal, hooks, resume'
+below). The journal itself stays append-only (see Supporting cast below) —
+only the interpretation of its events is scoped by this rule.
 Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
@@ -309,9 +319,9 @@ Triggered whenever a launched implementer's `Task()` call returns.
    "merge_commit", "conflict_retries", "tests": "pass"|"fail",
    "deviations": [...], "notes"}` (malformed/missing report → treat as
    `failed`) — set `tasks.{T}.status = merged` for every task verified
-   merged, `= failed` for every task whose last journal event is `failed`
-   or whose report is `failed`/malformed, on the worktree just refreshed in
-   step 2, then commit:
+   merged, `= failed` for every task whose step 1 reconciled state is
+   `failed` or whose report is `failed`/malformed, on the worktree just
+   refreshed in step 2, then commit:
    `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
    phase reconcile" "$RECONCILE_TIP"` (exit-4 recovery: Branch & Worktree
    Model above — on a second exit 4, stop the wake phase with a report
@@ -347,8 +357,12 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   means the plan (or the spec behind it) is wrong; fix it upstream, not
   here. This automatic re-entry applies only when no task has status
   `merged` — the absence of any `merged` task; the drain above has
-  already retired every `in_progress` sibling by this point. Refresh
-  the integration worktree first (`git -C "$WT_ROOT/integration"
+  already retired every `in_progress` sibling by this point. In addition
+  to that gate — never instead of it — route-back is admissible only when
+  every task whose status it would reset to `pending` has a terminal
+  journal last event (`merged` or `failed`), checked by replaying the
+  journal. Refresh the integration worktree first (`git -C
+  "$WT_ROOT/integration"
   reset --hard em-workflow/{feature}/integration`), then capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
   then make one ordered workflow.yaml write set: set `create-plan` to
@@ -379,7 +393,17 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   automatic re-entry does not apply: `create-plan` is NOT set to
   `needs_update`, `implement` stays `failed`, and the phase reports and
   returns control to the user via develop's stop condition 3 — the same
-  terminal as the "abort phase" option below.
+  terminal as the "abort phase" option below. If instead no task has
+  status `merged` but some task whose status route-back would reset has a
+  non-terminal journal last event (`launched`, or no journal event at
+  all), route-back is likewise INAPPLICABLE: no part of the write set
+  runs — no `create-plan` = `needs_update`, no `implement` = `pending`, no
+  task status reset to `pending` — and no worktree or branch cleanup and
+  no route-back commit occur; `implement` stays `failed`, and the phase
+  reports, naming each offending task id and its non-terminal journal last
+  event, and returns control to the user via develop's stop condition 3 —
+  the same terminal as the "abort phase" option below. There is no
+  partial-write path between these two outcomes.
 - **abort phase** — leave `implement` as `failed` for manual handling.
 
 There is NO skip option: a task is either merged, retried, or re-planned —
