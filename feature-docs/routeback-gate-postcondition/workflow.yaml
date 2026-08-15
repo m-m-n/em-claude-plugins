@@ -42,9 +42,27 @@ workflow:
     status: completed
     completed_at_commit: 408f6c228a98baacfaa698ea0d36ee773f1e6401
   - id: verify
-    status: in_progress
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: TS9
+        note: >-
+          Expected file list enumerates only implement-phase.md,
+          tests/test_implement_routeback_gate.py and plugin.json; the observed
+          integrated diff also contains the per-task test records
+          test-docs/routeback-gate-postcondition/task000{1,2,3,4}.tests.yaml,
+          which the implementer contract mandates for every task. The
+          criterion substance (no frozen file, no marketplace.json, no new
+          checker/script) holds.
+      - id: TS16
+        note: >-
+          Expected exactly six paths (TS9 three + commit-docs.sh +
+          skills/develop/SKILL.md + task0001.tests.yaml); observed nine — the
+          three extra are task0002/task0003/task0004.tests.yaml, the same
+          implementer-mandated records TS9 omits. Every other clause of TS16
+          verified true: frozen three byte-identical, marketplace.json
+          unmodified, plugin.json 0.1.37, commit-docs.sh diff comment-only, no
+          new checker/validator/script/test module.
   - id: retrospect
     status: pending
 
