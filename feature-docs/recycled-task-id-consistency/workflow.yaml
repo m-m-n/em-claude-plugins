@@ -38,7 +38,7 @@ workflow:
     status: completed
     completed_at_commit: 7eb230a8b9e179ce724ba4d40fc8dc9593c3c68d
   - id: verify
-    status: pending
+    status: in_progress
     previous_result: fail
     previous_failed_items: [TS-14, SC-6]
 
