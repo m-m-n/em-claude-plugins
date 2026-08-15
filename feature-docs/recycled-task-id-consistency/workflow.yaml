@@ -83,8 +83,9 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR8, NFR1, NFR3, NFR5]
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/recycled-task-id-consistency/task0003
     provenance:
       source: verify
       source_ids: [TS-14, SC-6]
