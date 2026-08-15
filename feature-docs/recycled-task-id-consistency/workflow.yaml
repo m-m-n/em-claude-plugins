@@ -20,25 +20,26 @@ project:
 workflow:
   - id: create-spec
     artifacts: [REQUIREMENTS.md, SPEC.md]
-    status: completed
+    status: needs_update
     completed_at_commit: 5f897970684bff35daf806e8f664a724b9ecbdef
+    needs_update_reason: "rework の spec-change 遷移。FR8 / AC-8 の宣言ファイル集合に test-docs/{feature}/** を追加する（phase-state/rework.yaml の spec_change 参照）"
   - id: design
     artifacts: [DESIGN.md, design/]
     status: skipped
     skipped_reason: "成果物は protocol markdown・feature-docs 成果物・JSON の version フィールド・Python unittest のみで、UI 面もレンダリング出力も無く、design-system 候補もゼロ（gate create-spec.design-step = skip）。"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: completed
+    status: pending
     completed_at_commit: a7be86766a65ff87f091cefbb731dc9d5ec7a748
   - id: implement
-    status: completed
+    status: pending
     completed_at_commit: db28418b6ef8cbe2f456f09f019f18e8cf0f187f
     base_commit: b73c6e69e4ee81519d0e6f7f8f6a03ec06b5db24
   - id: review
-    status: completed
+    status: pending
     completed_at_commit: c2a72d1190e7bd3ff9b539a0a5bbbb238a98e93f
   - id: verify
-    status: failed
+    status: pending
     result: fail
     failed_items:
       - id: TS-12
@@ -84,7 +85,7 @@ tasks:
     branch: em-workflow/recycled-task-id-consistency/task0002
 
 review:
-  status: completed
+  status: pending
   rounds_completed: 1
   plan:
     floor: [comprehensive, performance, architecture, spec]
@@ -203,4 +204,4 @@ requirements:
 
 batch:
   review_rework_count: 0
-  verify_rework_count: 1
+  verify_rework_count: 0
