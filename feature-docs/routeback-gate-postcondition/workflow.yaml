@@ -39,7 +39,7 @@ workflow:
     base_commit: b219c321d384ca823d994b2e8254e596c1e32598
     completed_at_commit: 7c4e3d48c25b98e13b0add474356ffd7342c82d7
   - id: review
-    status: pending
+    status: in_progress
   - id: verify
     status: pending
     result: null
@@ -110,7 +110,7 @@ tasks:
       source_ids: [538008334a8016fe]
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 1
   plan:
     floor: [comprehensive, performance, architecture, spec]
