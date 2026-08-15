@@ -48,6 +48,8 @@ Ownership boundaries relevant to this change:
 | `replace_all` admissibility condition (`references/workflow-patch.md`) | Frozen SSOT for when a `replace_planning` patch is accepted | Read-only. May be cited by path/operation name; its condition set must never be restated in another document | task0001 (read-only) |
 | Route-back document-contract test module (`tests/test_implement_routeback_gate.py`) | Sole home of the assertions pinning the I.2.c section and the exit-4 enumeration | pre: exists with assertions pinning the pre-change prose; post: same module asserts the post-change prose, with no test skipped or removed | task0001 (exclusive writer) |
 | Plugin version field (`em-workflow/.claude-plugin/plugin.json`) | Single source of the plugin version | pre: reads `0.1.36`; post: reads `0.1.37`; JSON stays parseable and all other fields unchanged | task0002 (exclusive writer) |
+| Exit-4 recovery carve-out (owned by `implement-phase.md`'s Branch & Worktree Model bullet) | Says which `commit-docs.sh` call sites the bounded recovery binds, and on what proof a site may be exempt | pre: every caller is bound (`commit-docs.sh`'s RECOVERY CONTRACT header); post: a site is exempt only when its owning protocol document states BOTH an unreachability proof over the paths that can advance the integration branch ref AND a defined terminal for an unexpected non-zero exit — today exactly one site, Step I.2.c's route-back commit. `commit-docs.sh`'s header and `skills/develop/SKILL.md`'s exit-4 paragraph carry the carve-out by citation and never restate the proof | task0003 (exclusive writer of all three surfaces) |
+| Step I.2.c rejected-path terminal (`implement-phase.md`) | Persists the terminal state the rejected route-back path halts on | pre: the gate rejected; post: `implement` is `failed` in workflow.yaml AND committed, so develop Step B stop condition 3 fires on the next step selection; no route-back write set, no worktree/branch cleanup, no route-back commit | task0003 (exclusive writer) |
 
 ## Conventions
 
@@ -117,6 +119,40 @@ its replacement), keeping the module's negative-matcher discipline — every
 absence assertion is paired with a proof that the matcher would flag the
 pre-change wording. Deleting or skipping such a test to reach green violates
 NFR3.
+
+### D5: The exit-4 carve-out is a cross-document contract (rework round 1)
+
+Added by the round-1 rework. D3 recorded that no companion document needed
+editing, because every other document that mentions the route back delegates
+the *admissibility condition*. Review round 1 found a second, different
+cross-document surface that D3 did not cover: the exit-4 recovery obligation.
+`em-workflow/scripts/commit-docs.sh` declares its RECOVERY CONTRACT "binding on
+every caller" and `em-workflow/skills/develop/SKILL.md` scopes its exit-4
+paragraph to every call site, so removing one call site from that obligation in
+`implement-phase.md` alone leaves three SSOTs disagreeing about one event.
+
+The carve-out is therefore a shared contract, owned by `implement-phase.md`'s
+Branch & Worktree Model bullet and cited (never restated) by the other two.
+task0003 is the exclusive writer of all three surfaces in one task, because a
+partial edit is exactly the defect being repaired. This NARROWS D3 for the
+rework round: `skills/develop/SKILL.md` is in scope for task0003, for this
+paragraph only. D3's statement stands unchanged for the admissibility
+condition, and `references/batch-mode.md` and `references/workflow-schema.md`
+remain out of scope.
+
+`commit-docs.sh` is a script but not a frozen file (D2 lists the frozen set,
+and it is not in it). Its edit is confined to comment text: no executable
+line changes, so `tests/test_commit_docs.py` — which tests exit codes and
+behavior, not header prose — must stay green unmodified.
+
+### D6: The version bump is not repeated for rework
+
+The feature's single bump to `0.1.37` is owned by task0002 and is already
+merged. SPEC AC6 and VERIFICATION TS9/TS16 pin that exact value, so a second
+bump for the rework round would fail them. No rework task edits
+`em-workflow/.claude-plugin/plugin.json`; the one bump covers the feature
+including its rework, since nothing has been released between the rounds. D1's
+single-ownership rule extends unchanged to task0003 and task0004.
 
 ## Risk Assessment
 

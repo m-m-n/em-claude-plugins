@@ -43,6 +43,64 @@ criteria live in `tasks/task0001.md` and `tasks/task0002.md`.
 | TS10 | Run `python3 -m unittest discover -s tests` from the repository root | Exit 0, with no test skipped or removed | Integration (command) |
 | TS11 | Compare the test module against its pre-change state | Every assertion that pinned the old I.2.c or exit-4 wording was updated in the same change; the module's test method count did not decrease and no `skip` was introduced | Manual (diff review) + Integration (TS10 as the green proof) |
 
+### Rework Round 1 Scenarios (review-sourced)
+
+Added by the round-1 rework for tasks task0003 / task0004. Every scenario
+above (TS1–TS11) stands unchanged; these state the additional postconditions
+the rework introduces. Where a rework postcondition narrows the scope of an
+earlier scenario's expected result, the scenario below is the precise
+statement to verify against — see the note after the table.
+
+| ID | Scenario | Expected Result | Test Type |
+|----|----------|-----------------|-----------|
+| TS12 | Read Step I.2.c's rejected path in `em-workflow/references/implement-phase.md` | The path sets the `implement` step to `failed` in workflow.yaml and commits that single write via `commit-docs.sh`; no "stays `failed`" formulation remains; develop Step B stop condition 3 is still the named halt; the scope sentence states that no route-back write set, no worktree/branch cleanup and no route-back commit occur and that the terminal write plus its own commit is the only side effect | Unit (document assertion) + Manual trace |
+| TS13 | Compare the exit-4 recovery statements in `em-workflow/references/implement-phase.md`, `em-workflow/scripts/commit-docs.sh` (RECOVERY CONTRACT header) and `em-workflow/skills/develop/SKILL.md` (exit-4 paragraph) | All three state the same carve-out and all three name Step I.2.c's route-back commit as its only site; the phase's enumeration also binds Step I.2.c's rejected-path terminal status commit; the proof enumerates the paths that can advance the integration branch ref and names the residual assumption plus its terminal; the route back's order is write set → commit → cleanup so the stop-with-report terminal is reached with nothing deleted | Unit (document assertion) + Manual (semantic review) |
+| TS14 | Reason over a workflow.yaml whose task row reads `pending` while the journal's last event for that task is `launched` (a live implementer the status does not reflect) | The documented gate blocks route back: its `in_progress` half is the union of the workflow.yaml status and Step I.2.b's last-event-per-task in-flight rule, cited to Step I.2.b as owner, and either source alone blocks | Manual (reasoning over TS13's and TS1's asserted text) |
+| TS15 | Load `test-docs/routeback-gate-postcondition/task0001.tests.yaml` and `task0002.tests.yaml` | Every `acceptance_tests` entry in both files carries `tests`, `red_confirmed` and `red_reason`; `task0001` AC-6 and AC-7 read `red_confirmed: false`; no `red_reason` text and no `tests` list changed | Manual (record inspection) |
+| TS16 | Inspect the integrated diff's file list after the rework round | It adds exactly `em-workflow/scripts/commit-docs.sh`, `em-workflow/skills/develop/SKILL.md` and `test-docs/routeback-gate-postcondition/task0001.tests.yaml` to TS9's three paths; `em-workflow/scripts/validate-worker-output.py`, `em-workflow/references/workflow-patch.md` and `em-workflow/references/contracts/*` are byte-identical; the root `.claude-plugin/marketplace.json` is unmodified; `em-workflow/.claude-plugin/plugin.json` still reads `0.1.37`; no new checker, validator rule, script or test module was added, and `commit-docs.sh`'s diff contains comment lines only | Manual (diff-scope inspection) |
+
+**Scope notes for TS6 and TS9 after the rework** (neither scenario is
+rewritten; these state how each is read against the reworked documents):
+
+- TS6's "no `commit-docs.sh` call and no cleanup step is reachable after the
+  gate rejects" is verified against the rejected path's *route-back* side
+  effects, which is what FR3/AC3 constrain: no route-back write set, no
+  cleanup and no route-back commit. The single `implement: failed` status
+  write and its own commit — the terminal FR2/AC2 require, which cannot exist
+  unpersisted — is the one side effect that path has, and TS12 is the precise
+  statement of it. TS6's cleanup half is unchanged and still holds absolutely.
+- TS9's three-path file list is the pre-rework diff scope. TS16 states the
+  post-rework list; TS9's substance (no frozen file, no `marketplace.json`
+  entry, no new checker/script) is carried into TS16 unchanged.
+
+### Rework Requirements Coverage
+
+| Requirement | Rework task | Verification |
+|-------------|-------------|--------------|
+| FR1 | task0003 | TS14 |
+| FR2 | task0003 | TS12 |
+| FR3 | task0003 | TS12 |
+| FR4 | task0003 | TS13 |
+| FR5 | task0003 | TS16 |
+| NFR1 | task0003 | TS16 |
+| NFR2 | task0003 | TS14 |
+| NFR3 | task0003, task0004 | TS15, TS16, plus TS10's command run |
+
+### Rework Manual Testing
+
+- [ ] TS12: read Step I.2.c's rejected path top-down and confirm the only
+      side-effecting instruction it reaches is the `implement: failed` write
+      and its commit — no refresh for a route back, no tip capture for one, no
+      write set, no cleanup.
+- [ ] TS13: read the three exit-4 statements side by side and confirm no
+      reader could derive a different obligation depending on which document
+      they opened first.
+- [ ] TS14: walk the gate text against a workflow.yaml / journal pair that
+      disagree, in both directions, and confirm the union blocks in both.
+- [ ] TS15: load both `tests.yaml` records and diff their key sets per entry.
+- [ ] TS16: run a changed-file listing for the integration branch against
+      `base_branch` and confirm the six expected paths and nothing else.
+
 ## Code Quality Verification
 
 - Format: not applicable — `project.components.main.format_command` is empty.
