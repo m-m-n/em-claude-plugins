@@ -1,41 +1,49 @@
-"""Tests for task0001 (implement-routeback-gate): the I.2.c route-back path
-correction plus the Branch & Worktree Model's exit-4 call-site enumeration
-in `em-workflow/references/implement-phase.md`.
+"""Tests for task0001 (routeback-gate-postcondition): widening the I.2.c
+route-back gate to a conjunction of both blockers, collapsing the rejected
+path to a single generalized terminal, and correcting the Branch & Worktree
+Model's exit-4 call-site enumeration in
+`em-workflow/references/implement-phase.md`.
 
 Covers task0001 Acceptance Criteria
-(feature-docs/implement-routeback-gate/tasks/task0001.md):
+(feature-docs/routeback-gate-postcondition/tasks/task0001.md):
 
-- AC-1: the route-back bullet resets the failed task's `tasks.{T}.status`
-  to `pending` and preserves the failure reason in `tasks.{T}.notes`, as
-  part of the same write-back that sets `create-plan` to `needs_update`
-  and `implement` back to `pending`.
-- AC-2: the route-back bullet commits the write-back via `commit-docs.sh`
-  with an expected-tip third argument and an exit-4 recovery pointer,
-  positioned after the status-write instructions and before the
-  end-of-phase report sentence, with unambiguous ordering relative to the
-  failed task's worktree/branch cleanup.
-- AC-3: the Branch & Worktree Model's exit-4 recovery bullet enumerates
-  the I.2.c route-back commit alongside Step I.1's and Step I.2.b's.
-- AC-4: the gate is expressed as the absence of any `merged` task; the old
-  "every existing task is still `pending`" phrasing is gone from the
-  section.
-- AC-5: the merged-task branch states `implement` stays `failed` and
-  control returns via develop's stop condition 3, with no "rework" or
-  "`append`" in that branch's text.
-- AC-6: the delegation sentence names Step B's stop-condition-3 precedence
-  clause and no longer attributes that precedence to the create-plan
-  exemption.
-- AC-7 (partial -- the rest is covered by the two existing regression
-  suites and by this task's own file-set discipline): the
-  `### I.2.c: Failed handling` heading and the batch-mode paragraph that
-  follows the section are byte-identical to their pre-change text.
+- AC-1 (FR1, NFR2): the gate is the conjunction of "no task has status
+  `merged`" and "no task has status `in_progress`", both read from
+  workflow.yaml task statuses, independent of the preceding drain.
+- AC-2 (FR1): the four write-set instructions stay present and ordered
+  before the worktree/branch cleanup, and the section still cites
+  `references/workflow-patch.md`'s `replace_all` permission conditions as
+  the owner without restating them.
+- AC-3 (FR2): the rejected path states exactly one terminal, phrased to
+  cover both blockers, with no retry/alternative/degraded route back
+  offered; the sibling retry/abort options, the "NO skip option"
+  paragraph, the heading and the batch-mode paragraph stay unchanged
+  (heading and batch-mode paragraph byte-identical).
+- AC-4 (FR3): in document order, the gate decision precedes the
+  integration-worktree refresh, the tip capture, the write set, the
+  cleanup and the `commit-docs.sh` invocation; an explicit sentence states
+  the rejected path commits nothing and starts no cleanup.
+- AC-5 (FR4): the Branch & Worktree Model's exit-4 recovery bullet no
+  longer lists the I.2.c route-back commit as an applicable call site,
+  still names Step I.1's and Step I.2.b's commits, and states the
+  unreachability justification chain tied to the widened gate; the I.2.c
+  call site no longer points at the bounded recovery procedure and
+  instead states the unreachability plus a stop-with-report terminal.
+- AC-6 (FR5, NFR3): all test changes live in this module; the module's
+  test method count does not decrease; no test is skipped; every new
+  absence assertion is paired with a proof that its matcher flags the
+  pre-change wording.
+- AC-7 (NFR1, NFR3): covered by this task's own file-set discipline (the
+  diff touches only this file and the target document) and by the full
+  suite passing.
 
 This is a documentation task (Test Notes: unit-level document-contract
 assertions), following the pattern established by
 tests/test_review_implement_develop_lock_contracts.py (task0007). Content
 assertions compare against a whitespace-normalized copy of the section so
 that line-wrap choices inside the prose never make an assertion brittle;
-byte-identity assertions (AC-7) compare the raw, un-normalized text.
+byte-identity assertions (AC-3's heading/batch-mode-paragraph clause)
+compare the raw, un-normalized text.
 """
 
 import re
@@ -48,7 +56,7 @@ IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
 I2C_HEADING = "### I.2.c: Failed handling"
 NEXT_SECTION_HEADING = "### Supporting cast"
 
-# Pre-change literal (captured before the task0001 edit landed) -- AC-7's
+# Pre-change literal (captured before the task0001 edit landed) -- AC-3's
 # byte-identity assertion needs this exact value. Captured via:
 #   text.index("Batch mode (`references/batch-mode.md`")
 #   .. text.index("### Supporting cast")
@@ -63,11 +71,27 @@ PRE_CHANGE_BATCH_MODE_PARAGRAPH = (
     "\n"
 )
 
-# The removed, self-falsifying gate phrasing (AC-4).
-OLD_GATE_PHRASE = "every existing task is still `pending`"
+# Historical regression guards, pre-dating this feature: the self-falsifying
+# gate phrasing and the delegation mis-citation from an earlier round of
+# this same section. This task neither introduces nor removes either, but
+# both remain standing proof that the section has not regressed to them.
+OLD_SELF_FALSIFYING_GATE_PHRASE = "every existing task is still `pending`"
+OLD_DELEGATION_MISCITATION_PHRASE = "create-plan exemption owns that precedence"
 
-# The removed delegation mis-citation (AC-6).
-OLD_DELEGATION_PHRASE = "create-plan exemption owns that precedence"
+# This task's own removed wording (task0001, routeback-gate-postcondition),
+# captured before the edit landed -- needed for the absence assertions'
+# paired regression proofs (AC-6).
+OLD_DRAIN_AS_JUSTIFICATION_PHRASE = (
+    "the drain above has already retired every `in_progress` sibling by "
+    "this point"
+)
+OLD_MERGED_ONLY_TERMINAL_PHRASE = (
+    "If any task has already merged, this automatic re-entry does not apply"
+)
+OLD_EXIT4_ENUMERATION_TAIL = (
+    "Step I.2.b's wake-phase commit, and Step I.2.c's route-back commit"
+)
+OLD_I2C_RECOVERY_POINTER = "(exit-4 recovery: Branch & Worktree Model above)"
 
 
 def _read():
@@ -90,6 +114,15 @@ def _i2c_section(text):
     return text[start:end]
 
 
+def _branch_worktree_model_section(text):
+    """The `## Branch & Worktree Model` section, sliced from its heading to
+    the next top-level step heading -- includes the exit-4 recovery
+    bullet."""
+    start = text.index("## Branch & Worktree Model")
+    end = text.index("## Step I.0")
+    return text[start:end]
+
+
 def _bare_git_commit_or_add_lines(text):
     """Lines that are actual shell invocations (start with `git`, ignoring
     markdown backticks/indentation) touching `commit` or `add -A` -- as
@@ -102,11 +135,58 @@ def _bare_git_commit_or_add_lines(text):
     return out
 
 
-class TestRouteBackResetsFailedTaskAndPreservesNotes(unittest.TestCase):
-    """AC-1 / FR1: the route-back bullet resets `tasks.{T}.status` to
-    `pending` and preserves the failure reason in `tasks.{T}.notes`, as
-    part of the same write-back that also sets `create-plan` to
-    `needs_update` and `implement` back to `pending`."""
+class TestRouteBackGateIsConjunctionOfBothBlockers(unittest.TestCase):
+    """AC-1 / FR1, NFR2: route-back admissibility is the conjunction of "no
+    task has status `merged`" and "no task has status `in_progress`", both
+    read from workflow.yaml task statuses, as an independent check -- never
+    inferred from the preceding drain."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.raw_section = _i2c_section(_read())
+        cls.section = _normalize_ws(cls.raw_section)
+
+    def test_gate_states_no_merged_task_conjunct(self):
+        self.assertIn("no task has status `merged`", self.section)
+
+    def test_gate_states_no_in_progress_task_conjunct(self):
+        self.assertIn("no task has status `in_progress`", self.section)
+
+    def test_conjuncts_are_joined_in_one_sentence(self):
+        section = self.section
+        idx1 = section.index("no task has status `merged`")
+        idx2 = section.index("no task has status `in_progress`")
+        self.assertLess(idx1, idx2)
+        between = section[idx1:idx2]
+        self.assertNotIn(". ", between)
+
+    def test_conjuncts_are_read_from_workflow_yaml_task_statuses(self):
+        self.assertIn("re-read from workflow.yaml task statuses", self.section)
+
+    def test_gate_is_independent_of_the_drain(self):
+        self.assertIn("not inferred from the drain above", self.section)
+
+    def test_drain_not_presented_as_in_progress_justification(self):
+        self.assertNotIn(OLD_DRAIN_AS_JUSTIFICATION_PHRASE, self.section)
+
+    def test_stale_in_progress_entry_blocks_like_a_merged_task(self):
+        self.assertIn("stale or unretired `in_progress` entry", self.section)
+        self.assertIn(
+            "blocks this path exactly as a `merged` task does", self.section
+        )
+
+    def test_old_self_falsifying_gate_phrasing_absent(self):
+        # Historical regression guard (pre-dates this feature).
+        self.assertNotIn(OLD_SELF_FALSIFYING_GATE_PHRASE, self.section)
+
+
+class TestRouteBackWriteSetUnchanged(unittest.TestCase):
+    """AC-2 / FR1: the four write-set instructions (`create-plan` ->
+    `needs_update`; `implement` -> `pending`; failure reason into
+    `tasks.{T}.notes`; every failed task's status -> `pending`) stay
+    present and ordered before the worktree/branch cleanup, and the
+    section still cites `references/workflow-patch.md`'s `replace_all`
+    permission conditions as the owner without restating them."""
 
     @classmethod
     def setUpClass(cls):
@@ -152,56 +232,119 @@ class TestRouteBackResetsFailedTaskAndPreservesNotes(unittest.TestCase):
         self.assertIn("replace_all", self.section)
 
 
-class TestRouteBackCommitsTheWriteBack(unittest.TestCase):
-    """AC-2 / FR2: a `commit-docs.sh` call for the route-back write-back,
-    with an expected-tip third argument and an exit-4 recovery pointer,
-    positioned after the status-write instructions and before the
-    end-of-phase report sentence; unambiguous ordering relative to the
-    failed task's worktree/branch cleanup."""
+class TestGateDecisionPrecedesAllSideEffects(unittest.TestCase):
+    """AC-4 / FR3: in document order, the gate decision precedes the
+    integration-worktree refresh, the tip capture, the write set, the
+    worktree/branch cleanup and the `commit-docs.sh` invocation; an
+    explicit sentence states that the rejected path commits nothing and
+    starts no cleanup."""
 
     @classmethod
     def setUpClass(cls):
         cls.raw_section = _i2c_section(_read())
         cls.section = _normalize_ws(cls.raw_section)
 
-    def test_commit_docs_sh_call_present_with_expected_tip_and_recovery_pointer(self):
-        self.assertIn("commit-docs.sh", self.section)
-        self.assertIn('"$WT_ROOT/integration"', self.section)
-        self.assertIn("exit-4 recovery: Branch & Worktree Model above", self.section)
-
-    def test_commit_follows_status_writes_and_precedes_end_of_phase_report(self):
+    def test_document_order_gate_before_refresh_tip_writeset_cleanup_commit(self):
         section = self.section
-        status_write_idx = section.index("tasks.{T}.status` back to `pending`")
-        commit_idx = section.index("commit-docs.sh")
-        report_idx = section.index("End the phase with a")
-        self.assertLess(status_write_idx, commit_idx)
-        self.assertLess(commit_idx, report_idx)
-
-    def test_cleanup_precedes_commit_unambiguously(self):
-        section = self.section
+        gate_idx = section.index(
+            "This automatic re-entry applies only when the gate holds"
+        )
+        refresh_idx = section.index("Refresh the integration worktree first")
+        tip_idx = section.index("ROUTEBACK_TIP")
+        write_set_idx = section.index("make one ordered workflow.yaml write set")
         cleanup_idx = section.index("git worktree remove --force")
         commit_idx = section.index("commit-docs.sh")
+        self.assertLess(gate_idx, refresh_idx)
+        self.assertLess(refresh_idx, tip_idx)
+        self.assertLess(tip_idx, write_set_idx)
+        self.assertLess(write_set_idx, cleanup_idx)
         self.assertLess(cleanup_idx, commit_idx)
 
+    def test_rejected_path_commits_nothing_and_starts_no_cleanup(self):
+        self.assertIn(
+            "nothing is committed and no worktree/branch cleanup is started",
+            self.section,
+        )
 
-class TestExit4RecoveryEnumeratesRouteBackCommit(unittest.TestCase):
-    """AC-3 / FR3: the Branch & Worktree Model's exit-4 recovery bullet
-    enumerates the I.2.c route-back commit alongside Step I.1's baseline
-    commit and Step I.2.b's wake-phase commit."""
+
+class TestRejectedPathHasSingleGeneralizedTerminal(unittest.TestCase):
+    """AC-3 / FR2: when the gate does not hold -- for either blocker -- the
+    section states exactly one terminal: `create-plan` not set to
+    `needs_update`, `implement` stays `failed`, control returned via
+    develop's stop condition 3 (the same terminal as "abort phase"), with
+    no retry, alternative recovery or degraded route back offered."""
 
     @classmethod
     def setUpClass(cls):
-        text = _read()
-        start = text.index("## Branch & Worktree Model")
-        end = text.index("## Step I.0")
-        cls.section = _normalize_ws(text[start:end])
+        # Slice on the normalized copy: the split point's anchor phrase
+        # can straddle a line-wrap boundary in the raw markdown, which
+        # would make `.index()` raise on a value that is genuinely
+        # present.
+        cls.section = _normalize_ws(_i2c_section(_read()))
+        start = cls.section.index("When the gate does not hold")
+        end = cls.section.index("- **abort phase**", start)
+        cls.branch = cls.section[start:end]
 
-    def test_exit4_bullet_names_all_three_call_sites(self):
+    def test_covers_the_merged_blocker(self):
+        self.assertIn("because a task has status `merged`", self.branch)
+
+    def test_covers_the_in_progress_blocker(self):
+        self.assertIn("because a task has status `in_progress`", self.branch)
+
+    def test_create_plan_not_set_to_needs_update(self):
+        self.assertIn(
+            "create-plan` is NOT set to `needs_update`", self.branch
+        )
+
+    def test_implement_stays_failed(self):
+        self.assertIn("implement` stays `failed`", self.branch)
+
+    def test_control_returns_via_stop_condition_3(self):
+        self.assertIn("stop condition 3", self.branch)
+        self.assertIn("abort phase", self.branch)
+
+    def test_no_retry_alternative_or_degraded_route_back_offered(self):
+        self.assertIn(
+            "No retry loop, no alternative recovery route, and no "
+            "degraded route back is offered",
+            self.branch,
+        )
+
+    def test_no_rework_or_append_handoff(self):
+        self.assertNotIn("rework", self.branch)
+        self.assertNotIn("append", self.branch)
+
+    def test_old_single_blocker_only_phrasing_absent(self):
+        self.assertNotIn(OLD_MERGED_ONLY_TERMINAL_PHRASE, self.section)
+
+
+class TestExit4EnumerationExcludesRouteBackCommit(unittest.TestCase):
+    """AC-5 / FR4: the Branch & Worktree Model's exit-4 recovery bullet no
+    longer lists the I.2.c route-back commit as an applicable call site,
+    still names Step I.1's baseline commit and Step I.2.b's wake-phase
+    commit, and states the unreachability justification chain tied to the
+    widened I.2.c gate; the bounded recovery procedure sentences
+    themselves are unchanged."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_branch_worktree_model_section(_read()))
+
+    def test_enumeration_names_step_i1_and_step_i2b(self):
+        self.assertIn("Step I.1's baseline commit", self.section)
+        self.assertIn("Step I.2.b's wake-phase commit", self.section)
+
+    def test_enumeration_no_longer_lists_i2c_route_back_commit(self):
+        self.assertNotIn(OLD_EXIT4_ENUMERATION_TAIL, self.section)
+
+    def test_states_unreachability_chain_tied_to_widened_gate(self):
         section = self.section
-        self.assertIn("exit-4 recovery", section)
-        self.assertIn("Step I.1's baseline commit", section)
-        self.assertIn("Step I.2.b's wake-phase commit", section)
-        self.assertIn("Step I.2.c's route-back commit", section)
+        self.assertIn("no task has status `in_progress`", section)
+        self.assertIn("no implementer of this feature can be running", section)
+        self.assertIn(
+            "implementers are the only callers of `merge-task.sh`", section
+        )
+        self.assertIn("no concurrent ref advance can occur", section)
 
     def test_recovery_procedure_sentences_survive(self):
         # IMPLEMENTATION.md D4: only the enumeration changes; the recovery
@@ -212,59 +355,39 @@ class TestExit4RecoveryEnumeratesRouteBackCommit(unittest.TestCase):
         self.assertIn("stops the phase", section)
 
 
-class TestGateIsAbsenceOfMergedTask(unittest.TestCase):
-    """AC-4 / FR4: the gate is expressed as the absence of any task with
-    status `merged`; the old self-falsifying phrasing is gone."""
+class TestI2cCallSiteNoLongerPointsAtRecoveryProcedure(unittest.TestCase):
+    """AC-5 / FR4 (second half): the I.2.c route-back commit no longer
+    points at the bounded exit-4 recovery procedure -- it states that exit
+    4 cannot occur at this call site and that an unexpected non-zero exit
+    stops the phase with a report."""
 
     @classmethod
     def setUpClass(cls):
-        cls.raw_section = _i2c_section(_read())
-        cls.section = _normalize_ws(cls.raw_section)
+        cls.section = _normalize_ws(_i2c_section(_read()))
 
-    def test_gate_expressed_as_no_merged_task(self):
-        self.assertIn("no task has status `merged`", self.section)
+    def test_old_recovery_pointer_removed(self):
+        self.assertNotIn(OLD_I2C_RECOVERY_POINTER, self.section)
 
-    def test_old_falsifiable_phrasing_is_gone(self):
-        # Checked against the normalized copy only: the phrase's own
-        # words can straddle a line-wrap boundary in the raw markdown
-        # (on either side of an edit), which would make a raw substring
-        # search pass by accident rather than by the phrase's absence.
-        self.assertNotIn(OLD_GATE_PHRASE, self.section)
+    def test_states_exit4_unreachable_at_this_call_site(self):
+        self.assertIn("exit 4 cannot occur at this call site", self.section)
 
+    def test_states_stop_with_report_terminal_for_unexpected_exit(self):
+        self.assertIn(
+            "stops the phase immediately with a report", self.section
+        )
 
-class TestMergedTaskBranchHasDefinedTerminal(unittest.TestCase):
-    """AC-5 / FR5: when a task has already merged, `implement` stays
-    `failed` and control returns to the user via develop's stop condition
-    3 -- the same terminal as "abort phase" -- with no rework/`append`
-    handoff."""
-
-    @classmethod
-    def setUpClass(cls):
-        # Slice on the normalized copy: the split point's anchor phrase
-        # can straddle a line-wrap boundary in the raw markdown, which
-        # would make `.index()` raise on a value that is genuinely
-        # present.
-        section = _normalize_ws(_i2c_section(_read()))
-        start = section.index("If any task has already merged")
-        end = section.index("- **abort phase**", start)
-        cls.branch = section[start:end]
-
-    def test_implement_stays_failed(self):
-        self.assertIn("implement` stays `failed`", self.branch)
-
-    def test_control_returns_via_stop_condition_3(self):
-        self.assertIn("stop condition 3", self.branch)
-        self.assertIn("abort phase", self.branch)
-
-    def test_no_rework_or_append_handoff(self):
-        self.assertNotIn("rework", self.branch)
-        self.assertNotIn("append", self.branch)
+    def test_points_to_branch_worktree_model_for_justification(self):
+        self.assertIn(
+            "Branch & Worktree Model's exit-4 recovery bullet above",
+            self.section,
+        )
 
 
 class TestDelegationCitesStopCondition3Clause(unittest.TestCase):
-    """AC-6 / FR6, NFR2: the delegation sentence names Step B's
-    stop-condition-3 precedence clause and no longer attributes that
-    precedence to the create-plan exemption."""
+    """Regression coverage (out of this task's scope, per task0001.md
+    Surface B's out-of-scope note): the delegation sentence naming Step
+    B's stop-condition-3 precedence clause is untouched by this task's
+    edits."""
 
     @classmethod
     def setUpClass(cls):
@@ -276,18 +399,17 @@ class TestDelegationCitesStopCondition3Clause(unittest.TestCase):
         self.assertIn("Step B's stop-condition-3 precedence clause", self.section)
 
     def test_no_longer_attributes_precedence_to_create_plan_exemption(self):
-        # Checked against the normalized copy only -- see the matching
-        # comment in TestGateIsAbsenceOfMergedTask.
-        self.assertNotIn(OLD_DELEGATION_PHRASE, self.section)
+        # Historical regression guard (pre-dates this feature).
+        self.assertNotIn(OLD_DELEGATION_MISCITATION_PHRASE, self.section)
 
 
 class TestContainmentAndInvariants(unittest.TestCase):
-    """AC-7 (partial) / NFR1: the heading and the batch-mode paragraph
-    stay byte-identical, and implement-phase.md has no bare `git commit` /
-    `git add -A` line. The rest of AC-7 (file-set containment; the two
-    existing regression suites) is covered by this task's own file-set
-    discipline and by tests/test_review_implement_develop_lock_contracts.py
-    / tests/test_develop_skill_rewiring.py, run unchanged."""
+    """AC-3 (heading/batch-mode-paragraph clause) / NFR1: the heading and
+    the batch-mode paragraph stay byte-identical, and implement-phase.md
+    has no bare `git commit` / `git add -A` line. The rest of AC-7
+    (file-set containment; the full suite passing unmodified elsewhere) is
+    covered by this task's own file-set discipline and by the suites
+    outside this file, run unchanged."""
 
     @classmethod
     def setUpClass(cls):
@@ -312,21 +434,56 @@ class TestContainmentAndInvariants(unittest.TestCase):
 class TestValidationDetectsRegressions(unittest.TestCase):
     """Proof that the checks above fail meaningfully, per the tdd-testing
     discipline (a test that can never fail is not a test) -- demonstrated
-    against the pre-change wording itself."""
+    against the pre-change wording itself (AC-6: every new absence
+    assertion is paired with such a proof)."""
 
-    def test_old_gate_phrase_matcher_flags_the_pre_change_wording(self):
+    def test_old_self_falsifying_gate_phrase_matcher_flags_pre_change_wording(self):
         sample = (
             "This automatic re-entry applies only when every existing "
             "task is still `pending` (i.e. none has merged yet)."
         )
-        self.assertIn(OLD_GATE_PHRASE, sample)
+        self.assertIn(OLD_SELF_FALSIFYING_GATE_PHRASE, sample)
 
-    def test_old_delegation_phrase_matcher_flags_the_pre_change_wording(self):
+    def test_old_delegation_miscitation_matcher_flags_pre_change_wording(self):
         sample = (
             "`skills/develop/SKILL.md` Step B's create-plan exemption "
             "owns that precedence"
         )
-        self.assertIn(OLD_DELEGATION_PHRASE, sample)
+        self.assertIn(OLD_DELEGATION_MISCITATION_PHRASE, sample)
+
+    def test_drain_justification_phrase_matcher_flags_pre_change_wording(self):
+        sample = (
+            "This automatic re-entry applies only when no task has status "
+            "`merged` — the absence of any `merged` task; the drain above "
+            "has already retired every `in_progress` sibling by this "
+            "point. Refresh the integration worktree first."
+        )
+        self.assertIn(OLD_DRAIN_AS_JUSTIFICATION_PHRASE, sample)
+
+    def test_merged_only_terminal_phrase_matcher_flags_pre_change_wording(self):
+        sample = (
+            "the normal SPEC.md update path first. If any task has "
+            "already merged, this automatic re-entry does not apply: "
+            "`create-plan` is NOT set to `needs_update`."
+        )
+        self.assertIn(OLD_MERGED_ONLY_TERMINAL_PHRASE, sample)
+
+    def test_exit4_enumeration_tail_matcher_flags_pre_change_wording(self):
+        sample = (
+            "applies to every `commit-docs.sh` call site in this phase — "
+            "Step I.1's baseline commit, Step I.2.b's wake-phase commit, "
+            "and Step I.2.c's route-back commit): exit 4 means a "
+            "concurrent `merge-task.sh` advanced the branch ref"
+        )
+        self.assertIn(OLD_EXIT4_ENUMERATION_TAIL, sample)
+
+    def test_i2c_recovery_pointer_matcher_flags_pre_change_wording(self):
+        sample = (
+            '"docs({feature}): implement route back to planning" '
+            '"$ROUTEBACK_TIP"` (exit-4 recovery: Branch & Worktree Model '
+            "above). End the phase with a clear report."
+        )
+        self.assertIn(OLD_I2C_RECOVERY_POINTER, sample)
 
     def test_bare_commit_line_matcher_flags_an_unlocked_commit(self):
         sample = 'git -C {project_root} add -A -- foo && git -C {project_root} commit -m "x"'

@@ -1,0 +1,118 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implement_routeback_gate.TestRouteBackGateIsConjunctionOfBothBlockers.test_gate_states_no_in_progress_task_conjunct
+      - tests.test_implement_routeback_gate.TestRouteBackGateIsConjunctionOfBothBlockers.test_conjuncts_are_joined_in_one_sentence
+      - tests.test_implement_routeback_gate.TestRouteBackGateIsConjunctionOfBothBlockers.test_conjuncts_are_read_from_workflow_yaml_task_statuses
+      - tests.test_implement_routeback_gate.TestRouteBackGateIsConjunctionOfBothBlockers.test_gate_is_independent_of_the_drain
+      - tests.test_implement_routeback_gate.TestRouteBackGateIsConjunctionOfBothBlockers.test_drain_not_presented_as_in_progress_justification
+      - tests.test_implement_routeback_gate.TestRouteBackGateIsConjunctionOfBothBlockers.test_stale_in_progress_entry_blocks_like_a_merged_task
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the section read "no task has status `merged` — the
+      absence of any `merged` task; the drain above has already retired
+      every `in_progress` sibling by this point." AssertionError:
+      'no task has status `in_progress`' not found (test_gate_states_no_in_progress_task_conjunct);
+      'not inferred from the drain above' not found (test_gate_is_independent_of_the_drain);
+      OLD_DRAIN_AS_JUSTIFICATION_PHRASE was present, so the absence assertion
+      failed (test_drain_not_presented_as_in_progress_justification).
+  AC-2:
+    tests:
+      - tests.test_implement_routeback_gate.TestRouteBackWriteSetUnchanged.test_failure_reason_stays_recorded_in_notes
+      - tests.test_implement_routeback_gate.TestRouteBackWriteSetUnchanged.test_failed_task_status_is_reset_to_pending
+      - tests.test_implement_routeback_gate.TestRouteBackWriteSetUnchanged.test_status_reset_create_plan_and_implement_are_one_write_set
+      - tests.test_implement_routeback_gate.TestRouteBackWriteSetUnchanged.test_status_reset_cites_workflow_patch_as_owner_without_restating
+    red_confirmed: false
+    red_reason: >-
+      This surface (the four-item write set + the workflow-patch.md
+      citation) was already correct before this task's edit and is
+      unmodified by it -- these assertions were already green pre-edit.
+      They stay in the suite as regression coverage for a surface this
+      task's plan explicitly requires to remain unchanged (Surface A: "The
+      write set is unchanged"), not as new red->green evidence for this
+      task.
+  AC-3:
+    tests:
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_covers_the_merged_blocker
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_covers_the_in_progress_blocker
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_create_plan_not_set_to_needs_update
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_implement_stays_failed
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_control_returns_via_stop_condition_3
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_no_retry_alternative_or_degraded_route_back_offered
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_no_rework_or_append_handoff
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_old_single_blocker_only_phrasing_absent
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_heading_is_byte_identical
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_batch_mode_paragraph_is_byte_identical
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised ValueError: substring "When the gate does not hold"
+      not found in the unedited document (the old text opened this branch
+      with "If any task has already merged, this automatic re-entry does
+      not apply" instead), so every test method in
+      TestRejectedPathHasSingleGeneralizedTerminal errored before the edit.
+      The two byte-identity tests were already green pre-edit (heading and
+      batch-mode paragraph were never touched) and stay as regression
+      coverage for AC-3's "unchanged" clause.
+  AC-4:
+    tests:
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_document_order_gate_before_refresh_tip_writeset_cleanup_commit
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_rejected_path_commits_nothing_and_starts_no_cleanup
+    red_confirmed: true
+    red_reason: >-
+      test_document_order_gate_before_refresh_tip_writeset_cleanup_commit
+      raised ValueError: substring "This automatic re-entry applies only
+      when the gate holds" not found (old text used a different opening
+      phrase). test_rejected_path_commits_nothing_and_starts_no_cleanup:
+      AssertionError: 'nothing is committed and no worktree/branch cleanup
+      is started' not found -- that sentence did not exist before the edit.
+  AC-5:
+    tests:
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_enumeration_no_longer_lists_i2c_route_back_commit
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_states_unreachability_chain_tied_to_widened_gate
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_enumeration_names_step_i1_and_step_i2b
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_recovery_procedure_sentences_survive
+      - tests.test_implement_routeback_gate.TestI2cCallSiteNoLongerPointsAtRecoveryProcedure.test_old_recovery_pointer_removed
+      - tests.test_implement_routeback_gate.TestI2cCallSiteNoLongerPointsAtRecoveryProcedure.test_states_exit4_unreachable_at_this_call_site
+      - tests.test_implement_routeback_gate.TestI2cCallSiteNoLongerPointsAtRecoveryProcedure.test_states_stop_with_report_terminal_for_unexpected_exit
+      - tests.test_implement_routeback_gate.TestI2cCallSiteNoLongerPointsAtRecoveryProcedure.test_points_to_branch_worktree_model_for_justification
+    red_confirmed: true
+    red_reason: >-
+      test_enumeration_no_longer_lists_i2c_route_back_commit: AssertionError,
+      OLD_EXIT4_ENUMERATION_TAIL ("Step I.2.b's wake-phase commit, and Step
+      I.2.c's route-back commit") was present in the old enumeration.
+      test_states_unreachability_chain_tied_to_widened_gate: AssertionError,
+      'no implementer of this feature can be running' not found (the
+      justification chain did not exist yet). The four
+      TestI2cCallSiteNoLongerPointsAtRecoveryProcedure tests: AssertionError
+      on each -- the old call site still carried the "(exit-4 recovery:
+      Branch & Worktree Model above)" pointer and none of the new
+      unreachability wording existed yet.
+  AC-6:
+    tests: []
+    red_reason: >-
+      Process/meta criterion verified by inspection, not a single test:
+      confirmed via `git diff --stat` that only
+      tests/test_implement_routeback_gate.py and
+      em-workflow/references/implement-phase.md changed (no new test
+      module/script/validator/hook); the module's test method count grew
+      from 23 to 43 (never decreased); `python3 -m unittest
+      tests.test_implement_routeback_gate -v` shows no test skipped; every
+      new absence assertion (drain justification, single-blocker-only
+      terminal, exit-4 enumeration tail, old recovery pointer) has a paired
+      proof test in TestValidationDetectsRegressions asserting the matcher
+      flags the pre-change sample wording.
+  AC-7:
+    tests: []
+    red_reason: >-
+      Process/meta criterion, not a single test: `python3 -m unittest
+      discover -s tests` exits 0 from the repository root (945 tests, 0
+      failures -- baseline before this task's edit was 925 tests, 0
+      failures). `git diff --stat` from the task branch shows exactly two
+      changed files: em-workflow/references/implement-phase.md and
+      tests/test_implement_routeback_gate.py; `git diff --stat` scoped to
+      the frozen files (validate-worker-output.py, workflow-patch.md,
+      references/contracts/, both plugin.json/marketplace.json files)
+      produced no output, confirming they are untouched.
