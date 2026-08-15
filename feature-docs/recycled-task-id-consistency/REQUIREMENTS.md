@@ -31,6 +31,7 @@ status: draft
 - `em-workflow/.claude-plugin/plugin.json`
 - `.claude-plugin/marketplace.json`
 - `feature-docs/recycled-task-id-consistency/` 配下の成果物
+- `test-docs/recycled-task-id-consistency/` 配下の成果物（`em-workflow/references/implement-phase.md` がタスクごとの必須生成物に定めるため、実装側では削除できない）
 - `tests/` 配下の新規または拡張されるテストモジュール
 
 明示的に対象外（FR8）。
@@ -258,7 +259,7 @@ flowchart TD
 
 #### FR8: 変更の封じ込め
 
-**説明**: 変更が触れるのは次のみ。`em-workflow/references/implement-phase.md`、`em-workflow/.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json`、`feature-docs/recycled-task-id-consistency/` 配下の成果物、`tests/` 配下の新規または拡張されるテストモジュール。
+**説明**: 変更が触れるのは次のみ。`em-workflow/references/implement-phase.md`、`em-workflow/.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json`、`feature-docs/recycled-task-id-consistency/` 配下の成果物、`test-docs/recycled-task-id-consistency/` 配下の成果物、`tests/` 配下の新規または拡張されるテストモジュール。
 
 明示的に変更しないもの: `em-workflow/hooks/`、`em-workflow/scripts/`、`em-workflow/agents/`、`em-workflow/skills/`（`skills/develop/SKILL.md` を含む）配下のすべて、`em-workflow/references/workflow-patch.md`、`em-workflow/references/workflow-schema.md`、`em-workflow/references/rework-task-synthesis.md`、`em-workflow/references/contracts/*`、`feature-docs/implement-routeback-gate/*`、既存テストモジュール `tests/test_implement_routeback_gate.py`、`tests/test_review_implement_develop_lock_contracts.py`、`tests/test_rework_synthesis_contract.py`、`tests/test_develop_skill_rewiring.py`、`tests/test_batch_policies.py`、`tests/test_check_plugin_invariants.py`。
 
@@ -433,7 +434,7 @@ flowchart TD
 - [ ] AC-5 (FR5): I.2.a の recycled-task-id 段落が、id の再利用は I.2.c route-back と planner の `replace_all` 再採番を通じてのみ生じること、および AC-3 の前提条件のもとで `status: pending` と journal last event `launched` の同時成立が起こりえないことを述べていること。文「A task whose journal last event is `launched` is always in-flight, regardless of workflow.yaml `status`」が引き続き存在すること。
 - [ ] AC-6 (FR6): `implement-phase.md` に、recycled-task-id ルールがオーケストレータによる journal の解釈のみを支配すると述べ、`queue_launch_guard.py`、`queue_stop_guard.py`、`queue_failure_net.py`、`queue_taskstop_net.py` を名指しし、これらが journal の last event のみで判断し `tasks.{T}.status` を決して参照しないと述べる文が存在すること。これらの hook が workflow.yaml を決して読まないという主張はドキュメントに存在しないこと。
 - [ ] AC-7 (FR7): `feature-docs/recycled-task-id-consistency/REQUIREMENTS.md` と `SPEC.md` が存在し、保持されるルールの要件・受け入れ基準・テストシナリオを載せていること。変更に対する `git diff --name-only` が `feature-docs/implement-routeback-gate/` 配下のパスを一切列挙しないこと。
-- [ ] AC-8 (FR8): 変更に対する `git diff --name-only` が {`em-workflow/references/implement-phase.md`、`em-workflow/.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json`、`feature-docs/recycled-task-id-consistency/**`、`tests/` 配下の新規／拡張モジュール} の部分集合であり、`em-workflow/hooks/`、`em-workflow/scripts/`、`em-workflow/agents/`、`em-workflow/skills/` 配下のパスを含まないこと。
+- [ ] AC-8 (FR8): 変更に対する `git diff --name-only` が {`em-workflow/references/implement-phase.md`、`em-workflow/.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json`、`feature-docs/recycled-task-id-consistency/**`、`test-docs/recycled-task-id-consistency/**`、`tests/` 配下の新規／拡張モジュール} の部分集合であり、`em-workflow/hooks/`、`em-workflow/scripts/`、`em-workflow/agents/`、`em-workflow/skills/` 配下のパスを含まないこと。
 - [ ] AC-9 (FR9): `em-workflow/.claude-plugin/plugin.json` が `"version": "0.1.37"` であり、`.claude-plugin/marketplace.json` の `em-workflow` エントリが `"version": "0.1.37"` であること。`em-review` エントリは変更されていないこと。
 - [ ] AC-10 (NFR1): リポジトリルートから `python3 -m unittest discover -s tests` が、`tests/test_implement_routeback_gate.py`、`tests/test_review_implement_develop_lock_contracts.py`、`tests/test_rework_synthesis_contract.py`、`tests/test_develop_skill_rewiring.py`、`tests/test_batch_policies.py`、`tests/test_check_plugin_invariants.py` を未変更のままパスすること。これが NFR1 の列挙する全アンカーの生存を示す。
 - [ ] AC-11 (NFR1): `implement-phase.md` に、（markdown のバッククォートとインデントを無視して）`git ` で始まりかつ `commit` または `add -A` を含む行が 1 つも存在しないこと。
