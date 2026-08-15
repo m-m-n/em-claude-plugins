@@ -35,14 +35,14 @@ workflow:
     status: completed
     completed_at_commit: 260aef8101f52d1add9f9894d2083dcc510aa002
   - id: implement
-    status: in_progress
+    status: completed
     base_commit: b219c321d384ca823d994b2e8254e596c1e32598
-    completed_at_commit: null
+    completed_at_commit: 20a08d60a72a69eac42dd4a0499982fe82602621
   - id: review
     status: completed
     completed_at_commit: 408f6c228a98baacfaa698ea0d36ee773f1e6401
   - id: verify
-    status: pending
+    status: in_progress
     result: null
     failed_items: []
   - id: retrospect
