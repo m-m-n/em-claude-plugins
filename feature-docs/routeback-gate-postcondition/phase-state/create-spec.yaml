@@ -3,19 +3,144 @@ feature: routeback-gate-postcondition
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 17d603b
+base_revision: d5041d6db698bc5e38243d9f5095ed048b7eaaf8
 last_input_digest: sha256:104041da60fcae2219d1519c810a296a30eb6a804d00bed96f0051151cae2b52
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-15T20:58:00+09:00"
+    questions:
+      - question_id: routeback.enforcement-mechanism
+        status: answered
+      - question_id: routeback.unmet-terminal-state
+        status: answered
+      - question_id: routeback.exit4-recovery
+        status: answered
+      - question_id: routeback.mechanical-enforcement
+        status: answered
+      - question_id: routeback.version-bump-scope
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  routeback.enforcement-mechanism:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T21:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [widen-gate]
+    freeform: null
+    normalized_answer: >-
+      Widen the I.2.c gate: route back is admissible only when no task has
+      status `merged` AND no task has status `in_progress`. The write set is
+      unchanged (failed tasks reset to `pending`).
+    resolution_note: >-
+      gate create-spec.requirement-clarification resolved by
+      batch-policies.yaml action `codex_consultation` (1 turn). Codex
+      grounded the choice in workflow-patch.md's replace_all admissibility
+      condition (every existing task `pending`): requiring the absence of
+      both `merged` and `in_progress`, then resetting only `failed`,
+      establishes exactly that state without relabeling work that may still
+      be live. record_as_assumption: true.
+  routeback.unmet-terminal-state:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T21:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [blocked-halt]
+    freeform: null
+    normalized_answer: >-
+      When the widened gate rejects route back, the implement step is set to
+      `failed` and the run stops on develop Step B stop condition 3. Nothing
+      is committed and no route-back cleanup begins.
+    resolution_note: >-
+      gate create-spec.requirement-clarification resolved by
+      batch-policies.yaml action `codex_consultation`. Codex named the
+      concrete values (`implement: failed`, stop condition 3) as matching
+      the existing abort terminal in implement-phase.md and develop
+      SKILL.md's human-intervention rule. record_as_assumption: true.
+  routeback.exit4-recovery:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T21:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [unreachable]
+    freeform: null
+    normalized_answer: >-
+      The drain claim is authoritative. With the widened gate, route back
+      only proceeds when no `in_progress` task exists, so no implementer of
+      this feature can concurrently call merge-task.sh against this
+      integration branch — exit 4 is unreachable at this call site. Remove
+      the I.2.c route-back commit from the exit-4 recovery enumeration and
+      state the justification.
+    resolution_note: >-
+      gate create-spec.requirement-clarification resolved by
+      batch-policies.yaml action `codex_consultation`. Codex tied the answer
+      to the Q1 choice: implementers are the only possible merge-task.sh
+      callers, the drain retires all of them, and a stale `in_progress`
+      entry now takes the Q2 terminal instead of passing the gate.
+      record_as_assumption: true.
+  routeback.mechanical-enforcement:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T21:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [prose-only]
+    freeform: null
+    normalized_answer: >-
+      Documentary change only. No new mechanical checker is added; the
+      acceptance bar is that `python3 -m unittest discover -s tests` stays
+      green (with the reference-sweep style tests updated in the same change
+      when they pin the edited text).
+    resolution_note: >-
+      gate create-spec.requirement-clarification resolved by
+      batch-policies.yaml action `codex_consultation`. Codex noted a new
+      checker would exceed the task's declared file scope while the frozen
+      validator and patch contract stay unchanged. record_as_assumption: true.
+  routeback.version-bump-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T21:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [plugin-json-only]
+    freeform: null
+    normalized_answer: >-
+      Bump only `em-workflow/.claude-plugin/plugin.json` (0.1.36 -> 0.1.37).
+      The root `.claude-plugin/marketplace.json` em-workflow entry carries no
+      `version` field, so there is nothing to keep in sync there.
+    resolution_note: >-
+      gate create-spec.requirement-clarification resolved by
+      batch-policies.yaml action `codex_consultation`, and independently
+      verified by the orchestrator against the actual marketplace.json
+      (plugins[] entries carry name / description / author / category /
+      source only). record_as_assumption: true.
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T21:02:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [skip]
+    freeform: null
+    normalized_answer: >-
+      Skip the design step. No UI surface, no data model, no design-system
+      input; the open decisions are protocol-semantic and belong in SPEC.md.
+    resolution_note: >-
+      gate create-spec.design-step. batch-policies.yaml names option_id
+      `decide_autonomously`, which this packet did not offer (its options
+      were `skip` / `run`). The orchestrator applied the policy's intent —
+      decide autonomously — and took the analyst's own recommended option
+      `skip`, rather than aborting a non-blocking preference question on a
+      success path. The option_id mismatch between batch-policies.yaml and
+      the analyst's packet is recorded as a follow-up.
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:104041da60fcae2219d1519c810a296a30eb6a804d00bed96f0051151cae2b52
     output_digest: null
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:9ee1c1b0dc3c1c5f6b0f60a8e34f1a2a8b7bfa1d8b2e6f5d0c9a4e3b2d1f0a99
 stale_redispatch_count: 0
 resolved_input_cache:
   design_system_candidates:
