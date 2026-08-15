@@ -37,7 +37,7 @@ PLUGIN_MANIFEST_PATH = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
 MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
 
-EXPECTED_VERSION = "0.1.37"
+BASELINE_PATCH = 36
 
 
 def _load_json(path):
@@ -52,6 +52,17 @@ def _marketplace_entry(data, name):
         if entry.get("name") == name:
             return entry
     raise AssertionError(f"no marketplace entry named {name!r}")
+
+
+def _assert_version_past_baseline(test, version):
+    """Durable invariant: (major, minor) == (0, 1) and patch > BASELINE_PATCH.
+    A fixed literal is guaranteed to go stale on the very next unrelated
+    version bump, per the pattern in tests/test_planner_designer_worktree_docs.py."""
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)$", version)
+    test.assertIsNotNone(match, f"version {version!r} is not of the form X.Y.Z")
+    major, minor, patch = (int(g) for g in match.groups())
+    test.assertEqual((major, minor), (0, 1))
+    test.assertGreater(patch, BASELINE_PATCH)
 
 
 def _bare_git_commit_or_add_lines(text):
@@ -73,28 +84,33 @@ class TestPluginManifestVersion(unittest.TestCase):
     def setUpClass(cls):
         cls.data = _load_json(PLUGIN_MANIFEST_PATH)
 
-    def test_version_is_0_1_37(self):
-        self.assertEqual(self.data["version"], EXPECTED_VERSION)
+    def test_version_is_past_baseline(self):
+        _assert_version_past_baseline(self, self.data["version"])
 
     def test_name_field_unchanged(self):
         self.assertEqual(self.data["name"], "em-workflow")
 
 
 class TestMarketplaceEntryVersion(unittest.TestCase):
-    """AC-2 / FR9: the em-workflow marketplace entry reads 0.1.37; the
-    em-review entry stays untouched with no version key."""
+    """AC-2 / FR9: the em-workflow marketplace entry version stays in sync
+    with the plugin manifest and is past the pre-task baseline."""
 
     @classmethod
     def setUpClass(cls):
         cls.data = _load_json(MARKETPLACE_PATH)
+        cls.manifest = _load_json(PLUGIN_MANIFEST_PATH)
 
-    def test_em_workflow_entry_version_is_0_1_37(self):
+    def test_em_workflow_entry_version_is_past_baseline(self):
         entry = _marketplace_entry(self.data, "em-workflow")
-        self.assertEqual(entry.get("version"), EXPECTED_VERSION)
+        _assert_version_past_baseline(self, entry.get("version"))
 
-    def test_em_review_entry_has_no_version_key(self):
+    def test_em_workflow_entry_version_matches_plugin_manifest(self):
+        entry = _marketplace_entry(self.data, "em-workflow")
+        self.assertEqual(entry.get("version"), self.manifest["version"])
+
+    def test_em_review_entry_source_unchanged(self):
         entry = _marketplace_entry(self.data, "em-review")
-        self.assertNotIn("version", entry)
+        self.assertEqual(entry.get("source"), "./em-review")
 
 
 class TestImplementPhaseHasNoBareGitCommitLines(unittest.TestCase):
@@ -118,8 +134,9 @@ class TestValidationDetectsRegressions(unittest.TestCase):
     negative-proof test for each of the module's two matchers."""
 
     def test_version_matcher_flags_forged_pre_bump_manifest(self):
-        forged = {"name": "em-workflow", "version": "0.1.36"}
-        self.assertNotEqual(forged["version"], EXPECTED_VERSION)
+        forged_version = f"0.1.{BASELINE_PATCH}"
+        with self.assertRaises(AssertionError):
+            _assert_version_past_baseline(self, forged_version)
 
     def test_bare_commit_line_matcher_flags_an_unlocked_commit(self):
         sample = (
