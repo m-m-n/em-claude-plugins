@@ -1,11 +1,11 @@
 schema_version: 1
 feature: recycled-task-id-consistency
 phase: rework
-status: completed
-generation: 1
-base_revision: 5039f99
-last_input_digest: null
-active_request_id: null
+status: needs_user_input
+generation: 2
+base_revision: 8c9cd0e
+last_input_digest: "sha256:5db460ae7bcb12c464a866af4cfd6537e7c798c05afd00e6f39b09812785645a"
+active_request_id: rework-run-0002
 packets:
   rework-q0001:
     status: answered
@@ -13,6 +13,12 @@ packets:
     questions:
       - question_id: rework.spec-change.fr8-declared-file-set
         status: answered
+  rework-q0002:
+    status: open
+    issued_at: "2026-08-16T01:05:00+09:00"
+    questions:
+      - question_id: rework.spec-change.routeback-admissibility
+        status: open
 answers:
   rework.spec-change.fr8-declared-file-set:
     packet_id: rework-q0001
@@ -32,6 +38,10 @@ worker_runs:
     status: needs_user_input
     input_digest: null
     output_digest: null
+  - request_id: rework-run-0002
+    status: needs_user_input
+    input_digest: "sha256:5db460ae7bcb12c464a866af4cfd6537e7c798c05afd00e6f39b09812785645a"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -49,3 +59,62 @@ spec_change:
   finding_stable_id: TS-12
   recorded_at_commit: 5039f99ce360e785d746c7176ffe00f090ce5748
   consumed: true
+pending_gate:
+  gate_id: rework.spec-change
+  packet_id: rework-q0002
+  question_id: rework.spec-change.routeback-admissibility
+  category: spec-change
+  opened_at: "2026-08-16T01:05:00+09:00"
+  source: review
+  review_round: 2
+  finding_stable_ids: [29b99dea6a37377d, c431ec8ba89742db]
+  batch_resolution: abort
+  batch_resolution_reason: >-
+    `references/question-resolution.md` の fail-closed classification により、
+    category が spec-change の質問は batch では policy lookup にも Codex 相談にも
+    到達せずフェーズを中断する。`references/batch-policies.yaml` にも
+    `rework.spec-change` の entry は意図的に存在しない。
+  summary: >-
+    review round 2 の残存 high 2 件は単一の根本原因（I.2.c の route-back 可否条件が
+    「journal last event が terminal か」だけで表現されており、launch guard も同じ
+    journal 単独判定で、hook 群は FR8 / NFR3 により変更禁止）に帰着する。どの修正
+    経路も SPEC.md の FR3/AC-3（"terminal journal last event (`merged` or `failed`)"）、
+    FR4/AC-4（I.2.c セクションに `rework` / `append` トークンを含まない）、
+    FR5/AC-5（in-flight 文の verbatim 保持）のいずれかの literal を書き換えるため、
+    現行仕様の内側では rework task を 1 件も合成できない。
+  options:
+    - option_id: narrow_terminality_to_failed
+      label: "Admit only `failed`"
+      description: >-
+        FR3/AC-3 を変更し、route-back を「reset 対象の全タスクの journal last event が
+        `failed`」のときだけ admissible にする。`merged` は INAPPLICABLE 分岐に回す。
+        29b99dea6a37377d を解消。FR3 / AC-3 / FR4 / AC-4 / TS-3 / TS-4 と
+        tests/test_recycled_task_id_consistency.py のマッチャを同時変更する必要がある。
+        c431ec8ba89742db は未解消のまま残る。
+    - option_id: recovery_path_for_stale_launched
+      label: "Add escape path"
+      description: >-
+        AC-4/FR4 の `append` トークン禁止を緩め、INAPPLICABLE 分岐に stale `launched`
+        の明示的な回復手順を書けるようにする。c431ec8ba89742db を解消。
+        FR4 / AC-4 / TS-4 と 2 つのテストモジュールのマッチャを同時変更する必要がある。
+        29b99dea6a37377d は未解消のまま残る。
+    - option_id: both
+      label: "Both changes"
+      description: >-
+        両方を適用する。2 つの編集は同じ I.2.c bullet に落ちるため、1 回の create-spec
+        再突入でまとめて行えば 2 度目の rework ラウンドを避けられる。rework-planner の
+        推奨。
+    - option_id: defer_both
+      label: "Defer both"
+      description: >-
+        仕様変更を行わない。両 finding を「出荷するプロトコルの既知の制約」として受容し、
+        本 feature の外の follow-up として起票する。review の残存 high 2 件は
+        unresolved のまま残り、rework task は作られない。
+  recommended_option_id: both
+  next_steps: >-
+    人間が option を選んだら、`references/rework-task-synthesis.md` Section 10 の
+    specification-change transition に従う: create-spec を `needs_update`、
+    create-plan / implement / review を `pending`、`workflow[implement].base_commit`
+    は保持、この pending_gate に選択内容を answer として記録して consumed にし、
+    develop を create-spec から再突入させる。
+  consumed: false
