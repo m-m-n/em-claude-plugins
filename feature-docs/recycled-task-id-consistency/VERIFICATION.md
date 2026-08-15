@@ -7,7 +7,8 @@
 **IMPLEMENTATION.md**: `feature-docs/recycled-task-id-consistency/IMPLEMENTATION.md`
 
 This document covers the INTEGRATED verification of the merged result. Per-task
-acceptance criteria live in `tasks/task0001.md` and `tasks/task0002.md`.
+acceptance criteria live in `tasks/task0001.md`, `tasks/task0002.md` and
+`tasks/task0003.md`.
 
 ## Build Verification
 
@@ -43,6 +44,7 @@ acceptance criteria live in `tasks/task0001.md` and `tasks/task0002.md`.
 | TS-12 | Change containment: `git diff --name-only` against the implement baseline commit | Every path is inside {`em-workflow/references/implement-phase.md`, `em-workflow/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `feature-docs/recycled-task-id-consistency/**`, `test-docs/recycled-task-id-consistency/**`, new modules under `tests/`}; no path under `feature-docs/implement-routeback-gate/`, `em-workflow/hooks/`, `em-workflow/scripts/`, `em-workflow/agents/`, `em-workflow/skills/`; no pre-existing `tests/` module modified | Manual (inspection) |
 | TS-13 | SSOT non-duplication and local style of the edited prose | The added text cites `references/workflow-patch.md`, `skills/develop/SKILL.md` Step B's stop-condition-3 precedence clause and the "Supporting cast" inventory rather than restating them; exactly one normative statement of the recycled-task-id rule remains; English prose, backtick conventions and bullet structure match the surroundings | Manual (inspection) |
 | TS-14 | Negative-proof coverage of the new matchers | Each new matcher in both new modules has at least one test demonstrating that it flags the corresponding pre-change wording | Manual (inspection over the merged test modules) |
+| TS-15 | Negative proofs for the eight new-wording matchers of `tests/test_recycled_task_id_consistency.py` (AC-1's reconciled-state phrasing, AC-4's three INAPPLICABLE-branch matchers, AC-5's unreachability sentence, AC-6's three scope-sentence matchers) | For each of the eight, a named negative-proof test applies the module's whitespace-normalizing helper to a captured pre-change sample and shows the matcher does not match it; each sample is guarded by a retained-anchor assertion so the proof cannot be vacuous; the positive test and its proof share one module-level constant per matcher | Unit |
 
 ## Code Quality Verification
 
@@ -62,7 +64,7 @@ acceptance criteria live in `tasks/task0001.md` and `tasks/task0002.md`.
 | SC-3 | The suite passes with the six enumerated pre-existing modules unmodified | TS-12 confirms they are unmodified; the suite run confirms they pass |
 | SC-4 | The change stays inside FR8's declared file set and lists no path under `feature-docs/implement-routeback-gate/` | TS-12 |
 | SC-5 | Both registries read version `0.1.37` for em-workflow | TS-11 |
-| SC-6 | Every new matcher has a negative-proof test | TS-14 |
+| SC-6 | Every new matcher has a negative-proof test | TS-15 (automated, for the eight new-wording matchers task0003 covers), then TS-14 (inspection confirming the module's inventory names a proof or a documented exemption for every remaining matcher) |
 | SC-7 | Exactly one normative statement of the recycled-task-id rule remains, and rules owned elsewhere are cited rather than restated | TS-2, TS-13 |
 
 ### Functional Requirements Coverage
@@ -76,13 +78,13 @@ acceptance criteria live in `tasks/task0001.md` and `tasks/task0002.md`.
 | FR5 | task0001 | TS-5 |
 | FR6 | task0001 | TS-6 |
 | FR7 | task0001, task0002 | TS-12 (no path under `feature-docs/implement-routeback-gate/`; this feature's REQUIREMENTS.md and SPEC.md carry the requirements, ACs and scenarios) |
-| FR8 | task0001, task0002 | TS-12 |
+| FR8 | task0001, task0002, task0003 | TS-12 |
 | FR9 | task0002 | TS-11 |
-| NFR1 | task0001, task0002 | TS-7, TS-8, TS-9, TS-10, TS-11, plus the full-suite run with the six protected modules unmodified (TS-12) |
+| NFR1 | task0001, task0002, task0003 | TS-7, TS-8, TS-9, TS-10, TS-11, plus the full-suite run with the six protected modules unmodified (TS-12) |
 | NFR2 | task0001 | TS-13 |
-| NFR3 | task0001, task0002 | TS-12 (no path under `em-workflow/hooks/`, `em-workflow/scripts/`, `em-workflow/agents/`, `em-workflow/skills/`) |
+| NFR3 | task0001, task0002, task0003 | TS-12 (no path under `em-workflow/hooks/`, `em-workflow/scripts/`, `em-workflow/agents/`, `em-workflow/skills/`) |
 | NFR4 | task0001 | TS-13 |
-| NFR5 | task0001, task0002 | TS-1 .. TS-11 exist as `unittest` modules discovered by the single project command; TS-14 |
+| NFR5 | task0001, task0002, task0003 | TS-1 .. TS-11 exist as `unittest` modules discovered by the single project command; TS-15; TS-14 |
 
 ## E2E Testing
 
@@ -102,7 +104,12 @@ is a document-contract assertion inside the `unittest` suite.
       are cited rather than restated, and that the prose matches the surrounding
       style.
 - [ ] TS-14: read both new test modules and confirm every new matcher has a
-      negative-proof test against pre-change wording.
+      negative-proof test against pre-change wording. After task0003, this is a
+      lookup against the matcher → negative-proof inventory in
+      `tests/test_recycled_task_id_consistency.py`'s docstring: confirm the
+      inventory lists every matcher in the module, and that each entry names
+      either a negative-proof test or a documented exemption (retention matcher
+      or regression guard). TS-15 covers the eight entries automatically.
 - [ ] Read the merged I.2.c section end-to-end and confirm the route-back
       precondition, the inapplicable branch and the existing merged-task branch
       describe three mutually exclusive outcomes with no partial-write path
@@ -117,6 +124,6 @@ no runtime surface, no data stored or transmitted.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 14 | 11 (TS-1 .. TS-11) | 0 | 3 (TS-12 .. TS-14) |
+| Test scenarios | 15 | 12 (TS-1 .. TS-11, TS-15) | 0 | 3 (TS-12 .. TS-14) |
 | Success criteria | 7 | 5 | 0 | 2 |
 | Requirements (FR + NFR) | 14 | 14 (each maps to ≥ 1 scenario) | 0 | — |
