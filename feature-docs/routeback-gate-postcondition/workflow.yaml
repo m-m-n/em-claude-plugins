@@ -35,34 +35,16 @@ workflow:
     status: completed
     completed_at_commit: 260aef8101f52d1add9f9894d2083dcc510aa002
   - id: implement
-    status: completed
+    status: pending
     base_commit: b219c321d384ca823d994b2e8254e596c1e32598
-    completed_at_commit: 7c4e3d48c25b98e13b0add474356ffd7342c82d7
+    completed_at_commit: null
   - id: review
     status: completed
     completed_at_commit: 408f6c228a98baacfaa698ea0d36ee773f1e6401
   - id: verify
-    status: failed
-    result: fail
-    failed_items:
-      - id: TS9
-        note: >-
-          Expected file list enumerates only implement-phase.md,
-          tests/test_implement_routeback_gate.py and plugin.json; the observed
-          integrated diff also contains the per-task test records
-          test-docs/routeback-gate-postcondition/task000{1,2,3,4}.tests.yaml,
-          which the implementer contract mandates for every task. The
-          criterion substance (no frozen file, no marketplace.json, no new
-          checker/script) holds.
-      - id: TS16
-        note: >-
-          Expected exactly six paths (TS9 three + commit-docs.sh +
-          skills/develop/SKILL.md + task0001.tests.yaml); observed nine — the
-          three extra are task0002/task0003/task0004.tests.yaml, the same
-          implementer-mandated records TS9 omits. Every other clause of TS16
-          verified true: frozen three byte-identical, marketplace.json
-          unmodified, plugin.json 0.1.37, commit-docs.sh diff comment-only, no
-          new checker/validator/script/test module.
+    status: pending
+    result: null
+    failed_items: []
   - id: retrospect
     status: pending
 
@@ -127,6 +109,23 @@ tasks:
       source: review
       review_round: 1
       source_ids: [538008334a8016fe]
+  task0005:
+    title: "Repair the feature's TDD evidence records: missing red_confirmed keys and stale test-method references"
+    plan: tasks/task0005.md
+    files:
+      - test-docs/routeback-gate-postcondition/task0001.tests.yaml
+      - test-docs/routeback-gate-postcondition/task0003.tests.yaml
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [NFR3]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 2
+      source_ids: [ec4a77d0acd113a9, b0cfa3f73c54f78d, 198872620f741da4]
 
 review:
   status: completed
@@ -207,8 +206,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004]
-    tests: [TS10, TS11, TS15, TS16]
+    tasks: [task0001, task0002, task0003, task0004, task0005]
+    tests: [TS10, TS11, TS15, TS16, TS17, TS18]
 
 batch:
   review_rework_count: 1
