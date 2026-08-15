@@ -1,15 +1,15 @@
 """Tests for task0002 (recycled-task-id-consistency): the em-workflow plugin
-version bump to 0.1.37 in both registries, plus the whole-file bare-git-line
+version bump to 0.1.38 in both registries, plus the whole-file bare-git-line
 invariant (NFR1 half) in `em-workflow/references/implement-phase.md`.
 
 Covers task0002 Acceptance Criteria
 (feature-docs/recycled-task-id-consistency/tasks/task0002.md):
 
 - AC-1 (FR9): `em-workflow/.claude-plugin/plugin.json` parses as JSON and its
-  `version` reads `0.1.37`.
+  `version` reads `0.1.38`.
 - AC-2 (FR9): `.claude-plugin/marketplace.json` parses as JSON and the
   `plugins[]` entry whose `name` is `em-workflow` reads
-  `"version": "0.1.37"`; the `em-review` entry has no `version` key.
+  `"version": "0.1.38"`; the `em-review` entry has no `version` key.
 - AC-3 (NFR5, FR9): this module exists and is discovered by
   `python3 -m unittest discover -s tests` from the repository root, and
   asserts AC-1 and AC-2 by parsing both files as JSON.
@@ -37,7 +37,7 @@ PLUGIN_MANIFEST_PATH = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
 MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
 
-BASELINE_PATCH = 36
+BASELINE_PATCH = 37
 
 
 def _load_json(path):
@@ -78,7 +78,7 @@ def _bare_git_commit_or_add_lines(text):
 
 
 class TestPluginManifestVersion(unittest.TestCase):
-    """AC-1 / FR9: the plugin manifest's version reads 0.1.37."""
+    """AC-1 / FR9: the plugin manifest's version reads 0.1.38."""
 
     @classmethod
     def setUpClass(cls):
