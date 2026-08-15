@@ -4,21 +4,32 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_recycled_task_id_version_bump.TestPluginManifestVersion.test_version_is_0_1_37
-    red_confirmed: true
-    red_reason: "AssertionError: '0.1.36' != '0.1.37' (plugin.json still carried the pre-bump version)"
-  AC-2:
-    tests:
-      - tests.test_recycled_task_id_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_0_1_37
-      - tests.test_recycled_task_id_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+      - tests.test_recycled_task_id_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
     red_confirmed: true
     red_reason: >-
-      test_em_workflow_entry_version_is_0_1_37: AssertionError: None != '0.1.37'
-      (the em-workflow marketplace entry had no version key yet). The sibling
-      test_em_review_entry_has_no_version_key passed from the start -- the
-      em-review entry never had a version key, so this is a standing guard
-      against editing the wrong entry rather than a red->green transition;
-      recorded honestly rather than claimed as observed-red.
+      test_version_is_past_baseline asserts (major, minor) == (0, 1) and
+      patch > BASELINE_PATCH (36); before the bump plugin.json's version was
+      '0.1.36', so patch > 36 failed. TestPluginManifestVersion also has
+      test_name_field_unchanged (invariant guard, not part of AC-1's
+      red->green transition -- it was green from the start since this task
+      does not change the `name` field).
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_recycled_task_id_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_recycled_task_id_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+    red_confirmed: true
+    red_reason: >-
+      test_em_workflow_entry_version_is_past_baseline: same past-baseline
+      assertion as AC-1, applied to the em-workflow marketplace entry's
+      version, which failed before the bump. test_em_workflow_entry_version_matches_plugin_manifest
+      cross-checks the marketplace entry against plugin.json's version and
+      was also red before the bump (marketplace entry lagged the manifest).
+      test_em_review_entry_source_unchanged is a standing guard that the
+      em-review entry's `source` key is untouched -- it passed from the
+      start (this task never edits the em-review entry), so it is not part
+      of the red->green transition; recorded honestly rather than claimed
+      as observed-red.
   AC-3:
     tests: []
     red_confirmed: true
