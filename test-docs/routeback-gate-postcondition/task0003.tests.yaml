@@ -1,0 +1,180 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_implement_is_written_to_failed_and_committed
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_old_stays_failed_phrasing_absent
+    red_confirmed: true
+    red_reason: >-
+      Verified by temporarily stashing the three doc edits (git stash push
+      on implement-phase.md/commit-docs.sh/SKILL.md, keeping the updated
+      test file) and re-running the module against the original,
+      pre-task0003 prose. Both failed for the right reason:
+      test_implement_is_written_to_failed_and_committed: AssertionError,
+      "sets the `implement` step's `status` to `failed`" not found (the old
+      branch only asserted "`implement` stays `failed`", no write
+      described). test_old_stays_failed_phrasing_absent: AssertionError,
+      OLD_IMPLEMENT_STAYS_FAILED_PHRASE was present in the old branch, so
+      the absence assertion failed. Also directly observed pre-rewrite: the
+      original (task0001-authored) test_implement_stays_failed, asserting
+      presence of "implement` stays `failed`", failed against the edited
+      document with "not found" before this task's test-file rewrite
+      landed. Docs restored via git stash pop before continuing.
+  AC-2:
+    tests:
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_rejected_path_states_rescoped_no_side_effect_sentence
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_old_unscoped_no_side_effect_sentence_absent
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_rejected_path_order_gate_terminal_write_terminal_commit
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup
+    red_confirmed: true
+    red_reason: >-
+      Same stash-and-rerun method as AC-1.
+      test_rejected_path_states_rescoped_no_side_effect_sentence:
+      AssertionError, the new rescoped sentence did not exist in the old
+      text. test_old_unscoped_no_side_effect_sentence_absent:
+      AssertionError, OLD_UNSCOPED_REJECTED_PATH_PHRASE ("nothing is
+      committed and no worktree/branch cleanup is started") was present
+      pre-edit, so the absence assertion failed (this exact test also
+      failed, under its pre-rewrite name
+      test_rejected_path_commits_nothing_and_starts_no_cleanup, when first
+      run against the edited document before the test file was updated).
+      test_rejected_path_order_gate_terminal_write_terminal_commit: ERROR,
+      ValueError -- "TERMINAL_TIP" substring not found in the old document
+      (the rejected path had no write/commit of its own yet).
+      test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup:
+      ERROR, ValueError -- "Commit that write set next, BEFORE any cleanup"
+      not found (old order was write-set -> cleanup -> commit, this phrase
+      did not exist). Note:
+      test_no_route_back_instruction_after_the_gate_rejects (same class)
+      was already green pre-edit -- the invariant it guards (no admitted
+      route-back instruction leaking into the rejected branch) already held
+      before this task, since the old rejected branch was short and never
+      contained those phrases either. Recorded honestly: red_confirmed
+      false for that one test, kept as regression coverage, not counted as
+      new red->green evidence.
+  AC-3:
+    tests:
+      - tests.test_implement_routeback_gate.TestRouteBackGateIsConjunctionOfBothBlockers.test_in_progress_half_is_stated_as_a_union
+      - tests.test_implement_routeback_gate.TestRouteBackGateIsConjunctionOfBothBlockers.test_union_second_source_is_step_i2b_last_event_rule
+      - tests.test_implement_routeback_gate.TestRouteBackGateIsConjunctionOfBothBlockers.test_union_cites_step_i2b_as_owner_without_restating
+    red_confirmed: true
+    red_reason: >-
+      Same stash-and-rerun method. All three: AssertionError, none of "a
+      union of two independent sources", "Step I.2.b's last-event-per-task
+      rule reporting a task in-flight", or "cited here as the owning rule,
+      not restated" existed in the pre-task0003 gate paragraph, which
+      stated only the two workflow.yaml conjuncts. The pre-existing
+      `merged`/`in_progress` conjunct tests and the write-set-precedes-
+      cleanup test were already green pre-edit and stay as regression
+      coverage for the "both original conjuncts and the write set survive"
+      half of AC-3, per the plan's explicit "unchanged" requirement.
+  AC-4:
+    tests:
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_enumeration_names_rejected_path_terminal_commit_as_bound
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_carve_out_names_route_back_commit_explicitly
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_states_unreachability_chain_tied_to_widened_gate
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_proof_enumerates_both_ref_advancing_paths
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_old_merge_task_sh_only_callers_phrase_absent
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_names_residual_assumption_and_its_covering_terminal
+    red_confirmed: true
+    red_reason: >-
+      Same stash-and-rerun method.
+      test_enumeration_names_rejected_path_terminal_commit_as_bound and
+      test_carve_out_names_route_back_commit_explicitly: AssertionError,
+      neither "Step I.2.c's rejected-path terminal status commit" nor "The
+      single carve-out is Step I.2.c's **route-back** commit" existed
+      pre-edit (old enumeration named only two call sites and phrased the
+      carve-out differently). test_states_unreachability_chain_tied_to_
+      widened_gate: AssertionError, "run only by this feature's
+      implementers" / "orchestrator's own `commit-docs.sh` calls" not
+      found (old proof used different, merge-task.sh-only wording).
+      test_proof_enumerates_both_ref_advancing_paths: AssertionError,
+      "enumerates the paths able to advance" not found. test_old_merge_
+      task_sh_only_callers_phrase_absent: AssertionError,
+      OLD_EXIT4_MERGETASK_ONLY_PHRASE was present pre-edit, so the absence
+      assertion failed. test_names_residual_assumption_and_its_covering_
+      terminal: AssertionError, "residual assumption is that no process
+      outside this develop run advances this ref" not found -- the old
+      text had no residual-assumption/terminal pairing. The pre-existing
+      enumeration/pointer tests (Step I.1/I.2.b naming,
+      OLD_EXIT4_ENUMERATION_TAIL absence, recovery-procedure-sentences
+      survival, old-pointer-removed, exit4-unreachable, stop-with-report,
+      points-to-Branch&Worktree-Model) were already green pre-edit
+      (task0001 established them) and stay as regression coverage.
+  AC-5:
+    tests:
+      - tests.test_implement_routeback_gate.TestI2cCallSiteNoLongerPointsAtRecoveryProcedure.test_states_no_worktree_or_branch_deleted_yet_at_that_commit
+      - tests.test_implement_routeback_gate.TestI2cCallSiteNoLongerPointsAtRecoveryProcedure.test_states_leftover_state_and_i2a_rule_that_covers_it
+    red_confirmed: true
+    red_reason: >-
+      Same stash-and-rerun method. Both: AssertionError -- "a report, at a
+      point where no worktree or branch has been deleted" and "this
+      order's one residual leftover state is the commit succeeding and the
+      cleanup not yet running" / "Step I.2.a's resume guard and its
+      recycled-task-id rule already cover" did not exist pre-edit, since
+      the old order committed AFTER cleanup and carried no leftover-state
+      prose. (The reordering itself is also covered by AC-2's
+      test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup,
+      listed under AC-2 since that is the write-set/commit/cleanup
+      ordering criterion.)
+  AC-6:
+    tests:
+      - tests.test_implement_routeback_gate.TestExit4CarveOutStatedInAllThreeSSOTs.test_commit_docs_header_states_the_carve_out
+      - tests.test_implement_routeback_gate.TestExit4CarveOutStatedInAllThreeSSOTs.test_commit_docs_header_names_implement_phase_route_back_commit
+      - tests.test_implement_routeback_gate.TestExit4CarveOutStatedInAllThreeSSOTs.test_old_commit_docs_unscoped_binding_phrase_absent
+      - tests.test_implement_routeback_gate.TestExit4CarveOutStatedInAllThreeSSOTs.test_skill_paragraph_states_the_carve_out
+      - tests.test_implement_routeback_gate.TestExit4CarveOutStatedInAllThreeSSOTs.test_skill_paragraph_names_implement_phase_route_back_commit
+      - tests.test_implement_routeback_gate.TestExit4CarveOutStatedInAllThreeSSOTs.test_old_skill_unscoped_closing_phrase_absent
+    red_confirmed: true
+    red_reason: >-
+      Same stash-and-rerun method. All six failed for the right reason:
+      the RECOVERY CONTRACT header still read "binding on every caller):"
+      unscoped, and the SKILL.md exit-4 parenthetical still closed with
+      "含む）: 戻り値 4" unscoped, so neither the carve-out language nor
+      the implement-phase.md/Step I.2.c/route-back citation existed in
+      either file, and both "old unscoped phrase absent" assertions failed
+      because the old phrases were still present.
+      test_skill_pinned_recovery_loop_sentences_survive_byte_identical was
+      already green pre-edit (those sentences are untouched by this task)
+      and stays as regression coverage for the "byte-identical" half of
+      AC-6. AC-6's "no executable line of commit-docs.sh changes" half is
+      verified by inspection, not a test (Test Notes): `git diff
+      em-workflow/scripts/commit-docs.sh` shows only five added/changed
+      lines, every one `#`-prefixed.
+  AC-7:
+    tests: []
+    red_reason: >-
+      Process/meta criterion, not a single test: all test changes live in
+      tests/test_implement_routeback_gate.py (git diff --stat confirms no
+      other test file touched); the module's test method count grew from
+      43 to 69 (never decreased, per `python3 -m unittest
+      tests.test_implement_routeback_gate -v` method count before/after
+      this task's test-file edit); no test is skipped (verbose run shows
+      no "skipped" outcomes); every new absence assertion
+      (test_old_stays_failed_phrasing_absent,
+      test_old_unscoped_no_side_effect_sentence_absent,
+      test_old_merge_task_sh_only_callers_phrase_absent,
+      test_old_commit_docs_unscoped_binding_phrase_absent,
+      test_old_skill_unscoped_closing_phrase_absent) has a paired proof in
+      TestValidationDetectsRegressions demonstrating the matcher flags a
+      pre-change sample.
+  AC-8:
+    tests: []
+    red_reason: >-
+      Process/meta criterion, not a single test: `python3 -m unittest
+      discover -s tests` exits 0 from the repository root (971 tests, 0
+      failures -- baseline before this task's edit was 945 tests, 0
+      failures, matching the +26 methods this task added to
+      test_implement_routeback_gate.py). `git diff --stat` from the task
+      branch shows exactly this task's four files changed:
+      em-workflow/references/implement-phase.md,
+      em-workflow/scripts/commit-docs.sh,
+      em-workflow/skills/develop/SKILL.md,
+      tests/test_implement_routeback_gate.py. `git diff --stat` scoped to
+      the frozen/out-of-scope files (validate-worker-output.py,
+      workflow-patch.md, references/contracts/, both
+      plugin.json/marketplace.json files,
+      test-docs/routeback-gate-postcondition/task0001.tests.yaml)
+      produced no output, confirming they are untouched.

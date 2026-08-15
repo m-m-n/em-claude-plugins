@@ -36,7 +36,11 @@
 #       acquiring it; any divergence means an external ref move landed in
 #       that window. No git state touched.
 #
-#       RECOVERY CONTRACT (binding on every caller): on exit 4 the caller
+#       RECOVERY CONTRACT (binding on every caller EXCEPT a call site whose
+#       owning protocol document states both a proof of unreachability and
+#       a defined terminal for an unexpected non-zero exit — today exactly
+#       one such site: `em-workflow/references/implement-phase.md` Step
+#       I.2.c's route-back commit): on exit 4 the caller
 #       MUST (1) refresh this worktree to the new branch tip (e.g. `git
 #       reset --hard` to the current branch ref — safe per NFR2, this
 #       worktree never carries uncommitted state across turns), (2)

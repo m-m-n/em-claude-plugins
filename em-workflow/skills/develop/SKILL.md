@@ -293,7 +293,9 @@ worktree に移っただけ）。
 
 **exit-4 リカバリ**（commit-docs.sh の全呼び出し箇所で共通 — Step B のこの
 ドキュメントコミット、および下記の verify / retrospect フェーズのコミットを
-含む）: 戻り値 4（stale worktree — 並行する merge-task.sh がこの worktree の
+含む。ただし `em-workflow/references/implement-phase.md` Step I.2.c の
+route-back コミットは対象外 — 同ドキュメントが到達不能性の証明と非ゼロ
+終了時の terminal を定義済み）: 戻り値 4（stale worktree — 並行する merge-task.sh がこの worktree の
 直近の refresh より後にブランチ ref を進めた）を受けたら、
 `git -C {integration worktree の絶対パス} reset --hard
 em-workflow/{feature}/integration` で最新 tip に refresh し、直前に書こう

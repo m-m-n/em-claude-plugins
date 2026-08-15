@@ -40,9 +40,10 @@ document is written; this phase never creates them itself.
   (safe: the integration worktree never carries uncommitted state across
   turns — every workflow.yaml / document write, in every phase, is followed
   by a `commit-docs.sh` commit in the same step; NFR2).
-- **exit-4 recovery** (bounded; applies to Step I.1's baseline commit and
-  Step I.2.b's wake-phase commit — the two `commit-docs.sh` call sites in
-  this phase where exit 4 can occur): exit 4 means a concurrent
+- **exit-4 recovery** (bounded; applies to Step I.1's baseline commit, Step
+  I.2.b's wake-phase commit and Step I.2.c's rejected-path terminal status
+  commit — the three `commit-docs.sh` call sites in this phase where exit 4
+  can occur): exit 4 means a concurrent
   `merge-task.sh` advanced the branch ref
   between that call site's last refresh and its commit attempt. Recovery:
   refresh the integration worktree again (the `reset --hard` above), RE-CAPTURE
@@ -52,13 +53,27 @@ document is written; this phase never creates them itself.
   source (the recorded base_commit, or the journal/report facts), never a
   replay of a stale diff — and retry `commit-docs.sh` once. A second exit 4
   stops the phase immediately with a report naming the call site and the
-  task(s) involved; never loop unbounded. Step I.2.c's route-back commit is
-  unreachable for exit 4, tied to the widened I.2.c gate below: that gate
-  lets route back proceed only when no task has status `in_progress`, so no
-  implementer of this feature can be running at that point; implementers
-  are the only callers of `merge-task.sh` against this integration branch;
-  therefore no concurrent ref advance can occur between that call site's
-  refresh and its commit attempt.
+  task(s) involved; never loop unbounded. The single carve-out is Step
+  I.2.c's **route-back** commit — distinct from the rejected-path terminal
+  status commit enumerated above, which IS bound by this bounded recovery —
+  unreachable for exit 4, tied to the widened I.2.c gate below. The
+  unreachability proof enumerates the paths able to advance
+  `refs/heads/em-workflow/{feature}/integration` during a develop run:
+  `merge-task.sh`, run only by this feature's implementers against this
+  integration branch, and the orchestrator's own `commit-docs.sh` calls
+  elsewhere in this phase, which never race each other because the
+  orchestrator is single-threaded (one turn runs at a time) and every
+  `commit-docs.sh` invocation additionally serializes on the shared lock.
+  The widened I.2.c gate's union rule — blocked when workflow.yaml reports
+  a task `in_progress` OR Step I.2.b's last-event-per-task rule reports a
+  task in-flight — excludes the first path: route back proceeds only when
+  no implementer of this feature can be running, so no `merge-task.sh` call
+  against this branch can be in flight either; therefore no concurrent ref
+  advance can occur between the route-back call site's refresh and its
+  commit attempt. The residual assumption is that no process outside this
+  develop run advances this ref; the route-back call site's own
+  stop-with-report terminal (Step I.2.c below) covers the case where that
+  assumption fails and an unexpected non-zero exit occurs there anyway.
 - Every workflow artifact — `feature-docs/{feature}/` (REQUIREMENTS.md,
   SPEC.md, workflow.yaml, IMPLEMENTATION.md, VERIFICATION.md, tasks/,
   reviews/, retrospect.yaml), `test/README.md`, `design-system/` — is written
@@ -357,7 +372,12 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   independent check, not inferred from the drain above (which only
   describes the normal case, not the admissibility test); a stale or
   unretired `in_progress` entry left by a crashed implementer blocks this
-  path exactly as a `merged` task does. Refresh
+  path exactly as a `merged` task does. The `in_progress` half is a union
+  of two independent sources, either of which blocks: workflow.yaml
+  reporting a task `in_progress`, OR Step I.2.b's last-event-per-task
+  rule reporting a task in-flight (a `launched` last event, with the
+  recycled-task-id carve-out that step already defines) — cited here as
+  the owning rule, not restated. Refresh
   the integration worktree first (`git -C "$WT_ROOT/integration"
   reset --hard em-workflow/{feature}/integration`), then capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
@@ -371,15 +391,20 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   operation admissible on re-entry
   (`references/workflow-patch.md`'s `replace_all` permission
   conditions own the full condition set and the protocol-error rule —
-  not restated here). Clean up each of those failed
-  tasks' worktrees and branches next (`git worktree remove --force
-  "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`, for
-  every {T} just reset), then commit the write-back against the
-  integration worktree: `commit-docs.sh "$WT_ROOT/integration"
+  not restated here). Commit that write set next, BEFORE any cleanup:
+  `commit-docs.sh "$WT_ROOT/integration"
   "docs({feature}): implement route back to planning" "$ROUTEBACK_TIP"`
   (exit 4 cannot occur at this call site — see the Branch & Worktree
   Model's exit-4 recovery bullet above for why; an unexpected non-zero
-  exit here stops the phase immediately with a report). End the phase with a
+  exit here stops the phase immediately with a report, at a point where
+  no worktree or branch has been deleted). Only once that commit
+  succeeds, clean up each of those failed
+  tasks' worktrees and branches (`git worktree remove --force
+  "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`, for
+  every {T} just reset) — this order's one residual leftover state is the
+  commit succeeding and the cleanup not yet running, i.e. stale
+  worktrees for tasks now `pending`, which Step I.2.a's resume guard and
+  its recycled-task-id rule already cover. End the phase with a
   clear report; create-plan re-enters afterwards. The develop state
   machine does **not** stop on this `needs_update` —
   `skills/develop/SKILL.md` Step B's stop-condition-3 precedence clause
@@ -388,14 +413,23 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   planner re-scopes the failed task (split it, change the approach) — or,
   when a requirement itself must be dropped, routes that change through
   the normal SPEC.md update path first. When the gate does not hold —
-  because a task has status `merged`, or because a task has status
-  `in_progress` — this automatic re-entry does not apply: `create-plan`
-  is NOT set to `needs_update`, `implement` stays `failed`, and the phase
-  reports and returns control to the user via develop's stop condition 3
-  — the same terminal as the "abort phase" option below. No retry loop,
-  no alternative recovery route, and no degraded route back is offered
-  for this path; nothing is committed and no worktree/branch cleanup is
-  started.
+  because a task has status `merged`, because a task has status
+  `in_progress`, or because Step I.2.b's last-event-per-task rule reports
+  a task in-flight — this automatic re-entry does not apply:
+  `create-plan` is NOT set to `needs_update`. The phase instead refreshes
+  the integration worktree first (the same `reset --hard` as above),
+  captures `TERMINAL_TIP=$(git -C "$WT_ROOT/integration" rev-parse
+  HEAD)`, sets the `implement` step's `status` to `failed` in
+  workflow.yaml — the single write this path makes — and commits exactly
+  that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
+  implement route-back gate rejected" "$TERMINAL_TIP"`. There is no
+  route-back write set, no worktree/branch cleanup and no route-back
+  commit on this path — the terminal status write and its own commit are
+  the ONLY side effect. The phase then reports and returns control to
+  the user via develop's stop condition 3, which fires on the next Step B
+  iteration reading `implement: failed` — the same terminal as the
+  "abort phase" option below. No retry loop, no alternative recovery
+  route, and no degraded route back is offered for this path.
 - **abort phase** — leave `implement` as `failed` for manual handling.
 
 There is NO skip option: a task is either merged, retried, or re-planned —
