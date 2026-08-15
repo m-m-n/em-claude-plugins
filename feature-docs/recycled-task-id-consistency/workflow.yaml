@@ -38,9 +38,27 @@ workflow:
     status: completed
     completed_at_commit: 7eb230a8b9e179ce724ba4d40fc8dc9593c3c68d
   - id: verify
-    status: in_progress
+    status: completed
+    completed_at_commit: 659584dd63f529d0bd905e3865bb07bd20e40621
     previous_result: fail
     previous_failed_items: [TS-14, SC-6]
+    result: pass
+    failed_items: []
+    summary: >-
+      `python3 -m unittest discover -s tests` は 978 tests / OK。build・format・E2E は
+      コマンド未定義（該当なし）。TS-1..TS-11 / TS-15 は自動テストで green。TS-12 は
+      implement baseline b73c6e69 との `git diff --name-only` が FR8 の宣言集合の部分集合で
+      あることを確認（禁止パス 0 件、既存 tests/ モジュールの改変 0 件、tests/ の 2 件は新規追加）。
+      TS-13 は I.2.a / I.2.b / I.2.c の編集済み散文を読み、normative statement が I.2.a に 1 つだけ
+      存在し他 2 箇所が引用していること、Supporting cast / workflow-patch.md / develop SKILL.md を
+      再掲せず引用していること、周囲のスタイルと一致していることを確認。TS-14 は
+      tests/test_recycled_task_id_consistency.py の matcher → negative-proof インベントリが
+      モジュール内の全 matcher を網羅し、各エントリが negative proof か明示的免除
+      （retention matcher / regression guard）を挙げていること、および
+      tests/test_recycled_task_id_version_bump.py の 2 matcher が negative proof を持つことを確認。
+      SC-1..SC-7 すべて充足。verify 中に FR9 の bump 先を 0.1.37 → 0.1.38 に繰り上げた
+      （REQUIREMENTS.md A6-1 に記録）。
+    excluded_requirements: []
 
   - id: retrospect
     status: pending
@@ -60,7 +78,7 @@ tasks:
     notes: null
     branch: em-workflow/recycled-task-id-consistency/task0001
   task0002:
-    title: "Plugin version bump to 0.1.37 in both registries"
+    title: "Plugin version bump to 0.1.38 in both registries"
     plan: tasks/task0002.md
     files:
       - em-workflow/.claude-plugin/plugin.json
@@ -169,7 +187,7 @@ requirements:
     tasks: [task0001, task0002, task0003]
     tests: [TS-12]
   FR9:
-    title: "Plugin version bump to 0.1.37 in both registries"
+    title: "Plugin version bump to 0.1.38 in both registries"
     status: ok
     tbd_reason: null
     excluded_reason: null

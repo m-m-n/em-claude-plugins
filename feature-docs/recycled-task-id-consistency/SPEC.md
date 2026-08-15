@@ -43,7 +43,7 @@ As the maintainer of this repository, I want the requirements, acceptance criter
 **Acceptance Criteria:**
 - [ ] AC-7 (FR7): `feature-docs/recycled-task-id-consistency/REQUIREMENTS.md` and `SPEC.md` exist and carry the requirements, acceptance criteria and test scenarios for the retained rule; `git diff --name-only` for the change lists no path under `feature-docs/implement-routeback-gate/`.
 - [ ] AC-8 (FR8): `git diff --name-only` for the change is a subset of {`em-workflow/references/implement-phase.md`, `em-workflow/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `feature-docs/recycled-task-id-consistency/**`, `test-docs/recycled-task-id-consistency/**`, the new/extended module(s) under `tests/`}, and contains no path under `em-workflow/hooks/`, `em-workflow/scripts/`, `em-workflow/agents/`, `em-workflow/skills/`.
-- [ ] AC-9 (FR9): `em-workflow/.claude-plugin/plugin.json` reads `"version": "0.1.37"`, and the `em-workflow` entry of `.claude-plugin/marketplace.json` reads `"version": "0.1.37"`; the `em-review` entry is unchanged.
+- [ ] AC-9 (FR9): `em-workflow/.claude-plugin/plugin.json` reads `"version": "0.1.38"`, and the `em-workflow` entry of `.claude-plugin/marketplace.json` reads `"version": "0.1.38"`; the `em-review` entry is unchanged.
 - [ ] AC-10 (NFR1): `python3 -m unittest discover -s tests` passes from the repository root with `tests/test_implement_routeback_gate.py`, `tests/test_review_implement_develop_lock_contracts.py`, `tests/test_rework_synthesis_contract.py`, `tests/test_develop_skill_rewiring.py`, `tests/test_batch_policies.py` and `tests/test_check_plugin_invariants.py` unmodified — which is what demonstrates that every anchor NFR1 enumerates survived.
 - [ ] AC-11 (NFR1): `implement-phase.md` contains no line that begins with `git ` (ignoring markdown backticks and indentation) and contains `commit` or `add -A`.
 - [ ] AC-12 (NFR5): The new test module(s) assert every point of AC-1 through AC-6 and include at least one test proving each new matcher flags the corresponding pre-change wording.
@@ -60,7 +60,7 @@ As the maintainer of this repository, I want the requirements, acceptance criter
 - **FR6 — The rule's scope is stated as orchestrator-only:** `implement-phase.md` states explicitly that the recycled-task-id rule governs ONLY the orchestrator's interpretation of the journal, and that the journal-reading hooks are unaffected: `queue_launch_guard.py`, `queue_stop_guard.py`, `queue_failure_net.py` and `queue_taskstop_net.py` each derive a task's state from the journal's last event ALONE and never consult `tasks.{T}.status`. The statement must be worded so that it stays true of `queue_stop_guard.py`, which does read workflow.yaml for the `implement` step's own status line and for the `tasks:` key list — the claim to make is "never consults `tasks.{T}.status`", never the stronger "never reads workflow.yaml". The sentence sits with I.2.a's normative statement (FR2) and does not restate hook internals already owned by the "Supporting cast: journal, hooks, resume" inventory; it cites that inventory rather than duplicating it.
 - **FR7 — Requirements, ACs and test scenarios live in this feature's documents:** The requirements, acceptance criteria and test scenarios that back the retained recycled-task-id rule are written into `feature-docs/recycled-task-id-consistency/REQUIREMENTS.md` and `feature-docs/recycled-task-id-consistency/SPEC.md`. No file under `feature-docs/implement-routeback-gate/` is created, edited or deleted — its REQUIREMENTS.md, SPEC.md, tasks/ and reviews/round1.yaml stay exactly as they are, preserving that completed feature's historical scope and review provenance.
 - **FR8 — Change containment:** The change touches only: `em-workflow/references/implement-phase.md`; `em-workflow/.claude-plugin/plugin.json`; `.claude-plugin/marketplace.json`; artifacts under `feature-docs/recycled-task-id-consistency/`; artifacts under `test-docs/recycled-task-id-consistency/` (`em-workflow/references/implement-phase.md` mandates these as per-task required outputs, so the implementation cannot omit them); and the new or extended test module(s) under `tests/`. Explicitly NOT modified: anything under `em-workflow/hooks/`, `em-workflow/scripts/`, `em-workflow/agents/`, `em-workflow/skills/` (including `skills/develop/SKILL.md`), `em-workflow/references/workflow-patch.md`, `em-workflow/references/workflow-schema.md`, `em-workflow/references/rework-task-synthesis.md`, `em-workflow/references/contracts/*`, `feature-docs/implement-routeback-gate/*`, and the existing test modules `tests/test_implement_routeback_gate.py`, `tests/test_review_implement_develop_lock_contracts.py`, `tests/test_rework_synthesis_contract.py`, `tests/test_develop_skill_rewiring.py`, `tests/test_batch_policies.py`, `tests/test_check_plugin_invariants.py`.
-- **FR9 — Plugin version bump to 0.1.37 in both registries:** As part of the same change, `em-workflow/.claude-plugin/plugin.json`'s `version` goes from `0.1.36` to `0.1.37` (patch), and the root `.claude-plugin/marketplace.json`'s `plugins[]` entry whose `name` is `em-workflow` carries `"version": "0.1.37"`. That entry currently has no `version` key at all, so this requirement is satisfied by ADDING the key with that value; the `em-review` entry is not touched, and no other field of either file changes.
+- **FR9 — Plugin version bump to 0.1.38 in both registries:** As part of the same change, `em-workflow/.claude-plugin/plugin.json`'s `version` goes from `0.1.37` to `0.1.38` (patch), and the root `.claude-plugin/marketplace.json`'s `plugins[]` entry whose `name` is `em-workflow` carries `"version": "0.1.38"`. That entry currently has no `version` key at all, so this requirement is satisfied by ADDING the key with that value; the `em-review` entry is not touched, and no other field of either file changes.
 
 ### Non-Functional Requirements
 
@@ -94,9 +94,9 @@ em-workflow/references/implement-phase.md
 │               └── inapplicable branch, no partial write (FR4)
 └── ### Supporting cast: journal, hooks, resume  ← cited by FR6, not duplicated
 
-em-workflow/.claude-plugin/plugin.json      version 0.1.36 → 0.1.37   (FR9)
+em-workflow/.claude-plugin/plugin.json      version 0.1.37 → 0.1.38   (FR9)
 .claude-plugin/marketplace.json             em-workflow entry gains
-                                            "version": "0.1.37"        (FR9)
+                                            "version": "0.1.38"        (FR9)
 
 feature-docs/recycled-task-id-consistency/  REQUIREMENTS.md, SPEC.md   (FR7)
 tests/                                      new/extended unittest
@@ -157,8 +157,8 @@ Not applicable. This feature introduces no persistent data model. The only struc
 
 | File | Key | Before | After |
 |------|-----|--------|-------|
-| `em-workflow/.claude-plugin/plugin.json` | `version` | `0.1.36` | `0.1.37` |
-| `.claude-plugin/marketplace.json` | `plugins[name == em-workflow].version` | key absent | `0.1.37` (key added) |
+| `em-workflow/.claude-plugin/plugin.json` | `version` | `0.1.37` | `0.1.38` |
+| `.claude-plugin/marketplace.json` | `plugins[name == em-workflow].version` | key absent | `0.1.38` (key added) |
 
 #### Entity Relationship Diagram
 
@@ -183,9 +183,9 @@ em-workflow/
 ├── references/
 │   └── implement-phase.md            # FR1-FR6, NFR1, NFR2, NFR4
 └── .claude-plugin/
-    └── plugin.json                   # FR9: version 0.1.37
+    └── plugin.json                   # FR9: version 0.1.38
 .claude-plugin/
-└── marketplace.json                  # FR9: em-workflow entry gains version 0.1.37
+└── marketplace.json                  # FR9: em-workflow entry gains version 0.1.38
 feature-docs/
 └── recycled-task-id-consistency/
     ├── REQUIREMENTS.md               # FR7
@@ -205,7 +205,7 @@ tests/
 - [ ] TS-7 (regression / unittest, AC-10, NFR1): Assert the raw text still contains "Select\nunlaunched tasks (no journal event yet and `status != merged`, ascending" and "require at least one task in `tasks` whose\n   `status == pending`" with the second occurring before the first, so a reflow introduced by the I.2.a edit fails here with a message naming the wrap rather than only inside an unrelated suite.
 - [ ] TS-8 (regression / unittest, AC-10, NFR1): Assert the raw text still contains '"docs({feature}): implement wake\n   phase reconcile"' exactly, guarding the I.2.b step-3 edit against reflowing the commit literal.
 - [ ] TS-9 (regression / unittest, AC-10 + NFR1): Assert `### I.2.c: Failed handling` is byte-identical and the batch-mode paragraph is still the byte-identical tail of the I.2.c section (reuse `tests/test_implement_routeback_gate.py`'s literal).
-- [ ] TS-11 (normal / unittest, AC-9 + AC-11, FR9 + NFR1): Parse `em-workflow/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` as JSON and assert both report version `0.1.37` for em-workflow; and assert `implement-phase.md` has zero lines starting with `git ` that contain `commit` or `add -A`.
+- [ ] TS-11 (normal / unittest, AC-9 + AC-11, FR9 + NFR1): Parse `em-workflow/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` as JSON and assert both report version `0.1.38` for em-workflow; and assert `implement-phase.md` has zero lines starting with `git ` that contain `commit` or `add -A`.
 
 ### Integration Tests
 
@@ -284,7 +284,7 @@ Not applicable.
 - [ ] All test scenarios (TS-1 .. TS-11) pass.
 - [ ] `python3 -m unittest discover -s tests` passes from the repository root with the six enumerated existing modules unmodified (AC-10).
 - [ ] `git diff --name-only` for the change stays inside FR8's declared file set and lists no path under `feature-docs/implement-routeback-gate/` (AC-7, AC-8).
-- [ ] `em-workflow/.claude-plugin/plugin.json` and the `em-workflow` entry of `.claude-plugin/marketplace.json` both read version `0.1.37` (AC-9).
+- [ ] `em-workflow/.claude-plugin/plugin.json` and the `em-workflow` entry of `.claude-plugin/marketplace.json` both read version `0.1.38` (AC-9).
 - [ ] Every new matcher has a negative-proof test showing it flags the corresponding pre-change wording (AC-12).
 - [ ] `implement-phase.md` keeps exactly one normative statement of the recycled-task-id rule and cites, rather than restates, rules owned elsewhere (NFR2).
 

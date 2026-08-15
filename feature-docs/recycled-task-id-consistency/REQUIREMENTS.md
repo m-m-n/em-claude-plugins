@@ -137,7 +137,7 @@ graph LR
 | FR6 | ルールのスコープをオーケストレータ限定として明記 | hook 群は journal の last event のみで判断し `tasks.{T}.status` を参照しない旨を明記 | 指定なし |
 | FR7 | 要件・AC・テストシナリオを本機能のドキュメントに置く | implement-routeback-gate のドキュメントは変更しない | 指定なし |
 | FR8 | 変更の封じ込め | 変更対象・非対象のファイルを限定 | 指定なし |
-| FR9 | プラグインバージョンを 0.1.37 に bump（両レジストリ） | plugin.json と marketplace.json | 指定なし |
+| FR9 | プラグインバージョンを 0.1.38 に bump（両レジストリ） | plugin.json と marketplace.json | 指定なし |
 
 （本要件群に優先度は定義されていない。）
 
@@ -263,15 +263,15 @@ flowchart TD
 
 明示的に変更しないもの: `em-workflow/hooks/`、`em-workflow/scripts/`、`em-workflow/agents/`、`em-workflow/skills/`（`skills/develop/SKILL.md` を含む）配下のすべて、`em-workflow/references/workflow-patch.md`、`em-workflow/references/workflow-schema.md`、`em-workflow/references/rework-task-synthesis.md`、`em-workflow/references/contracts/*`、`feature-docs/implement-routeback-gate/*`、既存テストモジュール `tests/test_implement_routeback_gate.py`、`tests/test_review_implement_develop_lock_contracts.py`、`tests/test_rework_synthesis_contract.py`、`tests/test_develop_skill_rewiring.py`、`tests/test_batch_policies.py`、`tests/test_check_plugin_invariants.py`。
 
-#### FR9: プラグインバージョンを両レジストリで 0.1.37 に bump
+#### FR9: プラグインバージョンを両レジストリで 0.1.38 に bump
 
-**説明**: 同一の変更の一部として、`em-workflow/.claude-plugin/plugin.json` の `version` を `0.1.36` から `0.1.37`（patch）にする。またルートの `.claude-plugin/marketplace.json` の `plugins[]` のうち `name` が `em-workflow` のエントリが `"version": "0.1.37"` を持つようにする。当該エントリは現在 `version` キーを一切持たないため、この要件はそのキーを当該値で**追加**することで満たされる。`em-review` エントリには触れず、両ファイルの他のフィールドは変更しない。
+**説明**: 同一の変更の一部として、`em-workflow/.claude-plugin/plugin.json` の `version` を `0.1.37` から `0.1.38`（patch）にする。またルートの `.claude-plugin/marketplace.json` の `plugins[]` のうち `name` が `em-workflow` のエントリが `"version": "0.1.38"` を持つようにする。当該エントリは現在 `version` キーを一切持たないため、この要件はそのキーを当該値で**追加**することで満たされる。`em-review` エントリには触れず、両ファイルの他のフィールドは変更しない。
 
 **バリデーション**:
 | 項目 | ルール | エラーメッセージ |
 |------|--------|------------------|
-| `plugin.json` の `version` | `0.1.37` であること | 該当なし（テストで検証） |
-| `marketplace.json` の em-workflow エントリ | `"version": "0.1.37"` を持つこと | 該当なし（テストで検証） |
+| `plugin.json` の `version` | `0.1.38` であること | 該当なし（テストで検証） |
+| `marketplace.json` の em-workflow エントリ | `"version": "0.1.38"` を持つこと | 該当なし（テストで検証） |
 
 ## 5. 非機能要件
 
@@ -302,7 +302,7 @@ flowchart TD
 ### 5.5 互換性要件
 
 - ブラウザサポート: 該当なし（A2 により UI 表面もレンダリング出力も存在しない）
-- APIバージョン: 該当なし。プラグインバージョンについては FR9（0.1.36 → 0.1.37）が適用される。
+- APIバージョン: 該当なし。プラグインバージョンについては FR9（0.1.37 → 0.1.38）が適用される。
 
 ### 5.6 本機能の非機能要件
 
@@ -368,8 +368,8 @@ flowchart TD
 
 | エンティティ | 項目名 | 型 | 必須 | 説明 |
 |--------------|--------|-----|------|------|
-| `em-workflow/.claude-plugin/plugin.json` | `version` | 文字列 | ○ | `0.1.36` から `0.1.37` へ（FR9） |
-| `.claude-plugin/marketplace.json` の em-workflow エントリ | `version` | 文字列 | ○ | `"0.1.37"` を追加（現在キーが存在しない）（FR9） |
+| `em-workflow/.claude-plugin/plugin.json` | `version` | 文字列 | ○ | `0.1.37` から `0.1.38` へ（FR9） |
+| `.claude-plugin/marketplace.json` の em-workflow エントリ | `version` | 文字列 | ○ | `"0.1.38"` を追加（現在キーが存在しない）（FR9） |
 
 ### 7.3 データ保持期間
 
@@ -435,7 +435,7 @@ flowchart TD
 - [ ] AC-6 (FR6): `implement-phase.md` に、recycled-task-id ルールがオーケストレータによる journal の解釈のみを支配すると述べ、`queue_launch_guard.py`、`queue_stop_guard.py`、`queue_failure_net.py`、`queue_taskstop_net.py` を名指しし、これらが journal の last event のみで判断し `tasks.{T}.status` を決して参照しないと述べる文が存在すること。これらの hook が workflow.yaml を決して読まないという主張はドキュメントに存在しないこと。
 - [ ] AC-7 (FR7): `feature-docs/recycled-task-id-consistency/REQUIREMENTS.md` と `SPEC.md` が存在し、保持されるルールの要件・受け入れ基準・テストシナリオを載せていること。変更に対する `git diff --name-only` が `feature-docs/implement-routeback-gate/` 配下のパスを一切列挙しないこと。
 - [ ] AC-8 (FR8): 変更に対する `git diff --name-only` が {`em-workflow/references/implement-phase.md`、`em-workflow/.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json`、`feature-docs/recycled-task-id-consistency/**`、`test-docs/recycled-task-id-consistency/**`、`tests/` 配下の新規／拡張モジュール} の部分集合であり、`em-workflow/hooks/`、`em-workflow/scripts/`、`em-workflow/agents/`、`em-workflow/skills/` 配下のパスを含まないこと。
-- [ ] AC-9 (FR9): `em-workflow/.claude-plugin/plugin.json` が `"version": "0.1.37"` であり、`.claude-plugin/marketplace.json` の `em-workflow` エントリが `"version": "0.1.37"` であること。`em-review` エントリは変更されていないこと。
+- [ ] AC-9 (FR9): `em-workflow/.claude-plugin/plugin.json` が `"version": "0.1.38"` であり、`.claude-plugin/marketplace.json` の `em-workflow` エントリが `"version": "0.1.38"` であること。`em-review` エントリは変更されていないこと。
 - [ ] AC-10 (NFR1): リポジトリルートから `python3 -m unittest discover -s tests` が、`tests/test_implement_routeback_gate.py`、`tests/test_review_implement_develop_lock_contracts.py`、`tests/test_rework_synthesis_contract.py`、`tests/test_develop_skill_rewiring.py`、`tests/test_batch_policies.py`、`tests/test_check_plugin_invariants.py` を未変更のままパスすること。これが NFR1 の列挙する全アンカーの生存を示す。
 - [ ] AC-11 (NFR1): `implement-phase.md` に、（markdown のバッククォートとインデントを無視して）`git ` で始まりかつ `commit` または `add -A` を含む行が 1 つも存在しないこと。
 - [ ] AC-12 (NFR5): 新しいテストモジュールが AC-1 から AC-6 のすべての点をアサートし、各新規マッチャが対応する変更前文言を検出することを示すテストを少なくとも 1 つ含むこと。
@@ -460,7 +460,7 @@ flowchart TD
 - [ ] 回帰 TS-8 (unittest、AC-10): 生テキストが引き続き `"docs({feature}): implement wake\n   phase reconcile"` を厳密に含むことをアサートし、I.2.b step 3 の編集がコミットリテラルを reflow させることを防ぐ。
 - [ ] 回帰 TS-9 (unittest、AC-10 + NFR1): `### I.2.c: Failed handling` がバイト同一であり、batch-mode 段落が引き続き I.2.c セクションのバイト同一な末尾であることをアサートする（`tests/test_implement_routeback_gate.py` のリテラルを再利用）。
 - [ ] 境界値 TS-10 (unittest ドキュメント契約、NFR1): 編集後に I.2.c セクション内の順序を再アサートする。最初の `tasks.{T}.status` 出現の後続 60 正規化文字以内に `pending` があること、4 つの書き込みトークンが `git worktree remove --force` より前にあること、クリーンアップが最初の `commit-docs.sh` より前にあり、それが `End the phase with a` より前にあること。
-- [ ] 正常系 TS-11 (unittest、AC-9 + AC-11): `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` を JSON としてパースし、双方が em-workflow について version `0.1.37` を報告することをアサートする。あわせて `implement-phase.md` に `git ` で始まり `commit` または `add -A` を含む行が 0 行であることをアサートする。
+- [ ] 正常系 TS-11 (unittest、AC-9 + AC-11): `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` を JSON としてパースし、双方が em-workflow について version `0.1.38` を報告することをアサートする。あわせて `implement-phase.md` に `git ` で始まり `commit` または `add -A` を含む行が 0 行であることをアサートする。
 - [ ] セキュリティ: 該当なし（NFR3 によりドキュメントのみの変更）。
 - [ ] パフォーマンス: 該当なし（NFR3 によりドキュメントのみの変更）。
 
@@ -489,7 +489,8 @@ flowchart TD
 - [x] A3（対象テキスト）: 対象テキストは本機能の統合 worktree における `em-workflow/references/implement-phase.md` の状態、すなわち implement-routeback-gate の変更（PR #4）が入った**後**の状態であり、当該 PR のレビュー auto-fix loop 3 が導入した recycled-task-id 段落を含む。上記のすべての要件はそのテキストに対して表現され、本ラウンドでそれに照らして確認された。
 - [x] A4（テスト規約）: 新しいアサーションは `tests/test_implement_routeback_gate.py` のスタイル（見出しによるセクションのスライス、散文アサーション用 `_normalize_ws`、バイト同一性アサーション用の生テキスト、加えて negative-proof テスト）で `tests/` 配下の Python `unittest` ドキュメント契約テストとして追加する。プロジェクトには当該モジュールが 27 個あり、他のテストフレームワークは存在しない。
 - [x] A5（FR3 前提条件の到達可能性メモ）: 前提条件は、記録された回答どおり逐語的に「terminal journal last event (`merged` / `failed`)」として述べる。journal イベントを 1 つも持たないタスクも同様に非終端だが、route-back がリセットする対象のタスクについてその状態は到達不能である。I.2.b step 3 は、step-1 reconciled state が `failed` であるか完了レポートが `failed`／不正であるタスクにのみ `failed` を書き、いずれも少なくとも `launched` イベントの存在を含意する。したがって「イベントなし」の別分岐は不要である。
-- [x] A6（バージョン bump の対象）: bump は `em-workflow/.claude-plugin/plugin.json` で 0.1.36 → 0.1.37（patch）であり、同じ値を `.claude-plugin/marketplace.json` の `em-workflow` エントリに設定する。当該エントリは現在 `version` キーを持たないため、そこではフィールドを追加する。これは `feature-docs/implement-routeback-gate/REQUIREMENTS.md` の AS-4 に記録された前回 bump の結論（marketplace.json の編集は不要）とは異なる。
+- [x] A6-1（bump 先の繰り上げ・verify フェーズで記録）: 当初 FR9 は 0.1.36 → 0.1.37 を指定していたが、本 feature の implement 完了後に `main` が別 feature の bump で 0.1.37 に到達したため、0.1.37 のままでは「同じ変更の中で version を上げる」という運用ルール（`~/.claude/rules/plugin-version-bump.md`）を満たさなくなった。FR9 の意図（プラグイン本体を変更した同一変更で両レジストリの version を pre-feature baseline より先へ進める）を保つため、bump 先を 0.1.38 に繰り上げ、テストモジュールの `BASELINE_PATCH` を 36 → 37 に合わせた。検証は元から baseline 相対（patch > BASELINE_PATCH）なので TS-11 / SC-5 の判定方法は変わらない。
+- [x] A6（バージョン bump の対象）: bump は `em-workflow/.claude-plugin/plugin.json` で 0.1.37 → 0.1.38（patch）であり、同じ値を `.claude-plugin/marketplace.json` の `em-workflow` エントリに設定する。当該エントリは現在 `version` キーを持たないため、そこではフィールドを追加する。これは `feature-docs/implement-routeback-gate/REQUIREMENTS.md` の AS-4 に記録された前回 bump の結論（marketplace.json の編集は不要）とは異なる。
 
 ### 14.2 未確認・保留事項
 
