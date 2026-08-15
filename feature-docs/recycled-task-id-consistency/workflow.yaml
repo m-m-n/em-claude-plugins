@@ -93,7 +93,7 @@ tasks:
 
 review:
   status: pending
-  rounds_completed: 1
+  rounds_completed: 2
   plan:
     floor: [comprehensive, performance, architecture, spec]
     discretionary:
@@ -101,13 +101,13 @@ review:
         reason: "diff は implement-phase.md のプロトコル本文を書き換えており、その本文が branch 名 / worktree パスのシェル補間に対する fail-closed 識別子ゲート（I.0）と、route-back の `git worktree remove --force` / `git branch -D` という破壊的クリーンアップの発火条件を規定しているため"
     cross_validation: true
   perspectives:
-    comprehensive: pending
-    performance: pending
-    architecture: pending
-    spec: pending
-    security: pending
-  residual_critical_high: 0
-  needs_rework: false
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+    security: completed
+  residual_critical_high: 2
+  needs_rework: true
 
 requirements:
   FR1:
