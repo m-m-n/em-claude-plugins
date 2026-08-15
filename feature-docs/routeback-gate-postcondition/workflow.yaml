@@ -35,11 +35,11 @@ workflow:
     status: completed
     completed_at_commit: 260aef8101f52d1add9f9894d2083dcc510aa002
   - id: implement
-    status: completed
+    status: pending
     base_commit: b219c321d384ca823d994b2e8254e596c1e32598
-    completed_at_commit: 266513d32dd1cfd221ead4958d5c617d66fd649a
+    completed_at_commit: null
   - id: review
-    status: in_progress
+    status: pending
   - id: verify
     status: pending
     result: null
@@ -73,6 +73,41 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/routeback-gate-postcondition/task0002
+  task0003:
+    title: Ground the I.2.c rejected-path terminal and the exit-4 carve-out in their owning SSOTs
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/scripts/commit-docs.sh
+      - em-workflow/skills/develop/SKILL.md
+      - tests/test_implement_routeback_gate.py
+    skills: []
+    domains: [api-contract, concurrency, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, NFR1, NFR2, NFR3]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids: [a20084be19e61af3, d0373cded02969e7, c5c4f849898d2e81, b3707bdad3d6bf14, e28d931a8a28f55b]
+  task0004:
+    title: Complete the red_confirmed field in task0001's tests.yaml record
+    plan: tasks/task0004.md
+    files:
+      - test-docs/routeback-gate-postcondition/task0001.tests.yaml
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [NFR3]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids: [538008334a8016fe]
 
 review:
   status: pending
@@ -95,36 +130,36 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS1, TS2, TS3, TS4]
+    tasks: [task0001, task0003]
+    tests: [TS1, TS2, TS3, TS4, TS14]
   FR2:
     title: Terminal state when the gate rejects route back
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS5]
+    tasks: [task0001, task0003]
+    tests: [TS5, TS12]
   FR3:
     title: Gate decision precedes every side effect
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS6]
+    tasks: [task0001, task0003]
+    tests: [TS6, TS12]
   FR4:
     title: Exit-4 recovery enumeration entry removed as unreachable
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS7, TS8]
+    tasks: [task0001, task0003]
+    tests: [TS7, TS8, TS13]
   FR5:
     title: Documentary change only, no new mechanical checker
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS9, TS10, TS11]
+    tasks: [task0001, task0003]
+    tests: [TS9, TS10, TS11, TS16]
   FR6:
     title: Version bump scope
     status: ok
@@ -137,22 +172,22 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
-    tests: [TS9, TS10]
+    tasks: [task0001, task0002, task0003]
+    tests: [TS9, TS10, TS16]
   NFR2:
     title: Independent safety net restored
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS3]
+    tasks: [task0001, task0003]
+    tests: [TS3, TS14]
   NFR3:
     title: Test suite stays green
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
-    tests: [TS10, TS11]
+    tasks: [task0001, task0002, task0003, task0004]
+    tests: [TS10, TS11, TS15, TS16]
 
 batch:
   review_rework_count: 1
