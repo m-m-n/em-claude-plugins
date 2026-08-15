@@ -1,0 +1,46 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_reference_sweep.TestPluginManifest.test_plugin_json_is_valid_json
+      - tests.test_reference_sweep.TestPluginManifest.test_version_is_strictly_greater_than_baseline
+    red_confirmed: false
+    red_reason: >
+      Per the task's Test Notes, no test pins the exact string "0.1.37"
+      deliberately (it would need editing on every future bump). These two
+      pre-existing sweep tests only assert the file parses as JSON and the
+      version compares strictly greater than the recorded baseline
+      (0.1.27); both were already green before this task touched the file
+      (with version 0.1.36) and remain green after (0.1.37), so neither
+      went red for this change. The exact value "0.1.37" was confirmed by
+      a direct read of the file after editing, not by a failing test.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Per the task's Test Notes, diff-scope is not automatable here without
+      adding a checker (forbidden by FR5/D2). Verified by inspecting
+      `git diff` on the task branch: the only changed line in
+      em-workflow/.claude-plugin/plugin.json is the version value; `name`,
+      `description` and `author` are byte-identical to before, and no other
+      line (indentation, key order, trailing newline) changed.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Verified by `git diff`/`git status` on the task branch: the only file
+      touched is em-workflow/.claude-plugin/plugin.json. The repository-root
+      .claude-plugin/marketplace.json is untouched (confirmed byte-identical
+      via git diff showing no entry for it).
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Verified by running "python3 -m unittest discover -s tests" from the
+      worktree root both before (4a baseline: 925 tests, 0 failures) and
+      after (final run: 925 tests, 0 failures) the edit — exit code 0 both
+      times, identical test count, no test skipped/deleted/modified (git
+      diff shows only em-workflow/.claude-plugin/plugin.json changed, no
+      file under tests/ touched).
