@@ -101,7 +101,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [NFR3]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/routeback-gate-postcondition/task0004
     provenance:
