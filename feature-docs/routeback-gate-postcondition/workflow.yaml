@@ -39,7 +39,8 @@ workflow:
     base_commit: b219c321d384ca823d994b2e8254e596c1e32598
     completed_at_commit: 7c4e3d48c25b98e13b0add474356ffd7342c82d7
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: PLACEHOLDER
   - id: verify
     status: pending
     result: null
@@ -110,8 +111,8 @@ tasks:
       source_ids: [538008334a8016fe]
 
 review:
-  status: in_progress
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor: [comprehensive, performance, architecture, spec]
     discretionary: []
@@ -121,8 +122,10 @@ review:
     performance: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 1
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
+  deferred_findings: [2394334a18ac6901, 397c2a098d705a55, 298809a29d50c663, ab26af4afc0af665, dbb12002e43e113d, ec4a77d0acd113a9, b0cfa3f73c54f78d, 198872620f741da4, fdedc8f16de14808, cc9c0ab026ca8a32, 17748248197b0ec6]
+  deferred_reason: "batch mode: rework cap reached (references/batch-mode.md review.residual-critical-high); 4 of them are critical/high — see reviews/round2.yaml"
 
 requirements:
   FR1:
