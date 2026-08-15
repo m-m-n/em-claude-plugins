@@ -39,7 +39,7 @@ acceptance_tests:
       - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_covers_the_merged_blocker
       - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_covers_the_in_progress_blocker
       - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_create_plan_not_set_to_needs_update
-      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_implement_stays_failed
+      - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_implement_is_written_to_failed_and_committed
       - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_control_returns_via_stop_condition_3
       - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_no_retry_alternative_or_degraded_route_back_offered
       - tests.test_implement_routeback_gate.TestRejectedPathHasSingleGeneralizedTerminal.test_no_rework_or_append_handoff
@@ -58,8 +58,9 @@ acceptance_tests:
       coverage for AC-3's "unchanged" clause.
   AC-4:
     tests:
-      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_document_order_gate_before_refresh_tip_writeset_cleanup_commit
-      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_rejected_path_commits_nothing_and_starts_no_cleanup
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_rejected_path_states_rescoped_no_side_effect_sentence
+      - tests.test_implement_routeback_gate.TestGateDecisionPrecedesAllSideEffects.test_old_unscoped_no_side_effect_sentence_absent
     red_confirmed: true
     red_reason: >-
       test_document_order_gate_before_refresh_tip_writeset_cleanup_commit
