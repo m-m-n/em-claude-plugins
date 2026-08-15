@@ -1,19 +1,32 @@
 schema_version: 1
 feature: recycled-task-id-consistency
 phase: rework
-status: failed
+status: completed
 generation: 1
-base_revision: 016ce7266f4e63bbf68b66aadee53144e0f54d57
+base_revision: 5039f99
 last_input_digest: null
 active_request_id: null
 packets:
   rework-q0001:
-    status: issued
+    status: answered
     issued_at: "2026-08-15T02:05:00+09:00"
     questions:
       - question_id: rework.spec-change.fr8-declared-file-set
-        status: issued
-answers: {}
+        status: answered
+answers:
+  rework.spec-change.fr8-declared-file-set:
+    packet_id: rework-q0001
+    answered_at: "2026-08-15T13:50:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [change_spec]
+    freeform: |
+      Notion タスク 3bc3509ec8ee813998d1c1de663c7fe6 の「申し送り」で人間が
+      判断を示した。1. TS-12 / SC-4 は SPEC.md / REQUIREMENTS.md の FR8 / AC-8
+      に `test-docs/{feature}/**` を追加する（仕様変更を採る）。2. TS-14 / SC-6
+      は不足している negative-proof テストを追加する（仕様変更は不要）。
+      3. deferred medium 13 件は本 feature のスコープ外として別タスクに起票する。
+    normalized_answer: "SPEC 変更を採用: FR8 / AC-8 の宣言ファイル集合に test-docs/{feature}/** を追加する"
 worker_runs:
   - request_id: rework-run-0001
     status: needs_user_input
@@ -24,6 +37,15 @@ patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: "verify 由来 rework: rework-planner が gate_id rework.spec-change（category: spec-change）を返した。references/question-resolution.md の fail-closed 分類により batch では policy 参照・Codex 相談の前に中断する。仕様変更（SPEC.md FR8 / AC-8 の宣言ファイル集合に test-docs/{feature}/** を追加）はユーザー判断が要る"
-# spec_change は記録しない: 仕様変更の遷移は選択されておらず、create-spec への
-# 再突入根拠にはならない。develop の停止条件 3 が通常どおり発火する。
+last_error: null
+spec_change:
+  reason: |
+    verify 由来 rework が gate_id rework.spec-change（category: spec-change）で
+    中断した。SPEC.md / REQUIREMENTS.md の FR8 / AC-8 が宣言するファイル集合が
+    `test-docs/{feature}/**` を含まないため、implement-phase.md が必須生成物に
+    定める test-docs 成果物が TS-12 / SC-4 を不成立にしていた。人間が Notion
+    タスクの申し送りで SPEC 変更を選択したため、create-spec へ再突入して
+    宣言集合を修正する。
+  finding_stable_id: TS-12
+  recorded_at_commit: 5039f99ce360e785d746c7176ffe00f090ce5748
+  consumed: false
