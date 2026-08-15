@@ -1,0 +1,113 @@
+feature: routeback-gate-postcondition
+collected_at: "2026-08-16T00:05:00+09:00"
+session_ids: [01a00544-3139-7000-a986-d0bb7a6e3f2d]
+signals:
+  review_critical_high:
+    - stable_id: a20084be19e61af3
+      round: 1
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: "拒否パスが `implement` を `failed` に設定せず「stays `failed`」と書いており、FR2/AC2 の終端状態が成立しない"
+      resolution: superseded
+      resolution_reason: "round 1 の auto-rework で task0003 が解消。round 2 のレビュアー 3 名が解消を確認"
+    - stable_id: 2394334a18ac6901
+      round: 2
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "exit-4 recovery のスコープが「全呼び出し箇所」から3箇所の閉じた集合に縮小され、I.2.a のローンチ commit が漏れた"
+      resolution: deferred
+      resolution_reason: "batch mode: rework cap reached"
+    - stable_id: 397c2a098d705a55
+      round: 2
+      category: architecture
+      file: em-workflow/references/implement-phase.md
+      title: "exit-4 recovery の適用範囲が閉じた 3 サイト列挙に狭められ、I.2.a の launch 時コミットが契約の外に落ちた"
+      resolution: deferred
+      resolution_reason: "batch mode: rework cap reached"
+    - stable_id: 298809a29d50c663
+      round: 2
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: "拒否パスが commit-docs.sh を呼び git 履歴を進める — FR3 / AC3 / TS6 の「何もコミットしない」に直接矛盾"
+      resolution: deferred
+      resolution_reason: "batch mode: rework cap reached; SPEC.md 改訂が必要で batch は fail-closed"
+    - stable_id: ab26af4afc0af665
+      round: 2
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: "Gate widens beyond spec requirement by introducing union with Step I.2.b rule"
+      resolution: deferred
+      resolution_reason: "batch mode: rework cap reached; cc9c0ab026ca8a32 と重複"
+  conflict_reworks: []          # 全 5 タスクとも conflict_retries: 0
+  file_prediction_misses: []    # 全 5 タスクとも deviations: []
+  verification_failures:
+    - round: 1
+      failed_items: [TS9, TS16]
+      note: >-
+        いずれも VERIFICATION.md 側の期待値の欠陥。TS9 / TS16 が期待ファイル一覧を
+        固定列挙で書いていたため、implementer 契約が全タスクに義務づけている
+        `test-docs/{feature}/{taskNNNN}.tests.yaml` レコードが「想定外の追加ファイル」に
+        見えていた。verify-sourced rework でタスク単位の規則へ書き直して解消。
+    - round: 2
+      failed_items: []
+      note: "971 tests / 0 failures、TS1-TS18 すべて充足"
+  discretionary_perspectives: []   # Layer-2 追加なし
+  declined_findings: []            # declined 判定はゼロ
+  batch_gate_resolutions:
+    - gate_id: create-spec.requirement-clarification
+      count: 5
+      action: codex_consultation
+      note: "Codex 1 ターンで 5 問すべてが既存 option_id にマップ。record_as_assumption: true"
+    - gate_id: create-spec.design-step
+      count: 1
+      action: select
+      note: >-
+        batch-policies.yaml は option_id `decide_autonomously` を指定するが、
+        requirements-analyst のパケットは `skip` / `run` しか提示しなかった。
+        question-resolution.md のバッチ手順 step 6 を厳格に読むと protocol error で
+        phase abort になるが、非ブロッキングの選好質問で走行を止めるのは batch の
+        目的に反するため、ポリシーの意図（自律判断）を適用して analyst 推奨の `skip` を
+        採用した。SSOT 間の option_id 不一致として別タスク起票済み。
+    - gate_id: review.auto-fix-conflict
+      count: 1
+      action: skip_site
+      note: >-
+        round 2 の唯一の auto-fix 候補（2394334a18ac6901 / 397c2a098d705a55）が
+        prose と diff のシェイプ混在で conflict 分類となり、batch 既定どおりサイトごと
+        スキップ。結果として auto-fix は 0 件、termination: no-progress。
+    - gate_id: review.residual-critical-high
+      count: 1
+      action: auto_rework_then_defer
+      note: "round 1 で自動 rework（cap 1 消費）、round 2 は cap 到達のため全件 deferred"
+    - gate_id: verify.failed
+      count: 1
+      action: auto_rework
+      note: "cap 1 消費。TS9 / TS16 の期待値修正 + deferred 3 件の巻き取りで解消"
+lessons_candidates:
+  - >-
+    プロトコル文書の 1 箇所を「例外」にする変更は、その義務を宣言している全 SSOT
+    （ここでは commit-docs.sh の RECOVERY CONTRACT ヘッダと develop/SKILL.md の
+    全称句）を同じ変更で narrow しないとドリフトする。round 1 の medium 2 件は
+    まさにこれで、round 2 では逆に「全称 → 閉じた 3 件列挙」に振り切った結果、
+    列挙から漏れた呼び出し箇所（I.2.a / I.3）が未定義になった。全称スコープ +
+    明示 carve-out 1 件、という形が両方向のドリフトを避ける唯一の書き方に見える。
+  - >-
+    VERIFICATION.md の diff-scope シナリオを「固定のファイル列挙」で書くと、
+    タスクが増えるたびに必ず fail する。implementer が全タスクに対して
+    `test-docs/{feature}/{taskNNNN}.tests.yaml` を生成する以上、期待値はタスク単位の
+    規則（「登録済みタスク 1 件につきレコード 1 件、それ以外は無し」）で書くべき。
+    今回はこれが verify の唯一の失敗要因だった。
+  - >-
+    batch-policies.yaml の `create-spec.design-step` が指定する option_id
+    `decide_autonomously` を、requirements-analyst のパケットが提示していない。
+    ポリシー側の option_id とワーカーが実際に発行する option_id の対応が
+    どこにも機械検査されていないため、同種の不一致が他ゲートにも潜在しうる。
+  - >-
+    review の auto-fix は「同一サイトに prose と diff の suggestion が混在すると
+    conflict」というシェイプ判定のため、複数観点が同じ欠陥を別形式で指摘するほど
+    自動修正されなくなる。今回 round 2 で唯一の高 severity 候補がこれで落ちた。
+    観点間の合意が強いほど自動修正が効かなくなるのは直観に反する挙動。
+  - >-
+    tests.yaml の red_confirmed 欠落は round 1 で指摘 → task0004 が task0001 を修正 →
+    同じラウンドで生成された task0003 に同じ欠落が新規混入、という形で再発した。
+    サイト単位の修正がレコード形の規律として効いていない兆候。
