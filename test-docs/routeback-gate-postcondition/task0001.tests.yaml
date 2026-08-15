@@ -92,6 +92,7 @@ acceptance_tests:
       unreachability wording existed yet.
   AC-6:
     tests: []
+    red_confirmed: false
     red_reason: >-
       Process/meta criterion verified by inspection, not a single test:
       confirmed via `git diff --stat` that only
@@ -106,6 +107,7 @@ acceptance_tests:
       flags the pre-change sample wording.
   AC-7:
     tests: []
+    red_confirmed: false
     red_reason: >-
       Process/meta criterion, not a single test: `python3 -m unittest
       discover -s tests` exits 0 from the repository root (945 tests, 0

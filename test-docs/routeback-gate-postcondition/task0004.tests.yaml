@@ -1,0 +1,54 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process/meta criterion verified by inspection, not a single test (Test
+      Notes forbid adding a schema checker for tests.yaml files -- FR5/ASM4):
+      loaded task0001.tests.yaml with `python3 -c "import yaml; ..."` and
+      confirmed every one of the seven `acceptance_tests` entries (AC-1
+      through AC-7) has exactly the key set {tests, red_confirmed,
+      red_reason}, with red_confirmed a Python bool in every case. Before
+      this task's edit, AC-6 and AC-7 had only {tests, red_reason} (two
+      keys) -- confirmed by reading the pre-edit file content.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by inspection: after the edit, AC-6.red_confirmed and
+      AC-7.red_confirmed both read `false`. AC-1.red_confirmed through
+      AC-5.red_confirmed read true, false, true, true, true respectively --
+      identical to the pre-edit values, confirmed via `git diff` showing no
+      change to any pre-existing red_confirmed line.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by `git diff -- test-docs/routeback-gate-postcondition/task0001.tests.yaml`:
+      the diff shows exactly two added lines (`red_confirmed: false` under
+      AC-6 and under AC-7) and zero removed or modified lines. task_id,
+      baseline_failures, final_failures, every tests list and every
+      red_reason string are therefore byte-unchanged. The file was also
+      re-parsed as YAML successfully after the edit (see AC-1's inspection),
+      confirming it still parses.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by `git status --porcelain` and `git diff --stat` on the task
+      branch: the only modified file is
+      test-docs/routeback-gate-postcondition/task0001.tests.yaml (2
+      insertions, 0 deletions); task0002.tests.yaml does not appear in the
+      diff at all. This task's own task0004.tests.yaml is the implementer
+      contract's output, not part of the task plan's diff scope.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by running `python3 -m unittest discover -s tests` from the
+      repository root both before (4a baseline: 945 tests, OK, 0 failures)
+      and after (final run: 945 tests, OK, 0 failures) the edit -- identical
+      test count both times, exit code 0, no test added, skipped or removed.
