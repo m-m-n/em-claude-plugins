@@ -62,7 +62,7 @@ workflow:
       requirement is `excluded`, so no scenario was out of scope.
   - id: retrospect
     status: completed
-    completed_at_commit: PLACEHOLDER
+    completed_at_commit: 4109269c0e1a29bf2ac1ddcb2458d48c41d7a905
 
 tasks:
   task0001:
