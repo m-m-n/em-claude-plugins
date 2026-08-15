@@ -56,10 +56,16 @@ another; reading another task's file is allowed.
 | File | Owner |
 |------|-------|
 | `em-workflow/references/implement-phase.md` | task0001 |
-| `tests/test_recycled_task_id_consistency.py` | task0001 |
+| `tests/test_recycled_task_id_consistency.py` | task0001, then task0003 (D8) |
 | `em-workflow/.claude-plugin/plugin.json` | task0002 |
 | `.claude-plugin/marketplace.json` | task0002 |
 | `tests/test_recycled_task_id_version_bump.py` | task0002 |
+| `test-docs/recycled-task-id-consistency/task0003.tests.yaml` | task0003 |
+
+The one-writer rule constrains tasks that run in PARALLEL. task0003 belongs to a
+later rework round, so it is the only task in flight when it writes; it inherits
+sole write ownership of `tests/test_recycled_task_id_consistency.py` from the
+merged task0001 rather than sharing it (D8).
 
 Files no task may touch: anything under `em-workflow/hooks/`,
 `em-workflow/scripts/`, `em-workflow/agents/`, `em-workflow/skills/`,
@@ -91,7 +97,8 @@ Both modules follow the pattern of `tests/test_implement_routeback_gate.py`:
   an assertion brittle. Byte-identity assertions use the raw text instead.
 - At least one negative-proof test class per module: each new matcher is shown
   to flag the corresponding pre-change wording (a test that can never fail is
-  not a test).
+  not a test). The shape that proof must take — shared constant, captured
+  sample, normalization, non-vacuity guard, recorded exemptions — is D8.
 
 ### Error-handling convention
 
@@ -215,6 +222,35 @@ which is possible because each task's assertions only concern files that task
 owns — with the single documented exception of task0002's bare-git-line
 assertion, which holds both before and after task0001's edit. Affected tasks:
 both.
+
+### D8: One matcher literal, shared by the assertion and its negative proof
+
+Verify found (TS-14 / SC-6) that a negative proof written with its own copy of a
+matcher's literal proves nothing about the matcher that actually runs: the two
+copies drift, and the assertion can then pass against wording that never
+changed. The contract every negative proof in this feature's test modules
+follows is therefore:
+
+1. Each matcher that asserts NEW post-change wording keeps its literal in ONE
+   module-level constant. The positive assertion and its negative proof both
+   read that constant; the literal is never spelled twice.
+2. Each negative proof runs against a captured pre-change sample — a verbatim
+   excerpt of the file under test at the implement phase's base commit — and
+   applies the module's own whitespace-normalizing helper to it first, so the
+   proof exercises the same comparison the positive assertion does.
+3. Each sample carries a RETAINED anchor asserted positively in a guard test, so
+   a sample that was emptied or truncated past the relevant sentence fails
+   loudly instead of making every absence assertion pass vacuously.
+4. Matchers that assert RETAINED pre-change wording, and pure regression guards,
+   need no negative proof; the module records that exemption per matcher in its
+   docstring inventory rather than leaving it implicit.
+
+This is a cross-task contract because it governs both new modules'
+`TestValidationDetectsRegressions` classes and the NFR5 clause both tasks
+inherit. `tests/test_recycled_task_id_version_bump.py` already satisfies it for
+both of its matchers and is not modified. Affected tasks: task0001 (author of
+the module task0003 extends), task0002 (already conformant), task0003
+(brings the eight remaining matchers into conformance).
 
 ## Risk Assessment
 
