@@ -43,7 +43,7 @@ by another task (reads never conflict); only a WRITE to the same file conflicts.
 | `em-workflow/references/implement-phase.md` | The protocol document under change | Written by task0001 ONLY. Postcondition after task0001's edit, relied on by task0002's assertions: no line of the file, after stripping indentation and markdown backticks, begins with `git ` and also contains `commit` or `add -A`; the heading `### I.2.c: Failed handling` and the batch-mode paragraph that closes the I.2.c section stay byte-identical, with that paragraph still the last text of the section | task0001 (writes), task0002 (reads) |
 | NFR1 anchor set | The literals and orderings existing suites depend on | Precondition on every edit: the raw, un-normalized literals and the intra-section orderings listed under "Anchor-preservation contract" below survive unchanged. Postcondition: `python3 -m unittest discover -s tests` is green with the six protected modules unmodified | task0001, task0002 |
 | `tests/` module namespace | Where new document-contract assertions live | Exactly one new module per task; the two module paths are fixed in the ownership map below so parallel tasks never write the same file. Neither task modifies any pre-existing module | task0001, task0002 |
-| Plugin version value `0.1.37` | The version both registries must carry | Written by task0002 ONLY, into both `em-workflow/.claude-plugin/plugin.json` (`version`, replacing `0.1.36`) and the `em-workflow` entry of the root `.claude-plugin/marketplace.json` (`version`, a NEW key). Postcondition: both parse as JSON and report `0.1.37` for `em-workflow` | task0002 |
+| Plugin version value `0.1.38` | The version both registries must carry | Written by task0002 ONLY, into both `em-workflow/.claude-plugin/plugin.json` (`version`, replacing `0.1.37`) and the `em-workflow` entry of the root `.claude-plugin/marketplace.json` (`version`, a NEW key). Postcondition: both parse as JSON and report `0.1.38` for `em-workflow` | task0002 |
 
 ## Conventions
 
@@ -208,7 +208,7 @@ restating hook internals. Affected tasks: task0001.
 ### D6: Version-bump safety against existing monotonic assertions
 
 Three existing modules assert the em-workflow plugin version is on the `0.1.x`
-line and strictly greater than a fixed pre-feature baseline. `0.1.37` satisfies
+line and strictly greater than a fixed pre-feature baseline. `0.1.38` satisfies
 all of them, so no existing module needs to change. The root marketplace entry
 currently has no `version` key and no existing test reads that file, so ADDING
 the key is safe. Affected tasks: task0002.
