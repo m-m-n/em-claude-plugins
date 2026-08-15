@@ -40,9 +40,9 @@ document is written; this phase never creates them itself.
   (safe: the integration worktree never carries uncommitted state across
   turns — every workflow.yaml / document write, in every phase, is followed
   by a `commit-docs.sh` commit in the same step; NFR2).
-- **exit-4 recovery** (bounded; applies to every `commit-docs.sh` call site in
-  this phase — Step I.1's baseline commit, Step I.2.b's wake-phase commit,
-  and Step I.2.c's route-back commit): exit 4 means a concurrent
+- **exit-4 recovery** (bounded; applies to Step I.1's baseline commit and
+  Step I.2.b's wake-phase commit — the two `commit-docs.sh` call sites in
+  this phase where exit 4 can occur): exit 4 means a concurrent
   `merge-task.sh` advanced the branch ref
   between that call site's last refresh and its commit attempt. Recovery:
   refresh the integration worktree again (the `reset --hard` above), RE-CAPTURE
@@ -52,7 +52,13 @@ document is written; this phase never creates them itself.
   source (the recorded base_commit, or the journal/report facts), never a
   replay of a stale diff — and retry `commit-docs.sh` once. A second exit 4
   stops the phase immediately with a report naming the call site and the
-  task(s) involved; never loop unbounded.
+  task(s) involved; never loop unbounded. Step I.2.c's route-back commit is
+  unreachable for exit 4, tied to the widened I.2.c gate below: that gate
+  lets route back proceed only when no task has status `in_progress`, so no
+  implementer of this feature can be running at that point; implementers
+  are the only callers of `merge-task.sh` against this integration branch;
+  therefore no concurrent ref advance can occur between that call site's
+  refresh and its commit attempt.
 - Every workflow artifact — `feature-docs/{feature}/` (REQUIREMENTS.md,
   SPEC.md, workflow.yaml, IMPLEMENTATION.md, VERIFICATION.md, tasks/,
   reviews/, retrospect.yaml), `test/README.md`, `design-system/` — is written
@@ -345,9 +351,13 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   resume guard).
 - **route back to planning** — a task that cannot be implemented as planned
   means the plan (or the spec behind it) is wrong; fix it upstream, not
-  here. This automatic re-entry applies only when no task has status
-  `merged` — the absence of any `merged` task; the drain above has
-  already retired every `in_progress` sibling by this point. Refresh
+  here. This automatic re-entry applies only when the gate holds: no task
+  has status `merged`, and no task has status `in_progress` — both
+  re-read from workflow.yaml task statuses at this point, as an
+  independent check, not inferred from the drain above (which only
+  describes the normal case, not the admissibility test); a stale or
+  unretired `in_progress` entry left by a crashed implementer blocks this
+  path exactly as a `merged` task does. Refresh
   the integration worktree first (`git -C "$WT_ROOT/integration"
   reset --hard em-workflow/{feature}/integration`), then capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
@@ -367,7 +377,9 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   every {T} just reset), then commit the write-back against the
   integration worktree: `commit-docs.sh "$WT_ROOT/integration"
   "docs({feature}): implement route back to planning" "$ROUTEBACK_TIP"`
-  (exit-4 recovery: Branch & Worktree Model above). End the phase with a
+  (exit 4 cannot occur at this call site — see the Branch & Worktree
+  Model's exit-4 recovery bullet above for why; an unexpected non-zero
+  exit here stops the phase immediately with a report). End the phase with a
   clear report; create-plan re-enters afterwards. The develop state
   machine does **not** stop on this `needs_update` —
   `skills/develop/SKILL.md` Step B's stop-condition-3 precedence clause
@@ -375,11 +387,15 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   planner with the step still `needs_update` (not restated here). The
   planner re-scopes the failed task (split it, change the approach) — or,
   when a requirement itself must be dropped, routes that change through
-  the normal SPEC.md update path first. If any task has already merged, this
-  automatic re-entry does not apply: `create-plan` is NOT set to
-  `needs_update`, `implement` stays `failed`, and the phase reports and
-  returns control to the user via develop's stop condition 3 — the same
-  terminal as the "abort phase" option below.
+  the normal SPEC.md update path first. When the gate does not hold —
+  because a task has status `merged`, or because a task has status
+  `in_progress` — this automatic re-entry does not apply: `create-plan`
+  is NOT set to `needs_update`, `implement` stays `failed`, and the phase
+  reports and returns control to the user via develop's stop condition 3
+  — the same terminal as the "abort phase" option below. No retry loop,
+  no alternative recovery route, and no degraded route back is offered
+  for this path; nothing is committed and no worktree/branch cleanup is
+  started.
 - **abort phase** — leave `implement` as `failed` for manual handling.
 
 There is NO skip option: a task is either merged, retried, or re-planned —
