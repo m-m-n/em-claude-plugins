@@ -145,6 +145,7 @@ acceptance_tests:
       lines, every one `#`-prefixed.
   AC-7:
     tests: []
+    red_confirmed: false
     red_reason: >-
       Process/meta criterion, not a single test: all test changes live in
       tests/test_implement_routeback_gate.py (git diff --stat confirms no
@@ -162,6 +163,7 @@ acceptance_tests:
       pre-change sample.
   AC-8:
     tests: []
+    red_confirmed: false
     red_reason: >-
       Process/meta criterion, not a single test: `python3 -m unittest
       discover -s tests` exits 0 from the repository root (971 tests, 0

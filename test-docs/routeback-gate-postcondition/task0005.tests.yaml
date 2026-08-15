@@ -1,0 +1,97 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process/meta criterion verified by inspection, not a test: loaded
+      test-docs/routeback-gate-postcondition/task0003.tests.yaml with
+      yaml.safe_load and checked, for every entry under `acceptance_tests`
+      (AC-1 through AC-8), that `entry.keys() == {"tests", "red_confirmed",
+      "red_reason"}` and `type(entry["red_confirmed"]) is bool`. Before this
+      task's edit, AC-7 and AC-8 had only `{"tests", "red_reason"}` (missing
+      `red_confirmed`); after adding the key, all eight entries satisfy the
+      check.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process/meta criterion verified by inspection: `git diff` on
+      task0003.tests.yaml shows exactly two added lines, `red_confirmed:
+      false` under AC-7 and under AC-8, with every surrounding line
+      (including both entries' `red_reason` text) unchanged. AC-1 through
+      AC-6's `red_confirmed` values (all `true`) are untouched by the diff.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process/meta criterion verified by inspection: extracted every
+      `def test_...` name from tests/test_implement_routeback_gate.py (69
+      methods) and every method name referenced from any `tests:` list in
+      task0001.tests.yaml, via a small ad hoc Python script using
+      yaml.safe_load (no script committed, per FR5/ASM4 -- Test Notes).
+      Before this task's edit, three referenced names were not in the
+      defined set: test_implement_stays_failed,
+      test_document_order_gate_before_refresh_tip_writeset_cleanup_commit,
+      test_rejected_path_commits_nothing_and_starts_no_cleanup. After
+      re-pointing them at test_implement_is_written_to_failed_and_committed,
+      test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup, and
+      test_rejected_path_states_rescoped_no_side_effect_sentence plus
+      test_old_unscoped_no_side_effect_sentence_absent, the referenced set
+      is a subset of the defined set (empty set difference).
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process/meta criterion verified by inspection: AC-4's `tests` list had
+      2 entries before this task's edit and has 3 after (one direct rename,
+      one entry replaced by two successor tests that together carry its
+      "commits nothing and starts no cleanup" assertion -- the new-sentence
+      presence half and the old-phrase absence half, per IMPLEMENTATION.md
+      D4's rewrite pattern). Every other AC entry's `tests` list in
+      task0001.tests.yaml is untouched and remains non-empty where it was
+      non-empty before (`git diff` shows no other AC block touched).
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process/meta criterion verified by inspection: `git diff` on both
+      edited files shows the only changed lines are the two added
+      `red_confirmed: false` lines in task0003.tests.yaml and the three
+      re-pointed method-name lines in task0001.tests.yaml (one line changed
+      to one, one line changed to two). Every `red_reason` string, and every
+      `red_confirmed` value not touched by AC-2, is byte-identical to its
+      pre-task value -- confirmed by the diff containing no other hunk.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process/meta criterion verified by inspection: both files load without
+      error via yaml.safe_load after the edit. `task_id`, `baseline_failures`
+      and `final_failures` in both files, and every `acceptance_tests` field
+      not named in this task's fix, are absent from the diff, so they are
+      unchanged.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process/meta criterion verified by inspection: `git diff --stat` from
+      the task branch shows exactly two files changed --
+      test-docs/routeback-gate-postcondition/task0001.tests.yaml and
+      test-docs/routeback-gate-postcondition/task0003.tests.yaml -- plus
+      this task's own task0005.tests.yaml once committed. `git diff --stat`
+      scoped to em-workflow/, tests/,
+      test-docs/routeback-gate-postcondition/task0002.tests.yaml and
+      test-docs/routeback-gate-postcondition/task0004.tests.yaml produced no
+      output, confirming none of them changed.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process/meta criterion (NFR3): `python3 -m unittest discover -s
+      tests` exits 0 from the repository root -- 971 tests, 0 failures,
+      identical to the 971 tests at task start named in the plan. No test
+      was added, skipped or removed: this task edits only YAML records
+      under test-docs/, which the discover path does not include.
