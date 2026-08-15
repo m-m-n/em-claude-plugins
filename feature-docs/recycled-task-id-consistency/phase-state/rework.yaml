@@ -48,4 +48,4 @@ spec_change:
     宣言集合を修正する。
   finding_stable_id: TS-12
   recorded_at_commit: 5039f99ce360e785d746c7176ffe00f090ce5748
-  consumed: false
+  consumed: true

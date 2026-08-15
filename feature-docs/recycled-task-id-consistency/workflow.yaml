@@ -20,9 +20,8 @@ project:
 workflow:
   - id: create-spec
     artifacts: [REQUIREMENTS.md, SPEC.md]
-    status: needs_update
-    completed_at_commit: 5f897970684bff35daf806e8f664a724b9ecbdef
-    needs_update_reason: "rework の spec-change 遷移。FR8 / AC-8 の宣言ファイル集合に test-docs/{feature}/** を追加する（phase-state/rework.yaml の spec_change 参照）"
+    status: completed
+    completed_at_commit: c5d9c957a98b6658a8722c79368d0e1a85598192
   - id: design
     artifacts: [DESIGN.md, design/]
     status: skipped
