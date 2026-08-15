@@ -1,0 +1,328 @@
+round: 2
+executed_at: "2026-08-15T23:05:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: b219c321d384ca823d994b2e8254e596c1e32598
+  head_commit: 3a56347de68d085760f7ae088a5b4297145d1e38
+  changed_files:
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - em-workflow/scripts/commit-docs.sh
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/routeback-gate-postcondition/task0001.tests.yaml
+    - test-docs/routeback-gate-postcondition/task0002.tests.yaml
+    - test-docs/routeback-gate-postcondition/task0003.tests.yaml
+    - test-docs/routeback-gate-postcondition/task0004.tests.yaml
+    - tests/test_implement_routeback_gate.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+round1_disposition:
+  note: >-
+    All six round-1 findings (a20084be19e61af3, d0373cded02969e7,
+    c5c4f849898d2e81, b3707bdad3d6bf14, e28d931a8a28f55b, 538008334a8016fe) were
+    routed into rework tasks task0003 / task0004 and are confirmed resolved by
+    this round's comprehensive, architecture and cross-model architecture
+    reviewers. Their round-1 records stay `unresolved` as written at the time;
+    this round supersedes them.
+findings:
+  - stable_id: 2394334a18ac6901
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 43
+    line_end: 46
+    title: "exit-4 recovery のスコープが「全呼び出し箇所」から3箇所の閉じた集合に縮小され、I.2.a のローンチ commit が漏れた"
+    description: >-
+      変更前は「applies to every `commit-docs.sh` call site in this phase」で列挙は
+      例示だった。変更後は「the three `commit-docs.sh` call sites in this phase
+      where exit 4 can occur」という網羅性を主張する閉じた列挙になり、I.1 / I.2.b /
+      I.2.c 拒否パス terminal の 3 つだけになっている。しかしこのフェーズには他にも
+      commit-docs.sh 呼び出し箇所がある: Step I.2.a の `tasks.{T}.status =
+      in_progress` 書き込み（refill 経由では兄弟 implementer が in-flight のまま走る
+      ため、concurrent merge-task.sh による exit 4 が最も起きやすい窓）と、Step I.3 の
+      完了コミット。これらは carve-out でもないため commit-docs.sh の RECOVERY
+      CONTRACT には依然拘束されるが、フェーズ文書の列挙から外れた。結果、
+      オーケストレーターが I.2.a のコミットで exit 4 を受けたときに想定外終了として
+      develop 実行を中断する誤動作が起こりうる。develop/SKILL.md と commit-docs.sh の
+      2 つの SSOT は「route-back 以外は全サイト bound」と言っており、
+      implement-phase.md だけが「この 3 サイトのみ」と言う不整合でもある。
+    suggestion: >-
+      列挙を閉じた集合として書かず、「bounded recovery はこのフェーズの全
+      commit-docs.sh 呼び出し箇所に適用される（Step I.1 の baseline commit、
+      Step I.2.a の launch/refill ステータスコミット、Step I.2.b の wake-phase
+      commit、Step I.2.c の rejected-path terminal status commit、Step I.3 の完了
+      コミットを含む）。唯一の carve-out は Step I.2.c の route-back commit」と
+      書き直す。3 件に限定したいなら I.2.a と I.3 についても到達不能性を証明する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 397c2a098d705a55
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 43
+    line_end: 46
+    title: "exit-4 recovery の適用範囲が閉じた 3 サイト列挙に狭められ、I.2.a の launch 時コミットが契約の外に落ちた"
+    description: >-
+      2394334a18ac6901 と同一サイトを architecture 観点から独立に検出したもの。
+      このフェーズの commit-docs.sh 呼び出しは 4 つ以上（I.1 baseline / I.2.a launch
+      write / I.2.b wake / I.2.c の 2 サイト / I.3 完了 write）あり、閉じた 3 件列挙は
+      網羅していない。とくに I.2.a は refill 経路で in-flight の兄弟実装者がいる状態で
+      走るため exit 4 の窓が最も広い。この列挙は develop/SKILL.md の「commit-docs.sh の
+      全呼び出し箇所で共通（ただし route-back は対象外）」および commit-docs.sh の
+      RECOVERY CONTRACT（「binding on every caller EXCEPT ... today exactly one such
+      site」）と正面から矛盾し、I.2.a / I.3 のコミットが bound でも carve-out でもない
+      未定義状態になる。
+    suggestion: >-
+      全称スコープに戻し carve-out は 1 件だけという形に直す。提案 diff:
+      「exit-4 recovery (bounded; applies to EVERY `commit-docs.sh` call site in
+      this phase — Step I.1's baseline commit, I.2.a's launch-time
+      `tasks.{T}.status` / `tasks.{T}.branch` write, Step I.2.b's wake-phase
+      commit, Step I.2.c's rejected-path terminal status commit and Step I.3's
+      completion write — with exactly one exclusion, named below)」。既存テストが
+      固定している 3 文字列と OLD_EXIT4_ENUMERATION_TAIL の不在はこの形でも維持される。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 298809a29d50c663
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 419
+    line_end: 428
+    title: "拒否パスが commit-docs.sh を呼び git 履歴を進める — FR3 / AC3 / TS6 の「何もコミットしない」に直接矛盾"
+    description: >-
+      SPEC FR3「the rejected path commits nothing and mutates nothing」、AC3
+      「says nothing is committed on the rejected path」、TS6「no `commit-docs.sh`
+      call and no cleanup step can be reached after the gate rejects」に対し、
+      rework 後の拒否パスは統合 worktree を `reset --hard` で更新し、`TERMINAL_TIP`
+      を取得し、`commit-docs.sh ... "docs({feature}): implement route-back gate
+      rejected" "$TERMINAL_TIP"` を実行する。round 1 が指摘した FR2/AC2（implement を
+      `failed` に SET する = 書き込み）と AC3 の緊張を、実装側が FR2 を採り AC3 を破る
+      形で決着させただけで SPEC は未修正。Branch & Worktree Model の exit-4 列挙にも
+      SPEC が存在しないと述べているコミットが追加されている。
+    suggestion: >-
+      (a) SPEC を改訂する: FR3 / AC3 / TS6 の「nothing is committed / mutates
+      nothing」を「route-back の write set・worktree/branch cleanup・route-back
+      コミットは行わない。terminal status write とその commit のみが副作用」へ
+      再スコープし、根拠（統合 worktree はターン跨ぎで未コミット状態を持たないため
+      FR2 の書き込みは必然的にコミットを伴う）を SPEC に明記する。Decision structure
+      図と TS6 の文面も更新する。(b) 実装を SPEC のまま満たす: 拒否パスから refresh /
+      TERMINAL_TIP / commit-docs.sh を外し、FR2 の `implement: failed` をどこで永続化
+      するのかを SPEC 側で定義し直す。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached; requires a SPEC.md revision, which batch resolves fail-closed (rework.spec-change)"
+  - stable_id: ab26af4afc0af665
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 391
+    title: "Gate widens beyond spec requirement by introducing union with Step I.2.b rule"
+    description: >-
+      FR1/OBJ1 は route-back ゲートを「no task has status `merged` AND no task has
+      status `in_progress`」の 2 項として規定するが、diff の `in_progress` 側は
+      workflow.yaml と Step I.2.b の last-event-per-task ルールの union になっている。
+      SPEC はゲートの情報源として workflow.yaml の task status のみを述べており、
+      第 2 情報源は SPEC の要求範囲を超えて admissibility を狭めうる。
+      cc9c0ab026ca8a32（Claude spec 側の同趣旨指摘）と実質同一の論点だが、
+      同一サイト判定（line 391 vs 375）には届かなかったため独立エントリとして残す。
+    suggestion: >-
+      union 節を外して workflow.yaml の task status のみの 2 項条件に戻すか、
+      SPEC NFR2 / FR1 / AC1 側を union を含む形に改訂して整合させる。
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached; overlaps cc9c0ab026ca8a32"
+  - stable_id: dbb12002e43e113d
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 428
+    line_end: 433
+    title: "拒否パスだけ `implement: failed` を書くようになり、「abort phase と同じ terminal」という等値主張が成立しなくなった"
+    description: >-
+      拒否パスは `implement` を `failed` に書いてコミットするようになった一方、
+      隣の abort phase 選択肢（「leave `implement` as `failed` for manual handling」）と
+      batch mode 段落（「implement stays `failed`, report and stop」）は書き込みを
+      行わない旧表現のまま。Step I.1 で `implement` は `in_progress` になるため、
+      abort を選んだ場合の実 status は `in_progress` のままで develop の停止条件 3 が
+      発火せず、Step B が implement を再実行して I.2.c で再び三択を出すループになる。
+      batch mode の「2 回目の failed で abort、report して停止」も同じ理由で根拠を失う。
+    suggestion: >-
+      abort phase 選択肢と batch mode の abort を拒否パスと同じ明示的な書き込みに
+      揃える（refresh 後に `implement: failed` を書き commit-docs.sh でコミットしてから
+      報告し停止条件 3 で制御を返す）。それが望ましくないなら拒否パス側の「the same
+      terminal as the "abort phase" option below」を削り、両者が同じ terminal では
+      ないことを明記する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: ec4a77d0acd113a9
+    severity: medium
+    category: comprehensive
+    file: test-docs/routeback-gate-postcondition/task0003.tests.yaml
+    line: 146
+    line_end: 180
+    title: "task0003.tests.yaml の AC-7 / AC-8 に `red_confirmed` が無い（round 1 で指摘され task0004 が直したのと同じ欠落の再発）"
+    description: >-
+      round 1 は task0001.tests.yaml の同じ欠落を指摘し task0004 が解消したが、同じ
+      rework ラウンドで生成された task0003.tests.yaml の AC-7 / AC-8 は `tests: []` と
+      `red_reason` だけで `red_confirmed` を持たない。implementer のテスト記録契約は
+      `tests: []` の criterion も含め全 AC エントリに `red_confirmed` を要求している。
+      後続フェーズが機械的に読むと該当 AC で KeyError 相当になる。
+    suggestion: "task0003.tests.yaml の AC-7 / AC-8 に `red_confirmed: false` を追加する（いずれも process/meta 基準で観測された red が無いため false が正しい値）。"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: b0cfa3f73c54f78d
+    severity: medium
+    category: architecture
+    file: test-docs/routeback-gate-postcondition/task0003.tests.yaml
+    line: 146
+    line_end: 165
+    title: "task0003.tests.yaml の AC-7 / AC-8 に `red_confirmed` が無く、round 1 が task0001 で指摘した契約違反を新ファイルで再現している"
+    description: >-
+      ec4a77d0acd113a9 と同一サイトを architecture 観点から独立に検出したもの。
+      tests.yaml のレコード形は implementer 契約が所有する SSOT であり、
+      `tests` / `red_confirmed` / `red_reason` の 3 キーを持つ。round 1 の修正が
+      サイト単位に留まり、レコード形の規律としては効いていないことを示している。
+    suggestion: "task0004 が task0001.tests.yaml に対して行ったのと同じ 2 行（`red_confirmed: false`）を AC-7 / AC-8 に追加する。"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 198872620f741da4
+    severity: medium
+    category: comprehensive
+    file: test-docs/routeback-gate-postcondition/task0001.tests.yaml
+    line: 59
+    line_end: 62
+    title: "task0003 のテストリネームで task0001.tests.yaml の AC→test 参照が3件宙に浮いた（AC-4 は全滅）"
+    description: >-
+      task0003 が tests/test_implement_routeback_gate.py を書き換えた際、
+      task0001.tests.yaml が参照するテストメソッド名が 3 件消えた（AC-3 の
+      `test_implement_stays_failed`、AC-4 の
+      `test_document_order_gate_before_refresh_tip_writeset_cleanup_commit` と
+      `test_rejected_path_commits_nothing_and_starts_no_cleanup`）。AC-4 は列挙 2 件とも
+      消えており、記録上の被覆が実行不能な id しか持たない。クラス名は残っており
+      テストは全て green なので CI では気づけない。
+    suggestion: >-
+      task0001.tests.yaml の該当エントリを現行のテスト名に更新する（AC-3 →
+      `test_implement_is_written_to_failed_and_committed`、AC-4 →
+      `test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup` /
+      `test_rejected_path_order_gate_terminal_write_terminal_commit` /
+      `test_old_unscoped_no_side_effect_sentence_absent`）。旧 red の観測事実自体は
+      書き換えず、リネームの事実を `red_reason` に 1 行追記する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: fdedc8f16de14808
+    severity: medium
+    category: spec
+    file: em-workflow/scripts/commit-docs.sh
+    line: 39
+    line_end: 43
+    title: "宣言済みファイルスコープ外の 2 ファイルを変更 — NFR1 / US4 / TS9 に矛盾"
+    description: >-
+      SPEC の File Structure「Files this change may touch」は implement-phase.md /
+      Branch & Worktree Model 文書 / plugin.json / tests/ の 4 つのみを挙げ、TS9 も
+      同じリストを検査する。現 diff はそれに加えて `em-workflow/scripts/commit-docs.sh`
+      （RECOVERY CONTRACT ヘッダのコメント追記）と `em-workflow/skills/develop/SKILL.md`
+      （exit-4 リカバリ括弧の追記）を変更している。両ファイルとも SPEC の凍結リスト
+      （validate-worker-output.py / workflow-patch.md / references/contracts/*）には
+      無く、変更もコメント・プロズのみなので AC5 と凍結 3 ファイルの byte-identity は
+      保たれている。破れているのは宣言済みスコープの方で、TS9 のファイルリスト検査が
+      現状では通らない。拡張自体は内容的には必要（3 SSOT を揃えないと契約が矛盾する）。
+      クロスモデル spec レビュアーは同一サイトを「凍結ファイルの変更」と報告したが、
+      SPEC の凍結リストにこの 2 ファイルは含まれないため、その severity 判定
+      （high / NFR1 違反）はオーケストレーター側で誤読と判断し、本エントリの
+      medium / スコープ宣言の問題として統合した。
+    suggestion: >-
+      SPEC の File Structure「Files this change may touch」に
+      `em-workflow/scripts/commit-docs.sh`（コメントのみ）と
+      `em-workflow/skills/develop/SKILL.md`（exit-4 リカバリ段落のみ）を追加し、
+      TS9 のファイルリストと NFR1 を同じ範囲へ更新する。あわせて「実行行は変更しない /
+      コメント・プロズのみ」という制約を NFR1 に明記する。
+    sources: [claude:spec, "litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 95
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached; requires a SPEC.md revision"
+  - stable_id: cc9c0ab026ca8a32
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 375
+    line_end: 380
+    title: "gate の `in_progress` 判定に workflow.yaml 以外の情報源を追加 — NFR2 の「task statuses alone」に矛盾"
+    description: >-
+      SPEC NFR2 は「Route-back admissibility is decided from `workflow.yaml` task
+      statuses alone」と述べ、AC1 / FR1 も admissibility を 2 項として固定している。
+      現行プロセは `in_progress` 側を「workflow.yaml が in_progress を報告する、
+      または Step I.2.b の last-event-per-task ルールが in-flight を報告する」の
+      union として定義している。方向としてはゲートが厳しくなるだけなので OBJ1 は
+      破られないが、SPEC が resolved として固定した NFR2 の "alone" と AC1 の 2 項
+      条件を SPEC 改訂なしに実装側が広げている。
+    suggestion: >-
+      (a) SPEC NFR2 を union を含む形に改訂し FR1 / AC1 の条件記述にも第 2 情報源を
+      追加する（round 1 で union が要求された経緯を SPEC に残す）。(b) union を落として
+      NFR2 どおり workflow.yaml の task status だけで判定する。実装は既に (a) の形。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached; requires a SPEC.md revision"
+  - stable_id: 17748248197b0ec6
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 50
+    line_end: 80
+    title: "Route-back commit still mentioned in exit-4 enumeration despite FR4 requiring removal"
+    description: >-
+      FR4 は I.2.c の route-back commit を exit-4 recovery 列挙から「削除」することを
+      要求するが、diff は削除ではなく carve-out（到達不能性の証明つきの明示的除外）と
+      して言及を残している。オーケストレーター判断: carve-out は FR4 の意図
+      （「exit-4 リカバリが適用されるケースとして扱わない」）を満たしており、
+      round 1 の d0373cded02969e7 / c5c4f849898d2e81 が要求した SSOT 整合には
+      むしろ明示的除外が必要なため、実害は無いと判断する。SPEC FR4 の文言と
+      実装表現のズレとして記録に残すに留める。
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached; assessed as a wording gap with no functional impact"
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+  note: >-
+    R4 の候補ゲートを通過したのは 2394334a18ac6901（comprehensive）と
+    397c2a098d705a55（architecture）の 2 件のみ。両者は same_site グループを成し、
+    片方の suggestion が prose、もう片方が diff というシェイプ混在のため conflict に
+    分類された。batch モードの `review.auto-fix-conflict` は「skip the site（全メンバー
+    を abort）」なので editor は 1 件も dispatch されず、loop は no-progress で終了した。
+    残りの findings は severity: medium か category: spec のため候補ゲートを通過しない。
+residual_critical_high: 4
+rework_required: false
+completion_note: >-
+  `batch.review_rework_count` は round 1 の自動 rework で 1（cap）に達しているため、
+  `references/batch-mode.md` の `review.residual-critical-high` に従い、残存する
+  critical/high を含む全 findings を `deferred`（理由: batch mode: rework cap
+  reached）として review step を completed にする。spec カテゴリの 4 件は SPEC.md の
+  改訂を要するため、batch では `rework.spec-change` の fail-closed 分類に該当し、
+  いずれにせよ自動解決の対象外。人間の評価者への引き継ぎ事項として本記録に残す。
