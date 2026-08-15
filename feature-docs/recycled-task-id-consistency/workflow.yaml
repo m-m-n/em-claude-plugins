@@ -210,5 +210,5 @@ requirements:
     tests: [TS-14, TS-15]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 1
