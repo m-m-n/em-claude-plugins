@@ -1,0 +1,121 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestWakePhaseWriteBackKeyedOffReconciledState.test_reconciled_state_phrasing_present
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_reconciled_state_phrase_matcher_flags_absence_in_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_inapplicable_branch_states_implement_stays_failed
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_inapplicable_marker_and_implement_stays_failed_flag_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_inapplicable_branch_cites_stop_condition_3_and_abort_phase
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_inapplicable_anchored_slice_cannot_be_taken_on_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestNonTerminalEventMakesRouteBackInapplicable.test_inapplicable_branch_names_no_partial_write
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_no_partial_write_phrases_matcher_flags_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_present
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_unreachability_opening_anchor_matcher_flags_absence_in_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_scope_sentence_names_all_four_hooks
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_four_hooks_conjunction_matcher_fails_on_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_scope_sentence_states_status_never_consulted
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_status_never_consulted_matcher_flags_absence_in_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_scope_sentence_governs_only_orchestrator_interpretation
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_orchestrator_only_scope_matcher_flags_absence_in_pre_change_wording
+    red_confirmed: true
+    red_reason: >-
+      Each of the eight matchers' literals was extracted into a single
+      module-level constant referenced by both its positive test (listed
+      above, already existing from task0001) and its new negative-proof
+      test. To confirm the pairing is a genuine shared reference rather than
+      two independently-spelled copies, the whole constants/samples block
+      was temporarily removed and the suite re-run: 20 tests failed with
+      NameError (e.g. "name 'RECONCILED_STATE_PHRASE' is not defined" for
+      both test_reconciled_state_phrasing_present and its paired negative
+      proof; "name 'PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE' is not
+      defined" for the AC-6 group's negative proofs, etc.) -- both members
+      of each pair failed together on the same missing name. Restoring the
+      block made all 977 tests pass again.
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2b_step3_sample_retains_merged_half
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2c_routeback_sample_retains_merged_gate
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_recycled_paragraph_sample_retains_in_flight_sentence
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_hook_parenthetical_sample_retains_queue_launch_guard
+    red_confirmed: true
+    red_reason: >-
+      These four guard tests, and the sample constants they read, did not
+      exist before this task. During the same constants/samples-removal
+      step used for AC-1's evidence, all four failed with NameError (e.g.
+      "name 'PRE_CHANGE_I2B_STEP3_WRITE_BACK_SAMPLE' is not defined").
+      After restoring the samples (each a verbatim excerpt of
+      implement-phase.md at commit b73c6e69e4ee81519d0e6f7f8f6a03ec06b5db24,
+      extracted programmatically via git show plus exact-index slicing to
+      avoid transcription drift), all four pass, each asserting its group's
+      retained anchor phrase is present in the sample.
+  AC-3:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_reconciled_state_phrase_matcher_flags_absence_in_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_inapplicable_marker_and_implement_stays_failed_flag_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_inapplicable_anchored_slice_cannot_be_taken_on_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_no_partial_write_phrases_matcher_flags_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_unreachability_opening_anchor_matcher_flags_absence_in_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_four_hooks_conjunction_matcher_fails_on_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_status_never_consulted_matcher_flags_absence_in_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_orchestrator_only_scope_matcher_flags_absence_in_pre_change_wording
+    red_confirmed: true
+    red_reason: >-
+      All eight negative-proof tests failed with NameError before the
+      module-level constants/samples existed (same removal step as AC-1/
+      AC-2). Per the Design's group-specific proof shapes:
+      test_inapplicable_anchored_slice_cannot_be_taken_on_pre_change_wording
+      and
+      test_unreachability_opening_anchor_matcher_flags_absence_in_pre_change_wording
+      each assert `sample.index(ANCHOR)` raises ValueError (the slice the
+      real matcher relies on cannot be formed on pre-change wording), and
+      test_four_hooks_conjunction_matcher_fails_on_pre_change_wording
+      asserts the already-present `queue_launch_guard.py` name IS in the
+      sample while the other three hook names are absent (the conjunction
+      fails on the missing three, not vacuously on all four). The remaining
+      five are plain assertNotIn checks of their matcher's constant against
+      the normalized sample.
+  AC-4:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Outcome-based, not a red-then-green criterion for a single test:
+      `python3 -m unittest discover -s tests` from the repository root
+      reported 965 passing tests at this task's own Step 4a baseline run
+      (no failures), and 977 passing tests after (965 + 12 new: 8 negative
+      proofs + 4 guard tests) -- strictly greater, as required.
+      `git status --porcelain` throughout
+      shows only tests/test_recycled_task_id_consistency.py modified;
+      tests/test_implement_routeback_gate.py,
+      tests/test_review_implement_develop_lock_contracts.py,
+      tests/test_rework_synthesis_contract.py,
+      tests/test_develop_skill_rewiring.py, tests/test_batch_policies.py,
+      tests/test_check_plugin_invariants.py and
+      tests/test_recycled_task_id_version_bump.py were never touched.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Documentation content (the module docstring's matcher ->
+      negative-proof inventory table), not asserted by any runtime test --
+      there is no automated check of docstring text in this suite, so this
+      criterion's outcome is a build/lint-style property verified by
+      inspection rather than a red-then-green test. Verified by reading the
+      updated docstring: it lists all 30 test methods across the module's
+      ten pre-existing TS-1..TS-10 classes, each mapped either to its
+      negative-proof test name or to an explicit exemption reason
+      (RETENTION matcher, regression guard, or derivative of another
+      matcher's existing proof).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      A git-diff-scope property, not a red-then-green test. Verified via
+      `git diff --name-only` / `git status --porcelain` after implementing:
+      the only path shown is tests/test_recycled_task_id_consistency.py
+      (modified); test-docs/recycled-task-id-consistency/task0003.tests.yaml
+      is the new file this same command creates, added alongside it. No
+      path under em-workflow/, no .claude-plugin manifest, and no other
+      pre-existing module under tests/ was touched.
