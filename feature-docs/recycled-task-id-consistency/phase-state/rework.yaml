@@ -1,7 +1,7 @@
 schema_version: 1
 feature: recycled-task-id-consistency
 phase: rework
-status: needs_user_input
+status: done
 generation: 2
 base_revision: 8c9cd0e
 last_input_digest: "sha256:5db460ae7bcb12c464a866af4cfd6537e7c798c05afd00e6f39b09812785645a"
@@ -14,11 +14,13 @@ packets:
       - question_id: rework.spec-change.fr8-declared-file-set
         status: answered
   rework-q0002:
-    status: open
+    status: closed
     issued_at: "2026-08-16T01:05:00+09:00"
+    closed_at: "2026-08-16T02:40:00+09:00"
+    close_reason: "batch mode: rework cap reached — R5 at-cap defer が rework 経路に優先する"
     questions:
       - question_id: rework.spec-change.routeback-admissibility
-        status: open
+        status: closed
 answers:
   rework.spec-change.fr8-declared-file-set:
     packet_id: rework-q0001
@@ -112,9 +114,13 @@ pending_gate:
         unresolved のまま残り、rework task は作られない。
   recommended_option_id: both
   next_steps: >-
-    人間が option を選んだら、`references/rework-task-synthesis.md` Section 10 の
-    specification-change transition に従う: create-spec を `needs_update`、
-    create-plan / implement / review を `pending`、`workflow[implement].base_commit`
-    は保持、この pending_gate に選択内容を answer として記録して consumed にし、
-    develop を create-spec から再突入させる。
-  consumed: false
+    このゲートは選択されずに閉じた。`references/review-phase.md` Phase R5 の batch
+    規則により、`batch.review_rework_count` が cap 1 に達している時点で review-sourced
+    rework は成立せず、残存 high は `deferred` として記録して review step を完了する。
+    したがって rework-planner の再 dispatch（rework-run-0002）は取り消し、両 finding を
+    follow-up タスクとして起票する。
+  closed_without_selection: true
+  closed_reason: >-
+    batch mode: rework cap reached（`batch.review_rework_count` = 1）。R5 の at-cap
+    分岐が rework 経路より優先されるため、spec-change ゲートを開く前提自体が成立しない。
+  consumed: true

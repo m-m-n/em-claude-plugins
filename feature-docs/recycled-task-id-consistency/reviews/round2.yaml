@@ -54,13 +54,14 @@ findings:
       不到達主張の文言更新を伴う。
     sources: [claude:comprehensive]
     confidence: 65
-    resolution: unresolved
+    resolution: deferred
     resolution_reason: >-
-      auto-fix loop 2 で適用を試みたが、SPEC AC-3 が byte-exact に固定している
-      literal "terminal journal last event (`merged` or `failed`)" を書き換える
-      ため tests/test_recycled_task_id_consistency.py の TS-3 が 2 件失敗した。
-      復元して stable_id を abort。SPEC・protocol・テストの協調変更が必要なため
-      rework に回す。
+      batch mode: rework cap reached。auto-fix loop 2 で適用を試みたが、SPEC AC-3
+      が byte-exact に固定している literal
+      "terminal journal last event (`merged` or `failed`)" を書き換えるため
+      tests/test_recycled_task_id_consistency.py の TS-3 が 2 件失敗した。復元して
+      stable_id を abort。SPEC・protocol・テストの協調変更が必要で、
+      `batch.review_rework_count` は既に cap 1 に達しているため deferred。
   - stable_id: c431ec8ba89742db
     severity: high
     category: comprehensive
@@ -82,13 +83,15 @@ findings:
       INAPPLICABLE 分岐に明示的な回復手順を書く。
     sources: [claude:comprehensive]
     confidence: 65
-    resolution: unresolved
+    resolution: deferred
     resolution_reason: >-
-      auto-fix loop 1 で適用を試みたが、SPEC AC-4 が「I.2.c セクションに `rework`
-      / `append` トークンを含まない」ことを要求しており、提案された TaskStop →
-      `failed` append の退避路がそれに違反して tests/test_implement_routeback_gate.py
-      と tests/test_recycled_task_id_consistency.py が失敗した。復元して
-      stable_id を abort。SPEC 変更を伴うため rework に回す。
+      batch mode: rework cap reached。auto-fix loop 1 で適用を試みたが、SPEC AC-4
+      が「I.2.c セクションに `rework` / `append` トークンを含まない」ことを要求して
+      おり、提案された TaskStop → `failed` append の退避路がそれに違反して
+      tests/test_implement_routeback_gate.py と
+      tests/test_recycled_task_id_consistency.py が失敗した。復元して stable_id を
+      abort。SPEC 変更を伴い、`batch.review_rework_count` は既に cap 1 に達している
+      ため deferred。
   - stable_id: dff48aa5464d3a7d
     severity: medium
     category: comprehensive
@@ -300,4 +303,14 @@ auto_fix:
     実測で確定しており、user-resolvable な候補が残っていないため loop 3 は
     実行していない。
 residual_critical_high: 2
-rework_required: true
+rework_required: false
+completion_gate:
+  resolution: deferred_at_rework_cap
+  reason: >-
+    batch mode: `batch.review_rework_count` が既に 1（cap）に達しているため、
+    `references/review-phase.md` Phase R5 の batch 規則により残存 high 2 件
+    （29b99dea6a37377d / c431ec8ba89742db）を `deferred` として記録し、review step を
+    completed にする。両件は follow-up タスクとして別途起票する。
+  deferred_stable_ids:
+    - 29b99dea6a37377d
+    - c431ec8ba89742db
