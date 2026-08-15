@@ -38,18 +38,14 @@ workflow:
     status: completed
     completed_at_commit: c2a72d1190e7bd3ff9b539a0a5bbbb238a98e93f
   - id: verify
-    status: pending
+    status: failed
     result: fail
     failed_items:
-      - id: TS-12
-        note: "変更集合に `test-docs/recycled-task-id-consistency/*.tests.yaml` が含まれ、SPEC FR8 / AC-8 が宣言するファイル集合の subset を外れる。禁止パス（implement-routeback-gate / hooks / scripts / agents / skills）は 0 件、既存 tests/ モジュールの変更も 0 件。是正には SPEC.md / REQUIREMENTS.md の宣言集合の修正が要る（当該パスは implement-phase.md が必須生成物として定めるため削除不可）"
-      - id: SC-4
-        note: "TS-12 に依存するため同時に不成立"
       - id: TS-14
         note: "新規 matcher ごとの negative-proof が不足。negative proof があるのは consistency 側 4 件（journal-only 文言 / never read workflow.yaml / precondition 不在 / rework・append）と version_bump 側 2 matcher のみで、AC-1 の reconciled-state 文言、AC-4 の INAPPLICABLE 系、AC-5 の unreachability、AC-6 の scope 文の matcher には pre-change 文言による証明が無い"
       - id: SC-6
         note: "TS-14 に依存するため同時に不成立"
-    passed_items_note: "`python3 -m unittest discover -s tests` は 965 tests OK（TS-1..TS-11 / SC-1 / SC-2 / SC-3 / SC-5 / SC-7 充足）。TS-13（SSOT 非重複・文体）も目視で充足。build / format / e2e コマンドは未定義のため評価対象外"
+    passed_items_note: "`python3 -m unittest discover -s tests` は 965 tests OK（TS-1..TS-11 / SC-1 / SC-2 / SC-3 / SC-5 / SC-7 充足）。TS-12 / SC-4 は FR8 / AC-8 の宣言集合に test-docs/{feature}/** を追加した仕様変更により充足（変更集合 13 パスすべてが宣言集合内、禁止パス 0 件、既存 tests/ モジュールの改変 0 件）。TS-13（SSOT 非重複・文体）も目視で充足。build / format / e2e コマンドは未定義のため評価対象外"
 
   - id: retrospect
     status: pending
