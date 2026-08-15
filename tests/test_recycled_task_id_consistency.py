@@ -37,6 +37,62 @@ Covers task0001 Acceptance Criteria
 Content assertions compare against a whitespace-normalized copy of each
 section (line-wrap choices never make an assertion brittle); byte-identity
 assertions (TS-7, TS-8, TS-9) compare the raw, un-normalized text.
+
+task0003 (verify-sourced rework, TS-14 / SC-6) extends this module with
+negative proofs for the eight matchers below that assert NEW post-change
+wording and previously had none: each keeps its literal in one module-level
+constant shared by its positive test and its negative-proof test (Contract
+1), and the negative proofs run against captured pre-change wording samples
+(Contract 2) in `TestValidationDetectsRegressions`, guarded for non-vacuity
+in `TestPreChangeSampleGuards` (Contract 4).
+
+Matcher -> negative-proof inventory (AC-5; every matcher in this module):
+
+- test_reconciled_state_phrasing_present -> new wording ->
+  test_reconciled_state_phrase_matcher_flags_absence_in_pre_change_wording
+- test_journal_only_phrasing_absent -> new wording (pre-existing proof) ->
+  test_journal_only_phrase_matcher_flags_the_pre_change_wording
+- test_merged_half_unchanged -> RETENTION matcher, no proof needed
+- test_report_failed_or_malformed_clause_survives -> RETENTION matcher, no
+  proof needed
+- test_i2a_normative_statement_present -> RETENTION matcher (statement
+  unchanged by task0001's edit), no proof needed
+- test_i2b_step1_citation_present -> RETENTION matcher, no proof needed
+- test_precondition_names_terminal_event_with_merged_and_failed -> new
+  wording (pre-existing proof) ->
+  test_precondition_matcher_flags_absence_in_pre_change_wording
+- test_precondition_precedes_ordered_write_set -> derivative ordering check
+  on the same literal proven by
+  test_precondition_matcher_flags_absence_in_pre_change_wording; no separate
+  proof needed
+- test_existing_merged_gate_survives -> RETENTION matcher, no proof needed
+- test_inapplicable_branch_states_implement_stays_failed -> new wording ->
+  test_inapplicable_marker_and_implement_stays_failed_flag_pre_change_wording
+- test_inapplicable_branch_cites_stop_condition_3_and_abort_phase -> new
+  wording (slice-anchor shape) ->
+  test_inapplicable_anchored_slice_cannot_be_taken_on_pre_change_wording
+- test_inapplicable_branch_names_no_partial_write -> new wording ->
+  test_no_partial_write_phrases_matcher_flags_pre_change_wording
+- test_no_rework_or_append_anywhere_in_i2c -> regression guard (pre-existing
+  proof) -> test_rework_append_matcher_flags_the_bad_wording
+- test_unreachability_sentence_present -> new wording (slice-anchor shape)
+  -> test_unreachability_opening_anchor_matcher_flags_absence_in_pre_change_wording
+- test_retained_in_flight_sentence_survives -> RETENTION matcher, no proof
+  needed
+- test_scope_sentence_names_all_four_hooks -> new wording (conjunction
+  shape) -> test_four_hooks_conjunction_matcher_fails_on_pre_change_wording
+- test_scope_sentence_states_status_never_consulted -> new wording ->
+  test_status_never_consulted_matcher_flags_absence_in_pre_change_wording
+- test_scope_sentence_governs_only_orchestrator_interpretation -> new
+  wording ->
+  test_orchestrator_only_scope_matcher_flags_absence_in_pre_change_wording
+- test_no_never_reads_workflow_yaml_claim_anywhere -> regression guard
+  (pre-existing proof) ->
+  test_never_reads_workflow_yaml_matcher_flags_the_bad_wording
+- TestProtectedRawLiteralsSurvive.* (TS-7), TestWakePhaseCommitLiteralSurvives
+  (TS-8), TestI2cHeadingAndBatchModeParagraphByteIdentical.* (TS-9),
+  TestI2cOrderings.* (TS-10) -> regression guards over pre-existing literals
+  and orderings, no proof needed
 """
 
 import re
@@ -67,6 +123,96 @@ PRE_CHANGE_BATCH_MODE_PARAGRAPH = (
     "retry-consumed state per task in `tasks.{T}.notes`.\n"
     "\n"
 )
+
+# --- task0003 (D8): module-level constants for the eight new-wording
+# matchers this task adds negative proofs for. Each constant is read by
+# both its positive test above and its negative-proof test in
+# TestValidationDetectsRegressions below -- the literal is never spelled
+# twice (Contract 1 / AC-1).
+
+# AC-1 (FR1) group: I.2.b step 3's reconciled-state write-back phrasing.
+RECONCILED_STATE_PHRASE = "step 1 reconciled state is `failed`"
+
+# AC-4 (FR4) group: the I.2.c INAPPLICABLE branch.
+INAPPLICABLE_MARKER = "INAPPLICABLE"
+IMPLEMENT_STAYS_FAILED_PHRASE = "implement` stays `failed`"
+STOP_CONDITION_3_PHRASE = "stop condition 3"
+ABORT_PHASE_TERMINAL_PHRASE = 'the same terminal as the "abort phase" option below'
+NO_PART_OF_WRITE_SET_RUNS_PHRASE = "no part of the write set runs"
+NO_PARTIAL_WRITE_PATH_PHRASE = "no partial-write path"
+
+# AC-5 (FR5) group: the I.2.a unreachability sentence's opening anchor.
+UNREACHABILITY_OPENING_ANCHOR = "Given I.2.c's route-back precondition"
+
+# AC-6 (FR6) group: the I.2.a scope sentence.
+HOOK_FILENAMES = (
+    "queue_launch_guard.py",
+    "queue_stop_guard.py",
+    "queue_failure_net.py",
+    "queue_taskstop_net.py",
+)
+STATUS_NEVER_CONSULTED_PHRASE = "never consult `tasks.{T}.status`"
+ORCHESTRATOR_ONLY_SCOPE_PHRASE = (
+    "governs only the orchestrator's interpretation of the journal"
+)
+
+# --- task0003 (D8): pre-change wording samples, one per group, each a
+# verbatim excerpt of em-workflow/references/implement-phase.md at the
+# implement phase's base commit b73c6e69e4ee81519d0e6f7f8f6a03ec06b5db24
+# (Contract 2). Not paraphrased, not reconstructed -- copied the same way
+# TS-9's byte-identity literal was copied.
+
+# AC-1 group sample: I.2.b step 3's write-back sentence, including its
+# `merged` half (RETAINED anchor) and its report clause.
+PRE_CHANGE_I2B_STEP3_WRITE_BACK_SAMPLE = (
+    "set `tasks.{T}.status = merged` for every task verified\n"
+    "   merged, `= failed` for every task whose last journal event is "
+    "`failed`\n"
+    "   or whose report is `failed`/malformed"
+)
+
+# AC-4 group sample: the I.2.c route-back bullet, from its opening gate
+# sentence ("no task has status `merged`" -- RETAINED anchor) through the
+# ordered workflow.yaml write set.
+PRE_CHANGE_I2C_ROUTEBACK_SAMPLE = (
+    "This automatic re-entry applies only when no task has status\n"
+    "  `merged` — the absence of any `merged` task; the drain above has\n"
+    "  already retired every `in_progress` sibling by this point. Refresh\n"
+    "  the integration worktree first (`git -C \"$WT_ROOT/integration\"\n"
+    "  reset --hard em-workflow/{feature}/integration`), then capture\n"
+    "  `ROUTEBACK_TIP=$(git -C \"$WT_ROOT/integration\" rev-parse HEAD)`,\n"
+    "  then make one ordered workflow.yaml write set: set `create-plan` to\n"
+    "  `needs_update`, set the `implement` step back to `pending`, record\n"
+    "  each failed task's failure reason (the implementer's report\n"
+    "  `notes`) in `tasks.{T}.notes`, and set\n"
+    "  **every** failed task's `tasks.{T}.status` back to `pending`"
+)
+
+# AC-5 group sample: the I.2.a recycled-task-id paragraph, from the
+# normative statement through the retained in-flight sentence (RETAINED
+# anchor).
+PRE_CHANGE_I2A_RECYCLED_PARAGRAPH = (
+    "Recycled task id: workflow.yaml's status wins over a stale journal "
+    "event\n"
+    "here — a task whose workflow.yaml `status` is `pending` while the\n"
+    "journal's last event for that id is `failed` counts as "
+    "**unlaunched**, not\n"
+    "failed. This carve-out is deliberately scoped to `failed` only, to "
+    "stay\n"
+    "consistent with `queue_launch_guard.py`, which reads only the "
+    "journal's\n"
+    "last event (never workflow.yaml) and allows a post-`failed` launch "
+    "as the\n"
+    "legitimate retry path. A task whose journal last event is "
+    "`launched` is\n"
+    "always in-flight, regardless of workflow.yaml `status` — never "
+    "reinterpret\n"
+    "it as unlaunched, since the launch guard would deny that launch."
+)
+
+# AC-6 group sample: the same I.2.a paragraph -- it already named
+# `queue_launch_guard.py` (RETAINED anchor) before the change.
+PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE = PRE_CHANGE_I2A_RECYCLED_PARAGRAPH
 
 
 def _read():
@@ -108,7 +254,7 @@ class TestWakePhaseWriteBackKeyedOffReconciledState(unittest.TestCase):
         cls.section = _normalize_ws(_i2b_section(_read()))
 
     def test_reconciled_state_phrasing_present(self):
-        self.assertIn("step 1 reconciled state is `failed`", self.section)
+        self.assertIn(RECONCILED_STATE_PHRASE, self.section)
 
     def test_journal_only_phrasing_absent(self):
         self.assertNotIn(OLD_JOURNAL_ONLY_PHRASE, self.section)
@@ -181,21 +327,21 @@ class TestNonTerminalEventMakesRouteBackInapplicable(unittest.TestCase):
         cls.section = _normalize_ws(cls.raw_section)
 
     def test_inapplicable_branch_states_implement_stays_failed(self):
-        self.assertIn("INAPPLICABLE", self.section)
-        self.assertIn("implement` stays `failed`", self.section)
+        self.assertIn(INAPPLICABLE_MARKER, self.section)
+        self.assertIn(IMPLEMENT_STAYS_FAILED_PHRASE, self.section)
 
     def test_inapplicable_branch_cites_stop_condition_3_and_abort_phase(self):
         # Anchor on "INAPPLICABLE" (new text) so this proves the NEW
         # branch cites stop condition 3 / abort phase, not merely that
         # the pre-existing merged-task branch already did.
-        idx = self.section.index("INAPPLICABLE")
+        idx = self.section.index(INAPPLICABLE_MARKER)
         branch = self.section[idx:]
-        self.assertIn("stop condition 3", branch)
-        self.assertIn('the same terminal as the "abort phase" option below', branch)
+        self.assertIn(STOP_CONDITION_3_PHRASE, branch)
+        self.assertIn(ABORT_PHASE_TERMINAL_PHRASE, branch)
 
     def test_inapplicable_branch_names_no_partial_write(self):
-        self.assertIn("no part of the write set runs", self.section)
-        self.assertIn("no partial-write path", self.section)
+        self.assertIn(NO_PART_OF_WRITE_SET_RUNS_PHRASE, self.section)
+        self.assertIn(NO_PARTIAL_WRITE_PATH_PHRASE, self.section)
 
     def test_no_rework_or_append_anywhere_in_i2c(self):
         self.assertNotIn("rework", self.section)
@@ -212,7 +358,7 @@ class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
         cls.section = _normalize_ws(_i2a_section(_read()))
 
     def test_unreachability_sentence_present(self):
-        idx = self.section.index("Given I.2.c's route-back precondition")
+        idx = self.section.index(UNREACHABILITY_OPENING_ANCHOR)
         end = self.section.index("can never arise.", idx) + len("can never arise.")
         sentence = self.section[idx:end]
         self.assertIn("replace_all", sentence)
@@ -238,22 +384,14 @@ class TestRecycledTaskIdRuleScopedToOrchestrator(unittest.TestCase):
         cls.i2a = _normalize_ws(_i2a_section(cls.text))
 
     def test_scope_sentence_names_all_four_hooks(self):
-        for hook in (
-            "queue_launch_guard.py",
-            "queue_stop_guard.py",
-            "queue_failure_net.py",
-            "queue_taskstop_net.py",
-        ):
+        for hook in HOOK_FILENAMES:
             self.assertIn(f"`{hook}`", self.i2a)
 
     def test_scope_sentence_states_status_never_consulted(self):
-        self.assertIn("never consult `tasks.{T}.status`", self.i2a)
+        self.assertIn(STATUS_NEVER_CONSULTED_PHRASE, self.i2a)
 
     def test_scope_sentence_governs_only_orchestrator_interpretation(self):
-        self.assertIn(
-            "governs only the orchestrator's interpretation of the journal",
-            self.i2a,
-        )
+        self.assertIn(ORCHESTRATOR_ONLY_SCOPE_PHRASE, self.i2a)
 
     def test_no_never_reads_workflow_yaml_claim_anywhere(self):
         self.assertNotIn("never read workflow.yaml", self.text)
@@ -408,6 +546,108 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         self.assertIn("rework", sample)
         other_sample = "the failure reason is appended to the report"
         self.assertIn("append", other_sample)
+
+    # --- task0003 (D8 / TS-14 / SC-6): negative proofs for the eight
+    # matchers that assert NEW post-change wording and previously had no
+    # proof they would flag the pre-change document.
+
+    def test_reconciled_state_phrase_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2B_STEP3_WRITE_BACK_SAMPLE)
+        self.assertNotIn(RECONCILED_STATE_PHRASE, sample)
+
+    def test_inapplicable_marker_and_implement_stays_failed_flag_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2C_ROUTEBACK_SAMPLE)
+        self.assertNotIn(INAPPLICABLE_MARKER, sample)
+        self.assertNotIn(IMPLEMENT_STAYS_FAILED_PHRASE, sample)
+
+    def test_inapplicable_anchored_slice_cannot_be_taken_on_pre_change_wording(
+        self,
+    ):
+        # The matcher slices the section from the INAPPLICABLE marker
+        # onward before checking "stop condition 3" / the abort-phase
+        # terminal phrase. On the pre-change sample the marker is absent,
+        # so that slice cannot be taken at all -- proving the surviving
+        # "abort phase" mention elsewhere in the pre-change document could
+        # not satisfy this matcher (it never reaches that check).
+        sample = _normalize_ws(PRE_CHANGE_I2C_ROUTEBACK_SAMPLE)
+        with self.assertRaises(ValueError):
+            sample.index(INAPPLICABLE_MARKER)
+
+    def test_no_partial_write_phrases_matcher_flags_pre_change_wording(self):
+        sample = _normalize_ws(PRE_CHANGE_I2C_ROUTEBACK_SAMPLE)
+        self.assertNotIn(NO_PART_OF_WRITE_SET_RUNS_PHRASE, sample)
+        self.assertNotIn(NO_PARTIAL_WRITE_PATH_PHRASE, sample)
+
+    def test_unreachability_opening_anchor_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        # The matcher slices from this opening anchor to a closing anchor
+        # before checking the three tokens. Those tokens (`launched`,
+        # `pending`) DO occur elsewhere in the pre-change paragraph, so
+        # proving the matcher flags the pre-change wording must be about
+        # the slice anchor, not the tokens: the opening anchor is absent,
+        # so the slice -- and therefore the matcher -- cannot be formed.
+        sample = _normalize_ws(PRE_CHANGE_I2A_RECYCLED_PARAGRAPH)
+        with self.assertRaises(ValueError):
+            sample.index(UNREACHABILITY_OPENING_ANCHOR)
+
+    def test_four_hooks_conjunction_matcher_fails_on_pre_change_wording(self):
+        # The matcher is a conjunction over all four hook names. The
+        # pre-change paragraph already named the first one, so the proof
+        # must show the conjunction fails because of the other three --
+        # not assert that all four are absent (that would be false).
+        sample = _normalize_ws(PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE)
+        self.assertIn(f"`{HOOK_FILENAMES[0]}`", sample)
+        for hook in HOOK_FILENAMES[1:]:
+            self.assertNotIn(f"`{hook}`", sample)
+
+    def test_status_never_consulted_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE)
+        self.assertNotIn(STATUS_NEVER_CONSULTED_PHRASE, sample)
+
+    def test_orchestrator_only_scope_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE)
+        self.assertNotIn(ORCHESTRATOR_ONLY_SCOPE_PHRASE, sample)
+
+
+class TestPreChangeSampleGuards(unittest.TestCase):
+    """AC-2 / Contract 4: each pre-change wording sample carries a RETAINED
+    anchor -- a phrase present both in the sample and in the post-change
+    document -- asserted positively here. A sample that was emptied,
+    truncated past the relevant sentence, or replaced with unrelated text
+    fails one of these guards, so a negative proof above cannot silently
+    degrade into a tautology (`assertNotIn(X, "")` passes for every X)."""
+
+    def test_i2b_step3_sample_retains_merged_half(self):
+        sample = _normalize_ws(PRE_CHANGE_I2B_STEP3_WRITE_BACK_SAMPLE)
+        self.assertIn(
+            "set `tasks.{T}.status = merged` for every task verified merged",
+            sample,
+        )
+
+    def test_i2c_routeback_sample_retains_merged_gate(self):
+        sample = _normalize_ws(PRE_CHANGE_I2C_ROUTEBACK_SAMPLE)
+        self.assertIn("no task has status `merged`", sample)
+
+    def test_i2a_recycled_paragraph_sample_retains_in_flight_sentence(self):
+        sample = _normalize_ws(PRE_CHANGE_I2A_RECYCLED_PARAGRAPH)
+        self.assertIn(
+            "A task whose journal last event is `launched` is always "
+            "in-flight",
+            sample,
+        )
+
+    def test_i2a_hook_parenthetical_sample_retains_queue_launch_guard(self):
+        sample = _normalize_ws(PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE)
+        self.assertIn(f"`{HOOK_FILENAMES[0]}`", sample)
 
 
 if __name__ == "__main__":
