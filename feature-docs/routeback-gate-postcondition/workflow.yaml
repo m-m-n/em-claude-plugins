@@ -40,7 +40,7 @@ workflow:
     completed_at_commit: 7c4e3d48c25b98e13b0add474356ffd7342c82d7
   - id: review
     status: completed
-    completed_at_commit: PLACEHOLDER
+    completed_at_commit: 408f6c228a98baacfaa698ea0d36ee773f1e6401
   - id: verify
     status: pending
     result: null
