@@ -1,0 +1,95 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_key_set_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_author_field_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion.test_description_field_retains_stable_anchor
+    red_confirmed: true
+    red_reason: >-
+      test_version_is_past_baseline observed red before the bump:
+      "AssertionError: 40 not greater than 40" (plugin.json still read
+      0.1.40). The other four tests in this criterion are retention
+      matchers (key set / name / author / description-anchor) that were
+      already green before the bump, since this task does not touch those
+      fields -- they are exempt from red-confirmation per the module
+      docstring convention (nothing for this task to have broken).
+  AC-2:
+    tests:
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_agrees_with_manifest
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_top_level_key_set_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_key_set_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_name_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_author_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_category_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_source_unchanged
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_description_retains_stable_anchor
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+    red_confirmed: true
+    red_reason: >-
+      test_em_workflow_entry_version_is_past_baseline observed red before
+      the bump: "AssertionError: 40 not greater than 40" (marketplace.json
+      em-workflow entry still read 0.1.40). test_em_workflow_entry_version_agrees_with_manifest
+      was already green before the bump (both registries equalled 0.1.40,
+      just not yet advanced) -- matches Test Notes' predicted transition
+      exactly. The key-set / name / author / category / source /
+      description-anchor / em-review-unchanged tests are retention
+      matchers, already green before the bump since this task does not
+      touch those fields -- exempt from red-confirmation, same as AC-1.
+  AC-3:
+    tests:
+      - tests.test_spec_file_set_completeness_version_bump.TestPluginManifestVersion
+      - tests.test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion
+    red_confirmed: true
+    red_reason: >-
+      The module did not exist before this task; `python3 -m unittest
+      discover -s tests` now collects and runs all 20 of its tests (up
+      from the 1195-test baseline to 1215). Before the version-file edits,
+      two of the module's tests (the advanced-patch checks) failed for the
+      right reason as recorded under AC-1/AC-2; after the edits all 20
+      pass. The module imports only json, re, unittest and pathlib
+      (standard library).
+  AC-4:
+    tests:
+      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_version_matcher_flags_forged_baseline_patch_version
+      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_version_matcher_flags_malformed_shape
+      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_agreement_matcher_flags_a_mismatched_pair
+      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_flags_an_altered_entry
+      - tests.test_spec_file_set_completeness_version_bump.TestValidationDetectsRegressions.test_entry_lookup_flags_a_missing_entry_name
+    red_confirmed: true
+    red_reason: >-
+      Each negative-proof test wraps a forged-sample call in
+      assertRaises(AssertionError). Called the same five matcher
+      invocations directly, outside assertRaises, and observed each one
+      actually raise: _assert_version_past_baseline on "0.1.40" ->
+      "40 not greater than 40"; on "0.1" -> "unexpectedly None : version
+      '0.1' is not of the form X.Y.Z"; _assert_versions_agree on
+      ("0.1.41", "0.1.42") -> "'0.1.41' != '0.1.42'";
+      _assert_em_review_entry_unchanged on the source-altered dict ->
+      dict-diff AssertionError; _marketplace_entry on a plugins list
+      missing "em-workflow" -> "no marketplace entry named
+      'em-workflow'". This covers the exact three forged sample kinds
+      task0003.md names (baseline-patch version, mismatched pair, altered
+      em-review entry) plus two bonus cases (malformed shape, missing
+      entry name). With assertRaises in place these tests are green
+      because the raise is the expected/asserted outcome.
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Not unit-testable from inside the module (it is a claim about the
+      task's own diff and about pre-existing files, not about runtime
+      behavior). Verified directly: `git status --porcelain` /
+      `git diff --stat` in the worktree show exactly the three declared
+      files touched (two one-line JSON version edits, one new test file);
+      `python3 -m unittest discover -s tests` was run before any edit
+      (1195 tests, all passing -- baseline) and again after (1215 tests,
+      all passing -- the 20 new tests plus the unchanged 1195), so no
+      pre-existing module regressed. Pre-existing module byte-identity
+      follows from having made zero edits to any file under tests/ other
+      than creating this one new module.
