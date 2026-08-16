@@ -1,0 +1,190 @@
+round: 2
+executed_at: "2026-08-16T20:10:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: efab0e40b913932a426d63a468a00c12c7e241b6
+  head_commit: dd5cd98bd52c001f7d3d9eb063f17e68bca56af4
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/batch-stop-contract/task0001.tests.yaml
+    - test-docs/batch-stop-contract/task0002.tests.yaml
+    - test-docs/batch-stop-contract/task0003.tests.yaml
+    - test-docs/batch-stop-contract/task0004.tests.yaml
+    - test-docs/batch-stop-contract/task0005.tests.yaml
+    - tests/test_batch_stop_contract.py
+    - tests/test_batch_stop_contract_skill_wiring.py
+    - tests/test_batch_stop_contract_version_bump.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: skipped, skip_reason: "round 1 で findings 0、round 2 の差分は round 1 findings への対応に限られるため再実行せず"}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: skipped, skip_reason: "round 1 で findings 0、round 2 の差分は round 1 findings への対応に限られるため再実行せず"}
+round1_resolution_check:
+  note: >-
+    round 1 の 9 findings は 3 観点すべてが「文面上いずれも解消済み」と確認した。
+    reason code / stop-point key の 9→11 拡張、優先規則の追加、detail 正規化の
+    明文化、no-line 規則の一般化、Source 欄の主張弱化＋パス実在検証、両ポインタ
+    文書への Read 指示のすべてが反映されている。テストは 1195 件 green。
+  verified_resolved:
+    [0637708c55c7f230, 1b6dc8cae3c91111, 0637708c55c7f231, 4aeb3f8b0e8ec9e6,
+     55903a56e01e5125, 6a1c9f2d84be3057, ae79421a2b5a7aab, 37980aa6aa498c1f,
+     a8ab378dda806693]
+findings:
+  - stable_id: b654786a7fb8e13c
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 98
+    title: 「全ての終端停止点が 11 code のいずれかに束ねられている」という主張が実態と合っておらず、閉集合外の停止が残っている
+    description: >-
+      round 1 の Step A / commit-docs exit-4 の穴は塞がったが、同じクラスの穴が
+      他に残っている。coverage 表のどの行にも該当しない終端停止が少なくとも 4 つ
+      実在する: (1) designer-contract.md の `kind: none` × token 実在 ABORT 行と
+      候補探索 truncated 時の batch abort、(2) 同 contract の `em_workflow` ×
+      html のみ実在行（dispatch 中止・ユーザー介入待ち）、(3) phase-state.md の
+      未知 `schema_version` による plugin version mismatch abort、(4)
+      batch-policies.yaml の `create-spec.command-approval` の
+      `refusal_patterns: hard_fail`。いずれも step の status を `failed` にしない
+      ため `stop-condition-3` にも落ちない。reason は 11 個の閉集合でフォール
+      バック code が無いため、この停止に達したオーケストレーターは閉集合外の値を
+      捏造するか終端行を出さないかのどちらかになる。テスト側も文書内部の整合と
+      Source パスの実在しか見ないため、owner 文書側の停止点増減を検出できない。
+    suggestion: >-
+      (a) 12 個目に catch-all code（例 `run_aborted`）を定義し「coverage 表の
+      どの行にも該当しない終端停止はこの code を使い detail に停止点を書く」
+      という fallback 規則を明記する、または (b) 上記 4 箇所に行を足したうえで
+      owner 文書側に停止点キーをアンカーとして書き、Source 欄のパス実在に加えて
+      「そのファイル内に当該キーが現れる」ことをテストで検査する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 6d3ffa3e04510229
+    severity: medium
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 61
+    title: "`no-step` の適用先が 3 停止点に閉じられ、step を特定できない停止で step の値が構成できない"
+    description: >-
+      `no-step` の列挙が一般規則＋網羅列挙の形で 3 停止点に固定され、テストが
+      ちょうど 3 要素であることを pin している。しかし step を特定できない停止は
+      他にもある（`stop-condition-4` の workflow.yaml parse エラー、Step A.5 の
+      コマンド承認ゲート由来の停止）。emitter は列挙に反して `no-step` を出すか、
+      無関係な step id を捏造するかのどちらかになる。
+    suggestion: >-
+      列挙を網羅的定義から例示に落とし、step を特定できない停止一般に `no-step`
+      を使う旨を明記する。テストは `assertEqual` を issuperset へ緩め、代わりに
+      一般規則の文の存在を pin する。
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 454755f74a3e8a04
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 61
+    title: stop-condition-4 に出せる step 値が存在しない
+    description: >-
+      stable_id 6d3ffa3e04510229 と同一の欠陥を comprehensive 観点から確認した
+      もの。`stop-condition-4` では step id の唯一の出所である workflow.yaml が
+      まさに読めない状態であり、Step A.5 や Step B の初回 Read で発火した場合は
+      それ以前に step が一度も特定されていない。
+    suggestion: >-
+      `no-step` バレットに `stop-condition-4` を加えてテストの集合も更新するか、
+      `step` バレットに fallback 規則（把握している最後の step id、無ければ
+      `no-step`）を明記する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: e0aba3d91cffcb97
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 116
+    title: precedence 規則の根拠が Source ドキュメントと矛盾
+    description: >-
+      precedence 段落が 3 停止点を「all three leave a step's status `failed`」と
+      断定するが、`docs-commit-conflict` は違う。SKILL.md の exit-4 リカバリも
+      phase-state.md の Phase-state exit-4 recovery も、2 回目の exit 4 では
+      status 書き込みを行わずフェーズを中断する（そもそも書けなかったのが停止
+      理由）。SSOT が自分の Source ドキュメントと食い違う記述を持ち、それが
+      `stop-condition-3` の意味を制限する規範文の前提になっている。
+    suggestion: >-
+      precedence 段落を書き分ける — `implement-second-failure` と
+      `verify-rework-cap` は status を `failed` にするため重なるが、
+      `docs-commit-conflict` は status を書かずに中断するので、step が既に
+      `failed` / `needs_update` だった場合にのみ重なる、と明記する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: c1e94c9399f18b7d
+    severity: medium
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 122
+    title: 優先規則の stop-condition-3 限定文により、前回ランが残した failed での再突入停止に該当 code が無くなる
+    description: >-
+      優先規則の締めの一文が状態ベースの限定になっているため、ランをまたぐと穴が
+      開く。フェーズ固有の停止点で止まったランは step の status を `failed` の
+      まま残すため、再突入すると Step B が停止条件 3 で即停止する。この停止は
+      今回のランでフェーズ固有の停止点を通っていないので固有 code を名乗れない
+      一方、限定文により `stop-condition-3` の対象からも外れる。
+    suggestion: >-
+      優先規則の適用範囲を「同一ターン内で複数行に該当する停止」に限定し、限定文
+      を状態ベースから経路ベースへ改める（そのターンでフェーズ固有の停止点を
+      通っていない `failed` / `needs_update` 停止に適用される、と書く）。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 9e5ce22b85677b38
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 98
+    title: コマンド承認ゲートの refusal-pattern hard fail が coverage 表に無い
+    description: >-
+      stable_id b654786a7fb8e13c の (4) と同一の欠陥を comprehensive 観点から
+      確認したもの。`create-spec.command-approval` の `refusal_patterns:
+      hard_fail` は batch でも承認不能・回避不能な終端停止だが、11 コードの
+      どれにも割り当てられていない。`gate_option_unavailable` は
+      `on_unavailable: abort` 専用、`gate_fail_closed` は question-resolution.md
+      の分類専用で、packet を持たないこのゲートには適用されない。
+    suggestion: >-
+      coverage 表に 12 行目を追加して新コードを定義するか、refusal-pattern hard
+      fail を `gate_fail_closed` へ写像すると明示して同コードの Meaning を広げる。
+      いずれの場合も Step A.5 発火時の `step` 値（`no-step` 許可）を併記する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+  note: >-
+    唯一の critical/high 候補（stable_id b654786a7fb8e13c、category
+    architecture）は、round 1 と同じ理由で単一ファイル auto-fix では解決できない
+    — 閉集合を変えると tests/test_batch_stop_contract.py と
+    tests/test_batch_stop_contract_skill_wiring.py の pin 定数が同時に動く必要が
+    あり、review-editor の 1 dispatch = 1 ファイルの scope 制約に収まらない。
+    batch の rework cap（batch.review_rework_count == 1）は round 1 で消費済みの
+    ため、residual は deferred として記録して step を完了する。
+residual_critical_high: 1
+rework_required: false
+deferred_note: >-
+  deferred にした 6 件はいずれも「終端行契約の網羅性・一意性をさらに詰める」
+  第 2 世代の指摘で、本 feature が解決した中心課題（正常完了と停止を機械可読に
+  区別できるようにする）は満たされている。残件は別タスクとして起票する。
