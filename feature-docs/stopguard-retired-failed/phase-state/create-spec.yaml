@@ -3,15 +3,19 @@ feature: stopguard-retired-failed
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: aaa282b6a0752ea5adf4aa725271ce2c11d99eb1
-last_input_digest: sha256:452de81a0f4673df7c8af5b5db527eee6ac56f2e6c7333a7b27a0c0b18e66e9c
-active_request_id: create-spec-run-0001
+base_revision: abcc9417d615e0b572ee6929960e32cbe27e273d
+last_input_digest: sha256:2dd5fc9fadf2fa5fe6730a84e473cf0dad1821534dde7b298e6bfd29e2ad3857
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: completed
     input_digest: sha256:452de81a0f4673df7c8af5b5db527eee6ac56f2e6c7333a7b27a0c0b18e66e9c
+    output_digest: sha256:c14ee683a21ab4d5a7e6191a85111bb05d0bb3d482352eab4e32f44556564e6f
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: sha256:2dd5fc9fadf2fa5fe6730a84e473cf0dad1821534dde7b298e6bfd29e2ad3857
     output_digest: null
 artifacts: []
 patches: []
