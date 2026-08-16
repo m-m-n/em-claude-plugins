@@ -1,0 +1,89 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_gate_option_vocabulary_doc.TestDocExists.test_doc_file_exists
+      - tests.test_gate_option_vocabulary_doc.TestCorrespondenceRuleStated.test_states_the_correspondence_rule
+      - tests.test_gate_option_vocabulary_doc.TestCorrespondenceRuleStated.test_names_policy_file_as_authoritative_side
+      - tests.test_gate_option_vocabulary_doc.TestCorrespondenceRuleStated.test_names_protocol_error_abort_as_the_prevented_failure_mode
+    red_confirmed: true
+    red_reason: >
+      With em-workflow/references/gate-option-vocabulary.md temporarily
+      removed, setUpClass raised FileNotFoundError for every test class
+      that reads DOC_PATH, including TestCorrespondenceRuleStated.
+  AC-2:
+    tests:
+      - tests.test_gate_option_vocabulary_doc.TestCanonicalDeclarationFormat.test_states_the_exact_heading
+      - tests.test_gate_option_vocabulary_doc.TestCanonicalDeclarationFormat.test_states_column_order
+      - tests.test_gate_option_vocabulary_doc.TestCanonicalDeclarationFormat.test_states_one_row_per_option
+      - tests.test_gate_option_vocabulary_doc.TestCanonicalDeclarationFormat.test_states_backtick_quoted_identifiers
+      - tests.test_gate_option_vocabulary_doc.TestCanonicalDeclarationFormat.test_states_prose_meaning
+      - tests.test_gate_option_vocabulary_doc.TestCanonicalDeclarationFormat.test_states_why_not_gate_identifiers_heading
+      - tests.test_gate_option_vocabulary_doc.TestCanonicalDeclarationFormat.test_format_is_complete_enough_to_write_a_conforming_block
+    red_confirmed: true
+    red_reason: >
+      With the doc removed, TestCanonicalDeclarationFormat's setUpClass
+      raised FileNotFoundError -- the same doc-missing failure that
+      confirmed AC-1's red state.
+  AC-3:
+    tests:
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryStructure.test_table_has_three_named_columns
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryStructure.test_states_only_source_of_exemptions
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryStructure.test_states_absent_registry_means_zero_exemptions
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryStructure.test_registry_holds_zero_rows
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryStructure.test_states_zero_rows_in_words
+    red_confirmed: true
+    red_reason: >
+      With the doc removed, TestExemptionRegistryStructure's setUpClass
+      raised FileNotFoundError -- the same doc-missing failure that
+      confirmed AC-1's red state.
+  AC-4:
+    tests:
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryValidatorAgainstSyntheticRows.test_well_formed_row_has_no_violations
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryValidatorAgainstSyntheticRows.test_row_missing_reason_is_flagged
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryValidatorAgainstSyntheticRows.test_row_missing_guarantee_is_flagged
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryValidatorAgainstSyntheticRows.test_row_naming_a_non_select_gate_is_flagged
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryValidatorAgainstSyntheticRows.test_the_real_documents_zero_rows_produce_zero_violations
+    red_confirmed: true
+    red_reason: >
+      With the doc removed, this class's setUpClass (which reads DOC_PATH
+      for the real-document non-vacuity check) raised FileNotFoundError,
+      so every synthetic-row assertion in it was unreachable until the
+      document existed.
+  AC-5:
+    tests:
+      - tests.test_gate_option_vocabulary_doc.TestPolicyFilePointer.test_header_points_at_the_new_document
+      - tests.test_gate_option_vocabulary_doc.TestPolicyFilePointer.test_no_forbidden_phrase_gained
+      - tests.test_gate_option_vocabulary_doc.TestPolicyFilePointer.test_gate_entries_unchanged
+      - tests.test_gate_option_vocabulary_doc.TestQuestionResolutionPointer.test_protocol_error_step_points_at_the_new_document
+      - tests.test_gate_option_vocabulary_doc.TestQuestionResolutionPointer.test_no_forbidden_phrase_gained
+      - tests.test_gate_option_vocabulary_doc.TestQuestionResolutionPointer.test_protocol_error_step_still_present_verbatim
+      - tests.test_gate_option_vocabulary_doc.TestQuestionResolutionPointer.test_no_feature_docs_task_identifier_introduced
+    red_confirmed: true
+    red_reason: >
+      With both pointer edits reverted (git stash of the two tracked
+      files), test_header_points_at_the_new_document and
+      test_protocol_error_step_points_at_the_new_document both raised
+      AssertionError: 'references/gate-option-vocabulary.md' not found in
+      <header text> / <batch-resolution-sequence text>.
+  AC-6:
+    tests:
+      - tests.test_gate_option_vocabulary_doc.TestNoSecondPolicyTableOrRestatedMap.test_scope_section_states_no_second_policy_table
+      - tests.test_gate_option_vocabulary_doc.TestNoSecondPolicyTableOrRestatedMap.test_issuing_site_map_is_cited_not_restated
+      - tests.test_gate_option_vocabulary_doc.TestNoSecondPolicyTableOrRestatedMap.test_does_not_contain_a_second_gate_policies_key
+    red_confirmed: true
+    red_reason: >
+      With the doc removed, TestNoSecondPolicyTableOrRestatedMap's
+      setUpClass raised FileNotFoundError -- the same doc-missing failure
+      that confirmed AC-1's red state.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Verifiable outcome is "python3 -m unittest discover -s tests passes
+      for the whole suite" -- not a single test to red/green independently.
+      Confirmed by running the full suite after implementation: 1325 tests
+      (1294 baseline + 31 new), all passing, zero regressions against the
+      baseline recorded before this task's changes.
