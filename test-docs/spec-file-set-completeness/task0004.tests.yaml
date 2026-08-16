@@ -1,0 +1,126 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_declared_change_set_invariants.TestNoVerifySideExclusionRule.test_no_offender_found
+      - tests.test_declared_change_set_invariants.TestNoVerifySideExclusionRule.test_every_scanned_path_exists_and_was_read
+      - tests.test_declared_change_set_invariants.TestNoVerifySideExclusionRule.test_contracts_directory_scan_is_nonempty
+      - tests.test_declared_change_set_invariants.TestNoVerifySideExclusionRule.test_known_create_spec_near_miss_is_present_but_not_flagged
+    red_confirmed: true
+    red_reason: >-
+      Watched two distinct reds before landing the final matcher: (1) with
+      _has_verify_side_exclusion_rule stubbed to `return False`, the
+      TS-8 negative-proof test (see AC-6) failed with "AssertionError: False
+      is not true" -- proving the matcher can fire at all; (2) with the
+      matcher loosened to a bare EXCLUSION_WORD_RE.search (no artifact-root
+      / change-set co-occurrence requirement), test_no_offender_found and
+      test_known_create_spec_near_miss_is_present_but_not_flagged both
+      failed, listing 9 real files (including the known create-spec-phase
+      near miss) as false-positive offenders -- proving the 3-way
+      conjunction is load-bearing against the real repository, not just
+      against the synthetic sample.
+  AC-2:
+    tests:
+      - tests.test_declared_change_set_invariants.TestRecycledTaskIdRetentionPin.test_spec_fr8_still_enumerates_the_test_docs_path
+      - tests.test_declared_change_set_invariants.TestRecycledTaskIdRetentionPin.test_spec_ac8_still_enumerates_the_test_docs_path
+      - tests.test_declared_change_set_invariants.TestRecycledTaskIdRetentionPin.test_requirements_fr8_still_enumerates_the_test_docs_path
+    red_confirmed: true
+    red_reason: >-
+      With TEST_DOCS_RECYCLED_PATH_LITERAL corrupted to
+      "test-docs/recycled-task-id-consistency-BOGUS/", all three tests
+      failed with assertIn AssertionErrors, each showing the correctly
+      sliced FR8/AC-8 section text (proving the anchor-based slicing itself
+      is correct and the failure is solely the literal mismatch).
+  AC-3:
+    tests:
+      - tests.test_declared_change_set_invariants.TestNoThirdRestatementOfDefaultMembership.test_walk_visited_a_nontrivial_number_of_files
+      - tests.test_declared_change_set_invariants.TestNoThirdRestatementOfDefaultMembership.test_scan_root_is_the_plugin_directory_excluding_feature_docs
+      - tests.test_declared_change_set_invariants.TestNoThirdRestatementOfDefaultMembership.test_carrier_set_is_subset_of_the_two_templates
+      - tests.test_declared_change_set_invariants.TestNoThirdRestatementOfDefaultMembership.test_review_phase_is_not_a_carrier
+      - tests.test_declared_change_set_invariants.TestNoThirdRestatementOfDefaultMembership.test_implement_phase_is_not_a_carrier
+    red_confirmed: true
+    red_reason: >-
+      Watched two distinct reds: (1) with
+      _carries_default_membership_enumeration stubbed to `return False`, the
+      TS-11 negative-proof test (AC-6) failed with "False is not true"; (2)
+      with the co-occurrence AND loosened to OR (single-literal matching),
+      test_carrier_set_is_subset_of_the_two_templates and
+      test_review_phase_is_not_a_carrier both failed, showing
+      review-phase.md misclassified as a carrier -- proving Contract MK's
+      "single-literal matching is wrong" warning is load-bearing against the
+      real repository.
+  AC-4:
+    tests:
+      - tests.test_declared_change_set_invariants.TestNoRetroactiveObligationOnExistingSpecs.test_no_module_combines_a_spec_wildcard_with_the_section_requirement
+      - tests.test_declared_change_set_invariants.TestNoRetroactiveObligationOnExistingSpecs.test_walk_found_at_least_the_existing_modules
+      - tests.test_declared_change_set_invariants.TestNoRetroactiveObligationOnExistingSpecs.test_this_modules_actual_feature_docs_reads_are_literal_paths
+    red_confirmed: true
+    red_reason: >-
+      With _is_spec_wildcard_section_requirement_offender stubbed to `return
+      False`, the TS-12 negative-proof test (AC-6) failed with "False is not
+      true". A first draft of this module's own self-check
+      (test_this_module_does_not_wildcard_scan_feature_docs_for_spec_files)
+      also went red for a real reason during development: the module's own
+      negative-proof fixture strings for G4 legitimately contain
+      "feature-docs" + "*" + "SPEC.md" as literal demonstration text, which
+      the reused detector flagged; resolved by excluding this module's own
+      path from the G4 real-directory scan (G4_SELF_EXCLUDED_PATH,
+      precedented by test_reference_sweep.py's SELF_EXCLUDED_PLUGIN_FILE)
+      and replacing the self-check with one that asserts the module's
+      actual feature-docs reads (RECYCLED_SPEC_PATH /
+      RECYCLED_REQUIREMENTS_PATH) are literal paths that resolve to real
+      files.
+  AC-5:
+    tests:
+      - tests.test_declared_change_set_invariants.TestModuleIsDiscoverableAndImportsStdlibOnly.test_module_filename_matches_the_contract_mi_inventory
+      - tests.test_declared_change_set_invariants.TestModuleIsDiscoverableAndImportsStdlibOnly.test_this_module_only_imports_standard_library_modules
+    red_confirmed: false
+    red_reason: >-
+      Discovery/import-hygiene checks: the module's existence and its own
+      import list are asserted from the module's own already-loaded state,
+      so there is no pre-implementation state in which the module could
+      exist yet fail these -- the module either exists and imports stdlib
+      only, or it does not exist and unittest discover reports zero
+      collected tests for it (observed empirically: before this file was
+      created, `python3 -m unittest discover -s tests` collected 1195 tests;
+      after, 1220 -- the +25 delta is this module's full contribution,
+      which is the discovery proof).
+  AC-6:
+    tests:
+      - tests.test_declared_change_set_invariants.TestNewMatchersFlagSyntheticViolations.test_verify_side_exclusion_matcher_flags_a_synthetic_violation
+      - tests.test_declared_change_set_invariants.TestNewMatchersFlagSyntheticViolations.test_verify_side_exclusion_matcher_requires_the_artifact_root_token
+      - tests.test_declared_change_set_invariants.TestNewMatchersFlagSyntheticViolations.test_verify_side_exclusion_matcher_requires_the_change_set_token
+      - tests.test_declared_change_set_invariants.TestNewMatchersFlagSyntheticViolations.test_carrier_matcher_flags_a_synthetic_sample_with_both_literals
+      - tests.test_declared_change_set_invariants.TestNewMatchersFlagSyntheticViolations.test_carrier_matcher_requires_both_literals_not_just_one
+      - tests.test_declared_change_set_invariants.TestNewMatchersFlagSyntheticViolations.test_wildcard_section_requirement_matcher_flags_a_synthetic_module
+      - tests.test_declared_change_set_invariants.TestNewMatchersFlagSyntheticViolations.test_wildcard_alone_is_not_sufficient
+      - tests.test_declared_change_set_invariants.TestNewMatchersFlagSyntheticViolations.test_section_requirement_alone_is_not_sufficient
+    red_confirmed: true
+    red_reason: >-
+      Each matcher was stubbed to a non-firing implementation in turn and
+      its corresponding positive-flag test observed to fail
+      (AssertionError: False is not true) before being restored; the two
+      "alone is not sufficient" tests were separately confirmed red by
+      loosening _is_spec_wildcard_section_requirement_offender's AND to OR,
+      which flipped both from pass to fail. Full detail recorded per-matcher
+      under AC-1/AC-3/AC-4 above. G2's retention pin
+      (TestRecycledTaskIdRetentionPin) is intentionally NOT listed here --
+      it is explicitly exempt from a negative proof per the module
+      docstring and IMPLEMENTATION.md's Conventions (a retention matcher has
+      no "pre-change wording" to construct a violation from).
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Process-level invariant, not a code path with an observable red
+      state: this task created exactly one file
+      (tests/test_declared_change_set_invariants.py) and its test record,
+      touching nothing else -- confirmed by `git status` showing only these
+      two untracked/new paths, and every pre-existing module under tests/
+      being byte-unchanged by construction (no Edit/Write call in this task
+      targeted any of them). The full-suite pass is the outcome: baseline
+      `python3 -m unittest discover -s tests` (before this task's file
+      existed) ran 1195 tests, all green; the same command after this
+      task's commit ran 1220 tests, all green.
