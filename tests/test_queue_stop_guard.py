@@ -18,7 +18,16 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 HOOK_PATH = os.path.join(REPO_ROOT, "em-workflow", "hooks", "queue_stop_guard.py")
 
 
-def build_workflow_yaml(feature, implement_status, task_ids):
+def build_workflow_yaml(feature, implement_status, task_ids, task_statuses=None):
+    """`task_statuses` optionally maps a task id to the value written after
+    its own `status:` line. A task id absent from the mapping keeps writing
+    `status: pending` (today's fixed text) so every existing call site's
+    output is byte-identical. A mapped value of None omits the `status:`
+    key entirely (the "absent status key" scenario); a mapped value of ""
+    writes `status:` with no value after the colon (the "undeterminable"
+    scenario, since a bare colon leaves nothing for a status reader to
+    capture)."""
+    task_statuses = task_statuses or {}
     lines = [
         "schema_version: 1",
         f"feature: {feature}",
@@ -64,10 +73,15 @@ def build_workflow_yaml(feature, implement_status, task_ids):
                 "    domains: []",
                 "    complexity: medium",
                 "    requirements: []",
-                "    status: pending",
-                "    notes: null",
             ]
         )
+        if task_id in task_statuses:
+            status = task_statuses[task_id]
+            if status is not None:
+                lines.append(f"    status: {status}")
+        else:
+            lines.append("    status: pending")
+        lines.append("    notes: null")
     return "\n".join(lines) + "\n"
 
 
@@ -83,8 +97,10 @@ class StopGuardFixture:
         )
         os.makedirs(self.docs_dir, exist_ok=True)
 
-    def write_workflow(self, implement_status, task_ids):
-        content = build_workflow_yaml(self.feature, implement_status, task_ids)
+    def write_workflow(self, implement_status, task_ids, task_statuses=None):
+        content = build_workflow_yaml(
+            self.feature, implement_status, task_ids, task_statuses=task_statuses
+        )
         with open(os.path.join(self.docs_dir, "workflow.yaml"), "w") as fh:
             fh.write(content)
 
@@ -155,13 +171,19 @@ class TestQueueStopGuardBlocking(unittest.TestCase):
 
 
 class TestQueueStopGuardFailedTask(unittest.TestCase):
-    """AC-2: a failed task suppresses blocking even with capacity."""
+    """AC-2: a genuinely failed task suppresses blocking even with capacity.
+
+    task0001's own workflow status is explicitly non-pending here so this
+    exercises a genuine failure, not the recycled-task-id carve-out (see
+    TestQueueStopGuardRecycledTaskId for that discriminator)."""
 
     def test_failed_task_present_never_blocks(self):
         with tempfile.TemporaryDirectory() as tmp:
             fx = StopGuardFixture(tmp)
             task_ids = ["task0001", "task0002", "task0003"]
-            fx.write_workflow("in_progress", task_ids)
+            fx.write_workflow(
+                "in_progress", task_ids, task_statuses={"task0001": "failed"}
+            )
             fx.write_journal([failed("task0001")])  # task0002/3 unlaunched, free slots plenty
 
             result = invoke_hook(tmp, DEFAULT_STDIN)
@@ -318,6 +340,174 @@ class TestQueueStopGuardRetryAfterFailure(unittest.TestCase):
             self.assertIn("free_slots=5", result.stderr)
             self.assertNotIn("task0001", result.stderr)
             self.assertIn("task0002", result.stderr)
+
+
+class TestQueueStopGuardRecycledTaskId(unittest.TestCase):
+    """Recycled-task-id carve-out: a `failed` journal last event whose
+    task's own workflow status still reads `pending` is a retired id from a
+    route-back re-plan, not a genuine failure (AC-1 through AC-4)."""
+
+    def test_retired_task_id_with_pending_status_is_unlaunched_and_blocks(self):
+        # AC-1 / TS1: the residual `failed` event for task0001 must not
+        # suppress the feature once its own status is still `pending`.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            task_ids = ["task0001", "task0002", "task0003"]
+            fx.write_workflow("in_progress", task_ids)  # all default to pending
+            fx.write_journal([failed("task0001")])
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("free_slots=6", result.stderr)
+            for expected in ("task0001", "task0002", "task0003"):
+                self.assertIn(expected, result.stderr)
+
+    def test_failed_task_with_non_pending_status_still_suppresses(self):
+        # AC-2: every genuine-failure status value keeps suppressing.
+        for status in ("failed", "in_progress", "merged", "cancelled"):
+            with self.subTest(status=status):
+                with tempfile.TemporaryDirectory() as tmp:
+                    fx = StopGuardFixture(tmp)
+                    task_ids = ["task0001", "task0002", "task0003"]
+                    fx.write_workflow(
+                        "in_progress", task_ids, task_statuses={"task0001": status}
+                    )
+                    fx.write_journal([failed("task0001")])
+
+                    result = invoke_hook(tmp, DEFAULT_STDIN)
+
+                    self.assertEqual(result.returncode, 0)
+
+    def test_failed_task_with_absent_status_key_still_suppresses(self):
+        # AC-2: no `status:` key at all in the task's own block.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            task_ids = ["task0001", "task0002", "task0003"]
+            fx.write_workflow(
+                "in_progress", task_ids, task_statuses={"task0001": None}
+            )
+            fx.write_journal([failed("task0001")])
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 0)
+
+    def test_failed_task_with_undeterminable_status_still_suppresses(self):
+        # AC-2: a `status:` line whose value cannot be captured (bare
+        # colon, nothing after it).
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            task_ids = ["task0001", "task0002", "task0003"]
+            fx.write_workflow(
+                "in_progress", task_ids, task_statuses={"task0001": ""}
+            )
+            fx.write_journal([failed("task0001")])
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 0)
+
+    def test_mixed_retired_and_genuinely_failed_tasks_suppresses(self):
+        # AC-2: a retired id (pending) alongside a genuine failure — the
+        # whole feature still suppresses because of the genuine failure.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            task_ids = ["task0001", "task0002", "task0003"]
+            fx.write_workflow(
+                "in_progress", task_ids, task_statuses={"task0002": "failed"}
+            )
+            fx.write_journal([failed("task0001"), failed("task0002")])
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 0)
+
+    def test_status_scoped_to_own_task_block_not_confused_with_step_status(self):
+        # AC-3: the per-task status read must not pick up a workflow-step
+        # status line. "skipped" is a real step-status value elsewhere in
+        # the fixture (the `design` step); used here as a TASK status it is
+        # simply an unrecognized value, not `pending`, so it must still
+        # suppress rather than be silently reclassified.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            task_ids = ["task0001", "task0002", "task0003"]
+            fx.write_workflow(
+                "in_progress", task_ids, task_statuses={"task0001": "skipped"}
+            )
+            fx.write_journal([failed("task0001")])
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 0)
+
+    def test_task_id_absent_from_tasks_mapping_is_ignored_even_if_failed_in_journal(self):
+        # Table row: any journal state for a task id not declared under
+        # `tasks:` is not evaluated at all — it must not suppress the
+        # feature nor appear in the launch list.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            task_ids = ["task0001", "task0002"]
+            fx.write_workflow("in_progress", task_ids)
+            fx.write_journal([failed("task9999")])
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("task0001", result.stderr)
+            self.assertIn("task0002", result.stderr)
+            self.assertNotIn("task9999", result.stderr)
+
+    def test_retired_task_participates_in_free_slot_arithmetic_and_bounded_list(self):
+        # AC-4: a reclassified (retired) task counts as unlaunched for
+        # free-slot arithmetic and the ascending bounded launch list, same
+        # as any other unlaunched task.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            task_ids = [f"task{i:04d}" for i in range(1, 9)]  # 8 tasks
+            fx.write_workflow("in_progress", task_ids)  # all pending
+            # task0001 is a retired id (pending); task0006-8 in-flight ->
+            # free_slots = 6 - 3 = 3; unlaunched = task0001..task0005 (5),
+            # bounded ascending list = task0001, task0002, task0003.
+            fx.write_journal(
+                [
+                    failed("task0001"),
+                    launched("task0006"),
+                    launched("task0007"),
+                    launched("task0008"),
+                ]
+            )
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("free_slots=3", result.stderr)
+            for expected in ("task0001", "task0002", "task0003"):
+                self.assertIn(expected, result.stderr)
+            for not_expected in ("task0004", "task0005", "task0006", "task0007", "task0008"):
+                self.assertNotIn(not_expected, result.stderr)
+
+    def test_consecutive_block_cap_still_works_with_reclassified_task(self):
+        # AC-4: the cap/fingerprint machinery downstream of classification
+        # is unaffected by a reclassified task being present.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp)
+            task_ids = ["task0001", "task0002", "task0003"]
+            fx.write_workflow("in_progress", task_ids)  # all pending
+            fx.write_journal([failed("task0001")])  # retired id, reclassified unlaunched
+
+            for i in range(1, 4):
+                result = invoke_hook(tmp, DEFAULT_STDIN)
+                self.assertEqual(result.returncode, 2, f"block #{i} should block")
+
+            fourth = invoke_hook(tmp, DEFAULT_STDIN)
+            self.assertEqual(fourth.returncode, 0)
+            self.assertIn("WARNING", fourth.stderr)
+
+            # A real state change (task0001 now launched) re-arms blocking.
+            fx.write_journal([launched("task0001")])
+            after_change = invoke_hook(tmp, DEFAULT_STDIN)
+            self.assertEqual(after_change.returncode, 2)
 
 
 class TestQueueStopGuardStdlibOnly(unittest.TestCase):
