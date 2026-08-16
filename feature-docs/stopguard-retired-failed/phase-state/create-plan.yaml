@@ -1,0 +1,21 @@
+schema_version: 1
+feature: stopguard-retired-failed
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 713664d1ad612e926f10c9f16f2ec3121b3a5479
+last_input_digest: sha256:1af46dd9630916f9b8d44b23991be5d690baac22ebd866ff1e6bec72a391d9d4
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:1af46dd9630916f9b8d44b23991be5d690baac22ebd866ff1e6bec72a391d9d4
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
