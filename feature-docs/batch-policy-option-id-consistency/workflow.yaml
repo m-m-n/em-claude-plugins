@@ -79,7 +79,7 @@ tasks:
     domains: [api-contract]
     complexity: low
     requirements: [FR6, NFR3, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/batch-policy-option-id-consistency/task0002
   task0003:
