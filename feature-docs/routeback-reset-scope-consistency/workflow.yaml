@@ -28,7 +28,8 @@ workflow:
     skipped_reason: "Documentation + Python-unittest repository with no UI, no rendered output and no design-system inputs; design-system candidate discovery returned zero candidates."
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 7c8a647e3031167f836761f23c585129a3b1ac8b
   - id: implement
     status: pending
     base_commit: c8843c9c086323c5378c6b3abe89dc63e5c02a40
@@ -41,7 +42,36 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: One derivation source across I.2.c's route-back path
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_routeback_reset_scope_consistency.py
+      - test-docs/routeback-reset-scope-consistency/task0001.tests.yaml
+    skills: []
+    domains: [api-contract, concurrency]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7, NFR8]
+    status: pending
+    notes: null
+    branch: em-workflow/routeback-reset-scope-consistency/task0001
+  task0002:
+    title: Bump the em-workflow plugin version to 0.1.39
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_routeback_reset_scope_version_bump.py
+      - test-docs/routeback-reset-scope-consistency/task0002.tests.yaml
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR8, NFR7, NFR8]
+    status: pending
+    notes: null
+    branch: em-workflow/routeback-reset-scope-consistency/task0002
 
 review:
   status: pending
@@ -57,112 +87,112 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR2:
     title: The reset (write set) target set is defined by the reconciled state
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-2]
   FR3:
     title: Cleanup targets only tasks confirmed not merged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-3]
   FR4:
     title: The rejected path enumerates the new blocker
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4]
   FR5:
     title: Cross-references describing the gate stay true
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-5]
   FR6:
     title: Route-back's own recursion invariant is stated
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-6]
   FR7:
     title: Document-contract tests
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-8]
   FR8:
     title: Plugin version bump
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-9]
   NFR1:
     title: Byte-identity regression
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-7]
   NFR2:
     title: Protected line wraps
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-7]
   NFR3:
     title: Ordering invariants
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-7]
   NFR4:
     title: Rejected-path containment
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4, TS-7]
   NFR5:
     title: Retained gate literals
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-7]
   NFR6:
     title: No bare git write commands
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-7]
   NFR7:
     title: Test environment
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-8]
   NFR8:
     title: Documentation-only
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-7]
 
 batch:
