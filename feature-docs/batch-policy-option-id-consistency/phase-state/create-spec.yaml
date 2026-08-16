@@ -1,17 +1,52 @@
 schema_version: 1
 feature: batch-policy-option-id-consistency
 phase: create-spec
-status: initialized
+status: awaiting_answers
 generation: 1
-base_revision: bd1181a15f58d5e88f050f50bb56aa80abdf7dde
-last_input_digest: null
-active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+base_revision: de718596067a356b90b6384e3e7161827469b0c1
+last_input_digest: "sha256:151bc646982dee9f7c191fe2957103f6fb1f6a23e706ec3486ef876d10f3dd3b"
+active_request_id: create-spec-run-0001
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-17T02:35:00+09:00"
+    questions:
+      - question_id: policy.option-id.reconciliation-direction
+        status: answered
+answers:
+  policy.option-id.reconciliation-direction:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-17T02:40:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [pin_worker_vocabulary]
+    freeform: null
+    normalized_answer: >-
+      batch-policies.yaml is authoritative for every `action: select` gate's
+      option_id. Each gate's issuing site (worker contract / agent prompt /
+      phase protocol) declares and offers the option_id the policy names.
+      No policy option_id is rewritten to match a worker's drifted vocabulary.
+    resolution_note: >-
+      gate_id create-spec.requirement-clarification resolves via
+      `action: codex_consultation` (references/batch-policies.yaml). Codex was
+      consulted once (run_codex_exec.sh readonly) and returned
+      `pin_worker_vocabulary`; the orchestrator judged the suggestion to map
+      onto that existing option_id and adopted it. record_as_assumption: true
+      per the same policy entry.
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:151bc646982dee9f7c191fe2957103f6fb1f6a23e706ec3486ef876d10f3dd3b"
+    output_digest: "sha256:pending"
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
