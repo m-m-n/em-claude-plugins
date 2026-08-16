@@ -208,6 +208,24 @@ erDiagram
 ### 9.3 スケジュール制約
 - {制約}
 
+### 9.4 宣言された変更集合
+
+**このフィーチャー固有のパス**:
+- {変更対象パス1}
+- {変更対象パス2}
+
+**デフォルトメンバー**（SPEC作成者が明示的に除外しない限り、常に宣言に含まれる）:
+- `feature-docs/{feature}/**`
+- `test-docs/{feature}/**`
+
+`feature-docs/{feature}/**` に含まれるもの: `REQUIREMENTS.md`、`SPEC.md`、`workflow.yaml`、`phase-state/`、`tasks/`、`reviews/roundN.yaml`、`VERIFICATION.md`、`retrospect.yaml`、およびデザインステップが生成するデザイン成果物。生成主体は各フェーズドキュメントおよび `references/phase-state.md` を参照（引用のみ、ルールは再掲しない）。
+
+`test-docs/{feature}/**` に含まれるもの: `{T}.tests.yaml`（パス形式: `test-docs/{feature}/{T}.tests.yaml`）。生成主体は `implement-phase.md` を参照（引用のみ、ルールは再掲しない）。
+
+**意味論**:
+- デフォルトのメンバーは、SPEC作成者が明示的に除外しない限り宣言に含まれる。除外は意図的な絞り込みであり、記載漏れによる省略ではない。
+- この宣言はスーパーセット（superset）の主張であり、実際の変更集合は宣言に含まれる（CONTAINED IN）必要がある。実際には生成されないパスが宣言されていても違反にはならない。implementタスクを1つも生成しないフィーチャーは `test-docs/{feature}/` ディレクトリを生成しないが、宣言された `test-docs/{feature}/**` は依然として正しい。
+
 ## 10. 想定される課題とリスク
 
 ### 10.1 技術的課題
