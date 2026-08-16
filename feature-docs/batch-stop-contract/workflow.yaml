@@ -1,0 +1,174 @@
+schema_version: 1
+feature: batch-stop-contract
+created: 2026-08-16
+base_branch: main
+parent_branch: em-workflow/batch-stop-contract/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown-yaml-python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 9d71fcf9eef7919708bc21c2905c4600c6878f7d
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      変更対象が Markdown / YAML の SSOT 文書、Python 契約テスト、2 つの JSON
+      マニフェストに限られ、UI・画面・視覚要素を伴わない。design-system 候補も
+      0 件。batch policy create-spec.design-step（decide_autonomously）により
+      analyst の skip 推奨がそのまま採用された。
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: 終端状態の機械可読出力
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1]
+  FR2:
+    title: 停止 step と停止理由の同梱
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2]
+  FR3:
+    title: 出力契約の SSOT 明記
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1]
+  FR4:
+    title: 既存成功時出力の非破壊
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS5]
+  FR5:
+    title: 対象停止点の列挙
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3]
+  FR6:
+    title: 待機ターンと step を持たない停止の表現
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS4]
+  FR7:
+    title: 外部サービス責務の非侵犯
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS6]
+  FR8:
+    title: ドキュメント契約テストの追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS8]
+  FR9:
+    title: version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS7]
+  NFR1:
+    title: "Dependencies: 標準ライブラリのみ"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS8]
+  NFR2:
+    title: "Compatibility: 既存テスト無改変"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS8]
+  NFR3:
+    title: "Simplicity: 追加依存なしの 1 行出力"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1]
+  NFR4:
+    title: "Test quality: 耐久的 assertion と negative proof / non-vacuity guard"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS7]
+  NFR5:
+    title: "Observability: 終端行接頭辞の一意性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS8]
+  NFR6:
+    title: "Security: detail に秘匿情報を含めない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2]
+  NFR7:
+    title: "Verifiability: 停止理由コードの閉じた集合"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2]
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
