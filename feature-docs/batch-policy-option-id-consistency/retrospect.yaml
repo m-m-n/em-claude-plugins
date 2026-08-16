@@ -1,0 +1,90 @@
+feature: batch-policy-option-id-consistency
+collected_at: "2026-08-17T03:48:00+09:00"
+session_ids: [01a00b9b-ee24-7000-995b-f6350150b707]
+signals:
+  review_critical_high:
+    - stable_id: xm1fr1compliance
+      category: spec
+      file: em-workflow/references/contracts/analyst-contract.md
+      title: "FR1 compliance: design-step option_id unchanged and declared at both issuing sites"
+      resolution: declined
+    - stable_id: xm2fr3compliance
+      category: spec
+      file: em-workflow/references/phases/create-spec-phase.md
+      title: "FR3 compliance: design-system option_id unchanged and declared at issuing site"
+      resolution: declined
+    - stable_id: xm3missingmap
+      category: spec
+      file: em-workflow/references/batch-policies.yaml
+      title: "Missing documented issuing site for select gate"
+      resolution: declined
+    - stable_id: xm4missingcheck
+      category: spec
+      file: tests/test_gate_option_vocabulary.py
+      title: "Missing mechanical consistency check"
+      resolution: declined
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - stable_id: xm1fr1compliance
+      category: spec
+      resolution_reason: >-
+        Compliance confirmation ("- OK") emitted as a critical finding; asserts
+        no violation, carries no suggestion.
+    - stable_id: xm2fr3compliance
+      category: spec
+      resolution_reason: >-
+        Same class as xm1fr1compliance — a compliance confirmation emitted as a
+        critical finding.
+    - stable_id: xm3missingmap
+      category: spec
+      resolution_reason: >-
+        Factually false. gate-option-vocabulary.md's `## Issuing-site map`
+        section pins the map in tests/test_gate_option_vocabulary.py's
+        ISSUING_SITE_MAP, whose keys include create-spec.feature-identity.
+    - stable_id: xm4missingcheck
+      category: spec
+      resolution_reason: >-
+        Factually false. The file the finding is filed against IS the FR5
+        mechanical check (test_every_select_gate_option_is_declared_at_every_issuing_site).
+    - stable_id: xm5thirdparty
+      category: spec
+      resolution_reason: >-
+        Factually false. hashlib / os / re / tempfile / unittest / pathlib are
+        all Python standard library; NFR2 prohibits third-party imports only.
+lessons_candidates:
+  - note: >-
+      この run 自体が、修正対象のバグ（batch-policies.yaml の
+      create-spec.design-step が存在しない option_id `decide_autonomously` を
+      指す）を踏まなかった。requirements-analyst が design step の判断を
+      question packet として上げず、resolved_requirements の design_step に
+      status: skipped を直接入れて返したため。UI が皆無な変更ではゲート自体が
+      開かないので、バグの再現は「design step の要否が曖昧な feature」でしか
+      起きない。
+  - note: >-
+      唯一開いたゲートは create-spec.requirement-clarification（action:
+      codex_consultation）。Codex 相談は 1 ターンで収束し、返した
+      `pin_worker_vocabulary` は packet の options に実在したのでそのまま採用
+      できた。option_id へのマッピング判定をオーケストレーター側に残す設計が
+      機能した実例。
+  - note: >-
+      vertex-deepseek-v3.2 の spec レビューが 5 件中 5 件とも無効だった
+      （2 件は「準拠している」という確認を severity: critical の finding として
+      出力、3 件は差分と矛盾する虚偽）。ディスパッチ元の vertex-reviewer
+      エージェント自身が差分と突き合わせて虚偽を申告しており、その注記が
+      オーケストレーターの declined 判断を早めた。review-phase.md の R3
+      サニタイズ規則は「defect でないもの」を機械的に落とす手段を持たないため、
+      severity: critical の非 defect が residual_critical_high に入りかけた
+      （resolution: declined で解消）。
+  - note: >-
+      claude 側 3 観点が同一欠陥（load_exempt_gate_ids のセクション非限定
+      パース）を独立に指摘したが、行番号が 271 / 271 / 286 に散ったため
+      same_site（|Δline| <= 5）では 2 件しか結合されず、spec 側の 1 件は
+      別サイト扱いになった。同一欠陥の収束を confidence に反映しきれていない。
+  - note: >-
+      収束した 3 指摘はいずれも severity: medium のため R4 の auto-fix 候補
+      ゲート（critical/high のみ）に掛からず unresolved のまま残った。
+      feature 自身の成果物（FR5 の機械チェック）の網羅性に関わる欠陥が
+      severity 基準だけで自動修正から外れる構図。
