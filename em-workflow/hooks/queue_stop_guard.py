@@ -249,32 +249,13 @@ def fingerprint_for(unlaunched, in_flight):
     )
 
 
-def integration_workflow_yaml_path(root, feature):
-    """Path to workflow.yaml inside the feature's integration worktree, where
-    implement-phase.md's Branch & Worktree Model says feature-docs/{feature}/
-    actually lives (never synced back to the main tree)."""
-    return os.path.join(
-        root, ".claude", "worktrees", "em-workflow", feature,
-        "integration", "feature-docs", feature, "workflow.yaml",
-    )
-
-
-def resolve_workflow_yaml_path(root, feature):
-    """Prefer the integration-worktree workflow.yaml; fall back to the
-    legacy {root}/feature-docs/{feature}/workflow.yaml layout."""
-    integration_path = integration_workflow_yaml_path(root, feature)
-    if os.path.isfile(integration_path):
-        return integration_path
-    return os.path.join(root, "feature-docs", feature, "workflow.yaml")
-
-
 def evaluate_feature(root, feature):
     """Return a decision dict for `feature` if it currently has refillable
     work to report, else None (nothing actionable / not evaluable)."""
     if not FEATURE_RE.match(feature):
         return None
 
-    workflow_yaml_path = resolve_workflow_yaml_path(root, feature)
+    workflow_yaml_path = os.path.join(root, "feature-docs", feature, "workflow.yaml")
     if not implement_in_progress(workflow_yaml_path):
         return None
 
@@ -329,18 +310,8 @@ def evaluate_feature(root, feature):
 
 def active_features(root):
     docs_dir = os.path.join(root, "feature-docs")
-    legacy_paths = glob.glob(os.path.join(docs_dir, "*", "workflow.yaml"))
-    integration_glob = os.path.join(
-        root, ".claude", "worktrees", "em-workflow", "*",
-        "integration", "feature-docs", "*", "workflow.yaml",
-    )
-    integration_paths = glob.glob(integration_glob)
-    features = set()
-    for path in legacy_paths:
-        features.add(os.path.basename(os.path.dirname(path)))
-    for path in integration_paths:
-        features.add(os.path.basename(os.path.dirname(path)))
-    return sorted(features)
+    paths = sorted(glob.glob(os.path.join(docs_dir, "*", "workflow.yaml")))
+    return [os.path.basename(os.path.dirname(path)) for path in paths]
 
 
 def read_sidecar(path):
