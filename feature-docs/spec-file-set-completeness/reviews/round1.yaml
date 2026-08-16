@@ -1,0 +1,193 @@
+round: 1
+executed_at: "2026-08-16T21:35:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: df80475378d4c87b4dea544d4788d79586aa0b25
+  head_commit: 83be7135b6df38fe9a996e5bdc6a5567af380280
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/templates/requirements-document.md
+    - em-workflow/references/templates/spec-document.md
+    - test-docs/spec-file-set-completeness/task0001.tests.yaml
+    - test-docs/spec-file-set-completeness/task0002.tests.yaml
+    - test-docs/spec-file-set-completeness/task0003.tests.yaml
+    - test-docs/spec-file-set-completeness/task0004.tests.yaml
+    - tests/test_declared_change_set_invariants.py
+    - tests/test_requirements_template_declared_change_set.py
+    - tests/test_spec_file_set_completeness_version_bump.py
+    - tests/test_spec_template_declared_change_set.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+findings:
+  - stable_id: ecc15ec125fae1cf
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/templates/spec-document.md
+    line: 182
+    title: 既定メンバーシップの列挙が IMPLEMENTATION.md を落としている
+    description: >-
+      `feature-docs/{feature}/**` が covers するものとして REQUIREMENTS.md /
+      SPEC.md / workflow.yaml / phase-state/ / tasks/ / reviews/roundN.yaml /
+      VERIFICATION.md / retrospect.yaml / design artifacts を列挙しているが、
+      create-plan フェーズが必ず生成する `IMPLEMENTATION.md` が抜けている。
+      ルート宣言が `**` グロブなので containment 自体は破れないが、この列挙の
+      目的は SPEC 作成者が成果物を再発見しなくて済むこと（FR4）であり、列挙
+      だけを見て宣言を絞り込んだ作成者は IMPLEMENTATION.md を落とす。同じ欠落
+      が requirements-document.md の日本語版と、2 つのテストモジュールの
+      FEATURE_DOCS_MEMBERS 定数にもミラーされている。
+    suggestion: >-
+      4 箇所（両テンプレートの列挙 + 2 モジュールの FEATURE_DOCS_MEMBERS）に
+      `IMPLEMENTATION.md` を追加する。上流の SPEC FR4 / AC-4 も同じ列挙を持つ
+      ため、そちらの是正は SPEC 変更（rework.spec-change）を伴う。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix 候補ゲート（critical/high のみ）に
+      該当せず、residual_critical_high にも計上されない。SPEC FR4 / AC-4 の
+      是正を伴うため rework 合成では扱えない（rework-task-synthesis.md §9）。
+      後続タスクとして起票する。
+  - stable_id: 10a47973c523af07
+    severity: medium
+    category: architecture
+    file: em-workflow/references/templates/spec-document.md
+    line: 183
+    title: デフォルトメンバー列挙が IMPLEMENTATION.md を落としている（SSOT との契約ドリフト）
+    description: >-
+      生成主体側の SSOT（`references/phases/create-plan-phase.md`、
+      `references/phase-state.md`）は IMPLEMENTATION.md を create-plan の必須
+      成果物と定めており、feature-docs/ 配下の全フィーチャーに実在する。新設
+      節の列挙は導入時点ですでに SSOT からドリフトしている。
+    suggestion: >-
+      両テンプレートの列挙と対応する 2 つのテスト定数に `IMPLEMENTATION.md`
+      を追加する（計 4 箇所）。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: >-
+      ecc15ec125fae1cf と同一サイトの別観点指摘。同じ理由で未解決のまま記録し、
+      後続タスクとして起票する。
+  - stable_id: a8250b12d6eba635
+    severity: medium
+    category: spec
+    file: tests/test_spec_file_set_completeness_version_bump.py
+    line: 161
+    title: TS-10 が要求する `0.1.41` のリテラル検証がテストに存在しない
+    description: >-
+      SPEC の TS-10 は「両レジストリが `0.1.41` を読むこと」を要求するが、実装
+      された `_assert_version_past_baseline` は (major, minor) == (0, 1) かつ
+      patch > 40 という耐久形の述語しか検証していない。両レジストリを揃えて
+      0.1.42 に書き換えても本モジュールは green のままになる。実ファイル自体
+      は両レジストリとも 0.1.41 であり AC-9 の実体は満たしている。
+    suggestion: >-
+      TS-10 の文言どおりリテラル assert を追加するか、逸脱を承認事項として
+      VERIFICATION.md の AC-9 直接読み取りで充足とする旨を記録する。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: declined
+    resolution_reason: >-
+      実装側の逸脱は IMPLEMENTATION.md の決定 D4（リテラルは次回の無関係な
+      bump で陳腐化する）として記録済みで、既存の
+      tests/test_recycled_task_id_version_bump.py の precedent に従っている。
+      AC-9 のリテラルは verify フェーズで両 JSON を直接読んで確認する
+      （VERIFICATION.md の該当行）。SPEC 本文の書き換えは rework.spec-change
+      ゲートに載るため採らない。
+  - stable_id: 5bffb33fde8523db
+    severity: medium
+    category: comprehensive
+    file: tests/test_declared_change_set_invariants.py
+    line: 111
+    title: G1 の除外ルール検出器が誤検知寸前で、無関係なドキュメント編集でスイートが落ちる
+    description: >-
+      `_has_verify_side_exclusion_rule` は ±400 文字ウィンドウ内の 3 トークン
+      連言で走査する。実測で 3 つのうち 2 つを満たすウィンドウが 5 文書に 9
+      箇所あり、既存の exclude/ignore 記述の近傍に `feature-docs/` を 1 回
+      書き足すだけで誤検知で赤になる。
+    suggestion: >-
+      ウィンドウを段落単位に狭める、`ignor\w*` を語群から外す、あるいは規範文
+      の形に限定する。現在 2-of-3 に当たっている 9 箇所を回帰サンプルとして
+      負の証明側に固定する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix 候補ゲートに該当しない。後続タスク
+      として起票する。
+  - stable_id: e5a64966d87d55ad
+    severity: medium
+    category: comprehensive
+    file: tests/test_declared_change_set_invariants.py
+    line: 172
+    title: G3 の carrier 判定がファイル全体の共起で、review-phase.md はリテラル 1 個分の距離しかない
+    description: >-
+      `_carries_default_membership_enumeration` は 2 つのルートリテラルが
+      ファイル内のどこかに両方あれば carrier と判定する。近接条件が無いため、
+      既に `feature-docs/{feature}/**` を持つ review-phase.md に
+      `test-docs/{feature}/**` が 1 度登場しただけで subset 検査が落ちる。
+      NFR2 が禁じているのは列挙の第 3 の再掲であって 2 リテラルの併記ではない。
+    suggestion: >-
+      carrier 判定に近接または構造の条件（同一段落内、あるいはメンバー名の
+      共起）を足し、「2 リテラルが遠く離れて併記されているだけのサンプルは
+      carrier ではない」という負の証明を 1 本追加する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix 候補ゲートに該当しない。後続タスク
+      として起票する。
+  - stable_id: 0ac64def3f86b019
+    severity: medium
+    category: architecture
+    file: em-workflow/references/templates/requirements-document.md
+    line: 221
+    title: 同一メンバー列挙が 4 箇所に複製され、所有 SSOT との整合を検査する仕組みがない
+    description: >-
+      feature-docs メンバー列挙は 2 テンプレートの本文と 2 テストモジュールの
+      FEATURE_DOCS_MEMBERS に複製されているが、引用先の生成主体ドキュメントと
+      列挙内容が一致しているかを機械的に確認するテストが無い。フェーズドキュ
+      メント側が成果物を追加してもどのテストも赤にならない。
+    suggestion: >-
+      tests/test_declared_change_set_invariants.py に、所有 SSOT 側に現れる
+      feature-docs 成果物名の集合が両テンプレートの列挙に含まれることを検査
+      するガードを追加する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix 候補ゲートに該当しない。後続タスク
+      として起票する。
+  - stable_id: 364b882bcfc1a603
+    severity: medium
+    category: architecture
+    file: tests/test_spec_file_set_completeness_version_bump.py
+    line: 123
+    title: em-workflow フィーチャーのテストが別プラグイン em-review のマニフェスト全文を固定している
+    description: >-
+      `EXPECTED_EM_REVIEW_ENTRY` が marketplace.json の em-review エントリを
+      description 全文まで verbatim で固定する。em-review は独立プラグインで、
+      この機能と無関係に description を更新しうる。同モジュールは em-workflow
+      側の description については安定サブストリングのアンカーに留めており、
+      方針が内部で矛盾している。
+    suggestion: >-
+      em-review エントリの検査を、存在すること・name/category/source が不変で
+      あること・version キーを持たないことに絞り、description は安定サブスト
+      リングのアンカーに置き換える。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix 候補ゲートに該当しない。後続タスク
+      として起票する。
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
