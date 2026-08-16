@@ -32,6 +32,15 @@ external tool: it is a single line of text appended to the final assistant
 message. The line is emitted only in a batch-mode run — an interactive run
 emits nothing.
 
+`detail`'s value is normalized before it is written into the line: every
+CR, LF and TAB character in it is replaced with a single space, runs of
+spaces are then collapsed to one and the result is trimmed. If the
+normalized value is empty, a fixed non-empty placeholder is substituted, so
+`## Field values`'s non-empty guarantee for `detail` still holds. This
+normalization is what keeps the line always exactly one physical line even
+when `detail`'s source (implementer notes, a gate's `blocking_reason`, a
+YAML parser message) itself contains newlines.
+
 Example (a stop):
 
 ```
@@ -50,19 +59,20 @@ EM_WORKFLOW_TERMINAL: state=completed step=retrospect reason=none detail=feature
 - `step` — a `workflow.yaml` step id (`create-spec`, `design`,
   `create-plan`, `implement`, `review`, `verify`, `retrospect`), or the
   single sentinel `no-step`. `no-step` applies whenever no `workflow.yaml`
-  step is in effect at the stop point: Step 0's git-setup abort, Step A's
-  feature-resolution failure, and Step C's abort (every workflow step has
-  already completed by then, and the stop happens outside any of them). On
+  step is in effect at the stop point: `stop-condition-6` (Step 0's
+  git-setup abort), `step-a-abort` (Step A's feature-resolution failure),
+  and `step-c-abort` (Step C's abort — every workflow step has already
+  completed by then, and the stop happens outside any of them). On
   `state=completed` the value is always `retrospect` — the final workflow
   step, which a completed run has always reached.
-- `reason` — one of the nine stop reason codes listed below, or the
+- `reason` — one of the eleven stop reason codes listed below, or the
   reserved value `none` (used only when `state=completed`).
 - `detail` — a single line, human-facing, non-empty description. It
   carries no confidential information beyond paths.
 
 ## Stop reason codes
 
-Closed set of nine stop reason codes:
+Closed set of eleven stop reason codes:
 
 | Code | Meaning | Applies to `state` |
 |---|---|---|
@@ -75,6 +85,8 @@ Closed set of nine stop reason codes:
 | `implement_task_failed` | A task failed a second time in the implement phase | `stopped` |
 | `verify_rework_cap_reached` | The verify phase's rework cap was reached | `stopped` |
 | `completion_aborted` | Step C's completion processing aborted | `stopped` |
+| `feature_resolution_aborted` | Step A's feature-resolution failed and the batch run aborted | `stopped` |
+| `docs_commit_conflict_aborted` | A phase aborted after a second consecutive `commit-docs.sh` exit 4 | `stopped` |
 
 The value `none` is reserved for `state=completed`; it is not itself a
 stop reason code and is never used together with `state=stopped`. Every
@@ -84,7 +96,7 @@ carries a `detail` field.
 ## Stop point coverage
 
 Every terminating stop point is bound to exactly one reason code above.
-The third column names the document that owns (defines) the stop point;
+The third column names the document where the stop point is specified;
 this table only maps it to a reason code, it does not redefine it.
 
 | Stop point | Reason code | Source |
@@ -98,13 +110,30 @@ this table only maps it to a reason code, it does not redefine it.
 | `implement-second-failure` | `implement_task_failed` | `references/implement-phase.md` |
 | `verify-rework-cap` | `verify_rework_cap_reached` | `skills/develop/SKILL.md` |
 | `step-c-abort` | `completion_aborted` | `skills/develop/SKILL.md` |
+| `step-a-abort` | `feature_resolution_aborted` | `skills/develop/SKILL.md` |
+| `docs-commit-conflict` | `docs_commit_conflict_aborted` | `references/phase-state.md` |
+
+Precedence rule: when a stop matches more than one row above, the
+phase-specific stop point takes precedence over the generic
+`stop-condition-N` rows, so exactly one code applies.
+`implement-second-failure`, `verify-rework-cap` and `docs-commit-conflict`
+are the stop points that can also match `stop-condition-3` — all three
+leave a step's status `failed`, which is `stop-condition-3`'s own trigger —
+and in each case the phase-specific row wins. Correspondingly, the
+`stop-condition-3` row's meaning is restricted to `failed` / `needs_update`
+states that no phase-specific row covers.
 
 ## No line on a wait turn
 
-A turn that ends at develop's stop condition 5 (waiting for an implementer
-notification) emits no terminal line. That wait is in-flight, not a stop:
-the run resumes when the notification arrives, and a terminal line at that
-point would be misread as a stop by a consumer parsing the output.
+A turn that has not reached either of the contract's two terminal states
+(`state=completed` or `state=stopped`) emits no terminal line. Develop's
+stop condition 5 (waiting for an implementer notification) is one instance:
+that wait is in-flight, not a stop, and the run resumes when the
+notification arrives — a terminal line at that point would be misread as a
+stop by a consumer parsing the output. Implement's launch turn and wake
+turn (`references/implement-phase.md`) are further instances: both end the
+turn mid-run, without the batch run itself having reached a terminal
+state.
 
 ## Responsibility boundary
 

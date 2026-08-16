@@ -1,0 +1,114 @@
+task_id: task0004
+baseline_failures: []          # full suite (1162 tests) was green before any edit
+final_failures: []             # full suite (1177 tests) green after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_eleven_fixed_codes
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_section_stated_count_equals_table_row_count
+    red_confirmed: true
+    red_reason: >-
+      test_extracted_set_equals_the_eleven_fixed_codes: extracted set had
+      only 9 codes, missing feature_resolution_aborted and
+      docs_commit_conflict_aborted.
+      test_section_stated_count_equals_table_row_count: "'eleven' not found
+      in \"...closed set of nine stop reason codes...\"".
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
+    red_confirmed: true
+    red_reason: >-
+      test_bidirectional_coverage: "every stop-point key must appear exactly
+      once" -- extracted 9 keys, expected 11 (missing step-a-abort,
+      docs-commit-conflict).
+      test_pairing_matches_expected_key_code_mapping: dict mismatch, real
+      table's dict missing the two new key->code pairs present in
+      _KEY_CODE_PAIRS_IN_ORDER.
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_no_step_bullet_names_the_stop_points_as_a_set
+    red_confirmed: true
+    red_reason: >-
+      extracted no-step stop-point set was {stop-condition-6, step-c-abort}
+      (2 members, "Step A's feature-resolution failure" was prose only, not
+      backticked as a stop-point key) vs expected {stop-condition-6,
+      step-a-abort, step-c-abort} (3 members) -- assertEqual failed.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_precedence_rule_stated
+      - tests.test_batch_stop_contract.TestPrecedenceMatcherNegativeProof.test_missing_precedence_rule_is_rejected
+      - tests.test_batch_stop_contract.TestPrecedenceMatcherNegativeProof.test_forged_section_still_parses_into_a_complete_well_formed_table
+    red_confirmed: true
+    red_reason: >-
+      test_precedence_rule_stated: "'phase-specific stop point takes
+      precedence over the generic' not found" in the real Stop point
+      coverage section (no precedence rule existed yet). The negative-proof
+      class's own tests exercise the matcher against a forged sample and
+      were designed to pass from the start (they test the matcher, not the
+      document); the real-document assertion is what carried the red state.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_states_detail_normalization_rule
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_detail_bullet_consistent_with_normalization
+      - tests.test_batch_stop_contract.TestDetailNormalizationMatcherNegativeProof.test_missing_normalization_rule_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      test_states_detail_normalization_rule: 'CR' not found in the real
+      Line format section (no detail-normalization rule existed yet).
+      test_field_values_detail_bullet_consistent_with_normalization was
+      already green pre-implementation -- the pre-existing `detail` bullet
+      already said "non-empty" and this task does not change that bullet;
+      it is a consistency check, not new behavior, so its pass predates the
+      edit (see notes).
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_states_general_no_line_rule
+      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_states_stop_condition_5_emits_no_line
+    red_confirmed: true
+    red_reason: >-
+      test_states_general_no_line_rule: "'has not reached either' not
+      found" in the real "No line on a wait turn" section (only the
+      condition-5-specific wording existed). test_states_stop_condition_5_emits_no_line
+      is the Test-Notes-mandated pure regression guard over retained
+      wording (heading text and the stop-condition-5 phrase are unchanged
+      by this task) and was already green before and after -- exempt from
+      the negative-proof requirement per IMPLEMENTATION.md's Test
+      authoring note.
+  AC-7:
+    tests:
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_source_column_intro_claims_only_naming
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_source_paths_resolve_to_existing_files
+      - tests.test_batch_stop_contract.TestSourcePathMatcherNegativeProof.test_nonexistent_source_path_is_rejected
+      - tests.test_batch_stop_contract.TestSourcePathMatcherNegativeProof.test_forged_row_is_otherwise_well_formed_and_extracted
+    red_confirmed: true
+    red_reason: >-
+      test_source_column_intro_claims_only_naming: "'owns (defines)'
+      unexpectedly found" in the real section (the intro sentence still
+      claimed ownership). test_nonexistent_source_path_is_rejected
+      (negative proof) failed before the `subTest` fix in
+      `_assert_source_paths_resolve` was applied (AssertionError was
+      swallowed by subTest instead of propagating to assertRaises) --
+      after the fix it correctly rejects the forged non-existent path.
+      test_source_paths_resolve_to_existing_files itself was already green
+      before the two new rows were added (the pre-existing 9 rows' paths
+      already resolved); it was not independently observed red, but its
+      matcher's rejection behavior is proven by the negative proof above,
+      and the two new rows' paths (skills/develop/SKILL.md,
+      references/phase-state.md) were verified to resolve via direct
+      filesystem check before being written into the document.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/process-level criterion, not a single red-green test: verified
+      directly by running `python3 -m unittest discover -s tests` (1177
+      passed, 0 failures, up from the 1162-test baseline) and `python3
+      em-workflow/scripts/check-plugin-invariants.py .` (exit 0, all 7
+      checks PASS) from the repository root after implementation, by
+      grepping this module's imports (stdlib only: os, re, unittest,
+      pathlib), and by confirming every matcher added by this task carries
+      a negative proof plus a non-vacuity guard (see AC-4/5/7 entries
+      above). No test module that pre-dates this feature was modified --
+      the only test file touched is this feature's own
+      tests/test_batch_stop_contract.py, created by task0001.
