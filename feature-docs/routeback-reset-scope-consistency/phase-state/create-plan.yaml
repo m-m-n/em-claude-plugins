@@ -1,0 +1,21 @@
+schema_version: 1
+feature: routeback-reset-scope-consistency
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 5fc5a4a051b56f60d74d95a73ed1d4c4a0d6603b
+last_input_digest: sha256:daebbf43c35711275aa8fe2d19301c0bd7768ef895864cfded12bd5f41410085
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:daebbf43c35711275aa8fe2d19301c0bd7768ef895864cfded12bd5f41410085
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
