@@ -1,0 +1,296 @@
+round: 1
+executed_at: "2026-08-16T16:35:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: b3d8824da4182071c2a5d7490925fee1aba951e1
+  head_commit: bee4d5a469274969b8ebe76b3a0b8f5a67411bb7
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/routeback-reset-scope-consistency/task0001.tests.yaml
+    - test-docs/routeback-reset-scope-consistency/task0002.tests.yaml
+    - tests/test_routeback_reset_scope_consistency.py
+    - tests/test_routeback_reset_scope_version_bump.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+
+findings:
+  - stable_id: 0acedde04c24cb8d
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 409
+    line_end: 417
+    title: "書き込みセットの対象集合だけ reconciled state に移り、直後の事後条件と `replace_all` 前提条件（workflow.yaml status ベース）との接続が切れている"
+    description: >-
+      reset 対象集合が「Step I.2.b step 1 の reconciled state が `failed` のタスク」に
+      定義し直された結果、直後の事後条件「no task is left `merged` or `in_progress` or
+      `failed`」が、「workflow.yaml で `failed` の集合 ⊆ reconciled state が `failed`
+      の集合」という未記載の前提に依存するようになった。ゲートが証明するのは
+      workflow.yaml 側の `merged` / `in_progress` 不在と reconciled 側の `merged` /
+      in-flight 不在だけで、workflow.yaml の `failed` については何も言っていない。
+      journal 欠落時（workflow.yaml `status: failed` + journal イベント無し）に両者が
+      乖離し、`replace_all` の permission condition（workflow.yaml status 基準）に
+      違反して再計画が protocol error で詰む経路が残る。
+    suggestion: >-
+      reset 対象集合をゲートが実際に推論している両ソースの和で定義するか、
+      「workflow.yaml で `failed` のタスクは必ず reconciled state も `failed`」を
+      I.2.b step 3 の書き込み規則から導く一文を明示的に足す。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix candidate gate（critical/high のみ）に
+      該当せず、batch モードで自動修正しない。Notion に追跡タスクとして起票する。
+  - stable_id: e3a4f2b026841bf6
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 218
+    line_end: 221
+    title: "I.2.a に追加した再帰不変条件の参照先が誤っており、I.2.a → I.2.c → I.2.b → I.2.a の循環参照を作っている"
+    description: >-
+      追加文の `(the widened I.2.c gate above)` は方向が誤り（I.2.c は下）。さらに
+      I.2.a より上に実在するゲート記述は Branch & Worktree Model の exit-4 bullet
+      だけで、その bullet は本変更でまさに `in_progress` union rule へ限定された。
+      加えて I.2.a の carve-out スコープ ← I.2.c のゲート ← I.2.b step 1 の
+      reconciled state ← I.2.a の carve-out という所有関係の閉路ができており、
+      その打ち切り点が文書化されていない。
+    suggestion: >-
+      参照を `below` に直すか `merged` union を定義している I.2.c の箇所を名指しし、
+      「carve-out は journal last event が `failed` の場合のみ適用されるため
+      I.2.b step 1 の `merged` 判定は carve-out に依存せず循環しない」旨を追記する。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix candidate gate に該当せず、batch モードで
+      自動修正しない。spec 観点 (69fc571959dc36a1) / comprehensive 観点
+      (477a18556a3587e3) が同一サイトを独立に検出。Notion に追跡タスクとして起票する。
+  - stable_id: 5a9c94c87a6f7c4f
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 428
+    line_end: 431
+    title: "reconciled state `merged` が、ゲートではハード阻止条件・cleanup ではソフトなフィルタ条件として二通りに扱われている"
+    description: >-
+      cleanup 文の「a task whose reconciled state is `merged` is never a cleanup
+      target, whatever workflow.yaml says」は、reconciled-`merged` のタスクが
+      cleanup 地点に到達しうる前提の書き方。しかし同節のゲートは reconciled-`merged`
+      が 1 件でもあれば route-back 自体を拒否するので、この時点で定義上存在しない。
+      同一述語が一方ではハードゲート、他方ではフィルタとして書かれており、
+      単一導出元へ揃えるという本変更の目的自体に対する不整合。
+    suggestion: >-
+      cleanup 文をゲートの帰結と分かる形に言い直す（例: 「the gate above already
+      excluded every task the reconciled state reports `merged`」）か、逆に
+      cleanup 側での再判定を owner として一箇所に決める。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix candidate gate に該当せず、batch モードで
+      自動修正しない。comprehensive 観点 (cbe1e5e8ca5cf4df) が同一サイトを独立に検出。
+      Notion に追跡タスクとして起票する。
+  - stable_id: cbe1e5e8ca5cf4df
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 428
+    line_end: 433
+    title: "cleanup が「confirmed not merged」と断言するが、実ブランチの ancestor 検証は一度も走らない"
+    description: >-
+      cleanup の削除対象を「confirmed not merged」と書くが、その根拠は journal の
+      last event と workflow.yaml status だけで、`git merge-base --is-ancestor` は
+      「`merged` を主張したタスク」にしか適用されない。merge-task.sh は
+      `git update-ref` の後で `append_merged_event` を呼び、append 失敗時は WARNING
+      のまま exit 0 で続行する。update-ref 成功後・append 前に実装者が停止し report も
+      欠落すると、queue_failure_net.py が `failed` を追記 → 再構成状態 `failed` →
+      拡張後のゲートもブロックせず、マージ済みブランチが `git branch -D` される
+      残余経路が残る。
+    suggestion: >-
+      (a) cleanup 直前に削除候補ごとの `git merge-base --is-ancestor` 検査を足して
+      ancestor だったタスクを cleanup / reset の両方から外す、または (b) 「confirmed
+      not merged」を実際の検証内容（reconciled state が `merged` でない）まで弱め、
+      journal に `merged` が残らなかったマージ済みブランチはこのゲートでは検出できない
+      残余状態であることを leftover-state 文と同じ体裁で明記する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix candidate gate に該当せず、batch モードで
+      自動修正しない。architecture 観点 (5a9c94c87a6f7c4f) が同一サイトを独立に検出。
+      Notion に追跡タスクとして起票する。
+  - stable_id: 477a18556a3587e3
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 218
+    line_end: 222
+    title: "I.2.a に追加した recursion invariant の相互参照方向が逆（\"above\" だが I.2.c は下）"
+    description: >-
+      追加文が `(the widened I.2.c gate above)` と書いているが I.2.c は 372 行以降で
+      下にある。同段落 2 文前は同じ対象を `below` で参照しており段落内で矛盾。さらに
+      I.2.a より上の唯一のゲート記述（Branch & Worktree Model の exit-4 bullet）は
+      本変更で `in_progress` union rule に限定されており `merged` について述べていない
+      ため、ポインタを辿った読み手が invariant の根拠に到達できない。
+    suggestion: >-
+      `above` を `below` に直す 1 語修正。テストの RECURSION_INVARIANT_PHRASE は
+      "no retired task id can leave..." のみを固定しており above/below を含まないため
+      既存アサーションは壊れない。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: >-
+      severity medium のため R4 の auto-fix candidate gate に該当せず、batch モードで
+      自動修正しない。architecture 観点 (e3a4f2b026841bf6) / spec 観点
+      (69fc571959dc36a1) が同一サイトを独立に検出。Notion に追跡タスクとして起票する。
+  - stable_id: 69fc571959dc36a1
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 219
+    line_end: 219
+    title: "FR6 の新規文が I.2.c ゲートを「above」と誤指示（実際は below）"
+    description: >-
+      SPEC FR6 で追加された I.2.a の再帰不変条件文が `(the widened I.2.c gate above)`
+      と書いているが、I.2.a は 191 行目、I.2.c は 372 行目で参照先は below。本
+      ドキュメント内の I.2.c への前方参照は他すべて `below` で統一されており、219 行目
+      だけが例外。SPEC FR5「Every site that describes the I.2.c gate is updated in
+      the same change so it still reads correctly」に対する違反。
+    suggestion: >-
+      219 行目の `the widened I.2.c gate above` を `the widened I.2.c gate below`
+      に修正する（unified diff をレビュアーが提示済み）。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: >-
+      severity medium かつ category spec のため R4 の auto-fix candidate gate
+      （critical/high AND category != spec）に二重に該当せず、batch モードで
+      自動修正しない。architecture / comprehensive の 2 観点が同一サイトを独立に検出。
+      Notion に追跡タスクとして起票する。
+  - stable_id: 93ecbc5aa6c055de
+    severity: critical
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 390
+    title: "FR1 requirement: merged conjunct now union of two sources"
+    description: "FR1 は充足。merged conjunct が 2 ソースの union として記述されている。"
+    suggestion: "None - spec requirement is met."
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      欠陥報告ではなく要件充足の確認。suggestion が "None - spec requirement is met."
+      であり severity: critical は cross-model レビュアーの出力スキーマ誤用。
+      Claude spec 観点も FR1-FR8 実装済みと独立に確認済み。retrospect の
+      declined_findings（誤検知候補）として記録する。
+  - stable_id: 049e482557089a13
+    severity: critical
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 399
+    title: "FR2 requirement: reset target defined by reconciled state"
+    description: "FR2 は充足。write set の reset 対象が reconciled state で表現されている。"
+    suggestion: "None - spec requirement is met."
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "同上（要件充足の確認であり欠陥報告ではない）。"
+  - stable_id: 1d20acebc317649a
+    severity: critical
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 415
+    title: "FR3 requirement: cleanup targets only tasks confirmed not merged"
+    description: "FR3 は充足。cleanup 対象が「confirmed not merged」と明記されている。"
+    suggestion: "None - spec requirement is met."
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "同上（要件充足の確認であり欠陥報告ではない）。"
+  - stable_id: de02235f1c3833a0
+    severity: critical
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 430
+    title: "FR4 requirement: rejected path enumerates reconciled-state-merged blocker"
+    description: "FR4 は充足。rejected path が reconciled-state-merged blocker を列挙している。"
+    suggestion: "None - spec requirement is met."
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "同上（要件充足の確認であり欠陥報告ではない）。"
+  - stable_id: 011d613fba6726d5
+    severity: critical
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 64
+    title: "FR5 requirement: cross-references describing gate stay true"
+    description: "FR5 は充足。exit-4 bullet が `in_progress` union rule に限定された。"
+    suggestion: "None - spec requirement is met."
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      要件充足の確認であり欠陥報告ではない。ただし Claude spec 観点は同じ FR5 に対し
+      219 行目の誤参照を違反として検出しており (69fc571959dc36a1)、そちらが有効な指摘。
+  - stable_id: abb9445083dcf44f
+    severity: critical
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 215
+    title: "FR6 requirement: recursion invariant is stated"
+    description: "FR6 は充足。recursion invariant の文が追加されている。"
+    suggestion: "None - spec requirement is met."
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "同上（要件充足の確認であり欠陥報告ではない）。"
+  - stable_id: b26831cae7851173
+    severity: critical
+    category: spec
+    file: tests/test_routeback_reset_scope_consistency.py
+    line: 1
+    title: "FR7 requirement: document-contract tests exist"
+    description: "FR7 は充足。document-contract テストモジュールが追加されている。"
+    suggestion: "None - spec requirement is met."
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "同上（要件充足の確認であり欠陥報告ではない）。"
+  - stable_id: c53747afeed6d44f
+    severity: critical
+    category: spec
+    file: .claude-plugin/marketplace.json
+    line: 26
+    title: "FR8 requirement: plugin version bump to 0.1.39"
+    description: "FR8 は充足。両ファイルとも 0.1.38 → 0.1.39 に bump されている。"
+    suggestion: "None - spec requirement is met."
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "同上（要件充足の確認であり欠陥報告ではない）。"
+
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+  note: >-
+    R4 の candidate gate（severity ∈ {critical, high} AND category != spec）に
+    該当する finding がゼロだったため auto-fix ループは 1 度も起動していない。
+    実欠陥として残った 6 件はすべて medium、cross-model spec の critical 8 件は
+    いずれも要件充足の確認（declined）。
+residual_critical_high: 0
+rework_required: false
