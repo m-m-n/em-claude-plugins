@@ -1,0 +1,161 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_document_exists
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_seven_level_2_headings_in_order
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_prefix_literal_is_defined
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_fixed_four_field_order
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_states_same_prefix_and_fields_for_both_terminal_states
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_states_no_external_tool_needed
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_states_batch_only_emission
+    red_confirmed: true
+    red_reason: >-
+      Before em-workflow/references/batch-terminal-line.md existed, every
+      test in this class errored in setUpClass with
+      FileNotFoundError: [Errno 2] No such file or directory:
+      '.../em-workflow/references/batch-terminal-line.md'.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_table_has_rows
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_codes_are_well_formed
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_nine_fixed_codes
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_none_documented_as_reserved_for_completed
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_states_step_and_detail_fields_also_carried
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extractor_ignores_reason_codes_mentioned_only_in_prose
+      - tests.test_batch_stop_contract.TestReasonCodeExtractorNegativeProofs.test_duplicate_table_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestReasonCodeExtractorNegativeProofs.test_duplicate_code_is_rejected
+      - tests.test_batch_stop_contract.TestReasonCodeExtractorNegativeProofs.test_empty_cell_table_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestReasonCodeExtractorNegativeProofs.test_empty_first_cell_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      TestStopReasonCodes.setUpClass errored with the same FileNotFoundError
+      as AC-1 before the contract document existed. The negative-proof
+      matcher tests (TestReasonCodeExtractorNegativeProofs) do not depend on
+      the document and do not go red by themselves; they exercise
+      `_assert_well_formed_code_list` directly against forged tables and
+      were confirmed correct by observing them pass against the intended
+      forged-duplicate / forged-empty-cell samples plus the corresponding
+      _rejected assertRaises tests failing (AssertionError not raised) when
+      an early version of `_forged_coverage_table` (a sibling helper, same
+      bug class) omitted the header row, which was caught and fixed before
+      this run (see notes).
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_table_has_rows
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_each_row_names_a_source_document
+      - tests.test_batch_stop_contract.TestCoverageMatcherNegativeProofs.test_missing_key_table_parses_into_a_non_empty_pair_of_sets
+      - tests.test_batch_stop_contract.TestCoverageMatcherNegativeProofs.test_missing_key_is_rejected
+      - tests.test_batch_stop_contract.TestCoverageMatcherNegativeProofs.test_code_outside_set_table_parses_into_a_non_empty_pair_of_sets
+      - tests.test_batch_stop_contract.TestCoverageMatcherNegativeProofs.test_code_outside_set_is_rejected
+      - tests.test_batch_stop_contract.TestCoverageMatcherNegativeProofs.test_duplicate_stop_point_key_table_parses_into_a_non_empty_pair_of_sets
+      - tests.test_batch_stop_contract.TestCoverageMatcherNegativeProofs.test_duplicate_stop_point_key_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      TestStopPointCoverage.setUpClass errored with the same
+      FileNotFoundError before the document existed. The
+      TestCoverageMatcherNegativeProofs tests initially failed for a real
+      bug in the test helper itself, not the missing document:
+      `_forged_coverage_table` built forged samples with no header row, so
+      `_table_rows` (which always drops the first parsed row as a header)
+      silently ate one real data row, making
+      `test_missing_key_table_parses_into_a_non_empty_pair_of_sets` etc.
+      assert len(pairs)==8 but observe 7. Fixed by adding a header +
+      separator row to `_forged_coverage_table`; re-run confirmed all nine
+      tests in this AC pass afterward.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_states_stop_condition_5_emits_no_line
+      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_field_values_defines_the_sentinel_and_its_condition
+    red_confirmed: true
+    red_reason: >-
+      TestNoLineOnWaitTurnAndSentinel.setUpClass errored with the same
+      FileNotFoundError before the document existed.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract.TestResponsibilityBoundary.test_states_no_status_operation_against_external_service
+      - tests.test_batch_stop_contract.TestResponsibilityBoundary.test_states_detail_carries_no_confidential_information
+    red_confirmed: true
+    red_reason: >-
+      TestResponsibilityBoundary.setUpClass errored with the same
+      FileNotFoundError before the document existed. After the document was
+      created, the two assertions initially failed on the raw (non-
+      whitespace-normalized) section text because the target phrases
+      ("no status operation", "no confidential information") were split
+      across a line wrap in the rendered prose; fixed by normalizing
+      whitespace before the substring check (`_normalize`, matching the
+      existing tests/test_batch_policies.py convention), then re-confirmed
+      green.
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract.TestBatchModePointer.test_names_the_contract_document
+      - tests.test_batch_stop_contract.TestBatchModePointer.test_restates_no_contract_literal
+      - tests.test_batch_stop_contract.TestBatchModePointer.test_non_packet_gates_table_row_count_unchanged
+      - tests.test_batch_stop_contract.TestBatchModePointer.test_d7_pinned_strings_still_absent
+      - tests.test_batch_stop_contract.TestBatchModePointer.test_catch_all_paragraph_unchanged
+      - tests.test_batch_stop_contract.TestBatchModePointer.test_diff_size_gate_row_unchanged
+      - tests.test_batch_stop_contract.TestBatchModePointer.test_per_command_approval_row_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Before batch-mode.md carried the pointer,
+      test_names_the_contract_document failed with AssertionError:
+      'references/batch-terminal-line.md' not found in <the pre-edit
+      batch-mode.md text>. The remaining tests in this class are pure
+      regression guards over batch-mode.md content this task does not
+      change (row count, D7-pinned strings, catch-all paragraph, diff-size
+      row, per-command row) and were green both before and after the edit,
+      per IMPLEMENTATION.md's Test authoring note that such guards are
+      exempt from a negative-proof requirement; they are included here
+      because they are load-bearing regression evidence for AC-6's "still
+      satisfies D7" clause, confirmed correct against the retained
+      pre-edit file first.
+  AC-7:
+    tests:
+      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_occurs_only_in_the_contract_document
+      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_appears_in_the_contract_document
+      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_occurs_only_inside_fenced_blocks
+    red_confirmed: true
+    red_reason: >-
+      test_prefix_appears_in_the_contract_document and
+      test_prefix_occurs_only_inside_fenced_blocks both errored with
+      FileNotFoundError before the document existed.
+      test_prefix_occurs_only_in_the_contract_document passed trivially
+      before the document existed (the prefix literal appeared nowhere
+      under em-workflow/, so the offenders list was empty both before and
+      after) -- this is the TDD-awkward case named in task0001.md Test
+      Notes: the sweep's "absent from the whole plugin directory" state is
+      not itself a red, so red-confirmed here rests on the other two tests
+      in the class plus the post-creation run additionally confirming the
+      prefix is present in exactly one file and only inside fenced blocks.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-8 is a property of the test module itself (discoverability,
+      stdlib-only imports, negative-proof/non-vacuity coverage per matcher)
+      rather than of application behavior, so there is no separate test
+      asserting it and no meaningful "red" state to observe: the module's
+      existence, its successful discovery by `python3 -m unittest discover
+      -s tests`, and its imports (`os`, `re`, `unittest`,
+      `pathlib.Path` -- no third-party or project dependency) are the
+      verifiable outcome, confirmed directly by running the full suite
+      (1129 tests, all pass, 0 pre-existing modules modified) and by
+      reading the module's own import statements.
+notes: >-
+  Two bugs were found and fixed in the test module itself during
+  implementation, both before any assertion was made about the contract
+  document's content: (1) `_forged_coverage_table` omitted a header row,
+  which the shared `_table_rows` helper always drops as the header --
+  silently losing one real forged data row per sample; fixed by adding a
+  header + separator line. (2) three prose substring assertions
+  (`no external tool`, the `no `workflow.yaml` step is in effect` sentinel
+  condition, and the two Responsibility-boundary phrases) initially failed
+  against the freshly written contract document because the target phrase
+  spanned a line wrap in the rendered Markdown; fixed by adding a
+  `_normalize` whitespace-collapsing helper (matching the existing
+  tests/test_batch_policies.py convention) and applying it to those
+  specific multi-word phrase checks, keeping raw (newline-preserving) text
+  for every table-extraction path.

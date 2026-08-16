@@ -91,6 +91,14 @@ batch:                       # created by the orchestrator on the first
 Counters only. Never used to decide whether batch mode is active (that is
 the `--batch` flag's job, per-invocation).
 
+## Terminal line
+
+At the end of every batch run — both on normal completion and on every
+terminating stop — the final assistant message carries a machine-readable
+terminal line as its last line. `references/batch-terminal-line.md` is the
+sole owner of that line's format and is referenced here rather than
+restated.
+
 ## Reporting
 
 The final report of a batch run MUST include, beyond the normal completion
