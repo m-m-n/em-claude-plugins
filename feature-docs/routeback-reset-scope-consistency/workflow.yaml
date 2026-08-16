@@ -111,8 +111,13 @@ tasks:
     domains: [api-contract, concurrency]
     complexity: medium
     requirements: [FR2, FR3, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7, NFR8]
-    status: in_progress
-    notes: null
+    status: failed
+    notes: >-
+      run 1: implementer がストリーム無進捗 600 秒でハーネスのウォッチドッグに
+      停止させられ、completion report を返さなかった（journal 最終イベントは
+      launched のまま、failure net の追記なし）。worktree には Site A の途中編集が
+      残っている。batch mode の implement.failed-task ポリシーにより自動 retry を
+      1 回消費して同一 worktree で再開する（retry_consumed: 1）。
     branch: em-workflow/routeback-reset-scope-consistency/task0003
     provenance:
       source: verify
