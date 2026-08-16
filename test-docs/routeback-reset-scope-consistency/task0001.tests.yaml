@@ -1,0 +1,129 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_routeback_reset_scope_consistency.TestI2cGateMergedConjunctIsUnion.test_merged_union_opening_present
+      - tests.test_routeback_reset_scope_consistency.TestI2cGateMergedConjunctIsUnion.test_merged_union_names_workflow_yaml_source
+      - tests.test_routeback_reset_scope_consistency.TestI2cGateMergedConjunctIsUnion.test_merged_union_names_reconciled_state_source
+      - tests.test_routeback_reset_scope_consistency.TestI2cGateMergedConjunctIsUnion.test_merged_union_states_ancestor_verification
+      - tests.test_routeback_reset_scope_consistency.TestI2cGateMergedConjunctIsUnion.test_merged_union_cites_step_i2b_without_restating
+      - tests.test_routeback_reset_scope_consistency.TestI2cGateMergedConjunctIsUnion.test_retained_merged_literal_survives
+      - tests.test_routeback_reset_scope_consistency.TestI2cGateMergedConjunctIsUnion.test_merged_and_in_progress_literals_joined_without_sentence_break
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the setUpClass for this test class raised ValueError
+      ("substring not found") because MERGED_UNION_OPENING_ANCHOR ("The
+      `merged` half is likewise a union of two independent sources") was
+      absent from the document -- the merged conjunct was not yet stated as
+      a union at all.
+  AC-2:
+    tests:
+      - tests.test_routeback_reset_scope_consistency.TestI2cWriteSetResetTargetIsReconciledState.test_reset_target_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestI2cWriteSetResetTargetIsReconciledState.test_old_workflow_status_only_reset_phrase_absent
+      - tests.test_routeback_reset_scope_consistency.TestI2cWriteSetResetTargetIsReconciledState.test_four_write_instructions_survive_and_precede_cleanup
+      - tests.test_routeback_reset_scope_consistency.TestI2cWriteSetResetTargetIsReconciledState.test_first_tasks_status_has_pending_within_60_chars
+    red_confirmed: true
+    red_reason: >-
+      test_reset_target_phrase_present failed: AssertionError, 'every task
+      whose Step I.2.b step 1 reconciled state is `failed`' not found in the
+      normalized I.2.c section. test_old_workflow_status_only_reset_phrase_absent
+      failed: AssertionError, "**every** failed task's `tasks.{T}.status`
+      back to `pending`" was unexpectedly still present (the pre-change,
+      workflow.yaml-status-only phrasing).
+  AC-3:
+    tests:
+      - tests.test_routeback_reset_scope_consistency.TestI2cCleanupTargetsConfirmedNotMerged.test_cleanup_scope_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestI2cCleanupTargetsConfirmedNotMerged.test_cleanup_confirmed_not_merged_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestI2cCleanupTargetsConfirmedNotMerged.test_git_branch_d_occurs_exactly_once_and_within_cleanup_sentence
+      - tests.test_routeback_reset_scope_consistency.TestI2cCleanupTargetsConfirmedNotMerged.test_commit_docs_precedes_cleanup_precedes_end_of_phase
+      - tests.test_routeback_reset_scope_consistency.TestI2cCleanupTargetsConfirmedNotMerged.test_leftover_state_sentence_survives
+    red_confirmed: true
+    red_reason: >-
+      test_cleanup_scope_phrase_present and test_cleanup_confirmed_not_merged_phrase_present
+      failed: AssertionError, neither "clean up worktrees and branches for
+      exactly the tasks the write set just reset" nor "a task whose
+      reconciled state is `merged` is never a cleanup target, whatever
+      workflow.yaml says" was present. test_git_branch_d_occurs_exactly_once_and_within_cleanup_sentence
+      errored (ValueError, substring not found) because
+      CLEANUP_TARGET_SCOPE_PHRASE could not be located to anchor the
+      window check.
+  AC-4:
+    tests:
+      - tests.test_routeback_reset_scope_consistency.TestI2cRejectedBranchEnumeratesReconciledMergedBlocker.test_rejected_merged_reconciled_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestI2cRejectedBranchEnumeratesReconciledMergedBlocker.test_existing_blockers_still_enumerated
+      - tests.test_routeback_reset_scope_consistency.TestI2cRejectedBranchEnumeratesReconciledMergedBlocker.test_rejected_terminal_unchanged
+      - tests.test_routeback_reset_scope_consistency.TestI2cRejectedBranchEnumeratesReconciledMergedBlocker.test_containment_after_gate_rejects
+      - tests.test_routeback_reset_scope_consistency.TestI2cRejectedBranchEnumeratesReconciledMergedBlocker.test_no_rework_or_append_in_i2c
+    red_confirmed: true
+    red_reason: >-
+      test_rejected_merged_reconciled_phrase_present failed: AssertionError,
+      "Step I.2.b step 1's reconciled state reports a task `merged` though
+      workflow.yaml does not" not found in the rejected-path branch slice --
+      the enumeration named only the pre-existing `merged` / `in_progress` /
+      in-flight blockers.
+  AC-5:
+    tests:
+      - tests.test_routeback_reset_scope_consistency.TestCrossReferencesDescribeGateCorrectly.test_in_progress_union_rule_named_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestCrossReferencesDescribeGateCorrectly.test_rest_of_exit4_bullet_unchanged
+      - tests.test_routeback_reset_scope_consistency.TestCrossReferencesDescribeGateCorrectly.test_i2a_unreachability_sentence_present_and_terminates_correctly
+    red_confirmed: true
+    red_reason: >-
+      test_in_progress_union_rule_named_phrase_present failed:
+      AssertionError, "The widened I.2.c gate's `in_progress` union rule"
+      not found -- the exit-4 bullet still read "The widened I.2.c gate's
+      union rule" without specifying which of the (now two) unions it
+      invokes.
+  AC-6:
+    tests:
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_phrase_present
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_placed_after_unreachability_terminal
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_carve_out_still_scoped_to_failed_only
+      - tests.test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_retained_in_flight_sentence_survives
+    red_confirmed: true
+    red_reason: >-
+      test_recursion_invariant_phrase_present failed: AssertionError, "no
+      retired task id can leave a `merged` last event behind for a
+      renumbered task to inherit" not found in the I.2.a section.
+      test_recursion_invariant_placed_after_unreachability_terminal errored
+      (ValueError, substring not found) for the same reason -- the
+      recursion-invariant sentence did not exist yet.
+  AC-7:
+    tests:
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_heading_is_byte_identical
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_batch_mode_paragraph_is_byte_identical_tail
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_step_i0_pending_literal_survives
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_step_i2a_select_literal_survives
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_step_i2b_commit_literal_survives
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_retained_gate_literals_survive
+      - tests.test_routeback_reset_scope_consistency.TestRegressionGuards.test_no_bare_git_commit_or_add_lines
+      - tests.test_implement_routeback_gate
+      - tests.test_recycled_task_id_consistency
+    red_confirmed: false
+    red_reason: >-
+      This criterion is a pure regression guard over properties that were
+      already true before this task's edit (the protected byte-identical
+      heading/tail, the three raw line-wrap literals, the retained gate
+      literals, the whole-file bare-git-line invariant, and both protected
+      pre-existing modules passing unmodified). There is no observable state
+      change for these specific checks to prove red-then-green against --
+      their value is regression detection, not a new-behavior proof.
+      Recorded honestly per the tdd-testing skill rather than fabricating a
+      red. `python3 -m unittest discover -s tests` passes (1079 tests, up
+      from the 1024-test baseline).
+  AC-8:
+    tests:
+      - tests.test_routeback_reset_scope_consistency
+    red_confirmed: false
+    red_reason: >-
+      The module's own existence/discoverability/stdlib-only/matcher-shape
+      criteria are structural properties of the file itself, not a
+      behavior that can be red before the file exists. The module's
+      individual matchers each carry their own red_confirmed evidence above
+      (AC-1..AC-6); the negative-proof and non-vacuity-guard tests
+      (TestValidationDetectsRegressions, TestPreChangeSampleGuards) were
+      written and passed from their first run since they exercise captured
+      pre-change samples rather than the live (mutable) document, so there
+      is no meaningful red state for them individually either -- their
+      correctness is verified by inspection against the D8 contract instead.

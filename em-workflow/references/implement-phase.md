@@ -64,9 +64,10 @@ document is written; this phase never creates them itself.
   elsewhere in this phase, which never race each other because the
   orchestrator is single-threaded (one turn runs at a time) and every
   `commit-docs.sh` invocation additionally serializes on the shared lock.
-  The widened I.2.c gate's union rule — blocked when workflow.yaml reports
-  a task `in_progress` OR Step I.2.b's last-event-per-task rule reports a
-  task in-flight — excludes the first path: route back proceeds only when
+  The widened I.2.c gate's `in_progress` union rule — blocked when
+  workflow.yaml reports a task `in_progress` OR Step I.2.b's
+  last-event-per-task rule reports a task in-flight — excludes the first
+  path: route back proceeds only when
   no implementer of this feature can be running, so no `merge-task.sh` call
   against this branch can be in flight either; therefore no concurrent ref
   advance can occur between the route-back call site's refresh and its
@@ -214,7 +215,11 @@ journal last event, and the planner's `replace_all` renumbering from
 `task0001` that is the sole source of any recycled id, a re-numbered task
 can only ever inherit a retired id's terminal events — so workflow.yaml
 `status: pending` combined with journal last event `launched` can never
-arise. This recycled-task-id rule governs only the orchestrator's
+arise. Because route-back proceeds only when no task is `merged` under
+either source (the widened I.2.c gate above), no retired task id can
+leave a `merged` last event behind for a renumbered task to inherit, so
+the recycled-task-id carve-out above stays correctly scoped to `failed`
+only. This recycled-task-id rule governs only the orchestrator's
 interpretation of the journal: `queue_launch_guard.py`,
 `queue_stop_guard.py`, `queue_failure_net.py` and `queue_taskstop_net.py`
 derive a task's state from the journal's last event alone and never
@@ -382,7 +387,12 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   independent check, not inferred from the drain above (which only
   describes the normal case, not the admissibility test); a stale or
   unretired `in_progress` entry left by a crashed implementer blocks this
-  path exactly as a `merged` task does. The `in_progress` half is a union
+  path exactly as a `merged` task does. The `merged` half is likewise a
+  union of two independent sources, either of which blocks: workflow.yaml
+  reporting a task `merged`, OR Step I.2.b step 1's reconciled state
+  reporting a task `merged` (journal last event `merged`, verified by
+  `git merge-base --is-ancestor` as that step already requires) — cited
+  here as the owning rule, not restated. The `in_progress` half is a union
   of two independent sources, either of which blocks: workflow.yaml
   reporting a task `in_progress`, OR Step I.2.b's last-event-per-task
   rule reporting a task in-flight (a `launched` last event, with the
@@ -396,16 +406,16 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   the integration worktree first (`git -C "$WT_ROOT/integration"
   reset --hard em-workflow/{feature}/integration`), then capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
-  then make one ordered workflow.yaml write set: set `create-plan` to
-  `needs_update`, set the `implement` step back to `pending`, record
-  each failed task's failure reason (the implementer's report
-  `notes`) in `tasks.{T}.notes`, and set
-  **every** failed task's `tasks.{T}.status` back to `pending` — the
+  then make one ordered workflow.yaml write set over the reset target
+  set — every task whose Step I.2.b step 1 reconciled state is
+  `failed`: set `create-plan` to `needs_update`, set the `implement`
+  step back to `pending`, record each such task's failure reason (the
+  implementer's report `notes`) in `tasks.{T}.notes`, and set
+  `tasks.{T}.status` back to `pending` for every task in that set — the
   gate above already established that no task is `merged` or
   `in_progress` at this point, so the result is that no task is left
-  `merged` or `in_progress` or `failed`,
-  which is exactly what makes the planner's `replace_planning`
-  operation admissible on re-entry
+  `merged` or `in_progress` or `failed`, which is exactly what makes the
+  planner's `replace_planning` operation admissible on re-entry
   (`references/workflow-patch.md`'s `replace_all` permission
   conditions own the full condition set and the protocol-error rule —
   not restated here). Commit that write set next, BEFORE any cleanup:
@@ -415,8 +425,10 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   Model's exit-4 recovery bullet above for why; an unexpected non-zero
   exit here stops the phase immediately with a report, at a point where
   no worktree or branch has been deleted). Only once that commit
-  succeeds, clean up each of those failed
-  tasks' worktrees and branches (`git worktree remove --force
+  succeeds, clean up worktrees and branches for exactly the tasks the
+  write set just reset — confirmed not merged; a task whose reconciled
+  state is `merged` is never a cleanup target, whatever workflow.yaml
+  says (`git worktree remove --force
   "$WT_ROOT/{T}"`; `git branch -D "em-workflow/{feature}/{T}"`, for
   every {T} just reset) — this order's one residual leftover state is the
   commit succeeding and the cleanup not yet running, i.e. stale
@@ -430,9 +442,11 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   planner re-scopes the failed task (split it, change the approach) — or,
   when a requirement itself must be dropped, routes that change through
   the normal SPEC.md update path first. When the gate does not hold —
-  because a task has status `merged`, because a task has status
-  `in_progress`, or because Step I.2.b's last-event-per-task rule reports
-  a task in-flight — this automatic re-entry does not apply:
+  because a task has status `merged`, because Step I.2.b step 1's
+  reconciled state reports a task `merged` though workflow.yaml does
+  not, because a task has status `in_progress`, or because Step I.2.b's
+  last-event-per-task rule reports a task in-flight — this automatic
+  re-entry does not apply:
   `create-plan` is NOT set to `needs_update`. The phase instead refreshes
   the integration worktree first (the same `reset --hard` as above),
   captures `TERMINAL_TIP=$(git -C "$WT_ROOT/integration" rev-parse
