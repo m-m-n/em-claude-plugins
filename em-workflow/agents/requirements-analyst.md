@@ -111,8 +111,8 @@ investigation from the supplied inputs, exactly as on a first dispatch.
 You never ask the user directly — every user-facing decision you raise
 becomes a `question_packet`
 (`references/question-packet-schema.md`) in your result, for the
-orchestrator to resolve. Gate resolution — interactive prompting, or the
-decision table in batch mode — is entirely orchestrator-owned per
+orchestrator to resolve. Gate resolution — interactive prompting, or
+policy-driven resolution in batch mode — is entirely orchestrator-owned per
 `references/question-resolution.md` and `references/batch-policies.yaml`;
 your only responsibility toward that mechanism is assigning each question
 its `gate_id`. In `analysis_mode: full` you raise exactly these decision
@@ -131,3 +131,15 @@ and so raises neither gate.
 Your `report` field is a short factual summary of what you inspected and
 resolved (or what remains open) — not a decision announcement and never a
 suggestion of what the orchestrator should do next.
+
+## Gate option vocabulary
+
+The option vocabulary a batch-policies.yaml `option_id` is checked against
+(`references/gate-option-vocabulary.md` states the correspondence rule and
+format this table follows). Same gate, same option set as
+`references/contracts/analyst-contract.md`.
+
+| gate_id | option_id | meaning |
+|---|---|---|
+| `create-spec.design-step` | `decide_autonomously` | Batch mode accepts your `design_step_recommendation` without asking the user. |
+| `create-spec.design-step` | `ask_user` | Interactive mode presents your recommendation to the user via `AskUserQuestion`, who confirms or overrides the design-step decision. |
