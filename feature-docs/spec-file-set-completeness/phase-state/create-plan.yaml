@@ -1,0 +1,21 @@
+schema_version: 1
+feature: spec-file-set-completeness
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 5f14501ec00c814300a9910123a6ea858e4b093c
+last_input_digest: sha256:3aeacbb8c49e1ffa2c9c57c02f6b71ffef2f751dc9d084dbedc847dcd10fbfec
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:3aeacbb8c49e1ffa2c9c57c02f6b71ffef2f751dc9d084dbedc847dcd10fbfec
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
