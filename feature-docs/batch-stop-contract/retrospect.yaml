@@ -1,0 +1,79 @@
+feature: batch-stop-contract
+collected_at: "2026-08-16T20:10:00+09:00"
+session_ids: [01a009e9-0a4b-7000-bd93-142ee17e4bb0]
+signals:
+  review_critical_high:
+    - stable_id: 0637708c55c7f230
+      category: comprehensive
+      file: em-workflow/references/batch-terminal-line.md
+      title: Step A の feature 解決失敗に割り当てられた reason code が存在しない
+      resolution: fixed（round 2 で解消確認）
+    - stable_id: 1b6dc8cae3c91111
+      category: architecture
+      file: em-workflow/references/batch-terminal-line.md
+      title: 閉集合に Step A の中断に対応する reason code が無く同一文書内で矛盾
+      resolution: fixed（round 2 で解消確認）
+    - stable_id: 0637708c55c7f231
+      category: spec
+      file: em-workflow/references/batch-terminal-line.md
+      title: Step A の feature 解決失敗に対応する reason code が無く終端行が構成できない
+      resolution: fixed（round 2 で解消確認）
+    - stable_id: 4aeb3f8b0e8ec9e6
+      category: architecture
+      file: em-workflow/references/batch-terminal-line.md
+      title: 停止点が重なるのに優先規則が無く reason code が一意に決まらない
+      resolution: fixed（round 2 で解消確認）
+    - stable_id: 55903a56e01e5125
+      category: comprehensive
+      file: em-workflow/skills/develop/SKILL.md
+      title: 停止条件 5 以外の非終端ターン終了で終端行の要否が未定義
+      resolution: fixed（round 2 で解消確認）
+    - stable_id: 6a1c9f2d84be3057
+      category: comprehensive
+      file: em-workflow/skills/develop/SKILL.md
+      title: 終端行の literal を持つ SSOT を Read する指示が無い
+      resolution: fixed（round 2 で解消確認）
+    - stable_id: b654786a7fb8e13c
+      category: architecture
+      file: em-workflow/references/batch-terminal-line.md
+      title: 閉集合外の終端停止が残っている（designer-contract / phase-state / command-approval hard_fail）
+      resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  deferred_findings:
+    - {stable_id: b654786a7fb8e13c, severity: high, category: architecture, resolution_reason: "batch mode: rework cap reached"}
+    - {stable_id: 6d3ffa3e04510229, severity: medium, category: architecture, resolution_reason: "batch mode: rework cap reached"}
+    - {stable_id: 454755f74a3e8a04, severity: medium, category: comprehensive, resolution_reason: "batch mode: rework cap reached"}
+    - {stable_id: e0aba3d91cffcb97, severity: medium, category: comprehensive, resolution_reason: "batch mode: rework cap reached"}
+    - {stable_id: c1e94c9399f18b7d, severity: medium, category: architecture, resolution_reason: "batch mode: rework cap reached"}
+    - {stable_id: 9e5ce22b85677b38, severity: medium, category: comprehensive, resolution_reason: "batch mode: rework cap reached"}
+lessons_candidates:
+  - >-
+    VERIFICATION.md のテストシナリオ ID を implementation-planner が `TS1` 形式で
+    書いたが、`skills/plan-writing/SKILL.md` の表テンプレートと
+    `scripts/validate-worker-output.py` の `_TS_ID_RE`（`TS-\d+`）はどちらも
+    `TS-N` 形式を要求する。create-plan フェーズの検証はこの形式を見ないため
+    ズレが素通りし、rework フェーズの `rework_index` 検証で初めて落ちた。
+    planner 側に ID 形式を明示するか、create-plan の検証でも同じ正規表現を
+    かけると早期に気づける。
+  - >-
+    `scripts/validate-worker-output.py` の `extract_markdown_section` は
+    `text.find("## ", start)` で次見出しを探すため、表セル内のバッククォート付き
+    `` `## Line format` `` のような文字列を見出しと誤認してセクションを途中で
+    打ち切る。今回 VERIFICATION.md のシナリオ表がこれに当たり、TS-1 以外が
+    抽出されなかった。行頭アンカー（`^## `）にするだけで解消する。
+  - >-
+    review フェーズの auto-fix（review-editor）は 1 dispatch = 1 ファイルに
+    scope が固定されるため、「閉集合を定義する文書」と「その集合を pin する
+    テストモジュール」が別ファイルにある設計では critical/high を 1 件も
+    自動修正できない。今回は 2 ラウンドとも auto-fix を 0 loop で打ち切り
+    rework に回した。契約テストを伴う文書変更では、auto-fix ではなく rework が
+    既定経路になることを review-phase.md 側に書いておくと判断が速い。
+  - >-
+    「閉集合の網羅性」を要求する契約は、レビューのたびに未カバーの停止点が
+    追加で見つかる構造を持つ。round 1 で 2 つ塞いだら round 2 で 4 つ見つかった。
+    catch-all コード + fallback 規則を最初から置くか、owner 文書側にアンカーを
+    書いて機械的に双方向チェックできる形にしないと収束しない。
