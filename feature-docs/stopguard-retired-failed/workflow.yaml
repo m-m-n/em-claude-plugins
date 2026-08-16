@@ -28,7 +28,8 @@ workflow:
     skipped_reason: "Backend-only classification-rule fix inside a single Python Stop hook plus two doc/metadata edits. No UI, no user-visible visual surface, no new artifact schema, and no design-system candidates exist in this repository."
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 9809d94119f0adad319e9bcfcba8b66ab39e3303
   - id: implement
     status: pending
     base_commit: null
@@ -41,7 +42,34 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "Stop-hook recycled-task-id carve-out"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/hooks/queue_stop_guard.py
+      - tests/test_queue_stop_guard.py
+    skills: [backend-impl]
+    domains: [input-handling, external-io]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR7, FR8, NFR1, NFR2, NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: "SSOT sentence and plugin version alignment"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR6, FR9]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -55,91 +83,91 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1, TS4, TS6]
   FR2:
     title: "Genuine failures still suppress blocking"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS2, TS3, TS4, TS7]
   FR3:
     title: "Per-task status parsing stays line-based"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS7]
   FR4:
     title: "Reclassified tasks flow through the existing selection and cap machinery unchanged"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1, TS5, TS6, TS9]
   FR5:
     title: "Task ids absent from the current plan remain ignored"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS8]
   FR6:
     title: "implement-phase.md's hook-scope sentence is amended"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS10]
   FR7:
     title: "The other three hooks are untouched"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS10]
   FR8:
     title: "Unit tests added"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS10]
   FR9:
     title: "Plugin version bump in the same change"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS10]
   NFR1:
     title: "Fail-open contract preserved"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS7, TS10]
   NFR2:
     title: "Stdlib-only imports"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS10]
   NFR3:
     title: "Read-only with respect to the journal"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: []
   NFR4:
     title: "Bounded hook latency"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: []
 
 batch:
