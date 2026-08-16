@@ -1,0 +1,111 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_requirements_template_declared_change_set.TestSectionPosition.test_anchor_present
+      - tests.test_requirements_template_declared_change_set.TestSectionPosition.test_anchor_occurs_exactly_once
+      - tests.test_requirements_template_declared_change_set.TestSectionPosition.test_93_heading_occurs_exactly_once
+      - tests.test_requirements_template_declared_change_set.TestSectionPosition.test_10_heading_occurs_exactly_once
+      - tests.test_requirements_template_declared_change_set.TestSectionPosition.test_anchor_after_93_before_10
+      - tests.test_requirements_template_declared_change_set.TestSectionPosition.test_anchor_strictly_inside_outer_fences
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, text.index(HEADING_94) raised ValueError:
+      substring not found (setUpClass errors in TestRootLiterals /
+      TestEnumerationAndCitation / TestSemantics which slice from
+      HEADING_94), and test_anchor_present /
+      test_anchor_occurs_exactly_once failed directly
+      (AssertionError: 0 != 1) since "### 9.4 宣言された変更集合" did
+      not exist in the template yet.
+  AC-2:
+    tests:
+      - tests.test_requirements_template_declared_change_set.TestNumberingGuard.test_all_top_level_headings_present_and_unchanged
+      - tests.test_requirements_template_declared_change_set.TestNumberingGuard.test_top_level_headings_relative_order_unchanged
+    red_confirmed: false
+    red_reason: >-
+      Retention matcher (Design / AC-7): numbering is never touched by
+      this task's edit, so this test was already green before any
+      implementation existed and stays green after. Declared exempt from
+      a negative proof in the module docstring, per the task plan's Test
+      Notes: "the numbering guard is expected to be green before and
+      after, which is why it is declared a retention matcher rather than
+      given a negative proof."
+  AC-3:
+    tests:
+      - tests.test_requirements_template_declared_change_set.TestRootLiterals.test_both_root_literals_present_in_subsection
+      - tests.test_requirements_template_declared_change_set.TestEnumerationAndCitation.test_all_feature_docs_members_named
+      - tests.test_requirements_template_declared_change_set.TestEnumerationAndCitation.test_test_docs_member_named_with_path_form
+      - tests.test_requirements_template_declared_change_set.TestEnumerationAndCitation.test_placeholder_slot_present
+    red_confirmed: true
+    red_reason: >-
+      setUpClass for TestRootLiterals and TestEnumerationAndCitation
+      raised ValueError (substring not found for HEADING_94) because
+      _subsection_94_slice could not locate the new subsection before
+      the edit existed.
+  AC-4:
+    tests:
+      - tests.test_requirements_template_declared_change_set.TestEnumerationAndCitation.test_cites_implement_phase_and_phase_state
+      - tests.test_requirements_template_declared_change_set.TestSemantics.test_default_unless_removed_stated
+      - tests.test_requirements_template_declared_change_set.TestSemantics.test_removal_is_deliberate_narrowing_not_silent_omission
+      - tests.test_requirements_template_declared_change_set.TestSemantics.test_superset_and_contained_in_stated
+      - tests.test_requirements_template_declared_change_set.TestSemantics.test_declared_path_never_materializing_not_a_violation
+      - tests.test_requirements_template_declared_change_set.TestSemantics.test_zero_implement_task_instance_named
+    red_confirmed: true
+    red_reason: >-
+      setUpClass for TestEnumerationAndCitation and TestSemantics raised
+      ValueError (substring not found for HEADING_94) before the
+      subsection existed, so the citation and semantics phrases could
+      not be checked at all.
+  AC-5:
+    tests:
+      - tests.test_requirements_template_declared_change_set.TestNoExtraRationaleOrExclusionRule.test_no_exclusion_rule_phrase
+      - tests.test_requirements_template_declared_change_set.TestNoExtraRationaleOrExclusionRule.test_no_rationale_marker_words
+    red_confirmed: false
+    red_reason: >-
+      These are regression guards over phrasing this task must never
+      write (DM-9); no pre-change text exists to make them fail (the
+      forbidden phrases were never present anywhere). Their matchers are
+      proven meaningful instead via a synthetic bad sample in
+      TestValidationDetectsRegressions.test_exclusion_rule_and_rationale_guards_flag_synthetic_bad_sample
+      (NFR5: "or, where no pre-change text exists, a synthetic sample
+      that a violating document would contain").
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Build/discovery outcome, not a single test: before this task the
+      file tests/test_requirements_template_declared_change_set.py did
+      not exist, so `python3 -m unittest discover -s tests` could not
+      collect it. Verified after implementation by running the discover
+      command from the repository root and confirming the module is
+      collected and its tests execute; the module imports only `re`,
+      `unittest` and `pathlib` (standard library).
+  AC-7:
+    tests:
+      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_position_matcher_flags_absence_in_pre_change_section
+      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_root_literals_matcher_flags_absence_in_pre_change_section
+      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_feature_docs_members_matcher_flags_absence_in_pre_change_section
+      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_test_docs_member_matcher_flags_absence_in_pre_change_section
+      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_placeholder_matcher_flags_absence_in_pre_change_section
+      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_citation_matcher_flags_absence_in_pre_change_section
+      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_semantics_matchers_flag_absence_in_pre_change_section
+      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_exclusion_rule_and_rationale_guards_flag_synthetic_bad_sample
+      - tests.test_requirements_template_declared_change_set.TestPreChangeSampleGuard.test_sample_retains_91_anchor
+      - tests.test_requirements_template_declared_change_set.TestPreChangeSampleGuard.test_sample_retains_92_anchor
+      - tests.test_requirements_template_declared_change_set.TestPreChangeSampleGuard.test_sample_retains_93_anchor
+    red_confirmed: false
+    red_reason: >-
+      These ARE the negative proofs / non-vacuity guards themselves --
+      they assert absence against a fixed pre-change sample and are
+      designed to hold both before and after the implementation (the
+      pre-change sample never changes), so they were green from the
+      moment they were written. Meaningfulness is demonstrated by the
+      assertion itself (each proves its corresponding positive matcher
+      would have failed on the pre-change text), not by a red-to-green
+      transition of the guard test. `python3 -m unittest discover -s
+      tests` passed the full 1226-test suite (1195 pre-existing +
+      31 new) after implementation, with every pre-existing module under
+      tests/ byte-unchanged (git diff shows only the template file
+      modified and this new module added).
