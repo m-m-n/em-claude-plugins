@@ -1,0 +1,53 @@
+feature: spec-file-set-completeness
+collected_at: "2026-08-16T21:35:00+09:00"
+session_ids: [01a00a4e-9c68-7000-8f88-ed823ce91844]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - stable_id: a8250b12d6eba635
+      category: spec
+      resolution_reason: >-
+        TS-10 のリテラル `0.1.41` 検証は IMPLEMENTATION.md の決定 D4
+        （リテラルは次回の無関係な bump で陳腐化する）に基づき耐久形の述語に
+        置き換えられている。既存 tests/test_recycled_task_id_version_bump.py
+        の precedent に従う。AC-9 のリテラルは verify フェーズで両 JSON を
+        直接読んで確認済み（両レジストリとも 0.1.41）。
+lessons_candidates:
+  - >-
+    requirements-analyst の初回 question_packet が
+    `gate_id: create-spec.design-step` に対して batch policy が名指しする
+    `option_id: decide_autonomously` を options に含めておらず、
+    scripts/validate-worker-output.py の検証層 2 で不合格になった。
+    再 dispatch で是正したが、analyst 側の contract か agent prompt に
+    「batch policy が option_id を名指しするゲートは、その option_id を
+    必ず options に含める」ことを明示すると 1 ラウンド節約できる。
+  - >-
+    develop の Step B / workflow-schema.md は `workflow[implement].base_commit`
+    を「integration ブランチ作成時の HEAD」と説明するが、implement-phase.md
+    Step I.1 は「implement 開始時の HEAD（create-spec / design / create-plan
+    のコミットを含む）」と定義しており、両者が食い違う。前者で埋めると review
+    フェーズの diff に feature-docs のドキュメントコミットが全部乗る。今回は
+    I.1 の定義を採用して implement 突入時に書き直した。schema 側のコメントを
+    I.1 に揃えるべき。
+  - >-
+    spec-writer / implementation-planner は Bash を持たないため
+    written_artifacts の sha256 を計算できず null を返す。orchestrator が
+    検証層 5 で計算する運用で回るが、contract 側に「Bash を持たない worker は
+    sha256 を null で返し、orchestrator が計算する」と明記されていない。
+  - >-
+    今回の feature が導入した既定メンバー列挙自体が create-plan の必須成果物
+    `IMPLEMENTATION.md` を落としており、architecture / comprehensive の 2 観点
+    が同一サイトを指摘した（stable_id ecc15ec125fae1cf / 10a47973c523af07）。
+    severity medium のため R4 の auto-fix ゲート（critical/high のみ）に載らず
+    未解決のまま完了した。「SSOT の列挙が漏れている」種の指摘は containment を
+    直接破らないので medium に落ちやすいが、この feature の目的そのものなので
+    後続タスクとして起票した。
+  - >-
+    task0004 が追加したリポジトリ横断の prose ガード 2 本（G1 除外ルール検出、
+    G3 carrier 判定）は、comprehensive レビューの実測で誤検知寸前のマージン
+    しかないと指摘された。文書全体を対象にトークン共起で走査するガードは、
+    無関係な編集で赤くなる負債になりやすい。
