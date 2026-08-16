@@ -111,7 +111,7 @@ tasks:
     domains: [api-contract, concurrency]
     complexity: medium
     requirements: [FR2, FR3, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7, NFR8]
-    status: failed
+    status: in_progress
     notes: >-
       run 1: implementer がストリーム無進捗 600 秒でハーネスのウォッチドッグに
       停止させられ、completion report を返さなかった（journal 最終イベントは
