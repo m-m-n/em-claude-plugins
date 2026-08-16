@@ -208,9 +208,19 @@ it as unlaunched, since the launch guard would deny that launch. Reason:
 I.2.c's route back to planning is the only writer that resets a task's
 status to `pending`, and the planner's `replace_all` re-numbers tasks from
 `task0001`, so the `pending` + `failed` combination only ever arises when a
-re-planned task inherited a retired id's journal events. The journal itself
-stays append-only (see Supporting cast below) — only the interpretation of
-its events is scoped by this rule.
+re-planned task inherited a retired id's journal events. Given I.2.c's
+route-back precondition below, which admits only tasks with a terminal
+journal last event, and the planner's `replace_all` renumbering from
+`task0001` that is the sole source of any recycled id, a re-numbered task
+can only ever inherit a retired id's terminal events — so workflow.yaml
+`status: pending` combined with journal last event `launched` can never
+arise. This recycled-task-id rule governs only the orchestrator's
+interpretation of the journal: `queue_launch_guard.py`,
+`queue_stop_guard.py`, `queue_failure_net.py` and `queue_taskstop_net.py`
+derive a task's state from the journal's last event alone and never
+consult `tasks.{T}.status` (see 'Supporting cast: journal, hooks, resume'
+below). The journal itself stays append-only (see Supporting cast below) —
+only the interpretation of its events is scoped by this rule.
 Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
@@ -330,9 +340,9 @@ Triggered whenever a launched implementer's `Task()` call returns.
    "merge_commit", "conflict_retries", "tests": "pass"|"fail",
    "deviations": [...], "notes"}` (malformed/missing report → treat as
    `failed`) — set `tasks.{T}.status = merged` for every task verified
-   merged, `= failed` for every task whose last journal event is `failed`
-   or whose report is `failed`/malformed, on the worktree just refreshed in
-   step 2, then commit:
+   merged, `= failed` for every task whose step 1 reconciled state is
+   `failed` or whose report is `failed`/malformed, on the worktree just
+   refreshed in step 2, then commit:
    `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
    phase reconcile" "$RECONCILE_TIP"` (exit-4 recovery: Branch & Worktree
    Model above — on a second exit 4, stop the wake phase with a report
@@ -377,7 +387,12 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   reporting a task `in_progress`, OR Step I.2.b's last-event-per-task
   rule reporting a task in-flight (a `launched` last event, with the
   recycled-task-id carve-out that step already defines) — cited here as
-  the owning rule, not restated. Refresh
+  the owning rule, not restated. The second source is what makes the gate
+  admit route-back only when every task in the current plan whose journal
+  carries any event has a terminal journal last event (`merged` or
+  `failed`) — the planner's `replace_all` recycles every id, not only the
+  failed ones, so a task with no journal event at all has nothing to
+  inherit and never blocks route-back. Refresh
   the integration worktree first (`git -C "$WT_ROOT/integration"
   reset --hard em-workflow/{feature}/integration`), then capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
@@ -386,7 +401,9 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   each failed task's failure reason (the implementer's report
   `notes`) in `tasks.{T}.notes`, and set
   **every** failed task's `tasks.{T}.status` back to `pending` — the
-  result is that no task is left `merged` or `in_progress` or `failed`,
+  gate above already established that no task is `merged` or
+  `in_progress` at this point, so the result is that no task is left
+  `merged` or `in_progress` or `failed`,
   which is exactly what makes the planner's `replace_planning`
   operation admissible on re-entry
   (`references/workflow-patch.md`'s `replace_all` permission

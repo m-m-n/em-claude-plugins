@@ -1,0 +1,316 @@
+round: 2
+executed_at: "2026-08-16T00:55:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: b73c6e69e4ee81519d0e6f7f8f6a03ec06b5db24
+  head_commit: eb9ad94
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/recycled-task-id-consistency/task0001.tests.yaml
+    - test-docs/recycled-task-id-consistency/task0002.tests.yaml
+    - test-docs/recycled-task-id-consistency/task0003.tests.yaml
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_recycled_task_id_version_bump.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary:
+    - perspective: security
+      reason: "diff は implement-phase.md のプロトコル本文を書き換えており、その本文が branch 名 / worktree パスのシェル補間に対する fail-closed 識別子ゲート（I.0）と、route-back の `git worktree remove --force` / `git branch -D` という破壊的クリーンアップの発火条件を規定しているため"
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+findings:
+  - stable_id: 29b99dea6a37377d
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 361
+    title: "route-back 前提が journal `merged` も terminal 扱いするため、再採番タスクが `merged` を継承して永久に起動不能になる"
+    description: >-
+      I.2.c の route-back 前提条件は「terminal journal last event (`merged` or
+      `failed`)」を admissible とするが、I.2.a の recycled-task-id カーブアウトは
+      `failed` のみにスコープされており、journal last event が `merged` の id を
+      継承した場合の救済がない。I.2.b step 1 の trust-but-verify により
+      merge-task.sh が journal に `merged` を append しても
+      `git merge-base --is-ancestor` 検証に落ちれば workflow.yaml の status は
+      `merged` にならないため、既存ゲートも新前提も通過して route-back が走る。
+      planner の `replace_all` で再採番された id は journal last event が
+      `merged` のままなので launch guard が launch を拒否し続け、当該タスクは
+      一度も実装されないまま起動不能になる。
+    suggestion: >-
+      (a) 前提を `failed`（およびイベント無し）に限定し journal last event が
+      `merged` のタスクが残る場合は route-back を INAPPLICABLE とする、または
+      (b) I.2.a のカーブアウトを `merged` にも拡張する。いずれも I.2.a の
+      不到達主張の文言更新を伴う。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: >-
+      batch mode: rework cap reached。auto-fix loop 2 で適用を試みたが、SPEC AC-3
+      が byte-exact に固定している literal
+      "terminal journal last event (`merged` or `failed`)" を書き換えるため
+      tests/test_recycled_task_id_consistency.py の TS-3 が 2 件失敗した。復元して
+      stable_id を abort。SPEC・protocol・テストの協調変更が必要で、
+      `batch.review_rework_count` は既に cap 1 に達しているため deferred。
+  - stable_id: c431ec8ba89742db
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 399
+    title: "stale `launched` が残ると route-back が恒久的に INAPPLICABLE になり、プロトコル内に脱出経路がない"
+    description: >-
+      新しい INAPPLICABLE 分岐は journal last event が `launched` のタスクが 1 つ
+      でもあれば route-back を一切行わないと定める。しかし同文書の
+      Stale-`launched` caveat が認めるとおり、launch guard は allow 時点で
+      `launched` を append するため、`Task()` が許可されたのに実際には起動しな
+      かったケースでは実装者不在のまま `launched` が残る。オーケストレーターは
+      journal を書かないので、この id を terminal にできる writer が存在しない。
+      結果として stale `launched` を持つプランでは route-back が永久に不可能に
+      なり、ユーザーの選択肢は abort だけになる。
+    suggestion: >-
+      前提条件を I.2.b step 1 の reconciled state で評価する（worktree/branch が
+      存在せず in-flight でもない `launched` は stale として terminal 扱い）か、
+      INAPPLICABLE 分岐に明示的な回復手順を書く。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: >-
+      batch mode: rework cap reached。auto-fix loop 1 で適用を試みたが、SPEC AC-4
+      が「I.2.c セクションに `rework` / `append` トークンを含まない」ことを要求して
+      おり、提案された TaskStop → `failed` append の退避路がそれに違反して
+      tests/test_implement_routeback_gate.py と
+      tests/test_recycled_task_id_consistency.py が失敗した。復元して stable_id を
+      abort。SPEC 変更を伴い、`batch.review_rework_count` は既に cap 1 に達している
+      ため deferred。
+  - stable_id: dff48aa5464d3a7d
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 176
+    title: "I.2.a の選択述語「no journal event yet」が直後の recycled-task-id カーブアウトと矛盾したまま残っている"
+    description: >-
+      I.2.a は選択条件を「unlaunched tasks (no journal event yet and
+      `status != merged`)」と字義的に定義しているが、直後のカーブアウトは
+      workflow.yaml `status: pending` かつ journal last event `failed` のタスクを
+      unlaunched とみなすと定める。recycled id は journal イベントを持つため、
+      字義どおり読むと選択述語から漏れ、カーブアウトが定義した unlaunched タスクは
+      永久に launch されない。
+    suggestion: >-
+      選択述語を reconciled state ベースに書き換える。tests/test_recycled_task_id_consistency.py
+      の TS-7 が該当行を byte 単位で固定しているため、同一変更でリテラル定数も
+      更新する必要がある。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補ゲート外"
+  - stable_id: 18aab274341eafe0
+    severity: high
+    category: architecture
+    file: test-docs/recycled-task-id-consistency/task0002.tests.yaml
+    line: 7
+    title: "loop 1 のリネームで tests.yaml の AC→テスト対応が宙吊り参照になっている"
+    description: >-
+      auto-fix loop 1 が tests/test_recycled_task_id_version_bump.py の
+      テストメソッド名を差し替えた一方、AC → テストノード ID の対応表である
+      task0002.tests.yaml が更新されず、3 件のノード ID が実在しなくなった。
+      test-docs は後続の失敗帰属に使われる一級成果物であり、ノード ID の実在を
+      検証する仕組みが無いためこの drift は無音のまま残る。
+    suggestion: >-
+      AC-1 / AC-2 のノード ID を実体名に差し替え、red_reason も現行アサーションで
+      観測される内容に書き直す。
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 90
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2"
+  - stable_id: 445a3765be2fa020
+    severity: medium
+    category: comprehensive
+    file: test-docs/recycled-task-id-consistency/task0002.tests.yaml
+    line: 7
+    title: "loop 1 の修正の巻き添えで、task0002.tests.yaml が存在しないテストメソッド名を参照している"
+    description: "18aab274341eafe0 と同一サイト・同一事象を comprehensive 観点から検出したもの。"
+    suggestion: "18aab274341eafe0 と同じ。"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2（18aab274341eafe0 の修正で同時に解消）"
+  - stable_id: e449798987d64715
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 196
+    title: "recycled-task-id ルールを「解釈のみ」と宣言しているが queue_stop_guard.py の refill セーフティネットに穴を開ける"
+    description: >-
+      新規追加された scope 文は 4 つの hook が journal の last event のみから
+      状態を導くと明記するが、「解釈のみに閉じる = 挙動上の影響なし」という含意が
+      成立しない。carve-out が効く状態（`status: pending` + journal last event
+      `failed`）では、オーケストレーターは unlaunched、queue_stop_guard.py は
+      failed と判定し、後者が feature 全体の refill 通知を抑止する。route-back →
+      replace_all 再採番後、再採番 id への最初の launch が journal に載るまでの窓で
+      「forgotten INITIAL launch」を拾えず implement phase が無音で停止する。
+    suggestion: >-
+      scope 文にこの窓と代替セーフティネットを明記するか、queue_stop_guard.py 側に
+      同じ carve-out を持ち込むか、route-back 時に journal を世代マーカーで区切る。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補ゲート外"
+  - stable_id: 94af26aca96c11cb
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 373
+    title: "I.2.c route-back で「residual in_progress タスク」の扱いが同一 bullet 内で自己矛盾している"
+    description: >-
+      同じ bullet 内に噛み合わない 3 つの規定が並ぶ。(1)「drain above has already
+      retired every `in_progress` sibling」、(2) 新 precondition により journal に
+      `launched` を持つタスクが 1 つでもあれば INAPPLICABLE、(3) write set が
+      「residual `in_progress` タスク」を `pending` に戻す。(1) が正しければ (3) は
+      死に条件、(2) が正しければ (3) の対象は「status=in_progress だが journal
+      event 皆無」のクラッシュ窓のみ。write set は worktree/branch の破壊的削除まで
+      連動するため、曖昧さが destructive write の対象集合の曖昧さに直結する。
+    suggestion: "3 つの規定を 1 つの判定順に畳み、TS-3/TS-4/TS-10 のマッチャも合わせて更新する。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補ゲート外"
+  - stable_id: f7e30ea1ecd196a5
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 183
+    title: "AC-6 が禁じた「hook は workflow.yaml を読まない」主張が I.2.a に残っている"
+    description: >-
+      SPEC AC-6 / FR6 は「never consults `tasks.{T}.status`」という形の主張のみを
+      許し「never reads workflow.yaml」を禁じるが、I.2.a に
+      "which reads only the journal's last event (never workflow.yaml)" が残る。
+      ガードテスト test_no_never_reads_workflow_yaml_claim_anywhere は
+      "never read(s) workflow.yaml" の 2 表記しか見ておらず、括弧形
+      "(never workflow.yaml)" を素通りさせるため AC-6 が実質未達。
+    suggestion: >-
+      括弧を FR6 が指定した主張形に置き換え、あわせてガードテストに括弧形の
+      assertNotIn を追加する。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "category == spec のため auto-fix 候補ゲート外"
+  - stable_id: ff4c4a0a623fbdfa
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 360
+    title: "I.2.c route-back の前提条件スコープと書き込み集合が FR3/FR4 の規定を超えて変更されている"
+    description: >-
+      FR3 は前提条件のスコープを「route-back がリセットするタスク」と規定するが、
+      実装文は「journal に event を持つ全タスク」と広い。さらに FR3/FR4 が要求して
+      いない ordered write set の変更（every failed task → status が pending でない
+      全タスク）とクリーンアップ対象の拡大が入っており、NFR3「No executed behaviour
+      changes」に反する未承認の規範変更。status が `in_progress` のまま journal
+      最終イベントが `merged` のタスクが worktree/branch ごと削除されうる。
+    suggestion: >-
+      (a) 文書側を FR3 の語彙に戻す、または (b) SPEC 側（FR3 / FR4 / AC-3 /
+      Implementation Approach）を先に直して write set 拡張を正式化する。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "category == spec のため auto-fix 候補ゲート外"
+  - stable_id: 8ecaa9f7693c3910
+    severity: medium
+    category: spec
+    file: tests/test_recycled_task_id_version_bump.py
+    line: 94
+    title: "loop 1 の修正で TS-11 の `0.1.37` 断言と AC-9「em-review エントリ不変」の検証が失われた"
+    description: >-
+      auto-fix loop 1 の付随影響。SPEC TS-11 は両ファイルが version `0.1.37` を
+      報告することの assert を規定し、AC-9 は em-review エントリが変更されない
+      ことを要求するが、修正後のモジュールは (0,1) + patch > 36 と 2 ファイル間の
+      一致のみを検証する。成果物自体は AC-9 を満たしており、失われたのは回帰検出。
+    suggestion: >-
+      耐久チェックは残しつつ test_em_review_entry_has_no_version_key を復元し、
+      FEATURE_MIN_PATCH = 37 を導入して assertGreaterEqual で TS-11 の意図を明示する。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "category == spec のため auto-fix 候補ゲート外"
+  - stable_id: 960a61c72544179f
+    severity: high
+    category: comprehensive
+    file: tests/test_recycled_task_id_version_bump.py
+    line: 40
+    title: "バージョンを固定リテラルで assert しており、次のバンプで確実に赤くなる"
+    description: >-
+      EXPECTED_VERSION = "0.1.37" の等値比較。同リポジトリで
+      tests/test_planner_designer_worktree_docs.py が既に是正済みのアンチパターン。
+    suggestion: "durable invariant（(0,1) + patch > baseline）と 2 レジストリ間の一致検査に置き換える。"
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1"
+  - stable_id: 4d94560ab7a2eb4f
+    severity: medium
+    category: architecture
+    file: tests/test_recycled_task_id_version_bump.py
+    line: 40
+    title: "プラグイン版数の整合検査が feature 名のテストモジュールにリテラル固定で置かれている"
+    description: "960a61c72544179f と同一サイトを architecture 観点から検出したもの。"
+    suggestion: "関係検査（plugin.json と marketplace.json の一致）へ置き換える。"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1（960a61c72544179f の修正で同時に解消）"
+  - stable_id: f58deb0c0d79c48d
+    severity: medium
+    category: architecture
+    file: .claude-plugin/marketplace.json
+    line: 22
+    title: "version の真実源が plugin.json と marketplace.json に二重化され、エントリ間の形も非対称になった"
+    description: >-
+      em-workflow エントリにだけ version が追加され em-review エントリは持たない
+      非対称な形になった、という指摘。
+    suggestion: "marketplace 側の version を外すか、全エントリに付けて CLAUDE.md を更新する。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: declined
+    resolution_reason: >-
+      指摘の前提が成立しない。ユーザーのグローバルルール
+      ~/.claude/rules/plugin-version-bump.md が「plugin.json と marketplace.json の
+      両方に同じ version を書く」ことを明示的に要求しており、em-workflow エントリの
+      version 追加はそのルールへの準拠。em-review 側が未追随なのは別プラグインの
+      運用課題であり、本 feature のスコープ外。
+auto_fix:
+  loops_run: 2
+  applied_total: 2
+  aborted_stable_ids:
+    - c431ec8ba89742db
+    - 29b99dea6a37377d
+  termination: no-progress
+  termination_reason: >-
+    loop 2 完了時点で、候補ゲート（severity ∈ {critical, high} かつ
+    category != spec かつ file ∈ changed_files）を通る残存 finding は
+    c431ec8ba89742db と 29b99dea6a37377d の 2 件のみで、両方とも
+    aborted_stable_ids に入っている。どちらも「implement-phase.md 単独の編集では
+    SPEC が byte-exact に固定した document contract を必ず破る」ことが 2 回の
+    実測で確定しており、user-resolvable な候補が残っていないため loop 3 は
+    実行していない。
+residual_critical_high: 2
+rework_required: false
+completion_gate:
+  resolution: deferred_at_rework_cap
+  reason: >-
+    batch mode: `batch.review_rework_count` が既に 1（cap）に達しているため、
+    `references/review-phase.md` Phase R5 の batch 規則により残存 high 2 件
+    （29b99dea6a37377d / c431ec8ba89742db）を `deferred` として記録し、review step を
+    completed にする。両件は follow-up タスクとして別途起票する。
+  deferred_stable_ids:
+    - 29b99dea6a37377d
+    - c431ec8ba89742db

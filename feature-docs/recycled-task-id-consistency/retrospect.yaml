@@ -1,0 +1,75 @@
+feature: recycled-task-id-consistency
+collected_at: "2026-08-16T02:42:00+09:00"
+session_ids: [01a0067b-b261-7000-a2d5-3d31c5e39b48]
+signals:
+  review_critical_high:
+    - stable_id: 458fc3619e8fc0a3
+      category: architecture
+      file: em-workflow/references/implement-phase.md
+      title: "I.2.c の route-back 前提条件の対象集合が、I.2.a の不可能性証明が必要とする集合と一致していない"
+      resolution: fixed
+    - stable_id: f8b1422b71466fce
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "route-back 事前条件の対象集合が「status をリセットする task」に限定され、危険な in_progress/`launched` task を素通しする"
+      resolution: fixed
+    - stable_id: d30fe543d2801104
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "「no journal event at all」を非終端として block 扱いにすると、未起動 task を含む plan で route-back が恒久的に成立しなくなる"
+      resolution: fixed
+    - stable_id: 18aab274341eafe0
+      category: architecture
+      file: test-docs/recycled-task-id-consistency/task0002.tests.yaml
+      title: "loop 1 のリネームで tests.yaml の AC→テスト対応が宙吊り参照になっている"
+      resolution: fixed
+    - stable_id: 960a61c72544179f
+      category: comprehensive
+      file: tests/test_recycled_task_id_version_bump.py
+      title: "バージョンを固定リテラルで assert しており、次のバンプで確実に赤くなる"
+      resolution: fixed
+    - stable_id: 29b99dea6a37377d
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "route-back 前提が journal `merged` も terminal 扱いするため、再採番タスクが `merged` を継承して永久に起動不能になる"
+      resolution: deferred
+    - stable_id: c431ec8ba89742db
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "stale `launched` が残ると route-back が恒久的に INAPPLICABLE になり、プロトコル内に脱出経路がない"
+      resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - round: 1
+      failed_items: [TS-14, SC-6]
+      resolution: "verify 由来 rework で task0003（8 matcher の negative proof）を追加し解消"
+  discretionary_perspectives:
+    - perspective: security
+      reason: "diff は implement-phase.md のプロトコル本文を書き換えており、その本文が branch 名 / worktree パスのシェル補間に対する fail-closed 識別子ゲート（I.0）と、route-back の破壊的クリーンアップの発火条件を規定しているため"
+  declined_findings:
+    - stable_id: f58deb0c0d79c48d
+      category: architecture
+      resolution_reason: "指摘の前提が成立しない。~/.claude/rules/plugin-version-bump.md が plugin.json と marketplace.json 双方への同一 version 記載を要求しており、em-workflow エントリへの version 追加はそのルールへの準拠。em-review 側の未追随は別プラグインの運用課題"
+lessons_candidates:
+  - id: L1
+    note: >-
+      SPEC の AC が version 番号のような可変リテラルを byte-exact に固定すると、
+      feature の implement 完了から merge までの間に main 側が同じ番号へ到達したとき、
+      AC を満たしたまま運用ルール（同一変更内での bump）を破る状態が作れてしまう。
+      本 feature では review round 2 で「固定リテラル assert は次の bump で赤くなる」
+      （960a61c72544179f）としてテスト側は baseline 相対に直したが、SPEC 側のリテラルは
+      残っていた。verify で main と突き合わせて 0.1.38 へ繰り上げた（REQUIREMENTS.md A6-1）。
+  - id: L2
+    note: >-
+      review の completion gate と rework 経路の優先順位が実行時に取り違えられた。
+      `batch.review_rework_count` が cap 1 に達していれば review-phase.md Phase R5 の
+      at-cap defer が適用されるが、前回 run は rework-planner を再 dispatch し、
+      spec-change ゲートで無人実行を停止させた。R5 の at-cap 分岐は rework 経路より
+      先に評価されることを protocol 側でより明示できる余地がある。
+  - id: L3
+    note: >-
+      auto-fix loop が「SPEC が byte-exact に固定した document contract」に阻まれて
+      2 回連続 abort した（29b99dea6a37377d / c431ec8ba89742db）。document-contract
+      テストは回帰防止に効く一方、同じ feature 内での修正余地を消すため、
+      新規 wording の matcher をどこまで厳密に固定するかは設計判断として記録に値する。
