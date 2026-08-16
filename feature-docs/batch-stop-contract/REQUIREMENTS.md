@@ -194,9 +194,9 @@ FR7 により、em-workflow から外部タスク管理サービスのタスク�
 
 | 課題 | 影響度 | 対応策 |
 |------|--------|--------|
-| 終端行の接頭辞が散文や契約文書内の例示行と衝突する | 中 | NFR5 として一意性を要件化し、TS8 で偶発的出現を検査する |
-| 停止点の取りこぼしが他経路に残る | 高 | FR5 で全終端停止点を列挙し、TS3 で双方向カバレッジを検査する |
-| 停止条件 5 の待機ターンを停止と誤判定する | 中 | FR6 で終端行を出さないことを契約に明記し、TS4 で検査する |
+| 終端行の接頭辞が散文や契約文書内の例示行と衝突する | 中 | NFR5 として一意性を要件化し、TS-8 で偶発的出現を検査する |
+| 停止点の取りこぼしが他経路に残る | 高 | FR5 で全終端停止点を列挙し、TS-3 で双方向カバレッジを検査する |
+| 停止条件 5 の待機ターンを停止と誤判定する | 中 | FR6 で終端行を出さないことを契約に明記し、TS-4 で検査する |
 
 ### 10.2 ビジネスリスク
 
@@ -229,14 +229,14 @@ FR7 により、em-workflow から外部タスク管理サービスのタスク�
 
 | ID | 対象要件 | シナリオ |
 |----|----------|----------|
-| TS1 | FR1, FR3 | 契約 SSOT が終端行の接頭辞・フィールド構成・完了/停止の両方に出す旨を定義していることを、文書本文の assert で確認する |
-| TS2 | FR2, NFR7 | 契約 SSOT が停止理由コードの閉じた集合を列挙し、各コードが step フィールドと detail フィールドを伴うことを assert する。集合を集合として抽出し、重複・空要素が無いことも検査する |
-| TS3 | FR5 | FR5 が挙げる全停止点（停止条件 2/3/4/6、fail-closed abort、`on_unavailable: abort`、implement 2 回目 failed、verify cap 到達、Step C 中断）が契約文書上でいずれかの理由コードに対応づけられていることを、停止点リストと対応表の双方向カバレッジとして assert する |
-| TS4 | FR6 | 契約文書が「停止条件 5 の待機ターンには終端行を出さない」と明記していること、および step を持たない停止用のセンチネル step 値が定義されていることを assert する |
-| TS5 | FR4 | `skills/develop/SKILL.md` の Step C 終了報告が、`em-workflow 完了: {feature}`・ブランチ名案内・PR URL・license none の 1 行・batch 監査項目を保持していることを回帰ガードとして assert する |
-| TS6 | FR7 | 契約文書が「外部タスク管理サービスのステータス操作を行わない」旨を明記していることを assert する |
-| TS7 | FR9, NFR4 | `plugin.json` と `marketplace.json` が JSON としてパースでき、version が 0.1 系で patch > 39、かつ両者が文字列として一致することを assert する。matcher ごとに negative proof（偽造した 0.1.39 / 不一致ペアを拒否する）と non-vacuity guard（偽造値が well-formed であること）を置く |
-| TS8 | NFR1, NFR2, NFR5 | 追加モジュールが標準ライブラリのみを import すること、既存モジュール無改変で `python3 -m unittest discover -s tests` 全体が通ること、および終端行の接頭辞が契約文書内の例示行とテスト側の期待値だけに現れ、散文中に偶発的に出現しないことを確認する |
+| TS-1 | FR1, FR3 | 契約 SSOT が終端行の接頭辞・フィールド構成・完了/停止の両方に出す旨を定義していることを、文書本文の assert で確認する |
+| TS-2 | FR2, NFR7 | 契約 SSOT が停止理由コードの閉じた集合を列挙し、各コードが step フィールドと detail フィールドを伴うことを assert する。集合を集合として抽出し、重複・空要素が無いことも検査する |
+| TS-3 | FR5 | FR5 が挙げる全停止点（停止条件 2/3/4/6、fail-closed abort、`on_unavailable: abort`、implement 2 回目 failed、verify cap 到達、Step C 中断）が契約文書上でいずれかの理由コードに対応づけられていることを、停止点リストと対応表の双方向カバレッジとして assert する |
+| TS-4 | FR6 | 契約文書が「停止条件 5 の待機ターンには終端行を出さない」と明記していること、および step を持たない停止用のセンチネル step 値が定義されていることを assert する |
+| TS-5 | FR4 | `skills/develop/SKILL.md` の Step C 終了報告が、`em-workflow 完了: {feature}`・ブランチ名案内・PR URL・license none の 1 行・batch 監査項目を保持していることを回帰ガードとして assert する |
+| TS-6 | FR7 | 契約文書が「外部タスク管理サービスのステータス操作を行わない」旨を明記していることを assert する |
+| TS-7 | FR9, NFR4 | `plugin.json` と `marketplace.json` が JSON としてパースでき、version が 0.1 系で patch > 39、かつ両者が文字列として一致することを assert する。matcher ごとに negative proof（偽造した 0.1.39 / 不一致ペアを拒否する）と non-vacuity guard（偽造値が well-formed であること）を置く |
+| TS-8 | NFR1, NFR2, NFR5 | 追加モジュールが標準ライブラリのみを import すること、既存モジュール無改変で `python3 -m unittest discover -s tests` 全体が通ること、および終端行の接頭辞が契約文書内の例示行とテスト側の期待値だけに現れ、散文中に偶発的に出現しないことを確認する |
 
 ## 13. 用語定義
 

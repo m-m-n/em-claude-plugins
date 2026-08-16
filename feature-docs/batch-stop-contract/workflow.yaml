@@ -111,112 +111,112 @@ requirements:
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002]
-    tests: [TS1]
+    tests: [TS-1]
   FR2:
     title: 停止 step と停止理由の同梱
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS2]
+    tests: [TS-2]
   FR3:
     title: 出力契約の SSOT 明記
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS1]
+    tests: [TS-1]
   FR4:
     title: 既存成功時出力の非破壊
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0002]
-    tests: [TS5]
+    tests: [TS-5]
   FR5:
     title: 対象停止点の列挙
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002]
-    tests: [TS3]
+    tests: [TS-3]
   FR6:
     title: 待機ターンと step を持たない停止の表現
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002]
-    tests: [TS4]
+    tests: [TS-4]
   FR7:
     title: 外部サービス責務の非侵犯
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS6]
+    tests: [TS-6]
   FR8:
     title: ドキュメント契約テストの追加
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002, task0003]
-    tests: [TS8]
+    tests: [TS-8]
   FR9:
     title: version bump
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0003]
-    tests: [TS7]
+    tests: [TS-7]
   NFR1:
     title: "Dependencies: 標準ライブラリのみ"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002, task0003]
-    tests: [TS8]
+    tests: [TS-8]
   NFR2:
     title: "Compatibility: 既存テスト無改変"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002, task0003]
-    tests: [TS8]
+    tests: [TS-8]
   NFR3:
     title: "Simplicity: 追加依存なしの 1 行出力"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS1]
+    tests: [TS-1]
   NFR4:
     title: "Test quality: 耐久的 assertion と negative proof / non-vacuity guard"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001, task0002, task0003]
-    tests: [TS7]
+    tests: [TS-7]
   NFR5:
     title: "Observability: 終端行接頭辞の一意性"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS8]
+    tests: [TS-8]
   NFR6:
     title: "Security: detail に秘匿情報を含めない"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS2]
+    tests: [TS-2]
   NFR7:
     title: "Verifiability: 停止理由コードの閉じた集合"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
-    tests: [TS2]
+    tests: [TS-2]
 
 batch:
   review_rework_count: 1

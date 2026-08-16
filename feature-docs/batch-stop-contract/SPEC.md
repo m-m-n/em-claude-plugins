@@ -130,14 +130,14 @@ Test command: `python3 -m unittest discover -s tests`. The project has no build,
 
 ### Documentation Contract Tests
 
-- [ ] **TS1** (FR1, FR3): Assert against the contract document body that the SSOT defines the terminal line's prefix, its field composition, and the fact that it is emitted on both completion and stop.
-- [ ] **TS2** (FR2, NFR7): Assert that the contract SSOT enumerates a closed set of stop reason codes and that each code is accompanied by a step field and a `detail` field. Extract the set as a set and also check it has no duplicates and no empty members.
-- [ ] **TS3** (FR5): Assert that every stop point listed in FR5 (stop conditions 2/3/4/6, fail-closed abort, `on_unavailable: abort`, second `failed` in implement, verify cap reached, Step C abort) is bound to some reason code in the contract document, as a bidirectional coverage check between the stop-point list and the mapping table.
-- [ ] **TS4** (FR6): Assert that the contract document states "no terminal line on a stop-condition-5 wait turn", and that a sentinel step value for step-less stops is defined.
-- [ ] **TS5** (FR4): Regression guard — assert that the Step C completion report in `skills/develop/SKILL.md` still carries `em-workflow 完了: {feature}`, the branch-name guidance, the PR URL, the `license none` single line and the batch audit items.
-- [ ] **TS6** (FR7): Assert that the contract document states that em-workflow performs no status operation against the external task-management service.
-- [ ] **TS7** (FR9, NFR4): Assert that `plugin.json` and `marketplace.json` parse as JSON, that `version` is in the `0.1` series with patch > 39, and that the two match as strings. Place a negative proof (rejecting a forged `0.1.39` and a mismatched pair) and a non-vacuity guard (the forged value is well-formed) per matcher.
-- [ ] **TS8** (NFR1, NFR2, NFR5): Verify that the added module imports the standard library only, that the whole `python3 -m unittest discover -s tests` suite passes with existing modules unmodified, and that the terminal-line prefix appears only in the contract document's example lines and in the test's expected values — never incidentally in prose.
+- [ ] **TS-1** (FR1, FR3): Assert against the contract document body that the SSOT defines the terminal line's prefix, its field composition, and the fact that it is emitted on both completion and stop.
+- [ ] **TS-2** (FR2, NFR7): Assert that the contract SSOT enumerates a closed set of stop reason codes and that each code is accompanied by a step field and a `detail` field. Extract the set as a set and also check it has no duplicates and no empty members.
+- [ ] **TS-3** (FR5): Assert that every stop point listed in FR5 (stop conditions 2/3/4/6, fail-closed abort, `on_unavailable: abort`, second `failed` in implement, verify cap reached, Step C abort) is bound to some reason code in the contract document, as a bidirectional coverage check between the stop-point list and the mapping table.
+- [ ] **TS-4** (FR6): Assert that the contract document states "no terminal line on a stop-condition-5 wait turn", and that a sentinel step value for step-less stops is defined.
+- [ ] **TS-5** (FR4): Regression guard — assert that the Step C completion report in `skills/develop/SKILL.md` still carries `em-workflow 完了: {feature}`, the branch-name guidance, the PR URL, the `license none` single line and the batch audit items.
+- [ ] **TS-6** (FR7): Assert that the contract document states that em-workflow performs no status operation against the external task-management service.
+- [ ] **TS-7** (FR9, NFR4): Assert that `plugin.json` and `marketplace.json` parse as JSON, that `version` is in the `0.1` series with patch > 39, and that the two match as strings. Place a negative proof (rejecting a forged `0.1.39` and a mismatched pair) and a non-vacuity guard (the forged value is well-formed) per matcher.
+- [ ] **TS-8** (NFR1, NFR2, NFR5): Verify that the added module imports the standard library only, that the whole `python3 -m unittest discover -s tests` suite passes with existing modules unmodified, and that the terminal-line prefix appears only in the contract document's example lines and in the test's expected values — never incidentally in prose.
 
 ### E2E Tests
 
