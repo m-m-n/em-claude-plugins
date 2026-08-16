@@ -1,0 +1,37 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_policy_option_id_version_bump.TestPluginManifestVersion.test_manifest_is_valid_json_with_version_key
+      - tests.test_batch_policy_option_id_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+    red_confirmed: true
+    red_reason: "AssertionError: 41 not greater than 41 (plugin.json version was 0.1.41, not yet past the 0.1.41 baseline)"
+  AC-2:
+    tests:
+      - tests.test_batch_policy_option_id_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_batch_policy_option_id_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: "AssertionError: 41 not greater than 41 (marketplace em-workflow entry version was 0.1.41, not yet past the 0.1.41 baseline); the equality sub-check was already passing since both fields already agreed at 0.1.41 pre-bump"
+  AC-3:
+    tests:
+      - tests.test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+    red_confirmed: false
+    red_reason: "This test asserts a non-change (the em-review entry stays byte-identical). It could not be made to fail before implementation because no implementation touches this entry -- the criterion is a non-regression guarantee, not new behavior; the negative-proof direction is instead demonstrated structurally by pinning the full pre-task snapshot as the expected value (a forged/altered snapshot would fail the equality)."
+  AC-4:
+    tests:
+      - tests.test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_fails_when_versions_differ
+      - tests.test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
+      - tests.test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_fails_when_version_below_baseline
+      - tests.test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_fails_for_malformed_version_shape
+      - tests.test_batch_policy_option_id_version_bump.TestValidationDetectsRegressions.test_entry_lookup_fails_on_a_missing_entry_name
+      - tests.test_batch_policy_option_id_version_bump.TestVersionComparisonIsPerComponentNumeric.test_naive_string_comparison_gets_two_digit_patch_backwards
+      - tests.test_batch_policy_option_id_version_bump.TestVersionComparisonIsPerComponentNumeric.test_version_tuple_orders_two_digit_patch_correctly
+      - tests.test_batch_policy_option_id_version_bump.TestVersionComparisonIsPerComponentNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
+    red_confirmed: false
+    red_reason: "These are negative-proof/meta tests: they assert that the module's own helpers (_assert_version_past_baseline, _assert_versions_agree, _marketplace_entry, _version_tuple) correctly raise on forged/synthetic bad input. The helpers were authored correctly at inception rather than iteratively red-green'd, so these tests passed on their first run (observed in the pre-bump run: all five TestValidationDetectsRegressions cases and all three TestVersionComparisonIsPerComponentNumeric cases were already 'ok' before em-workflow/.claude-plugin/plugin.json or .claude-plugin/marketplace.json were touched). No genuine red was observed for this AC; see report notes."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "Verified by actually running `python3 -m unittest discover -s tests` after implementation (1307 tests, all pass, 0 failures/errors) -- not itself unit-testable from inside the suite it verifies."
