@@ -73,8 +73,8 @@ tasks:
     branch: em-workflow/stopguard-retired-failed/task0002
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor: [comprehensive, security, performance, spec]
     discretionary:
@@ -82,13 +82,13 @@ review:
         reason: "diff が hook の状態判定契約を変更し、その契約を宣言する SSOT (implement-phase.md) も同時に書き換えているため"
     cross_validation: true
   perspectives:
-    comprehensive: pending
-    security: pending
-    performance: pending
-    spec: pending
-    architecture: pending
-  residual_critical_high: 0
-  needs_rework: false
+    comprehensive: completed
+    security: completed
+    performance: completed
+    spec: completed
+    architecture: completed
+  residual_critical_high: 1
+  needs_rework: true
 
 requirements:
   FR1:

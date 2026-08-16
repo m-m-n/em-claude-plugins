@@ -1,0 +1,193 @@
+round: 1
+executed_at: "2026-08-16T22:47:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: f5b0df510298149396a666d2e151a4d7a72c09e4
+  head_commit: db91387173b89c74bd8adfa7e2ed85980613df73
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/queue_stop_guard.py
+    - em-workflow/references/implement-phase.md
+    - test-docs/stopguard-retired-failed/task0001.tests.yaml
+    - test-docs/stopguard-retired-failed/task0002.tests.yaml
+    - tests/test_queue_stop_guard.py
+plan:
+  floor: [comprehensive, security, performance, spec]
+  discretionary:
+    - perspective: architecture
+      reason: "diff が hook の状態判定契約を変更し、その契約を宣言する SSOT (implement-phase.md) も同時に書き換えているため"
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+findings:
+  - stable_id: df5b41d20735b142
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 258
+    title: "carve-out が実運用で到達不能: 統合 worktree レイアウトでは workflow.yaml と journal が同一 root 下に共存しない"
+    description: >-
+      evaluate_feature は workflow.yaml を {root}/feature-docs/{feature}/workflow.yaml、
+      journal を {root}/.claude/worktrees/em-workflow/{feature}/journal.jsonl から読む
+      （root = cwd の git toplevel）。しかし implement-phase.md の Branch & Worktree Model が
+      SSOT として定めるとおり、feature-docs/{feature}/ は統合 worktree の中だけに書かれ、
+      メインツリーにコピーは存在しない。したがって root=メインツリーなら
+      implement_in_progress() が False で早期 return、root=統合 worktree なら
+      read_journal() が None を返して早期 return となり、本 feature が追加した
+      failed→pending 再分類に到達しない。active_features(root) も同じ理由で
+      進行中 feature を列挙できない。実機で確認済み。
+      なお このパス解決の欠陥は本 diff 以前から存在する（本 feature が持ち込んだ
+      ものではない）。
+    suggestion: >-
+      find_project_root() の後に統合 worktree 側の workflow.yaml を優先探索し、
+      無ければ現行パスにフォールバックする。active_features も同じ探索源に揃える。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: >-
+      round 1 loop 1 で auto-fix を適用したが（commit 827d223）、再レビューで spec 観点 2 本
+      （claude=high / litellm:vertex-deepseek-v3.2=critical）が独立に「SPEC.md の
+      Architecture『classification branch 以外は上流・下流とも不変 (FR4)』および NFR4
+      『追加の filesystem scan を導入しない』に直接矛盾するスコープ外変更」と判定。さらに
+      comprehensive / architecture 観点が、その修正自体に構造的欠陥（列挙側は
+      feature-docs/* の内側ワイルドカードから feature 名を取り、解決側は feature 名から
+      パスを組み直すため、列挙したファイルと読むファイルが一致しない。放棄された
+      worktree が恒久的に active 扱いになり誤 BLOCK しうる）を独立に検出した。これは
+      本 feature の Objective「誤ってブロックする経路を新設しない」に反するため、
+      commit db91387 で revert し、宣言済み変更集合に戻した。本指摘は本 diff 以前からの
+      既存欠陥であり、修正には SPEC 変更が必要なため別タスクとして起票する。
+  - stable_id: eda12b14c5d3235f
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 222
+    title: "SSOT 文が自己矛盾し、既存の整合性テストが空回りのガードになっている"
+    description: >-
+      改訂後の I.2.a は "governs only the orchestrator's interpretation" というリテラルを
+      保持したまま直後に queue_stop_guard.py の例外を宣言しており、文として矛盾している。
+      リテラルが残っているのは tests/test_recycled_task_id_consistency.py の assertIn を
+      通すためで、テストはリテラルの存在しか見ないため、旧契約（4 hook すべてが
+      tasks.{T}.status を参照しない）が偽になったことを検出できない。
+    suggestion: >-
+      本文を矛盾のない形に直し、test_recycled_task_id_consistency.py を新契約
+      （3 hook への never-consult 主張 + queue_stop_guard.py を明示的例外として記載）
+      に合わせて更新する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: >-
+      修正には tests/test_recycled_task_id_consistency.py の編集が必要だが、同ファイルは
+      SPEC.md の Declared Change Set の外にあり、IMPLEMENTATION.md D5 も本 feature が
+      新規テストモジュールを作れないことを記録している。別タスクとして起票する。
+  - stable_id: 0e36903a813a34fa
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 222
+    title: "recycled-task-id ルールが 3 箇所に複製され、それを固定していた invariant テストが空振りになった"
+    description: >-
+      carve-out の定義が I.2.a の散文・Supporting cast の Stop-hook 箇条書き・
+      queue_stop_guard.py 実装の 3 箇所に置かれ、SSOT と consumer を機械的に結ぶものが
+      無い。ドリフト検出テストは各ファイル名が I.2.a に文字列として出現するかしか
+      見ていないため、意味が反転したまま緑になる。
+    suggestion: >-
+      HOOK_FILENAMES を「status を読まない 3 hook」と「明示的例外の queue_stop_guard.py」に
+      分けて assert するようテストを更新し、ドキュメントの分類ルールと hook 実装の対応を
+      pin するテストを 1 本足す。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: >-
+      eda12b14c5d3235f と同じ根本原因。修正対象の
+      tests/test_recycled_task_id_consistency.py が Declared Change Set の外。
+      別タスクとして起票する。
+  - stable_id: b715bc4788192a59
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 282
+    title: "fail-open ネットが、自分が backstop している orchestrator 可変状態に依存するようになった"
+    description: >-
+      判定材料が journal（append-only）だけだった hook に、orchestrator が turn 内で
+      書き換える workflow.yaml の tasks.{T}.status が入り、権限方向が逆転している。
+      劣化方向が fail-open ではなく block 方向で、I.2.a の launch 時 status 書き込みが
+      失われた task や I.2.c の route-back write set 中断時に、genuine failure が
+      unlaunched に再分類されて BLOCK しうる。影響は MAX_CONSECUTIVE_BLOCKS=3 で
+      上限が付く。
+    suggestion: >-
+      判別子を re-plan 世代カウンタ等の不変量に置き換えるか、現方式を維持するなら
+      pending + failed が再計画完了後にしか出ないことを hook 側でも担保する条件を足す。
+      加えて I.2.c の write set の順序が Stop hook 分類の前提である旨を
+      implement-phase.md に契約として明記する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: >-
+      本 feature が採用した判別子（SPEC.md A1 / FR1）そのものへの設計上の異議であり、
+      修正には SPEC 変更が必要。medium のため完了ゲートは塞がない。別タスクとして起票する。
+  - stable_id: 91452f4dd86f0ec3
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 137
+    title: "同じ tasks: ブロックを走査するパーサが 2 実装に分岐した（文法の重複）"
+    description: >-
+      task_statuses_from_workflow は task_ids_from_workflow とほぼ同一の走査を独立に
+      再実装しており、task キーの認定条件が既に食い違っている（前者はブロック境界を
+      管理し、後者はインデントを問わない）。実害方向は安全側（不一致は非 pending 扱い
+      = suppress）だが、tasks ブロックのレイアウト変更時に片方だけ直すと無言で食い違う。
+    suggestion: >-
+      tasks: セクションの走査を 1 本のスキャナに集約し、(ids, statuses) を 1 回の
+      読み取りで同時に返す形にする。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: >-
+      実害方向は安全側（fail-open 契約を維持）で medium。リファクタリングとして
+      別タスクに切り出す。
+  - stable_id: a605385c22eafd37
+    severity: medium
+    category: performance
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 134
+    title: "Repeated file scan for task statuses"
+    description: >-
+      task_statuses_from_workflow が failed task ごとに workflow.yaml を再走査し、
+      O(n) のファイル読み込みになるという指摘。
+    suggestion: "初回読み取り後に結果をキャッシュする。"
+    sources: ["litellm:vertex-deepseek-v3.2:performance"]
+    confidence: 65
+    resolution: declined
+    resolution_reason: >-
+      事実誤認。task_statuses は evaluate_feature ごとに 1 回だけ None 初期化され、
+      最初の failed task で `if task_statuses is None:` によって遅延生成されたあとは
+      同一呼び出し内の全 failed task で再利用される（feature あたり最大 1 スキャン）。
+      中継した reviewer エージェント自身と、loop 2 の performance 再レビュー（claude、
+      実測: active_features 0.24ms / 全 feature の evaluate_feature 合計 0.71ms）が
+      独立に同じ結論に達している。
+auto_fix:
+  loops_run: 1
+  applied_total: 1
+  reverted_total: 1
+  termination: no-progress
+  notes: >-
+    loop 1 で df5b41d20735b142 に対する prose 指摘を batch 既定（Apply as-is）で
+    review-editor に適用し commit 827d223 として記録した（スコープ検証は通過、
+    1303 tests OK）。しかし loop 1 後の全観点再レビューで spec 観点 2 本が独立に
+    critical / high の SPEC 違反と判定し、comprehensive / architecture 観点が
+    その修正自体の構造的欠陥を検出したため、commit db91387 で revert した。
+    revert 後のファイルハッシュは round 1 レビュー時点と完全一致
+    （493bb88a2ac92deafec9ff7ecc6bd9382e3e6d39）のため、上記 findings が現ツリーに
+    対する権威ある結果であり、同一ツリーへの再ファンアウトは行っていない。
+    revert 後も 1303 tests OK。
+residual_critical_high: 1
+rework_required: true
