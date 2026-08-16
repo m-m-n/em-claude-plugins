@@ -1,0 +1,46 @@
+schema_version: 1
+feature: routeback-reset-scope-consistency
+phase: create-spec
+status: completed
+generation: 1
+base_revision: c8843c9c086323c5378c6b3abe89dc63e5c02a40
+last_input_digest: sha256:5d9fec2e27cb4cf1090d6165fca415cee3e8480772216a412e1f3ab70eac10a1
+active_request_id: null
+packets: {}
+answers: {}
+recorded_assumptions:
+  - id: A-1
+    statement: "reviewer option (a) を採用 — reset/cleanup スコープを I.2.b step 1 の reconciled state で定義し、gate の merged conjunct を in_progress と同じ 2 ソース union にする"
+  - id: A-2
+    statement: "I.2.b step 3 の precedence ambiguity は据え置き（スコープ外）"
+  - id: A-3
+    statement: "version bump は 0.1.38 -> 0.1.39 (patch)"
+  - id: A-4
+    statement: "新規テストは tests/ 配下の単一新規ファイル。保護済み 2 モジュールは編集しない"
+  - id: A-5
+    statement: "スコープは implement-phase.md / 新規テスト / version 2 ファイル、および FR-5 が要求する記述整合のみ"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: discarded_stale
+    input_digest: sha256:5d9fec2e27cb4cf1090d6165fca415cee3e8480772216a412e1f3ab70eac10a1
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:5d9fec2e27cb4cf1090d6165fca415cee3e8480772216a412e1f3ab70eac10a1
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:9b1f0c4ad4d6b0f0a3f3d1c2e5b8a7d6c4e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8
+    output_digest: null
+artifacts:
+  - path: feature-docs/routeback-reset-scope-consistency/REQUIREMENTS.md
+    sha256: sha256:0d3bfe83ada07e2ffef752c6d3ed9f9a5c4ecf21869255ff29916decbf25ca51
+    produced_by: create-spec-run-0003
+  - path: feature-docs/routeback-reset-scope-consistency/SPEC.md
+    sha256: sha256:cc64b082c1cf8148d60f0b4e80f61e45a6c5732b43f286920be4eb293ebff95c
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
