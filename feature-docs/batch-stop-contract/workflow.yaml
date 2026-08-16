@@ -58,9 +58,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: high
     requirements: [FR1, FR2, FR3, FR5, FR6, FR7, FR8, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-stop-contract/task0001
   task0002:
     title: develop-skill wiring for the terminal line
     plan: tasks/task0002.md
@@ -71,9 +71,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR1, FR4, FR5, FR6, FR8, NFR1, NFR2, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-stop-contract/task0002
   task0003:
     title: Plugin version bump
     plan: tasks/task0003.md
@@ -85,9 +85,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR8, FR9, NFR1, NFR2, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-stop-contract/task0003
 
 review:
   status: pending
