@@ -32,7 +32,8 @@ workflow:
       analyst の skip 推奨がそのまま採用された。
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: e396680f2922c67ce3a1049051c1b45343668224
   - id: implement
     status: pending
     base_commit: null
@@ -45,7 +46,48 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: Terminal-line contract SSOT document
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/batch-terminal-line.md
+      - em-workflow/references/batch-mode.md
+      - tests/test_batch_stop_contract.py
+    skills: [infra-impl]
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR5, FR6, FR7, FR8, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: develop-skill wiring for the terminal line
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/skills/develop/SKILL.md
+      - tests/test_batch_stop_contract_skill_wiring.py
+    skills: [infra-impl]
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR1, FR4, FR5, FR6, FR8, NFR1, NFR2, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: Plugin version bump
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_batch_stop_contract_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR8, FR9, NFR1, NFR2, NFR4]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -61,112 +103,112 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS1]
   FR2:
     title: 停止 step と停止理由の同梱
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS2]
   FR3:
     title: 出力契約の SSOT 明記
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1]
   FR4:
     title: 既存成功時出力の非破壊
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS5]
   FR5:
     title: 対象停止点の列挙
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS3]
   FR6:
     title: 待機ターンと step を持たない停止の表現
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS4]
   FR7:
     title: 外部サービス責務の非侵犯
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS6]
   FR8:
     title: ドキュメント契約テストの追加
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS8]
   FR9:
     title: version bump
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS7]
   NFR1:
     title: "Dependencies: 標準ライブラリのみ"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS8]
   NFR2:
     title: "Compatibility: 既存テスト無改変"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS8]
   NFR3:
     title: "Simplicity: 追加依存なしの 1 行出力"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1]
   NFR4:
     title: "Test quality: 耐久的 assertion と negative proof / non-vacuity guard"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS7]
   NFR5:
     title: "Observability: 終端行接頭辞の一意性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS8]
   NFR6:
     title: "Security: detail に秘匿情報を含めない"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS2]
   NFR7:
     title: "Verifiability: 停止理由コードの閉じた集合"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS2]
 
 batch:
