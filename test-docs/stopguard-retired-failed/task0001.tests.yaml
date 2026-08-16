@@ -1,0 +1,94 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_id_with_pending_status_is_unlaunched_and_blocks
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 2 — the hook exited 0 (suppressed by \
+      the residual `failed` event) because the classification branch did \
+      not yet exist; every declared task defaults to workflow status \
+      `pending` in this fixture."
+  AC-2:
+    tests:
+      - test_queue_stop_guard.TestQueueStopGuardFailedTask.test_failed_task_present_never_blocks
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_non_pending_status_still_suppresses
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_absent_status_key_still_suppresses
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_undeterminable_status_still_suppresses
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_mixed_retired_and_genuinely_failed_tasks_suppresses
+    red_confirmed: false
+    red_reason: "These assert exit 0 (suppression), which the PRE-existing \
+      hook already produced for every `failed` last event regardless of \
+      per-task status (the old, unconditional rule). They were green before \
+      any implementation existed, so they do not prove the new \
+      classification branch — they guard against a regression in the \
+      already-correct suppressing cases once the branch is added. \
+      AC-1's test is the one that was red for this criterion's positive \
+      counterpart (the carve-out itself)."
+  AC-3:
+    tests:
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_status_scoped_to_own_task_block_not_confused_with_step_status
+    red_confirmed: false
+    red_reason: "Same reason as AC-2: this fixture's task status (\"skipped\", \
+      borrowed from the `design` step's own vocabulary to probe cross-block \
+      confusion) is non-pending, so the pre-existing unconditional-suppress \
+      rule already returned exit 0 before task_statuses_from_workflow \
+      existed. What this test actually proves — that scoping is correct — \
+      only becomes meaningful once the classification branch reads \
+      per-task status at all; it is a scoping regression guard, not a \
+      red-then-green criterion test."
+  AC-4:
+    tests:
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_participates_in_free_slot_arithmetic_and_bounded_list
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_consecutive_block_cap_still_works_with_reclassified_task
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_task_id_absent_from_tasks_mapping_is_ignored_even_if_failed_in_journal
+      - test_queue_stop_guard.TestQueueStopGuardRetryAfterFailure.test_retried_task_counts_as_in_flight
+    red_confirmed: true
+    red_reason: "test_retired_task_participates_in_free_slot_arithmetic_and_bounded_list \
+      and test_consecutive_block_cap_still_works_with_reclassified_task both \
+      failed with AssertionError: 0 != 2 (block #1 should block / exit code \
+      0 != 2) before the classification branch existed, for the same \
+      residual-failed-event-suppresses-everything reason as AC-1. \
+      test_task_id_absent_from_tasks_mapping_is_ignored_even_if_failed_in_journal \
+      was already green (the undeclared-id ignoring behavior is unchanged \
+      by this task) — kept as a regression guard for that table row. \
+      test_retried_task_counts_as_in_flight is the pre-existing relaunch \
+      test, unaffected since its last event is `launched`, not `failed`."
+  AC-5:
+    tests:
+      - test_queue_stop_guard.TestQueueStopGuardFailOpen.test_missing_journal_directory_passes
+      - test_queue_stop_guard.TestQueueStopGuardFailOpen.test_malformed_journal_line_is_skipped_not_fatal
+      - test_queue_stop_guard.TestQueueStopGuardFailOpen.test_malformed_stdin_passes
+      - test_queue_stop_guard.TestQueueStopGuardFailOpen.test_missing_feature_docs_passes
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_absent_status_key_still_suppresses
+      - test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_undeterminable_status_still_suppresses
+    red_confirmed: false
+    red_reason: "The fail-open sweep is pre-existing coverage, unaffected by \
+      this task (no new failure mode was introduced — \
+      task_statuses_from_workflow follows the identical open()/OSError-catch \
+      pattern as the other line-based readers, so an unreadable \
+      workflow.yaml degrades to an empty status map, which the \
+      classification already treats as non-pending/suppressing). The two \
+      RecycledTaskId tests cover the undeterminable-per-task-status case \
+      specifically; both were already green pre-implementation per AC-2's \
+      note. No traceback is asserted absent by any of these, consistent \
+      with the existing sweep's style."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "Structural criterion (the test module's scenario coverage), \
+      not a single red/green test. Satisfied by the tests enumerated under \
+      AC-1 through AC-5 above plus the pre-existing suite, and by the \
+      fixture builder's new task_statuses parameter (verified: every \
+      existing call site omits it and produces byte-identical \
+      workflow.yaml text, confirmed by the unmodified full suite passing)."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "Build/inspection criterion, not a unit test. Verified by \
+      `git diff --stat` against the parent branch showing only \
+      em-workflow/hooks/queue_stop_guard.py and tests/test_queue_stop_guard.py \
+      changed (the other three queue hooks and every other test module are \
+      byte-unchanged), and by `python3 -m unittest discover -s tests` \
+      passing (1303 tests, 0 failures) from the repository root."

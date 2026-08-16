@@ -13,8 +13,10 @@ boundary).
 
 Decision (per the first in-progress feature, stable ordering by feature
 name, that has refillable work):
-  - Any task's last journal event is `failed`         -> exit 0 (no block;
-    user decision pending).
+  - Any task's last journal event is `failed`, UNLESS that task's own
+    workflow.yaml status still reads exactly `pending` (a recycled task id
+    left behind by a route-back re-plan) -> exit 0 (no block; user decision
+    pending). A recycled id is instead treated as unlaunched.
   - No unlaunched tasks, or no free slot (>= MAX_PARALLEL_IMPLEMENTERS
     in-flight) -> exit 0.
   - Otherwise -> BLOCK: exit 2, stderr names the feature, the free-slot
@@ -57,6 +59,7 @@ STEP_ID_RE = re.compile(r"^\s*-\s*id:\s*(\S+)\s*$")
 STEP_STATUS_RE = re.compile(r"^\s*status:\s*(\S+)\s*$")
 TASKS_SECTION_RE = re.compile(r"^tasks:\s*$")
 TASK_KEY_RE = re.compile(r"^\s+(task[0-9]+):\s*$")
+TASK_STATUS_RE = re.compile(r"^\s+status:\s*(\S+)\s*$")
 
 KNOWN_EVENTS = ("launched", "merged", "failed")
 
@@ -129,6 +132,67 @@ def task_ids_from_workflow(workflow_yaml_path):
         if match and TASK_ID_RE.match(match.group(1)):
             ids.append(match.group(1))
     return ids
+
+
+def task_statuses_from_workflow(workflow_yaml_path):
+    """Per-task workflow status, scoped to each task's own indented block
+    under the top-level `tasks:` mapping (D2 — the recycled-task-id
+    carve-out's discriminator). A status value is attributed to a task id
+    only while the scan is strictly inside the lines belonging to that
+    task's own `taskNNNN:` key — never a workflow-step's `status:` line,
+    never another task's. A task id with no status line inside its own
+    block (key absent, or the value after the colon undeterminable) is
+    simply absent from the returned mapping; callers treat that the same
+    as any other non-`pending` classification (D1)."""
+    try:
+        with open(workflow_yaml_path, encoding="utf-8", errors="replace") as fh:
+            lines = fh.readlines()
+    except OSError:
+        return {}
+
+    statuses = {}
+    in_tasks = False
+    current_task = None
+    current_task_indent = None
+    for line in lines:
+        if TASKS_SECTION_RE.match(line):
+            in_tasks = True
+            current_task = None
+            current_task_indent = None
+            continue
+        if not in_tasks:
+            continue
+        if line.strip() == "":
+            continue
+        if not line[0].isspace():
+            # Dedent to another top-level key: the tasks: mapping ended.
+            in_tasks = False
+            current_task = None
+            current_task_indent = None
+            continue
+
+        indent = len(line) - len(line.lstrip(" "))
+        if current_task is not None and indent <= current_task_indent:
+            # Dedented to (or above) the current task's own key level:
+            # its block has ended, whether or not this line starts a new
+            # sibling task.
+            current_task = None
+            current_task_indent = None
+
+        key_match = TASK_KEY_RE.match(line)
+        if key_match and current_task is None:
+            if TASK_ID_RE.match(key_match.group(1)):
+                current_task = key_match.group(1)
+                current_task_indent = indent
+            continue
+
+        if current_task is None:
+            continue
+
+        status_match = TASK_STATUS_RE.match(line)
+        if status_match and current_task not in statuses:
+            statuses[current_task] = status_match.group(1)
+    return statuses
 
 
 def read_journal(journal_path):
@@ -206,6 +270,9 @@ def evaluate_feature(root, feature):
         return None
 
     unlaunched, in_flight, failed = [], [], []
+    task_statuses = None  # lazily read: only needed when a `failed` last
+    # event is actually present, so the common (no-failure) path costs no
+    # extra pass over workflow.yaml (D2, NFR4).
     for task_id in task_ids:
         state = last_events.get(task_id)
         if state is None:
@@ -213,7 +280,15 @@ def evaluate_feature(root, feature):
         elif state == "launched":
             in_flight.append(task_id)
         elif state == "failed":
-            failed.append(task_id)
+            if task_statuses is None:
+                task_statuses = task_statuses_from_workflow(workflow_yaml_path)
+            if task_statuses.get(task_id) == "pending":
+                # Recycled-task-id carve-out (D1): the journal's `failed`
+                # event is residual from before a route-back re-plan reset
+                # this task's own workflow status back to pending.
+                unlaunched.append(task_id)
+            else:
+                failed.append(task_id)
         # "merged" tasks need no further tracking (terminal).
 
     if failed:
