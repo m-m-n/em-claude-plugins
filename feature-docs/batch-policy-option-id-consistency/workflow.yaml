@@ -45,7 +45,56 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: Declare every select gate's option vocabulary and pin the correspondence mechanically
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/phases/create-spec-phase.md
+      - em-workflow/references/contracts/analyst-contract.md
+      - em-workflow/agents/requirements-analyst.md
+      - em-workflow/references/contracts/spec-writer-contract.md
+      - em-workflow/references/contracts/designer-contract.md
+      - em-workflow/references/contracts/planner-contract.md
+      - em-workflow/agents/implementation-planner.md
+      - tests/test_gate_option_vocabulary.py
+      - tests/test_batch_policies.py
+    skills: []
+    domains: [api-contract]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR7, NFR1, NFR2, NFR3, NFR5]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: Document the correspondence rule and the uncheckable-gate exemption registry
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/gate-option-vocabulary.md
+      - em-workflow/references/batch-policies.yaml
+      - em-workflow/references/question-resolution.md
+      - tests/test_gate_option_vocabulary_doc.py
+    skills: []
+    domains: [api-contract]
+    complexity: low
+    requirements: [FR6, NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: Bump the em-workflow plugin version in both manifests
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_batch_policy_option_id_version_bump.py
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR8, NFR3]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -61,92 +110,92 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS3]
   FR2:
     title: Identified issuing site per select gate
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1, TS2, TS6, TS7]
   FR3:
     title: create-spec.design-system's second latent mismatch
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS4]
   FR4:
     title: Option vocabularies that exist only in the policy file
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS4, TS5]
   FR5:
     title: Mechanical consistency check
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1, TS2, TS3, TS4, TS5, TS6, TS7]
   FR6:
     title: Documented fallback for uncheckable gates
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS8]
   FR7:
     title: Existing structural tests updated in the same change
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1]
   FR8:
     title: Plugin version bump
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS10]
   NFR1:
     title: Frozen files
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS9]
   NFR2:
     title: No third-party imports in test code
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS11]
   NFR3:
     title: Whole suite stays green
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS12]
   NFR4:
     title: SSOT preserved
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS1]
   NFR5:
     title: Direction of reconciliation is uniform
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS3, TS4]
 
 batch:
   review_rework_count: 0
