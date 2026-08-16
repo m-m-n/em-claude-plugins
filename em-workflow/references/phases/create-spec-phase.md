@@ -511,3 +511,25 @@ Running step 1 before evaluating HEAD movement means the worker's
 unpermitted changes are never folded into the baseline of the next
 snapshot. Excluding the HEAD layer from step 1 means an external commit is
 never misreported as the worker's violation.
+
+## Gate option vocabulary
+
+The option vocabulary a batch-policies.yaml `option_id` is checked against
+(`references/gate-option-vocabulary.md` states the correspondence rule and
+format this table follows).
+
+| gate_id | option_id | meaning |
+|---|---|---|
+| `create-spec.feature-identity` | `derive_from_task_description` | Batch mode derives the feature name automatically from the supplied task description, without asking the user. |
+| `create-spec.design-system` | `top_candidate_or_none` | Batch mode resolves the design-system `kind` automatically: `project_native` when a candidate was found, `none` when none were found. |
+| `create-spec.design-system` | `project_native` | Interactive mode: the user picks the top design-system candidate that was found (section 11a). |
+| `create-spec.design-system` | `em_workflow` | Interactive mode: the user picks em-workflow's own design system instead of any detected candidate (section 11a). |
+| `create-spec.design-system` | `none` | Interactive mode: the user picks no design system for this feature (section 11a). |
+| `create-spec.stalled` | `record_tbd` | Batch mode records the specific stalled items as TBD and continues (the three-way stalled gate's branch 2). |
+| `create-spec.stalled` | `continue_with_more_info` | The user chooses to continue create-spec with more information rather than stopping (branch 1). |
+| `create-spec.stalled` | `abort_create_spec` | The user chooses to abort create-spec as `needs_update` or `failed` (branch 3). |
+
+`create-spec.feature-identity`'s interactive counterpart is not a selectable
+`option_id`: the orchestrator asks the user directly to name the feature
+identifier as free text (section 3, step 2), so there is no second row for
+it here.

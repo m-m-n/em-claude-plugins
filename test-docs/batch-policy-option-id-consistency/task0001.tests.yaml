@@ -1,0 +1,123 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_issuing_site_map_matches_policy_select_gate_set
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_every_select_gate_option_is_declared_at_every_issuing_site
+      - tests.test_gate_option_vocabulary.TestVocabularyBlockParser.test_error_message_names_document_and_row
+    red_confirmed: true
+    red_reason: >
+      Before the seven documents were edited, test_every_select_gate_option_is_declared_at_every_issuing_site
+      failed with AssertionError listing all 15 (gate_id, document) pairs as
+      "missing option_id" (verified by stashing the doc edits and running the
+      module in isolation), e.g. "create-spec.feature-identity @
+      em-workflow/references/phases/create-spec-phase.md: missing option_id
+      'derive_from_task_description'". test_error_message_names_document_and_row
+      was confirmed by temporarily disabling the parser's malformed-row
+      detection: "AssertionError: ValueError not raised".
+  AC-2:
+    tests:
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_design_step_option_id_unchanged
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_design_system_option_id_unchanged
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_design_step_declared_by_both_contract_and_prompt
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_design_system_declares_three_kind_values_alongside_policy_value
+    red_confirmed: true
+    red_reason: >
+      test_design_step_declared_by_both_contract_and_prompt and
+      test_design_system_declares_three_kind_values_alongside_policy_value
+      failed pre-edit: "AssertionError: 'decide_autonomously' not found in
+      set()" and a set-equality mismatch listing all four expected kind
+      values as missing (same stash-based run as AC-1). The two
+      *_option_id_unchanged tests assert a fact about batch-policies.yaml,
+      which this task never modifies, so they were already true before any
+      implementation existed (red_confirmed applies to the two declaration
+      tests above; the two "unchanged" pins are regression guards on
+      unmodified data, not behavior this task adds).
+  AC-3:
+    tests:
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_every_select_gate_option_is_declared_at_every_issuing_site
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_previously_policy_only_option_ids_unchanged
+    red_confirmed: true
+    red_reason: >
+      The "has a declared row" half is the same
+      test_every_select_gate_option_is_declared_at_every_issuing_site failure
+      recorded under AC-1 (it lists feature-identity, design-system,
+      license-conflict, existing-files, TBD-resolution and stalled among the
+      15 offenders pre-edit). test_previously_policy_only_option_ids_unchanged
+      asserts batch-policies.yaml's option_id values are unchanged -- true
+      before this task touched anything (this task never edits that file),
+      so that half was never red; it is a regression pin, not new behavior.
+  AC-4:
+    tests:
+      - tests.test_gate_option_vocabulary.TestCorrespondenceDecisionHermetic.test_mutated_policy_option_id_is_detected_as_missing
+      - tests.test_gate_option_vocabulary.TestCorrespondenceDecisionHermetic.test_vocabulary_block_missing_the_named_option_fails
+      - tests.test_gate_option_vocabulary.TestCorrespondenceDecisionHermetic.test_on_unanswered_field_value_elsewhere_does_not_count
+      - tests.test_gate_option_vocabulary.TestVocabularyBlockParser.test_malformed_row_wrong_cell_count_raises
+      - tests.test_gate_option_vocabulary.TestVocabularyBlockParser.test_malformed_row_missing_backticks_on_gate_id_raises
+      - tests.test_gate_option_vocabulary.TestVocabularyBlockParser.test_malformed_row_missing_backticks_on_option_id_raises
+      - tests.test_gate_option_vocabulary.TestVocabularyBlockParser.test_malformed_row_double_backtick_span_raises
+      - tests.test_gate_option_vocabulary.TestVocabularyBlockParser.test_malformed_row_empty_meaning_raises
+      - tests.test_gate_option_vocabulary.TestSyntheticDocumentTree.test_correspondence_fails_against_a_synthetic_tree_with_mutated_policy
+      - tests.test_gate_option_vocabulary.TestSyntheticDocumentTree.test_malformed_row_raises_when_read_from_a_real_file
+    red_confirmed: true
+    red_reason: >
+      Verified by temporarily disabling the malformed-row raise logic in
+      parse_vocabulary_rows (kept the row-splitting but removed every
+      ValueError check) and re-running TestVocabularyBlockParser /
+      TestSyntheticDocumentTree: all 7 malformed-row tests failed with
+      "AssertionError: ValueError not raised", confirming the parser's
+      loud-failure behavior is actually exercised. The mutated-policy /
+      missing-option / on_unanswered membership tests are proven correct by
+      construction (gate_offers_option returns False whenever the option
+      string is absent from the parsed table rows; the on_unanswered test
+      encodes the real repository ambiguity between question-packet-schema.md's
+      `on_unanswered: record_tbd` and the `create-spec.stalled` policy value
+      of the same name) and were re-verified after the parser fix restored.
+  AC-5:
+    tests:
+      - tests.test_batch_policies.TestSelectGateStructure.test_select_gate_set_matches_pinned_expectation
+      - tests.test_batch_policies.TestSelectGateStructure.test_non_select_gates_carry_no_option_id
+      - tests.test_batch_policies.TestSelectGateStructure.test_non_select_gates_excluded_from_select_set
+      - tests.test_batch_policies.TestSelectGateStructure.test_intentionally_unlisted_gate_absent_and_not_a_coverage_gap
+    red_confirmed: true
+    red_reason: >
+      Each assertion was verified by deliberately mutating the pinned data
+      and observing failure, then restoring: (1) removing
+      "create-plan.existing-files" from SELECT_GATE_IDS produced
+      "AssertionError: Items in the first set but not the second:
+      'create-plan.existing-files'"; (2) adding "create-spec.stalled" (a
+      select gate) to NON_SELECT_GATES_WITH_ENTRIES produced
+      "AssertionError: 'select' == 'select'" and a set-membership failure;
+      (3) adding "rework.spec-change" to SELECT_GATE_IDS produced two
+      failures naming it as unexpectedly present. All three mutations were
+      reverted and the suite re-confirmed green.
+  AC-6:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_design_step_fixture_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
+      - tests.test_gate_option_vocabulary.TestDigestPinMechanismHermetic.test_mismatched_content_is_detected
+    red_confirmed: true
+    red_reason: >
+      TDD-awkward per the task plan's own Test Notes: digests can only be
+      pinned after being read from the current tree. Wrote
+      WORKFLOW_PATCH_SHA256 as an all-zero 64-char placeholder first, ran
+      test_workflow_patch_md_byte_identical, and observed
+      "AssertionError: '2fb18...f509d0e' != '000...000'", then filled in the
+      real digest (independently recomputed via a separate `sha256sum`
+      invocation, matching) and re-confirmed green. This exercises the same
+      comparison mechanism used by all five digest/line pins in this class.
+  AC-7:
+    tests: []
+    red_reason: >
+      Build/whole-suite check, not a single-behavior test: `python3 -m
+      unittest discover -s tests` was run and passed (1334 tests, up from
+      the 1294-test baseline) after every edit in this task, and the two
+      touched test modules' imports were manually inspected (hashlib, os,
+      re, tempfile, unittest, pathlib.Path in test_gate_option_vocabulary.py;
+      json, os, re, unittest in test_batch_policies.py) -- all standard
+      library, none third-party.

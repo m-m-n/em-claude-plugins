@@ -139,3 +139,24 @@ path's current digest and decides its `action`:
 - **spec-writer must not invent requirements or assumptions that
   requirements-analyst did not produce.** Every requirement and assumption
   in the output must trace back to `requirements_analysis`.
+
+## Gate option vocabulary
+
+The option vocabulary a batch-policies.yaml `option_id` is checked against
+(`references/gate-option-vocabulary.md` states the correspondence rule and
+format this table follows). One shared block: the three
+`{phase}.artifact-overwrite` gates ("How the orchestrator chooses each
+target's action before dispatch", above) offer identical semantics, so each
+gate gets its own row per option rather than one row shared across gates.
+
+| gate_id | option_id | meaning |
+|---|---|---|
+| `create-spec.artifact-overwrite` | `preserve_and_reuse` | Batch mode's default: treat the existing artifact as authoritative — re-dispatch with that target's action set to `preserve`; the phase continues only if the existing artifact still passes the worker's postconditions. |
+| `create-spec.artifact-overwrite` | `overwrite` | The user chooses to overwrite the existing artifact; the target's action becomes `replace_authorized`. |
+| `create-spec.artifact-overwrite` | `abort` | The user chooses to abort the phase rather than touch the existing artifact. |
+| `design.artifact-overwrite` | `preserve_and_reuse` | Batch mode's default: treat the existing artifact as authoritative — re-dispatch with that target's action set to `preserve`; the phase continues only if the existing artifact still passes the worker's postconditions. |
+| `design.artifact-overwrite` | `overwrite` | The user chooses to overwrite the existing artifact; the target's action becomes `replace_authorized`. |
+| `design.artifact-overwrite` | `abort` | The user chooses to abort the phase rather than touch the existing artifact. |
+| `create-plan.artifact-overwrite` | `preserve_and_reuse` | Batch mode's default: treat the existing artifact as authoritative — re-dispatch with that target's action set to `preserve`; the phase continues only if the existing artifact still passes the worker's postconditions. |
+| `create-plan.artifact-overwrite` | `overwrite` | The user chooses to overwrite the existing artifact; the target's action becomes `replace_authorized`. |
+| `create-plan.artifact-overwrite` | `abort` | The user chooses to abort the phase rather than touch the existing artifact. |
