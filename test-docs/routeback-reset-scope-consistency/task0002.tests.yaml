@@ -1,0 +1,61 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_routeback_reset_scope_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_routeback_reset_scope_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+    red_confirmed: true
+    red_reason: >-
+      test_version_is_past_baseline failed on the un-bumped 0.1.38 tree:
+      "AssertionError: 38 not greater than 38".
+  AC-2:
+    tests:
+      - tests.test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+    red_confirmed: true
+    red_reason: >-
+      test_em_workflow_entry_version_is_past_baseline failed on the
+      un-bumped 0.1.38 tree: "AssertionError: 38 not greater than 38".
+  AC-3:
+    tests:
+      - tests.test_routeback_reset_scope_version_bump
+    red_confirmed: true
+    red_reason: >-
+      Same run as AC-1/AC-2: the module is discovered by
+      `python3 -m unittest discover -s tests`, imports only json/re/unittest/
+      pathlib, and its version assertion (BASELINE_PATCH = 38, patch > 38)
+      went red on the un-bumped 0.1.38 tree before any JSON edit.
+  AC-4:
+    tests:
+      - tests.test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_routeback_reset_scope_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+    red_confirmed: false
+    red_reason: >-
+      These are negative-proof/non-vacuity tests: they assert that the
+      matchers under test correctly reject forged inputs (a pre-bump
+      "0.1.38" string, and a differing version pair), which is true
+      regardless of whether the real registries had been bumped yet. There
+      is no implementation change that makes them go from red to green --
+      they are pinned green from the moment the module is written, by
+      design (D8's negative-proof requirement is a property of the module
+      itself, not of the JSON files under test).
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Verified as a suite-level outcome, not a single test: before this
+      task's edits, `python3 -m unittest discover -s tests` ran 1024 tests,
+      OK (baseline). The new module, run alone before the JSON bump, showed
+      2 failures for the reason recorded under AC-1/AC-2 -- i.e. the suite
+      was NOT yet green with the new module present and the files
+      un-bumped, which is what AC-5 (post-bump, full-suite green) requires
+      to have a real red state to move from. After the bump, the full suite
+      is green at 1034 tests (1024 pre-existing + 10 new), with every
+      pre-existing module unmodified and the diff touching only the four
+      files under Scope.
