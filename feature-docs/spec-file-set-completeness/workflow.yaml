@@ -1,0 +1,166 @@
+schema_version: 1
+feature: spec-file-set-completeness
+created: 2026-08-16
+base_branch: main
+parent_branch: em-workflow/spec-file-set-completeness/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: ebd75a1f7e693e40226fe5ab7f687ec8f3cb1eb6
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      Documentation-and-tests-only change to two markdown templates plus one new
+      Python unittest module. No user interface, no visual surface, no new
+      architecture, data model or external interface.
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: 14f30df2b5d5d8404aa76359347df23e486784d2
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: SPEC template gains a Declared Change Set section
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-2]
+  FR2:
+    title: REQUIREMENTS template gains the equivalent section
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3, TS-4]
+  FR3:
+    title: Default membership is both workflow-output roots
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR4:
+    title: The default membership enumerates what the two roots cover, by citation
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  FR5:
+    title: Default-inclusive, superset semantics stated explicitly
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+  FR6:
+    title: Containment verification semantics are unchanged
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  FR7:
+    title: Completed features are not rewritten; the already-consistent state is pinned by a test
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-9]
+  FR8:
+    title: Change containment for this feature
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: Plugin version bump to 0.1.41 in both registries
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-10]
+  NFR1:
+    title: Documentation-and-tests-only change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  NFR2:
+    title: SSOT non-duplication
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11]
+  NFR3:
+    title: Local style consistency of both templates
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  NFR4:
+    title: The existing suite stays green with every pre-existing module unmodified
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: New verification is Python unittest document-contract tests with negative proofs
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-13]
+  NFR6:
+    title: No retroactive obligation on SPECs without a closed declaration
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-12]
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
