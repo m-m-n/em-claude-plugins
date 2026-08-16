@@ -1,0 +1,337 @@
+round: 1
+executed_at: "2026-08-17T03:44:30+09:00"
+scope:
+  review_mode: diff
+  base_commit: a753428561acdb86578f3d37c2c3500151d5095d
+  head_commit: e5ac2d4c1f6874ca785025a6931ef2959cacd090
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/agents/requirements-analyst.md
+    - em-workflow/references/batch-policies.yaml
+    - em-workflow/references/contracts/analyst-contract.md
+    - em-workflow/references/contracts/designer-contract.md
+    - em-workflow/references/contracts/planner-contract.md
+    - em-workflow/references/contracts/spec-writer-contract.md
+    - em-workflow/references/gate-option-vocabulary.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - em-workflow/references/question-resolution.md
+    - test-docs/batch-policy-option-id-consistency/task0001.tests.yaml
+    - test-docs/batch-policy-option-id-consistency/task0002.tests.yaml
+    - test-docs/batch-policy-option-id-consistency/task0003.tests.yaml
+    - tests/test_batch_policies.py
+    - tests/test_batch_policy_option_id_version_bump.py
+    - tests/test_gate_option_vocabulary.py
+    - tests/test_gate_option_vocabulary_doc.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: c1exempt271scan
+    severity: medium
+    category: comprehensive
+    file: tests/test_gate_option_vocabulary.py
+    line: 271
+    title: "exemption loader scans the whole document, so any second table silently exempts gates"
+    description: >-
+      load_exempt_gate_ids() collects Markdown table rows from the ENTIRE text of
+      em-workflow/references/gate-option-vocabulary.md rather than from its
+      `## Exemption registry` section. The sibling parser in
+      tests/test_gate_option_vocabulary_doc.py scopes correctly
+      (_section(text, "## Exemption registry", "## Scope")), so the two modules
+      disagree about what the registry says. Adding one illustrative
+      `## Gate option vocabulary` example table to that document — a plausible
+      edit, since the document describes the format in prose with no example —
+      makes load_exempt_gate_ids() return {'create-spec.feature-identity'} while
+      the registry still reports zero rows. The sweep then skips that gate via
+      `if gate_id in exempt: continue` with no test failing, reopening the
+      protocol-error abort this feature exists to close.
+    suggestion: >-
+      Scope the scan to the `## Exemption registry` section before collecting
+      table lines, mirroring extract_vocabulary_section(). Add a hermetic test:
+      a registry document containing an unrelated table plus a zero-row
+      `## Exemption registry` must yield set().
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium — below Phase R4's auto-fix candidate gate
+      (critical/high only). Carried to a follow-up task.
+  - stable_id: a2exempt271split
+    severity: medium
+    category: architecture
+    file: tests/test_gate_option_vocabulary.py
+    line: 271
+    title: "exemption registry のパーサ／バリデータが2モジュールに分裂し、消費側はセクション非限定・検証なし"
+    description: >-
+      gate-option-vocabulary.md の exemption registry には実装が2つある。検証側
+      tests/test_gate_option_vocabulary_doc.py の parse_exemption_table_rows +
+      validate_exemption_rows は `## Exemption registry` 〜 `## Scope` にスコープを
+      限定し、3セル・reason 非空・compensating guarantee 非空・gate_id が
+      action: select であることまで検査する。一方、実際に免除判定を行う消費側
+      tests/test_gate_option_vocabulary.py の load_exempt_gate_ids はドキュメント
+      全体のパイプ行を無条件に集め、先頭セルのバックティック内文字列をそのまま
+      免除 gate_id として採用し、検証を一切行わない。同じフォーマットの契約が
+      2実装に分かれ、検証ロジックが消費経路上に無い。
+    suggestion: >-
+      load_exempt_gate_ids を `## Exemption registry` 節に限定してパースし、
+      validate_exemption_rows と同じ検査（3セル・reason/guarantee 非空・select
+      gate 所属）を適用して違反時は ValueError で落とす。共通ロジックは tests/
+      配下の非テストヘルパ（例 tests/_gate_vocabulary.py）に1つ置き、doc 側
+      モジュールと消費側モジュールの双方がそれを使う。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium — below Phase R4's auto-fix candidate gate
+      (critical/high only). Carried to a follow-up task.
+  - stable_id: s1exempt286anchor
+    severity: medium
+    category: spec
+    file: tests/test_gate_option_vocabulary.py
+    line: 286
+    title: "免除レジストリの解析が `## Exemption registry` セクションに固定されておらず、暗黙の免除でチェックが静かに縮む"
+    description: >-
+      SPEC FR5 は「action: select エントリが issuing site の提供しない option_id を
+      指したとき失敗するチェックを every such entry に対して持つ」ことを、FR6 は
+      「機械チェックできないゲートは理由と代替保証をドキュメントに記録し、暗黙に
+      しない」ことを求めている。gate-option-vocabulary.md 自身も「This table is the
+      ONLY source of such exemptions」と宣言している。しかし load_exempt_gate_ids は
+      `## Exemption registry` セクションを特定せず、ドキュメント全体から Markdown
+      テーブル行を集めるため、`## Canonical declaration format` 節に実例テーブルが
+      後から追記されると、その行の 1 セル目が免除 gate_id として読まれ、FR5 の網羅が
+      無言で失われる。doc 側の検証は正しくセクションを限定しているため、この違反は
+      どちらのテストにも検出されない。
+    suggestion: >-
+      load_exempt_gate_ids で `## Exemption registry` 見出しから次の `## ` 見出しまでを
+      切り出してからテーブル行を集める（tests/test_gate_option_vocabulary_doc.py の
+      _registry_section と同じアンカーの取り方に揃える）。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium — below Phase R4's auto-fix candidate gate
+      (critical/high only). Same underlying defect as c1exempt271scan /
+      a2exempt271split; not merged because same_site requires |Δline| <= 5.
+      Carried to a follow-up task.
+  - stable_id: c2sha256pins659
+    severity: medium
+    category: comprehensive
+    file: tests/test_gate_option_vocabulary.py
+    line: 659
+    title: "sha256 byte-identity pins on three actively maintained unrelated files will fail opaquely on the next legitimate edit"
+    description: >-
+      TestFrozenMachineReadSurface pins em-workflow/references/workflow-patch.md,
+      em-workflow/scripts/validate-worker-output.py,
+      tests/test_validate_worker_output.py and a fixture to hardcoded sha256
+      constants. The property being encoded — "task0001 did not touch these" —
+      is point-in-time and has no meaning once task0001 is merged, but the pins
+      persist forever. The next unrelated change to any of those files fails
+      with an opaque digest mismatch inside a module named for gate-option
+      vocabulary. This also contradicts the repository's own documented
+      precedent against point-in-time literal pins
+      (tests/test_spec_file_set_completeness_version_bump.py).
+    suggestion: >-
+      Replace the whole-file digest assertions with assertions on the properties
+      that must hold durably (the validator still derives its gate registry from
+      the `## Gate identifiers` heading; the validator test still pins
+      required_option_id == "decide_autonomously"; the fixture's gate_id /
+      option_id values are unchanged, parsed as JSON).
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium — below Phase R4's auto-fix candidate gate
+      (critical/high only). Carried to a follow-up task.
+  - stable_id: c3testname537
+    severity: medium
+    category: comprehensive
+    file: tests/test_gate_option_vocabulary.py
+    line: 537
+    title: "test name and module docstring assert a premise the merge falsified (registry file absent)"
+    description: >-
+      test_real_repository_registry_is_absent_in_this_worktree and the module
+      docstring state that em-workflow/references/gate-option-vocabulary.md does
+      not exist. In the integrated tree it does — task0002 created it. The
+      assertion still passes, but only by coincidence: its meaning silently
+      flipped from "the file is absent" to "the registry declares zero
+      exemptions", duplicating task0002's test_registry_holds_zero_rows. A
+      maintainer who adds the first exemption row gets a failure from a test
+      whose name tells them the file should not exist.
+    suggestion: >-
+      Rename to test_real_repository_registry_declares_zero_exemptions and
+      rewrite the docstring plus the module-level paragraph to state the
+      post-merge fact, pointing at
+      tests/test_gate_option_vocabulary_doc.py::TestExemptionRegistryStructure::test_registry_holds_zero_rows
+      as the sibling pin.
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium — below Phase R4's auto-fix candidate gate
+      (critical/high only). Carried to a follow-up task.
+  - stable_id: a1testsnotshipped66
+    severity: medium
+    category: architecture
+    file: em-workflow/references/gate-option-vocabulary.md
+    line: 66
+    title: "配布対象外の tests/ を SSOT ドキュメントが唯一の issuing-site map 置き場として指している"
+    description: >-
+      gate-option-vocabulary.md は em-workflow プラグイン内の references/ に置かれ、
+      インストール時は ~/.claude/plugins/cache/<marketplace>/em-workflow/<version>/
+      に展開される。marketplace.json の source は ./em-workflow なので、リポジトリ
+      ルートの tests/ はパッケージに含まれない。それにもかかわらず本ドキュメントは
+      gate_id → 宣言すべきドキュメントパスの対応（issuing-site map）を tests/ 配下の
+      correspondence-check モジュール一箇所に固定し、自らは行を再掲しないと明言して
+      いる。結果、インストール済みプラグインの読者は、どの文書に
+      `## Gate option vocabulary` を追加すべきかを参照先ごと解決できない。
+    suggestion: >-
+      (a) issuing-site map の行を gate-option-vocabulary.md 側に置き、tests/ の
+      テーブルはそれを読む消費者に降格する、または (b) map を
+      em-workflow/references/ 配下の機械可読ファイル（例
+      references/gate-issuing-sites.yaml）に切り出し、ドキュメントとテストの双方が
+      そこを参照する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium — below Phase R4's auto-fix candidate gate
+      (critical/high only). Carried to a follow-up task.
+  - stable_id: a3vocabdup253
+    severity: medium
+    category: architecture
+    file: em-workflow/agents/implementation-planner.md
+    line: 253
+    title: "同一 worker の gate 語彙をエージェントプロンプトと契約書に全文重複させている"
+    description: >-
+      implementation-planner.md の `## Gate option vocabulary` 表は
+      references/contracts/planner-contract.md の表と1行ずつ完全一致で、
+      requirements-analyst.md と contracts/analyst-contract.md も同様。どちらの組も
+      同じ worker が発行する同じ gate であり、issuing site としては1つ。宣言実体が
+      2つあるため option_id を1つ改名・追加するたびに batch-policies.yaml + 契約書 +
+      プロンプトの3ファイルを同時に編集する必要があり、ズレは D1 テストでしか
+      検出されない。同じ変更セットの gate-option-vocabulary.md は issuing-site map
+      について "cite, never restate" を採用しており、方針が一貫していない。
+    suggestion: >-
+      各ペアで宣言実体を1つに決める（worker の契約書側を宣言サイトにするのが自然）。
+      エージェントプロンプト側は表を再掲せず参照だけに留め、issuing-site map は
+      その1文書だけを指すよう更新する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium — below Phase R4's auto-fix candidate gate
+      (critical/high only). Carried to a follow-up task.
+  - stable_id: xm1fr1compliance
+    severity: critical
+    category: spec
+    file: em-workflow/references/contracts/analyst-contract.md
+    line: 212
+    title: "FR1 compliance: design-step option_id unchanged and declared at both issuing sites"
+    description: >-
+      SPEC FR1: create-spec.design-step policy option_id 'decide_autonomously'
+      unchanged and declared in both analyst-contract.md and
+      requirements-analyst.md - OK
+    suggestion: ""
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      Not a defect. The reviewer emitted a compliance confirmation ("- OK") as a
+      finding and mislabeled it severity critical; it asserts no violation and
+      carries no suggestion. Verified independently: the policy option_id is
+      unchanged and declared at both sites.
+  - stable_id: xm2fr3compliance
+    severity: critical
+    category: spec
+    file: em-workflow/references/phases/create-spec-phase.md
+    line: 514
+    title: "FR3 compliance: design-system option_id unchanged and declared at issuing site"
+    description: >-
+      SPEC FR3: create-spec.design-system option_id 'top_candidate_or_none'
+      unchanged and declared in create-spec-phase.md alongside
+      project_native/em_workflow/none - OK
+    suggestion: ""
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      Not a defect. Same class as xm1fr1compliance — a compliance confirmation
+      emitted as a critical finding, asserting no violation and carrying no
+      suggestion.
+  - stable_id: xm3missingmap
+    severity: high
+    category: spec
+    file: em-workflow/references/batch-policies.yaml
+    line: 1
+    title: "Missing documented issuing site for select gate"
+    description: >-
+      SPEC FR2 violation: Missing documented issuing site for gate
+      'create-spec.feature-identity' - SPEC requires identified issuing site per
+      select gate but no documented issuing site map in the diff
+    suggestion: "Add issuing site documentation as required by FR2"
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      Factually false, verified against the merged tree.
+      em-workflow/references/gate-option-vocabulary.md carries an
+      `## Issuing-site map` section (line 64) that pins the map in
+      tests/test_gate_option_vocabulary.py's ISSUING_SITE_MAP (line 73), whose
+      keys include "create-spec.feature-identity" (line 74). The dispatching
+      vertex-reviewer agent independently flagged this finding as contradicted
+      by the diff it fetched.
+  - stable_id: xm4missingcheck
+    severity: critical
+    category: spec
+    file: tests/test_gate_option_vocabulary.py
+    line: 1
+    title: "Missing mechanical consistency check"
+    description: >-
+      SPEC FR5 violation: Mechanical consistency check missing - SPEC requires
+      repository-root unittest suite gains a check that fails when
+      batch-policies.yaml action:select entry names option_id gate's issuing
+      site does not offer
+    suggestion: "Implement mechanical check as required by FR5"
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      Factually false, verified against the merged tree. The file the finding is
+      filed against IS the FR5 mechanical check: 728 lines containing
+      test_every_select_gate_option_is_declared_at_every_issuing_site (line 591),
+      which sweeps all eleven select gates. The dispatching vertex-reviewer agent
+      independently flagged this finding as contradicted by the diff it fetched.
+  - stable_id: xm5thirdparty
+    severity: medium
+    category: spec
+    file: tests/test_gate_option_vocabulary.py
+    line: 52
+    title: "Third-party imports in test code"
+    description: >-
+      SPEC NFR2 violation: Third-party import in test code -
+      test_gate_option_vocabulary.py imports hashlib, os, re, tempfile,
+      unittest, pathlib.Path which includes third-party packages
+    suggestion: "Remove third-party imports as required by NFR2"
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      Factually false, verified against the merged tree. hashlib, os, re,
+      tempfile, unittest and pathlib are all Python standard-library modules;
+      NFR2 prohibits third-party imports only. The module's full import list
+      (lines 51-56) contains no non-stdlib package.
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
