@@ -3,9 +3,9 @@ feature: stopguard-retired-failed
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: abcc9417d615e0b572ee6929960e32cbe27e273d
+base_revision: c66125b3eadf9244da23729681ae1914abb1ac9f
 last_input_digest: sha256:2dd5fc9fadf2fa5fe6730a84e473cf0dad1821534dde7b298e6bfd29e2ad3857
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,16 @@ worker_runs:
     input_digest: sha256:452de81a0f4673df7c8af5b5db527eee6ac56f2e6c7333a7b27a0c0b18e66e9c
     output_digest: sha256:c14ee683a21ab4d5a7e6191a85111bb05d0bb3d482352eab4e32f44556564e6f
   - request_id: create-spec-run-0002
-    status: dispatched
+    status: completed
     input_digest: sha256:2dd5fc9fadf2fa5fe6730a84e473cf0dad1821534dde7b298e6bfd29e2ad3857
-    output_digest: null
-artifacts: []
+    output_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+artifacts:
+  - path: feature-docs/stopguard-retired-failed/REQUIREMENTS.md
+    sha256: sha256:1019b6e0a3ef80e50d6f227c6cde2102f405a03501a50579cd64974b02d3e0e0
+    produced_by: create-spec-run-0002
+  - path: feature-docs/stopguard-retired-failed/SPEC.md
+    sha256: sha256:cc8ce3d314bcbf41597d42db4a977f539b6b7474f034c282324a5151aeea8572
+    produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
