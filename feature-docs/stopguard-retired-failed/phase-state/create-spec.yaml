@@ -1,14 +1,18 @@
 schema_version: 1
 feature: stopguard-retired-failed
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: bd1181a15f58d5e88f050f50bb56aa80abdf7dde
-last_input_digest: null
-active_request_id: null
+base_revision: aaa282b6a0752ea5adf4aa725271ce2c11d99eb1
+last_input_digest: sha256:452de81a0f4673df7c8af5b5db527eee6ac56f2e6c7333a7b27a0c0b18e66e9c
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:452de81a0f4673df7c8af5b5db527eee6ac56f2e6c7333a7b27a0c0b18e66e9c
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
