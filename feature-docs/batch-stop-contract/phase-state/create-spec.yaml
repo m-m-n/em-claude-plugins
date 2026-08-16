@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-stop-contract
 phase: create-spec
-status: awaiting_answers
+status: completed
 generation: 1
 base_revision: d1e0fd9979f868a03474a501ca2365ebd23e5d32
-last_input_digest: "sha256:263f092a200b6c732e2ff597f9853e9dc91c161233fc184c866b13035034f20e"
-active_request_id: create-spec-run-0001
+last_input_digest: "sha256:ce24abb49e12e556ab52ff7ad1778f07b358a721d618c6cfb13d8f91c209d75b"
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -103,7 +103,21 @@ worker_runs:
     status: needs_user_input
     input_digest: "sha256:263f092a200b6c732e2ff597f9853e9dc91c161233fc184c866b13035034f20e"
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: "sha256:53658a7e2a7d77e3afaabd4379b257f5f7a3c2aa07d5e14a44264f5855d6a01c"
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:ce24abb49e12e556ab52ff7ad1778f07b358a721d618c6cfb13d8f91c209d75b"
+    output_digest: null
+artifacts:
+  - path: feature-docs/batch-stop-contract/REQUIREMENTS.md
+    sha256: "sha256:f0e425cc61d7c09794132caef558be4ea5ff4a893366d88d886b42e6ad010b5b"
+    produced_by: create-spec-run-0003
+  - path: feature-docs/batch-stop-contract/SPEC.md
+    sha256: "sha256:944f4a9c62739bdbde9666eeacf445f14a86f30b2c9c15e2df260aee1fa12750"
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: "sha256:3e7f94f5ece25581959264a228d16cec9e1766923d6d4a321fe35f7d6f64aa22"
 stale_redispatch_count: 0
