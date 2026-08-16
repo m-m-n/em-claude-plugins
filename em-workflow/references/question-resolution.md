@@ -110,6 +110,9 @@ three can override this step.
 6. If the resolved option ID is not present in that question's
    `options[].option_id`, this is a protocol error and the phase aborts —
    label matching is never substituted for the option ID.
+   `references/gate-option-vocabulary.md` documents the correspondence rule
+   and canonical declaration format that keep this abort unreachable at
+   every select gate its registry does not exempt.
 7. Build the answer object with `source: batch-decision-table`. When the
    gate was orchestrator-opened with no worker packet, `packet_id` is null
    and `question_id` is the gate's own `gate_id`, since no worker minted

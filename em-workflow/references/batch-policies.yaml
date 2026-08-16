@@ -39,6 +39,12 @@
 # actually offer the option this policy names (e.g. the worker never listed
 # `preserve_and_reuse` among its options) — never fall back to a different
 # option by guessing.
+#
+# See references/gate-option-vocabulary.md for the correspondence rule
+# between a select gate's option_id below and the option_ids its issuing
+# site offers, the canonical declaration format an issuing site uses to
+# offer them, and the registry of gates that rule cannot be checked
+# against mechanically.
 
 gate_policies:
   create-spec.feature-identity:
