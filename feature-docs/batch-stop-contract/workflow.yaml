@@ -35,7 +35,7 @@ workflow:
     status: completed
     completed_at_commit: e396680f2922c67ce3a1049051c1b45343668224
   - id: implement
-    status: pending
+    status: in_progress
     base_commit: efab0e40b913932a426d63a468a00c12c7e241b6
     completed_at_commit: e008fec5c462c111d2ca597bed8ccc8bd2e050f2
   - id: review
@@ -100,9 +100,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: high
     requirements: [FR2, FR5, FR6, FR8, NFR1, NFR2, NFR4, NFR7]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-stop-contract/task0004
     provenance:
       source: review
       source_ids: [0637708c55c7f230, 1b6dc8cae3c91111, 0637708c55c7f231, 4aeb3f8b0e8ec9e6, 37980aa6aa498c1f, ae79421a2b5a7aab, a8ab378dda806693, 55903a56e01e5125]
@@ -118,9 +118,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR3, FR5, FR6, FR8, NFR1, NFR2, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-stop-contract/task0005
     provenance:
       source: review
       source_ids: [55903a56e01e5125, 6a1c9f2d84be3057, 0637708c55c7f230, 0637708c55c7f231]
