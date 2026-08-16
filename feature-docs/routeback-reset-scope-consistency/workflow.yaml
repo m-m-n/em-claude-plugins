@@ -75,9 +75,12 @@ tasks:
     branch: em-workflow/routeback-reset-scope-consistency/task0002
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
+  plan:
+    floor: [comprehensive, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
