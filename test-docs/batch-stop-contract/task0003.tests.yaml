@@ -1,0 +1,32 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_batch_stop_contract_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+    red_confirmed: true
+    red_reason: "test_version_is_past_baseline failed with AssertionError: 39 not greater than 39 on the un-bumped 0.1.39 tree"
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+    red_confirmed: true
+    red_reason: "test_em_workflow_entry_version_is_past_baseline failed with AssertionError: 39 not greater than 39 on the un-bumped 0.1.39 tree"
+  AC-3:
+    tests: []
+    red_reason: "verified by running `python3 -m unittest discover -s tests` from the repository root: the new module's 10 tests were collected and executed alongside the rest of the suite; the module imports only json/re/unittest/pathlib from the standard library"
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_batch_stop_contract_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+    red_confirmed: false
+    red_reason: "these tests assert that the matcher functions themselves reject forged input; they do not depend on the un-bumped tree state and were green from first write (they exercise _assert_version_past_baseline/_assert_versions_equal directly against forged literals, not the manifests under bump). AC-4 is a property of the matcher implementation, verified by these tests passing consistently before and after the manifest edit."
+  AC-5:
+    tests: []
+    red_reason: "verified by running the full suite (python3 -m unittest discover -s tests) after the bump: 1099 tests, 0 failures, and no pre-existing test file was modified (only two files edited: em-workflow/.claude-plugin/plugin.json and .claude-plugin/marketplace.json; one file created: tests/test_batch_stop_contract_version_bump.py)"
