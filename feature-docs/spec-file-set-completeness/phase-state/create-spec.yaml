@@ -1,18 +1,73 @@
 schema_version: 1
 feature: spec-file-set-completeness
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
-base_revision: 14f30df2b5d5d8404aa76359347df23e486784d2
+base_revision: eeceee89ecc44943c6f6e13e708666236d9b9950
 last_input_digest: sha256:46f43baa448f72c4bf15bfc12fd3e6ee40e7d6414d540addd48a55460ddd8f34
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: "2026-08-16T20:31:00+09:00"
+    questions:
+      - question_id: fix-locus
+        status: answered
+      - question_id: workflow-artifact-set
+        status: answered
+      - question_id: recycled-feature-remediation
+        status: answered
+      - question_id: design-step
+        status: issued
+answers:
+  fix-locus:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-16T20:31:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [template-default]
+    freeform: null
+    normalized_answer: >-
+      SPEC / REQUIREMENTS テンプレートに「宣言された変更集合」の節を新設し、
+      workflow 生成物を既定で含む形にする。containment 検証側は現状どおり
+      「コミットされた成果物はすべて実変更集合の一部」として扱う。
+    resolution_note: >-
+      batch-policies.yaml の create-spec.requirement-clarification が
+      codex_consultation を指定。Codex は template-default を推し、
+      「生成物を検証側で除外すると閉じた宣言が実態と乖離し containment が弱まる」
+      ことを理由に挙げた。オーケストレーターが option_id への対応を判定して採用。
+  workflow-artifact-set:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-16T20:31:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [test-docs-and-feature-docs]
+    freeform: null
+    normalized_answer: >-
+      既定集合は test-docs/{feature}/** と feature-docs/{feature}/** の両方。
+      後者には SPEC 執筆後に生成される reviews/roundN.yaml・retrospect.yaml・
+      VERIFICATION.md・tasks/・workflow.yaml・phase-state/ が含まれる。
+    resolution_note: >-
+      Codex 相談。両ディレクトリとも回避不能な workflow 出力であり、
+      test-docs のみに限ると後続フェーズの生成物で同じ行き止まりが再発する。
+  recycled-feature-remediation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-16T20:31:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [verify-only]
+    freeform: null
+    normalized_answer: >-
+      recycled-task-id-consistency の SPEC.md / REQUIREMENTS.md は変更しない。
+      既に整合している状態を document-contract テストで固定するにとどめる。
+    resolution_note: >-
+      Codex 相談。base revision 時点で完了条件を既に満たしており、
+      完了済み feature の文書を遡って書き直しても是正される内容が無い。
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:46f43baa448f72c4bf15bfc12fd3e6ee40e7d6414d540addd48a55460ddd8f34
-    output_digest: null
+    output_digest: sha256:9d1a4d0a5f2c4b1e8a7c3f6b2e5d8a1c4f7b0e3d6a9c2f5b8e1d4a7c0f3b6e9d
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -24,4 +79,7 @@ resolved_input_cache:
     paths: []
     digests: {}
     truncated: false
-last_error: null
+last_error: >-
+  create-spec-run-0001 の question_packet が検証層 2 で不合格:
+  questions[3].gate_id 'create-spec.design-step' は option_id
+  'decide_autonomously' を options に含める必要がある。再 dispatch で是正する。
