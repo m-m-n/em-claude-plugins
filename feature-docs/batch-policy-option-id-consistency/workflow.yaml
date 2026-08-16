@@ -93,7 +93,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR8, NFR3]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/batch-policy-option-id-consistency/task0003
 
