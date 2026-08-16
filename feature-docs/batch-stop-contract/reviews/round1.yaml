@@ -1,0 +1,245 @@
+round: 1
+executed_at: "2026-08-16T19:40:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: efab0e40b913932a426d63a468a00c12c7e241b6
+  head_commit: f2aa6305ad5b3b2529dc45a3931f327ad8d1ba6f
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/batch-stop-contract/task0001.tests.yaml
+    - test-docs/batch-stop-contract/task0002.tests.yaml
+    - test-docs/batch-stop-contract/task0003.tests.yaml
+    - tests/test_batch_stop_contract.py
+    - tests/test_batch_stop_contract_skill_wiring.py
+    - tests/test_batch_stop_contract_version_bump.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: 0637708c55c7f230
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 52
+    title: Step A の feature 解決失敗に割り当てられた reason code が存在しない
+    description: >-
+      Field values 節は `no-step` センチネルの適用先として「Step 0 の git-setup
+      中断 / Step A の feature 解決失敗 / Step C の中断」を明示列挙しているが、
+      Stop reason codes の閉集合 9 個にも Stop point coverage 表にも Step A に
+      対応する行が無い。Step A の中断は実在の終端停止（develop SKILL.md の
+      fail-closed 識別子ゲート、および batch-mode.md Non-packet gates 表の
+      「タスク記述も無ければ中断報告」）。同じ穴が commit-docs.sh exit-4 の 2 回目
+      失敗によるフェーズ中断にもある。この停止に到達したオーケストレーターは、
+      閉集合外の reason を捏造する（契約違反）か終端行を出さない
+      （Purpose 節の規定により消費側はクラッシュと誤読する）かのどちらかしか
+      選べない。文書自身の Field values と Stop point coverage が矛盾している。
+    suggestion: >-
+      10 個目の reason code（例 `feature_resolution_aborted`）を Stop reason
+      codes 表に追加し、Stop point coverage 表に対応行を足す。あわせて
+      tests/test_batch_stop_contract.py の REASON_CODES / STOP_POINT_KEYS /
+      _KEY_CODE_PAIRS_IN_ORDER、tests/test_batch_stop_contract_skill_wiring.py の
+      REASON_CODES、skills/develop/SKILL.md「バッチ終端行」節の停止点列挙を
+      同期する。commit-docs.sh exit-4 中断も同様に扱うか、catch-all code を
+      1 つ定義する。
+    sources: [claude:comprehensive, claude:architecture, claude:spec]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "round 2 の rework で修正する（単一ファイル auto-fix では閉集合とテストの同期が取れない）"
+  - stable_id: 1b6dc8cae3c91111
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 86
+    title: 閉集合に Step A の feature 解決中断に対応する reason code が無く、同一文書内で矛盾している
+    description: >-
+      86 行の「Every terminating stop point is bound to exactly one reason code
+      above」が、52-56 行の `no-step` 適用先列挙（Step A を含む）と矛盾する。
+      Stop point coverage 表に Step A の行が無く、9 個の閉じた reason code の
+      どれも Step A の feature 解決失敗を表さない。
+    suggestion: >-
+      reason code を 1 つ追加して閉集合を閉じ直すか、Step A の中断を既存 code へ
+      明示的に束ねる。いずれの場合も Field values の `no-step` 列挙と coverage
+      表の行集合が 1 対 1 で対応することを不変条件としてテストに追加する。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "round 2 の rework で修正する"
+  - stable_id: 0637708c55c7f231
+    severity: high
+    category: spec
+    file: em-workflow/references/batch-terminal-line.md
+    line: 53
+    title: Step A の feature 解決失敗に対応する reason code が無く、終端行が構成できない
+    description: >-
+      SPEC FR6 は「step を持たない停止（Step 0 git-setup 中断 / Step A feature
+      解決失敗）に固定センチネル step 値を割り当て、終端行に載せる」と明記して
+      いるが、その停止で使える reason code が閉集合に存在しない。FR1 の
+      「行の不在＝クラッシュ/切断」規約と組み合わさり、無人実行の呼び出し側が
+      Step A 中断をクラッシュと誤読する。skills/develop/SKILL.md の
+      「バッチ終端行」節の出力対象列挙にも Step A は入っていない。
+    suggestion: >-
+      reason code を 1 つ追加し（例 `feature_resolution_aborted`）、Stop point
+      coverage 表・SKILL.md の対象列挙・2 つのテストモジュールの定数を同期する。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "round 2 の rework で修正する"
+  - stable_id: 4aeb3f8b0e8ec9e6
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 92
+    title: 停止点が互いに重なるのに優先規則が無く、同一の停止に対して reason code が一意に決まらない
+    description: >-
+      `implement-second-failure` と `verify-rework-cap` はどちらも step の status
+      を `failed` のまま残してターンを終えるため、develop の停止条件 3
+      （→ `step_needs_intervention`）にも同時に該当する。契約は
+      「exactly one reason code」と宣言する一方、どちらを優先するかの規則を持た
+      ない。reason code は外部サービスが後続処理を分岐させる機械可読キーである
+      ため、同じ失敗に異なる code が出ると分岐が非決定的になる。
+    suggestion: >-
+      Stop point coverage 表の直後に優先規則を明記する（より具体的なフェーズ固有
+      の停止点が停止条件 2-4 の汎用行に優先する）。`stop-condition-3` 行の意味を
+      「フェーズ固有の停止点でカバーされない failed / needs_update のみ」に限定し、
+      優先規則の存在を pin する assertion をテストに足す。
+    sources: [claude:architecture, claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "round 2 の rework で修正する"
+  - stable_id: 55903a56e01e5125
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 484
+    title: 停止条件 5 以外の「終端でないターン終了」で終端行の要否が未定義
+    description: >-
+      「バッチ終端行」節は終端行を出さないターンとして停止条件 5 だけを挙げるが、
+      implement フェーズの launch phase（launch 直後にターンを終える）と wake
+      phase（refill 後にターンを終える）も、ランが継続中のターン終了点として
+      implement-phase.md に独立して規定されている。実装者が停止条件 5 を文字通り
+      「完了通知を待つターン」だけと読むと、launch 直後のターンで終端行を出すか
+      否かが不定になる。誤って出せばラン継続中に `state=stopped` が消費側に届き、
+      本 feature が解決しようとしている誤判定の裏返しが起きる。
+    suggestion: >-
+      除外条件を停止条件 5 に限定せず「終端状態に達していない全てのターン終了」
+      と一般化する。契約文書の `## No line on a wait turn` も同様に、`state` の
+      終端 2 値のいずれにも該当しないターンでは行を出さない、と表現を揃える。
+      skill wiring テストの該当アサーションも literal ではなく「非終端ターンでは
+      出力しない」旨を pin するよう更新する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "round 2 の rework で修正する"
+  - stable_id: 6a1c9f2d84be3057
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 486
+    title: 終端行の literal を持つ SSOT を Read する指示が無く、出力側が prefix を知り得ない
+    description: >-
+      設計上、prefix・フィールド名・reason code の literal は
+      batch-terminal-line.md にしか書かれず、契約テストが SKILL.md と
+      batch-mode.md からの restate を禁止している。ところが実際に行を出力する
+      オーケストレーターに対して、その文書を Read せよという指示がどこにも無い。
+      この skill 内で実際に読ませる文書は例外なく
+      `${CLAUDE_PLUGIN_ROOT}/references/... を Read する` の形で書かれているが、
+      新規箇所だけが plugin-root 前置きの無い裸の相対パスかつ Read 指示なし。
+      結果、batch ラン中に prefix を一度も入手しないまま終端行を出そうとし、
+      prefix を捏造するか行自体を落とす可能性が高い。
+    suggestion: >-
+      「バッチ終端行」節に「出力の直前に
+      `${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md` を Read し、
+      そこに定義された prefix・フィールド文法・値の集合をそのまま使う」旨を
+      追加する。batch-mode.md の `## Terminal line` 側にも同様の一文を足す。
+      literal を新たに書かないため既存テストは緑のまま。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "round 2 の rework で修正する"
+  - stable_id: ae79421a2b5a7aab
+    severity: medium
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 88
+    title: coverage 表の停止点キーが Source 欄の文書に一切存在せず、双方向の追跡もドリフト検出もできない
+    description: >-
+      表の 9 つの停止点キーは em-workflow 配下のどのファイルにも存在せず、
+      Source 欄が指す文書はその停止点を「定義」していない。テスト側も 3 列目が
+      空でないことしか検査していないため、owner 側の停止点が削除・改名されても
+      緑のままになる。このリポジトリは gate_id で SSOT を結ぶ規約を既に持って
+      いるのに、この表だけがアンカー無しになっている。
+    suggestion: >-
+      owner 文書側に同じキーをアンカーとして書き込み、テストで「Source 欄の
+      パスが実在し、その中にキーが現れる」ことを検証する。アンカーを置かない
+      方針なら「owns (defines) the stop point」という主張を実態に合わせて弱める。
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "round 2 の rework にまとめて含める（同一文書・同一根本原因）"
+  - stable_id: 37980aa6aa498c1f
+    severity: medium
+    category: spec
+    file: em-workflow/references/batch-terminal-line.md
+    line: 86
+    title: 同一の停止状態に複数の reason code が該当し、どれを出すかの優先規則が無い
+    description: >-
+      stable_id 4aeb3f8b0e8ec9e6 と同一の欠陥を spec 観点から確認したもの。
+      NFR7 が求める「集合と停止点の対応をテストで検査できる」形が、写像の
+      一意性を欠くために成立していない。
+    suggestion: >-
+      Stop point coverage 表の直後に優先規則を明記し、その記述の存在を pin する
+      アサーションを coverage テストに 1 本足す。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "round 2 の rework にまとめて含める"
+  - stable_id: a8ab378dda806693
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 20
+    title: "`detail` の値に改行・空文字が来た場合の扱いが未規定"
+    description: >-
+      Line format 節は「always exactly one physical line」と述べ、Field values 節は
+      `detail` を「non-empty」と定義するが、生成側が満たすべき正規化規則が無い。
+      `detail` の供給源（implementer の notes、gate の blocking_reason、YAML
+      パーサのエラーメッセージ）は複数行を含みうる。改行がそのまま入ると終端行が
+      2 行以上に分割され、消費側の行パーサが 2 行目以降を読み飛ばして `detail` が
+      黙って切り詰められる。
+    suggestion: >-
+      Line format 節に正規化規則を追加する（改行・タブ・CR を単一スペースへ置換し
+      連続スペースを畳む。正規化後が空になる場合は固定の代替文字列を使う）。
+      その規則が文書に存在することを pin するアサーションをテストに足す。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "round 2 の rework にまとめて含める"
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+  note: >-
+    critical/high 候補はいずれも category != spec の 4 件（stable_id
+    0637708c55c7f230 / 1b6dc8cae3c91111 / 4aeb3f8b0e8ec9e6 / 55903a56e01e5125 /
+    6a1c9f2d84be3057）だが、各 suggestion が明示するとおり、修正には
+    em-workflow/references/batch-terminal-line.md・
+    em-workflow/skills/develop/SKILL.md・tests/test_batch_stop_contract.py・
+    tests/test_batch_stop_contract_skill_wiring.py の同期更新が必要。
+    review-editor は 1 dispatch につき finding.file 1 ファイルしか変更できず
+    （scope verification が delta == finding.file を強制する）、どれか 1
+    ファイルだけを直すと閉集合とそれを pin するテスト定数が食い違って
+    スイートが赤になる。よって auto-fix では解決不能と判定し、ループを
+    走らせずに rework へ回した。
+residual_critical_high: 6
+rework_required: true
