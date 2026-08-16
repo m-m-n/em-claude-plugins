@@ -38,9 +38,37 @@ workflow:
     status: completed
     completed_at_commit: bee4d5a469274969b8ebe76b3a0b8f5a67411bb7
   - id: verify
-    status: pending
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: "MANUAL-1"
+        criteria: [AC-1]
+        note: >-
+          I.2.c の route back 節が「単一の導出元を名指す 1 つの指示」として読めない。
+          write set の対象集合だけ reconciled state に移った結果、直後の事後条件と
+          workflow-patch.md の `replace_all` 前提条件（workflow.yaml status 基準）
+          との接続が未証明（finding 0acedde04c24cb8d）。また reconciled-`merged` が
+          ゲートではハード阻止条件、cleanup ではフィルタとして二通りに書かれている
+          （finding 5a9c94c87a6f7c4f）。
+      - id: "MANUAL-2"
+        criteria: [AC-2, AC-3]
+        note: >-
+          EC-1 の読み合わせで、cleanup 文の「confirmed not merged」が実際の検証内容
+          （journal 由来のみ、ancestor 検査なし）より強い。merge-task.sh の
+          update-ref → append_merged_event 間で中断した場合、マージ済みブランチが
+          `git branch -D` される残余経路が残る（finding cbe1e5e8ca5cf4df）。
+      - id: "MANUAL-3"
+        criteria: [FR5, FR6]
+        note: >-
+          implement-phase.md:219 の `(the widened I.2.c gate above)` が方向誤り
+          （I.2.c は 372 行目＝below）。さらに I.2.a より上にある唯一のゲート記述
+          （67 行目の exit-4 bullet）は本変更で `in_progress` union rule に限定された
+          ため、`merged` union の根拠として参照できない。spec / architecture /
+          comprehensive の 3 観点が独立に検出（69fc571959dc36a1 /
+          e3a4f2b026841bf6 / 477a18556a3587e3）。
+      - id: "TEST-SUITE"
+        criteria: [AC-5, AC-6, AC-7]
+        note: "pass — 1089 tests OK、保護済み 2 モジュールは diff に不在、version 両ファイル一致。参考情報として記録。"
   - id: retrospect
     status: pending
 
