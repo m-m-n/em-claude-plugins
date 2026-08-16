@@ -42,6 +42,17 @@ Task-level acceptance criteria live in the task plans.
 | TS-8 | Every new-wording matcher in TS-1 .. TS-6 has a negative proof against a verbatim pre-change sample, and each sample carries a retained anchor asserted positively | Each matcher's literal lives in one shared constant; each proof runs on the normalized captured sample; each sample's non-vacuity guard passes; exemptions recorded in the module docstring | Unit (meta / test quality) |
 | TS-9 | Both version files report the same, bumped version string | Both parse as JSON; `0.1.x` with patch > 38; the two strings are equal | Unit (registry contract) |
 
+### Rework scenarios (verify round 1 → task0003)
+
+Added for the verify-sourced rework tasks; they extend the table above and are
+run by the same command.
+
+| ID | Scenario | Expected Result | Test Type |
+|----|----------|-----------------|-----------|
+| TS-10 | The route-back write set's reset target set covers both `failed` sources, and the document connects that set to the postcondition and to `replace_all`'s workflow.yaml-status permission conditions | The existing reconciled-state literal survives verbatim as the leading member, a workflow.yaml `status: failed` member is named alongside it, and one sentence states that the two sets can diverge (citing Step I.2.b step 3) and that covering both is what makes the postcondition true; the four write instructions, their order and the 60-character `tasks.{T}.status` / `pending` window still hold | Unit (document contract) |
+| TS-11 | The cleanup sentence reads as a consequence of the gate and claims only what the two sources verify, with the merged-branch-without-journal-event residual recorded in the leftover-state style | The gate-consequence wording and the source-qualified not-merged claim are present, both retained cleanup literals survive, the residual sentence follows the leftover-state sentence, `git branch -D` still occurs exactly once inside the scoped sentence, and "rework" / "append" are still absent from the I.2.c section | Unit (document contract) |
+| TS-12 | Step I.2.a's forward reference to the I.2.c gate points below, and the carve-out / gate / reconciled-state ownership chain has a stated termination point | No reference to the I.2.c gate as `above` remains in I.2.a; the recursion-invariant sentence still follows "can never arise."; the termination sentence states the carve-out applies only to a `failed` last event so Step I.2.b step 1's `merged` classification never consults it; the carve-out and in-flight sentences survive | Unit (document contract) |
+
 ## Code Quality Verification
 
 - Format: none. `project.components.main.format_command` is empty; there is no
@@ -55,9 +66,9 @@ Task-level acceptance criteria live in the task plans.
 
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
-| AC-1 | I.2.c's route-back admissibility, write set and cleanup all name Step I.2.b step 1's reconciled state | TS-1, TS-2, TS-3 pass; plus the manual read-through below |
-| AC-2 | A task whose journal last event is `merged` (ancestor-verified) is never a route-back cleanup target, whatever workflow.yaml says | TS-1 and TS-3 pass; manual walk of EC-1 / EC-2 against the edited paragraph |
-| AC-3 | The document states that `git branch -D` on this path targets only tasks confirmed not merged | TS-3 passes |
+| AC-1 | I.2.c's route-back admissibility, write set and cleanup all name Step I.2.b step 1's reconciled state | TS-1, TS-2, TS-3, TS-10 pass; plus the manual read-through below |
+| AC-2 | A task whose journal last event is `merged` (ancestor-verified) is never a route-back cleanup target, whatever workflow.yaml says | TS-1, TS-3 and TS-11 pass; manual walk of EC-1 / EC-2 against the edited paragraph |
+| AC-3 | The document states that `git branch -D` on this path targets only tasks confirmed not merged | TS-3 and TS-11 pass — TS-11 additionally requires the claim to be qualified by the two sources the path actually reads, with the unverifiable residual recorded rather than asserted away |
 | AC-4 | Document-contract tests equivalent to TS-3 / TS-4 exist under `tests/`, each new matcher paired with a negative proof and a non-vacuity guard | TS-3, TS-4, TS-8 pass; the module docstring's matcher inventory lists every exemption |
 | AC-5 | `python3 -m unittest discover -s tests` passes | Run the command from the project root; exit code 0, no skips |
 | AC-6 | `tests/test_implement_routeback_gate.py` and `tests/test_recycled_task_id_consistency.py` pass unmodified | The suite run above, plus `git diff --name-only` against the implement base commit showing neither file in the diff |
@@ -68,21 +79,21 @@ Task-level acceptance criteria live in the task plans.
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
 | FR1 | task0001 | TS-1 |
-| FR2 | task0001 | TS-2 |
-| FR3 | task0001 | TS-3 |
+| FR2 | task0001, task0003 | TS-2, TS-10 |
+| FR3 | task0001, task0003 | TS-3, TS-11 |
 | FR4 | task0001 | TS-4 |
-| FR5 | task0001 | TS-5 |
-| FR6 | task0001 | TS-6 |
-| FR7 | task0001 | TS-8 (the module's own quality contract), exercised by TS-1 .. TS-7 |
+| FR5 | task0001, task0003 | TS-5, TS-12 |
+| FR6 | task0001, task0003 | TS-6, TS-12 |
+| FR7 | task0001, task0003 | TS-8 (the module's own quality contract), exercised by TS-1 .. TS-7 and TS-10 .. TS-12 |
 | FR8 | task0002 | TS-9 |
-| NFR1 | task0001 | TS-7 (heading and batch-mode-paragraph byte identity) |
-| NFR2 | task0001 | TS-7 (the three protected raw line-wrap literals) |
-| NFR3 | task0001 | TS-7 (the four normalized I.2.c orderings) |
-| NFR4 | task0001 | TS-4, TS-7 (rejected-path containment; "rework" / "append" absence) |
-| NFR5 | task0001 | TS-7 (retained gate literals) |
-| NFR6 | task0001 | TS-7 (no bare `git … commit` / `git … add -A` line) |
-| NFR7 | task0001, task0002 | TS-8, TS-9 — both new modules are standard-library-only, live in the repository-root `tests/`, and are picked up by the discovery command |
-| NFR8 | task0001, task0002 | TS-7, plus the manual diff-scope check below (no runtime script, hook or shell behaviour modified) |
+| NFR1 | task0001, task0003 | TS-7 (heading and batch-mode-paragraph byte identity) |
+| NFR2 | task0001, task0003 | TS-7 (the three protected raw line-wrap literals) |
+| NFR3 | task0001, task0003 | TS-7, TS-10 (the four normalized I.2.c orderings) |
+| NFR4 | task0001, task0003 | TS-4, TS-7, TS-11 (rejected-path containment; "rework" / "append" absence) |
+| NFR5 | task0001, task0003 | TS-7 (retained gate literals) |
+| NFR6 | task0001, task0003 | TS-7 (no bare `git … commit` / `git … add -A` line) |
+| NFR7 | task0001, task0002, task0003 | TS-8, TS-9 — every new module is standard-library-only, lives in the repository-root `tests/`, and is picked up by the discovery command |
+| NFR8 | task0001, task0002, task0003 | TS-7, plus the manual diff-scope check below (no runtime script, hook or shell behaviour modified) |
 
 Every requirement maps to at least one task and at least one test scenario;
 there are no uncovered requirement IDs and no `tbd` requirements.
@@ -103,6 +114,15 @@ exercise (`project.components.main.e2e_test_command` is empty). Nothing to run.
       (journal `merged` + workflow.yaml `failed` → blocked, not cleaned up)
       and EC-3 (a `merged` claim failing `git merge-base --is-ancestor` does
       not block).
+- [ ] Re-walk the three verify-round-1 failed items against the reworked text
+      (task0003): MANUAL-1 — the write set now covers the same task set the
+      postcondition and `replace_all` are judged over, including a task
+      workflow.yaml reports `failed` with no journal event; MANUAL-2 — the
+      not-merged claim states only what the two sources establish, and the
+      branch-advanced-without-journal-event window is recorded as a residual;
+      MANUAL-3 — following I.2.a's pointer to the I.2.c gate lands on I.2.c,
+      and the carve-out / gate / reconciled-state chain has a stated
+      termination point.
 - [ ] Read the Branch & Worktree Model's exit-4 bullet and Step I.2.a's
       recycled-task-id paragraph and confirm both still describe the gate
       correctly now that it has two union rules (FR5, FR6).
@@ -131,8 +151,8 @@ applies).
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1 .. TS-9) | 9 | 9 | 0 | 0 |
+| Test scenarios (TS-1 .. TS-12) | 12 | 12 | 0 | 0 |
 | Success criteria (AC-1 .. AC-7) | 7 | 7 | 0 | 2 (AC-2 and AC-6 additionally get a manual read-through / diff check) |
 | Functional requirements (FR1 .. FR8) | 8 | 8 | 0 | 0 |
 | Non-functional requirements (NFR1 .. NFR8) | 8 | 8 | 0 | 1 (NFR8's diff-scope check) |
-| Manual-only checks | 5 | 0 | 0 | 5 |
+| Manual-only checks | 6 | 0 | 0 | 6 |

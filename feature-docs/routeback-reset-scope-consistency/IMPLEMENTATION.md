@@ -59,8 +59,8 @@ file owned by another; reading another task's file is allowed.
 
 | File | Owner |
 |------|-------|
-| `em-workflow/references/implement-phase.md` | task0001 |
-| `tests/test_routeback_reset_scope_consistency.py` | task0001 |
+| `em-workflow/references/implement-phase.md` | task0001, then task0003 (D9) |
+| `tests/test_routeback_reset_scope_consistency.py` | task0001, then task0003 (D9) |
 | `em-workflow/.claude-plugin/plugin.json` | task0002 |
 | `.claude-plugin/marketplace.json` | task0002 |
 | `tests/test_routeback_reset_scope_version_bump.py` | task0002 |
@@ -262,6 +262,56 @@ pass against wording that never changed. Both new modules follow:
    module docstring inventory rather than left implicit.
 
 Affected tasks: both.
+
+### D9: Rework round 1 (verify-sourced) — amended shared contracts
+
+task0003 is a verify-sourced rework task (failed items MANUAL-1 / MANUAL-2 /
+MANUAL-3). It edits two files task0001 already owns, so the contracts below are
+amended rather than added alongside the originals. Everything not listed here —
+D2's vocabulary table, D3's anchor set, D4, D5, D7, D8 — applies to task0003
+unchanged.
+
+1. **File ownership passes to task0003** for
+   `em-workflow/references/implement-phase.md` and
+   `tests/test_routeback_reset_scope_consistency.py`. task0001 and task0002 are
+   both `merged`, so no writer runs concurrently with task0003 and the
+   one-writer-per-file rule is preserved by the transfer rather than broken by
+   it. The "files no task may touch" list is unchanged, and now also covers
+   `tests/test_routeback_reset_scope_version_bump.py` (task0002's module) for
+   task0003.
+2. **D2's write-set contract is amended.** The reset target set is no longer
+   "every task whose Step I.2.b step 1 reconciled state is `failed`" alone; it
+   is the union of that set with "every task workflow.yaml reports
+   `status: failed`" — the same union shape D2 already defines for the gate's
+   two halves, for the same reason: the postcondition the write set claims, and
+   `references/workflow-patch.md`'s `replace_all` permission conditions, are
+   evaluated over workflow.yaml's own `tasks.{T}.status` values, while Step
+   I.2.b step 3 can write `failed` for a task whose reconciled state is not
+   `failed` (a `failed`/malformed report with no journal event). Naming only
+   the reconciled state left the postcondition resting on an unstated
+   inclusion that does not hold. The reconciled-state member stays the leading,
+   verbatim member of the phrase so task0001's TS-2 matcher keeps matching.
+3. **D2's cleanup contract is amended**: "the document says in so many words
+   that those are tasks confirmed NOT merged" becomes "the document says that
+   those are tasks not merged UNDER THE TWO SOURCES this path reads
+   (workflow.yaml `status` and Step I.2.b step 1's reconciled state), and
+   records the residual it cannot see". Reviewer option (a) for MANUAL-2 — a
+   per-candidate `git merge-base --is-ancestor` check before cleanup — is NOT
+   adopted: it would add a verification step to the protocol that SPEC.md never
+   requires, and either narrow the cleanup target set below the set the write
+   set just reset (breaking the postcondition for a task that is merged yet
+   recorded `failed`) or force the gate's `merged` union to a third source,
+   contradicting FR1's two-source shape and the literals task0001's module
+   pins. The honest documentation of the residual is option (b), and it keeps
+   the change documentation-only (NFR8).
+4. **No further version bump.** `0.1.39` (task0002) has not shipped; it covers
+   this feature's whole change set, including task0003's edits. The existing
+   monotonic assertions (patch > 38, both registries equal) stay satisfied, so
+   the two `.claude-plugin` manifests remain out of task0003's file set and
+   keep task0002 as their owner.
+
+Affected tasks: task0003 (author of all four); task0001 / task0002 are merged
+and unaffected in place.
 
 ## Risk Assessment
 
