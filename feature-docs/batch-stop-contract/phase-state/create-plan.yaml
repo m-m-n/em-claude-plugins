@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-stop-contract
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 0368e0d60cffbc1fa0de892d31e0a9c0c411b9bd
 last_input_digest: "sha256:1a59967a03c218f78bfb16b28844e95405a583a312b6abf8956b63c4c4f57b5c"
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -31,7 +31,7 @@ artifacts:
     produced_by: create-plan-run-0001
 patches:
   - patch_id: batch-stop-contract-p0001
-    status: proposed
+    status: applied
     base_input_digest: "sha256:1a59967a03c218f78bfb16b28844e95405a583a312b6abf8956b63c4c4f57b5c"
     base_workflow_blob: 242fff136c194a0efca83602a152065a8059a38b
 progress_fingerprint: null
