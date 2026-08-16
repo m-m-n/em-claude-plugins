@@ -45,11 +45,11 @@ these values are fixed here and are not renegotiated inside a task.
 | Terminal-line field grammar | Machine-parseable payload | After the prefix, exactly four `key=value` fields in this fixed order: `state`, `step`, `reason`, `detail`. Single space between fields, no space around `=`. `detail` is last and its value runs to end of line, so it may contain spaces. Postcondition: one physical line, never wrapped | task0001, task0002 |
 | `state` value domain | Distinguishes completion from a stop | Closed set of two: `completed`, `stopped`. Same prefix and same four fields in both cases (FR1), so absence of the line is the only abnormal-outcome signal | task0001, task0002 |
 | `step` value domain | Locates the stop | A `workflow.yaml` step id (`create-spec`, `design`, `create-plan`, `implement`, `review`, `verify`, `retrospect`) or the single sentinel `no-step`. `no-step` applies whenever no `workflow.yaml` step is in effect at the stop point (Step 0 git-setup abort, Step A feature-resolution failure, Step C completion processing). On `state=completed` the value is `retrospect` — the final workflow step, which a completed run has always reached | task0001, task0002 |
-| Stop reason-code set | The closed enum of FR2/NFR7 | Exactly nine stop codes: `step_stuck`, `step_needs_intervention`, `workflow_yaml_unparseable`, `git_setup_aborted`, `gate_fail_closed`, `gate_option_unavailable`, `implement_task_failed`, `verify_rework_cap_reached`, `completion_aborted`. Plus the reserved value `none`, used only when `state=completed`. All lowercase snake_case, no dots | task0001, task0002 |
-| Stop-point key set | The FR5 enumeration, in machine-comparable form | Exactly nine keys: `stop-condition-2`, `stop-condition-3`, `stop-condition-4`, `stop-condition-6`, `fail-closed-abort`, `policy-option-unavailable`, `implement-second-failure`, `verify-rework-cap`, `step-c-abort`. Lowercase, hyphen-separated, no dots | task0001, task0002 |
+| Stop reason-code set | The closed enum of FR2/NFR7 | Exactly ELEVEN stop codes: `step_stuck`, `step_needs_intervention`, `workflow_yaml_unparseable`, `git_setup_aborted`, `gate_fail_closed`, `gate_option_unavailable`, `implement_task_failed`, `verify_rework_cap_reached`, `completion_aborted`, plus (rework round 1, D9) `feature_resolution_aborted` and `docs_commit_conflict_aborted`. Plus the reserved value `none`, used only when `state=completed`. All lowercase snake_case, no dots | task0001, task0002 (first nine); task0004, task0005 (the two additions) |
+| Stop-point key set | The FR5 enumeration, in machine-comparable form | Exactly ELEVEN keys: `stop-condition-2`, `stop-condition-3`, `stop-condition-4`, `stop-condition-6`, `fail-closed-abort`, `policy-option-unavailable`, `implement-second-failure`, `verify-rework-cap`, `step-c-abort`, plus (rework round 1, D9) `step-a-abort` and `docs-commit-conflict`. Lowercase, hyphen-separated, no dots | task0001, task0002 (first nine); task0004 (the two additions) |
 | Contract-document heading set | Section anchors the contract test slices on | Exactly these seven level-2 headings, in this order: `## Purpose`, `## Line format`, `## Field values`, `## Stop reason codes`, `## Stop point coverage`, `## No line on a wait turn`, `## Responsibility boundary`. Postcondition: a test may locate a section by its heading string alone | task0001 |
 | Reason-code table shape | Lets a test extract the closed set mechanically | Under `## Stop reason codes`: a Markdown table whose first column is a single backticked reason code and which also states, per row, the meaning and which `state` it applies to. Precondition for extraction: one code per row, no code repeated | task0001 |
-| Coverage table shape | Lets a test check FR5 bidirectionally | Under `## Stop point coverage`: a Markdown table whose first column is a single backticked stop-point key, whose second column is a single backticked reason code, and whose third column names the owning source document. Postcondition: every stop-point key appears exactly once, and every one of the nine stop reason codes is used by at least one row | task0001 |
+| Coverage table shape | Lets a test check FR5 bidirectionally | Under `## Stop point coverage`: a Markdown table whose first column is a single backticked stop-point key, whose second column is a single backticked reason code, and whose third column names the owning source document. Postcondition: every stop-point key appears exactly once, and every stop reason code of the set above is used by at least one row | task0001, task0004 |
 | Plugin version | Single version identity for the plugin | `0.1.40` — a patch bump from the current `0.1.39` — written identically as a string into `em-workflow/.claude-plugin/plugin.json` and the `em-workflow` entry of `.claude-plugin/marketplace.json`. Exactly one task performs it | task0003 |
 
 ## Conventions
@@ -118,7 +118,7 @@ task0002.
 ### D4 — Stop-point keys are first-class identifiers
 
 FR5's nine stop points are given stable keys rather than prose labels, so the
-coverage check (TS3) is a set comparison instead of a substring search over
+coverage check (TS-3) is a set comparison instead of a substring search over
 sentences that can be reworded. Affected: task0001.
 
 ### D5 — Emission is batch-only
@@ -176,6 +176,42 @@ The version test asserts the `0.1` line with patch strictly greater than 39
 (the current committed `0.1.39`), rather than equality with `0.1.40`, so it
 stays green across later unrelated bumps while still going red on the
 un-bumped tree. Affected: task0003.
+
+### D9 — Rework round 1: the closed sets grow by two, and the split that keeps the two rework tasks independent
+
+Review round 1 found that the closed sets fixed above are not total: Step A's
+feature-resolution failure (already named in `## Field values` as a `no-step`
+stop) and the phase abort taken when `commit-docs.sh` returns exit 4 a second
+time are terminating stops with no reason code and no coverage row. Closing the
+sets is a NEW cross-task agreement, because two rework tasks in separate
+worktrees both depend on the same names:
+
+| Stop | Stop-point key | Reason code | Owner document named in the coverage table | `step` value |
+|---|---|---|---|---|
+| Step A abort (fail-closed feature-identifier gate; batch run with no task description) | `step-a-abort` | `feature_resolution_aborted` | `skills/develop/SKILL.md` | the `no-step` sentinel |
+| Phase abort on a second `commit-docs.sh` exit 4 | `docs-commit-conflict` | `docs_commit_conflict_aborted` | `references/phase-state.md` | the id of the step whose phase aborted |
+
+Ownership split (file sets are disjoint, so both rework tasks are mergeable
+from independent worktrees and each leaves the suite green on its own):
+
+- **task0004** owns `references/batch-terminal-line.md` and
+  `tests/test_batch_stop_contract.py`: the two new codes and rows, the
+  precedence rule that makes an overlapping stop resolve to exactly one code
+  (a phase-specific stop point wins over the generic `stop-condition-N` rows),
+  the `detail` normalization rule, the generalized no-line rule, and the
+  weakened Source-column claim plus its path-resolvability check.
+- **task0005** owns `skills/develop/SKILL.md`, `references/batch-mode.md` and
+  `tests/test_batch_stop_contract_skill_wiring.py`: the completed stop
+  enumeration, the no-line rule generalized over every non-terminal turn end,
+  and the instruction to Read the contract SSOT before emitting the line.
+
+Two consequences that must hold in EITHER merge order: a pointer document still
+restates no literal, so `batch-mode.md` and `SKILL.md` stay clean against both
+the nine-code and the eleven-code absence lists; and the eleven-member tuple in
+the skill-wiring module is used for absence checks only, so it is green
+regardless of whether the contract document already carries the two new codes.
+
+Affected: task0004, task0005.
 
 ## Risk Assessment
 
