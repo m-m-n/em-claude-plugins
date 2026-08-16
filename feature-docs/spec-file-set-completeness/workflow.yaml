@@ -34,7 +34,8 @@ workflow:
     status: completed
     completed_at_commit: a989245ad80f686b3965f4e9147d8cb322ea0891
   - id: implement
-    status: in_progress
+    status: completed
+    completed_at_commit: beea6f9e7245a3b5eb159d233b7bf74b7d6f6cb0
     base_commit: df80475378d4c87b4dea544d4788d79586aa0b25
   - id: review
     status: pending
@@ -95,7 +96,7 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR6, FR7, FR8, NFR1, NFR2, NFR4, NFR5, NFR6]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/spec-file-set-completeness/task0004
 
