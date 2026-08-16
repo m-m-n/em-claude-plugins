@@ -1,0 +1,105 @@
+schema_version: 1
+feature: recycled-task-id-consistency
+phase: create-spec
+status: completed
+generation: 1
+10d1a8262e4c75e7c9ca3f6d00a6e7271e549275
+last_input_digest: sha256:699f599211bfd84b997f1d7b4591a1c39fc2ac4a5cab7c5e7d0f040cd999b67a
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-15T00:33:00+09:00"
+    questions:
+      - question_id: rule.disposition
+        status: answered
+      - question_id: pending.launched.exit
+        status: answered
+      - question_id: rule.scope
+        status: answered
+      - question_id: stopguard.retired.failed
+        status: answered
+      - question_id: spec.home
+        status: answered
+      - question_id: design.step
+        status: answered
+answers:
+  rule.disposition:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T00:37:52+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [keep-harmonize]
+    freeform: null
+    normalized_answer: "Keep the recycled-task-id rule and harmonize it: I.2.b step 3's write-back must key off the step-1 reconciled state (failed) rather than re-reading the journal's last event directly, so the rule reads identically at I.2.a, I.2.b step 1, I.2.b step 3 and I.2.c route-back."
+    resolution_note: "batch: gate create-spec.requirement-clarification -> codex_consultation. Codex agreed with the analyst's tentative position; removing the rule would leave the id-reuse misclassification in place, and abolishing id recycling would ripple disproportionately into workflow-patch.md and the planner contract."
+  pending.launched.exit:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T00:37:52+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [routeback-precondition]
+    freeform: null
+    normalized_answer: "Prevent the state instead of recovering from it: I.2.c route-back gains a precondition that every task it resets must have a terminal journal last event (merged or failed). A non-terminal last event (launched) makes route-back inapplicable, and that failure is itself a defined terminal outcome (abort with a report for manual handling) rather than an undefined path. Because task-id recycling only ever occurs through route-back plus replace_all renumbering, the 'status: pending + journal launched' pair then cannot arise, satisfying the acceptance criterion's second branch."
+    resolution_note: "batch: gate create-spec.requirement-clarification -> codex_consultation. Codex rejected the analyst's tentative 'reconcile-terminal' with a verifiable reason: the orchestrator never writes the journal, so reclassifying a task as failed appends no failed event, and queue_launch_guard.py (journal-only) would still deny the advertised retry. Orchestrator confirmed that against em-workflow/references/implement-phase.md's journal-writer list and queue_launch_guard.py."
+  rule.scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T00:37:52+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [orchestrator-only]
+    freeform: null
+    normalized_answer: "State explicitly that the recycled-task-id rule governs only the orchestrator's interpretation of the journal. The journal-reading hooks (queue_launch_guard.py, queue_stop_guard.py, queue_failure_net.py, queue_taskstop_net.py) continue to judge by journal last event alone and never read workflow.yaml."
+    resolution_note: "batch: gate create-spec.requirement-clarification -> codex_consultation. Matches the current implementation and keeps the hooks' fail-open, journal-only contract; letting the launch guard trust a possibly-stale workflow.yaml status could permit a duplicate launch."
+  stopguard.retired.failed:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T00:37:52+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [out-of-scope]
+    freeform: null
+    normalized_answer: "Out of scope for this feature. queue_stop_guard.py's silence when any task carries a permanent failed journal event is a real but separate detection defect; it gets its own task with its own requirements and tests."
+    resolution_note: "batch: gate create-spec.requirement-clarification -> codex_consultation. Named in the task's constraints but absent from its acceptance criteria; fixing it would expand this feature into Python behaviour changes. Orchestrator will file a follow-up task."
+  spec.home:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T00:37:52+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [this-feature]
+    freeform: null
+    normalized_answer: "Define the requirements, acceptance criteria and test scenarios in THIS feature's REQUIREMENTS.md / SPEC.md. Do not retroactively edit the completed implement-routeback-gate documents."
+    resolution_note: "batch: gate create-spec.requirement-clarification -> codex_consultation. Retroactively editing a completed feature's specification would blur its historical scope and review provenance."
+  design.step:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-15T00:37:52+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [skip]
+    freeform: null
+    normalized_answer: "Skip the design step. The deliverables are protocol Markdown, YAML references and Python unittests; there is no UI and there are zero design-system candidates."
+    resolution_note: "batch: gate create-spec.design-step -> batch-policies.yaml option_id 'decide_autonomously'. That id is a decision procedure, not a literal packet option (same idiom as the sibling entry create-spec.design-system's 'top_candidate_or_none'), so it resolves to adopting the analyst's own design_step_recommendation, which is 'skip'."
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: sha256:362b1307b8b7b530fb71d446cefd785d74afed56aff1e85bd1beb07c6f8d56c2
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:eeb48641aeede1fc34b7938a615bd95656ffa70aa54b0f2763d28a67402f0873
+    output_digest: sha256:c420467c0b89a394adaaf1412806c438036d9311bef8a7b492115dc725090fb5
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:699f599211bfd84b997f1d7b4591a1c39fc2ac4a5cab7c5e7d0f040cd999b67a
+    output_digest: sha256:b80a8b4ab8f7a48813aa948387e527a7ad87ab1c0ca041794beb7b0d749f05e0
+artifacts:
+  - path: feature-docs/recycled-task-id-consistency/REQUIREMENTS.md
+    sha256: sha256:3c0312ca84bbd4cc83af157d420642323fabce88cbb413df5d98e436c3de9521
+    produced_by: create-spec-run-0003
+  - path: feature-docs/recycled-task-id-consistency/SPEC.md
+    sha256: sha256:b80a8b4ab8f7a48813aa948387e527a7ad87ab1c0ca041794beb7b0d749f05e0
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: sha256:872b43e81ffceaf3a8dd963df3e14e3a3aefd32da49ccd356a70cee1843df8d1
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

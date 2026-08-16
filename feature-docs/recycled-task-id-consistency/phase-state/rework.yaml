@@ -1,0 +1,126 @@
+schema_version: 1
+feature: recycled-task-id-consistency
+phase: rework
+status: done
+generation: 2
+base_revision: 8c9cd0e
+last_input_digest: "sha256:5db460ae7bcb12c464a866af4cfd6537e7c798c05afd00e6f39b09812785645a"
+active_request_id: rework-run-0002
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: "2026-08-15T02:05:00+09:00"
+    questions:
+      - question_id: rework.spec-change.fr8-declared-file-set
+        status: answered
+  rework-q0002:
+    status: closed
+    issued_at: "2026-08-16T01:05:00+09:00"
+    closed_at: "2026-08-16T02:40:00+09:00"
+    close_reason: "batch mode: rework cap reached — R5 at-cap defer が rework 経路に優先する"
+    questions:
+      - question_id: rework.spec-change.routeback-admissibility
+        status: closed
+answers:
+  rework.spec-change.fr8-declared-file-set:
+    packet_id: rework-q0001
+    answered_at: "2026-08-15T13:50:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [change_spec]
+    freeform: |
+      Notion タスク 3bc3509ec8ee813998d1c1de663c7fe6 の「申し送り」で人間が
+      判断を示した。1. TS-12 / SC-4 は SPEC.md / REQUIREMENTS.md の FR8 / AC-8
+      に `test-docs/{feature}/**` を追加する（仕様変更を採る）。2. TS-14 / SC-6
+      は不足している negative-proof テストを追加する（仕様変更は不要）。
+      3. deferred medium 13 件は本 feature のスコープ外として別タスクに起票する。
+    normalized_answer: "SPEC 変更を採用: FR8 / AC-8 の宣言ファイル集合に test-docs/{feature}/** を追加する"
+worker_runs:
+  - request_id: rework-run-0001
+    status: needs_user_input
+    input_digest: null
+    output_digest: null
+  - request_id: rework-run-0002
+    status: needs_user_input
+    input_digest: "sha256:5db460ae7bcb12c464a866af4cfd6537e7c798c05afd00e6f39b09812785645a"
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+spec_change:
+  reason: |
+    verify 由来 rework が gate_id rework.spec-change（category: spec-change）で
+    中断した。SPEC.md / REQUIREMENTS.md の FR8 / AC-8 が宣言するファイル集合が
+    `test-docs/{feature}/**` を含まないため、implement-phase.md が必須生成物に
+    定める test-docs 成果物が TS-12 / SC-4 を不成立にしていた。人間が Notion
+    タスクの申し送りで SPEC 変更を選択したため、create-spec へ再突入して
+    宣言集合を修正する。
+  finding_stable_id: TS-12
+  recorded_at_commit: 5039f99ce360e785d746c7176ffe00f090ce5748
+  consumed: true
+pending_gate:
+  gate_id: rework.spec-change
+  packet_id: rework-q0002
+  question_id: rework.spec-change.routeback-admissibility
+  category: spec-change
+  opened_at: "2026-08-16T01:05:00+09:00"
+  source: review
+  review_round: 2
+  finding_stable_ids: [29b99dea6a37377d, c431ec8ba89742db]
+  batch_resolution: abort
+  batch_resolution_reason: >-
+    `references/question-resolution.md` の fail-closed classification により、
+    category が spec-change の質問は batch では policy lookup にも Codex 相談にも
+    到達せずフェーズを中断する。`references/batch-policies.yaml` にも
+    `rework.spec-change` の entry は意図的に存在しない。
+  summary: >-
+    review round 2 の残存 high 2 件は単一の根本原因（I.2.c の route-back 可否条件が
+    「journal last event が terminal か」だけで表現されており、launch guard も同じ
+    journal 単独判定で、hook 群は FR8 / NFR3 により変更禁止）に帰着する。どの修正
+    経路も SPEC.md の FR3/AC-3（"terminal journal last event (`merged` or `failed`)"）、
+    FR4/AC-4（I.2.c セクションに `rework` / `append` トークンを含まない）、
+    FR5/AC-5（in-flight 文の verbatim 保持）のいずれかの literal を書き換えるため、
+    現行仕様の内側では rework task を 1 件も合成できない。
+  options:
+    - option_id: narrow_terminality_to_failed
+      label: "Admit only `failed`"
+      description: >-
+        FR3/AC-3 を変更し、route-back を「reset 対象の全タスクの journal last event が
+        `failed`」のときだけ admissible にする。`merged` は INAPPLICABLE 分岐に回す。
+        29b99dea6a37377d を解消。FR3 / AC-3 / FR4 / AC-4 / TS-3 / TS-4 と
+        tests/test_recycled_task_id_consistency.py のマッチャを同時変更する必要がある。
+        c431ec8ba89742db は未解消のまま残る。
+    - option_id: recovery_path_for_stale_launched
+      label: "Add escape path"
+      description: >-
+        AC-4/FR4 の `append` トークン禁止を緩め、INAPPLICABLE 分岐に stale `launched`
+        の明示的な回復手順を書けるようにする。c431ec8ba89742db を解消。
+        FR4 / AC-4 / TS-4 と 2 つのテストモジュールのマッチャを同時変更する必要がある。
+        29b99dea6a37377d は未解消のまま残る。
+    - option_id: both
+      label: "Both changes"
+      description: >-
+        両方を適用する。2 つの編集は同じ I.2.c bullet に落ちるため、1 回の create-spec
+        再突入でまとめて行えば 2 度目の rework ラウンドを避けられる。rework-planner の
+        推奨。
+    - option_id: defer_both
+      label: "Defer both"
+      description: >-
+        仕様変更を行わない。両 finding を「出荷するプロトコルの既知の制約」として受容し、
+        本 feature の外の follow-up として起票する。review の残存 high 2 件は
+        unresolved のまま残り、rework task は作られない。
+  recommended_option_id: both
+  next_steps: >-
+    このゲートは選択されずに閉じた。`references/review-phase.md` Phase R5 の batch
+    規則により、`batch.review_rework_count` が cap 1 に達している時点で review-sourced
+    rework は成立せず、残存 high は `deferred` として記録して review step を完了する。
+    したがって rework-planner の再 dispatch（rework-run-0002）は取り消し、両 finding を
+    follow-up タスクとして起票する。
+  closed_without_selection: true
+  closed_reason: >-
+    batch mode: rework cap reached（`batch.review_rework_count` = 1）。R5 の at-cap
+    分岐が rework 経路より優先されるため、spec-change ゲートを開く前提自体が成立しない。
+  consumed: true

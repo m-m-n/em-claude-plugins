@@ -1,0 +1,305 @@
+round: 1
+executed_at: "2026-08-15T01:47:51+09:00"
+scope:
+  review_mode: diff
+  base_commit: b73c6e69e4ee81519d0e6f7f8f6a03ec06b5db24
+  head_commit: c2a72d1190e7bd3ff9b539a0a5bbbb238a98e93f
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/recycled-task-id-consistency/task0001.tests.yaml
+    - test-docs/recycled-task-id-consistency/task0002.tests.yaml
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_recycled_task_id_version_bump.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary:
+    - perspective: security
+      reason: "diff は implement-phase.md のプロトコル本文を書き換えており、その本文が branch 名 / worktree パスのシェル補間に対する fail-closed 識別子ゲート（I.0）と、route-back の `git worktree remove --force` / `git branch -D` という破壊的クリーンアップの発火条件を規定しているため"
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+findings:
+  - stable_id: 458fc3619e8fc0a3
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 361
+    title: "I.2.c の route-back 前提条件の対象集合が、I.2.a の不可能性証明が必要とする集合と一致していない"
+    description: |
+      前提条件は検査対象を「every task whose status it would reset to `pending`」と定義していたが、
+      同じ bullet の write set は failed タスクしかリセットしないため、検査対象が実質 failed のみになる。
+      一方 I.2.a の不可能性証明は「`replace_all` が再採番する全 id が terminal な last event を持つこと」
+      を根拠にしており集合が食い違う。`status: in_progress` かつ journal last event `launched` のタスクが
+      ゲートを素通りし、(a) `replace_all` 許可条件違反で再計画が行き止まりになるか、
+      (b) 再採番後に `pending` + journal `launched` の恒久デッドロックを生む。
+    suggestion: "前提条件の集合を id 空間で定義し直し、write set 側も `pending` 以外の全タスクをリセットする形に揃える"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1 (review-editor, needs-judgment / batch auto-select 'Apply as-is')。round 1 の再レビューで comprehensive・architecture 両観点が修正の成立を確認"
+  - stable_id: f8b1422b71466fce
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 361
+    title: "route-back 事前条件の対象集合が「status をリセットする task」に限定され、危険な in_progress/`launched` task を素通しする"
+    description: |
+      458fc3619e8fc0a3 と同一サイト・同一欠陥を comprehensive 観点が独立に検出したもの。
+      auto-fix では同一サイトグループとして 458fc3619e8fc0a3 に集約して 1 度だけ適用した。
+    suggestion: "検査対象を write set の副作用ではなく id 空間で定義し直す"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1 と同一サイトグループ（dispatched id: 458fc3619e8fc0a3）"
+  - stable_id: d30fe543d2801104
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 396
+    title: "「no journal event at all」を非終端として block 扱いにすると、未起動 task を含む plan で route-back が恒久的に成立しなくなる"
+    description: |
+      INAPPLICABLE 分岐が非終端状態として「(`launched`, or no journal event at all)」を列挙していた。
+      未起動 task は `max_parallel_implementers` 超過時や failed 後の refill 停止で通常発生するため、
+      この列挙のままだと route-back は実質一度も実行されず abort 一択に縮退する。
+    suggestion: "blocking 条件を `launched` のみに揃え、journal event を持たない task は route-back を block しない旨を明記する"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1 (review-editor, needs-judgment / batch auto-select 'Apply as-is')"
+  - stable_id: aa49e758c90b277a
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 373
+    title: "Route-back now resets a residual in_progress task whose journal last event is `merged`, discarding the record of already-merged work"
+    description: |
+      loop 1 の修正で write set が「`pending` でない全タスク（failed と residual `in_progress`）」に広がった一方、
+      新 precondition は terminal を `merged` or `failed` と定義し、既存ゲートは workflow.yaml の `status: merged` しか見ない。
+      「merge-task.sh でマージ済み（journal 最終イベント `merged`）だが wake の書き戻し前に中断して `status: in_progress`」
+      のタスクが両ゲートを通過し、`pending` に戻され `git branch -D` される。修正前は同じ状態が
+      `replace_all` の permission 条件違反として fail-closed していた。
+    suggestion: |
+      precondition に「どのタスクの journal 最終イベントも `merged` ではないこと」を追加し、
+      INAPPLICABLE 分岐にも同ケースを書き足す。あるいは residual `in_progress` のリセットを
+      journal 最終イベント `failed` のものに限る（修正前の fail-closed 挙動に戻す）。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ（review-phase.md Phase R4）。本 run の auto-fix loop 1 が新たに開いた経路であり、フォローアップタスクとして起票する"
+  - stable_id: d9e4ba4852030aff
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 373
+    title: "I.2.c の route-back で、可否判定はジャーナル基準・リセット対象は workflow.yaml status 基準に分裂している"
+    description: |
+      aa49e758c90b277a と同一サイトを architecture 観点が独立に検出したもの。可否ゲートがジャーナル基準、
+      write set とクリーンアップが workflow.yaml status 基準という二重基準になっており、
+      I.2.a / I.2.b が確立した「タスク状態は step 1 の reconciled state から導く」という単一の導出規則に反する。
+    suggestion: |
+      (a) reset 対象を I.2.b step 1 の reconciled state で定義し reconciled state が `merged` のタスクを除外する、
+      または (b) 既存の `merged` ゲートをジャーナル基準にも拡張して両者の基準を揃える。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ。aa49e758c90b277a と同一サイトの独立検出であり、同じフォローアップタスクで扱う"
+  - stable_id: 5b4159ddfcfbf6f2
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 362
+    title: "AC-3 の「reset 対象タスク」文言が loop 1 の書き換えで消えた"
+    description: |
+      SPEC AC-3 は「route-back が status をリセットする全タスクが terminal な journal last event を持つこと」を
+      本文が述べることを要求しているが、loop 1 で対象集合が「current plan で journal に事象を持つ全タスク」に
+      置き換わり、AC-3 が名指す言明そのものは本文から消えた（実質的には含意されるが、TS-3 は
+      フレーズと位置しか見ていないため検出できなかった）。
+    suggestion: "reset 対象の節を明示的に併記し、TS-3 に「whose status it would reset」を pin するアサーションを足す"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ、かつ category: spec は auto-fix 対象外"
+  - stable_id: 1a8fa6009351c7e6
+    severity: medium
+    category: spec
+    file: tests/test_recycled_task_id_consistency.py
+    line: 170
+    title: "AC-4 の複数の要求点が新テストで一切アサートされていない（AC-12 違反）"
+    description: |
+      AC-12 は AC-1〜AC-6 の全点をアサートすることを要求しているが、AC-4 の
+      「no worktree/branch cleanup are performed」「the phase reports (naming the affected task ids
+      and their last journal event)」に対応するアサーションが存在しない。AC-3 のスコープ文言も pin されて
+      いないため、loop 1 の書き換えをスイートが検出できなかった。
+      round 1 の 1 回目パスでは同一サイトを stable_id d119fc395553799f として検出している。
+    suggestion: "INAPPLICABLE 以降のスライスに 2 本のアサーションを追加し、TS-3 に AC-3 のスコープ文言 pin を 1 本足す"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "category: spec は auto-fix 対象外（review-phase.md Phase R4 candidate gate）"
+  - stable_id: dae1d00f67527eb0
+    severity: medium
+    category: spec
+    file: test-docs/recycled-task-id-consistency/task0001.tests.yaml
+    line: 1
+    title: "AC-8 の「新規 matcher ごとに negative-proof」記載が実態と一致しない"
+    description: |
+      tests.yaml の AC-8 red_reason は「one negative-proof test per new matcher」と記録しているが、
+      実際に negative-proof があるのは 4 matcher 分のみ。AC-1 / AC-4 / AC-5 / AC-6 の新規 matcher には
+      pre-change 文言サンプルによる証明が無い。記録が実装より広い充足を主張している。
+      round 1 の 1 回目パスでは同一サイトを stable_id eb28f35c1e8969b9（AC-8 の宣言ファイル集合に
+      test-docs/ が含まれていない点）として検出している。
+    suggestion: "不足 matcher に negative-proof を追加するか、tests.yaml の記載を実態どおりに書き換える"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "category: spec は auto-fix 対象外"
+  - stable_id: eb28f35c1e8969b9
+    severity: medium
+    category: spec
+    file: test-docs/recycled-task-id-consistency/task0001.tests.yaml
+    line: 1
+    title: "AC-8 / FR8 の宣言ファイル集合に test-docs/ が含まれておらず変更集合が subset を外れている"
+    description: |
+      SPEC AC-8 の宣言ファイル集合に `test-docs/recycled-task-id-consistency/**` が無いが、
+      これは implement フェーズが必須生成物として定めるパス（implement-phase.md の `tests_yaml_path`）であり
+      削除できない。SPEC 側の宣言集合が実際のワークフロー生成物を取りこぼしている。
+    suggestion: "SPEC の FR8 / AC-8 の宣言ファイル集合に `test-docs/recycled-task-id-consistency/**` を追加する"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "category: spec は auto-fix 対象外"
+  - stable_id: 30ba08ab3d7af5c0
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 190
+    title: "「`status: pending` + journal last event `launched` can never arise」の断定が、fail-open な failure net の存在と整合しない"
+    description: |
+      I.2.a の断定は I.2.c の事前条件と `replace_all` の再採番だけを根拠にしているが、journal に `failed` を書く
+      net（`queue_failure_net.py` / `queue_taskstop_net.py`）は fail-open であり、停止した implementer の
+      last event が `launched` のまま残る経路は設計上残る。同一段落内に「起こり得ない」と「起きたらこう扱う」が
+      併存しており、将来の編集者が断定を根拠に防御規則を撤去すると無限 in-flight を招く。
+    suggestion: "`can never arise` を条件付きに落とし、in-flight 規則が冗長ではないことを明記する"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ"
+  - stable_id: 03bdb0e25d9e1564
+    severity: medium
+    category: comprehensive
+    file: tests/test_recycled_task_id_version_bump.py
+    line: 95
+    title: "`test_em_review_entry_has_no_version_key` が em-review の version 追加を恒久的に禁止し、次の em-review bump で無関係に落ちる"
+    description: |
+      marketplace.json の em-review エントリに `version` キーが無いことを不変条件として固定しているが、
+      em-workflow エントリに version を足した根拠（プラグイン変更時は両方を同じ値にする運用）は
+      em-review にも等しく適用される。規約どおり em-review 側にも version を書いた瞬間、
+      本 feature のテストモジュールが無関係に赤くなる。
+    suggestion: "絶対値ではなく同一性で書く（version が存在する場合は plugin.json の値と一致することを assert）"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ"
+  - stable_id: 64573e0de69b9286
+    severity: medium
+    category: architecture
+    file: tests/test_recycled_task_id_version_bump.py
+    line: 40
+    title: "プラグイン版数の整合検査が feature 名のテストモジュールにリテラル固定で置かれ、他プラグインのリリースにも結合している"
+    description: |
+      `EXPECTED_VERSION = "0.1.37"` を feature 固有モジュールにハードコードしているため、次回 em-workflow を
+      0.1.38 に上げる通常運用で無関係なモジュールが赤くなる。本来検査したい不変条件は
+      「plugin.json の version と marketplace.json の該当エントリの version が一致する」という関係性であり、
+      これは `check-plugin-invariants.py` が担う層の責務。
+    suggestion: "リテラル一致を関係性の検査に置き換え、置き場所を check-plugin-invariants.py 側へ移す"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ"
+  - stable_id: ff3f50bcd9f07c2d
+    severity: medium
+    category: comprehensive
+    file: tests/test_recycled_task_id_version_bump.py
+    line: 57
+    title: "bare `git commit` 検出が行頭 `git` 限定で、markdown リスト項目やプロンプト付きの実コマンドを見逃す"
+    description: |
+      `_bare_git_commit_or_add_lines` は `line.strip().strip("`")` の結果が `^git\\s` にマッチする行しか見ない。
+      implement-phase.md は箇条書きで手順を書くドキュメントなので、`- \\`git commit -m ...\\`` や `$ git commit ...` は
+      すり抜ける。`git add .` / `git add -u` も `add -A` 限定の検索に掛からない。
+    suggestion: "箇条書き記号・シェルプロンプト・バッククォートを剥がしてから判定し、負の証明テストに箇条書きケースを足す"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ"
+  - stable_id: 072dbbf298885c96
+    severity: medium
+    category: architecture
+    file: .claude-plugin/marketplace.json
+    line: 22
+    title: "Marketplace schema drift: inconsistent version field presence across entries"
+    description: |
+      em-workflow エントリだけが `version` を持ち em-review は持たない非対称な形になった。
+      consumer が「全エントリに version がある / 無い」のどちらかを前提にしていると
+      dispatch エラーや silent misclassification を起こしうる。
+    suggestion: "全エントリに version を付けるか、version が任意であることのセマンティクスを marketplace schema 側に明文化する"
+    sources: [litellm:vertex-glm-5:architecture]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ"
+  - stable_id: c4563fd15aa751c9
+    severity: medium
+    category: architecture
+    file: tests/test_recycled_task_id_consistency.py
+    line: 29
+    title: "Duplicated path construction across test modules"
+    description: |
+      2 つの新規テストモジュールが同じパス定数（PLUGIN_ROOT / IMPLEMENT_PHASE_PATH）を独立に構築している。
+      リポジトリ構造が変わると両方を同期して直す必要がある shotgun-surgery リスク。
+    suggestion: "共有テストユーティリティモジュールにパス定義を切り出す"
+    sources: [litellm:vertex-glm-5:architecture]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ"
+  - stable_id: 6b875d06c0c2e094
+    severity: medium
+    category: architecture
+    file: tests/test_recycled_task_id_consistency.py
+    line: 51
+    title: "Fragile golden literal creates maintenance coupling"
+    description: |
+      `PRE_CHANGE_BATCH_MODE_PARAGRAPH` は implement-phase.md から逐語コピーした 6 行のリテラルで、
+      本文側を編集すると自動的な連携なしにテストのリテラル更新が必要になる。
+    suggestion: "byte-identity 不変条件が本当に必要か再検討し、必要なら本文側に対応テストの存在を注記する"
+    sources: [litellm:vertex-glm-5:architecture]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "batch auto-fix の candidate gate は critical/high のみ"
+  - stable_id: d119fc395553799f
+    severity: medium
+    category: spec
+    file: tests/test_recycled_task_id_consistency.py
+    line: 170
+    title: "AC-12 未達: AC-4 の2点が未アサート、新規マッチャの negative proof も不足"
+    description: |
+      round 1 の 1 回目パスでの検出。2 回目パスの 1a8fa6009351c7e6 が同一サイト・同一趣旨を再検出している。
+    suggestion: "1a8fa6009351c7e6 を参照"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "category: spec は auto-fix 対象外。1a8fa6009351c7e6 と同一サイト"
+auto_fix:
+  loops_run: 1
+  applied_total: 2
+  termination: clean
+residual_critical_high: 0
+rework_required: false

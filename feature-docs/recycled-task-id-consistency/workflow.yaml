@@ -1,0 +1,235 @@
+schema_version: 1
+feature: recycled-task-id-consistency
+created: 2026-08-15
+base_branch: main
+parent_branch: em-workflow/recycled-task-id-consistency/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: "Markdown / YAML / Python"
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: c5d9c957a98b6658a8722c79368d0e1a85598192
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "成果物は protocol markdown・feature-docs 成果物・JSON の version フィールド・Python unittest のみで、UI 面もレンダリング出力も無く、design-system 候補もゼロ（gate create-spec.design-step = skip）。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: completed
+    completed_at_commit: 871845a7d265b9634a82cdeabf972ef973faa105
+  - id: implement
+    status: completed
+    completed_at_commit: 928cd9300124f56613f3bae950f4b0ff2aeb7527
+    base_commit: b73c6e69e4ee81519d0e6f7f8f6a03ec06b5db24
+  - id: review
+    status: completed
+    completed_at_commit: 7eb230a8b9e179ce724ba4d40fc8dc9593c3c68d
+  - id: verify
+    status: completed
+    completed_at_commit: 659584dd63f529d0bd905e3865bb07bd20e40621
+    previous_result: fail
+    previous_failed_items: [TS-14, SC-6]
+    result: pass
+    failed_items: []
+    summary: >-
+      `python3 -m unittest discover -s tests` は 978 tests / OK。build・format・E2E は
+      コマンド未定義（該当なし）。TS-1..TS-11 / TS-15 は自動テストで green。TS-12 は
+      implement baseline b73c6e69 との `git diff --name-only` が FR8 の宣言集合の部分集合で
+      あることを確認（禁止パス 0 件、既存 tests/ モジュールの改変 0 件、tests/ の 2 件は新規追加）。
+      TS-13 は I.2.a / I.2.b / I.2.c の編集済み散文を読み、normative statement が I.2.a に 1 つだけ
+      存在し他 2 箇所が引用していること、Supporting cast / workflow-patch.md / develop SKILL.md を
+      再掲せず引用していること、周囲のスタイルと一致していることを確認。TS-14 は
+      tests/test_recycled_task_id_consistency.py の matcher → negative-proof インベントリが
+      モジュール内の全 matcher を網羅し、各エントリが negative proof か明示的免除
+      （retention matcher / regression guard）を挙げていること、および
+      tests/test_recycled_task_id_version_bump.py の 2 matcher が negative proof を持つことを確認。
+      SC-1..SC-7 すべて充足。verify 中に FR9 の bump 先を 0.1.37 → 0.1.38 に繰り上げた
+      （REQUIREMENTS.md A6-1 に記録）。
+    excluded_requirements: []
+
+  - id: retrospect
+    status: completed
+    completed_at_commit: 1b21e90ba89a391651ab657151b939c8489c08f4
+
+tasks:
+  task0001:
+    title: "Harmonize the recycled-task-id rule and gate route-back in implement-phase.md"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_recycled_task_id_consistency.py
+    skills: []
+    domains: [concurrency, api-contract]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/recycled-task-id-consistency/task0001
+  task0002:
+    title: "Plugin version bump to 0.1.38 in both registries"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_recycled_task_id_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR7, FR8, FR9, NFR1, NFR3, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/recycled-task-id-consistency/task0002
+  task0003:
+    title: "Negative proofs for the eight unproven matchers in the recycled-task-id document-contract module"
+    plan: tasks/task0003.md
+    files:
+      - tests/test_recycled_task_id_consistency.py
+      - test-docs/recycled-task-id-consistency/task0003.tests.yaml
+    skills: []
+    domains: [api-contract]
+    complexity: medium
+    requirements: [FR8, NFR1, NFR3, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/recycled-task-id-consistency/task0003
+    provenance:
+      source: verify
+      source_ids: [TS-14, SC-6]
+      review_round: null
+
+review:
+  status: completed
+  rounds_completed: 2
+  plan:
+    floor: [comprehensive, performance, architecture, spec]
+    discretionary:
+      - perspective: security
+        reason: "diff は implement-phase.md のプロトコル本文を書き換えており、その本文が branch 名 / worktree パスのシェル補間に対する fail-closed 識別子ゲート（I.0）と、route-back の `git worktree remove --force` / `git branch -D` という破壊的クリーンアップの発火条件を規定しているため"
+    cross_validation: true
+  perspectives:
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+    security: completed
+  residual_critical_high: 2
+  needs_rework: false
+  deferred_stable_ids: [29b99dea6a37377d, c431ec8ba89742db]
+  deferred_reason: "batch mode: rework cap reached"
+
+requirements:
+  FR1:
+    title: "I.2.b step 3's write-back keys off the step-1 reconciled state"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-1]
+  FR2:
+    title: "One normative statement of the recycled-task-id rule, cited by the other three sites"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-2]
+  FR3:
+    title: "I.2.c route-back precondition: every reset task has a terminal journal last event"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-3]
+  FR4:
+    title: "A non-terminal last event is a defined terminal outcome, not an undefined path"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-4]
+  FR5:
+    title: "The `pending` + journal `launched` pair is shown to be unreachable"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-5]
+  FR6:
+    title: "The rule's scope is stated as orchestrator-only"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-6]
+  FR7:
+    title: "Requirements, ACs and test scenarios live in this feature's documents"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-12]
+  FR8:
+    title: "Change containment"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-12]
+  FR9:
+    title: "Plugin version bump to 0.1.38 in both registries"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS-11]
+  NFR1:
+    title: "Existing document-contract test anchors survive unchanged"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-7, TS-8, TS-9, TS-10, TS-11]
+  NFR2:
+    title: "SSOT non-duplication"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-13]
+  NFR3:
+    title: "Documentation-only change"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-12]
+  NFR4:
+    title: "Local style consistency"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-13]
+  NFR5:
+    title: "Tests are Python unittest document-contract assertions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-14, TS-15]
+
+batch:
+  review_rework_count: 1
+  verify_rework_count: 1
