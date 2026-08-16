@@ -31,7 +31,8 @@ workflow:
       architecture, data model or external interface.
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: a989245ad80f686b3965f4e9147d8cb322ea0891
   - id: implement
     status: pending
     base_commit: 14f30df2b5d5d8404aa76359347df23e486784d2
@@ -44,7 +45,59 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: Declared Change Set section in the SPEC template
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/templates/spec-document.md
+      - tests/test_spec_template_declared_change_set.py
+    skills: []
+    domains: [api-contract]
+    complexity: medium
+    requirements: [FR1, FR3, FR4, FR5, FR8, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: 宣言された変更集合 subsection in the REQUIREMENTS template
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/templates/requirements-document.md
+      - tests/test_requirements_template_declared_change_set.py
+    skills: []
+    domains: [api-contract]
+    complexity: medium
+    requirements: [FR2, FR3, FR4, FR5, FR8, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: Plugin version bump to 0.1.41 in both registries
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_spec_file_set_completeness_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR8, FR9, NFR1, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: Invariant guards for the declared change set
+    plan: tasks/task0004.md
+    files:
+      - tests/test_declared_change_set_invariants.py
+    skills: []
+    domains: [api-contract]
+    complexity: medium
+    requirements: [FR6, FR7, FR8, NFR1, NFR2, NFR4, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -60,105 +113,105 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1, TS-2]
   FR2:
     title: REQUIREMENTS template gains the equivalent section
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-3, TS-4]
   FR3:
     title: Default membership is both workflow-output roots
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-5]
   FR4:
     title: The default membership enumerates what the two roots cover, by citation
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-6]
   FR5:
     title: Default-inclusive, superset semantics stated explicitly
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-7]
   FR6:
     title: Containment verification semantics are unchanged
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests: [TS-8]
   FR7:
     title: Completed features are not rewritten; the already-consistent state is pinned by a test
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests: [TS-9]
   FR8:
     title: Change containment for this feature
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003, task0004]
+    tests: [TS-14]
   FR9:
     title: Plugin version bump to 0.1.41 in both registries
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS-10]
   NFR1:
     title: Documentation-and-tests-only change
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-8]
+    tasks: [task0001, task0002, task0003, task0004]
+    tests: [TS-8, TS-14]
   NFR2:
     title: SSOT non-duplication
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0004]
     tests: [TS-11]
   NFR3:
     title: Local style consistency of both templates
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-2]
+    tasks: [task0001, task0002]
+    tests: [TS-2, TS-3]
   NFR4:
     title: The existing suite stays green with every pre-existing module unmodified
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003, task0004]
+    tests: [TS-15]
   NFR5:
     title: New verification is Python unittest document-contract tests with negative proofs
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003, task0004]
     tests: [TS-13]
   NFR6:
     title: No retroactive obligation on SPECs without a closed declaration
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0004]
     tests: [TS-12]
 
 batch:
