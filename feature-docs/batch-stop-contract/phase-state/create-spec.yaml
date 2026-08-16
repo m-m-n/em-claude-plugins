@@ -1,0 +1,17 @@
+schema_version: 1
+feature: batch-stop-contract
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: ab3211c969c709d93ee42ad9922d5651f8fae808
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
