@@ -34,8 +34,8 @@ workflow:
     status: completed
     completed_at_commit: a989245ad80f686b3965f4e9147d8cb322ea0891
   - id: implement
-    status: pending
-    base_commit: 14f30df2b5d5d8404aa76359347df23e486784d2
+    status: in_progress
+    base_commit: df80475378d4c87b4dea544d4788d79586aa0b25
   - id: review
     status: pending
   - id: verify
@@ -56,9 +56,9 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR1, FR3, FR4, FR5, FR8, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/spec-file-set-completeness/task0001
   task0002:
     title: 宣言された変更集合 subsection in the REQUIREMENTS template
     plan: tasks/task0002.md
@@ -69,9 +69,9 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR2, FR3, FR4, FR5, FR8, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/spec-file-set-completeness/task0002
   task0003:
     title: Plugin version bump to 0.1.41 in both registries
     plan: tasks/task0003.md
@@ -83,9 +83,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR8, FR9, NFR1, NFR4, NFR5]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/spec-file-set-completeness/task0003
   task0004:
     title: Invariant guards for the declared change set
     plan: tasks/task0004.md
@@ -95,9 +95,9 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR6, FR7, FR8, NFR1, NFR2, NFR4, NFR5, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/spec-file-set-completeness/task0004
 
 review:
   status: pending
