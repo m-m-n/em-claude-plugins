@@ -189,8 +189,8 @@ decision it raises is expressed as a `question_packet` question whose
 
 `analysis_mode: design_system_detection` never returns a `question_packet`
 (see above) and so raises neither gate. Gate resolution itself —
-interactive prompting, or the decision table in batch mode — is entirely
-orchestrator-owned per `references/question-resolution.md` and
+interactive prompting, or policy-driven resolution in batch mode — is
+entirely orchestrator-owned per `references/question-resolution.md` and
 `references/batch-policies.yaml`; this worker's only responsibility toward
 that mechanism is assigning each question its `gate_id`.
 
@@ -200,3 +200,16 @@ During its dispatch window, requirements-analyst assumes exclusive access to
 the integration worktree: no other worker dispatch or orchestrator commit
 runs against that worktree while this worker is executing
 (design-input.md 5.11.3).
+
+## Gate option vocabulary
+
+The option vocabulary a batch-policies.yaml `option_id` is checked against
+(`references/gate-option-vocabulary.md` states the correspondence rule and
+format this table follows). Placed as its own section, never inside "Gate
+identifiers" above, so the frozen validator's derivation from that section
+is unaffected.
+
+| gate_id | option_id | meaning |
+|---|---|---|
+| `create-spec.design-step` | `decide_autonomously` | Batch mode accepts requirements-analyst's `design_step_recommendation` without asking the user. |
+| `create-spec.design-step` | `ask_user` | Interactive mode presents the recommendation to the user via `AskUserQuestion`, who confirms or overrides the design-step decision. |

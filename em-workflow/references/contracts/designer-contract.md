@@ -198,3 +198,15 @@ modify or delete files in the integration worktree (design-input.md
 5.11.3); this assumption applies for the interval from scope-snapshot
 capture through scope verification, and is not a permanent constraint on
 the plugin as a whole.
+
+## Gate option vocabulary
+
+The option vocabulary a batch-policies.yaml `option_id` is checked against
+(`references/gate-option-vocabulary.md` states the correspondence rule and
+format this table follows).
+
+| gate_id | option_id | meaning |
+|---|---|---|
+| `design-system.reclassify` | `em_workflow` | Batch mode's default: reclassify to em-workflow's own design system, since an existing token file means `none` was the wrong classification. |
+| `design-system.reclassify` | `project_native` | The user reclassifies to the project's own native design system. |
+| `design-system.reclassify` | `none` | The user reclassifies back to no design system. |

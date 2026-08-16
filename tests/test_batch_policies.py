@@ -651,5 +651,73 @@ class TestGateIdCoverageWithinOwnedFiles(unittest.TestCase):
         self.assertNotIn(INTENTIONAL_FALLBACK_EXCEPTION, self.other_owned_text)
 
 
+# task0001 (batch-policy-option-id-consistency) AC-5: the pinned, explicit
+# set of `action: select` gate_ids -- identical to tests/
+# test_gate_option_vocabulary.py's ISSUING_SITE_MAP key set (that module
+# asserts the two stay equal). A newly added select gate fails here until
+# it is deliberately registered in both places (IMPLEMENTATION.md D5:
+# policy-structure facts live in this module; correspondence facts live in
+# test_gate_option_vocabulary.py).
+SELECT_GATE_IDS = {
+    "create-spec.feature-identity",
+    "create-spec.design-step",
+    "create-spec.design-system",
+    "design-system.reclassify",
+    "create-spec.artifact-overwrite",
+    "design.artifact-overwrite",
+    "create-plan.artifact-overwrite",
+    "create-spec.stalled",
+    "create-plan.tbd-resolution",
+    "create-plan.license-conflict",
+    "create-plan.existing-files",
+}
+
+# The two non-select gates that DO have a batch-policies.yaml entry but
+# carry no `option_id` at all (task0001 AC-5).
+NON_SELECT_GATES_WITH_ENTRIES = {
+    "create-spec.requirement-clarification",
+    "create-spec.command-approval",
+}
+
+
+class TestSelectGateStructure(unittest.TestCase):
+    """task0001 AC-5 (policy-structure half; correspondence facts for these
+    same gates live in tests/test_gate_option_vocabulary.py per
+    IMPLEMENTATION.md D5)."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(POLICY_PATH, encoding="utf-8") as fh:
+            cls.gate_policies = parse_gate_policies(fh.read())
+
+    def test_select_gate_set_matches_pinned_expectation(self):
+        actual = {
+            gid
+            for gid, attrs in self.gate_policies.items()
+            if attrs.get("action") == "select"
+        }
+        self.assertEqual(actual, SELECT_GATE_IDS)
+
+    def test_non_select_gates_carry_no_option_id(self):
+        for gate_id in NON_SELECT_GATES_WITH_ENTRIES:
+            with self.subTest(gate_id=gate_id):
+                self.assertIn(gate_id, self.gate_policies)
+                attrs = self.gate_policies[gate_id]
+                self.assertNotEqual(attrs.get("action"), "select")
+                self.assertNotIn("option_id", attrs)
+
+    def test_non_select_gates_excluded_from_select_set(self):
+        for gate_id in NON_SELECT_GATES_WITH_ENTRIES:
+            self.assertNotIn(gate_id, SELECT_GATE_IDS)
+
+    def test_intentionally_unlisted_gate_absent_and_not_a_coverage_gap(self):
+        # rework.spec-change carries a gate_id but deliberately has no
+        # batch-policies.yaml entry at all (module docstring,
+        # INTENTIONAL_FALLBACK_EXCEPTION) -- it must be neither a select
+        # gate nor reported as a missing one.
+        self.assertNotIn(INTENTIONAL_FALLBACK_EXCEPTION, self.gate_policies)
+        self.assertNotIn(INTENTIONAL_FALLBACK_EXCEPTION, SELECT_GATE_IDS)
+
+
 if __name__ == "__main__":
     unittest.main()

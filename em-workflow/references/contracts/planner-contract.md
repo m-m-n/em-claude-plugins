@@ -130,3 +130,22 @@ modify or delete files in the integration worktree (design-input.md
 5.11.3); this assumption applies for the interval from scope-snapshot
 capture through scope verification, and is not a permanent constraint on
 the plugin as a whole.
+
+## Gate option vocabulary
+
+The option vocabulary a batch-policies.yaml `option_id` is checked against
+(`references/gate-option-vocabulary.md` states the correspondence rule and
+format this table follows). Same three gates, same option sets as
+`${CLAUDE_PLUGIN_ROOT}/agents/implementation-planner.md`.
+
+| gate_id | option_id | meaning |
+|---|---|---|
+| `create-plan.tbd-resolution` | `assume` | The user chooses to place an assumption on the TBD requirement and proceed (仮定を置いて進める); the requirement's `status` becomes `assumed`. |
+| `create-plan.tbd-resolution` | `resolve_first` | The user chooses to resolve the TBD requirement before proceeding (解決してから進める). |
+| `create-plan.tbd-resolution` | `exclude` | The user chooses to exclude the TBD requirement and proceed (除外して進める); the requirement's `status` becomes `excluded`. |
+| `create-plan.license-conflict` | `compatible_alternative` | The user chooses to replace the conflicting dependency with a compatible-license alternative (互換ライセンスの別ライブラリへ差し替える). |
+| `create-plan.license-conflict` | `change_project_license` | The user chooses to change `project.license` to a new SPDX id instead (プロジェクトのライセンスを変更する). |
+| `create-plan.license-conflict` | `abort` | The user chooses to abort planning rather than resolve the license conflict (中断する). |
+| `create-plan.existing-files` | `merge` | The user chooses to update (merge into) the existing IMPLEMENTATION.md / tasks/ (更新（マージ）). |
+| `create-plan.existing-files` | `overwrite` | The user chooses to overwrite the existing IMPLEMENTATION.md / tasks/ (上書き). |
+| `create-plan.existing-files` | `cancel` | The user chooses to cancel this planning run rather than touch the existing files (キャンセル). |
