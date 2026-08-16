@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-policy-option-id-consistency
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
-base_revision: 43d5da847db798ef20aaa463a64357e8e3cf32b1
+base_revision: 15b95027d1940f0a79fa5526f42104b327da911a
 last_input_digest: "sha256:2653bd2b5af4fa2fe2059dd0f34c1235a275bf4b69f0fe9570778f8cf570cf83"
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
