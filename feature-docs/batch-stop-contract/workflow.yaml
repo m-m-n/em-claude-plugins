@@ -35,7 +35,7 @@ workflow:
     status: completed
     completed_at_commit: e396680f2922c67ce3a1049051c1b45343668224
   - id: implement
-    status: completed
+    status: pending
     base_commit: efab0e40b913932a426d63a468a00c12c7e241b6
     completed_at_commit: e008fec5c462c111d2ca597bed8ccc8bd2e050f2
   - id: review
@@ -90,6 +90,42 @@ tasks:
     notes: null
     branch: em-workflow/batch-stop-contract/task0003
 
+  task0004:
+    title: "Terminal-line contract: total and deterministic stop mapping"
+    plan: tasks/task0004.md
+    files:
+      - em-workflow/references/batch-terminal-line.md
+      - tests/test_batch_stop_contract.py
+    skills: [infra-impl]
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR2, FR5, FR6, FR8, NFR1, NFR2, NFR4, NFR7]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      source_ids: [0637708c55c7f230, 1b6dc8cae3c91111, 0637708c55c7f231, 4aeb3f8b0e8ec9e6, 37980aa6aa498c1f, ae79421a2b5a7aab, a8ab378dda806693, 55903a56e01e5125]
+      review_round: 1
+  task0005:
+    title: "Pointer-document wiring: every stop, every non-terminal turn, and the SSOT read"
+    plan: tasks/task0005.md
+    files:
+      - em-workflow/skills/develop/SKILL.md
+      - em-workflow/references/batch-mode.md
+      - tests/test_batch_stop_contract_skill_wiring.py
+    skills: [infra-impl]
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR3, FR5, FR6, FR8, NFR1, NFR2, NFR4]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      source_ids: [55903a56e01e5125, 6a1c9f2d84be3057, 0637708c55c7f230, 0637708c55c7f231]
+      review_round: 1
+
 review:
   status: pending
   rounds_completed: 1
@@ -117,15 +153,15 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-2]
+    tasks: [task0001, task0004]
+    tests: [TS-2, TS-10]
   FR3:
     title: 出力契約の SSOT 明記
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1]
+    tasks: [task0001, task0005]
+    tests: [TS-1, TS-14]
   FR4:
     title: 既存成功時出力の非破壊
     status: ok
@@ -138,15 +174,15 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
-    tests: [TS-3]
+    tasks: [task0001, task0002, task0004, task0005]
+    tests: [TS-3, TS-9, TS-11]
   FR6:
     title: 待機ターンと step を持たない停止の表現
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
-    tests: [TS-4]
+    tasks: [task0001, task0002, task0004, task0005]
+    tests: [TS-4, TS-12, TS-13]
   FR7:
     title: 外部サービス責務の非侵犯
     status: ok
@@ -159,7 +195,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0004, task0005]
     tests: [TS-8]
   FR9:
     title: version bump
@@ -173,14 +209,14 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0004, task0005]
     tests: [TS-8]
   NFR2:
     title: "Compatibility: 既存テスト無改変"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0004, task0005]
     tests: [TS-8]
   NFR3:
     title: "Simplicity: 追加依存なしの 1 行出力"
@@ -194,7 +230,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0004, task0005]
     tests: [TS-7]
   NFR5:
     title: "Observability: 終端行接頭辞の一意性"
@@ -215,8 +251,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-2]
+    tasks: [task0001, task0004]
+    tests: [TS-2, TS-9]
 
 batch:
   review_rework_count: 1

@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-stop-contract
 phase: rework
-status: applying_patch
+status: completed
 generation: 1
 base_revision: c327adaed21c3f8e7024e74266f3fbd66e574a30
 last_input_digest: "sha256:23e886bfd4d1e5f4b5dffc25fb61821d827832f74401ced4f6a64fad012eca3f"
-active_request_id: rework-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -15,20 +15,20 @@ worker_runs:
     output_digest: null
 artifacts:
   - path: feature-docs/batch-stop-contract/tasks/task0004.md
-    sha256: "sha256:b8ae05a0f47299afc908591fdfed831b200b2e76e896c21cb5aab913059afee3"
+    sha256: "sha256:0c261d9fd775e11389f439631392f8efee07edbfa0eaf9143fd7223249505053"
     produced_by: rework-run-0001
   - path: feature-docs/batch-stop-contract/tasks/task0005.md
-    sha256: "sha256:cb22c139e0c081cb77a44d2880dc143ea130ddfc8dbf796091a1b7e85deed1b7"
+    sha256: "sha256:3ca81aab7539ea7c4746c025ee38a7af286292122928a0408799adcc5c68c3e9"
     produced_by: rework-run-0001
   - path: feature-docs/batch-stop-contract/IMPLEMENTATION.md
-    sha256: "sha256:3efc0abe8a50d4352962f5511fcf6bb93a4e242aeee63b2aff0ebea9deb3f6c4"
+    sha256: "sha256:95b57411b4b7fde226a9ea2af41418708d7d96af11f65827d3d654619021bd8b"
     produced_by: rework-run-0001
   - path: feature-docs/batch-stop-contract/VERIFICATION.md
-    sha256: "sha256:3d0cecd75e2b8fe5ad5e5b2293f068a56786de363ee76fa896497b60b8fc0b5d"
+    sha256: "sha256:f3a70a599389ec3e3e69414f917b139b94d3cd0438a36a1ef8aed9dcf506d871"
     produced_by: rework-run-0001
 patches:
   - patch_id: batch-stop-contract-p0002
-    status: proposed
+    status: applied
     base_input_digest: "sha256:23e886bfd4d1e5f4b5dffc25fb61821d827832f74401ced4f6a64fad012eca3f"
     base_workflow_blob: d2a52bafc745ed00f22f2e7980159880e8739ded
 progress_fingerprint: null
