@@ -64,6 +64,57 @@ row) must not be picked up by the extractor
 stop-point key listed twice must fail
 (`test_duplicate_stop_point_key_is_rejected`); the AC-7 sweep walks every
 file under `em-workflow/` via `os.walk`, never a hand-maintained allowlist.
+
+Rework round 1 (task0004, feature-docs/batch-stop-contract/tasks/task0004.md)
+extends the module above -- the pinned sets grow from nine to eleven members
+and gain one matcher per new contract statement, each with its own negative
+proof and non-vacuity guard (this addendum uses task0004's own AC numbering,
+distinct from the task0001 numbering above):
+
+- AC-1: the reason-code table extracts to exactly eleven codes (the nine
+  above plus `feature_resolution_aborted` and `docs_commit_conflict_aborted`),
+  and the section's stated count ("eleven") equals the table's row count
+  (`test_section_stated_count_equals_table_row_count`).
+- AC-2: the coverage table binds all eleven stop-point keys exactly once,
+  and the full key->code pairing (not merely the two sets) matches the
+  pinned mapping, including the two new rows
+  (`test_pairing_matches_expected_key_code_mapping`).
+- AC-3: the `no-step` bullet's stop-point set is extracted structurally
+  (backtick tokens, not a substring search) and checked as a set relation
+  against the real coverage table
+  (`test_no_step_bullet_names_the_stop_points_as_a_set`).
+- AC-4: the coverage section states a phase-specific-wins precedence rule
+  after the table, naming the three overlapping stop points
+  (`test_precedence_rule_stated`; matcher
+  `_assert_precedence_rule_stated`; negative proof
+  `test_missing_precedence_rule_is_rejected`; non-vacuity guard
+  `test_forged_section_still_parses_into_a_complete_well_formed_table`).
+- AC-5: `## Line format` states the `detail` normalization rule
+  (`test_states_detail_normalization_rule`; matcher
+  `_assert_detail_normalization_stated`; negative proof
+  `test_missing_normalization_rule_is_rejected`; non-vacuity guard
+  `test_forged_body_is_otherwise_well_formed`).
+- AC-6: `## No line on a wait turn` states the general rule (not reached
+  either terminal state -> no line), naming the implement launch/wake
+  turns as further instances, while retaining the stop-condition-5 wording
+  as a pure regression guard (`test_states_general_no_line_rule`,
+  `test_states_stop_condition_5_emits_no_line`).
+- AC-7: every coverage row's Source cell resolves to an existing file under
+  `em-workflow/`, and the third-column intro sentence claims only naming,
+  not ownership (`test_source_paths_resolve_to_existing_files`,
+  `test_source_column_intro_claims_only_naming`; matcher
+  `_assert_source_paths_resolve`; negative proof
+  `test_nonexistent_source_path_is_rejected`; non-vacuity guard
+  `test_forged_row_is_otherwise_well_formed_and_extracted`).
+- AC-8: this task modifies no test module that pre-dates the feature (this
+  module is the feature's own, created by task0001); the whole-suite run
+  and the plugin invariant checker are exercised outside this module, per
+  the implementer's report.
+
+TestCoverageMatcherNegativeProofs' expected pair counts are derived from
+`len(_KEY_CODE_PAIRS_IN_ORDER)` rather than re-pinned as literals (Test
+Notes trap), so the eleven-member set change does not silently make those
+non-vacuity guards vacuous.
 """
 
 import os
@@ -102,6 +153,9 @@ REASON_CODES = frozenset(
         "implement_task_failed",
         "verify_rework_cap_reached",
         "completion_aborted",
+        # rework round 1 (D9): closes the two previously-uncovered stops.
+        "feature_resolution_aborted",
+        "docs_commit_conflict_aborted",
     }
 )
 
@@ -116,8 +170,15 @@ STOP_POINT_KEYS = frozenset(
         "implement-second-failure",
         "verify-rework-cap",
         "step-c-abort",
+        # rework round 1 (D9): closes the two previously-uncovered stops.
+        "step-a-abort",
+        "docs-commit-conflict",
     }
 )
+
+# The no-step sentinel's stop points (AC-3) -- a subset of STOP_POINT_KEYS,
+# checked as a set relation against the real coverage table, not as prose.
+NO_STEP_STOP_POINTS = frozenset({"stop-condition-6", "step-a-abort", "step-c-abort"})
 
 # Ordered pairing used only to build forged coverage samples below -- the
 # contract itself treats both STOP_POINT_KEYS and REASON_CODES as unordered.
@@ -131,6 +192,9 @@ _KEY_CODE_PAIRS_IN_ORDER = [
     ("implement-second-failure", "implement_task_failed"),
     ("verify-rework-cap", "verify_rework_cap_reached"),
     ("step-c-abort", "completion_aborted"),
+    # rework round 1 (D9): closes the two previously-uncovered stops.
+    ("step-a-abort", "feature_resolution_aborted"),
+    ("docs-commit-conflict", "docs_commit_conflict_aborted"),
 ]
 
 HEADING_RE = re.compile(r"^## (.+?)\s*$", re.MULTILINE)
@@ -261,6 +325,85 @@ def _forged_coverage_table(pairs):
     )
 
 
+def _extract_coverage_source_cells(section_text):
+    """Parses the `## Stop point coverage` table's third column (raw cell
+    text, backticks included) for each data row -- companion to
+    `_extract_coverage_table`, which only extracts the first two columns."""
+    return [row[2] for row in _table_rows(section_text)]
+
+
+def _assert_source_paths_resolve(test, cells):
+    """Validation for the Source-column extractor (AC-7): every cell is a
+    single backticked, plugin-relative path that resolves to an existing
+    file under `em-workflow/`. Deliberately does NOT use `subTest` -- a
+    `subTest`-scoped `AssertionError` is swallowed locally rather than
+    propagated to a caller's `assertRaises`, which would break the negative
+    proof (`test_nonexistent_source_path_is_rejected`)."""
+    for cell in cells:
+        path_str = _first_column_code(cell)
+        test.assertIsNotNone(
+            path_str, f"source cell is not a single backticked path: {cell!r}"
+        )
+        test.assertTrue(
+            (PLUGIN_ROOT / path_str).is_file(),
+            f"source path does not resolve to an existing file under "
+            f"em-workflow/: {path_str}",
+        )
+
+
+NO_STEP_BULLET_RE = re.compile(
+    r"`no-step` applies whenever.*?(?=\n- `|\Z)", re.DOTALL
+)
+_HYPHENATED_BACKTICK_TOKEN_RE = re.compile(r"`([a-z0-9]+(?:-[a-z0-9]+)+)`")
+
+
+def _extract_no_step_stop_points(field_values_section_text):
+    """Extracts the set of backticked, hyphenated stop-point keys named in
+    the `no-step` bullet of `## Field values` (AC-3) -- a structural
+    extraction (via the bullet's backtick tokens), not a prose substring
+    search. `no-step` itself is excluded (it also matches the hyphenated
+    backtick-token shape but is the sentinel, not a stop-point key)."""
+    match = NO_STEP_BULLET_RE.search(field_values_section_text)
+    if match is None:
+        return set()
+    tokens = set(_HYPHENATED_BACKTICK_TOKEN_RE.findall(match.group(0)))
+    return tokens - {"no-step"}
+
+
+def _assert_precedence_rule_stated(test, coverage_section_text):
+    """Validation for the precedence-rule matcher (AC-4): the coverage
+    section states that a phase-specific stop point takes precedence over
+    the generic `stop-condition-N` rows, names the three overlapping cases,
+    and restricts `stop-condition-3`'s meaning to the states no
+    phase-specific row covers."""
+    normalized = _normalize(coverage_section_text)
+    test.assertIn(
+        "phase-specific stop point takes precedence over the generic",
+        normalized,
+    )
+    for key in ("implement-second-failure", "verify-rework-cap", "docs-commit-conflict"):
+        with test.subTest(key=key):
+            test.assertIn(f"`{key}`", coverage_section_text)
+    test.assertIn("`stop-condition-3`", coverage_section_text)
+    test.assertIn("`failed`", coverage_section_text)
+    test.assertIn("`needs_update`", coverage_section_text)
+    test.assertIn("no phase-specific row covers", normalized)
+
+
+def _assert_detail_normalization_stated(test, line_format_section_text):
+    """Validation for the `detail`-normalization matcher (AC-5): the `##
+    Line format` section states the CR/LF/TAB-to-space rule, the
+    space-collapsing rule, and the non-empty placeholder fallback."""
+    normalized = _normalize(line_format_section_text)
+    test.assertIn("CR", line_format_section_text)
+    test.assertIn("LF", line_format_section_text)
+    test.assertIn("TAB", line_format_section_text)
+    test.assertIn("single space", normalized)
+    test.assertIn("collapse", normalized.lower())
+    test.assertIn("placeholder", normalized.lower())
+    test.assertIn("non-empty", normalized.lower())
+
+
 def _iter_em_workflow_files(plugin_root):
     for dirpath, _dirnames, filenames in os.walk(plugin_root):
         for filename in filenames:
@@ -306,6 +449,20 @@ class TestContractDocumentStructure(unittest.TestCase):
             "only in a batch-mode run", _normalize(self.sections["Line format"])
         )
 
+    def test_states_detail_normalization_rule(self):
+        """AC-5: CR/LF/TAB each become a single space, runs of spaces
+        collapse, and an empty normalized value is replaced by a fixed
+        non-empty placeholder."""
+        _assert_detail_normalization_stated(self, self.sections["Line format"])
+
+    def test_field_values_detail_bullet_consistent_with_normalization(self):
+        """AC-5: `## Field values`'s `detail` bullet remains consistent with
+        the normalization rule -- in particular it still promises a
+        non-empty value, which the placeholder fallback is what makes
+        true."""
+        detail_bullet_text = self.sections["Field values"]
+        self.assertIn("non-empty", detail_bullet_text)
+
 
 class TestStopReasonCodes(unittest.TestCase):
     """AC-2."""
@@ -321,8 +478,17 @@ class TestStopReasonCodes(unittest.TestCase):
     def test_codes_are_well_formed(self):
         _assert_well_formed_code_list(self, self.codes)
 
-    def test_extracted_set_equals_the_nine_fixed_codes(self):
+    def test_extracted_set_equals_the_eleven_fixed_codes(self):
         self.assertEqual(set(self.codes), REASON_CODES)
+
+    def test_section_stated_count_equals_table_row_count(self):
+        """AC-1: the section's stated count (prose) equals the table's
+        data-row count -- both must have moved from nine to eleven
+        together."""
+        self.assertIn("eleven", self.section.lower())
+        self.assertNotIn("nine", self.section.lower())
+        self.assertEqual(len(self.codes), 11)
+        self.assertEqual(len(self.codes), len(REASON_CODES))
 
     def test_none_documented_as_reserved_for_completed(self):
         self.assertIn("`none`", self.section)
@@ -385,7 +551,7 @@ class TestReasonCodeExtractorNegativeProofs(unittest.TestCase):
 
 
 class TestStopPointCoverage(unittest.TestCase):
-    """AC-3."""
+    """AC-2, AC-4, AC-7."""
 
     @classmethod
     def setUpClass(cls):
@@ -398,16 +564,45 @@ class TestStopPointCoverage(unittest.TestCase):
     def test_bidirectional_coverage(self):
         _assert_bidirectional_coverage(self, self.pairs, STOP_POINT_KEYS, REASON_CODES)
 
+    def test_pairing_matches_expected_key_code_mapping(self):
+        """AC-2: the full table (not merely its key-set and code-set) must
+        match the pinned pairing exactly -- in particular the two new rows
+        `step-a-abort` -> `feature_resolution_aborted` and
+        `docs-commit-conflict` -> `docs_commit_conflict_aborted`."""
+        self.assertEqual(dict(self.pairs), dict(_KEY_CODE_PAIRS_IN_ORDER))
+
     def test_each_row_names_a_source_document(self):
         rows = _table_rows(self.section)
         for row in rows:
             with self.subTest(row=row):
                 self.assertTrue(row[2].strip())
 
+    def test_source_paths_resolve_to_existing_files(self):
+        """AC-7: every Source cell is a single backticked, plugin-relative
+        path that resolves to an existing file under `em-workflow/`."""
+        cells = _extract_coverage_source_cells(self.section)
+        _assert_source_paths_resolve(self, cells)
+
+    def test_source_column_intro_claims_only_naming(self):
+        """AC-7: the sentence introducing the third column claims only that
+        the document names/specifies the stop point -- not that it "owns
+        (defines)" the stop point (Design section 5)."""
+        self.assertNotIn("owns (defines)", self.section)
+        self.assertIn("names the document", _normalize(self.section))
+
+    def test_precedence_rule_stated(self):
+        """AC-4: a phase-specific stop point takes precedence over the
+        generic `stop-condition-N` rows."""
+        _assert_precedence_rule_stated(self, self.section)
+
 
 FORGED_MISSING_KEY_TABLE = _forged_coverage_table(_KEY_CODE_PAIRS_IN_ORDER[:-1])
+# Filters by key rather than relying on "step-c-abort" being positionally
+# last -- D9 appended two pairs after it, so a positional [:-1] would instead
+# collide with the last-appended pair and (mis-)produce a duplicate key.
 FORGED_CODE_OUTSIDE_SET_TABLE = _forged_coverage_table(
-    _KEY_CODE_PAIRS_IN_ORDER[:-1] + [("step-c-abort", "bogus_code")]
+    [pair for pair in _KEY_CODE_PAIRS_IN_ORDER if pair[0] != "step-c-abort"]
+    + [("step-c-abort", "bogus_code")]
 )
 FORGED_DUPLICATE_KEY_TABLE = _forged_coverage_table(
     _KEY_CODE_PAIRS_IN_ORDER[:-1] + [("stop-condition-2", "completion_aborted")]
@@ -416,11 +611,16 @@ FORGED_DUPLICATE_KEY_TABLE = _forged_coverage_table(
 
 class TestCoverageMatcherNegativeProofs(unittest.TestCase):
     """NFR4: negative proof + non-vacuity guard for the bidirectional
-    coverage validator (`_assert_bidirectional_coverage`)."""
+    coverage validator (`_assert_bidirectional_coverage`).
+
+    Expected pair counts are derived from `len(_KEY_CODE_PAIRS_IN_ORDER)`
+    rather than re-pinned as literals, so a future change to the pinned set
+    cannot silently make these non-vacuity guards vacuous (Test Notes
+    trap)."""
 
     def test_missing_key_table_parses_into_a_non_empty_pair_of_sets(self):
         pairs = _extract_coverage_table(FORGED_MISSING_KEY_TABLE)
-        self.assertEqual(len(pairs), 8)
+        self.assertEqual(len(pairs), len(_KEY_CODE_PAIRS_IN_ORDER) - 1)
         self.assertTrue({key for key, _code in pairs})
         self.assertTrue({code for _key, code in pairs})
 
@@ -431,7 +631,7 @@ class TestCoverageMatcherNegativeProofs(unittest.TestCase):
 
     def test_code_outside_set_table_parses_into_a_non_empty_pair_of_sets(self):
         pairs = _extract_coverage_table(FORGED_CODE_OUTSIDE_SET_TABLE)
-        self.assertEqual(len(pairs), 9)
+        self.assertEqual(len(pairs), len(_KEY_CODE_PAIRS_IN_ORDER))
         self.assertTrue({key for key, _code in pairs})
         self.assertTrue({code for _key, code in pairs})
 
@@ -442,7 +642,7 @@ class TestCoverageMatcherNegativeProofs(unittest.TestCase):
 
     def test_duplicate_stop_point_key_table_parses_into_a_non_empty_pair_of_sets(self):
         pairs = _extract_coverage_table(FORGED_DUPLICATE_KEY_TABLE)
-        self.assertEqual(len(pairs), 9)
+        self.assertEqual(len(pairs), len(_KEY_CODE_PAIRS_IN_ORDER))
         self.assertTrue({key for key, _code in pairs})
         self.assertTrue({code for _key, code in pairs})
 
@@ -452,22 +652,123 @@ class TestCoverageMatcherNegativeProofs(unittest.TestCase):
             _assert_bidirectional_coverage(self, pairs, STOP_POINT_KEYS, REASON_CODES)
 
 
+# Real table content (well-formed, complete) with no precedence-rule prose
+# after it -- exercises `_assert_precedence_rule_stated` in isolation from
+# `_assert_bidirectional_coverage`.
+FORGED_COVERAGE_SECTION_WITHOUT_PRECEDENCE = _forged_coverage_table(
+    _KEY_CODE_PAIRS_IN_ORDER
+)
+
+
+class TestPrecedenceMatcherNegativeProof(unittest.TestCase):
+    """NFR4: negative proof + non-vacuity guard for the precedence-rule
+    validator (`_assert_precedence_rule_stated`, AC-4)."""
+
+    def test_forged_section_still_parses_into_a_complete_well_formed_table(self):
+        pairs = _extract_coverage_table(FORGED_COVERAGE_SECTION_WITHOUT_PRECEDENCE)
+        _assert_bidirectional_coverage(self, pairs, STOP_POINT_KEYS, REASON_CODES)
+
+    def test_missing_precedence_rule_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_precedence_rule_stated(
+                self, FORGED_COVERAGE_SECTION_WITHOUT_PRECEDENCE
+            )
+
+
+# A `## Line format` body stating only the one-physical-line guarantee --
+# well-formed prose, but missing the detail-normalization rule.
+FORGED_LINE_FORMAT_WITHOUT_DETAIL_NORMALIZATION = (
+    "The terminal line is always exactly one physical line -- it is never "
+    "wrapped. The same prefix and the same four fields are used whether the "
+    "run completed normally or stopped."
+)
+
+
+class TestDetailNormalizationMatcherNegativeProof(unittest.TestCase):
+    """NFR4: negative proof + non-vacuity guard for the detail-normalization
+    validator (`_assert_detail_normalization_stated`, AC-5)."""
+
+    def test_forged_body_is_otherwise_well_formed(self):
+        self.assertIn(
+            "one physical line", FORGED_LINE_FORMAT_WITHOUT_DETAIL_NORMALIZATION
+        )
+
+    def test_missing_normalization_rule_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_detail_normalization_stated(
+                self, FORGED_LINE_FORMAT_WITHOUT_DETAIL_NORMALIZATION
+            )
+
+
+# A coverage row naming a Source document that does not exist under
+# em-workflow/ -- otherwise well-formed and picked up cleanly by both
+# extractors.
+FORGED_NONEXISTENT_SOURCE_ROW_TABLE = (
+    "| Stop point | Reason code | Source |\n"
+    "|---|---|---|\n"
+    "| `stop-condition-2` | `step_stuck` | `references/does-not-exist.md` |\n"
+)
+
+
+class TestSourcePathMatcherNegativeProof(unittest.TestCase):
+    """NFR4: negative proof + non-vacuity guard for the Source-path
+    resolvability validator (`_assert_source_paths_resolve`, AC-7)."""
+
+    def test_forged_row_is_otherwise_well_formed_and_extracted(self):
+        pairs = _extract_coverage_table(FORGED_NONEXISTENT_SOURCE_ROW_TABLE)
+        self.assertEqual(pairs, [("stop-condition-2", "step_stuck")])
+        cells = _extract_coverage_source_cells(FORGED_NONEXISTENT_SOURCE_ROW_TABLE)
+        self.assertEqual(cells, ["`references/does-not-exist.md`"])
+
+    def test_nonexistent_source_path_is_rejected(self):
+        cells = _extract_coverage_source_cells(FORGED_NONEXISTENT_SOURCE_ROW_TABLE)
+        with self.assertRaises(AssertionError):
+            _assert_source_paths_resolve(self, cells)
+
+
 class TestNoLineOnWaitTurnAndSentinel(unittest.TestCase):
-    """AC-4."""
+    """AC-3, AC-6."""
 
     @classmethod
     def setUpClass(cls):
         cls.sections = _sections(_read(CONTRACT_PATH))
 
     def test_states_stop_condition_5_emits_no_line(self):
+        """AC-6: regression guard over TS-4's retained wording -- keep
+        asserting the retained "stop condition 5" phrase so this guarantee
+        does not silently disappear when the rule is generalized."""
         section = _normalize(self.sections["No line on a wait turn"])
         self.assertIn("stop condition 5", section)
         self.assertIn("no terminal line", section)
+
+    def test_states_general_no_line_rule(self):
+        """AC-6: the general rule -- a turn that has not reached either
+        terminal state emits no line -- with the implement launch/wake
+        turns named as further instances alongside stop condition 5."""
+        section = _normalize(self.sections["No line on a wait turn"])
+        self.assertIn("has not reached either", section)
+        self.assertIn("terminal state", section)
+        self.assertIn("launch", section)
+        self.assertIn("wake", section)
+        self.assertIn("implement", section)
 
     def test_field_values_defines_the_sentinel_and_its_condition(self):
         section = self.sections["Field values"]
         self.assertIn(f"`{SENTINEL}`", section)
         self.assertIn("no `workflow.yaml` step is in effect", _normalize(section))
+
+    def test_no_step_bullet_names_the_stop_points_as_a_set(self):
+        """AC-3: the `no-step` bullet's stop-point set equals exactly
+        {stop-condition-6, step-a-abort, step-c-abort}, asserted as a set
+        relation against the real coverage table (not a prose substring)."""
+        coverage_section = _sections(_read(CONTRACT_PATH))["Stop point coverage"]
+        coverage_keys = {key for key, _code in _extract_coverage_table(coverage_section)}
+        extracted = _extract_no_step_stop_points(self.sections["Field values"])
+        self.assertEqual(extracted, NO_STEP_STOP_POINTS)
+        self.assertTrue(
+            extracted <= coverage_keys,
+            "every no-step stop point must be a key of the coverage table",
+        )
 
 
 class TestResponsibilityBoundary(unittest.TestCase):
