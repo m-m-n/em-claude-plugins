@@ -471,12 +471,31 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
    `LICENSE が無いから /em-workflow:gen-license の実行をおすすめするよ`
    を 1 行添える。batch: batch-mode.md「Reporting」の監査項目
    （自動承認コマンド / 記録した仮定 / rework 消費 / deferred findings）
-   を必ず含める — 外部サービス経由で人間の評価者に届く唯一の確認面
+   を必ず含める — 外部サービス経由で人間の評価者に届く唯一の確認面。
+   batch はこの報告のあとに終端行を追記する
+   （`references/batch-terminal-line.md`、下記「バッチ終端行」参照）
 
 ## 停止時の報告（停止条件 2-4 のみ）
 
 - スタック: `{step} が {status} のままだよ。フェーズ出力を確認してね`
 - 中断: `{step} が {status} のため中断。再開するには /em-workflow:develop を実行してね`
 - YAML エラー: 内容と `git restore` 等のリカバリ案を報告
+
+## バッチ終端行
+
+`--batch` 実行では、ランを終わらせるターン（Step C の完了処理、または
+下記に列挙する終端の停止条件で終わるターン）が、最後の assistant
+メッセージの末尾に終端行を 1 行出力する。行の書式・フィールドの意味・
+値の集合は `references/batch-terminal-line.md` を唯一の SSOT とし、
+ここでは「いつ出すか」だけを定める。
+
+対象は Step C の完了処理（通常完了）に加えて、停止条件 2（スタック）、
+停止条件 3（failed / needs_update）、停止条件 4（YAML parse エラー）、
+停止条件 6（git-setup 中断）、フェーズ内のゲート中断、Step C 内の中断、
+そして implement / verify フェーズが定める終端停止 — 同 SSOT が列挙する
+停止点のすべてを含む。
+
+停止条件 5（implementer の完了通知待ち）でターンを終える場合は、ラン自体は
+継続しているため終端行を出力しない。
 
 $ARGUMENTS

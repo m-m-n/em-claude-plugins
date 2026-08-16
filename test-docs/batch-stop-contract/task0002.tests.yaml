@@ -1,0 +1,100 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_heading_is_present
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_is_placed_immediately_after_stop_report_section
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_names_the_contract_document
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_terminal_line_is_last_line_of_final_message
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_normal_completion
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_the_terminating_stops
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_step_c_report_item_points_at_terminal_line
+    red_confirmed: true
+    red_reason: >-
+      Before the SKILL.md edit, setUpClass raised
+      "ValueError: substring not found" while slicing on the
+      '## バッチ終端行' heading (the subsection did not exist yet), which
+      unittest reports as ERROR for every test method in the class --
+      including test_step_c_report_item_points_at_terminal_line, which
+      covers the Design item 4 pointer line (no separate AC number; folded
+      into AC-1's "covering ... normal completion" requirement per this
+      module's own docstring). After adding the subsection and the Step C
+      pointer line, all seven pass.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_wait_turn_emits_no_terminal_line
+    red_confirmed: true
+    red_reason: >-
+      Same setUpClass ValueError as AC-1 (the subsection did not exist yet),
+      reported as ERROR for this test method too. Green after the subsection
+      was added with the "停止条件 5 ... 終端行を出力しない" paragraph.
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestSubsectionRestatesNoContractLiteral.test_subsection_restates_no_contract_literal
+      - tests.test_batch_stop_contract_skill_wiring.TestSubsectionRestatesNoContractLiteral.test_prefix_literal_absent_from_whole_skill_md
+      - tests.test_batch_stop_contract_skill_wiring.TestContractLiteralMatcherCanFail.test_forged_restatement_is_a_well_formed_subsection_the_slicer_finds
+      - tests.test_batch_stop_contract_skill_wiring.TestContractLiteralMatcherCanFail.test_matcher_rejects_the_forged_field_name_restatement
+    red_confirmed: true
+    red_reason: >-
+      test_subsection_restates_no_contract_literal and
+      test_prefix_literal_absent_from_whole_skill_md sit in
+      TestSubsectionRestatesNoContractLiteral, whose setUpClass raised the
+      same "ValueError: substring not found" on '## バッチ終端行' before the
+      edit -- ERROR, not a pass, confirming red for the right reason. Green
+      after the subsection was written without restating the prefix, the
+      four field-name tokens together, any reason code, or the sentinel.
+      TestContractLiteralMatcherCanFail's two tests (the matcher's own
+      negative proof and non-vacuity guard) do not depend on SKILL.md at
+      all -- they run the matcher against a self-contained forged string --
+      so they were already green in the same run that produced the errors
+      above (D8-style: pinned green by construction, not by
+      implementation).
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_completion_headline_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_retained_branch_guidance_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_pr_url_guidance_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_license_single_line_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_batch_audit_items_present
+    red_confirmed: false
+    red_reason: >-
+      Per the task plan's Test Notes, these five are pure regression guards
+      over retained pre-change wording and are exempt from the red-first
+      requirement -- and in fact all five already passed in the very first
+      run of this module, before any SKILL.md edit, because the Step C
+      report content they check was never removed or reworded, only
+      appended to afterward.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_pinned_headings_unchanged
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_no_decision_table_literal
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_no_stale_agent_name
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_no_stale_inline_phrase
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_new_subsection_mentions_no_gate_id
+    red_confirmed: true
+    red_reason: >-
+      test_new_subsection_mentions_no_gate_id genuinely failed with
+      "ValueError: substring not found" before the SKILL.md edit (it slices
+      on '## バッチ終端行', which did not exist yet) -- a real red-to-green
+      transition proving the new content introduces no gate_id/gate ID
+      mention. The other four in this class are pure regression guards
+      (pinned headings, D7's forbidden literals) that were already true and
+      remain true; they passed in the same pre-edit run.
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: >-
+      Structural/static check with no implementation-driven red-to-green
+      transition: it inspects this module's own AST for non-stdlib imports,
+      which was already true the moment the file was written, before any
+      SKILL.md edit. Discovery and whole-suite-green are verified
+      operationally instead: `python3 -m unittest discover -s tests` ran
+      1089 tests OK before this task's edits (4a baseline) and 1112 tests OK
+      after (1089 + 23 new), with every pre-existing module unmodified --
+      confirming both this module's discovery by the collector and NFR4's
+      whole-suite-green requirement. `python3
+      em-workflow/scripts/check-plugin-invariants.py .` also exits 0 against
+      this worktree.
