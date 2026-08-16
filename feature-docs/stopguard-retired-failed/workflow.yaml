@@ -67,7 +67,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR6, FR9]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/stopguard-retired-failed/task0002
 
