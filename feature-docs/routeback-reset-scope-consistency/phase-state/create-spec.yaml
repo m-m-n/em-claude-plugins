@@ -1,14 +1,18 @@
 schema_version: 1
 feature: routeback-reset-scope-consistency
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: c8843c9c086323c5378c6b3abe89dc63e5c02a40
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:5d9fec2e27cb4cf1090d6165fca415cee3e8480772216a412e1f3ab70eac10a1
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:5d9fec2e27cb4cf1090d6165fca415cee3e8480772216a412e1f3ab70eac10a1
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
