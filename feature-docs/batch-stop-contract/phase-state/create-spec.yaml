@@ -1,17 +1,117 @@
 schema_version: 1
 feature: batch-stop-contract
 phase: create-spec
-status: initialized
+status: awaiting_answers
 generation: 1
-base_revision: ab3211c969c709d93ee42ad9922d5651f8fae808
-last_input_digest: null
-active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+base_revision: d1e0fd9979f868a03474a501ca2365ebd23e5d32
+last_input_digest: "sha256:263f092a200b6c732e2ff597f9853e9dc91c161233fc184c866b13035034f20e"
+active_request_id: create-spec-run-0001
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-16T18:38:00+09:00"
+    questions:
+      - question_id: stop-output.channel
+        status: answered
+      - question_id: stop-output.terminal-status-symmetry
+        status: answered
+      - question_id: stop-output.reason-vocabulary
+        status: answered
+      - question_id: stop-output.coverage
+        status: answered
+      - question_id: stop-output.wait-turn-and-stepless-stop
+        status: answered
+      - question_id: design-step.decision
+        status: answered
+answers:
+  stop-output.channel:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-16T18:43:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [final_message_marker_line]
+    freeform: null
+    normalized_answer: >-
+      最終アシスタントメッセージ内の固定接頭辞付き 1 行として出力する。既存の
+      integration ブランチ行 / PR URL 行と同じ行パース方式で受け取れる。
+    resolution_note: >-
+      batch-policies.yaml の create-spec.requirement-clarification は
+      codex_consultation。Codex の提案が既存 option_id に一致したため採用
+      (source: batch-codex-consultation)。
+  stop-output.terminal-status-symmetry:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-16T18:43:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [symmetric_terminal_status]
+    freeform: null
+    normalized_answer: >-
+      正常完了・停止のどちらでも同形式の終端行を出す。行が無いこと自体を
+      異常（クラッシュ・打ち切り）として検出できるようにする。
+    resolution_note: >-
+      codex_consultation の提案が既存 option_id に一致したため採用。
+  stop-output.reason-vocabulary:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-16T18:43:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [stable_enum_plus_detail]
+    freeform: null
+    normalized_answer: >-
+      安定した停止理由コードの閉じた集合に、人間向けの自由文 detail を添える。
+    resolution_note: >-
+      codex_consultation の提案が既存 option_id に一致したため採用。
+  stop-output.coverage:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-16T18:43:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [all_stops_including_phase_aborts]
+    freeform: null
+    normalized_answer: >-
+      停止条件 2/3/4/6 に加え、fail-closed abort・on_unavailable: abort・
+      implement の 2 回目 failed・verify の cap 到達・Step C の中断まで、
+      全ての終端停止点を契約対象にする。
+    resolution_note: >-
+      codex_consultation の提案が既存 option_id に一致したため採用。
+  stop-output.wait-turn-and-stepless-stop:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-16T18:43:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [no_marker_on_wait_and_sentinel_step]
+    freeform: null
+    normalized_answer: >-
+      待機ターンには終端行を出さない。step を持たない停止には固定センチネル
+      step 値を割り当てる。
+    resolution_note: >-
+      codex_consultation の提案が既存 option_id に一致したため採用。
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-16T18:43:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: >-
+      analyst の推奨（skip）を採用し、design ステップを skipped にする。
+    resolution_note: >-
+      batch-policies.yaml の create-spec.design-step: option_id
+      decide_autonomously。
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:263f092a200b6c732e2ff597f9853e9dc91c161233fc184c866b13035034f20e"
+    output_digest: null
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: "sha256:3e7f94f5ece25581959264a228d16cec9e1766923d6d4a321fe35f7d6f64aa22"
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
