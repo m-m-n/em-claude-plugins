@@ -170,6 +170,38 @@ internal/
 │   └── errors.go            # Error definitions
 ```
 
+## Declared Change Set
+
+{Enumerate every file and directory this feature creates or modifies.}
+
+Every SPEC declares, by default, the following two workflow-generated
+entries in addition to the feature-specific paths above:
+
+- `feature-docs/{feature}/**`
+- `test-docs/{feature}/**`
+
+`feature-docs/{feature}/**` covers `REQUIREMENTS.md`, `SPEC.md`,
+`workflow.yaml`, `phase-state/`, `tasks/`, `reviews/roundN.yaml`,
+`VERIFICATION.md`, `retrospect.yaml`, and the design artifacts the design
+step produces. These are generated and owned by the phase documents and by
+`references/phase-state.md`; this section cites them and restates none of
+their rules.
+
+`test-docs/{feature}/**` covers `test-docs/{feature}/{T}.tests.yaml`, the
+per-task test record. It is generated and owned by `implement-phase.md`;
+this section cites it and restates none of its rules.
+
+These two default entries are part of the declaration unless the SPEC
+author explicitly removes them; their absence is never assumed by
+silence — removal is a deliberate, explicit narrowing.
+
+This declaration is a SUPERSET assertion: the actual change set observed
+at verification time must be CONTAINED IN the declared set, not equal to
+it. A feature that produces no implement tasks generates no
+`test-docs/{feature}/` directory at all; the declared
+`test-docs/{feature}/**` entry is still correct in that case — a declared
+path that never materializes is not a violation.
+
 ## Test Scenarios
 
 ### Unit Tests

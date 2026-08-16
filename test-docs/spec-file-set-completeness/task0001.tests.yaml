@@ -1,0 +1,91 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_spec_template_declared_change_set.TestSectionPosition.test_heading_present
+      - tests.test_spec_template_declared_change_set.TestSectionPosition.test_heading_follows_file_structure_and_precedes_test_scenarios
+      - tests.test_spec_template_declared_change_set.TestSectionPosition.test_file_structure_anchor_is_unique
+      - tests.test_spec_template_declared_change_set.TestSectionInsideOuterFencedBody.test_at_least_two_fence_lines_exist
+      - tests.test_spec_template_declared_change_set.TestSectionInsideOuterFencedBody.test_heading_lies_strictly_between_outer_fences
+    red_confirmed: true
+    red_reason: >-
+      test_heading_present failed with AssertionError: '## Declared Change
+      Set' not found in the template text; the sibling tests in the same
+      classes errored with ValueError: substring not found, because
+      _declared_change_set_section could not locate the missing heading.
+  AC-2:
+    tests:
+      - tests.test_spec_template_declared_change_set.TestRootLiteralsPresent.test_feature_docs_root_literal_present
+      - tests.test_spec_template_declared_change_set.TestRootLiteralsPresent.test_test_docs_root_literal_present
+      - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_every_feature_docs_member_named
+      - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_design_artifacts_phrase_named
+      - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_test_docs_member_named
+      - tests.test_spec_template_declared_change_set.TestPlaceholderSlot.test_author_placeholder_present
+    red_confirmed: true
+    red_reason: >-
+      setUpClass for TestRootLiteralsPresent and TestEnumerationAndCitation,
+      and test_author_placeholder_present directly, all errored with
+      ValueError: substring not found ('## Declared Change Set' absent, so
+      the section slice could not be formed).
+  AC-3:
+    tests:
+      - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_cites_implement_phase_as_test_record_owner
+      - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_cites_phase_documents_and_phase_state_as_feature_docs_owners
+    red_confirmed: true
+    red_reason: >-
+      Same shared setUpClass failure as AC-2 (TestEnumerationAndCitation):
+      ValueError: substring not found for '## Declared Change Set'.
+  AC-4:
+    tests:
+      - tests.test_spec_template_declared_change_set.TestSemanticsStated.test_default_unless_removed_stated
+      - tests.test_spec_template_declared_change_set.TestSemanticsStated.test_superset_containment_stated
+      - tests.test_spec_template_declared_change_set.TestSemanticsStated.test_zero_implement_task_instance_stated
+    red_confirmed: true
+    red_reason: >-
+      setUpClass for TestSemanticsStated errored with ValueError: substring
+      not found ('## Declared Change Set' absent before the edit).
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No dedicated automated matcher lives in this module for AC-5 -- the
+      task plan's Design table assigns this module only TS-1, TS-2 and the
+      spec-document half of TS-5, TS-6, TS-7. AC-5's properties (English
+      text, {placeholder}/heading convention, no rationale beyond the
+      requirements, no verification-time exclusion rule, every other byte
+      of the template unchanged, no file outside the task's declared set
+      touched) were verified by construction and by `git diff --stat`,
+      which shows exactly one file changed
+      (em-workflow/references/templates/spec-document.md, 32 insertions, 0
+      deletions) plus the new test module as the only untracked file;
+      re-checked by VERIFICATION.md's integrated run per the task plan.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      tests/test_spec_template_declared_change_set.py did not exist before
+      this task; `python3 -m unittest discover -s tests` had nothing to
+      collect for it. After creation it is discovered, all 23 of its tests
+      run and pass, and it imports only re, unittest and pathlib (stdlib).
+  AC-7:
+    tests:
+      - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_position_matcher_flags_absence_in_pre_change_sample
+      - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_root_literals_matcher_flags_absence_in_pre_change_sample
+      - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_enumeration_and_citation_matcher_flags_absence_in_pre_change_sample
+      - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_semantics_matcher_flags_absence_in_pre_change_sample
+      - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_placeholder_matcher_flags_absence_in_pre_change_sample
+      - tests.test_spec_template_declared_change_set.TestPreChangeSampleGuards.test_sample_retains_file_structure_anchor
+      - tests.test_spec_template_declared_change_set.TestPreChangeSampleGuards.test_sample_retains_test_scenarios_anchor
+    red_confirmed: false
+    red_reason: >-
+      These are proof-only tests that assert against PRE_CHANGE_SAMPLE, a
+      fixed captured string, independent of the live template's edit
+      state -- they passed immediately when the module was first written
+      (before the template edit), which is the correct, expected behavior
+      for a negative proof rather than a red-green transition. Correctness
+      was verified by inspection: PRE_CHANGE_SAMPLE (the File Structure
+      block through the Test Scenarios opening) contains neither the new
+      heading nor any of the new literals, and `git status` confirms no
+      pre-existing module under tests/ was touched by this task.
