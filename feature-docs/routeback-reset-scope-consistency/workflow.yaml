@@ -31,7 +31,7 @@ workflow:
     status: completed
     completed_at_commit: 7c8a647e3031167f836761f23c585129a3b1ac8b
   - id: implement
-    status: in_progress
+    status: failed
     base_commit: b3d8824da4182071c2a5d7490925fee1aba951e1
   - id: review
     status: pending
@@ -111,13 +111,21 @@ tasks:
     domains: [api-contract, concurrency]
     complexity: medium
     requirements: [FR2, FR3, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7, NFR8]
-    status: in_progress
+    status: failed
     notes: >-
       run 1: implementer がストリーム無進捗 600 秒でハーネスのウォッチドッグに
       停止させられ、completion report を返さなかった（journal 最終イベントは
       launched のまま、failure net の追記なし）。worktree には Site A の途中編集が
       残っている。batch mode の implement.failed-task ポリシーにより自動 retry を
-      1 回消費して同一 worktree で再開する（retry_consumed: 1）。
+      1 回消費して同一 worktree で再開しようとしたが、queue_launch_guard.py が
+      journal の最終イベント launched を見て二重起動として deny した。ウォッチドッグ
+      による kill は SubagentStop も TaskStop も配送しないため failure net が
+      failed を追記できず、journal が launched のまま固着している。orchestrator は
+      journal に追記できない（workflow-schema.md）ので、この task id は復旧経路が
+      無い。batch mode の implement.failed-task に従い phase を abort する
+      （retry_consumed: 1、retry dispatch は guard により不成立）。
+      worktree は診断用に保持: .claude/worktrees/em-workflow/routeback-reset-scope-consistency/task0003
+      （implement-phase.md と test_routeback_reset_scope_consistency.py に未コミットの途中編集あり）。
     branch: em-workflow/routeback-reset-scope-consistency/task0003
     provenance:
       source: verify
