@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-policy-option-id-consistency
 phase: create-spec
-status: awaiting_answers
+status: completed
 generation: 1
-base_revision: de718596067a356b90b6384e3e7161827469b0c1
-last_input_digest: "sha256:151bc646982dee9f7c191fe2957103f6fb1f6a23e706ec3486ef876d10f3dd3b"
-active_request_id: create-spec-run-0001
+base_revision: 8fc574961a4c92f39a9cbe2828f270d08f2f1c73
+last_input_digest: "sha256:13c41720d97d249190bcb0b9cac0da4907a1b52d8bd8a86ba699eac41e1da4e5"
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -38,7 +38,21 @@ worker_runs:
     status: needs_user_input
     input_digest: "sha256:151bc646982dee9f7c191fe2957103f6fb1f6a23e706ec3486ef876d10f3dd3b"
     output_digest: "sha256:pending"
-artifacts: []
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: "sha256:2ac53fab75c7e8cd893af14cbeae3e2d3c095d92ebefda63d9ddeb8cf5118eb1"
+    output_digest: "sha256:pending"
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:13c41720d97d249190bcb0b9cac0da4907a1b52d8bd8a86ba699eac41e1da4e5"
+    output_digest: "sha256:pending"
+artifacts:
+  - path: feature-docs/batch-policy-option-id-consistency/REQUIREMENTS.md
+    sha256: "sha256:a3322c7d075ce7b4adfb6464ba0da5638439e29ca0576319060ad31fe2762ebd"
+    produced_by: create-spec-run-0003
+  - path: feature-docs/batch-policy-option-id-consistency/SPEC.md
+    sha256: "sha256:3c5a2dca504fa8f7d84ad8d151b5e1662a4c8d859dcaf706cb76ca5e018639e3"
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
