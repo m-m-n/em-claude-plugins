@@ -64,9 +64,9 @@ tasks:
     domains: [api-contract]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR7, NFR1, NFR2, NFR3, NFR5]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-policy-option-id-consistency/task0001
   task0002:
     title: Document the correspondence rule and the uncheckable-gate exemption registry
     plan: tasks/task0002.md
@@ -79,9 +79,9 @@ tasks:
     domains: [api-contract]
     complexity: low
     requirements: [FR6, NFR3, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-policy-option-id-consistency/task0002
   task0003:
     title: Bump the em-workflow plugin version in both manifests
     plan: tasks/task0003.md
@@ -93,9 +93,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR8, NFR3]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-policy-option-id-consistency/task0003
 
 review:
   status: pending
