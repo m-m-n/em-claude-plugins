@@ -191,3 +191,15 @@ auto_fix:
     revert 後も 1303 tests OK。
 residual_critical_high: 1
 rework_required: true
+rework_outcome: aborted-spec-change-gate
+rework_outcome_reason: >-
+  batch auto-rework を 1 回消費して rework-planner を dispatch したが、
+  rework-planner は df5b41d20735b142 を実在の欠陥と確認したうえで
+  「SPEC.md の既存要件集合の内側では修正不能」と判定し、task を合成せず
+  gate_id: rework.spec-change / category: spec-change の question を返した
+  （packet rework-q0001）。references/question-resolution.md の fail-closed
+  分類により、spec-change は policy 参照も Codex 相談も経ずフェーズを中断する。
+  batch-policies.yaml が rework.spec-change を意図的に未登録にしているのも
+  同じ理由。したがって review ステップは failed で終端し、SPEC 変更の可否は
+  人間の判断に委ねる。implement / task0001 / task0002 は完了・マージ済みで、
+  1303 tests は緑のまま。
