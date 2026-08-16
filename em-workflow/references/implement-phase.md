@@ -220,12 +220,16 @@ either source (the widened I.2.c gate above), no retired task id can
 leave a `merged` last event behind for a renumbered task to inherit, so
 the recycled-task-id carve-out above stays correctly scoped to `failed`
 only. This recycled-task-id rule governs only the orchestrator's
-interpretation of the journal: `queue_launch_guard.py`,
-`queue_stop_guard.py`, `queue_failure_net.py` and `queue_taskstop_net.py`
-derive a task's state from the journal's last event alone and never
-consult `tasks.{T}.status` (see 'Supporting cast: journal, hooks, resume'
-below). The journal itself stays append-only (see Supporting cast below) —
-only the interpretation of its events is scoped by this rule.
+interpretation of the journal, with one explicit exception:
+`queue_stop_guard.py` applies this same recycled-task-id carve-out itself
+(see the Stop-hook bullet under 'Supporting cast: journal, hooks, resume'
+below, which states the same classification). The other three hooks —
+`queue_launch_guard.py`,
+`queue_failure_net.py` and `queue_taskstop_net.py` — derive a task's state
+from the journal's last event alone and never consult `tasks.{T}.status`
+(see 'Supporting cast: journal, hooks, resume' below). The journal itself
+stays append-only (see Supporting cast below) — only the interpretation of
+its events is scoped by this rule.
 Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
@@ -490,10 +494,14 @@ summary (full schema: IMPLEMENTATION.md's Journal contract).
 **The hooks** (`em-workflow/hooks/`, wired in `hooks.json`):
 
 - **Stop hook** (`queue_stop_guard.py`) — fires when the orchestrator's turn
-  ends. Replays the journal and workflow.yaml; if refillable slots and
-  unlaunched tasks exist and no task has failed, it BLOCKS (exit 2) naming
-  the tasks to launch — catching a forgotten refill after a wake phase. A
-  consecutive-block cap (3, tracked in a sidecar next to the journal)
+  ends. Replays the journal and workflow.yaml, applying the same
+  recycled-task-id carve-out as I.2.a above — a task whose journal last
+  event is `failed` and whose workflow.yaml `status` reads `pending`
+  reclassifies as unlaunched, not failed; if refillable slots and
+  unlaunched tasks exist and no task's reconciled state is `failed`, it
+  BLOCKS (exit 2) naming the tasks to launch — catching a forgotten refill
+  after a wake phase. A consecutive-block cap (3, tracked in a sidecar
+  next to the journal)
   prevents it from wedging the session on unexpected state; exceeding the
   cap yields a warning and lets the turn end. Does not write the journal.
 - **PreToolUse(Task|Agent) launch guard** (`queue_launch_guard.py`) — fires on

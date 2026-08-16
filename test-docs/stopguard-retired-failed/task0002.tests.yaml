@@ -1,0 +1,104 @@
+task_id: task0002
+baseline_failures: []          # full suite was green (1294 tests) before any edit
+final_failures: []             # full suite still green (1294 tests) after the edit
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No automated home inside the declared change set (IMPLEMENTATION.md D5:
+      tests/test_queue_stop_guard.py is the only test file this feature may
+      create/modify, and it belongs to task0001). Verified by reading the
+      amended passage: section I.2.a (em-workflow/references/implement-phase.md,
+      lines 222-232) now reads "This recycled-task-id rule governs only the
+      orchestrator's interpretation of the journal, with one explicit
+      exception: `queue_stop_guard.py` applies this same recycled-task-id
+      carve-out itself (see the Stop-hook bullet under 'Supporting cast:
+      journal, hooks, resume' below, which states the same classification).
+      The other three hooks ... derive a task's state from the journal's
+      last event alone and never consult `tasks.{T}.status` ..." — the Stop
+      hook is now the explicit named exception; the false journal-last-event-
+      alone / never-consult claim is no longer made of it.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Same manual-verification home as AC-1 (D5). The amended I.2.a passage
+      still asserts journal-last-event-only behaviour and the never-consult
+      claim for `queue_launch_guard.py`, `queue_failure_net.py` and
+      `queue_taskstop_net.py`, and all four hook filenames
+      (`queue_launch_guard.py`, `queue_stop_guard.py`, `queue_failure_net.py`,
+      `queue_taskstop_net.py`) still appear backtick-quoted inside section
+      I.2.a. Also covered mechanically by the pre-existing (untouched)
+      tests/test_recycled_task_id_consistency.py::TestRecycledTaskIdRuleScopedToOrchestrator
+      (test_scope_sentence_names_all_four_hooks, which checks each of the
+      four filenames individually), part of the TS10 regression sweep.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Same manual-verification home as AC-1/AC-2 (D5). The Stop-hook bullet
+      under 'Supporting cast' (implement-phase.md, the `queue_stop_guard.py`
+      bullet) now reads "... applying the same recycled-task-id carve-out as
+      I.2.a above — a task whose journal last event is `failed` and whose
+      workflow.yaml `status` reads `pending` reclassifies as unlaunched, not
+      failed; if refillable slots and unlaunched tasks exist and no task's
+      reconciled state is `failed`, it BLOCKS ..." — no residual claim that
+      any task with a raw `failed` journal event alone suppresses the block;
+      the classification matches section I.2.a's.
+  AC-4:
+    tests: [tests/test_recycled_task_id_consistency.py]
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing module outside this task's declared change set (not
+      created or modified by this task); not eligible for a red-first
+      observation under this task's own edit. Covered by the TS10 full-suite
+      regression sweep: python3 -m unittest discover -s tests passed with
+      1294/1294 tests green after the edit, including this module's
+      TestRecycledTaskIdRuleScopedToOrchestrator (all four hook filenames,
+      the never-consult phrase, the orchestrator-only-scope phrase, and the
+      absence of "never read(s) workflow.yaml" anywhere in the document) and
+      every other literal/heading-boundary assertion in the module.
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Manually confirmed both registries still read the pre-bump version
+      before editing (em-workflow/.claude-plugin/plugin.json and
+      .claude-plugin/marketplace.json both "0.1.41"), then edited only the
+      version string in each file. Post-edit: both parse as JSON, both read
+      "0.1.42" (git diff shows a single-line value change per file; key sets,
+      identity fields, and the entire em-review marketplace entry are
+      byte-for-byte unchanged). Also covered by the pre-existing
+      tests/test_check_plugin_invariants.py suite implicitly (no assertion
+      broken) — no dedicated pinned-version test module exists in this
+      repository state for the literal "0.1.42" per task Test Notes (only a
+      durable past-baseline invariant would apply, and none was found
+      pinning this exact feature's target version).
+  AC-6:
+    tests: [full suite via python3 -m unittest discover -s tests]
+    red_confirmed: false
+    red_reason: >-
+      No genuine red state exists for this criterion: before any edit, by
+      definition no file had been created or modified, and the baseline
+      suite run (Step 4a) was already green (1294/1294) — so "suite passes
+      and no file outside the three declared files is touched" was trivially
+      true pre-edit, not something that could be observed failing first. This
+      is the tdd-testing skill's "behavior genuinely pre-existed, no
+      observable change" case. Verified post-edit instead:
+      `git status --porcelain` / `git diff --stat` show exactly the three
+      declared files modified (em-workflow/references/implement-phase.md,
+      em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json)
+      and none created, and `python3 -m unittest discover -s tests` from the
+      repository root passed 1294/1294 after the edit.
+notes: >-
+  This is a documentation/registry-only task (infra-impl). Per
+  IMPLEMENTATION.md D5, no new test module may be added and the only test
+  file this feature may touch belongs to task0001 (out of scope here), so
+  AC-1/AC-2/AC-3 have no automated home and are verified by direct reading
+  of the amended passages (quoted above) plus the untouched full suite
+  staying green. AC-4/AC-5/AC-6 are covered by the TS10 full-suite
+  regression sweep (tests/test_recycled_task_id_consistency.py and other
+  pre-existing modules already pin the retained literals and registry
+  invariants); the suite passed 1294/1294 both before (baseline) and after
+  this task's edit.
