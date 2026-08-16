@@ -1,0 +1,152 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_step_a_and_docs_commit_conflict_stops
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_the_terminating_stops
+    red_confirmed: true
+    red_reason: >-
+      Before the SKILL.md edit, test_subsection_covers_step_a_and_docs_commit_conflict_stops
+      failed with "AssertionError: 'Step A の feature 解決失敗' not found in
+      '## バッチ終端行 ...'" (confirmed by re-running the test against the
+      stashed pre-edit worktree). Green after the enumeration paragraph
+      gained the Step A feature-resolution-failure marker and the
+      commit-docs.sh second-exit-4 phase-abort marker.
+      test_subsection_covers_the_terminating_stops is the pre-existing
+      (task0002) regression guard over the six markers the subsection
+      already carried; it stayed green throughout since none of those six
+      were reworded, only extended alongside.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_no_line_rule_is_generalized_over_non_terminal_turn_ends
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_wait_turn_emits_no_terminal_line
+      - tests.test_batch_stop_contract_skill_wiring.TestNoLineGeneralizationMatcherCanFail.test_forged_no_line_only_subsection_is_well_formed_and_found
+      - tests.test_batch_stop_contract_skill_wiring.TestNoLineGeneralizationMatcherCanFail.test_matcher_rejects_subsection_naming_stop_condition_5_only
+    red_confirmed: true
+    red_reason: >-
+      test_no_line_rule_is_generalized_over_non_terminal_turn_ends failed
+      with "AssertionError: False is not true" against the pre-edit
+      subsection (task0002's wording named only 停止条件 5, with no launch
+      turn / wake turn mention) -- confirmed by re-running against the
+      stashed pre-edit worktree. Green after the no-line paragraph was
+      restated as a general rule naming implement's launch turn and wake
+      turn as further instances. test_subsection_states_wait_turn_emits_no_terminal_line
+      is the pre-existing (task0002) regression guard for the 「停止条件 5」
+      / 「終端行を出力しない」 anchors, which the generalized wording keeps
+      verbatim; it stayed green throughout. The two
+      TestNoLineGeneralizationMatcherCanFail tests are the matcher's own
+      negative proof and non-vacuity guard -- self-contained against a
+      forged string, so they were already green by construction and do not
+      depend on SKILL.md's edit state (D8-style: pinned green by
+      construction, not by implementation).
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_instructs_reading_the_contract_doc_before_emitting
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_instructs_reading_the_contract_doc_before_emitting
+      - tests.test_batch_stop_contract_skill_wiring.TestReadInstructionMatcherCanFail.test_forged_doc_name_without_read_instruction_is_well_formed_and_found
+      - tests.test_batch_stop_contract_skill_wiring.TestReadInstructionMatcherCanFail.test_matcher_rejects_doc_name_without_read_instruction
+    red_confirmed: true
+    red_reason: >-
+      Both test_subsection_instructs_reading_the_contract_doc_before_emitting
+      (SKILL.md) and test_section_instructs_reading_the_contract_doc_before_emitting
+      (batch-mode.md) failed with "AssertionError: False is not true"
+      against the pre-edit documents -- neither carried a Read instruction
+      paired with the contract-document reference, only a bare mention.
+      Confirmed by re-running both against the stashed pre-edit worktree.
+      Green after SKILL.md's subsection gained
+      "${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md を Read し"
+      and batch-mode.md's `## Terminal line` gained "Read
+      `references/batch-terminal-line.md`". The two
+      TestReadInstructionMatcherCanFail tests are the matcher's own negative
+      proof and non-vacuity guard -- self-contained against a forged string
+      -- so they were already green by construction.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestSubsectionRestatesNoContractLiteral.test_subsection_restates_no_contract_literal
+      - tests.test_batch_stop_contract_skill_wiring.TestSubsectionRestatesNoContractLiteral.test_prefix_literal_absent_from_whole_skill_md
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_restates_no_contract_literal
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_prefix_literal_absent_from_whole_batch_mode_md
+      - tests.test_batch_stop_contract_skill_wiring.TestContractLiteralMatcherCanFail.test_forged_restatement_is_a_well_formed_subsection_the_slicer_finds
+      - tests.test_batch_stop_contract_skill_wiring.TestContractLiteralMatcherCanFail.test_matcher_rejects_the_forged_field_name_restatement
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeLiteralMatcherCanFail.test_forged_body_is_well_formed_and_found
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeLiteralMatcherCanFail.test_matcher_rejects_forged_reason_code_restatement
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsEleven.test_reason_codes_tuple_has_eleven_members
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsEleven.test_reason_codes_tuple_includes_the_two_rework_codes
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsEleven.test_reason_codes_tuple_has_no_duplicates
+    red_confirmed: false
+    red_reason: >-
+      The literal-absence assertions (SKILL.md and batch-mode.md halves)
+      were already true in the pre-edit documents -- this task's additions
+      name no contract literal, so these are non-regression invariants
+      re-verified after the edit rather than a red-to-green transition; both
+      passed in the same pre-edit run used to confirm AC-1/AC-2/AC-3's red.
+      The matcher-can-fail pairs are self-contained against a forged string
+      and were green by construction from the moment the module was
+      written. The REASON_CODES-tuple-length assertions check this test
+      module's own constant, defined together with the tests in the same
+      edit -- there is no separate implementation step for a test module to
+      observe red against; the constant and its cardinality were correct by
+      construction. All eleven listed here passed on every run of this
+      module during this task.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeNonPacketGatesTableUnchanged.test_table_has_exactly_ten_data_rows
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeNonPacketGatesTableUnchanged.test_catch_all_diff_size_and_per_command_wording_intact
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_completion_headline_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_retained_branch_guidance_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_pr_url_guidance_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_license_single_line_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression.test_batch_audit_items_present
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_pinned_headings_unchanged
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_no_decision_table_literal
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_no_stale_agent_name
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_no_stale_inline_phrase
+      - tests.test_batch_stop_contract_skill_wiring.TestExistingHeadingsAndForbiddenLiteralsUnchanged.test_new_subsection_mentions_no_gate_id
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+    red_confirmed: false
+    red_reason: >-
+      Per the task plan's Test Notes, the Step C / pinned-heading /
+      forbidden-literal assertions are pure regression guards over retained
+      pre-change wording, exempt from the red-first requirement; all were
+      already true before this task's edits (the SKILL.md subsection is
+      additive, batch-mode.md's edit is confined to `## Terminal line`) and
+      remain true after. test_table_has_exactly_ten_data_rows and
+      test_catch_all_diff_size_and_per_command_wording_intact are new
+      regression guards this task adds specifically because it now touches
+      batch-mode.md -- they pin the Non-packet gates table's row count and
+      wording as untouched, true both before and after this task's single
+      edit to that file's `## Terminal line` section only.
+      test_checker_exits_cleanly_against_the_repository_root is task0021's
+      pre-existing repository-level check (not owned by this task); it was
+      run manually via `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      both before and after this task's edits and exited 0 both times, and
+      it is also exercised automatically by `python3 -m unittest discover -s tests`.
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: >-
+      Structural/static check with no implementation-driven red-to-green
+      transition: it inspects this module's own AST for non-stdlib imports,
+      true the moment the file was written. Discovery and whole-suite-green
+      are verified operationally instead: `python3 -m unittest discover -s
+      tests` ran 1162 tests OK before this task's edits (4a baseline, no
+      test module pre-dating this feature modified) and 1180 tests OK after
+      (1162 + 18 new test methods this task adds:
+      test_subsection_covers_step_a_and_docs_commit_conflict_stops,
+      test_no_line_rule_is_generalized_over_non_terminal_turn_ends,
+      test_subsection_instructs_reading_the_contract_doc_before_emitting,
+      the 4 TestNoLineGeneralizationMatcherCanFail /
+      TestReadInstructionMatcherCanFail matcher-proof tests, the 4
+      TestBatchModeTerminalLineWiring tests, the 2
+      TestBatchModeLiteralMatcherCanFail matcher-proof tests, the 2
+      TestBatchModeNonPacketGatesTableUnchanged regression guards, and the 3
+      TestOwnReasonCodeTupleIsEleven tests). Every matcher this task adds
+      (`_states_generalized_no_line_rule`, `_has_read_instruction_for_contract_doc`,
+      and the batch-mode.md reuse of the pre-existing
+      `_find_contract_literal_violations`) carries a negative proof plus a
+      non-vacuity guard, listed under AC-2/AC-3/AC-4 above respectively.
+      `python3 em-workflow/scripts/check-plugin-invariants.py .` exits 0
+      against this worktree.
