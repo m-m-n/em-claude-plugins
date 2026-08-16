@@ -31,14 +31,12 @@ workflow:
     status: completed
     completed_at_commit: 7c8a647e3031167f836761f23c585129a3b1ac8b
   - id: implement
-    status: completed
-    completed_at_commit: fb15a39967282d3bf33b63b99d1289650bf7133d
+    status: pending
     base_commit: b3d8824da4182071c2a5d7490925fee1aba951e1
   - id: review
-    status: completed
-    completed_at_commit: bee4d5a469274969b8ebe76b3a0b8f5a67411bb7
+    status: pending
   - id: verify
-    status: failed
+    status: pending
     result: fail
     failed_items:
       - id: "MANUAL-1"
@@ -102,9 +100,27 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/routeback-reset-scope-consistency/task0002
+  task0003:
+    title: Close the three unproven joins left in I.2.c / I.2.a by the single-derivation-source rewrite
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_routeback_reset_scope_consistency.py
+      - test-docs/routeback-reset-scope-consistency/task0003.tests.yaml
+    skills: []
+    domains: [api-contract, concurrency]
+    complexity: medium
+    requirements: [FR2, FR3, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7, NFR8]
+    status: pending
+    notes: null
+    branch: em-workflow/routeback-reset-scope-consistency/task0003
+    provenance:
+      source: verify
+      source_ids: [MANUAL-1, MANUAL-2, MANUAL-3]
+      review_stable_ids: [0acedde04c24cb8d, 5a9c94c87a6f7c4f, cbe1e5e8ca5cf4df, 69fc571959dc36a1, e3a4f2b026841bf6, 477a18556a3587e3]
 
 review:
-  status: completed
+  status: pending
   rounds_completed: 1
   plan:
     floor: [comprehensive, performance, architecture, spec]
@@ -131,15 +147,15 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-2]
+    tasks: [task0001, task0003]
+    tests: [TS-2, TS-10]
   FR3:
     title: Cleanup targets only tasks confirmed not merged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-3]
+    tasks: [task0001, task0003]
+    tests: [TS-3, TS-11]
   FR4:
     title: The rejected path enumerates the new blocker
     status: ok
@@ -152,21 +168,21 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-5]
+    tasks: [task0001, task0003]
+    tests: [TS-5, TS-12]
   FR6:
     title: Route-back's own recursion invariant is stated
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-6]
+    tasks: [task0001, task0003]
+    tests: [TS-6, TS-12]
   FR7:
     title: Document-contract tests
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-8]
   FR8:
     title: Plugin version bump
@@ -180,58 +196,58 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-7]
   NFR2:
     title: Protected line wraps
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-7]
   NFR3:
     title: Ordering invariants
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-7]
+    tasks: [task0001, task0003]
+    tests: [TS-7, TS-10]
   NFR4:
     title: Rejected-path containment
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-4, TS-7]
+    tasks: [task0001, task0003]
+    tests: [TS-4, TS-7, TS-11]
   NFR5:
     title: Retained gate literals
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-7]
   NFR6:
     title: No bare git write commands
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-7]
   NFR7:
     title: Test environment
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
+    tasks: [task0001, task0002, task0003]
     tests: [TS-8]
   NFR8:
     title: Documentation-only
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
+    tasks: [task0001, task0002, task0003]
     tests: [TS-7]
 
 batch:
   review_rework_count: 0
-  verify_rework_count: 0
+  verify_rework_count: 1
