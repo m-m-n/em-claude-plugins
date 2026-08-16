@@ -42,9 +42,18 @@ workflow:
     status: completed
     completed_at_commit: 9a5d36881c0fee72628f006feb6cd93dd9465726
   - id: verify
-    status: in_progress
-    result: null
+    status: completed
+    completed_at_commit: 18d75bbee063b4bb5aab26bbe64abd906bbf6337
+    result: pass
     failed_items: []
+    note: >-
+      python3 -m unittest discover -s tests = 1195 tests OK。
+      check-plugin-invariants.py . = 全 7 チェック PASS。
+      TS-1..TS-14 は該当契約テストモジュール（106 tests）で緑。
+      SC-1..SC-10 すべて充足、version は plugin.json / marketplace.json とも
+      0.1.40 で一致。build / format / e2e コマンドはプロジェクトに存在しない
+      ため対象外。excluded 要件は無し。Manual Testing の 5 項目は実機の無人実行
+      を要するため人手確認に残す（VERIFICATION.md「Manual Testing」参照）。
   - id: retrospect
     status: pending
 
