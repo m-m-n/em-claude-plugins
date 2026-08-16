@@ -53,9 +53,9 @@ tasks:
     domains: [input-handling, external-io]
     complexity: medium
     requirements: [FR1, FR2, FR3, FR4, FR5, FR7, FR8, NFR1, NFR2, NFR3, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/stopguard-retired-failed/task0001
   task0002:
     title: "SSOT sentence and plugin version alignment"
     plan: tasks/task0002.md
@@ -67,9 +67,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR6, FR9]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/stopguard-retired-failed/task0002
 
 review:
   status: pending
