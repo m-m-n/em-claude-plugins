@@ -42,9 +42,22 @@ workflow:
     status: completed
     completed_at_commit: 4b8cc2a353c76b68c6191c9121f7930c25f6ab61
   - id: verify
-    status: pending
-    result: null
+    status: completed
+    completed_at_commit: ed6dec822548914750ae030f9b5c7ec07066e448
+    result: pass
     failed_items: []
+    notes: >-
+      python3 -m unittest discover -s tests -> Ran 1378 tests, OK (exit 0).
+      TS1-TS12 all pass. build/format/e2e commands are intentionally empty in
+      project.components, so those verification sections are not applicable.
+      TS9/SC-5/SC-6 additionally confirmed by git diff: no frozen path
+      (workflow-patch.md, scripts/, tests/test_validate_worker_output.py,
+      references/fixtures/) changed since the implement base commit.
+      TS10: plugin.json and marketplace.json both read 0.1.42 (> 0.1.41).
+      Manual checks: no document gained a new `## Gate identifiers` section;
+      gate-option-vocabulary.md introduces no second policy table (NFR4);
+      batch-policies.yaml's gate_policies block is byte-unchanged, only its
+      header comment gained a pointer (NFR5). No requirement is `excluded`.
   - id: retrospect
     status: pending
 
