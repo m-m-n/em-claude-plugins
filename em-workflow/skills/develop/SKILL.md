@@ -487,15 +487,22 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 下記に列挙する終端の停止条件で終わるターン）が、最後の assistant
 メッセージの末尾に終端行を 1 行出力する。行の書式・フィールドの意味・
 値の集合は `references/batch-terminal-line.md` を唯一の SSOT とし、
-ここでは「いつ出すか」だけを定める。
+ここでは「いつ出すか」だけを定める。出力の直前に
+`${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md` を Read し、
+そこに定義された prefix・フィールド文法・値の集合をそのまま使う。
 
 対象は Step C の完了処理（通常完了）に加えて、停止条件 2（スタック）、
 停止条件 3（failed / needs_update）、停止条件 4（YAML parse エラー）、
 停止条件 6（git-setup 中断）、フェーズ内のゲート中断、Step C 内の中断、
-そして implement / verify フェーズが定める終端停止 — 同 SSOT が列挙する
-停止点のすべてを含む。
+Step A の feature 解決失敗（fail-closed 識別子ゲート、またはパス引数も
+タスク記述も無い batch 起動による中断）、commit-docs.sh の 2 回目の
+exit 4 によるフェーズ中断、そして implement / verify フェーズが定める
+終端停止 — 同 SSOT が列挙する停止点のすべてを含む。
 
-停止条件 5（implementer の完了通知待ち）でターンを終える場合は、ラン自体は
-継続しているため終端行を出力しない。
+ターンが終わる時点でランが終端状態（同 SSOT が定める 2 つの終端状態の
+いずれか）に達していない場合は、終端行を出力しない。停止条件 5
+（implementer の完了通知待ち）はこの規則のインスタンスであり、implement
+フェーズの launch ターン（起動直後にターンを終える）と wake ターン
+（補充後にターンを終える）も同様である。
 
 $ARGUMENTS
