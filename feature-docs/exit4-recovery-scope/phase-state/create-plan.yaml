@@ -1,0 +1,21 @@
+schema_version: 1
+feature: exit4-recovery-scope
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 7d3921bfbaf558ab6f88a6926512260be67dc61b
+last_input_digest: sha256:bd6fb4e67dca7b14dd4248abf001ef1994149975bf2a28399bb07aec25c4df3e
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:bd6fb4e67dca7b14dd4248abf001ef1994149975bf2a28399bb07aec25c4df3e
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
