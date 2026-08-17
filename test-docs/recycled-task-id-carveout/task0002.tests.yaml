@@ -1,0 +1,85 @@
+task_id: task0002
+baseline_failures: []          # full suite (1452 tests) was green before any edit
+final_failures: []             # full suite (1461 tests) green after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_hook_status_read_pin.TestQueueHookStatusReadPin.test_no_journal_only_hook_performs_a_per_task_status_read
+    red_confirmed: false
+    red_reason: >
+      Cannot manufacture a red state for this test without editing a file
+      under em-workflow/hooks/, which is out of scope (hooks are observed,
+      never modified). The matcher's own true-positive/true-negative
+      behavior IS red-confirmed independently via the VIOLATING_SAMPLE /
+      BARE_SUBSTRING_SAMPLE proofs (see AC-2, AC-3); this test then applies
+      that already-proven scan_for_status_read_violations function to the
+      three real, unmodified hook sources and passed on first run because
+      the codebase already conforms to the classification.
+  AC-2:
+    tests:
+      - tests.test_queue_hook_status_read_pin.TestScanForStatusReadViolationsProofs.test_bare_workflow_yaml_substring_alone_is_not_reported
+      - tests.test_queue_hook_status_read_pin.TestQueueHookStatusReadPin.test_taskstop_net_bare_workflow_yaml_docstring_mention_is_not_a_violation
+    red_confirmed: true
+    red_reason: >
+      test_bare_workflow_yaml_substring_alone_is_not_reported raised
+      "NameError: name 'scan_for_status_read_violations' is not defined"
+      before the scan function existed. The live-source counterpart
+      (queue_taskstop_net.py's docstring) applies the same already-proven
+      function to an unmodified hook and could not be independently
+      reddened without editing em-workflow/hooks/ (out of scope, same
+      constraint as AC-1).
+  AC-3:
+    tests:
+      - tests.test_queue_hook_status_read_pin.TestScanForStatusReadViolationsProofs.test_violating_sample_is_reported
+    red_confirmed: true
+    red_reason: >
+      "NameError: name 'scan_for_status_read_violations' is not defined"
+      observed before the function existed; both proof tests in this class
+      failed together for that reason at that point.
+  AC-4:
+    tests:
+      - tests.test_queue_hook_status_read_pin.TestQueueStopGuardCarveOutBehavioralPin.test_pending_status_applies_the_carve_out_and_blocks
+    red_confirmed: true
+    red_reason: >
+      "NameError: name '_build_carveout_fixture' is not defined" observed
+      before the fixture-builder and subprocess-invocation helpers existed.
+  AC-5:
+    tests:
+      - tests.test_queue_hook_status_read_pin.TestQueueStopGuardCarveOutBehavioralPin.test_non_pending_status_does_not_apply_the_carve_out
+    red_confirmed: true
+    red_reason: >
+      "NameError: name '_build_carveout_fixture' is not defined" observed
+      before the fixture helpers existed, across all four subTest status
+      values (failed, in_progress, merged, cancelled).
+  AC-6:
+    tests:
+      - tests.test_queue_hook_status_read_pin.TestModuleImportsStdlibOnly.test_only_stdlib_imports
+    red_confirmed: true
+    red_reason: >
+      Verified by temporarily inserting a resolvable non-stdlib import
+      (`import yaml`, present in this environment as the plugin's runtime
+      dependency) after the docstring: the test failed with "AssertionError:
+      'yaml' not found in ... : yaml is not a stdlib module". Reverted
+      immediately after confirming (diffed clean against the pre-probe
+      file). The temp-directory isolation and no-real-state-touched claims
+      in this criterion are structural properties of using
+      tempfile.TemporaryDirectory() for every fixture and never
+      referencing a path under the repository's own .claude/worktrees or
+      the user's home directory -- verified by code review, not by a
+      dedicated red/green assertion.
+  AC-7:
+    tests:
+      - tests.test_queue_hook_status_read_pin.TestPreChangeSampleGuards.test_violating_sample_retains_its_status_read_call
+      - tests.test_queue_hook_status_read_pin.TestPreChangeSampleGuards.test_bare_substring_sample_retains_the_workflow_yaml_literal
+    red_confirmed: false
+    red_reason: >
+      Structural/discipline criterion (each matcher's literal lives in one
+      module-level constant, no other test module is imported or modified,
+      no file under em-workflow/hooks/ is modified, and the full suite
+      exits 0). Verified by construction and by the final
+      `python3 -m unittest discover -s tests` run (exit 0, 1461 tests;
+      `git status` shows only tests/test_queue_hook_status_read_pin.py as
+      new/untracked), not by a red/green behavioral test. The two
+      TestPreChangeSampleGuards tests assert fixed literal containment in
+      samples authored for this task; there is no meaningful prior "red"
+      state to observe without a contrived typo.
