@@ -1,0 +1,229 @@
+round: 2
+executed_at: "2026-08-18T02:35:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: c4a2b0fb8c77a9475040d51b4448d821868d4fbb
+  head_commit: ad2396b8890648acc4e1cea605e4754ad19069a1
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/queue_stop_guard.py
+    - test-docs/stopguard-worktree-paths/task0001.tests.yaml
+    - test-docs/stopguard-worktree-paths/task0002.tests.yaml
+    - test-docs/stopguard-worktree-paths/task0003.tests.yaml
+    - tests/test_queue_stop_guard.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: skipped, skip_reason: "rate_limited"}
+  - {perspective: performance, source: litellm, model: muse-spark, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: 41e69f86b48ab042
+    severity: high
+    category: spec
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 324
+    title: Feature identity derived from two sources violates single-derivation invariant
+    description: >-
+      NFR4 は identity を列挙済みパス 1 箇所からのみ導出することを要求しているが、
+      `select_owned_unique_matches` の所有権検査が docs セグメントを identity と比較して
+      いるため、docs セグメントが 2 つ目の identity ソースになっている、という指摘。
+    suggestion: >-
+      Remove the docs segment comparison since identity should only come from the
+      worktree-side segment per NFR4.
+    sources: [litellm:vertex-deepseek-v3.2:spec]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      オーケストレーターが実装と SPEC を突き合わせて検証した結果、誤検知。
+      identity は `decompose_enumerated_path` で 1 回だけ導出され、docs セグメントは
+      その identity と**比較**されるだけで identity として読まれていない
+      （`em-workflow/hooks/queue_stop_guard.py` の `select_owned_unique_matches`:
+      `docs_segment = os.path.basename(os.path.dirname(match))` → `if docs_segment != identity: continue`）。
+      ルートと feature 名からパスを組み直す箇所は存在しない。SPEC.md:172-175 の NFR4 が
+      禁じているのは「解決側での identity の再導出」であって、列挙済みパス 2 成分の比較
+      ではない。加えて SPEC.md:242 の Path Contract は両ワイルドカード位置に同一の
+      `{feature}` を要求しており、この比較はその契約の強制そのもの。提案どおり比較を
+      削除すると round 1 の high 指摘（51eb6a3a09783d9d / 04fa12c3a465eb0b）が再発する。
+      同じラウンドの claude:spec と claude:architecture は独立に「NFR4 と両立する」と
+      判定している。
+  - stable_id: f4c325ae32c85c12
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 340
+    line_end: 348
+    title: >-
+      select_owned_unique_matches の曖昧性拒否（条件3）は到達不能で、AC-5 の 4 テストは
+      docstring の事前条件を破る入力でしかそれを再現できていない
+    description: >-
+      条件2（ownership）と、glob パターンの第1ワイルドカードが 1 セグメント固定であることの
+      組み合わせにより、identity は worktrees_root 直下のディレクトリ名に一意に決まる。
+      owned な 2 件が同一 identity を持つには第1・第2セグメントが両方一致する必要があり、
+      それは同一パスを意味する。glob は同一パスを重複して返さないため、条件3
+      （ambiguity refusal）は active_candidates 経由では発火しない。
+      TS11/AC-5 の 4 テストは root と feature セグメントの間に余分なセグメントを挿入した
+      パスを渡しており、docstring が明記する事前条件（layout パターンが 1 つの列挙ルート
+      配下で生成したパス列）を満たさない合成入力になっている。
+    suggestion: >-
+      (a) 防御的に残すなら docstring とテストに「現行の列挙パターンでは条件2 により到達
+      しない防御的分岐」「事前条件を意図的に破った合成入力」であることを明記し、
+      task0003.tests.yaml の AC-5 にも但し書きを足す。(b) 到達可能な契約にしたいなら
+      identity の導出元を広げる。(c) 単純化するなら条件3 と TS11 の 4 テストを削除して
+      ownership だけを契約として残す。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+  - stable_id: bda49fecfc14e765
+    severity: medium
+    category: comprehensive
+    file: test-docs/stopguard-worktree-paths/task0001.tests.yaml
+    line: 118
+    line_end: 122
+    title: task0001.tests.yaml の AC-8 が存在しないテスト名を指し、記録された期待挙動が task0003 で反転済み
+    description: >-
+      task0001.tests.yaml:118 は AC-8 の根拠として
+      `tests.test_queue_stop_guard.TestQueueStopGuardSingleDerivation.test_divergent_worktree_and_docs_segment_names_reads_the_enumerated_file`
+      を挙げているが、このメソッドは存在しない。task0003 が同じクラスのメソッドを
+      `test_divergent_worktree_and_docs_segment_names_is_never_enumerated`
+      （exit 0 を assert）へリネーム＋意味反転しており、task0003.tests.yaml:23 が新名称を
+      記録している。記録されたテスト ID をそのまま unittest に渡すと収集エラーになる。
+      オーケストレーターが grep で確認済み: 旧名は task0001.tests.yaml:118 にのみ残り、
+      実体は tests/test_queue_stop_guard.py:725 の新名称。
+    suggestion: >-
+      task0001.tests.yaml の AC-8 エントリを新名称に差し替え、red_reason に
+      「task0003 で ownership 契約に合わせて exit 0 期待へ反転した」旨を追記する
+      （または AC-8 を task0003 側の記録へ委譲する旨を notes に明記する）。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+  - stable_id: f4f2237e0fb7d3a4
+    severity: medium
+    category: security
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 68
+    line_end: 86
+    title: 列挙ルートの上方向探索に信頼境界がなく、プロジェクト外・共有書き込み可能な祖先にバインドしうる
+    description: >-
+      `find_worktrees_root()` は `os.getcwd()` からファイルシステムルートまで無制限に遡り、
+      最初に見つかった `.claude/worktrees/em-workflow` をそのまま列挙ルートにする。
+      所有者チェックもリポジトリ境界での打ち切りもマウント境界での停止もない。
+      cwd が共有書き込み可能なツリー配下にある場合、同一ホストの別ユーザーが
+      `/tmp/.claude/worktrees/em-workflow/<f>/integration/feature-docs/<f>/workflow.yaml` と
+      journal を仕込むだけでそのツリーが列挙ルートになり、(1) 攻撃者配下のファイルを読み、
+      (2) `write_sidecar()` が攻撃者ディレクトリに書き、(3) BLOCK の stderr が
+      オーケストレーターのコンテキストへ差し戻される。単一ユーザー機では悪用不可で、
+      共有ホスト / CI を前提とした指摘。round 1 の 7b7f078c1177e6db の再掲（当該サイトは
+      今回の diff でも未変更）で、所有権フィルタでは塞がらない。
+    suggestion: >-
+      上方向探索に信頼境界を入れる。(a) 各祖先と発見した worktrees root を `os.stat()` し、
+      現在の uid 所有でない / other-writable なものはルートに採用せず None を返す、
+      (b) `$HOME` を超えて遡らない、(c) `st_dev` が cwd と一致する間だけ遡りマウント境界を
+      跨がない。fail-open 方針は維持し、境界に触れたら黙って exit 0。
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+  - stable_id: 15427e2dcd1f35f0
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 497
+    line_end: 499
+    title: root 解決が Stop payload の `cwd` ではなくプロセスの `os.getcwd()` だけを見る
+    description: >-
+      round 1 の f60c814d2cee2d34 の再掲。当該サイトは今回の diff でも変更されていない。
+      姉妹 hook は payload 側を使う（queue_taskstop_net.py は `data.get("cwd")`、
+      bash_guard.py は `data.get("cwd") or os.getcwd()`）。削除された find_project_root() の
+      git toplevel プローブがこの差を吸収していたが、もう吸収されない。プロセス cwd が
+      セッションディレクトリと食い違う起動経路では祖先探索が None を返し、フックは
+      何のシグナルも出さず exit 0 する。
+    suggestion: '`root = find_worktrees_root(data.get("cwd") or os.getcwd())` にする。'
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+  - stable_id: 1701bd3cc7d715ec
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 200
+    line_end: 218
+    title: >-
+      `read_journal` の「journal ディレクトリ不在 → None」分岐が新レイアウトでは到達不能で、
+      カバーするテストが 1 本も残っていない
+    description: >-
+      round 1 の 5dffcf7cf52a0f0d の再掲。当該サイトは今回の diff でも変更されていない。
+      新レイアウトでは journal_dir は列挙された workflow.yaml の祖先なので glob マッチ時点で
+      必ず存在し、`return None` は TOCTOU を除いて死んだ分岐。docstring は旧契約のまま。
+      対応していた `test_missing_journal_directory_passes` は「worktrees_root だけ作り
+      feature サブディレクトリを作らない＝そもそも列挙されない」に書き換えられており、
+      read_journal の None 経路を覆うテストは残っていない。
+    suggestion: >-
+      (a) 死んだ分岐を落として「ファイル不在なら常に {}、その他 OSError なら None」に
+      単純化し docstring を書き直す、または (b) 防御的に残すなら docstring に明記のうえ
+      read_journal を直接呼ぶユニットテストを 1 本追加する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+  - stable_id: 8da25f905c85394b
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 301
+    title: Freshness threshold uses inclusive inequality allowing exactly-24-hour-old files
+    description: >-
+      FR3 の「more than 24 hours older」に対して `candidate_is_fresh` が
+      `(now - mtime) <= FRESHNESS_THRESHOLD_SECONDS` を使っている点の確認要請。
+      指摘者自身が「文字どおり読むと正しい」「実際の違反かどうか確信は無い」と付記している。
+    suggestion: Confirm the boundary semantics against FR3's exact wording before changing anything.
+    sources: [litellm:vertex-deepseek-v3.2:spec]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      検証の結果、欠陥ではない。FR3 は「mtime が 24 時間**より**古い feature を除外する」と
+      規定しており、ちょうど 86400 秒の候補を fresh に保つ `<=` はその文言と一致する。
+      指摘自体も「確認のためのフラグであって違反の主張ではない」と述べている。
+  - stable_id: 39abcf105edf8599
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 520
+    line_end: 521
+    title: Missing worktrees root exit behavior vs existing test expectations
+    description: >-
+      `TestQueueStopGuardFailOpen.test_missing_feature_docs_passes` と矛盾する、という指摘。
+      指摘者自身が「確信度が低い」「行番号が該当コードに当たっていない」と付記している。
+    suggestion: Verify against the actual test file before acting.
+    sources: [litellm:vertex-deepseek-v3.2:spec]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      根拠が成立していない。指摘者自身が行参照が該当コードに当たっていないと認めており、
+      矛盾するとされたテストを含む全 1412 テストが green（round 2 の claude:spec が
+      `python3 -m unittest discover -s tests` で確認、verify フェーズでも再確認する）。
+      テスト期待との矛盾は観測されていない。
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+  notes: >-
+    R4 の候補ゲート（severity ∈ {critical, high} かつ category != spec）に載る finding が
+    ゼロだったため auto-fix ループは 1 度も回していない。唯一の high は
+    41e69f86b48ab042 だが category が spec でゲート対象外であり、かつ検証の結果
+    誤検知として declined。
+residual_critical_high: 0
+rework_required: false
