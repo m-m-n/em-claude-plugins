@@ -3,15 +3,19 @@ feature: exit4-recovery-scope
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 3e409e2
-last_input_digest: sha256:57fec079da4ea0da096a211e3dc460eb673dc5e119f51479fd1fb04c52761be5
-active_request_id: create-spec-run-0001
+base_revision: 9df76cba8f164aeba2eb517fddeb5b5b58639810
+last_input_digest: sha256:cf53b65cf40a927a123e189b2a6046574c21fb52b978d16531a59a6a4e0b6c68
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: completed
     input_digest: sha256:57fec079da4ea0da096a211e3dc460eb673dc5e119f51479fd1fb04c52761be5
+    output_digest: sha256:6187a3e94a2c0bd932537492fe5ab0422ef6427310f65d42a5dd918432357baa
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: sha256:cf53b65cf40a927a123e189b2a6046574c21fb52b978d16531a59a6a4e0b6c68
     output_digest: null
 artifacts: []
 patches: []
