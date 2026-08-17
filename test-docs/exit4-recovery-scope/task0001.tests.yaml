@@ -63,14 +63,17 @@ acceptance_tests:
   AC-6:
     tests:
       - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_plugin_manifest_and_marketplace_agree_on_version
-      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_shared_version_is_0_1_43
+      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_shared_version_is_past_the_pre_task_baseline
     red_confirmed: true
     red_reason: >-
-      test_shared_version_is_0_1_43 failed against the pre-bump manifests
-      (AssertionError: '0.1.42' != '0.1.43'), confirmed by temporarily
-      reverting both manifest files to their pre-task content, rerunning
-      the test class, observing the failure, then restoring the 0.1.43
-      bump.
+      test_shared_version_is_past_the_pre_task_baseline failed against the
+      pre-bump manifests (patch 42 is not greater than the pre-task
+      baseline 42), confirmed by temporarily reverting both manifest files
+      to their pre-task content, rerunning the test class, observing the
+      failure, then restoring the 0.1.43 bump. The assertion was written as
+      a literal equality against '0.1.43' during implementation and moved to
+      the repository's durable baseline-comparison form during review round
+      1 (auto-fix loop 1).
   AC-7:
     tests: []
     red_confirmed: false
