@@ -247,13 +247,8 @@ git worktree add -b "em-workflow/{feature}/{T}" "$WT_ROOT/{T}" \
 ```
 
 Branch point = integration branch AT THIS MOMENT (includes every task merged
-so far). Refresh the integration worktree first (Branch & Worktree Model):
-`git -C "$WT_ROOT/integration" reset --hard em-workflow/{feature}/integration`,
-then capture `LAUNCH_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`. Set
-`tasks.{T}.status = in_progress`, `tasks.{T}.branch` in workflow.yaml on the
-worktree just refreshed, then commit:
-`commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement launch {T}" "$LAUNCH_TIP"`
-(exit-4 recovery: Branch & Worktree Model above).
+so far). Set `tasks.{T}.status = in_progress`, `tasks.{T}.branch` in
+workflow.yaml.
 
 **Resume guard**: before running `git worktree add -b` for task T, check
 whether `em-workflow/{feature}/{T}` and/or `$WT_ROOT/{T}` already exist (this
@@ -582,14 +577,8 @@ post-resume wake.
 
 ## Step I.3: Phase completion
 
-When every task is `merged`: refresh the integration worktree first (Branch
-& Worktree Model): `git -C "$WT_ROOT/integration" reset --hard
-em-workflow/{feature}/integration`, then capture
-`COMPLETION_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`. Set
-`implement` step `status = completed`, `completed_at_commit = $COMPLETION_TIP`
-on the worktree just refreshed, then commit:
-`commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase
-complete" "$COMPLETION_TIP"` (exit-4 recovery: Branch & Worktree Model above).
+When every task is `merged`: set `implement` step `status = completed`,
+`completed_at_commit = $(git rev-parse "em-workflow/{feature}/integration")`.
 There is no other way to complete this phase — a non-merged task always
 resolves via retry, route-back-to-planning, or abort (I.2.c). Report overall
 stats (tasks, conflict retries, failures) in 1-3 lines and return control to
