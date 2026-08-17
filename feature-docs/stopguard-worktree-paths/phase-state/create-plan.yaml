@@ -1,0 +1,21 @@
+schema_version: 1
+feature: stopguard-worktree-paths
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 6e8afb32e78f65ecc55890f72fc7091b5a567fbd
+last_input_digest: sha256:0051c192f9dd55c2ba813490314ab652743f14e05c3f1aa6bf9b60536957a129
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:0051c192f9dd55c2ba813490314ab652743f14e05c3f1aa6bf9b60536957a129
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
