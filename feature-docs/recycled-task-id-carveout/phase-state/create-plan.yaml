@@ -1,0 +1,21 @@
+schema_version: 1
+feature: recycled-task-id-carveout
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 2695a13e9a406f3557abaf227b35c14193d79ffe
+last_input_digest: sha256:d6250c0b1449e397906917769ecfc3a0cc66eb369f1e2e8d555fe6a5bbde17f8
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:d6250c0b1449e397906917769ecfc3a0cc66eb369f1e2e8d555fe6a5bbde17f8
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
