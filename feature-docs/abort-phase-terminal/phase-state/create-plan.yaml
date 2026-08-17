@@ -1,0 +1,37 @@
+schema_version: 1
+feature: abort-phase-terminal
+phase: create-plan
+status: completed
+generation: 1
+base_revision: c1f57609c07bda4362aa52b38417acf93d1a8a0e
+last_input_digest: sha256:3e3ac4766de01332ef880e94ad2a99b890b66fb3ab19e150ed602835bd333247
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: completed
+    input_digest: sha256:3e3ac4766de01332ef880e94ad2a99b890b66fb3ab19e150ed602835bd333247
+    output_digest: null
+artifacts:
+  - path: feature-docs/abort-phase-terminal/IMPLEMENTATION.md
+    sha256: sha256:dbe272265437f4b3493b26d16bf8e97c1e939a3af9f1a0466852310c360d699e
+    produced_by: create-plan-run-0001
+  - path: feature-docs/abort-phase-terminal/VERIFICATION.md
+    sha256: sha256:6ab9382233bfd729dc5e4b4a25994682959431aa9b68573cf8eea644dc16f79a
+    produced_by: create-plan-run-0001
+  - path: feature-docs/abort-phase-terminal/tasks/task0001.md
+    sha256: sha256:b927fc82f16974f4c85e58d7fd91b8fdaadb1206bdab7e9377d58770e895cf57
+    produced_by: create-plan-run-0001
+  - path: feature-docs/abort-phase-terminal/tasks/task0002.md
+    sha256: sha256:504d889b3e959565a13bca3c097654d11e06494bf1aa352f933a03d10ac23a46
+    produced_by: create-plan-run-0001
+patches:
+  - patch_id: abort-phase-terminal-p0001
+    status: applied
+    base_input_digest: sha256:3e3ac4766de01332ef880e94ad2a99b890b66fb3ab19e150ed602835bd333247
+    base_workflow_blob: b3d85979597ef964710a2233377831a688de8600
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

@@ -1,0 +1,144 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_abort_bullet_opens_with_exact_literal
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_worktree_refresh
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_tip_capture
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_implement_failed_write
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_commit_docs_sh_with_captured_tip
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_order_refresh_before_tip_before_write_before_commit
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_old_manual_handling_phrase_absent
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_heading_still_byte_identical
+      - tests/test_implement_routeback_gate.py::TestValidationDetectsRegressions::test_old_abort_manual_handling_phrase_matcher_flags_pre_change_wording
+    red_confirmed: true
+    red_reason: >-
+      Before the implement-phase.md edit, the old abort bullet
+      ("- **abort phase** — leave `implement` as `failed` for manual
+      handling.") failed every ordered/content assertion:
+      AssertionError: "reset --hard em-workflow/{feature}/integration" not
+      found; "rev-parse HEAD" not found; "set the `implement` step's
+      `status` to `failed`" not found; the ValueError from
+      test_order_refresh_before_tip_before_write_before_commit's index()
+      call (ERROR, not just FAIL) confirmed no ordering could even be
+      formed. 6 tests red for the right reason before the edit landed.
+  AC-2:
+    tests:
+      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_names_non_packet_gates_table_and_gate_id
+      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_states_refresh
+      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_states_implement_failed_write_via_commit_docs_sh
+      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_states_report_and_stop
+      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_old_stays_failed_report_and_stop_phrase_absent
+      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_paragraph_still_final_content_before_supporting_cast
+      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_retains_auto_retry_once_per_task_rule
+      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_retains_route_back_never_automatic
+      - tests/test_recycled_task_id_consistency.py::TestBatchModeParagraphRestatesSC1Terminal::test_retains_retry_consumed_state_note
+      - tests/test_recycled_task_id_consistency.py::TestValidationDetectsRegressions::test_old_batch_mode_stays_failed_phrase_matcher_flags_pre_change_wording
+    red_confirmed: true
+    red_reason: >-
+      Before the batch-mode-paragraph edit, three assertions failed for the
+      right reason: "refresh the integration worktree" not found;
+      "set and commit the `implement` step's `status` to `failed` via
+      `commit-docs.sh`" not found; and the absence check
+      test_old_stays_failed_report_and_stop_phrase_absent failed because
+      the old phrase "implement stays `failed`, report and stop" was still
+      present. The other tests in this class already passed on the
+      pre-change paragraph (retained content: gate-id, retry rule,
+      route-back-never-automatic, retry-consumed note, "report and stop"
+      substring) -- those are RETENTION checks, not new-behavior checks.
+  AC-3:
+    tests:
+      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_abort_bullet_states_exclusions_and_only_side_effect
+      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_batch_mode_paragraph_states_exclusions_and_only_side_effect
+      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_abort_bullet_names_stop_condition_3_with_step_b_formulation
+      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_batch_mode_paragraph_names_stop_condition_3_with_step_b_formulation
+      - tests/test_implement_routeback_gate.py::TestBothAbortDescriptionsShareTheSameTerminal::test_rejected_path_side_effect_sentences_untouched
+    red_confirmed: true
+    red_reason: >-
+      Before both edits, all four new-behavior assertions failed:
+      "no `create-plan` `needs_update`" not found in either slice, and
+      "stop condition 3" not found in either slice (old abort bullet had
+      neither; old batch-mode paragraph named neither). One mid-course
+      correction: the abort bullet's first draft capitalized "No
+      `create-plan`..." as a new sentence, which still failed the lowercase
+      literal match -- rewrote it as a parenthetical to match the required
+      phrase exactly, then it passed.
+  AC-4:
+    tests:
+      - tests/test_implement_routeback_gate.py::TestRejectedPathHasSingleGeneralizedTerminal::test_control_returns_via_stop_condition_3
+      - tests/test_recycled_task_id_consistency.py::TestNonTerminalEventMakesRouteBackInapplicable::test_rejected_path_cites_stop_condition_3_and_abort_phase
+    red_confirmed: false
+    red_reason: >-
+      Retention criterion: the rejected path's own sentence containing
+      `the same terminal as the "abort phase" option below` is untouched
+      by this task, so these pre-existing tests were already green before
+      this task's edit and stayed green after -- there is no new behavior
+      to drive red first. Verified by leaving the rejected-path prose
+      byte-identical and confirming these two pre-existing tests still
+      pass in the final full-suite run.
+  AC-5:
+    tests:
+      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_names_abort_phase_terminal_status_commit
+      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_three_prior_entries_still_named
+      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_carve_out_still_single_route_back_commit
+      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_abort_call_site_never_described_as_carved_out
+      - tests/test_implement_routeback_gate.py::TestExit4EnumerationNamesAbortPhaseCommit::test_closed_enumeration_claim_still_absent
+    red_confirmed: true
+    red_reason: >-
+      Before the Branch & Worktree Model bullet edit,
+      test_names_abort_phase_terminal_status_commit failed: "Step I.2.c's
+      abort-phase terminal status commit" not found in the exit-4
+      enumeration. The other four tests in this class were retention/
+      regression-guard style and already passed against the pre-change
+      bullet (the three prior entries and the carve-out sentence were
+      already there; the withdrawn closed-enumeration literal was already
+      absent).
+  AC-6:
+    tests:
+      - tests/test_implement_routeback_gate.py::TestContainmentAndInvariants::test_batch_mode_paragraph_is_byte_identical
+      - tests/test_recycled_task_id_consistency.py::TestI2cHeadingAndBatchModeParagraphByteIdentical::test_batch_mode_paragraph_is_byte_identical_tail
+      - tests/test_routeback_reset_scope_consistency.py::TestRegressionGuards::test_batch_mode_paragraph_is_byte_identical_tail
+    red_confirmed: true
+    red_reason: >-
+      After editing implement-phase.md's batch-mode paragraph but before
+      updating the three modules' pin literals, all three byte-identity
+      tests failed with a string mismatch against the still-old literal
+      value (observed directly: "AssertionError: ...abort phase**: refresh
+      ... != ...abort phase** (implement\nstays `failed`... "). Derived
+      each literal from the actual post-change document bytes (never
+      retyped from memory) and updated all three; the full suite then went
+      green. AC-6's own negative-proof experiment was also run manually
+      (not committed): mutated only test_recycled_task_id_consistency.py's
+      literal (one word), ran the full suite, observed exactly that one
+      module's byte-identity test fail (1424 tests run, 1 failure), then
+      restored the literal and re-ran to confirm green again.
+  AC-7:
+    tests:
+      - tests/test_recycled_task_id_consistency.py::TestNonTerminalEventMakesRouteBackInapplicable::test_no_rework_or_append_anywhere_in_i2c
+      - tests/test_routeback_reset_scope_consistency.py::TestRegressionGuards::test_no_rework_or_append_in_i2c
+      - tests/test_routeback_reset_scope_consistency.py::TestRegressionGuards::test_no_bare_git_commit_or_add_lines
+      - tests/test_implement_routeback_gate.py::TestContainmentAndInvariants::test_no_bare_git_commit_or_add_lines
+    red_confirmed: false
+    red_reason: >-
+      Preventive constraint, not new behavior: neither the pre-change nor
+      the post-change I.2.c prose contains "rework"/"append", and neither
+      version has a bare `git commit`/`git add` line (this task's writes
+      go through `commit-docs.sh` only). These pre-existing whole-section /
+      whole-file scans were already green before this task's edit and
+      remained green after; there is no observable red state to confirm
+      for a constraint that was never violated.
+  AC-8:
+    tests: []
+    red_reason: >-
+      Verified operationally, not via a unit-test assertion (consistent
+      with how prior tasks in this module set treat this criterion): (1)
+      `python3 -m unittest discover -s tests` run from the repository root
+      exits 0 (1424 tests, all passing); (2) `git diff --stat` against the
+      integration branch touches exactly the four files listed under this
+      task's Scope (em-workflow/references/implement-phase.md,
+      tests/test_implement_routeback_gate.py,
+      tests/test_recycled_task_id_consistency.py,
+      tests/test_routeback_reset_scope_consistency.py) and no others.
+    red_confirmed: false
