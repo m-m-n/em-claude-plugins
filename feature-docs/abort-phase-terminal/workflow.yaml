@@ -61,9 +61,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR8, FR10, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/abort-phase-terminal/task0001
   task0002:
     title: batch-mode.md gate row synchronization and version bump
     plan: tasks/task0002.md
@@ -76,9 +76,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR7, FR9, FR10, NFR4, NFR5, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/abort-phase-terminal/task0002
 
 review:
   status: pending
