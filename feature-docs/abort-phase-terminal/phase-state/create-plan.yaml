@@ -1,9 +1,9 @@
 schema_version: 1
 feature: abort-phase-terminal
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
-base_revision: 0601a9952ed3a796695ed8083c83d742f9fc9379
+base_revision: c1f57609c07bda4362aa52b38417acf93d1a8a0e
 last_input_digest: sha256:3e3ac4766de01332ef880e94ad2a99b890b66fb3ab19e150ed602835bd333247
 active_request_id: null
 packets: {}
@@ -28,7 +28,7 @@ artifacts:
     produced_by: create-plan-run-0001
 patches:
   - patch_id: abort-phase-terminal-p0001
-    status: validated
+    status: applied
     base_input_digest: sha256:3e3ac4766de01332ef880e94ad2a99b890b66fb3ab19e150ed602835bd333247
     base_workflow_blob: b3d85979597ef964710a2233377831a688de8600
 progress_fingerprint: null
