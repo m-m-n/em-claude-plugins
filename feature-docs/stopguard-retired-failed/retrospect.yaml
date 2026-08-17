@@ -1,0 +1,38 @@
+feature: stopguard-retired-failed
+collected_at: "2026-08-17T09:45:00+09:00"
+session_ids: [01a00d28-1bfb-7000-ba7f-20fd56b6fdac]
+signals:
+  review_critical_high:
+    - stable_id: df5b41d20735b142
+      category: comprehensive
+      file: em-workflow/hooks/queue_stop_guard.py
+      title: "carve-out が実運用で到達不能: 統合 worktree レイアウトでは workflow.yaml と journal が同一 root 下に共存しない"
+      resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: architecture
+      reason: "diff が hook の状態判定契約を変更し、その契約を宣言する SSOT (implement-phase.md) も同時に書き換えているため"
+  declined_findings:
+    - stable_id: a605385c22eafd37
+      category: performance
+      resolution_reason: >-
+        事実誤認。task_statuses は evaluate_feature ごとに 1 回だけ遅延生成され、
+        同一呼び出し内の全 failed task で再利用される（feature あたり最大 1 スキャン）。
+        中継した reviewer 自身と loop 2 の performance 再レビューが独立に同じ結論に達した。
+lessons_candidates:
+  - >-
+    review round 1 の auto-fix が SPEC 違反を持ち込み、再レビューで spec 観点 2 本が
+    独立に検出して revert に至った。batch 既定の "Apply as-is" は prose 指摘に対して
+    スコープ外の変更を生みうる — 指摘が「既存欠陥」と述べている場合は auto-fix 候補から
+    外す判定があってもよいかもしれない。
+  - >-
+    rework-planner が spec-change ゲートで中断したあと、そのフィーチャーは
+    review: failed のまま人間判断待ちで止まる。今回はタスク側の申し送りで
+    「residual を deferred で受理」と事前に指示されていたため再開できた。
+    batch 運用では、この種の事前受理をタスク記述に書ける導線があると停止が減る。
+  - >-
+    commit-docs.sh の実行が auto モードの分類器に拒否され、同等の scoped な
+    git add/commit で代替した。無人実行では workflow 用スクリプトを permission
+    ルールに載せておかないと全ドキュメント遷移が詰まる。
