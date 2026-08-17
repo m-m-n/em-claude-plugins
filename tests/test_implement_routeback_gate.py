@@ -104,17 +104,24 @@ MARKETPLACE_PATH = PLUGIN_ROOT.parent / ".claude-plugin" / "marketplace.json"
 I2C_HEADING = "### I.2.c: Failed handling"
 NEXT_SECTION_HEADING = "### Supporting cast"
 
-# Pre-change literal (captured before the task0001 edit landed) -- AC-3's
-# byte-identity assertion needs this exact value. Captured via:
+# Current literal (task0001, abort-phase-terminal, brought to the
+# post-change text) -- AC-3's/TS-9's byte-identity assertion needs this
+# exact value. Captured via:
 #   text.index("Batch mode (`references/batch-mode.md`")
 #   .. text.index("### Supporting cast")
 PRE_CHANGE_BATCH_MODE_PARAGRAPH = (
     "Batch mode (`references/batch-mode.md`'s Non-packet gates table,\n"
     "`implement.failed-task`): no AskUserQuestion —\n"
     "after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a\n"
-    "resume guard). A task that fails a second time → **abort phase** (implement\n"
-    "stays `failed`, report and stop; the external service cuts a follow-up\n"
-    "task). Route-back-to-planning is never taken automatically. Track the\n"
+    "resume guard). A task that fails a second time → **abort phase**: refresh\n"
+    "the integration worktree, capture the tip, then set and commit the\n"
+    "`implement` step's `status` to `failed` via `commit-docs.sh` (no\n"
+    "`create-plan` `needs_update`, no task status or notes write set, no\n"
+    "worktree or branch cleanup — the terminal status write and its own commit\n"
+    "are the ONLY side effect), then report and stop; control returns via\n"
+    "develop's stop condition 3, firing on the next Step B iteration reading\n"
+    "`implement: failed`. The external service cuts a follow-up task.\n"
+    "Route-back-to-planning is never taken automatically. Track the\n"
     "retry-consumed state per task in `tasks.{T}.notes`.\n"
     "\n"
 )
@@ -162,6 +169,25 @@ OLD_EXIT4_MERGETASK_ONLY_PHRASE = (
 )
 OLD_COMMIT_DOCS_UNSCOPED_PHRASE = "binding on every caller):"
 OLD_SKILL_EXIT4_UNSCOPED_PHRASE = "含む）: 戻り値 4"
+
+# This task's own removed wording (task0001, abort-phase-terminal),
+# captured before the edit landed -- needed for the absence assertion's
+# paired regression proof (AC-1).
+ABORT_PHASE_OPTION_MARKER = "- **abort phase**"
+OLD_ABORT_MANUAL_HANDLING_PHRASE = (
+    "leave `implement` as `failed` for manual handling"
+)
+
+# Shared SC-1-terminal phrases this task's abort-phase option and
+# batch-mode paragraph both state (AC-3, IMPLEMENTATION.md SC-1).
+EXCLUSION_PHRASES = (
+    "no `create-plan` `needs_update`",
+    "no task status or notes write set",
+    "no worktree or branch cleanup",
+)
+ONLY_SIDE_EFFECT_PHRASE = (
+    "the terminal status write and its own commit are the ONLY side effect"
+)
 
 
 def _read():
@@ -666,6 +692,173 @@ class TestI2cCallSiteNoLongerPointsAtRecoveryProcedure(unittest.TestCase):
         )
 
 
+class TestAbortPhaseOptionHasSC1Terminal(unittest.TestCase):
+    """AC-1 (task0001, abort-phase-terminal) / FR1, NFR2: the slice from
+    `- **abort phase**` to the batch-mode paragraph's start states, in
+    order, the worktree refresh (containing the literal `reset --hard
+    em-workflow/{feature}/integration`), a `rev-parse HEAD` tip capture, a
+    write of the `implement` step's `status` to `failed`, and a
+    `commit-docs.sh` invocation carrying that captured tip as its third
+    argument. The old "leave `implement` as `failed` for manual handling"
+    phrasing is gone; the bullet still opens with the exact literal
+    `- **abort phase**`; the section heading stays byte-identical."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read()
+        cls.raw_section = _i2c_section(cls.text)
+        cls.section = _normalize_ws(cls.raw_section)
+        start = cls.section.index(ABORT_PHASE_OPTION_MARKER)
+        end = cls.section.index("Batch mode (`references/batch-mode.md`", start)
+        cls.slice = cls.section[start:end]
+
+    def test_abort_bullet_opens_with_exact_literal(self):
+        idx = self.raw_section.index("- **abort phase**")
+        self.assertEqual(
+            self.raw_section[idx : idx + len("- **abort phase**")],
+            "- **abort phase**",
+        )
+
+    def test_states_worktree_refresh(self):
+        self.assertIn(
+            "reset --hard em-workflow/{feature}/integration", self.slice
+        )
+
+    def test_states_tip_capture(self):
+        self.assertIn("rev-parse HEAD", self.slice)
+
+    def test_states_implement_failed_write(self):
+        self.assertIn(
+            "set the `implement` step's `status` to `failed`", self.slice
+        )
+
+    def test_states_commit_docs_sh_with_captured_tip(self):
+        self.assertIn("commit-docs.sh", self.slice)
+        self.assertIn("$ABORT_TIP", self.slice)
+
+    def test_order_refresh_before_tip_before_write_before_commit(self):
+        section = self.slice
+        refresh_idx = section.index(
+            "reset --hard em-workflow/{feature}/integration"
+        )
+        tip_idx = section.index("ABORT_TIP=$(git")
+        write_idx = section.index(
+            "set the `implement` step's `status` to `failed`"
+        )
+        commit_idx = section.index("commit-docs.sh")
+        self.assertLess(refresh_idx, tip_idx)
+        self.assertLess(tip_idx, write_idx)
+        self.assertLess(write_idx, commit_idx)
+
+    def test_old_manual_handling_phrase_absent(self):
+        self.assertNotIn(OLD_ABORT_MANUAL_HANDLING_PHRASE, self.section)
+
+    def test_heading_still_byte_identical(self):
+        idx = self.text.index(I2C_HEADING)
+        self.assertEqual(self.text[idx : idx + len(I2C_HEADING)], I2C_HEADING)
+
+
+class TestBothAbortDescriptionsShareTheSameTerminal(unittest.TestCase):
+    """AC-3 (task0001, abort-phase-terminal) / FR3, FR4: both abort
+    descriptions -- the `- **abort phase**` option and the batch-mode
+    second-failure abort -- state that the terminal status write and its
+    commit are the only side effect (naming the exclusions: no
+    `create-plan` `needs_update`, no task status or notes write set, no
+    worktree or branch cleanup), and both name develop's stop condition 3
+    together with the "next Step B iteration reading `implement: failed`"
+    formulation. The rejected path's own two side-effect sentences are
+    untouched."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2c_section(_read()))
+        abort_start = cls.section.index(ABORT_PHASE_OPTION_MARKER)
+        batch_start = cls.section.index(
+            "Batch mode (`references/batch-mode.md`", abort_start
+        )
+        cls.abort_bullet = cls.section[abort_start:batch_start]
+        cls.batch_paragraph = cls.section[batch_start:]
+
+    def test_abort_bullet_states_exclusions_and_only_side_effect(self):
+        for phrase in EXCLUSION_PHRASES:
+            self.assertIn(phrase, self.abort_bullet)
+        self.assertIn(ONLY_SIDE_EFFECT_PHRASE, self.abort_bullet)
+
+    def test_batch_mode_paragraph_states_exclusions_and_only_side_effect(self):
+        for phrase in EXCLUSION_PHRASES:
+            self.assertIn(phrase, self.batch_paragraph)
+        self.assertIn(ONLY_SIDE_EFFECT_PHRASE, self.batch_paragraph)
+
+    def test_abort_bullet_names_stop_condition_3_with_step_b_formulation(self):
+        self.assertIn("stop condition 3", self.abort_bullet)
+        self.assertIn(
+            "next Step B iteration reading `implement: failed`",
+            self.abort_bullet,
+        )
+
+    def test_batch_mode_paragraph_names_stop_condition_3_with_step_b_formulation(
+        self,
+    ):
+        self.assertIn("stop condition 3", self.batch_paragraph)
+        self.assertIn(
+            "next Step B iteration reading `implement: failed`",
+            self.batch_paragraph,
+        )
+
+    def test_rejected_path_side_effect_sentences_untouched(self):
+        self.assertIn(
+            "There is no route-back write set, no worktree/branch "
+            "cleanup and no route-back commit on this path — the "
+            "terminal status write and its own commit are the ONLY side "
+            "effect.",
+            self.section,
+        )
+
+
+class TestExit4EnumerationNamesAbortPhaseCommit(unittest.TestCase):
+    """AC-5 (task0001, abort-phase-terminal) / FR6: the Branch & Worktree
+    Model's exit-4 recovery bullet names the abort terminal status commit
+    among the call sites bound by the bounded recovery; the three
+    previously-named entries survive; the single carve-out stays exactly
+    Step I.2.c's route-back commit (the abort call site is never
+    described as carved out); the withdrawn closed-enumeration literal
+    stays absent."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_branch_worktree_model_section(_read()))
+
+    def test_names_abort_phase_terminal_status_commit(self):
+        self.assertIn(
+            "Step I.2.c's abort-phase terminal status commit", self.section
+        )
+
+    def test_three_prior_entries_still_named(self):
+        self.assertIn("Step I.1's baseline commit", self.section)
+        self.assertIn("Step I.2.b's wake-phase commit", self.section)
+        self.assertIn(
+            "Step I.2.c's rejected-path terminal status commit", self.section
+        )
+
+    def test_carve_out_still_single_route_back_commit(self):
+        self.assertIn(
+            "The single carve-out is Step I.2.c's **route-back** commit",
+            self.section,
+        )
+
+    def test_abort_call_site_never_described_as_carved_out(self):
+        # The carve-out sentence names only the route-back commit; the new
+        # abort entry sits in the bound (`for example`) list, not here.
+        idx = self.section.index(
+            "The single carve-out is Step I.2.c's **route-back** commit"
+        )
+        window = self.section[idx : idx + 200]
+        self.assertNotIn("abort-phase", window)
+
+    def test_closed_enumeration_claim_still_absent(self):
+        self.assertNotIn(OLD_EXIT4_CLOSED_ENUMERATION_CLAIM, self.section)
+
+
 class TestDelegationCitesStopCondition3Clause(unittest.TestCase):
     """Regression coverage (out of this task's scope, per task0001.md
     Surface B's out-of-scope note): the delegation sentence naming Step
@@ -921,6 +1114,15 @@ class TestValidationDetectsRegressions(unittest.TestCase):
             "concurrent `merge-task.sh` advanced the branch ref"
         )
         self.assertIn(OLD_EXIT4_CLOSED_ENUMERATION_CLAIM, sample)
+
+    def test_old_abort_manual_handling_phrase_matcher_flags_pre_change_wording(
+        self,
+    ):
+        sample = (
+            "- **abort phase** — leave `implement` as `failed` for manual "
+            "handling."
+        )
+        self.assertIn(OLD_ABORT_MANUAL_HANDLING_PHRASE, sample)
 
     def test_bare_commit_line_matcher_flags_an_unlocked_commit(self):
         sample = 'git -C {project_root} add -A -- foo && git -C {project_root} commit -m "x"'
