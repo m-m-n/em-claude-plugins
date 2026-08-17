@@ -1,0 +1,37 @@
+schema_version: 1
+feature: stopguard-retired-failed
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 9809d94119f0adad319e9bcfcba8b66ab39e3303
+last_input_digest: sha256:1af46dd9630916f9b8d44b23991be5d690baac22ebd866ff1e6bec72a391d9d4
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: completed
+    input_digest: sha256:1af46dd9630916f9b8d44b23991be5d690baac22ebd866ff1e6bec72a391d9d4
+    output_digest: null
+artifacts:
+  - path: feature-docs/stopguard-retired-failed/IMPLEMENTATION.md
+    sha256: sha256:6ac707a01dbd357d3017887de2865dc81a311558d962bcfe92d56dc2ce1d6f72
+    produced_by: create-plan-run-0001
+  - path: feature-docs/stopguard-retired-failed/VERIFICATION.md
+    sha256: sha256:f18639f2c8c44a8cd070ecf17eff8a55a87f0b24ae9c068f9f4a199f64cd6562
+    produced_by: create-plan-run-0001
+  - path: feature-docs/stopguard-retired-failed/tasks/task0001.md
+    sha256: sha256:974cbbc5f989ffcf66cbd54fca976d0fa2973b20457e54ced3e8aa85e29bdca4
+    produced_by: create-plan-run-0001
+  - path: feature-docs/stopguard-retired-failed/tasks/task0002.md
+    sha256: sha256:c966b872b035c39b7260bba6d445f9aa92140a9ddbbcd1322eb4531304b1d57e
+    produced_by: create-plan-run-0001
+patches:
+  - patch_id: create-plan-p0001
+    status: applied
+    base_input_digest: sha256:1af46dd9630916f9b8d44b23991be5d690baac22ebd866ff1e6bec72a391d9d4
+    base_workflow_blob: f94fc20e593277257fb25fd2f51a3e6aa5419fa1
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
