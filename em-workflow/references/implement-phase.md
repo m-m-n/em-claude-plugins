@@ -45,7 +45,8 @@ document is written; this phase never creates them itself.
   below) — for example, Step I.1's baseline commit, Step
   I.2.a's launch-time task status / task branch write, Step I.2.b's
   wake-phase commit, Step I.2.c's rejected-path terminal status commit,
-  and Step I.3's implement-completed / completed-commit write): exit 4
+  Step I.2.c's abort-phase terminal status commit, and Step I.3's
+  implement-completed / completed-commit write): exit 4
   means a concurrent
   `merge-task.sh` advanced the branch ref
   between that call site's last refresh and its commit attempt. Recovery:
@@ -468,7 +469,18 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   iteration reading `implement: failed` — the same terminal as the
   "abort phase" option below. No retry loop, no alternative recovery
   route, and no degraded route back is offered for this path.
-- **abort phase** — leave `implement` as `failed` for manual handling.
+- **abort phase** — refresh the integration worktree first (the same
+  `reset --hard em-workflow/{feature}/integration` the rejected path
+  above uses), capture `ABORT_TIP=$(git -C "$WT_ROOT/integration"
+  rev-parse HEAD)`, set the `implement` step's `status` to `failed` in
+  workflow.yaml — the single write this path makes — and commit exactly
+  that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
+  implement phase aborted" "$ABORT_TIP"` (no `create-plan`
+  `needs_update`, no task status or notes write set, no worktree or
+  branch cleanup — the terminal status write and its own commit are the
+  ONLY side effect). The phase then reports and returns control to the
+  user via develop's stop condition 3, which fires on the next Step B
+  iteration reading `implement: failed`.
 
 There is NO skip option: a task is either merged, retried, or re-planned —
 never dropped mid-phase. "実装完了 = 親ブランチへのマージ完了" admits no
@@ -478,9 +490,15 @@ implement phase.
 Batch mode (`references/batch-mode.md`'s Non-packet gates table,
 `implement.failed-task`): no AskUserQuestion —
 after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a
-resume guard). A task that fails a second time → **abort phase** (implement
-stays `failed`, report and stop; the external service cuts a follow-up
-task). Route-back-to-planning is never taken automatically. Track the
+resume guard). A task that fails a second time → **abort phase**: refresh
+the integration worktree, capture the tip, then set and commit the
+`implement` step's `status` to `failed` via `commit-docs.sh` (no
+`create-plan` `needs_update`, no task status or notes write set, no
+worktree or branch cleanup — the terminal status write and its own commit
+are the ONLY side effect), then report and stop; control returns via
+develop's stop condition 3, firing on the next Step B iteration reading
+`implement: failed`. The external service cuts a follow-up task.
+Route-back-to-planning is never taken automatically. Track the
 retry-consumed state per task in `tasks.{T}.notes`.
 
 ### Supporting cast: journal, hooks, resume

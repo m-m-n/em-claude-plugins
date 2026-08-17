@@ -112,14 +112,21 @@ OLD_JOURNAL_ONLY_PHRASE = "for every task whose last journal event is `failed`"
 
 # TS-9's byte-identical literal, copied here per the task plan rather than
 # imported from tests/test_implement_routeback_gate.py (that module is not
-# imported and not modified).
+# imported and not modified). Brought to the post-change text by task0001
+# (abort-phase-terminal).
 PRE_CHANGE_BATCH_MODE_PARAGRAPH = (
     "Batch mode (`references/batch-mode.md`'s Non-packet gates table,\n"
     "`implement.failed-task`): no AskUserQuestion —\n"
     "after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a\n"
-    "resume guard). A task that fails a second time → **abort phase** (implement\n"
-    "stays `failed`, report and stop; the external service cuts a follow-up\n"
-    "task). Route-back-to-planning is never taken automatically. Track the\n"
+    "resume guard). A task that fails a second time → **abort phase**: refresh\n"
+    "the integration worktree, capture the tip, then set and commit the\n"
+    "`implement` step's `status` to `failed` via `commit-docs.sh` (no\n"
+    "`create-plan` `needs_update`, no task status or notes write set, no\n"
+    "worktree or branch cleanup — the terminal status write and its own commit\n"
+    "are the ONLY side effect), then report and stop; control returns via\n"
+    "develop's stop condition 3, firing on the next Step B iteration reading\n"
+    "`implement: failed`. The external service cuts a follow-up task.\n"
+    "Route-back-to-planning is never taken automatically. Track the\n"
     "retry-consumed state per task in `tasks.{T}.notes`.\n"
     "\n"
 )
@@ -221,6 +228,26 @@ PRE_CHANGE_I2A_RECYCLED_PARAGRAPH = (
 # AC-6 group sample: the same I.2.a paragraph -- it already named
 # `queue_launch_guard.py` (RETAINED anchor) before the change.
 PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE = PRE_CHANGE_I2A_RECYCLED_PARAGRAPH
+
+# --- task0001 (abort-phase-terminal): the closing batch-mode paragraph's
+# old status-without-a-write phrasing, captured before this task's edit
+# landed -- needed for this task's own absence assertion's paired
+# regression proof (AC-2). Distinct from PRE_CHANGE_BATCH_MODE_PARAGRAPH
+# above, which this task updates to the POST-change bytes for TS-9's
+# byte-pin check.
+OLD_BATCH_MODE_STAYS_FAILED_REPORT_STOP_PHRASE = (
+    "implement stays `failed`, report and stop"
+)
+OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL = (
+    "Batch mode (`references/batch-mode.md`'s Non-packet gates table,\n"
+    "`implement.failed-task`): no AskUserQuestion —\n"
+    "after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a\n"
+    "resume guard). A task that fails a second time → **abort phase** (implement\n"
+    "stays `failed`, report and stop; the external service cuts a follow-up\n"
+    "task). Route-back-to-planning is never taken automatically. Track the\n"
+    "retry-consumed state per task in `tasks.{T}.notes`.\n"
+    "\n"
+)
 
 
 def _read():
@@ -484,6 +511,72 @@ class TestI2cHeadingAndBatchModeParagraphByteIdentical(unittest.TestCase):
         self.assertEqual(actual, PRE_CHANGE_BATCH_MODE_PARAGRAPH)
 
 
+class TestBatchModeParagraphRestatesSC1Terminal(unittest.TestCase):
+    """AC-2 (task0001, abort-phase-terminal) / FR2: the closing batch-mode
+    paragraph describes the same refresh / `implement: failed` write /
+    `commit-docs.sh` / report sequence as the rejected path and the
+    abort-phase option, still names the Non-packet gates table and
+    `implement.failed-task`, no longer contains the old
+    status-without-a-write phrasing, and -- on the raw text -- is still
+    the section's final content before `### Supporting cast`."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read()
+        cls.raw_section = _i2c_section(cls.text)
+        cls.section = _normalize_ws(cls.raw_section)
+        cls.paragraph = cls.section[
+            cls.section.index("Batch mode (`references/batch-mode.md`") :
+        ]
+
+    def test_names_non_packet_gates_table_and_gate_id(self):
+        self.assertIn("Non-packet gates table", self.paragraph)
+        self.assertIn("`implement.failed-task`", self.paragraph)
+
+    def test_states_refresh(self):
+        self.assertIn("refresh the integration worktree", self.paragraph)
+
+    def test_states_implement_failed_write_via_commit_docs_sh(self):
+        self.assertIn(
+            "set and commit the `implement` step's `status` to `failed` "
+            "via `commit-docs.sh`",
+            self.paragraph,
+        )
+
+    def test_states_report_and_stop(self):
+        self.assertIn("report and stop", self.paragraph)
+
+    def test_old_stays_failed_report_and_stop_phrase_absent(self):
+        self.assertNotIn(
+            OLD_BATCH_MODE_STAYS_FAILED_REPORT_STOP_PHRASE, self.section
+        )
+
+    def test_paragraph_still_final_content_before_supporting_cast(self):
+        idx = self.text.index(NEXT_SECTION_HEADING)
+        tail_before_heading = self.text[:idx]
+        # exactly one blank line separates the paragraph's end from the
+        # next heading -- i.e. the raw text ends "...notes`.\n\n" right
+        # before "### Supporting cast".
+        self.assertTrue(
+            tail_before_heading.endswith("`tasks.{T}.notes`.\n\n")
+        )
+
+    def test_retains_auto_retry_once_per_task_rule(self):
+        self.assertIn("auto-select **retry** ONCE per task", self.paragraph)
+
+    def test_retains_route_back_never_automatic(self):
+        self.assertIn(
+            "Route-back-to-planning is never taken automatically",
+            self.paragraph,
+        )
+
+    def test_retains_retry_consumed_state_note(self):
+        self.assertIn(
+            "Track the retry-consumed state per task in `tasks.{T}.notes`",
+            self.paragraph,
+        )
+
+
 class TestI2cOrderings(unittest.TestCase):
     """TS-10: normalized I.2.c orderings survive -- first `tasks.{T}.status`
     has `pending` within 60 characters; the four write tokens precede
@@ -631,6 +724,13 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         self.assertNotIn(ORCHESTRATOR_ONLY_SCOPE_PHRASE, sample)
 
 
+    def test_old_batch_mode_stays_failed_phrase_matcher_flags_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL)
+        self.assertIn(OLD_BATCH_MODE_STAYS_FAILED_REPORT_STOP_PHRASE, sample)
+
+
 class TestPreChangeSampleGuards(unittest.TestCase):
     """AC-2 / Contract 4: each pre-change wording sample carries a RETAINED
     anchor -- a phrase present both in the sample and in the post-change
@@ -661,6 +761,10 @@ class TestPreChangeSampleGuards(unittest.TestCase):
     def test_i2a_hook_parenthetical_sample_retains_queue_launch_guard(self):
         sample = _normalize_ws(PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE)
         self.assertIn(f"`{HOOK_FILENAMES[0]}`", sample)
+
+    def test_old_batch_mode_paragraph_sample_retains_gate_id_anchor(self):
+        sample = _normalize_ws(OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL)
+        self.assertIn("`implement.failed-task`", sample)
 
 
 if __name__ == "__main__":
