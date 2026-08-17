@@ -1,0 +1,88 @@
+task_id: task0003
+baseline_failures: []          # `python3 -m unittest discover -s tests` was
+                                # 1434 tests, all green, before any edit.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Structural/diff criterion (Test Notes: inspected on the diff, not by a
+      committed checker). Pre-task: `tests/test_abort_phase_terminal_batch_mode.py`
+      existed (confirmed via `ls tests/`) and the working tree was clean
+      (`git status` showed nothing to commit, i.e. no diff against the task
+      branch base yet). Post-task: `rm` deletes the file and
+      `git status --porcelain` shows exactly ` D tests/test_abort_phase_terminal_batch_mode.py`
+      and ` M tests/test_implement_routeback_gate.py`; `git diff --name-only HEAD`
+      lists exactly those two paths.
+  AC-2:
+    tests:
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_states_status_written_to_failed
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_states_the_write_is_committed
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_no_longer_claims_implement_stays_failed
+    red_confirmed: true
+    red_reason: >-
+      Added the relocated test class first, referencing not-yet-defined
+      `_batch_mode_gate_row` / `_read_batch_mode`. Running
+      `python3 -m unittest tests.test_implement_routeback_gate` produced
+      "ERROR: setUpClass ... NameError: name '_batch_mode_gate_row' is not
+      defined" for this class, before the BATCH_MODE_* constants and helper
+      functions were added.
+  AC-3:
+    tests:
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowRetainsExistingClauses.test_gate_id_present
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowRetainsExistingClauses.test_retry_clause_survives
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowRetainsExistingClauses.test_route_back_clause_survives
+      - tests.test_implement_routeback_gate.TestImplementFailedTaskRowRetainsExistingClauses.test_detail_pointer_survives
+    red_confirmed: true
+    red_reason: >-
+      Same setUpClass NameError as AC-2 ("name '_batch_mode_gate_row' is not
+      defined"), observed for this class before the constants/helpers were
+      wired in.
+  AC-4:
+    tests:
+      - tests.test_implement_routeback_gate.TestBatchModeGateRowRegressionGuard.test_removed_phrase_matcher_flags_pre_change_row
+      - tests.test_implement_routeback_gate.TestBatchModeGateRowRegressionGuard.test_pre_change_row_sample_is_not_vacuous
+      - tests.test_implement_routeback_gate.TestBatchModeGateRowRegressionGuard.test_new_wording_matcher_flags_absence_in_pre_change_row
+    red_confirmed: true
+    red_reason: >-
+      "NameError: name 'BATCH_MODE_REMOVED_PHRASE' is not defined" and
+      "NameError: name 'BATCH_MODE_GATE_ID' is not defined" observed for
+      these three methods before the BATCH_MODE_* constants existed.
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Process-level check (Test Notes: no committed checker; run and
+      inspected directly). Baseline (Step 4a):
+      `python3 -m unittest tests.test_implement_routeback_gate` collected 95
+      tests, all green -- fewer than the required pre-task-count-plus-10
+      (105), so the criterion's numeric bound was genuinely false at that
+      point. After relocating the ten assertions and wiring their
+      constants/helpers, the same command collects 105 tests (95 + 10), all
+      green, no skips, exit code 0; `git diff` on the file (see AC-1) shows
+      no removed lines, so no pre-existing test method was removed or
+      renamed.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Full-suite invariant (Test Notes: no committed checker for
+      change-set containment; this is the equivalent full-suite guard).
+      `python3 -m unittest discover -s tests` was already green at 1434
+      tests before this task's edits (baseline, Step 4a), and stays at
+      exactly 1434 after deleting the 10-test source module and adding the
+      10 relocated tests to the target module (net zero). The criterion was
+      never observed false -- it is a non-regression invariant carried
+      through the relocation, not a state that started failing.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Byte-identity invariant (Test Notes: inspected on the diff, same
+      treatment as VERIFICATION.md's TS-10). None of the listed paths
+      (`implement-phase.md`, `batch-mode.md`, the three sibling test
+      modules, the two manifests) was ever opened for edit by this task, so
+      the invariant was never at risk of going false; confirmed via
+      `git diff --stat` on those exact paths returning empty both before
+      and after this task's commits.
