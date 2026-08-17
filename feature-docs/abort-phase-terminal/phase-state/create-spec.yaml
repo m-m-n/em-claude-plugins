@@ -1,0 +1,17 @@
+schema_version: 1
+feature: abort-phase-terminal
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: dc342491d770a68b72dc0a9959c2f0a8bd84dc07
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
