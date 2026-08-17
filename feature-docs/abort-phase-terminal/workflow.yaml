@@ -44,9 +44,26 @@ workflow:
     status: completed
     completed_at_commit: 2ea80ab21dafe05c17a60d62ce57fb8beafceabd
   - id: verify
-    status: pending
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: SC-F
+        note: >-
+          The actual change set is NOT contained in SPEC.md's Declared Change
+          Set. `tests/test_abort_phase_terminal_batch_mode.py` is created by the
+          merged feature but is absent from the declared feature-specific paths
+          and is not covered by the two default entries
+          (`feature-docs/abort-phase-terminal/**`,
+          `test-docs/abort-phase-terminal/**`). SPEC.md declares the set as a
+          SUPERSET assertion, so this is a containment violation. Matches review
+          finding b06cb0bd27bf9dbd.
+    note: >-
+      `python3 -m unittest discover -s tests` -> 1434 tests, 0 failures, exit 0.
+      TS-1 .. TS-9 pass; TS-10's automated half (suite green, frozen paths
+      absent from the diff) passes and its manual diff inspection confirms the
+      eight expected paths, but SC-F fails because SPEC.md's Declared Change Set
+      omits the new test module that TS-10's own expected result names.
+      SC-A/SC-B/SC-C/SC-D/SC-E/SC-G hold.
   - id: retrospect
     status: pending
 
