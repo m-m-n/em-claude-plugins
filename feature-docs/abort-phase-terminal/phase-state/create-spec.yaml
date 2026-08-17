@@ -3,9 +3,9 @@ feature: abort-phase-terminal
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: d418e19e67555b3decc206299d7dacf4b59a0674
+base_revision: a47aa18ff93a39781c171f1475f48064331d0224
 last_input_digest: sha256:066915029dddf055cccb852b25240049d4020f7b82fbc6a30825eb595b5d649b
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   abort-phase-terminal-q0001:
     status: answered
@@ -64,10 +64,16 @@ worker_runs:
     input_digest: sha256:f877ba1392178d64e9a80f872caa9b6f5af1e90279fcffd2ced40a9f3f98f020
     output_digest: null   # worker wrote no artifacts; result body not retained
   - request_id: create-spec-run-0003
-    status: dispatched
+    status: completed
     input_digest: sha256:066915029dddf055cccb852b25240049d4020f7b82fbc6a30825eb595b5d649b
-    output_digest: null
-artifacts: []
+    output_digest: null   # result body not retained
+artifacts:
+  - path: feature-docs/abort-phase-terminal/REQUIREMENTS.md
+    sha256: sha256:eb4b1b46c6c2600aaba6fe3fcfe243e1a693fd6f3a2d63e5c6b0e00663ce6db8
+    produced_by: create-spec-run-0003
+  - path: feature-docs/abort-phase-terminal/SPEC.md
+    sha256: sha256:dc4be3577930fb4a4b2b6cd114b9eed03e16800da8257eccd2a8dd99733a211a
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:75f25693fe0c3841d04fc88bd8ca17a1ce62529809ae921fc9753aebac2d6615
 stale_redispatch_count: 0
