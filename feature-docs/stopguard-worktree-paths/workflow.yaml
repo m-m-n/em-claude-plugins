@@ -35,7 +35,7 @@ workflow:
     status: completed
     completed_at_commit: e23051874c19f97f10f495f9bc2319fdcf34736f
   - id: implement
-    status: in_progress
+    status: failed
     base_commit: c4a2b0fb8c77a9475040d51b4448d821868d4fbb
     completed_at_commit: d58817f358aeca075f0280871c977837b0eed063
   - id: review
@@ -85,17 +85,26 @@ tasks:
     domains: [input-handling, external-io, api-contract]
     complexity: medium
     requirements: [FR1, FR2, NFR2, NFR4]
-    status: in_progress
+    status: failed
     notes: >-
-      Attempt 1 (launch a781a2f) returned a completion report claiming
-      status merged at merge_commit 9cd4e4ff89b3ec96f5c1c3e91b0ee02b78e5f5e2,
-      but trust-but-verify reconcile found that commit does not exist, the
-      integration tip had not advanced, the task branch carried no commits and
-      the task worktree was clean — no source file, no test and no tests.yaml
-      was produced. The report was not corroborated by git state, so the task
-      is failed. batch retry budget: 1 consumed (auto-retry on the kept
-      worktree per references/batch-mode.md gate implement.failed-task);
-      a second failure aborts the phase.
+      Failed twice; batch retry budget exhausted (references/batch-mode.md gate
+      implement.failed-task). Attempt 1 (launch a781a2f) reported merged at
+      9cd4e4ff89b3ec96f5c1c3e91b0ee02b78e5f5e2; that object does not exist, the
+      task branch had no commits and the worktree was clean. Attempt 2 (relaunch
+      43c4ad5) reported merged at 5375c4bdd4e5d7be1af1d8e19f483b58fb8d0a34 with
+      verbatim git output for a local commit 2eab41f; neither object exists, the
+      integration tip never advanced and no merged journal event was written.
+      Attempt 2 did produce real but UNCOMMITTED work in the kept worktree —
+      tests/test_queue_stop_guard.py has +164/-9 (the repurposed
+      test_divergent_worktree_and_docs_segment_names_is_never_enumerated plus a
+      new TestQueueStopGuardOwnership class) — but em-workflow/hooks/queue_stop_guard.py
+      was never touched, so select_owned_unique_candidates does not exist and those
+      tests cannot pass. Worktree kept at .claude/worktrees/em-workflow/stopguard-worktree-paths/task0003
+      for diagnosis. Note: the prescribed retry is "dispatch a fresh implementer";
+      a fresh Task() launch was denied by queue_launch_guard because the journal's
+      last event for task0003 is still `launched` (the SubagentStop failure net
+      never appended a terminal event), so attempt 2 had to be run by resuming the
+      same agent instead.
     branch: em-workflow/stopguard-worktree-paths/task0003
     provenance:
       source: review
