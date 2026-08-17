@@ -37,33 +37,29 @@ workflow:
     status: completed
     completed_at_commit: c1f57609c07bda4362aa52b38417acf93d1a8a0e
   - id: implement
-    status: completed
+    status: pending
     base_commit: 5b764bc0963f912a04831e4530c3d2deb362d1e8
-    completed_at_commit: c000a91bcc37348722221b92f66ca271d9d912c7
   - id: review
     status: completed
     completed_at_commit: 2ea80ab21dafe05c17a60d62ce57fb8beafceabd
   - id: verify
-    status: failed
-    result: fail
-    failed_items:
-      - id: SC-F
-        note: >-
-          The actual change set is NOT contained in SPEC.md's Declared Change
-          Set. `tests/test_abort_phase_terminal_batch_mode.py` is created by the
-          merged feature but is absent from the declared feature-specific paths
-          and is not covered by the two default entries
-          (`feature-docs/abort-phase-terminal/**`,
-          `test-docs/abort-phase-terminal/**`). SPEC.md declares the set as a
-          SUPERSET assertion, so this is a containment violation. Matches review
-          finding b06cb0bd27bf9dbd.
-    note: >-
-      `python3 -m unittest discover -s tests` -> 1434 tests, 0 failures, exit 0.
-      TS-1 .. TS-9 pass; TS-10's automated half (suite green, frozen paths
-      absent from the diff) passes and its manual diff inspection confirms the
-      eight expected paths, but SC-F fails because SPEC.md's Declared Change Set
-      omits the new test module that TS-10's own expected result names.
-      SC-A/SC-B/SC-C/SC-D/SC-E/SC-G hold.
+    status: pending
+    result: null
+    failed_items: []
+    prior_result:
+      round: 1
+      result: fail
+      failed_items:
+        - id: SC-F
+          note: >-
+            The actual change set was NOT contained in SPEC.md's Declared Change
+            Set: tests/test_abort_phase_terminal_batch_mode.py was created by the
+            merged feature but is absent from the declared feature-specific paths
+            and is not covered by the two default entries. Routed to rework
+            task0003 (batch auto-rework, verify_rework_count 0 -> 1).
+      note: >-
+        `python3 -m unittest discover -s tests` -> 1434 tests, 0 failures,
+        exit 0. TS-1 .. TS-9 passed; SC-A/SC-B/SC-C/SC-D/SC-E/SC-G held.
   - id: retrospect
     status: pending
 
@@ -98,6 +94,22 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/abort-phase-terminal/task0002
+  task0003:
+    title: Fold the batch-mode gate-row assertions into a declared test module
+    plan: tasks/task0003.md
+    files:
+      - tests/test_implement_routeback_gate.py
+      - tests/test_abort_phase_terminal_batch_mode.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: low
+    requirements: [FR7, FR10, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: verify
+      source_ids: [SC-F]
 
 review:
   status: completed
@@ -161,7 +173,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
+    tasks: [task0002, task0003]
     tests: [TS-6]
   FR8:
     title: Every byte pin of the I.2.c batch-mode paragraph is updated
@@ -182,7 +194,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
+    tasks: [task0001, task0002, task0003]
     tests: [TS-10]
   NFR1:
     title: Forbidden tokens in I.2.c
@@ -210,14 +222,14 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
+    tasks: [task0001, task0002, task0003]
     tests: [TS-10]
   NFR5:
     title: Suite green
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
+    tasks: [task0001, task0002, task0003]
     tests: [TS-7, TS-10]
   NFR6:
     title: Internal consistency of the terminal description
@@ -229,4 +241,4 @@ requirements:
 
 batch:
   review_rework_count: 0
-  verify_rework_count: 0
+  verify_rework_count: 1

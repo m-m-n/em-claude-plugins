@@ -1,9 +1,9 @@
 schema_version: 1
 feature: abort-phase-terminal
 phase: rework
-status: applying_patch
+status: completed
 generation: 1
-base_revision: ca3cc3e2ffff841c5b21601a37a37c55a7cb1355
+base_revision: cb30c82af6a1154882ffa5a0422a2eaa862f2e15
 last_input_digest: sha256:0577351c981184a47763df4c842aa6757401ea87569a10041791d3dde8590ed1
 active_request_id: null
 packets: {}
@@ -22,7 +22,7 @@ artifacts:
     produced_by: rework-run-0001
 patches:
   - patch_id: abort-phase-terminal-p0002
-    status: validated
+    status: applied
     base_input_digest: sha256:0577351c981184a47763df4c842aa6757401ea87569a10041791d3dde8590ed1
     base_workflow_blob: 4f8bdef270b44a12da6696887cfb639f6dd2ebbb
 progress_fingerprint: null
