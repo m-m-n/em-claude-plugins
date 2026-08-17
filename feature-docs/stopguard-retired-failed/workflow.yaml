@@ -38,9 +38,24 @@ workflow:
     status: completed
     completed_at_commit: 3319d23381e66592e89aa8ead0e4e4e405e63a61
   - id: verify
-    status: pending
-    result: null
+    status: completed
+    completed_at_commit: 6343ff612f1a3798ec0d087b6b04cd16175403da
+    result: pass
     failed_items: []
+    summary: >-
+      python3 -m unittest discover -s tests: 1303 tests OK (exit 0)。
+      TS1-TS9 は tests/test_queue_stop_guard.py の対応テストで網羅、TS10 は
+      スイート全体の緑で充足。手動チェック M1-M5 すべて合格 —
+      M1: implement-phase.md I.2.a が Stop hook を明示的な例外として名指しし、
+      他 3 hook の never-consult 主張と supporting cast の記述が一致。
+      M2: em-workflow/.claude-plugin/plugin.json と .claude-plugin/marketplace.json が
+      ともに 0.1.42。M3: 変更集合は宣言済みの範囲内で、queue_launch_guard.py /
+      queue_failure_net.py / queue_taskstop_net.py と test_queue_stop_guard.py 以外の
+      テストモジュールは byte-unchanged。M4: hook の読み取りは journal と workflow.yaml
+      のみ、書き込みは既存 sidecar のみ。M5: 追加パスは既存の行ベース走査 1 回で、
+      failed イベントが実在するときだけ遅延実行、subprocess / network / filesystem scan の
+      追加なし。build / format / e2e コマンドは未設定のため対象外。
+      status: excluded の要件は無し。
   - id: retrospect
     status: pending
 
