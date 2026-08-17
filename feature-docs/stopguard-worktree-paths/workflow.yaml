@@ -85,8 +85,17 @@ tasks:
     domains: [input-handling, external-io, api-contract]
     complexity: medium
     requirements: [FR1, FR2, NFR2, NFR4]
-    status: merged
-    notes: null
+    status: failed
+    notes: >-
+      Attempt 1 (launch a781a2f) returned a completion report claiming
+      status merged at merge_commit 9cd4e4ff89b3ec96f5c1c3e91b0ee02b78e5f5e2,
+      but trust-but-verify reconcile found that commit does not exist, the
+      integration tip had not advanced, the task branch carried no commits and
+      the task worktree was clean — no source file, no test and no tests.yaml
+      was produced. The report was not corroborated by git state, so the task
+      is failed. batch retry budget: 1 consumed (auto-retry on the kept
+      worktree per references/batch-mode.md gate implement.failed-task);
+      a second failure aborts the phase.
     branch: em-workflow/stopguard-worktree-paths/task0003
     provenance:
       source: review
