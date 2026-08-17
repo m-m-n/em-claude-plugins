@@ -1,9 +1,9 @@
 schema_version: 1
 feature: abort-phase-terminal
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: a47aa18ff93a39781c171f1475f48064331d0224
+base_revision: f6d566c99d4aa4da9117fdace761d71c58e3e29d
 last_input_digest: sha256:066915029dddf055cccb852b25240049d4020f7b82fbc6a30825eb595b5d649b
 active_request_id: null
 packets:
