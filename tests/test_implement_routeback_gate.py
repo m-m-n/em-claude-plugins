@@ -737,9 +737,18 @@ class TestPluginVersionBumpedInLockstep(unittest.TestCase):
             self.plugin_manifest["version"], self.marketplace_entry["version"]
         )
 
-    def test_shared_version_is_0_1_43(self):
-        self.assertEqual(self.plugin_manifest["version"], "0.1.43")
-        self.assertEqual(self.marketplace_entry["version"], "0.1.43")
+    def test_shared_version_is_past_the_pre_task_baseline(self):
+        # Durable form (repo convention, see
+        # tests/test_recycled_task_id_version_bump.py): major/minor fixed,
+        # patch strictly greater than the pre-task baseline 42. Pinning the
+        # literal 0.1.43 would go red on the next unrelated bump.
+        for version in (
+            self.plugin_manifest["version"],
+            self.marketplace_entry["version"],
+        ):
+            major, minor, patch = (int(part) for part in version.split("."))
+            self.assertEqual((major, minor), (0, 1))
+            self.assertGreater(patch, 42)
 
 
 class TestExit4CarveOutStatedInAllThreeSSOTs(unittest.TestCase):
