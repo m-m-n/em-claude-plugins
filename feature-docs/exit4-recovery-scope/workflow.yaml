@@ -35,7 +35,8 @@ workflow:
     base_commit: 8f42dd47a2650b48c6911ab489eafe6f1920bfae
     completed_at_commit: 96388d5fed50f39861a9324b2de7b97835963250
   - id: review
-    status: pending
+    status: completed
+    completed_at_commit: 9ecc2dfaccf475d145b1b8420d6adae8923e5d4b
   - id: verify
     status: pending
   - id: retrospect
@@ -58,8 +59,11 @@ tasks:
     branch: em-workflow/exit4-recovery-scope/task0001
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor: [comprehensive, architecture, spec]
     discretionary: []

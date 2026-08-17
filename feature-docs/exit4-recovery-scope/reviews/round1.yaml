@@ -1,0 +1,192 @@
+round: 1
+executed_at: "2026-08-17T18:14:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 8f42dd47a2650b48c6911ab489eafe6f1920bfae
+  head_commit: 9ecc2dfaccf475d145b1b8420d6adae8923e5d4b
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/exit4-recovery-scope/task0001.tests.yaml
+    - tests/test_implement_routeback_gate.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+findings:
+  - stable_id: 96d6e2ac1e07075b
+    severity: high
+    category: comprehensive
+    file: tests/test_implement_routeback_gate.py
+    line: 740
+    title: "バージョン literal を直接ピンしたテストで次回の bump が必ず赤くなる"
+    description: >-
+      test_shared_version_is_0_1_43 が plugin.json / marketplace.json の version を
+      literal "0.1.43" と等値比較している。em-workflow 配下を触る変更は必ず version
+      bump を伴うため、次の無関係な変更で 0.1.44 になった瞬間にこのテストは失敗する。
+      このリポジトリは同じ問題を既に踏んで durable form（(major, minor) 固定 +
+      patch > BASELINE_PATCH）に統一済み。
+    suggestion: "durable form へ書き換え（(0,1) 固定 + patch > 42）"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1（test_shared_version_is_past_the_pre_task_baseline へ改名）"
+  - stable_id: f6c7b79e78ed68b1
+    severity: medium
+    category: architecture
+    file: tests/test_implement_routeback_gate.py
+    line: 740
+    title: "version literal を第 3 の複製として test に固定し、リポジトリ既定の baseline 比較規約に反する"
+    description: >-
+      同一サイトを architecture 観点が独立に検出。version の値を plugin.json /
+      marketplace.json に加えた 3 つ目の複製にしており、次のタスクが 0.1.44 に
+      上げた瞬間に無関係な test モジュールが赤くなる。
+    suggestion: "リテラル等値をやめ BASELINE_PATCH 比較にする"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "loop 1 の 96d6e2ac1e07075b と同一サイト・同一処方のため同時に解消"
+  - stable_id: 622831f37e0689d0
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 43
+    title: "widened exit-4 scope claims coverage at I.2.a / I.3, but those call sites never pass expected_base_tip"
+    description: >-
+      scope を every commit-docs.sh call site に広げ bound 側で Step I.2.a と
+      Step I.3 を名指ししたが、この 2 サイトは tip を capture して
+      expected_base_tip（第 3 引数）を渡す記述を持たないため、exit 4 が
+      原理的に発火しない。掛かっていない保護を掛かっているものとして
+      読ませる契約ドリフトになるという指摘。
+    suggestion: >-
+      (a) Step I.2.a / I.3 に tip capture 付きの commit-docs.sh 呼び出しを明記する、
+      または (b) bullet 側を実態に合わせて限定する。
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: declined
+    resolution_reason: >-
+      loop 1 で (a) を適用したが、SPEC §Assumptions A3 が「Step I.2.a と Step I.3 へ
+      明示的な commit-docs.sh 呼び出し行を追加することは本 feature のスコープ外」と
+      宣言しており、かつその変更が tests/test_rework_synthesis_contract.py の
+      byte-pinned アサーションを壊してフルスイートが red になった（spec 観点が
+      critical として検出）。loop 2 で全面 revert。指摘自体は妥当だが本 feature の
+      SPEC が明示的に範囲外としているため declined とし、後続タスクとして起票する。
+  - stable_id: b0f695f4ff205b4a
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 45
+    title: "Step I.2.a を exit-4 recovery の対象と宣言したが、その手順に refresh / tip 取得 / commit 呼び出しが一切ない"
+    description: >-
+      622831f37e0689d0 と同一サイトを comprehensive 観点が独立に検出。あわせて
+      「全称スコープと single carve-out が同一 bullet 内で字面上矛盾する」
+      （5df28ea0bbbd29cf, medium）を同一サイトとしてマージ。
+    suggestion: >-
+      (a) Step I.2.a に refresh / tip capture / commit-docs.sh を明記、
+      (b) 全称節の中に例外を畳み込みピア SSOT と同じ形にする。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: >-
+      (b)（carve-out を全称節へ畳み込む書き換え）は loop 1 で適用し維持。
+      (a) は 622831f37e0689d0 と同じ理由で loop 2 に revert 済み（declined 相当）。
+  - stable_id: 5df28ea0bbbd29cf
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 43
+    title: "同一 bullet 内で「every call site に適用」と「single carve-out」が字面上矛盾する"
+    description: >-
+      スコープ節が無条件の全称になった一方、3 文後に single carve-out 文が残り
+      字面上自己矛盾する。ピアの 2 SSOT はどちらも例外を全称節の中に畳み込んでいる。
+    suggestion: "applies to every ... EXCEPT Step I.2.c's route-back commit (carved out below) — for example, ..."
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1（b0f695f4ff205b4a と同一サイトでマージ dispatch）"
+  - stable_id: 4a1c0b5e9f2d7a63
+    severity: critical
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 585
+    title: "Step I.3 の書き換えで全体テストがレッド（AC6 / NFR3 / TS5 違反）"
+    description: >-
+      loop 1 の auto-fix が Step I.3 の文を書き換えた結果、旧文面をバイト単位で
+      固定していた tests/test_rework_synthesis_contract.py:208
+      test_completed_at_commit_wording_is_unchanged が失敗し、
+      python3 -m unittest discover -s tests が 1394 tests / failures=1 になった。
+      SPEC の A4「他モジュールが同 bullet の文面を pin している可能性は
+      full-suite run で discharge する」が想定していたケースそのもの。
+    suggestion: "Step I.3 の旧文をバイト単位で復元する"
+    sources: [claude:spec]
+    confidence: 85
+    resolution: fixed
+    resolution_reason: "loop 2 で Step I.2.a / I.3 の追加分を全面 revert、スイート 1394/1394 green に復帰"
+  - stable_id: 7e3f81d0c4b6a952
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 250
+    title: "A3 が明示的に scope 外とした commit-docs.sh 呼び出し行を Step I.2.a / I.3 に追加している"
+    description: >-
+      SPEC §Assumptions A3 は「Step I.2.a と Step I.3 に明示的な commit-docs.sh
+      呼び出し行を追加することは本 feature のスコープ外」と明記し、Assumptions は
+      実装が守るべき前提として宣言されている。loop 1 の auto-fix はこれに直接反し、
+      さらに Branch & Worktree Model が所有する refresh / write-then-commit 手順を
+      2 箇所で再記述して NFR5 にも反していた。
+    suggestion: "追加した手続き記述を戻し、変更を exit-4 recovery bullet だけに限定する"
+    sources: [claude:spec]
+    confidence: 70
+    resolution: fixed
+    resolution_reason: "loop 2 で全面 revert"
+  - stable_id: c92a4d17b8e05f3a
+    severity: medium
+    category: comprehensive
+    file: test-docs/exit4-recovery-scope/task0001.tests.yaml
+    line: 66
+    title: "AC-6 のテスト記録が存在しないテストメソッド名を指している"
+    description: >-
+      loop 1 のリネーム（test_shared_version_is_0_1_43 →
+      test_shared_version_is_past_the_pre_task_baseline）が tests.yaml の
+      AC → test マッピングに反映されず、記録された ID が解決不能になっていた。
+      spec / architecture の 2 観点も同一サイトを独立に検出（同一処方）。
+    suggestion: "AC-6 の tests エントリと red_reason を改名後の名前・失敗理由に更新する"
+    sources: [claude:comprehensive, claude:spec, claude:architecture]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: >-
+      loop 3 で適用。critical/high ゲートの対象外だが、loop 1 の auto-fix リネームが
+      直接生んだ記録の齟齬であり、editor が単一ファイル制約で同時更新できなかった
+      付随修正として、ゲート外で明示的に適用した。
+  - stable_id: 3d5b7e91a02c4f68
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 589
+    title: "exit-4 リトライ時に completed_at_commit が古い tip のまま残り rule R2 に反しうる"
+    description: >-
+      loop 1 で Step I.3 の完了コミットに明示的な tip capture を入れた状態を前提に、
+      exit 4 リトライ時の completed_at_commit 再導出が未定義という指摘。
+    suggestion: "再捕捉した tip を第 3 引数と completed_at_commit の双方に使う旨を明記する"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: declined
+    resolution_reason: >-
+      前提としていた loop 1 の Step I.3 書き換えが loop 2 で revert されたため、
+      指摘の対象そのものが存在しない（moot）。
+auto_fix:
+  loops_run: 3
+  applied_total: 4
+  termination: clean
+  notes: >-
+    loop 1: 2 件適用（version literal の durable 化 / carve-out の全称節への畳み込み
+    + Step I.2.a・I.3 への明示的呼び出し追加）。loop 2: Step I.2.a・I.3 への追加分を
+    revert（SPEC A3 違反 + pinned test 破壊）。loop 3: tests.yaml の AC-6 記録を
+    改名後の名前へ追随（ゲート外の付随修正）。
+residual_critical_high: 0
+rework_required: false
