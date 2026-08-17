@@ -87,6 +87,30 @@ assertions compare against a whitespace-normalized copy of the section so
 that line-wrap choices inside the prose never make an assertion brittle;
 byte-identity assertions (AC-3's heading/batch-mode-paragraph clause)
 compare the raw, un-normalized text.
+
+Also covers task0002 Acceptance Criteria
+(feature-docs/abort-phase-terminal/tasks/task0002.md), relocated here by
+task0003 (abort-phase-terminal, rework round 1: SC-F containment fix; see
+feature-docs/abort-phase-terminal/tasks/task0003.md) from the undeclared
+module tests/test_abort_phase_terminal_batch_mode.py, which no longer
+exists:
+
+- AC-1 (FR7, NFR6): the `implement.failed-task` Non-packet gate row's Batch
+  behavior cell in `em-workflow/references/batch-mode.md` states that the
+  second failure on the same task takes the abort terminal in which the
+  `implement` step's `status` is written to `failed` and that write is
+  committed, and no longer contains the phrase "`implement` stays
+  `failed`".
+- AC-2 (FR7): the same row still contains the retry clause, the
+  route-back-never-automatic clause, the gate id, and the detail pointer.
+- AC-4 (FR7): a paired negative proof that the removed phrase is exactly
+  the literal that was in the row before task0002's edit, plus a
+  non-vacuity guard and a proof that the new-wording matcher also fails
+  against the pre-change capture.
+
+These relocated assertions read only `em-workflow/references/batch-mode.md`
+and use the standard library only, unchanged in substance from their
+original module.
 """
 
 import json
@@ -189,9 +213,75 @@ ONLY_SIDE_EFFECT_PHRASE = (
     "the terminal status write and its own commit are the ONLY side effect"
 )
 
+# Relocated from tests/test_abort_phase_terminal_batch_mode.py (task0003,
+# abort-phase-terminal, rework round 1: SC-F containment fix). These assert
+# task0002's `implement.failed-task` Non-packet gate row in
+# `em-workflow/references/batch-mode.md`. Names carry a `BATCH_MODE_` prefix
+# so none of them rebinds a constant already defined above in this module
+# (task0003 Design: "the relocated module-level constants to carry
+# batch-mode-specific names").
+BATCH_MODE_PATH = PLUGIN_ROOT / "references" / "batch-mode.md"
+
+BATCH_MODE_GATE_ID = "implement.failed-task"
+
+# The exact phrase task0002's edit removes from the row's Batch behavior
+# cell.
+BATCH_MODE_REMOVED_PHRASE = "`implement` stays `failed`"
+
+# The row's Batch behavior cell, byte-for-byte, exactly as it read before
+# task0002's edit (captured verbatim via `repr()` against the base-commit
+# file so the negative proof below is provably about the same literal the
+# positive assertion checks the absence of -- the regression-guard pattern
+# used elsewhere in this module).
+BATCH_MODE_PRE_CHANGE_ROW = (
+    "| `implement.failed-task` — Step I.2.c task failure after the "
+    "parent-side-adoption protocol is exhausted "
+    "(`references/implement-phase.md` Step I.2.c: retry / "
+    "route-back-to-planning / abort via AskUserQuestion) | Auto-select "
+    "**retry** once per task (kept worktree, I.2.a resume guard). A "
+    "second failure on the SAME task → **abort phase** (`implement` "
+    "stays `failed`). Route-back-to-planning is never taken "
+    "automatically. Full detail: `references/implement-phase.md` Step "
+    "I.2.c |"
+)
+
+# Elements that must survive task0002's edit unchanged in substance
+# (task0002 plan Design section, "Elements of the row that MUST survive
+# unchanged").
+BATCH_MODE_RETRY_CLAUSE = (
+    "Auto-select **retry** once per task (kept worktree, I.2.a resume "
+    "guard)"
+)
+BATCH_MODE_ROUTE_BACK_CLAUSE = "Route-back-to-planning is never taken automatically"
+BATCH_MODE_DETAIL_POINTER = "Full detail: `references/implement-phase.md` Step I.2.c"
+
+# The new wording task0002 introduces to state SC-1's write-and-commit
+# terminal.
+BATCH_MODE_STATUS_WRITTEN_FAILED_PHRASE = (
+    "`implement` step's `status` is written to `failed`"
+)
+BATCH_MODE_WRITE_COMMITTED_PHRASE = "that write is committed"
+
 
 def _read():
     return IMPLEMENT_PHASE_PATH.read_text(encoding="utf-8")
+
+
+def _read_batch_mode():
+    return BATCH_MODE_PATH.read_text(encoding="utf-8")
+
+
+def _batch_mode_gate_row(text):
+    """Locates the single line of batch-mode.md's Non-packet gates table
+    containing the gate id (task0002 Test Notes: "read the file, select the
+    single line containing the gate id")."""
+    matches = [line for line in text.splitlines() if BATCH_MODE_GATE_ID in line]
+    if len(matches) != 1:
+        raise AssertionError(
+            f"expected exactly one line containing {BATCH_MODE_GATE_ID!r} in "
+            f"{BATCH_MODE_PATH}, found {len(matches)}"
+        )
+    return matches[0]
 
 
 def _read_commit_docs_sh():
@@ -1133,6 +1223,87 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         sample = "No bare `git add`/`git commit` against the integration worktree runs outside"
         lines = _bare_git_commit_or_add_lines(sample)
         self.assertEqual(lines, [])
+
+
+class TestImplementFailedTaskRowStatesWriteAndCommitTerminal(unittest.TestCase):
+    """Relocated from tests/test_abort_phase_terminal_batch_mode.py (task0003,
+    abort-phase-terminal, rework round 1: SC-F containment fix). Covers
+    task0002 AC-1 (FR7, NFR6): the `implement.failed-task` row's Batch
+    behavior cell states that the second failure on the same task takes the
+    abort terminal in which the `implement` step's `status` is written to
+    `failed` and that write is committed, and no longer contains the phrase
+    "`implement` stays `failed`"."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.row = _batch_mode_gate_row(_read_batch_mode())
+
+    def test_row_states_status_written_to_failed(self):
+        self.assertIn(BATCH_MODE_STATUS_WRITTEN_FAILED_PHRASE, self.row)
+
+    def test_row_states_the_write_is_committed(self):
+        self.assertIn(BATCH_MODE_WRITE_COMMITTED_PHRASE, self.row)
+
+    def test_row_no_longer_claims_implement_stays_failed(self):
+        self.assertNotIn(BATCH_MODE_REMOVED_PHRASE, self.row)
+
+
+class TestImplementFailedTaskRowRetainsExistingClauses(unittest.TestCase):
+    """Relocated from tests/test_abort_phase_terminal_batch_mode.py (task0003,
+    abort-phase-terminal, rework round 1). Covers task0002 AC-2 (FR7): the
+    same row still contains the retry clause, the route-back-never-automatic
+    clause, the gate id, and the detail pointer."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.row = _batch_mode_gate_row(_read_batch_mode())
+
+    def test_gate_id_present(self):
+        self.assertIn(f"`{BATCH_MODE_GATE_ID}`", self.row)
+
+    def test_retry_clause_survives(self):
+        self.assertIn(BATCH_MODE_RETRY_CLAUSE, self.row)
+
+    def test_route_back_clause_survives(self):
+        self.assertIn(BATCH_MODE_ROUTE_BACK_CLAUSE, self.row)
+
+    def test_detail_pointer_survives(self):
+        self.assertIn(BATCH_MODE_DETAIL_POINTER, self.row)
+
+
+class TestBatchModeGateRowRegressionGuard(unittest.TestCase):
+    """Relocated from tests/test_abort_phase_terminal_batch_mode.py (task0003,
+    abort-phase-terminal, rework round 1). Covers task0002 AC-4 (FR7): a
+    paired negative proof that BATCH_MODE_REMOVED_PHRASE is exactly the
+    literal that was in the row before task0002's edit -- the absence
+    matcher in TestImplementFailedTaskRowStatesWriteAndCommitTerminal would
+    have failed against the row as it read pre-change, and the
+    write-and-commit matcher would likewise have failed to find its new
+    wording there. Named distinctly from this module's pre-existing
+    TestValidationDetectsRegressions class so the two never collide
+    (task0003 Design: "never a second class of the same name" -- a
+    duplicate would silently shadow the first and drop its tests from
+    discovery)."""
+
+    def test_removed_phrase_matcher_flags_pre_change_row(self):
+        self.assertIn(BATCH_MODE_REMOVED_PHRASE, BATCH_MODE_PRE_CHANGE_ROW)
+
+    def test_pre_change_row_sample_is_not_vacuous(self):
+        # Non-vacuity guard: the captured sample is genuinely the row (not
+        # an empty or unrelated string) -- scoped by the same gate id and
+        # retained clauses the live lookup keys off, so the proof above is
+        # not `assertIn(X, "")`-style vacuous.
+        self.assertIn(f"`{BATCH_MODE_GATE_ID}`", BATCH_MODE_PRE_CHANGE_ROW)
+        self.assertIn(BATCH_MODE_RETRY_CLAUSE, BATCH_MODE_PRE_CHANGE_ROW)
+        self.assertIn(BATCH_MODE_ROUTE_BACK_CLAUSE, BATCH_MODE_PRE_CHANGE_ROW)
+        self.assertIn(BATCH_MODE_DETAIL_POINTER, BATCH_MODE_PRE_CHANGE_ROW)
+
+    def test_new_wording_matcher_flags_absence_in_pre_change_row(self):
+        # Proof the new-wording matcher would have failed against the
+        # pre-change row too -- the write-and-commit phrasing is new.
+        self.assertNotIn(
+            BATCH_MODE_STATUS_WRITTEN_FAILED_PHRASE, BATCH_MODE_PRE_CHANGE_ROW
+        )
 
 
 if __name__ == "__main__":
