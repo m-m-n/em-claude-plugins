@@ -715,13 +715,14 @@ class TestQueueStopGuardStdlibOnly(unittest.TestCase):
 
 
 class TestQueueStopGuardSingleDerivation(unittest.TestCase):
-    """AC-8: feature identity is derived exactly once. A probe fixture
-    whose worktree-side segment name differs from its feature-docs segment
-    name must block, name the worktree-side segment as the feature, and
-    prove it read the enumerated file -- which fails if any read path is
-    rebuilt from an enumeration root plus a feature name."""
+    """AC-4: ownership contract. SPEC.md's Path Contract requires the SAME
+    `{feature}` name in both wildcard positions of the enumerated location,
+    so a matched path whose worktree-side segment name differs from its
+    `feature-docs` segment name is not owned by the identity derived from
+    it, and must never be enumerated or read -- silent no-decision, not a
+    block."""
 
-    def test_divergent_worktree_and_docs_segment_names_reads_the_enumerated_file(self):
+    def test_divergent_worktree_and_docs_segment_names_is_never_enumerated(self):
         with tempfile.TemporaryDirectory() as tmp:
             fx = StopGuardFixture(
                 tmp, feature="worktree-segment", docs_segment="unrelated-docs-name"
@@ -731,11 +732,170 @@ class TestQueueStopGuardSingleDerivation(unittest.TestCase):
 
             result = invoke_hook(tmp, DEFAULT_STDIN)
 
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+
+class TestQueueStopGuardOwnership(unittest.TestCase):
+    """AC-1/AC-2/AC-3: an integration worktree is a full checkout, so it
+    contains every OTHER feature's `feature-docs/` directory too. Only the
+    `feature-docs/<segment>` that equals the identity derived from the
+    worktree-side segment (the "owned" match) may ever be enumerated or
+    read; a foreign match sitting alongside it must not leak into this
+    feature's decision, journal or sidecar (IMPLEMENTATION.md D6)."""
+
+    def test_worktree_with_only_a_foreign_docs_directory_is_not_enumerated(self):
+        # AC-1 (TS10a): `.../alpha/integration/feature-docs/beta/workflow.yaml`
+        # only -- no `feature-docs/alpha` at all.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = StopGuardFixture(tmp, feature="alpha", docs_segment="beta")
+            fx.write_workflow("in_progress", ["task0001", "task0002"])
+            fx.write_journal([])  # fresh journal at alpha/, no launched events
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+            self.assertNotIn("Traceback", result.stderr)
+
+    def test_worktree_with_owned_and_foreign_docs_directories_reads_only_owned(self):
+        # AC-2 (TS10b): both `feature-docs/alpha` (owned) and
+        # `feature-docs/beta` (foreign) exist inside the SAME `alpha`
+        # integration worktree, sharing one journal directory. Only the
+        # owned match's tasks may appear; the foreign match's identity and
+        # task ids must never leak into the decision.
+        # The foreign segment name ("0-decoy") is chosen to sort BEFORE the
+        # owned segment name ("alpha") in the glob's lexicographic order --
+        # this is what makes the negative assertions below a genuine
+        # discriminator between "read the owned match" and "read the first
+        # match" (Test Notes), rather than passing by alphabetical luck.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx_owned = StopGuardFixture(tmp, feature="alpha", docs_segment="alpha")
+            fx_foreign = StopGuardFixture(tmp, feature="alpha", docs_segment="0-decoy")
+            fx_owned.write_workflow("in_progress", ["task0001", "task0002"])
+            fx_foreign.write_workflow(
+                "in_progress", ["task0007", "task0008", "task0009"]
+            )
+            fx_owned.write_journal([])  # one shared fresh journal, no launched events
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
             self.assertEqual(result.returncode, 2)
-            self.assertIn("worktree-segment", result.stderr)
-            self.assertNotIn("unrelated-docs-name", result.stderr)
+            self.assertIn("alpha", result.stderr)
             self.assertIn("task0001", result.stderr)
             self.assertIn("task0002", result.stderr)
+            self.assertNotIn("0-decoy", result.stderr)
+            for not_expected in ("task0007", "task0008", "task0009"):
+                self.assertNotIn(not_expected, result.stderr)
+
+    def test_owned_docs_completed_and_foreign_docs_in_progress_produces_no_decision(self):
+        # AC-3 (TS10c): the finding's real-world shape. The OWNED docs
+        # directory's implement step already reads `completed`; only the
+        # FOREIGN docs directory (unowned, so never read) reads
+        # `in_progress` with unlaunched tasks. No decision must result, and
+        # no sidecar may be created.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx_owned = StopGuardFixture(tmp, feature="alpha", docs_segment="alpha")
+            fx_foreign = StopGuardFixture(tmp, feature="alpha", docs_segment="beta")
+            fx_owned.write_workflow("completed", ["task0001", "task0002"])
+            fx_foreign.write_workflow("in_progress", ["task0007", "task0008"])
+            fx_owned.write_journal([])  # one shared fresh journal
+
+            result = invoke_hook(tmp, DEFAULT_STDIN)
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+            self.assertFalse(os.path.exists(fx_owned.sidecar_path()))
+
+
+class TestQueueStopGuardOwnershipAmbiguity(unittest.TestCase):
+    """AC-5 (TS11): the ownership + uniqueness selection step, exercised
+    directly against hand-built matched paths under a root that does not
+    exist on disk. The hook module is loaded by file path -- module-level
+    execution is guarded by `if __name__ == "__main__":`, so the load
+    performs no hook work. Only the single selection-step symbol is used
+    from the loaded module; the rest of the suite stays behavioural."""
+
+    @staticmethod
+    def _load_hook_module():
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "queue_stop_guard_ac5_probe", HOOK_PATH
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    @staticmethod
+    def _match(root, feature_segment, docs_segment):
+        return os.path.join(
+            root,
+            feature_segment,
+            "integration",
+            "feature-docs",
+            docs_segment,
+            "workflow.yaml",
+        )
+
+    def test_duplicate_identity_dropped_others_survive_ascending(self):
+        # (a) two distinct owned matches deriving the same identity yield NO
+        # entry for that identity, while every other identity's entry
+        # survives, in ascending order.
+        module = self._load_hook_module()
+        root = "/nonexistent/ac5-root-a"
+        matches = [
+            self._match(os.path.join(root, "branch-two"), "alpha", "alpha"),
+            self._match(root, "zeta", "zeta"),
+            self._match(os.path.join(root, "branch-one"), "alpha", "alpha"),
+            self._match(root, "mid", "mid"),
+        ]
+
+        result = module.select_owned_unique_matches(matches)
+
+        identities = [candidate["identity"] for candidate in result]
+        self.assertNotIn("alpha", identities)
+        self.assertEqual(identities, ["mid", "zeta"])
+
+    def test_duplicate_removed_yields_identity_exactly_once(self):
+        # (b) the same list with the duplicate removed yields that identity
+        # exactly once.
+        module = self._load_hook_module()
+        root = "/nonexistent/ac5-root-b"
+        matches = [
+            self._match(root, "zeta", "zeta"),
+            self._match(root, "alpha", "alpha"),
+            self._match(root, "mid", "mid"),
+        ]
+
+        result = module.select_owned_unique_matches(matches)
+
+        identities = [candidate["identity"] for candidate in result]
+        self.assertEqual(identities.count("alpha"), 1)
+        self.assertEqual(identities, ["alpha", "mid", "zeta"])
+
+    def test_divergent_segments_yield_no_entry(self):
+        # (c) a match whose two segments differ yields no entry.
+        module = self._load_hook_module()
+        root = "/nonexistent/ac5-root-c"
+        matches = [self._match(root, "worktree-name", "docs-name")]
+
+        result = module.select_owned_unique_matches(matches)
+
+        self.assertEqual(result, [])
+
+    def test_no_exception_and_no_file_created_for_nonexistent_paths(self):
+        # (d) purity: no exception is raised and no file is created, though
+        # none of the supplied paths exists on disk.
+        module = self._load_hook_module()
+        root = "/nonexistent/ac5-root-d"
+        matches = [self._match(root, "gamma", "gamma")]
+
+        result = module.select_owned_unique_matches(matches)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["identity"], "gamma")
+        self.assertFalse(os.path.exists(root))
 
 
 class TestQueueStopGuardMultiFeatureOrdering(unittest.TestCase):

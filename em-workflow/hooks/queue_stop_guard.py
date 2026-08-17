@@ -289,33 +289,85 @@ def candidate_is_fresh(journal_dir, workflow_yaml_path, now=None):
     return (now - mtime) <= FRESHNESS_THRESHOLD_SECONDS
 
 
-def active_candidates(worktrees_root, now=None):
-    """Stage 2 (Active set): expand the layout pattern under
-    `worktrees_root`, decompose each match once, and keep only candidates
-    whose derived identity satisfies the feature-name shape check, whose
-    implement step reads in_progress, and that pass the freshness
-    condition. Returns a list of {"identity", "workflow_yaml_path",
-    "journal_dir"} dicts, stable and ascending by identity."""
-    pattern = os.path.join(
-        worktrees_root, "*", "integration", "feature-docs", "*", "workflow.yaml"
-    )
-    candidates = []
-    for match in sorted(glob.glob(pattern)):
+def select_owned_unique_matches(matches):
+    """Ownership + uniqueness selection step (IMPLEMENTATION.md D6, task
+    plan "Ownership + uniqueness selection step"). Runs after the layout
+    pattern is expanded and before the `in_progress` / freshness filters, so
+    a rejected match costs zero file reads.
+
+    Precondition: the ordered list of `workflow.yaml` paths the layout
+    pattern `{worktrees_root}/*/integration/feature-docs/*/workflow.yaml`
+    produced under one enumeration root.
+
+    Postcondition: an ordered list of {"identity", "workflow_yaml_path",
+    "journal_dir"} dicts, ascending and stable by identity, restricted to
+    matches that satisfy all of:
+      1. the identity derived by the single decomposition (D1) passes the
+         existing feature-name shape check (FEATURE_RE);
+      2. the match's own `feature-docs/<segment>` segment equals that
+         identity -- ownership. SPEC.md's Path Contract states the SAME
+         `{feature}` name in both wildcard positions of the enumerated
+         location; a match whose two segments differ is outside the
+         specified layout and is never enumerated or read;
+      3. no other surviving match derives the same identity -- an identity
+         carried by two or more surviving matches is dropped IN FULL
+         (ambiguity refusal, the fail-open direction), not resolved by
+         first-wins.
+
+    Purity: decides all three conditions from the matched path strings
+    alone. Opens nothing, stats nothing, spawns nothing, so it is directly
+    unit-testable against paths that do not exist on disk. Condition 2
+    compares two segments *of the path that was matched*; no path is ever
+    reconstructed from a root plus a name, and the `feature-docs` segment is
+    still never read AS identity -- it is only compared against it (NFR4).
+    """
+    owned = []
+    for match in matches:
         identity, journal_dir = decompose_enumerated_path(match)
         if not FEATURE_RE.match(identity):
             continue
-        if not implement_in_progress(match):
-            continue
-        if not candidate_is_fresh(journal_dir, match, now=now):
-            continue
-        candidates.append(
+        docs_segment = os.path.basename(os.path.dirname(match))
+        if docs_segment != identity:
+            continue  # unowned: the two wildcard positions disagree
+        owned.append(
             {
                 "identity": identity,
                 "workflow_yaml_path": match,
                 "journal_dir": journal_dir,
             }
         )
-    candidates.sort(key=lambda candidate: candidate["identity"])
+
+    identity_counts = {}
+    for candidate in owned:
+        identity_counts[candidate["identity"]] = (
+            identity_counts.get(candidate["identity"], 0) + 1
+        )
+
+    unique = [c for c in owned if identity_counts[c["identity"]] == 1]
+    unique.sort(key=lambda candidate: candidate["identity"])
+    return unique
+
+
+def active_candidates(worktrees_root, now=None):
+    """Stage 2 (Active set): expand the layout pattern under
+    `worktrees_root`, run the ownership + uniqueness selection step, and
+    keep only candidates whose implement step reads in_progress and that
+    pass the freshness condition. Returns a list of {"identity",
+    "workflow_yaml_path", "journal_dir"} dicts, stable and ascending by
+    identity."""
+    pattern = os.path.join(
+        worktrees_root, "*", "integration", "feature-docs", "*", "workflow.yaml"
+    )
+    matches = sorted(glob.glob(pattern))
+    candidates = []
+    for candidate in select_owned_unique_matches(matches):
+        if not implement_in_progress(candidate["workflow_yaml_path"]):
+            continue
+        if not candidate_is_fresh(
+            candidate["journal_dir"], candidate["workflow_yaml_path"], now=now
+        ):
+            continue
+        candidates.append(candidate)
     return candidates
 
 
