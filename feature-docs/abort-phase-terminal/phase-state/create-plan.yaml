@@ -1,0 +1,21 @@
+schema_version: 1
+feature: abort-phase-terminal
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 0601a9952ed3a796695ed8083c83d742f9fc9379
+last_input_digest: sha256:3e3ac4766de01332ef880e94ad2a99b890b66fb3ab19e150ed602835bd333247
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:3e3ac4766de01332ef880e94ad2a99b890b66fb3ab19e150ed602835bd333247
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
