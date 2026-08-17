@@ -592,6 +592,7 @@ class TestRegressionGuards(unittest.TestCase):
         self.assertEqual(self.text[idx : idx + len(I2C_HEADING)], I2C_HEADING)
 
     def test_batch_mode_paragraph_is_byte_identical_tail(self):
+        # Brought to the post-change text by task0001 (abort-phase-terminal).
         pre_change_batch_mode_paragraph = (
             "Batch mode (`references/batch-mode.md`'s Non-packet gates "
             "table,\n"
@@ -599,11 +600,23 @@ class TestRegressionGuards(unittest.TestCase):
             "after the drain, auto-select **retry** ONCE per task (kept "
             "worktree, I.2.a\n"
             "resume guard). A task that fails a second time → **abort "
-            "phase** (implement\n"
-            "stays `failed`, report and stop; the external service cuts a "
-            "follow-up\n"
-            "task). Route-back-to-planning is never taken automatically. "
-            "Track the\n"
+            "phase**: refresh\n"
+            "the integration worktree, capture the tip, then set and "
+            "commit the\n"
+            "`implement` step's `status` to `failed` via `commit-docs.sh` "
+            "(no\n"
+            "`create-plan` `needs_update`, no task status or notes write "
+            "set, no\n"
+            "worktree or branch cleanup — the terminal status write and "
+            "its own commit\n"
+            "are the ONLY side effect), then report and stop; control "
+            "returns via\n"
+            "develop's stop condition 3, firing on the next Step B "
+            "iteration reading\n"
+            "`implement: failed`. The external service cuts a follow-up "
+            "task.\n"
+            "Route-back-to-planning is never taken automatically. Track "
+            "the\n"
             "retry-consumed state per task in `tasks.{T}.notes`.\n"
             "\n"
         )
