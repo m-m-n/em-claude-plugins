@@ -1,11 +1,11 @@
 schema_version: 1
 feature: recycled-task-id-carveout
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 78380093aa22abd652e0e3333e49f14885bd0280
-last_input_digest: sha256:db17688b129eb02f3006b1196a570cb5981c9ef11456bc13d89e35134a776897
-active_request_id: create-spec-run-0003
+last_input_digest: sha256:27f9c929154d19f784b59d6e7c3e70622224a64a53b8791586177effba282bca
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -54,7 +54,17 @@ worker_runs:
     status: completed
     input_digest: sha256:db17688b129eb02f3006b1196a570cb5981c9ef11456bc13d89e35134a776897
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:27f9c929154d19f784b59d6e7c3e70622224a64a53b8791586177effba282bca
+    output_digest: null
+artifacts:
+  - path: feature-docs/recycled-task-id-carveout/REQUIREMENTS.md
+    sha256: sha256:a361699a8fcf2e2f293cd70f9f4ff5a5580eb212c93009597997c2c370391c1a
+    produced_by: create-spec-run-0003
+  - path: feature-docs/recycled-task-id-carveout/SPEC.md
+    sha256: sha256:ed1577b9a383327a72cc883ad2e918b4f8c169f86b4aeac3aea960f5f5172833
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

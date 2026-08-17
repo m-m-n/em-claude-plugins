@@ -1,0 +1,156 @@
+schema_version: 1
+feature: recycled-task-id-carveout
+created: 2026-08-18
+base_branch: main
+parent_branch: em-workflow/recycled-task-id-carveout/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 6185da2a7e852a7004d567a064d02690fd12eda4
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "ユーザーに見える面が無い。参照ドキュメントの一節・Python unittest のアサーション・JSON の version フィールド 2 箇所のみを変更する feature であり、UI も画面も視覚的出力も存在しない。design-system 候補もリポジトリに無い。batch policy が create-spec.design-step を option_id decide_autonomously で解決した。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "I.2.a scope sentence made internally consistent"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-2, TS-3]
+  FR2:
+    title: "Supporting-cast Stop-hook bullet scoped to the carve-out"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR3:
+    title: "TestRecycledTaskIdRuleScopedToOrchestrator split into two claims"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2, TS-3, TS-10]
+  FR4:
+    title: "Two-layer pin joining the documented classification to the hook implementations"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5, TS-6, TS-7]
+  FR5:
+    title: "Non-vacuity discipline for every new matcher"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-10]
+  FR6:
+    title: "Unlaunched-definition divergence documented rather than closed"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  FR7:
+    title: "Plugin version bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-9]
+  FR8:
+    title: "Whole suite green"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11]
+  NFR1:
+    title: "Test-code dependency floor"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11]
+  NFR2:
+    title: "Test placement and naming"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11]
+  NFR3:
+    title: "Line-wrap robustness of document assertions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11]
+  NFR4:
+    title: "Hook runtime behavior unchanged"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6, TS-7]
+  NFR5:
+    title: "Test isolation"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6, TS-7]
+  NFR6:
+    title: "SSOT singularity preserved"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
