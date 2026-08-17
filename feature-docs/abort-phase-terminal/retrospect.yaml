@@ -1,0 +1,79 @@
+feature: abort-phase-terminal
+collected_at: "2026-08-18T00:40:50+09:00"
+session_ids: [01a01010-2dbe-7000-b479-b6b2c69d3a80]
+signals:
+  review_critical_high: []      # round1 produced three findings, all severity medium
+  conflict_reworks: []          # task0001 / task0002 / task0003 all reported conflict_retries: 0
+  file_prediction_misses: []    # every implementer reported deviations: []
+  verification_failures:
+    - id: SC-F
+      round: 1
+      note: >-
+        The merged change set was not contained in SPEC.md's Declared Change
+        Set. task0002 created `tests/test_abort_phase_terminal_batch_mode.py`,
+        a path the planner put in the task's `files` but nobody added to the
+        SPEC declaration. Repaired by verify-sourced rework task0003, which
+        folded the assertions into the already-declared
+        `tests/test_implement_routeback_gate.py` and deleted the new module.
+  discretionary_perspectives: []   # review plan had no Layer-2 additions
+  declined_findings: []            # no finding was resolved as `declined`
+  unresolved_findings:
+    - stable_id: 0ff859e09508f200
+      category: architecture
+      severity: medium
+      resolution: unresolved
+      note: >-
+        The terminal procedure is now stated verbatim at three sites in I.2.c
+        (rejected path, abort bullet, batch-mode paragraph) with no site named
+        as owner, against this document's own cite-don't-restate convention.
+        Below the auto-fix gate (medium), so R4 never saw it.
+    - stable_id: 676ce984493653e6
+      category: comprehensive
+      severity: medium
+      resolution: unresolved
+      note: >-
+        Adding a `commit-docs.sh` call to the batch abort path makes two
+        phase-specific rows of `references/batch-terminal-line.md`'s Stop point
+        coverage table (`implement-second-failure` and `docs-commit-conflict`)
+        simultaneously applicable, which its Precedence rule does not resolve.
+        Below the auto-fix gate (medium).
+lessons_candidates:
+  - >-
+    The planner's `files` list and SPEC.md's Declared Change Set are two
+    independent declarations of the same thing, and nothing mechanically ties
+    them together. task0002's plan legitimately listed a new test module in
+    `files`; SPEC.md never learned about it; the drift surfaced only at verify
+    as SC-F, after two tasks had already merged. A create-plan-time check that
+    every task's `files` entry is contained in the Declared Change Set (or
+    raises a gate) would have caught it before any implementer ran.
+  - >-
+    `scripts/validate-worker-output.py`'s `task-plan-files` parser accepts one
+    backtick-quoted path per bullet and silently discards a bullet carrying a
+    second backtick span in its prose. The planner wrote a natural
+    "`path` — `field` only." bullet and the whole entry vanished from the Files
+    union, producing a files-mismatch error whose message did not name the real
+    cause. Either the parser should take the FIRST backtick span as the path,
+    or the error should say why the bullet was dropped.
+  - >-
+    Both planning workers and both spec workers returned `written_artifacts`
+    with `sha256: null` because their agent definitions grant no execution
+    tool. The orchestrator has to compute every artifact digest itself before
+    validation layer 5 can run. That is workable, but the contract reads as if
+    the worker supplies the digest, so the expectation should be stated
+    explicitly on the orchestrator side (or the workers should get a digest
+    tool).
+  - >-
+    `patch_id` is required to be unique within a feature, but each phase-state
+    file is written independently and both planning workers minted
+    `abort-phase-terminal-p0001`. The orchestrator had to renumber the rework
+    patch to `p0002`. Nothing in the validator catches this: its
+    duplicate-identifier check only sees the single `--phase-state` file it was
+    given, never the sibling phase-state files.
+  - >-
+    Review round 1 found three real defects and every one of them was medium,
+    so Phase R4's candidate gate (critical/high only) let all three through
+    untouched and the review step still completed with
+    `residual_critical_high: 0`. The gate is working as specified, but a run
+    can finish "clean" while carrying three known documentation defects — worth
+    deciding whether medium findings should ever be auto-fixable, or at least
+    surfaced more loudly in the completion report.

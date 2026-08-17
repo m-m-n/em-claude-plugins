@@ -1,0 +1,81 @@
+task_id: task0002
+baseline_failures: []          # `python3 -m unittest discover -s tests` from the
+                                # repository root, before any file was touched: 1394
+                                # tests, all passing.
+final_failures: []             # same command after implementation: 1404 tests
+                                # (1394 + 10 new), all passing.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_states_status_written_to_failed
+      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_states_the_write_is_committed
+      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowStatesWriteAndCommitTerminal.test_row_no_longer_claims_implement_stays_failed
+    red_confirmed: true
+    red_reason: >-
+      Watched all three fail against the pre-edit row: "`implement` step's
+      `status` is written to `failed`" not found; "that write is committed"
+      not found; "`implement` stays `failed`" unexpectedly found. All three
+      passed immediately after the batch-mode.md row edit.
+  AC-2:
+    tests:
+      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowRetainsExistingClauses.test_gate_id_present
+      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowRetainsExistingClauses.test_retry_clause_survives
+      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowRetainsExistingClauses.test_route_back_clause_survives
+      - tests.test_abort_phase_terminal_batch_mode.TestImplementFailedTaskRowRetainsExistingClauses.test_detail_pointer_survives
+    red_confirmed: false
+    red_reason: >-
+      Retention matchers: the task plan requires these four elements to
+      "survive unchanged in substance" (Design section), so they were
+      already true -- and these four tests already green -- on the very
+      first run of the module, before the row was edited. Same pattern as
+      tests/test_recycled_task_id_consistency.py's "RETENTION matcher, no
+      proof needed" entries. No implementation change makes these go
+      red->green; they guard against a future regression instead.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      tests/test_batch_policies.py is explicitly out of scope and must stay
+      green unmodified (task plan Out of Scope; AC-3 wording itself: "passes
+      unmodified"). Verified by running the whole suite: its
+      NON_PACKET_GATE_COVERAGE ("implement I.2.c failed task",
+      "implement.failed-task") keyword pairing and its Non-packet gate id
+      list still match batch-mode.md after the row edit. This test was
+      never red at any point in this task.
+  AC-4:
+    tests:
+      - tests.test_abort_phase_terminal_batch_mode.TestValidationDetectsRegressions.test_removed_phrase_matcher_flags_pre_change_row
+      - tests.test_abort_phase_terminal_batch_mode.TestValidationDetectsRegressions.test_pre_change_row_sample_is_not_vacuous
+      - tests.test_abort_phase_terminal_batch_mode.TestValidationDetectsRegressions.test_new_wording_matcher_flags_absence_in_pre_change_row
+    red_confirmed: false
+    red_reason: >-
+      The module's existence was the negated outcome before it was written
+      (the file did not exist at the 4a baseline). Once created, these
+      three negative-proof tests assert against PRE_CHANGE_ROW, a literal
+      captured independently of the live document's edit state, so they
+      were green on the very first run of the module (before the
+      batch-mode.md row was touched) -- they encode the proof structurally
+      rather than via a construction-time failure. AC-1's entry above is
+      the red-confirmed half of this same module's coverage.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      By design (task plan Test Notes) no test pins the literal 0.1.44.
+      The existing lockstep assertion,
+      tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_shared_version_is_past_the_pre_task_baseline,
+      already accepted patch > 42 before this task's edit (0.1.43 passed)
+      and continues to accept it after (0.1.44 passes) -- it was never red
+      and this task does not own or modify that module. Verified by reading
+      both manifests directly (both now read "0.1.44") and by re-running
+      that module (all tests pass).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/scope check, not a dedicated test. Verified by running
+      `python3 -m unittest discover -s tests` from the repository root
+      (exit 0, 1404 tests) and by `git status --porcelain` in the worktree,
+      which shows exactly the four Scope files touched: em-workflow/references/batch-mode.md,
+      em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json
+      (all modified), and tests/test_abort_phase_terminal_batch_mode.py (new).

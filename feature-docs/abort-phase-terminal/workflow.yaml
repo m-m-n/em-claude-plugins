@@ -1,0 +1,272 @@
+schema_version: 1
+feature: abort-phase-terminal
+created: 2026-08-17
+base_branch: main
+parent_branch: em-workflow/abort-phase-terminal/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown-python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: f6d566c99d4aa4da9117fdace761d71c58e3e29d
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      Resolved at gate create-spec.design-step with option `decide_autonomously`:
+      the change is a documentation-consistency fix inside two markdown protocol
+      documents plus three Python test modules and two version manifests. It
+      ships no user interface, no visual surface, no CSS/token/theme artifact and
+      no new user-facing interaction, so there is nothing for a designer worker
+      to produce.
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: completed
+    completed_at_commit: c1f57609c07bda4362aa52b38417acf93d1a8a0e
+  - id: implement
+    status: completed
+    base_commit: 5b764bc0963f912a04831e4530c3d2deb362d1e8
+    completed_at_commit: a4701b08f477da9ef12000b8a9f599605e333f86
+  - id: review
+    status: completed
+    completed_at_commit: 2ea80ab21dafe05c17a60d62ce57fb8beafceabd
+  - id: verify
+    status: completed
+    result: pass
+    failed_items: []
+    completed_at_commit: 49543c4268bee075097d1513d404e7e1aaaea648
+    note: >-
+      Round 2 of verify, after the SC-F containment failure was repaired by the
+      verify-sourced rework (task0003). `python3 -m unittest discover -s tests`
+      -> 1434 tests, 0 failures, exit 0. TS-1 .. TS-9 pass as automated unit
+      tests. TS-7's manual negative proof was performed and confirmed: mutating
+      the pinned batch-mode paragraph literal in each of the three modules in
+      turn makes exactly that one module fail
+      (test_batch_mode_paragraph_is_byte_identical /
+      test_batch_mode_paragraph_is_byte_identical_tail), and every mutation was
+      reverted with `git checkout --`, leaving the worktree clean. TS-9's value
+      inspection confirms `0.1.44` in both manifests. TS-10's diff inspection
+      over `git diff --name-status {base_commit} HEAD` shows 15 paths, all
+      contained in SPEC.md's Declared Change Set: the four declared
+      feature-specific documents/manifests, the three declared pin-bearing test
+      modules, and the rest under the two default entries
+      (`feature-docs/abort-phase-terminal/**`, `test-docs/abort-phase-terminal/**`).
+      `tests/test_abort_phase_terminal_batch_mode.py` no longer appears — it is
+      created and deleted inside the range. Every frozen path
+      (skills/develop/SKILL.md, workflow-patch.md, validate-worker-output.py,
+      commit-docs.sh, hooks/, routeback-gate-postcondition/) is absent from the
+      diff. NFR6 was checked by reading the four terminal sites side by side:
+      the rejected path, the abort bullet, the I.2.c batch-mode paragraph and
+      batch-mode.md's `implement.failed-task` row all describe one terminal
+      (refresh -> tip capture -> `implement: failed` write -> `commit-docs.sh`),
+      and none claims `implement` reaches `failed` without naming the write.
+      BO2 holds: both abort sites name develop's stop condition 3 and the
+      "next Step B iteration reading `implement: failed`" formulation.
+      SC-A .. SC-G all hold.
+    prior_result:
+      round: 1
+      result: fail
+      failed_items:
+        - id: SC-F
+          note: >-
+            The actual change set was NOT contained in SPEC.md's Declared Change
+            Set: tests/test_abort_phase_terminal_batch_mode.py was created by the
+            merged feature but was absent from the declared feature-specific
+            paths and not covered by the two default entries. Routed to rework
+            task0003 (batch auto-rework, verify_rework_count 0 -> 1).
+  - id: retrospect
+    status: completed
+    completed_at_commit: 66ea24cb7a485fd395f0a3964a371d7bc099dd51
+
+tasks:
+  task0001:
+    title: implement-phase.md abort terminal and byte pins
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_implement_routeback_gate.py
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_routeback_reset_scope_consistency.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR8, FR10, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
+    status: merged
+    notes: null
+    branch: em-workflow/abort-phase-terminal/task0001
+  task0002:
+    title: batch-mode.md gate row synchronization and version bump
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - tests/test_abort_phase_terminal_batch_mode.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR7, FR9, FR10, NFR4, NFR5, NFR6]
+    status: merged
+    notes: null
+    branch: em-workflow/abort-phase-terminal/task0002
+  task0003:
+    title: Fold the batch-mode gate-row assertions into a declared test module
+    plan: tasks/task0003.md
+    files:
+      - tests/test_implement_routeback_gate.py
+      - tests/test_abort_phase_terminal_batch_mode.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: low
+    requirements: [FR7, FR10, NFR4, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/abort-phase-terminal/task0003
+    provenance:
+      source: verify
+      source_ids: [SC-F]
+
+review:
+  status: completed
+  rounds_completed: 1
+  plan:
+    floor: [comprehensive, architecture, spec]
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: Interactive abort option gets an explicit write-and-commit terminal
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-1]
+  FR2:
+    title: Batch-mode abort gets the identical terminal
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-2]
+  FR3:
+    title: Abort's side-effect set is bounded to the terminal write and its commit
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-3]
+  FR4:
+    title: The post-abort stopping point is stated uniquely
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-3]
+  FR5:
+    title: The equivalence claim is kept, not deleted
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-4]
+  FR6:
+    title: The new commit call site falls on the bounded side of exit-4 recovery
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-5]
+  FR7:
+    title: batch-mode.md's implement.failed-task row is synchronized
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0003]
+    tests: [TS-6]
+  FR8:
+    title: Every byte pin of the I.2.c batch-mode paragraph is updated
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-7]
+  FR9:
+    title: Plugin version bump in lockstep
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS-9]
+  FR10:
+    title: Synchronization scope — exactly four documents, one explicit non-goal
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-10]
+  NFR1:
+    title: Forbidden tokens in I.2.c
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-8]
+  NFR2:
+    title: Structural anchors preserved
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-1]
+  NFR3:
+    title: No bare git commit/add lines
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-8]
+  NFR4:
+    title: Documentation-only change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-10]
+  NFR5:
+    title: Suite green
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-7, TS-10]
+  NFR6:
+    title: Internal consistency of the terminal description
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-3, TS-6]
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 1

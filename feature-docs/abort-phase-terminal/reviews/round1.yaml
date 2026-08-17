@@ -1,0 +1,144 @@
+round: 1
+executed_at: "2026-08-18T00:20:14+09:00"
+scope:
+  review_mode: diff
+  base_commit: 5b764bc0963f912a04831e4530c3d2deb362d1e8
+  head_commit: df8e52a4ad1170c1b6efa11eb44e8a2d3aa2e05d
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/implement-phase.md
+    - test-docs/abort-phase-terminal/task0001.tests.yaml
+    - test-docs/abort-phase-terminal/task0002.tests.yaml
+    - tests/test_abort_phase_terminal_batch_mode.py
+    - tests/test_implement_routeback_gate.py
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_routeback_reset_scope_consistency.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: b06cb0bd27bf9dbd
+    severity: medium
+    category: spec
+    file: tests/test_abort_phase_terminal_batch_mode.py
+    line: 1
+    title: 新規テストモジュールが Declared Change Set に含まれていない
+    description: >-
+      この変更は `tests/test_abort_phase_terminal_batch_mode.py` を新規追加している
+      （diff: `new file mode 100644`、159 行）が、このパスは SPEC の Declared Change
+      Set に列挙されていない。同節は「This declaration is a SUPERSET assertion: the
+      actual change set observed at verification time must be CONTAINED IN the
+      declared set」と明示しており、Success Criteria の「The actual change set is
+      contained in the Declared Change Set above」も同じ制約を課す。さらに NFR4 は
+      変更集合を「prose plus the three test modules plus the two version manifests」
+      と限定し、TS-10 も同じ 3 モジュール前提で検証手順を書いている。実測の
+      `git diff --name-status 5b764bc` は宣言済み 7 パス + 既定エントリで被覆される
+      workflow.yaml / task000{1,2}.tests.yaml に加えて、被覆されない
+      `tests/test_abort_phase_terminal_batch_mode.py` を含むため、TS-10 と Success
+      Criteria が記述どおりには成立しない。task0002.tests.yaml の AC-6 自身は
+      この新規ファイルをスコープ内として記録しており、タスク計画側と SPEC 側の
+      宣言がドリフトしている。機能上の害はなく、テストスイートは 1434 件グリーン。
+    suggestion: >-
+      いずれか一方で整合させる。(a) SPEC を正とするなら、FR7 の検証を新規モジュール
+      ではなく既に宣言済みのモジュール（例: `tests/test_recycled_task_id_consistency.py`）
+      に取り込み、`tests/test_abort_phase_terminal_batch_mode.py` を作らない。
+      (b) 実装を正とするなら、SPEC の Declared Change Set に
+      `tests/test_abort_phase_terminal_batch_mode.py` を追記し、あわせて NFR4 の
+      「the three test modules」と TS-10 の同表現を四モジュールに合わせて改める
+      （FR8 が指す byte-pin 三モジュールとは別カウントである旨も明記する）。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため Phase R4 の auto-fix 候補ゲート
+      （severity ∈ {critical, high} かつ category != spec）に該当せず、この
+      ラウンドでは修正対象にならなかった。SPEC 改訂を伴うため別タスクへ回す。
+  - stable_id: 0ff859e09508f200
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 472
+    line_end: 500
+    title: 終端手順が owner なしで 3 箇所に全文複製され、cite-don't-restate 規約から外れている
+    description: >-
+      この差分で「refresh → tip 捕捉 → `implement` step の `status` を `failed` へ
+      書く → 捕捉した tip を第 3 引数にした `commit-docs.sh`」という同一の終端手順が、
+      rejected path (L458-471)、abort bullet (L472-483)、batch-mode 段落 (L490-500)
+      の 3 箇所に、どれが owner か明示されないまま並列に書かれた。差分の実体は変数名
+      （`TERMINAL_TIP` / `ABORT_TIP`）とコミットメッセージだけで、「the terminal
+      status write and its own commit are the ONLY side effect」は 3 箇所に逐語重複
+      している。この文書自身は同じ I.2.c 内で「cited here as the owning rule, not
+      restated」等の規約を繰り返し使っており、abort bullet も refresh だけは引用の
+      形にしておきながら tip 捕捉以降は全文再記述という中途半端な形になっている。
+      維持コストはこの差分自体が示している: batch-mode 段落の文言が 3 つのテスト
+      モジュールに byte-identical リテラルとして pin されており、終端手順を 1 語
+      直すだけで散文 3 箇所 + テストリテラル 3 箇所の協調編集が要る。さらに既に
+      表現の分岐が生じている — 除外リストが rejected path と abort で別文言。
+      なお exit-4 側の配置は問題なし（abort の call site は bounded 側、carve-out は
+      route-back コミット単独のまま）で、develop/SKILL.md を触らなかった判断も正しい。
+    suggestion: >-
+      終端手順の owner を 1 箇所に定め、他は引用にする。(a) rejected path の記述を
+      owning statement とし、abort bullet を「上の rejected path と同じ terminal を
+      コミットメッセージだけ変えて実行する」に縮める。または (b) I.2.c 内に終端手順の
+      小節を 1 つ立て、3 箇所ともそこを cite するだけにし、各サイト固有の差分
+      （コミットメッセージ、変数名、mode 固有の選択規則）だけを残す。いずれの場合も
+      除外リストは owner 側 1 箇所に統一する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため Phase R4 の auto-fix 候補ゲートに該当せず、この
+      ラウンドでは修正対象にならなかった。3 つの byte pin と協調する散文
+      リファクタリングになるため別タスクへ回す。
+  - stable_id: 676ce984493653e6
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 493
+    line_end: 500
+    title: batch abort に commit 呼び出しが入ったことで batch-terminal-line の stop reason code が二重該当しうる
+    description: >-
+      この変更で batch の 2 回目失敗 abort パスに `commit-docs.sh` 呼び出しが新設され、
+      その call site は exit-4 recovery の対象として Branch & Worktree Model の
+      箇条書きに明示的に追加された。その結果、abort 実行中に 2 回連続の exit 4 が
+      起きた停止点は `references/batch-terminal-line.md` の Stop point coverage 表の
+      2 行 — `implement-second-failure`（→ `implement_task_failed`）と
+      `docs-commit-conflict`（→ `docs_commit_conflict_aborted`）— の両方に同時に
+      該当する。同ファイルの Precedence rule は「phase-specific > generic
+      `stop-condition-N`」しか解決せず、phase-specific 同士の衝突を解決しないまま
+      「so exactly one code applies」と宣言しているため、batch run が最終行に出す
+      reason code が未定義になる。外部サービスはこのコードでフォローアップタスクを
+      起票するので、誤帰属が起きうる。変更前は abort パスに commit が一切無かった
+      ため、この 2 行が同時に該当することは起き得なかった。副次的に、exit-4
+      recovery を使い切った時点では 2 回目の書き込み（`implement: failed`）が
+      未コミットのまま worktree に残る点も、この経路特有の残留状態になる。
+    suggestion: >-
+      どちらか一方の SSOT で優先関係を明示する。(a)
+      `references/batch-terminal-line.md` の Precedence rule に「phase-specific 同士が
+      同時該当した場合は、停止を直接引き起こした事象側（= `docs-commit-conflict`）が
+      勝つ」といった規則を 1 文追加する。または (b)
+      `references/implement-phase.md` の abort 記述側に、この call site で exit-4
+      recovery を使い切って停止した場合の reason code を明記する。あわせて、その
+      停止時に terminal status write が未コミットで残ることも 1 文で定義しておく。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため Phase R4 の auto-fix 候補ゲートに該当せず、この
+      ラウンドでは修正対象にならなかった。`batch-terminal-line.md` は本 feature の
+      宣言済み変更集合の外にあり、SSOT をまたぐ判断が要るため別タスクへ回す。
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
