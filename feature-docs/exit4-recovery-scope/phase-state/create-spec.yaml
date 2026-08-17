@@ -3,7 +3,7 @@ feature: exit4-recovery-scope
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 9df76cba8f164aeba2eb517fddeb5b5b58639810
+base_revision: c8d4416adca15f3e2c69c038037c325d996c3f9c
 last_input_digest: sha256:cf53b65cf40a927a123e189b2a6046574c21fb52b978d16531a59a6a4e0b6c68
 active_request_id: create-spec-run-0002
 packets: {}
@@ -14,10 +14,16 @@ worker_runs:
     input_digest: sha256:57fec079da4ea0da096a211e3dc460eb673dc5e119f51479fd1fb04c52761be5
     output_digest: sha256:6187a3e94a2c0bd932537492fe5ab0422ef6427310f65d42a5dd918432357baa
   - request_id: create-spec-run-0002
-    status: dispatched
+    status: completed
     input_digest: sha256:cf53b65cf40a927a123e189b2a6046574c21fb52b978d16531a59a6a4e0b6c68
-    output_digest: null
-artifacts: []
+    output_digest: sha256:dc4a20fdbad15fea3b4574e5c489fe685f2f5192792fe96f70f3d8ac4716d903
+artifacts:
+  - path: feature-docs/exit4-recovery-scope/REQUIREMENTS.md
+    sha256: sha256:cb7ec3aa5ed2dc4efc336f385e2b70ee8c016c31ebd9dffd36d06e8bab52b281
+    produced_by: create-spec-run-0002
+  - path: feature-docs/exit4-recovery-scope/SPEC.md
+    sha256: sha256:dc4a20fdbad15fea3b4574e5c489fe685f2f5192792fe96f70f3d8ac4716d903
+    produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
