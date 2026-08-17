@@ -40,10 +40,12 @@ document is written; this phase never creates them itself.
   (safe: the integration worktree never carries uncommitted state across
   turns — every workflow.yaml / document write, in every phase, is followed
   by a `commit-docs.sh` commit in the same step; NFR2).
-- **exit-4 recovery** (bounded; applies to Step I.1's baseline commit, Step
-  I.2.b's wake-phase commit and Step I.2.c's rejected-path terminal status
-  commit — the three `commit-docs.sh` call sites in this phase where exit 4
-  can occur): exit 4 means a concurrent
+- **exit-4 recovery** (bounded; applies to every `commit-docs.sh` call site
+  in the implement phase — for example, Step I.1's baseline commit, Step
+  I.2.a's launch-time task status / task branch write, Step I.2.b's
+  wake-phase commit, Step I.2.c's rejected-path terminal status commit,
+  and Step I.3's implement-completed / completed-commit write): exit 4
+  means a concurrent
   `merge-task.sh` advanced the branch ref
   between that call site's last refresh and its commit attempt. Recovery:
   refresh the integration worktree again (the `reset --hard` above), RE-CAPTURE

@@ -1,0 +1,84 @@
+task_id: task0001
+baseline_failures: []          # full suite: 1387 passed / 0 failed before any edit (4a)
+final_failures: []             # full suite: 1394 passed / 0 failed after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_scope_is_universal_over_every_call_site
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_old_closed_enumeration_exhaustiveness_claim_absent
+    red_confirmed: true
+    red_reason: >-
+      Both assertions failed against the pre-edit document: the
+      universal-scope presence assertIn raised AssertionError (phrase
+      absent from the bullet), and the closed-enumeration absence
+      assertNotIn raised AssertionError (the exhaustiveness-claim phrase
+      was still present).
+  AC-2:
+    tests:
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_bound_side_names_step_i2a_launch_time_write
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_bound_side_names_step_i3_completion_write
+    red_confirmed: true
+    red_reason: >-
+      Both assertIn assertions raised AssertionError against the pre-edit
+      bullet, which named only three sites (Step I.1, I.2.b, I.2.c) and did
+      not mention Step I.2.a's launch-time write or Step I.3's completion
+      write.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Preservation criterion (the carve-out sentence, the unreachability
+      proof, and the two citing SSOTs stay unmodified) -- verified by
+      pre-existing pinning tests (test_carve_out_names_route_back_commit_explicitly,
+      test_states_unreachability_chain_tied_to_widened_gate,
+      test_recovery_procedure_sentences_survive, and the whole
+      TestExit4CarveOutStatedInAllThreeSSOTs class) which were already
+      green before this task and remain green after, plus `git status
+      --porcelain` confirming commit-docs.sh and SKILL.md are absent from
+      the changed-file list. No new test corresponds to this criterion
+      since it asserts nothing changed, not a new capability to pin.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Preservation criterion: every pre-existing assertion in the module
+      (69 tests before this task) still passes unchanged -- verified by the
+      full module run (76/76 green) and the full project suite (1394/1394
+      green, baseline was 1387/1387 green). No new test corresponds to this
+      criterion since it asserts nothing broke, not a new capability.
+  AC-5:
+    tests:
+      - tests.test_implement_routeback_gate.TestExit4EnumerationExcludesRouteBackCommit.test_old_closed_enumeration_exhaustiveness_claim_absent
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_old_exit4_closed_enumeration_claim_matcher_flags_pre_change_wording
+    red_confirmed: true
+    red_reason: >-
+      The absence assertion failed pre-edit (same observation as AC-1);
+      its paired regression-proof test (asserting the same matcher flags a
+      literal copy of the pre-change wording) was green from the start by
+      design -- a proof test validates the matcher itself, not the
+      document, so it is not expected to go red. Module test-method count
+      increased from 69 to 76 (confirmed by `unittest -v` run counts before
+      and after); diff review confirms no existing test was removed,
+      renamed away, or skipped.
+  AC-6:
+    tests:
+      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_plugin_manifest_and_marketplace_agree_on_version
+      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_shared_version_is_0_1_43
+    red_confirmed: true
+    red_reason: >-
+      test_shared_version_is_0_1_43 failed against the pre-bump manifests
+      (AssertionError: '0.1.42' != '0.1.43'), confirmed by temporarily
+      reverting both manifest files to their pre-task content, rerunning
+      the test class, observing the failure, then restoring the 0.1.43
+      bump.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/inspection-level criterion -- verified by the full suite
+      passing (1394/1394), `git status --porcelain` showing exactly the
+      four Scope files changed and no other files touched, and no .sh file
+      appearing in the diff (so no executable line of any script changed;
+      the two frozen files were never opened for edit). Not independently
+      red-confirmed since it is a containment/regression check, not a new
+      failing behavior to pin.
