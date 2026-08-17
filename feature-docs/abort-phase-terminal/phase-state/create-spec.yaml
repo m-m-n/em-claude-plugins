@@ -1,11 +1,11 @@
 schema_version: 1
 feature: abort-phase-terminal
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
-base_revision: 94a81e5aa1f16b5e3dff5c67ac6b8f7e1246bfb3
-last_input_digest: sha256:2303dd7602852ef3d6dc2f7779fce55e250c2655839f4cbe7256d564b2c29ee7
-active_request_id: null
+base_revision: 02fb568b2c8192f058801c6d7b74e365ae16f221
+last_input_digest: sha256:f877ba1392178d64e9a80f872caa9b6f5af1e90279fcffd2ced40a9f3f98f020
+active_request_id: create-spec-run-0002
 packets:
   abort-phase-terminal-q0001:
     status: answered
@@ -59,6 +59,10 @@ worker_runs:
     status: needs_user_input
     input_digest: sha256:2303dd7602852ef3d6dc2f7779fce55e250c2655839f4cbe7256d564b2c29ee7
     output_digest: null   # worker wrote no artifacts; result body not retained
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: sha256:f877ba1392178d64e9a80f872caa9b6f5af1e90279fcffd2ced40a9f3f98f020
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: sha256:75f25693fe0c3841d04fc88bd8ca17a1ce62529809ae921fc9753aebac2d6615
