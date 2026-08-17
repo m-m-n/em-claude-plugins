@@ -89,6 +89,7 @@ byte-identity assertions (AC-3's heading/batch-mode-paragraph clause)
 compare the raw, un-normalized text.
 """
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -97,6 +98,8 @@ PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "em-workflow"
 IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
 COMMIT_DOCS_SH_PATH = PLUGIN_ROOT / "scripts" / "commit-docs.sh"
 DEVELOP_SKILL_PATH = PLUGIN_ROOT / "skills" / "develop" / "SKILL.md"
+PLUGIN_MANIFEST_PATH = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
+MARKETPLACE_PATH = PLUGIN_ROOT.parent / ".claude-plugin" / "marketplace.json"
 
 I2C_HEADING = "### I.2.c: Failed handling"
 NEXT_SECTION_HEADING = "### Supporting cast"
@@ -137,6 +140,14 @@ OLD_EXIT4_ENUMERATION_TAIL = (
     "Step I.2.b's wake-phase commit, and Step I.2.c's route-back commit"
 )
 OLD_I2C_RECOVERY_POINTER = "(exit-4 recovery: Branch & Worktree Model above)"
+
+# This task's own removed wording (task0001, exit4-recovery-scope), captured
+# before the edit landed -- needed for the absence assertion's paired
+# regression proof (AC-1 / FR1).
+OLD_EXIT4_CLOSED_ENUMERATION_CLAIM = (
+    "the three `commit-docs.sh` call sites in this phase where exit 4 can "
+    "occur"
+)
 
 # task0003's own removed wording (routeback-gate-postcondition, rework
 # round 1), captured before the edit landed -- needed for the absence
@@ -557,6 +568,48 @@ class TestExit4EnumerationExcludesRouteBackCommit(unittest.TestCase):
         self.assertIn("second exit 4", section)
         self.assertIn("stops the phase", section)
 
+    def test_scope_is_universal_over_every_call_site(self):
+        # task0001 (exit4-recovery-scope) AC-1 / FR1, FR2: the bounded
+        # recovery's scope is stated as a universal quantifier over every
+        # `commit-docs.sh` call site in the implement phase, not a closed
+        # list of named sites.
+        self.assertIn(
+            "applies to every `commit-docs.sh` call site in the implement "
+            "phase",
+            self.section,
+        )
+
+    def test_old_closed_enumeration_exhaustiveness_claim_absent(self):
+        # task0001 (exit4-recovery-scope) AC-1 / FR1: the tail asserting
+        # that the listed sites are the three `commit-docs.sh` call sites
+        # in this phase where exit 4 can occur no longer appears anywhere
+        # in the document.
+        self.assertNotIn(OLD_EXIT4_CLOSED_ENUMERATION_CLAIM, self.section)
+        self.assertNotIn(
+            OLD_EXIT4_CLOSED_ENUMERATION_CLAIM, _normalize_ws(_read())
+        )
+
+    def test_bound_side_names_step_i2a_launch_time_write(self):
+        # task0001 (exit4-recovery-scope) AC-2: Step I.2.a's launch-time
+        # task status / task branch write is named on the bound side
+        # inside this same bullet -- scoped to the Branch & Worktree Model
+        # section (narrower than the whole file, where "Step I.2.a" also
+        # occurs elsewhere without naming this write).
+        self.assertIn(
+            "Step I.2.a's launch-time task status / task branch write",
+            self.section,
+        )
+
+    def test_bound_side_names_step_i3_completion_write(self):
+        # task0001 (exit4-recovery-scope) AC-2: Step I.3's
+        # implement-completed / completed-commit write is named on the
+        # bound side inside this same bullet -- same scoping rationale as
+        # the I.2.a assertion above.
+        self.assertIn(
+            "Step I.3's implement-completed / completed-commit write",
+            self.section,
+        )
+
 
 class TestI2cCallSiteNoLongerPointsAtRecoveryProcedure(unittest.TestCase):
     """AC-5 / FR4 (second half): the I.2.c route-back commit no longer
@@ -659,6 +712,34 @@ class TestContainmentAndInvariants(unittest.TestCase):
     def test_no_bare_git_commit_or_add_lines(self):
         lines = _bare_git_commit_or_add_lines(self.text)
         self.assertEqual(lines, [], f"unexpected raw git commit/add lines: {lines}")
+
+
+class TestPluginVersionBumpedInLockstep(unittest.TestCase):
+    """AC-6 (task0001, exit4-recovery-scope): the plugin manifest and the
+    marketplace entry for em-workflow agree on the same version, bumped to
+    0.1.43 in this task. Test Notes: assert the two manifests agree on the
+    same value rather than checking each file in isolation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plugin_manifest = json.loads(
+            PLUGIN_MANIFEST_PATH.read_text(encoding="utf-8")
+        )
+        marketplace = json.loads(MARKETPLACE_PATH.read_text(encoding="utf-8"))
+        cls.marketplace_entry = next(
+            entry
+            for entry in marketplace["plugins"]
+            if entry.get("name") == "em-workflow"
+        )
+
+    def test_plugin_manifest_and_marketplace_agree_on_version(self):
+        self.assertEqual(
+            self.plugin_manifest["version"], self.marketplace_entry["version"]
+        )
+
+    def test_shared_version_is_0_1_43(self):
+        self.assertEqual(self.plugin_manifest["version"], "0.1.43")
+        self.assertEqual(self.marketplace_entry["version"], "0.1.43")
 
 
 class TestExit4CarveOutStatedInAllThreeSSOTs(unittest.TestCase):
@@ -821,6 +902,16 @@ class TestValidationDetectsRegressions(unittest.TestCase):
             "並行する merge-task.sh がこの worktree の"
         )
         self.assertIn(OLD_SKILL_EXIT4_UNSCOPED_PHRASE, sample)
+
+    def test_old_exit4_closed_enumeration_claim_matcher_flags_pre_change_wording(self):
+        sample = (
+            "applies to Step I.1's baseline commit, Step I.2.b's "
+            "wake-phase commit and Step I.2.c's rejected-path terminal "
+            "status commit — the three `commit-docs.sh` call sites in "
+            "this phase where exit 4 can occur): exit 4 means a "
+            "concurrent `merge-task.sh` advanced the branch ref"
+        )
+        self.assertIn(OLD_EXIT4_CLOSED_ENUMERATION_CLAIM, sample)
 
     def test_bare_commit_line_matcher_flags_an_unlocked_commit(self):
         sample = 'git -C {project_root} add -A -- foo && git -C {project_root} commit -m "x"'
