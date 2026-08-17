@@ -1,0 +1,147 @@
+task_id: task0001
+baseline_failures: []          # tests/, python3 -m unittest discover -s tests, 1394 tests, all green
+final_failures: []             # same command, 1405 tests, all green (11 new tests added)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardBlocking.test_free_slots_and_unlaunched_tasks_blocks_with_bounded_ascending_ids
+      - tests.test_queue_stop_guard.TestQueueStopGuardRealLayoutAncestorWalk.test_blocks_identically_from_fixture_root_and_integration_dir
+      - tests.test_queue_stop_guard.TestQueueStopGuardRealLayoutAncestorWalk.test_blocks_from_a_deep_subdirectory_of_the_integration_worktree
+    red_confirmed: true
+    red_reason: >
+      Against the pre-implementation hook (find_project_root + flat-layout
+      active_features), all three returned exit 0 (AssertionError: 0 != 2):
+      the migrated fixture writes workflow.yaml under the nested
+      integration-worktree layout, which the old flat glob
+      {root}/feature-docs/*/workflow.yaml never matches.
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardFreshness.test_stale_journal_mtime_excludes_despite_unlaunched_tasks
+      - tests.test_queue_stop_guard.TestQueueStopGuardFreshness.test_fresh_journal_mtime_blocks
+      - tests.test_queue_stop_guard.TestQueueStopGuardFreshness.test_no_journal_file_falls_back_to_stale_workflow_yaml_mtime_and_excludes
+      - tests.test_queue_stop_guard.TestQueueStopGuardFreshness.test_no_journal_file_falls_back_to_fresh_workflow_yaml_mtime_and_blocks
+    red_confirmed: true
+    red_reason: >
+      Two-step confirmation, because a single pre-implementation hook run
+      does not discriminate the freshness filter from plain non-enumeration.
+      (1) The two "blocks" tests (fresh mtime) returned 0 instead of 2
+      against the original hook (nothing enumerated at all under the real
+      layout). (2) The two "excludes" tests (stale mtime) returned 2 instead
+      of 0 against an intermediate hook that had the new-layout enumeration
+      and decomposition but with candidate_is_fresh's filter call removed —
+      proving the freshness check itself, not mere non-enumeration, is what
+      those two assertions exercise.
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardLayoutIsolation.test_flat_main_tree_workflow_yaml_is_never_enumerated
+      - tests.test_queue_stop_guard.TestQueueStopGuardLayoutIsolation.test_no_worktrees_directory_anywhere_above_cwd_passes_silently
+    red_confirmed: true
+    red_reason: >
+      test_flat_main_tree_workflow_yaml_is_never_enumerated returned 2
+      instead of 0 against the original hook (a readable, empty journal was
+      deliberately placed at the worktree-side directory so the old hook,
+      which DOES enumerate the flat path via its cwd fallback, reaches an
+      actual BLOCK rather than bailing out on an unrelated missing-journal
+      reason — this makes the red a genuine statement about layout
+      isolation). test_no_worktrees_directory_anywhere_above_cwd_passes_silently
+      was already green pre-implementation (see unconfirmed_reds) — recorded
+      honestly rather than misrepresented.
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardReviewRound1Regressions.test_journal_file_absent_but_directory_present_blocks
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailOpen.test_missing_journal_directory_passes
+    red_confirmed: true
+    red_reason: >
+      test_journal_file_absent_but_directory_present_blocks returned 0
+      instead of 2 against the original hook (nothing enumerated under the
+      migrated fixture's nested layout). test_missing_journal_directory_passes
+      (adapted to represent "whole worktree-side feature directory absent")
+      was already green pre-implementation (see unconfirmed_reds).
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardMultiFeatureOrdering.test_two_features_reports_first_by_ascending_name
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 2 against the pre-implementation hook (nothing enumerated under the real layout for either fixture feature)."
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardBlocking.test_free_slots_and_unlaunched_tasks_blocks_with_bounded_ascending_ids
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailedTask.test_failed_task_present_never_blocks
+      - tests.test_queue_stop_guard.TestQueueStopGuardNonBlockingStates.test_exactly_six_in_flight_no_free_slot_passes
+      - tests.test_queue_stop_guard.TestQueueStopGuardNonBlockingStates.test_zero_unlaunched_tasks_passes
+      - tests.test_queue_stop_guard.TestQueueStopGuardNonBlockingStates.test_no_feature_with_implement_in_progress_passes
+      - tests.test_queue_stop_guard.TestQueueStopGuardConsecutiveBlockCap.test_three_blocks_then_fourth_passes_with_warning_then_state_change_resets
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailOpen.test_missing_journal_directory_passes
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailOpen.test_malformed_journal_line_is_skipped_not_fatal
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailOpen.test_malformed_stdin_passes
+      - tests.test_queue_stop_guard.TestQueueStopGuardFailOpen.test_missing_feature_docs_passes
+      - tests.test_queue_stop_guard.TestQueueStopGuardRetryAfterFailure.test_retried_task_counts_as_in_flight
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_id_with_pending_status_is_unlaunched_and_blocks
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_non_pending_status_still_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_absent_status_key_still_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_failed_task_with_undeterminable_status_still_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_mixed_retired_and_genuinely_failed_tasks_suppresses
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_status_scoped_to_own_task_block_not_confused_with_step_status
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_task_id_absent_from_tasks_mapping_is_ignored_even_if_failed_in_journal
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_retired_task_participates_in_free_slot_arithmetic_and_bounded_list
+      - tests.test_queue_stop_guard.TestQueueStopGuardRecycledTaskId.test_consecutive_block_cap_still_works_with_reclassified_task
+      - tests.test_queue_stop_guard.TestQueueStopGuardStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard.TestQueueStopGuardReviewRound1Regressions.test_journal_file_absent_but_directory_present_blocks
+      - tests.test_queue_stop_guard.TestQueueStopGuardReviewRound1Regressions.test_stops_after_cap_keep_passing_in_same_state
+    red_confirmed: true
+    red_reason: >
+      All 23 pre-existing test methods carry forward against the migrated
+      StopGuardFixture (nested integration-worktree layout) with their
+      original intent and assertions unchanged. 10 of them assert a
+      blocking (exit 2) outcome and went genuinely red against the
+      pre-implementation hook (AssertionError: 0 != 2, or block #1 should
+      block) because the old flat-layout enumeration never matches the
+      migrated fixture's nested workflow.yaml path; all 10 are green now.
+      The remaining 13 assert an exit-0/fail-open outcome that both the old
+      and the migrated fixture happen to satisfy trivially (the old hook's
+      cwd-fallback still finds nothing relevant in these specific fixture
+      shapes) — carried forward for regression coverage, not as red-green
+      evidence for this task's new behavior.
+  AC-7:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardStdlibOnly.test_no_process_spawning_facility_or_repo_toplevel_probe_referenced
+      - tests.test_queue_stop_guard.TestQueueStopGuardStdlibOnly.test_only_stdlib_imports
+    red_confirmed: true
+    red_reason: >
+      test_no_process_spawning_facility_or_repo_toplevel_probe_referenced
+      failed against the original hook source
+      (AssertionError: 'subprocess' unexpectedly found in ...).
+      test_only_stdlib_imports is a preservation check (subprocess was
+      already a stdlib module, so this assertion holds both before and
+      after) carried forward, not a new-behavior red.
+  AC-8:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardSingleDerivation.test_divergent_worktree_and_docs_segment_names_reads_the_enumerated_file
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 2 against the pre-implementation hook (the divergent-segment probe fixture is not enumerable by the old flat layout at all)."
+  AC-9:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      Outcome is the full suite command itself
+      (python3 -m unittest discover -s tests). Pre-implementation:
+      1394 baseline tests pass, but running the migrated test file alone
+      against the original hook produced 17 failures out of 34
+      (see AC-1/AC-2/AC-3/AC-4/AC-5/AC-6/AC-7/AC-8 red_reason entries).
+      Post-implementation: full discovery run is 1405 tests, 0 failures,
+      0 errors.
+notes: |
+  Two acceptance-criterion sub-cases could not be made to fail first and are
+  recorded honestly rather than fabricated as red-confirmed (see
+  unconfirmed_reds in the final report): AC-3's "no worktrees directory
+  anywhere above cwd" case and AC-4's "whole worktree-side feature directory
+  absent" case. Both assert exit 0 / empty-ish stderr on a completely empty
+  fixture directory tree; the pre-implementation hook's find_project_root()
+  always falls back to cwd itself (it never fails), so it also reaches
+  "nothing to enumerate -> exit 0" on an empty tree, for an unrelated
+  reason. There is no way to construct an input on which the old
+  cwd-fallback and the new ancestor-walk-with-None disagree when nothing
+  exists on disk at all -- the scenario is inherently non-discriminating
+  between the two implementations. Both tests remain valid forward-looking
+  regression coverage for the new contract (verified to still exit 0 with
+  no crash / no traceback post-implementation) even though they were not
+  observed to fail first.
