@@ -1,0 +1,17 @@
+schema_version: 1
+feature: recycled-task-id-carveout
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 996b270c9e58319e99c9e2c32138c8334189a0f2
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
