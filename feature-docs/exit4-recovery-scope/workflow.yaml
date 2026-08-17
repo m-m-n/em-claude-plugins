@@ -58,8 +58,12 @@ tasks:
     branch: em-workflow/exit4-recovery-scope/task0001
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor: [comprehensive, architecture, spec]
+    discretionary: []
+    cross_validation: false
 
 batch:
   review_rework_count: 0
