@@ -1,0 +1,42 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 1394 tests, all pass
+final_failures: []             # same suite, same result after the change
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, em-workflow/.claude-plugin/plugin.json held
+      "0.1.43" (the pre-change value itself, not that value with the patch
+      incremented), so the criterion "patch incremented by one, major/minor
+      unchanged" failed. Observed via Read before editing. After the edit
+      the value is "0.1.44" (verified with python json.load).
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Both files already held the identical value "0.1.43" before the
+      edit, so character-for-character parity was already true pre-change
+      — there was no failing state to observe. This task preserves the
+      invariant across the bump (both now "0.1.44") rather than
+      establishing it from red. No automated test was added; the task
+      plan's Test Notes explicitly defer verification to the
+      VERIFICATION.md release check rather than a new unit test.
+  AC-3:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, `git status` on the worktree was clean (0 changed
+      lines), failing "diff is exactly two changed lines". After the edit,
+      `git diff --stat` shows 2 files changed, 2 insertions(+),
+      2 deletions(-) — one version line per file, no other key touched.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Both files already parsed as valid JSON and the marketplace file
+      already listed both plugin entries (em-review, em-workflow) before
+      the edit — this criterion is a non-regression guard, not a state the
+      implementation creates from failing. Verified after the edit via
+      python json.load on both files plus an entry-count/name check
+      (2 entries: em-review, em-workflow, unchanged).
