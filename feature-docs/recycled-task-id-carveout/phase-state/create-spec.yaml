@@ -1,17 +1,64 @@
 schema_version: 1
 feature: recycled-task-id-carveout
 phase: create-spec
-status: initialized
+status: awaiting_answers
 generation: 1
-base_revision: 996b270c9e58319e99c9e2c32138c8334189a0f2
-last_input_digest: null
-active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+base_revision: 78380093aa22abd652e0e3333e49f14885bd0280
+last_input_digest: sha256:7b4c22c4bfa0a6c5b94ae4269b6ef768e2b71faa94b3e51427de85cf18208b6a
+active_request_id: create-spec-run-0001
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-18T08:15:48+09:00"
+    questions:
+      - question_id: recycled-carveout.unlaunched-divergence
+        status: answered
+      - question_id: recycled-carveout.pin-test-mechanism
+        status: answered
+      - question_id: recycled-carveout.design-step
+        status: answered
+answers:
+  recycled-carveout.unlaunched-divergence:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-18T08:15:48+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [document_divergence_in_ssot]
+    freeform: null
+    normalized_answer: "Leave queue_stop_guard.py untouched; state the unlaunched-definition divergence explicitly in implement-phase.md I.2.a as a deliberate, documented divergence."
+    resolution_note: "batch: gate create-spec.requirement-clarification -> codex_consultation (batch-policies.yaml). Codex recommended document_divergence_in_ssot; orchestrator judged the mapping onto the packet's option_id. Recorded as assumption per record_as_assumption: true."
+  recycled-carveout.pin-test-mechanism:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-18T08:15:48+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [both]
+    freeform: null
+    normalized_answer: "Use both layers: a static source scan pinning the negative claim for the three journal-only hooks, plus a behavioral subprocess test for queue_stop_guard.py's carve-out."
+    resolution_note: "batch: gate create-spec.requirement-clarification -> codex_consultation (batch-policies.yaml). Codex recommended both; orchestrator judged the mapping onto the packet's option_id. Recorded as assumption per record_as_assumption: true."
+  recycled-carveout.design-step:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-18T08:15:48+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "Accept requirements-analyst's design-step recommendation: skip (no UI)."
+    resolution_note: "batch: gate create-spec.design-step -> select option_id decide_autonomously (batch-policies.yaml)."
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: sha256:7b4c22c4bfa0a6c5b94ae4269b6ef768e2b71faa94b3e51427de85cf18208b6a
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
