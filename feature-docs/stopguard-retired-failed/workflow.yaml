@@ -35,7 +35,8 @@ workflow:
     base_commit: f5b0df510298149396a666d2e151a4d7a72c09e4
     completed_at_commit: 48455e6a312f7a83e81b48f41e4ba290af93b01b
   - id: review
-    status: failed
+    status: completed
+    completed_at_commit: 3319d23381e66592e89aa8ead0e4e4e405e63a61
   - id: verify
     status: pending
     result: null
@@ -73,7 +74,7 @@ tasks:
     branch: em-workflow/stopguard-retired-failed/task0002
 
 review:
-  status: failed
+  status: completed
   rounds_completed: 1
   plan:
     floor: [comprehensive, security, performance, spec]
@@ -87,8 +88,9 @@ review:
     performance: completed
     spec: completed
     architecture: completed
-  residual_critical_high: 1
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
+  residual_accepted_deferred: [df5b41d20735b142]
 
 requirements:
   FR1:

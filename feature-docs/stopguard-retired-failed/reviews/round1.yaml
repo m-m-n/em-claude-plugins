@@ -52,8 +52,12 @@ findings:
       無ければ現行パスにフォールバックする。active_features も同じ探索源に揃える。
     sources: [claude:comprehensive]
     confidence: 65
-    resolution: unresolved
+    resolution: deferred
     resolution_reason: >-
+      ユーザーが明示的に受理（Notion タスクの申し送り「既存欠陥・別タスク起票済み」
+      として residual を deferred で受理）。本指摘は本 diff 以前からの既存欠陥であり、
+      修正には SPEC 変更が必要なため、本 feature のスコープ外として別タスクで扱う。
+      以下は round 1 での経緯。
       round 1 loop 1 で auto-fix を適用したが（commit 827d223）、再レビューで spec 観点 2 本
       （claude=high / litellm:vertex-deepseek-v3.2=critical）が独立に「SPEC.md の
       Architecture『classification branch 以外は上流・下流とも不変 (FR4)』および NFR4
@@ -189,9 +193,15 @@ auto_fix:
     （493bb88a2ac92deafec9ff7ecc6bd9382e3e6d39）のため、上記 findings が現ツリーに
     対する権威ある結果であり、同一ツリーへの再ファンアウトは行っていない。
     revert 後も 1303 tests OK。
-residual_critical_high: 1
-rework_required: true
-rework_outcome: aborted-spec-change-gate
+residual_critical_high: 0
+residual_accepted_deferred: [df5b41d20735b142]
+rework_required: false
+rework_outcome: aborted-spec-change-gate-then-user-accepted
+rework_resolution: >-
+  中断した rework.spec-change ゲートに対し、ユーザーが Notion タスクの申し送りで
+  「既存欠陥・別タスク起票済み」として residual の deferred 受理を明示した。
+  これにより review ステップの完了ゲートは explicit user acceptance の経路で
+  満たされ、SPEC 変更は本 feature では行わない。
 rework_outcome_reason: >-
   batch auto-rework を 1 回消費して rework-planner を dispatch したが、
   rework-planner は df5b41d20735b142 を実在の欠陥と確認したうえで
