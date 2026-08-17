@@ -39,13 +39,14 @@ import glob
 import json
 import os
 import re
-import subprocess
 import sys
 import tempfile
+import time
 
 MAX_PARALLEL_IMPLEMENTERS = 6  # SSOT duplicated per IMPLEMENTATION.md; also
                                 # pinned in implement-phase.md (task0005).
 MAX_CONSECUTIVE_BLOCKS = 3
+FRESHNESS_THRESHOLD_SECONDS = 24 * 60 * 60  # D3: abandoned-worktree cutoff.
 
 FEATURE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 TASK_ID_RE = re.compile(r"^task[0-9]+$")
@@ -64,24 +65,25 @@ TASK_STATUS_RE = re.compile(r"^\s+status:\s*(\S+)\s*$")
 KNOWN_EVENTS = ("launched", "merged", "failed")
 
 
-def find_project_root():
-    """Stop hooks run with cwd = the session's project directory; a git
-    toplevel probe refines it when available (worktrees, subdirectories)."""
-    cwd = os.getcwd()
-    try:
-        proc = subprocess.run(
-            ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if proc.returncode == 0:
-            top = proc.stdout.strip()
-            if top and os.path.isdir(top):
-                return top
-    except (OSError, subprocess.SubprocessError):
-        pass
-    return cwd
+def find_worktrees_root(cwd):
+    """Stage 1 (Enumeration root): walk up from `cwd` (itself included) to
+    the nearest ancestor containing `.claude/worktrees/em-workflow` as a
+    directory; return that worktrees directory itself, or None if the walk
+    reaches the filesystem root without a hit. No process invocation.
+    Duplicated deliberately (not factored into a shared module) from
+    queue_taskstop_net.py's find_worktrees_root — same semantics
+    (IMPLEMENTATION.md D2)."""
+    if not isinstance(cwd, str) or not cwd:
+        return None
+    current = os.path.abspath(cwd)
+    while True:
+        candidate = os.path.join(current, ".claude", "worktrees", "em-workflow")
+        if os.path.isdir(candidate):
+            return candidate
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
 
 
 def implement_in_progress(workflow_yaml_path):
@@ -249,21 +251,88 @@ def fingerprint_for(unlaunched, in_flight):
     )
 
 
-def evaluate_feature(root, feature):
-    """Return a decision dict for `feature` if it currently has refillable
-    work to report, else None (nothing actionable / not evaluable)."""
-    if not FEATURE_RE.match(feature):
-        return None
+def decompose_enumerated_path(workflow_yaml_path):
+    """Enumerated-path decomposition (single derivation, IMPLEMENTATION.md
+    D1): from one workflow.yaml path produced by the layout pattern
+    `{worktrees_root}/*/integration/feature-docs/*/workflow.yaml`, derive
+    (feature identity, journal directory). The journal directory is the
+    ancestor of the matched path that directly contains the
+    `integration` directory; that same ancestor's own last segment is the
+    identity. The `feature-docs/<segment>` wildcard is never read as
+    identity, and nothing downstream reassembles this path from a root
+    plus a name."""
+    segment_dir = os.path.dirname(workflow_yaml_path)  # feature-docs/<segment>
+    feature_docs_dir = os.path.dirname(segment_dir)  # .../integration/feature-docs
+    integration_dir = os.path.dirname(feature_docs_dir)  # .../<feature>/integration
+    journal_dir = os.path.dirname(integration_dir)  # .../<feature>
+    identity = os.path.basename(journal_dir)
+    return identity, journal_dir
 
-    workflow_yaml_path = os.path.join(root, "feature-docs", feature, "workflow.yaml")
-    if not implement_in_progress(workflow_yaml_path):
-        return None
+
+def candidate_is_fresh(journal_dir, workflow_yaml_path, now=None):
+    """D3 freshness condition: reads the journal file's modification time,
+    falling back to the enumerated workflow.yaml's modification time when
+    the journal file does not exist. Excludes the candidate when the
+    chosen time is more than FRESHNESS_THRESHOLD_SECONDS in the past, or
+    when neither time is obtainable (undecidable falls to the
+    non-blocking side)."""
+    if now is None:
+        now = time.time()
+    journal_path = os.path.join(journal_dir, "journal.jsonl")
+    try:
+        mtime = os.path.getmtime(journal_path)
+    except OSError:
+        try:
+            mtime = os.path.getmtime(workflow_yaml_path)
+        except OSError:
+            return False
+    return (now - mtime) <= FRESHNESS_THRESHOLD_SECONDS
+
+
+def active_candidates(worktrees_root, now=None):
+    """Stage 2 (Active set): expand the layout pattern under
+    `worktrees_root`, decompose each match once, and keep only candidates
+    whose derived identity satisfies the feature-name shape check, whose
+    implement step reads in_progress, and that pass the freshness
+    condition. Returns a list of {"identity", "workflow_yaml_path",
+    "journal_dir"} dicts, stable and ascending by identity."""
+    pattern = os.path.join(
+        worktrees_root, "*", "integration", "feature-docs", "*", "workflow.yaml"
+    )
+    candidates = []
+    for match in sorted(glob.glob(pattern)):
+        identity, journal_dir = decompose_enumerated_path(match)
+        if not FEATURE_RE.match(identity):
+            continue
+        if not implement_in_progress(match):
+            continue
+        if not candidate_is_fresh(journal_dir, match, now=now):
+            continue
+        candidates.append(
+            {
+                "identity": identity,
+                "workflow_yaml_path": match,
+                "journal_dir": journal_dir,
+            }
+        )
+    candidates.sort(key=lambda candidate: candidate["identity"])
+    return candidates
+
+
+def evaluate_feature(candidate):
+    """Return a decision dict for `candidate` if it currently has
+    refillable work to report, else None (nothing actionable / not
+    evaluable). `candidate` is an already-resolved pair from
+    active_candidates (Stage 3: reads the given workflow.yaml path
+    verbatim; nothing here is joined from a root plus a feature name)."""
+    feature = candidate["identity"]
+    workflow_yaml_path = candidate["workflow_yaml_path"]
+    journal_dir = candidate["journal_dir"]
 
     task_ids = task_ids_from_workflow(workflow_yaml_path)
     if not task_ids:
         return None
 
-    journal_dir = os.path.join(root, ".claude", "worktrees", "em-workflow", feature)
     journal_path = os.path.join(journal_dir, "journal.jsonl")
     last_events = read_journal(journal_path)
     if last_events is None:
@@ -306,12 +375,6 @@ def evaluate_feature(root, feature):
         "to_launch": to_launch,
         "fingerprint": fingerprint_for(unlaunched, in_flight),
     }
-
-
-def active_features(root):
-    docs_dir = os.path.join(root, "feature-docs")
-    paths = sorted(glob.glob(os.path.join(docs_dir, "*", "workflow.yaml")))
-    return [os.path.basename(os.path.dirname(path)) for path in paths]
 
 
 def read_sidecar(path):
@@ -379,10 +442,12 @@ def hook_main():
     # unconditional block: blocking is decided solely by evaluate_feature().
     _ = bool(data.get("stop_hook_active"))
 
-    root = find_project_root()
+    root = find_worktrees_root(os.getcwd())
+    if root is None:
+        return 0  # no enumeration root above cwd: no active feature
 
-    for feature in active_features(root):
-        result = evaluate_feature(root, feature)
+    for candidate in active_candidates(root):
+        result = evaluate_feature(candidate)
         if result is None:
             continue
 
