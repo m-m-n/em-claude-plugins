@@ -1,11 +1,11 @@
 schema_version: 1
 feature: stopguard-worktree-paths
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
-base_revision: 75dafb1e9f347ce8fd109ce97cb9da6c35209d7a
+base_revision: 95b92f8b3fdd6813b3d45eaebb920116b9801859
 last_input_digest: sha256:1caad428eb84a0045d21ea85e4c7ed06c990b546d4a8169264e2927b6029d60a
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -81,6 +81,14 @@ worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
     input_digest: sha256:1caad428eb84a0045d21ea85e4c7ed06c990b546d4a8169264e2927b6029d60a
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:23360b9ddbc5b83e7cf2ca68aa9e282384bc6b6ac0156070f268edabd7951eca
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: dispatched
+    input_digest: sha256:cf1b6f2a4d0e5c8b7a91e3d260f4b8c5a7e19d3f6b2c48a0d5e7f193b6c2a48d
     output_digest: null
 artifacts: []
 patches: []
