@@ -1,0 +1,55 @@
+task_id: task0003
+baseline_failures: []          # `python3 -m unittest discover -s tests` was
+                                # green (1405 tests) before any change.
+final_failures: []             # green after implementation (1412 tests).
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardOwnership.test_worktree_with_only_a_foreign_docs_directory_is_not_enumerated
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 0 -- the foreign feature-docs/beta match was enumerated and evaluated under identity alpha's journal, producing a BLOCK where none should occur."
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardOwnership.test_worktree_with_owned_and_foreign_docs_directories_reads_only_owned
+    red_confirmed: true
+    red_reason: "AssertionError: 'task0001' not found in 'queue_stop_guard: BLOCK feature=alpha free_slots=6 launch=task0007,task0008,task0009\\n' -- with the decoy docs segment sorting before the owned one, the old first-wins active_candidates() read the foreign match instead of the owned one."
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardOwnership.test_owned_docs_completed_and_foreign_docs_in_progress_produces_no_decision
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 0 -- the owned match's implement:completed correctly excluded it, but the foreign match (feature-docs/beta, in_progress) was still enumerated under identity alpha and produced a BLOCK."
+  AC-4:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardSingleDerivation.test_divergent_worktree_and_docs_segment_names_is_never_enumerated
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 0 -- pre-existing test (renamed in place) previously asserted a block for a divergent-segment layout; rewritten to assert exit 0 with empty stderr, which failed against the unfixed hook (returncode 2)."
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardOwnershipAmbiguity.test_duplicate_identity_dropped_others_survive_ascending
+      - tests.test_queue_stop_guard.TestQueueStopGuardOwnershipAmbiguity.test_duplicate_removed_yields_identity_exactly_once
+      - tests.test_queue_stop_guard.TestQueueStopGuardOwnershipAmbiguity.test_divergent_segments_yield_no_entry
+      - tests.test_queue_stop_guard.TestQueueStopGuardOwnershipAmbiguity.test_no_exception_and_no_file_created_for_nonexistent_paths
+    red_confirmed: true
+    red_reason: "AttributeError: module 'queue_stop_guard_ac5_probe' has no attribute 'select_owned_unique_matches' -- the selection step did not exist yet in any of the four tests."
+  AC-6:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardBlocking.test_free_slots_and_unlaunched_tasks_blocks_with_bounded_ascending_ids
+      - tests.test_queue_stop_guard.TestQueueStopGuardRealLayoutAncestorWalk.test_blocks_identically_from_fixture_root_and_integration_dir
+      - tests.test_queue_stop_guard.TestQueueStopGuardMultiFeatureOrdering.test_two_features_reports_first_by_ascending_name
+    red_confirmed: false
+    red_reason: "Regression-guard criterion: pre-existing tests (TS1, TS2, TS8, and every other pre-existing class) were already green before this task and must stay green after it -- there is no red state to observe for a non-regression criterion. Verified by the full-suite run: 1405 tests green at baseline (4a), 1412 tests green after implementation (4b), and no failure appears in final_failures."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "No dedicated test: verified by AC-1/AC-2/AC-3 (the two new exclusions -- unowned match, ambiguous identity -- exit 0 silently) plus the full pre-existing fail-open suite (TestQueueStopGuardFailOpen and others) staying green, confirming no new exit-2 path was introduced."
+  AC-8:
+    tests:
+      - tests.test_queue_stop_guard.TestQueueStopGuardStdlibOnly.test_only_stdlib_imports
+      - tests.test_queue_stop_guard.TestQueueStopGuardStdlibOnly.test_no_process_spawning_facility_or_repo_toplevel_probe_referenced
+    red_confirmed: false
+    red_reason: "Pre-existing static-assertion tests, unmodified by this task; they were already green and stay green (`python3 -m unittest discover -s tests` reports 1412 passed, 0 failed, 0 errors)."
+notes: >
+  AC-6 and AC-8 are regression/non-regression criteria with no observable
+  red state by construction (see red_reason per criterion); AC-7 has no
+  standalone test but is covered jointly by AC-1/AC-2/AC-3's exit-0
+  assertions plus the unmodified fail-open suite staying green.
