@@ -76,7 +76,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR7, FR9, FR10, NFR4, NFR5, NFR6]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/abort-phase-terminal/task0002
 
