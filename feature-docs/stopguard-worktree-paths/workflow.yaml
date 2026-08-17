@@ -85,7 +85,7 @@ tasks:
     domains: [input-handling, external-io, api-contract]
     complexity: medium
     requirements: [FR1, FR2, NFR2, NFR4]
-    status: failed
+    status: in_progress
     notes: >-
       Attempt 1 (launch a781a2f) returned a completion report claiming
       status merged at merge_commit 9cd4e4ff89b3ec96f5c1c3e91b0ee02b78e5f5e2,
