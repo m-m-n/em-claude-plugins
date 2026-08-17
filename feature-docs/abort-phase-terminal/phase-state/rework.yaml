@@ -1,20 +1,30 @@
 schema_version: 1
 feature: abort-phase-terminal
 phase: rework
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: ca3cc3e2ffff841c5b21601a37a37c55a7cb1355
 last_input_digest: sha256:0577351c981184a47763df4c842aa6757401ea87569a10041791d3dde8590ed1
-active_request_id: rework-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
   - request_id: rework-run-0001
-    status: dispatched
+    status: completed
     input_digest: sha256:0577351c981184a47763df4c842aa6757401ea87569a10041791d3dde8590ed1
     output_digest: null
-artifacts: []
-patches: []
+artifacts:
+  - path: feature-docs/abort-phase-terminal/tasks/task0003.md
+    sha256: sha256:03251503175bb80ac1694b4a48e865d4d488030f285cf87099f7d1f76de6f5db
+    produced_by: rework-run-0001
+  - path: feature-docs/abort-phase-terminal/VERIFICATION.md
+    sha256: sha256:910f1ff43a0c578b035ed39be56a0513016027321847c3fcfd374a96c988c5eb
+    produced_by: rework-run-0001
+patches:
+  - patch_id: abort-phase-terminal-p0002
+    status: validated
+    base_input_digest: sha256:0577351c981184a47763df4c842aa6757401ea87569a10041791d3dde8590ed1
+    base_workflow_blob: 4f8bdef270b44a12da6696887cfb639f6dd2ebbb
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}

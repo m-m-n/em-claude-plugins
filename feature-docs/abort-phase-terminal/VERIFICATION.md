@@ -6,9 +6,9 @@
 **SPEC.md**: `feature-docs/abort-phase-terminal/SPEC.md` /
 **IMPLEMENTATION.md**: `feature-docs/abort-phase-terminal/IMPLEMENTATION.md`
 
-This document covers the INTEGRATED verification of the feature, after both
+This document covers the INTEGRATED verification of the feature, after all
 tasks are merged into the integration branch. Per-task acceptance criteria
-live in `tasks/task0001.md` and `tasks/task0002.md`.
+live in `tasks/task0001.md`, `tasks/task0002.md` and `tasks/task0003.md`.
 
 ## Build Verification
 
@@ -40,7 +40,7 @@ step. Nothing is compiled or packaged by this feature.
 | TS-7 | Run the three pin-bearing modules — `tests/test_implement_routeback_gate.py`, `tests/test_recycled_task_id_consistency.py`, `tests/test_routeback_reset_scope_consistency.py` | Each module's batch-mode paragraph equality assertion passes against the post-change text. Negative proof (manual, not committed): reverting any single one of the three literals to its pre-change value makes exactly that module fail | Unit (regression) + Manual |
 | TS-8 | Edge case: on the normalized I.2.c section, assert absence of the substrings `rework` and `append`; scan the whole implement-phase.md for bare `git commit` / `git add` lines | Both substrings absent; the bare-line scan returns an empty list | Unit |
 | TS-9 | `tests/test_implement_routeback_gate.py::TestPluginVersionBumpedInLockstep` | Passes: the plugin manifest and the marketplace `em-workflow` entry agree, `(major, minor) == (0, 1)`, patch > 42. Inspection additionally confirms both read `0.1.44` | Unit + Manual (value inspection) |
-| TS-10 | Integration: inspect the working-tree diff of the merged feature and run the full suite | The change set touches only implement-phase.md, batch-mode.md, the three pin modules, the new batch-mode test module and the two version manifests; `em-workflow/skills/develop/SKILL.md`, `em-workflow/references/workflow-patch.md`, `em-workflow/scripts/validate-worker-output.py`, `em-workflow/scripts/commit-docs.sh`, the hooks and `feature-docs/routeback-gate-postcondition/SPEC.md` are absent from the diff; `python3 -m unittest discover -s tests` exits 0 | Integration (manual diff inspection + automated suite) |
+| TS-10 | Integration: inspect the working-tree diff of the merged feature and run the full suite | The change set touches only implement-phase.md, batch-mode.md, the three pin modules and the two version manifests — `tests/test_abort_phase_terminal_batch_mode.py` is absent from it, the `implement.failed-task` row assertions living in `tests/test_implement_routeback_gate.py`; `em-workflow/skills/develop/SKILL.md`, `em-workflow/references/workflow-patch.md`, `em-workflow/scripts/validate-worker-output.py`, `em-workflow/scripts/commit-docs.sh`, the hooks and `feature-docs/routeback-gate-postcondition/SPEC.md` are absent from the diff; `python3 -m unittest discover -s tests` exits 0 | Integration (manual diff inspection + automated suite) |
 
 ## Code Quality Verification
 
@@ -97,8 +97,9 @@ surface an E2E harness could drive.
 ## Manual Testing (E2E Not Possible)
 
 - [ ] **Change-set containment (TS-10)**: inspect the merged diff and confirm
-      it touches only the eight expected paths; confirm every frozen path
-      listed in TS-10 is absent from it.
+      it touches only the seven expected paths; confirm every frozen path
+      listed in TS-10 is absent from it, and that
+      `tests/test_abort_phase_terminal_batch_mode.py` is absent from it too.
 - [ ] **Byte-pin negative proof (TS-7)**: revert one of the three paragraph
       literals to its pre-change value, run the suite, confirm exactly that
       one module fails, then restore it. Nothing from this experiment is
