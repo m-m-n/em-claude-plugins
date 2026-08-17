@@ -1,0 +1,135 @@
+schema_version: 1
+feature: exit4-recovery-scope
+created: 2026-08-17
+base_branch: main
+parent_branch: em-workflow/exit4-recovery-scope/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 63f3887810e8d05ceff0f68c9d300393ff53d5f4
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "Documentation-only protocol prose change plus two version fields. No UI surface, no user-visible visual output, and zero design-system candidates exist in this repository."
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
+
+requirements:
+  FR1:
+    title: "exit-4 recovery scope restored to universal quantification"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS3]
+  FR2:
+    title: "I.2.a and I.3 commits explicitly on the bound side"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2]
+  FR3:
+    title: "Single carve-out, unchanged"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS4]
+  FR4:
+    title: "Three-SSOT agreement on the carve-out"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS4]
+  FR5:
+    title: "Existing pinned strings preserved"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3, TS4]
+  FR6:
+    title: "Version bump in lockstep"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS6]
+  NFR1:
+    title: "Documentation/comment-only change"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS5]
+  NFR2:
+    title: "Frozen files untouched"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS5]
+  NFR3:
+    title: "Suite green, no test lost"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS5]
+  NFR4:
+    title: "Minimal, contained file set"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS5]
+  NFR5:
+    title: "SSOT discipline preserved"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS4]
+  NFR6:
+    title: "Test-module conventions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3]
