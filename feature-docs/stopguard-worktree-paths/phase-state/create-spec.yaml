@@ -1,16 +1,85 @@
 schema_version: 1
 feature: stopguard-worktree-paths
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
-base_revision: 1786acb624a10cc9d94c664be2350e91a0b14328
+base_revision: 75dafb1e9f347ce8fd109ce97cb9da6c35209d7a
 last_input_digest: sha256:1caad428eb84a0045d21ea85e4c7ed06c990b546d4a8169264e2927b6029d60a
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-18T00:53:00+09:00"
+    questions:
+      - question_id: requirement.abandoned-integration-worktree
+        status: answered
+      - question_id: requirement.main-tree-flat-layout
+        status: answered
+      - question_id: requirement.enumeration-root-discovery
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  requirement.abandoned-integration-worktree:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-18T00:53:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [journal_freshness]
+    freeform: "閾値は 24 時間。journal.jsonl の mtime を見て、無ければ workflow.yaml の mtime にフォールバックする"
+    normalized_answer: >-
+      進行中 feature の active 判定に鮮度条件を加える。journal.jsonl（存在しなければ
+      workflow.yaml）の mtime が現在時刻から 24 時間より古い feature は active 集合から
+      除外する。stat 1 回で判定でき、判定不能なら除外側（＝ブロックしない側）に倒す。
+    resolution_note: >-
+      batch: gate create-spec.requirement-clarification は batch-policies.yaml で
+      codex_consultation。Codex は journal_freshness を選び 24 時間の閾値を明示した。
+      オーケストレーターが option_id への写像を判定して採用。net として「誤ブロック」より
+      「見逃し」に倒れる点が hook の契約と一致する。
+  requirement.main-tree-flat-layout:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-18T00:53:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [worktree_only]
+    freeform: null
+    normalized_answer: >-
+      列挙は統合 worktree レイアウトのみを対象にする。flat レイアウト
+      ({root}/feature-docs/*/workflow.yaml) の列挙は撤去し、既存テストの fixture は
+      実レイアウトへ移行する。
+    resolution_note: >-
+      batch: codex_consultation。Codex は worktree_only を選択。SSOT 上メインツリーに
+      in_progress な workflow.yaml は存在し得ず、経路を 2 本残すと feature 同定の
+      二重導出が復活するという task_description の禁止事項に触れる。
+  requirement.enumeration-root-discovery:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-18T00:53:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [cwd_ancestor_walk]
+    freeform: null
+    normalized_answer: >-
+      列挙起点は cwd からの祖先探索で .claude/worktrees/em-workflow を持つ最近接の
+      祖先を求める。queue_taskstop_net.find_worktrees_root と同一機構。git サブプロセスは
+      使わない。
+    resolution_note: >-
+      batch: codex_consultation。Codex は cwd_ancestor_walk を選択。既存機構との一致と
+      Stop ごとの git サブプロセス回避が理由。
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-18T00:53:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: >-
+      analyst の design_step_recommendation（skip）をそのまま採用する。
+    resolution_note: >-
+      batch: gate create-spec.design-step は batch-policies.yaml で
+      option_id: decide_autonomously。
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:1caad428eb84a0045d21ea85e4c7ed06c990b546d4a8169264e2927b6029d60a
     output_digest: null
 artifacts: []
