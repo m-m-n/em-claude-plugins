@@ -57,9 +57,9 @@ tasks:
     domains: [input-handling, external-io, api-contract, config-infra]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, NFR1, NFR2, NFR3, NFR4, NFR5]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/stopguard-worktree-paths/task0001
   task0002:
     title: Matching plugin version bump in both manifests
     plan: tasks/task0002.md
@@ -70,9 +70,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/stopguard-worktree-paths/task0002
 
 review:
   status: pending
