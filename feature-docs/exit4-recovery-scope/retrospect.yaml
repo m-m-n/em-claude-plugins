@@ -1,0 +1,68 @@
+feature: exit4-recovery-scope
+collected_at: "2026-08-17T18:17:00+09:00"
+session_ids: [01a00ee1-2863-7000-af29-5603eae81e18]
+signals:
+  review_critical_high:
+    - stable_id: 4a1c0b5e9f2d7a63
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: "Step I.3 の書き換えで全体テストがレッド（AC6 / NFR3 / TS5 違反）"
+      resolution: fixed
+    - stable_id: 7e3f81d0c4b6a952
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: "A3 が明示的に scope 外とした commit-docs.sh 呼び出し行を Step I.2.a / I.3 に追加している"
+      resolution: fixed
+    - stable_id: 622831f37e0689d0
+      category: architecture
+      file: em-workflow/references/implement-phase.md
+      title: "widened exit-4 scope claims coverage at I.2.a / I.3, but those call sites never pass expected_base_tip"
+      resolution: declined
+    - stable_id: b0f695f4ff205b4a
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "Step I.2.a を exit-4 recovery の対象と宣言したが、その手順に refresh / tip 取得 / commit 呼び出しが一切ない"
+      resolution: fixed
+    - stable_id: 96d6e2ac1e07075b
+      category: comprehensive
+      file: tests/test_implement_routeback_gate.py
+      title: "バージョン literal を直接ピンしたテストで次回の bump が必ず赤くなる"
+      resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - stable_id: 622831f37e0689d0
+      category: architecture
+      resolution_reason: >-
+        SPEC §Assumptions A3 が Step I.2.a / I.3 への明示的な commit-docs.sh
+        呼び出し行の追加を本 feature のスコープ外と宣言しているため。指摘自体は
+        妥当なので後続タスクとして起票する。
+    - stable_id: 3d5b7e91a02c4f68
+      category: comprehensive
+      resolution_reason: >-
+        前提としていた loop 1 の Step I.3 書き換えが loop 2 で revert されたため moot。
+lessons_candidates:
+  - >-
+    batch モードの auto-fix（review.auto-fix-judgment = Apply as-is）が、
+    SPEC の Assumptions に反する修正を適用しうる。今回は architecture /
+    comprehensive の high 指摘に従って Step I.2.a / I.3 へ明示的な
+    commit-docs.sh 呼び出しを追加したが、SPEC A3 がそれを明示的にスコープ外と
+    宣言しており、さらに他モジュールの byte-pinned アサーションを壊して
+    フルスイートが red になった。R4 の candidate gate が category != spec で
+    spec 観点を auto-fix から除外している一方、spec 観点だけが SPEC の
+    Assumptions 違反を検出できるため、非 spec 観点の指摘が SPEC と衝突する
+    ケースを loop 内で事前に弾く仕組みが無い。needs-judgment の dispatch 前に
+    SPEC の Assumptions / Out of Scope と突き合わせる手順を検討する価値がある。
+  - >-
+    auto-fix の editor が単一ファイル制約を持つため、テストメソッドのリネームが
+    test-docs の AC → test マッピングに追随できず、記録が解決不能な ID を
+    指す状態になった。critical/high ゲートの外（medium）に落ちるため protocol 上は
+    未解決のまま残る。今回はゲート外の付随修正として明示的に適用した。
+  - >-
+    ドキュメント文面をバイト単位で pin するテストが複数モジュールに分散しており
+    （今回は tests/test_rework_synthesis_contract.py が implement-phase.md の
+    Step I.3 の一文を pin）、編集側からは事前に気づけない。SPEC の A4 が
+    「full-suite run で discharge する」と定めていた想定どおりに機能したが、
+    auto-fix loop はテスト実行を挟まないため red の検出が次の再レビューまで遅れた。
