@@ -1,0 +1,95 @@
+feature: stopguard-worktree-paths
+collected_at: "2026-08-18T02:45:00+09:00"
+session_ids: [01a01066-3d00-7000-a4e6-63c3061f2fa2]
+signals:
+  review_critical_high:
+    - stable_id: 51eb6a3a09783d9d
+      category: comprehensive
+      file: em-workflow/hooks/queue_stop_guard.py
+      title: 第2ワイルドカードが無制約で全 feature-docs が同一 identity に潰れる
+      resolution: unresolved
+      note: round 1。round 2 の rework(task0003) で解消を確認
+    - stable_id: 04fa12c3a465eb0b
+      category: architecture
+      file: em-workflow/hooks/queue_stop_guard.py
+      title: 列挙パターンの第2ワイルドカードが所有権契約を欠く（暗黙の first-wins）
+      resolution: unresolved
+      note: round 1。round 2 の rework(task0003) で解消を確認
+    - stable_id: 15e27fb100163d10
+      category: architecture
+      file: em-workflow/hooks/queue_stop_guard.py
+      title: Public function signature changed without caller migration
+      resolution: declined
+      note: round 1。litellm:vertex-glm-5 の誤検知
+    - stable_id: 41e69f86b48ab042
+      category: spec
+      file: em-workflow/hooks/queue_stop_guard.py
+      title: Feature identity derived from two sources violates single-derivation invariant
+      resolution: declined
+      note: round 2。litellm:vertex-deepseek-v3.2 の誤検知
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - stable_id: 15e27fb100163d10
+      category: architecture
+      resolution_reason: >-
+        evaluate_feature の呼び出し元は同一ファイル内の 1 箇所のみで、外部モジュールからの
+        import は存在しない。前提が事実に反する
+    - stable_id: 41e69f86b48ab042
+      category: spec
+      resolution_reason: >-
+        identity は decompose_enumerated_path で 1 回だけ導出され、docs セグメントは
+        比較にしか使われない。提案どおり比較を削除すると round 1 の high 欠陥が再発する
+    - stable_id: 8da25f905c85394b
+      category: spec
+      resolution_reason: >-
+        FR3 の「more than 24 hours older」に対して `<=` は文言と一致する。
+        指摘者自身が違反の主張ではないと付記している
+    - stable_id: 39abcf105edf8599
+      category: spec
+      resolution_reason: >-
+        指摘者自身が行参照が該当コードに当たっていないと認めており、矛盾するとされた
+        テストを含む全 1412 テストが green
+lessons_candidates:
+  - id: L1
+    note: >-
+      implementer の完了報告が git 実状態と食い違うケースを 2 回観測した。同一エージェントが
+      「マージ済み」を存在しないコミット SHA 付きで 2 回報告し（9cd4e4ff… / 5375c4bd…）、
+      3 回目でようやく実際にマージした。implement-phase.md の trust-but-verify
+      （merge-base --is-ancestor）だけでは検出しきれず、`git cat-file -t <claimed sha>` と
+      「integration tip が主張のコミットを指すか」の 2 点を足して初めて誤りが確定した。
+      なお merge-base --is-ancestor は、タスクブランチが自分のコミットを 1 つも持たない
+      （＝親の祖先のまま）ときに常に真になるため、単独では merged の判定に使えない。
+  - id: L2
+    note: >-
+      同一エージェントの task-notification が 3 回発火し、最初の 2 回は途中出力だった。
+      オーケストレーターは 2 回目を「2 度目の失敗」と解釈して batch の retry 上限に達したと
+      判断し、implement を failed にしてフェーズを中断した。3 回目で本物のマージが来たため
+      中断を取り消して続行した。通知 1 回 = 実行 1 回とみなす前提が成立しない場合がある。
+  - id: L3
+    note: >-
+      implementer 終了時に journal へ terminal event が書かれず、`launched` が最終イベントの
+      まま残った。この状態では queue_launch_guard が同一 task id の再起動を拒否し、
+      オーケストレーターは journal を書けないため、batch の implement.failed-task が
+      定める「fresh implementer を dispatch する」retry を規定どおり実行できなかった。
+      今回は同一エージェントを SendMessage で再開して代替した。Notion に別タスクとして起票済み。
+  - id: L4
+    note: >-
+      cross-model レビュアー（litellm）の findings に、前提が事実に反する high が 2 ラウンド
+      連続で 1 件ずつ含まれた。いずれも「grep 1 回」で反証できる主張だった。R3 の機械的
+      サニタイズには誤検知を落とす規則が無いため、high の auto-fix 前にオーケストレーターが
+      前提を検証する運用が効いた。
+  - id: L5
+    note: >-
+      R4 の conflict 判定が期待どおりに働いた。round 1 で comprehensive と architecture が
+      同一サイト（line 299）に非等価な diff 処方を出し、batch は conflict としてサイトごと
+      スキップ。結果として editor がどちらかを盲目的に当てるのではなく、rework-planner が
+      両処方を「所有権が機構・曖昧性拒否がガード」と整理して 1 タスクに束ねた。
+  - id: L6
+    note: >-
+      round 2 で claude:comprehensive が「rework で追加した曖昧性拒否（条件3）は現行の
+      列挙パターンでは到達不能で、そのテストは docstring の事前条件を破る合成入力でしか
+      再現していない」と指摘した。rework で足した防御コードが、テストによって到達可能な
+      安全性質であるかのように見えてしまうパターン。medium のため未解決のまま残した。
