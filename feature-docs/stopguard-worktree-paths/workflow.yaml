@@ -76,20 +76,20 @@ tasks:
     branch: em-workflow/stopguard-worktree-paths/task0002
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
     cross_validation: true
   perspectives:
-    comprehensive: pending
-    security: pending
-    performance: pending
-    architecture: pending
-    spec: pending
-  residual_critical_high: 0
-  needs_rework: false
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 2
+  needs_rework: true
 
 requirements:
   FR1:

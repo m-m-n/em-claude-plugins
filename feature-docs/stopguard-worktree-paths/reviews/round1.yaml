@@ -1,0 +1,249 @@
+round: 1
+executed_at: "2026-08-18T02:05:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: c4a2b0fb8c77a9475040d51b4448d821868d4fbb
+  head_commit: 8f54df24c8c95172764f8ff0e3d0baf36a11dd82
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/queue_stop_guard.py
+    - test-docs/stopguard-worktree-paths/task0001.tests.yaml
+    - test-docs/stopguard-worktree-paths/task0002.tests.yaml
+    - tests/test_queue_stop_guard.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: 51eb6a3a09783d9d
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 299
+    line_end: 319
+    title: >-
+      第2ワイルドカードが無制約で、1つの integration worktree 内の全 feature-docs が同一
+      identity/journal/sidecar に潰れる
+    description: >-
+      列挙パターン `{worktrees_root}/*/integration/feature-docs/*/workflow.yaml` の
+      2つ目の `*` に制約が無く、`decompose_enumerated_path` は identity と journal_dir を
+      worktree 側セグメントからだけ導出する。integration worktree はブランチの完全
+      チェックアウトなので、そこには自分以外の全 feature の `feature-docs/` が入る。
+      オーケストレーターが実測したところ、本 feature の integration worktree で raw glob が
+      16 件マッチし、その 16 件すべてが identity `stopguard-worktree-paths`・同一
+      journal_dir に decompose された。現状これが表面化していないのは、他 15 件の
+      implement status がたまたま `completed` / `failed` だからにすぎない。
+      base ブランチに `implement: in_progress` のまま残った feature が 1 つでもあれば、
+      その 1 件が現 feature の journal で評価され、現 feature の名前で別 feature の
+      task id を BLOCK に出し、同じ `stop-guard-state.json` を上書きする。
+      SPEC.md:242 の Path Contract は
+      `{worktrees_root}/{feature}/integration/feature-docs/{feature}/workflow.yaml` と
+      両位置に同一の `{feature}` を規定しており、実装はこの等式を強制していない。
+      さらに `tests/test_queue_stop_guard.py` の
+      `test_divergent_worktree_and_docs_segment_names_reads_the_enumerated_file` が
+      セグメント不一致でも BLOCK することを積極的に assert しており、この緩さを
+      テストで固定してしまっている。
+    suggestion: >-
+      glob マッチ後に 2 つのセグメントの一致を検査し、不一致なら候補から外す
+      (`if os.path.basename(os.path.dirname(match)) != identity: continue`)。
+      これは列挙済みパスの検査であってパスの再構築ではないため NFR4（単一導出）とは
+      矛盾しない。あわせて上記テストを「不一致は列挙されない（exit 0）」を期待する形に
+      書き換える。単一導出の証明は、パス契約を満たす fixture のまま journal 側だけを
+      差し替える形で別途書ける。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: >-
+      R4 で同一サイト（line 299）に architecture 観点の非等価な diff 処方が併存したため
+      conflict グループとなり、batch モードの gate review.auto-fix-conflict に従って
+      サイトごとスキップした。round 1 の rework で扱う。
+  - stable_id: 04fa12c3a465eb0b
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 299
+    line_end: 319
+    title: >-
+      列挙パターンの第2ワイルドカードが他 feature の workflow.yaml を同一 identity に
+      取り込む（所有権契約の欠落・first-wins）
+    description: >-
+      「列挙された workflow.yaml が、導出した identity の所有物であること」を保証する契約が
+      どこにも無い。`candidates.sort` は identity 同値では安定ソートなので順序が docs
+      セグメント名の辞書順で決まり、`hook_main` は最初に決定を返した候補で return する
+      （暗黙の first-wins）。同一 identity の候補が複数存在しうるため
+      `stop-guard-state.json`（identity 単位で 1 つ）を複数候補が共有し、勝者が入れ替わる
+      たびに fingerprint が変わって MAX_CONSECUTIVE_BLOCKS の計数が意図せずリセット
+      されうる。姉妹フック `queue_taskstop_net.py:237` は識別子が複数の対にまたがる場合に
+      解決失敗（None）とする Ambiguity refusal を既に契約化しており、本フックだけが
+      暗黙の first-wins になっていて hook 間で解決規約がドリフトしている。
+    suggestion: >-
+      `active_candidates` に曖昧性拒否の契約を足す。identity 同値の生存候補が 2 件以上ある
+      とき、その identity を丸ごと落とす（fail-open、queue_taskstop_net.py と同じ規約）。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: >-
+      R4 で同一サイト（line 299）に comprehensive 観点の非等価な diff 処方が併存したため
+      conflict グループとなり、batch モードの gate review.auto-fix-conflict に従って
+      サイトごとスキップした。round 1 の rework で扱う。
+  - stable_id: 15e27fb100163d10
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 314
+    line_end: 324
+    title: Public function signature changed without caller migration
+    description: >-
+      evaluate_feature() のシグネチャが (root, feature) から (candidate) に変わったのに
+      外部呼び出し元の更新が見当たらない、という指摘。queue_taskstop_net.py などが
+      import していれば実行時に壊れる、としている。
+    suggestion: >-
+      Audit all callers of evaluate_feature outside this file before merge; consider
+      deprecation path or internal-only marker if this was never a public API.
+    sources: [litellm:vertex-glm-5:architecture]
+    confidence: 50
+    resolution: declined
+    resolution_reason: >-
+      オーケストレーターが検証した結果、前提が事実に反する誤検知。統合 worktree 全体を
+      grep したところ `evaluate_feature` の呼び出し元は同一ファイル内の
+      `em-workflow/hooks/queue_stop_guard.py:450` の 1 箇所のみで、外部モジュールからの
+      import は存在しない。queue 系 hook はいずれも独立したスクリプトとして
+      パス指定で起動され、相互 import を持たない。
+  - stable_id: 7b7f078c1177e6db
+    severity: medium
+    category: security
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 68
+    line_end: 86
+    title: Stop フックの列挙ルート探索が上方向に無制限で、セッションのプロジェクト境界を越える
+    description: >-
+      `find_worktrees_root(os.getcwd())` は cwd からファイルシステムルートまで無制限に
+      遡り、最初に見つかった `.claude/worktrees/em-workflow` を列挙ルートに採用する。
+      旧実装は git toplevel または cwd に固定されており、走査は現在のリポジトリ内に
+      閉じていた。本フックはジャーナル追記ではなくターンをブロックして feature 名と
+      task id をエージェントの文脈に注入する制御決定を行うため、列挙ルートを制御できる側は
+      セッションを最大 3 回連続でブロックし、自分が用意したツリー配下への implementer 起動を
+      指示させうる。`write_sidecar` もその外部ツリー配下に書き込む。
+      緩和されている点: stderr に出る文字列は FEATURE_RE / TASK_ID_RE で検証済みの値のみで
+      構成されるため自由文インジェクションは成立せず、glob も固定深さでトラバーサル不可。
+    suggestion: >-
+      上方向の探索に封じ込めを入れる。(a) stdin ペイロードの `cwd` を起点に $HOME または
+      明示的なプロジェクトルートを超えたら打ち切る、(b) 遡上段数に上限（例: 8 階層）を
+      設ける、(c) 発見した worktrees_root が os.path.commonpath でセッションの作業ツリー
+      配下に収まることを確認する、のいずれか。
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+  - stable_id: 5cd04c078b057691
+    severity: medium
+    category: performance
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 292
+    line_end: 319
+    title: Stop 毎の列挙コストが (live integration worktree 数 × feature-docs 数) に増える
+    description: >-
+      旧列挙は O(F) だったが、新パターンは live な integration worktree 1 本につき F 件
+      マッチするため O(W × F)、feature 蓄積に対して実質二次で伸びる。実測で 16 マッチ /
+      glob 0.68ms + 全件 readlines 1.07ms。増幅要因は 3 つ: (1) active_candidates が
+      リストを完全に materialize するため hook_main の early return が効かない、
+      (2) 安価な freshness prune が高価な implement_in_progress の後に置かれている、
+      (3) 同一 identity の重複排除が無く同じ journal.jsonl を最大 F 回読む。
+      SPEC NFR3 は「1 回の glob と候補ごとの stat 1 回」を予算として宣言しており、
+      実装はその予算からずれている。
+    suggestion: >-
+      (a) candidate_is_fresh を implement_in_progress より前に移す（純粋な述語の AND の
+      並べ替えで結果集合も順序も変わらない）、(b) 導出 identity で重複排除する、
+      (c) active_candidates をジェネレータにして early return を効かせる。
+    sources: [claude:performance]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+  - stable_id: f60c814d2cee2d34
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 445
+    line_end: 447
+    title: >-
+      root 解決が Stop payload の `cwd` ではなくプロセスの `os.getcwd()` だけを見る
+    description: >-
+      `find_worktrees_root(os.getcwd())` が唯一の root 入力になったが、同リポジトリの
+      姉妹 hook は payload 側を使っている（queue_taskstop_net.py:365 は
+      `find_worktrees_root(data.get("cwd"))`、bash_guard.py:180 は
+      `data.get("cwd") or os.getcwd()`）。IMPLEMENTATION.md D2 は「queue_taskstop_net.py の
+      walk と同一セマンティクス」と書いているが、関数本体は同一でも呼び出しの入力が違う。
+      削除された find_project_root() の git toplevel プローブがこの差を吸収していたが、
+      今は吸収されない。プロセス cwd がセッションディレクトリと食い違う起動経路では
+      祖先探索が None を返し、hook は何のシグナルも出さず exit 0 する。
+    suggestion: '`root = find_worktrees_root(data.get("cwd") or os.getcwd())` にする（bash_guard.py:180 と同じ形）。'
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+  - stable_id: 5dffcf7cf52a0f0d
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 200
+    line_end: 218
+    title: >-
+      `read_journal` の「journal ディレクトリ不在 → None」分岐が新レイアウトでは
+      到達不能になり、docstring だけが古い契約を主張している
+    description: >-
+      新レイアウトでは journal_dir は列挙された workflow.yaml の祖先なので glob が
+      マッチした時点で必ず存在する。したがって `return None`（評価不能 → skip）は
+      TOCTOU を除いて到達不能な死んだ分岐になったが、docstring は今も旧契約を書いている。
+      対応するテストも「feature ディレクトリごと作らない＝そもそも列挙されない」に
+      書き換えられており、read_journal の None 経路を覆うテストは 1 本も残っていない。
+    suggestion: >-
+      (a) 死んだ分岐を落として read_journal を「ファイル不在なら常に {}」に単純化し
+      docstring を新レイアウトで書き直す、または (b) 防御的に残すなら docstring に
+      「新レイアウトでは通常到達しない」と明記し、read_journal を直接呼ぶユニットテストで
+      None 経路を 1 本固定する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+  - stable_id: 2a2d6dd325e272bb
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_stop_guard.py
+    line: 74
+    line_end: 79
+    title: 'Primitive obsession: layout path duplicated without abstraction'
+    description: >-
+      `.claude/worktrees/em-workflow` が find_worktrees_root の探索、active_candidates の
+      glob パターン、テスト fixture の構築と複数箇所に文字列で散っており、レイアウト変更に
+      コードとテストの協調編集が要る。中心的な定義が無い。
+    suggestion: >-
+      モジュールレベル定数（例: WORKTREES_RELATIVE_PATH = '.claude/worktrees/em-workflow'）に
+      抽出して一貫して参照する。
+    sources: [litellm:vertex-glm-5:architecture]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: severity medium のため R4 の auto-fix 候補ゲート（critical/high）に載らない
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  notes: >-
+    loop 1 の候補は stable_id 51eb6a3a09783d9d（comprehensive）と 04fa12c3a465eb0b
+    （architecture）の 2 件で、どちらも line 299 の同一サイト・非等価な diff 処方だったため
+    conflict グループになり、batch モードの gate review.auto-fix-conflict に従いサイトごと
+    スキップした。3 件目の高深刻度候補 15e27fb100163d10 はオーケストレーター検証で誤検知と
+    確定したため declined とし、dispatch しなかった。適用 0 件・ユーザー解決可能な候補なしで
+    no-progress 終了。
+residual_critical_high: 2
+rework_required: true
