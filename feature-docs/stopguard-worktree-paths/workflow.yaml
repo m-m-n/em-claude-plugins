@@ -42,9 +42,31 @@ workflow:
     status: completed
     completed_at_commit: ad2396b8890648acc4e1cea605e4754ad19069a1
   - id: verify
-    status: in_progress
-    result: null
+    status: completed
+    completed_at_commit: eaea7ef5891ca5ae2564ecbb4c2a6ffc488d492a
+    result: pass
     failed_items: []
+    summary: >-
+      test: python3 -m unittest discover -s tests -> 1412 tests, OK (exit 0).
+      queue_stop_guard 単体では 16 クラス 41 テストが green（TS1-TS11 に対応する
+      RealLayoutAncestorWalk / Freshness / LayoutIsolation / SingleDerivation /
+      Ownership / OwnershipAmbiguity / MultiFeatureOrdering / FailOpen /
+      StdlibOnly / ReviewRound1Regressions を含む）。build / format / e2e は
+      project.components で空のため該当なし。
+      Manual Verification 4 件すべて pass:
+      (1) 変更セット封じ込め — base_commit..HEAD の非ドキュメント差分は
+      .claude-plugin/marketplace.json / em-workflow/.claude-plugin/plugin.json /
+      em-workflow/hooks/queue_stop_guard.py / tests/test_queue_stop_guard.py の
+      4 ファイルのみで SPEC の Declared Change Set と一致、queue_launch_guard.py /
+      queue_failure_net.py / queue_taskstop_net.py は無変更（NFR5）。
+      (2) リリースチェック — 両マニフェストが JSON として parse でき、version は
+      いずれも 0.1.44、差分は version 行 2 本のみ（0.1.43 -> 0.1.44、patch +1）（AC9/NFR6）。
+      (3) キャッシュ再起動の告知 — 完了報告に記載（assumption a4）。
+      (4) 単一導出の読み合わせ — 列挙ルートと feature 名を join して後で open する
+      パスは存在せず、feature-docs ワイルドカードは identity として読まれず
+      比較にのみ使われる。subprocess / git 参照はゼロ、import は stdlib 7 個のみ
+      （NFR1/NFR3/NFR4/AC7）。
+      status: excluded の要件は無し（除外一覧は空）。
   - id: retrospect
     status: pending
 
