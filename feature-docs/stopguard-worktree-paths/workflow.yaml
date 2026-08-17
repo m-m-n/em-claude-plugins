@@ -85,9 +85,9 @@ tasks:
     domains: [input-handling, external-io, api-contract]
     complexity: medium
     requirements: [FR1, FR2, NFR2, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/stopguard-worktree-paths/task0003
     provenance:
       source: review
       source_ids: [51eb6a3a09783d9d, 04fa12c3a465eb0b]
