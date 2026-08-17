@@ -46,7 +46,8 @@ the requirement to land in the same change.
 |-----------|----------------|------------------------------|---------------|
 | Enumeration-root resolver | Locate the worktrees root from the hook's current working directory | pre: none. post: yields the `.claude/worktrees/em-workflow` directory belonging to the nearest ancestor of the current directory (the directory itself included) that contains one; yields "no root" when the walk reaches the filesystem root, when the starting value is empty, or when it is not a usable path. Spawns no process. Never raises to the caller. Same semantics as the ancestor walk already in `queue_taskstop_net.py` (`:149`) | task0001 |
 | Enumerated-path decomposition | Single derivation of feature identity and journal directory from one matched `workflow.yaml` path | pre: the path was produced by the layout pattern below. post: yields (feature identity, journal directory) where the journal directory is the ancestor of the matched path that directly contains the integration-worktree directory, and the identity is that same ancestor's own last segment. The `feature-docs/<segment>` wildcard is never read as identity. No join of root plus identity is ever used to produce a path that is later opened | task0001 |
-| Active-set enumerator | Ordered candidate list | pre: an enumeration root. post: candidate (feature identity, `workflow.yaml` path) pairs, ascending and stable by feature identity, restricted to features whose implement step reads `in_progress` and that pass the freshness condition | task0001 |
+| Enumerated-path ownership filter | Decide, from the matched path alone, whether the derived identity owns that path, and refuse ambiguity | pre: the ordered list of paths the layout pattern produced under one enumeration root. post: the subset whose `feature-docs/<segment>` equals the identity the decomposition derived (ownership), minus every identity carried by two or more surviving matches, which is dropped in full (ambiguity refusal, fail-open). Decided from path strings only: opens nothing, stats nothing, spawns nothing. Compares two segments of the matched path; never reconstructs a path from a root plus a name | task0003 |
+| Active-set enumerator | Ordered candidate list | pre: an enumeration root. post: candidate (feature identity, `workflow.yaml` path) pairs, ascending and stable by feature identity, restricted to paths the ownership filter admitted, to features whose implement step reads `in_progress`, and that pass the freshness condition | task0001, task0003 |
 | Decision stage | Block / no-block for one candidate | pre: a candidate pair from the enumerator. post: reads the given `workflow.yaml` path verbatim; reaches the journal and sidecar through the decomposition above; all downstream semantics (slot arithmetic, failed-task pass-through, recycled-task-id carve-out, fingerprint, three-block cap) unchanged | task0001 |
 | Release version parity | Plugin manifest and marketplace entry carry one identical version string | pre: both currently hold the same value. post: both hold the same new value; no other key in either file changes | task0002 |
 
@@ -69,6 +70,21 @@ not the ancestor that contains it — this matches the value the existing
 reference walk returns, and the two rows below it are expressed relative to
 that. The journal and sidecar locations are unchanged by this feature
 (assumption a1); only the way they are reached changes.
+
+**Ownership (binding on every enumerated path).** The `{feature}` in the two
+wildcard positions of the enumerated location is the SAME name — that is what
+SPEC.md's Path Contract states, and it is a condition to be enforced, not an
+assumption to be trusted. An integration worktree is a full checkout of its
+branch, so it also contains every OTHER feature's `feature-docs/` directory;
+the pattern's second wildcard therefore matches paths the derived identity
+does not own. A matched path is admitted only when its
+`feature-docs/<segment>` equals the identity derived from its worktree-side
+segment, and an identity carried by more than one admitted path is dropped in
+full. Consequences relied on downstream: one identity maps to at most one
+`workflow.yaml`, so the journal and the sidecar under
+`{worktrees_root}/{feature}/` have exactly one writer per Stop, and the
+"first in-progress feature with refillable work wins" selection ranges over
+distinct identities only.
 
 ## Conventions
 
@@ -143,11 +159,32 @@ honest and lets the two run in parallel. It is not optional: without it the
 plugin cache keeps serving the old hook (NFR6, assumption a4). Affected:
 task0002.
 
+### D6 — Ownership is enforced; ambiguity refusal guards the resulting invariant
+
+Enforcing the Path Contract's segment equality (above) is the mechanism that
+keeps one feature's Stop decision out of another feature's journal and
+sidecar. Refusing an ambiguous identity — dropping it entirely when two
+admitted paths carry it, as `queue_taskstop_net.py` already does for its own
+identifier resolution — is a guard on the invariant that equality creates,
+not a second mechanism for the same defect: with equality enforced, one
+identity cannot be carried twice under one enumeration root. Both are kept,
+in that order, so the selection over candidates is an explicit contract
+rather than an implicit first-wins. Checking two segments of the path that
+was matched is an inspection of an enumerated path, not a reconstruction, so
+D1 (single derivation) is untouched. Affected: task0003.
+
+Consequence for D1's automated proxy: the divergent-segment probe can no
+longer assert a block, because a divergent layout is now excluded. The
+replacement discriminator is two `feature-docs` directories inside ONE
+integration worktree, only one of which is owned — reading the unowned one is
+observable in the BLOCK line's task ids.
+
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Re-derivation creeps back in on the resolution side (the defect behind the earlier revert) | Medium | High | D1 pinned as a contract; review-blocking invariant; task0001 carries a divergent-segment probe test that fails if any read path is rebuilt from root plus name |
+| Re-derivation creeps back in on the resolution side (the defect behind the earlier revert) | Medium | High | D1 pinned as a contract; review-blocking invariant; task0003's mixed-worktree probe (two `feature-docs` directories in one integration worktree, only the owned one readable) fails if any read path is rebuilt from root plus name or taken from an unowned match |
+| An unowned `workflow.yaml` from another feature in the same integration worktree is evaluated under this feature's identity, journal and sidecar | High (observed in review round 1: 16 raw matches collapsing to one identity) | High | D6 ownership enforcement plus ambiguity refusal; task0003 AC-1 to AC-3 and AC-5 |
 | Fixture migration silently removes coverage — the suite goes green because nothing is enumerated any more | Medium | High | TS7 requires every existing test class to keep its intent, and TS1/TS2 assert a positive block under the migrated layout, so an enumeration that yields nothing cannot pass |
 | Freshness excludes a genuinely active feature | Low | Low | The failure direction is not blocking, which is the fail-open side; boundary values in tests sit well clear of the threshold |
 | Clock-dependent flakiness in the freshness tests | Low | Medium | Test times are set to "now" and "now minus 25 hours"; no assertion sits near the 24-hour boundary |
@@ -157,8 +194,9 @@ task0002.
 ## Open Questions
 
 - [ ] NFR4 (single derivation of feature identity) has no SPEC test scenario.
-      It is verified by code review as a blocking invariant, plus the
-      divergent-segment probe test task0001 adds. No TS id covers it.
+      It is verified by code review as a blocking invariant, plus TS10 —
+      task0003's ownership scenarios, which subsume the divergent-segment
+      probe task0001 added and add the mixed-worktree discriminator (D6).
 - [ ] NFR6 (matching version bump) has no SPEC test scenario and no automated
       check in the suite. It is verified by the release check recorded in
       VERIFICATION.md. Adding a manifest-parity unit test would widen the

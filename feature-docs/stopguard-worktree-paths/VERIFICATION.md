@@ -7,8 +7,8 @@
 **IMPLEMENTATION.md**: `feature-docs/stopguard-worktree-paths/IMPLEMENTATION.md`
 
 This document covers the INTEGRATED verification of the merged feature.
-Per-task acceptance criteria live in `tasks/task0001.md` and
-`tasks/task0002.md`.
+Per-task acceptance criteria live in `tasks/task0001.md`,
+`tasks/task0002.md` and `tasks/task0003.md`.
 
 ## Build Verification
 
@@ -37,6 +37,8 @@ Per-task acceptance criteria live in `tasks/task0001.md` and
 | TS7 | Fixture-migration regression sweep across the eight pre-existing test classes | All pass with their intent unchanged; no test depends on the flat layout being enumerated | Integration |
 | TS8 | Two features enumerated at once, both `in_progress` and both refillable | The first by stable ascending feature-name ordering is reported | Unit |
 | TS9 | Standard-library-only assertion, plus absence of the repository-top-level probe and of any process spawn on the Stop path | Assertion passes; no external command reference remains in the hook | Static |
+| TS10 | Enumerated-path ownership, three cases inside one integration worktree named `alpha`: (a) only a foreign `feature-docs/beta/workflow.yaml`, `in_progress` with unlaunched tasks; (b) both `feature-docs/alpha` (`task0001`, `task0002`) and `feature-docs/beta` (`task0007`–`task0009`), both `in_progress`; (c) own docs `completed` while the foreign docs read `in_progress` with unlaunched tasks | (a) exit 0, empty stderr; (b) exit 2 naming `alpha` with exactly `task0001`, `task0002` and no mention of `beta` or `task0007`–`task0009`; (c) exit 0, empty stderr and no `stop-guard-state.json` created | Unit |
+| TS11 | Ambiguity refusal, exercised directly on the ownership + uniqueness selection step with hand-built match lists under a non-existent root | An identity carried by two admitted matches yields no entry at all while other identities survive in ascending order; without the duplicate the identity appears exactly once; a segment-mismatched match yields no entry; no filesystem access and no exception | Unit |
 
 ## Code Quality Verification
 
@@ -65,25 +67,28 @@ Per-task acceptance criteria live in `tasks/task0001.md` and
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS1, TS2, TS3 — the decision stage reads the enumerated path verbatim and reaches the journal through the same path's worktree-side ancestor |
-| FR2 | task0001 | TS1, TS8 — enumeration from the main tree yields pairs and preserves stable feature-name ordering |
+| FR1 | task0001, task0003 | TS1, TS2, TS3 — the decision stage reads the enumerated path verbatim and reaches the journal through the same path's worktree-side ancestor; TS10 — the path it reads is the one the identity owns, not a foreign `feature-docs` directory in the same worktree |
+| FR2 | task0001, task0003 | TS1, TS8 — enumeration from the main tree yields pairs and preserves stable feature-name ordering; TS10, TS11 — the enumerated set is restricted to owned paths and refuses an ambiguous identity |
 | FR3 | task0001 | TS3, TS4 — freshness with journal time, fallback time, and the undecidable case |
 | FR4 | task0001 | TS6, TS7 — the flat layout is not an enumeration source and the fixture has migrated off it |
 | FR5 | task0001 | TS1, TS2, TS5, TS9 — ancestor walk resolves from both positions, misses silently, and spawns nothing |
 | NFR1 | task0001 | TS9 — standard-library-only assertion |
-| NFR2 | task0001 | TS3, TS5, plus the whole TS7 sweep — every abnormal condition still exits 0 |
+| NFR2 | task0001, task0003 | TS3, TS5, plus the whole TS7 sweep — every abnormal condition still exits 0; TS10 (a), (c) and TS11 — the two exclusions added for ownership and ambiguity also fall to the non-blocking side |
 | NFR3 | task0001 | TS9 for the no-subprocess half; the cost bound (one pattern expansion, one time-stamp read per candidate, no recursive scan) is confirmed structurally in review against IMPLEMENTATION.md D3 |
-| NFR4 | task0001 | No SPEC test scenario. Verified by review as a blocking invariant, plus task0001 AC-8's divergent-segment probe test — see Gaps below |
+| NFR4 | task0001, task0003 | No SPEC test scenario. Verified by review as a blocking invariant, plus TS10 — the mixed-worktree probe that replaces task0001 AC-8's divergent-segment probe — see Gaps below |
 | NFR5 | task0001 | TS7 for the preserved semantics; the untouched-hooks half is confirmed against the diff — the change set must contain no other hook file |
 | NFR6 | task0002 | No SPEC test scenario. Verified by the release check under Manual Verification — see Gaps below |
 
 ### Coverage Gaps
 
-- **NFR4** — no TS id covers it. It is a structural invariant, not an
-  observable behaviour, and the review phase treats it as blocking. The
-  divergent-segment probe added by task0001 (AC-8) is the closest automated
-  proxy: it fails if any read path is rebuilt from an enumeration root plus a
-  feature name.
+- **NFR4** — no TS id covers the invariant itself. It is a structural
+  invariant, not an observable behaviour, and the review phase treats it as
+  blocking. TS10 is the closest automated proxy: case (b) fails if the hook
+  reads a `workflow.yaml` other than the one its identity owns, whether
+  because a path was rebuilt from an enumeration root plus a feature name or
+  because an unowned match was taken. It replaces task0001 AC-8's
+  divergent-segment probe, which asserted a block for a layout that
+  task0003 excludes (IMPLEMENTATION.md D6).
 - **NFR6** — no TS id and no automated check. Adding a manifest-parity unit
   test would widen SPEC's declared change set, so it is deliberately verified
   manually.
@@ -118,8 +123,10 @@ with the same stdin payload.
       a4).
 - [ ] **Single-derivation read-through (NFR4)** — reading the merged hook,
       confirm that no path which is later opened is constructed by joining an
-      enumeration root with a feature name, and that the feature-docs wildcard
-      segment is never read as feature identity.
+      enumeration root with a feature name, that the feature-docs wildcard
+      segment is never read as feature identity, and that the ownership check
+      compares two segments of the matched path rather than reconstructing one
+      (IMPLEMENTATION.md D6).
 
 No mockup comparison applies: the design step is `skipped` and the feature has
 no visual surface.
@@ -140,7 +147,7 @@ no visual surface.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS1–TS9) | 9 | 9 | 0 | 0 |
+| Test scenarios (TS1–TS11) | 11 | 11 | 0 | 0 |
 | Success criteria (AC1–AC9) | 9 | 8 | 0 | 1 |
 | Requirements (FR1–FR5, NFR1–NFR6) | 11 | 9 | 0 | 2 |
 | Manual verification items | 4 | 0 | 0 | 4 |
