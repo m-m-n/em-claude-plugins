@@ -1,0 +1,139 @@
+schema_version: 1
+feature: stopguard-worktree-paths
+created: 2026-08-18
+base_branch: main
+parent_branch: em-workflow/stopguard-worktree-paths/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 6228cab6d0be975a76f8ea95b9d3e6081429925a
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      対象は Python の Stop hook 1 本のパス解決・列挙・active 判定と、その unittest
+      fixture のみ。UI も視覚的成果物も無く、design-system 候補もゼロ。gate
+      create-spec.design-step は batch モードで decide_autonomously に解決し、
+      analyst の skip 推奨をそのまま採用した。
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: Pair-based resolution of workflow.yaml and journal
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS2, TS3]
+  FR2:
+    title: In-progress features are enumerable from the main tree
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS8]
+  FR3:
+    title: Freshness condition excludes abandoned integration worktrees
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3, TS4]
+  FR4:
+    title: Integration-worktree layout is the only enumerated layout
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS6, TS7]
+  FR5:
+    title: Enumeration root comes from a cwd ancestor walk
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS2, TS5, TS9]
+  NFR1:
+    title: Dependencies - Python standard library only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS9]
+  NFR2:
+    title: Reliability - fail-open contract preserved without exception
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3, TS5]
+  NFR3:
+    title: Performance - per-Stop cost bounded and non-growing
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS9]
+  NFR4:
+    title: Structural invariant - feature identity derived exactly once
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Scope containment - other queue hooks and downstream semantics unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS7]
+  NFR6:
+    title: Release - matching plugin.json and marketplace.json version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0

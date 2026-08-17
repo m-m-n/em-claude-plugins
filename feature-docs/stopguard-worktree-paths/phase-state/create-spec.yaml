@@ -1,11 +1,11 @@
 schema_version: 1
 feature: stopguard-worktree-paths
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: 95b92f8b3fdd6813b3d45eaebb920116b9801859
-last_input_digest: sha256:1caad428eb84a0045d21ea85e4c7ed06c990b546d4a8169264e2927b6029d60a
-active_request_id: create-spec-run-0003
+base_revision: 6228cab6d0be975a76f8ea95b9d3e6081429925a
+last_input_digest: sha256:cf1b6f2a4d0e5c8b7a91e3d260f4b8c5a7e19d3f6b2c48a0d5e7f193b6c2a48d
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -87,10 +87,16 @@ worker_runs:
     input_digest: sha256:23360b9ddbc5b83e7cf2ca68aa9e282384bc6b6ac0156070f268edabd7951eca
     output_digest: null
   - request_id: create-spec-run-0003
-    status: dispatched
+    status: completed
     input_digest: sha256:cf1b6f2a4d0e5c8b7a91e3d260f4b8c5a7e19d3f6b2c48a0d5e7f193b6c2a48d
     output_digest: null
-artifacts: []
+artifacts:
+  - path: feature-docs/stopguard-worktree-paths/REQUIREMENTS.md
+    sha256: sha256:5d14eaee6ab48b9f1579947510311679bd366ee16cae63040021133743657c44
+    produced_by: create-spec-run-0003
+  - path: feature-docs/stopguard-worktree-paths/SPEC.md
+    sha256: sha256:ba606f86c43447c71e5dbaecac55967fc4a6489b079a8370abc34069a991bd75
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
