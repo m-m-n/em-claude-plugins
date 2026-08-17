@@ -34,7 +34,8 @@ workflow:
       to produce.
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: c1f57609c07bda4362aa52b38417acf93d1a8a0e
   - id: implement
     status: pending
     base_commit: null
@@ -47,7 +48,37 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: implement-phase.md abort terminal and byte pins
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_implement_routeback_gate.py
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_routeback_reset_scope_consistency.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR8, FR10, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: batch-mode.md gate row synchronization and version bump
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - tests/test_abort_phase_terminal_batch_mode.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR7, FR9, FR10, NFR4, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -63,112 +94,112 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR2:
     title: Batch-mode abort gets the identical terminal
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-2]
   FR3:
     title: Abort's side-effect set is bounded to the terminal write and its commit
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-3]
   FR4:
     title: The post-abort stopping point is stated uniquely
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-3]
   FR5:
     title: The equivalence claim is kept, not deleted
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4]
   FR6:
     title: The new commit call site falls on the bounded side of exit-4 recovery
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-5]
   FR7:
     title: batch-mode.md's implement.failed-task row is synchronized
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-6]
   FR8:
     title: Every byte pin of the I.2.c batch-mode paragraph is updated
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-7]
   FR9:
     title: Plugin version bump in lockstep
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-9]
   FR10:
     title: Synchronization scope — exactly four documents, one explicit non-goal
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-10]
   NFR1:
     title: Forbidden tokens in I.2.c
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-8]
   NFR2:
     title: Structural anchors preserved
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   NFR3:
     title: No bare git commit/add lines
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-8]
   NFR4:
     title: Documentation-only change
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-10]
   NFR5:
     title: Suite green
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-7, TS-10]
   NFR6:
     title: Internal consistency of the terminal description
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-3, TS-6]
 
 batch:
