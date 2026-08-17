@@ -28,7 +28,8 @@ workflow:
     skipped_reason: "ユーザーに見える面が無い。参照ドキュメントの一節・Python unittest のアサーション・JSON の version フィールド 2 箇所のみを変更する feature であり、UI も画面も視覚的出力も存在しない。design-system 候補もリポジトリに無い。batch policy が create-spec.design-step を option_id decide_autonomously で解決した。"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 4bfb1998c5b48c6af7aa305f869b72a5a135e999
   - id: implement
     status: pending
     base_commit: null
@@ -41,7 +42,46 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "I.2.a scope rewrite and its wording pin"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_recycled_task_id_consistency.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR5, FR6, FR8, NFR1, NFR2, NFR3, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: "Two-layer pin joining the hook classification to the hooks"
+    plan: tasks/task0002.md
+    files:
+      - tests/test_queue_hook_status_read_pin.py
+    skills: []
+    domains: [external-io, config-infra]
+    complexity: medium
+    requirements: [FR4, FR5, FR8, NFR1, NFR2, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: "Plugin version bump to 0.1.45 in lockstep"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_recycled_task_id_carveout_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR7, FR8, NFR1, NFR2]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -57,98 +97,98 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1, TS-2, TS-3]
   FR2:
     title: "Supporting-cast Stop-hook bullet scoped to the carve-out"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4]
   FR3:
     title: "TestRecycledTaskIdRuleScopedToOrchestrator split into two claims"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-2, TS-3, TS-10]
   FR4:
     title: "Two-layer pin joining the documented classification to the hook implementations"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-5, TS-6, TS-7]
   FR5:
     title: "Non-vacuity discipline for every new matcher"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-10]
+    tasks: [task0001, task0002]
+    tests: [TS-10, TS-5]
   FR6:
     title: "Unlaunched-definition divergence documented rather than closed"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-8]
   FR7:
     title: "Plugin version bump"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS-9]
   FR8:
     title: "Whole suite green"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-11]
   NFR1:
     title: "Test-code dependency floor"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-11]
   NFR2:
     title: "Test placement and naming"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-11]
   NFR3:
     title: "Line-wrap robustness of document assertions"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-11]
   NFR4:
     title: "Hook runtime behavior unchanged"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-6, TS-7]
   NFR5:
     title: "Test isolation"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-6, TS-7]
   NFR6:
     title: "SSOT singularity preserved"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4]
 
 batch:
