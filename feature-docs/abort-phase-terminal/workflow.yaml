@@ -41,7 +41,7 @@ workflow:
     base_commit: 5b764bc0963f912a04831e4530c3d2deb362d1e8
     completed_at_commit: c000a91bcc37348722221b92f66ca271d9d912c7
   - id: review
-    status: pending
+    status: in_progress
   - id: verify
     status: pending
     result: null
@@ -82,10 +82,16 @@ tasks:
     branch: em-workflow/abort-phase-terminal/task0002
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
-  perspectives: {}
+  plan:
+    floor: [comprehensive, architecture, spec]
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: pending
+    architecture: pending
+    spec: pending
   residual_critical_high: 0
   needs_rework: false
 
