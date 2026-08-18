@@ -1,0 +1,46 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      No automated assertion reads either manifest (task plan Test Notes:
+      adding one would require a new test module, out of scope per NFR4).
+      Verified by inspection: em-workflow/.claude-plugin/plugin.json version
+      changed from 0.1.44 to 0.1.45 (patch component incremented, major/minor
+      unchanged).
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      No automated assertion reads either manifest. Verified by inspection:
+      the em-workflow entry in .claude-plugin/marketplace.json now declares
+      version "0.1.45", byte-identical to the plugin manifest's new value.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      No automated assertion exists. Verified by inspection: both files
+      parse as valid JSON (python3 -c "json.load(...)" succeeded for each),
+      and `git diff` shows exactly one changed line per file — only the
+      version value differs; all other keys, values, key order, and
+      indentation are unchanged.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      No automated assertion exists. Verified by inspection: `git status
+      --porcelain` shows exactly em-workflow/.claude-plugin/plugin.json and
+      .claude-plugin/marketplace.json modified — the two files listed under
+      Scope — with no file created, renamed, or deleted.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Regression guard, not a red/green criterion — the task plan's own Test
+      Notes state the suite does not read either manifest, so it cannot go
+      red for this change. Baseline run (4a, before any edit) already passed
+      1452/1452 tests, 0 failures, 0 errors. Post-implementation run also
+      passed 1452/1452, confirming no regression.
