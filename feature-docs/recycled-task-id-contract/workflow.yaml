@@ -31,7 +31,8 @@ workflow:
       ユーザー向け表示面を持たない。design system も存在しない。
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 7227f4edd6903fffb4ff7c352da77514a819e968
   - id: implement
     status: pending
     base_commit: 996b270c9e58319e99c9e2c32138c8334189a0f2
@@ -44,7 +45,35 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "recycled-task-id contract wording, classification table and its pin"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_hook_classification_pin.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR4, FR5, NFR1, NFR2, NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: "plugin version bump in both registries"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_recycled_task_id_contract_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR6, NFR1, NFR2, NFR3]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -60,71 +89,71 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS6, TS5]
   FR2:
     title: "Align the Supporting cast Stop-hook bullets with I.2.a"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS7, TS5]
   FR3:
     title: "Split the assertions in TestRecycledTaskIdRuleScopedToOrchestrator"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1, TS2, TS5]
   FR4:
     title: "Record the unlaunched-detection divergence in I.2.a as SSOT"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS8, TS5]
   FR5:
     title: "Make the hook classification table machine-readable and pin it with one test"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1, TS2, TS3, TS4, TS5]
   FR6:
     title: "Bump the plugin version"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS9, TS5]
   NFR1:
     title: "Test dependencies: standard library only"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002]
+    tests: [TS10, TS5]
   NFR2:
     title: "Test placement and naming conventions"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002]
+    tests: [TS11, TS5]
   NFR3:
     title: "Out-of-scope immutability"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002]
+    tests: [TS12]
   NFR4:
     title: "Single source of truth for hook classification"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS13, TS3]
 
 batch:
   review_rework_count: 0
