@@ -63,10 +63,16 @@ tasks:
     branch: em-workflow/i2c-routeback-reconciliation/task0001
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
-  perspectives: {}
+  plan:
+    floor: [comprehensive, architecture, spec]
+    discretionary: []
+    cross_validation: false
+  perspectives:
+    comprehensive: pending
+    architecture: pending
+    spec: pending
   residual_critical_high: 0
   needs_rework: false
 
