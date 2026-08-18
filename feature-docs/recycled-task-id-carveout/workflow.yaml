@@ -38,9 +38,15 @@ workflow:
     status: completed
     completed_at_commit: 6f142312c50b1a2355dc52e305de59819e3942d6
   - id: verify
-    status: in_progress
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: TS-2
+        note: "三フック節 matcher の negative proof が未実装。queue_stop_guard.py を三フック claim に折り込んだ違反サンプルに対して matcher が落ちることを示すテストが無い（VERIFICATION.md TS-2 の Expected Result 後半が未達）"
+      - id: SC-1
+        note: "FR3 の AC-6（ORCHESTRATOR_ONLY_SCOPE_PHRASE 改訂後に single-reader の module-level 定数を残さない）が未達。HOOK_FILENAMES の reader は 1 箇所、JOURNAL_ONLY_HOOK_FILENAMES の reader も 1 箇所"
+    passed_summary: "python3 -m unittest discover -s tests: 1479 tests OK / build・format コマンドは未定義のため対象外 / SC-4・SC-5・SC-6・SC-7 は pass / TS-1・TS-3〜TS-11 は pass"
+
   - id: retrospect
     status: pending
 
