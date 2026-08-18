@@ -37,8 +37,9 @@ workflow:
   status: completed
   completed_at_commit: f5f493ce1898859ffaab7488f6e0dbdee518d501
 - id: implement
-  status: in_progress
+  status: completed
   base_commit: 996b270c9e58319e99c9e2c32138c8334189a0f2
+  completed_at_commit: 82ceb330a2123a36bcd0f2d3090ba81264b0b543
 - id: review
   status: pending
 - id: verify
@@ -68,7 +69,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/declared-change-set-implementation/task0001
   task0002:
