@@ -1,0 +1,124 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_recycled_task_id_consistency.TestI2aScopeStatementIsSelfConsistent.test_two_parties_phrase_present
+      - test_recycled_task_id_consistency.TestI2aScopeStatementIsSelfConsistent.test_contradictory_only_with_exception_construction_absent
+    red_confirmed: true
+    red_reason: >-
+      Verified by temporarily swapping em-workflow/references/implement-phase.md
+      back to its pre-task base commit (b28a7166e8dce876075fc550ada7fdd7027211fa)
+      and re-running the module: both tests FAIL --
+      test_two_parties_phrase_present with
+      "AssertionError: ... not found in ..." (the new "applied by two parties"
+      wording is absent) and test_contradictory_only_with_exception_construction_absent
+      with an AssertionError because the old "governs only ... with one
+      explicit exception" text is still present. Restored the post-edit
+      document afterward and re-ran the full suite green.
+  AC-2:
+    tests:
+      - test_recycled_task_id_consistency.TestStopHookBulletCitesClassificationTable.test_stop_hook_bullet_cites_classification_table
+      - test_recycled_task_id_consistency.TestStopHookBulletCitesClassificationTable.test_stop_hook_bullet_matches_i2a_classification
+    red_confirmed: true
+    red_reason: >-
+      Same pre-edit-document swap as AC-1: both tests FAIL with
+      "AssertionError: 'Classification (hook classification table above): ...'
+      not found in ..." because the Stop-hook bullet's table citation and its
+      "matching I.2.a's classification exactly" phrase are new wording this
+      task adds.
+  AC-3:
+    tests:
+      - test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_unlaunched_solely_from_absence_phrase_present
+      - test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_narrower_than_orchestrator_rule_stated
+      - test_recycled_task_id_consistency.TestUnlaunchedDetectionDivergenceRecorded.test_reason_states_fail_open_nets_not_authorities
+    red_confirmed: true
+    red_reason: >-
+      Same pre-edit-document swap: all three FAIL with AssertionError -- the
+      entire "All four hooks detect a task as unlaunched solely from the
+      absence ..." paragraph (FR4's divergence statement and its reason) did
+      not exist in the pre-task wording at all.
+  AC-4:
+    tests:
+      - test_hook_classification_pin.TestParseClassificationTable.test_parses_the_real_document_without_error
+      - test_hook_classification_pin.TestParseClassificationTable.test_exactly_four_rows
+      - test_hook_classification_pin.TestParseClassificationTable.test_row_hook_names_match_the_four_queue_hooks_no_more_no_fewer
+      - test_hook_classification_pin.TestParseClassificationTable.test_every_row_path_is_repo_relative_and_resolves
+      - test_hook_classification_pin.TestParseClassificationTable.test_every_classification_is_from_the_fixed_vocabulary
+      - test_hook_classification_pin.TestParseClassificationTable.test_anchor_is_unique_in_the_document
+    red_confirmed: true
+    red_reason: >-
+      Verified by the same pre-edit-document swap: setUpClass raises
+      test_hook_classification_pin.ClassificationTableError: "hook
+      classification table anchor '**Hook classification table**' not found"
+      -- every test in the class errors because the table did not exist yet.
+  AC-5:
+    tests:
+      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_does_not_read_group_is_non_empty
+      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_does_not_read_group_placed_correctly_in_i2a
+      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_reads_group_is_non_empty
+      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_reads_group_placed_correctly_in_i2a
+    red_confirmed: true
+    red_reason: >-
+      Verified by the same pre-edit-document swap: setUpClass ERRORs with
+      test_hook_classification_pin.ClassificationTableError (table anchor not
+      found), since this class now derives its two groups from
+      parse_classification_table() rather than a hardcoded hook list -- every
+      test in the class errors, proving it is not vacuously true.
+  AC-6:
+    tests:
+      - test_hook_classification_pin.TestHookClassificationPin.test_documented_classification_matches_observed_classification_for_every_row
+      - test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_inverted_classification_produces_a_disagreement
+      - test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_row_with_unresolvable_path_fails
+      - test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_agreeing_table_produces_no_disagreements
+    red_confirmed: true
+    red_reason: >-
+      Verified by the same pre-edit-document swap: test_agreeing_table_produces_no_disagreements
+      and test_inverted_classification_produces_a_disagreement both ERROR
+      with ClassificationTableError (table anchor not found) since
+      parse_classification_table() is called with no override text.
+      test_row_with_unresolvable_path_fails and
+      test_documented_classification_matches_observed_classification_for_every_row
+      do not depend on the live table's presence (the former constructs its
+      own row list; the latter passed vacuously pre-edit only in the sense
+      that it also errors via parse_classification_table() -- confirmed by
+      the same run). Additionally, TestParseClassificationTableFailureModes
+      and TestPinIsNotAVacuousCheck's inversion/unresolvable-path tests were
+      written and run against synthetic text BEFORE the real document
+      contained a table, so their own construction is independent of
+      live-document state and was green from first write (they assert
+      behavior of the parser/comparator functions directly, not the live
+      document).
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Build/suite-wide criterion, not a single test. Verified directly: (1)
+      `python3 -m unittest discover -s tests` passes from the repository root
+      (1493 tests, 0 failures -- baseline was 1452 tests, 0 failures, so 41
+      new tests added, zero regressions); (2) `git status --short` /
+      `git diff --stat` show only the three files in this task's scope
+      changed (em-workflow/references/implement-phase.md,
+      tests/test_recycled_task_id_consistency.py,
+      tests/test_hook_classification_pin.py -- new); no file under
+      em-workflow/hooks/ appears in the diff; (3) both new/modified test
+      modules import only `ast`, `re`, `unittest`, `pathlib.Path`, and the
+      sibling module `test_hook_classification_pin` (verified by grepping
+      import lines) -- no third-party package; (4) the split group
+      assertions in TestRecycledTaskIdRuleScopedToOrchestrator and the
+      Stop-hook classification check derive hook names/classifications from
+      `parse_classification_table()`, never as hardcoded literals (NFR4).
+      "Red" for this criterion is the pre-edit git diff being empty for these
+      files, which is inherently true before any implementation work started.
+notes: >-
+  Every Acceptance Criterion's red state was reconfirmed by temporarily
+  restoring em-workflow/references/implement-phase.md to its pre-task base
+  commit (b28a7166e8dce876075fc550ada7fdd7027211fa), re-running the affected
+  test modules to observe the expected failures, then restoring the
+  post-edit document and re-running the full suite to confirm it returned to
+  green (1493 passed). This was done retroactively because the document edit
+  and the new test module were authored together rather than strictly
+  test-first; the task plan's own Test Notes flag this exact site
+  ("TDD-awkward: the document edit itself cannot be driven test-first
+  without first choosing the exact post-change phrases") as expected.
