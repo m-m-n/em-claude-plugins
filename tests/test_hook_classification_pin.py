@@ -33,9 +33,15 @@ pin stays a single test while its parts remain provable on their own:
    unparsing) are excluded before the search, because `queue_taskstop_net.py`
    mentions the workflow state file only in its module docstring --
    explicitly disclaiming that it ever touches it there -- and a raw text
-   search over the whole file would misclassify it as reading it. Raises
-   `ClassificationTableError` if the given path does not resolve to an
-   existing file (table contract's Consumer obligation).
+   search over the whole file would misclassify it as reading it. The
+   signal itself is the AND of two conditions, not a bare "workflow.yaml"
+   substring search (which alone cannot distinguish reading per-task status
+   from any other reason to touch the file, e.g. `bash_guard.py` extracting
+   `*_command` fields): "workflow.yaml" appears in the stripped source, AND
+   a defined-and-called function whose own name denotes deriving a per-task
+   status exists in the module. Raises `ClassificationTableError` if the
+   given path does not resolve to an existing file (table contract's
+   Consumer obligation).
 3. `compare_table_to_sources` -- the list of disagreements between each
    row's documented classification and the observation of its own source;
    an empty list iff documentation and implementation agree. Propagates
@@ -49,6 +55,8 @@ parser, one source of truth for the table's shape and vocabulary).
 """
 
 import ast
+import re
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -192,6 +200,18 @@ def _strip_docstrings(source):
     return ast.unparse(tree)
 
 
+# The observation rule's actual signal (not a bare substring search over
+# "workflow.yaml"): a defined-and-referenced name that itself denotes
+# extracting a PER-TASK status out of the parsed workflow state -- e.g.
+# `task_statuses_from_workflow`. A module can mention "workflow.yaml" (a
+# glob pattern, a docstring disclaimer, a *_command extraction unrelated to
+# task status -- see bash_guard.py) without ever deriving a per-task status
+# from it; this pattern requires BOTH "task" and "status" to co-occur in one
+# identifier, so it only fires on code that names the thing the table's
+# vocabulary is actually about.
+_TASK_STATUS_NAME_RE = re.compile(r"task[a-z_]*status|status[a-z_]*task", re.IGNORECASE)
+
+
 def reads_per_task_status(hook_path):
     """Observe one hook source directly: does it read `tasks.{T}.status`?
 
@@ -201,6 +221,19 @@ def reads_per_task_status(hook_path):
     workflow state file only in its module docstring -- explicitly
     disclaiming that it ever touches it there -- and a raw text search over
     the whole file would misclassify it.
+
+    The signal is NOT a bare `"workflow.yaml" in source` check (that only
+    proves the file references the workflow state file at all -- a module
+    can do that for an unrelated purpose, e.g. `bash_guard.py` extracts
+    `*_command` fields and never looks at any task's status). Instead this
+    walks the AST for a defined function whose own name denotes deriving a
+    PER-TASK status (matches `_TASK_STATUS_NAME_RE`: both "task" and
+    "status" co-occur in one identifier) that is also actually CALLED
+    somewhere in the module -- a merely-defined-but-dead helper proves
+    nothing was read. `workflow.yaml` must additionally appear in the
+    (docstring-stripped) executable source, so the two conditions are
+    ANDed: a per-task-status accessor is defined and invoked, AND the
+    module's executable code references the workflow state file.
 
     Precondition: `hook_path` resolves to an existing file -- otherwise
     `ClassificationTableError` (table contract's Consumer obligation).
@@ -212,7 +245,25 @@ def reads_per_task_status(hook_path):
         )
     source = path.read_text(encoding="utf-8")
     stripped = _strip_docstrings(source)
-    return "workflow.yaml" in stripped
+    if "workflow.yaml" not in stripped:
+        return False
+
+    tree = ast.parse(stripped)
+    task_status_fn_names = {
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and _TASK_STATUS_NAME_RE.search(node.name)
+    }
+    if not task_status_fn_names:
+        return False
+
+    called_names = {
+        node.func.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    return bool(task_status_fn_names & called_names)
 
 
 def compare_table_to_sources(rows):
@@ -397,6 +448,81 @@ class TestObserveHookSource(unittest.TestCase):
             reads_per_task_status(
                 REPO_ROOT / "em-workflow/hooks/does_not_exist.py"
             )
+
+    def test_bash_guard_reads_workflow_yaml_but_not_task_status(self):
+        # Real negative counter-example (finding 56b64fea7f61b999): this
+        # hook's `declared_commands` reads workflow.yaml on purpose, but
+        # only to extract *_command fields -- it never derives a per-task
+        # status. A bare `"workflow.yaml" in source` rule would misclassify
+        # it as reading status; the AND'd per-task-status-accessor signal
+        # correctly says False.
+        path = REPO_ROOT / "em-workflow/hooks/bash_guard.py"
+        self.assertIn("workflow.yaml", path.read_text(encoding="utf-8"))
+        self.assertFalse(reads_per_task_status(path))
+
+    def _write_and_observe(self, source):
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False, encoding="utf-8"
+        ) as fh:
+            fh.write(source)
+            tmp_path = Path(fh.name)
+        try:
+            return reads_per_task_status(tmp_path)
+        finally:
+            tmp_path.unlink()
+
+    def test_bare_workflow_yaml_mention_without_status_accessor_is_false(self):
+        # Non-triviality: a module that merely mentions "workflow.yaml" in
+        # executable code, with no per-task-status accessor defined or
+        # called, must NOT be classified as reading status. Pins down that
+        # the rule is the AND of both signals, not the workflow.yaml
+        # substring alone.
+        source = (
+            "import glob\n"
+            "PATTERN = 'feature-docs/*/workflow.yaml'\n"
+            "def find_files():\n"
+            "    return glob.glob(PATTERN)\n"
+        )
+        self.assertFalse(self._write_and_observe(source))
+
+    def test_removing_the_status_carveout_flips_observation_to_false(self):
+        # Non-trivial fixed test required by finding 56b64fea7f61b999: a
+        # synthetic source modeled on queue_stop_guard.py, with ONLY its
+        # recycled-task-id carve-out's status read removed (the
+        # `task_statuses_from_workflow` definition and call site both
+        # deleted, everything else -- including the "workflow.yaml"
+        # glob-pattern string -- left intact), must observe as False. This
+        # proves the rule tracks the actual status-reading carve-out, not
+        # merely the presence of the "workflow.yaml" string in the file.
+        with_carveout = (
+            "import glob\n"
+            "import os\n"
+            "\n"
+            "def task_statuses_from_workflow(path):\n"
+            "    return {'task0001': 'pending'}\n"
+            "\n"
+            "def evaluate_feature(path):\n"
+            "    statuses = task_statuses_from_workflow(path)\n"
+            "    return statuses.get('task0001') == 'pending'\n"
+            "\n"
+            "def active_candidates(root):\n"
+            "    pattern = os.path.join(root, '*', 'feature-docs', '*', 'workflow.yaml')\n"
+            "    return sorted(glob.glob(pattern))\n"
+        )
+        self.assertTrue(self._write_and_observe(with_carveout))
+
+        without_carveout = (
+            "import glob\n"
+            "import os\n"
+            "\n"
+            "def evaluate_feature(path):\n"
+            "    return False\n"
+            "\n"
+            "def active_candidates(root):\n"
+            "    pattern = os.path.join(root, '*', 'feature-docs', '*', 'workflow.yaml')\n"
+            "    return sorted(glob.glob(pattern))\n"
+        )
+        self.assertFalse(self._write_and_observe(without_carveout))
 
 
 class TestNonVacuityGuards(unittest.TestCase):
