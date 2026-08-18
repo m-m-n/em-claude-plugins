@@ -1,0 +1,21 @@
+schema_version: 1
+feature: recycled-task-id-carveout
+phase: rework
+status: dispatching
+generation: 1
+base_revision: c950d1c1c4af1a99ae1f248f8521966b9e282fe1
+last_input_digest: sha256:e6927e2539f40d8cc289cf721616fc24fac231bbf4dd5c0ca26c6aba9aa06276
+active_request_id: rework-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: rework-run-0001
+    status: dispatched
+    input_digest: sha256:e6927e2539f40d8cc289cf721616fc24fac231bbf4dd5c0ca26c6aba9aa06276
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
