@@ -80,12 +80,20 @@ acceptance_tests:
     red_reason: >
       Process/non-vacuity criterion, not a single runnable assertion:
       verified by code review plus a grep-based constant-reader-count audit
-      run during implementation (every module-level constant this task
-      added or revised has >=2 readers, or was fully retired together with
-      all of its readers -- PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE and
-      its four old readers are removed with zero remaining occurrences).
-      The individual negative-proof and guard tests this criterion governs
-      are listed under AC-1..AC-4 above
+      run during implementation. PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE
+      and its four old readers are removed with zero remaining
+      occurrences. The audit found two module-level constants left with
+      exactly one reader site at this task's merge: HOOK_FILENAMES (read
+      only by JOURNAL_ONLY_HOOK_FILENAMES's derivation) and
+      JOURNAL_ONLY_HOOK_FILENAMES (read only by
+      test_three_journal_only_hooks_named_in_anchored_never_consult_slice).
+      task0004 (verify-sourced rework, TS-13 / SC-1) closes this gap: it
+      retires HOOK_FILENAMES together with the derivation and adds a
+      second reader for JOURNAL_ONLY_HOOK_FILENAMES (the three-hook
+      anchored-slice matcher's paired negative proof, which that task's
+      own rework also added). The individual negative-proof and guard
+      tests this criterion otherwise governs are listed under AC-1..AC-4
+      above
       (TestValidationDetectsRegressions.test_orchestrator_only_scope_phrase_matcher_flags_the_pre_change_wording,
       test_stop_guard_exception_anchor_matcher_flags_absence_in_pre_change_wording,
       test_divergence_phrases_matcher_flags_absence_in_pre_change_wording,

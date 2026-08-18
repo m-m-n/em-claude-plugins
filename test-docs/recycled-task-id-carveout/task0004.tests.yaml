@@ -1,0 +1,115 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in
+    red_confirmed: false
+    red_reason: >
+      This is a proof over a fixed, verbatim-captured historical sample
+      (no production/prose code changes in this task -- the task plan's
+      own Test Notes anticipate this: "If it passes immediately, that is
+      expected -- the positive matcher is already anchored -- and the
+      non-vacuity is carried by AC-3's retained-anchor guard ... Do NOT
+      manufacture a red step by weakening the matcher"). The test passed
+      on first write: applying THREE_HOOKS_SLICE_START_ANCHOR,
+      JOURNAL_ONLY_HOOK_FILENAMES and STATUS_NEVER_CONSULTED_PHRASE (the
+      SAME constants the positive test reads) to
+      PRE_STOPGUARD_RETIRED_FAILED_FOUR_HOOK_NEVER_CONSULT_SAMPLE confirms
+      every journal-only hook name, `queue_stop_guard.py`, and the
+      never-consult phrase are all present in the sample (so a naive
+      filename-presence matcher would wrongly accept it), then confirms
+      `sample.index(THREE_HOOKS_SLICE_START_ANCHOR)` raises ValueError --
+      the real anchored-slice matcher cannot even form its slice against
+      this sample, proving it does not match. See notes / unconfirmed_reds.
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in
+    red_confirmed: false
+    red_reason: >
+      Inspection-verified alongside AC-1's test: the sample is a captured
+      verbatim excerpt of em-workflow/references/implement-phase.md at
+      commit 061786a3c34f0f8a1d05ffd7915e5d5d51e04d56 (the commit
+      immediately preceding the already-merged stopguard-retired-failed
+      feature's merge -- the last point at which `queue_stop_guard.py` was
+      folded into the same never-consult claim as the other three hooks),
+      with a provenance comment naming both the source file and that
+      commit, never a paraphrase. No existing sample in this module
+      reaches back that far (verified by reading every existing sample and
+      constant; none contains the four-hook fold-in wording), so it is
+      captured fresh rather than reused -- see notes for the mechanical
+      reason the module's suggested reuse candidate could not be used
+      as-is. The comparison runs through _normalize_ws, the module's
+      existing normalization helper.
+  AC-3:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_pre_stopguard_retired_failed_sample_retains_never_consulted_phrase
+    red_confirmed: false
+    red_reason: >
+      Data-integrity guard over the same fixed sample as AC-1/AC-2, added
+      alongside it in the same commit -- there is no prior implementation
+      state for this assertion to be red against. Asserts
+      STATUS_NEVER_CONSULTED_PHRASE ("never consult `tasks.{T}.status`")
+      is present in the normalized sample; that phrase is also present,
+      unchanged, in the current post-change document, so it is a genuine
+      RETAINED anchor (Contract 4) proving the sample was not emptied or
+      truncated past the relevant content.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Inspection criterion (no assertion can check a docstring's own
+      prose without being self-referential, per the task plan's Test
+      Notes). Verified by reading the module docstring's "Matcher ->
+      negative-proof inventory" entry for
+      test_three_journal_only_hooks_named_in_anchored_never_consult_slice:
+      it no longer reads "RETENTION matcher over unchanged wording ... (no
+      negative proof needed, Contract 3)"; it now reads "new-wording
+      matcher (Contracts 1, 2, 4, task0004 correction)" and names the new
+      negative-proof test
+      (test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in).
+      The THREE_HOOKS_SLICE_START_ANCHOR constant's own comment is
+      corrected to match. TestRecycledTaskIdRuleScopedToOrchestrator's
+      class docstring was re-read against its actual assertions and
+      already matched (no change needed there).
+  AC-5:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_three_journal_only_hooks_named_in_anchored_never_consult_slice
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in
+    red_confirmed: false
+    red_reason: >
+      Inspection criterion (constant reader-count audit), per the task
+      plan's Test Notes. Verified by grep across the module for every
+      module-level constant: HOOK_FILENAMES is retired (zero code
+      references remain, only comments) together with the derivation that
+      was its sole reader; JOURNAL_ONLY_HOOK_FILENAMES is now a direct
+      tuple literal read at two sites (the pre-existing positive test and
+      the new negative-proof test above). Every other module-level
+      constant already had >=2 readers before this task and is unchanged.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Text-edit criterion verified by inspection and by parsing the
+      result: test-docs/recycled-task-id-carveout/task0001.tests.yaml's
+      AC-6 red_reason no longer claims every module-level constant task0001
+      added or revised has >=2 readers or was fully retired with its
+      readers; it now records the measured state at task0001's merge
+      (HOOK_FILENAMES and JOURNAL_ONLY_HOOK_FILENAMES each had exactly one
+      reader) and names task0004 as the change closing it. `git diff`
+      against the pre-edit file confirms the change is confined to the
+      AC-6 block; every other entry is byte-unchanged. The file parses as
+      YAML (python3 -c "import yaml; yaml.safe_load(open(...))"
+      succeeded, all 7 acceptance_tests keys present).
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Suite-level / scope criterion, not a single runnable assertion:
+      verified by running `python3 -m unittest discover -s tests` from the
+      repository root (1481 tests, exit 0; baseline before this task was
+      1479/0 failures, +2 for the two tests this task adds) and by `git
+      status --porcelain` showing exactly the two files in expected_files
+      as modified. Only standard-library imports (re, unittest, pathlib)
+      are used; no import of any other test module was added.
