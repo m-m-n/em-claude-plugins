@@ -1,0 +1,34 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_exit4_tip_argument_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_exit4_tip_argument_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+    red_confirmed: true
+    red_reason: "AssertionError: 44 not greater than 44 (plugin.json still 0.1.44 before the bump)"
+  AC-2:
+    tests:
+      - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+    red_confirmed: true
+    red_reason: "AssertionError: 44 not greater than 44 (marketplace.json em-workflow entry still 0.1.44 before the bump); the em-review retention checks were already green pre-bump since that entry is untouched"
+  AC-3:
+    tests:
+      - tests.test_exit4_tip_argument_version_bump
+    red_confirmed: true
+    red_reason: "Module did not exist before this task; once written it failed on the un-bumped 0.1.44 tree (see AC-1/AC-2), proving discovery + baseline-expression are exercised. Module imports only json/re/unittest/pathlib and no other test module."
+  AC-4:
+    tests:
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_exit4_tip_argument_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+    red_confirmed: false
+    red_reason: "These tests assert that the matcher correctly REJECTS a forged bad sample (assertRaises(AssertionError) around the matcher call) -- their purpose is proven by the matcher raising, which is true whether or not the live registries are bumped. They were written alongside the live-registry tests in the same red run and passed immediately (the matchers already reject forged samples by construction); this is expected for negative-proof tests per tdd-testing guidance and does not indicate a vacuous test -- the non-vacuity guards (also listed here) confirm the forged samples are well-formed, so the assertRaises is exercising the comparison, not a parse failure."
+  AC-5:
+    tests: []
+    red_reason: "Full-suite exit code / no-file-outside-scope check; not a unit test. Verified via `python3 -m unittest discover -s tests` (exit 0, 1462 tests, 0 failures) and `git status --porcelain` / `git diff --stat` showing only the three declared files touched."
