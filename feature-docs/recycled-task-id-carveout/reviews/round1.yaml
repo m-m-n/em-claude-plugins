@@ -1,0 +1,145 @@
+round: 1
+executed_at: "2026-08-18T09:13:33+09:00"
+scope:
+  review_mode: diff
+  base_commit: bd0c6b8c00ad43280fee123ca39be80be2418a9e
+  head_commit: 90f0de975fd5fe9742110e8c157528f7ddb4ab37
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/recycled-task-id-carveout/task0001.tests.yaml
+    - test-docs/recycled-task-id-carveout/task0002.tests.yaml
+    - test-docs/recycled-task-id-carveout/task0003.tests.yaml
+    - tests/test_queue_hook_status_read_pin.py
+    - tests/test_recycled_task_id_carveout_version_bump.py
+    - tests/test_recycled_task_id_consistency.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+findings:
+  - stable_id: 8b579bf5c8547993
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 242
+    title: "新設した divergence 記述が SSOT 内の fail-open 定義と矛盾する（同一文書内の契約ドリフト）"
+    description: >-
+      I.2.a に追加された divergence 段落は、queue_stop_guard.py が journal イベントの無いタスクを
+      status 無視で unlaunched とみなし merged 状態のタスクを launch list に載せ得る挙動を
+      「deliberate, intended fail-open behavior」と正当化している。しかし同じ文書の Supporting cast
+      セクションは fail-open を「on any unexpected state ... they exit 0 silently」と定義しており、
+      ここで述べられている挙動は exit 0 ではなく exit 2 の誤 BLOCK である。用語の矛盾が
+      DIVERGENCE_DELIBERATE_PHRASE としてテストに固定されている。
+    suggestion: >-
+      divergence の正当化を文書内の fail-open 定義と整合する語に置き換える。意図された根拠
+      （初回 launch 取りこぼし検出）と、誤 BLOCK が consecutive-block cap (3) で有界化されている
+      事実を明示し、この挙動に fail-open という語を当てない。文言変更時は
+      tests/test_recycled_task_id_consistency.py の DIVERGENCE_DELIBERATE_PHRASE も同時に更新する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 auto-fix gate は critical/high のみを対象とするため未対応"
+  - stable_id: "0376cefe80d8189b"
+    severity: medium
+    category: architecture
+    file: tests/test_queue_hook_status_read_pin.py
+    line: 60
+    title: "hook classification pin の matcher キーが実装（SSOT）に固定されておらず、リネームで無言に無効化する"
+    description: >-
+      STATUS_READ_IDENTIFIERS は queue_stop_guard.py の識別子を provenance コメント付きで複製して
+      いるが、その識別子が実際に queue_stop_guard.py に存在することを検証する assertion が無い。
+      リネーム時に scan_for_status_read_violations が常に空を返し、AC-1 のテストが空虚に green のまま
+      になる。
+    suggestion: >-
+      matcher を実装側に錨で固定する assertion を 1 本追加する
+      （STOP_GUARD_HOOK_PATH のソースに対するスキャン結果が sorted(STATUS_READ_IDENTIFIERS) と
+      一致することを assert する）。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 auto-fix gate は critical/high のみを対象とするため未対応"
+  - stable_id: daed4402b7c30c16
+    severity: medium
+    category: spec
+    file: tests/test_recycled_task_id_consistency.py
+    line: 604
+    title: "TS-2 が要求する三フック節の negative proof が実装されていない"
+    description: >-
+      SPEC TS-2 は「matcher が queue_stop_guard.py を三フック節に含むサンプルで落ちること」を
+      negative proof として要求しているが、test_three_journal_only_hooks_named_in_anchored_never_consult_slice
+      には対となる negative proof が無い。docstring は Contract 3 の RETENTION matcher として proof を
+      省いている。SPEC AC-9 も各 matcher の negative proof を要求している。
+    suggestion: >-
+      queue_stop_guard.py を三フック節に含めた違反サンプルを module-level 定数として追加し、
+      TestValidationDetectsRegressions に matcher が落ちることを示すテストを置く。
+      TestPreChangeSampleGuards に retained anchor ガードを追加し、docstring の inventory も更新する。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 auto-fix gate は critical/high のみを対象とするため未対応"
+  - stable_id: c7ecd2015871b514
+    severity: medium
+    category: spec
+    file: tests/test_recycled_task_id_consistency.py
+    line: 218
+    title: "AC-6 の「single-reader 定数を残さない」条件を HOOK_FILENAMES / JOURNAL_ONLY_HOOK_FILENAMES が満たしていない"
+    description: >-
+      旧テスト 3 本の retire により HOOK_FILENAMES の reader が 1 箇所、JOURNAL_ONLY_HOOK_FILENAMES の
+      reader も 1 箇所となり、SPEC AC-6 が禁じた single-reader 定数が 2 つ残っている。
+      task0001.tests.yaml の AC-6 red_reason の記述とも一致していない。
+    suggestion: >-
+      HOOK_FILENAMES を retire し JOURNAL_ONLY_HOOK_FILENAMES を直接リテラル定義したうえで 2 つ目の
+      reader を与える、または現状を許容範囲と判断するなら tests.yaml の AC-6 red_reason を実測に
+      合わせて訂正し docstring に例外として明記する。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 auto-fix gate は critical/high のみを対象とするため未対応"
+  - stable_id: "6022d58527957f19"
+    severity: medium
+    category: comprehensive
+    file: tests/test_queue_hook_status_read_pin.py
+    line: 127
+    title: "Layer-1 の status-read スキャンは識別子リネームで無言に空振りする"
+    description: >-
+      scan_for_status_read_violations のキー識別子が queue_stop_guard.py に現存することを検証する
+      assertion がリポジトリ内に無く、リネーム時にスキャンが空虚に green となる。本 feature が
+      defect と名指しした空振りテストと同型。
+    suggestion: >-
+      STOP_GUARD_HOOK_PATH のソースに対して scan_for_status_read_violations が
+      sorted(STATUS_READ_IDENTIFIERS) を返すことを assert する liveness ガードを追加する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 auto-fix gate は critical/high のみを対象とするため未対応"
+  - stable_id: "436df760545c569d"
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 236
+    title: "新設の divergence 文が I.2.b step 1 の同型ルールを取りこぼしている"
+    description: >-
+      divergence 文は status 無参照の no-event 分類を queue_stop_guard.py 固有の逸脱として提示するが、
+      同じ文書の I.2.b step 1 も orchestrator の reconcile ルールとして status 無参照で
+      「no event → unlaunched」を規定している。逸脱はフック固有ではなく分類層と選択層の差。
+    suggestion: >-
+      divergence 文に I.2.b step 1 の reconcile も status 無参照で分類し status != merged は I.2.a の
+      選択時フィルタとして効く旨を追記する、または I.2.b step 1 側に注記を足して divergence 文の主語を
+      「I.2.a の選択条件」と明示する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 auto-fix gate は critical/high のみを対象とするため未対応"
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
