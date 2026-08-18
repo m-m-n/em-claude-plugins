@@ -57,7 +57,7 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5]
-    status: pending
+    status: in_progress
     notes: null
     branch: em-workflow/i2c-routeback-reconciliation/task0001
 
