@@ -7,23 +7,30 @@ completed-commit write pass a captured `expected_base_tip` as
 Covers task0001 Acceptance Criteria
 (feature-docs/exit4-tip-argument/tasks/task0001.md):
 
-- AC-1 (FR2, NFR1): Step I.2.a's text contains, in order, the refresh, the
-  tip capture into a named variable, the `tasks.{T}.status = in_progress` /
-  `tasks.{T}.branch` write, and a `commit-docs.sh` invocation whose third
-  argument is that variable; ordering is normative and exit-4 cross-
-  references the Branch & Worktree Model.
+- AC-1 (FR2, NFR1): Step I.2.a's text contains, in order, the tip capture
+  into a named variable, the refresh of the integration worktree to exactly
+  that captured tip, the `tasks.{T}.status = in_progress` /
+  `tasks.{T}.branch` write for every task selected in that single entry, and
+  a `commit-docs.sh` invocation naming every such task whose third argument
+  is the captured variable; ordering is normative (capture precedes
+  refresh, refresh precedes write, write precedes commit) and exit-4
+  cross-references the Branch & Worktree Model.
 - AC-2 (FR3, NFR1): Step I.3's text contains the same four elements in the
-  same order for the implement-completed / completed-commit write, with the
-  same exit-4 cross-reference.
+  same order (capture, refresh to the captured tip, write, commit) for the
+  implement-completed / completed-commit write, with the same exit-4
+  cross-reference.
 - AC-3 (FR4): the Step I.3 completion sentence survives byte-for-byte
   including its internal newline; every element AC-2 adds lies strictly
   before or strictly after that span; the rework-synthesis contract test
   module is absent from this task's diff (not asserted here -- a diff
   property, not a document property).
-- AC-4 (FR5): Step I.2.a states that a fresh tip is captured on every entry,
-  including the refill re-entry from Step I.2.b step 5, and that
-  `$RECONCILE_TIP` is never reused as the third argument; every occurrence
-  of `RECONCILE_TIP` inside the I.2.a section lies within that statement.
+- AC-4 (FR5): Step I.2.a states that this capture/refresh/write/commit
+  sequence runs ONCE per entry into Step I.2.a, including the refill
+  re-entry from Step I.2.b step 5, covering every task selected in that
+  entry with a single capture, a single refresh, one write set, and one
+  commit; a fresh tip is captured on every such entry; `$RECONCILE_TIP` is
+  never reused as the third argument; every occurrence of `RECONCILE_TIP`
+  inside the I.2.a section lies within that statement.
 - AC-5 (FR1, NFR4): every call site the exit-4 recovery bullet enumerates
   has a three-argument `commit-docs.sh` invocation in its own step's text;
   the bullet's enumeration wording and Step I.2.c's route-back carve-out are
@@ -64,22 +71,34 @@ STEP_I0_HEADING = "## Step I.0"
 # wording. Each constant is read by both its positive test and its
 # negative-proof test below -- the literal is never spelled twice.
 
-REFRESH_CMD = (
-    "git -C {integration_worktree} reset --hard "
-    "em-workflow/{feature}/integration"
+LAUNCH_TIP_CAPTURE = (
+    "LAUNCH_TIP=$(git -C {integration_worktree} rev-parse "
+    "em-workflow/{feature}/integration)"
 )
-LAUNCH_TIP_CAPTURE = "LAUNCH_TIP=$(git -C {integration_worktree} rev-parse HEAD)"
+LAUNCH_REFRESH_CMD = 'git -C {integration_worktree} reset --hard "$LAUNCH_TIP"'
 LAUNCH_TIP_WRITE_STATUS = "tasks.{T}.status = in_progress"
 LAUNCH_TIP_WRITE_BRANCH = "tasks.{T}.branch"
 LAUNCH_TIP_COMMIT_THIRD_ARG = '"$LAUNCH_TIP"'
 
 COMPLETION_TIP_CAPTURE = (
-    "COMPLETION_TIP=$(git -C {integration_worktree} rev-parse HEAD)"
+    "COMPLETION_TIP=$(git -C {integration_worktree} rev-parse "
+    "em-workflow/{feature}/integration)"
+)
+COMPLETION_REFRESH_CMD = (
+    'git -C {integration_worktree} reset --hard "$COMPLETION_TIP"'
 )
 COMPLETION_TIP_WRITE = "status = completed"
 COMPLETION_TIP_COMMIT_THIRD_ARG = '"$COMPLETION_TIP"'
 
-REFILL_STATEMENT_PHRASE = "EVERY entry into Step I.2.a"
+# The pre-change/defective refresh: resets to the branch name rather than to
+# the just-captured variable, reopening the race the capture-first ordering
+# closes. Used only as a negative anchor (must NOT appear in either section).
+BRANCH_NAME_REFRESH_CMD = (
+    "git -C {integration_worktree} reset --hard "
+    "em-workflow/{feature}/integration"
+)
+
+REFILL_STATEMENT_PHRASE = "ONCE per entry into Step I.2.a"
 REFILL_REENTRY_NAMED_PHRASE = "refill re-entry from Step I.2.b step 5"
 RECONCILE_TIP_NOT_REUSED_PHRASE = "$RECONCILE_TIP` is never reused"
 
@@ -172,9 +191,10 @@ def _bare_git_commit_or_add_lines(text):
 
 
 class TestStepI2aLaunchTimeWriteHasTipArgument(unittest.TestCase):
-    """AC-1 / TS3: Step I.2.a's text contains, in order, the refresh, the
-    tip capture, the workflow.yaml write, and a commit-docs.sh invocation
-    whose third argument is the captured variable."""
+    """AC-1 / TS3: Step I.2.a's text contains, in order, the tip capture,
+    the refresh to that captured tip, the workflow.yaml write, and a
+    commit-docs.sh invocation whose third argument is the captured
+    variable."""
 
     @classmethod
     def setUpClass(cls):
@@ -182,7 +202,7 @@ class TestStepI2aLaunchTimeWriteHasTipArgument(unittest.TestCase):
         cls.section = _normalize_ws(cls.raw_section)
 
     def test_refresh_command_present(self):
-        self.assertIn(_normalize_ws(REFRESH_CMD), self.section)
+        self.assertIn(_normalize_ws(LAUNCH_REFRESH_CMD), self.section)
 
     def test_tip_capture_present(self):
         self.assertIn(_normalize_ws(LAUNCH_TIP_CAPTURE), self.section)
@@ -197,17 +217,26 @@ class TestStepI2aLaunchTimeWriteHasTipArgument(unittest.TestCase):
 
     def test_four_elements_are_in_strictly_increasing_order(self):
         section = self.section
-        refresh_idx = section.index(_normalize_ws(REFRESH_CMD))
         capture_idx = section.index(_normalize_ws(LAUNCH_TIP_CAPTURE))
-        write_idx = section.index(LAUNCH_TIP_WRITE_STATUS)
+        refresh_idx = section.index(_normalize_ws(LAUNCH_REFRESH_CMD), capture_idx)
+        write_idx = section.index(LAUNCH_TIP_WRITE_STATUS, refresh_idx)
         commit_idx = section.index(
             "commit-docs.sh", write_idx
         )
         arg_idx = section.index(LAUNCH_TIP_COMMIT_THIRD_ARG, commit_idx)
-        self.assertLess(refresh_idx, capture_idx)
-        self.assertLess(capture_idx, write_idx)
+        self.assertLess(capture_idx, refresh_idx)
+        self.assertLess(refresh_idx, write_idx)
         self.assertLess(write_idx, commit_idx)
         self.assertLess(commit_idx, arg_idx)
+
+    def test_refresh_resets_to_captured_tip_not_branch_name(self):
+        # Regression lock (capture-first ordering): the refresh must reset
+        # to the just-captured variable, not to the branch name -- a
+        # revert to `reset --hard em-workflow/{feature}/integration`
+        # followed by `rev-parse HEAD` reopens the race the capture-first
+        # ordering closes.
+        self.assertIn(_normalize_ws(LAUNCH_REFRESH_CMD), self.section)
+        self.assertNotIn(_normalize_ws(BRANCH_NAME_REFRESH_CMD), self.section)
 
     def test_ordering_stated_as_normative(self):
         # "task-id order" already occurs pre-change in the launch-selection
@@ -238,7 +267,7 @@ class TestStepI3CompletionWriteHasTipArgument(unittest.TestCase):
         cls.section = _normalize_ws(cls.raw_section)
 
     def test_refresh_command_present(self):
-        self.assertIn(_normalize_ws(REFRESH_CMD), self.section)
+        self.assertIn(_normalize_ws(COMPLETION_REFRESH_CMD), self.section)
 
     def test_tip_capture_present(self):
         self.assertIn(_normalize_ws(COMPLETION_TIP_CAPTURE), self.section)
@@ -256,19 +285,27 @@ class TestStepI3CompletionWriteHasTipArgument(unittest.TestCase):
 
     def test_four_elements_are_in_strictly_increasing_order(self):
         section = self.section
-        refresh_idx = section.index(_normalize_ws(REFRESH_CMD))
         capture_idx = section.index(_normalize_ws(COMPLETION_TIP_CAPTURE))
+        refresh_idx = section.index(
+            _normalize_ws(COMPLETION_REFRESH_CMD), capture_idx
+        )
         # The pinned sentence's status=completed occurs BEFORE the new
         # sequence (it is the write the new sequence's step 3 refers back
         # to) -- so anchor the "write" element to the new sequence's own
         # step-3 text, not to the pinned sentence itself.
-        write_idx = section.index("on the worktree just refreshed")
+        write_idx = section.index("on the worktree just refreshed", refresh_idx)
         commit_idx = section.index("commit-docs.sh", write_idx)
         arg_idx = section.index(COMPLETION_TIP_COMMIT_THIRD_ARG, commit_idx)
-        self.assertLess(refresh_idx, capture_idx)
-        self.assertLess(capture_idx, write_idx)
+        self.assertLess(capture_idx, refresh_idx)
+        self.assertLess(refresh_idx, write_idx)
         self.assertLess(write_idx, commit_idx)
         self.assertLess(commit_idx, arg_idx)
+
+    def test_refresh_resets_to_captured_tip_not_branch_name(self):
+        # Regression lock (capture-first ordering): same guard as
+        # Step I.2.a's, scoped to Step I.3's own section.
+        self.assertIn(_normalize_ws(COMPLETION_REFRESH_CMD), self.section)
+        self.assertNotIn(_normalize_ws(BRANCH_NAME_REFRESH_CMD), self.section)
 
     def test_ordering_stated_as_normative(self):
         self.assertIn("in this normative order", self.section)
@@ -278,8 +315,8 @@ class TestStepI3CompletionWriteHasTipArgument(unittest.TestCase):
 
     def test_pinned_sentence_precedes_new_sequence(self):
         pinned_idx = self.section.index(_normalize_ws(PINNED_COMPLETION_SENTENCE))
-        refresh_idx = self.section.index(_normalize_ws(REFRESH_CMD))
-        self.assertLess(pinned_idx, refresh_idx)
+        capture_idx = self.section.index(_normalize_ws(COMPLETION_TIP_CAPTURE))
+        self.assertLess(pinned_idx, capture_idx)
 
 
 class TestStepI3PinnedCompletionSentenceByteIdentical(unittest.TestCase):
@@ -534,6 +571,7 @@ class TestValidationDetectsRegressions(unittest.TestCase):
     def test_i2a_matchers_fail_against_pre_change_sample(self):
         sample = _normalize_ws(SAMPLE_I2A_PRE_CHANGE)
         self.assertNotIn(_normalize_ws(LAUNCH_TIP_CAPTURE), sample)
+        self.assertNotIn(_normalize_ws(LAUNCH_REFRESH_CMD), sample)
         self.assertNotIn(LAUNCH_TIP_COMMIT_THIRD_ARG, sample)
         self.assertNotIn(REFILL_STATEMENT_PHRASE, sample)
         self.assertNotIn(RECONCILE_TIP_NOT_REUSED_PHRASE, sample)
@@ -551,6 +589,7 @@ class TestValidationDetectsRegressions(unittest.TestCase):
     def test_i3_matchers_fail_against_pre_change_sample(self):
         sample = _normalize_ws(SAMPLE_I3_PRE_CHANGE)
         self.assertNotIn(_normalize_ws(COMPLETION_TIP_CAPTURE), sample)
+        self.assertNotIn(_normalize_ws(COMPLETION_REFRESH_CMD), sample)
         self.assertNotIn(COMPLETION_TIP_COMMIT_THIRD_ARG, sample)
 
     def test_i3_sample_retains_pinned_sentence_anchor(self):

@@ -240,7 +240,8 @@ retry). Only after the user chooses "retry" is that task re-dispatched (on
 its kept worktree via the resume guard below); the launch guard then admits
 it because a post-`failed` launch is the legitimate retry path.
 
-For each selected task T, create its worktree:
+For each selected task T (every task selected in this single entry into
+Step I.2.a), create its worktree:
 
 ```bash
 git worktree add -b "em-workflow/{feature}/{T}" "$WT_ROOT/{T}" \
@@ -248,27 +249,45 @@ git worktree add -b "em-workflow/{feature}/{T}" "$WT_ROOT/{T}" \
 ```
 
 Branch point = integration branch AT THIS MOMENT (includes every task merged
-so far). Write task T's launch state in this normative order — the refresh
-precedes the capture, the capture precedes the write, and the write
-precedes the commit:
+so far). Write the launch state for ALL selected tasks in this normative
+order — the capture precedes the refresh, the refresh precedes the write,
+and the write precedes the commit:
 
-1. **refresh** the integration worktree —
-   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
-2. **capture** the tip —
-   `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse HEAD)`
+1. **capture** the tip —
+   `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)`
+2. **refresh** the integration worktree to exactly that captured tip —
+   `git -C {integration_worktree} reset --hard "$LAUNCH_TIP"`
 3. **write**, on the worktree just refreshed, `tasks.{T}.status =
-   in_progress` and `tasks.{T}.branch` into workflow.yaml
-4. **commit** that write with the captured tip as the third argument —
-   `commit-docs.sh {integration_worktree} "docs({feature}): launch {T}"
-   "$LAUNCH_TIP"` (the third argument is `expected_base_tip`; exit-4
-   recovery: Branch & Worktree Model above)
+   in_progress` and `tasks.{T}.branch` into workflow.yaml for EVERY task
+   selected in this entry — one write set, not one per task
+4. **commit** that single write set with the captured tip as the third
+   argument — `commit-docs.sh {integration_worktree} "docs({feature}):
+   launch {T1}, {T2}, …"  "$LAUNCH_TIP"` (naming every task selected in
+   this entry; the third argument is `expected_base_tip`; exit-4
+   recovery: Branch & Worktree Model above — the "a second exit 4 stops
+   the phase" counter there is counted per commit attempt, i.e. per entry
+   into this sequence, not per task named in the commit)
 
-**Refill (FR5)**: this sequence runs on EVERY entry into Step I.2.a —
-including the refill re-entry from Step I.2.b step 5 within the same turn —
-and a fresh `LAUNCH_TIP` is captured each time. `$RECONCILE_TIP` is never
-reused as this step's third argument: it is captured at Step I.2.b step 2,
-BEFORE Step I.2.b step 3's own commit advances the branch tip, so by the
-time the refill path re-enters Step I.2.a, `$RECONCILE_TIP` is already
+Capture precedes refresh, deliberately: a linked worktree's `HEAD` is an
+attached symref to the branch, so `git rev-parse HEAD` after a `reset
+--hard <branch>` reads the branch ref AT READ TIME, which a concurrent
+`merge-task.sh update-ref` can advance between the reset and the read —
+`LAUNCH_TIP` would then hold a tip the just-reset tree was never built
+on, and `commit-docs.sh`'s tip check would pass against the CURRENT
+(advanced) tip while silently committing a stale tree. Resetting to the
+already-captured `$LAUNCH_TIP` instead makes "the tree equals
+`$LAUNCH_TIP`" true by construction, so any later ref advance is
+guaranteed to surface as `commit-docs.sh` exit 4 rather than being
+silently swallowed.
+
+**Refill (FR5)**: this sequence runs ONCE per entry into Step I.2.a —
+including the refill re-entry from Step I.2.b step 5 within the same
+turn — covering every task selected in that entry with a single capture,
+a single refresh, one write set, and one commit; a fresh `LAUNCH_TIP` is
+captured each time (i.e. on each such entry, not per task). `$RECONCILE_TIP`
+is never reused as this step's third argument: it is captured at Step I.2.b
+step 2, BEFORE Step I.2.b step 3's own commit advances the branch tip, so by
+the time the refill path re-enters Step I.2.a, `$RECONCILE_TIP` is already
 stale.
 
 **Resume guard**: before running `git worktree add -b` for task T, check
@@ -617,14 +636,14 @@ post-resume wake.
 
 When every task is `merged`: set `implement` step `status = completed`,
 `completed_at_commit = $(git rev-parse "em-workflow/{feature}/integration")`.
-Write and commit that status in this normative order — the refresh precedes
-the capture, the capture precedes the write, and the write precedes the
+Write and commit that status in this normative order — the capture precedes
+the refresh, the refresh precedes the write, and the write precedes the
 commit:
 
-1. **refresh** the integration worktree —
-   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
-2. **capture** the tip —
-   `COMPLETION_TIP=$(git -C {integration_worktree} rev-parse HEAD)`
+1. **capture** the tip —
+   `COMPLETION_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)`
+2. **refresh** the integration worktree to exactly that captured tip —
+   `git -C {integration_worktree} reset --hard "$COMPLETION_TIP"`
 3. **write**, on the worktree just refreshed, the `implement` step's
    `status = completed` and `completed_at_commit` set above
 4. **commit** that write with the captured tip as the third argument —
@@ -632,9 +651,11 @@ commit:
    completed" "$COMPLETION_TIP"` (the third argument is `expected_base_tip`;
    exit-4 recovery: Branch & Worktree Model above)
 
-Because step 1's refresh makes the worktree's HEAD equal the integration
-branch ref, `$COMPLETION_TIP` and the `completed_at_commit` value above
-denote the SAME commit.
+Because step 2's refresh resets the worktree's HEAD to exactly the
+captured `$COMPLETION_TIP`, `$COMPLETION_TIP` and the `completed_at_commit`
+value above denote the SAME commit. On an exit-4 retry, both values are
+re-derived together from the refreshed tip, so this invariant continues to
+hold across retries.
 
 There is no other way to complete this phase — a non-merged task always
 resolves via retry, route-back-to-planning, or abort (I.2.c). Report overall
