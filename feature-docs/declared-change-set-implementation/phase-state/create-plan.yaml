@@ -1,20 +1,36 @@
 schema_version: 1
 feature: declared-change-set-implementation
 phase: create-plan
-status: dispatching
+status: completed
 generation: 1
-base_revision: 5897535e2a6ee8f3d9ce6dd895c4ce1298fefdec
+base_revision: f5f493ce1898859ffaab7488f6e0dbdee518d501
 last_input_digest: sha256:d68c91f1bd81878ae3f69a006a49d8305bd357babfae780e6ee60f50d69e495f
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
-  - request_id: create-plan-run-0001
-    status: dispatched
-    input_digest: sha256:d68c91f1bd81878ae3f69a006a49d8305bd357babfae780e6ee60f50d69e495f
-    output_digest: null
-artifacts: []
-patches: []
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:d68c91f1bd81878ae3f69a006a49d8305bd357babfae780e6ee60f50d69e495f
+  output_digest: null
+artifacts:
+- path: feature-docs/declared-change-set-implementation/IMPLEMENTATION.md
+  sha256: sha256:0889b197e20e822d71c98a4a4ddf077f0aac580b5a8959ace7a34a44c2b38fb5
+  produced_by: create-plan-run-0001
+- path: feature-docs/declared-change-set-implementation/VERIFICATION.md
+  sha256: sha256:917bc3d394ca79f2d6e4eb4c9a63846741496b772610ee0e75f13f149ef70abf
+  produced_by: create-plan-run-0001
+- path: feature-docs/declared-change-set-implementation/tasks/task0001.md
+  sha256: sha256:e8700056d8e8001c76831b8892a86d78049bbbb04215d6c28061620671fa8789
+  produced_by: create-plan-run-0001
+- path: feature-docs/declared-change-set-implementation/tasks/task0002.md
+  sha256: sha256:48566e65971f62a46a24cc8fc26a95dcc572200af8645553462378b2380a7c3e
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: declared-change-set-implementation-p0001
+  status: applied
+  base_input_digest: sha256:d68c91f1bd81878ae3f69a006a49d8305bd357babfae780e6ee60f50d69e495f
+  base_workflow_blob: 7aa5784aaac7fbb68fde26bf4d964a1d89293876
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
