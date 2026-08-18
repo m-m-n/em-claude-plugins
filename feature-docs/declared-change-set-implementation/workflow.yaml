@@ -41,7 +41,7 @@ workflow:
   base_commit: 996b270c9e58319e99c9e2c32138c8334189a0f2
   completed_at_commit: 82ceb330a2123a36bcd0f2d3090ba81264b0b543
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -90,10 +90,17 @@ tasks:
     notes: null
     branch: em-workflow/declared-change-set-implementation/task0002
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
-  perspectives: {}
+  plan:
+    floor:
+    - comprehensive
+    - spec
+    discretionary: []
+    cross_validation: false
+  perspectives:
+    comprehensive: pending
+    spec: pending
   residual_critical_high: 0
   needs_rework: false
 requirements:
