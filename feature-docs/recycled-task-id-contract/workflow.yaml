@@ -1,0 +1,191 @@
+schema_version: 1
+feature: recycled-task-id-contract
+created: 2026-08-18
+base_branch: main
+parent_branch: em-workflow/recycled-task-id-contract/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 02b0e71558f58767b7cf108fcc2099a31ec277c3
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      変更対象は em-workflow/references/implement-phase.md（ドキュメント）、tests/ 配下の
+      Python テスト、および plugin.json / marketplace.json の version のみで、UI・視覚的成果物・
+      ユーザー向け表示面を持たない。design system も存在しない。
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: completed
+    completed_at_commit: 7227f4edd6903fffb4ff7c352da77514a819e968
+  - id: implement
+    status: completed
+    completed_at_commit: 78ac57329ebf6e1deff432ab98b1854bf3cea193
+    base_commit: 51f9424ec654f260a653df316d0e12f28c39cd42
+  - id: review
+    status: completed
+    completed_at_commit: 6a86edf893d2763f06aaee7d588173b21af33cfc
+  - id: verify
+    status: completed
+    completed_at_commit: eeef34b9b0188fb3ba9d116bb438215212606e74
+    result: pass
+    failed_items: []
+  - id: retrospect
+    status: completed
+    completed_at_commit: 80efb8ec3d3daad233685335bbe95a4ebe3fab1a
+
+tasks:
+  task0001:
+    title: "recycled-task-id contract wording, classification table and its pin"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_hook_classification_pin.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR4, FR5, NFR1, NFR2, NFR3, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/recycled-task-id-contract/task0001
+  task0002:
+    title: "plugin version bump in both registries"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_recycled_task_id_contract_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR6, NFR1, NFR2, NFR3]
+    status: merged
+    notes: null
+    branch: em-workflow/recycled-task-id-contract/task0002
+  task0003:
+    title: "Remove the duplicated hook classification from TestObserveHookSource"
+    plan: tasks/task0003.md
+    files:
+      - tests/test_hook_classification_pin.py
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [NFR4, FR5]
+    provenance:
+      source: verify
+      failed_item_id: TS13
+    status: merged
+    notes: >-
+      implementer が status: merged / merge_commit 3adc7d8e2fef34b1c4dc0f1bbf10b3fd4dc75ba8 を
+      報告したが、実状態が一致しなかった。git cat-file で当該 merge commit は存在せず、
+      journal.jsonl には task0003 の merged イベントが無く（最終イベントは launched）、
+      task branch は起点コミット 0a2cbcb から一切進んでいなかった。よって trust-but-verify により
+      merged 判定を棄却し failed とする。実装成果は task worktree ごと失われている。
+      batch retry 1 回目を消費して再実行する。
+    branch: em-workflow/recycled-task-id-contract/task0003
+
+review:
+  status: completed
+  rounds_completed: 1
+  plan:
+    floor: [comprehensive, architecture, spec]
+    discretionary: []
+    cross_validation: false
+  perspectives:
+    comprehensive: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "Make I.2.a's recycled-task-id wording non-contradictory"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS6, TS5]
+  FR2:
+    title: "Align the Supporting cast Stop-hook bullets with I.2.a"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS7, TS5]
+  FR3:
+    title: "Split the assertions in TestRecycledTaskIdRuleScopedToOrchestrator"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS1, TS2, TS5]
+  FR4:
+    title: "Record the unlaunched-detection divergence in I.2.a as SSOT"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS8, TS5]
+  FR5:
+    title: "Make the hook classification table machine-readable and pin it with one test"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS1, TS2, TS3, TS4, TS5]
+  FR6:
+    title: "Bump the plugin version"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS9, TS5]
+  NFR1:
+    title: "Test dependencies: standard library only"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS10, TS5]
+  NFR2:
+    title: "Test placement and naming conventions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS11, TS5]
+  NFR3:
+    title: "Out-of-scope immutability"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS12]
+  NFR4:
+    title: "Single source of truth for hook classification"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS13, TS3]
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 1
