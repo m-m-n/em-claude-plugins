@@ -92,6 +92,7 @@ TEST_DOCS_ROOT_LITERAL = "test-docs/{feature}/**"
 FEATURE_DOCS_MEMBERS = (
     "REQUIREMENTS.md",
     "SPEC.md",
+    "IMPLEMENTATION.md",
     "workflow.yaml",
     "phase-state/",
     "tasks/",
