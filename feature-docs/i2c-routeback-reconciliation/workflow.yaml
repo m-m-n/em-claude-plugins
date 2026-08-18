@@ -42,9 +42,17 @@ workflow:
     status: completed
     completed_at_commit: b35bcbd36d1a11bd211be436f695ec824a231a27
   - id: verify
-    status: pending
-    result: null
+    status: completed
+    completed_at_commit: 47c81c641aaec12c522bf2ce1314c7990de00d7b
+    result: pass
     failed_items: []
+    evidence:
+      TS-5: "python3 -m unittest discover -s tests => Ran 1522 tests, OK (integration worktree). Modules standalone: test_implement_routeback_gate 105 OK, test_recycled_task_id_consistency 70 OK"
+      TS-7: "git diff --name-only 642dd39..HEAD => 4 paths, all under feature-docs/i2c-routeback-reconciliation/ or test-docs/i2c-routeback-reconciliation/; no path under em-workflow/ or tests/, neither manifest"
+      TS-1_TS-4_TS-6_TS-8_TS-9_TS-10: "document scenarios evaluated against RECONCILIATION-RECORD.md sections 1-7; all present as specified"
+      M-1: pass
+      M-2: "pass — 4 quoted anchors re-located from the phrase alone under whitespace normalization. Note: 'the terminal status write and its own commit are the ONLY side effect' occurs 3 times in implement-phase.md (rejected path / abort path / batch-mode paragraph), all restating the same normative guarantee for different branches"
+      M-3: pass
   - id: retrospect
     status: pending
 
