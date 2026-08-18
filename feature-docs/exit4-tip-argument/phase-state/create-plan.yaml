@@ -1,0 +1,21 @@
+schema_version: 1
+feature: exit4-tip-argument
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 3d1cfb8fc629c32fa27c9a193f3d15a342490759
+last_input_digest: "sha256:3780f1ed0da82f61e6a9f41556af2659131a591f249b611cc6704eb404e53746"
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: "sha256:3780f1ed0da82f61e6a9f41556af2659131a591f249b611cc6704eb404e53746"
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
