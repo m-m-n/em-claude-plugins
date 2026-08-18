@@ -1,0 +1,255 @@
+round: 1
+executed_at: '2026-08-18T14:40:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 2bc54ba78ce6c783e5c25674ba3c09b941d0a32a
+  head_commit: fdffb3ff4cf5ce030abf68814142042b7099c96f
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/implement-phase.md
+  - test-docs/exit4-tip-argument/task0001.tests.yaml
+  - test-docs/exit4-tip-argument/task0002.tests.yaml
+  - tests/test_exit4_tip_argument_consistency.py
+  - tests/test_exit4_tip_argument_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- perspective: comprehensive
+  source: claude
+  status: completed
+- perspective: performance
+  source: claude
+  status: completed
+- perspective: performance
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+- perspective: architecture
+  source: claude
+  status: completed
+- perspective: architecture
+  source: litellm
+  model: vertex-glm-5
+  status: completed
+- perspective: spec
+  source: claude
+  status: completed
+- perspective: spec
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+findings:
+- stable_id: 04b858ec69e95afa
+  severity: high
+  category: architecture
+  file: em-workflow/references/implement-phase.md
+  line: 255
+  title: normative 化した refresh→capture 順序が expected_base_tip の不変条件を成立させない
+  description: linked worktree の HEAD は branch への attached symref なので、reset --hard <branch> 直後の rev-parse
+    HEAD は読み取り時点の branch ref を返す。reset と rev-parse の間に merge-task.sh の update-ref が着地すると、捕捉した tip は新 tip・作業ツリーは旧
+    tree となり、 commit-docs.sh の tip チェックを素通りして stale tree が commit されうる。
+  suggestion: capture を refresh より先に行い、捕捉値と作業ツリーが同一コミットであることを構成的に保証する。
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 (order inverted), corrected further in loop 2 — capture reads
+    the branch ref, refresh targets the branch name
+- stable_id: 7e8e1b7b0b5ec22a
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/implement-phase.md
+  line: 251
+  title: I.2.a の refresh/capture が「タスク毎」か「エントリ毎」か未確定 — 複数タスク一括launchで自作の exit 4 が確定発生
+  description: Step I.2.a は 1 エントリで最大 6 タスクを選択する。シーケンスの粒度が per-task とも per-entry とも読め、per-entry capture
+    + per-task commit と解すると 2 本目以降の expected_base_tip が自分自身の直前 commit で必ず不一致になり exit 4 が確定発生する。
+  suggestion: 粒度を per-entry に確定し、1 capture / 1 refresh / 1 write set / 1 commit にする。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 — per-entry granularity, single write set, single commit naming
+    every selected task
+- stable_id: 0dccfbd185c16185
+  severity: medium
+  category: architecture
+  file: em-workflow/references/implement-phase.md
+  line: 620
+  title: refresh/capture/write/commit 手順が呼び出しサイトごとに重複展開されている
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: medium; below the auto-fix candidate gate (critical/high only)
+- stable_id: 5fdb96be4d2193fe
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/implement-phase.md
+  line: 618
+  title: Step I.3 の新不変条件が exit-4 リトライ経路で破れる
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 — the retry re-derives both values together
+- stable_id: 95e3f45d7eaec703
+  severity: medium
+  category: comprehensive
+  file: tests/test_exit4_tip_argument_consistency.py
+  line: 343
+  title: test_every_reconcile_tip_occurrence_is_inside_the_statement が下限しか検査せず、名前どおりのガードになっていない
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: deferred
+  resolution_reason: medium; below the auto-fix candidate gate. Re-reported at round end as b2a2f858218edd53
+- stable_id: c8791c0aea69cc2e
+  severity: medium
+  category: comprehensive
+  file: tests/test_exit4_tip_argument_consistency.py
+  line: 497
+  title: test_step_i2b_commit_literal_survives が改行位置とインデント幅を生テキストで固定していて壊れやすい
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: deferred
+  resolution_reason: medium; below the auto-fix candidate gate
+- stable_id: loop1-regression-reset-to-sha
+  severity: critical
+  category: comprehensive
+  file: em-workflow/references/implement-phase.md
+  line: 259
+  title: Step I.2.a の `reset --hard "$LAUNCH_TIP"` は統合ブランチを巻き戻し、並行 merge のマージコミットを消す
+  description: loop 1 の auto-fix が持ち込んだ回帰。integration worktree は attached HEAD なので 捕捉済み SHA への reset --hard
+    はブランチ ref 自体を巻き戻し、並行 merge-task.sh の マージコミットを無警告で破棄する。オーケストレーター側でも throwaway repo で再現を確認した。 architecture
+    観点も独立に critical として検出。
+  suggestion: refresh のターゲットを捕捉済み SHA ではなくブランチ名に戻す（capture-first は維持）。
+  sources:
+  - claude:comprehensive
+  - claude:architecture
+  confidence: 95
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 — refresh targets the branch name again; `reset --hard "$LAUNCH_TIP"`
+    / `"$COMPLETION_TIP"` no longer appear in the file
+- stable_id: cd31cb3178d2168f
+  severity: high
+  category: spec
+  file: em-workflow/references/implement-phase.md
+  line: 253
+  title: 'Step I.2.a: 順序と tip capture コマンドが FR2 / US1 AC1 の規範と逆のまま'
+  description: SPEC FR2 は refresh→capture を normative と定め capture を `rev-parse HEAD` と指定するが、 現行文書は capture→refresh
+    で capture が `rev-parse em-workflow/{feature}/integration`。 実装側の形は data loss 回避のため正しく、解決は SPEC.md 側の改訂が要る。
+  suggestion: SPEC FR2 の (1)/(2) を入れ替え、capture の literal と normative 文、US1 AC1、Uniform four-part mechanism
+    ブロック、Data Flow 図を同時に改訂する。
+  sources:
+  - claude:spec
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'category: spec — excluded from the auto-fix candidate gate; requires a SPEC.md revision'
+- stable_id: 99f62d8f6b2ea0b8
+  severity: high
+  category: spec
+  file: em-workflow/references/implement-phase.md
+  line: 646
+  title: 'Step I.3: 順序と tip capture コマンドが FR3 / US2 AC2 の規範と逆のまま'
+  suggestion: FR2 と同じ改訂で FR3 / US2 AC2 も同時に直す。
+  sources:
+  - claude:spec
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'category: spec — excluded from the auto-fix candidate gate; requires a SPEC.md revision'
+- stable_id: 16bc95ab0bec754f
+  severity: high
+  category: spec
+  file: em-workflow/references/implement-phase.md
+  line: 257
+  title: 'NFR1 のパリティ違反: 6 サイトのうち新規 2 サイトだけが別 idiom になり、文書内で自己矛盾'
+  description: I.1 / I.2.b / I.2.c の 4 サイトは refresh→`rev-parse HEAD` のままで、新規 2 サイトのみ capture-first。新規プローズはその旧形を明示的に危険と断じているため文書内で自己矛盾する。
+  suggestion: 4 サイトを capture-first に揃えて SPEC NFR1 も改訂するか、NFR1 を narrow して過渡状態である旨を注記する。
+  sources:
+  - claude:spec
+  - claude:architecture
+  - claude:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'category: spec — excluded from the auto-fix candidate gate; scope change beyond
+    this feature''s declared change set'
+- stable_id: 788983648ff3c29e
+  severity: medium
+  category: architecture
+  file: em-workflow/references/implement-phase.md
+  line: 272
+  title: 新規の capture-before-refresh 規範が、同じ bullet が束ねる他4サイトの refresh→rev-parse HEAD と矛盾している
+  sources:
+  - claude:architecture
+  - claude:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: medium; below the auto-fix candidate gate. Same substance as the spec finding 16bc95ab0bec754f
+- stable_id: 37660d698d7f57aa
+  severity: medium
+  category: architecture
+  file: em-workflow/references/implement-phase.md
+  line: 661
+  title: '`completed_at_commit` と `$COMPLETION_TIP` の『同一 capture 由来』という不変条件が、同じ節の指示文からは成立しない'
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: medium; below the auto-fix candidate gate
+- stable_id: beb390e658b8561a
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/implement-phase.md
+  line: 285
+  title: 新規2サイトの capture→refresh 順序が、未変更の4サイトおよび commit-docs.sh の契約と矛盾する
+  sources:
+  - claude:comprehensive
+  - claude:architecture
+  confidence: 80
+  resolution: deferred
+  resolution_reason: medium; below the auto-fix candidate gate. Same substance as 16bc95ab0bec754f
+- stable_id: b2a2f858218edd53
+  severity: medium
+  category: comprehensive
+  file: tests/test_exit4_tip_argument_consistency.py
+  line: 413
+  title: test_every_reconcile_tip_occurrence_is_inside_the_statement が許容ゾーンの終端を検査していない
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: deferred
+  resolution_reason: medium; below the auto-fix candidate gate. Carried over from 95e3f45d7eaec703
+auto_fix:
+  loops_run: 2
+  applied_total: 4
+  termination: clean
+residual_critical_high: 3
+rework_required: true
+rework:
+  attempted: true
+  outcome: aborted_fail_closed
+  gate_id: rework.spec-change
+  packet_id: rework-q0001
+  questions:
+  - spec.fr2-fr3-order-idiom
+  - spec.nfr1-parity-scope
+  reason: 'rework-planner synthesized zero tasks: all three residual high findings are category: spec
+    and resolve to one root cause requiring a SPEC.md revision, which rework-planner may never perform.
+    Both questions carry gate_id rework.spec-change / category spec-change, which references/question-resolution.md
+    classifies fail-closed: batch mode aborts the phase rather than guessing a specification change. batch.review_rework_count
+    consumed (1/1).'
+  user_decision_required:
+  - 'SPEC FR2/FR3 (+ US1 AC1, US2 AC2, the Uniform four-part mechanism block, the Data Flow diagram):
+    revise SPEC.md to the shipped capture-then-refresh / branch-ref-capture form (recommended by the planner;
+    the shipped form is the one that provably avoids the branch rewind), or revert implement-phase.md
+    to the SPEC-mandated refresh-then-capture / rev-parse HEAD form (reintroduces the defect).'
+  - 'SPEC NFR1 six-site parity: narrow NFR1 and add a transitional note (recommended), align all six sites
+    (conflicts with NFR3''s frozen test module), or add a note only.'

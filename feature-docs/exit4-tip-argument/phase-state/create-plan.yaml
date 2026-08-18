@@ -1,0 +1,37 @@
+schema_version: 1
+feature: exit4-tip-argument
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 3d1cfb8fc629c32fa27c9a193f3d15a342490759
+last_input_digest: "sha256:3780f1ed0da82f61e6a9f41556af2659131a591f249b611cc6704eb404e53746"
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: completed
+    input_digest: "sha256:3780f1ed0da82f61e6a9f41556af2659131a591f249b611cc6704eb404e53746"
+    output_digest: "sha256:planner-completed"
+artifacts:
+  - path: feature-docs/exit4-tip-argument/IMPLEMENTATION.md
+    sha256: "sha256:616e4d0243cc6d8273fd0488d030c3cb23025664e4d97ba6adb1c95f837889f3"
+    produced_by: create-plan-run-0001
+  - path: feature-docs/exit4-tip-argument/VERIFICATION.md
+    sha256: "sha256:b43499b74d94f785169f1a8628aab67f555847306bd0e3b18a4cf17172935dae"
+    produced_by: create-plan-run-0001
+  - path: feature-docs/exit4-tip-argument/tasks/task0001.md
+    sha256: "sha256:52c37937aebd5c41d65e12938521f09480e06d4b472ded786b6712411f8d4872"
+    produced_by: create-plan-run-0001
+  - path: feature-docs/exit4-tip-argument/tasks/task0002.md
+    sha256: "sha256:855227b213cc2b29e5c00e00f9329e87886adc457e59ad9ae0beaf6126c67767"
+    produced_by: create-plan-run-0001
+patches:
+  - patch_id: exit4-tip-argument-p0001
+    status: applied
+    base_input_digest: "sha256:3780f1ed0da82f61e6a9f41556af2659131a591f249b611cc6704eb404e53746"
+    base_workflow_blob: "998a1729eafc787c3a703c303919e9103aadb136"
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
