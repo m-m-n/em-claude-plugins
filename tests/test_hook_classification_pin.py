@@ -400,44 +400,15 @@ class TestObserveHookSource(unittest.TestCase):
     workflow state file only in its module docstring is not misclassified
     by a raw text search."""
 
-    def test_queue_stop_guard_reads_status(self):
-        self.assertTrue(
-            reads_per_task_status(
-                REPO_ROOT / "em-workflow/hooks/queue_stop_guard.py"
-            )
-        )
-
-    def test_queue_launch_guard_does_not_read_status(self):
-        self.assertFalse(
-            reads_per_task_status(
-                REPO_ROOT / "em-workflow/hooks/queue_launch_guard.py"
-            )
-        )
-
-    def test_queue_failure_net_does_not_read_status(self):
-        self.assertFalse(
-            reads_per_task_status(
-                REPO_ROOT / "em-workflow/hooks/queue_failure_net.py"
-            )
-        )
-
-    def test_queue_taskstop_net_does_not_read_status(self):
-        # This hook's module docstring explicitly says it "never touches
-        # `workflow.yaml`" -- but it SAYS "workflow.yaml" while saying so.
-        # A raw text search over the whole file would find that mention and
-        # misclassify the hook as reading it; the observation rule strips
-        # the docstring first and correctly classifies it as not reading.
-        self.assertFalse(
-            reads_per_task_status(
-                REPO_ROOT / "em-workflow/hooks/queue_taskstop_net.py"
-            )
-        )
-
     def test_raw_text_search_would_have_misclassified_queue_taskstop_net(self):
-        # Proof that the docstring-stripping step above is load-bearing,
-        # not incidental: without it, the raw source DOES contain the
-        # workflow-state-file marker (in prose, disclaiming exactly what
-        # the naive search would conclude).
+        # Real-hook evidence motivating the docstring-stripping step: this
+        # hook's raw source DOES contain the workflow-state-file marker (in
+        # its module docstring's prose, disclaiming exactly what a naive
+        # substring search would conclude). The load-bearing proof that
+        # stripping actually flips the observed classification is carried,
+        # without naming any hook, by the synthetic-source pair below
+        # (`test_workflow_yaml_mention_moved_from_docstring_to_code_flips_
+        # observation`).
         raw = (
             REPO_ROOT / "em-workflow/hooks/queue_taskstop_net.py"
         ).read_text(encoding="utf-8")
@@ -523,6 +494,42 @@ class TestObserveHookSource(unittest.TestCase):
             "    return sorted(glob.glob(pattern))\n"
         )
         self.assertFalse(self._write_and_observe(without_carveout))
+
+    def test_workflow_yaml_mention_moved_from_docstring_to_code_flips_observation(
+        self,
+    ):
+        # AC-5: proves the docstring-stripping step is load-bearing without
+        # naming any hook. A source whose ONLY mention of the workflow
+        # state file lives in its module docstring, and which defines and
+        # calls a per-task-status accessor, must observe as NOT reading
+        # per-task status -- the docstring-stripping step removes that
+        # mention before the search runs, and the accessor's presence rules
+        # out the pair passing vacuously (Test Notes edge case). The same
+        # source with the mention moved into executable code, everything
+        # else unchanged, must observe as reading it.
+        docstring_only = (
+            '"""This module never touches workflow.yaml at runtime."""\n'
+            "\n"
+            "def task_status_from_state(state):\n"
+            "    return state.get('status')\n"
+            "\n"
+            "def evaluate(state):\n"
+            "    return task_status_from_state(state) == 'pending'\n"
+        )
+        self.assertFalse(self._write_and_observe(docstring_only))
+
+        mention_in_code = (
+            '"""This module reads task status."""\n'
+            "\n"
+            "WORKFLOW_STATE_FILE = 'workflow.yaml'\n"
+            "\n"
+            "def task_status_from_state(state):\n"
+            "    return state.get('status')\n"
+            "\n"
+            "def evaluate(state):\n"
+            "    return task_status_from_state(state) == 'pending'\n"
+        )
+        self.assertTrue(self._write_and_observe(mention_in_code))
 
 
 class TestNonVacuityGuards(unittest.TestCase):
