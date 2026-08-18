@@ -38,9 +38,32 @@ workflow:
     status: completed
     completed_at_commit: 6f142312c50b1a2355dc52e305de59819e3942d6
   - id: verify
-    status: in_progress
-    result: null
+    status: completed
+    result: pass
     failed_items: []
+    passed_summary: >-
+      round 2（rework 後）: python3 -m unittest discover -s tests は 1481 tests / 0 failures。
+      build・format コマンドは未定義のため対象外。TS-1〜TS-12 と TS-14 は満たされている
+      （TS-2 の negative proof は test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in
+      として追加済み、TS-14 は task0001.tests.yaml の AC-6 記述が実測値に訂正済み）。
+      SC-1〜SC-7 も満たされている（両 version ファイルが 0.1.45、em-workflow/hooks/ 配下は無変更、
+      観測された変更集合は SPEC の Declared Change Set に包含）。
+    notes: >-
+      TS-13 の判定注記: TS-13 は自身の出典として SPEC AC-6 を挙げており、AC-6 は
+      「ORCHESTRATOR_ONLY_SCOPE_PHRASE の改訂の結果として single-reader の定数を残さない」ことを
+      求めている。この基準では合格 — HOOK_FILENAMES はその唯一の reader だった導出ごと retire され、
+      JOURNAL_ONLY_HOOK_FILENAMES は reader 2 箇所を持つ直接リテラルになった。
+      一方 TS-13 の Expected Result 欄は「モジュール内のすべての module-level 定数が reader 0 または
+      2 以上」という AC-6 より広い全称文になっており、この文字どおりでは不合格になる:
+      tests/test_recycled_task_id_consistency.py には reader 1 の定数が 6 個残る
+      （PLUGIN_ROOT / IMPLEMENT_PHASE_PATH / ABORT_PHASE_TERMINAL_PHRASE / STOP_CONDITION_3_PHRASE は
+      本 feature 以前から single-reader、STOP_HOOK_BULLET_START / NEXT_SUPPORTING_CAST_BULLET_START は
+      task0001 が追加したセクション切り出し用アンカーで matcher リテラルではない）。
+      TS-13 を書いた rework-planner はこのモジュールを読んでいない（envelope の宣言入力に含まれない）と
+      自ら warning で述べており、出典の AC-6 より広い文言になったのはその結果と判断した。
+      実装側の不具合ではなく VERIFICATION.md 側の文言の問題として扱い、pass とする。
+      あわせて、モジュール docstring が「leaving no module-level constant in this module with fewer than
+      two reader sites」と書いているのも実測と一致しないため、TS-13 の文言修正と同時に直すべき残件。
   - id: retrospect
     status: pending
 
