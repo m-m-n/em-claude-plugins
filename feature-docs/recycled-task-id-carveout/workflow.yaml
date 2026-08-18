@@ -35,7 +35,7 @@ workflow:
     completed_at_commit: 78e8abf4e5bf1cf10e91c10b0d4f3cb44fe75b2c
     base_commit: bd0c6b8c00ad43280fee123ca39be80be2418a9e
   - id: review
-    status: pending
+    status: in_progress
   - id: verify
     status: pending
     result: null
@@ -85,10 +85,17 @@ tasks:
     branch: em-workflow/recycled-task-id-carveout/task0003
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
-  perspectives: {}
+  plan:
+    floor: [comprehensive, performance, architecture, spec]
+    discretionary: []
+    cross_validation: false
+  perspectives:
+    comprehensive: pending
+    performance: pending
+    architecture: pending
+    spec: pending
   residual_critical_high: 0
   needs_rework: false
 
