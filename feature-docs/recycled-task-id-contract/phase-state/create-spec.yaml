@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 996b270
 last_input_digest: "sha256:8c7991c52ad35d6ea51b26546dbc8c92471d2e5ce502326b8999227c8403e8a3"
-active_request_id: create-spec-run-0002
+active_request_id: create-spec-run-0003
 packets:
   recycled-task-id-contract-q0001:
     status: answered
@@ -66,6 +66,10 @@ answers:
 worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
+    input_digest: "sha256:8c7991c52ad35d6ea51b26546dbc8c92471d2e5ce502326b8999227c8403e8a3"
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
     input_digest: "sha256:8c7991c52ad35d6ea51b26546dbc8c92471d2e5ce502326b8999227c8403e8a3"
     output_digest: null
 artifacts: []
