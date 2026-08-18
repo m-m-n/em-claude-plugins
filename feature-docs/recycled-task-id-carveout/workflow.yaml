@@ -31,14 +31,14 @@ workflow:
     status: completed
     completed_at_commit: 4bfb1998c5b48c6af7aa305f869b72a5a135e999
   - id: implement
-    status: completed
+    status: pending
     completed_at_commit: 78e8abf4e5bf1cf10e91c10b0d4f3cb44fe75b2c
     base_commit: bd0c6b8c00ad43280fee123ca39be80be2418a9e
   - id: review
     status: completed
     completed_at_commit: 6f142312c50b1a2355dc52e305de59819e3942d6
   - id: verify
-    status: failed
+    status: pending
     result: fail
     failed_items:
       - id: TS-2
@@ -91,6 +91,23 @@ tasks:
     notes: null
     branch: em-workflow/recycled-task-id-carveout/task0003
 
+  task0004:
+    title: "Negative proof and constant-reader discipline for the three-hook slice matcher"
+    plan: tasks/task0004.md
+    files:
+      - tests/test_recycled_task_id_consistency.py
+      - test-docs/recycled-task-id-carveout/task0001.tests.yaml
+    skills: []
+    domains: [config-infra]
+    complexity: medium
+    requirements: [FR3, FR5, FR8, NFR1, NFR2, NFR3]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: verify
+      source_ids: [TS-2, SC-1]
+      review_round: null
 review:
   status: completed
   rounds_completed: 1
@@ -126,8 +143,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-2, TS-3, TS-10]
+    tasks: [task0001, task0004]
+    tests: [TS-2, TS-3, TS-10, TS-12, TS-13, TS-14]
   FR4:
     title: "Two-layer pin joining the documented classification to the hook implementations"
     status: ok
@@ -140,8 +157,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
-    tests: [TS-10, TS-5]
+    tasks: [task0001, task0002, task0004]
+    tests: [TS-10, TS-5, TS-12]
   FR6:
     title: "Unlaunched-definition divergence documented rather than closed"
     status: ok
@@ -161,28 +178,28 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0004]
     tests: [TS-11]
   NFR1:
     title: "Test-code dependency floor"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0004]
     tests: [TS-11]
   NFR2:
     title: "Test placement and naming"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0004]
     tests: [TS-11]
   NFR3:
     title: "Line-wrap robustness of document assertions"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0004]
     tests: [TS-11]
   NFR4:
     title: "Hook runtime behavior unchanged"
@@ -208,4 +225,4 @@ requirements:
 
 batch:
   review_rework_count: 0
-  verify_rework_count: 0
+  verify_rework_count: 1
