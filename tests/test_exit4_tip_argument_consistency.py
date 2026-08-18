@@ -8,17 +8,22 @@ Covers task0001 Acceptance Criteria
 (feature-docs/exit4-tip-argument/tasks/task0001.md):
 
 - AC-1 (FR2, NFR1): Step I.2.a's text contains, in order, the tip capture
-  into a named variable, the refresh of the integration worktree to exactly
-  that captured tip, the `tasks.{T}.status = in_progress` /
+  into a named variable (from the integration branch ref, via `rev-parse`),
+  the refresh of the integration worktree to the integration BRANCH NAME
+  (not the captured variable -- the integration worktree's HEAD is an
+  attached symref, so resetting to a captured SHA would move the branch
+  ref itself backward and could silently discard a concurrent
+  merge-task.sh merge; resetting to the branch name moves the ref to
+  where it already points), the `tasks.{T}.status = in_progress` /
   `tasks.{T}.branch` write for every task selected in that single entry, and
   a `commit-docs.sh` invocation naming every such task whose third argument
   is the captured variable; ordering is normative (capture precedes
   refresh, refresh precedes write, write precedes commit) and exit-4
   cross-references the Branch & Worktree Model.
 - AC-2 (FR3, NFR1): Step I.3's text contains the same four elements in the
-  same order (capture, refresh to the captured tip, write, commit) for the
-  implement-completed / completed-commit write, with the same exit-4
-  cross-reference.
+  same order (capture from the branch ref, refresh to the branch name,
+  write, commit) for the implement-completed / completed-commit write,
+  with the same exit-4 cross-reference.
 - AC-3 (FR4): the Step I.3 completion sentence survives byte-for-byte
   including its internal newline; every element AC-2 adds lies strictly
   before or strictly after that span; the rework-synthesis contract test
@@ -75,7 +80,10 @@ LAUNCH_TIP_CAPTURE = (
     "LAUNCH_TIP=$(git -C {integration_worktree} rev-parse "
     "em-workflow/{feature}/integration)"
 )
-LAUNCH_REFRESH_CMD = 'git -C {integration_worktree} reset --hard "$LAUNCH_TIP"'
+LAUNCH_REFRESH_CMD = (
+    "git -C {integration_worktree} reset --hard "
+    "em-workflow/{feature}/integration"
+)
 LAUNCH_TIP_WRITE_STATUS = "tasks.{T}.status = in_progress"
 LAUNCH_TIP_WRITE_BRANCH = "tasks.{T}.branch"
 LAUNCH_TIP_COMMIT_THIRD_ARG = '"$LAUNCH_TIP"'
@@ -85,17 +93,25 @@ COMPLETION_TIP_CAPTURE = (
     "em-workflow/{feature}/integration)"
 )
 COMPLETION_REFRESH_CMD = (
-    'git -C {integration_worktree} reset --hard "$COMPLETION_TIP"'
+    "git -C {integration_worktree} reset --hard "
+    "em-workflow/{feature}/integration"
 )
 COMPLETION_TIP_WRITE = "status = completed"
 COMPLETION_TIP_COMMIT_THIRD_ARG = '"$COMPLETION_TIP"'
 
-# The pre-change/defective refresh: resets to the branch name rather than to
-# the just-captured variable, reopening the race the capture-first ordering
-# closes. Used only as a negative anchor (must NOT appear in either section).
-BRANCH_NAME_REFRESH_CMD = (
-    "git -C {integration_worktree} reset --hard "
-    "em-workflow/{feature}/integration"
+# The defective refresh: resets to the just-captured SHA rather than to the
+# branch name. The integration worktree is a linked worktree whose HEAD is
+# an attached symref to the branch, so `reset --hard` on a captured SHA
+# moves the BRANCH REF itself backward and can silently discard a
+# concurrent merge-task.sh merge commit landed between capture and refresh.
+# Resetting to the branch name instead moves the ref to where it already
+# points, so it can never rewind it. Used only as a negative anchor (must
+# NOT appear in either section).
+LAUNCH_CAPTURED_SHA_REFRESH_CMD = (
+    'git -C {integration_worktree} reset --hard "$LAUNCH_TIP"'
+)
+COMPLETION_CAPTURED_SHA_REFRESH_CMD = (
+    'git -C {integration_worktree} reset --hard "$COMPLETION_TIP"'
 )
 
 REFILL_STATEMENT_PHRASE = "ONCE per entry into Step I.2.a"
@@ -218,7 +234,12 @@ class TestStepI2aLaunchTimeWriteHasTipArgument(unittest.TestCase):
     def test_four_elements_are_in_strictly_increasing_order(self):
         section = self.section
         capture_idx = section.index(_normalize_ws(LAUNCH_TIP_CAPTURE))
-        refresh_idx = section.index(_normalize_ws(LAUNCH_REFRESH_CMD), capture_idx)
+        capture_end = capture_idx + len(_normalize_ws(LAUNCH_TIP_CAPTURE))
+        # The capture and refresh now share the substring
+        # "em-workflow/{feature}/integration", so an unanchored .index()
+        # on the refresh command could match inside the capture line
+        # itself. Search starting just past the end of the capture match.
+        refresh_idx = section.index(_normalize_ws(LAUNCH_REFRESH_CMD), capture_end)
         write_idx = section.index(LAUNCH_TIP_WRITE_STATUS, refresh_idx)
         commit_idx = section.index(
             "commit-docs.sh", write_idx
@@ -229,14 +250,18 @@ class TestStepI2aLaunchTimeWriteHasTipArgument(unittest.TestCase):
         self.assertLess(write_idx, commit_idx)
         self.assertLess(commit_idx, arg_idx)
 
-    def test_refresh_resets_to_captured_tip_not_branch_name(self):
-        # Regression lock (capture-first ordering): the refresh must reset
-        # to the just-captured variable, not to the branch name -- a
-        # revert to `reset --hard em-workflow/{feature}/integration`
-        # followed by `rev-parse HEAD` reopens the race the capture-first
-        # ordering closes.
+    def test_refresh_resets_to_the_branch_not_a_captured_sha(self):
+        # Regression lock: the integration worktree is a linked worktree
+        # whose HEAD is an attached symref to the branch, so `reset --hard`
+        # against a captured SHA moves the BRANCH REF itself backward and
+        # can silently discard a concurrent merge-task.sh merge commit
+        # landed between capture and refresh. Resetting to the branch name
+        # moves the ref to where it already points, so it can never rewind
+        # it -- that is the form that must be present here.
         self.assertIn(_normalize_ws(LAUNCH_REFRESH_CMD), self.section)
-        self.assertNotIn(_normalize_ws(BRANCH_NAME_REFRESH_CMD), self.section)
+        self.assertNotIn(
+            _normalize_ws(LAUNCH_CAPTURED_SHA_REFRESH_CMD), self.section
+        )
 
     def test_ordering_stated_as_normative(self):
         # "task-id order" already occurs pre-change in the launch-selection
@@ -286,8 +311,13 @@ class TestStepI3CompletionWriteHasTipArgument(unittest.TestCase):
     def test_four_elements_are_in_strictly_increasing_order(self):
         section = self.section
         capture_idx = section.index(_normalize_ws(COMPLETION_TIP_CAPTURE))
+        capture_end = capture_idx + len(_normalize_ws(COMPLETION_TIP_CAPTURE))
+        # The capture and refresh now share the substring
+        # "em-workflow/{feature}/integration"; search starting just past
+        # the end of the capture match so the refresh index cannot land
+        # inside the capture line itself.
         refresh_idx = section.index(
-            _normalize_ws(COMPLETION_REFRESH_CMD), capture_idx
+            _normalize_ws(COMPLETION_REFRESH_CMD), capture_end
         )
         # The pinned sentence's status=completed occurs BEFORE the new
         # sequence (it is the write the new sequence's step 3 refers back
@@ -301,11 +331,14 @@ class TestStepI3CompletionWriteHasTipArgument(unittest.TestCase):
         self.assertLess(write_idx, commit_idx)
         self.assertLess(commit_idx, arg_idx)
 
-    def test_refresh_resets_to_captured_tip_not_branch_name(self):
-        # Regression lock (capture-first ordering): same guard as
-        # Step I.2.a's, scoped to Step I.3's own section.
+    def test_refresh_resets_to_the_branch_not_a_captured_sha(self):
+        # Regression lock: same guard as Step I.2.a's, scoped to Step
+        # I.3's own section. See that test's docstring for why the
+        # branch-name form is the correct one here.
         self.assertIn(_normalize_ws(COMPLETION_REFRESH_CMD), self.section)
-        self.assertNotIn(_normalize_ws(BRANCH_NAME_REFRESH_CMD), self.section)
+        self.assertNotIn(
+            _normalize_ws(COMPLETION_CAPTURED_SHA_REFRESH_CMD), self.section
+        )
 
     def test_ordering_stated_as_normative(self):
         self.assertIn("in this normative order", self.section)
