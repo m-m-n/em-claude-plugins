@@ -1,20 +1,33 @@
 schema_version: 1
 feature: i2c-routeback-reconciliation
 phase: create-plan
-status: dispatching
+status: completed
 generation: 1
-base_revision: 82e8d5abb3b13104fad3de608523c0cd0751602f
+base_revision: 1697a64cc0dff828557bcd2b7294fb8fa1434277
 last_input_digest: sha256:c98fe05bfeb57017167af624047369430eeca9a2bf91f9c595367253887d1140
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
   - request_id: create-plan-run-0001
-    status: dispatched
+    status: completed
     input_digest: sha256:c98fe05bfeb57017167af624047369430eeca9a2bf91f9c595367253887d1140
     output_digest: null
-artifacts: []
-patches: []
+artifacts:
+  - path: feature-docs/i2c-routeback-reconciliation/IMPLEMENTATION.md
+    sha256: sha256:333881605d89ad73f97a4ccd54116288213a10756d2b5e59fa754a21042ae8ac
+    produced_by: create-plan-run-0001
+  - path: feature-docs/i2c-routeback-reconciliation/VERIFICATION.md
+    sha256: sha256:c27441dba4833df2b8cb3714c6f46a0426e3831f44da52ed673e78e4070169ca
+    produced_by: create-plan-run-0001
+  - path: feature-docs/i2c-routeback-reconciliation/tasks/task0001.md
+    sha256: sha256:8b200103eaf9e410f3e76b6a9d42f53863a72dd0e2a55531f195976a1802187f
+    produced_by: create-plan-run-0001
+patches:
+  - patch_id: i2c-routeback-reconciliation-p0001
+    status: applied
+    base_input_digest: sha256:c98fe05bfeb57017167af624047369430eeca9a2bf91f9c595367253887d1140
+    base_workflow_blob: e0dc730d68fb1bb7869d13c3d31c27e83f05dfee
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}

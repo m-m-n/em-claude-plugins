@@ -32,7 +32,8 @@ workflow:
     skipped_reason: "Resolved at gate create-spec.design-step with option decide_autonomously. The sole deliverable is a markdown verification record under feature-docs/i2c-routeback-reconciliation/; no UI surface, no data model, no design-system input, and the repository has no design system."
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 1697a64cc0dff828557bcd2b7294fb8fa1434277
   - id: implement
     status: pending
     base_commit: null
@@ -45,7 +46,20 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "I.2.c reconciliation verification record"
+    plan: tasks/task0001.md
+    files:
+      - feature-docs/i2c-routeback-reconciliation/RECONCILIATION-RECORD.md
+      - test-docs/i2c-routeback-reconciliation/task0001.tests.yaml
+    skills: []
+    domains: [api-contract]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: em-workflow/i2c-routeback-reconciliation/task0001
 
 review:
   status: pending
@@ -61,58 +75,82 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-1, TS-4]
   FR2:
     title: "Verify the write-then-commit-then-cleanup ordering and record which source ordering was superseded"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-2, TS-10]
   FR3:
     title: "Verify the gate-rejection side effect and reconcile the two features' opposing statements about it"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-3, TS-4]
   FR4:
     title: "Verify both document-contract modules are green against the merged text"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-5, TS-6]
   FR5:
     title: "Version bump — not applicable to this feature"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-7, TS-9]
   FR6:
     title: "Record PR #5's settled disposition"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-8]
   FR7:
     title: "The deliverable is a verification record under this feature's directory only"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-7]
   NFR1:
     title: "Evidence-backed, re-checkable claims"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-4]
   NFR2:
     title: "Zero-diff outside this feature's directory"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-7]
   NFR3:
     title: "Supersession is recorded, never silently dropped"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-4, TS-6, TS-10]
   NFR4:
     title: "No behaviour change and no new mechanical checker"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-5]
   NFR5:
     title: "Local documentation conventions"
     status: ok
     tbd_reason: null
     excluded_reason: null
+    tasks: [task0001]
+    tests: []
