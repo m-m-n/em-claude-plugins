@@ -248,8 +248,28 @@ git worktree add -b "em-workflow/{feature}/{T}" "$WT_ROOT/{T}" \
 ```
 
 Branch point = integration branch AT THIS MOMENT (includes every task merged
-so far). Set `tasks.{T}.status = in_progress`, `tasks.{T}.branch` in
-workflow.yaml.
+so far). Write task T's launch state in this normative order — the refresh
+precedes the capture, the capture precedes the write, and the write
+precedes the commit:
+
+1. **refresh** the integration worktree —
+   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
+2. **capture** the tip —
+   `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse HEAD)`
+3. **write**, on the worktree just refreshed, `tasks.{T}.status =
+   in_progress` and `tasks.{T}.branch` into workflow.yaml
+4. **commit** that write with the captured tip as the third argument —
+   `commit-docs.sh {integration_worktree} "docs({feature}): launch {T}"
+   "$LAUNCH_TIP"` (the third argument is `expected_base_tip`; exit-4
+   recovery: Branch & Worktree Model above)
+
+**Refill (FR5)**: this sequence runs on EVERY entry into Step I.2.a —
+including the refill re-entry from Step I.2.b step 5 within the same turn —
+and a fresh `LAUNCH_TIP` is captured each time. `$RECONCILE_TIP` is never
+reused as this step's third argument: it is captured at Step I.2.b step 2,
+BEFORE Step I.2.b step 3's own commit advances the branch tip, so by the
+time the refill path re-enters Step I.2.a, `$RECONCILE_TIP` is already
+stale.
 
 **Resume guard**: before running `git worktree add -b` for task T, check
 whether `em-workflow/{feature}/{T}` and/or `$WT_ROOT/{T}` already exist (this
@@ -597,6 +617,25 @@ post-resume wake.
 
 When every task is `merged`: set `implement` step `status = completed`,
 `completed_at_commit = $(git rev-parse "em-workflow/{feature}/integration")`.
+Write and commit that status in this normative order — the refresh precedes
+the capture, the capture precedes the write, and the write precedes the
+commit:
+
+1. **refresh** the integration worktree —
+   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`
+2. **capture** the tip —
+   `COMPLETION_TIP=$(git -C {integration_worktree} rev-parse HEAD)`
+3. **write**, on the worktree just refreshed, the `implement` step's
+   `status = completed` and `completed_at_commit` set above
+4. **commit** that write with the captured tip as the third argument —
+   `commit-docs.sh {integration_worktree} "docs({feature}): implement phase
+   completed" "$COMPLETION_TIP"` (the third argument is `expected_base_tip`;
+   exit-4 recovery: Branch & Worktree Model above)
+
+Because step 1's refresh makes the worktree's HEAD equal the integration
+branch ref, `$COMPLETION_TIP` and the `completed_at_commit` value above
+denote the SAME commit.
+
 There is no other way to complete this phase — a non-merged task always
 resolves via retry, route-back-to-planning, or abort (I.2.c). Report overall
 stats (tasks, conflict retries, failures) in 1-3 lines and return control to
