@@ -1,0 +1,156 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_exit4_tip_argument_consistency.TestStepI2aLaunchTimeWriteHasTipArgument.test_refresh_command_present
+      - tests.test_exit4_tip_argument_consistency.TestStepI2aLaunchTimeWriteHasTipArgument.test_tip_capture_present
+      - tests.test_exit4_tip_argument_consistency.TestStepI2aLaunchTimeWriteHasTipArgument.test_workflow_yaml_write_present
+      - tests.test_exit4_tip_argument_consistency.TestStepI2aLaunchTimeWriteHasTipArgument.test_commit_docs_invocation_with_captured_tip_present
+      - tests.test_exit4_tip_argument_consistency.TestStepI2aLaunchTimeWriteHasTipArgument.test_four_elements_are_in_strictly_increasing_order
+      - tests.test_exit4_tip_argument_consistency.TestStepI2aLaunchTimeWriteHasTipArgument.test_ordering_stated_as_normative
+      - tests.test_exit4_tip_argument_consistency.TestStepI2aLaunchTimeWriteHasTipArgument.test_exit4_case_cross_references_branch_worktree_model
+      - tests.test_exit4_tip_argument_consistency.TestSixSiteCorrespondence.test_step_i2a_launch_time_write_has_tip_argument
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, Step I.2.a's section contained no refresh/capture
+      sequence at all: assertIn on the refresh command and the LAUNCH_TIP
+      capture failed ("... not found in ..."), assertIn on "commit-docs.sh"
+      failed (the section had no commit-docs.sh call), the strict-ordering
+      test raised ValueError (substring not found) trying to locate the
+      refresh command, and the cross-reference phrase was absent. The
+      "in this normative order" ordering-anchor test was rewritten during
+      implementation after an initial version (bare "order" substring)
+      was found to pass vacuously against a pre-existing "task-id order"
+      phrase elsewhere in the section -- the strengthened version was
+      confirmed to fail against a captured pre-change sample before the
+      edit made it pass.
+  AC-2:
+    tests:
+      - tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument.test_refresh_command_present
+      - tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument.test_tip_capture_present
+      - tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument.test_workflow_yaml_write_present
+      - tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument.test_commit_docs_invocation_with_captured_tip_present
+      - tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument.test_four_elements_are_in_strictly_increasing_order
+      - tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument.test_ordering_stated_as_normative
+      - tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument.test_exit4_case_cross_references_branch_worktree_model
+      - tests.test_exit4_tip_argument_consistency.TestStepI3CompletionWriteHasTipArgument.test_pinned_sentence_precedes_new_sequence
+      - tests.test_exit4_tip_argument_consistency.TestSixSiteCorrespondence.test_step_i3_completion_write_has_tip_argument
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, Step I.3's section had no refresh/capture/commit
+      sequence after the pinned completion sentence: assertIn on the
+      refresh command and COMPLETION_TIP capture failed, assertIn on
+      "commit-docs.sh" failed, the ordering test raised ValueError trying
+      to locate the refresh command, and both the exit-4 cross-reference
+      phrase and the "in this normative order" phrase were absent.
+  AC-3:
+    tests:
+      - tests.test_exit4_tip_argument_consistency.TestStepI3PinnedCompletionSentenceByteIdentical.test_pinned_sentence_present_byte_for_byte
+      - tests.test_exit4_tip_argument_consistency.TestStepI3PinnedCompletionSentenceByteIdentical.test_new_sequence_lies_strictly_after_the_pinned_span
+      - tests.test_exit4_tip_argument_consistency.TestStepI3PinnedCompletionSentenceByteIdentical.test_there_is_no_other_way_sentence_follows_the_new_sequence
+    red_confirmed: true
+    red_reason: >-
+      test_pinned_sentence_present_byte_for_byte is a RETENTION assertion
+      (the sentence already existed verbatim pre-change) and was green
+      before any edit -- it guards against the edit disturbing the pinned
+      span, not against a missing behavior, per tdd-testing's "matchers
+      that only guard retained wording need no negative proof" rule. The
+      other two tests in this AC assert NEW material (the sequence's
+      position relative to the pinned span) and both raised ValueError
+      (substring not found: "git -C {integration_worktree} reset --hard"
+      / "commit-docs.sh") before the edit, because no such sequence
+      existed yet. The rework-synthesis contract test module
+      (tests/test_rework_synthesis_contract.py) is untouched by this
+      task's diff, confirmed via `git status`/`git diff --stat`.
+  AC-4:
+    tests:
+      - tests.test_exit4_tip_argument_consistency.TestRefillStatement.test_fresh_capture_on_every_entry_stated
+      - tests.test_exit4_tip_argument_consistency.TestRefillStatement.test_refill_reentry_named
+      - tests.test_exit4_tip_argument_consistency.TestRefillStatement.test_reconcile_tip_never_reused_statement_present
+      - tests.test_exit4_tip_argument_consistency.TestRefillStatement.test_every_reconcile_tip_occurrence_is_inside_the_statement
+      - tests.test_exit4_tip_argument_consistency.TestRefillStatement.test_reconcile_tip_never_passed_as_commit_docs_third_argument
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, Step I.2.a had no refill/fresh-capture statement at
+      all: assertIn on "EVERY entry into Step I.2.a", "refill re-entry
+      from Step I.2.b step 5", and the RECONCILE_TIP-not-reused phrase all
+      failed with "not found in ...", and the occurrence-scoping test
+      raised ValueError trying to locate the not-reused statement (there
+      was no RECONCILE_TIP occurrence anywhere in the I.2.a section at
+      all pre-change). test_reconcile_tip_never_passed_as_commit_docs_third_argument
+      was already true pre-change (RECONCILE_TIP did not appear at all in
+      I.2.a) -- a retention/absence guard, not a new-behavior proof; it
+      stays true post-change because the new statement never passes
+      RECONCILE_TIP to commit-docs.sh either.
+  AC-5:
+    tests:
+      - tests.test_exit4_tip_argument_consistency.TestSixSiteCorrespondence.test_step_i1_baseline_commit_has_tip_argument
+      - tests.test_exit4_tip_argument_consistency.TestSixSiteCorrespondence.test_step_i2a_launch_time_write_has_tip_argument
+      - tests.test_exit4_tip_argument_consistency.TestSixSiteCorrespondence.test_step_i2b_wake_phase_commit_has_tip_argument
+      - tests.test_exit4_tip_argument_consistency.TestSixSiteCorrespondence.test_step_i2c_rejected_path_terminal_commit_has_tip_argument
+      - tests.test_exit4_tip_argument_consistency.TestSixSiteCorrespondence.test_step_i2c_abort_phase_terminal_commit_has_tip_argument
+      - tests.test_exit4_tip_argument_consistency.TestSixSiteCorrespondence.test_step_i3_completion_write_has_tip_argument
+      - tests.test_exit4_tip_argument_consistency.TestSixSiteCorrespondence.test_step_i2c_routeback_commit_has_no_tip_argument_carve_out
+      - tests.test_exit4_tip_argument_consistency.TestExit4RecoveryBulletUnchanged.test_bullet_names_step_i2a_launch_time_write
+      - tests.test_exit4_tip_argument_consistency.TestExit4RecoveryBulletUnchanged.test_bullet_names_step_i3_completion_write
+      - tests.test_exit4_tip_argument_consistency.TestExit4RecoveryBulletUnchanged.test_bullet_names_all_six_sites
+      - tests.test_exit4_tip_argument_consistency.TestExit4RecoveryBulletUnchanged.test_routeback_carve_out_survives
+    red_confirmed: true
+    red_reason: >-
+      Only the two mechanical checks that depend on this task's new
+      wording went red pre-change: test_step_i2a_launch_time_write_has_tip_argument
+      and test_step_i3_completion_write_has_tip_argument both asserted
+      "[] is not true" (no commit-docs.sh call with a $VAR third argument
+      found in those sections). The other four site-correspondence tests
+      (I.1, I.2.b, I.2.c rejected, I.2.c abort) and the bullet-unchanged /
+      routeback-carve-out tests are RETENTION assertions over wording this
+      task does not change -- they were already true pre-change (the
+      bulleted enumeration and the other four sites' commit-docs.sh calls
+      pre-date this task) and stay true post-change; per tdd-testing they
+      need no negative proof. Two of these (test_bullet_names_step_i2a_*,
+      test_bullet_names_all_six_sites) initially failed during writing due
+      to a test-code bug (comparing raw un-normalized text against a
+      phrase that line-wraps in the source, e.g. "Step\n  I.2.a's") rather
+      than a document defect; fixed by normalizing whitespace before the
+      comparison, consistent with every other module in this suite.
+  AC-6:
+    tests: []
+    red_reason: >-
+      Verified by running `python3 -m unittest discover -s tests` at 4a
+      (baseline: 1452 tests, 0 failures) and again after the full
+      implementation (1499 tests -- the 1452 pre-existing plus this
+      task's 47 new tests -- 0 failures). `git status`/`git diff --stat`
+      confirm exactly em-workflow/references/implement-phase.md and
+      tests/test_exit4_tip_argument_consistency.py changed; no
+      pre-existing file under tests/ was modified, and
+      em-workflow/scripts/commit-docs.sh is absent from the diff. The
+      retention inventory items are asserted by this module's own
+      TestRegressionGuards / TestExit4RecoveryBulletUnchanged classes plus
+      the untouched pre-existing modules (test_review_implement_develop_lock_contracts.py,
+      test_routeback_reset_scope_consistency.py, test_recycled_task_id_consistency.py,
+      test_rework_synthesis_contract.py, test_implement_routeback_gate.py),
+      all of which stayed green.
+    red_confirmed: false
+  AC-7:
+    tests:
+      - tests.test_exit4_tip_argument_consistency
+    red_reason: >-
+      This criterion describes the test module's own structure (exists,
+      discovered by unittest discover, stdlib-only, no cross-module
+      import, covers TS3/TS4/TS5 and six-site correspondence, gives every
+      new-wording matcher a negative proof plus a non-vacuity guard) --
+      not a runtime behavior with an observable pre-implementation red
+      state, so there is no "red" to confirm for the module's existence
+      itself. Verified by inspection: `python3 -m unittest discover -s
+      tests` picks up the module (1499 total includes its 47); the module
+      imports only `re`, `unittest`, and `pathlib.Path`; every matcher
+      asserting new wording (I.2.a's refresh/capture/write/commit/
+      ordering/refill elements, I.3's refresh/capture/write/commit/
+      ordering/pinned-sequencing elements) has a corresponding negative
+      proof in TestValidationDetectsRegressions, and each of that class's
+      pre-change samples carries a non-vacuity guard
+      (test_i2a_sample_retains_branch_point_anchor,
+      test_i3_sample_retains_pinned_sentence_anchor).
+    red_confirmed: false
