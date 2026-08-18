@@ -85,17 +85,17 @@ tasks:
     branch: em-workflow/recycled-task-id-carveout/task0003
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor: [comprehensive, performance, architecture, spec]
     discretionary: []
     cross_validation: false
   perspectives:
-    comprehensive: pending
-    performance: pending
-    architecture: pending
-    spec: pending
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 
