@@ -70,9 +70,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/exit4-tip-argument/task0001
   task0002:
     title: plugin version bump in both registries
     plan: tasks/task0002.md
@@ -88,9 +88,9 @@ tasks:
     requirements:
     - FR6
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/exit4-tip-argument/task0002
 review:
   status: pending
   rounds_completed: 0
