@@ -101,7 +101,7 @@ tasks:
     domains: [config-infra]
     complexity: medium
     requirements: [FR3, FR5, FR8, NFR1, NFR2, NFR3]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/recycled-task-id-carveout/task0004
     provenance:
