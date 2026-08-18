@@ -1,11 +1,11 @@
 schema_version: 1
 feature: exit4-tip-argument
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 996b270c9e58319e99c9e2c32138c8334189a0f2
-last_input_digest: "sha256:4946e094e770e4eca8f31a1f5cf99f623d55810c2d09155a37c907cc754c5efd"
-active_request_id: create-spec-run-0003
+last_input_digest: "sha256:b7918011f6922c972b823e4f71d90d012a488eda65b9e5fa10075539143e7014"
+active_request_id: create-spec-run-0004
 packets:
   create-spec-run-q0002:
     status: answered
@@ -55,6 +55,10 @@ worker_runs:
     input_digest: "sha256:4946e094e770e4eca8f31a1f5cf99f623d55810c2d09155a37c907cc754c5efd"
     output_digest: "sha256:validated"
   - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:b7918011f6922c972b823e4f71d90d012a488eda65b9e5fa10075539143e7014"
+    output_digest: "sha256:analyst-completed"
+  - request_id: create-spec-run-0004
     status: dispatched
     input_digest: null
     output_digest: null
