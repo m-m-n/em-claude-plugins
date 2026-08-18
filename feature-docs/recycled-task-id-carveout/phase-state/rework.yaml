@@ -1,20 +1,33 @@
 schema_version: 1
 feature: recycled-task-id-carveout
 phase: rework
-status: dispatching
+status: completed
 generation: 1
 base_revision: c950d1c1c4af1a99ae1f248f8521966b9e282fe1
 last_input_digest: sha256:e6927e2539f40d8cc289cf721616fc24fac231bbf4dd5c0ca26c6aba9aa06276
-active_request_id: rework-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
   - request_id: rework-run-0001
-    status: dispatched
+    status: completed
     input_digest: sha256:e6927e2539f40d8cc289cf721616fc24fac231bbf4dd5c0ca26c6aba9aa06276
     output_digest: null
-artifacts: []
-patches: []
+artifacts:
+  - path: feature-docs/recycled-task-id-carveout/tasks/task0004.md
+    sha256: sha256:33b79468339832d5b7dbc1a0a3447f0ff03ae4213b7f236ac5aa443a09acdafc
+    produced_by: rework-run-0001
+  - path: feature-docs/recycled-task-id-carveout/IMPLEMENTATION.md
+    sha256: sha256:4a2885a5d85cde386e7b74059d263597b4f1ea02bdbff001f348d03509ab2488
+    produced_by: rework-run-0001
+  - path: feature-docs/recycled-task-id-carveout/VERIFICATION.md
+    sha256: sha256:f43976750e5e871c52ddb15cc71a3015bc809f9e1c649241e045eb19a6173cff
+    produced_by: rework-run-0001
+patches:
+  - patch_id: recycled-task-id-carveout-p0002
+    status: applied
+    base_input_digest: sha256:e6927e2539f40d8cc289cf721616fc24fac231bbf4dd5c0ca26c6aba9aa06276
+    base_workflow_blob: 53164d2f9a7672c450e7316197eaaf52a12e23f1
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
