@@ -1,7 +1,7 @@
 schema_version: 1
 feature: recycled-task-id-contract
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 996b270
 last_input_digest: "sha256:8c7991c52ad35d6ea51b26546dbc8c92471d2e5ce502326b8999227c8403e8a3"
