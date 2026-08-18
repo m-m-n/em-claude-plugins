@@ -88,7 +88,7 @@ tasks:
     requirements:
     - FR6
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/exit4-tip-argument/task0002
 review:
