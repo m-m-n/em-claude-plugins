@@ -98,9 +98,9 @@ tasks:
     provenance:
       source: verify
       failed_item_id: TS13
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/recycled-task-id-contract/task0003
 
 review:
   status: completed
