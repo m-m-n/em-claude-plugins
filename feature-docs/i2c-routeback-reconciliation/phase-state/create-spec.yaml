@@ -1,11 +1,11 @@
 schema_version: 1
 feature: i2c-routeback-reconciliation
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: 1307f2b0bcaf8c2db00251562b8ef7b1d9b34803
+base_revision: c1d810735f7dedcea761cd37495591a704191bbd
 last_input_digest: sha256:f90552a540e16957b28d2e32697e019a9b2fbb5ddf316d5b06ec156fa451a9f4
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -50,10 +50,14 @@ worker_runs:
     input_digest: sha256:87862277a920a2bc83bb7a82d68e7a93221df11c765b0a26bb500da2828abed6
     output_digest: null
   - request_id: create-spec-run-0003
-    status: dispatched
+    status: completed
     input_digest: sha256:f90552a540e16957b28d2e32697e019a9b2fbb5ddf316d5b06ec156fa451a9f4
     output_digest: null
-artifacts: []
+artifacts:
+  - path: feature-docs/i2c-routeback-reconciliation/REQUIREMENTS.md
+    produced_by: create-spec-run-0003
+  - path: feature-docs/i2c-routeback-reconciliation/SPEC.md
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

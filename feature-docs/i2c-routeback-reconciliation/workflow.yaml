@@ -1,0 +1,118 @@
+schema_version: 1
+feature: i2c-routeback-reconciliation
+created: 2026-08-18
+base_branch: main
+parent_branch: em-workflow/i2c-routeback-reconciliation/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: c1d810735f7dedcea761cd37495591a704191bbd
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "Resolved at gate create-spec.design-step with option decide_autonomously. The sole deliverable is a markdown verification record under feature-docs/i2c-routeback-reconciliation/; no UI surface, no data model, no design-system input, and the repository has no design system."
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "Verify the reconciled gate condition satisfies both features' acceptance criteria"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  FR2:
+    title: "Verify the write-then-commit-then-cleanup ordering and record which source ordering was superseded"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  FR3:
+    title: "Verify the gate-rejection side effect and reconcile the two features' opposing statements about it"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  FR4:
+    title: "Verify both document-contract modules are green against the merged text"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  FR5:
+    title: "Version bump — not applicable to this feature"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  FR6:
+    title: "Record PR #5's settled disposition"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  FR7:
+    title: "The deliverable is a verification record under this feature's directory only"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  NFR1:
+    title: "Evidence-backed, re-checkable claims"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  NFR2:
+    title: "Zero-diff outside this feature's directory"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  NFR3:
+    title: "Supersession is recorded, never silently dropped"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  NFR4:
+    title: "No behaviour change and no new mechanical checker"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+  NFR5:
+    title: "Local documentation conventions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
