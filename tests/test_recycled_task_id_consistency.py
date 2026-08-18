@@ -93,11 +93,67 @@ Matcher -> negative-proof inventory (AC-5; every matcher in this module):
   (TS-8), TestI2cHeadingAndBatchModeParagraphByteIdentical.* (TS-9),
   TestI2cOrderings.* (TS-10) -> regression guards over pre-existing literals
   and orderings, no proof needed
+
+task0001 (recycled-task-id-contract) removes the "governs only ... with one
+explicit exception" contradiction from I.2.a's recycled-task-id scope
+sentence, aligns the Supporting cast Stop-hook bullet with it, records the
+hooks' narrower unlaunched-detection rule (no `status != merged` condition),
+and adds the machine-readable hook classification table both sites cite.
+Covers this task's own Acceptance Criteria
+(feature-docs/recycled-task-id-contract/tasks/task0001.md):
+
+- AC-1 (FR1): the scope sentence is single and self-consistent -- it names
+  who applies the carve-out and who does not, with no "only X ... with an
+  exception" construction -> TestI2aScopeStatementIsSelfConsistent.
+- AC-2 (FR2): the Stop-hook bullet states the same classification as I.2.a
+  and cites the classification table ->
+  TestStopHookBulletCitesClassificationTable.
+- AC-3 (FR4): I.2.a records, with its reason, that the hooks detect
+  unlaunched solely from journal-event absence, never promising the
+  `status != merged` protection only the orchestrator's own rule applies ->
+  TestUnlaunchedDetectionDivergenceRecorded.
+- AC-5 (FR3): `TestRecycledTaskIdRuleScopedToOrchestrator` is rewritten (name
+  kept) into two independent group assertions derived from
+  `tests/test_hook_classification_pin.py`'s parsed table -- the
+  does-not-read group (floor 3) and the reads group (floor 1) -- each with
+  its own non-vacuity guard, so a break on one side cannot mask on the
+  other. Its hook names are never hardcoded here (NFR4): they come from the
+  parsed table, imported, not restated.
+
+Matcher -> negative-proof inventory added by task0001 (recycled-task-id-
+contract; every matcher's negative proof runs against
+PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE or PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE,
+verbatim excerpts of this task's own base commit
+b28a7166e8dce876075fc550ada7fdd7027211fa):
+
+- test_two_parties_phrase_present -> new wording ->
+  test_two_parties_phrase_matcher_flags_absence_in_pre_change_wording
+- test_contradictory_only_with_exception_construction_absent -> regression
+  guard (absence of the removed construction) ->
+  test_contradictory_construction_matcher_flags_the_pre_change_wording
+- test_stop_hook_bullet_cites_classification_table -> new wording ->
+  test_stop_hook_citation_matcher_flags_absence_in_pre_change_wording
+- test_stop_hook_bullet_matches_i2a_classification -> new wording -> same
+  proof above
+- test_unlaunched_solely_from_absence_phrase_present -> new wording ->
+  test_unlaunched_divergence_matchers_flag_absence_in_pre_change_wording
+- test_narrower_than_orchestrator_rule_stated -> new wording -> same proof
+  above
+- test_reason_states_fail_open_nets_not_authorities -> new wording -> same
+  proof above
+- TestRecycledTaskIdRuleScopedToOrchestrator's group-placement tests -> new
+  wording (group anchors) ->
+  test_group_anchors_absent_in_pre_change_wording
 """
 
 import re
 import unittest
 from pathlib import Path
+
+# Sibling module (tests/ is on the import path under `unittest discover`):
+# owns the classification table's parser, per NFR4 -- one parser, one
+# source of truth, never duplicated here.
+import test_hook_classification_pin as hook_classification_pin
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "em-workflow"
 IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
@@ -106,6 +162,7 @@ I2A_HEADING = "### I.2.a: Launch phase"
 I2B_HEADING = "### I.2.b: Wake phase"
 I2C_HEADING = "### I.2.c: Failed handling"
 NEXT_SECTION_HEADING = "### Supporting cast"
+STEP_I3_HEADING = "## Step I.3: Phase completion"
 
 # The removed, journal-only write-back phrasing (TS-1 / AC-1).
 OLD_JOURNAL_ONLY_PHRASE = "for every task whose last journal event is `failed`"
@@ -249,6 +306,115 @@ OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL = (
     "\n"
 )
 
+# --- task0001 (recycled-task-id-contract): module-level constants for the
+# new-wording matchers this task adds. Each is read by both its positive
+# test above and its negative-proof test below -- the literal is never
+# spelled twice (same Contract 1 pattern as task0003's block above).
+
+# AC-1 (FR1) group: the recycled-task-id scope statement is now a single,
+# self-consistent statement -- who applies the carve-out (two parties) and
+# who does not (the other three), no "only X ... with an exception"
+# construction.
+TWO_PARTIES_PHRASE = (
+    "is applied by two parties: the orchestrator's own interpretation of "
+    "the journal (this rule), and the Stop hook, `queue_stop_guard.py`, "
+    "which reads `tasks.{T}.status` and applies the identical carve-out "
+    "itself"
+)
+CONTRADICTORY_CONSTRUCTION_PHRASE = (
+    "governs only the orchestrator's interpretation of the journal, with "
+    "one explicit exception"
+)
+
+# AC-5 (FR3) group: the two group-placement anchors the split assertions
+# slice on. Hook NAMES are never hardcoded alongside these -- they come
+# from the parsed classification table (NFR4).
+DOES_NOT_READ_OPENING_ANCHOR = "The other three queue hooks —"
+DOES_NOT_READ_CLOSING_PHRASE = "never consult `tasks.{T}.status`"
+READS_OPENING_ANCHOR = "and the Stop hook,"
+READS_CLOSING_PHRASE = "applies the identical carve-out itself"
+
+# AC-2 (FR2) group: the Supporting cast Stop-hook bullet cites the
+# classification table and states the same classification as I.2.a.
+STOP_HOOK_TABLE_CITATION_PHRASE = (
+    "Classification (hook classification table above): **reads** "
+    "`tasks.{T}.status`"
+)
+STOP_HOOK_MATCHES_I2A_PHRASE = "matching I.2.a's classification exactly"
+
+# AC-3 (FR4) group: the hooks' narrower unlaunched-detection rule, recorded
+# with its reason.
+UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE = (
+    "detect a task as **unlaunched** solely from the absence of any "
+    "journal event for that task id — never from `tasks.{T}.status`"
+)
+NARROWER_THAN_ORCHESTRATOR_PHRASE = (
+    "narrower than the orchestrator's own selection rule above, which "
+    "additionally excludes any task whose `status` reads `merged`"
+)
+NO_EQUIVALENT_EXCLUSION_PHRASE = "the hooks carry no equivalent exclusion"
+DIVERGENCE_REASON_PHRASE = "the hooks are fail-open nets, not authorities"
+AUTHORITATIVE_SOURCE_PHRASE = (
+    "the orchestrator protocol above together with the I.2.a resume guard "
+    "remain the authoritative source of task state"
+)
+
+# --- task0001 (recycled-task-id-contract): pre-change wording samples, each
+# a verbatim excerpt of em-workflow/references/implement-phase.md at this
+# task's own base commit b28a7166e8dce876075fc550ada7fdd7027211fa (Contract
+# 2) -- not paraphrased, not reconstructed, copied the same way the other
+# pre-change samples in this module were captured.
+
+# The I.2.a scope-sentence tail this task replaced in full -- from the old
+# "governs only ... with one explicit exception" sentence through the old
+# "journal itself stays append-only" sentence. Used for both the AC-1 and
+# the AC-3 negative proofs (AC-3's divergence wording is entirely new, so
+# it is provably absent from this same pre-change tail).
+PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE = (
+    "This recycled-task-id rule governs only the orchestrator's\n"
+    "interpretation of the journal, with one explicit exception:\n"
+    "`queue_stop_guard.py` applies this same recycled-task-id carve-out "
+    "itself\n"
+    "(see the Stop-hook bullet under 'Supporting cast: journal, hooks, "
+    "resume'\n"
+    "below, which states the same classification). The other three "
+    "hooks —\n"
+    "`queue_launch_guard.py`,\n"
+    "`queue_failure_net.py` and `queue_taskstop_net.py` — derive a task's "
+    "state\n"
+    "from the journal's last event alone and never consult "
+    "`tasks.{T}.status`\n"
+    "(see 'Supporting cast: journal, hooks, resume' below). The journal "
+    "itself\n"
+    "stays append-only (see Supporting cast below) — only the "
+    "interpretation of\n"
+    "its events is scoped by this rule."
+)
+
+# The Supporting cast Stop-hook bullet before this task's edit -- used for
+# the AC-2 negative proof.
+PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE = (
+    "- **Stop hook** (`queue_stop_guard.py`) — fires when the "
+    "orchestrator's turn\n"
+    "  ends. Replays the journal and workflow.yaml, applying the same\n"
+    "  recycled-task-id carve-out as I.2.a above — a task whose journal "
+    "last\n"
+    "  event is `failed` and whose workflow.yaml `status` reads "
+    "`pending`\n"
+    "  reclassifies as unlaunched, not failed; if refillable slots and\n"
+    "  unlaunched tasks exist and no task's reconciled state is "
+    "`failed`, it\n"
+    "  BLOCKS (exit 2) naming the tasks to launch — catching a forgotten "
+    "refill\n"
+    "  after a wake phase. A consecutive-block cap (3, tracked in a "
+    "sidecar\n"
+    "  next to the journal)\n"
+    "  prevents it from wedging the session on unexpected state; "
+    "exceeding the\n"
+    "  cap yields a warning and lets the turn end. Does not write the "
+    "journal."
+)
+
 
 def _read():
     return IMPLEMENT_PHASE_PATH.read_text(encoding="utf-8")
@@ -276,6 +442,12 @@ def _i2b_section(text):
 def _i2c_section(text):
     start = text.index(I2C_HEADING)
     end = text.index(NEXT_SECTION_HEADING, start)
+    return text[start:end]
+
+
+def _supporting_cast_section(text):
+    start = text.index(NEXT_SECTION_HEADING)
+    end = text.index(STEP_I3_HEADING, start)
     return text[start:end]
 
 
@@ -411,28 +583,128 @@ class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
 
 
 class TestRecycledTaskIdRuleScopedToOrchestrator(unittest.TestCase):
-    """TS-6 / AC-6 (FR6): the scope sentence names all four hook
-    filenames and states `tasks.{T}.status` is never consulted; the
-    document nowhere contains "never read workflow.yaml"."""
+    """TS-6 / AC-5 (FR3, recycled-task-id-contract task0001): the two hook
+    groups -- does-not-read and reads -- are each derived from
+    `test_hook_classification_pin.py`'s parsed classification table and
+    asserted in their OWN independent group assertion, so a break in
+    either group's I.2.a wording fails only that group's assertion, never
+    the other's. Each group asserts its own non-emptiness FIRST (floor of
+    three for does-not-read, one for reads -- FR3's own wording) so an
+    emptied group cannot make the loop vacuously pass. Hook names are never
+    hardcoded here (NFR4): they come from the parsed table.
+
+    Retains the pre-existing "never read workflow.yaml" absence guard
+    (unrelated to the split, still a valid regression guard)."""
 
     @classmethod
     def setUpClass(cls):
         cls.text = _read()
         cls.i2a = _normalize_ws(_i2a_section(cls.text))
+        rows = hook_classification_pin.parse_classification_table()
+        cls.does_not_read_group = sorted(
+            Path(path).name
+            for path, classification in rows
+            if classification == hook_classification_pin.DOES_NOT_READ_STATUS
+        )
+        cls.reads_group = sorted(
+            Path(path).name
+            for path, classification in rows
+            if classification == hook_classification_pin.READS_STATUS
+        )
 
-    def test_scope_sentence_names_all_four_hooks(self):
-        for hook in HOOK_FILENAMES:
-            self.assertIn(f"`{hook}`", self.i2a)
+    def test_does_not_read_group_is_non_empty(self):
+        self.assertGreaterEqual(len(self.does_not_read_group), 3)
 
-    def test_scope_sentence_states_status_never_consulted(self):
-        self.assertIn(STATUS_NEVER_CONSULTED_PHRASE, self.i2a)
+    def test_does_not_read_group_placed_correctly_in_i2a(self):
+        start = self.i2a.index(DOES_NOT_READ_OPENING_ANCHOR)
+        end = self.i2a.index(DOES_NOT_READ_CLOSING_PHRASE, start) + len(
+            DOES_NOT_READ_CLOSING_PHRASE
+        )
+        slice_ = self.i2a[start:end]
+        for hook in self.does_not_read_group:
+            self.assertIn(f"`{hook}`", slice_)
 
-    def test_scope_sentence_governs_only_orchestrator_interpretation(self):
-        self.assertIn(ORCHESTRATOR_ONLY_SCOPE_PHRASE, self.i2a)
+    def test_reads_group_is_non_empty(self):
+        self.assertGreaterEqual(len(self.reads_group), 1)
+
+    def test_reads_group_placed_correctly_in_i2a(self):
+        start = self.i2a.index(READS_OPENING_ANCHOR)
+        end = self.i2a.index(READS_CLOSING_PHRASE, start) + len(
+            READS_CLOSING_PHRASE
+        )
+        slice_ = self.i2a[start:end]
+        for hook in self.reads_group:
+            self.assertIn(f"`{hook}`", slice_)
 
     def test_no_never_reads_workflow_yaml_claim_anywhere(self):
         self.assertNotIn("never read workflow.yaml", self.text)
         self.assertNotIn("never reads workflow.yaml", self.text)
+
+
+class TestI2aScopeStatementIsSelfConsistent(unittest.TestCase):
+    """AC-1 (FR1, recycled-task-id-contract task0001): the recycled-task-id
+    scope statement in I.2.a is a single, self-consistent statement -- it
+    names who applies the carve-out (the orchestrator and the Stop hook)
+    and who does not (the other three queue hooks), and contains no
+    "only X ... with an exception that contradicts X" construction."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2a = _normalize_ws(_i2a_section(_read()))
+
+    def test_two_parties_phrase_present(self):
+        self.assertIn(TWO_PARTIES_PHRASE, self.i2a)
+
+    def test_contradictory_only_with_exception_construction_absent(self):
+        self.assertNotIn(CONTRADICTORY_CONSTRUCTION_PHRASE, self.i2a)
+        self.assertNotIn("governs only", self.i2a)
+
+
+class TestStopHookBulletCitesClassificationTable(unittest.TestCase):
+    """AC-2 (FR2, recycled-task-id-contract task0001): the Stop-hook bullet
+    under 'Supporting cast: journal, hooks, resume' states the same
+    classification as I.2.a and cites the classification table."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = _read()
+        cls.supporting_cast = _normalize_ws(_supporting_cast_section(text))
+        cls.i2a = _normalize_ws(_i2a_section(text))
+
+    def test_stop_hook_bullet_cites_classification_table(self):
+        self.assertIn(STOP_HOOK_TABLE_CITATION_PHRASE, self.supporting_cast)
+
+    def test_stop_hook_bullet_matches_i2a_classification(self):
+        self.assertIn(STOP_HOOK_MATCHES_I2A_PHRASE, self.supporting_cast)
+        # Both sites assert the identical classification value for this
+        # hook -- read from the fixed vocabulary, never restated (NFR4).
+        self.assertIn(
+            hook_classification_pin.READS_STATUS, self.supporting_cast
+        )
+        self.assertIn(hook_classification_pin.READS_STATUS, self.i2a)
+
+
+class TestUnlaunchedDetectionDivergenceRecorded(unittest.TestCase):
+    """AC-3 (FR4, recycled-task-id-contract task0001): I.2.a states, with
+    its reason, that the hooks treat a task as unlaunched solely from the
+    absence of a journal event for that id, and nowhere promises the
+    `status != merged` protection that only the orchestrator's own
+    selection rule applies."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2a = _normalize_ws(_i2a_section(_read()))
+
+    def test_unlaunched_solely_from_absence_phrase_present(self):
+        self.assertIn(UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE, self.i2a)
+
+    def test_narrower_than_orchestrator_rule_stated(self):
+        self.assertIn(NARROWER_THAN_ORCHESTRATOR_PHRASE, self.i2a)
+        self.assertIn(NO_EQUIVALENT_EXCLUSION_PHRASE, self.i2a)
+
+    def test_reason_states_fail_open_nets_not_authorities(self):
+        self.assertIn(DIVERGENCE_REASON_PHRASE, self.i2a)
+        self.assertIn(AUTHORITATIVE_SOURCE_PHRASE, self.i2a)
 
 
 class TestProtectedRawLiteralsSurvive(unittest.TestCase):
@@ -730,6 +1002,57 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         sample = _normalize_ws(OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL)
         self.assertIn(OLD_BATCH_MODE_STAYS_FAILED_REPORT_STOP_PHRASE, sample)
 
+    # --- task0001 (recycled-task-id-contract): negative proofs for this
+    # task's own new-wording matchers, run against this task's own
+    # pre-change samples (base commit
+    # b28a7166e8dce876075fc550ada7fdd7027211fa).
+
+    def test_two_parties_phrase_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        self.assertNotIn(TWO_PARTIES_PHRASE, sample)
+
+    def test_contradictory_construction_matcher_flags_the_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        self.assertIn(CONTRADICTORY_CONSTRUCTION_PHRASE, sample)
+        self.assertIn("governs only", sample)
+
+    def test_stop_hook_citation_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE)
+        self.assertNotIn(STOP_HOOK_TABLE_CITATION_PHRASE, sample)
+        self.assertNotIn(STOP_HOOK_MATCHES_I2A_PHRASE, sample)
+
+    def test_unlaunched_divergence_matchers_flag_absence_in_pre_change_wording(
+        self,
+    ):
+        # AC-3's whole paragraph is brand new (no prior sentence stated
+        # anything about the hooks' unlaunched-detection rule at all), so
+        # every one of its phrases must be provably absent from the
+        # pre-change tail sample.
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        self.assertNotIn(UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE, sample)
+        self.assertNotIn(NARROWER_THAN_ORCHESTRATOR_PHRASE, sample)
+        self.assertNotIn(NO_EQUIVALENT_EXCLUSION_PHRASE, sample)
+        self.assertNotIn(DIVERGENCE_REASON_PHRASE, sample)
+        self.assertNotIn(AUTHORITATIVE_SOURCE_PHRASE, sample)
+
+    def test_group_anchors_absent_in_pre_change_wording(self):
+        # The split assertions' own opening anchors did not exist in the
+        # pre-change wording (the old sentence used a different
+        # conjunction, "The other three hooks —", without the word
+        # "queue"), so the anchored slice used by the new group-placement
+        # matchers cannot even be formed against the old text.
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        with self.assertRaises(ValueError):
+            sample.index(DOES_NOT_READ_OPENING_ANCHOR)
+        with self.assertRaises(ValueError):
+            sample.index(READS_OPENING_ANCHOR)
+
 
 class TestPreChangeSampleGuards(unittest.TestCase):
     """AC-2 / Contract 4: each pre-change wording sample carries a RETAINED
@@ -765,6 +1088,27 @@ class TestPreChangeSampleGuards(unittest.TestCase):
     def test_old_batch_mode_paragraph_sample_retains_gate_id_anchor(self):
         sample = _normalize_ws(OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL)
         self.assertIn("`implement.failed-task`", sample)
+
+    def test_i2a_scope_tail_sample_retains_same_classification_anchor(self):
+        # "which states the same classification" survives verbatim across
+        # this task's edit (the new text only appends "and cites the
+        # classification table" after it) -- a RETAINED anchor present in
+        # both the pre-change sample and the live post-change document.
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        anchor = "which states the same classification"
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_i2a_section(_read())))
+
+    def test_stop_hook_bullet_sample_retains_forgotten_refill_anchor(self):
+        # "catching a forgotten refill after a wake phase" survives
+        # verbatim across this task's edit -- a RETAINED anchor present in
+        # both the pre-change sample and the live post-change document.
+        sample = _normalize_ws(PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE)
+        anchor = "catching a forgotten refill after a wake phase"
+        self.assertIn(anchor, sample)
+        self.assertIn(
+            anchor, _normalize_ws(_supporting_cast_section(_read()))
+        )
 
 
 if __name__ == "__main__":
