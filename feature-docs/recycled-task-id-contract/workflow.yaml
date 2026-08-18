@@ -41,9 +41,20 @@ workflow:
     status: completed
     completed_at_commit: 6a86edf893d2763f06aaee7d588173b21af33cfc
   - id: verify
-    status: pending
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: TS13
+        note: >-
+          NFR4 不成立。TestObserveHookSource の 4 メソッドが hook パスと期待分類の両方を
+          リテラルで持ち、分類テーブルとは独立した第二の分類 SSOT になっている
+          （tests/test_hook_classification_pin.py の test_queue_stop_guard_reads_status /
+          test_queue_launch_guard_does_not_read_status /
+          test_queue_failure_net_does_not_read_status /
+          test_queue_taskstop_net_does_not_read_status）。TS13 の
+          「no hard-coded hook-to-classification mapping in tests/」を満たさない。
+          パーサが 1 箇所であること（TS13 前半）は満たしている。
+          review round 1 の finding b4393fb2176068e4 / 50019760ded86f26 と同一。
   - id: retrospect
     status: pending
 
