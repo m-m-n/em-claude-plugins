@@ -88,6 +88,44 @@ sentence and its Supporting-cast citing bullet
 - AC-7 (FR8, NFR1, NFR2): the whole suite runs green; only standard-library
   imports are added; no file outside this task's two-file scope changes.
 
+task0004 (verify-sourced rework, TS-2 / TS-12 / TS-13 / TS-14, SPEC AC-6)
+closes two findings left open by task0001's own rework of this class:
+
+- AC-1/AC-2/AC-3: `TestValidationDetectsRegressions` gains the paired
+  negative proof
+  `test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in`
+  for the three-hook anchored-slice matcher, applied to a newly captured
+  pre-stopguard-retired-failed excerpt of `implement-phase.md` (commit
+  061786a3c34f0f8a1d05ffd7915e5d5d51e04d56 -- the commit immediately
+  preceding the already-merged `stopguard-retired-failed` feature's
+  merge) in which `queue_stop_guard.py` was folded into the SAME "never
+  consult `tasks.{T}.status`" claim as the three journal-only hooks --
+  proving a naive filename-presence check would wrongly accept that
+  wording (every hook name it names IS present in the sample) while the
+  anchored-slice matcher correctly cannot even form its slice against it,
+  since `THREE_HOOKS_SLICE_START_ANCHOR` was introduced only later, by
+  the edit that separated `queue_stop_guard.py` out. No sample already in
+  this module reaches back to that wording -- it predates both this
+  feature and `recycled-task-id-consistency` -- so it is captured fresh
+  rather than reused. `TestPreChangeSampleGuards` gains the paired
+  retained-anchor guard for that new sample.
+- AC-4: the inventory entry below for
+  `test_three_journal_only_hooks_named_in_anchored_never_consult_slice`
+  is corrected from a RETENTION classification (Contract 3, no proof
+  needed) to a new-wording classification (Contracts 1, 2, 4) -- the
+  WORDING inside the slice is retained, but the anchored-slice CLAIM the
+  matcher makes is new.
+- AC-5/AC-6: `HOOK_FILENAMES` is retired together with the derivation
+  that was its sole remaining reader; `JOURNAL_ONLY_HOOK_FILENAMES`
+  becomes a direct tuple literal and gains a second reader (the new
+  negative proof above), leaving no module-level constant in this module
+  with fewer than two reader sites.
+- The AC-6 entry of
+  `test-docs/recycled-task-id-carveout/task0001.tests.yaml` is corrected
+  to record this exact single-reader state as it stood at task0001's
+  merge, rather than the unmet ">=2 readers or fully retired" claim it
+  previously recorded (IMPLEMENTATION.md D7).
+
 Matcher -> negative-proof inventory (AC-5; every matcher in this module):
 
 - test_reconciled_state_phrasing_present -> new wording ->
@@ -122,11 +160,16 @@ Matcher -> negative-proof inventory (AC-5; every matcher in this module):
 - test_retained_in_flight_sentence_survives -> RETENTION matcher, no proof
   needed
 - test_three_journal_only_hooks_named_in_anchored_never_consult_slice ->
-  RETENTION matcher over unchanged wording, narrowed to an anchored slice
-  (no negative proof needed, Contract 3); the slice-exclusion check
-  (`queue_stop_guard.py` NOT in the three-hook slice) is likewise
-  retention, since the old wording already kept the exception hook out of
-  that clause
+  new-wording matcher (Contracts 1, 2, 4, task0004 correction): the
+  SLICED WORDING is unchanged by this task's own edit, but the
+  anchored-slice CLAIM itself is new -- it replaces the retired
+  four-hook filename-presence conjunction
+  (`test_scope_sentence_names_all_four_hooks`) and, by construction,
+  excludes `queue_stop_guard.py` from the slice rather than merely
+  happening to omit it -- so it is governed by Contracts 1, 2 and 4, not
+  the Contract 3 retention exemption ->
+  test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in
+  (task0004)
 - test_stop_guard_named_as_explicit_exception_in_anchored_slice -> new
   wording (slice-anchor shape) ->
   test_stop_guard_exception_anchor_matcher_flags_absence_in_pre_change_wording
@@ -214,15 +257,17 @@ ONLY_SIDE_EFFECT_PHRASE = (
 # AC-5 (FR5) group: the I.2.a unreachability sentence's opening anchor.
 UNREACHABILITY_OPENING_ANCHOR = "Given I.2.c's route-back precondition"
 
-# AC-6 (FR6) group: the I.2.a scope sentence.
-HOOK_FILENAMES = (
+# AC-6 (FR6) group: the I.2.a scope sentence. task0004 (rework, TS-13 /
+# SC-1): JOURNAL_ONLY_HOOK_FILENAMES is a direct literal rather than a
+# derivation from a HOOK_FILENAMES constant -- HOOK_FILENAMES is retired
+# together with the derivation, since the derivation was HOOK_FILENAMES's
+# only remaining reader (module Convention "Non-vacuity discipline": a
+# constant whose only remaining reader is a derivation feeding one other
+# constant is retired together with that derivation).
+JOURNAL_ONLY_HOOK_FILENAMES = (
     "queue_launch_guard.py",
-    "queue_stop_guard.py",
     "queue_failure_net.py",
     "queue_taskstop_net.py",
-)
-JOURNAL_ONLY_HOOK_FILENAMES = tuple(
-    h for h in HOOK_FILENAMES if h != "queue_stop_guard.py"
 )
 STATUS_NEVER_CONSULTED_PHRASE = "never consult `tasks.{T}.status`"
 # task0001 (recycled-task-id-carveout): the literal that must now be ABSENT
@@ -238,9 +283,13 @@ ORCHESTRATOR_ONLY_SCOPE_PHRASE = (
 # task0001 (recycled-task-id-carveout): anchors for the two separated
 # claims that replace the four-hook filename-presence conjunction (FR3).
 # Claim (a): the three journal-only hooks, inside a slice opening here and
-# closing at STATUS_NEVER_CONSULTED_PHRASE -- unchanged wording, so no
-# negative proof is needed (Contract 3), but the anchor still gets a
-# second reader via the retained-anchor guard below.
+# closing at STATUS_NEVER_CONSULTED_PHRASE. task0004 (rework, TS-2 /
+# TS-12): although the SLICED WORDING is unchanged by this task's own
+# edit, the anchored-slice CLAIM itself is new -- it replaces the retired
+# four-hook filename-presence conjunction and, by construction, excludes
+# `queue_stop_guard.py` from the slice -- so it carries its own paired
+# negative proof below (Contracts 1, 2, 4), not a Contract 3 retention
+# exemption.
 THREE_HOOKS_SLICE_START_ANCHOR = "The other three hooks"
 # Claim (b): `queue_stop_guard.py` named as the single explicit exception,
 # inside a slice opening here (NEW wording -- this exact conjunction did
@@ -382,6 +431,38 @@ PRE_CARVEOUT_STOP_HOOK_BULLET_SAMPLE = (
     "exceeding the\n"
     "  cap yields a warning and lets the turn end. Does not write the "
     "journal."
+)
+
+# --- task0004 (verify-sourced rework, TS-2 / SC-1): the wording that
+# predates BOTH this feature and `recycled-task-id-consistency` -- the
+# state before the already-merged `stopguard-retired-failed` feature
+# split `queue_stop_guard.py` out as a separate exception. Captured
+# verbatim from em-workflow/references/implement-phase.md at commit
+# 061786a3c34f0f8a1d05ffd7915e5d5d51e04d56 (the commit immediately
+# preceding stopguard-retired-failed's merge) -- the last point at which
+# `queue_stop_guard.py` was folded into the SAME "never consult
+# `tasks.{T}.status`" claim as the other three hooks, which is exactly
+# the violation VERIFICATION.md TS-2's negative half requires (Contract
+# 2). No sample already captured in this module reaches back this far:
+# `THREE_HOOKS_SLICE_START_ANCHOR` ("The other three hooks") was
+# introduced BY stopguard-retired-failed's own edit as the mechanism that
+# separated `queue_stop_guard.py` out, so no wording captured after that
+# point ever folds it back in, and no wording captured before that point
+# ever carries that anchor -- the two properties are mutually exclusive
+# across real history, which is exactly what the negative proof below
+# demonstrates: the anchor genuinely cannot be found in this sample.
+PRE_STOPGUARD_RETIRED_FAILED_FOUR_HOOK_NEVER_CONSULT_SAMPLE = (
+    "This recycled-task-id rule governs only the orchestrator's\n"
+    "interpretation of the journal: `queue_launch_guard.py`,\n"
+    "`queue_stop_guard.py`, `queue_failure_net.py` and "
+    "`queue_taskstop_net.py`\n"
+    "derive a task's state from the journal's last event alone and "
+    "never\n"
+    "consult `tasks.{T}.status` (see 'Supporting cast: journal, hooks, "
+    "resume'\n"
+    "below). The journal itself stays append-only (see Supporting cast "
+    "below) —\n"
+    "only the interpretation of its events is scoped by this rule."
 )
 
 # --- task0001 (abort-phase-terminal): the closing batch-mode paragraph's
@@ -983,6 +1064,33 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         sample = _normalize_ws(OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL)
         self.assertIn(OLD_BATCH_MODE_STAYS_FAILED_REPORT_STOP_PHRASE, sample)
 
+    # --- task0004 (verify-sourced rework, TS-2 / SC-1): the paired
+    # negative proof for the three-hook anchored-slice matcher (AC-1/AC-2).
+
+    def test_three_hooks_never_consult_slice_matcher_flags_four_hook_fold_in(
+        self,
+    ):
+        sample = _normalize_ws(
+            PRE_STOPGUARD_RETIRED_FAILED_FOUR_HOOK_NEVER_CONSULT_SAMPLE
+        )
+        # The sample genuinely folds `queue_stop_guard.py` into the same
+        # claim as the three journal-only hooks -- every hook name the
+        # positive matcher checks for IS present in this sample, and so is
+        # the never-consult phrase, so a naive filename-presence check
+        # would wrongly accept it.
+        for hook in JOURNAL_ONLY_HOOK_FILENAMES:
+            self.assertIn(f"`{hook}`", sample)
+        self.assertIn("`queue_stop_guard.py`", sample)
+        self.assertIn(STATUS_NEVER_CONSULTED_PHRASE, sample)
+        # Yet the anchored-slice matcher -- reading the SAME
+        # THREE_HOOKS_SLICE_START_ANCHOR constant the positive test reads
+        # -- cannot even form its slice against this sample: that opening
+        # anchor was introduced by a later edit that separated
+        # `queue_stop_guard.py` out, so it is absent here. The matcher
+        # does not match this sample.
+        with self.assertRaises(ValueError):
+            sample.index(THREE_HOOKS_SLICE_START_ANCHOR)
+
 
 class TestPreChangeSampleGuards(unittest.TestCase):
     """AC-2 / Contract 4: each pre-change wording sample carries a RETAINED
@@ -1035,6 +1143,18 @@ class TestPreChangeSampleGuards(unittest.TestCase):
     def test_old_batch_mode_paragraph_sample_retains_gate_id_anchor(self):
         sample = _normalize_ws(OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL)
         self.assertIn("`implement.failed-task`", sample)
+
+    def test_pre_stopguard_retired_failed_sample_retains_never_consulted_phrase(
+        self,
+    ):
+        # AC-3 (task0004): the RETAINED anchor for the new negative-proof
+        # sample above -- STATUS_NEVER_CONSULTED_PHRASE is present both
+        # here and in the current post-change document, so the negative
+        # proof's ValueError cannot be a symptom of an emptied sample.
+        sample = _normalize_ws(
+            PRE_STOPGUARD_RETIRED_FAILED_FOUR_HOOK_NEVER_CONSULT_SAMPLE
+        )
+        self.assertIn(STATUS_NEVER_CONSULTED_PHRASE, sample)
 
 
 if __name__ == "__main__":
