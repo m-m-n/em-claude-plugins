@@ -1,0 +1,13 @@
+feature: declared-change-set-implementation
+collected_at: '2026-08-18T19:13:19+09:00'
+session_ids: []
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+lessons_candidates:
+- review round1 の唯一の finding は severity medium のため R4 の auto-fix ゲート（critical/high のみ）に載らず未修正のまま完了した。本フィーチャー自体が『medium が未解決のまま完了した結果ドリフトが残る』という同型の事象への対処であり、medium の扱いは繰り返し論点になっている。
+- implementer が書く *.tests.yaml の red_reason は、既存テストの網羅範囲を実際に検索せずに『テストは存在しない』と断定しうる。task0002 でそれが起きた。
