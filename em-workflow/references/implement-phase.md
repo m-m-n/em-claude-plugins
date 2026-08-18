@@ -223,17 +223,26 @@ arise. Because route-back proceeds only when no task is `merged` under
 either source (the widened I.2.c gate above), no retired task id can
 leave a `merged` last event behind for a renumbered task to inherit, so
 the recycled-task-id carve-out above stays correctly scoped to `failed`
-only. This recycled-task-id rule governs only the orchestrator's
-interpretation of the journal, with one explicit exception:
-`queue_stop_guard.py` applies this same recycled-task-id carve-out itself
-(see the Stop-hook bullet under 'Supporting cast: journal, hooks, resume'
-below, which states the same classification). The other three hooks —
+only. This recycled-task-id rule applies to the orchestrator's
+interpretation of the journal and, identically, to `queue_stop_guard.py`,
+which applies this same recycled-task-id carve-out itself (see the
+Stop-hook bullet under 'Supporting cast: journal, hooks, resume' below,
+which states the same classification). The other three hooks —
 `queue_launch_guard.py`,
 `queue_failure_net.py` and `queue_taskstop_net.py` — derive a task's state
 from the journal's last event alone and never consult `tasks.{T}.status`
 (see 'Supporting cast: journal, hooks, resume' below). The journal itself
 stays append-only (see Supporting cast below) — only the interpretation of
-its events is scoped by this rule.
+its events is scoped by this rule. This scope statement diverges
+deliberately from `queue_stop_guard.py`'s own unlaunched classification:
+I.2.a defines unlaunched as no journal event yet AND `status != merged`,
+whereas the hook classifies a task with no journal event as unlaunched
+without consulting that task's workflow.yaml status at all — so on a
+missing or truncated journal, a task whose workflow.yaml status reads
+`merged` can still be named in the hook's launch list. This divergence is
+deliberate, intended fail-open behavior, not a defect: the hook is a
+fail-open net, not an authority (see 'Supporting cast: journal, hooks,
+resume' below).
 Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
@@ -516,8 +525,10 @@ summary (full schema: IMPLEMENTATION.md's Journal contract).
 
 - **Stop hook** (`queue_stop_guard.py`) — fires when the orchestrator's turn
   ends. Replays the journal and workflow.yaml, applying the same
-  recycled-task-id carve-out as I.2.a above — a task whose journal last
-  event is `failed` and whose workflow.yaml `status` reads `pending`
+  recycled-task-id carve-out as I.2.a above — I.2.a is the owning rule and
+  this equivalence claim is limited to the carve-out itself, not a
+  restatement of I.2.a's full unlaunched definition — a task whose journal
+  last event is `failed` and whose workflow.yaml `status` reads `pending`
   reclassifies as unlaunched, not failed; if refillable slots and
   unlaunched tasks exist and no task's reconciled state is `failed`, it
   BLOCKS (exit 2) naming the tasks to launch — catching a forgotten refill

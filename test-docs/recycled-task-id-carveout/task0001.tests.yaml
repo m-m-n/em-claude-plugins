@@ -1,0 +1,103 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_orchestrator_only_scope_phrase_absent_everywhere
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_no_never_reads_workflow_yaml_claim_anywhere
+    red_confirmed: true
+    red_reason: >
+      test_orchestrator_only_scope_phrase_absent_everywhere failed against
+      the pre-edit document: AssertionError -- "governs only the
+      orchestrator's interpretation of the journal" unexpectedly found in
+      the normalized whole-document text (assertNotIn). Fixed after
+      discovering the check must compare normalized text, since the raw
+      literal spans a line-wrap at that location and a raw-text check
+      passed vacuously. test_no_never_reads_workflow_yaml_claim_anywhere is
+      an unmodified retention guard (pre-existing, already passing;
+      "never read(s) workflow.yaml" was never introduced by this task).
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_stop_guard_named_as_explicit_exception_in_anchored_slice
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_three_journal_only_hooks_named_in_anchored_never_consult_slice
+    red_confirmed: true
+    red_reason: >
+      test_stop_guard_named_as_explicit_exception_in_anchored_slice raised
+      ValueError: substring not found -- the new opening anchor "This
+      recycled-task-id rule applies to the orchestrator's interpretation of
+      the journal" did not exist in the pre-edit text (which opened with
+      "governs only ... with one explicit exception:" instead), so the
+      slice could not even be formed. The second test
+      (test_three_journal_only_hooks_named_in_anchored_never_consult_slice)
+      already passed pre-edit: the underlying "The other three hooks ...
+      never consult tasks.{T}.status" clause and its exclusion of
+      queue_stop_guard.py are wording this task does not change, only
+      narrows into an anchored-slice assertion shape (module Convention
+      "Non-vacuity discipline" Contract 3: a matcher asserting retention of
+      pre-existing wording needs no negative proof). See notes /
+      unconfirmed_reds.
+  AC-3:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestUnlaunchedDefinitionDivergenceDocumented.test_divergence_names_missing_journal_event_case
+      - tests.test_recycled_task_id_consistency.TestUnlaunchedDefinitionDivergenceDocumented.test_divergence_names_merged_status_consequence
+      - tests.test_recycled_task_id_consistency.TestUnlaunchedDefinitionDivergenceDocumented.test_divergence_marked_deliberate
+    red_confirmed: true
+    red_reason: >
+      All three failed against the pre-edit document with AssertionError:
+      the phrase not found in the normalized I.2.a section -- the
+      divergence statement is wholly new appended text, absent before this
+      task's edit.
+  AC-4:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestSupportingCastStopHookBulletScopedToCarveout.test_bullet_limits_equivalence_to_carveout_and_cites_i2a
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleStaysSingleSource.test_i2b_step1_citation_present
+    red_confirmed: true
+    red_reason: >
+      test_bullet_limits_equivalence_to_carveout_and_cites_i2a failed
+      against the pre-edit bullet: AssertionError -- "I.2.a is the owning
+      rule and this equivalence claim is limited to the carve-out itself"
+      not found. test_i2b_step1_citation_present is an unmodified retention
+      guard proving the I.2.b step 1 citation literal was never touched
+      (already passing before and after; this task does not edit I.2.b).
+  AC-5:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_three_journal_only_hooks_named_in_anchored_never_consult_slice
+      - tests.test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_stop_guard_named_as_explicit_exception_in_anchored_slice
+    red_confirmed: true
+    red_reason: >
+      Same evidence as AC-2 (the class's two separated claims). The
+      exception-slice test is a genuine red->green (ValueError on the
+      pre-edit anchor, see AC-2). The three-hook slice test embodies the
+      "no assertion satisfiable by a bare filename occurring elsewhere in
+      the section" structural requirement by construction (narrow
+      start/end anchors), which the retired
+      test_scope_sentence_names_all_four_hooks did not have; see
+      unconfirmed_reds for why that specific sub-check has no observed red.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Process/non-vacuity criterion, not a single runnable assertion:
+      verified by code review plus a grep-based constant-reader-count audit
+      run during implementation (every module-level constant this task
+      added or revised has >=2 readers, or was fully retired together with
+      all of its readers -- PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE and
+      its four old readers are removed with zero remaining occurrences).
+      The individual negative-proof and guard tests this criterion governs
+      are listed under AC-1..AC-4 above
+      (TestValidationDetectsRegressions.test_orchestrator_only_scope_phrase_matcher_flags_the_pre_change_wording,
+      test_stop_guard_exception_anchor_matcher_flags_absence_in_pre_change_wording,
+      test_divergence_phrases_matcher_flags_absence_in_pre_change_wording,
+      test_supporting_cast_scope_limit_phrase_matcher_flags_pre_change_wording,
+      and their TestPreChangeSampleGuards retained-anchor counterparts),
+      all of which pass.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Suite-level / scope criterion, not a single runnable assertion:
+      verified by running `python3 -m unittest discover -s tests` from the
+      repository root (1460 tests, exit 0, baseline was 1452/0 failures
+      before this task) and by `git status --porcelain` showing exactly the
+      two files in expected_files as modified.
