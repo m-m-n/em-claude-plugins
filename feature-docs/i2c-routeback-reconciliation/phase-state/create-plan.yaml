@@ -1,0 +1,21 @@
+schema_version: 1
+feature: i2c-routeback-reconciliation
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 82e8d5abb3b13104fad3de608523c0cd0751602f
+last_input_digest: sha256:c98fe05bfeb57017167af624047369430eeca9a2bf91f9c595367253887d1140
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:c98fe05bfeb57017167af624047369430eeca9a2bf91f9c595367253887d1140
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
