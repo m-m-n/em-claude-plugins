@@ -39,7 +39,8 @@ workflow:
     completed_at_commit: 59e026b2512d2baa4ebeb6b7431391e359c15e92
     base_commit: 642dd39c9c7ea466c9fa535226f8f5344495c859
   - id: review
-    status: pending
+    status: completed
+    completed_at_commit: b35bcbd36d1a11bd211be436f695ec824a231a27
   - id: verify
     status: pending
     result: null
@@ -63,16 +64,16 @@ tasks:
     branch: em-workflow/i2c-routeback-reconciliation/task0001
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor: [comprehensive, architecture, spec]
     discretionary: []
     cross_validation: false
   perspectives:
-    comprehensive: pending
-    architecture: pending
-    spec: pending
+    comprehensive: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 
