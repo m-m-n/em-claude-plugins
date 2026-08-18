@@ -1,11 +1,11 @@
 schema_version: 1
 feature: i2c-routeback-reconciliation
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
-base_revision: 7cb634bfb4fe868137a850c90ccac71df327bbc6
-last_input_digest: sha256:fbcafce0c4df933da02086fc747f2a3397179eb2b8f32fedcd0aea06db81d0ea
-active_request_id: create-spec-run-0001
+base_revision: 1307f2b0bcaf8c2db00251562b8ef7b1d9b34803
+last_input_digest: sha256:f90552a540e16957b28d2e32697e019a9b2fbb5ddf316d5b06ec156fa451a9f4
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -44,6 +44,14 @@ worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
     input_digest: sha256:fbcafce0c4df933da02086fc747f2a3397179eb2b8f32fedcd0aea06db81d0ea
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:87862277a920a2bc83bb7a82d68e7a93221df11c765b0a26bb500da2828abed6
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: dispatched
+    input_digest: sha256:f90552a540e16957b28d2e32697e019a9b2fbb5ddf316d5b06ec156fa451a9f4
     output_digest: null
 artifacts: []
 patches: []
