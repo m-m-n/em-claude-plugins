@@ -238,8 +238,11 @@ the Stop-hook bullet both cite as its source. The journal itself stays
 append-only (see Supporting cast below) — only the interpretation of its
 events is scoped by this rule.
 
-All four hooks detect a task as **unlaunched** solely from the absence of
-any journal event for that task id — never from `tasks.{T}.status`. This is
+The other three queue hooks detect a task as **unlaunched** solely from the absence of
+any journal event for that task id — never from `tasks.{T}.status`.
+`queue_stop_guard.py` is the exception: as described above, it also reads
+`tasks.{T}.status` to apply the recycled-task-id carve-out that reclassifies
+a `failed` + `pending` task as unlaunched. This is
 narrower than the orchestrator's own selection rule above, which
 additionally excludes any task whose `status` reads `merged`; the hooks
 carry no equivalent exclusion. This divergence is recorded, not fixed: the
