@@ -1,0 +1,128 @@
+schema_version: 1
+feature: exit4-tip-argument
+created: 2026-08-18
+base_branch: main
+parent_branch: em-workflow/exit4-tip-argument/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: a39cb61fb79b6500308b77045b6502bcebecf6fe
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "変更は em-workflow/references/implement-phase.md のプロトコル文面とテスト、および plugin version の bump に限られる。UI もユーザー可視のビジュアル面も無く、design-system 候補は 0 件のため designer が生成するものが無い。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "Every enumerated implement-phase commit-docs.sh call site passes a captured expected_base_tip"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3, TS4, TS6]
+  FR2:
+    title: "Step I.2.a states the refresh / capture / write / commit-with-tip sequence"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2, TS3]
+  FR3:
+    title: "Step I.3 states the refresh / capture / write / commit-with-tip sequence"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS4]
+  FR4:
+    title: "Step I.3's pinned sentence stays byte-identical and its test is not edited"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS4]
+  FR5:
+    title: "The refill re-entry into Step I.2.a captures a fresh tip, never reusing RECONCILE_TIP"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS5]
+  FR6:
+    title: "Plugin version bump accompanies the change"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "Wording parity with the existing tip-passing call sites"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "Documentation-only change"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "Existing test suite stays green without edits"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS2]
+  NFR4:
+    title: "Internal consistency of the exit-4 recovery enumeration"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS6]
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
