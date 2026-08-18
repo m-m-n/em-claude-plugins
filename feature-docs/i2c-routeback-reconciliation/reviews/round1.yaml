@@ -1,0 +1,70 @@
+round: 1
+executed_at: "2026-08-18T23:52:25+09:00"
+scope:
+  review_mode: diff
+  base_commit: 642dd39c9c7ea466c9fa535226f8f5344495c859
+  head_commit: b35bcbd36d1a11bd211be436f695ec824a231a27
+  changed_files:
+    - test-docs/i2c-routeback-reconciliation/task0001.tests.yaml
+  excluded_from_review:
+    - feature-docs/i2c-routeback-reconciliation/**
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+findings:
+  - stable_id: e42a404cafa83c7b
+    severity: medium
+    category: comprehensive
+    file: test-docs/i2c-routeback-reconciliation/task0001.tests.yaml
+    line: 4
+    title: "final_failures の根拠とされる「2回目のスイート実行」が baseline と経過時間まで完全一致しており、再実行の証拠になっていない"
+    description: |
+      baseline_failures のコメントは成果物を書く前の実行結果として "Ran 1522 tests in 12.759s / OK" を、
+      final_failures のコメントは 2 つの成果物を書いた後の再実行結果として同じ "Ran 1522 tests in 12.759s / OK"
+      を記録している。1522 件のスイートを独立に 2 回走らせて経過時間がミリ秒単位まで一致することは実質的に
+      起こらないため、この行は 2 回目の実行を実際に観測せず baseline の出力を写した可能性が高い。
+      em-workflow/agents/implementer.md Step 4c はこのファイルを後続タスクが失敗原因を帰属させるための
+      証拠と定義しているため、final_failures の裏付けが写しであることは記録の証拠価値を損なう。
+      なおスイート件数自体（total 1522 / 105 / 70）はレビュアーが独立に検証して一致している。
+    suggestion: |
+      実際に再実行してその回の実出力を記録するか、再実行していないなら「source / test ファイルを一切
+      変更していないため再実行せず baseline と同一」と主張のとおりに書き換える。同一の実行結果を 2 つの
+      独立した観測であるかのように提示しない。
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 auto-fix ゲート（critical/high のみ）の対象外。フォローアップタスクとして起票"
+  - stable_id: 7ad9024270d98c72
+    severity: medium
+    category: comprehensive
+    file: test-docs/i2c-routeback-reconciliation/task0001.tests.yaml
+    line: 14
+    title: "red_confirmed の意味を notes 内でローカルに再定義したまま 8 件すべて true にしており、SSOT（implementer.md 4c）の定義と食い違う"
+    description: |
+      notes は red_confirmed を「対応する記録セクションを書く前に該当アンカーを読んだこと」と、この
+      ファイルだけで通用する意味に再定義したうえで AC-1〜AC-8 すべてを tests: [] かつ red_confirmed: true
+      にしている。フィールドの意味を所有する em-workflow/agents/implementer.md Step 4c では
+      red_confirmed: true は「実装が存在しない状態でテストが落ちるのを実際に見た」ことを意味し、observe
+      できなかった red に true を書くなと明示されている。実行可能な red が原理的に存在しないケースの
+      契約側の指定は false + red_reason であり、true にして意味を差し替えることではない。機械的に読む
+      後続タスク・verify・unconfirmed_reds 集計は「8 件すべてで red→green の証跡がある」と解釈する。
+    suggestion: |
+      implementer.md 4c の規定どおり実行可能な red を観測していない criterion は red_confirmed: false に
+      して理由を red_reason に書き report の unconfirmed_reds に載せる。あわせて AC-4 は実在してパスする
+      4 つのテストメソッドを機械可読な tests: にも列挙する。
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 auto-fix ゲート（critical/high のみ）の対象外。フォローアップタスクとして起票"
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+  note: "critical/high の findings がゼロのため候補なし（R4 のゲートは severity ∈ {critical, high}）"
+residual_critical_high: 0
+rework_required: false
