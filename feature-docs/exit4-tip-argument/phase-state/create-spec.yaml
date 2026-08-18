@@ -1,21 +1,62 @@
 schema_version: 1
 feature: exit4-tip-argument
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 996b270c9e58319e99c9e2c32138c8334189a0f2
 last_input_digest: "sha256:4946e094e770e4eca8f31a1f5cf99f623d55810c2d09155a37c907cc754c5efd"
-active_request_id: create-spec-run-0002
-packets: {}
-answers: {}
+active_request_id: create-spec-run-0003
+packets:
+  create-spec-run-q0002:
+    status: answered
+    issued_at: "2026-08-18T13:35:00+09:00"
+    questions:
+      - question_id: requirement.approach
+        status: answered
+      - question_id: testing.i3-pin-handling
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  requirement.approach:
+    packet_id: create-spec-run-q0002
+    answered_at: "2026-08-18T13:35:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [explicit_step_sequence]
+    freeform: null
+    normalized_answer: "Add the refresh / tip-capture / write / commit-with-captured-tip ordering directly into Step I.2.a and Step I.3, mirroring Step I.2.b's existing wording."
+    resolution_note: "gate create-spec.requirement-clarification -> batch-policies.yaml action: codex_consultation. Codex (1 turn, readonly) verified the call sites and recommended explicit_step_sequence; the orchestrator judged the mapping onto the offered option_id. Recorded as an assumption per record_as_assumption: true."
+  testing.i3-pin-handling:
+    packet_id: create-spec-run-q0002
+    answered_at: "2026-08-18T13:35:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [preserve_pin]
+    freeform: null
+    normalized_answer: "Place all added mechanics strictly outside the pinned Step I.3 sentence; tests/test_rework_synthesis_contract.py is not edited."
+    resolution_note: "gate create-spec.requirement-clarification -> codex_consultation. Codex verified the pin is an assertIn substring check (tests/test_rework_synthesis_contract.py:209-217), so preserve_pin is achievable. Mapping judged by the orchestrator."
+  design-step.recommendation:
+    packet_id: create-spec-run-q0002
+    answered_at: "2026-08-18T13:35:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "Accept requirements-analyst's design_step_recommendation (skip) without asking the user."
+    resolution_note: "gate create-spec.design-step -> batch-policies.yaml action: select, option_id: decide_autonomously."
 worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
     input_digest: "sha256:4946e094e770e4eca8f31a1f5cf99f623d55810c2d09155a37c907cc754c5efd"
     output_digest: "sha256:invalid-gate-option-vocabulary"
   - request_id: create-spec-run-0002
-    status: dispatched
+    status: needs_user_input
     input_digest: "sha256:4946e094e770e4eca8f31a1f5cf99f623d55810c2d09155a37c907cc754c5efd"
+    output_digest: "sha256:validated"
+  - request_id: create-spec-run-0003
+    status: dispatched
+    input_digest: null
     output_digest: null
 artifacts: []
 patches: []
@@ -34,4 +75,4 @@ resolved_input_cache:
     paths: []
     digests: {}
     truncated: false
-last_error: "create-spec-run-0001: worker-result validation error (gate_id): create-spec.design-step must offer option_id decide_autonomously"
+last_error: null
