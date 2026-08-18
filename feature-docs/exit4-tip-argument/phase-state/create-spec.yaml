@@ -1,14 +1,22 @@
 schema_version: 1
 feature: exit4-tip-argument
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 996b270c9e58319e99c9e2c32138c8334189a0f2
-last_input_digest: null
-active_request_id: null
+last_input_digest: "sha256:4946e094e770e4eca8f31a1f5cf99f623d55810c2d09155a37c907cc754c5efd"
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:4946e094e770e4eca8f31a1f5cf99f623d55810c2d09155a37c907cc754c5efd"
+    output_digest: "sha256:invalid-gate-option-vocabulary"
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: "sha256:4946e094e770e4eca8f31a1f5cf99f623d55810c2d09155a37c907cc754c5efd"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -26,4 +34,4 @@ resolved_input_cache:
     paths: []
     digests: {}
     truncated: false
-last_error: null
+last_error: "create-spec-run-0001: worker-result validation error (gate_id): create-spec.design-step must offer option_id decide_autonomously"
