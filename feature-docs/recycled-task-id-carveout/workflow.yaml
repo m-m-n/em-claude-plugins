@@ -31,8 +31,8 @@ workflow:
     status: completed
     completed_at_commit: 4bfb1998c5b48c6af7aa305f869b72a5a135e999
   - id: implement
-    status: in_progress
-    completed_at_commit: 78e8abf4e5bf1cf10e91c10b0d4f3cb44fe75b2c
+    status: completed
+    completed_at_commit: 2adeeaaaf9a9f6722fd0fec5f66c640887c5e666
     base_commit: bd0c6b8c00ad43280fee123ca39be80be2418a9e
   - id: review
     status: completed
