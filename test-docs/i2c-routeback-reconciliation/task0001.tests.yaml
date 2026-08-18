@@ -1,0 +1,107 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any file was
+                                # written: "Ran 1522 tests in 12.759s / OK" -- no failures inherited.
+final_failures: []             # same command, run again after writing the two output files (no
+                                # source or test file touched): "Ran 1522 tests in 12.759s / OK".
+notes: >
+  This task produces a verification record, not code (SPEC.md NFR4 forbids adding a mechanical
+  checker). There is no executable unit under test, so each acceptance criterion's "test" is a
+  documentary re-observation: read the cited anchor in the already-merged
+  em-workflow/references/implement-phase.md, the two document-contract test modules, the two
+  source SPECs, or the two plugin manifests, and confirm the observed content before writing the
+  corresponding claim into RECONCILIATION-RECORD.md (Design step 1-3: observe, classify, write).
+  Before this task ran, RECONCILIATION-RECORD.md did not exist at all, so every criterion below was
+  necessarily unsatisfied (red) until its section was written; red_confirmed records that the
+  underlying anchor was located and read BEFORE the corresponding record section was composed, per
+  Design step 3's ordering discipline.
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      RECONCILIATION-RECORD.md did not exist before this task. Anchors read before writing
+      Section 1: em-workflow/references/implement-phase.md lines 407-408 (gate conjunction),
+      413-418 (`merged` half union), 418-423 (`in_progress` half union), 423-428
+      (terminal-last-event derivation, and the no-journal-event-never-blocks clause);
+      feature-docs/recycled-task-id-consistency/SPEC.md Merge Note row 1 (line 21, "FR3's
+      precondition holds as that union member rather than as a separate check");
+      feature-docs/routeback-gate-postcondition/SPEC.md AC1 (lines 35-37);
+      feature-docs/recycled-task-id-consistency/SPEC.md AC-3 (line 50). All quoted phrases were
+      located by direct read/grep in this worktree before Section 1 was composed.
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      Anchors read before writing Section 2: em-workflow/references/implement-phase.md lines
+      428-429 (refresh), 431 (ROUTEBACK_TIP), 432-433 (write set start), 444 ("Commit that write
+      set next, BEFORE any cleanup"), 450-452 ("Only once that commit succeeds"), 456-459
+      (residual leftover state); feature-docs/recycled-task-id-consistency/SPEC.md Merge Note row 3
+      (line 23) and line 160 diagram, NFR1 line 87, TS-10 line 244 (as-written ordering being
+      superseded); feature-docs/routeback-gate-postcondition/SPEC.md AC3 (lines 47-49) confirmed
+      still holding by locating the first commit-docs.sh call inside the I.2.c section (line 445)
+      and showing the gate group (407-428) precedes it.
+  AC-3:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      Anchors read before writing Section 3: em-workflow/references/implement-phase.md lines
+      467-472 (four rejection causes), 473-474 (refresh), 475 (TERMINAL_TIP), 476-478 (single
+      write), 478-479 (single commit and its message), 479-482 (scoped no-side-effect sentence),
+      485-486 (no retry/alternative/degraded route back); feature-docs/routeback-gate-postcondition/SPEC.md
+      FR2 (lines 86-90), FR3/AC3 (lines 91-94, 47-49); feature-docs/recycled-task-id-consistency/SPEC.md
+      Merge Note row 2 (line 22, "same guarantee, stated as an explicit write rather than as an
+      absence").
+  AC-4:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      Anchors read before writing Section 4: tests/test_implement_routeback_gate.py methods
+      test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup,
+      test_rejected_path_order_gate_terminal_write_terminal_commit,
+      test_implement_is_written_to_failed_and_committed (class TestGateDecisionPrecedesAllSideEffects
+      / TestRejectedPathHasSingleGeneralizedTerminal); tests/test_recycled_task_id_consistency.py
+      method test_commit_precedes_cleanup_precedes_end_of_phase_report (class TestI2cOrderings,
+      docstring lines 864-871). `python3 -m unittest discover -s tests` run from the repository
+      root: "Ran 1522 tests in 12.759s / OK", matching SPEC.md ASM2's 1522-test baseline.
+      `python3 -m unittest tests.test_implement_routeback_gate`: "Ran 105 tests ... OK".
+      `python3 -m unittest tests.test_recycled_task_id_consistency`: "Ran 70 tests ... OK".
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      Anchors read before writing Section 5: em-workflow/.claude-plugin/plugin.json line 7
+      ("version": "0.1.45") and .claude-plugin/marketplace.json em-workflow entry line 26
+      ("version": "0.1.45"), read via direct file read and via `python3 -c "import json; ..."`;
+      feature-docs/recycled-task-id-consistency/SPEC.md FR9 (line 83) and AC-9 (line 66, target
+      0.1.38); feature-docs/i2c-routeback-reconciliation/SPEC.md FR5 (lines 98-108), FR6 (lines
+      110-117), ASM1 (lines 372-376) and ASM2 (lines 377-380) for the PR #5 orchestrator evidence
+      and the ADM4-fourth-acceptance-criterion mapping; feature-docs/recycled-task-id-consistency/SPEC.md
+      Merge Note (lines 9-27) read as in-repo corroborating evidence.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      Anchors read before writing Section 6: the same routeback-gate-postcondition FR3/AC3 and
+      recycled-task-id-consistency ordering anchors used for AC-2/AC-3 above, assembled into the
+      three-column departure table; confirmed feature-docs/routeback-gate-postcondition/SPEC.md
+      contains no "Merge Note" heading (grep returned no match).
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      Every quoted phrase in the record was located by grep/read in this worktree before being
+      written, each paired with its containing section and an observed line range (or, for the
+      test-suite evidence, a module path plus test-method name). No section of the record cites
+      the task description's narrative directly; PR #5 and version-bump narrative claims cite this
+      feature's own SPEC.md sections instead. Backtick conventions and feature-qualified
+      requirement IDs were applied throughout while composing the record (self-checked by re-read
+      after writing).
+  AC-8:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      `git diff --name-only` against the merge-base with
+      em-workflow/i2c-routeback-reconciliation/integration was empty before this task wrote any
+      file (confirmed at the start of the task); after committing RECONCILIATION-RECORD.md and
+      task0001.tests.yaml, the same diff lists exactly those two paths and no path under
+      em-workflow/ or tests/, and neither manifest -- recorded in RECONCILIATION-RECORD.md Section 7.
