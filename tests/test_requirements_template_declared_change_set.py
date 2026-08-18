@@ -98,10 +98,11 @@ TOP_LEVEL_HEADINGS = (
 ROOT_FEATURE_DOCS = "feature-docs/{feature}/**"
 ROOT_TEST_DOCS = "test-docs/{feature}/**"
 
-# DM-2: the eight feature-docs members, verbatim.
+# DM-2: the nine feature-docs members, verbatim.
 FEATURE_DOCS_MEMBERS = (
     "REQUIREMENTS.md",
     "SPEC.md",
+    "IMPLEMENTATION.md",
     "workflow.yaml",
     "phase-state/",
     "tasks/",
