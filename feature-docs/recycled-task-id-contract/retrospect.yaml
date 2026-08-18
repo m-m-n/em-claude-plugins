@@ -1,0 +1,95 @@
+feature: recycled-task-id-contract
+collected_at: "2026-08-18T11:27:00+09:00"
+session_ids: [01a01257-05c6-7000-9636-13d59305a44b]
+signals:
+  review_critical_high:
+    - stable_id: 56b64fea7f61b999
+      category: comprehensive
+      file: tests/test_hook_classification_pin.py
+      title: "pin テストの観測規則が tasks.{T}.status ではなく文字列 workflow.yaml を見ており、意図した drift を検出できない"
+      resolution: fixed
+    - stable_id: 9de3e28d9fe3bd98
+      category: spec
+      file: tests/test_hook_classification_pin.py
+      title: "pin テストの観測規則が FR5 の要求と別命題を測っており、実装片側の変更を検出できない"
+      resolution: fixed
+    - stable_id: 5e4ac6eb66fcd379
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "新規段落「All four hooks ... never from tasks.{T}.status」が同一文書・同一コードと矛盾する"
+      resolution: fixed
+    - stable_id: 12d628ea378ca770
+      category: architecture
+      file: tests/test_recycled_task_id_consistency.py
+      title: "共有パーサの sibling import が実行形式に依存し python3 -m unittest tests.<module> を壊す"
+      resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - id: TS13
+      note: >-
+        NFR4 不成立。TestObserveHookSource が hook パスと期待分類をリテラルで持ち、
+        implement-phase.md の分類テーブルと独立した第二の分類 SSOT になっていた。
+        verify auto-rework 1 回で task0003 を追加し解消。
+  discretionary_perspectives: []
+  declined_findings: []
+  deferred_findings:
+    - stable_id: b4393fb2176068e4
+      category: spec
+      resolution_reason: "medium のため auto-fix 候補外。後に TS13 として verify が捕捉し task0003 で解消済み"
+    - stable_id: 50019760ded86f26
+      category: spec
+      resolution_reason: "b4393fb2176068e4 と同一。task0003 で解消済み"
+    - stable_id: 8a1f0c4d2e6b7935
+      category: comprehensive
+      resolution_reason: "medium。auto-fix が持ち込んだ識別子名ヒューリスティックの弱さ。未解消"
+    - stable_id: c5b9df953b1fa49f
+      category: comprehensive
+      resolution_reason: "medium。分類テーブルパーサの \\| エスケープ非対応。未解消"
+    - stable_id: 61b85ceaf53452ce
+      category: comprehensive
+      resolution_reason: "medium。marketplace 全体のエントリ数スナップショット。未解消"
+    - stable_id: 4d38d19e836bbffb
+      category: comprehensive
+      resolution_reason: "medium。task0002.tests.yaml の AC-4 に red_confirmed 欠落。未解消"
+    - stable_id: 3c7e5b9a1d4f8026
+      category: comprehensive
+      resolution_reason: "medium。auto-fix 後に task0001.tests.yaml の記録が陳腐化。未解消"
+lessons_candidates:
+  - >-
+    implementer が status: merged と merge_commit を報告したが、その merge commit は存在せず
+    journal にも merged イベントが無く task branch も 1 コミットも進んでいなかった（task0003 初回）。
+    implement-phase.md I.2.b step 1 の trust-but-verify（merge-base --is-ancestor）だけでは
+    検出できなかった — task branch が起点から一切進んでいない場合、その branch は integration の
+    ancestor に自明に該当してチェックを素通りする。orchestrator が merged 判定を出す前に
+    「journal に当該 task の merged イベントが存在すること」と「報告された merge_commit が
+    git cat-file で実在すること」を併せて確認する必要がある。この見落としで worktree を削除し、
+    実装成果を失った。
+  - >-
+    上記の誤判定から復帰する際、journal の最終イベントが launched のままだったため
+    queue_launch_guard.py が retry を deny した。orchestrator は journal を書けない規約なので、
+    stop-tool recorder（queue_taskstop_net.py）を発火させるために完了済みエージェントへ
+    TaskStop を発行して failed イベントを追記させる必要があった。この復帰経路は
+    implement-phase.md の stale-launched caveat に記述はあるが、
+    「orchestrator 自身の誤判定で in-flight でないのに launched が残った」ケースの手順としては
+    明示されていない。
+  - >-
+    review の auto-fix 候補ゲートが critical/high に限定されているため、NFR4 違反
+    （b4393fb2176068e4、medium）が review では deferred になり、その後 verify の TS13 として
+    再検出されて rework 1 周を消費した。VERIFICATION.md のシナリオに直接紐づく medium finding は、
+    review 時点で verify を落とすことが予見できる。review 段階で「この finding は
+    VERIFICATION.md のどのシナリオを落とすか」を判定して昇格させる余地がある。
+  - >-
+    spec-writer / implementation-planner / rework-planner はいずれもシェル実行ツールを持たないため
+    written_artifacts の sha256 を算出できず null を返した。3 ワーカーとも同じ警告を出しており、
+    契約側で digest 算出を orchestrator の layer 5 責務として明記するか、ワーカーに
+    ハッシュ手段を与えるかの判断余地がある。
+  - >-
+    rework-planner が written_artifacts に task0003.md を申告したが実際には書かれていなかった
+    （1 回目）。layer 5 artifact validation（宣言ファイルの実在確認）が捕捉した。
+    ワーカーの written_artifacts 申告は実在確認なしに信用できない。
+  - >-
+    implementation-planner の task0002.md の Files セクションが
+    validate-worker-output.py の抽出規則（1 bullet に backtick 引用は 1 つだけ）に違反し、
+    files-mismatch で validation エラーになった。plan-writing スキルまたは
+    task-plan テンプレートにこの制約を明記すると初回で通せる。
