@@ -1,14 +1,18 @@
 schema_version: 1
 feature: declared-change-set-implementation
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: 996b270c9e58319e99c9e2c32138c8334189a0f2
-last_input_digest: null
-active_request_id: null
+base_revision: a7bb5b736cbdac48e7f24cf10fe73ce2639d5d47
+last_input_digest: sha256:605989c2051c48beebe742dbda75c0628559c847e38d528f63b23412a24c26f5
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:605989c2051c48beebe742dbda75c0628559c847e38d528f63b23412a24c26f5
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
