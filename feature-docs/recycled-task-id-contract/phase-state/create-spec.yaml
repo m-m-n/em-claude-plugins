@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 996b270
 last_input_digest: "sha256:8c7991c52ad35d6ea51b26546dbc8c92471d2e5ce502326b8999227c8403e8a3"
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   recycled-task-id-contract-q0001:
     status: answered
@@ -72,7 +72,17 @@ worker_runs:
     status: completed
     input_digest: "sha256:8c7991c52ad35d6ea51b26546dbc8c92471d2e5ce502326b8999227c8403e8a3"
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:8c7991c52ad35d6ea51b26546dbc8c92471d2e5ce502326b8999227c8403e8a3"
+    output_digest: null
+artifacts:
+  - path: feature-docs/recycled-task-id-contract/REQUIREMENTS.md
+    sha256: "sha256:10288502c28da80244e6e4a43eef6534c2b20b189e20051c3c3a6c4026174a7c"
+    produced_by: create-spec-run-0003
+  - path: feature-docs/recycled-task-id-contract/SPEC.md
+    sha256: "sha256:1ccc88491057a2506cbdf48eb9fed11ffd547d9e5a67bd9e266a2cca82d8ba3e"
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
