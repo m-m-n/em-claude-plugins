@@ -1,0 +1,289 @@
+round: 1
+executed_at: "2026-08-18T11:05:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 51f9424ec654f260a653df316d0e12f28c39cd42
+  head_commit: 7a6a2c0f54a07c0641ed5c188adea627fa483c6e
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/recycled-task-id-contract/task0001.tests.yaml
+    - test-docs/recycled-task-id-contract/task0002.tests.yaml
+    - tests/test_hook_classification_pin.py
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_recycled_task_id_contract_version_bump.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+findings:
+  - stable_id: 56b64fea7f61b999
+    severity: high
+    category: comprehensive
+    file: tests/test_hook_classification_pin.py
+    line: 215
+    title: "pin テストの観測規則が tasks.{T}.status ではなく文字列 workflow.yaml を見ており、意図した drift を検出できない"
+    description: >-
+      reads_per_task_status() は `return "workflow.yaml" in stripped` で、実行コード中に
+      workflow.yaml という文字列が現れるかだけを見ていた。queue_stop_guard.py が True になる
+      唯一の根拠は feature 探索用の glob 文字列であり、task_statuses_from_workflow() /
+      status == "pending" の carve-out とは無関係。carve-out を丸ごと削除しても pin は緑のまま
+      通るため、SPEC FR5 の「実装側だけが変わったら落ちる」性質が成立していなかった。実在の
+      反例として em-workflow/hooks/bash_guard.py は workflow.yaml を読むが per-task status には
+      触れない。
+    suggestion: >-
+      観測対象を実際のシグナルに寄せる。AST を歩いて per-task status 抽出の痕跡を判定条件に
+      含め、workflow.yaml 参照との AND にする。carve-out だけを削った合成ソースに対して観測が
+      False へ反転する非自明性テストを固定すること。
+    sources: [claude:comprehensive, claude:spec, claude:architecture]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: >-
+      auto-applied round 1 loop 1。観測規則を「workflow.yaml が docstring 除去後のソースに現れる」
+      AND「per-task status アクセサが AST 上で定義され、かつ実際に呼び出されている」の合成条件へ
+      置換。bash_guard.py を実ファイルの反例とする非自明性テスト、および carve-out だけを削った
+      合成 queue_stop_guard ソースで False へ反転することを固定するテストを追加。3 観点の再レビュー
+      すべてが解消を確認した。
+  - stable_id: 9de3e28d9fe3bd98
+    severity: high
+    category: spec
+    file: tests/test_hook_classification_pin.py
+    line: 215
+    title: "pin テストの観測規則が tasks.{T}.status ではなく workflow.yaml の有無を見ており、実装片側の変更を検出できない"
+    description: >-
+      SPEC FR5 および Data Flow が要求する「各 hook のソースが tasks.{T}.status を読むかを検証し、
+      ドキュメント側だけ・実装側だけの変更で落ちること」に対し、観測規則が別命題を測っていた。
+      queue_stop_guard.py から status トークンを全除去したコピーに対しても True を返すことを実証。
+    suggestion: >-
+      観測規則を tasks.{T}.status の読み取りそのものに紐づける（AST での status 抽出痕跡、または
+      hook 側の機械可読マーカー）。
+    sources: [claude:spec]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: >-
+      56b64fea7f61b999 と同一サイトの同一欠陥。同じ auto-fix で解消。spec 観点の再レビューが
+      FR5 充足を確認した（carve-out 削除で観測が False へ反転することが合成テストで担保）。
+  - stable_id: 5e4ac6eb66fcd379
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 241
+    title: "新規段落「All four hooks ... never from tasks.{T}.status」が同一文書・同一コードと矛盾する"
+    description: >-
+      I.2.a に追加された段落が「全 4 hook は journal イベントの不在のみから unlaunched を判定し、
+      tasks.{T}.status からは決して判定しない」と全称で述べていたが、(1) 同じ節の十数行前が
+      queue_stop_guard.py は tasks.{T}.status を読むと述べ、(2) Supporting cast の Stop-hook
+      箇条書きが failed + pending のタスクを unlaunched へ再分類すると述べ、(3) 実コード
+      queue_stop_guard.py の classify が task_statuses.get(task_id) == "pending" の分岐で
+      unlaunched.append している。本 feature が除去しようとした自己矛盾（FR1）と同種の矛盾を
+      同じ節に持ち込んでいた。
+    suggestion: >-
+      全称の主語を実際の分類に合わせて絞り、queue_stop_guard.py が carve-out 経由で再分類する点を
+      1 文添える。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: >-
+      auto-applied round 1 loop 1。「All four hooks」を「The other three queue hooks」に置換し、
+      queue_stop_guard.py の carve-out 例外を明示する 1 文を追加。テストが逐語で固定している
+      5 つのリテラル部分文字列は保持。3 観点の再レビューが実コードとの一致を確認した。
+  - stable_id: 0761142669e5c710
+    severity: medium
+    category: architecture
+    file: tests/test_hook_classification_pin.py
+    line: 195
+    title: "分類テーブルの語彙と pin の観測規則が別命題を測っている（SSOT と検証器の契約ドリフト）"
+    description: >-
+      表の語彙は「reads tasks.{T}.status / does not read tasks.{T}.status」なのに、一致を担保する
+      唯一の pin は文字列 workflow.yaml の有無を観測していた。偽の不一致（他 hook が別目的で
+      workflow.yaml を読むと disagreement）と偽の一致（パス生成のリファクタで観測だけ反転）の
+      両方向の破綻経路がある。
+    suggestion: 観測規則を分類語彙と同じ命題に揃える。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: >-
+      56b64fea7f61b999 と同一の欠陥をアーキテクチャ観点から述べたもの。同じ auto-fix で解消。
+      architecture 観点の再レビューが解消を確認した（残る弱点として識別子名ベースの静的
+      ヒューリスティックである点を挙げたが、新規 finding にはしないと明言）。
+  - stable_id: 12d628ea378ca770
+    severity: medium
+    category: architecture
+    file: tests/test_recycled_task_id_consistency.py
+    line: 156
+    title: "共有パーサがテストモジュール内に置かれ、暗黙の sys.path 依存で sibling import されている"
+    description: >-
+      parse_classification_table / reads_per_task_status / compare_table_to_sources と分類語彙定数は
+      library 的責務だが tests/test_hook_classification_pin.py 内に置かれ、
+      tests/test_recycled_task_id_consistency.py が裸のトップレベル名で import している。
+      tests/ に __init__.py が無いため、この import が解決するのは unittest discover -s tests が
+      tests/ を sys.path に差し込むときだけ。リポジトリルートからの
+      `python3 -m unittest tests.test_recycled_task_id_consistency` は ModuleNotFoundError になる。
+      tests/ 配下で唯一の兄弟テストモジュール import であり、既存慣行
+      （importlib.util.spec_from_file_location に絶対パスを渡す）から外れている。
+      加えて task0001.tests.yaml と task0002.tests.yaml でテスト ID の表記形式が割れている。
+    suggestion: >-
+      importlib.util.spec_from_file_location による絶対パス読み込みへ変更するか、パーサと語彙定数を
+      tests/support/ 配下の非テストモジュールへ切り出す。併せて 2 つの tests.yaml のテスト ID 表記を
+      どちらか一方へ揃える。
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: >-
+      再レビューで comprehensive が high に格上げして再報告したため R4 loop 2 の候補となり、
+      auto-applied round 1 loop 2。裸の sibling import を importlib.util.spec_from_file_location による
+      絶対パス読み込み（tests/test_check_plugin_invariants.py の既存慣行と同形）へ置換し、登録名を
+      `_hook_classification_pin` として discover 由来のコピーと衝突しないようにした。適用後に両方の
+      起動形式を実測: `python3 -m unittest tests.test_recycled_task_id_consistency` → 70 tests OK、
+      `python3 -m unittest discover -s tests` → 1506 tests OK。最終再レビューが新規欠陥なしを確認。
+  - stable_id: ceb19e4508f5a9ac
+    severity: medium
+    category: comprehensive
+    file: tests/test_recycled_task_id_consistency.py
+    line: 156
+    title: "兄弟モジュールの裸 import が python3 -m unittest tests.<module> を壊す"
+    description: >-
+      12d628ea378ca770 と同一サイト・同一欠陥を包括観点から述べたもの。単一モジュールを指定した
+      切り分け実行が失敗するため、後続フェーズ（verify / rework）の実務で踏みやすい。
+    suggestion: sys.path への自ディレクトリ挿入、または tests/ のパッケージ化。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "12d628ea378ca770 と同一サイト・同一欠陥。同じ auto-fix（loop 2）で解消。"
+  - stable_id: b4393fb2176068e4
+    severity: medium
+    category: spec
+    file: tests/test_hook_classification_pin.py
+    line: 397
+    title: "TestObserveHookSource が4フックの分類をテスト内にハードコードし、NFR4 と FR5 の「単一テスト」に反する"
+    description: >-
+      TestObserveHookSource の 4 メソッドが分類表を参照せず、hook パスと期待分類の両方をリテラルで
+      書いている。表と独立にドリフトする分類の写しであり NFR4 に反する。また表の 4 hook それぞれの
+      分類を検証するテストが pin テスト以外に 4 本存在する状態で、FR5 の「single test」にも抵触する。
+    suggestion: >-
+      当該 4 メソッドを削除する（表由来の pin テストと TestRecycledTaskIdRuleScopedToOrchestrator が
+      既に完全にカバーしており、観測規則の非自明性は反例・合成ソーステスト群が担保している）。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: deferred
+    resolution_reason: "medium のため auto-fix 候補ゲート（critical/high）に該当せず。別タスクとして起票する。"
+  - stable_id: 61b85ceaf53452ce
+    severity: medium
+    category: comprehensive
+    file: tests/test_recycled_task_id_contract_version_bump.py
+    line: 167
+    title: "version bump テストがマーケットプレイス全体のスナップショットを固定し、プラグイン追加で無関係に落ちる"
+    description: >-
+      MARKETPLACE_NAME_SOURCE_BASELINE が 2 エントリを literal で持ち、test_entry_count_unchanged が
+      len(plugins) == 2 を主張する。CLAUDE.md はプラグイン追加を通常運用として明記しているため、
+      3 つ目のプラグイン追加時点で em-workflow の version bump と無関係にこのモジュールが赤くなる。
+      既存の同種モジュールにはこのエントリ数ガードは無い。
+    suggestion: >-
+      assertGreaterEqual へ緩めるか、test_em_workflow_entry_name_and_source_unchanged に一本化する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "medium のため auto-fix 候補外。将来のプラグイン追加時に顕在化する。別タスクとして起票する。"
+  - stable_id: 4d38d19e836bbffb
+    severity: medium
+    category: comprehensive
+    file: test-docs/recycled-task-id-contract/task0002.tests.yaml
+    line: 24
+    title: "AC-4 エントリに必須の red_confirmed が欠落している"
+    description: >-
+      implementer.md が定める tests.yaml スキーマでは全 Acceptance Criterion エントリが
+      tests / red_confirmed / red_reason を持つ。task0002.tests.yaml の AC-4 だけが red_confirmed を
+      欠く。後続フェーズが失敗の帰属根拠として読む成果物であり、フィールド欠落は KeyError や
+      判定スキップを招く。関連して task0001.tests.yaml の AC-7 は観測していない red に true を
+      書いている疑いがある。
+    suggestion: "AC-4 に red_confirmed: false を追加し、task0001.tests.yaml の AC-7 も併せて訂正を検討する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "medium のため auto-fix 候補外。別タスクとして起票する。"
+  - stable_id: 50019760ded86f26
+    severity: medium
+    category: spec
+    file: tests/test_hook_classification_pin.py
+    line: 346
+    title: "NFR4 違反: hook ごとの分類がテスト内にハードコードで重複している（round 1 初回報告）"
+    description: >-
+      b4393fb2176068e4 の初回報告。auto-fix によりファイル内容が変わり行番号が移動したため、
+      再レビューでは b4393fb2176068e4 として再報告された。同一欠陥。
+    suggestion: b4393fb2176068e4 を参照。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: deferred
+    resolution_reason: "b4393fb2176068e4 と同一。medium のため auto-fix 候補外。"
+  - stable_id: c5b9df953b1fa49f
+    severity: medium
+    category: comprehensive
+    file: tests/test_hook_classification_pin.py
+    line: 152
+    title: "分類テーブルのパーサが \\| エスケープを処理せず、パイプを含むセルで誤ったカラム数になる"
+    description: >-
+      parse_classification_table() が line.strip().strip("|").split("|") と素朴に分割するため、
+      Markdown の \\| エスケープを含むセルがあると、その行だけカラム数が合わず黙ってスキップされる。
+      現在の表に該当セルは無いので今は動くが、行が消えてもパーサはエラーを出さない。
+    suggestion: >-
+      分割前にエスケープを sentinel へ退避して処理する。または区切り行以外で 2 カラムでない行に
+      出会ったら AssertionError を投げ、パーサの限界が原因だと即座に分かるようにする。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "medium のため auto-fix 候補外。現在の表では顕在化しない潜在欠陥。別タスクとして起票する。"
+  - stable_id: 8a1f0c4d2e6b7935
+    severity: medium
+    category: comprehensive
+    file: tests/test_hook_classification_pin.py
+    line: 212
+    title: "auto-fix で入った関数名ヒューリスティックが pin の drift 検出力を弱めた"
+    description: >-
+      loop 1 の修正が `_TASK_STATUS_NAME_RE`（"task" と "status" が同一識別子内に共起する関数名）に
+      一致する関数の定義かつ呼び出しを AND 条件に加えた。bash_guard 型の誤検知は潰れたが、
+      queue_launch_guard.py に tasks.{T}.status を読む処理が追加されてもヘルパ名が規則に合わなければ
+      observed = does-not-read となり pin がグリーンのまま通る silent false-negative を作った。
+      逆に既存 task_statuses_from_workflow を改名しただけで偽の赤を出す点もリファクタ耐性として弱い。
+    suggestion: >-
+      識別子名に依存しない値レベルの signal に置き換える。docstring 除去後の実行コードに
+      "workflow.yaml" と "status" の両方が出現する条件に差し替えれば、現行 5 ファイルすべてで
+      同じ正答を出しつつヘルパ名に依存しない。あわせて「status 読み出しを追加したが名前が規則に
+      合わない合成ソースが True になる」非空虚テストを 1 本追加する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: >-
+      medium のため R4 の auto-fix 候補ゲート（critical/high）に該当せず。当初の high（文字列
+      部分一致のみ）は解消済みで、architecture 観点も「当初指摘の具体的失敗モードは塞がれている」と
+      判断している。別タスクとして起票する。
+  - stable_id: 3c7e5b9a1d4f8026
+    severity: medium
+    category: comprehensive
+    file: test-docs/recycled-task-id-contract/task0001.tests.yaml
+    line: 39
+    title: "auto-fix 後にテスト記録が更新されておらず、存在しない文面を引用し新規テストが未記録"
+    description: >-
+      loop 1 の副次影響。(1) AC-3 の red_reason が「All four hooks ...」という現在は存在しない文面を
+      引用している（実際は「The other three queue hooks ...」に書き換わった）。(2) loop 1 が
+      tests/test_hook_classification_pin.py に追加した非空虚性テスト 3 本がどの AC の tests リストにも
+      載っていない。(3) AC-7 の red_reason がテスト総数を旧件数のまま記録している。
+    suggestion: >-
+      task0001.tests.yaml を auto-fix 後の実態に合わせて更新する（引用文面の訂正、新規 3 テストの
+      AC への追加、テスト総数の再計測値への置換）。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: >-
+      medium のため auto-fix 候補外。記録の陳腐化であり成果物の機能には影響しない。別タスクとして
+      起票する。
+auto_fix:
+  loops_run: 2
+  applied_total: 3
+  termination: clean
+residual_critical_high: 0
+rework_required: false
