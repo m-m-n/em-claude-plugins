@@ -85,7 +85,7 @@ tasks:
     requirements:
     - FR4
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/declared-change-set-implementation/task0002
 review:
