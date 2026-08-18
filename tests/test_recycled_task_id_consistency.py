@@ -26,7 +26,11 @@ Covers task0001 Acceptance Criteria
 - AC-6 (FR6): a sentence scopes the recycled-task-id rule to the
   orchestrator's interpretation of the journal, naming all four hooks and
   stating they never consult `tasks.{T}.status` (never the stronger,
-  false "never reads workflow.yaml").
+  false "never reads workflow.yaml"). SUPERSEDED by task0001
+  (recycled-task-id-carveout) below: the "governs only the orchestrator's
+  interpretation" framing was itself the self-contradiction that feature
+  removes (SPEC.md's Overview) -- `TestRecycledTaskIdRuleScopedToOrchestrator`
+  now asserts a different contract; see that paragraph for the current one.
 - AC-7 (NFR1, NFR3, NFR4): the full suite (including the six protected
   pre-existing modules) stays green; no bare `git ... commit`/`add -A`
   line is introduced -- verified by the untouched
@@ -45,6 +49,44 @@ constant shared by its positive test and its negative-proof test (Contract
 1), and the negative proofs run against captured pre-change wording samples
 (Contract 2) in `TestValidationDetectsRegressions`, guarded for non-vacuity
 in `TestPreChangeSampleGuards` (Contract 4).
+
+task0001 (recycled-task-id-carveout) rewrites the I.2.a closing scope
+sentence and its Supporting-cast citing bullet
+(feature-docs/recycled-task-id-carveout/tasks/task0001.md):
+
+- AC-1/AC-2 (FR1): the self-contradictory literal "governs only the
+  orchestrator's interpretation of the journal" -- immediately followed by
+  a declared exception for `queue_stop_guard.py` -- is removed and replaced
+  by a single non-contradictory rule: the recycled-task-id rule applies to
+  the orchestrator's interpretation of the journal AND, identically, to
+  `queue_stop_guard.py`, which applies the same carve-out itself; the other
+  three hooks derive state from the journal's last event alone and never
+  consult `tasks.{T}.status`. Neither "never read(s) workflow.yaml" occurs
+  anywhere (unchanged regression guard).
+- AC-3 (FR6): a new sentence, appended to the same paragraph, documents the
+  deliberate unlaunched-definition divergence -- the hook classifies a task
+  with no journal event as unlaunched without consulting its
+  workflow.yaml status, so a missing/truncated journal can surface a
+  `merged`-status task in the hook's launch list -- marked as intended
+  fail-open behavior, not a defect. No hook file is touched.
+- AC-4 (FR2, NFR6): the Supporting-cast Stop-hook bullet's equivalence
+  claim is rescoped to state explicitly that it is limited to the
+  carve-out itself and that I.2.a is the owning rule; the I.2.b step 1
+  citation literal is unchanged (retention test, unmodified).
+- AC-5/AC-6 (FR3, FR5): `TestRecycledTaskIdRuleScopedToOrchestrator` is
+  split into two anchored-slice claims (the three journal-only hooks;
+  `queue_stop_guard.py` as the single exception) replacing the four-hook
+  filename-presence conjunction that stayed green with its meaning
+  inverted (SPEC.md's Overview) -- neither claim is satisfiable by a
+  filename occurring merely somewhere in the section.
+  `ORCHESTRATOR_ONLY_SCOPE_PHRASE` is repurposed from a presence matcher's
+  literal to a whole-document absence matcher's literal (Contract 1: kept
+  as one constant, still shared by its positive test and its negative
+  proof). `PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE` and its sole
+  remaining reader are retired together, since every matcher that used it
+  is retired by this task.
+- AC-7 (FR8, NFR1, NFR2): the whole suite runs green; only standard-library
+  imports are added; no file outside this task's two-file scope changes.
 
 Matcher -> negative-proof inventory (AC-5; every matcher in this module):
 
@@ -79,16 +121,29 @@ Matcher -> negative-proof inventory (AC-5; every matcher in this module):
   -> test_unreachability_opening_anchor_matcher_flags_absence_in_pre_change_wording
 - test_retained_in_flight_sentence_survives -> RETENTION matcher, no proof
   needed
-- test_scope_sentence_names_all_four_hooks -> new wording (conjunction
-  shape) -> test_four_hooks_conjunction_matcher_fails_on_pre_change_wording
-- test_scope_sentence_states_status_never_consulted -> new wording ->
-  test_status_never_consulted_matcher_flags_absence_in_pre_change_wording
-- test_scope_sentence_governs_only_orchestrator_interpretation -> new
-  wording ->
-  test_orchestrator_only_scope_matcher_flags_absence_in_pre_change_wording
+- test_three_journal_only_hooks_named_in_anchored_never_consult_slice ->
+  RETENTION matcher over unchanged wording, narrowed to an anchored slice
+  (no negative proof needed, Contract 3); the slice-exclusion check
+  (`queue_stop_guard.py` NOT in the three-hook slice) is likewise
+  retention, since the old wording already kept the exception hook out of
+  that clause
+- test_stop_guard_named_as_explicit_exception_in_anchored_slice -> new
+  wording (slice-anchor shape) ->
+  test_stop_guard_exception_anchor_matcher_flags_absence_in_pre_change_wording
+- test_orchestrator_only_scope_phrase_absent_everywhere -> regression guard
+  (the literal is removed by this task) ->
+  test_orchestrator_only_scope_phrase_matcher_flags_the_pre_change_wording
 - test_no_never_reads_workflow_yaml_claim_anywhere -> regression guard
   (pre-existing proof) ->
   test_never_reads_workflow_yaml_matcher_flags_the_bad_wording
+- test_divergence_names_missing_journal_event_case /
+  test_divergence_names_merged_status_consequence /
+  test_divergence_marked_deliberate -> new wording ->
+  test_divergence_phrases_matcher_flags_absence_in_pre_change_wording
+- test_bullet_limits_equivalence_to_carveout_and_cites_i2a -> new wording ->
+  test_supporting_cast_scope_limit_phrase_matcher_flags_pre_change_wording
+- test_bullet_still_states_the_carveout_reclassification -> RETENTION
+  matcher, no proof needed
 - TestProtectedRawLiteralsSurvive.* (TS-7), TestWakePhaseCommitLiteralSurvives
   (TS-8), TestI2cHeadingAndBatchModeParagraphByteIdentical.* (TS-9),
   TestI2cOrderings.* (TS-10) -> regression guards over pre-existing literals
@@ -166,9 +221,59 @@ HOOK_FILENAMES = (
     "queue_failure_net.py",
     "queue_taskstop_net.py",
 )
+JOURNAL_ONLY_HOOK_FILENAMES = tuple(
+    h for h in HOOK_FILENAMES if h != "queue_stop_guard.py"
+)
 STATUS_NEVER_CONSULTED_PHRASE = "never consult `tasks.{T}.status`"
+# task0001 (recycled-task-id-carveout): the literal that must now be ABSENT
+# from the whole document -- it is the contradiction the feature removes
+# (it was immediately followed by a declared exception for
+# `queue_stop_guard.py`, so "governs only the orchestrator's" was never
+# true). Repurposed from a presence matcher's literal to an absence
+# matcher's literal; kept as one constant per the module's Contract 1.
 ORCHESTRATOR_ONLY_SCOPE_PHRASE = (
     "governs only the orchestrator's interpretation of the journal"
+)
+
+# task0001 (recycled-task-id-carveout): anchors for the two separated
+# claims that replace the four-hook filename-presence conjunction (FR3).
+# Claim (a): the three journal-only hooks, inside a slice opening here and
+# closing at STATUS_NEVER_CONSULTED_PHRASE -- unchanged wording, so no
+# negative proof is needed (Contract 3), but the anchor still gets a
+# second reader via the retained-anchor guard below.
+THREE_HOOKS_SLICE_START_ANCHOR = "The other three hooks"
+# Claim (b): `queue_stop_guard.py` named as the single explicit exception,
+# inside a slice opening here (NEW wording -- this exact conjunction did
+# not exist before this task) and closing at the retained phrase "applies
+# this same recycled-task-id carve-out itself".
+STOP_GUARD_EXCEPTION_START_ANCHOR = (
+    "This recycled-task-id rule applies to the orchestrator's "
+    "interpretation of the journal"
+)
+STOP_GUARD_EXCEPTION_END_ANCHOR = (
+    "applies this same recycled-task-id carve-out itself"
+)
+
+# AC-3 (FR6) group: the deliberate unlaunched-definition divergence
+# statement appended to the same I.2.a paragraph.
+DIVERGENCE_NO_JOURNAL_EVENT_PHRASE = (
+    "the hook classifies a task with no journal event as unlaunched "
+    "without consulting that task's workflow.yaml status at all"
+)
+DIVERGENCE_MERGED_STATUS_PHRASE = (
+    "a task whose workflow.yaml status reads `merged` can still be named "
+    "in the hook's launch list"
+)
+DIVERGENCE_DELIBERATE_PHRASE = (
+    "This divergence is deliberate, intended fail-open behavior, not a "
+    "defect"
+)
+
+# AC-4 (FR2) group: the Supporting-cast Stop-hook bullet's rescoped
+# equivalence clause.
+SUPPORTING_CAST_SCOPE_LIMIT_PHRASE = (
+    "I.2.a is the owning rule and this equivalence claim is limited to "
+    "the carve-out itself"
 )
 
 # --- task0003 (D8): pre-change wording samples, one per group, each a
@@ -225,9 +330,59 @@ PRE_CHANGE_I2A_RECYCLED_PARAGRAPH = (
     "it as unlaunched, since the launch guard would deny that launch."
 )
 
-# AC-6 group sample: the same I.2.a paragraph -- it already named
-# `queue_launch_guard.py` (RETAINED anchor) before the change.
-PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE = PRE_CHANGE_I2A_RECYCLED_PARAGRAPH
+# --- task0001 (recycled-task-id-carveout): pre-change wording samples,
+# captured verbatim from em-workflow/references/implement-phase.md at this
+# task's own base commit 300b565d4985d24b77c71077368ea79cc1c68a98 (Contract
+# 2), i.e. the text this task itself is about to replace -- not paraphrased,
+# not reconstructed.
+
+# AC-1/AC-2/AC-3 group sample: the I.2.a closing scope sentence this task
+# rewrites, from the self-contradictory "governs only..." opening through
+# the retained "...scoped by this rule." closing clause.
+PRE_CARVEOUT_I2A_SCOPE_SENTENCE_SAMPLE = (
+    "This recycled-task-id rule governs only the orchestrator's\n"
+    "interpretation of the journal, with one explicit exception:\n"
+    "`queue_stop_guard.py` applies this same recycled-task-id carve-out "
+    "itself\n"
+    "(see the Stop-hook bullet under 'Supporting cast: journal, hooks, "
+    "resume'\n"
+    "below, which states the same classification). The other three "
+    "hooks —\n"
+    "`queue_launch_guard.py`,\n"
+    "`queue_failure_net.py` and `queue_taskstop_net.py` — derive a "
+    "task's state\n"
+    "from the journal's last event alone and never consult "
+    "`tasks.{T}.status`\n"
+    "(see 'Supporting cast: journal, hooks, resume' below). The journal "
+    "itself\n"
+    "stays append-only (see Supporting cast below) — only the "
+    "interpretation of\n"
+    "its events is scoped by this rule."
+)
+
+# AC-4 group sample: the Supporting-cast Stop-hook bullet this task
+# rescopes.
+PRE_CARVEOUT_STOP_HOOK_BULLET_SAMPLE = (
+    "- **Stop hook** (`queue_stop_guard.py`) — fires when the "
+    "orchestrator's turn\n"
+    "  ends. Replays the journal and workflow.yaml, applying the same\n"
+    "  recycled-task-id carve-out as I.2.a above — a task whose journal "
+    "last\n"
+    "  event is `failed` and whose workflow.yaml `status` reads "
+    "`pending`\n"
+    "  reclassifies as unlaunched, not failed; if refillable slots and\n"
+    "  unlaunched tasks exist and no task's reconciled state is "
+    "`failed`, it\n"
+    "  BLOCKS (exit 2) naming the tasks to launch — catching a "
+    "forgotten refill\n"
+    "  after a wake phase. A consecutive-block cap (3, tracked in a "
+    "sidecar\n"
+    "  next to the journal)\n"
+    "  prevents it from wedging the session on unexpected state; "
+    "exceeding the\n"
+    "  cap yields a warning and lets the turn end. Does not write the "
+    "journal."
+)
 
 # --- task0001 (abort-phase-terminal): the closing batch-mode paragraph's
 # old status-without-a-write phrasing, captured before this task's edit
@@ -276,6 +431,18 @@ def _i2b_section(text):
 def _i2c_section(text):
     start = text.index(I2C_HEADING)
     end = text.index(NEXT_SECTION_HEADING, start)
+    return text[start:end]
+
+
+STOP_HOOK_BULLET_START = "- **Stop hook**"
+NEXT_SUPPORTING_CAST_BULLET_START = (
+    "- **PreToolUse(Task|Agent) launch guard**"
+)
+
+
+def _stop_hook_bullet(text):
+    start = text.index(STOP_HOOK_BULLET_START)
+    end = text.index(NEXT_SUPPORTING_CAST_BULLET_START, start)
     return text[start:end]
 
 
@@ -411,28 +578,100 @@ class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
 
 
 class TestRecycledTaskIdRuleScopedToOrchestrator(unittest.TestCase):
-    """TS-6 / AC-6 (FR6): the scope sentence names all four hook
-    filenames and states `tasks.{T}.status` is never consulted; the
-    document nowhere contains "never read workflow.yaml"."""
+    """TS-6 / AC-2 (FR1, task0001/recycled-task-id-carveout): the I.2.a
+    scope sentence states ONE non-contradictory rule as two SEPARATE
+    claims -- (a) the three journal-only hooks are named inside an
+    anchored slice that also states they never consult
+    `tasks.{T}.status`, and that slice excludes `queue_stop_guard.py`;
+    (b) `queue_stop_guard.py` is named as the explicit, single exception
+    applying the carve-out, inside its own anchored slice. Neither
+    assertion is satisfiable merely by a filename occurring somewhere in
+    the section -- each is confined to its anchored slice. The document
+    nowhere contains "governs only the orchestrator's interpretation of
+    the journal" (the self-contradiction this task removes) or "never
+    read(s) workflow.yaml"."""
 
     @classmethod
     def setUpClass(cls):
         cls.text = _read()
+        # Whole-document, whitespace-normalized: the removed literal spans
+        # a line-wrap in the raw text at this exact location, so a raw
+        # (un-normalized) check would pass vacuously without the edit
+        # (NFR3 -- prose assertions compare against normalized text).
+        cls.normalized_text = _normalize_ws(cls.text)
         cls.i2a = _normalize_ws(_i2a_section(cls.text))
 
-    def test_scope_sentence_names_all_four_hooks(self):
-        for hook in HOOK_FILENAMES:
-            self.assertIn(f"`{hook}`", self.i2a)
+    def test_three_journal_only_hooks_named_in_anchored_never_consult_slice(
+        self,
+    ):
+        start = self.i2a.index(THREE_HOOKS_SLICE_START_ANCHOR)
+        end = self.i2a.index(STATUS_NEVER_CONSULTED_PHRASE, start) + len(
+            STATUS_NEVER_CONSULTED_PHRASE
+        )
+        slice_ = self.i2a[start:end]
+        for hook in JOURNAL_ONLY_HOOK_FILENAMES:
+            self.assertIn(f"`{hook}`", slice_)
+        # The exception hook must NOT be conflated into this claim.
+        self.assertNotIn("`queue_stop_guard.py`", slice_)
 
-    def test_scope_sentence_states_status_never_consulted(self):
-        self.assertIn(STATUS_NEVER_CONSULTED_PHRASE, self.i2a)
+    def test_stop_guard_named_as_explicit_exception_in_anchored_slice(self):
+        start = self.i2a.index(STOP_GUARD_EXCEPTION_START_ANCHOR)
+        end = self.i2a.index(STOP_GUARD_EXCEPTION_END_ANCHOR, start) + len(
+            STOP_GUARD_EXCEPTION_END_ANCHOR
+        )
+        slice_ = self.i2a[start:end]
+        self.assertIn("`queue_stop_guard.py`", slice_)
 
-    def test_scope_sentence_governs_only_orchestrator_interpretation(self):
-        self.assertIn(ORCHESTRATOR_ONLY_SCOPE_PHRASE, self.i2a)
+    def test_orchestrator_only_scope_phrase_absent_everywhere(self):
+        self.assertNotIn(ORCHESTRATOR_ONLY_SCOPE_PHRASE, self.normalized_text)
 
     def test_no_never_reads_workflow_yaml_claim_anywhere(self):
         self.assertNotIn("never read workflow.yaml", self.text)
         self.assertNotIn("never reads workflow.yaml", self.text)
+
+
+class TestUnlaunchedDefinitionDivergenceDocumented(unittest.TestCase):
+    """AC-3 (FR6, task0001/recycled-task-id-carveout): I.2.a records the
+    unlaunched-definition divergence between its own definition and
+    `queue_stop_guard.py`'s status-blind treatment of a missing journal
+    event, and marks it deliberate, intended fail-open behavior -- not a
+    defect. No hook file is touched by this task (verified by the
+    unmodified-module scope, not by a test here)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2a = _normalize_ws(_i2a_section(_read()))
+
+    def test_divergence_names_missing_journal_event_case(self):
+        self.assertIn(DIVERGENCE_NO_JOURNAL_EVENT_PHRASE, self.i2a)
+
+    def test_divergence_names_merged_status_consequence(self):
+        self.assertIn(DIVERGENCE_MERGED_STATUS_PHRASE, self.i2a)
+
+    def test_divergence_marked_deliberate(self):
+        self.assertIn(DIVERGENCE_DELIBERATE_PHRASE, self.i2a)
+
+
+class TestSupportingCastStopHookBulletScopedToCarveout(unittest.TestCase):
+    """AC-4 (FR2, NFR6, task0001/recycled-task-id-carveout): the
+    Supporting-cast Stop-hook bullet's equivalence claim is limited to
+    the carve-out itself and cites I.2.a as the owning rule; the bullet
+    remains a citing consumer, never an independent restatement."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.bullet = _normalize_ws(_stop_hook_bullet(_read()))
+
+    def test_bullet_limits_equivalence_to_carveout_and_cites_i2a(self):
+        self.assertIn(SUPPORTING_CAST_SCOPE_LIMIT_PHRASE, self.bullet)
+
+    def test_bullet_still_states_the_carveout_reclassification(self):
+        self.assertIn(
+            "a task whose journal last event is `failed` and whose "
+            "workflow.yaml `status` reads `pending` reclassifies as "
+            "unlaunched, not failed",
+            self.bullet,
+        )
 
 
 class TestProtectedRawLiteralsSurvive(unittest.TestCase):
@@ -701,28 +940,42 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         with self.assertRaises(ValueError):
             sample.index(UNREACHABILITY_OPENING_ANCHOR)
 
-    def test_four_hooks_conjunction_matcher_fails_on_pre_change_wording(self):
-        # The matcher is a conjunction over all four hook names. The
-        # pre-change paragraph already named the first one, so the proof
-        # must show the conjunction fails because of the other three --
-        # not assert that all four are absent (that would be false).
-        sample = _normalize_ws(PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE)
-        self.assertIn(f"`{HOOK_FILENAMES[0]}`", sample)
-        for hook in HOOK_FILENAMES[1:]:
-            self.assertNotIn(f"`{hook}`", sample)
+    # --- task0001 (recycled-task-id-carveout): negative proofs for the
+    # matchers added/revised by this task (AC-6).
 
-    def test_status_never_consulted_matcher_flags_absence_in_pre_change_wording(
+    def test_orchestrator_only_scope_phrase_matcher_flags_the_pre_change_wording(
         self,
     ):
-        sample = _normalize_ws(PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE)
-        self.assertNotIn(STATUS_NEVER_CONSULTED_PHRASE, sample)
+        # The absence-check above is only meaningful if the literal really
+        # was present before this task's own edit -- prove it against this
+        # task's own captured pre-change sample.
+        sample = _normalize_ws(PRE_CARVEOUT_I2A_SCOPE_SENTENCE_SAMPLE)
+        self.assertIn(ORCHESTRATOR_ONLY_SCOPE_PHRASE, sample)
 
-    def test_orchestrator_only_scope_matcher_flags_absence_in_pre_change_wording(
+    def test_stop_guard_exception_anchor_matcher_flags_absence_in_pre_change_wording(
         self,
     ):
-        sample = _normalize_ws(PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE)
-        self.assertNotIn(ORCHESTRATOR_ONLY_SCOPE_PHRASE, sample)
+        # The matcher slices from this NEW opening anchor onward. On the
+        # pre-change sample the anchor is absent (the old text opened with
+        # "governs only ... with one explicit exception:" instead), so the
+        # slice -- and therefore the matcher -- cannot even be formed.
+        sample = _normalize_ws(PRE_CARVEOUT_I2A_SCOPE_SENTENCE_SAMPLE)
+        with self.assertRaises(ValueError):
+            sample.index(STOP_GUARD_EXCEPTION_START_ANCHOR)
 
+    def test_divergence_phrases_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CARVEOUT_I2A_SCOPE_SENTENCE_SAMPLE)
+        self.assertNotIn(DIVERGENCE_NO_JOURNAL_EVENT_PHRASE, sample)
+        self.assertNotIn(DIVERGENCE_MERGED_STATUS_PHRASE, sample)
+        self.assertNotIn(DIVERGENCE_DELIBERATE_PHRASE, sample)
+
+    def test_supporting_cast_scope_limit_phrase_matcher_flags_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CARVEOUT_STOP_HOOK_BULLET_SAMPLE)
+        self.assertNotIn(SUPPORTING_CAST_SCOPE_LIMIT_PHRASE, sample)
 
     def test_old_batch_mode_stays_failed_phrase_matcher_flags_pre_change_wording(
         self,
@@ -758,9 +1011,26 @@ class TestPreChangeSampleGuards(unittest.TestCase):
             sample,
         )
 
-    def test_i2a_hook_parenthetical_sample_retains_queue_launch_guard(self):
-        sample = _normalize_ws(PRE_CHANGE_I2A_HOOK_PARENTHETICAL_SAMPLE)
-        self.assertIn(f"`{HOOK_FILENAMES[0]}`", sample)
+    def test_pre_carveout_scope_sentence_sample_retains_three_hooks_anchor(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CARVEOUT_I2A_SCOPE_SENTENCE_SAMPLE)
+        self.assertIn(THREE_HOOKS_SLICE_START_ANCHOR, sample)
+
+    def test_pre_carveout_scope_sentence_sample_retains_never_consulted_phrase(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CARVEOUT_I2A_SCOPE_SENTENCE_SAMPLE)
+        self.assertIn(STATUS_NEVER_CONSULTED_PHRASE, sample)
+
+    def test_pre_carveout_stop_hook_bullet_sample_retains_carveout_citation(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CARVEOUT_STOP_HOOK_BULLET_SAMPLE)
+        self.assertIn(
+            "applying the same recycled-task-id carve-out as I.2.a above",
+            sample,
+        )
 
     def test_old_batch_mode_paragraph_sample_retains_gate_id_anchor(self):
         sample = _normalize_ws(OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL)
