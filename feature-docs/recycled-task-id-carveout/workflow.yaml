@@ -53,7 +53,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR1, FR2, FR3, FR5, FR6, FR8, NFR1, NFR2, NFR3, NFR6]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/recycled-task-id-carveout/task0001
   task0002:
