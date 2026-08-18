@@ -66,7 +66,8 @@ workflow:
       あわせて、モジュール docstring が「leaving no module-level constant in this module with fewer than
       two reader sites」と書いているのも実測と一致しないため、TS-13 の文言修正と同時に直すべき残件。
   - id: retrospect
-    status: in_progress
+    status: completed
+    completed_at_commit: 9d587987e5a9a61e0068c94a1376542c6aa854eb
 
 tasks:
   task0001:
