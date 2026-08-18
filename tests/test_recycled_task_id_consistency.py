@@ -146,14 +146,26 @@ b28a7166e8dce876075fc550ada7fdd7027211fa):
   test_group_anchors_absent_in_pre_change_wording
 """
 
+import importlib.util
 import re
 import unittest
 from pathlib import Path
 
-# Sibling module (tests/ is on the import path under `unittest discover`):
-# owns the classification table's parser, per NFR4 -- one parser, one
-# source of truth, never duplicated here.
-import test_hook_classification_pin as hook_classification_pin
+# Sibling module owns the classification table's parser, per NFR4 -- one
+# parser, one source of truth, never duplicated here. Loaded via an
+# absolute path (matching tests/test_check_plugin_invariants.py's
+# convention) rather than a bare import, so this module collects
+# correctly regardless of invocation form (`python3 -m unittest
+# tests.test_recycled_task_id_consistency` from the repo root, or
+# `unittest discover -s tests`) instead of depending on tests/ being on
+# sys.path. The registered module name is kept distinct from the real
+# module name so it cannot collide with a discover-loaded copy.
+_PIN_PATH = Path(__file__).resolve().parent / "test_hook_classification_pin.py"
+_pin_spec = importlib.util.spec_from_file_location(
+    "_hook_classification_pin", _PIN_PATH
+)
+hook_classification_pin = importlib.util.module_from_spec(_pin_spec)
+_pin_spec.loader.exec_module(hook_classification_pin)
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "em-workflow"
 IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
