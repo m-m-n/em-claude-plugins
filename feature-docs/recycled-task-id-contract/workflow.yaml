@@ -98,7 +98,7 @@ tasks:
     provenance:
       source: verify
       failed_item_id: TS13
-    status: in_progress
+    status: merged
     notes: >-
       implementer が status: merged / merge_commit 3adc7d8e2fef34b1c4dc0f1bbf10b3fd4dc75ba8 を
       報告したが、実状態が一致しなかった。git cat-file で当該 merge commit は存在せず、
