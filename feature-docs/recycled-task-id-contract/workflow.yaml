@@ -98,8 +98,14 @@ tasks:
     provenance:
       source: verify
       failed_item_id: TS13
-    status: merged
-    notes: null
+    status: failed
+    notes: >-
+      implementer が status: merged / merge_commit 3adc7d8e2fef34b1c4dc0f1bbf10b3fd4dc75ba8 を
+      報告したが、実状態が一致しなかった。git cat-file で当該 merge commit は存在せず、
+      journal.jsonl には task0003 の merged イベントが無く（最終イベントは launched）、
+      task branch は起点コミット 0a2cbcb から一切進んでいなかった。よって trust-but-verify により
+      merged 判定を棄却し failed とする。実装成果は task worktree ごと失われている。
+      batch retry 1 回目を消費して再実行する。
     branch: em-workflow/recycled-task-id-contract/task0003
 
 review:
