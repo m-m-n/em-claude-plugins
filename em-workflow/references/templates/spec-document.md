@@ -181,11 +181,11 @@ entries in addition to the feature-specific paths above:
 - `test-docs/{feature}/**`
 
 `feature-docs/{feature}/**` covers `REQUIREMENTS.md`, `SPEC.md`,
-`workflow.yaml`, `phase-state/`, `tasks/`, `reviews/roundN.yaml`,
-`VERIFICATION.md`, `retrospect.yaml`, and the design artifacts the design
-step produces. These are generated and owned by the phase documents and by
-`references/phase-state.md`; this section cites them and restates none of
-their rules.
+`IMPLEMENTATION.md`, `workflow.yaml`, `phase-state/`, `tasks/`,
+`reviews/roundN.yaml`, `VERIFICATION.md`, `retrospect.yaml`, and the design
+artifacts the design step produces. These are generated and owned by the
+phase documents and by `references/phase-state.md`; this section cites them
+and restates none of their rules.
 
 `test-docs/{feature}/**` covers `test-docs/{feature}/{T}.tests.yaml`, the
 per-task test record. It is generated and owned by `implement-phase.md`;
