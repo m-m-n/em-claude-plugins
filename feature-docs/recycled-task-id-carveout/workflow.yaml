@@ -39,6 +39,7 @@ workflow:
     completed_at_commit: 6f142312c50b1a2355dc52e305de59819e3942d6
   - id: verify
     status: completed
+    completed_at_commit: 8f16cc1bcc9caaaad4c2ed099876f24a58ab1fcd
     result: pass
     failed_items: []
     passed_summary: >-
