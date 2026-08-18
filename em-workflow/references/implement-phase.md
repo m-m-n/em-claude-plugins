@@ -223,17 +223,29 @@ arise. Because route-back proceeds only when no task is `merged` under
 either source (the widened I.2.c gate above), no retired task id can
 leave a `merged` last event behind for a renumbered task to inherit, so
 the recycled-task-id carve-out above stays correctly scoped to `failed`
-only. This recycled-task-id rule governs only the orchestrator's
-interpretation of the journal, with one explicit exception:
-`queue_stop_guard.py` applies this same recycled-task-id carve-out itself
+only. The recycled-task-id carve-out above is applied by two parties: the
+orchestrator's own interpretation of the journal (this rule), and the Stop
+hook, `queue_stop_guard.py`, which reads `tasks.{T}.status` and applies the
+identical carve-out itself
 (see the Stop-hook bullet under 'Supporting cast: journal, hooks, resume'
-below, which states the same classification). The other three hooks —
-`queue_launch_guard.py`,
+below, which states the same classification and cites the classification
+table). The other three queue hooks — `queue_launch_guard.py`,
 `queue_failure_net.py` and `queue_taskstop_net.py` — derive a task's state
-from the journal's last event alone and never consult `tasks.{T}.status`
-(see 'Supporting cast: journal, hooks, resume' below). The journal itself
-stays append-only (see Supporting cast below) — only the interpretation of
-its events is scoped by this rule.
+from the journal's last event alone and never consult `tasks.{T}.status`.
+The full per-hook classification is the hook classification table under
+'Supporting cast: journal, hooks, resume' below, which this paragraph and
+the Stop-hook bullet both cite as its source. The journal itself stays
+append-only (see Supporting cast below) — only the interpretation of its
+events is scoped by this rule.
+
+All four hooks detect a task as **unlaunched** solely from the absence of
+any journal event for that task id — never from `tasks.{T}.status`. This is
+narrower than the orchestrator's own selection rule above, which
+additionally excludes any task whose `status` reads `merged`; the hooks
+carry no equivalent exclusion. This divergence is recorded, not fixed: the
+hooks are fail-open nets, not authorities (see 'Supporting cast: journal,
+hooks, resume' below), and the orchestrator protocol above together with
+the I.2.a resume guard remain the authoritative source of task state.
 Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
@@ -514,6 +526,17 @@ summary (full schema: IMPLEMENTATION.md's Journal contract).
 
 **The hooks** (`em-workflow/hooks/`, wired in `hooks.json`):
 
+**Hook classification table** — source of truth for which of the four
+queue hooks below read `tasks.{T}.status`; both I.2.a above and the
+Stop-hook bullet below cite it as this classification's source.
+
+| Hook | Classification |
+|---|---|
+| `em-workflow/hooks/queue_launch_guard.py` | does not read `tasks.{T}.status` |
+| `em-workflow/hooks/queue_stop_guard.py` | reads `tasks.{T}.status` |
+| `em-workflow/hooks/queue_failure_net.py` | does not read `tasks.{T}.status` |
+| `em-workflow/hooks/queue_taskstop_net.py` | does not read `tasks.{T}.status` |
+
 - **Stop hook** (`queue_stop_guard.py`) — fires when the orchestrator's turn
   ends. Replays the journal and workflow.yaml, applying the same
   recycled-task-id carve-out as I.2.a above — a task whose journal last
@@ -521,8 +544,10 @@ summary (full schema: IMPLEMENTATION.md's Journal contract).
   reclassifies as unlaunched, not failed; if refillable slots and
   unlaunched tasks exist and no task's reconciled state is `failed`, it
   BLOCKS (exit 2) naming the tasks to launch — catching a forgotten refill
-  after a wake phase. A consecutive-block cap (3, tracked in a sidecar
-  next to the journal)
+  after a wake phase. Classification (hook classification table above):
+  **reads** `tasks.{T}.status`, the sole exception among the four queue
+  hooks named in I.2.a — matching I.2.a's classification exactly. A
+  consecutive-block cap (3, tracked in a sidecar next to the journal)
   prevents it from wedging the session on unexpected state; exceeding the
   cap yields a warning and lets the turn end. Does not write the journal.
 - **PreToolUse(Task|Agent) launch guard** (`queue_launch_guard.py`) — fires on
