@@ -1,14 +1,73 @@
 schema_version: 1
 feature: recycled-task-id-contract
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 996b270
-last_input_digest: null
-active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+last_input_digest: "sha256:8c7991c52ad35d6ea51b26546dbc8c92471d2e5ce502326b8999227c8403e8a3"
+active_request_id: create-spec-run-0002
+packets:
+  recycled-task-id-contract-q0001:
+    status: answered
+    issued_at: "2026-08-18T09:55:00+09:00"
+    questions:
+      - question_id: requirement.unlaunched-definition-divergence
+        status: answered
+      - question_id: requirement.doc-hook-pin-mechanism
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  requirement.unlaunched-definition-divergence:
+    packet_id: recycled-task-id-contract-q0001
+    answered_at: "2026-08-18T09:56:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [doc_records_divergence]
+    freeform: null
+    normalized_answer: >-
+      Keep hook behavior unchanged; record in implement-phase.md I.2.a as SSOT that the
+      hooks deliberately treat journal absence alone as unlaunched, with the reason.
+    resolution_note: >-
+      gate create-spec.requirement-clarification -> batch policy codex_consultation.
+      Codex consulted (1 turn, available). Suggestion mapped onto option_id
+      doc_records_divergence; rationale: the task description explicitly places
+      queue_stop_guard.py classification-logic changes out of scope, and documenting the
+      journal-absence rule avoids the SSOT promising protection the hooks do not provide.
+      Recorded as assumption a3 per batch-policies.yaml record_as_assumption.
+  requirement.doc-hook-pin-mechanism:
+    packet_id: recycled-task-id-contract-q0001
+    answered_at: "2026-08-18T09:56:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [parse_doc_table]
+    freeform: null
+    normalized_answer: >-
+      Add a machine-readable hook-to-classification table to implement-phase.md; the
+      pinning test parses that table and checks each named hook's source for whether it
+      reads tasks.{T}.status.
+    resolution_note: >-
+      gate create-spec.requirement-clarification -> batch policy codex_consultation.
+      Codex consulted (1 turn, available). Suggestion mapped onto option_id
+      parse_doc_table; rationale: a parsed table makes the document the source of
+      expected classification, so a change on either side alone fails the test.
+      Recorded as assumption a4 per batch-policies.yaml record_as_assumption.
+  design-step.recommendation:
+    packet_id: recycled-task-id-contract-q0001
+    answered_at: "2026-08-18T09:56:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: >-
+      Accept requirements-analyst's design_step_recommendation (skip) without asking.
+    resolution_note: >-
+      gate create-spec.design-step -> batch-policies.yaml select decide_autonomously.
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:8c7991c52ad35d6ea51b26546dbc8c92471d2e5ce502326b8999227c8403e8a3"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
