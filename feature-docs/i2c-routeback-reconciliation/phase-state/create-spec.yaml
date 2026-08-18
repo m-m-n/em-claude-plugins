@@ -1,16 +1,48 @@
 schema_version: 1
 feature: i2c-routeback-reconciliation
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
-base_revision: 9a4ff72cfa60510e54e52891ae3dd0780f25ed79
+base_revision: 7cb634bfb4fe868137a850c90ccac71df327bbc6
 last_input_digest: sha256:fbcafce0c4df933da02086fc747f2a3397179eb2b8f32fedcd0aea06db81d0ea
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-18T23:05:00+09:00"
+    questions:
+      - question_id: scope.reconciliation-already-merged
+        status: answered
+      - question_id: design.step-decision
+        status: answered
+answers:
+  scope.reconciliation-already-merged:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-18T23:06:00+09:00"
+    source: batch_policy
+    answer_mode: select_or_freeform
+    selected_option_ids: [verify_and_close]
+    freeform: |
+      Orchestrator verified the analyst's premise directly, in batch mode:
+      - `gh pr view 5` => state MERGED (base main, head em-workflow/recycled-task-id-consistency/integration).
+      - `git merge-base --is-ancestor origin/em-workflow/recycled-task-id-consistency/integration origin/main` => true.
+      - `python3 -m unittest discover -s tests` => Ran 1522 tests, OK.
+      Every acceptance criterion in the task description is therefore already satisfied on main.
+      Scope this feature to verification and record-keeping only: no edit to
+      em-workflow/references/implement-phase.md, no test-matcher change, and consequently no
+      lockstep version bump (nothing under em-workflow/ changes).
+    normalized_answer: "verify_and_close"
+  design.step-decision:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-18T23:06:00+09:00"
+    source: batch_policy
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "decide_autonomously"
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:fbcafce0c4df933da02086fc747f2a3397179eb2b8f32fedcd0aea06db81d0ea
     output_digest: null
 artifacts: []
