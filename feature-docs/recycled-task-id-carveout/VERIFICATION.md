@@ -32,6 +32,9 @@ This document covers the INTEGRATED verification of the merged feature. Per-task
 | TS-9 | Both version-carrying files parse as JSON, their em-workflow version values are equal, and the value is past the pre-change baseline `0.1.44` | Equality and past-baseline assertions hold; both negative proofs hold | Unit |
 | TS-10 | Every pre-change sample introduced by this feature carries a positively-asserted retained anchor in a `TestPreChangeSampleGuards` class (per module) | All guard assertions hold | Unit |
 | TS-11 | The full suite — every pre-existing module in `tests/`, including this feature's untouched neighbours and the pre-existing TS-7/TS-8/TS-9/TS-10 guards inside `tests/test_recycled_task_id_consistency.py` — runs green | `python3 -m unittest discover -s tests` exits 0 | Integration |
+| TS-12 (SPEC AC-6, AC-9) | The module docstring of `tests/test_recycled_task_id_consistency.py` classifies the three-hook anchored-slice matcher as a new-wording matcher under Contracts 1, 2 and 4 with a paired negative proof — not as a RETENTION matcher exempt from one under Contract 3 — and its description of `TestRecycledTaskIdRuleScopedToOrchestrator` matches the assertions the class actually contains | Read the docstring and the class side by side: no RETENTION/no-negative-proof classification survives for that matcher, and every claim in the docstring maps to a present assertion | Inspection |
+| TS-13 (SPEC AC-6) | No module-level constant in `tests/test_recycled_task_id_consistency.py` is left with fewer than two reader sites; `HOOK_FILENAMES` and `JOURNAL_ONLY_HOOK_FILENAMES` in particular are each read by at least two sites or retired together with all of their readers | Count reader sites per module-level constant; every constant has 0 (retired with its readers) or >= 2 | Inspection |
+| TS-14 (SPEC AC-6) | The AC-6 entry of `test-docs/recycled-task-id-carveout/task0001.tests.yaml` no longer asserts that every module-level constant task0001 added or revised has >= 2 readers or was fully retired with its readers; it records the state measured at task0001's merge and names task0004 as the change closing it | The stale claim is absent, the measured state is recorded, every other entry is byte-unchanged, and the file still parses as YAML | Inspection |
 
 ## Code Quality Verification
 
@@ -58,15 +61,15 @@ This document covers the INTEGRATED verification of the merged feature. Per-task
 |-------------|-------|--------------|
 | FR1 | task0001 | TS-1, TS-2, TS-3 |
 | FR2 | task0001 | TS-4 |
-| FR3 | task0001 | TS-2, TS-3, TS-10 |
+| FR3 | task0001, task0004 | TS-2, TS-3, TS-10, TS-12, TS-13, TS-14 |
 | FR4 | task0002 | TS-5, TS-6, TS-7 |
-| FR5 | task0001, task0002 | TS-5, TS-10 |
+| FR5 | task0001, task0002, task0004 | TS-5, TS-10, TS-12 |
 | FR6 | task0001 | TS-8 |
 | FR7 | task0003 | TS-9 (durable pin) + SC-5 (literal, by direct read) |
-| FR8 | task0001, task0002, task0003 | TS-11 |
-| NFR1 | task0001, task0002, task0003 | TS-11 + import inspection (Code Quality above) |
-| NFR2 | task0001, task0002, task0003 | TS-11 (discovery with no registration step) + naming inspection |
-| NFR3 | task0001 | TS-11 + inspection that prose matchers compare normalized text while the byte-identity/raw line-wrap guards compare raw text |
+| FR8 | task0001, task0002, task0003, task0004 | TS-11 |
+| NFR1 | task0001, task0002, task0003, task0004 | TS-11 + import inspection (Code Quality above) |
+| NFR2 | task0001, task0002, task0003, task0004 | TS-11 (discovery with no registration step) + naming inspection |
+| NFR3 | task0001, task0004 | TS-11 + inspection that prose matchers compare normalized text while the byte-identity/raw line-wrap guards compare raw text |
 | NFR4 | task0002 | TS-6, TS-7 + SC-6 |
 | NFR5 | task0002 | TS-6, TS-7 + inspection that the fixture is confined to a temporary directory |
 | NFR6 | task0001 | TS-4 |
@@ -82,6 +85,9 @@ Not applicable — `e2e_test_command` is empty and this feature has no end-to-en
 - [ ] Confirm the Supporting-cast Stop-hook bullet cites I.2.a rather than restating the rule in a form that could drift, and that I.2.a is still the only normative statement.
 - [ ] Confirm by direct read that both version-carrying files show `0.1.45` (SC-5).
 - [ ] Confirm the merged change set touches no file under `em-workflow/hooks/` (SC-6).
+- [ ] Read the module docstring of `tests/test_recycled_task_id_consistency.py` against `TestRecycledTaskIdRuleScopedToOrchestrator` and confirm every claim it makes maps to an assertion that is present, with the three-hook anchored-slice matcher classified as a new-wording matcher carrying a paired negative proof (TS-12).
+- [ ] Count the reader sites of every module-level constant in that module and confirm none is left with exactly one (TS-13).
+- [ ] Read the AC-6 entry of `test-docs/recycled-task-id-carveout/task0001.tests.yaml` and confirm it records the measured state rather than the retracted claim (TS-14).
 - No mockup comparison applies: the design step is `skipped` (no user-visible surface).
 
 ## Performance / Security Verification
@@ -92,6 +98,8 @@ Not applicable. No performance goal is stated. No authenticated, authorized or e
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1..TS-11) | 11 | 11 | 0 | 0 |
+| Test scenarios (TS-1..TS-14) | 14 | 11 | 0 | 3 (TS-12..TS-14, inspection) |
 | Success criteria (SC-1..SC-7) | 7 | 4 | 0 | 3 |
 | Requirements (FR1-FR8, NFR1-NFR6) | 14 | 14 | 0 | 4 (supplementary judgment items) |
+
+TS-12..TS-14 were added by the verify-sourced rework round for task0004. They are counted under Manual because each is verified by reading the module, its docstring or the test record — a module asserting over its own docstring, or counting its own constants' readers, would be self-referential rather than a genuine pin.
