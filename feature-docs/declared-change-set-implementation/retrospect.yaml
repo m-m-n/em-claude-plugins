@@ -1,6 +1,7 @@
 feature: declared-change-set-implementation
 collected_at: '2026-08-18T19:13:19+09:00'
-session_ids: []
+session_ids:
+- 01a01440-efcb-7000-8afd-00cedc55fb6c.jsonl
 signals:
   review_critical_high: []
   conflict_reworks: []
