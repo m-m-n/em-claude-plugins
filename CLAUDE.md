@@ -6,6 +6,8 @@
 
 ```
 .
+├── .claude/
+│   └── rules/              # このリポジトリの作業ルール（後述）
 ├── .claude-plugin/
 │   └── marketplace.json    # マーケットプレイス定義（plugins[].source で各プラグインを参照）
 ├── <plugin-name>/          # 各プラグインのルート（サブディレクトリ単位）
@@ -16,6 +18,15 @@
 │   └── references/         # プラグイン内 SSOT（プロトコル / スキーマ / レジストリ等）
 └── README.md
 ```
+
+## ルール
+
+このリポジトリで作業するときは `.claude/rules/` 配下を参照すること。
+
+| ファイル | 内容 |
+|---------|------|
+| `.claude/rules/plugin-version-bump.md` | プラグインの中身を変更したときの version bump（2 箇所を同じ値にする） |
+| `.claude/rules/slash-commands-as-skills.md` | スラッシュコマンドは `commands/` ではなくスキルとして作る |
 
 ## プラグインを追加するときのルール
 

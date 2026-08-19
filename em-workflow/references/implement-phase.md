@@ -529,6 +529,12 @@ summary (full schema: IMPLEMENTATION.md's Journal contract).
 
 **The hooks** (`em-workflow/hooks/`, wired in `hooks.json`):
 
+Scope note: this section covers the queue loop's own hooks only. The same
+directory also ships guardrail hooks unrelated to the queue (the gitleaks
+scanners, `kill-guard.py`, `destructive-guard.py`) — those are documented in
+`em-workflow/README.md`, are never consulted by this phase, and are outside
+every classification below.
+
 **Hook classification table** — source of truth for which of the four
 queue hooks below read `tasks.{T}.status`; both I.2.a above and the
 Stop-hook bullet below cite it as this classification's source.
@@ -641,3 +647,11 @@ integrated verification is the review/verify phases' job).
 - Never run `git reset` / `git update-ref` on the integration branch from the
   orchestrator side to "undo" a merge; corrective work is a new task or a
   rework loop from the review phase.
+- An implementer that fails at the **harness** level rather than returning a
+  task result — the launch call comes back `is_error`, its output carries a
+  permission denial, or it reports `skipped: true` unexpectedly — is not a
+  planning problem and I.2.c's retry / route-back choice cannot be judged
+  without knowing why it died. Diagnose it first per
+  `references/workflow-failure-recovery.md` (dispatch `workflow-doctor` over
+  the failed agents' JSONL logs), then surface the failure with that
+  diagnosis included.

@@ -45,6 +45,16 @@ module, not by hardcoding an expected pattern string) and asserts all three
 compiled regexes are identical in both pattern text and flags, so a future
 edit to any one copy that silently diverges from the others fails the suite
 instead of only surfacing as a runtime accept/reject mismatch between hooks.
+
+Extended again by the guardrail-hook migration (four PreToolUse guards moved
+in from `~/.claude/hooks/`): the manifest-driven checks below stay driven by
+whatever hooks.json declares, but the "standard shape" they enforce is now
+two-dimensional -- the interpreter follows the script's extension (`python3`
+for `.py`, `bash` for `.sh`) and the timeout follows a per-script table
+(NONSTANDARD_HOOK_TIMEOUTS) rather than a single constant, because the
+migrated guards carry the timeouts their original global registration used.
+The ordering requirement among the PreToolUse(Bash) guards is a separate
+concern, pinned in tests/test_guardrail_hooks_migration.py.
 """
 
 import importlib.util
@@ -68,7 +78,7 @@ REQUIRED_ENTRIES = [
     ("SubagentStop", None, "queue_failure_net.py"),
 ]
 
-_SCRIPT_COMMAND_RE = re.compile(r"hooks/([A-Za-z0-9_.-]+\.py)")
+_SCRIPT_COMMAND_RE = re.compile(r"hooks/([A-Za-z0-9_.-]+\.(?:py|sh))")
 
 
 def find_matching_hook_entries(config, event, matcher, script_filename):
@@ -87,9 +97,9 @@ def find_matching_hook_entries(config, event, matcher, script_filename):
 
 def extract_script_path(command, plugin_root):
     """Resolve the script file a hook `command` string references (the
-    `${CLAUDE_PLUGIN_ROOT}/hooks/<name>.py` pattern) to a filesystem path
-    under plugin_root. Returns None if the command does not match the
-    pattern."""
+    `${CLAUDE_PLUGIN_ROOT}/hooks/<name>.py` or `.../hooks/<name>.sh`
+    pattern) to a filesystem path under plugin_root. Returns None if the
+    command does not match the pattern."""
     match = _SCRIPT_COMMAND_RE.search(command)
     if not match:
         return None
@@ -126,10 +136,39 @@ def validate_hooks_config(config, plugin_root):
 
 # Standard shape every hook registration in this plugin must follow
 # (worktree-task-workflow / IMPLEMENTATION.md Conventions: "Registration").
+#
+# The interpreter is picked by the script's extension -- `python3` for `.py`,
+# `bash` for `.sh` -- and the path is plugin-root-relative in both cases. The
+# `.sh` half exists because of the guardrail hooks migrated in from
+# `~/.claude/hooks/` (gitleaks-precommit / gitleaks-write-guard): they are
+# launched through an explicit `bash` rather than relying on their shebang,
+# so the registration does not depend on the executable bit surviving a
+# plugin cache extraction.
 STANDARD_HOOK_TIMEOUT = 15
-_PLUGIN_ROOT_PYTHON3_COMMAND_RE = re.compile(
-    r'^python3 "\$\{CLAUDE_PLUGIN_ROOT\}"/hooks/[A-Za-z0-9_.-]+\.py$'
+
+# Hooks whose timeout deliberately differs from STANDARD_HOOK_TIMEOUT, keyed
+# by script filename. These values are carried over verbatim from the global
+# `~/.claude/settings.json` registrations the guardrail hooks were migrated
+# from: a gitleaks scan shells out over a whole diff (30s), while the two
+# permission guards are in-process string/PID work (10s).
+NONSTANDARD_HOOK_TIMEOUTS = {
+    "gitleaks-precommit.sh": 30,
+    "gitleaks-write-guard.sh": 30,
+    "kill-guard.py": 10,
+    "destructive-guard.py": 10,
+}
+
+_PLUGIN_ROOT_COMMAND_RE = re.compile(
+    r'^(python3|bash) "\$\{CLAUDE_PLUGIN_ROOT\}"/hooks/[A-Za-z0-9_.-]+\.(py|sh)$'
 )
+_INTERPRETER_FOR_EXTENSION = {"py": "python3", "sh": "bash"}
+
+
+def expected_timeout(script_filename):
+    """The timeout a hook registration for `script_filename` must declare:
+    its entry in NONSTANDARD_HOOK_TIMEOUTS when it has one, otherwise
+    STANDARD_HOOK_TIMEOUT."""
+    return NONSTANDARD_HOOK_TIMEOUTS.get(script_filename, STANDARD_HOOK_TIMEOUT)
 
 
 def iter_all_hook_commands(config):
@@ -153,9 +192,12 @@ def iter_all_hook_commands(config):
 def validate_hook_entry_shape(hook, plugin_root):
     """Validate a single hook-command dict's registration shape:
 
-    - its `command` uses the plugin-root-relative `python3` form
-      (`python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/<name>.py`, verbatim shape);
-    - its `timeout` equals the standard value (STANDARD_HOOK_TIMEOUT);
+    - its `command` uses the plugin-root-relative interpreter form
+      (`python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/<name>.py` or
+      `bash "${CLAUDE_PLUGIN_ROOT}"/hooks/<name>.sh`, verbatim shape), with
+      the interpreter matching the script's extension;
+    - its `timeout` equals the value expected for that script
+      (`expected_timeout`);
     - the script file its command references exists on disk under
       plugin_root.
 
@@ -163,16 +205,24 @@ def validate_hook_entry_shape(hook, plugin_root):
     """
     errors = []
     command = hook.get("command", "")
-    if not _PLUGIN_ROOT_PYTHON3_COMMAND_RE.match(command):
+    match = _PLUGIN_ROOT_COMMAND_RE.match(command)
+    if not match:
         errors.append(
-            f"command does not use the plugin-root-relative python3 form: {command!r}"
+            f"command does not use the plugin-root-relative interpreter form: "
+            f"{command!r}"
         )
-    if hook.get("timeout") != STANDARD_HOOK_TIMEOUT:
+    elif _INTERPRETER_FOR_EXTENSION[match.group(2)] != match.group(1):
         errors.append(
-            f"timeout is not the standard {STANDARD_HOOK_TIMEOUT}: "
-            f"{hook.get('timeout')!r} (command={command!r})"
+            f"interpreter {match.group(1)!r} does not match the script extension "
+            f"{match.group(2)!r}: {command!r}"
         )
     script_path = extract_script_path(command, plugin_root)
+    expected = expected_timeout(script_path.name if script_path is not None else None)
+    if hook.get("timeout") != expected:
+        errors.append(
+            f"timeout is not the expected {expected}: "
+            f"{hook.get('timeout')!r} (command={command!r})"
+        )
     if script_path is None:
         errors.append(
             f"command does not reference a resolvable script path: {command!r}"
@@ -376,14 +426,24 @@ class TestValidateHookEntryShapeDetectsMalformedEntries(unittest.TestCase):
     happens to be well-formed in the other two respects."""
 
     def _well_formed_hook(self, name="queue_launch_guard.py"):
+        interpreter = "bash" if name.endswith(".sh") else "python3"
         return {
             "type": "command",
-            "command": f'python3 "${{CLAUDE_PLUGIN_ROOT}}"/hooks/{name}',
-            "timeout": STANDARD_HOOK_TIMEOUT,
+            "command": f'{interpreter} "${{CLAUDE_PLUGIN_ROOT}}"/hooks/{name}',
+            "timeout": expected_timeout(name),
         }
 
     def test_well_formed_entry_produces_no_errors(self):
         errors = validate_hook_entry_shape(self._well_formed_hook(), PLUGIN_ROOT)
+        self.assertEqual(errors, [])
+
+    def test_well_formed_bash_entry_produces_no_errors(self):
+        """A migrated guardrail hook (`.sh`, launched via an explicit `bash`,
+        with its own non-standard timeout) is just as valid a registration as
+        the `python3` queue hooks."""
+        errors = validate_hook_entry_shape(
+            self._well_formed_hook(name="gitleaks-write-guard.sh"), PLUGIN_ROOT
+        )
         self.assertEqual(errors, [])
 
     def test_wrong_timeout_is_detected(self):
@@ -391,7 +451,19 @@ class TestValidateHookEntryShapeDetectsMalformedEntries(unittest.TestCase):
         hook["timeout"] = 30
         errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
         self.assertTrue(
-            any("timeout is not the standard" in e for e in errors),
+            any("timeout is not the expected" in e for e in errors),
+            errors,
+        )
+
+    def test_standard_timeout_on_a_nonstandard_timeout_hook_is_detected(self):
+        """The per-script timeout table is enforced in both directions: a
+        guardrail hook registered with the queue hooks' standard 15 is as
+        wrong as a queue hook registered with 30."""
+        hook = self._well_formed_hook(name="gitleaks-precommit.sh")
+        hook["timeout"] = STANDARD_HOOK_TIMEOUT
+        errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
+        self.assertTrue(
+            any("timeout is not the expected 30" in e for e in errors),
             errors,
         )
 
@@ -400,7 +472,7 @@ class TestValidateHookEntryShapeDetectsMalformedEntries(unittest.TestCase):
         del hook["timeout"]
         errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
         self.assertTrue(
-            any("timeout is not the standard" in e for e in errors),
+            any("timeout is not the expected" in e for e in errors),
             errors,
         )
 
@@ -409,16 +481,29 @@ class TestValidateHookEntryShapeDetectsMalformedEntries(unittest.TestCase):
         hook["command"] = "python3 hooks/queue_launch_guard.py"
         errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
         self.assertTrue(
-            any("plugin-root-relative python3 form" in e for e in errors),
+            any("plugin-root-relative interpreter form" in e for e in errors),
             errors,
         )
 
-    def test_non_python3_command_is_detected(self):
+    def test_unknown_interpreter_command_is_detected(self):
         hook = self._well_formed_hook()
         hook["command"] = 'python "${CLAUDE_PLUGIN_ROOT}"/hooks/queue_launch_guard.py'
         errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
         self.assertTrue(
-            any("plugin-root-relative python3 form" in e for e in errors),
+            any("plugin-root-relative interpreter form" in e for e in errors),
+            errors,
+        )
+
+    def test_interpreter_not_matching_the_extension_is_detected(self):
+        """`bash foo.py` / `python3 foo.sh` parse as the plugin-root-relative
+        form but would still fail at runtime, so the pairing is checked."""
+        hook = self._well_formed_hook(name="gitleaks-write-guard.sh")
+        hook["command"] = (
+            'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/gitleaks-write-guard.sh'
+        )
+        errors = validate_hook_entry_shape(hook, PLUGIN_ROOT)
+        self.assertTrue(
+            any("does not match the script extension" in e for e in errors),
             errors,
         )
 

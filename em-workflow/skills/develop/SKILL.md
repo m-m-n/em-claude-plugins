@@ -54,6 +54,13 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 - ❌ 「進めてよいですか？」と確認を挟む（各フェーズ内の guard が必要な確認を行う）
 - ❌ workflow.yaml を読み直さずに応答を返す
 - ❌ `base_branch`（ユーザーのブランチ）へのコミット・reset・checkout
+- ❌ `/branch` で分岐したセッションからこのワークフローを起動・継続する。
+  分岐セッションはサブエージェントのディスパッチ・worktree の状態変更・
+  workflow.yaml の更新・コミット/マージを行わない（メインセッションが同じ
+  feature をオーケストレーション中だと状態が二重に進む）。判定基準と、
+  触ってしまった場合の扱いは
+  `${CLAUDE_PLUGIN_ROOT}/references/branch-session-scope.md`。分岐セッション
+  だと判定したら、起動せずにその旨を報告して止まる
 
 ## 引数処理
 
