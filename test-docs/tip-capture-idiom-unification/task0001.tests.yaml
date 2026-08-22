@@ -1,0 +1,141 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCaptureResolvesBranchRef::test_every_site_captures_from_the_branch_ref
+      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCaptureNeverUsesWorktreeHead::test_no_site_captures_from_head
+      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteRefreshNeverTargetsCapturedValue::test_no_site_refreshes_to_its_own_captured_variable
+      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteExplicitRefreshTargetsBranchName::test_explicit_refresh_commands_target_the_branch_name
+      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCapturePrecedesRefresh::test_capture_precedes_refresh_in_every_site
+    red_confirmed: true
+    red_reason: >-
+      Stashed the implement-phase.md edit (restoring the pre-conversion
+      text) and re-ran this module: 5 of 7 sites failed
+      test_every_site_captures_from_the_branch_ref /
+      test_no_site_captures_from_head (e.g. AssertionError:
+      'em-workflow/{feature}/integration' not found in 'BASE_COMMIT=$(git -C
+      "$WT_ROOT/integration" rev-parse HEAD)'), Step I.1 failed
+      test_explicit_refresh_commands_target_the_branch_name (the old form
+      had no refresh at all), and 4 sites failed/errored
+      test_capture_precedes_refresh_in_every_site (old order was
+      refresh-then-capture, or -- Step I.1 -- no refresh to find). Popped
+      the stash and re-ran: all green.
+  AC-2:
+    tests:
+      - tests/test_tip_capture_idiom_uniformity.py::TestExit4RecoveryBulletStatesRecaptureBeforeRefresh::test_states_recapture_from_branch_ref
+      - tests/test_tip_capture_idiom_uniformity.py::TestExit4RecoveryBulletStatesRecaptureBeforeRefresh::test_recapture_precedes_refresh
+      - tests/test_tip_capture_idiom_uniformity.py::TestExit4RecoveryBulletStatesRecaptureBeforeRefresh::test_refresh_targets_branch_name
+    red_confirmed: false
+    red_reason: >-
+      The Branch & Worktree Model's exit-4 recovery bullet already stated
+      capture-before-refresh before this task (an earlier, out-of-scope
+      task; this task's Out of Scope explicitly excludes editing this
+      bullet's own wording). All three tests passed even in the same
+      stash-revert check used for AC-1 (pre-conversion document), so they
+      never went red for this task's own edit -- they assert an invariant
+      this task must preserve, not new behavior it introduces. The "each
+      converted site's stated order MATCHES" half of AC-2 is exercised by
+      AC-1's per-site tests, which did go red.
+  AC-3:
+    tests:
+      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCaptureResolvesBranchRef::test_every_site_captures_from_the_branch_ref
+      - tests/test_tip_capture_idiom_uniformity.py::TestPerSiteCapturePrecedesRefresh::test_capture_precedes_refresh_in_every_site
+      - tests/test_review_implement_develop_lock_contracts.py::TestImplementPhaseWakePhaseOrdering::test_wake_phase_refresh_precedes_workflow_yaml_edit_and_commit
+      - tests/test_review_implement_develop_lock_contracts.py::TestImplementPhaseWakePhaseOrdering::test_wake_phase_commit_references_exit4_recovery
+    red_confirmed: true
+    red_reason: >-
+      The 'Step I.2.b wake reconcile' subTest failed in both
+      test_tip_capture_idiom_uniformity per-site methods against the
+      pre-conversion text (old capture was `rev-parse HEAD`, positioned
+      after the refresh). The two pre-existing
+      test_review_implement_develop_lock_contracts.py assertions were never
+      red -- they pin the "Refresh the integration worktree FIRST" phrase
+      and the wake commit literal, both of which this task's edit was
+      required to leave untouched; they are listed here as the regression
+      guard proving the capture insertion did not disturb them, not as a
+      newly-red criterion.
+  AC-4:
+    tests:
+      - tests/test_tip_capture_idiom_uniformity.py::TestExpectedBaseTipDescribesBranchRefCapture::test_states_new_branch_ref_capture_wording
+      - tests/test_tip_capture_idiom_uniformity.py::TestExpectedBaseTipDescribesBranchRefCapture::test_old_refresh_time_capture_phrasing_absent
+      - tests/test_tip_capture_idiom_uniformity.py::TestRecoveryContractStatesRecaptureThenRefresh::test_states_recapture_before_refresh
+      - tests/test_tip_capture_idiom_uniformity.py::TestRecoveryContractStatesRecaptureThenRefresh::test_old_refresh_first_phrasing_absent
+      - tests/test_tip_capture_idiom_uniformity.py::TestRecoveryContractStatesRecaptureThenRefresh::test_carve_out_sentence_is_byte_identical
+      - tests/test_tip_capture_idiom_uniformity.py::TestCommitDocsShExecutableBodyUnchanged::test_comment_stripped_body_matches_pre_change
+    red_confirmed: true
+    red_reason: >-
+      Stashed the commit-docs.sh edit and re-ran: test_states_new_branch_ref_capture_wording
+      and test_old_refresh_time_capture_phrasing_absent failed (old
+      refresh-time-capture phrasing still present, new phrasing absent);
+      test_states_recapture_before_refresh ERRORed (old text has no
+      "re-capture the tip from the branch ref" phrase at all) and
+      test_old_refresh_first_phrasing_absent failed (old "MUST (1)
+      refresh..." phrasing still present). test_carve_out_sentence_is_byte_identical
+      and test_comment_stripped_body_matches_pre_change passed even
+      pre-edit -- they pin the byte-identical carve-out sentence and the
+      comment-stripped executable body, both invariants this task must
+      preserve rather than change, so they are the regression guard for
+      AC-4's "no non-comment line changed" half. Popped the stash and
+      re-ran: all six green.
+  AC-5:
+    tests:
+      - tests/test_implement_routeback_gate.py::TestGateDecisionPrecedesAllSideEffects::test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_states_tip_capture
+      - tests/test_implement_routeback_gate.py::TestAbortPhaseOptionHasSC1Terminal::test_order_refresh_before_tip_before_write_before_commit
+    red_confirmed: true
+    red_reason: >-
+      Stashed the implement-phase.md edit (keeping these three amended
+      assertions as written) and ran the three methods directly against the
+      pre-conversion document: all three failed -- e.g. "AssertionError:
+      2234 not less than 2170" (tip index after refresh index in the old
+      route-back text) and "'rev-parse em-workflow/{feature}/integration'
+      not found" in the old abort-phase slice (which still read `rev-parse
+      HEAD`). Popped the stash and re-ran: all three green.
+  AC-6:
+    tests:
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_step_i1_bash_block_has_no_refresh_line
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_step_i1_capture_assignment_matcher_flags_head_form
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_reconcile_step2_refresh_precedes_capture
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_routeback_clause_refresh_precedes_capture
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_rejected_clause_refresh_precedes_capture
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_abort_clause_refresh_precedes_capture
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_old_samples_are_not_vacuous
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_expected_base_tip_matcher_flags_pre_change_block
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_recovery_contract_matcher_flags_pre_change_block
+      - tests/test_tip_capture_idiom_uniformity.py::TestValidationDetectsRegressions::test_stripped_body_matcher_flags_a_changed_executable_line
+    red_confirmed: false
+    red_reason: >-
+      These TS-7 negative-proof tests assert properties of hardcoded
+      pre-change SAMPLES (captured via `git show
+      HEAD:em-workflow/references/implement-phase.md` /
+      `...commit-docs.sh`), never the live document, so by construction
+      they were green from the moment they were written and had no red
+      state of their own to confirm. What AC-6 actually requires --
+      "fails when any converted site is reverted ... demonstrated by a
+      negative proof per matcher" -- is the red state of the POSITIVE
+      matchers on live-document reversion, which is confirmed directly
+      under AC-1 / AC-3 / AC-4 above via the stash-revert checks. AC-6's
+      remaining claims (module exists, is found by plain discovery, covers
+      TS-1 through TS-4) are structural facts confirmed by `python3 -m
+      unittest discover -s tests` finding 1535 tests (1511 baseline + 24
+      new), all passing.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Whole-suite / cross-module property, not a single test id.
+      `python3 -m unittest discover -s tests` was run BEFORE any edit
+      (baseline: 1511/1511 passing, 0 failures) and AFTER every edit in
+      this task (final: 1535/1535 passing, 0 failures -- the +24 are this
+      task's new module). The specific preserved-byte-identical items AC-7
+      names are asserted by pre-existing tests this task never touched
+      (e.g. tests/test_implement_routeback_gate.py's
+      TestContainmentAndInvariants.test_batch_mode_paragraph_is_byte_identical
+      and TestExit4EnumerationExcludesRouteBackCommit; the whole of
+      tests/test_exit4_tip_argument_consistency.py and
+      tests/test_recycled_task_id_consistency.py, run unmodified), all of
+      which stayed green throughout, so there was never a red state to
+      confirm for this criterion -- only a green-throughout invariant to
+      not break.
