@@ -63,10 +63,17 @@ tasks:
     branch: em-workflow/routeback-admissibility-exits/task0001
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
-  perspectives: {}
+  plan:
+    floor: [comprehensive, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: pending
+    performance: pending
+    architecture: pending
+    spec: pending
   residual_critical_high: 0
   needs_rework: false
 
