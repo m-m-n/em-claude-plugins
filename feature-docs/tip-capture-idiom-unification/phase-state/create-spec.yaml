@@ -3,14 +3,109 @@ feature: tip-capture-idiom-unification
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: f65575911f75243850f78b6366471896cf9586ce
+base_revision: 17ad8fdb8690f561ef3445ccd01dd58b9b25ca97
 last_input_digest: sha256:6a3e19081c8c97dc0c3053756df1e2aaad0fe9e619ed3ac1bdb870da6870b038
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-23T08:47:00+09:00"
+    questions:
+      - question_id: requirement.frozen-test-idiom-pin
+        status: answered
+      - question_id: requirement.site-set-definition
+        status: answered
+      - question_id: requirement.step-i1-refresh
+        status: answered
+      - question_id: requirement.commit-docs-prose-scope
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  requirement.frozen-test-idiom-pin:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T08:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [amend_frozen_module]
+    freeform: null
+    normalized_answer: >-
+      Amend the three affected assertions in tests/test_implement_routeback_gate.py
+      (route-back order pin, abort `rev-parse HEAD` literal, abort order pin) to the
+      new idiom. Every other assertion in that module stays untouched. Recorded as an
+      explicit in-scope change set item.
+    resolution_note: >-
+      batch: gate create-spec.requirement-clarification -> action codex_consultation.
+      Codex (1 turn) selected amend_frozen_module; the orchestrator judged the mapping
+      valid against the question's option_ids. superseding_assertions was rejected
+      because it would shape protocol prose to satisfy a test.
+  requirement.site-set-definition:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T08:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [all_seven]
+    freeform: null
+    normalized_answer: >-
+      All seven tip-carrying commit-docs.sh invocations are in scope: Step I.1,
+      Step I.2.a, Step I.2.b, Step I.2.c route-back, Step I.2.c rejected,
+      Step I.2.c abort, Step I.3. The route-back site's exit-4 unreachability
+      carve-out prose stays intact — it concerns exit-4 reachability, not tip capture.
+    resolution_note: >-
+      batch: gate create-spec.requirement-clarification -> action codex_consultation.
+      Codex selected all_seven; mapping judged valid by the orchestrator.
+  requirement.step-i1-refresh:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T08:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [capture_then_refresh]
+    freeform: null
+    normalized_answer: >-
+      Step I.1 adopts the full idiom: capture $BASE_COMMIT from the branch ref, then
+      add the `reset --hard em-workflow/{feature}/integration` refresh, then write,
+      then commit. $BASE_COMMIT remains both the recorded workflow[implement].base_commit
+      and the commit-docs.sh third argument, and its pinned commit literal is unchanged.
+    resolution_note: >-
+      batch: gate create-spec.requirement-clarification -> action codex_consultation.
+      Codex selected capture_then_refresh; mapping judged valid by the orchestrator.
+  requirement.commit-docs-prose-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T08:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [both_blocks]
+    freeform: null
+    normalized_answer: >-
+      Align both prose blocks in em-workflow/scripts/commit-docs.sh: the
+      `expected_base_tip` description AND the RECOVERY CONTRACT's recovery steps.
+      The RECOVERY CONTRACT's carve-out sentence is left untouched. No executable
+      line of the script changes.
+    resolution_note: >-
+      batch: gate create-spec.requirement-clarification -> action codex_consultation.
+      Codex selected both_blocks; mapping judged valid by the orchestrator.
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T08:52:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [skip]
+    freeform: null
+    normalized_answer: >-
+      Skip the design step. Documentation, shell-comment, test and version-manifest
+      change with no visual or interaction surface.
+    resolution_note: >-
+      batch: gate create-spec.design-step -> policy option_id decide_autonomously,
+      i.e. accept requirements-analyst's design_step_recommendation without asking.
+      The worker's packet offered `skip` / `run_design` instead of the contract's
+      declared `decide_autonomously` / `ask_user` vocabulary; the orchestrator applied
+      the policy's SEMANTICS (accept the recommendation, which is `skip`) rather than
+      aborting on the literal option-id mismatch, since the vocabulary rule exists to
+      make that abort unreachable at a non-blocking preference gate. Deviation recorded
+      in the run report.
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:6a3e19081c8c97dc0c3053756df1e2aaad0fe9e619ed3ac1bdb870da6870b038
     output_digest: null
 artifacts: []
