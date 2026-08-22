@@ -28,7 +28,8 @@ workflow:
     skipped_reason: "Protocol-document and test-only change with no user-facing UI, no rendered output and no design-system inputs."
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 3129f14ba447b69500cd2e9647b3d9732b51f4ad
   - id: implement
     status: pending
     base_commit: null
@@ -41,7 +42,24 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "Route-back admissibility exits in the implement-phase protocol"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_implement_routeback_gate.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - test-docs/routeback-admissibility-exits/task0001.tests.yaml
+    skills: []
+    domains: [api-contract, concurrency, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -57,84 +75,84 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR2:
     title: "Correct I.2.a's unreachability argument"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1, TS-3]
   FR3:
     title: "Exit for a plan carrying a stale `launched`"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-2]
   FR4:
     title: "Give I.2.b step 1's in-flight verification a defined outcome"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-2]
   FR5:
     title: "Keep the hook contract consistent"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-8]
   FR6:
     title: "SPEC-side coverage"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4]
   FR7:
     title: "Plugin version bump in lockstep"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-7]
   NFR1:
     title: "Hook code untouched by default"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-8]
   NFR2:
     title: "Test-module discipline"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4, TS-5, TS-6]
   NFR3:
     title: "Single-source discipline in implement-phase.md"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4, TS-5, TS-6]
   NFR4:
     title: "Suite green"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-9]
   NFR5:
     title: "No bare git commit/add lines"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4, TS-5, TS-6]
 
 batch:
