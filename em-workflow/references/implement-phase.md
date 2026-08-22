@@ -157,7 +157,8 @@ user's choice; the develop completion merge tolerates exactly this diff. A
 
 ```bash
 WT_ROOT="$(git rev-parse --show-toplevel)/.claude/worktrees/em-workflow/{feature}"
-BASE_COMMIT=$(git -C "$WT_ROOT/integration" rev-parse HEAD)
+BASE_COMMIT=$(git -C "$WT_ROOT/integration" rev-parse em-workflow/{feature}/integration)
+git -C "$WT_ROOT/integration" reset --hard em-workflow/{feature}/integration
 ```
 
 `$BASE_COMMIT` is the integration branch's HEAD at implement start —
@@ -386,9 +387,10 @@ Triggered whenever a launched implementer's `Task()` call returns.
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
      task merged on self-report or journal entry alone.
-2. **Refresh the integration worktree FIRST** (Branch & Worktree Model):
-   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`,
-   then capture `RECONCILE_TIP=$(git -C {integration_worktree} rev-parse HEAD)`.
+2. Capture `RECONCILE_TIP=$(git -C {integration_worktree} rev-parse
+   em-workflow/{feature}/integration)`. **Refresh the integration worktree FIRST**
+   (Branch & Worktree Model):
+   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`.
    Any reconcile that observed a ref advance means a concurrent
    `merge-task.sh` moved the branch tip via `update-ref` without touching
    this worktree — refreshing before step 3's edit is what keeps that edit
@@ -456,12 +458,13 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   carries any event has a terminal journal last event (`merged` or
   `failed`) — the planner's `replace_all` recycles every id, not only the
   failed ones, so a task with no journal event at all has nothing to
-  inherit and never blocks route-back. Refresh
-  the integration worktree first (`git -C "$WT_ROOT/integration"
-  reset --hard em-workflow/{feature}/integration`), then capture
-  `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
-  then make one ordered workflow.yaml write set over the reset target
-  set — every task whose Step I.2.b step 1 reconciled state is
+  inherit and never blocks route-back. Capture
+  `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse
+  em-workflow/{feature}/integration)`, refresh the integration worktree
+  (`git -C "$WT_ROOT/integration" reset --hard
+  em-workflow/{feature}/integration`), then make one ordered workflow.yaml
+  write set over the reset target set — every task whose Step I.2.b step 1
+  reconciled state is
   `failed`: set `create-plan` to `needs_update`, set the `implement`
   step back to `pending`, record each such task's failure reason (the
   implementer's report `notes`) in `tasks.{T}.notes`, and set
@@ -501,12 +504,12 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   not, because a task has status `in_progress`, or because Step I.2.b's
   last-event-per-task rule reports a task in-flight — this automatic
   re-entry does not apply:
-  `create-plan` is NOT set to `needs_update`. The phase instead refreshes
-  the integration worktree first (the same `reset --hard` as above),
-  captures `TERMINAL_TIP=$(git -C "$WT_ROOT/integration" rev-parse
-  HEAD)`, sets the `implement` step's `status` to `failed` in
-  workflow.yaml — the single write this path makes — and commits exactly
-  that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
+  `create-plan` is NOT set to `needs_update`. The phase instead captures
+  `TERMINAL_TIP=$(git -C "$WT_ROOT/integration" rev-parse
+  em-workflow/{feature}/integration)`, refreshes the integration worktree
+  (the same `reset --hard` as above), sets the `implement` step's `status`
+  to `failed` in workflow.yaml — the single write this path makes — and
+  commits exactly that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
   implement route-back gate rejected" "$TERMINAL_TIP"`. There is no
   route-back write set, no worktree/branch cleanup and no route-back
   commit on this path — the terminal status write and its own commit are
@@ -515,12 +518,12 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   iteration reading `implement: failed` — the same terminal as the
   "abort phase" option below. No retry loop, no alternative recovery
   route, and no degraded route back is offered for this path.
-- **abort phase** — refresh the integration worktree first (the same
-  `reset --hard em-workflow/{feature}/integration` the rejected path
-  above uses), capture `ABORT_TIP=$(git -C "$WT_ROOT/integration"
-  rev-parse HEAD)`, set the `implement` step's `status` to `failed` in
-  workflow.yaml — the single write this path makes — and commit exactly
-  that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
+- **abort phase** — capture `ABORT_TIP=$(git -C "$WT_ROOT/integration"
+  rev-parse em-workflow/{feature}/integration)`, refresh the integration
+  worktree (the same `reset --hard em-workflow/{feature}/integration` the
+  rejected path above uses), set the `implement` step's `status` to
+  `failed` in workflow.yaml — the single write this path makes — and
+  commit exactly that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
   implement phase aborted" "$ABORT_TIP"` (no `create-plan`
   `needs_update`, no task status or notes write set, no worktree or
   branch cleanup — the terminal status write and its own commit are the
