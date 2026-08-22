@@ -144,6 +144,33 @@ b28a7166e8dce876075fc550ada7fdd7027211fa):
 - TestRecycledTaskIdRuleScopedToOrchestrator's group-placement tests -> new
   wording (group anchors) ->
   test_group_anchors_absent_in_pre_change_wording
+
+task0001 (routeback-admissibility-exits) replaces I.2.a's unreachability
+premise -- the one the trust-but-verify path falsifies -- with a premise
+resting on Step I.2.c's new third gate conjunct (journal last event `merged`,
+read from the journal alone, independent of the ancestor verification). The
+paragraph's conclusion (the inheritance invariant and the failed-only
+carve-out scoping) is retained verbatim, as are the in-flight sentence and
+the unreachability slice anchors. Covers this task's own AC-2
+(feature-docs/routeback-admissibility-exits/tasks/task0001.md):
+
+Matcher -> negative-proof inventory added by task0001
+(routeback-admissibility-exits; negative proofs run against
+PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE, a verbatim excerpt of this task's
+own base commit 9f5d7ae):
+
+- test_new_premise_names_journal_last_event_conjunct -> new wording ->
+  test_new_premise_matcher_flags_absence_in_pre_change_wording
+- test_old_falsified_premise_absent -> regression guard (absence of the
+  removed premise) -> same proof above (asserts the OLD phrase is present
+  in the pre-change sample)
+- test_inheritance_invariant_conclusion_survives -> RETENTION matcher, no
+  proof needed
+- test_failed_only_carve_out_sentence_survives -> RETENTION matcher, no
+  proof needed
+- test_in_flight_sentence_survives -> RETENTION matcher, no proof needed
+- test_unreachability_slice_anchors_survive -> RETENTION matcher, no proof
+  needed
 """
 
 import importlib.util
@@ -403,6 +430,27 @@ PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE = (
     "its events is scoped by this rule."
 )
 
+# --- task0001 (routeback-admissibility-exits): module-level constants for
+# the I.2.a unreachability premise replacement. Each is read by both its
+# positive test and its negative-proof test below -- the literal is never
+# spelled twice (same Contract 1 pattern as the blocks above).
+
+# AC-2 group: the falsified premise this task removes.
+OLD_MERGED_UNDER_EITHER_SOURCE_PREMISE = (
+    "Because route-back proceeds only when no task is `merged` under "
+    "either source"
+)
+# AC-2 group: the replacement premise, resting on Step I.2.c's new third
+# gate conjunct (journal last event alone, independent of the ancestor
+# verification).
+NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE = (
+    "route-back proceeds only when no task's journal last event is "
+    "`merged`, read from the journal directly"
+)
+NEW_PREMISE_SURVIVES_ANCESTOR_CHECK_PHRASE = (
+    "the justification survives a failing ancestor check"
+)
+
 # The Supporting cast Stop-hook bullet before this task's edit -- used for
 # the AC-2 negative proof.
 PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE = (
@@ -425,6 +473,28 @@ PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE = (
     "exceeding the\n"
     "  cap yields a warning and lets the turn end. Does not write the "
     "journal."
+)
+
+
+# --- task0001 (routeback-admissibility-exits): pre-change wording sample,
+# a verbatim excerpt of em-workflow/references/implement-phase.md at this
+# task's own base commit 9f5d7ae (Contract 2) -- not paraphrased, not
+# reconstructed, copied the same way the other pre-change samples in this
+# module were captured. Spans from the unreachability slice's opening
+# anchor through the falsified premise's conclusion, i.e. the whole
+# sentence whose premise this task replaces.
+PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE = (
+    "Given I.2.c's\n"
+    "route-back precondition below, which admits only tasks with a terminal\n"
+    "journal last event, and the planner's `replace_all` renumbering from\n"
+    "`task0001` that is the sole source of any recycled id, a re-numbered task\n"
+    "can only ever inherit a retired id's terminal events — so workflow.yaml\n"
+    "`status: pending` combined with journal last event `launched` can never\n"
+    "arise. Because route-back proceeds only when no task is `merged` under\n"
+    "either source (the widened I.2.c gate above), no retired task id can\n"
+    "leave a `merged` last event behind for a renumbered task to inherit, so\n"
+    "the recycled-task-id carve-out above stays correctly scoped to `failed`\n"
+    "only."
 )
 
 
@@ -670,6 +740,59 @@ class TestI2aScopeStatementIsSelfConsistent(unittest.TestCase):
     def test_contradictory_only_with_exception_construction_absent(self):
         self.assertNotIn(CONTRADICTORY_CONSTRUCTION_PHRASE, self.i2a)
         self.assertNotIn("governs only", self.i2a)
+
+
+class TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct(
+    unittest.TestCase
+):
+    """AC-2 (FR2; TS-3, task0001 routeback-admissibility-exits): the I.2.a
+    premise that the trust-but-verify path falsifies is replaced by one
+    resting on Step I.2.c's new third gate conjunct -- route-back proceeds
+    only when no task's journal last event is `merged`, read from the
+    journal directly, so the justification survives a failing ancestor
+    check. The paragraph's conclusion (the inheritance invariant and the
+    failed-only carve-out scoping), the in-flight sentence and the
+    unreachability slice anchors all survive."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2a = _normalize_ws(_i2a_section(_read()))
+
+    def test_old_falsified_premise_absent(self):
+        self.assertNotIn(OLD_MERGED_UNDER_EITHER_SOURCE_PREMISE, self.i2a)
+
+    def test_new_premise_names_journal_last_event_conjunct(self):
+        self.assertIn(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE, self.i2a)
+        self.assertIn(NEW_PREMISE_SURVIVES_ANCESTOR_CHECK_PHRASE, self.i2a)
+
+    def test_inheritance_invariant_conclusion_survives(self):
+        self.assertIn(
+            "no retired task id can leave a `merged` last event behind "
+            "for a renumbered task to inherit",
+            self.i2a,
+        )
+
+    def test_failed_only_carve_out_sentence_survives(self):
+        self.assertIn(
+            "the recycled-task-id carve-out above stays correctly scoped "
+            "to `failed` only",
+            self.i2a,
+        )
+        self.assertIn(
+            "This carve-out is deliberately scoped to `failed` only",
+            self.i2a,
+        )
+
+    def test_in_flight_sentence_survives(self):
+        self.assertIn(
+            "A task whose journal last event is `launched` is always "
+            "in-flight, regardless of workflow.yaml `status`",
+            self.i2a,
+        )
+
+    def test_unreachability_slice_anchors_survive(self):
+        self.assertIn(UNREACHABILITY_OPENING_ANCHOR, self.i2a)
+        self.assertIn("can never arise.", self.i2a)
 
 
 class TestStopHookBulletCitesClassificationTable(unittest.TestCase):
@@ -1053,6 +1176,15 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         self.assertNotIn(DIVERGENCE_REASON_PHRASE, sample)
         self.assertNotIn(AUTHORITATIVE_SOURCE_PHRASE, sample)
 
+    # --- task0001 (routeback-admissibility-exits): negative proof for the
+    # I.2.a unreachability premise replacement, run against this task's own
+    # pre-change sample (base commit 9f5d7ae).
+
+    def test_new_premise_matcher_flags_absence_in_pre_change_wording(self):
+        sample = _normalize_ws(PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE)
+        self.assertNotIn(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE, sample)
+        self.assertIn(OLD_MERGED_UNDER_EITHER_SOURCE_PREMISE, sample)
+
     def test_group_anchors_absent_in_pre_change_wording(self):
         # The split assertions' own opening anchors did not exist in the
         # pre-change wording (the old sentence used a different
@@ -1108,6 +1240,22 @@ class TestPreChangeSampleGuards(unittest.TestCase):
         # both the pre-change sample and the live post-change document.
         sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
         anchor = "which states the same classification"
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_i2a_section(_read())))
+
+    def test_i2a_unreachability_tail_sample_retains_inheritance_invariant_anchor(
+        self,
+    ):
+        # "no retired task id can leave a `merged` last event behind for a
+        # renumbered task to inherit" survives verbatim across this task's
+        # edit (only the premise before it changes) -- a RETAINED anchor
+        # present in both the pre-change sample and the live post-change
+        # document.
+        sample = _normalize_ws(PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE)
+        anchor = (
+            "no retired task id can leave a `merged` last event behind "
+            "for a renumbered task to inherit"
+        )
         self.assertIn(anchor, sample)
         self.assertIn(anchor, _normalize_ws(_i2a_section(_read())))
 

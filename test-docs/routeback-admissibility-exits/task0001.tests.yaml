@@ -1,0 +1,169 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_third_conjunct_opening_present
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_third_conjunct_source_phrase_present
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_third_conjunct_independent_of_ancestor_verification
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_third_conjunct_cites_launch_guard_reason
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_third_conjunct_states_narrowing
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_existing_two_source_halves_survive
+      - tests.test_implement_routeback_gate.TestThirdGateConjunctMergedLastEventAlone.test_terminal_journal_last_event_precedes_create_plan_write_set
+    red_confirmed: true
+    red_reason: >-
+      Before the I.2.c edit, test_third_conjunct_source_phrase_present /
+      test_third_conjunct_independent_of_ancestor_verification /
+      test_third_conjunct_cites_launch_guard_reason /
+      test_third_conjunct_states_narrowing /
+      test_third_conjunct_opening_present all failed with
+      AssertionError: phrase not found in section (the third conjunct
+      prose did not exist yet). test_existing_two_source_halves_survive
+      and test_terminal_journal_last_event_precedes_create_plan_write_set
+      are retention checks over pre-existing literals and were already
+      green (nothing to make red for those two).
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_old_falsified_premise_absent
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_new_premise_names_journal_last_event_conjunct
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_failed_only_carve_out_sentence_survives
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_in_flight_sentence_survives
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_unreachability_slice_anchors_survive
+    red_confirmed: true
+    red_reason: >-
+      Before the I.2.a edit, test_old_falsified_premise_absent failed
+      with "'Because route-back proceeds only when no task is `merged`
+      under either source' unexpectedly found" and
+      test_new_premise_names_journal_last_event_conjunct failed with
+      AssertionError: the new premise phrase was not found. The other
+      four are retention checks over text this task does not touch and
+      were already green.
+  AC-3:
+    tests:
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_failure_condition_stated
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_no_reclassification_by_itself_and_cites_i2a
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_effect_triggers_recovery_and_names_task_in_report
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_recovery_stops_agent_and_stop_tool_recorder_records_terminal_failed
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_recovery_reaches_normal_failed_handling
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_residual_unresolvable_agent_case_stated
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_recovery_runs_before_i2c_menu
+      - tests.test_implement_routeback_gate.TestI2cCitesI2bRecoveryBeforeRejectedMarker.test_i2c_cites_i2b_step1_recovery_before_rejected_marker
+      - tests.test_implement_routeback_gate.TestI2cCitesI2bRecoveryBeforeRejectedMarker.test_i2c_contains_neither_banned_token
+      - tests.test_implement_routeback_gate.TestStaleLaunchedCaveatCitesI2bStep1Recovery.test_caveat_cites_i2b_step1_recovery
+      - tests.test_implement_routeback_gate.TestStaleLaunchedCaveatCitesI2bStep1Recovery.test_old_undefined_catches_outcome_absent
+      - tests.test_implement_routeback_gate.TestStaleLaunchedCaveatCitesI2bStep1Recovery.test_stop_hook_bullet_anchor_survives
+      - tests.test_implement_routeback_gate.TestStaleLaunchedCaveatCitesI2bStep1Recovery.test_stop_tool_recorder_bullet_anchor_survives
+      - tests.test_implement_routeback_gate.TestStaleLaunchedCaveatCitesI2bStep1Recovery.test_hook_classification_table_rows_survive
+    red_confirmed: true
+    red_reason: >-
+      Before the I.2.b step 1 / I.2.c / Supporting cast edits: all seven
+      TestI2bStep1InFlightExistenceCheckHasStatedEffect tests failed with
+      AssertionError (phrase not found -- the failure-condition/effect/
+      recovery/residual/menu-ordering prose did not exist yet);
+      test_i2c_cites_i2b_step1_recovery_before_rejected_marker raised
+      ValueError (the citation substring did not exist, so .index()
+      could not locate it -- a stronger proof of absence than a failed
+      assertIn); test_caveat_cites_i2b_step1_recovery failed with
+      AssertionError (the citation phrase was absent, the caveat still
+      read "catches it on the next reconcile pass"). The other four
+      (banned-token check, old-phrase-absent, and the two retention
+      anchors) were already green -- unaffected pre-existing invariants.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Property of the diff, not of the document (Test Notes: TDD-awkward,
+      no committed checker per FR5/NFR1). Verified by inspection:
+      `git diff --stat` against the base commit lists exactly
+      em-workflow/references/implement-phase.md, tests/test_recycled_task_id_consistency.py,
+      tests/test_implement_routeback_gate.py, em-workflow/.claude-plugin/plugin.json
+      and .claude-plugin/marketplace.json -- no file under em-workflow/hooks/
+      appears. The hook classification table (Supporting cast section) is
+      untouched -- confirmed by TestStaleLaunchedCaveatCitesI2bStep1Recovery.test_hook_classification_table_rows_survive
+      and by every pre-existing hook-contract test module
+      (test_queue_launch_guard.py, test_queue_stop_guard.py,
+      test_queue_failure_net.py, test_queue_taskstop_net.py,
+      test_hooks_registration.py, test_guardrail_hooks_migration.py,
+      test_hook_classification_pin.py) passing unmodified in the full
+      suite run.
+  AC-5:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_new_premise_matcher_flags_absence_in_pre_change_wording
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_inheritance_invariant_anchor
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_third_conjunct_matchers_flag_absence_in_pre_change_wording
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_i2c_recovery_citation_matcher_flags_absence_in_pre_change_wording
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_i2b_step1_existence_check_matchers_flag_absence_in_pre_change_wording
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_caveat_matcher_flags_absence_in_pre_change_wording
+      - tests.test_implement_routeback_gate.TestPreChangeSampleGuards.test_i2c_gate_conjunct_sample_retains_merged_half_anchor
+      - tests.test_implement_routeback_gate.TestPreChangeSampleGuards.test_i2b_step1_existence_check_sample_retains_ancestor_check_anchor
+      - tests.test_implement_routeback_gate.TestPreChangeSampleGuards.test_stale_launched_caveat_sample_retains_stop_tool_recorder_anchor
+    red_confirmed: false
+    red_reason: >-
+      These are the negative-proof / non-vacuity matchers themselves --
+      they assert facts about static pre-change wording SAMPLES (captured
+      verbatim from base 9f5d7ae) and are green from the moment they are
+      written, by construction; they never depend on implement-phase.md's
+      live content, so there is no red state to observe for them. What
+      they prove is that the corresponding positive matcher (listed under
+      AC-1/AC-2/AC-3 above, each already red_confirmed: true) would
+      correctly have failed against the pre-change document. AC-5's
+      "no test removed/skipped; neither module's test-method count
+      decreases" half is a structural property of this diff (only
+      additions to both modules; see git diff --stat), not a runtime
+      assertion.
+  AC-6:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestProtectedRawLiteralsSurvive.test_step_i2a_select_literal_survives
+      - tests.test_recycled_task_id_consistency.TestProtectedRawLiteralsSurvive.test_step_i0_pending_literal_survives
+      - tests.test_recycled_task_id_consistency.TestProtectedRawLiteralsSurvive.test_step_i0_literal_precedes_step_i2a_literal
+      - tests.test_recycled_task_id_consistency.TestWakePhaseCommitLiteralSurvives.test_commit_literal_survives
+      - tests.test_recycled_task_id_consistency.TestI2cHeadingAndBatchModeParagraphByteIdentical.test_heading_is_byte_identical
+      - tests.test_recycled_task_id_consistency.TestI2cHeadingAndBatchModeParagraphByteIdentical.test_batch_mode_paragraph_is_byte_identical_tail
+      - tests.test_recycled_task_id_consistency.TestI2cOrderings.test_first_tasks_status_has_pending_within_60_chars
+      - tests.test_recycled_task_id_consistency.TestI2cOrderings.test_write_tokens_precede_cleanup
+      - tests.test_recycled_task_id_consistency.TestI2cOrderings.test_commit_precedes_cleanup_precedes_end_of_phase_report
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_heading_is_byte_identical
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_batch_mode_paragraph_is_byte_identical
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_no_bare_git_commit_or_add_lines
+      - tests.test_implement_routeback_gate.TestI2cCitesI2bRecoveryBeforeRejectedMarker.test_i2c_contains_neither_banned_token
+    red_confirmed: false
+    red_reason: >-
+      All pre-existing regression/invariant guards over literals this
+      task's edits do not touch (the I.2.c heading, the batch-mode tail,
+      the three line-wrap-sensitive literals, the four I.2.c orderings,
+      the bare-git-line invariant) -- they were green before this task's
+      edits and stayed green after; there is no red state to observe
+      because the task plan requires these to be byte-identical /
+      unchanged, never rewritten. test_i2c_contains_neither_banned_token
+      was also already green pre-change (I.2.c never contained "rework"
+      or "append" before this task either) -- this task's new I.2.c prose
+      was written to avoid introducing either token, verified by this
+      test remaining green after the edit.
+  AC-7:
+    tests:
+      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_plugin_manifest_and_marketplace_agree_on_version
+      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_shared_version_is_past_the_pre_task_baseline
+    red_confirmed: true
+    red_reason: >-
+      test_shared_version_is_past_the_pre_task_baseline failed after the
+      baseline was raised to 47 (while both manifests still read 0.1.47):
+      AssertionError: 47 not greater than 47. Fixed by bumping both
+      manifests to 0.1.48 in the same change.
+      test_plugin_manifest_and_marketplace_agree_on_version was already
+      green (both files already agreed at 0.1.47) and stayed green after
+      the bump to 0.1.48 -- it asserts agreement, not a specific value, so
+      it was never expected to go red. The aggregate run
+      (`python3 -m unittest discover -s tests` from the repository root)
+      passed with 1584 tests, 0 failures, after all edits landed.
+notes: >-
+  AC-4's "no hook file modified" and AC-5's "no test removed / method
+  count does not decrease" are structural properties of the diff verified
+  by inspection (git diff --stat: only the five files in this task's Files
+  to Modify plus this test record were touched) rather than by a dedicated
+  runtime test, per the task plan's Test Notes ("TDD-awkward"). Full suite
+  run from the repository root: 1548 tests before this task's changes
+  (baseline, all passing -- no pre-existing failures), 1584 after (36 new
+  tests added across the two named modules, all passing, zero
+  regressions).
