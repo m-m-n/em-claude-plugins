@@ -486,18 +486,25 @@ class TestGateDecisionPrecedesAllSideEffects(unittest.TestCase):
     def test_admitted_path_order_gate_refresh_tip_writeset_commit_cleanup(self):
         # task0003 AC-5: commit now precedes cleanup (was cleanup then
         # commit before this task).
+        # task0001 (tip-capture-idiom-unification, FR7): the tip capture now
+        # precedes the refresh (canonical idiom), so this re-anchors off the
+        # `reset --hard` literal instead of the retired "Refresh the
+        # integration worktree first" phrase, which no longer opens this
+        # bullet.
         section = self.section
         gate_idx = section.index(
             "This automatic re-entry applies only when the gate holds"
         )
-        refresh_idx = section.index("Refresh the integration worktree first")
         tip_idx = section.index("ROUTEBACK_TIP")
+        refresh_idx = section.index(
+            "reset --hard em-workflow/{feature}/integration"
+        )
         write_set_idx = section.index("make one ordered workflow.yaml write set")
         commit_idx = section.index("Commit that write set next, BEFORE any cleanup")
         cleanup_idx = section.index("Only once that commit")
-        self.assertLess(gate_idx, refresh_idx)
-        self.assertLess(refresh_idx, tip_idx)
-        self.assertLess(tip_idx, write_set_idx)
+        self.assertLess(gate_idx, tip_idx)
+        self.assertLess(tip_idx, refresh_idx)
+        self.assertLess(refresh_idx, write_set_idx)
         self.assertLess(write_set_idx, commit_idx)
         self.assertLess(commit_idx, cleanup_idx)
 
@@ -815,7 +822,11 @@ class TestAbortPhaseOptionHasSC1Terminal(unittest.TestCase):
         )
 
     def test_states_tip_capture(self):
-        self.assertIn("rev-parse HEAD", self.slice)
+        # task0001 (tip-capture-idiom-unification, FR7): the capture now
+        # resolves the integration branch ref, never the worktree HEAD.
+        self.assertIn(
+            "rev-parse em-workflow/{feature}/integration", self.slice
+        )
 
     def test_states_implement_failed_write(self):
         self.assertIn(
@@ -827,17 +838,20 @@ class TestAbortPhaseOptionHasSC1Terminal(unittest.TestCase):
         self.assertIn("$ABORT_TIP", self.slice)
 
     def test_order_refresh_before_tip_before_write_before_commit(self):
+        # task0001 (tip-capture-idiom-unification, FR7): the refresh/tip
+        # pair inverts (capture now precedes the refresh); the write and
+        # commit relations stay.
         section = self.slice
+        tip_idx = section.index("ABORT_TIP=$(git")
         refresh_idx = section.index(
             "reset --hard em-workflow/{feature}/integration"
         )
-        tip_idx = section.index("ABORT_TIP=$(git")
         write_idx = section.index(
             "set the `implement` step's `status` to `failed`"
         )
         commit_idx = section.index("commit-docs.sh")
-        self.assertLess(refresh_idx, tip_idx)
-        self.assertLess(tip_idx, write_idx)
+        self.assertLess(tip_idx, refresh_idx)
+        self.assertLess(refresh_idx, write_idx)
         self.assertLess(write_idx, commit_idx)
 
     def test_old_manual_handling_phrase_absent(self):
