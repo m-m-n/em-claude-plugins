@@ -1,14 +1,18 @@
 schema_version: 1
 feature: tip-capture-idiom-unification
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: 5dc0f6c4418c76c08335cce9d32ebfd85fbdb9ec
-last_input_digest: null
-active_request_id: null
+base_revision: f65575911f75243850f78b6366471896cf9586ce
+last_input_digest: sha256:6a3e19081c8c97dc0c3053756df1e2aaad0fe9e619ed3ac1bdb870da6870b038
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:6a3e19081c8c97dc0c3053756df1e2aaad0fe9e619ed3ac1bdb870da6870b038
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
