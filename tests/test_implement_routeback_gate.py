@@ -111,6 +111,76 @@ exists:
 These relocated assertions read only `em-workflow/references/batch-mode.md`
 and use the standard library only, unchanged in substance from their
 original module.
+
+task0001 (routeback-admissibility-exits) adds a third route-back gate
+conjunct (Site A) -- route-back is inadmissible whenever the
+last-event-per-task replay alone reports any task's journal last event as
+`merged`, independent of the `merged` half's ancestor verification -- gives
+I.2.b step 1's in-flight worktree/branch existence check a stated effect and
+a stale-`launched` recovery (Site C), aligns the Supporting cast
+stale-`launched` caveat to cite that recovery instead of asserting an
+undefined "catches" outcome (Site D), and raises the version-lockstep
+assertion's patch baseline from 42 to 47 alongside the manifest bump to
+0.1.48 (Site F). Covers this task's own Acceptance Criteria
+(feature-docs/routeback-admissibility-exits/tasks/task0001.md):
+
+- AC-1 (FR1, FR2; TS-1): the I.2.c gate states the third conjunct, sourced
+  from the last-event replay alone and independent of the ancestor
+  verification, with the launch-guard reason cited not restated, and the
+  narrowing to `failed`-only recycled-id launchability.
+- AC-3 (FR3, FR4; TS-2): I.2.b step 1 states the existence check's failure
+  condition, its effect, the recovery ending in a stop-tool-recorder-written
+  terminal `failed` event, and the residual unresolvable case; I.2.c cites
+  that recovery before the gate-rejected marker and contains neither banned
+  token; the Supporting cast caveat cites I.2.b step 1 instead of asserting
+  an undefined outcome.
+- AC-7 (FR7, NFR4; TS-7): both manifests carry the same version with patch
+  strictly greater than 47, and the lockstep assertion's baseline is raised
+  to 47.
+
+Matcher -> negative-proof inventory added by task0001
+(routeback-admissibility-exits; negative proofs run against
+PRE_CHANGE_I2C_GATE_CONJUNCT_SAMPLE, PRE_CHANGE_I2B_STEP1_EXISTENCE_CHECK_SAMPLE
+and PRE_CHANGE_STALE_LAUNCHED_CAVEAT_SAMPLE, verbatim excerpts of this task's
+own base commit 9f5d7ae):
+
+- test_third_conjunct_source_phrase_present -> new wording ->
+  test_third_conjunct_matchers_flag_absence_in_pre_change_wording
+- test_third_conjunct_independent_of_ancestor_verification -> new wording ->
+  same proof above
+- test_third_conjunct_cites_launch_guard_reason -> new wording -> same
+  proof above
+- test_third_conjunct_states_narrowing -> new wording -> same proof above
+- test_i2c_cites_i2b_step1_recovery_before_rejected_marker -> new wording ->
+  test_i2c_recovery_citation_matcher_flags_absence_in_pre_change_wording
+- test_i2c_contains_neither_banned_token -> regression guard (pre-existing
+  proof elsewhere in this module), no separate proof needed
+- test_failure_condition_stated -> new wording ->
+  test_i2b_step1_existence_check_matchers_flag_absence_in_pre_change_wording
+- test_no_reclassification_by_itself_and_cites_i2a -> new wording -> same
+  proof above
+- test_effect_triggers_recovery_and_names_task_in_report -> new wording ->
+  same proof above
+- test_recovery_stops_agent_and_stop_tool_recorder_records_terminal_failed
+  -> new wording -> same proof above
+- test_recovery_reaches_normal_failed_handling -> new wording -> same proof
+  above
+- test_residual_unresolvable_agent_case_stated -> new wording -> same proof
+  above
+- test_recovery_runs_before_i2c_menu -> new wording -> same proof above
+- test_caveat_cites_i2b_step1_recovery -> new wording ->
+  test_caveat_matcher_flags_absence_in_pre_change_wording
+- test_old_undefined_catches_outcome_absent -> regression guard (absence of
+  the removed phrasing) -> same proof above (asserts the OLD phrase is
+  present in the pre-change sample)
+- test_stop_hook_bullet_anchor_survives -> RETENTION matcher, no proof
+  needed
+- test_stop_tool_recorder_bullet_anchor_survives -> RETENTION matcher, no
+  proof needed
+- test_hook_classification_table_rows_survive -> RETENTION matcher, no
+  proof needed
+- test_shared_version_is_past_the_pre_task_baseline (baseline raised to 47)
+  -> pre-existing matcher, its own pre-existing proof
 """
 
 import json
@@ -125,8 +195,10 @@ DEVELOP_SKILL_PATH = PLUGIN_ROOT / "skills" / "develop" / "SKILL.md"
 PLUGIN_MANIFEST_PATH = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
 MARKETPLACE_PATH = PLUGIN_ROOT.parent / ".claude-plugin" / "marketplace.json"
 
+I2B_HEADING = "### I.2.b: Wake phase"
 I2C_HEADING = "### I.2.c: Failed handling"
 NEXT_SECTION_HEADING = "### Supporting cast"
+STEP_I3_HEADING = "## Step I.3: Phase completion"
 
 # Current literal (task0001, abort-phase-terminal, brought to the
 # post-change text) -- AC-3's/TS-9's byte-identity assertion needs this
@@ -211,6 +283,143 @@ EXCLUSION_PHRASES = (
 )
 ONLY_SIDE_EFFECT_PHRASE = (
     "the terminal status write and its own commit are the ONLY side effect"
+)
+
+# --- task0001 (routeback-admissibility-exits): module-level constants for
+# the new-wording matchers this task adds. Each is read by both its
+# positive test and its negative-proof test below -- the literal is never
+# spelled twice (same Contract 1 pattern as elsewhere in this module).
+
+# Site A / AC-1 (FR1, FR2): I.2.c's third route-back gate conjunct.
+THIRD_CONJUNCT_OPENING_ANCHOR = (
+    "A third conjunct blocks independently of both halves above"
+)
+THIRD_CONJUNCT_SOURCE_PHRASE = (
+    "the last-event-per-task replay alone reports any task's journal "
+    "last event as `merged`"
+)
+THIRD_CONJUNCT_INDEPENDENCE_PHRASE = (
+    "regardless of the `git merge-base --is-ancestor` verification the "
+    "`merged` half's second source requires"
+)
+THIRD_CONJUNCT_LAUNCH_GUARD_REASON_PHRASE = (
+    "the launch guard denies a launch whose journal last event is "
+    "`merged`"
+)
+THIRD_CONJUNCT_LAUNCH_GUARD_CITATION_PHRASE = (
+    "cited here from its owning bullet under 'Supporting cast: journal, "
+    "hooks, resume' below rather than restated"
+)
+THIRD_CONJUNCT_NARROWING_PHRASE = (
+    "only the failed one leaves a recycled id launchable"
+)
+I2B_STEP1_RECOVERY_CITATION_PHRASE = "Step I.2.b step 1's recovery"
+
+# Site C / AC-3 (FR3, FR4): I.2.b step 1's in-flight existence check effect
+# and stale-`launched` recovery.
+EXISTENCE_CHECK_FAILURE_CONDITION_PHRASE = (
+    "the check FAILS when a task's journal last event is `launched` "
+    "while neither the task worktree nor the task branch exists"
+)
+NO_RECLASSIFICATION_PHRASE = (
+    "A failed check does not reclassify the task by itself: the "
+    "last-event rule owned by I.2.a above stays authoritative, cited "
+    "here rather than restated"
+)
+TRIGGERS_RECOVERY_PHRASE = "it triggers the recovery below"
+NAMES_TASK_IN_REPORT_PHRASE = "names the task in the phase report"
+STOPS_RECORDED_AGENT_PHRASE = (
+    "the wake phase stops that task's recorded agent through the "
+    "harness stop tool"
+)
+STOP_TOOL_RECORDER_CITATION_PHRASE = (
+    "the stop-tool recorder — cited from its own bullet under "
+    "'Supporting cast: journal, hooks, resume' below, not restated "
+    "here"
+)
+TERMINAL_FAILED_EVENT_PHRASE = "records the task's terminal `failed` event"
+REACHES_NORMAL_FAILED_HANDLING_PHRASE = (
+    "reaches the normal failed handling in I.2.c, where retry and "
+    "route-back are both available"
+)
+RESIDUAL_UNRESOLVABLE_PHRASE = (
+    "when the stopped agent cannot be resolved to that task, the "
+    "journal is unchanged, the task stays in-flight, the route-back "
+    "gate blocks, and the phase takes the existing gate-rejected "
+    "terminal"
+)
+RECOVERY_BEFORE_MENU_PHRASE = (
+    "This recovery runs during this wake-phase reconcile step, hence "
+    "before I.2.c's user-facing menu is offered"
+)
+
+# Site D / AC-3 (FR4, NFR3): the Supporting cast stale-`launched` caveat.
+CAVEAT_CITES_I2B_RECOVERY_PHRASE = (
+    "triggers I.2.b step 1's recovery on the next reconcile pass"
+)
+OLD_CAVEAT_CATCHES_PHRASE = "catches it on the next reconcile pass"
+
+# --- task0001 (routeback-admissibility-exits): pre-change wording samples,
+# each a verbatim excerpt of em-workflow/references/implement-phase.md at
+# this task's own base commit 9f5d7ae (Contract 2) -- not paraphrased, not
+# reconstructed, copied the same way the other pre-change samples in this
+# module were captured.
+
+PRE_CHANGE_I2C_GATE_CONJUNCT_SAMPLE = (
+    "- **route back to planning** — a task that cannot be implemented as planned\n"
+    "  means the plan (or the spec behind it) is wrong; fix it upstream, not\n"
+    "  here. This automatic re-entry applies only when the gate holds: no task\n"
+    "  has status `merged`, and no task has status `in_progress` — both\n"
+    "  re-read from workflow.yaml task statuses at this point, as an\n"
+    "  independent check, not inferred from the drain above (which only\n"
+    "  describes the normal case, not the admissibility test); a stale or\n"
+    "  unretired `in_progress` entry left by a crashed implementer blocks this\n"
+    "  path exactly as a `merged` task does. The `merged` half is likewise a\n"
+    "  union of two independent sources, either of which blocks: workflow.yaml\n"
+    "  reporting a task `merged`, OR Step I.2.b step 1's reconciled state\n"
+    "  reporting a task `merged` (journal last event `merged`, verified by\n"
+    "  `git merge-base --is-ancestor` as that step already requires) — cited\n"
+    "  here as the owning rule, not restated. The `in_progress` half is a union\n"
+    "  of two independent sources, either of which blocks: workflow.yaml\n"
+    "  reporting a task `in_progress`, OR Step I.2.b's last-event-per-task\n"
+    "  rule reporting a task in-flight (a `launched` last event, with the\n"
+    "  recycled-task-id carve-out that step already defines) — cited here as\n"
+    "  the owning rule, not restated. The second source is what makes the gate\n"
+    "  admit route-back only when every task in the current plan whose journal\n"
+    "  carries any event has a terminal journal last event (`merged` or\n"
+    "  `failed`) — the planner's `replace_all` recycles every id, not only the\n"
+    "  failed ones, so a task with no journal event at all has nothing to\n"
+    "  inherit and never blocks route-back. Refresh\n"
+    "  the integration worktree first (`git -C \"$WT_ROOT/integration\"\n"
+    "  reset --hard em-workflow/{feature}/integration`), then capture\n"
+)
+
+PRE_CHANGE_I2B_STEP1_EXISTENCE_CHECK_SAMPLE = (
+    "1. **Reconcile** — replay the journal (last-event-per-task rule: no event →\n"
+    "   unlaunched; `launched` → in-flight; `merged` → merged; `failed` →\n"
+    "   failed — except that a task whose journal last event is `failed` AND\n"
+    "   whose workflow.yaml `status` is `pending` is unlaunched instead, the\n"
+    "   recycled-task-id rule in I.2.a above; a `launched` last event is always\n"
+    "   in-flight regardless of workflow.yaml `status`) and cross-check against\n"
+    "   git actual state, trust-but-verify:\n"
+    "   - Worktree/branch existence for tasks the journal claims are in-flight.\n"
+    "   - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`\n"
+    "     for tasks the journal (or the implementer's own report) claims are\n"
+    "     `merged` — a claim that fails this check is NOT merged; never mark a\n"
+    "     task merged on self-report or journal entry alone.\n"
+)
+
+PRE_CHANGE_STALE_LAUNCHED_CAVEAT_SAMPLE = (
+    "**Stale-`launched` caveat**: the launch guard appends `launched` at allow\n"
+    "time, before the subagent actually starts — if the `Task()` call is then\n"
+    "allowed but never actually runs, a stale `launched` line can persist with no\n"
+    "corresponding implementer in flight. This is bounded, never silently masked:\n"
+    "the Stop hook's consecutive-block cap prevents an infinite blocking loop\n"
+    "over a wedged slot, the wake-phase git-state reconcile (worktree/branch\n"
+    "existence check) catches it on the next reconcile pass, and — specifically\n"
+    "for the deliberate-stop case — the stop-tool recorder appends `failed` as\n"
+    "soon as the `TaskStop` call completes, closing the gap before a reconcile\n"
+    "pass is even needed.\n"
 )
 
 # Relocated from tests/test_abort_phase_terminal_batch_mode.py (task0003,
@@ -336,6 +545,24 @@ def _i2c_section(text):
     bullets, the "NO skip option" paragraph and the batch-mode paragraph."""
     start = text.index(I2C_HEADING)
     end = text.index(NEXT_SECTION_HEADING, start)
+    return text[start:end]
+
+
+def _i2b_section(text):
+    """The `### I.2.b: Wake phase` section, sliced from its heading to the
+    `### I.2.c` heading -- includes the reconcile step's existence-check
+    bullet and its stale-`launched` recovery."""
+    start = text.index(I2B_HEADING)
+    end = text.index(I2C_HEADING, start)
+    return text[start:end]
+
+
+def _supporting_cast_section(text):
+    """The `### Supporting cast: journal, hooks, resume` section, sliced
+    from its heading to `## Step I.3` -- includes the hook bullets, the
+    hook classification table and the stale-`launched` caveat."""
+    start = text.index(NEXT_SECTION_HEADING)
+    end = text.index(STEP_I3_HEADING, start)
     return text[start:end]
 
 
@@ -969,6 +1196,153 @@ class TestDelegationCitesStopCondition3Clause(unittest.TestCase):
         self.assertNotIn(OLD_DELEGATION_MISCITATION_PHRASE, self.section)
 
 
+class TestThirdGateConjunctMergedLastEventAlone(unittest.TestCase):
+    """AC-1 (FR1, FR2; TS-1, task0001 routeback-admissibility-exits): the
+    whitespace-normalized I.2.c section states a third route-back gate
+    conjunct that blocks whenever any task's journal last event is
+    `merged`, sourced from the last-event replay alone and explicitly
+    independent of the ancestor verification, with the launch-guard reason
+    cited from its owning site; the terminal-journal-last-event literal
+    still precedes the create-plan write-set instruction."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2c_section(_read()))
+
+    def test_third_conjunct_opening_present(self):
+        self.assertIn(THIRD_CONJUNCT_OPENING_ANCHOR, self.section)
+
+    def test_third_conjunct_source_phrase_present(self):
+        self.assertIn(THIRD_CONJUNCT_SOURCE_PHRASE, self.section)
+
+    def test_third_conjunct_independent_of_ancestor_verification(self):
+        self.assertIn(THIRD_CONJUNCT_INDEPENDENCE_PHRASE, self.section)
+
+    def test_third_conjunct_cites_launch_guard_reason(self):
+        self.assertIn(THIRD_CONJUNCT_LAUNCH_GUARD_REASON_PHRASE, self.section)
+        self.assertIn(
+            THIRD_CONJUNCT_LAUNCH_GUARD_CITATION_PHRASE, self.section
+        )
+
+    def test_third_conjunct_states_narrowing(self):
+        self.assertIn(THIRD_CONJUNCT_NARROWING_PHRASE, self.section)
+
+    def test_existing_two_source_halves_survive(self):
+        self.assertIn("The `merged` half is likewise a union", self.section)
+        self.assertIn("The `in_progress` half is a union", self.section)
+        self.assertIn(
+            "Step I.2.b step 1's reconciled state reporting a task "
+            "`merged`",
+            self.section,
+        )
+
+    def test_terminal_journal_last_event_precedes_create_plan_write_set(self):
+        precondition_idx = self.section.index(
+            "terminal journal last event (`merged` or `failed`)"
+        )
+        write_set_idx = self.section.index("`create-plan` to `needs_update`")
+        self.assertLess(precondition_idx, write_set_idx)
+
+
+class TestI2cCitesI2bRecoveryBeforeRejectedMarker(unittest.TestCase):
+    """AC-3 (FR3, FR4; TS-2, task0001 routeback-admissibility-exits): I.2.c
+    cites Step I.2.b step 1's recovery before the gate-rejected marker
+    sentence, as a citation only; the I.2.c section still contains neither
+    banned token."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2c_section(_read()))
+
+    def test_i2c_cites_i2b_step1_recovery_before_rejected_marker(self):
+        citation_idx = self.section.index(I2B_STEP1_RECOVERY_CITATION_PHRASE)
+        marker_idx = self.section.index("When the gate does not hold")
+        self.assertLess(citation_idx, marker_idx)
+
+    def test_i2c_contains_neither_banned_token(self):
+        self.assertNotIn("rework", self.section)
+        self.assertNotIn("append", self.section)
+
+
+class TestI2bStep1InFlightExistenceCheckHasStatedEffect(unittest.TestCase):
+    """AC-3 (FR3, FR4; TS-2, task0001 routeback-admissibility-exits): I.2.b
+    step 1 states the failure condition of the in-flight existence check,
+    its effect (no reclassification by itself; triggers the recovery; the
+    task is named in the report), the recovery ending in a terminal journal
+    event recorded by the cited stop-tool recorder, and the residual
+    unresolvable case."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2b_section(_read()))
+
+    def test_failure_condition_stated(self):
+        self.assertIn(EXISTENCE_CHECK_FAILURE_CONDITION_PHRASE, self.section)
+
+    def test_no_reclassification_by_itself_and_cites_i2a(self):
+        self.assertIn(NO_RECLASSIFICATION_PHRASE, self.section)
+
+    def test_effect_triggers_recovery_and_names_task_in_report(self):
+        self.assertIn(TRIGGERS_RECOVERY_PHRASE, self.section)
+        self.assertIn(NAMES_TASK_IN_REPORT_PHRASE, self.section)
+
+    def test_recovery_stops_agent_and_stop_tool_recorder_records_terminal_failed(
+        self,
+    ):
+        self.assertIn(STOPS_RECORDED_AGENT_PHRASE, self.section)
+        self.assertIn(STOP_TOOL_RECORDER_CITATION_PHRASE, self.section)
+        self.assertIn(TERMINAL_FAILED_EVENT_PHRASE, self.section)
+
+    def test_recovery_reaches_normal_failed_handling(self):
+        self.assertIn(REACHES_NORMAL_FAILED_HANDLING_PHRASE, self.section)
+
+    def test_residual_unresolvable_agent_case_stated(self):
+        self.assertIn(RESIDUAL_UNRESOLVABLE_PHRASE, self.section)
+
+    def test_recovery_runs_before_i2c_menu(self):
+        self.assertIn(RECOVERY_BEFORE_MENU_PHRASE, self.section)
+
+
+class TestStaleLaunchedCaveatCitesI2bStep1Recovery(unittest.TestCase):
+    """AC-3 (FR4, NFR3; TS-2, task0001 routeback-admissibility-exits): the
+    Supporting cast stale-`launched` caveat cites I.2.b step 1 as the
+    owning rule for the reconcile's outcome, instead of asserting an
+    undefined "catches" outcome; the Stop-hook bullet, the hook
+    classification table and the stop-tool recorder bullet's existing
+    anchors stay intact."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.supporting_cast = _normalize_ws(_supporting_cast_section(_read()))
+
+    def test_caveat_cites_i2b_step1_recovery(self):
+        self.assertIn(CAVEAT_CITES_I2B_RECOVERY_PHRASE, self.supporting_cast)
+
+    def test_old_undefined_catches_outcome_absent(self):
+        self.assertNotIn(OLD_CAVEAT_CATCHES_PHRASE, self.supporting_cast)
+
+    def test_stop_hook_bullet_anchor_survives(self):
+        self.assertIn(
+            "catching a forgotten refill after a wake phase",
+            self.supporting_cast,
+        )
+
+    def test_stop_tool_recorder_bullet_anchor_survives(self):
+        self.assertIn(
+            "idempotent with the failure net, so at most one",
+            self.supporting_cast,
+        )
+
+    def test_hook_classification_table_rows_survive(self):
+        for hook in (
+            "queue_launch_guard.py",
+            "queue_stop_guard.py",
+            "queue_failure_net.py",
+            "queue_taskstop_net.py",
+        ):
+            self.assertIn(f"`{hook}`", self.supporting_cast)
+
+
 class TestContainmentAndInvariants(unittest.TestCase):
     """AC-3 (heading/batch-mode-paragraph clause) / NFR1: the heading and
     the batch-mode paragraph stay byte-identical, and implement-phase.md
@@ -998,10 +1372,12 @@ class TestContainmentAndInvariants(unittest.TestCase):
 
 
 class TestPluginVersionBumpedInLockstep(unittest.TestCase):
-    """AC-6 (task0001, exit4-recovery-scope): the plugin manifest and the
-    marketplace entry for em-workflow agree on the same version, bumped to
-    0.1.43 in this task. Test Notes: assert the two manifests agree on the
-    same value rather than checking each file in isolation."""
+    """AC-6 (task0001, exit4-recovery-scope); baseline raised to 47 by
+    task0001 (routeback-admissibility-exits) AC-7 / Site F: the plugin
+    manifest and the marketplace entry for em-workflow agree on the same
+    version, bumped to 0.1.48 in this task. Test Notes: assert the two
+    manifests agree on the same value rather than checking each file in
+    isolation."""
 
     @classmethod
     def setUpClass(cls):
@@ -1023,15 +1399,16 @@ class TestPluginVersionBumpedInLockstep(unittest.TestCase):
     def test_shared_version_is_past_the_pre_task_baseline(self):
         # Durable form (repo convention, see
         # tests/test_recycled_task_id_version_bump.py): major/minor fixed,
-        # patch strictly greater than the pre-task baseline 42. Pinning the
-        # literal 0.1.43 would go red on the next unrelated bump.
+        # patch strictly greater than the pre-task baseline, raised from 42
+        # to 47 by task0001 (routeback-admissibility-exits) Site F. Pinning
+        # a literal version would go red on the next unrelated bump.
         for version in (
             self.plugin_manifest["version"],
             self.marketplace_entry["version"],
         ):
             major, minor, patch = (int(part) for part in version.split("."))
             self.assertEqual((major, minor), (0, 1))
-            self.assertGreater(patch, 42)
+            self.assertGreater(patch, 47)
 
 
 class TestExit4CarveOutStatedInAllThreeSSOTs(unittest.TestCase):
@@ -1214,6 +1591,46 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         )
         self.assertIn(OLD_ABORT_MANUAL_HANDLING_PHRASE, sample)
 
+    # --- task0001 (routeback-admissibility-exits): negative proofs for
+    # this task's own new-wording matchers, run against this task's own
+    # pre-change samples (base commit 9f5d7ae).
+
+    def test_third_conjunct_matchers_flag_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2C_GATE_CONJUNCT_SAMPLE)
+        with self.assertRaises(ValueError):
+            sample.index(THIRD_CONJUNCT_OPENING_ANCHOR)
+        self.assertNotIn(THIRD_CONJUNCT_SOURCE_PHRASE, sample)
+        self.assertNotIn(THIRD_CONJUNCT_INDEPENDENCE_PHRASE, sample)
+        self.assertNotIn(THIRD_CONJUNCT_LAUNCH_GUARD_REASON_PHRASE, sample)
+        self.assertNotIn(THIRD_CONJUNCT_NARROWING_PHRASE, sample)
+
+    def test_i2c_recovery_citation_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2C_GATE_CONJUNCT_SAMPLE)
+        self.assertNotIn(I2B_STEP1_RECOVERY_CITATION_PHRASE, sample)
+
+    def test_i2b_step1_existence_check_matchers_flag_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2B_STEP1_EXISTENCE_CHECK_SAMPLE)
+        self.assertNotIn(EXISTENCE_CHECK_FAILURE_CONDITION_PHRASE, sample)
+        self.assertNotIn(NO_RECLASSIFICATION_PHRASE, sample)
+        self.assertNotIn(TRIGGERS_RECOVERY_PHRASE, sample)
+        self.assertNotIn(STOPS_RECORDED_AGENT_PHRASE, sample)
+        self.assertNotIn(STOP_TOOL_RECORDER_CITATION_PHRASE, sample)
+        self.assertNotIn(TERMINAL_FAILED_EVENT_PHRASE, sample)
+        self.assertNotIn(REACHES_NORMAL_FAILED_HANDLING_PHRASE, sample)
+        self.assertNotIn(RESIDUAL_UNRESOLVABLE_PHRASE, sample)
+        self.assertNotIn(RECOVERY_BEFORE_MENU_PHRASE, sample)
+
+    def test_caveat_matcher_flags_absence_in_pre_change_wording(self):
+        sample = _normalize_ws(PRE_CHANGE_STALE_LAUNCHED_CAVEAT_SAMPLE)
+        self.assertNotIn(CAVEAT_CITES_I2B_RECOVERY_PHRASE, sample)
+        self.assertIn(OLD_CAVEAT_CATCHES_PHRASE, sample)
+
     def test_bare_commit_line_matcher_flags_an_unlocked_commit(self):
         sample = 'git -C {project_root} add -A -- foo && git -C {project_root} commit -m "x"'
         lines = _bare_git_commit_or_add_lines(sample)
@@ -1223,6 +1640,41 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         sample = "No bare `git add`/`git commit` against the integration worktree runs outside"
         lines = _bare_git_commit_or_add_lines(sample)
         self.assertEqual(lines, [])
+
+
+class TestPreChangeSampleGuards(unittest.TestCase):
+    """AC-5 (task0001, routeback-admissibility-exits) / Contract 4: each of
+    this task's pre-change wording samples carries a RETAINED anchor -- a
+    phrase present both in the sample and in the live post-change document
+    -- asserted positively here, so a negative proof above cannot silently
+    degrade into a tautology (`assertNotIn(X, "")` passes for every X)."""
+
+    def test_i2c_gate_conjunct_sample_retains_merged_half_anchor(self):
+        sample = _normalize_ws(PRE_CHANGE_I2C_GATE_CONJUNCT_SAMPLE)
+        anchor = "The `merged` half is likewise a union"
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_i2c_section(_read())))
+
+    def test_i2b_step1_existence_check_sample_retains_ancestor_check_anchor(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2B_STEP1_EXISTENCE_CHECK_SAMPLE)
+        anchor = (
+            "never mark a task merged on self-report or journal entry "
+            "alone"
+        )
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_i2b_section(_read())))
+
+    def test_stale_launched_caveat_sample_retains_stop_tool_recorder_anchor(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_STALE_LAUNCHED_CAVEAT_SAMPLE)
+        anchor = "closing the gap before a reconcile pass is even needed"
+        self.assertIn(anchor, sample)
+        self.assertIn(
+            anchor, _normalize_ws(_supporting_cast_section(_read()))
+        )
 
 
 class TestImplementFailedTaskRowStatesWriteAndCommitTerminal(unittest.TestCase):
