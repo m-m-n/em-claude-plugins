@@ -1,11 +1,11 @@
 schema_version: 1
 feature: tip-capture-idiom-unification
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: b2197494e6291a34d0b490b6272a8a2d1f03fe71
+base_revision: 4c873d7848edd6ec564ef31c95e1fa8655d9b563
 last_input_digest: sha256:0f32cd74e79734a5e4f5481951168ed4029779a5dbf9bc9e6785fbad11f560ce
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -112,7 +112,17 @@ worker_runs:
     status: completed
     input_digest: sha256:0f32cd74e79734a5e4f5481951168ed4029779a5dbf9bc9e6785fbad11f560ce
     output_digest: sha256:analyst-run-0002-completed
-artifacts: []
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:c1f0a4d2e8b73956fa10c4d8e2b95removed-placeholder
+    output_digest: sha256:specwriter-run-0003-completed
+artifacts:
+  - path: feature-docs/tip-capture-idiom-unification/REQUIREMENTS.md
+    sha256: sha256:e7c625ab0585b8a25b94fea7aebc396acf832aa1202da1474b77a0549e134e94
+    produced_by: create-spec-run-0003
+  - path: feature-docs/tip-capture-idiom-unification/SPEC.md
+    sha256: sha256:13bddc44d226c92bcc382308dda7cc3f98bc8b9731e3312064474a805c30631a
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
