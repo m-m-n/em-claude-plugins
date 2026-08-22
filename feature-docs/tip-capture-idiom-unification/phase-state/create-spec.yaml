@@ -3,9 +3,9 @@ feature: tip-capture-idiom-unification
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 17ad8fdb8690f561ef3445ccd01dd58b9b25ca97
-last_input_digest: sha256:6a3e19081c8c97dc0c3053756df1e2aaad0fe9e619ed3ac1bdb870da6870b038
-active_request_id: create-spec-run-0001
+base_revision: f694e76329f7ba46b8834305480837ee3582237c
+last_input_digest: sha256:0f32cd74e79734a5e4f5481951168ed4029779a5dbf9bc9e6785fbad11f560ce
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -107,6 +107,10 @@ worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
     input_digest: sha256:6a3e19081c8c97dc0c3053756df1e2aaad0fe9e619ed3ac1bdb870da6870b038
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: sha256:0f32cd74e79734a5e4f5481951168ed4029779a5dbf9bc9e6785fbad11f560ce
     output_digest: null
 artifacts: []
 patches: []
