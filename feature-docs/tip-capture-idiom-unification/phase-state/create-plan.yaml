@@ -1,0 +1,21 @@
+schema_version: 1
+feature: tip-capture-idiom-unification
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: ec0344ce65605868273d674add27a2c68668a84b
+last_input_digest: sha256:3922b6d9182da199e70d014611de4b7848c3d4409391887fa3c4e2b646b96fc6
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:3922b6d9182da199e70d014611de4b7848c3d4409391887fa3c4e2b646b96fc6
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
