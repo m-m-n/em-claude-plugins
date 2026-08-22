@@ -32,7 +32,8 @@ workflow:
       screens to define, so DESIGN.md and mockups would carry no content.
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: ce47d95e15e5c335b48ad702f74e314b6e05cdc1
   - id: implement
     status: pending
     base_commit: null
@@ -45,7 +46,35 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: unify the seven tip-capture sites and lock the idiom with tests
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/scripts/commit-docs.sh
+      - tests/test_implement_routeback_gate.py
+      - tests/test_tip_capture_idiom_uniformity.py
+    skills: []
+    domains: [config-infra, concurrency]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: bump the em-workflow plugin version in both manifests
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR10, NFR6]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -61,112 +90,112 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1, TS-2]
   FR2:
     title: Convert the five old-idiom sites
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR3:
     title: PR 17 sites are the reference form, unchanged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR4:
     title: In-scope site set
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR5:
     title: Step I.1 treatment (capture-then-refresh)
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR6:
     title: Step I.2.b capture-line placement preserving the frozen ordering pin
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-5]
   FR7:
     title: Frozen-module assertion amendments
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-5, TS-6]
   FR8:
     title: commit-docs.sh prose alignment (both blocks)
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-3, TS-4]
   FR9:
     title: Idiom-uniformity test
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-7]
   FR10:
     title: Plugin version bump
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-8]
   NFR1:
     title: SSOT internal consistency
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1, TS-2]
   NFR2:
     title: Test-suite scope containment
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-5, TS-6]
   NFR3:
     title: Frozen-pin discipline
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-5, TS-6]
   NFR4:
     title: No executable change to commit-docs.sh
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-3, TS-4]
   NFR5:
     title: reset --hard target safety invariant
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1, TS-7]
   NFR6:
     title: No scope creep
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-6]
 
 batch:
