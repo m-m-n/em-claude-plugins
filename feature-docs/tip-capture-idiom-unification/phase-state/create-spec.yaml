@@ -1,0 +1,17 @@
+schema_version: 1
+feature: tip-capture-idiom-unification
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 5dc0f6c4418c76c08335cce9d32ebfd85fbdb9ec
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
