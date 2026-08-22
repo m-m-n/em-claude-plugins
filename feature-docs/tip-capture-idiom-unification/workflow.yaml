@@ -72,7 +72,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR10, NFR6]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/tip-capture-idiom-unification/task0002
 
