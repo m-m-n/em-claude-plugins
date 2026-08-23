@@ -189,7 +189,7 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0006
   task0007:
@@ -211,9 +211,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0007
   task0008:
     title: referenced-side impact scan in the analyst contract and prompt
     plan: tasks/task0008.md
