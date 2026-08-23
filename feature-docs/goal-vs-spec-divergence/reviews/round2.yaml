@@ -1,0 +1,259 @@
+round: 2
+executed_at: '2026-08-24T02:10:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
+  head_commit: ce24c77529194d032fb17537410897d0750664cb
+  changed_files_count: 64
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- perspective: comprehensive
+  source: claude
+  status: completed
+- perspective: security
+  source: claude
+  status: completed
+- perspective: security
+  source: codex
+  status: completed
+- perspective: performance
+  source: claude
+  status: completed
+- perspective: performance
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+- perspective: architecture
+  source: claude
+  status: completed
+- perspective: architecture
+  source: litellm
+  model: vertex-glm-5
+  status: completed
+- perspective: spec
+  source: claude
+  status: completed
+- perspective: spec
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+dropped_findings:
+- source: litellm:vertex-deepseek-v3.2:spec
+  reason: 'false positive: 実コードは is_replanning = needs_update or reentry() で、needs_update は spec_change を要求しない。finding
+    の説明自体がコードを正しく引用したうえで逆の結論を出している'
+  title: 'FR4 violation: needs_update case requires spec_change record incorrectly'
+- source: litellm:vertex-deepseek-v3.2:spec
+  reason: 'false positive: worker-envelope.md:113 に ## Untrusted-Input Handling が実在する'
+  title: 'FR3 violation: Missing explicit untrusted handling for goal block'
+- source: litellm:vertex-deepseek-v3.2:spec
+  reason: 'false positive: scripts/** は既定メンバーではなくフィーチャー固有パスとして宣言集合に入っている'
+  title: 'Declared Change Set omission: scripts/** not in default entries'
+findings:
+- stable_id: 68d1f5558ed5ae1d
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/phases/create-spec-phase.md
+  line: 187
+  title: create-spec 再入時に tasks / implement.base_commit の保全規定が無く、新しい再計画パスの前提が成立しない
+  description: §11 は workflow.yaml を無条件で構築すると書き、再入時の除外が明文化されたのは goal だけ。記述どおり再構築すると tasks と base_commit が同時に失われ、再入形の第
+    2 ケースが実行時に成立しない。
+  suggestion: §11 に「create-spec が needs_update で再入した場合は部分更新であり tasks / 各 step の status / base_commit / completed_at_commit
+    を保持する」を明記し、workflow-patch.md から相互参照する。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: 1da2c0b3e92f1bfe
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/workflow-patch.md
+  line: 109
+  title: Re-planning task-id allocation 規則に高水位の保存先も検証も無い
+  description: 「ever registered な最大 taskNNNN より上に採番」と定めたが、その高水位を保持する場所がリポジトリ内に無い。replace_all は tasks を丸ごと置換するため退役
+    ID は復元できない。Rule 4 の検査は append 限定で replace_all の採番は無検査。追加された正例フィクスチャ自体が task0009 登録済みの workflow に task0001 から振り直す
+    patch を valid として通しており、規則の反例になっている。
+  suggestion: 高水位の保存先を 1 箇所に定め、validator の replace_all 経路に検査を追加し、正例フィクスチャの番号を直す。機械的に保証しないなら implement-phase.md 側の論証を規則に依存しない形へ戻す。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: 8c123828d8681764
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 171
+  title: replace_planning の mandatory preserve を文書だけ更新し、検証器とフィクスチャは空のまま
+  description: 'workflow-patch.md:181 は Re-planning path で base_commit を mandatory と宣言したが REQUIRED_PRESERVE_BY_OPERATION[''replace_planning'']
+    は set() のまま。追加された正例フィクスチャは preserve: [] を持ち、文書が必須と宣言したケースの反例を valid として固定している。'
+  suggestion: REQUIRED_PRESERVE_BY_OPERATION を path 依存の判定に変え、is_replanning が真のとき base_commit を必須にする。正例フィクスチャの preserve
+    に同パスを入れ、欠落を invalid フィクスチャとして追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: ad9b77c0c67b93f7
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 270
+  title: deviation 自動追加の保持先を tasks.*.files と名指したが、それを書く手順がどのフェーズにも無い
+  description: implement-phase.md I.2.b step 3 が書く対象は tasks.{T}.status のみで files への追記に触れていない。監査記録の置き場として挙げた completion
+    report の deviations は implementer 側の入力フィールド。
+  suggestion: I.2.b step 3 の更新対象に files 追記を明記し、書き込みの検証も定める。監査記録は実際に永続化される先を名指しする。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: 87ae09bcfe6410c0
+  severity: high
+  category: security
+  file: em-workflow/references/question-resolution.md
+  line: 127
+  title: Origin verification がワーカー指定のパスからレビュー記録を読むため、category 降格の防御が迂回できる
+  description: どの記録ファイルを読むかを決めるのも同じワーカー。evidence[].path には realpath 封じ込め・symlink 拒否・ファイル名一致・オーケストレーター由来の確認のいずれも要求されていない。rework-planner
+    は tasks/ 配下に任意ファイルを書けるため、自作の記録風ファイルを指すだけで origin verification を通過できる。step 3 の fail-closed 条項も Precedence reservation
+    もこの経路を塞がない。
+  suggestion: レビューラウンド記録のパスをワーカー入力から取らない。オーケストレーターが R5 の決定的な位置から自分で列挙し、名指しされた stable_id をそこだけから探す。evidence[].path
+    は人間向けヒントとしてのみ扱う。
+  sources:
+  - claude:security
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: 61c73dc71f323f45
+  severity: high
+  category: security
+  file: em-workflow/references/question-resolution.md
+  line: 67
+  title: fail-closed の優先順位が、worker が付ける述語（category / assumptions）に依存したまま
+  description: 'gate_id: rework.spec-change に別の非 security カテゴリを付けると、即時 abort にも分類ゲートにも入らず unlisted fallback へ到達する。reversible:
+    false を省くだけで不可逆操作の abort も回避できる。信頼できる出所を参照していない。'
+  suggestion: routing を worker の category ではなく信頼できる gate_id で決め、gate_id → category の固定対応を強制する。不可逆性はオーケストレーター所有のメタデータから導出する。
+  sources:
+  - codex:security
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: c493a5655d015aa7
+  severity: medium
+  category: security
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 704
+  title: replace_all の再計画権限が spec_change の鮮度もスキーマも検証しない
+  description: spec_change レコードの存在と base_commit 設定済みだけで許可する。レコードは削除されず consumed が立つだけなので、SPEC 変更を 1 度でも通った feature
+    では権限が恒久的に開く。スキーマ・feature・phase・記録コミットの検証も無いため、任意の非空マッピングで merged タスクのレコード置換が許可される。
+  suggestion: consumed の確認を最低限入れ、feature / generation / 記録コミットとの結び付けまで検証する。workflow-patch.md の記述も「未消費の spec_change
+    レコード」に改める。
+  sources:
+  - claude:security
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: 7dd1a478ab63c59f
+  severity: high
+  category: spec
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 217
+  title: 再計画パスの再入シグナルが create-plan の正規呼び出しに到達せず、FR6 が実運用で成立しない
+  description: workflow_replace_all_spec_change_reentry() が読むのは --phase-state で渡された 1 ファイルだが、create-plan の canonical
+    invocation が渡すのは phase-state/create-plan.yaml。phase-state は 1 フェーズ 1 ファイルで spec_change は rework 専用のため、構造的に常に
+    False になる。フィクスチャが通るのはテストが rework 側を渡しているためで、正規呼び出しの形とは異なる。
+  suggestion: validator に再入シグナル専用の入力を追加して canonical invocation に含めるか、シグナルを create-plan が既に読む場所へ置き直す。正規呼び出しで FR6
+    の経路が通ることを示すテストを追加する。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: 0a6777facb990c9a
+  severity: high
+  category: spec
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 1151
+  title: FR5 の base_commit 必須 preserve が検証器で強制されず、新フィクスチャが preserve 空を valid と固定している
+  description: 適用規則 13 は mandatory preserve 集合の存在を要求するが、replace_planning に対しては何も要求しない。規則 14 の不変性検査も patch 自身が列挙したパスしか見ないため、base_commit
+    を載せない再計画 patch が無検査で通る。EC-4 で base_commit が失われる経路が残っている。
+  suggestion: path 依存の mandatory preserve を実装し、正例フィクスチャに base_commit を入れ、欠落の negative フィクスチャを追加する。
+  sources:
+  - claude:spec
+  - litellm:vertex-deepseek-v3.2:spec
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: c64996c1c4a836d2
+  severity: high
+  category: spec
+  file: em-workflow/references/implement-phase.md
+  line: 380
+  title: FR19 の自動追加条件に、機械的に検証できる証拠の形式が定義されていない
+  description: 「named, checkable condition」とあるが、何が有効な証拠かも、どう検証するかも定義されていない。包含チェックは残るが自動追加の判定基準に具体性が無い。
+  suggestion: 証拠の具体的な形式と検証方法を定義し、規則を強制可能にする。
+  sources:
+  - litellm:vertex-deepseek-v3.2:spec
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: 6d731d9cd6f8b3f9
+  severity: high
+  category: architecture
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 686
+  title: 再入シグナルの置き場と、それを読む検証器に渡される phase-state が食い違っている
+  description: canonical invocation が渡す create-plan.yaml には構造的に spec_change が入り得ない。SPEC 変更遷移後の再計画は round 1 以前と同じく拒否される。新規フィクスチャの
+    phase-state.json は phase キーを持たない合成データなので、この配線の食い違いをテストが検出できていない。
+  suggestion: rework 側 phase-state を渡す口を追加するか、遷移側で create-plan を needs_update にして第 2 形を不要にするか、シグナルを workflow.yaml
+    側へ移す。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: c6b1737a7d7e82f1
+  severity: high
+  category: architecture
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 273
+  title: §12 の保持先 tasks.{T}.files は、書き込む主体も操作も未定義で、しかも再計画で消える
+  description: workflow.yaml の書き込みはオーケストレーターと 2 つのパッチ操作に限られ、どれも implement wake で既存タスクの files に追記できない。さらに replace_planning
+    は tasks を丸ごと置換するため、再計画が保持先そのものを消す。tasks.{T}.files は implementer の expected_files とプランナのタスク独立性判定の入力でもある。
+  suggestion: implement wake で直接書く経路を採るか、フィーチャー単位の別フィールドに置くかを決め、誰がどの操作で書くかを 1 箇所に名指しする。
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+- stable_id: cbb5659c4025c46e
+  severity: medium
+  category: architecture
+  file: em-workflow/references/contracts/rework-planner-contract.md
+  line: 163
+  title: origin verification が要求する stable_id / round record を載せる場所が question-packet スキーマに無い
+  description: evidence[] は path / line / detail の 3 フィールドのみで stable_id を構造化して載せる場所が無く、detail の自由文からの抽出に依存する。validator
+    にも evidence の検証は無い。
+  suggestion: 'evidence[] に finding_stable_id と record_path を追加し、validator の question-packet 検証で gate_id: rework.spec-change
+    の質問に必須チェックを加える。'
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting user decision'
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: pending-user-decision
+residual_critical_high: 10
+rework_required: true
