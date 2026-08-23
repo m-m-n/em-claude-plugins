@@ -148,7 +148,7 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0004
   task0005:
@@ -298,9 +298,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0011
 review:
   status: pending
   rounds_completed: 0
