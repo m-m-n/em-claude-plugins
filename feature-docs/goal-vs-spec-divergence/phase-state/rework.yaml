@@ -1,18 +1,22 @@
 schema_version: 1
 feature: goal-vs-spec-divergence
 phase: rework
-status: completed
-generation: 1
+status: dispatching
+generation: 2
 base_revision: 369c30e00cea0878e0bc60f341104163a1b5daae
 last_input_digest: sha256:677ed80b98c8a4c48a26745587180bcedcc05e37c9ed0970e9dfa37f4b4e14d7
-active_request_id: null
+active_request_id: rework-run-0002
 packets: {}
 answers: {}
 worker_runs:
-  - request_id: rework-run-0001
-    status: completed
-    input_digest: sha256:677ed80b98c8a4c48a26745587180bcedcc05e37c9ed0970e9dfa37f4b4e14d7
-    output_digest: null
+- request_id: rework-run-0001
+  status: completed
+  input_digest: sha256:677ed80b98c8a4c48a26745587180bcedcc05e37c9ed0970e9dfa37f4b4e14d7
+  output_digest: null
+- request_id: rework-run-0002
+  status: dispatched
+  input_digest: null
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -20,35 +24,23 @@ stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
 deviation_from_transition:
-  reason: >-
-    レビュー round 1 の後、SPEC.md / REQUIREMENTS.md の宣言された変更集合に
-    `em-workflow/scripts/**` を追加した。FR4 が replace_all 許可条件の緩和を、
-    FR6 が SPEC 変更遷移の成立を要求する一方、validate-worker-output.py は
-    create-plan の status に関係なく replace_all を拒否するため、これに触れずに
-    FR4・FR6 を満たす実装は存在しない。既存要件からの論理的帰結であり要件変更ではない。
+  reason: レビュー round 1 の後、SPEC.md / REQUIREMENTS.md の宣言された変更集合に `em-workflow/scripts/**` を追加した。FR4 が replace_all
+    許可条件の緩和を、 FR6 が SPEC 変更遷移の成立を要求する一方、validate-worker-output.py は create-plan の status に関係なく replace_all
+    を拒否するため、これに触れずに FR4・FR6 を満たす実装は存在しない。既存要件からの論理的帰結であり要件変更ではない。
   decided_by: user
-  decided_at: "2026-08-23T23:35:00+09:00"
+  decided_at: '2026-08-23T23:35:00+09:00'
   documents_edited:
-    - feature-docs/goal-vs-spec-divergence/SPEC.md
-    - feature-docs/goal-vs-spec-divergence/REQUIREMENTS.md
-  edit_scope: >-
-    宣言された変更集合のパス一覧に 1 エントリ追加し、追加理由を各 1 段落添えたのみ。
-    要件・受け入れ条件・assumption のメタデータは未変更。
-  note: >-
-    正規の経路である rework の spec-change 遷移は、この feature が直そうとしている
-    欠陥 1（実装完了後は create-plan 再入場が protocol error で必ず弾かれる）に
-    自分で当たるため使えなかった。オーケストレーターが直接編集した。
+  - feature-docs/goal-vs-spec-divergence/SPEC.md
+  - feature-docs/goal-vs-spec-divergence/REQUIREMENTS.md
+  edit_scope: 宣言された変更集合のパス一覧に 1 エントリ追加し、追加理由を各 1 段落添えたのみ。 要件・受け入れ条件・assumption のメタデータは未変更。
+  note: 正規の経路である rework の spec-change 遷移は、この feature が直そうとしている 欠陥 1（実装完了後は create-plan 再入場が protocol error
+    で必ず弾かれる）に 自分で当たるため使えなかった。オーケストレーターが直接編集した。
 pending_decisions:
-  - id: ac11-stale-guard
-    decided_by: user
-    decided_at: "2026-08-24T00:35:00+09:00"
-    decision: >-
-      tests/test_guardrail_hooks_migration.py の 3 件の失敗は、ルート CLAUDE.md が
-      .claude/rules/ を参照しルール名を列挙することを期待する古いピン。現行の
-      CLAUDE.md はプロダクト価値のみを記載する方針に沿っており、古いのはテストの側。
-      期待値を現行のルール名（core- 接頭辞付き）と現行方針に合わせて書き直す。
-      ガードは削除しない。
-    scope: tests/test_guardrail_hooks_migration.py
-    reason: AC-11（python3 -m unittest discover -s tests のフルスイート合格）が未達のため
-    carried_into: review round 2 の rework バッチ
-
+- id: ac11-stale-guard
+  decided_by: user
+  decided_at: '2026-08-24T00:35:00+09:00'
+  decision: tests/test_guardrail_hooks_migration.py の 3 件の失敗は、ルート CLAUDE.md が .claude/rules/ を参照しルール名を列挙することを期待する古いピン。現行の
+    CLAUDE.md はプロダクト価値のみを記載する方針に沿っており、古いのはテストの側。 期待値を現行のルール名（core- 接頭辞付き）と現行方針に合わせて書き直す。 ガードは削除しない。
+  scope: tests/test_guardrail_hooks_migration.py
+  reason: AC-11（python3 -m unittest discover -s tests のフルスイート合格）が未達のため
+  carried_into: review round 2 の rework バッチ
