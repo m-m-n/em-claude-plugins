@@ -37,11 +37,11 @@ workflow:
   status: completed
   completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
 - id: implement
-  status: completed
+  status: pending
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
   completed_at_commit: d2370de3908e94469d022afa5ee9ae10099f3ca9
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -302,6 +302,109 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0011
+  task0012:
+    title: routed-arm exit and origin verification in batch question resolution
+    plan: tasks/task0012.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_rework_synthesis_contract.py
+    - tests/test_worker_contract_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR9
+    - FR10
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0013:
+    title: re-planning permission premise, task-id allocation, and the mandatory preserve set
+    plan: tasks/task0013.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/references/implement-phase.md
+    - tests/test_workflow_patch_doc.py
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_implement_routeback_gate.py
+    - tests/test_routeback_reset_scope_consistency.py
+    - tests/test_hook_classification_pin.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0014:
+    title: structure-preserving write of the goal block
+    plan: tasks/task0014.md
+    files:
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_goal_block_schema.py
+    - tests/test_create_spec_goal_persistence.py
+    - tests/test_phase_protocols.py
+    skills: []
+    domains:
+    - input-handling
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0015:
+    title: implement-derived members in the declared change set derivation
+    plan: tasks/task0015.md
+    files:
+    - em-workflow/references/phases/create-plan-phase.md
+    - tests/test_change_set_derivation.py
+    - tests/test_deviation_auto_addition.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR18
+    - FR19
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 1
@@ -331,6 +434,7 @@ requirements:
     tasks:
     - task0001
     - task0007
+    - task0014
     tests:
     - TS-1
   FR2:
@@ -341,6 +445,7 @@ requirements:
     tasks:
     - task0001
     - task0007
+    - task0014
     tests:
     - TS-1
   FR3:
@@ -351,6 +456,7 @@ requirements:
     tasks:
     - task0001
     - task0004
+    - task0014
     tests:
     - TS-1
   FR4:
@@ -360,6 +466,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0002
+    - task0013
     tests:
     - TS-2
   FR5:
@@ -369,6 +476,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0002
+    - task0013
     tests:
     - TS-2
   FR6:
@@ -378,6 +486,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0003
+    - task0013
     tests:
     - TS-2
   FR7:
@@ -405,6 +514,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0004
+    - task0012
     tests:
     - TS-3
   FR10:
@@ -414,6 +524,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0004
+    - task0012
     tests:
     - TS-3
   FR11:
@@ -424,6 +535,7 @@ requirements:
     tasks:
     - task0004
     - task0006
+    - task0012
     tests:
     - TS-4
   FR12:
@@ -489,6 +601,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0009
+    - task0015
     tests:
     - TS-8
   FR19:
@@ -498,6 +611,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0010
+    - task0015
     tests:
     - TS-8
   FR20:
@@ -527,6 +641,10 @@ requirements:
     - task0008
     - task0009
     - task0010
+    - task0012
+    - task0013
+    - task0014
+    - task0015
     tests:
     - TS-12
   NFR2:
@@ -537,6 +655,7 @@ requirements:
     tasks:
     - task0004
     - task0006
+    - task0012
     tests:
     - TS-4
   NFR3:
@@ -548,6 +667,8 @@ requirements:
     - task0004
     - task0005
     - task0010
+    - task0012
+    - task0015
     tests:
     - TS-13
   NFR4:
@@ -576,6 +697,10 @@ requirements:
     - task0009
     - task0010
     - task0011
+    - task0012
+    - task0013
+    - task0014
+    - task0015
     tests:
     - TS-16
   NFR6:
@@ -604,6 +729,10 @@ requirements:
     - task0009
     - task0010
     - task0011
+    - task0012
+    - task0013
+    - task0014
+    - task0015
     tests:
     - TS-15
   NFR8:
@@ -623,5 +752,9 @@ requirements:
     - task0009
     - task0010
     - task0011
+    - task0012
+    - task0013
+    - task0014
+    - task0015
     tests:
     - TS-10
