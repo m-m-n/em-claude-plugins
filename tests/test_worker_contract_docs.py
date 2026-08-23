@@ -41,6 +41,9 @@ ENVELOPE_DOC_PATH = (
     REPO_ROOT / "em-workflow" / "references" / "contracts" / "worker-envelope.md"
 )
 PACKET_DOC_PATH = REPO_ROOT / "em-workflow" / "references" / "question-packet-schema.md"
+REWORK_PLANNER_CONTRACT_PATH = (
+    REPO_ROOT / "em-workflow" / "references" / "contracts" / "rework-planner-contract.md"
+)
 
 
 def _read(path):
@@ -1102,6 +1105,100 @@ class TestNoRestatedSiblingSsotContent(unittest.TestCase):
                 any("application rule" in heading for heading in headings),
                 "must not duplicate workflow-patch.md's application-rule heading",
             )
+
+
+class TestReworkPlannerContractSpecChangeCitation(unittest.TestCase):
+    """task0012 AC-5 (NFR1): rework-planner-contract.md states batch
+    resolution of `rework.spec-change` only by citing question-resolution.md's
+    classification gate -- the superseded fail-closed-abort claim is absent
+    -- and states the packet's origin-naming obligation that the gate's
+    origin verification (tests/test_classification_gate.py) depends on."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(REWORK_PLANNER_CONTRACT_PATH)
+
+    def _transition_section(self):
+        return _section(
+            self.text,
+            "## Specification-change transition",
+            "## Other conditions under which a question packet may be returned",
+        )
+
+    def test_batch_mode_cites_classification_gate_not_unlisted_fallback(self):
+        section = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "In batch mode, `rework.spec-change` is resolved through the "
+            "classification gate defined in "
+            "`references/question-resolution.md`",
+            section,
+        )
+        self.assertIn("this document does not restate", section)
+
+    def test_interactive_mode_stated_unchanged(self):
+        section = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "Interactive mode is unchanged: the user is asked directly",
+            section,
+        )
+
+    def test_superseded_fail_closed_abort_claim_is_absent(self):
+        # C5: the absence half. Non-vacuity: `_transition_section` above
+        # already proved the section exists (it would have raised
+        # otherwise); this checks it is also non-empty.
+        section = self._transition_section()
+        self.assertTrue(section.strip())
+        self.assertNotIn("falls to the unlisted-gate fallback", section)
+        self.assertNotIn("aborts rather than proceeding", section)
+
+    def test_superseded_claim_negative_proof_would_be_caught(self):
+        # Non-vacuity guard (Test Notes): the matcher above must actually
+        # flag the pre-task0012 wording it supersedes, not merely pass by
+        # vacuity against text that never contained it.
+        fake_section = (
+            "In batch mode, `rework.spec-change` has no defined policy in "
+            "`batch-policies.yaml`, so it falls to the unlisted-gate "
+            "fallback (5.9), which — because a specification change is "
+            "one of the fail-closed categories — aborts rather than "
+            "proceeding."
+        )
+        self.assertIn("falls to the unlisted-gate fallback", fake_section)
+        self.assertIn("aborts rather than proceeding", fake_section)
+
+    def test_states_packet_origin_naming_obligation(self):
+        section = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "The question packet returned for `gate_id: rework.spec-change` "
+            "names each originating review finding's `stable_id` and the "
+            "review round record path in the question's `evidence[]` "
+            "entries",
+            section,
+        )
+        self.assertIn(
+            "the gate's origin verification "
+            "(`references/question-resolution.md`) reads them from there",
+            section,
+        )
+
+    def test_packet_obligation_negative_proof_missing_obligation_fails_matcher(self):
+        fake_section = (
+            "In batch mode, `rework.spec-change` is resolved through the "
+            "classification gate defined in "
+            "`references/question-resolution.md`, which this document does "
+            "not restate."
+        )
+        self.assertNotIn(
+            "names each originating review finding's `stable_id`",
+            fake_section,
+        )
+
+    def test_five_step_sequence_unaffected_by_the_citation_rewrite(self):
+        # Retention: the five numbered orchestrator-follow-up steps this
+        # task did not touch must still be exactly five, in order -- the
+        # citation rewrite only replaces the trailing prose paragraph.
+        section = self._transition_section()
+        numbered = re.findall(r"^(\d+)\. ", section, re.MULTILINE)
+        self.assertEqual(numbered, ["1", "2", "3", "4", "5"])
 
 
 if __name__ == "__main__":
