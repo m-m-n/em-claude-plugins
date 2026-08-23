@@ -271,9 +271,14 @@ A feature's declared change set is derived — not authored.
   location — the `files` list of the task whose deviation was admitted, in
   `workflow.yaml`, the same list the union above is read from.
   Re-derivation reads that location, which is what makes an admitted
-  addition survive every later re-derivation. The audit trail of the
-  admission decision stays where `references/implement-phase.md` puts it;
-  this retention rule does not change that.
+  addition survive every later re-derivation: a re-planning `replace_all`
+  may not drop an already-registered task entry, so the task carrying the
+  admitted path is still there to be read
+  (`references/workflow-patch.md`'s `replace_all` permission conditions
+  and protocol-error rule own that guarantee — cited here, never
+  restated). The audit trail of the admission decision stays where
+  `references/implement-phase.md` puts it; this retention rule does not
+  change that.
 - **Status**: this derivation is a guard, not a statement of the goal — it
   bounds what the implement phase may touch, and it is not itself a
   description of what the feature sets out to achieve.
