@@ -38,4 +38,17 @@ deviation_from_transition:
     正規の経路である rework の spec-change 遷移は、この feature が直そうとしている
     欠陥 1（実装完了後は create-plan 再入場が protocol error で必ず弾かれる）に
     自分で当たるため使えなかった。オーケストレーターが直接編集した。
+pending_decisions:
+  - id: ac11-stale-guard
+    decided_by: user
+    decided_at: "2026-08-24T00:35:00+09:00"
+    decision: >-
+      tests/test_guardrail_hooks_migration.py の 3 件の失敗は、ルート CLAUDE.md が
+      .claude/rules/ を参照しルール名を列挙することを期待する古いピン。現行の
+      CLAUDE.md はプロダクト価値のみを記載する方針に沿っており、古いのはテストの側。
+      期待値を現行のルール名（core- 接頭辞付き）と現行方針に合わせて書き直す。
+      ガードは削除しない。
+    scope: tests/test_guardrail_hooks_migration.py
+    reason: AC-11（python3 -m unittest discover -s tests のフルスイート合格）が未達のため
+    carried_into: review round 2 の rework バッチ
 
