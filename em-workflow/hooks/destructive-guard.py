@@ -47,6 +47,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import sys
 
 # When True, a command that matches no rule below is allowed outright, which
@@ -60,8 +61,29 @@ BATCH_OFF = ("", "0", "false", "no")
 # Statement separators after which a new command word can begin. Command
 # substitutions are deliberately NOT split here — their bodies are scanned
 # separately so a destructive call hidden inside one is still seen.
+# The regex is the fallback path only; see lex_segments().
 SEGMENT_SPLIT = re.compile(r"(?:\|\||&&|[;|&\n])")
+SEGMENT_CHARS = frozenset(";|&\n")
 SUBSTITUTION = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
+
+# Characters shlex should emit as operator tokens of their own. The default
+# set plus `\n`, which has to be removed from the whitespace set to survive
+# as a separator — a newline ends a statement just as `;` does.
+PUNCTUATION = "();<>|&\n"
+
+# Redirection operators, matched against a whole token. A redirect and its
+# target are not arguments to the command and must be lifted out before the
+# checks run, or `>` and `/dev/null` read as two more paths to delete.
+REDIRECT = re.compile(r"\d*(?:>>?\|?|<<?<?|>&|<&|&>>?)\d*")
+
+# A here-document and its body, up to the line bearing the delimiter.
+HEREDOC = re.compile(
+    r"<<-?(?!<)[ \t]*(['\"]?)(\w+)\1[^\n]*\n(.*?)^[ \t]*\2[ \t]*$",
+    re.S | re.M,
+)
+# Commands that run what arrives on stdin, so a here-doc body aimed at one is
+# not data but code, and has to be scanned like any other statement.
+SHELL_SINK = re.compile(r"\b(sh|bash|zsh|dash|ksh|python\d?|perl|ruby|node)\b")
 
 # Wrapper commands that prefix the real one. `mise exec -- gcloud …` and
 # `sudo rm -rf …` must be judged on the wrapped command, not the wrapper.
@@ -148,18 +170,99 @@ def decide(decision, rule, reason):
     sys.exit(0)
 
 
+def lex_segments(chunk):
+    """Split a chunk into statements, each returned as its token list.
+
+    Separators only count when they sit OUTSIDE quotes, and telling those
+    apart is the whole reason shlex does the splitting rather than a regex.
+    `echo 'a; rm -rf /x'` is one statement headed by `echo`; a quote-blind
+    split reads it as two and finds a recursive delete in the second, which
+    denied a command that deletes nothing. Literal command text like that
+    shows up constantly in generated docs, tests, and commit messages.
+
+    Falls back to the regex split when the chunk will not parse — an
+    unbalanced quote, usually. That path keeps the old false positives, but a
+    parse failure is rare, and waving the chunk through unexamined would be a
+    hole rather than a nuisance.
+    """
+    try:
+        lex = shlex.shlex(chunk, posix=True, punctuation_chars=PUNCTUATION)
+        lex.whitespace = " \t\r"
+        lex.whitespace_split = True
+        toks = list(lex)
+    except ValueError:
+        return [tokens(seg) for seg in SEGMENT_SPLIT.split(chunk) if seg.strip()]
+
+    out, current = [], []
+    for t in toks:
+        if t and all(c in SEGMENT_CHARS for c in t):
+            out.append(current)
+            current = []
+        else:
+            current.append(t)
+    out.append(current)
+    return out
+
+
+def split_redirects(toks):
+    """Return (the statement's own words, its redirection tokens).
+
+    `rm -rf /tmp/x > /dev/null` has to be judged on `rm -rf /tmp/x`. With the
+    redirect left in, `>` and `/dev/null` looked like two more delete targets
+    and the command was denied for writing to the bit bucket. A leading file
+    descriptor (`2` in `2>&1`) is part of the redirect too.
+    """
+    words, redirects = [], []
+    i = 0
+    while i < len(toks):
+        if REDIRECT.fullmatch(toks[i]):
+            if words and words[-1].isdigit():
+                redirects.append(words.pop())
+            redirects.extend(toks[i : i + 2])
+            i += 2
+            continue
+        words.append(toks[i])
+        i += 1
+    return words, redirects
+
+
+def strip_heredocs(chunk):
+    """Return (chunk without here-doc bodies, the bodies removed).
+
+    A here-doc body is data, not commands: `cat <<EOF` followed by a line
+    reading `rm -rf ~` deletes nothing. Leaving it in place meant the newline
+    split treated every line of the body as its own statement, so writing a
+    shell example into a file was refused as though it were being run.
+    """
+    bodies = []
+
+    def take(m):
+        bodies.append(m.group(3))
+        return m.group(0)[: m.start(3) - m.start(0)]
+
+    return HEREDOC.sub(take, chunk), bodies
+
+
 def statements(command):
-    """Yield every command segment, including command-substitution bodies."""
+    """Yield (text, tokens) per command segment, substitution bodies included.
+
+    The text is the tokens rejoined, so quoting is already resolved by the
+    time the regex-based checks see it.
+    """
     pending = [command]
     while pending:
         chunk = pending.pop()
+        chunk, bodies = strip_heredocs(chunk)
+        if bodies and SHELL_SINK.search(chunk):
+            # `bash <<EOF` does execute its body, so put it back in the queue.
+            pending.extend(b for b in bodies if b.strip())
         for m in SUBSTITUTION.finditer(chunk):
             body = m.group(1) or m.group(2) or ""
             if body.strip():
                 pending.append(body)
-        for seg in SEGMENT_SPLIT.split(SUBSTITUTION.sub(" ", chunk)):
-            if seg.strip():
-                yield seg.strip()
+        for toks in lex_segments(SUBSTITUTION.sub(" ", chunk)):
+            if toks:
+                yield " ".join(toks), toks
 
 
 def tokens(segment):
@@ -325,6 +428,41 @@ def check_git(args, segment):
         )
 
 
+_GIO = None
+
+
+def gio_available():
+    """Whether `gio` is on PATH. Probed once, and only on a deny path."""
+    global _GIO
+    if _GIO is None:
+        _GIO = shutil.which("gio") is not None
+    return _GIO
+
+
+def deletion_alternative(target):
+    """A concrete command to offer in place of the delete being refused.
+
+    `gio trash` is the good outcome: it records the original path and the
+    deletion time under ~/.local/share/Trash, so the file can be restored from
+    the desktop trash. The trash cannot span filesystems, though, so it only
+    works below $HOME — outside that, and when gio is not installed at all,
+    the honest suggestion is a move to somewhere the file survives.
+
+    The point is that the agent can read this, rewrite the command itself and
+    keep going. `gio trash` and `mv` are not `rm`, so neither comes back here.
+    """
+    path = os.path.abspath(os.path.expanduser(target))
+    home = os.path.expanduser("~")
+    if not gio_available():
+        return f"`mv {path} /tmp/` で退避する（gio が無いのでゴミ箱は使えない）。"
+    if path == home or path.startswith(home + os.sep):
+        return f"`gio trash {path}` に書き換える（復元情報が残り、ゴミ箱から戻せる）。"
+    return (
+        f"`mv {path} /tmp/` で退避する"
+        f"（$HOME の外はゴミ箱がファイルシステムをまたげないので `gio trash` は失敗する）。"
+    )
+
+
 def check_rm(args):
     flags = short_flags(args)
     recursive = "r" in flags or "R" in flags or has(args, "--recursive")
@@ -350,8 +488,7 @@ def check_rm(args):
         decide(
             "deny",
             "rm-recursive",
-            f"`rm -r` の対象 `{t}` はスクラッチ領域の外。"
-            f"消す必要があるなら `gio trash` を使う（復元情報が残る）。",
+            f"`rm -r` の対象 `{t}` はスクラッチ領域の外。{deletion_alternative(t)}",
         )
 
 
@@ -379,9 +516,13 @@ def check_file_destruction(word, args, segment):
         )
 
 
-def check_self_modification(segment, word, args):
+def check_self_modification(segment, word, args, redirects):
+    # An output redirect is only a write when it is a real operator token.
+    # Testing `">" in segment` also caught a `>` sitting inside a quoted
+    # string, so writing the text of a command into a file was mistaken for
+    # running it. `<` and `<<` read rather than write, so they do not count.
     writes = (
-        ">" in segment
+        any(REDIRECT.fullmatch(t) and not t.startswith("<") for t in redirects)
         or word in INPLACE_WRITERS
         or (word == "sed" and any(a.startswith("-i") for a in args))
         or word in ("rm", "mv", "cp", "ln", "chmod", "chown")
@@ -524,17 +665,15 @@ def main():
     # loop below and the check would never fire.
     check_pipe_to_shell(command)
 
-    for segment in statements(command):
-        toks = tokens(segment)
-        if not toks:
-            continue
+    for segment, toks in statements(command):
         check_bypass(segment, toks)
 
-        word, args = head(toks)
+        words, redirects = split_redirects(toks)
+        word, args = head(words)
         if word is None:
             continue
 
-        check_self_modification(segment, word, args)
+        check_self_modification(segment, word, args, redirects)
 
         if word == "git":
             check_git(args, segment)
