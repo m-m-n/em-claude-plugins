@@ -1,0 +1,96 @@
+task_id: task0003
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTStateTransition.test_states_create_plan_reentry_holds_with_merged_tasks
+    red_confirmed: true
+    red_reason: >
+      AssertionError: 'not rejected merely because merged tasks' not found in
+      the Section 10 transition text before the edit -- the pre-existing
+      document said nothing about create-plan re-entry with merged tasks
+      present.
+  AC-2:
+    tests:
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTStateTransition.test_batch_mode_routes_through_classification_gate
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTStateTransition.test_old_unlisted_gate_abort_wording_is_gone
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTStateTransition.test_interactive_mode_explicitly_stated_unchanged
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisAssertionsCanFail.test_superseded_batch_abort_wording_would_be_caught
+    red_confirmed: true
+    red_reason: >
+      AssertionError: 'classification gate' not found in the pre-edit
+      section; conversely 'falls to the unlisted-gate fallback' and the
+      '... aborts, because a SPEC change is not a success-path outcome'
+      wording were unexpectedly still present pre-edit (the superseded
+      claim this task removes).
+  AC-3:
+    tests:
+      - tests.test_wording_correction_route.TestWordingCorrectionRouteExistsAsDistinctBranch.test_route_heading_present
+      - tests.test_wording_correction_route.TestWordingCorrectionRouteExistsAsDistinctBranch.test_names_the_two_covered_documents
+      - tests.test_wording_correction_route.TestWordingCorrectionRouteExistsAsDistinctBranch.test_requires_no_planner_reentry
+      - tests.test_wording_correction_route.TestWordingCorrectionRouteExistsAsDistinctBranch.test_route_is_positioned_ahead_of_section_10
+    red_confirmed: true
+    red_reason: >
+      ValueError: substring not found -- '### Wording-correction route' did
+      not exist in the document at all before this task's edit, so
+      setUpClass raised before any assertion in this class could run.
+  AC-4:
+    tests:
+      - tests.test_wording_correction_route.TestEligibilityConditionsAreConjunctive.test_states_conjunctive_explicitly
+      - tests.test_wording_correction_route.TestEligibilityConditionsAreConjunctive.test_three_numbered_conditions_present_in_order
+      - tests.test_wording_correction_route.TestEligibilityConditionsAreConjunctive.test_condition_one_is_no_planner_reentry
+      - tests.test_wording_correction_route.TestEligibilityConditionsAreConjunctive.test_condition_two_names_plan_task_metadata_artefacts
+      - tests.test_wording_correction_route.TestEligibilityConditionsAreConjunctive.test_condition_three_names_requirement_metadata_artefacts
+      - tests.test_wording_correction_route.TestEligibilityConditionsAreConjunctive.test_alternative_disjunctive_framing_would_be_rejected
+    red_confirmed: true
+    red_reason: >
+      ValueError: substring not found -- the route section (and therefore
+      its eligibility block) did not exist pre-edit, so setUpClass raised
+      before any assertion in this class could run.
+  AC-5:
+    tests:
+      - tests.test_wording_correction_route.TestGuardFallback.test_states_fallback_to_normal_route_on_any_failing_condition
+      - tests.test_wording_correction_route.TestGuardFallback.test_conditions_name_concrete_artefacts_for_detectability
+    red_confirmed: true
+    red_reason: >
+      ValueError: substring not found -- the route section (and therefore
+      its guard block) did not exist pre-edit, so setUpClass raised before
+      any assertion in this class could run.
+  AC-6:
+    tests:
+      - tests.test_wording_correction_route.TestRouteDoesNotRestateOwnedRules.test_does_not_restate_classification_gate_verdicts
+      - tests.test_wording_correction_route.TestRouteDoesNotRestateOwnedRules.test_cites_question_resolution_by_path
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTStateTransition.test_does_not_restate_workflow_patch_permission_conditions
+    red_confirmed: true
+    red_reason: >
+      Route-side checks (verdict-absence, path citation) failed via the same
+      setUpClass ValueError as AC-3/4/5 -- the route did not exist pre-edit,
+      so it could neither restate nor cite anything. The transition-side
+      check (workflow-patch.md permission-conjunction absence) was already
+      vacuously true pre-edit -- the forbidden phrases ("every existing
+      task's `status` is `pending`", "an explicit re-plan") never appeared
+      in the original Section 10 text either -- so that one sub-check did
+      not itself go red; it is carried forward as a regression guard rather
+      than red-confirmed proof (see the implementer report's
+      unconfirmed_reds).
+  AC-7:
+    tests:
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTExistsAndStructure.test_all_thirteen_sections_present_in_order
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_invariant_list_has_eleven_items
+      - tests.test_wording_correction_route.TestWordingCorrectionRouteExistsAsDistinctBranch.test_route_is_a_subsection_not_a_new_numbered_top_level_section
+    red_confirmed: false
+    red_reason: >
+      The thirteen-section-order and eleven-invariant-count assertions are
+      pre-existing pins that were already green before this task's edit and
+      remain green after it -- this criterion is a preservation guarantee
+      with no intended observable change to section/invariant structure.
+      Verified instead by the full-suite run: baseline_failures ==
+      final_failures, i.e. no new failures, plus the new
+      "not-a-new-numbered-section" pin above.
