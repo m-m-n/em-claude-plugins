@@ -43,6 +43,7 @@ analysis_scope:                # each item's real paths arrive via resolved_inpu
   inspect_project_commands: true
   inspect_license: true
   decide_design_step: true
+  inspect_reference_impact: true
 task_description: |
   The feature description supplied by the user.
 known_feature_name: example-feature
@@ -57,6 +58,12 @@ known_feature_name: example-feature
   May be null on a repeat dispatch where it was already established.
 - `known_feature_name` — the feature name already resolved by the
   orchestrator, when known.
+- `analysis_scope.inspect_reference_impact` — whether this dispatch should
+  investigate the referencing side of symbols and strings scheduled for
+  deletion or renaming, using the paths supplied via
+  `resolved_input_paths.reference_scan_targets`. Meaningful only in
+  `analysis_mode: full`; `design_system_detection` ignores it exactly as it
+  ignores the rest of `analysis_scope`.
 
 requirements-analyst may also receive the common envelope's `prior_analysis`
 field (`references/contracts/worker-envelope.md`), populated on a
@@ -92,6 +99,9 @@ When requirements-analyst cannot proceed without user clarification, its
 - `design_step_recommendation` — `value`, `reason`
 - `design_system_candidates` — candidate paths and their classification;
   detection and classification only, no `kind` decision (see below)
+- `reference_impact` — a list whose entries pair a symbol or string
+  scheduled for deletion or renaming with the affected file paths;
+  affected test files are included among those paths
 
 This payload is exclusive to `analysis_mode: full` (see the mode table
 below).
@@ -113,6 +123,8 @@ contain:
   - `design_step` — `status`, `skipped_reason`
 - `project_detection` — `license`, `components`
 - `design_system_candidates`
+- `reference_impact` — same shape as in `analysis_snapshot` above (affected
+  test files included)
 
 ## `analysis_mode: design_system_detection` (lightweight, backfill-only)
 
@@ -141,11 +153,12 @@ exactly this set — nothing more, nothing less.
 
 | mode | `digest_inputs` (files) | `value_inputs` |
 |---|---|---|
-| `full` | `CLAUDE.md` (project root and the relevant directory), `LICENSE`, whichever package manifest files exist, `test/README.md`, resolved E2E-discovery paths, resolved design-system candidate paths, existing REQUIREMENTS.md / SPEC.md, this contract document itself | `task_description` |
+| `full` | `CLAUDE.md` (project root and the relevant directory), `LICENSE`, whichever package manifest files exist, `test/README.md`, resolved E2E-discovery paths, resolved design-system candidate paths, resolved reference-scan paths, existing REQUIREMENTS.md / SPEC.md, this contract document itself | `task_description` |
 | `design_system_detection` | resolved design-system candidate paths, this contract document itself | — |
 
 The orchestrator resolves every glob-derived category (E2E discovery,
-design-system candidates) **before** dispatch and lists the resolved paths
+design-system candidates, reference-scan targets) **before** dispatch and
+lists the resolved paths
 in the envelope's `resolved_input_paths`. requirements-analyst reads nothing
 outside the fixed-path inputs the envelope supplies plus the entries of
 `resolved_input_paths` — it never performs its own filesystem discovery.
