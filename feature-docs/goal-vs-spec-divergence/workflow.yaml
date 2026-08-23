@@ -37,7 +37,7 @@ workflow:
   status: completed
   completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
 - id: implement
-  status: pending
+  status: in_progress
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
   completed_at_commit: 278f356642f88955bbae1da624255459d60013e3
 - id: review
@@ -459,9 +459,9 @@ tasks:
     - NFR1
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0017
   task0018:
     title: create-spec re-entry is a partial update
     plan: tasks/task0018.md
@@ -479,9 +479,9 @@ tasks:
     - NFR1
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0018
   task0019:
     title: the classification gate's trust boundary
     plan: tasks/task0019.md
@@ -508,9 +508,9 @@ tasks:
     - NFR3
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0019
   task0020:
     title: a writer, an operation and an evidence form for deviation auto-addition
     plan: tasks/task0020.md
@@ -531,9 +531,9 @@ tasks:
     - NFR3
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0020
   task0021:
     title: realign the guardrail migration pins with the current repository
     plan: tasks/task0021.md
@@ -546,9 +546,9 @@ tasks:
     requirements:
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0021
 review:
   status: pending
   rounds_completed: 2
