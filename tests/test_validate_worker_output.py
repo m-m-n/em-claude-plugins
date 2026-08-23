@@ -96,6 +96,41 @@ this task:
 - AC-3: `invalid-replace-all-after-implementation-started` (`create-plan:
   needs_update` with an `in_progress` task) still fails on the re-planning
   path too, with exactly one error identifier.
+
+task0017 (feature-docs/goal-vs-spec-divergence review round2 rework) settles
+the re-planning permission contract in one place after task0013 (document)
+and task0016 (validator) disagreed when changed in separate worktrees:
+
+- AC-1 (FR6): `TestCanonicalReentryInvocation` drives the validator in
+  EXACTLY create-plan-phase.md's canonical invocation form -- `--feature-dir`
+  plus `--phase-state` pointing at the create-plan phase's own state file,
+  never at rework.yaml -- and asserts acceptance. `resolve_rework_phase_
+  state()` / `workflow_replace_all_spec_change_reentry()` now read the
+  signal from `{feature-dir}/phase-state/rework.yaml`, or from a
+  `--phase-state` mapping whose own `phase` is `rework` (an equivalence
+  case, proven separately, never substituted for this AC).
+- AC-2 (FR4): `TestReplanningReentrySignalHelper` adds direct proofs for
+  every new failure direction (missing `phase`, wrong `phase`, feature
+  mismatch, a `spec_change` record missing a mandatory field, `consumed:
+  true`) -- each falls back to the initial-planning rule, fail-closed.
+- AC-3 (FR5) / AC-5: `TestReplanningMandatoryPreserveAndTaskIdAllocation`
+  pins the two new re-planning-path-only obligations: `workflow.implement.
+  base_commit` mandatory in `preserve`, and `entries` must re-declare every
+  task id already registered in `workflow.yaml` (new ids allocated above
+  the highest registered one) -- via three new fixtures (`invalid-replace-
+  all-replanning-missing-base-commit-preserve`, `invalid-replace-all-
+  replanning-consumed-spec-change`, `invalid-replace-all-replanning-drops-
+  existing-task`).
+- AC-4: the corrected `valid-replace-all-replanning-merged-tasks` fixture
+  (preserve gains `workflow.implement.base_commit`, `phase-state.json`
+  gains `phase`/`feature`/a complete unconsumed `spec_change` record, and
+  its `entries` stop re-issuing `task0009`, the id its own `workflow.json`
+  already registers) is asserted by name in both TestReplaceAllCreatePlan
+  EntryStatus and the new class above.
+- AC-7: every pre-existing fixture in the `replace_planning` group keeps
+  its name and its outcome (unchanged in this round) -- already asserted by
+  name throughout `TestReplaceAllCreatePlanEntryStatus`, unaffected by this
+  round's edits.
 """
 
 import importlib.util
@@ -1655,17 +1690,108 @@ class TestReplaceAllCreatePlanEntryStatus(unittest.TestCase):
         self.assertIn("in_progress", messages)
 
 
+class TestReplanningMandatoryPreserveAndTaskIdAllocation(unittest.TestCase):
+    """task0017 (goal-vs-spec-divergence, review round 2 rework), AC-3 /
+    AC-5: on the re-planning path, `workflow.implement.base_commit` is
+    mandatory in `preserve`, and `entries` must re-declare every task id
+    already registered in workflow.yaml -- new ids allocated above the
+    highest registered one."""
+
+    def _run(self, case_name):
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / case_name
+        return run_cli(build_case_args("workflow-patch", "replace_planning", case_dir))
+
+    def test_missing_base_commit_preserve_on_replanning_path_rejected(self):
+        # AC-3
+        result = self._run("invalid-replace-all-replanning-missing-base-commit-preserve")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("workflow.implement.base_commit", result.stdout)
+
+    def test_missing_base_commit_preserve_rejected_for_exactly_one_reason(self):
+        result = self._run("invalid-replace-all-replanning-missing-base-commit-preserve")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"preserve"})
+
+    def test_missing_base_commit_preserve_still_accepted_on_initial_planning_path(self):
+        # AC-3: the same omission on the initial-planning path is still
+        # accepted -- valid-dry-run-apply already pins exactly this (its
+        # own preserve is [], and it is on the initial-planning path).
+        result = self._run("valid-dry-run-apply")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_corrected_replanning_merged_tasks_fixture_passes(self):
+        # AC-4: the corrected valid- fixture -- base_commit in preserve, a
+        # rework-shaped phase-state.json, and task ids that do not re-issue
+        # any id its workflow.json already registers.
+        result = self._run("valid-replace-all-replanning-merged-tasks")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_drops_existing_registered_task_id_rejected(self):
+        # AC-5
+        result = self._run("invalid-replace-all-replanning-drops-existing-task")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-drops-task"})
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("task0009", messages)
+
+    def test_consumed_spec_change_record_is_rejected(self):
+        # AC-2: the same corrected patch shape, but the spec_change record
+        # is already consumed -- fails closed to the initial-planning
+        # path's rule, and the merged task fails that rule's floor.
+        result = self._run("invalid-replace-all-replanning-consumed-spec-change")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-not-permitted"})
+
+
 class TestReplanningReentrySignalHelper(unittest.TestCase):
     """Direct unit tests of workflow_replace_all_spec_change_reentry (the
     pure helper backing the re-planning path's second entry form), covering
-    both required conditions independently -- fixture-driven CLI coverage
-    above exercises the combined check, not each condition in isolation."""
+    each required condition independently -- fixture-driven CLI coverage
+    above exercises the combined check, not each condition in isolation.
+
+    task0017 (review round 2 rework): the helper's contract widened -- it no
+    longer accepts ANY mapping carrying a `spec_change` record as proof of
+    re-entry (that was round 1's own bug: the test harness handed it a
+    rework-shaped mapping directly, and that mapping carried no `phase` key
+    at all, so nothing in the suite noticed create-plan-phase.md's canonical
+    invocation could never actually produce it). A rework-shaped mapping
+    must now also declare `phase: rework` and a `feature` matching the
+    workflow's own, and its `spec_change` record must be UNCONSUMED and
+    carry every mandatory phase-state.md field. Every pre-existing test
+    below now supplies `phase`/`feature` so it continues to prove the
+    condition it names, rather than accidentally exercising the
+    now-mandatory phase/feature check instead."""
+
+    FEATURE = "example"
 
     def _workflow(self, base_commit):
         step = {"id": "implement", "status": "pending"}
         if base_commit is not None:
             step["base_commit"] = base_commit
-        return {"workflow": [{"id": "create-plan", "status": "pending"}, step]}
+        return {
+            "feature": self.FEATURE,
+            "workflow": [{"id": "create-plan", "status": "pending"}, step],
+        }
+
+    def _rework_phase_state(self, **overrides):
+        base = {
+            "phase": "rework",
+            "feature": self.FEATURE,
+            "spec_change": {
+                "reason": "x",
+                "finding_stable_id": "abc",
+                "recorded_at_commit": "deadbeef",
+                "consumed": False,
+            },
+        }
+        base.update(overrides)
+        return base
 
     def test_no_phase_state_is_not_a_reentry(self):
         self.assertFalse(
@@ -1673,21 +1799,306 @@ class TestReplanningReentrySignalHelper(unittest.TestCase):
         )
 
     def test_phase_state_without_spec_change_record_is_not_a_reentry(self):
+        phase_state = {"phase": "rework", "feature": self.FEATURE}
         self.assertFalse(
-            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), {})
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
         )
 
     def test_spec_change_record_without_base_commit_is_not_a_reentry(self):
-        phase_state = {"spec_change": {"reason": "x", "finding_stable_id": "abc"}}
+        phase_state = self._rework_phase_state()
         self.assertFalse(
             VWO.workflow_replace_all_spec_change_reentry(self._workflow(None), phase_state)
         )
 
     def test_spec_change_record_with_base_commit_is_a_reentry(self):
-        phase_state = {"spec_change": {"reason": "x", "finding_stable_id": "abc"}}
+        phase_state = self._rework_phase_state()
         self.assertTrue(
             VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
         )
+
+    # --- task0017 (AC-2): the conditions this round's contract adds -------
+
+    def test_missing_phase_key_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state()
+        del phase_state["phase"]
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_phase_other_than_rework_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state(phase="create-plan")
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_feature_mismatch_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state(feature="other-feature")
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_spec_change_missing_mandatory_field_is_not_a_reentry(self):
+        for missing in ("reason", "finding_stable_id", "recorded_at_commit"):
+            with self.subTest(missing=missing):
+                phase_state = self._rework_phase_state()
+                del phase_state["spec_change"][missing]
+                self.assertFalse(
+                    VWO.workflow_replace_all_spec_change_reentry(
+                        self._workflow("deadbeef"), phase_state
+                    )
+                )
+
+    def test_spec_change_missing_consumed_field_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state()
+        del phase_state["spec_change"]["consumed"]
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_consumed_true_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state()
+        phase_state["spec_change"]["consumed"] = True
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    # --- task0017 (AC-1): {feature-dir}/phase-state/rework.yaml is an
+    # equivalent source, resolved even when --phase-state carries a
+    # DIFFERENT phase's state (create-plan.yaml, exactly the canonical
+    # invocation's own form). Full CLI-level coverage of the canonical
+    # invocation lives in TestCanonicalReentryInvocation below; these are
+    # direct unit tests of the resolution helper itself.
+
+    def test_feature_dir_rework_yaml_is_an_equivalent_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            feature_dir = Path(tmp)
+            phase_state_dir = feature_dir / "phase-state"
+            phase_state_dir.mkdir()
+            (phase_state_dir / "rework.yaml").write_text(
+                "phase: rework\n"
+                f"feature: {self.FEATURE}\n"
+                "spec_change:\n"
+                "  reason: x\n"
+                "  finding_stable_id: abc\n"
+                "  recorded_at_commit: deadbeef\n"
+                "  consumed: false\n",
+                encoding="utf-8",
+            )
+            # --phase-state carries the CREATE-PLAN phase's own state (the
+            # canonical form) -- no spec_change here at all.
+            create_plan_phase_state = {"phase": "create-plan", "feature": self.FEATURE}
+            self.assertTrue(
+                VWO.workflow_replace_all_spec_change_reentry(
+                    self._workflow("deadbeef"), create_plan_phase_state, feature_dir=feature_dir
+                )
+            )
+
+    def test_missing_feature_dir_rework_yaml_falls_back_to_initial_planning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            feature_dir = Path(tmp)
+            create_plan_phase_state = {"phase": "create-plan", "feature": self.FEATURE}
+            self.assertFalse(
+                VWO.workflow_replace_all_spec_change_reentry(
+                    self._workflow("deadbeef"), create_plan_phase_state, feature_dir=feature_dir
+                )
+            )
+
+
+# ---------------------------------------------------------------------------
+# task0017 (review round 2 rework) / AC-1 (FR6): the re-entry signal must be
+# recognized from the EXACT invocation create-plan-phase.md's canonical form
+# documents -- --feature-dir plus --phase-state pointing at the CREATE-PLAN
+# phase's own state file (never rework.yaml itself). A test that instead
+# passes the rework file directly as --phase-state proves the OLD wiring,
+# not the new one -- kept in TestReplanningReentrySignalHelper above as an
+# additional equivalence case, never as this AC's own proof. This class
+# drives the real CLI, end to end, through --dry-run-apply.
+# ---------------------------------------------------------------------------
+
+class TestCanonicalReentryInvocation(unittest.TestCase):
+    FEATURE = "example"
+
+    def _workflow_obj(self, base_commit="deadbeef", task_status="merged"):
+        return {
+            "feature": self.FEATURE,
+            "project": {"license": "MIT"},
+            "requirements": {"FR1": {"status": "ok", "tasks": [], "tests": [], "title": "x"}},
+            "schema_version": 1,
+            "tasks": {
+                "task0009": {
+                    "branch": "em-workflow/example/task0009",
+                    "complexity": "low",
+                    "domains": [],
+                    "files": ["x.go"],
+                    "notes": None,
+                    "plan": "tasks/task0009.md",
+                    "requirements": ["FR1"],
+                    "skills": [],
+                    "status": task_status,
+                    "title": "existing",
+                }
+            },
+            "workflow": [
+                {"completed_at_commit": "aaa", "id": "create-spec", "status": "completed"},
+                {"id": "design", "skipped_reason": "no UI", "status": "skipped"},
+                {"id": "create-plan", "status": "pending"},
+                {"base_commit": base_commit, "id": "implement", "status": "pending"},
+                {"id": "review", "status": "pending"},
+                {"id": "verify", "status": "pending"},
+                {"id": "retrospect", "status": "pending"},
+            ],
+        }
+
+    def _patch_obj(self, base_input_digest):
+        return {
+            "base_input_digest": base_input_digest,
+            "base_workflow_blob": "8f17c04",
+            "operation": "replace_planning",
+            "patch_id": "create-plan-p0001",
+            "preserve": ["workflow.implement.base_commit"],
+            "requirements_patch": None,
+            "schema_version": 1,
+            "step_patches": [],
+            "tasks_patch": {
+                "entries": {
+                    "task0009": {
+                        "complexity": "low",
+                        "domains": [],
+                        "files": ["x.go"],
+                        "initial_status": "pending",
+                        "plan": "tasks/task0009.md",
+                        "requirements": ["FR1"],
+                        "skills": [],
+                        "title": "existing",
+                    },
+                    "task0010": {
+                        "complexity": "medium",
+                        "domains": ["api-contract"],
+                        "files": ["src/api/register.go"],
+                        "initial_status": "pending",
+                        "plan": "tasks/task0010.md",
+                        "requirements": ["FR1"],
+                        "skills": ["backend-impl"],
+                        "title": "User registration API",
+                    },
+                },
+                "mode": "replace_all",
+            },
+        }
+
+    def _digest_source_obj(self):
+        return {
+            "answers_digest": "sha256:" + "2" * 64,
+            "digest_inputs": {},
+            "mode": "interactive",
+            "value_inputs": {"task_description": None},
+            "worker": "implementation-planner",
+            "workflow_blob": "8f17c04",
+            "write_policy_digest": "sha256:" + "3" * 64,
+        }
+
+    def _write(self, path, obj):
+        path.write_text(json.dumps(obj), encoding="utf-8")
+
+    def _run_canonical(self, tmp_path, *, rework_yaml_present):
+        # The canonical invocation, verbatim: --feature-dir plus
+        # --phase-state pointing at the CREATE-PLAN phase's own state file
+        # (create-plan-phase.md never passes rework.yaml as --phase-state).
+        feature_dir = tmp_path / "feature-dir"
+        (feature_dir / "phase-state").mkdir(parents=True)
+        if rework_yaml_present:
+            (feature_dir / "phase-state" / "rework.yaml").write_text(
+                "phase: rework\n"
+                f"feature: {self.FEATURE}\n"
+                "spec_change:\n"
+                "  reason: x\n"
+                "  finding_stable_id: abc\n"
+                "  recorded_at_commit: deadbeef\n"
+                "  consumed: false\n",
+                encoding="utf-8",
+            )
+
+        create_plan_yaml = tmp_path / "create-plan.yaml"
+        create_plan_yaml.write_text(
+            f"phase: create-plan\nfeature: {self.FEATURE}\n", encoding="utf-8"
+        )
+
+        digest_source = self._digest_source_obj()
+        base_input_digest = VWO.normalize_json_sha256(digest_source)
+
+        input_path = tmp_path / "input.json"
+        workflow_path = tmp_path / "workflow.json"
+        digest_source_path = tmp_path / "digest-source.json"
+        self._write(input_path, self._patch_obj(base_input_digest))
+        self._write(workflow_path, self._workflow_obj())
+        self._write(digest_source_path, digest_source)
+
+        return run_cli(
+            [
+                "--kind", "workflow-patch",
+                "--worker", "implementation-planner",
+                "--input", str(input_path),
+                "--workflow", str(workflow_path),
+                "--digest-source", str(digest_source_path),
+                "--feature-dir", str(feature_dir),
+                "--phase-state", str(create_plan_yaml),
+                "--dry-run-apply",
+            ]
+        )
+
+    def test_canonical_invocation_form_accepts_merged_task_reentry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._run_canonical(Path(tmp), rework_yaml_present=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_missing_feature_dir_rework_yaml_is_rejected_under_the_same_invocation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._run_canonical(Path(tmp), rework_yaml_present=False)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            codes = {e["code"] for e in payload["errors"]}
+            self.assertIn("replace-all-not-permitted", codes)
+
+    def test_rework_file_passed_directly_as_phase_state_is_an_equivalence_case_not_this_ac(self):
+        # Test Notes: proves the OLD wiring path still works, as an
+        # EQUIVALENT source (a caller that already has the rework file open
+        # is not forced to re-supply it) -- kept as an additional case, not
+        # as AC-1's own proof (the two tests above are).
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            rework_yaml = tmp_path / "rework.yaml"
+            rework_yaml.write_text(
+                "phase: rework\n"
+                f"feature: {self.FEATURE}\n"
+                "spec_change:\n"
+                "  reason: x\n"
+                "  finding_stable_id: abc\n"
+                "  recorded_at_commit: deadbeef\n"
+                "  consumed: false\n",
+                encoding="utf-8",
+            )
+            digest_source = self._digest_source_obj()
+            base_input_digest = VWO.normalize_json_sha256(digest_source)
+
+            input_path = tmp_path / "input.json"
+            workflow_path = tmp_path / "workflow.json"
+            digest_source_path = tmp_path / "digest-source.json"
+            self._write(input_path, self._patch_obj(base_input_digest))
+            self._write(workflow_path, self._workflow_obj())
+            self._write(digest_source_path, digest_source)
+
+            result = run_cli(
+                [
+                    "--kind", "workflow-patch",
+                    "--worker", "implementation-planner",
+                    "--input", str(input_path),
+                    "--workflow", str(workflow_path),
+                    "--digest-source", str(digest_source_path),
+                    "--phase-state", str(rework_yaml),
+                    "--dry-run-apply",
+                ]
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

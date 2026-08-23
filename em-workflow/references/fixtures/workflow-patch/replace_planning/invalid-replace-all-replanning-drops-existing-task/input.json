@@ -11,20 +11,6 @@
   "step_patches": [],
   "tasks_patch": {
     "entries": {
-      "task0009": {
-        "complexity": "low",
-        "domains": [],
-        "files": [
-          "x.go"
-        ],
-        "initial_status": "pending",
-        "plan": "tasks/task0009.md",
-        "requirements": [
-          "FR1"
-        ],
-        "skills": [],
-        "title": "existing"
-      },
       "task0010": {
         "complexity": "medium",
         "domains": [
