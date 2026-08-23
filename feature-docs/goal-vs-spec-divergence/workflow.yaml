@@ -429,8 +429,10 @@ tasks:
     - FR6
     - NFR5
     - NFR8
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'deviation: refreshed byte-identity SHA256 pins in tests/test_gate_option_vocabulary.py (outside
+      expected_files); reported disagreement with workflow-patch.md''s documented re-entry form (task0013
+      owns that document)'
     branch: em-workflow/goal-vs-spec-divergence/task0016
 review:
   status: pending
