@@ -71,10 +71,42 @@ MIGRATED_RULE_FILES = (
 )
 
 REPO_RULES_DIR = REPO_ROOT / ".claude" / "rules"
-REPO_RULE_FILES = (
-    "plugin-version-bump.md",
-    "slash-commands-as-skills.md",
+
+# Every rule file present today, discovered rather than hand-typed so a
+# rename does not leave a stale name behind the way `plugin-version-bump.md`
+# did (decision `ac11-stale-guard`, phase-state/rework.yaml
+# pending_decisions[0]).
+REPO_RULE_FILES = tuple(sorted(p.name for p in REPO_RULES_DIR.glob("*.md")))
+
+# The subset this project cannot lose without noticing: rules carrying the
+# `core-` prefix convention. Named explicitly (not derived) so that deleting
+# one of these fails loudly, naming the missing rule (see
+# .claude/rules/core-plugin-structure.md's own naming rationale).
+CORE_REPO_RULE_FILES = (
+    "core-plugin-structure.md",
+    "core-plugin-version-bump.md",
 )
+
+
+def _missing_rule_files(names, rules_dir):
+    """The subset of `names` that does not exist as a file under `rules_dir`."""
+    return [n for n in names if not (rules_dir / n).is_file()]
+
+
+def _empty_rule_files(names, rules_dir):
+    """The subset of `names` whose file under `rules_dir` has zero bytes."""
+    return [n for n in names if (rules_dir / n).stat().st_size == 0]
+
+
+def _rule_files_without_a_level1_heading(names, rules_dir):
+    """The subset of `names` whose file does not open on a level-1 heading
+    (a line starting with a single `# `), i.e. does not name what it
+    governs."""
+    return [
+        n
+        for n in names
+        if not (rules_dir / n).read_text().lstrip().startswith("# ")
+    ]
 
 # Binaries the two shell hooks need on PATH regardless of whether gitleaks
 # itself resolves. Symlinked into each test's sandboxed PATH so that the
@@ -356,22 +388,71 @@ class TestReadmeDocumentsTheClassifierSideEffect(unittest.TestCase):
         self.assertIn("gcloud projects add-iam-policy-binding", self.readme)
 
 
+# This class used to assert that the root CLAUDE.md pointed at
+# `.claude/rules/` and named every rule file -- a CLAUDE.md-as-index
+# convention that current policy has retired: CLAUDE.md now carries only the
+# product's value and the users it serves, and every rule lives under
+# `.claude/rules/` with nothing indexing it from CLAUDE.md. Those two
+# assertions are replaced below by assertions of equal strength evaluated
+# directly against `.claude/rules/` (non-empty, self-naming via a level-1
+# heading), per decision `ac11-stale-guard` (phase-state/rework.yaml
+# pending_decisions[0]).
 class TestRepositoryRulesAreInPlace(unittest.TestCase):
-    """The two repository-specific rules moved out of the user's global
+    """The repository-specific rules moved out of the user's global
     configuration and into the repository they actually govern."""
 
     def test_every_repository_rule_exists(self):
-        missing = [n for n in REPO_RULE_FILES if not (REPO_RULES_DIR / n).is_file()]
+        missing = _missing_rule_files(REPO_RULE_FILES, REPO_RULES_DIR)
         self.assertEqual(missing, [], f"missing repository rules: {missing}")
 
-    def test_root_claude_md_points_at_the_rules_directory(self):
-        claude_md = (REPO_ROOT / "CLAUDE.md").read_text()
-        self.assertIn(".claude/rules/", claude_md)
+    def test_repository_rule_list_is_not_empty(self):
+        self.assertNotEqual(REPO_RULE_FILES, ())
 
-    def test_root_claude_md_names_every_repository_rule(self):
-        claude_md = (REPO_ROOT / "CLAUDE.md").read_text()
-        missing = [n for n in REPO_RULE_FILES if n not in claude_md]
-        self.assertEqual(missing, [], f"rules unreferenced from CLAUDE.md: {missing}")
+    def test_existence_check_fails_for_a_rule_that_does_not_exist(self):
+        missing = _missing_rule_files(
+            REPO_RULE_FILES + ("does-not-exist.md",), REPO_RULES_DIR
+        )
+        self.assertEqual(missing, ["does-not-exist.md"])
+
+    def test_existence_check_fails_against_an_empty_rules_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = _missing_rule_files(REPO_RULE_FILES, Path(tmp))
+        self.assertEqual(sorted(missing), sorted(REPO_RULE_FILES))
+        self.assertNotEqual(missing, [])
+
+    def test_core_prefixed_rules_are_present(self):
+        missing = _missing_rule_files(CORE_REPO_RULE_FILES, REPO_RULES_DIR)
+        self.assertEqual(missing, [], f"missing core repository rules: {missing}")
+
+    def test_every_repository_rule_file_is_non_empty(self):
+        empty = _empty_rule_files(REPO_RULE_FILES, REPO_RULES_DIR)
+        self.assertEqual(empty, [], f"empty repository rule files: {empty}")
+
+    def test_non_empty_check_fails_for_an_empty_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rules_dir = Path(tmp)
+            (rules_dir / "empty.md").write_text("")
+            empty = _empty_rule_files(("empty.md",), rules_dir)
+        self.assertEqual(empty, ["empty.md"])
+
+    def test_every_repository_rule_file_names_what_it_governs(self):
+        missing_heading = _rule_files_without_a_level1_heading(
+            REPO_RULE_FILES, REPO_RULES_DIR
+        )
+        self.assertEqual(
+            missing_heading,
+            [],
+            f"repository rule files without a level-1 heading: {missing_heading}",
+        )
+
+    def test_heading_check_fails_for_a_file_without_a_level_1_heading(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rules_dir = Path(tmp)
+            (rules_dir / "no-heading.md").write_text("no heading here\n")
+            missing_heading = _rule_files_without_a_level1_heading(
+                ("no-heading.md",), rules_dir
+            )
+        self.assertEqual(missing_heading, ["no-heading.md"])
 
 
 if __name__ == "__main__":
