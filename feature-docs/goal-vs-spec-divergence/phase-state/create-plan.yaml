@@ -4,14 +4,32 @@ phase: create-plan
 status: dispatching
 generation: 1
 base_revision: 6af232cb235dff74a576117432bcfac448e34454
-last_input_digest: sha256:8cc15b68ad757414797f905aa25003304d32a0ab7dbcb10e0330ca5703251268
-active_request_id: create-plan-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:e53066b2ef920b2209e212d1d10f90e41da14fb845be4dce17e0bfff94d018ef
+active_request_id: create-plan-run-0002
+packets:
+  create-plan-q0001:
+    status: answered
+    issued_at: "2026-08-23T20:38:00+09:00"
+    questions:
+      - question_id: requirement.fr20.tbd-resolution
+        status: answered
+answers:
+  requirement.fr20.tbd-resolution:
+    packet_id: create-plan-q0001
+    answered_at: "2026-08-23T20:40:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "A-6 を仮定として採用し FR20 の status を assumed にする。goal ブロックを持たない feature は分類ゲート（FR7 / FR13）の適用外とし、batch で rework.spec-change に到達したら従来どおり停止する（backfill しない）。停止理由に「goal ブロック不在により分類ゲート適用外」を記録し、この規則を question-resolution.md の分類ゲート節に明記して tests/ 側のピンテストで固定する。EC-7 も同じ規則で扱う"
 worker_runs:
   - request_id: create-plan-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:8cc15b68ad757414797f905aa25003304d32a0ab7dbcb10e0330ca5703251268
+    output_digest: null
+  - request_id: create-plan-run-0002
+    status: dispatched
+    input_digest: sha256:e53066b2ef920b2209e212d1d10f90e41da14fb845be4dce17e0bfff94d018ef
     output_digest: null
 artifacts: []
 patches: []
