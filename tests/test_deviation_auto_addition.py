@@ -72,6 +72,48 @@ condition, so the rule and its derivation target stay pinned together:
 - `TestCreatePlanPhaseCitesAutoAdditionRule` -> task0015 AC-1 (FR19).
 - `TestCreatePlanPhaseCitationMatchersFlagSyntheticSamples` -> negative
   proof for the two matchers this extension adds.
+
+Round-2 rework (task0020, review round 2, source_ids `c6b1737a7d7e82f1`,
+`c64996c1c4a836d2`, `ad9b77c0c67b93f7`) names the writer, the operation and
+the evidence form the auto-addition rule left undefined: nobody wrote
+`tasks.{T}.files`, the evidence had no checkable form, and the audit trail
+pointed at the completion report (an input channel, not a resting place).
+This extension edits `implement-phase.md` only (C4; the sibling
+create-plan-phase.md assertions live in test_change_set_derivation.py):
+
+- `TestTask0020AC1FilesAppendSameCommitNeverRewritten` -> AC-1 (FR19): step
+  3 names `tasks.{T}.files` among what it updates, as an append performed
+  by the orchestrator in the same commit as the status update; an
+  existing entry is never removed or rewritten, and re-admitting an
+  already listed path is a no-op.
+- `TestTask0020AC2EvidenceFormThreeParts` -> AC-2 (FR19): the evidence form
+  is three named parts (the path, the identifier, the observable
+  failure), and the identifier must resolve to something that exists.
+- AC-3 (FR19, EC-5) is unchanged by this rework and re-verified by the
+  pre-existing `TestAC2ConvenienceDoesNotQualify` /
+  `TestAC3ContainmentCheckRetained` classes above, run again against the
+  updated document.
+- `TestTask0020AC4RestingPlacesNamedNotCompletionReport` -> AC-4 (NFR3):
+  the admission/decline resting places are named, and the completion
+  report is disclaimed as the record's resting place (an anti-regression
+  check confirms the old completion-report-as-resting-place framing is
+  gone).
+- AC-6 (FR19, retention) and AC-8 (NFR5, NFR8) are exercised by the
+  pre-existing `TestAC3ContainmentCheckRetained` /
+  `TestNoExclusionRuleStated` classes plus the full-suite run recorded in
+  this task's test record, not re-tested here (C4/Test Notes).
+
+Matcher -> negative-proof inventory (task0020 additions):
+
+- `_states_files_append_in_same_commit` ->
+  `TestTask0020MatchersFlagSyntheticSamples.
+  test_files_append_matcher_requires_orchestrator_and_same_commit_together`.
+- `_states_evidence_form_three_parts` ->
+  `TestTask0020MatchersFlagSyntheticSamples.
+  test_evidence_form_matcher_requires_all_three_parts_and_resolution`.
+- `_states_resting_places_not_completion_report` ->
+  `TestTask0020MatchersFlagSyntheticSamples.
+  test_resting_place_matcher_requires_admission_decline_and_disclaimer`.
 """
 
 import re
@@ -494,6 +536,198 @@ class TestMatchersFlagSyntheticSamples(unittest.TestCase):
             "reason that has nothing to do with any artifact root."
         )
         self.assertFalse(_has_verify_side_exclusion_rule(bare_exclusion_word))
+
+
+# --- task0020 (round-2 rework): the writer, the operation, and the
+# evidence form for deviation auto-addition.
+
+TASK0020_APPEND_PHRASE = "an append to that same task's `files`"
+TASK0020_SAME_COMMIT_PHRASE = "in the same commit as the status update"
+TASK0020_PERFORMED_BY_ORCH_PHRASE = "performed by the orchestrator"
+TASK0020_NEVER_REMOVED_PHRASE = (
+    "an existing entry is never removed or rewritten by this rule"
+)
+TASK0020_NOOP_PHRASE = "re-admitting an already listed path is a no-op"
+
+TASK0020_PATH_BEING_ADDED_PHRASE = "the path being added"
+TASK0020_IDENTIFIER_PHRASE = (
+    "the identifier of the acceptance criterion or requirement that would "
+    "otherwise be dropped"
+)
+TASK0020_OBSERVABLE_OUTCOME_PHRASE = "stated as an observable outcome"
+TASK0020_RESOLVE_EXISTS_PHRASE = "must resolve to something that exists"
+
+TASK0020_FILES_ENTRY_RESTING_PHRASE = "the `files` entry this step just appended"
+TASK0020_WAKE_COMMIT_RESTING_PHRASE = "wake commit that added it"
+TASK0020_WAKE_REPORT_RESTING_PHRASE = "wake phase's own report for that task"
+TASK0020_NOT_RESTING_PLACE_PHRASE = "never itself the record's resting place"
+
+# Anti-regression: the pre-rework framing that pointed the completion
+# report itself out as the record's resting place must be gone.
+OLD_RESTING_PLACE_PHRASE_REMOVED = (
+    "leaves its audit record through this same completion-report"
+)
+
+
+def _states_files_append_in_same_commit(text):
+    text = _normalize_ws(text)
+    return bool(
+        TASK0020_APPEND_PHRASE in text
+        and TASK0020_PERFORMED_BY_ORCH_PHRASE in text
+        and TASK0020_SAME_COMMIT_PHRASE in text
+    )
+
+
+def _states_evidence_form_three_parts(text):
+    text = _normalize_ws(text)
+    return bool(
+        TASK0020_PATH_BEING_ADDED_PHRASE in text
+        and TASK0020_IDENTIFIER_PHRASE in text
+        and TASK0020_OBSERVABLE_OUTCOME_PHRASE in text
+        and TASK0020_RESOLVE_EXISTS_PHRASE in text
+    )
+
+
+def _states_resting_places_not_completion_report(text):
+    text = _normalize_ws(text)
+    return bool(
+        TASK0020_FILES_ENTRY_RESTING_PHRASE in text
+        and TASK0020_WAKE_COMMIT_RESTING_PHRASE in text
+        and TASK0020_WAKE_REPORT_RESTING_PHRASE in text
+        and TASK0020_NOT_RESTING_PLACE_PHRASE in text
+    )
+
+
+class TestTask0020AC1FilesAppendSameCommitNeverRewritten(unittest.TestCase):
+    """AC-1 (FR19): step 3 names `tasks.{T}.files` among what it updates,
+    as an append performed by the orchestrator in the same commit as the
+    status update; an existing entry is never removed or rewritten, and
+    re-admitting an already listed path is a no-op."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.full_text = IMPLEMENT_PHASE_PATH.read_text(encoding="utf-8")
+        cls.normalized = _normalize_ws(cls.full_text)
+
+    def test_step_3_names_files_append_in_same_commit_by_the_orchestrator(
+        self,
+    ):
+        self.assertTrue(_states_files_append_in_same_commit(self.normalized))
+
+    def test_existing_entry_never_removed_or_rewritten(self):
+        self.assertIn(TASK0020_NEVER_REMOVED_PHRASE, self.normalized)
+
+    def test_readmission_of_an_already_listed_path_is_a_no_op(self):
+        self.assertIn(TASK0020_NOOP_PHRASE, self.normalized)
+
+    def test_files_append_statement_is_inside_step_3_not_free_floating(self):
+        # Test Notes: pin the enumeration inside step 3's own sentence, so
+        # a statement that landed in the wrong step fails.
+        step_3_start = self.full_text.index(
+            "3. **Update workflow.yaml, then commit**"
+        )
+        step_3_end = self.full_text.index(REGION_START_ANCHOR)
+        step_3_text = _normalize_ws(self.full_text[step_3_start:step_3_end])
+        self.assertIn(TASK0020_APPEND_PHRASE, step_3_text)
+        self.assertIn(TASK0020_NEVER_REMOVED_PHRASE, step_3_text)
+
+
+class TestTask0020AC2EvidenceFormThreeParts(unittest.TestCase):
+    """AC-2 (FR19): the evidence form is three named parts -- the path,
+    the identifier, the observable failure -- and the identifier must
+    resolve to something that exists."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.region = _slice_region(
+            IMPLEMENT_PHASE_PATH.read_text(encoding="utf-8")
+        )
+
+    def test_evidence_form_states_three_parts_and_resolution_requirement(
+        self,
+    ):
+        self.assertTrue(_states_evidence_form_three_parts(self.region))
+
+
+class TestTask0020AC4RestingPlacesNamedNotCompletionReport(unittest.TestCase):
+    """AC-4 (NFR3): the rule states where the admission decision persists
+    -- for an admission, the `files` entry and the wake commit that added
+    it; for a decline, the wake report's record of the reason -- and does
+    not point at the completion report as the record's resting place."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.region = _slice_region(
+            IMPLEMENT_PHASE_PATH.read_text(encoding="utf-8")
+        )
+
+    def test_resting_places_named_and_completion_report_disclaimed(self):
+        self.assertTrue(
+            _states_resting_places_not_completion_report(self.region)
+        )
+
+    def test_old_completion_report_resting_place_framing_is_gone(self):
+        self.assertNotIn(OLD_RESTING_PLACE_PHRASE_REMOVED, self.region)
+
+
+class TestTask0020MatchersFlagSyntheticSamples(unittest.TestCase):
+    """Negative-proof tests, one per new matcher this task0020 extension
+    adds, each against a synthetic sample rather than the repository."""
+
+    def test_files_append_matcher_requires_orchestrator_and_same_commit_together(
+        self,
+    ):
+        full_sample = (
+            "for each admitted deviation, an append to that same task's "
+            "`files`, performed by the orchestrator in the same commit as "
+            "the status update."
+        )
+        self.assertTrue(_states_files_append_in_same_commit(full_sample))
+
+        partial_sample = (
+            "for each admitted deviation, an append to that same task's "
+            "`files`."
+        )
+        self.assertFalse(_states_files_append_in_same_commit(partial_sample))
+
+    def test_evidence_form_matcher_requires_all_three_parts_and_resolution(
+        self,
+    ):
+        full_sample = (
+            "it carries the path being added; the identifier of the "
+            "acceptance criterion or requirement that would otherwise be "
+            "dropped; and how it fails, stated as an observable outcome. "
+            "The named identifier must resolve to something that exists."
+        )
+        self.assertTrue(_states_evidence_form_three_parts(full_sample))
+
+        partial_sample = (
+            "it carries the path being added and an identifier that would "
+            "otherwise be dropped."
+        )
+        self.assertFalse(_states_evidence_form_three_parts(partial_sample))
+
+    def test_resting_place_matcher_requires_admission_decline_and_disclaimer(
+        self,
+    ):
+        full_sample = (
+            "an admission's audit record is the `files` entry this step "
+            "just appended plus the wake commit that added it; a "
+            "decline's reason is recorded in this wake phase's own report "
+            "for that task. The completion report is never itself the "
+            "record's resting place."
+        )
+        self.assertTrue(
+            _states_resting_places_not_completion_report(full_sample)
+        )
+
+        partial_sample = (
+            "the decision is recorded through the completion-report "
+            "`deviations` channel."
+        )
+        self.assertFalse(
+            _states_resting_places_not_completion_report(partial_sample)
+        )
 
 
 class TestModuleIsDiscoverableAndImportsStdlibOnly(unittest.TestCase):
