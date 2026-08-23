@@ -90,7 +90,7 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0002
   task0003:
@@ -279,9 +279,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0010
   task0011:
     title: plugin version bump
     plan: tasks/task0011.md
