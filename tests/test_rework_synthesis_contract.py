@@ -190,6 +190,55 @@ class TestReworkSynthesisSSOTStateTransition(unittest.TestCase):
         )
         self.assertIn("review-specific", section)
 
+    def test_states_create_plan_reentry_holds_with_merged_tasks(self):
+        # task0003 AC-1 (FR6): create-plan re-entry under the SPEC-change
+        # transition is not rejected merely because merged tasks already
+        # exist, and the permission rule itself is cited by path rather
+        # than restated here (C2).
+        section = self._transition_section()
+        self.assertIn(
+            "not rejected merely because merged tasks",
+            section,
+        )
+        self.assertIn("references/workflow-patch.md", section)
+
+    def test_does_not_restate_workflow_patch_permission_conditions(self):
+        # task0003 AC-6 (NFR1): the `replace_all` permission conjunction is
+        # owned by workflow-patch.md and must not be copied here.
+        section = self._transition_section()
+        self.assertNotIn(
+            "every existing task's `status` is `pending`", section
+        )
+        self.assertNotIn("an explicit re-plan", section)
+
+    def test_batch_mode_routes_through_classification_gate(self):
+        # task0003 AC-2 (FR6, D8): batch resolves rework.spec-change through
+        # the classification gate in question-resolution.md.
+        section = self._transition_section()
+        normalized = re.sub(r"\s+", " ", section)
+        self.assertIn("classification gate", normalized)
+        self.assertIn("references/question-resolution.md", section)
+
+    def test_old_unlisted_gate_abort_wording_is_gone(self):
+        # task0003 AC-2: the superseded claim that batch aborts through the
+        # unlisted-gate fallback must not survive.
+        section = self._transition_section()
+        self.assertNotIn("falls to the unlisted-gate fallback", section)
+        self.assertNotIn(
+            "which aborts, because a SPEC change is not a success-path "
+            "outcome",
+            section,
+        )
+
+    def test_interactive_mode_explicitly_stated_unchanged(self):
+        # task0003 AC-2 (D8): interactive mode is stated as unchanged, not
+        # merely left silent.
+        normalized = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "Interactive mode is unchanged: the user is asked directly",
+            normalized,
+        )
+
 
 class TestImplementPhaseReworkPrecondition(unittest.TestCase):
     @classmethod
@@ -307,6 +356,24 @@ class TestReworkSynthesisAssertionsCanFail(unittest.TestCase):
         fake_section = "1. one\n2. two\n3. three\n"
         items = re.findall(r"^\d+\.", fake_section, re.MULTILINE)
         self.assertNotEqual(len(items), 11)
+
+    def test_superseded_batch_abort_wording_would_be_caught(self):
+        # task0003 AC-2 negative proof: the matcher used by
+        # test_old_unlisted_gate_abort_wording_is_gone must actually flag
+        # the pre-task0003 wording it supersedes, not merely pass by
+        # vacuity against text that never contained it.
+        fake_section = (
+            "Batch mode has no `rework.spec-change` entry in "
+            "`batch-policies.yaml`, so it\nfalls to the unlisted-gate "
+            "fallback (`references/question-resolution.md`)\n— which "
+            "aborts, because a SPEC change is not a success-path outcome."
+        )
+        self.assertIn("falls to the unlisted-gate fallback", fake_section)
+        self.assertIn(
+            "which aborts, because a SPEC change is not a success-path "
+            "outcome",
+            fake_section,
+        )
 
 
 if __name__ == "__main__":
