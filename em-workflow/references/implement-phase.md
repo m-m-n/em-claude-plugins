@@ -371,32 +371,51 @@ Triggered whenever a launched implementer's `Task()` call returns.
    "deviations": [...], "notes"}` (malformed/missing report → treat as
    `failed`) — set `tasks.{T}.status = merged` for every task verified
    merged, `= failed` for every task whose step 1 reconciled state is
-   `failed` or whose report is `failed`/malformed, on the worktree just
-   refreshed in step 2, then commit:
+   `failed` or whose report is `failed`/malformed, and, for each admitted
+   deviation (the Deviation auto-addition rule below), an append to that
+   same task's `files`. This step's enumeration of what it writes to
+   `workflow.yaml` is exactly these two: the `tasks.{T}.status` update and
+   this `files` append — both performed by the orchestrator, on the
+   worktree just refreshed in step 2, in the same commit as the status
+   update: never a second write, never a second commit, never a new patch
+   operation. The append is stated as an append: an existing entry is
+   never removed or rewritten by this rule, and re-admitting an already
+   listed path is a no-op. Then commit:
    `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
    phase reconcile" "$RECONCILE_TIP"` (exit-4 recovery: Branch & Worktree
    Model above — on a second exit 4, stop the wake phase with a report
    naming the task(s) involved rather than looping).
 
    **Deviation auto-addition rule**: a reported deviation (the
-   `deviations` entries in that same completion report) is auto-added to
-   the declared change set derivation — defined in
+   `deviations` entries in that same completion report — the completion
+   report stays the channel the evidence arrives on, the same
+   completion-report `deviations` channel already defined above, and is
+   never itself the record's resting place) is auto-added to the declared
+   change set derivation — defined in
    `references/phases/create-plan-phase.md`, cited here and never
-   restated — only when it is accompanied by evidence that an existing
-   acceptance criterion would otherwise be dropped: a named, checkable
-   condition, not a judgement call. Absent that evidence — implementer
-   convenience, a nicer structure, an unrelated cleanup — the deviation is
-   not auto-added; it surfaces as an ordinary deviation and the
-   containment check (observed change set ⊆ declared change set) handles
-   it exactly as before, and unjustified scope expansion is still stopped.
-   The containment check itself is unchanged by this rule. Every
-   auto-addition, and every deviation this rule declines to auto-add,
-   leaves its audit record through this same completion-report
-   `deviations` channel: what was (or would have been) added and the
-   evidence considered — for an auto-addition, the evidence that justified
-   it; for a rejected one, the reason it did not qualify (NFR3). No new
-   phase-state field is introduced for this record (D7) — the channel is
-   the one this step already defines.
+   restated — only when it carries, as three named parts, evidence that an
+   existing acceptance criterion would otherwise be dropped: the path
+   being added; the identifier of the acceptance criterion or requirement
+   that would otherwise be dropped — an `AC-n` of the reporting task's own
+   plan, or a requirement id already registered in `workflow.yaml`; and
+   how it fails without the path, stated as an observable outcome (a named
+   test that cannot be written or cannot pass), never as a preference. The
+   named identifier must resolve to something that exists. A deviation
+   failing any one of these three parts — a missing identifier, an
+   identifier that resolves to nothing, or a rationale of implementer
+   convenience, a nicer structure, an unrelated cleanup — is not
+   auto-added; it surfaces as an ordinary deviation and the containment
+   check (observed change set ⊆ declared change set) handles it exactly
+   as before, and unjustified scope expansion is still stopped. The
+   containment check itself is unchanged by this rule.
+
+   **Where the decision persists**: an admission's audit record is the
+   `files` entry this step just appended plus the wake commit that added
+   it — nothing further is written for it. A decline's audit record is the
+   reason recorded in this wake phase's own report for that task, naming
+   which of the three evidence parts was missing or unresolved. No new
+   phase-state field is introduced for this record (D7 unchanged) — the
+   channel is the one this step already defines.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
    git worktree remove "$WT_ROOT/{T}"
