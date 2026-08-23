@@ -679,8 +679,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
         / "input.json"
     )
 
+    # Updated by goal-vs-spec-divergence/task0002, which owns
+    # em-workflow/references/workflow-patch.md and intentionally edits it
+    # (the freeze this pin enforces was scoped to the
+    # batch-policy-option-id-consistency implementation window, which has
+    # completed; the pin is refreshed here, not removed, to keep guarding
+    # against future incidental edits).
     WORKFLOW_PATCH_SHA256 = (
-        "2fb181ad1a128f526d4b549013538d59804ace3a544af5811bc801801f509d0e"
+        "9636ddd51d7f606457531facd67eb3d7d5958378a931bbf3a527d87eebc063b6"
     )
     VALIDATE_WORKER_OUTPUT_SHA256 = (
         "1b86e4d4ccc9536aa170da0be3d1309d25b6c211cc388e9d2d02e6860b3eb4a7"

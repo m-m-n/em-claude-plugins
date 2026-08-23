@@ -343,6 +343,105 @@ class TestReplaceAllPermissionConditionsPinned(unittest.TestCase):
         self.assertIn("replace_all", rule_text)
         self.assertIn("permission conditions", rule_text.lower())
 
+    def test_floor_condition_is_scoped_to_the_initial_planning_path(self):
+        # task0002 AC-1: the tasks-empty-or-all-pending floor is stated
+        # inside the initial-planning path's own bullet, not as a
+        # blanket condition covering both paths.
+        start = self.section.index("Initial-planning path")
+        end = self.section.index("Re-planning path", start)
+        initial_bullet = self.section[start:end]
+        self.assertIn("`tasks` is empty", initial_bullet)
+        self.assertRegex(
+            initial_bullet, r"every existing task's `status` is `pending`"
+        )
+
+    def test_needs_update_path_explicitly_permits_merged_tasks(self):
+        # task0002 AC-2: merged tasks no longer block replace_all when
+        # create-plan is needs_update.
+        start = self.section.index("Re-planning path")
+        end = self.section.index("A `replace_all` received", start)
+        replanning_bullet = self.section[start:end]
+        self.assertIn("merged", replanning_bullet)
+
+    def test_protocol_error_sentence_no_longer_lists_merged(self):
+        # task0002 AC-3: in_progress / failed remain a protocol error on
+        # both paths; merged must not be listed there any more (it is
+        # explicitly permitted on the re-planning path instead).
+        match = re.search(
+            r"A `replace_all` received.*?protocol error[^\n]*\.",
+            self.section,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match, "expected the protocol-error sentence")
+        sentence = match.group(0)
+        self.assertIn("in_progress", sentence)
+        self.assertIn("failed", sentence)
+        self.assertNotIn("merged", sentence)
+
+
+# task0002: the wording that ANDed the task-state floor with either
+# create-plan path -- making the floor apply unconditionally to both paths
+# -- is superseded and must not remain anywhere in the document (AC-4).
+OLD_BLANKET_CONDITION_PATTERN = re.compile(
+    r"ALL of the following hold.*?"
+    r"`tasks` is empty, OR every existing task's `status` is `pending`.*?"
+    r"AND, additionally, one of:",
+    re.DOTALL,
+)
+
+
+class TestSupersededBlanketConditionRemoved(unittest.TestCase):
+    """task0002 AC-4: the superseded blanket condition ('every existing
+    task must be `pending`' as an unconditional requirement of both paths)
+    must not remain anywhere in the document."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+
+    def test_pattern_trips_on_a_synthetic_sample_of_the_old_wording(self):
+        # Non-vacuity guard: prove the pattern can match something, so the
+        # absence assertion below is not vacuously true.
+        synthetic = (
+            "`replace_all` is permitted ONLY when ALL of the following "
+            "hold; otherwise the patch is rejected:\n\n"
+            "- `tasks` is empty, OR every existing task's `status` is "
+            "`pending`\n"
+            "- AND, additionally, one of:\n"
+            "  - the `create-plan` step is `pending` (first planning "
+            "pass), OR\n"
+            "  - the `create-plan` step is `needs_update` (an explicit "
+            "re-plan)\n"
+        )
+        self.assertRegex(synthetic, OLD_BLANKET_CONDITION_PATTERN)
+
+    def test_superseded_blanket_condition_absent_from_document(self):
+        self.assertNotRegex(self.text, OLD_BLANKET_CONDITION_PATTERN)
+
+
+class TestBaseCommitPreservedOnReplanningPath(unittest.TestCase):
+    """task0002 AC-5: workflow.implement.base_commit is preserved on the
+    re-planning path, stated consistently with the rework invariant that a
+    rework patch never changes base_commit."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### `replace_all` permission conditions",
+            "### `append` requirements",
+        )
+
+    def test_base_commit_mentioned_within_permission_conditions_section(self):
+        self.assertIn("workflow.implement.base_commit", self.section)
+        self.assertIn("`preserve`", self.section)
+
+    def test_consistency_with_rework_invariant_is_stated(self):
+        lowered = self.section.lower()
+        self.assertIn("does not contradict", lowered)
+        self.assertIn("rework invariant", lowered)
+
 
 if __name__ == "__main__":
     unittest.main()
