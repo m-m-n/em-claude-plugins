@@ -1,0 +1,84 @@
+task_id: task0006
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_states_classification_gate_routing
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, header lacked the phrases "classification gate" and
+      "instead of aborting the phase outright" — assertIn on both raised
+      AssertionError against the pre-edit header text.
+  AC-2:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_no_longer_claims_unconditional_abort
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the superseded phrase "guessing an answer" was still
+      present in the header — assertNotIn raised AssertionError; a synthetic
+      non-vacuity check confirms the assertion is meaningful.
+  AC-3:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_gate_id_set_matches_design_input_minus_non_packet
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_rework_spec_change_absent
+      - tests.test_batch_policies.TestSelectGateStructure.test_select_gate_set_matches_pinned_expectation
+    red_confirmed: false
+    red_reason: >-
+      These are pre-existing structural pins over gate_policies (task0022's
+      module), unchanged by this task since only the header comment was
+      edited. Per the task plan's Test Notes, they are this task's
+      regression floor, not new red-green coverage: they were already green
+      and stayed green through the edit, proving gate_policies stayed
+      byte-unchanged.
+  AC-4:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_does_not_imply_other_arms_relaxed
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the header did not mention "category: security",
+      "category: license", "reversible: false" or "unchanged strength" at
+      all — each assertIn raised AssertionError against the pre-edit header.
+  AC-5:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_header_does_not_restate_gate_internals
+    red_confirmed: false
+    red_reason: >-
+      This is an absence-only assertion (no verdict/asymmetry/evidence_ids
+      terms present) plus a path-citation check. The path citation
+      (references/question-resolution.md) was already present in the
+      pre-edit header, and the pre-edit header also never contained the
+      leaked terms, so this test passed before the implementation existed
+      too. The observable red-green transition for AC-5's citation
+      requirement is instead carried by AC-1's test
+      (test_header_states_classification_gate_routing), which asserts the
+      same path citation inside text that did not exist pre-edit. Leaving
+      this one honestly as unconfirmed per the discipline rather than
+      fabricating a red.
+  AC-6:
+    tests:
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_gate_id_set_matches_design_input_minus_non_packet
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_select_entries_carry_an_option_id
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_artifact_overwrite_family_shares_identical_semantics
+      - tests.test_batch_policies.TestBatchPoliciesYaml.test_rework_spec_change_absent
+      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_intentional_exception_excluded_from_both_directions
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing structural guards (task0022's module), untouched by this
+      task's header-only edit. Verified they still pass after the edit
+      (see final_failures); not new coverage authored by this task.
+  AC-7:
+    tests:
+      - tests.test_batch_policies.TestNoStaleDecisionTableReference.test_no_decision_table_phrase_in_owned_files
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing guard against the "decision table" / 「決定表」 phrase;
+      this task's new wording was written to avoid tripping it, and the
+      full suite pass (1552 tests, same 3 pre-existing failures as
+      baseline) confirms it together with every other guard.
