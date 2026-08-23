@@ -1,0 +1,95 @@
+task_id: task0007
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_create_spec_goal_persistence.TestGoalFieldListedAndVerbatim.test_goal_listed_among_constructed_fields
+      - tests.test_create_spec_goal_persistence.TestGoalFieldListedAndVerbatim.test_launch_time_description_stored_verbatim
+      - tests.test_create_spec_goal_persistence.TestGoalFieldListedAndVerbatim.test_cites_workflow_schema_for_the_blocks_definition
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, section 11 listed only schema_version .. requirements
+      with no goal entry; assertIn("`goal`", section) and the
+      verbatim/citation checks failed with AssertionError: substring not
+      found in the unmodified section-11 text.
+  AC-2:
+    tests:
+      - tests.test_create_spec_goal_persistence.TestGoalSoleWriterAndNeverDerived.test_orchestrator_is_sole_writer
+      - tests.test_create_spec_goal_persistence.TestGoalSoleWriterAndNeverDerived.test_never_derived_from_requirements_or_spec
+    red_confirmed: true
+    red_reason: >-
+      "sole writer" and "REQUIREMENTS.md" / "never derived" were absent from
+      section 11 before the edit; assertIn raised AssertionError against the
+      unmodified text.
+  AC-3:
+    tests:
+      - tests.test_create_spec_goal_persistence.TestGoalReentryTiedToNeedsUpdate.test_document_states_reentry_leaves_goal_unchanged_tied_to_needs_update
+      - tests.test_create_spec_goal_persistence.TestGoalReentryTiedToNeedsUpdate.test_needs_update_status_literal_present
+    red_confirmed: true
+    red_reason: >-
+      "needs_update" did not appear anywhere in section 11 before the edit,
+      so both the literal-presence check and the
+      needs_update-goal-unchanged regex failed with AssertionError /
+      "Regex didn't match".
+  AC-4:
+    tests:
+      - tests.test_create_spec_goal_persistence.TestGoalNoSourceCase.test_ec7_marker_present
+      - tests.test_create_spec_goal_persistence.TestGoalNoSourceCase.test_no_source_case_states_no_goal_block_written
+      - tests.test_create_spec_goal_persistence.TestGoalNoSourceCase.test_no_goal_synthesized_in_that_case
+      - tests.test_create_spec_goal_persistence.TestGoalNoSourceCase.test_cites_question_resolution_for_the_gate_consequence
+    red_confirmed: true
+    red_reason: >-
+      None of "EC-7", "no `goal` block is written", "no goal is
+      synthesized", or a references/question-resolution.md citation existed
+      in section 11 before the edit; all four assertIn checks raised
+      AssertionError.
+  AC-5:
+    tests:
+      - tests.test_create_spec_goal_persistence.TestReferenceScanTargetResolution.test_reference_scan_targets_category_named
+      - tests.test_create_spec_goal_persistence.TestReferenceScanTargetResolution.test_orchestrator_resolves_before_dispatch
+      - tests.test_create_spec_goal_persistence.TestReferenceScanTargetResolution.test_analyst_performs_no_discovery_of_its_own
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, step 1 of the analyst dispatch loop named only "E2E
+      discovery" and "design-system candidates" as glob-derived categories;
+      "resolved_input_paths.reference_scan_targets" and "no filesystem
+      discovery of its own" were absent, so assertIn raised AssertionError
+      (and "resolves"/"before dispatch" co-occurrence check also failed on
+      the pre-edit text).
+  AC-6:
+    tests:
+      - tests.test_create_spec_goal_persistence.TestNoRestatedSiblingContent.test_construction_section_cites_schema_path_rather_than_copying_it
+      - tests.test_create_spec_goal_persistence.TestNoRestatedSiblingContent.test_dispatch_section_cites_analyst_contract_rather_than_copying_it
+      - tests.test_create_spec_goal_persistence.TestNoRestatedSiblingContent.test_request_side_flag_is_named_but_not_defined
+    red_confirmed: false
+    red_reason: >-
+      The citation-by-path half of these assertions
+      (references/workflow-schema.md and
+      references/contracts/analyst-contract.md already appeared in their
+      respective sections before this task's edit, since both paths were
+      already cited there for other, pre-existing reasons) was already
+      green before any implementation existed for this task. Only the
+      analysis_scope.inspect_reference_impact naming sub-check
+      (test_request_side_flag_is_named_but_not_defined) was genuinely red
+      beforehand. The negative "does not restate contract/schema wording"
+      half is a guard against future restatement and cannot be red by
+      construction (there is nothing to restate until the sibling tasks
+      land). Recorded honestly rather than marked true.
+  AC-7:
+    tests:
+      - tests.test_create_spec_goal_persistence.TestSectionHeadingsUnchangedAndInOrder.test_expected_headings_all_present_in_order
+    red_confirmed: false
+    red_reason: >-
+      This is a guard pinning the pre-existing heading list/order so this
+      task's own edits cannot renumber or insert a new numbered section; it
+      was already green against the unmodified document (there was nothing
+      to renumber yet). The "full suite passes" half of AC-7 is verified by
+      running `python3 -m unittest discover -s tests` directly (see
+      final_failures above), not by a dedicated red/green test.
