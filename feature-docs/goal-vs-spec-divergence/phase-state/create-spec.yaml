@@ -1,11 +1,11 @@
 schema_version: 1
 feature: goal-vs-spec-divergence
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 916fec6
 last_input_digest: sha256:93e99410f750a98138acd3d8148cf9e68a0a1fd8d6cdceeb2757214b6ef0260d
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -112,10 +112,16 @@ worker_runs:
     input_digest: sha256:17c1ca187a8372da8f432ac49ab26029168197ebbbd7426a94080c56c17adfe9
     output_digest: null
   - request_id: create-spec-run-0003
-    status: dispatched
+    status: completed
     input_digest: sha256:93e99410f750a98138acd3d8148cf9e68a0a1fd8d6cdceeb2757214b6ef0260d
     output_digest: null
-artifacts: []
+artifacts:
+  - path: feature-docs/goal-vs-spec-divergence/REQUIREMENTS.md
+    sha256: sha256:32eeb9a39c24d01b886707499b8fd7f575e79216685bc3c8306eb48014b54fb6
+    produced_by: create-spec-run-0003
+  - path: feature-docs/goal-vs-spec-divergence/SPEC.md
+    sha256: sha256:d0753d842f84addfebce308a2327462b541bad2e3f9ba705bfdcf627386d48ec
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
