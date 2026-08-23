@@ -3,8 +3,8 @@ feature: goal-vs-spec-divergence
 phase: rework
 status: dispatching
 generation: 3
-base_revision: dd6659eb62d6e77dce287c1d40e86f69b1d9a9fd
-last_input_digest: sha256:5853c9b9380dceefba59f3d651b7ea5a6b7edfb88363da0f9676fd7b97e63340
+base_revision: 3d4bc54544f516ea05d9cc67f45dec44f50fe2f9
+last_input_digest: sha256:c25861f787e0c79c4944eb428ef1998a25607ec2e88cc32583aa37e589af3656
 active_request_id: rework-run-0003
 packets: {}
 answers: {}
@@ -19,7 +19,7 @@ worker_runs:
   output_digest: null
 - request_id: rework-run-0003
   status: dispatched
-  input_digest: sha256:5853c9b9380dceefba59f3d651b7ea5a6b7edfb88363da0f9676fd7b97e63340
+  input_digest: sha256:c25861f787e0c79c4944eb428ef1998a25607ec2e88cc32583aa37e589af3656
   output_digest: null
 artifacts: []
 patches: []
