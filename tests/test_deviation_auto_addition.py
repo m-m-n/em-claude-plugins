@@ -61,6 +61,17 @@ Every absence assertion's non-vacuity guard: the deviation-handling region
 is asserted located and non-empty (`TestDeviationRegionIsLocated`); the
 whole-document exclusion scan asserts the document was read and is
 non-empty (`TestNoExclusionRuleStated.test_document_was_read`).
+
+Round-1 rework (task0015, source_ids `45cc2053b58d2a24`) extends this
+module with create-plan-phase.md-side assertions only (C4: task0015 owns
+`references/phases/create-plan-phase.md`, never `implement-phase.md`,
+which stays task0013's this round) -- pinning that §12's derivation cites
+this document's auto-addition rule by path, without restating its evidence
+condition, so the rule and its derivation target stay pinned together:
+
+- `TestCreatePlanPhaseCitesAutoAdditionRule` -> task0015 AC-1 (FR19).
+- `TestCreatePlanPhaseCitationMatchersFlagSyntheticSamples` -> negative
+  proof for the two matchers this extension adds.
 """
 
 import re
@@ -83,6 +94,20 @@ CREATE_PLAN_PHASE_PATH_LITERAL = "references/phases/create-plan-phase.md"
 
 ROOT_LITERAL_FEATURE_DOCS = "feature-docs/{feature}/**"
 ROOT_LITERAL_TEST_DOCS = "test-docs/{feature}/**"
+
+# --- task0015 rework: create-plan-phase.md-side assertions only (C4). The
+# file this task owns, read by literal path -- never implement-phase.md
+# again (that stays this module's pre-existing, unmodified assertions).
+CREATE_PLAN_PHASE_PATH = (
+    REPO_ROOT / "em-workflow" / "references" / "phases" / "create-plan-phase.md"
+)
+DERIVATION_SECTION_HEADING = "## 12. Declared change set derivation"
+IMPLEMENT_PHASE_PATH_LITERAL = "references/implement-phase.md"
+
+
+def _derivation_section_of_create_plan_phase(text):
+    start = text.index(DERIVATION_SECTION_HEADING)
+    return text[start:]
 
 # --- Reused verbatim from tests/test_declared_change_set_invariants.py
 # (Test Notes: "reuse the existing repository-wide guard's matcher shape...
@@ -333,6 +358,48 @@ class TestAC7FullSuiteOwnershipNote(unittest.TestCase):
         self.assertTrue(guard_path.is_file())
         guard_source = guard_path.read_text(encoding="utf-8")
         self.assertIn('"implement-phase.md"', guard_source)
+
+
+class TestCreatePlanPhaseCitesAutoAdditionRule(unittest.TestCase):
+    """task0015 AC-1 (FR19): create-plan-phase.md's §12 derivation section
+    (task0009's/task0015's file) cites this document's auto-addition rule
+    by path, without restating its evidence condition -- so the rule and
+    its derivation target stay pinned together. C4: this class asserts only
+    over create-plan-phase.md, the file task0015 owns; it does not touch
+    this module's other, pre-existing implement-phase.md assertions."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.full_text = CREATE_PLAN_PHASE_PATH.read_text(encoding="utf-8")
+        cls.section = _derivation_section_of_create_plan_phase(cls.full_text)
+
+    def test_document_exists_and_section_is_located_and_non_empty(self):
+        self.assertTrue(CREATE_PLAN_PHASE_PATH.is_file())
+        self.assertIn(DERIVATION_SECTION_HEADING, self.full_text)
+        self.assertGreater(len(self.section), 0)
+
+    def test_derivation_section_cites_this_document_by_path(self):
+        self.assertIn(IMPLEMENT_PHASE_PATH_LITERAL, self.section)
+
+    def test_derivation_section_does_not_restate_the_evidence_condition(self):
+        self.assertFalse(CRITERION_DROPPED_RE.search(self.section))
+
+
+class TestCreatePlanPhaseCitationMatchersFlagSyntheticSamples(unittest.TestCase):
+    """Negative proof for the two matchers
+    `TestCreatePlanPhaseCitesAutoAdditionRule` adds."""
+
+    def test_citation_matcher_flags_absence_of_the_path_literal(self):
+        sample = "## 12. Declared change set derivation\n\nNo citation here."
+        self.assertNotIn(IMPLEMENT_PHASE_PATH_LITERAL, sample)
+
+    def test_evidence_restatement_matcher_flags_a_synthetic_violation(self):
+        bad_sample = (
+            "## 12. Declared change set derivation\n\n"
+            "admitted only when accompanied by evidence that an existing "
+            "acceptance criterion would otherwise be dropped."
+        )
+        self.assertTrue(CRITERION_DROPPED_RE.search(bad_sample))
 
 
 class TestMatchersFlagSyntheticSamples(unittest.TestCase):
