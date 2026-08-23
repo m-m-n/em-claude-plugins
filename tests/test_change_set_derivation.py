@@ -48,6 +48,20 @@ admitted a deviation) -- covering task0015 Acceptance Criteria
 - AC-5 (NFR1, C6c/C6d): the auto-addition condition and the default-entry
   enumeration are not restated, the two root globs never co-occur, and no
   exclusion wording is introduced.
+
+Round-2 rework (task0020, review round 2, source_ids `c6b1737a7d7e82f1`,
+`c64996c1c4a836d2`, `ad9b77c0c67b93f7`) covers task0020 Acceptance Criteria
+(feature-docs/goal-vs-spec-divergence/tasks/task0020.md), create-plan-side
+only (C4; the implement-phase.md-side assertions live in
+test_deviation_auto_addition.py):
+
+- AC-5 (FR18): `TestTask0020AC5RetentionSurvivesReplanning` -- the
+  Retention bullet states that the location survives re-derivation because
+  a re-planning `replace_all` may not drop a registered task entry, citing
+  `references/workflow-patch.md` by path without restating the rule.
+- AC-7 (NFR1): `TestTask0020AC7NoRestatementInSection12` -- the evidence
+  form and the write procedure (implement-phase.md's own content) are not
+  restated in this section.
 """
 
 import re
@@ -109,6 +123,22 @@ RETENTION_SURVIVES_PHRASE = "survive every later re-derivation"
 TRIGGER_REPLANNING_PHRASE = "re-planning"
 TRIGGER_REWORK_APPEND_PHRASE = "rework append"
 TRIGGER_IMPLEMENT_WAKE_PHRASE = "an implement wake that admitted a deviation"
+
+# task0020 AC-5 literals: the Retention bullet's no-drop reason, cited by
+# path to workflow-patch.md (task0017 owns that document this round; never
+# restated here).
+RETENTION_NO_DROP_PHRASE = (
+    "a re-planning `replace_all` may not drop an already-registered task "
+    "entry"
+)
+WORKFLOW_PATCH_CITATION = "references/workflow-patch.md"
+
+# task0020 AC-7 literals: the evidence form / write procedure that live
+# only in implement-phase.md and must not be restated here.
+TASK0020_APPEND_PHRASE = "an append to that same task's `files`"
+TASK0020_SAME_COMMIT_PHRASE = "in the same commit as the status update"
+TASK0020_PATH_BEING_ADDED_PHRASE = "the path being added"
+TASK0020_RESOLVE_EXISTS_PHRASE = "must resolve to something that exists"
 
 
 def _read():
@@ -269,6 +299,54 @@ class TestThirdTriggerStated(unittest.TestCase):
         )
 
 
+class TestTask0020AC5RetentionSurvivesReplanning(unittest.TestCase):
+    """task0020 AC-5 (FR18): the Retention bullet states that the location
+    survives re-derivation because a re-planning `replace_all` may not
+    drop a registered task entry, citing `references/workflow-patch.md` by
+    path without restating the rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_derivation_section(_read()))
+
+    def test_retention_states_the_no_drop_reason(self):
+        self.assertIn(RETENTION_NO_DROP_PHRASE, self.section)
+
+    def test_retention_cites_workflow_patch_by_path(self):
+        self.assertIn(WORKFLOW_PATCH_CITATION, self.section)
+
+    def test_existing_retention_pins_still_hold(self):
+        # C5 retention half: the location/read/survive pins task0015 wrote
+        # stay true after this rework -- not weakened, only extended.
+        self.assertIn(RETENTION_LOCATION_PHRASE, self.section)
+        self.assertIn(RETENTION_READS_LOCATION_PHRASE, self.section)
+        self.assertIn(RETENTION_SURVIVES_PHRASE, self.section)
+
+    def test_does_not_restate_workflow_patchs_own_rule_text(self):
+        # NFR1/C2: workflow-patch.md's own permission-condition / protocol
+        # error prose is never copied here -- only cited by path.
+        self.assertNotIn("Initial-planning path", self.section)
+        self.assertNotIn("protocol error on BOTH paths", self.section)
+
+
+class TestTask0020AC7NoRestatementInSection12(unittest.TestCase):
+    """task0020 AC-7 (NFR1): the evidence form and the write procedure are
+    each stated in exactly one document -- implement-phase.md, the rule's
+    own home -- and this section cites rather than repeats them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _derivation_section(_read())
+
+    def test_section_does_not_restate_the_write_procedure(self):
+        self.assertNotIn(TASK0020_APPEND_PHRASE, self.section)
+        self.assertNotIn(TASK0020_SAME_COMMIT_PHRASE, self.section)
+
+    def test_section_does_not_restate_the_evidence_form(self):
+        self.assertNotIn(TASK0020_PATH_BEING_ADDED_PHRASE, self.section)
+        self.assertNotIn(TASK0020_RESOLVE_EXISTS_PHRASE, self.section)
+
+
 class TestNoForbiddenLiteralsInSection(unittest.TestCase):
     """AC-6 (NFR1, C6c/C6d): the new section never enumerates the two
     workflow-artifact root globs together, and introduces no verify-side
@@ -380,6 +458,27 @@ class TestValidationDetectsRegressions(unittest.TestCase):
             "would otherwise be dropped."
         )
         self.assertIn(EVIDENCE_CONDITION_PHRASE, bad_sample)
+
+    def test_no_drop_matcher_flags_absence_in_synthetic_sample(self):
+        sample = _normalize_ws(
+            "## 12. Declared change set derivation\n\n"
+            "- **Retention**: an admitted addition is retained and "
+            "survives every later re-derivation."
+        )
+        self.assertNotIn(RETENTION_NO_DROP_PHRASE, sample)
+        self.assertNotIn(WORKFLOW_PATCH_CITATION, sample)
+
+    def test_no_drop_matcher_flags_presence_in_a_synthetic_violation(self):
+        # "Violation" here means the opposite: a sample that DOES carry the
+        # required phrasing, proving the matcher can also detect presence.
+        good_sample = _normalize_ws(
+            "## 12. Declared change set derivation\n\n"
+            "- **Retention**: survives every later re-derivation because a "
+            "re-planning `replace_all` may not drop an already-registered "
+            "task entry (references/workflow-patch.md)."
+        )
+        self.assertIn(RETENTION_NO_DROP_PHRASE, good_sample)
+        self.assertIn(WORKFLOW_PATCH_CITATION, good_sample)
 
 
 if __name__ == "__main__":
