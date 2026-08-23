@@ -1,0 +1,21 @@
+schema_version: 1
+feature: goal-vs-spec-divergence
+phase: rework
+status: dispatching
+generation: 1
+base_revision: 369c30e00cea0878e0bc60f341104163a1b5daae
+last_input_digest: sha256:677ed80b98c8a4c48a26745587180bcedcc05e37c9ed0970e9dfa37f4b4e14d7
+active_request_id: rework-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: rework-run-0001
+    status: dispatched
+    input_digest: sha256:677ed80b98c8a4c48a26745587180bcedcc05e37c9ed0970e9dfa37f4b4e14d7
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
