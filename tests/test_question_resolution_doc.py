@@ -12,6 +12,17 @@ this task's own acceptance criteria):
   content (category values, explicit gate list, irreversible-assumption
   signal, cross-check reference, intentional behaviour-change note).
 
+Batch classification gate (this task's own acceptance criteria — see
+task0004's AC-1): the fail-closed classification's four abort arms become
+three abort arms (`security`, `license`, `reversible: false`) plus one
+routed arm (`spec-change` / `rework.spec-change`, routed to the
+Classification gate in batch; asked directly in interactive). The retention
+pins below assert the three unchanged abort arms individually, plus the
+"regardless of ..." clauses that make them non-overridable, and the
+four-category sentence pin is replaced with a three-category-plus-routed
+pin of the same specificity (C5). The Classification gate section itself is
+pinned in `tests/test_classification_gate.py`.
+
 task0022 acceptance criteria (round2.yaml findings bs2, bs3, bs6, bs8 —
 correcting round1's "presenter" criterion to gate-identifier presence):
 
@@ -256,15 +267,110 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         )
 
     def test_fail_closed_categories_named(self):
-        # The four fail-closed categories must all be named together.
+        # AC-1: the three abort arms (security, license, irreversible) are
+        # named together with unchanged force. Replaces the old
+        # four-category pin (spec-change no longer aborts here) at the same
+        # specificity (C5) — see test_old_four_category_sentence_is_gone for
+        # the corresponding negative proof.
         self.assertTrue(
             re.search(
-                r"Specification\s+change,\s+security,\s+licensing,\s+and\s+irreversible\s+operations\s+abort",
+                r"Security,\s+licensing,\s+and\s+irreversible\s+operations\s+"
+                r"abort\s+the\s+phase\s+immediately",
                 self.text,
             ),
-            "fail-closed rule must name specification change, security, "
-            "licensing and irreversible operations together",
+            "fail-closed rule must name security, licensing and "
+            "irreversible operations together, unchanged",
         )
+
+    def test_fail_closed_categories_outside_revision_scope(self):
+        # AC-1/NFR2: the three-arm sentence states they are outside this
+        # revision's scope, so the classification gate can never be read as
+        # a bypass around them.
+        self.assertIn("outside this revision's scope", self.norm)
+        self.assertIn(
+            "none of the classification gate's steps", self.norm.lower()
+        )
+
+    def test_old_four_category_sentence_is_gone(self):
+        # Negative proof (Test Notes): no surviving sentence names
+        # spec-change among the immediate, unconditional aborts.
+        self.assertNotIn(
+            "Specification change, security, licensing, and irreversible "
+            "operations abort",
+            self.text,
+        )
+
+    # --- retention pins (TS-4): the three unchanged abort arms, individually
+
+    def test_security_and_license_abort_arm_retained(self):
+        self.assertIn(
+            "the question's `category` "
+            "(`references/question-packet-schema.md`) is `security` or "
+            "`license`",
+            self.norm,
+        )
+
+    def test_irreversible_assumption_abort_arm_retained(self):
+        self.assertIn(
+            "an `assumptions[]` entry whose `related_question_ids` names "
+            "this question carries `reversible: false` — an irreversible "
+            "operation.",
+            self.norm,
+        )
+
+    def test_explicit_gate_list_mechanism_retained_as_a_slot(self):
+        # The list mechanism survives for a future entry; `rework.spec-change`
+        # is explicitly removed from it (see the routed-arm tests below).
+        self.assertIn(
+            "the `gate_id` appears on the explicit fail-closed gate list",
+            self.norm,
+        )
+
+    def test_spec_change_no_longer_cited_as_todays_gate_list_entry(self):
+        # Negative proof: the old wording that made `rework.spec-change` an
+        # abort-arm example ("today, per the comment in
+        # references/batch-policies.yaml") is gone.
+        self.assertNotIn(
+            "`rework.spec-change` today, per the comment in", self.text
+        )
+
+    # --- AC-1/FR7/FR8/D8: the routed arm ------------------------------------
+
+    def test_routed_arm_present_and_not_aborting(self):
+        self.assertIn("**The routed arm.**", self.text)
+        self.assertIn(
+            "does not abort here", self.norm
+        )
+
+    def test_routed_arm_states_batch_routes_to_classification_gate(self):
+        # AC-1/AC-2: batch routes spec-change to the classification gate
+        # instead of aborting.
+        self.assertIn(
+            "in batch, it is routed to the classification gate below "
+            "instead of aborting",
+            self.norm.lower(),
+        )
+
+    def test_routed_arm_states_interactive_asks_directly(self):
+        # AC-2/FR8/D8: interactive keeps asking the user directly; no new
+        # interactive question is introduced.
+        self.assertIn(
+            "in interactive, the question is asked directly, exactly as "
+            "today",
+            self.norm.lower(),
+        )
+        self.assertIn(
+            "this revision introduces no new interactive question",
+            self.norm.lower(),
+        )
+
+    def test_no_sentence_aborts_spec_change_unconditionally_in_batch(self):
+        # Negative proof (Test Notes): the fail-closed section's abort
+        # sentence no longer includes spec-change.
+        classify_idx = self.text.index("## Fail-closed classification")
+        gate_idx = self.text.index("## Classification gate")
+        section = self.text[classify_idx:gate_idx]
+        self.assertNotIn("`spec-change`, `security`, or `license`", section)
 
     def test_abort_ignores_on_unanswered_value(self):
         self.assertIn(
