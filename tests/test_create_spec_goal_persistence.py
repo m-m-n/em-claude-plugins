@@ -28,6 +28,15 @@ tasks/task0007.md):
   unchanged, and the full suite passes (verified by running the whole
   suite, not by this module alone).
 
+Extended for task0014 (goal-vs-spec-divergence rework, review round 1
+finding 7223862537d2283c):
+
+- AC-5 (NFR1): the construction section states the write-time procedure
+  (indentation + re-parse check) and the failure outcome, citing
+  `references/workflow-schema.md` for the rule itself rather than
+  restating it, and adds no second statement of the verbatim /
+  immutability / untrusted rules.
+
 Per the task's Test Notes: assertions here scan only
 `em-workflow/references/phases/create-spec-phase.md` (C4) — the schema
 document (task0001) and the analyst contract (task0008) are sibling tasks'
@@ -230,10 +239,68 @@ class TestGoalNoSourceCase(unittest.TestCase):
     def test_cites_question_resolution_for_the_gate_consequence(self):
         self.assertIn("references/question-resolution.md", self.section)
 
+    def test_no_source_outcome_is_not_an_empty_scalar(self):
+        # task0014 Test Notes edge case: an empty description resolves to
+        # the already-defined no-block state, never to an empty scalar.
+        self.assertIn("never as an empty scalar", self.section.lower())
+
     def test_synthetic_sample_missing_the_statement_fails_the_check(self):
         sample = "the orchestrator always writes a goal block."
         self.assertNotIn("no launch-time task description", sample.lower())
         self.assertNotIn("no goal is synthesized", sample.lower())
+        self.assertNotIn("never as an empty scalar", sample.lower())
+
+
+class TestWriteTimeProcedureAndFailureOutcome(unittest.TestCase):
+    """task0014 AC-5: the construction section states the write-time
+    procedure (indentation + re-parse check) and the failure outcome,
+    citing `references/workflow-schema.md` for the rule itself rather than
+    restating it, and adds no second statement of the verbatim /
+    immutability / untrusted rules."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = _read(CREATE_SPEC_PATH)
+        cls.section = _slice(text, CONSTRUCTION_START, CONSTRUCTION_END)
+
+    def test_construction_section_located_and_nonempty(self):
+        # Non-vacuity guard.
+        self.assertGreater(len(self.section.strip()), 0)
+
+    def test_states_indentation_and_reparse_are_performed_at_construction(self):
+        lowered = self.section.lower()
+        self.assertIn("indent", lowered)
+        self.assertIn("re-parsing", lowered)
+
+    def test_cites_workflow_schema_for_the_indentation_and_reparse_rule(self):
+        # Cited at least twice in this section: once for the verbatim
+        # field (AC-1), once for the write-time procedure (AC-5). The
+        # write-time bullet itself must not restate the rule's own detail.
+        self.assertIn("references/workflow-schema.md", self.section)
+        self.assertNotIn("YAML block scalar", self.section)
+        self.assertNotIn("blank line", self.section.lower())
+        self.assertNotIn("document marker", self.section.lower())
+
+    def test_states_failure_outcome_without_restating_it(self):
+        lowered = self.section.lower()
+        self.assertIn("failure is reported", lowered)
+        self.assertIn("no-source outcome", lowered)
+        self.assertNotIn("partially written or unverified", lowered)
+
+    def test_does_not_add_a_second_verbatim_immutability_untrusted_statement(self):
+        # These rules already have exactly one statement each in this
+        # section (existing bullets); the new write-time/failure bullets
+        # must not duplicate them.
+        self.assertEqual(
+            self.section.count("Untrusted-Input Handling"), 1
+        )
+
+    def test_synthetic_sample_missing_the_statement_fails_the_check(self):
+        sample = "the orchestrator writes the goal field."
+        lowered = sample.lower()
+        self.assertNotIn("indent", lowered)
+        self.assertNotIn("re-parsing", lowered)
+        self.assertNotIn("no-source outcome", lowered)
 
 
 class TestReferenceScanTargetResolution(unittest.TestCase):

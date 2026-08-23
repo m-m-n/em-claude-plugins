@@ -26,6 +26,24 @@ Acceptance criteria covered:
 - AC-7 (NFR5, NFR8): this module exists, is discovered by
   `python3 -m unittest discover -s tests`, imports only the standard
   library, and the full suite passes unchanged otherwise.
+
+Extended for task0014 (goal-vs-spec-divergence rework, review round 1
+finding 7223862537d2283c): the `goal` block's structural-integrity
+requirement and its post-write verification.
+
+- AC-1 (FR1): the document distinguishes the value's verbatimness from its
+  serialization and requires every line of the goal -- blank lines and
+  lines shaped like YAML keys, list items or document markers included --
+  to be written inside the block scalar's indentation.
+- AC-2 (FR1, FR3): it requires a post-write re-parse confirming the file
+  parses, `goal` reads back as one scalar equal to the launch-time
+  description, and every other key/value is unchanged from the intended
+  content.
+- AC-3 (FR1): a failed verification results in no `goal` block being
+  written -- the existing optional-absence state -- and in the failure
+  being reported, never in a partially written or unverified block.
+- AC-4 (FR2): the pre-existing verbatim, immutability and optionality
+  statements remain present and unweakened (retention pin).
 """
 
 import ast
@@ -325,6 +343,140 @@ class TestClassificationGateNotRestated(unittest.TestCase):
     def test_matcher_fails_on_synthetic_text_with_restated_vocabulary(self):
         sample = "the gate returns verdict: spec_gap when evidence_ids is non-empty"
         self.assertIn("spec_gap", sample)
+
+
+class TestSerializationDistinctionAndIndentation(unittest.TestCase):
+    """task0014 AC-1: verbatimness constrains the VALUE, not the
+    serialization; every line of the value -- blank lines and lines shaped
+    like a YAML key, a list item, or a document marker included -- must be
+    written inside the block scalar's indentation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(SCHEMA_PATH)
+        cls.section = _section(cls.text, GOAL_BLOCK_HEADING)
+        cls.norm = _norm(cls.section)
+
+    def test_goal_block_section_located_and_nonempty(self):
+        # Non-vacuity guard (Test Notes): the region must be located and
+        # non-empty before any content assertion below means anything.
+        self.assertGreater(len(self.section.strip()), 50)
+
+    def test_states_verbatimness_constrains_value_not_serialization(self):
+        self.assertIn("constrains the value, not the serialization", self.norm)
+
+    def test_requires_every_line_inside_the_indentation(self):
+        lowered = self.norm.lower()
+        self.assertIn("blank line", lowered)
+        self.assertIn("yaml key", lowered)
+        self.assertIn("list item", lowered)
+        self.assertIn("document marker", lowered)
+        self.assertIn("block scalar's indentation", lowered)
+
+    def test_states_indentation_is_not_normalization_of_the_value(self):
+        self.assertIn(
+            "not normalization of the value",
+            self.norm,
+        )
+
+    def test_matcher_fails_on_synthetic_section_missing_indentation_statement(self):
+        # Negative proof (Test Notes): a section that requires verbatim
+        # storage but says nothing about indentation must fail.
+        sample_section = (
+            "The value is stored verbatim as a YAML block scalar: no "
+            "summarizing, normalizing, or truncation is applied, and no "
+            "size limit exists."
+        )
+        lowered = sample_section.lower()
+        self.assertNotIn("blank line", lowered)
+        self.assertNotIn("document marker", lowered)
+        self.assertNotIn("block scalar's indentation", lowered)
+
+
+class TestPostWriteVerification(unittest.TestCase):
+    """task0014 AC-2: after writing workflow.yaml, the written file is
+    re-parsed and checked before the write is accepted -- stated as a
+    required step, not advice."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(SCHEMA_PATH)
+        cls.section = _section(cls.text, GOAL_BLOCK_HEADING)
+        cls.norm = _norm(cls.section)
+
+    def test_goal_block_section_located_and_nonempty(self):
+        self.assertGreater(len(self.section.strip()), 50)
+
+    def test_requires_reparse_after_write(self):
+        self.assertIn("re-parsed", self.norm.lower())
+
+    def test_requires_file_parses(self):
+        self.assertIn("the file parses", self.norm.lower())
+
+    def test_requires_goal_reads_back_as_single_scalar_equal_to_description(self):
+        self.assertIn(
+            "reads back as a single scalar equal to the launch-time "
+            "description",
+            self.norm,
+        )
+
+    def test_requires_every_other_key_and_value_unchanged(self):
+        self.assertIn(
+            "every other top-level key and value in the file matches the "
+            "content that was intended to be written",
+            self.norm,
+        )
+
+    def test_states_required_not_advisory(self):
+        self.assertIn("required, not advisory", self.norm)
+
+    def test_matcher_fails_on_synthetic_section_missing_reparse_statement(self):
+        # Negative proof (Test Notes): a section that says nothing about
+        # re-parsing must fail.
+        sample_section = (
+            "The value is stored verbatim as a YAML block scalar. Once "
+            "written, it is trusted to be correct."
+        )
+        lowered = sample_section.lower()
+        self.assertNotIn("re-parsed", lowered)
+        self.assertNotIn("reads back as a single scalar", lowered)
+
+
+class TestFailureOutcome(unittest.TestCase):
+    """task0014 AC-3: a failed post-write verification means the `goal`
+    block is NOT written -- the existing optional-absence state -- and the
+    failure is reported; never a partially written or unverified block."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(SCHEMA_PATH)
+        cls.section = _section(cls.text, GOAL_BLOCK_HEADING)
+        cls.norm = _norm(cls.section)
+
+    def test_goal_block_section_located_and_nonempty(self):
+        self.assertGreater(len(self.section.strip()), 50)
+
+    def test_failed_verification_means_block_not_written(self):
+        self.assertIn("block is NOT written", self.section)
+
+    def test_failure_outcome_is_the_existing_optional_absence_state(self):
+        self.assertIn("optional-absence state", self.norm)
+
+    def test_failure_is_reported(self):
+        self.assertIn("the failure is reported", self.norm.lower())
+
+    def test_never_a_partially_written_or_unverified_block(self):
+        self.assertIn("partially written or unverified", self.norm.lower())
+        self.assertIn("never left behind", self.norm.lower())
+
+    def test_matcher_fails_on_synthetic_section_missing_failure_outcome(self):
+        sample_section = (
+            "The value is stored verbatim as a YAML block scalar and is "
+            "written unconditionally."
+        )
+        lowered = sample_section.lower()
+        self.assertNotIn("block is not written", lowered)
+        self.assertNotIn("partially written or unverified", lowered)
 
 
 class TestGoalBlockTestModuleIsStdlibOnly(unittest.TestCase):
