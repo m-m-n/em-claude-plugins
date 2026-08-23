@@ -531,8 +531,9 @@ tasks:
     - NFR3
     - NFR5
     - NFR8
-    status: in_progress
-    notes: null
+    status: merged
+    notes: create-plan-phase.md §12 の Retention が workflow-patch.md の no-drop 規則をパス引用している。当該規則は task0017
+      が所有し、task0020 の worktree 分岐時点では未マージ。task0017 マージ後に整合を確認すること
     branch: em-workflow/goal-vs-spec-divergence/task0020
   task0021:
     title: realign the guardrail migration pins with the current repository
