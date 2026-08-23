@@ -1,0 +1,379 @@
+round: 1
+executed_at: '2026-08-23T23:05:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
+  head_commit: c67797d2885f2bdfb943eba301faa42d59184a5d
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/agents/requirements-analyst.md
+  - em-workflow/references/batch-policies.yaml
+  - em-workflow/references/contracts/analyst-contract.md
+  - em-workflow/references/contracts/worker-envelope.md
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/phases/create-spec-phase.md
+  - em-workflow/references/question-resolution.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/templates/requirements-document.md
+  - em-workflow/references/templates/spec-document.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/references/workflow-schema.md
+  - test-docs/goal-vs-spec-divergence/task0001.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0002.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0003.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0004.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0005.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0006.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0007.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0008.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0009.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0010.tests.yaml
+  - test-docs/goal-vs-spec-divergence/task0011.tests.yaml
+  - tests/test_batch_policies.py
+  - tests/test_change_set_derivation.py
+  - tests/test_classification_gate.py
+  - tests/test_create_spec_goal_persistence.py
+  - tests/test_deviation_auto_addition.py
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_goal_block_schema.py
+  - tests/test_goal_vs_spec_divergence_version_bump.py
+  - tests/test_phase_state_doc.py
+  - tests/test_question_resolution_doc.py
+  - tests/test_reference_impact_scan.py
+  - tests/test_requirements_template_declared_change_set.py
+  - tests/test_rework_synthesis_contract.py
+  - tests/test_spec_template_declared_change_set.py
+  - tests/test_wording_correction_route.py
+  - tests/test_workflow_patch_doc.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- perspective: comprehensive
+  source: claude
+  status: completed
+- perspective: security
+  source: claude
+  status: completed
+- perspective: security
+  source: codex
+  status: completed
+- perspective: performance
+  source: claude
+  status: completed
+- perspective: performance
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+- perspective: architecture
+  source: claude
+  status: completed
+- perspective: architecture
+  source: litellm
+  model: vertex-glm-5
+  status: completed
+- perspective: spec
+  source: claude
+  status: completed
+- perspective: spec
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+findings:
+- stable_id: 7c7f21d93abf4621
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/workflow-patch.md
+  line: 77
+  title: 再計画パスの replace_all が implement-phase の recycled-task-id 不変条件を壊す
+  description: SPEC 変更→再計画で task0001 から番号が振り直されると、新しい task0001 は status pending でも journal の最終イベントが merged のままになり、I.2.a
+    が launch 対象に選ばず I.2.b が merged と判定する。再計画タスクが未実装のまま merged 扱いになる。
+  suggestion: implement-phase.md 側を同じ変更で更新する。recycled-task-id の救済を merged にも広げる / journal の世代を切り替える / 再計画時の task
+    ID を振り直さない、のいずれか。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 359db9ee55f8cef4
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/contracts/rework-planner-contract.md
+  line: 158
+  title: rework-planner 契約が batch での spec-change 中断という旧規則を残している
+  description: question-resolution.md / batch-policies.yaml / rework-task-synthesis.md は classification gate へのルーティングに更新されたが、同じ事実を述べるこの契約文書だけが旧「fail-closed
+    で中断」のまま。changed_files 外。
+  suggestion: 当該段落を rework-task-synthesis.md と同じ引用のみの形に置き換える。check-plugin-invariants.py:298-299 のコメントも同様。
+  sources:
+  - claude:comprehensive
+  - claude:architecture
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: dead26d3888279ea
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/phase-state.md
+  line: 89
+  title: classification 監査レコードが「根拠なし spec_gap で停止」を表現できない
+  description: verdict は goal_not_met / spec_gap / not_applicable の 3 値で、evidence_ids は spec_gap のとき非空必須。「spec_gap
+    を主張したが ID が無いので停止した」pass を表現できない。
+  suggestion: 'verdict に spec_gap_unevidenced を追加するか、evidence_ids 非空要件を decision: proceed の組に限定する。'
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 958a9fb9a8c58e72
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/implement-phase.md
+  line: 379
+  title: deviation 自動追加に、宣言変更集合への書き込み経路も永続的な監査経路も無い
+  description: derivation は tasks.*.files の和集合と定義され、wake フェーズで files を増やす手段が定義されていない。監査記録の置き場として挙げられた completion-report
+    の deviations は implementer 側の入力フィールドで、オーケストレーターの採否判断を書ける先ではない。
+  suggestion: 書き込み先（tasks.{T}.files への追記など）と、実際に永続化される監査先を名指しする。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 289704062e3aaec7
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/contracts/analyst-contract.md
+  line: 126
+  title: reference_impact は completed payload の MUST だが、検証器も消費側も未対応
+  description: validate-worker-output.py:182 の required_payload に reference_impact が無く、design_system_detection の
+    forbidden_payload にも無い。リポジトリ全体で消費者も存在しない。
+  suggestion: validate-worker-output.py の required/forbidden payload に加え、オーケストレーターがどう使うかを create-spec-phase.md に
+    1 箇所定義する。消費者を決めないなら任意フィールドに落とす。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 3d9c3ce2490f8f5c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/phases/create-spec-phase.md
+  line: 82
+  title: reference_scan_targets の解決規則が未定義のまま design-system 用のキャッシュ規律に載せられている
+  description: どの glob・どの起点で解決するのかを定義した箇所がリポジトリ内に無い。analyst は envelope が渡したパスしか読まないため、解決規則が無いとスキャン結果は常に空になりうる。
+  suggestion: '解決の起点と glob、除外・拡張子フィルタ、truncated: true 時の interactive / batch の扱いを analyst-contract.md か phase-state.md
+    に定義する。'
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 2953f6bde0e327ab
+  severity: medium
+  category: comprehensive
+  file: tests/test_guardrail_hooks_migration.py
+  line: 365
+  title: 'AC-11 / TS-10 未達: フルスイートが 3 件失敗する'
+  description: TestRepositoryRulesAreInPlace の 3 件が失敗。原因は本 diff ではなく既存ドリフト（.claude/rules/ が core- プレフィックス付きに改名されたのにピンが旧名のまま）だが、AC-11
+    はフルスイート合格を要求している。changed_files 外。
+  suggestion: 既存ピンを現行のルール名に合わせて更新する（ガードは削除しない）。
+  sources:
+  - claude:spec
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: d4e76417c3772647
+  severity: high
+  category: security
+  file: em-workflow/references/question-resolution.md
+  line: 206
+  title: spec-change を abort 集合から外したが、Unlisted-gate fallback の fail-closed 前提が更新されていない
+  description: step 8 の「Fail-closed classification above has already aborted every specification-change ...」が偽になったまま残り、Classification
+    gate の防御を持たない fallback で証拠要件なしに自動回答され得る。
+  suggestion: routed された質問がゲートで解決を終え step 3 以降へ戻らない離脱規則を明記し、step 8 を書き換える。rework-planner-contract.md も同時に更新する。
+  sources:
+  - claude:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 7223862537d2283c
+  severity: high
+  category: security
+  file: em-workflow/references/workflow-schema.md
+  line: 142
+  title: goal の verbatim 保存に、YAML 構造を保全する要件が無い（workflow.yaml への構造インジェクション）
+  description: workflow.yaml は Write ツールで書かれる LLM 手書きファイル。改行を含む任意テキストを normalize 禁止で流し込む規定だけがあり、インデント維持・再パース検証を要求していない。承認済みコマンド文字列や
+    review.residual_critical_high を汚染できる。
+  suggestion: 全行にブロックスカラーのインデントを付与し、書き込み後に再パースして goal が単一スカラーとして読め他キーが不変であることを検証する、検証失敗時は goal を書かない、を追記する。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 320e8a23562fb63b
+  severity: high
+  category: security
+  file: em-workflow/references/question-resolution.md
+  line: 98
+  title: routed arm と不可逆アーム・origin provenance の優先順位が未定義
+  description: 'routed arm は category が spec-change であることだけで無条件の離脱を宣言しており、reversible: false の assumption や、security
+    / license 由来の finding が仕様変更として提示された場合の扱いを留保していない。category と gate_id は worker が自ら付けるため、ラベル付け替えで fail-closed を迂回できる。'
+  suggestion: routed arm に「他の 2 つの arm に触れる場合はそちらが先に評価され、その abort が最終」と留保を明記する。加えて元の finding の category / 不可逆性メタデータをゲートに携行させ、機械的に検証する。
+  sources:
+  - claude:security
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 2c9e0df2cb574cd4
+  severity: medium
+  category: security
+  file: em-workflow/references/workflow-patch.md
+  line: 77
+  title: Re-planning can replace previously merged task scopes
+  description: 再計画パスは merged タスクのレコード不変を要求しておらず、完了済みタスクの files スコープ・status・provenance を書き換えて実装者が書ける宣言パスを広げられる。
+  suggestion: merged タスクを再計画中は不変として扱い、ID / status / branch / files / requirements / provenance の保全を patch 検証で機械的に強制する。
+  sources:
+  - codex:security
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 6f7fdbfd2afca958
+  severity: high
+  category: spec
+  file: em-workflow/references/question-resolution.md
+  line: 206
+  title: Unlisted-gate fallback still claims spec-change was aborted; routed arm never exits the batch sequence
+  description: step 8 の旧前提文に加え、Batch resolution sequence step 2 に routed arm の離脱が書かれていないため、Classification gate を通った質問が文面上そのまま
+    fallback へ落ちる。FR9 / FR10 を迂回する経路。
+  suggestion: step 2 に離脱規定を明記し、step 8 を改訂後の事実に合わせる。test_question_resolution_doc.py に旧文言が残らないピンを追加する。
+  sources:
+  - claude:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: e1696ae0eabf4783
+  severity: high
+  category: spec
+  file: em-workflow/references/workflow-patch.md
+  line: 158
+  title: FR5 の base_commit 保全が散文だけで、mandatory preserve に反映されていない
+  description: Mandatory preserve 表の replace_planning 行は (none) のまま。Application rule 13/14 は preserve に列挙されたパスだけを検査するため、base_commit
+    を載せない replace_planning パッチが受理され、EC-4 の状況で base_commit が失われ得る。
+  suggestion: 表の replace_planning 行に「再計画パスでは workflow.implement.base_commit」を追記し、test_workflow_patch_doc.py にピンを足す。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 45cc2053b58d2a24
+  severity: high
+  category: spec
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 261
+  title: FR19 の deviation 自動追加が、derivation の入力にも再導出トリガーにも存在しない
+  description: §12 は Inputs を planning が登録した tasks.*.files の和集合に閉じ、再導出トリガーも再計画 / rework append の 2 つに限定している。implement
+    wake の deviation はどちらにも該当せず、自動追加しても宣言集合は変化しない。
+  suggestion: §12 の Inputs / Timing に implement 由来の自動追加分を組み込み、保持先を SSOT 側で一意に定める。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: f8c901d3140df169
+  severity: medium
+  category: spec
+  file: em-workflow/references/phase-state.md
+  line: 86
+  title: 'verdict: not_applicable の監査記録に、取り得る classifier 値がない'
+  description: classifier は codex | claude の 2 値に限定され省略可とも書かれていないため、分類器が動いていない inapplicable ケースに割り当てられる値が存在しない。
+  suggestion: 'classifier の語彙に none を足すか、verdict: not_applicable のときは省略と明記する。'
+  sources:
+  - claude:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 00bdbbdc72bd2f3f
+  severity: high
+  category: architecture
+  file: em-workflow/references/workflow-patch.md
+  line: 77
+  title: replace_all 再計画パスの前提が SPEC 変更遷移の実際の step 状態と矛盾
+  description: Re-planning path は create-plan が needs_update であることを条件にするが、SPEC 変更遷移の実体は 3 文書とも create-plan を pending
+    にする（needs_update になるのは create-spec のみ）。再計画は Initial-planning path に落ち、merged タスクがあると protocol error で拒否される。
+  suggestion: 遷移側を正とするなら Re-planning path のキーを「create-spec が needs_update を経た再入」に改める。workflow-patch.md を正とするなら 3
+    文書を揃える。
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 3aaf7218a5bfd4aa
+  severity: medium
+  category: architecture
+  file: em-workflow/references/question-resolution.md
+  line: 207
+  title: Unlisted-gate fallback step 8 が spec-change を「既に abort 済み」と述べたまま
+  description: 同一 SSOT 内で spec-change の扱いが abort と routing の 2 通りに読める状態。
+  suggestion: step 8 を abort と routing を区別した記述へ改める。
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 7f824aa3ee564282
+  severity: medium
+  category: architecture
+  file: em-workflow/references/implement-phase.md
+  line: 379
+  title: deviation の自動追加先が宣言集合の導出定義に存在しない
+  description: create-plan-phase.md §12 の Inputs は deviation 由来の追加メンバーを含めておらず、Timing も再導出で消える。D7 で新 phase-state
+    フィールドも作らないため保存先が契約上どこにも無い。
+  suggestion: §12 の Inputs に第 3 の入力とその保存場所を追記し、implement-phase 側は引用だけにする。
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: fe8f820b4d32ecd9
+  severity: medium
+  category: architecture
+  file: em-workflow/references/phases/create-spec-phase.md
+  line: 191
+  title: goal ブロックの規則が「引用のみ」と宣言しつつ 3 文書に重複記述
+  description: verbatim 性・不変性・合成禁止・untrusted 扱いが workflow-schema.md と create-spec-phase.md に重複し、一部は question-resolution.md
+    にも 3 箇所目として存在する。
+  suggestion: create-spec-phase.md の goal 節は phase 固有の事実だけ残し、残りは workflow-schema.md への参照 1 行に畳む。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+- stable_id: 075944a698fa0295
+  severity: medium
+  category: performance
+  file: em-workflow/references/phases/create-spec-phase.md
+  line: 95
+  title: reference_scan_targets の解決に列挙上限も除外リストも継承されていない
+  description: phase-state.md の除外リスト（node_modules / vendor / .git / .claude/worktrees）と探索上限（500 ファイル / 5 MB）は design_system_candidates
+    名指しでスコープされており、参照影響スキャンの列挙だけが無制限になる。generation_digest と input_digest の計算も同じ集合を舐める。
+  suggestion: 除外リストの適用を全カテゴリ共通の表現に直すか create-spec-phase.md で明示的に引用し、このカテゴリ用の列挙対象と探索上限、上限到達時の batch 挙動を定める。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 1: routed to implement rework'
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 9
+rework_required: true
