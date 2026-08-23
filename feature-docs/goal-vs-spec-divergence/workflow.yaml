@@ -169,7 +169,7 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0005
   task0006:
@@ -233,9 +233,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0008
   task0009:
     title: declared change set becomes a create-plan derivation
     plan: tasks/task0009.md
