@@ -228,6 +228,107 @@ class TestClassificationGate(unittest.TestCase):
             section,
         )
 
+    # --- task0012 AC-4 (NFR2, FR9, FR10): origin verification --------------
+
+    def _origin_verification_section(self):
+        section = self._gate_section()
+        start = section.index("**Origin verification.**")
+        end = section.index("**Question shape.**")
+        return section[start:end]
+
+    def test_origin_verification_positioned_between_applicability_and_classifier(
+        self,
+    ):
+        section = self._gate_section()
+        applicability_idx = section.index("**Applicability.**")
+        origin_idx = section.index("**Origin verification.**")
+        classifier_idx = section.index("**Classifier.**")
+        self.assertLess(applicability_idx, origin_idx)
+        self.assertLess(origin_idx, classifier_idx)
+
+    def test_origin_verification_requires_stable_id_and_round_record(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "must name the originating review finding(s) by `stable_id`".lower(),
+            section,
+        )
+        self.assertIn(
+            "the review round record that carries them".lower(), section
+        )
+
+    def test_origin_verification_reads_category_from_record_not_worker_set(
+        self,
+    ):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "the orchestrator reads each named finding's `category` from "
+            "that record".lower(),
+            section,
+        )
+        self.assertIn(
+            "never from the question's own worker-set `category`".lower(),
+            section,
+        )
+
+    def test_origin_verification_aborts_on_security_license_or_irreversible(
+        self,
+    ):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "aborts when any originating finding's category is `security` "
+            "or `license`".lower(),
+            section,
+        )
+        self.assertIn(
+            "an `assumptions[]` entry naming the question carries "
+            "`reversible: false`".lower(),
+            section,
+        )
+
+    def test_origin_verification_aborts_on_absent_unresolvable_or_unmatched_origin(
+        self,
+    ):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "an origin that is absent, unresolvable, or does not match a "
+            "finding in the named record also aborts".lower(),
+            section,
+        )
+        self.assertIn("fail-closed", section)
+
+    def test_origin_verification_records_reason_and_evidence_no_unanswerable_confirmation(
+        self,
+    ):
+        # AC-6: every new stop states its reason/evidence are recorded and
+        # raises no unanswerable batch confirmation (NFR3).
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "every abort here records its reason and the evidence "
+            "considered".lower(),
+            section,
+        )
+        self.assertIn(
+            "none of them raises, in batch, a confirmation nobody can "
+            "answer".lower(),
+            section,
+        )
+
+    def test_origin_verification_negative_proof_reading_category_from_packet_fails(
+        self,
+    ):
+        # Non-vacuity guard (Test Notes): a synthetic gate step that reads
+        # `category` from the packet (worker-set) instead of from the named
+        # review round record must NOT satisfy the matcher above.
+        fake_step = (
+            "3. **Origin verification.** The orchestrator reads the "
+            "question's own `category` field to decide whether to abort."
+        )
+        self.assertNotIn(
+            "the orchestrator reads each named finding's `category` from "
+            "that record".lower(),
+            fake_step.lower(),
+        )
+
     # --- Constraints: forbidden literals (C6a, C6b) -------------------------
 
     def test_no_taskNNNN_identifier_anywhere_in_document(self):
