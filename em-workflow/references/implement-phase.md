@@ -375,6 +375,26 @@ Triggered whenever a launched implementer's `Task()` call returns.
    phase reconcile" "$RECONCILE_TIP"` (exit-4 recovery: Branch & Worktree
    Model above — on a second exit 4, stop the wake phase with a report
    naming the task(s) involved rather than looping).
+
+   **Deviation auto-addition rule**: a reported deviation (the
+   `deviations` entries in that same completion report) is auto-added to
+   the declared change set derivation — defined in
+   `references/phases/create-plan-phase.md`, cited here and never
+   restated — only when it is accompanied by evidence that an existing
+   acceptance criterion would otherwise be dropped: a named, checkable
+   condition, not a judgement call. Absent that evidence — implementer
+   convenience, a nicer structure, an unrelated cleanup — the deviation is
+   not auto-added; it surfaces as an ordinary deviation and the
+   containment check (observed change set ⊆ declared change set) handles
+   it exactly as before, and unjustified scope expansion is still stopped.
+   The containment check itself is unchanged by this rule. Every
+   auto-addition, and every deviation this rule declines to auto-add,
+   leaves its audit record through this same completion-report
+   `deviations` channel: what was (or would have been) added and the
+   evidence considered — for an auto-addition, the evidence that justified
+   it; for a rejected one, the reason it did not qualify (NFR3). No new
+   phase-state field is introduced for this record (D7) — the channel is
+   the one this step already defines.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
    git worktree remove "$WT_ROOT/{T}"
