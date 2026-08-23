@@ -405,6 +405,33 @@ tasks:
     status: pending
     notes: null
     branch: null
+  task0016:
+    title: validator agreement with the two replace_all permission paths
+    plan: tasks/task0016.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/scripts/check-plugin-invariants.py
+    - tests/test_validate_worker_output.py
+    - tests/test_check_plugin_invariants.py
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/workflow.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/phase-state.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-initial-planning-merged-tasks/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-initial-planning-merged-tasks/workflow.json
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: medium
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 1
@@ -467,6 +494,7 @@ requirements:
     tasks:
     - task0002
     - task0013
+    - task0016
     tests:
     - TS-2
   FR5:
@@ -477,6 +505,7 @@ requirements:
     tasks:
     - task0002
     - task0013
+    - task0016
     tests:
     - TS-2
   FR6:
@@ -487,6 +516,7 @@ requirements:
     tasks:
     - task0003
     - task0013
+    - task0016
     tests:
     - TS-2
   FR7:
@@ -701,6 +731,7 @@ requirements:
     - task0013
     - task0014
     - task0015
+    - task0016
     tests:
     - TS-16
   NFR6:
@@ -756,5 +787,6 @@ requirements:
     - task0013
     - task0014
     - task0015
+    - task0016
     tests:
     - TS-10
