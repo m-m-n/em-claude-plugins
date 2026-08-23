@@ -1,16 +1,62 @@
 schema_version: 1
 feature: goal-vs-spec-divergence
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 916fec6
 last_input_digest: sha256:f3b558bc8a172c62d59cc3eef566c0adb24260b52b9c726d436a5a75ee6a0779
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: "2026-08-23T19:52:00+09:00"
+    questions:
+      - question_id: goal.persistence-form
+        status: answered
+      - question_id: defect1.transition-repair
+        status: answered
+      - question_id: unresolved.gate-mode
+        status: answered
+      - question_id: unresolved.gate-scope
+        status: issued
+      - question_id: unresolved.work-order
+        status: issued
+      - question_id: scope.optional-items
+        status: issued
+      - question_id: unresolved.defect2-route
+        status: issued
+      - question_id: edge.codex-unavailable
+        status: issued
+      - question_id: design-step.recommendation
+        status: issued
+answers:
+  goal.persistence-form:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:52:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [workflow_yaml_field]
+    freeform: null
+    normalized_answer: "goal は workflow.yaml に goal ブロックとして逐語保存する"
+  defect1.transition-repair:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:52:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [relax_replace_all]
+    freeform: null
+    normalized_answer: "workflow-patch.md の replace_all 許可条件を改訂し、create-plan が needs_update のときは merged タスクがあっても再計画を許す"
+  unresolved.gate-mode:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:52:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [batch_only]
+    freeform: null
+    normalized_answer: "Codex 分類ゲートは batch 専用。interactive では従来どおりユーザーに直接聞く"
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:f3b558bc8a172c62d59cc3eef566c0adb24260b52b9c726d436a5a75ee6a0779
     output_digest: null
 artifacts: []
