@@ -44,3 +44,13 @@ pending_decisions:
   scope: tests/test_guardrail_hooks_migration.py
   reason: AC-11（python3 -m unittest discover -s tests のフルスイート合格）が未達のため
   carried_into: review round 2 の rework バッチ
+protocol_slips:
+- id: orchestrator-commit-during-dispatch
+  at: '2026-08-24T02:40:00+09:00'
+  what: rework-run-0002 の dispatch 中に、オーケストレーターが glm-5 再実行の反映コミット (24721f1) を integration worktree に打った。まだ書き込み途中だった
+    tasks/task0017.md と tasks/task0018.md がそのコミットに巻き込まれた
+  rule_violated: worker-envelope.md / create-spec-phase.md の exclusivity assumption（worker の dispatch
+    中は orchestrator も worktree のファイルに触れない）
+  impact: なし。巻き込まれた 2 ファイルは planner 自身が written_artifacts に宣言した成果物で、5 本すべて正しく存在しコミット済み。scope verification
+    が 3 ファイルしか観測できなかったため、検査としては空振りした
+  lesson: レビュー結果の記録更新など orchestrator 側の書き込みも、worker の dispatch 窓の外で行う必要がある
