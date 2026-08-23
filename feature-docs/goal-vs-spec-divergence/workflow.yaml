@@ -3,7 +3,6 @@ feature: goal-vs-spec-divergence
 created: 2026-08-23
 base_branch: main
 parent_branch: em-workflow/goal-vs-spec-divergence/integration
-
 project:
   license: none
   design_system:
@@ -12,37 +11,296 @@ project:
   components:
     main:
       language: markdown
-      build_command: ""
-      test_command: "python3 -m unittest discover -s tests"
-      format_command: ""
-      e2e_test_command: ""
-
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
 workflow:
-  - id: create-spec
-    artifacts: [REQUIREMENTS.md, SPEC.md]
-    status: completed
-    completed_at_commit: a49819ffb60ac1f16f05a6265868da5597c05c46
-  - id: design
-    artifacts: [DESIGN.md, design/]
-    status: skipped
-    skipped_reason: "成果物が em-workflow のプロトコル文書・エージェントプロンプト・tests/ 配下の Python テストのみで、UI 面・データモデル・デザインシステム入力を持たない。design_system_candidates は 0 件。create-spec.design-step ゲートでユーザーが skip を確認済み"
-  - id: create-plan
-    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: a49819ffb60ac1f16f05a6265868da5597c05c46
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 成果物が em-workflow のプロトコル文書・エージェントプロンプト・tests/ 配下の Python テストのみで、UI 面・データモデル・デザインシステム入力を持たない。design_system_candidates
+    は 0 件。create-spec.design-step ゲートでユーザーが skip を確認済み
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
+- id: implement
+  status: pending
+  base_commit: null
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks:
+  task0001:
+    title: goal block definition in the workflow schema
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/workflow-schema.md
+    - tests/test_goal_block_schema.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR20
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
     status: pending
-  - id: implement
+    notes: null
+    branch: null
+  task0002:
+    title: replace_all permission relaxation for re-planning
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - tests/test_workflow_patch_doc.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
     status: pending
-    base_commit: null
-  - id: review
+    notes: null
+    branch: null
+  task0003:
+    title: SPEC-change transition consistency and the wording-correction route
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/agents/rework-planner.md
+    - tests/test_rework_synthesis_contract.py
+    - tests/test_wording_correction_route.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: high
+    requirements:
+    - FR6
+    - FR15
+    - FR16
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
     status: pending
-  - id: verify
+    notes: null
+    branch: null
+  task0004:
+    title: batch classification gate in question resolution
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR3
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - FR12
+    - FR13
+    - FR14
+    - FR20
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR7
+    - NFR8
     status: pending
-    result: null
-    failed_items: []
-  - id: retrospect
+    notes: null
+    branch: null
+  task0005:
+    title: classification audit record in the phase-state schema
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/references/phase-state.md
+    - tests/test_phase_state_doc.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR14
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR7
+    - NFR8
     status: pending
-
-tasks: {}
-
+    notes: null
+    branch: null
+  task0006:
+    title: batch policy header aligned with the revised fail-closed rule
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/references/batch-policies.yaml
+    - tests/test_batch_policies.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0007:
+    title: create-spec writes the goal and resolves reference-scan targets
+    plan: tasks/task0007.md
+    files:
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_create_spec_goal_persistence.py
+    skills: []
+    domains:
+    - input-handling
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR17
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0008:
+    title: referenced-side impact scan in the analyst contract and prompt
+    plan: tasks/task0008.md
+    files:
+    - em-workflow/references/contracts/analyst-contract.md
+    - em-workflow/references/contracts/worker-envelope.md
+    - em-workflow/agents/requirements-analyst.md
+    - tests/test_reference_impact_scan.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR17
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0009:
+    title: declared change set becomes a create-plan derivation
+    plan: tasks/task0009.md
+    files:
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/templates/spec-document.md
+    - em-workflow/references/templates/requirements-document.md
+    - tests/test_spec_template_declared_change_set.py
+    - tests/test_requirements_template_declared_change_set.py
+    - tests/test_declared_change_set_invariants.py
+    - tests/test_change_set_derivation.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR18
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0010:
+    title: conditional auto-addition of implement deviations
+    plan: tasks/task0010.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_deviation_auto_addition.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR19
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0011:
+    title: plugin version bump
+    plan: tasks/task0011.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_goal_vs_spec_divergence_version_bump.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - NFR6
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -50,201 +308,306 @@ review:
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
-
 requirements:
   FR1:
-    title: "Verbatim goal persistence"
+    title: Verbatim goal persistence
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-1]
+    tasks:
+    - task0001
+    - task0007
+    tests:
+    - TS-1
   FR2:
-    title: "Goal immutability"
+    title: Goal immutability
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-1]
+    tasks:
+    - task0001
+    - task0007
+    tests:
+    - TS-1
   FR3:
-    title: "Goal treated as untrusted"
+    title: Goal treated as untrusted
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-1]
+    tasks:
+    - task0001
+    - task0004
+    tests:
+    - TS-1
   FR4:
-    title: "Relaxed replace_all permission condition"
+    title: Relaxed replace_all permission condition
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-2]
+    tasks:
+    - task0002
+    tests:
+    - TS-2
   FR5:
-    title: "base_commit preservation on replanning"
+    title: base_commit preservation on replanning
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-2]
+    tasks:
+    - task0002
+    tests:
+    - TS-2
   FR6:
-    title: "SPEC-change transition holds"
+    title: SPEC-change transition holds
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-2]
+    tasks:
+    - task0003
+    tests:
+    - TS-2
   FR7:
-    title: "Classification gate (batch-only)"
+    title: Classification gate (batch-only)
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-3]
+    tasks:
+    - task0004
+    tests:
+    - TS-3
   FR8:
-    title: "Interactive behaviour unchanged"
+    title: Interactive behaviour unchanged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-3]
+    tasks:
+    - task0004
+    tests:
+    - TS-3
   FR9:
-    title: "Asymmetry of classification outcomes"
+    title: Asymmetry of classification outcomes
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-3]
+    tasks:
+    - task0004
+    tests:
+    - TS-3
   FR10:
-    title: "Adoption criterion (naming the evidence)"
+    title: Adoption criterion (naming the evidence)
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-3]
+    tasks:
+    - task0004
+    tests:
+    - TS-3
   FR11:
-    title: "Revised fail-closed classification"
+    title: Revised fail-closed classification
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-4]
+    tasks:
+    - task0004
+    - task0006
+    tests:
+    - TS-4
   FR12:
-    title: "Handling of Codex output"
+    title: Handling of Codex output
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0004
+    tests:
+    - TS-11
   FR13:
-    title: "Route when Codex is absent"
+    title: Route when Codex is absent
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-5]
+    tasks:
+    - task0004
+    tests:
+    - TS-5
   FR14:
-    title: "Classification audit record"
+    title: Classification audit record
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-5]
+    tasks:
+    - task0004
+    - task0005
+    tests:
+    - TS-5
   FR15:
-    title: "Independent wording-correction route"
+    title: Independent wording-correction route
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-6]
+    tasks:
+    - task0003
+    tests:
+    - TS-6
   FR16:
-    title: "Wording-correction route guard"
+    title: Wording-correction route guard
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-6]
+    tasks:
+    - task0003
+    tests:
+    - TS-6
   FR17:
-    title: "Impact-on-tests detection at create-spec"
+    title: Impact-on-tests detection at create-spec
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-7]
+    tasks:
+    - task0007
+    - task0008
+    tests:
+    - TS-7
   FR18:
-    title: "Declared Change Set becomes derived"
+    title: Declared Change Set becomes derived
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-8]
+    tasks:
+    - task0009
+    tests:
+    - TS-8
   FR19:
-    title: "Conditional auto-addition of deviations, containment check retained"
+    title: Conditional auto-addition of deviations, containment check retained
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-8]
+    tasks:
+    - task0010
+    tests:
+    - TS-8
   FR20:
-    title: "Handling of pre-existing features without a goal block"
-    status: tbd
-    tbd_reason: "今回の 9 件の回答は新規 create-spec 経路での goal 永続化のみを決めており、既存 feature への遡及（backfill するか、分類ゲート非適用として従来の停止に倒すか）はどの回答でも触れられていない。create-plan の TBD 解決で確定させる"
+    title: Handling of pre-existing features without a goal block
+    status: assumed
+    tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0004
+    - task0007
+    tests:
+    - TS-17
   NFR1:
-    title: "SSOT discipline"
+    title: SSOT discipline
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    - task0009
+    - task0010
+    tests:
+    - TS-12
   NFR2:
-    title: "Fail-closed strength not regressed"
+    title: Fail-closed strength not regressed
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-4]
+    tasks:
+    - task0004
+    - task0006
+    tests:
+    - TS-4
   NFR3:
-    title: "Unattended-run continuity"
+    title: Unattended-run continuity
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0004
+    - task0005
+    - task0010
+    tests:
+    - TS-13
   NFR4:
-    title: "Codex independence"
+    title: Codex independence
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0004
+    tests:
+    - TS-14
   NFR5:
-    title: "Test conventions"
+    title: Test conventions
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    - task0009
+    - task0010
+    - task0011
+    tests:
+    - TS-16
   NFR6:
-    title: "Plugin version bump"
+    title: Plugin version bump
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-9]
+    tasks:
+    - task0011
+    tests:
+    - TS-9
   NFR7:
-    title: "Single scope"
+    title: Single scope
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    - task0009
+    - task0010
+    - task0011
+    tests:
+    - TS-15
   NFR8:
-    title: "Existing tests not broken"
+    title: Existing tests not broken
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-10]
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    - task0009
+    - task0010
+    - task0011
+    tests:
+    - TS-10
