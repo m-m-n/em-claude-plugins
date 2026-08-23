@@ -64,9 +64,9 @@ reviews/round1.yaml for the reproductions these classes pin:
   kind worker-result (see that test's inline comment).
 
 task0003 (feature-docs/create-plan-status-conflict/tasks/task0003.md) adds
-TestReplaceAllCreatePlanEntryStatus below, pinning the (frozen,
-IMPLEMENTATION.md D1) validator's `replace_all` dry-run-apply permission
-check against the create-plan step's entry status:
+TestReplaceAllCreatePlanEntryStatus below, pinning the validator's
+`replace_all` dry-run-apply permission check against the create-plan step's
+entry status:
 
 - AC-3: a new `invalid-replace-all-create-plan-in-progress` fixture makes
   the check reject the patch with the `replace-all-not-permitted`
@@ -78,6 +78,24 @@ check against the create-plan step's entry status:
 - AC-5: the `in_progress` rejection carries exactly one error identifier --
   no staleness, vocabulary, or expected-mismatch entry rides along, so the
   regression cannot pass for the wrong reason.
+
+task0016 (feature-docs/goal-vs-spec-divergence review round1 rework) extends
+TestReplaceAllCreatePlanEntryStatus further: the create-plan/task-status
+permission check is no longer frozen (feature-docs/create-plan-status-
+conflict's D1 freeze is superseded here) because FR4/FR6 require the
+re-planning path to permit `merged` tasks, which the check rejected before
+this task:
+
+- AC-1: `valid-replace-all-replanning-merged-tasks` -- create-plan `pending`
+  re-entered via the SPEC-change transition (a `spec_change` record in
+  `--phase-state` plus `workflow.implement.base_commit` already set) permits
+  a `merged` task.
+- AC-2 / AC-6: `invalid-replace-all-initial-planning-merged-tasks` -- the
+  same patch shape without the re-entry signal (no `--phase-state`) is still
+  rejected: a narrower invocation never widens what replace_all permits.
+- AC-3: `invalid-replace-all-after-implementation-started` (`create-plan:
+  needs_update` with an `in_progress` task) still fails on the re-planning
+  path too, with exactly one error identifier.
 """
 
 import importlib.util
@@ -1527,16 +1545,25 @@ class TestNeedsUserInputPayloadExemption(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# task0003 (feature-docs/create-plan-status-conflict): pins the frozen
-# validate-worker-output.py replace_all/create-plan permission check with
+# task0003 (feature-docs/create-plan-status-conflict): pins
+# validate-worker-output.py's replace_all/create-plan permission check with
 # regression fixtures. AC-3/AC-4/AC-5.
+#
+# task0016 (feature-docs/goal-vs-spec-divergence review round1 rework):
+# extends the same class -- workflow-patch.md's `replace_all` permission
+# conditions define two permitted paths (initial-planning, re-planning) and
+# one rule common to both (no in_progress/failed task); this check now
+# implements the path split instead of applying the task-status test
+# independently of create-plan's status. AC-1/AC-2/AC-3/AC-4/AC-5/AC-6.
 # ---------------------------------------------------------------------------
 
 class TestReplaceAllCreatePlanEntryStatus(unittest.TestCase):
     """The validator's dry-run application (5.5.5 rule 5 /
     _validate_dry_run_apply) rejects replace_all unless the create-plan
-    step's entry status is pending or needs_update. This class pins that
-    behaviour without touching the validator (IMPLEMENTATION.md D1)."""
+    step's entry status is pending or needs_update, and unless the
+    task-status rule for whichever of the two permitted paths applies is
+    satisfied (workflow-patch.md "replace_all permission conditions"). This
+    class pins that behaviour."""
 
     def _run(self, case_name):
         case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / case_name
@@ -1576,6 +1603,91 @@ class TestReplaceAllCreatePlanEntryStatus(unittest.TestCase):
         # pending branch.
         result = self._run("valid-dry-run-apply")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_replanning_reentry_with_merged_task_passes(self):
+        # AC-1 (FR4, FR6): create-plan pending, re-entered via the
+        # SPEC-change transition (spec_change record in --phase-state +
+        # workflow.implement.base_commit already set), permits a merged
+        # task -- the re-planning path drops the task-status test for
+        # merged, keeping only rule 3 (in_progress/failed).
+        result = self._run("valid-replace-all-replanning-merged-tasks")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_initial_planning_with_merged_task_still_rejected(self):
+        # AC-2 (FR4): the same patch shape and workflow, but on the
+        # initial-planning path (no re-entry signal), is still rejected --
+        # a merged task never passes the empty-or-all-pending test.
+        result = self._run("invalid-replace-all-initial-planning-merged-tasks")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-not-permitted"})
+
+    def test_missing_reentry_signal_defaults_to_initial_planning(self):
+        # AC-6: the same fixture as AC-2, from the fail-closed angle -- no
+        # --phase-state is passed at all, so the check must never read the
+        # merged task's pending create-plan status as a re-planning
+        # re-entry. A narrower invocation (missing --phase-state) never
+        # widens what replace_all permits.
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / "invalid-replace-all-initial-planning-merged-tasks"
+        self.assertFalse(
+            (case_dir / "phase-state.json").exists(),
+            "this fixture must exercise the missing-signal path -- a "
+            "phase-state.json here would prove a different scenario",
+        )
+        result = self._run("invalid-replace-all-initial-planning-merged-tasks")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertIn("replace-all-not-permitted", codes)
+
+    def test_after_implementation_started_rejected_on_replanning_path_too(self):
+        # AC-3 (FR4): a replace_all received while a task is in_progress is
+        # a protocol error on BOTH paths, not just initial-planning --
+        # create-plan: needs_update (squarely the re-planning path) with an
+        # in_progress task still fails, with exactly one error identifier.
+        result = self._run("invalid-replace-all-after-implementation-started")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-not-permitted"})
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("in_progress", messages)
+
+
+class TestReplanningReentrySignalHelper(unittest.TestCase):
+    """Direct unit tests of workflow_replace_all_spec_change_reentry (the
+    pure helper backing the re-planning path's second entry form), covering
+    both required conditions independently -- fixture-driven CLI coverage
+    above exercises the combined check, not each condition in isolation."""
+
+    def _workflow(self, base_commit):
+        step = {"id": "implement", "status": "pending"}
+        if base_commit is not None:
+            step["base_commit"] = base_commit
+        return {"workflow": [{"id": "create-plan", "status": "pending"}, step]}
+
+    def test_no_phase_state_is_not_a_reentry(self):
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), None)
+        )
+
+    def test_phase_state_without_spec_change_record_is_not_a_reentry(self):
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), {})
+        )
+
+    def test_spec_change_record_without_base_commit_is_not_a_reentry(self):
+        phase_state = {"spec_change": {"reason": "x", "finding_stable_id": "abc"}}
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow(None), phase_state)
+        )
+
+    def test_spec_change_record_with_base_commit_is_a_reentry(self):
+        phase_state = {"spec_change": {"reason": "x", "finding_stable_id": "abc"}}
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
 
 
 if __name__ == "__main__":

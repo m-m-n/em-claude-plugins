@@ -1,0 +1,8 @@
+{
+  "spec_change": {
+    "consumed": false,
+    "finding_stable_id": "abc123",
+    "reason": "SPEC changed after implementation to add a missed requirement",
+    "recorded_at_commit": "deadbeef"
+  }
+}

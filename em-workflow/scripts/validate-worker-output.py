@@ -683,6 +683,32 @@ def workflow_find_step(workflow, step_id):
     return None
 
 
+def workflow_replace_all_spec_change_reentry(workflow, phase_state):
+    """workflow-patch.md's re-planning path has a second entry form: `create-
+    plan` reads `pending` not because this is the first planning pass but
+    because the SPEC-change transition re-entered it. That form is
+    recognizable only from phase-state, not from workflow.yaml alone --
+    both of the following must hold:
+
+    1. `phase_state` carries a `spec_change` record (the SPEC-change
+       transition's own step 4 writes this into rework.yaml's phase-state).
+    2. `workflow.implement.base_commit` is already set (implementation has
+       actually started at least once before).
+
+    Fails closed: a missing `--phase-state`, or a phase-state with no
+    `spec_change` record, is NOT this form -- the caller must fall back to
+    treating the patch as the initial-planning path. A narrower invocation
+    must never widen what replace_all permits."""
+    if not isinstance(phase_state, dict):
+        return False
+    spec_change = phase_state.get("spec_change")
+    if not isinstance(spec_change, dict) or not spec_change:
+        return False
+    implement_step = workflow_find_step(workflow, "implement")
+    base_commit = implement_step.get("base_commit") if implement_step else None
+    return bool(base_commit)
+
+
 def workflow_requirement_ids(workflow):
     return set((workflow or {}).get("requirements", {}) or {})
 
@@ -1165,15 +1191,26 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state):
             if not set(tasks_contains).issubset(current_tasks):
                 errors.append(err("expected-mismatch", f"requirements_patch.entries[{fr_id}].expected.tasks_contains not satisfied by current workflow.yaml"))
 
-    # Rule 5 / 5.5.1: replace_all permission conditions.
+    # Rule 5 / 5.5.1: replace_all permission conditions. Two permitted
+    # paths (workflow-patch.md "replace_all permission conditions"):
+    # initial-planning (create-plan: pending, no re-entry signal) and
+    # re-planning (create-plan: needs_update, OR create-plan: pending on a
+    # SPEC-change re-entry -- workflow_replace_all_spec_change_reentry).
+    # Rule 3, common to both: any in_progress/failed task is a protocol
+    # error regardless of path.
     if mode == "replace_all":
         tasks = workflow.get("tasks", {}) or {}
-        if tasks and any((t or {}).get("status") != "pending" for t in tasks.values()):
-            errors.append(err("replace-all-not-permitted", "replace_all requires tasks to be empty or all pending (implementation has started)"))
         create_plan_step = workflow_find_step(workflow, "create-plan")
         current_status = create_plan_step.get("status") if create_plan_step else None
         if current_status not in ("pending", "needs_update"):
             errors.append(err("replace-all-not-permitted", f"replace_all requires create-plan step to be pending or needs_update, got {current_status!r}"))
+        else:
+            if tasks and any((t or {}).get("status") in ("in_progress", "failed") for t in tasks.values()):
+                errors.append(err("replace-all-not-permitted", "replace_all requires no task to be in_progress or failed (implementation has started)"))
+            else:
+                is_replanning = current_status == "needs_update" or workflow_replace_all_spec_change_reentry(workflow, phase_state)
+                if not is_replanning and tasks and any((t or {}).get("status") != "pending" for t in tasks.values()):
+                    errors.append(err("replace-all-not-permitted", "replace_all requires tasks to be empty or all pending (implementation has started)"))
 
     # Rule 4: append must not overwrite existing task IDs, and
     # expected_next_task_id must match the actual next id.
