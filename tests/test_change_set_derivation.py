@@ -28,6 +28,26 @@ full-suite run recorded in this task's test record, not re-tested here.
 Content assertions read a whitespace-normalized slice of the new section
 (`_normalize_ws`), so line-wrap choices never make an assertion brittle;
 position/uniqueness assertions read raw offsets.
+
+Round-1 rework (task0015, source_ids `45cc2053b58d2a24`) extends this module
+with the third input (implement-derived additions), the single retention
+location, and the third re-derivation trigger (an implement wake that
+admitted a deviation) -- covering task0015 Acceptance Criteria
+(feature-docs/goal-vs-spec-divergence/tasks/task0015.md):
+
+- AC-1 (FR19): Inputs name the implement-derived additions, citing
+  `implement-phase.md`'s auto-addition rule by path without restating its
+  evidence condition.
+- AC-2 (FR19): exactly one retention location is named, and re-derivation
+  is stated to read it.
+- AC-3 (FR19, NFR3): Timing lists the implement-wake trigger alongside the
+  existing two.
+- AC-4 (FR18): the guard status, default-entry citation and containment
+  semantics stay exactly as task0009 pinned them (retention pin, no new
+  test needed beyond the unmodified existing classes below).
+- AC-5 (NFR1, C6c/C6d): the auto-addition condition and the default-entry
+  enumeration are not restated, the two root globs never co-occur, and no
+  exclusion wording is introduced.
 """
 
 import re
@@ -71,6 +91,24 @@ TEST_DOCS_ROOT_LITERAL = "test-docs/{feature}/**"
 # vocabulary in the new section at all, which trivially satisfies "no rule
 # says artifacts are excluded/ignored/subtracted at verification time".
 EXCLUSION_WORDS = ("exclud", "subtract", "ignor", "除外")
+
+# task0015 AC-1 literals: the third input (implement-derived additions),
+# cited by path, its evidence condition not restated here.
+IMPLEMENT_PHASE_CITATION = "references/implement-phase.md"
+IMPLEMENT_DERIVED_PHRASE = "implement-derived additions"
+EVIDENCE_CONDITION_PHRASE = "acceptance criterion would otherwise be dropped"
+
+# task0015 AC-2 literals: the single retention location, and re-derivation
+# reading it.
+RETENTION_LOCATION_PHRASE = "the `files` list of the task whose deviation was admitted"
+RETENTION_READS_LOCATION_PHRASE = "Re-derivation reads that location"
+RETENTION_SURVIVES_PHRASE = "survive every later re-derivation"
+
+# task0015 AC-3 literals: the third re-derivation trigger, alongside the
+# existing two.
+TRIGGER_REPLANNING_PHRASE = "re-planning"
+TRIGGER_REWORK_APPEND_PHRASE = "rework append"
+TRIGGER_IMPLEMENT_WAKE_PHRASE = "an implement wake that admitted a deviation"
 
 
 def _read():
@@ -168,6 +206,69 @@ class TestSemanticsAndTimingStated(unittest.TestCase):
         self.assertIn(RE_DERIVED_PHRASE, self.section)
 
 
+class TestThirdInputStated(unittest.TestCase):
+    """task0015 AC-1 (FR19): the implement-derived additions are named as a
+    third input, citing implement-phase.md's auto-addition rule by path
+    without restating its evidence condition."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_derivation_section(_read()))
+
+    def test_implement_derived_additions_named(self):
+        self.assertIn(IMPLEMENT_DERIVED_PHRASE, self.section)
+
+    def test_implement_phase_cited_by_path(self):
+        self.assertIn(IMPLEMENT_PHASE_CITATION, self.section)
+
+    def test_evidence_condition_not_restated(self):
+        self.assertNotIn(EVIDENCE_CONDITION_PHRASE, self.section)
+
+    def test_all_three_inputs_present_together(self):
+        self.assertTrue(
+            TASKS_FILES_LITERAL in self.section
+            and DEFAULT_ENTRIES_PHRASE in self.section
+            and IMPLEMENT_DERIVED_PHRASE in self.section
+            and IMPLEMENT_PHASE_CITATION in self.section
+        )
+
+
+class TestRetentionLocationStated(unittest.TestCase):
+    """task0015 AC-2 (FR19): exactly one retention location is named, and
+    re-derivation is stated to read it, so an admitted addition survives
+    every later re-derivation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_derivation_section(_read()))
+
+    def test_retention_location_named(self):
+        self.assertIn(RETENTION_LOCATION_PHRASE, self.section)
+
+    def test_rederivation_reads_that_location(self):
+        self.assertIn(RETENTION_READS_LOCATION_PHRASE, self.section)
+
+    def test_survives_every_later_rederivation(self):
+        self.assertIn(RETENTION_SURVIVES_PHRASE, self.section)
+
+
+class TestThirdTriggerStated(unittest.TestCase):
+    """task0015 AC-3 (FR19, NFR3): Timing lists an implement wake that
+    admitted a deviation as a re-derivation trigger, alongside the existing
+    two (re-planning, rework append)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_derivation_section(_read()))
+
+    def test_all_three_triggers_present_together(self):
+        self.assertTrue(
+            TRIGGER_REPLANNING_PHRASE in self.section
+            and TRIGGER_REWORK_APPEND_PHRASE in self.section
+            and TRIGGER_IMPLEMENT_WAKE_PHRASE in self.section
+        )
+
+
 class TestNoForbiddenLiteralsInSection(unittest.TestCase):
     """AC-6 (NFR1, C6c/C6d): the new section never enumerates the two
     workflow-artifact root globs together, and introduces no verify-side
@@ -229,6 +330,56 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         )
         lowered = bad_sample.lower()
         self.assertTrue(any(word in lowered for word in EXCLUSION_WORDS))
+
+    def test_third_input_matchers_flag_a_sample_naming_only_the_two_existing_sources(
+        self,
+    ):
+        sample = _normalize_ws(
+            "## 12. Declared change set derivation\n\n"
+            "- **Inputs**: the union of `tasks.*.files` entries and the "
+            "default entries."
+        )
+        self.assertFalse(
+            TASKS_FILES_LITERAL in sample
+            and DEFAULT_ENTRIES_PHRASE in sample
+            and IMPLEMENT_DERIVED_PHRASE in sample
+            and IMPLEMENT_PHASE_CITATION in sample
+        )
+
+    def test_retention_matchers_flag_a_sentence_naming_two_different_locations(
+        self,
+    ):
+        sample = _normalize_ws(
+            "## 12. Declared change set derivation\n\n"
+            "- **Retention**: an admitted addition is retained both in "
+            "`phase-state/rework.yaml` and in the task's completion "
+            "report."
+        )
+        self.assertNotIn(RETENTION_LOCATION_PHRASE, sample)
+        self.assertNotIn(RETENTION_READS_LOCATION_PHRASE, sample)
+
+    def test_third_trigger_matcher_flags_a_timing_list_carrying_only_the_two_existing_triggers(
+        self,
+    ):
+        sample = _normalize_ws(
+            "## 12. Declared change set derivation\n\n"
+            "- **Timing**: re-derived whenever the task set changes — "
+            "re-planning, or a rework append."
+        )
+        self.assertTrue(
+            TRIGGER_REPLANNING_PHRASE in sample
+            and TRIGGER_REWORK_APPEND_PHRASE in sample
+        )
+        self.assertFalse(TRIGGER_IMPLEMENT_WAKE_PHRASE in sample)
+
+    def test_evidence_condition_matcher_flags_a_synthetic_violation(self):
+        bad_sample = _normalize_ws(
+            "## 12. Declared change set derivation\n\n"
+            "the implement-derived additions are admitted only when "
+            "accompanied by evidence that an existing acceptance criterion "
+            "would otherwise be dropped."
+        )
+        self.assertIn(EVIDENCE_CONDITION_PHRASE, bad_sample)
 
 
 if __name__ == "__main__":
