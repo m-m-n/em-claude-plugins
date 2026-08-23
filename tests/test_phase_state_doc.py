@@ -702,5 +702,138 @@ class TestBackfillCrossProductDelegation(unittest.TestCase):
         self.assertNotIn("tokens.html` present", self.section)
 
 
+class TestClassificationAuditRecord(unittest.TestCase):
+    """task0005 (goal-vs-spec-divergence): classification audit record in
+    the phase-state schema (feature-docs/goal-vs-spec-divergence/tasks/
+    task0005.md).
+
+    AC-1: the schema listing shows the classification audit record under
+    `phase: rework`, as a sibling of `spec_change`, in the same style as the
+    existing entries.
+    AC-2: all five fields are defined with their value vocabularies --
+    `classifier`, `verdict`, `evidence_ids`, `decision`, `reason`.
+    AC-3: `evidence_ids` must be non-empty for a `spec_gap` verdict, and
+    `reason` is mandatory whenever `decision` is `stop`.
+    AC-4: a record is written for every gate pass, explicitly including
+    passes that stop and passes where the gate was inapplicable.
+    AC-5: the record appears in the every-top-level-field table with a
+    one-line meaning.
+    AC-6: the document does not restate the classification rule itself; it
+    cites `references/question-resolution.md`, and the record's
+    idempotency behaviour is stated via the document's existing
+    `spec_change` replace-wholesale exemption, not a new invention.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+
+        # Schema example block: from the `classification:` entry inside the
+        # fenced ```yaml schema block down to the closing fence -- scoped
+        # narrowly so generic tokens (`stop`, `proceed`, `reason`) that
+        # occur elsewhere in the document can't satisfy these assertions.
+        schema_start = cls.text.index("## Schema")
+        fence_end = cls.text.index("\n```\n", schema_start)
+        cls.schema_block = cls.text[schema_start:fence_end]
+        record_idx = cls.schema_block.index("classification:")
+        cls.record_block = cls.schema_block[record_idx:]
+
+        # Field-table row: the single line starting with the field's own
+        # cell marker.
+        table_idx = cls.text.index("| `classification` |")
+        line_end = cls.text.index("\n", table_idx)
+        cls.table_row = cls.text[table_idx:line_end]
+
+        # Idempotency bullet in "## ID uniqueness and idempotency".
+        idem_idx = cls.text.index("## ID uniqueness and idempotency")
+        idem_end = cls.text.index("### worker_runs[].status transitions")
+        cls.idempotency_section = cls.text[idem_idx:idem_end]
+
+    def test_record_present_as_sibling_of_spec_change_in_schema_block(self):
+        self.assertIn("spec_change:", self.schema_block)
+        self.assertIn("classification:", self.schema_block)
+        spec_change_idx = self.schema_block.index("spec_change:")
+        classification_idx = self.schema_block.index("classification:")
+        self.assertLess(
+            spec_change_idx,
+            classification_idx,
+            "classification record must follow spec_change as its sibling",
+        )
+        self.assertIn("phase: rework", self.record_block.split("\n")[0])
+
+    def test_all_five_fields_defined_with_value_vocabularies(self):
+        block = self.record_block
+        self.assertIn("classifier", block)
+        self.assertIn("codex", block)
+        self.assertIn("claude", block)
+        self.assertIn("verdict", block)
+        self.assertIn("goal_not_met", block)
+        self.assertIn("spec_gap", block)
+        self.assertIn("not_applicable", block)
+        self.assertIn("evidence_ids", block)
+        self.assertIn("decision", block)
+        self.assertIn("proceed", block)
+        self.assertIn("stop", block)
+        self.assertIn("reason", block)
+
+    def test_evidence_ids_non_empty_requirement_for_spec_gap_is_stated(self):
+        self.assertIn("non-empty", self.table_row)
+        self.assertIn("spec_gap", self.table_row)
+
+    def test_reason_mandatory_when_decision_is_stop_is_stated(self):
+        self.assertIn("mandatory", self.table_row)
+        self.assertIn("decision: stop", self.table_row)
+
+    def test_one_record_per_gate_pass_including_stop_and_inapplicable(self):
+        # Scoped to the classification table row itself -- per the task's
+        # Test Notes edge case, this must not be satisfiable by the general
+        # statement elsewhere in the document about recording answers.
+        row = self.table_row
+        self.assertIn("one record per pass", row)
+        self.assertIn("stop", row)
+        self.assertIn("inapplicable", row)
+
+    def test_record_appears_in_every_top_level_field_table(self):
+        self.assertIn("| `classification` |", self.text)
+        self.assertIn("classifier", self.table_row)
+        self.assertIn("verdict", self.table_row)
+        self.assertIn("evidence_ids", self.table_row)
+        self.assertIn("decision", self.table_row)
+        self.assertIn("reason", self.table_row)
+
+    def test_cites_question_resolution_doc_instead_of_restating_the_rule(self):
+        self.assertIn("references/question-resolution.md", self.table_row)
+
+    def test_idempotency_uses_the_spec_change_replace_wholesale_exemption(self):
+        section = self.idempotency_section
+        self.assertIn("classification", section)
+        self.assertIn("spec_change", section)
+        self.assertIn("wholesale", section)
+        self.assertIn("not a protocol error", section)
+
+
+class TestClassificationAuditRecordNegativeProof(unittest.TestCase):
+    """Proof the checks above fail meaningfully against a synthetic sample
+    lacking the record (tdd-testing discipline: a test that can never fail
+    is not a test)."""
+
+    def test_missing_field_is_detected_in_a_synthetic_block(self):
+        block = "classification:\n  classifier: codex\n  verdict: goal_not_met\n"
+        for token in ("evidence_ids", "decision", "reason", "spec_gap"):
+            self.assertNotIn(token, block)
+
+    def test_missing_row_is_detected_when_field_table_lacks_the_entry(self):
+        text_without_row = "| `spec_change` | ... |\n"
+        self.assertNotIn("| `classification` |", text_without_row)
+
+    def test_missing_citation_is_detected(self):
+        row_without_citation = "| `classification` | some fields, no citation |"
+        self.assertNotIn("references/question-resolution.md", row_without_citation)
+
+    def test_missing_idempotency_statement_is_detected(self):
+        section_without_statement = "## ID uniqueness and idempotency\nsome unrelated text\n"
+        self.assertNotIn("wholesale", section_without_statement)
+
+
 if __name__ == "__main__":
     unittest.main()
