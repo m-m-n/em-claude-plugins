@@ -496,9 +496,17 @@ FR1–FR19 を分割せず 1 feature としてまとめる（NFR7）。着手順
 - `em-workflow/references/**`
 - `em-workflow/skills/**`
 - `em-workflow/agents/**`
+- `em-workflow/scripts/**`
 - `tests/**`
 - `em-workflow/.claude-plugin/plugin.json`
 - `.claude-plugin/marketplace.json`
+
+`em-workflow/scripts/**` はレビュー round 1 の後に追加した。FR4 が `replace_all`
+許可条件の緩和を、FR6 が SPEC 変更遷移の成立を要求する一方、
+`em-workflow/scripts/validate-worker-output.py` は create-plan の status に
+関係なく「タスクが 1 つでも pending 以外なら `replace_all` は protocol error」と
+判定するため、これに触れずに FR4・FR6 を満たす実装は存在しない。追加は
+create-spec 時点で合意済みの要件からの論理的帰結であり、新しい要件ではない。
 
 **デフォルトメンバー**（SPEC作成者が明示的に除外しない限り、常に宣言に含まれる）:
 - `feature-docs/goal-vs-spec-divergence/**`

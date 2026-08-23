@@ -19,3 +19,23 @@ progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+deviation_from_transition:
+  reason: >-
+    レビュー round 1 の後、SPEC.md / REQUIREMENTS.md の宣言された変更集合に
+    `em-workflow/scripts/**` を追加した。FR4 が replace_all 許可条件の緩和を、
+    FR6 が SPEC 変更遷移の成立を要求する一方、validate-worker-output.py は
+    create-plan の status に関係なく replace_all を拒否するため、これに触れずに
+    FR4・FR6 を満たす実装は存在しない。既存要件からの論理的帰結であり要件変更ではない。
+  decided_by: user
+  decided_at: "2026-08-23T23:35:00+09:00"
+  documents_edited:
+    - feature-docs/goal-vs-spec-divergence/SPEC.md
+    - feature-docs/goal-vs-spec-divergence/REQUIREMENTS.md
+  edit_scope: >-
+    宣言された変更集合のパス一覧に 1 エントリ追加し、追加理由を各 1 段落添えたのみ。
+    要件・受け入れ条件・assumption のメタデータは未変更。
+  note: >-
+    正規の経路である rework の spec-change 遷移は、この feature が直そうとしている
+    欠陥 1（実装完了後は create-plan 再入場が protocol error で必ず弾かれる）に
+    自分で当たるため使えなかった。オーケストレーターが直接編集した。
+

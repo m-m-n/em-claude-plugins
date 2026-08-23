@@ -368,9 +368,18 @@ Feature-specific paths:
 - `em-workflow/references/**`
 - `em-workflow/skills/**`
 - `em-workflow/agents/**`
+- `em-workflow/scripts/**`
 - `tests/**`
 - `em-workflow/.claude-plugin/plugin.json`
 - `.claude-plugin/marketplace.json`
+
+`em-workflow/scripts/**` was added after review round 1. FR4 requires the
+`replace_all` permission condition to be relaxed and FR6 requires the
+SPEC-change transition to hold; `em-workflow/scripts/validate-worker-output.py`
+rejects `replace_all` whenever any task is non-pending, regardless of the
+create-plan step's status, so no implementation satisfying FR4 and FR6 exists
+without changing it. The widening is the logical consequence of requirements
+already agreed at create-spec time, not a new requirement.
 
 Every SPEC declares, by default, the following two workflow-generated
 entries in addition to the feature-specific paths above:
