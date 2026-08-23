@@ -37,7 +37,7 @@ workflow:
   status: completed
   completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
 - id: implement
-  status: pending
+  status: in_progress
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
   completed_at_commit: d2370de3908e94469d022afa5ee9ae10099f3ca9
 - id: review
@@ -327,9 +327,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0012
   task0013:
     title: re-planning permission premise, task-id allocation, and the mandatory preserve set
     plan: tasks/task0013.md
@@ -354,9 +354,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0013
   task0014:
     title: structure-preserving write of the goal block
     plan: tasks/task0014.md
@@ -379,9 +379,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0014
   task0015:
     title: implement-derived members in the declared change set derivation
     plan: tasks/task0015.md
@@ -402,9 +402,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0015
   task0016:
     title: validator agreement with the two replace_all permission paths
     plan: tasks/task0016.md
@@ -429,9 +429,9 @@ tasks:
     - FR6
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0016
 review:
   status: pending
   rounds_completed: 1
