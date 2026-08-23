@@ -37,6 +37,18 @@ Covers task0001 Acceptance Criteria
   and gives every new-wording matcher a negative proof plus a non-vacuity
   guard, per IMPLEMENTATION.md D8.
 
+task0013 (goal-vs-spec-divergence, review round 1 rework) rebuilds AC-6's
+recursion-invariant reasoning: the "widened gate admits no `merged` task"
+premise this task's own text relied on is no longer the only door into
+re-planning (the SPEC-change transition reaches it without going through
+I.2.c's gate at all), so `RECURSION_INVARIANT_PHRASE` is restated to derive
+the same conclusion from `references/workflow-patch.md`'s re-planning
+task-id allocation rule instead (no retired id is ever re-issued to a
+different task). `TestI2aRecursionInvariantPresent` is updated in place
+(name kept); the removed premise's absence is a new regression guard in
+`TestRegressionGuards`, proven against a captured pre-change sample in
+`TestValidationDetectsRegressions`.
+
 This module reads only `em-workflow/references/implement-phase.md`. It does
 not import from, and does not modify, any other test module; literals it
 needs from a protected module (the batch-mode paragraph) are copied into it
@@ -183,9 +195,21 @@ REJECTED_MERGED_RECONCILED_PHRASE = (
     "workflow.yaml does not"
 )
 
-# Site 5 / AC-6 (FR6): I.2.a's recursion-invariant statement.
+# Site 5 / AC-6 (FR6): I.2.a's recursion-invariant statement. Restated by
+# task0013 (goal-vs-spec-divergence): derived from workflow-patch.md's
+# re-planning task-id allocation rule (no retired id is ever re-issued to a
+# different task) instead of from the widened I.2.c gate, which is no
+# longer the only door into re-planning.
 UNREACHABILITY_OPENING_ANCHOR = "Given I.2.c's route-back precondition"
 RECURSION_INVARIANT_PHRASE = (
+    "No retired task id is ever re-issued, so a task whose workflow.yaml "
+    "`status` is `pending` can never carry an inherited `merged` journal "
+    "last event"
+)
+
+# task0013's own removed premise (the widened-gate-based reasoning this
+# task's edit replaces) -- must not resurface.
+OLD_RENUMBERING_PREMISE_PHRASE = (
     "no retired task id can leave a `merged` last event behind for a "
     "renumbered task to inherit"
 )
@@ -282,6 +306,20 @@ SAMPLE_6_EXIT4_UNION_RULE = (
     "reports a\n"
     "  task in-flight — excludes the first path: route back proceeds "
     "only when"
+)
+
+# task0013 (goal-vs-spec-divergence): the widened-gate-based premise this
+# task's edit replaces, captured verbatim from this task's own base commit
+# (immediately before this task's edit landed) -- not paraphrased, not
+# reconstructed.
+SAMPLE_7_I2A_WIDENED_GATE_PREMISE = (
+    "Because route-back proceeds only when no task is `merged` under\n"
+    "either source (the widened I.2.c gate above), no retired task id can\n"
+    "leave a `merged` last event behind for a renumbered task to inherit, "
+    "so\n"
+    "the recycled-task-id carve-out above stays correctly scoped to "
+    "`failed`\n"
+    "only."
 )
 
 
@@ -547,9 +585,11 @@ class TestCrossReferencesDescribeGateCorrectly(unittest.TestCase):
 
 class TestI2aRecursionInvariantPresent(unittest.TestCase):
     """AC-6 / FR6: I.2.a states that route-back's own recursion invariant --
-    no retired id can carry a `merged` last event forward under the widened
-    gate -- placed after the unreachability terminal; the carve-out and
-    the retained in-flight sentence stay intact."""
+    restated by task0013 (goal-vs-spec-divergence) as: no retired task id
+    is ever re-issued, so a `pending` task can never carry an inherited
+    `merged` journal last event -- placed after the unreachability
+    terminal; the carve-out and the retained in-flight sentence stay
+    intact; the superseded widened-gate premise does not resurface."""
 
     @classmethod
     def setUpClass(cls):
@@ -575,6 +615,11 @@ class TestI2aRecursionInvariantPresent(unittest.TestCase):
             "in-flight, regardless of workflow.yaml `status`",
             self.i2a,
         )
+
+    def test_old_renumbering_premise_absent(self):
+        # task0013: the widened-gate-based premise this task's edit
+        # replaces must not resurface anywhere in I.2.a.
+        self.assertNotIn(OLD_RENUMBERING_PREMISE_PHRASE, self.i2a)
 
 
 class TestRegressionGuards(unittest.TestCase):
@@ -747,6 +792,13 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         sample = _normalize_ws(SAMPLE_6_EXIT4_UNION_RULE)
         self.assertNotIn(IN_PROGRESS_UNION_RULE_NAMED_PHRASE, sample)
 
+    def test_old_renumbering_premise_matcher_flags_pre_change_wording(self):
+        # task0013: proves the new absence guard is not vacuous -- the
+        # phrase it looks for genuinely appeared in this task's own base
+        # commit.
+        sample = _normalize_ws(SAMPLE_7_I2A_WIDENED_GATE_PREMISE)
+        self.assertIn(OLD_RENUMBERING_PREMISE_PHRASE, sample)
+
     def test_bare_commit_line_matcher_flags_an_unlocked_commit(self):
         sample = (
             'git -C {project_root} add -A -- foo && git -C {project_root} '
@@ -797,6 +849,14 @@ class TestPreChangeSampleGuards(unittest.TestCase):
             "blocked when workflow.yaml reports a task `in_progress` OR "
             "Step I.2.b's last-event-per-task rule reports a task "
             "in-flight",
+            sample,
+        )
+
+    def test_sample7_retains_carve_out_scoped_anchor(self):
+        sample = _normalize_ws(SAMPLE_7_I2A_WIDENED_GATE_PREMISE)
+        self.assertIn(
+            "the recycled-task-id carve-out above stays correctly scoped "
+            "to `failed` only",
             sample,
         )
 

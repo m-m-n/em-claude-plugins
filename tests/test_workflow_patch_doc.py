@@ -443,5 +443,197 @@ class TestBaseCommitPreservedOnReplanningPath(unittest.TestCase):
         self.assertIn("rework invariant", lowered)
 
 
+class TestReplanningPathWidenedForSpecChangeReentry(unittest.TestCase):
+    """task0013 AC-1 (FR4, FR6): the Re-planning path is satisfied by the
+    state the SPEC-change transition actually produces (`create-plan:
+    pending` after a `create-spec: needs_update` re-entry), names the
+    recognizable signal for that case, and still admits the unchanged
+    `create-plan: needs_update` case. The transition documents themselves
+    (`rework-task-synthesis.md` Section 10, the two documents citing it)
+    are not modified by this task (AC-3) -- verified separately by this
+    task's own file-set discipline, not by an assertion here (Test Notes:
+    cross-document agreement is a verify-phase item)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### `replace_all` permission conditions",
+            "### `append` requirements",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_needs_update_case_still_present(self):
+        self.assertIn(
+            "the `create-plan` step is `needs_update`", self.normalized
+        )
+
+    def test_pending_reentry_case_states_recognizable_signal(self):
+        self.assertIn(
+            "a `spec_change` record present in `phase-state/rework.yaml`",
+            self.normalized,
+        )
+        self.assertIn(
+            "`workflow.implement.base_commit` already being set",
+            self.normalized,
+        )
+
+    def test_states_transition_produces_pending_not_needs_update(self):
+        self.assertIn(
+            "sets `create-plan` to `pending`, not `needs_update`",
+            self.normalized,
+        )
+        self.assertIn("rework-task-synthesis.md", self.normalized)
+
+    def test_new_case_matcher_fails_on_needs_update_only_wording(self):
+        # Non-vacuity / negative proof (Test Notes): a Re-planning path
+        # stated only as `create-plan: needs_update` -- the pre-task0013
+        # wording -- must not satisfy the widened matcher above.
+        synthetic_old_wording = (
+            "- **Re-planning path** -- the `create-plan` step is "
+            "`needs_update` (an explicit re-plan, e.g. the SPEC-change "
+            "transition): permitted regardless of task status, including "
+            "existing `merged` tasks."
+        )
+        self.assertNotIn(
+            "a `spec_change` record present in `phase-state/rework.yaml`",
+            synthetic_old_wording,
+        )
+        self.assertNotIn(
+            "`workflow.implement.base_commit` already being set",
+            synthetic_old_wording,
+        )
+
+
+class TestUnchangedHalvesStatedExplicitly(unittest.TestCase):
+    """task0013 AC-2 (FR4): the Initial-planning path's condition and the
+    `in_progress` / `failed` protocol error are stated as unchanged by the
+    Re-planning path's widening, on both paths."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### `replace_all` permission conditions",
+            "### `append` requirements",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_unchanged_statement_present(self):
+        self.assertIn(
+            "Neither this protocol-error rule nor the Initial-planning "
+            "path's floor condition above changes",
+            self.normalized,
+        )
+
+    def test_referenced_halves_still_present(self):
+        # Retention: both halves the "unchanged" sentence refers to.
+        self.assertIn("`tasks` is empty", self.normalized)
+        self.assertIn("in_progress", self.normalized)
+        self.assertIn("protocol error", self.normalized)
+
+    def test_unchanged_statement_matcher_fails_on_pre_change_wording(self):
+        # Negative proof: the pre-task0013 protocol-error sentence had no
+        # such explicit "unchanged" statement at all.
+        synthetic_old_wording = (
+            "A `replace_all` received while any task is `in_progress` or "
+            "`failed` is a protocol error on BOTH paths above."
+        )
+        self.assertNotIn(
+            "Neither this protocol-error rule nor the Initial-planning "
+            "path's floor condition above changes",
+            synthetic_old_wording,
+        )
+
+
+class TestReplanningTaskIdAllocationRule(unittest.TestCase):
+    """task0013 AC-4: a `replace_all` re-planning pass never re-issues a
+    task id the feature has already used, and allocates above the highest
+    previously registered id."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### Re-planning task-id allocation",
+            "### `append` requirements",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_allocates_above_highest_registered_id(self):
+        self.assertIn(
+            "allocates its new task ids continuing ABOVE the highest",
+            self.normalized,
+        )
+        self.assertIn("the feature has ever registered", self.normalized)
+
+    def test_retired_id_never_reissued(self):
+        self.assertIn(
+            "is never re-issued to a different task", self.normalized
+        )
+
+    def test_allocation_matcher_fails_on_reissuing_wording(self):
+        # Negative proof (Test Notes): an allocation sentence that permits
+        # re-issuing an id must fail this matcher.
+        synthetic_permissive_wording = (
+            "A re-planning pass may reuse any task id below "
+            "`next_task_id`, including a retired one, as long as its "
+            "content is replaced."
+        )
+        self.assertNotIn(
+            "is never re-issued to a different task",
+            synthetic_permissive_wording,
+        )
+        self.assertNotIn("ABOVE the highest", synthetic_permissive_wording)
+
+
+class TestMandatoryPreserveReplanningRowRequiresBaseCommit(unittest.TestCase):
+    """task0013 AC-6 (FR5): the Mandatory `preserve` table's
+    `replace_planning` row requires `workflow.implement.base_commit` on the
+    Re-planning path, states the Initial-planning (first-pass) case
+    explicitly, and no longer reads `(none)`."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### Mandatory `preserve` per operation",
+            "## Application rules",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_row_no_longer_reads_none(self):
+        self.assertNotRegex(
+            self.normalized, r"\| `replace_planning` \| \(none\) \|"
+        )
+
+    def test_row_requires_base_commit_on_replanning_path(self):
+        match = re.search(
+            r"\| `replace_planning` \| (.*?) \|", self.normalized
+        )
+        self.assertIsNotNone(match, "expected the replace_planning row")
+        row = match.group(1)
+        self.assertIn("workflow.implement.base_commit", row)
+        self.assertIn("Re-planning path", row)
+
+    def test_initial_planning_case_stated(self):
+        self.assertIn(
+            "Initial-planning path has no `implement` base commit yet",
+            self.normalized,
+        )
+
+    def test_row_matcher_fails_on_none_wording(self):
+        # Negative proof: a preserve row reading `(none)` must fail.
+        synthetic_old_row = "| `replace_planning` | (none) |"
+        self.assertRegex(
+            synthetic_old_row, r"\| `replace_planning` \| \(none\) \|"
+        )
+        self.assertNotIn("workflow.implement.base_commit", synthetic_old_row)
+
+
 if __name__ == "__main__":
     unittest.main()
