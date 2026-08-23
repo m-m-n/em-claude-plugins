@@ -403,6 +403,159 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         self.assertIn("not a regression", self.text)
         self.assertIn("continue-on-success-path", self.text)
 
+    # --- task0012 AC-1 (FR11): routed-arm exit from the Batch resolution
+    # --- sequence, at step 2 -----------------------------------------------
+
+    def test_step_2_states_routed_arm_also_exits_the_sequence(self):
+        section = re.sub(r"\s+", " ", self._batch_sequence_section())
+        self.assertIn(
+            "a question the routed arm instead sends to the classification "
+            "gate below also leaves the sequence here",
+            section.lower(),
+        )
+
+    def test_step_2_names_all_three_things_the_routed_question_never_reaches(
+        self,
+    ):
+        section = re.sub(r"\s+", " ", self._batch_sequence_section()).lower()
+        self.assertIn("neither step 3's policy lookup", section)
+        self.assertIn("nor the unlisted-gate fallback", section)
+        self.assertIn("nor `on_unanswered`", section)
+
+    def test_step_2_negative_proof_abort_only_wording_would_not_satisfy_matcher(
+        self,
+    ):
+        # Non-vacuity guard (Test Notes): a step 2 that states only the
+        # abort-exit half (the pre-task0012 wording) must not satisfy the
+        # routed-arm-exit matcher above.
+        fake_step_2 = (
+            "Apply the Fail-closed classification above. A question it "
+            "aborts never reaches step 3."
+        )
+        self.assertNotIn(
+            "a question the routed arm instead sends to the classification "
+            "gate below also leaves the sequence here",
+            fake_step_2.lower(),
+        )
+
+    # --- task0012 AC-3 (NFR2): precedence reservation on the routed arm ----
+
+    def _precedence_reservation_section(self):
+        start = self.text.index("**Precedence reservation.**")
+        end = self.text.index("## Classification gate")
+        return self.text[start:end]
+
+    def test_routed_arm_states_precedence_reservation(self):
+        self.assertIn("**Precedence reservation.**", self.text)
+        section = re.sub(
+            r"\s+", " ", self._precedence_reservation_section()
+        ).lower()
+        self.assertIn(
+            "the routed arm applies only when none of the three "
+            "immediate-abort conditions above holds",
+            section,
+        )
+
+    def test_precedence_reservation_names_all_three_conditions(self):
+        section = re.sub(r"\s+", " ", self._precedence_reservation_section())
+        self.assertIn("`category: security`", section)
+        self.assertIn("`category: license`", section)
+        self.assertIn("`reversible: false`", section)
+
+    def test_precedence_reservation_states_abort_final_and_non_overridable(
+        self,
+    ):
+        section = re.sub(
+            r"\s+", " ", self._precedence_reservation_section()
+        ).lower()
+        self.assertIn(
+            "the abort arm is evaluated first and its abort is final and "
+            "non-overridable",
+            section,
+        )
+        self.assertIn(
+            "the routed arm never converts an abort into a classification",
+            section,
+        )
+
+    def test_precedence_reservation_negative_proof_omitted_reservation_fails(
+        self,
+    ):
+        # Non-vacuity guard: a routed-arm paragraph that OMITS the
+        # precedence reservation (the pre-task0012 wording) must not carry
+        # the marker the section-locator above depends on.
+        fake_routed_arm = (
+            "**The routed arm.** A question whose `category` is "
+            "`spec-change` -- `gate_id: rework.spec-change` -- does not "
+            "abort here. In batch, it is routed to the Classification gate "
+            "below instead of aborting."
+        )
+        self.assertNotIn("**Precedence reservation.**", fake_routed_arm)
+
+    # --- task0012 AC-2 (FR11, NFR2): Unlisted-gate fallback distinguishes
+    # --- the aborted set from the routed set --------------------------------
+
+    def _fallback_block_branch(self):
+        marker = "## Unlisted-gate fallback"
+        end_marker = "### Codex consultation procedure"
+        start = self.text.index(marker)
+        end = self.text.index(end_marker, start)
+        section = self.text[start:end]
+        block_idx = section.index("8. `block`")
+        next_idx = section.index("9. `use_batch_policy`")
+        return section[block_idx:next_idx]
+
+    def test_block_branch_distinguishes_aborted_set_from_routed_set(self):
+        section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
+        self.assertIn(
+            "security, licensing and irreversible-operation questions "
+            "never reach here because the fail-closed classification "
+            "above has already aborted them",
+            section,
+        )
+        self.assertIn(
+            "specification-change questions never reach here either, but "
+            "for a different reason",
+            section,
+        )
+        self.assertIn(
+            "the routed arm removed them from the sequence entirely at "
+            "step 2",
+            section,
+        )
+
+    def test_superseded_single_mechanism_sentence_is_gone(self):
+        # C5: the absence half. Non-vacuity: the block-branch locator above
+        # already proves the region was found and is non-empty (it would
+        # have raised ValueError otherwise).
+        section = self._fallback_block_branch()
+        self.assertTrue(section.strip())
+        self.assertNotIn(
+            "The Fail-closed classification above has already aborted "
+            "every specification-change, security, licensing and "
+            "irreversible-operation question before this branch is "
+            "reached",
+            section,
+        )
+
+    def test_block_branch_negative_proof_old_sentence_would_be_caught(self):
+        # Non-vacuity guard (Test Notes): the matcher above must actually
+        # flag the pre-task0012 wording it supersedes.
+        fake_section = (
+            "8. `block` → The Fail-closed classification above has "
+            "already aborted every specification-change, security, "
+            "licensing and irreversible-operation question before this "
+            "branch is reached, so this branch only ever sees the "
+            "remainder."
+        )
+        self.assertIn(
+            "The Fail-closed classification above has already aborted "
+            "every specification-change, security, licensing and "
+            "irreversible-operation question before this branch is "
+            "reached",
+            fake_section,
+        )
+
     # --- classification is stated mechanically -----------------------------
 
     def test_classification_names_category_values(self):

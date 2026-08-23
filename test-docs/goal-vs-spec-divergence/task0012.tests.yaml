@@ -1,0 +1,55 @@
+task_id: task0012
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_step_2_states_routed_arm_also_exits_the_sequence
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_step_2_names_all_three_things_the_routed_question_never_reaches
+    red_confirmed: true
+    red_reason: "ValueError/AssertionError: 'a question the routed arm instead sends to the classification gate below also leaves the sequence here' not found in step 2 of the pre-edit Batch resolution sequence (only the abort-exit half existed)"
+  AC-2:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_block_branch_distinguishes_aborted_set_from_routed_set
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_superseded_single_mechanism_sentence_is_gone
+    red_confirmed: true
+    red_reason: "positive half: 'specification-change questions never reach here either, but for a different reason' / 'the routed arm removed them from the sequence entirely at step 2' not found in the pre-edit Unlisted-gate fallback block branch, which instead stated the single superseded sentence claiming spec-change was already aborted; absence-half test (test_superseded_single_mechanism_sentence_is_gone) failed against the pre-edit doc because the superseded sentence was still present there"
+  AC-3:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_routed_arm_states_precedence_reservation
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_precedence_reservation_names_all_three_conditions
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_precedence_reservation_states_abort_final_and_non_overridable
+    red_confirmed: true
+    red_reason: "ValueError: '**Precedence reservation.**' substring not found in the pre-edit document; the routed arm paragraph had no precedence-reservation clause"
+  AC-4:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_positioned_between_applicability_and_classifier
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_requires_stable_id_and_round_record
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_reads_category_from_record_not_worker_set
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_security_license_or_irreversible
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_absent_unresolvable_or_unmatched_origin
+    red_confirmed: true
+    red_reason: "ValueError: '**Origin verification.**' substring not found anywhere in the pre-edit Classification gate section; the gate had no origin-verification step at all"
+  AC-5:
+    tests:
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_batch_mode_cites_classification_gate_not_unlisted_fallback
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_interactive_mode_stated_unchanged
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_superseded_fail_closed_abort_claim_is_absent
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_origin_naming_obligation
+    red_confirmed: true
+    red_reason: "positive halves failed (pre-edit rework-planner-contract.md still said 'falls to the unlisted-gate fallback ... aborts rather than proceeding' and had no origin-naming-obligation sentence); absence-half test (test_superseded_fail_closed_abort_claim_is_absent) failed against the pre-edit doc because the superseded sentence was still present there"
+  AC-6:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_records_reason_and_evidence_no_unanswerable_confirmation
+    red_confirmed: true
+    red_reason: "ValueError: '**Origin verification.**' substring not found (step did not exist pre-edit, so its reason/evidence-recording sentence could not exist either)"
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "retention pin: no new test added — this AC requires the three existing abort-arm pins (already present and passing before this task) to remain unchanged, plus a full-suite pass. Verified by re-running the existing retention tests (test_security_and_license_abort_arm_retained, test_irreversible_assumption_abort_arm_retained, test_explicit_gate_list_mechanism_retained_as_a_slot) unmodified and green, and by the full-suite run (1815 tests, 3 baseline failures only, no regressions)."
