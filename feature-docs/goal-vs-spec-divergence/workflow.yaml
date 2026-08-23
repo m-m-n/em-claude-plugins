@@ -453,7 +453,7 @@ review:
     performance: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 10
+  residual_critical_high: 11
   needs_rework: true
 requirements:
   FR1:

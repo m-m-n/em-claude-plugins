@@ -38,6 +38,7 @@ perspective_runs:
   source: litellm
   model: vertex-glm-5
   status: completed
+  note: 1 回目は stream 切断で空の結果。同一プロンプトで再実行した 2 回目の完全な結果を採用
 - perspective: spec
   source: claude
   status: completed
@@ -237,23 +238,53 @@ findings:
   resolution: unresolved
   resolution_reason: 'round 2: awaiting user decision'
 - stable_id: cbb5659c4025c46e
-  severity: medium
+  severity: high
   category: architecture
   file: em-workflow/references/contracts/rework-planner-contract.md
   line: 163
   title: origin verification が要求する stable_id / round record を載せる場所が question-packet スキーマに無い
-  description: evidence[] は path / line / detail の 3 フィールドのみで stable_id を構造化して載せる場所が無く、detail の自由文からの抽出に依存する。validator
-    にも evidence の検証は無い。
+  description: 'evidence[] は path / line / detail の 3 フィールドのみで stable_id を構造化して載せる場所が無く、detail の自由文からの抽出に依存する。validator
+    にも evidence の検証は無い。 glm-5 も独立に同じ不一致を high として検出: rework-planner-contract.md は evidence[] が stable_id とレビューラウンド記録のパスを運ぶと主張するが、question-packet-schema.md
+    は question 側にもそのフィールドを定義していない。'
   suggestion: 'evidence[] に finding_stable_id と record_path を追加し、validator の question-packet 検証で gate_id: rework.spec-change
     の質問に必須チェックを加える。'
   sources:
   - claude:architecture
-  confidence: 60
+  - litellm:vertex-glm-5:architecture
+  confidence: 95
   resolution: unresolved
   resolution_reason: 'round 2: awaiting user decision'
+- stable_id: 6c5f7e9d405f9b7a
+  severity: medium
+  category: architecture
+  file: em-workflow/references/phases/create-spec-phase.md
+  line: 188
+  title: goal ブロックの規則が create-spec-phase.md に再掲されたままで、workflow-schema.md を SSOT として引用していない
+  description: create-spec-phase.md:185-216 が workflow-schema.md:140-181 の goal 規則（逐語性・サイズ上限なし・単一 writer・再入時挙動・取得元なしの扱い・書き込み手順・検証失敗時の帰結）を全面的に再掲している。round
+    1 の fe8f820b4d32ecd9 と同根で、rework では未着手。
+  suggestion: 実体の再掲を 1 行の相互参照に畳む。
+  sources:
+  - litellm:vertex-glm-5:architecture
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting rework'
+- stable_id: b3785c3ae575c8c5
+  severity: medium
+  category: architecture
+  file: em-workflow/references/phase-state.md
+  line: 116
+  title: classification レコードのフィールド説明が question-resolution.md の verdict 規則を部分的に再掲している
+  description: phase-state.md:116-127 の表が verdict 値・evidence_ids 要件・decision 値を説明しており、スキーマ定義を超えて question-resolution.md
+    が所有する規則の再掲になっている。
+  suggestion: 表の行をスキーマのみに短縮し、verdict の意味論は question-resolution.md への引用に委ねる。
+  sources:
+  - litellm:vertex-glm-5:architecture
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'round 2: awaiting rework'
 auto_fix:
   loops_run: 0
   applied_total: 0
   termination: pending-user-decision
-residual_critical_high: 10
+residual_critical_high: 11
 rework_required: true
