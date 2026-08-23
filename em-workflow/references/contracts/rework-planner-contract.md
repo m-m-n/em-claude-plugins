@@ -155,10 +155,15 @@ orchestrator's follow-up sequence is fixed to these five steps:
    `rework.yaml` phase-state.
 5. The `develop` state machine re-enters at `create-spec`.
 
-In batch mode, `rework.spec-change` has no defined policy in
-`batch-policies.yaml`, so it falls to the unlisted-gate fallback (5.9),
-which — because a specification change is one of the fail-closed
-categories — aborts rather than proceeding.
+In batch mode, `rework.spec-change` is resolved through the classification
+gate defined in `references/question-resolution.md`, which this document
+does not restate. Interactive mode is unchanged: the user is asked
+directly.
+
+The question packet returned for `gate_id: rework.spec-change` names each
+originating review finding's `stable_id` and the review round record path
+in the question's `evidence[]` entries — the gate's origin verification
+(`references/question-resolution.md`) reads them from there.
 
 ## Other conditions under which a question packet may be returned
 
