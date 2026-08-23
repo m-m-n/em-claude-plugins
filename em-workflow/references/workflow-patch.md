@@ -79,14 +79,24 @@ neither is rejected:
   `merged` tasks. Either of two states satisfies this path:
   - the `create-plan` step is `needs_update`, OR
   - `create-plan` reads `pending` on a re-entry recognizable as having come
-    through a `create-spec: needs_update` cycle — the signal is a
-    `spec_change` record present in `phase-state/rework.yaml`
-    (`references/phase-state.md`) together with
-    `workflow.implement.base_commit` already being set. The SPEC-change
-    transition (`references/rework-task-synthesis.md` Section 10) sets
-    `create-plan` to `pending`, not `needs_update` — this second case is
-    the state that transition actually produces, which is why the first
-    case alone does not cover it.
+    through a `create-spec: needs_update` cycle — the signal is an
+    **unconsumed** `spec_change` record (`references/phase-state.md`)
+    together with `workflow.implement.base_commit` already being set. The
+    record is read from `{feature-dir}/phase-state/rework.yaml`, or from a
+    `--phase-state` mapping whose own `phase` is `rework` (an equivalent
+    source for a caller that already has that file open) — either source's
+    mapping must also carry a `feature` matching the workflow's `feature`.
+    "Unconsumed" means the record carries `reason`, `finding_stable_id` and
+    `recorded_at_commit` (all non-empty), carries `consumed`, and
+    `consumed` is `false` — a record already marked `consumed: true` is
+    spent, not a standing permission. Any one of these conditions missing
+    means this is not the second case: the invocation falls back to the
+    Initial-planning path's rule (fail-closed — a narrower invocation never
+    widens what `replace_all` permits). The SPEC-change transition
+    (`references/rework-task-synthesis.md` Section 10) sets `create-plan`
+    to `pending`, not `needs_update` — this second case is the state that
+    transition actually produces, which is why the first case alone does
+    not cover it.
 
   A `replace_all` reaching either case of this path after implementation
   has already produced `merged` tasks is the intended flow, not an
@@ -110,6 +120,15 @@ A `replace_all` re-planning pass allocates its new task ids continuing
 ABOVE the highest `taskNNNN` id the feature has ever registered. A task id
 already used by any task — retired or not — is never re-issued to a
 different task, on either case of the Re-planning path above.
+
+Because `replace_all` replaces `tasks` wholesale, the high-water mark has no
+storage of its own: a re-planning `replace_all`'s `entries` MUST re-declare
+every task id already registered in the `workflow.yaml` it is applied to — a
+`merged` task keeps its `status`, its `branch` and its `files` — and any
+genuinely new task is numbered above the highest id present. Dropping a
+registered id is rejected; this is what keeps the highest id readable
+directly from the workflow the patch is applied to, instead of a number
+nothing stores.
 
 ### `append` requirements
 
@@ -188,7 +207,7 @@ check rather than the only thing preventing the overwrite.
 
 ## Application rules (in order)
 
-All sixteen rules apply, in order, to every patch:
+All seventeen rules apply, in order, to every patch:
 
 1. Reject unless `base_input_digest` matches the digest recomputed from the
    current input (rule R1).
@@ -217,6 +236,9 @@ All sixteen rules apply, in order, to every patch:
     (single-write application — no partial or incremental writes).
 16. The commit sequence follows rule R2: the artifact commit first, then the
     status-update commit.
+17. A re-planning `replace_all`'s `entries` must re-declare every task id
+    already registered in the current `workflow.yaml` (Re-planning task-id
+    allocation, above); dropping a registered id is rejected.
 
 ## Ownership boundary
 
