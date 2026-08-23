@@ -69,9 +69,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0001
   task0002:
     title: replace_all permission relaxation for re-planning
     plan: tasks/task0002.md
@@ -90,9 +90,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0002
   task0003:
     title: SPEC-change transition consistency and the wording-correction route
     plan: tasks/task0003.md
@@ -114,9 +114,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0003
   task0004:
     title: batch classification gate in question resolution
     plan: tasks/task0004.md
@@ -148,9 +148,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0004
   task0005:
     title: classification audit record in the phase-state schema
     plan: tasks/task0005.md
@@ -169,9 +169,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0005
   task0006:
     title: batch policy header aligned with the revised fail-closed rule
     plan: tasks/task0006.md
@@ -189,9 +189,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0006
   task0007:
     title: create-spec writes the goal and resolves reference-scan targets
     plan: tasks/task0007.md
