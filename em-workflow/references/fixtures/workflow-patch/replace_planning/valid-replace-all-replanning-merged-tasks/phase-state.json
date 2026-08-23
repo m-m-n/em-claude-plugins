@@ -1,4 +1,6 @@
 {
+  "phase": "rework",
+  "feature": "example",
   "spec_change": {
     "consumed": false,
     "finding_stable_id": "abc123",

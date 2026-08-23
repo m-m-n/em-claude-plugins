@@ -691,8 +691,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # re-planning permission conditions and task-id allocation rule) --
     # same rationale: refresh, don't remove, so the guard keeps catching
     # future incidental edits.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
+    # rework), which settles the re-planning permission contract in one
+    # place: the second Re-planning path case now reads an UNCONSUMED
+    # `spec_change` record (with its reading position named), the
+    # Re-planning task-id allocation section gains the "must re-declare
+    # every registered id" rule, and the Application rules list gains rule
+    # 17 for it. Same rationale as the two refreshes above: refresh, don't
+    # remove.
     WORKFLOW_PATCH_SHA256 = (
-        "ef62162f7d3c0d280db50d96dc23191ceb439ab43c7e3c2c73980f4dccc000c3"
+        "59dbf4316130de2bd3e04a842439cd06209190256d15ea79090f5b4f49ef4d0b"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -701,11 +710,29 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # be made to agree with workflow-patch.md's two permitted paths. As with
     # WORKFLOW_PATCH_SHA256 above, the pin is refreshed, not removed, to
     # keep guarding against future incidental edits of these two files.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
+    # rework): the re-entry recognition helper now resolves its signal from
+    # `{feature-dir}/phase-state/rework.yaml` or a `--phase-state` mapping
+    # whose own `phase` is `rework` (never any mapping carrying a
+    # `spec_change` record, which is what task0016 had left in place and
+    # which task0013's canonical invocation could never actually satisfy),
+    # `REQUIRED_PRESERVE_BY_OPERATION` stays operation-flat while the
+    # path-dependent mandatory-preserve and task-id-allocation checks move
+    # into `_validate_dry_run_apply`'s `replace_all` branch. Same rationale:
+    # refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "f2f5b35fe129492344513c9e80ebec627c1d197ae5f1ea2d070d98cdeb6c11b8"
+        "5e14f0383dc4864868a204f53b7a12b93dee179cd45e9e0b173ea3bf601e4e43"
     )
+    # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
+    # rework): TestReplanningReentrySignalHelper gains the tightened-
+    # contract cases (phase/feature match, unconsumed record, the
+    # feature-dir equivalent source) and TestCanonicalReentryInvocation /
+    # TestReplanningMandatoryPreserveAndTaskIdAllocation are new. Same
+    # rationale as the two refreshes above: refresh, don't remove --
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "417bed81829e48a8cf3b1f21773375127f3c36eec3989d51e4f0ef718a6b69be"
+        "ee61b019978d2f87bc7faaff01b21757465eab08e343d6401c3e7d67e024352b"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

@@ -233,7 +233,18 @@ class TestPreserveVocabulary(unittest.TestCase):
 
 
 class TestApplicationRules(unittest.TestCase):
-    """AC-5: all sixteen application rules, ordered, single-write + R2."""
+    """AC-5: all sixteen application rules from design-input.md, ordered,
+    single-write + R2.
+
+    task0017 (goal-vs-spec-divergence, review round 2 rework): the document
+    now carries a SEVENTEENTH rule (re-planning task-id allocation), added
+    after design-input.md's original sixteen (Convention C3: extend, never
+    renumber -- rules 1-16 keep their numbers and text unchanged). The doc's
+    own rule count is therefore no longer EQUAL to design-input.md's count;
+    it is one more than it. The sanity check that design-input.md itself
+    still states sixteen rules is retained (design-input.md is untouched by
+    this feature), split from the doc-side count so a future change to
+    either fails at the specific assertion that actually moved."""
 
     @classmethod
     def setUpClass(cls):
@@ -243,24 +254,43 @@ class TestApplicationRules(unittest.TestCase):
             cls.text, "## Application rules", "## Ownership boundary"
         )
 
-    def test_rule_count_matches_design_input(self):
+    def test_design_input_still_states_sixteen_rules(self):
         design_rules = self.fixture.application_rules()
         self.assertEqual(
             len(design_rules),
             16,
             "sanity: design-input.md 5.5.5 states sixteen rules",
         )
+
+    def test_doc_rule_count_is_design_input_count_plus_one(self):
+        design_rules = self.fixture.application_rules()
         doc_rule_numbers = re.findall(
             r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE
         )
-        self.assertEqual(len(doc_rule_numbers), len(design_rules))
+        self.assertEqual(
+            len(doc_rule_numbers),
+            len(design_rules) + 1,
+            "workflow-patch.md must carry design-input.md's sixteen rules "
+            "plus this feature's own seventeenth (re-planning task-id "
+            "allocation)",
+        )
 
-    def test_rules_are_ordered_one_through_sixteen(self):
+    def test_rules_are_ordered_one_through_seventeen(self):
         doc_rule_numbers = [
             int(n)
             for n in re.findall(r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE)
         ]
-        self.assertEqual(doc_rule_numbers, list(range(1, 17)))
+        self.assertEqual(doc_rule_numbers, list(range(1, 18)))
+
+    def test_rule_seventeen_states_the_task_id_allocation_rule(self):
+        # Rule 17 is the last rule in the list, so everything from its own
+        # number to the end of the section is its text. Whitespace is
+        # normalized so a line-wrap inside the citation never makes this
+        # brittle.
+        idx = self.doc_rules_section.index("17. ")
+        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:])
+        self.assertIn("re-declare", rule_text)
+        self.assertIn("Re-planning task-id allocation", rule_text)
 
     def test_single_write_application_rule_present(self):
         self.assertIn("single-write", self.text.lower())
@@ -470,8 +500,12 @@ class TestReplanningPathWidenedForSpecChangeReentry(unittest.TestCase):
         )
 
     def test_pending_reentry_case_states_recognizable_signal(self):
+        # task0017 (review round 2 rework) supersedes this wording: the
+        # signal is now an UNCONSUMED spec_change record, not merely one
+        # "present" -- see TestReplanningReentrySignalStrengthenedRound2
+        # below for the rest of this task's own pins.
         self.assertIn(
-            "a `spec_change` record present in `phase-state/rework.yaml`",
+            "an **unconsumed** `spec_change` record",
             self.normalized,
         )
         self.assertIn(
@@ -497,7 +531,7 @@ class TestReplanningPathWidenedForSpecChangeReentry(unittest.TestCase):
             "existing `merged` tasks."
         )
         self.assertNotIn(
-            "a `spec_change` record present in `phase-state/rework.yaml`",
+            "an **unconsumed** `spec_change` record",
             synthetic_old_wording,
         )
         self.assertNotIn(
@@ -575,6 +609,35 @@ class TestReplanningTaskIdAllocationRule(unittest.TestCase):
             "is never re-issued to a different task", self.normalized
         )
 
+    def test_replace_all_must_redeclare_every_registered_id(self):
+        # task0017 (review round 2 rework): the allocation rule gets an
+        # anchor -- a re-planning replace_all may not drop an existing task
+        # entry, because that is what keeps the highest registered id
+        # readable directly from workflow.yaml (no id is ever released).
+        self.assertIn(
+            "MUST re-declare every task id already registered",
+            self.normalized,
+        )
+        self.assertIn("Dropping a registered id is rejected", self.normalized)
+
+    def test_redeclare_matcher_fails_on_pre_change_wording(self):
+        # Negative proof: the pre-task0017 section said nothing about
+        # dropping a registered id.
+        synthetic_old_wording = (
+            "A `replace_all` re-planning pass allocates its new task ids "
+            "continuing ABOVE the highest `taskNNNN` id the feature has "
+            "ever registered. A task id already used by any task -- "
+            "retired or not -- is never re-issued to a different task, on "
+            "either case of the Re-planning path above."
+        )
+        self.assertNotIn(
+            "MUST re-declare every task id already registered",
+            synthetic_old_wording,
+        )
+        self.assertNotIn(
+            "Dropping a registered id is rejected", synthetic_old_wording
+        )
+
     def test_allocation_matcher_fails_on_reissuing_wording(self):
         # Negative proof (Test Notes): an allocation sentence that permits
         # re-issuing an id must fail this matcher.
@@ -588,6 +651,86 @@ class TestReplanningTaskIdAllocationRule(unittest.TestCase):
             synthetic_permissive_wording,
         )
         self.assertNotIn("ABOVE the highest", synthetic_permissive_wording)
+
+
+class TestReplanningReentrySignalStrengthenedRound2(unittest.TestCase):
+    """task0017 (goal-vs-spec-divergence, review round 2 rework), AC-6
+    (NFR1): the re-entry signal's reading position, the "unconsumed"
+    definition, the feature-match requirement and the fail-closed fallback
+    to the Initial-planning path are each stated exactly once, inside the
+    Re-planning path's own bullet."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### `replace_all` permission conditions",
+            "### `append` requirements",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_reading_position_names_both_sources(self):
+        self.assertIn(
+            "The record is read from `{feature-dir}/phase-state/rework.yaml`",
+            self.normalized,
+        )
+        self.assertIn(
+            "a `--phase-state` mapping whose own `phase` is `rework`",
+            self.normalized,
+        )
+
+    def test_feature_match_required(self):
+        self.assertIn(
+            "must also carry a `feature` matching the workflow's `feature`",
+            self.normalized,
+        )
+
+    def test_unconsumed_definition_stated(self):
+        self.assertIn(
+            '"Unconsumed" means the record carries `reason`, '
+            "`finding_stable_id` and `recorded_at_commit`",
+            self.normalized,
+        )
+        self.assertIn("`consumed` is `false`", self.normalized)
+
+    def test_fail_closed_fallback_to_initial_planning_stated(self):
+        self.assertIn(
+            "the invocation falls back to the Initial-planning path's rule",
+            self.normalized,
+        )
+        self.assertIn(
+            "a narrower invocation never widens what `replace_all` permits",
+            self.normalized,
+        )
+
+    def test_negative_proof_pre_change_wording_lacks_all_of_the_above(self):
+        # Non-vacuity: the pre-task0017 wording (task0013's own text) states
+        # none of these -- it never named a reading position, never
+        # required a feature match, and never defined "unconsumed".
+        synthetic_old_wording = (
+            "`create-plan` reads `pending` on a re-entry recognizable as "
+            "having come through a `create-spec: needs_update` cycle -- "
+            "the signal is a `spec_change` record present in "
+            "`phase-state/rework.yaml` (`references/phase-state.md`) "
+            "together with `workflow.implement.base_commit` already being "
+            "set."
+        )
+        self.assertNotIn(
+            "The record is read from `{feature-dir}/phase-state/rework.yaml`",
+            synthetic_old_wording,
+        )
+        self.assertNotIn(
+            "must also carry a `feature` matching the workflow's `feature`",
+            synthetic_old_wording,
+        )
+        self.assertNotIn(
+            '"Unconsumed" means the record carries', synthetic_old_wording
+        )
+        self.assertNotIn(
+            "the invocation falls back to the Initial-planning path's rule",
+            synthetic_old_wording,
+        )
 
 
 class TestMandatoryPreserveReplanningRowRequiresBaseCommit(unittest.TestCase):
