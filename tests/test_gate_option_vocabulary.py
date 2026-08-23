@@ -679,14 +679,20 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
         / "input.json"
     )
 
-    # Updated by goal-vs-spec-divergence/task0002, which owns
-    # em-workflow/references/workflow-patch.md and intentionally edits it
+    # Updated by goal-vs-spec-divergence/task0002, which owned
+    # em-workflow/references/workflow-patch.md and intentionally edited it
     # (the freeze this pin enforces was scoped to the
-    # batch-policy-option-id-consistency implementation window, which has
-    # completed; the pin is refreshed here, not removed, to keep guarding
+    # batch-policy-option-id-consistency implementation window, which had
+    # completed; the pin was refreshed there, not removed, to keep guarding
     # against future incidental edits).
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0013 (review round 1
+    # rework), which also intentionally edits workflow-patch.md (the
+    # re-planning permission conditions and task-id allocation rule) --
+    # same rationale: refresh, don't remove, so the guard keeps catching
+    # future incidental edits.
     WORKFLOW_PATCH_SHA256 = (
-        "9636ddd51d7f606457531facd67eb3d7d5958378a931bbf3a527d87eebc063b6"
+        "ef62162f7d3c0d280db50d96dc23191ceb439ab43c7e3c2c73980f4dccc000c3"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension

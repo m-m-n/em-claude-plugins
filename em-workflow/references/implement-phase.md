@@ -211,22 +211,24 @@ legitimate retry path. A task whose journal last event is `launched` is
 always in-flight, regardless of workflow.yaml `status` — never reinterpret
 it as unlaunched, since the launch guard would deny that launch. Reason:
 I.2.c's route back to planning is the only writer that resets a task's
-status to `pending`, and the planner's `replace_all` re-numbers tasks from
-`task0001`, so the `pending` + `failed` combination only ever arises when a
-re-planned task inherited a retired id's journal events. Given I.2.c's
-route-back precondition below, which admits only tasks with a terminal
-journal last event, and the planner's `replace_all` renumbering from
-`task0001` that is the sole source of any recycled id, a re-numbered task
-can only ever inherit a retired id's terminal events — so workflow.yaml
+status to `pending`, and no re-planning pass ever re-issues a retired task
+id to a different task — `references/workflow-patch.md`'s re-planning
+task-id allocation rule (cited here, never restated) allocates every new
+id above the highest the feature has ever registered, so the `pending` +
+`failed` combination arises only from I.2.c's own reset of a task's own
+prior `failed` status, never from a task inheriting a different task's
+retired id. Given I.2.c's route-back precondition below, which admits only
+tasks with a terminal journal last event, and the allocation rule's
+guarantee that a `replace_all` never re-issues a retired id, a task can
+only ever carry its OWN journal's terminal event — so workflow.yaml
 `status: pending` combined with journal last event `launched` can never
-arise. Because route-back proceeds only when no task is `merged` under
-either source (the widened I.2.c gate above), no retired task id can
-leave a `merged` last event behind for a renumbered task to inherit, so
-the recycled-task-id carve-out above stays correctly scoped to `failed`
-only. The recycled-task-id carve-out above is applied by two parties: the
-orchestrator's own interpretation of the journal (this rule), and the Stop
-hook, `queue_stop_guard.py`, which reads `tasks.{T}.status` and applies the
-identical carve-out itself
+arise. No retired task id is ever re-issued, so a task whose workflow.yaml
+`status` is `pending` can never carry an inherited `merged` journal last
+event; the recycled-task-id carve-out above therefore stays correctly
+scoped to `failed` only. The recycled-task-id carve-out above is applied
+by two parties: the orchestrator's own interpretation of the journal (this
+rule), and the Stop hook, `queue_stop_guard.py`, which reads
+`tasks.{T}.status` and applies the identical carve-out itself
 (see the Stop-hook bullet under 'Supporting cast: journal, hooks, resume'
 below, which states the same classification and cites the classification
 table). The other three queue hooks — `queue_launch_guard.py`,

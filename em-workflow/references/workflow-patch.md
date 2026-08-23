@@ -74,12 +74,23 @@ neither is rejected:
 - **Initial-planning path** — the `create-plan` step is `pending` (first
   planning pass), permitted only when:
   - `tasks` is empty, OR every existing task's `status` is `pending`
-- **Re-planning path** — the `create-plan` step is `needs_update` (an
-  explicit re-plan, e.g. the SPEC-change transition): permitted regardless
-  of task status, including existing `merged` tasks. The SPEC-change
-  transition sets `create-plan` to `needs_update` deliberately, so a
-  `replace_all` reaching this path after implementation has already
-  produced `merged` tasks is the intended flow, not an accident.
+- **Re-planning path** — an explicit re-plan (e.g. the SPEC-change
+  transition): permitted regardless of task status, including existing
+  `merged` tasks. Either of two states satisfies this path:
+  - the `create-plan` step is `needs_update`, OR
+  - `create-plan` reads `pending` on a re-entry recognizable as having come
+    through a `create-spec: needs_update` cycle — the signal is a
+    `spec_change` record present in `phase-state/rework.yaml`
+    (`references/phase-state.md`) together with
+    `workflow.implement.base_commit` already being set. The SPEC-change
+    transition (`references/rework-task-synthesis.md` Section 10) sets
+    `create-plan` to `pending`, not `needs_update` — this second case is
+    the state that transition actually produces, which is why the first
+    case alone does not cover it.
+
+  A `replace_all` reaching either case of this path after implementation
+  has already produced `merged` tasks is the intended flow, not an
+  accident.
 
   On this path, `workflow.implement.base_commit` appears in the patch's
   `preserve` list. This does not contradict the rework invariant that an
@@ -89,7 +100,16 @@ neither is rejected:
   implementation boundary.
 
 A `replace_all` received while any task is `in_progress` or `failed` is a
-protocol error on BOTH paths above.
+protocol error on BOTH paths above. Neither this protocol-error rule nor
+the Initial-planning path's floor condition above changes as a result of
+the Re-planning path's widening.
+
+### Re-planning task-id allocation
+
+A `replace_all` re-planning pass allocates its new task ids continuing
+ABOVE the highest `taskNNNN` id the feature has ever registered. A task id
+already used by any task — retired or not — is never re-issued to a
+different task, on either case of the Re-planning path above.
 
 ### `append` requirements
 
@@ -158,7 +178,7 @@ rejected.
 | operation | mandatory `preserve` |
 |---|---|
 | `append_rework` | `workflow.implement.base_commit` |
-| `replace_planning` | (none) |
+| `replace_planning` | `workflow.implement.base_commit`, mandatory on the Re-planning path; the Initial-planning path has no `implement` base commit yet, so nothing is mandatory there |
 
 `append_rework` also needs the status of every pre-existing task to survive
 the patch. Listing `tasks.<task_id>.status` for each ID in `existing_tasks`
