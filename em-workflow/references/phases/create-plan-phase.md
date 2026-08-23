@@ -253,3 +253,23 @@ invocation above is a coverage regression, not a smaller valid invocation.
   (Reconcile on entry), applying the pending patch per
   `references/phase-state.md`'s Resume decision table
   (`applying_patch`, not yet applied).
+
+## 12. Declared change set derivation
+
+A feature's declared change set is derived — not authored.
+
+- **Inputs**: the union of every `tasks.*.files` entry registered in
+  `workflow.yaml` by planning, plus the default entries. The default
+  entries' enumeration and their membership semantics live in
+  `references/templates/spec-document.md` and
+  `references/templates/requirements-document.md`; this document cites
+  them and never restates them.
+- **Status**: this derivation is a guard, not a statement of the goal — it
+  bounds what the implement phase may touch, and it is not itself a
+  description of what the feature sets out to achieve.
+- **Semantics**: the templates cited above state the superset/containment
+  semantics; this document does not restate them.
+- **Timing**: the derivation is available once planning's proposed patch
+  has registered the task set (section 10 above), and it is re-derived
+  whenever the task set changes — re-planning, or a rework append —
+  rather than being frozen at the first successful planning pass.
