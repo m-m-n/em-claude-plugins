@@ -37,8 +37,9 @@ workflow:
   status: completed
   completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
 - id: implement
-  status: in_progress
+  status: completed
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
+  completed_at_commit: d2370de3908e94469d022afa5ee9ae10099f3ca9
 - id: review
   status: pending
 - id: verify
@@ -298,7 +299,7 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0011
 review:
