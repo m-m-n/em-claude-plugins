@@ -47,6 +47,35 @@ correcting round1's "presenter" criterion to gate-identifier presence):
   the constraint AND names the enforcing script itself (a second,
   independent assertion below covers question-packet-schema.md's own
   text, since AC-7 spans both documents).
+
+task0019 acceptance criteria (round2 findings 87ae09bcfe6410c0,
+61c73dc71f323f45 -- confidence 95: the gate's routing and its origin check
+both consumed values the worker under scrutiny supplied):
+
+- AC-1: the routed arm's entry condition is stated as the question's
+  `gate_id` being `rework.spec-change`, and the section states that the
+  worker-set `category` never selects a route.
+- AC-2: a packet whose `gate_id` is `rework.spec-change` but whose
+  `category` is not `spec-change` is stated to abort as malformed -- it
+  reaches neither the routed arm nor the unlisted-gate fallback.
+- AC-3: irreversibility is decided from orchestrator-held metadata about
+  the operation, and a packet's `reversible: false` still aborts in
+  addition; omitting the assumption cannot remove the abort.
+- AC-4 (retention): the three immediate-abort conditions and the
+  precedence reservation survive unchanged (asserted individually by the
+  pre-existing retention tests above; this task adds one consolidated
+  confirmation).
+- AC-9 (NFR3, partial): the new malformed-pairing and orchestrator-held
+  irreversibility stops each state that their reason is recorded. (The
+  origin-verification half of AC-9 is pinned in
+  tests/test_classification_gate.py, alongside the section it belongs to.)
+
+The Classification gate's own step 3 (origin verification) rewrite --
+AC-5 through AC-7 -- is pinned in tests/test_classification_gate.py, per
+C4's one-module-per-section convention; question-packet-schema.md's new
+`finding_stable_id` field (AC-7's schema half) is pinned in
+tests/test_worker_contract_docs.py, alongside that document's other field
+pins.
 """
 
 import os
@@ -701,6 +730,166 @@ class TestQuestionResolutionDoc(unittest.TestCase):
     def test_resolution_basis_recorded(self):
         self.assertIn("resolution_note", self.text)
         self.assertIn("run report", self.text)
+
+
+class TestClassificationTrustBoundaryFix(unittest.TestCase):
+    """task0019 AC-1 through AC-4, AC-9 (round2 findings 87ae09bcfe6410c0,
+    61c73dc71f323f45): the routed arm and the irreversibility abort must not
+    depend on values the worker under scrutiny supplies.
+
+    - AC-1: the routed arm's entry condition is the question's `gate_id`
+      being `rework.spec-change`; a worker-set `category` never selects a
+      route on its own.
+    - AC-2: a packet whose `gate_id` is `rework.spec-change` but whose
+      `category` disagrees is malformed and aborts, reaching neither the
+      routed arm nor the Unlisted-gate fallback.
+    - AC-3: irreversibility is decided from orchestrator-held metadata
+      about the operation, independent of the packet; a packet's
+      `reversible: false` assumption still aborts in addition, and
+      omitting it can never remove the orchestrator-held abort.
+    - AC-4: the three pre-existing abort arms and the precedence
+      reservation are not weakened, merged or removed by the above.
+    - AC-9 (partial): the two new stop paths each state their reason is
+      recorded.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        with open(DOC_PATH, encoding="utf-8") as fh:
+            cls.text = fh.read()
+        cls.norm = re.sub(r"\s+", " ", cls.text)
+
+    def _fail_closed_section(self):
+        start = self.text.index("## Fail-closed classification")
+        end = self.text.index("## Classification gate")
+        return self.text[start:end]
+
+    def _fail_closed_norm(self):
+        return re.sub(r"\s+", " ", self._fail_closed_section()).lower()
+
+    # --- AC-1: routed arm keyed on gate_id, never on category --------------
+
+    def test_routed_arm_condition_is_gate_id_not_category(self):
+        section = self._fail_closed_norm()
+        self.assertIn(
+            "the routed arm's entry condition is the question's `gate_id` "
+            "being `rework.spec-change`",
+            section,
+        )
+        self.assertIn(
+            "a worker-set `category` value never selects a route on its "
+            "own",
+            section,
+        )
+
+    def test_routed_arm_condition_negative_twin_category_keyed_wording_fails(
+        self,
+    ):
+        # Test Notes: a synthetic sample describing the route as keyed on
+        # `category` must fail the matcher above, otherwise the pin would
+        # pass on any prose merely containing the word `gate_id`.
+        fake_section = (
+            "**The routed arm.** A question whose `category` is "
+            "`spec-change` is routed to the Classification gate below, "
+            "keyed on `gate_id: rework.spec-change` for bookkeeping only."
+        )
+        self.assertNotIn(
+            "the routed arm's entry condition is the question's `gate_id` "
+            "being `rework.spec-change`",
+            fake_section.lower(),
+        )
+
+    # --- AC-2: malformed gate_id/category pairing aborts --------------------
+
+    def test_malformed_pairing_aborts_reaching_neither_arm(self):
+        section = self._fail_closed_norm()
+        self.assertIn(
+            "a question whose `gate_id` is `rework.spec-change` and whose "
+            "`category` is anything other than `spec-change` is malformed "
+            "and aborts here, recording that reason",
+            section,
+        )
+        self.assertIn(
+            "it reaches neither the routed arm above nor the unlisted-gate "
+            "fallback below",
+            section,
+        )
+
+    def test_malformed_pairing_negative_twin_no_mismatch_rule_fails(self):
+        fake_section = (
+            "**The routed arm.** A question whose `gate_id` is "
+            "`rework.spec-change` is routed to the Classification gate, "
+            "regardless of its `category`."
+        )
+        self.assertNotIn("is malformed and aborts", fake_section.lower())
+
+    # --- AC-3: irreversibility from orchestrator-held metadata --------------
+
+    def test_irreversibility_decided_from_orchestrator_held_metadata(self):
+        section = self._fail_closed_norm()
+        self.assertIn(
+            "decided from metadata the orchestrator holds about that "
+            "operation",
+            section,
+        )
+        self.assertIn(
+            "independently of whatever the packet's `assumptions[]` does "
+            "or does not declare",
+            section,
+        )
+
+    def test_reversible_false_still_aborts_in_addition(self):
+        section = self._fail_closed_norm()
+        self.assertIn(
+            "still aborts, in addition to this orchestrator-held check",
+            section,
+        )
+
+    def test_omitting_the_assumption_cannot_remove_the_abort(self):
+        section = self._fail_closed_norm()
+        self.assertIn("omitting the assumption can never remove it", section)
+
+    def test_orchestrator_held_abort_records_its_reason(self):
+        section = self._fail_closed_norm()
+        self.assertIn(
+            "this abort records its reason exactly as every abort in this "
+            "section does",
+            section,
+        )
+
+    def test_irreversibility_negative_twin_packet_only_wording_fails(self):
+        # The pre-task0019 bullet alone (packet-declared reversible: false
+        # only) must not satisfy the orchestrator-held-metadata matcher.
+        fake_section = (
+            "- an `assumptions[]` entry whose `related_question_ids` names "
+            "this question carries `reversible: false` — an irreversible "
+            "operation."
+        )
+        self.assertNotIn(
+            "decided from metadata the orchestrator holds about that "
+            "operation",
+            fake_section.lower(),
+        )
+
+    # --- AC-4: retention, consolidated (individual pins already exist above)
+
+    def test_ac4_all_three_abort_arms_and_precedence_reservation_survive(
+        self,
+    ):
+        section = re.sub(r"\s+", " ", self._fail_closed_section())
+        self.assertIn(
+            "the question's `category` "
+            "(`references/question-packet-schema.md`) is `security` or "
+            "`license`",
+            section,
+        )
+        self.assertIn(
+            "an `assumptions[]` entry whose `related_question_ids` names "
+            "this question carries `reversible: false` — an irreversible "
+            "operation.",
+            section,
+        )
+        self.assertIn("**Precedence reservation.**", self._fail_closed_section())
 
 
 class TestQuestionPacketSchemaCategoryBlockingConstraint(unittest.TestCase):

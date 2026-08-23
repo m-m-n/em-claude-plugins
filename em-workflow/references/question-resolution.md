@@ -84,6 +84,17 @@ option is selected — when any of the following holds:
 - an `assumptions[]` entry whose `related_question_ids` names this question
   carries `reversible: false` — an irreversible operation.
 
+**Irreversibility is decided from orchestrator-held metadata, never from
+the packet alone.** The orchestrator aborts whenever the operation this
+gate stands in front of is on its own irreversible-operations list —
+decided from metadata the orchestrator holds about that operation,
+independently of whatever the packet's `assumptions[]` does or does not
+declare. The `reversible: false` assumption named in the bullet above
+still aborts, in addition to this orchestrator-held check: the two are
+independent triggers for the same abort, and omitting the assumption can
+never remove it. This abort records its reason exactly as every abort in
+this section does.
+
 **Security, licensing, and irreversible operations abort the phase
 immediately, at unchanged force and outside this revision's scope** —
 reaching a decision through either the Batch resolution sequence's policy
@@ -95,11 +106,19 @@ whether the `gate_id` is later found to be listed elsewhere, and regardless
 of whether a Codex suggestion would have mapped onto one of the question's
 existing `option_id`s — none of those three can override this step.
 
-**The routed arm.** A question whose `category` is `spec-change` —
-`gate_id: rework.spec-change` — does not abort here. In batch, it is routed
-to the Classification gate below instead of aborting. In interactive, the
+**The routed arm.** The routed arm's entry condition is the question's
+`gate_id` being `rework.spec-change` — never the worker-set `category`; a
+worker-set `category` value never selects a route on its own. A question
+whose `gate_id` is `rework.spec-change` and whose `category` is
+`spec-change` does not abort here. In batch, it is routed to the
+Classification gate below instead of aborting. In interactive, the
 question is asked directly, exactly as today; this revision introduces no
 new interactive question.
+
+**Malformed pairing.** A question whose `gate_id` is `rework.spec-change`
+and whose `category` is anything other than `spec-change` is malformed and
+aborts here, recording that reason: it reaches neither the routed arm
+above nor the Unlisted-gate fallback below.
 
 **Precedence reservation.** The routed arm applies only when none of the
 three immediate-abort conditions above holds (`category: security`,
@@ -125,19 +144,25 @@ sequence's policy lookup or its Unlisted-gate fallback.
    classification gate was inapplicable because the goal block is absent.
    No backfill of the goal from `SPEC.md` / `REQUIREMENTS.md` is attempted.
 3. **Origin verification.** Before the question reaches classification, it
-   must name the originating review finding(s) by `stable_id`, together
-   with the review round record that carries them
-   (`references/review-phase.md` "Phase R5: Persist the round record",
-   cited, not restated). The orchestrator reads each named finding's
-   `category` from THAT record — never from the question's own worker-set
-   `category` — and aborts when any originating finding's category is
-   `security` or `license`, or when an `assumptions[]` entry naming the
-   question carries `reversible: false`. An origin that is absent,
-   unresolvable, or does not match a finding in the named record also
-   aborts: fail-closed, so a packet with no verifiable origin can never
-   reach classification. Every abort here records its reason and the
-   evidence considered, and none of them raises, in batch, a confirmation
-   nobody can answer.
+   must name the originating review finding(s) by `stable_id`: at least
+   one of its `evidence[]` entries (`references/question-packet-schema.md`)
+   must carry `finding_stable_id`, and a `rework.spec-change` question with
+   no `evidence[]` entry carrying it aborts here, recording that reason.
+   The review round record that carries them is never supplied by the
+   packet: the orchestrator itself locates it, as the review round record
+   for this feature at the position `references/review-phase.md` "Phase
+   R5: Persist the round record" defines (cited, not restated), and
+   searches only there for each named `stable_id`. `evidence[].path` is a
+   human-readable hint presented to a reader; it is never opened as part
+   of this check. The orchestrator reads each named finding's `category`
+   from that record — never from the question's own worker-set `category`
+   — and aborts when any originating finding's category is `security` or
+   `license`, or when an `assumptions[]` entry naming the question carries
+   `reversible: false`. An origin that is absent, unresolvable, or does
+   not match a finding in the named record also aborts: fail-closed, so a
+   packet with no verifiable origin can never reach classification. Every
+   abort here records its reason and the evidence considered, and none of
+   them raises, in batch, a confirmation nobody can answer.
 4. **Question shape.** The question is posed so both directions can be
    raised: (a) the implementation cannot satisfy the goal; (b) the
    implementation satisfies the goal but diverges from the specification

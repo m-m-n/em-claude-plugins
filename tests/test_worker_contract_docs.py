@@ -955,6 +955,46 @@ class TestQuestionPacketFields(unittest.TestCase):
         self.assertIn("does not", lowered)
 
 
+class TestQuestionPacketEvidenceFindingStableIdField(unittest.TestCase):
+    """task0019 AC-7 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45,
+    cbb5659c4025c46e): `questions[].evidence[]` gains `finding_stable_id` in
+    the packet schema's field table -- the structured field the
+    Classification gate's origin verification requires
+    (tests/test_classification_gate.py)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PACKET_DOC_PATH)
+
+    def _evidence_row(self, field):
+        marker = f"`questions[].evidence[]`.`{field}`"
+        self.assertIn(marker, self.text, f"expected the {field!r} field row")
+        idx = self.text.index(marker)
+        row_end = self.text.index("\n", idx)
+        return self.text[idx:row_end]
+
+    def test_field_table_has_existing_evidence_rows(self):
+        # Non-vacuity guard (Test Notes): the table itself must be found
+        # before the new row's presence means anything.
+        self._evidence_row("path")
+        self._evidence_row("line")
+        self._evidence_row("detail")
+
+    def test_finding_stable_id_field_present(self):
+        row = self._evidence_row("finding_stable_id")
+        self.assertIn("stable_id", row.lower())
+
+    def test_finding_stable_id_negative_proof_missing_field_is_detected(self):
+        fake_text = (
+            "| `questions[].evidence[]`.`path` | Evidence file path |\n"
+            "| `questions[].evidence[]`.`line` | Evidence line number |\n"
+            "| `questions[].evidence[]`.`detail` | Evidence detail text |\n"
+        )
+        self.assertNotIn(
+            "`questions[].evidence[]`.`finding_stable_id`", fake_text
+        )
+
+
 class TestQuestionPacketGateIdOwnership(unittest.TestCase):
     """task0019 AC-5: the `gate_id` ownership statement names files that
     actually hold gate identifiers. `references/question-resolution.md`
@@ -1165,20 +1205,61 @@ class TestReworkPlannerContractSpecChangeCitation(unittest.TestCase):
         self.assertIn("falls to the unlisted-gate fallback", fake_section)
         self.assertIn("aborts rather than proceeding", fake_section)
 
-    def test_states_packet_origin_naming_obligation(self):
+    def test_states_packet_names_stable_id_via_finding_stable_id_field(self):
+        # task0019 AC-8 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45):
+        # the packet names stable_ids through the structured
+        # `evidence[].finding_stable_id` field, never the record path.
         section = re.sub(r"\s+", " ", self._transition_section())
         self.assertIn(
             "The question packet returned for `gate_id: rework.spec-change` "
-            "names each originating review finding's `stable_id` and the "
-            "review round record path in the question's `evidence[]` "
-            "entries",
+            "names each originating review finding's `stable_id` in the "
+            "question's `evidence[].finding_stable_id` entries",
             section,
         )
         self.assertIn(
             "the gate's origin verification "
-            "(`references/question-resolution.md`) reads them from there",
+            "(`references/question-resolution.md`) locates that record "
+            "itself",
             section,
         )
+
+    def test_states_packet_does_not_name_the_record_path(self):
+        section = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "does not name the review round record path", section
+        )
+
+    def test_old_packet_names_record_path_wording_is_gone(self):
+        # Negative proof: the pre-task0019 wording let the packet name the
+        # record path -- the worker-controlled channel the origin-
+        # verification bypass used. It must not survive.
+        section = self._transition_section()
+        self.assertNotIn(
+            "names each originating review finding's `stable_id` and the "
+            "review round record path",
+            section,
+        )
+
+    def test_old_wording_negative_proof_would_be_caught(self):
+        fake_section = (
+            "The question packet returned for `gate_id: rework.spec-change` "
+            "names each originating review finding's `stable_id` and the "
+            "review round record path in the question's `evidence[]` "
+            "entries -- the gate's origin verification "
+            "(`references/question-resolution.md`) reads them from there."
+        )
+        self.assertIn(
+            "names each originating review finding's `stable_id` and the "
+            "review round record path",
+            fake_section,
+        )
+
+    def test_does_not_restate_the_r5_position_or_path_formula(self):
+        # NFR1: the round-record location formula is owned by
+        # references/review-phase.md's R5 section and cited from
+        # question-resolution.md; this contract must not restate it.
+        self.assertNotIn("Phase R5", self.text)
+        self.assertNotIn("reviews/round", self.text)
 
     def test_packet_obligation_negative_proof_missing_obligation_fails_matcher(self):
         fake_section = (
