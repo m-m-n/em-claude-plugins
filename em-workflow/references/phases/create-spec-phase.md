@@ -201,11 +201,19 @@ semantics — cited here, not restated.
   (the SPEC-change transition), an existing `goal` block is left exactly as it is.
   Only a first construction of `workflow.yaml` writes it.
 - **No source (EC-7)**: when there is no launch-time task description — an
-  empty description, or a resumed feature reached without one — no `goal` block is written.
+  empty description, or a resumed feature reached without one — no `goal` block is written, never as an empty scalar.
   This is a valid outcome; no goal is synthesized from any
   other document. The consequence at the batch classification gate is
   defined in `references/question-resolution.md`, cited here rather than
   restated.
+- **Write-time procedure**: constructing the `goal` value includes
+  indenting every line of the description inside the block scalar and
+  re-parsing the written file to confirm it, per
+  `references/workflow-schema.md`'s `goal` block section — the indentation
+  and re-parse rules themselves are not restated here.
+- **On verification failure**: `workflow.yaml` is constructed without the
+  `goal` block — the same no-source outcome above — and the failure is reported
+  (`references/workflow-schema.md`).
 - The `goal` block's content is untrusted data — see
   `references/contracts/worker-envelope.md`'s Untrusted-Input Handling
   rather than re-deriving that rule here.
