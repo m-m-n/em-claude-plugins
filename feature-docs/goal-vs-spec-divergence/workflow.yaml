@@ -41,7 +41,7 @@ workflow:
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
   completed_at_commit: 278f356642f88955bbae1da624255459d60013e3
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -436,7 +436,7 @@ tasks:
       owns that document)'
     branch: em-workflow/goal-vs-spec-divergence/task0016
 review:
-  status: in_progress
+  status: pending
   rounds_completed: 2
   plan:
     floor:
