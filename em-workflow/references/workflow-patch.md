@@ -68,17 +68,28 @@ incomplete.
 
 ### `replace_all` permission conditions
 
-`replace_all` is permitted ONLY when ALL of the following hold; otherwise the
-patch is rejected:
+`replace_all` is permitted through exactly two paths; a patch matching
+neither is rejected:
 
-- `tasks` is empty, OR every existing task's `status` is `pending`
-- AND, additionally, one of:
-  - the `create-plan` step is `pending` (first planning pass), OR
-  - the `create-plan` step is `needs_update` (an explicit re-plan)
+- **Initial-planning path** — the `create-plan` step is `pending` (first
+  planning pass), permitted only when:
+  - `tasks` is empty, OR every existing task's `status` is `pending`
+- **Re-planning path** — the `create-plan` step is `needs_update` (an
+  explicit re-plan, e.g. the SPEC-change transition): permitted regardless
+  of task status, including existing `merged` tasks. The SPEC-change
+  transition sets `create-plan` to `needs_update` deliberately, so a
+  `replace_all` reaching this path after implementation has already
+  produced `merged` tasks is the intended flow, not an accident.
 
-A `replace_all` received while any task is `in_progress` / `merged` /
-`failed` is a protocol error. Re-planning after implementation has started
-goes through the rework path (`append`) instead.
+  On this path, `workflow.implement.base_commit` appears in the patch's
+  `preserve` list. This does not contradict the rework invariant that an
+  `append_rework` patch never changes `base_commit` (see Mandatory
+  `preserve` per operation, below) — the two state the same fact about
+  `base_commit` survival from different sides of the SPEC-change /
+  implementation boundary.
+
+A `replace_all` received while any task is `in_progress` or `failed` is a
+protocol error on BOTH paths above.
 
 ### `append` requirements
 
