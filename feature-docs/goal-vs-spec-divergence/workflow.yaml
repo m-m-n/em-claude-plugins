@@ -1,0 +1,250 @@
+schema_version: 1
+feature: goal-vs-spec-divergence
+created: 2026-08-23
+base_branch: main
+parent_branch: em-workflow/goal-vs-spec-divergence/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: a49819ffb60ac1f16f05a6265868da5597c05c46
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "成果物が em-workflow のプロトコル文書・エージェントプロンプト・tests/ 配下の Python テストのみで、UI 面・データモデル・デザインシステム入力を持たない。design_system_candidates は 0 件。create-spec.design-step ゲートでユーザーが skip を確認済み"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "Verbatim goal persistence"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR2:
+    title: "Goal immutability"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR3:
+    title: "Goal treated as untrusted"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR4:
+    title: "Relaxed replace_all permission condition"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  FR5:
+    title: "base_commit preservation on replanning"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  FR6:
+    title: "SPEC-change transition holds"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  FR7:
+    title: "Classification gate (batch-only)"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR8:
+    title: "Interactive behaviour unchanged"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR9:
+    title: "Asymmetry of classification outcomes"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR10:
+    title: "Adoption criterion (naming the evidence)"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR11:
+    title: "Revised fail-closed classification"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR12:
+    title: "Handling of Codex output"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR13:
+    title: "Route when Codex is absent"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR14:
+    title: "Classification audit record"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR15:
+    title: "Independent wording-correction route"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  FR16:
+    title: "Wording-correction route guard"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  FR17:
+    title: "Impact-on-tests detection at create-spec"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+  FR18:
+    title: "Declared Change Set becomes derived"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  FR19:
+    title: "Conditional auto-addition of deviations, containment check retained"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  FR20:
+    title: "Handling of pre-existing features without a goal block"
+    status: tbd
+    tbd_reason: "今回の 9 件の回答は新規 create-spec 経路での goal 永続化のみを決めており、既存 feature への遡及（backfill するか、分類ゲート非適用として従来の停止に倒すか）はどの回答でも触れられていない。create-plan の TBD 解決で確定させる"
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "SSOT discipline"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "Fail-closed strength not regressed"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  NFR3:
+    title: "Unattended-run continuity"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "Codex independence"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "Test conventions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: "Plugin version bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-9]
+  NFR7:
+    title: "Single scope"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR8:
+    title: "Existing tests not broken"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-10]
