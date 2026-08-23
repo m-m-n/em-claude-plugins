@@ -188,6 +188,24 @@ seven-step `workflow` array with `create-spec` set to `completed` and its
 `review`, `requirements` (one entry per FR/NFR from spec-writer's
 `spec_index`), and `goal`.
 
+**Partial update on re-entry**: when create-spec is re-entered with
+`status: needs_update` — the SPEC-change transition
+(`references/rework-task-synthesis.md` Section 10) — this is a partial
+update, not a reconstruction, of `workflow.yaml`. The re-entry leaves
+untouched:
+
+- `tasks` in full: every entry, with its `status`, `branch` and `files`;
+- each step's `status` and `completed_at_commit`, except the statuses the
+  SPEC-change transition itself assigns;
+- `workflow.implement.base_commit`;
+- `project` and `requirements`;
+- `goal` (carved out separately below).
+
+What the re-entry DOES write: the create-spec artifacts this phase
+produces, and the step statuses the transition assigns. The re-planning
+path in `references/workflow-patch.md` depends on this survival; that
+document's rules are cited here, never restated.
+
 **The `goal` field**: `references/workflow-schema.md` defines its schema and
 semantics — cited here, not restated.
 
