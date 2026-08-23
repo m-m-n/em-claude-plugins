@@ -23,6 +23,28 @@ convention):
 
 Constraints (C6a, C6b): no `taskNNNN`-shaped identifier and no "decision
 table" / 「決定表」 phrase anywhere in the document.
+
+task0019 acceptance criteria (round2 findings 87ae09bcfe6410c0,
+61c73dc71f323f45, cbb5659c4025c46e -- confidence 95: the worker under
+scrutiny controlled which file the origin check opened):
+
+- AC-5: step 3 states that the review round record is located by the
+  orchestrator from `references/review-phase.md`'s R5 position, that the
+  named `stable_id`s are searched only there, and that `evidence[].path`
+  is a human-readable hint that is never opened for this check.
+- AC-6: step 3 still aborts when the origin is absent, unresolvable, or
+  not found in the located record, and when any originating finding's
+  category read from that record is `security` or `license`; every abort
+  still records its reason and the evidence considered. (Pre-existing
+  pins above already cover most of this half unchanged; task0019 adds no
+  new assertions here beyond the below since the wording survives
+  verbatim.)
+- AC-7: `questions[].evidence[]` carries `finding_stable_id`, and step 3
+  requires at least one entry carrying it for a `rework.spec-change`
+  question, aborting when none does. (The schema half -- the field table
+  row itself -- is pinned in tests/test_worker_contract_docs.py.)
+- AC-9 (NFR3, partial): the new `finding_stable_id` abort states its
+  reason is recorded.
 """
 
 import os
@@ -327,6 +349,88 @@ class TestClassificationGate(unittest.TestCase):
             "the orchestrator reads each named finding's `category` from "
             "that record".lower(),
             fake_step.lower(),
+        )
+
+    # --- task0019 AC-5/AC-7/AC-9: origin verification locates the record ----
+    # --- itself; evidence[].path is demoted; finding_stable_id required -----
+
+    def test_record_never_supplied_by_the_packet(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "the review round record that carries them is never supplied "
+            "by the packet",
+            section,
+        )
+
+    def test_orchestrator_locates_record_from_r5_position(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "the orchestrator itself locates it, as the review round "
+            "record for this feature at the position "
+            "`references/review-phase.md`".lower(),
+            section,
+        )
+        self.assertIn(
+            'phase r5: persist the round record" defines', section
+        )
+        self.assertIn("cited, not restated", section)
+
+    def test_searches_only_the_located_record(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "searches only there for each named `stable_id`".lower(), section
+        )
+
+    def test_evidence_path_demoted_to_never_opened_hint(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "`evidence[].path` is a human-readable hint presented to a "
+            "reader".lower(),
+            section,
+        )
+        self.assertIn("it is never opened as part of this check", section)
+
+    def test_negative_twin_packet_supplied_path_wording_fails(self):
+        # Test Notes: a synthetic sample where the origin check is
+        # described as opening a packet-chosen path must fail this matcher.
+        fake_section = (
+            "**Origin verification.** The orchestrator opens the file at "
+            "`evidence[].path` and reads the finding's category from it."
+        )
+        self.assertNotIn(
+            "the review round record that carries them is never supplied "
+            "by the packet",
+            fake_section.lower(),
+        )
+
+    def test_requires_finding_stable_id_on_at_least_one_evidence_entry(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "at least one of its `evidence[]` entries "
+            "(`references/question-packet-schema.md`) must carry "
+            "`finding_stable_id`".lower(),
+            section,
+        )
+
+    def test_missing_finding_stable_id_aborts_a_spec_change_question(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "a `rework.spec-change` question with no `evidence[]` entry "
+            "carrying it aborts here, recording that reason".lower(),
+            section,
+        )
+
+    def test_negative_twin_no_finding_stable_id_requirement_fails(self):
+        fake_section = (
+            "**Origin verification.** The question must name the "
+            "originating review finding(s) by `stable_id` somewhere in its "
+            "prose."
+        )
+        self.assertNotIn(
+            "at least one of its `evidence[]` entries "
+            "(`references/question-packet-schema.md`) must carry "
+            "`finding_stable_id`".lower(),
+            fake_section.lower(),
         )
 
     # --- Constraints: forbidden literals (C6a, C6b) -------------------------
