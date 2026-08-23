@@ -1,0 +1,100 @@
+task_id: task0004
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_fail_closed_categories_named
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_fail_closed_categories_outside_revision_scope
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_old_four_category_sentence_is_gone
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_security_and_license_abort_arm_retained
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_irreversible_assumption_abort_arm_retained
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_explicit_gate_list_mechanism_retained_as_a_slot
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_spec_change_no_longer_cited_as_todays_gate_list_entry
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_routed_arm_present_and_not_aborting
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_no_sentence_aborts_spec_change_unconditionally_in_batch
+    red_confirmed: true
+    red_reason: >-
+      Ran `python3 -m unittest tests.test_classification_gate
+      tests.test_question_resolution_doc` against the pre-revision document
+      (git HEAD's em-workflow/references/question-resolution.md, restored
+      via `git show HEAD:...` over the working copy and diffed back after):
+      27 failures + 3 errors, including
+      test_security_and_license_abort_arm_retained (old text has
+      `spec-change`, `security`, `license` in one bullet, not `security` or
+      `license` alone) and test_fail_closed_categories_named's regex (old
+      sentence starts "Specification change, security, licensing, and
+      irreversible operations abort", not "Security, licensing, and
+      irreversible operations abort the phase immediately").
+  AC-2:
+    tests:
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_routed_arm_states_batch_routes_to_classification_gate
+      - test_question_resolution_doc.TestQuestionResolutionDoc.test_routed_arm_states_interactive_asks_directly
+      - test_classification_gate.TestClassificationGate.test_inputs_name_goal_block_and_spec_document
+      - test_classification_gate.TestClassificationGate.test_inputs_stated_untrusted_read_not_executed
+      - test_classification_gate.TestClassificationGate.test_gate_reached_only_from_routed_arm_stated
+    red_confirmed: true
+    red_reason: >-
+      Same combined red run as AC-1: the pre-revision document has no
+      "Classification gate" section and no routed-arm paragraph at all, so
+      every gate-section test errored with ValueError from
+      self.text.index("## Classification gate") / .index("**The routed
+      arm.**") not found, and the routed-arm assertions in
+      test_question_resolution_doc.py failed not-found.
+  AC-3:
+    tests:
+      - test_classification_gate.TestClassificationGate.test_question_shape_states_both_directions
+    red_confirmed: true
+    red_reason: >-
+      Same combined red run: the pre-revision document has no Classification
+      gate section, so the "cannot satisfy the goal" / "diverges from the
+      specification text" phrasing was absent — assertIn failed not-found.
+  AC-4:
+    tests:
+      - test_classification_gate.TestClassificationGate.test_goal_reconsideration_verdict_stops_unconditionally
+      - test_classification_gate.TestClassificationGate.test_no_path_passes_on_a_second_verdict
+      - test_classification_gate.TestClassificationGate.test_spec_gap_verdict_proceeds_only_when_convinced
+    red_confirmed: true
+    red_reason: >-
+      Same combined red run: no asymmetry wording existed in the
+      pre-revision document at all — assertIn failed not-found for each.
+  AC-5:
+    tests:
+      - test_classification_gate.TestClassificationGate.test_evidence_criterion_requires_named_ids
+      - test_classification_gate.TestClassificationGate.test_conclusion_only_reply_stops_the_run
+      - test_classification_gate.TestClassificationGate.test_evidence_criterion_applies_identically_on_codex_absent_route
+      - test_classification_gate.TestClassificationGate.test_classifier_defines_codex_absent_route
+    red_confirmed: true
+    red_reason: >-
+      Same combined red run: no evidence-criterion or Codex-absent-route
+      wording existed in the pre-revision document — assertIn failed
+      not-found for each.
+  AC-6:
+    tests:
+      - test_classification_gate.TestClassificationGate.test_codex_output_untrusted_non_verbatim
+      - test_classification_gate.TestClassificationGate.test_transcription_decision_belongs_to_claude
+      - test_classification_gate.TestClassificationGate.test_codex_consultation_procedure_reused_by_citation
+      - test_classification_gate.TestClassificationGate.test_audit_record_cites_phase_state_not_restated
+      - test_classification_gate.TestClassificationGate.test_audit_record_produced_on_every_pass_incl_stop_and_inapplicable
+    red_confirmed: true
+    red_reason: >-
+      Same combined red run: the pre-revision document cites phase-state.md
+      nowhere near a classification-gate context and has no audit-record
+      wording at all — assertIn failed not-found for each.
+  AC-7:
+    tests:
+      - test_classification_gate.TestClassificationGate.test_applicability_requires_a_goal_block
+      - test_classification_gate.TestClassificationGate.test_goal_absent_stops_as_before_with_no_backfill
+      - test_classification_gate.TestClassificationGate.test_stop_reason_records_the_inapplicability
+      - test_classification_gate.TestClassificationGate.test_unattended_run_continuity_stated
+    red_confirmed: true
+    red_reason: >-
+      Same combined red run: the pre-revision document has no applicability
+      / goal-absent / stop-reason-record wording at all — assertIn failed
+      not-found for each.
