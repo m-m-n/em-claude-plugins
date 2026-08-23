@@ -120,6 +120,39 @@ new one, or both.
 | `IMPLEMENTATION.md` | Only when the rework task introduces a NEW shared contract (interface, data format) with an existing task; the synthesizing worker always emits `payload.shared_contract_rationale` (summary of what was added, or why nothing needed adding) regardless of which branch it took, so the decision has a human-readable trail |
 | `SPEC.md` / `REQUIREMENTS.md` | Never updated by this synthesis; a rework that needs a SPEC change takes the transition in Section 10 instead |
 
+### Wording-correction route
+
+Before a needed change to `IMPLEMENTATION.md` or `VERIFICATION.md` is routed
+to rework-task synthesis above or to the SPEC-change transition (Section
+10), route selection checks first whether it qualifies for this
+independent route.
+
+**Applies to**: a change confined to the wording of the two create-plan-owned
+documents — `IMPLEMENTATION.md` and `VERIFICATION.md`.
+
+**Eligibility (all three, conjunctive — every condition below must hold)**:
+
+1. No planner re-entry is needed.
+2. No plan or task metadata changes: the task set, `files`, `skills`,
+   `domains`, `complexity`, or plan paths.
+3. No requirement metadata changes: requirement statements, IDs, `status`,
+   or the task/test mapping.
+
+**Outcome when eligible**: the correction is applied through this section's
+document-update channel with no task synthesized, `create-plan` is NOT set
+to `needs_update`, and no workflow patch touching planning is produced.
+
+**Guard**: failing any ONE of the three conditions above makes this route
+inapplicable, and the change instead goes through rework-task synthesis or
+the SPEC-change transition (Section 10). Each condition names the concrete
+artefact whose change disqualifies the route, so a change that turns out to
+have touched, for example, requirement metadata is recognizable after the
+fact rather than only by the intent behind it.
+
+**Ordering**: this route is checked first; only a change that fails it can
+reach the SPEC-change transition and, through it, the classification gate
+(`references/question-resolution.md`).
+
 ## 10. Workflow state transition
 
 **Review-sourced rework** proceeds in this fixed order:
@@ -151,9 +184,15 @@ change, the orchestrator's transition is fixed:
    finding's `stable_id`
 5. The develop state machine re-enters at `create-spec`
 
-Batch mode has no `rework.spec-change` entry in `batch-policies.yaml`, so it
-falls to the unlisted-gate fallback (`references/question-resolution.md`)
-— which aborts, because a SPEC change is not a success-path outcome.
+Step 2's `create-plan` re-entry is not rejected merely because merged tasks
+already exist in `workflow.yaml` at that point. The permission conditions
+that decide when a re-entry is admitted are owned by
+`references/workflow-patch.md`; this document does not restate them.
+
+In batch mode, `rework.spec-change` is resolved through the classification
+gate defined in `references/question-resolution.md`, which this document
+does not restate. Interactive mode is unchanged: the user is asked
+directly.
 
 **Other question conditions** — the synthesizing worker returns a question
 packet instead of tasks only when: the same finding still has mutually
