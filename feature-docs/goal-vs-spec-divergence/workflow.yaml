@@ -546,7 +546,7 @@ tasks:
     requirements:
     - NFR5
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0021
 review:
