@@ -18,11 +18,11 @@ packets:
       - question_id: unresolved.gate-mode
         status: answered
       - question_id: unresolved.gate-scope
-        status: issued
+        status: answered
       - question_id: unresolved.work-order
-        status: issued
+        status: answered
       - question_id: scope.optional-items
-        status: issued
+        status: answered
       - question_id: unresolved.defect2-route
         status: issued
       - question_id: edge.codex-unavailable
@@ -54,6 +54,30 @@ answers:
     selected_option_ids: [batch_only]
     freeform: null
     normalized_answer: "Codex 分類ゲートは batch 専用。interactive では従来どおりユーザーに直接聞く"
+  unresolved.gate-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:56:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [all_spec_change]
+    freeform: null
+    normalized_answer: "rework.spec-change で止まるケース全体を分類ゲートに通す。fail-closed 規則自体の改訂を伴う"
+  unresolved.work-order:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:56:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [single_batch]
+    freeform: null
+    normalized_answer: "順序を決めず、全項目を 1 フィーチャーとしてまとめて仕様化・実装する"
+  scope.optional-items:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:56:00+09:00"
+    source: user
+    answer_mode: multi_select
+    selected_option_ids: [upstream_detection, declared_set_derivation]
+    freeform: null
+    normalized_answer: "上流での波及テスト検出と Declared Change Set の導出化を、どちらもこの feature のスコープに含める"
 worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
