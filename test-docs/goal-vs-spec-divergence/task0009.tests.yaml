@@ -1,0 +1,101 @@
+task_id: task0009
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_change_set_derivation.TestSectionExists.test_heading_present
+      - test_change_set_derivation.TestSectionExists.test_heading_occurs_exactly_once
+      - test_change_set_derivation.TestSectionExists.test_heading_follows_completion_section
+      - test_change_set_derivation.TestInputsStated.test_derived_not_authored_stated
+      - test_change_set_derivation.TestInputsStated.test_tasks_files_literal_cited
+      - test_change_set_derivation.TestInputsStated.test_default_entries_phrase_present
+      - test_change_set_derivation.TestInputsStated.test_cites_both_templates_for_default_entries
+      - test_change_set_derivation.TestInputsStated.test_does_not_enumerate_the_default_entries_itself
+    red_confirmed: true
+    red_reason: >-
+      Before create-plan-phase.md had section 12, TestSectionExists'
+      test_heading_present/test_heading_occurs_exactly_once failed with
+      "AssertionError: '## 12. Declared change set derivation' not found",
+      and every setUpClass in TestInputsStated raised
+      "ValueError: substring not found" from _derivation_section (the
+      heading did not exist yet).
+  AC-2:
+    tests:
+      - test_change_set_derivation.TestGuardStatusStated.test_guard_not_goal_phrase_present
+    red_confirmed: true
+    red_reason: >-
+      Failed with "ValueError: substring not found" (_derivation_section
+      raised because the section did not exist yet) before the section was
+      added.
+  AC-3:
+    tests:
+      - test_change_set_derivation.TestSemanticsAndTimingStated.test_semantics_cited_not_restated
+      - test_change_set_derivation.TestSemanticsAndTimingStated.test_re_derivation_timing_stated
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised "ValueError: substring not found" before the
+      section existed; both tests errored for that reason.
+  AC-4:
+    tests:
+      - test_spec_template_declared_change_set.TestDerivationStatementPresent.test_derivation_statement_present
+      - test_spec_template_declared_change_set.TestDerivationStatementPresent.test_create_plan_phase_cited
+      - test_spec_template_declared_change_set.TestDerivationStatementPresent.test_author_enumeration_placeholder_removed
+      - test_requirements_template_declared_change_set.TestDerivationStatementPresent.test_derivation_statement_present
+      - test_requirements_template_declared_change_set.TestDerivationStatementPresent.test_create_plan_phase_cited
+      - test_requirements_template_declared_change_set.TestDerivationStatementPresent.test_author_enumeration_placeholder_removed
+    red_confirmed: true
+    red_reason: >-
+      Before editing spec-document.md, test_derivation_statement_present
+      and test_create_plan_phase_cited failed with AssertionError (phrase
+      not found in the still-placeholder section), and
+      test_author_enumeration_placeholder_removed failed with
+      "AssertionError: '{Enumerate every file and directory this feature
+      creates or modifies.}' unexpectedly found". The requirements-template
+      trio failed identically before requirements-document.md was edited
+      (its own {変更対象パスN} placeholder matched the compiled
+      REMOVED_PLACEHOLDER_PATTERN).
+  AC-5:
+    tests:
+      - test_spec_template_declared_change_set.TestRootLiteralsPresent.test_feature_docs_root_literal_present
+      - test_spec_template_declared_change_set.TestRootLiteralsPresent.test_test_docs_root_literal_present
+      - test_spec_template_declared_change_set.TestEnumerationAndCitation.test_every_feature_docs_member_named
+      - test_spec_template_declared_change_set.TestSemanticsStated.test_superset_containment_stated
+      - test_spec_template_declared_change_set.TestSemanticsStated.test_zero_implement_task_instance_stated
+    red_confirmed: false
+    red_reason: >-
+      Retention criterion (AC-5 requires these to still pass, not to change
+      behavior): this task's edit to spec-document.md touches only the
+      placeholder line pinned by AC-4; these retention pins were already
+      green before this task's edit (they assert content this task never
+      touches) and remain green after it. There is no pre-task wording for
+      them to go red against.
+  AC-6:
+    tests:
+      - test_change_set_derivation.TestNoForbiddenLiteralsInSection.test_root_globs_never_co_occur
+      - test_change_set_derivation.TestNoForbiddenLiteralsInSection.test_no_exclusion_wording_at_all
+    red_confirmed: true
+    red_reason: >-
+      Both errored with "ValueError: substring not found" (setUpClass could
+      not slice a section that did not exist yet) before section 12 was
+      added.
+  AC-7:
+    tests:
+      - test_declared_change_set_invariants.TestNoVerifySideExclusionRule.test_no_offender_found
+      - test_declared_change_set_invariants.TestNoThirdRestatementOfDefaultMembership.test_carrier_set_is_subset_of_the_two_templates
+    red_confirmed: false
+    red_reason: >-
+      Non-regression guard, not new behavior: this task never edits
+      test_declared_change_set_invariants.py (it did not move where the
+      default entries are enumerated), so these guards were already green
+      before this task started and stay green after it. Verified directly
+      by re-running this module (100/100 across the four related modules)
+      and by the full-suite run (1622 tests, only the 3 pre-existing
+      baseline failures in test_guardrail_hooks_migration.py, unrelated to
+      this task).

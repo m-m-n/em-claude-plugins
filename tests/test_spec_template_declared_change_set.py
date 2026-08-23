@@ -12,9 +12,11 @@ Covers task0001 Acceptance Criteria
   TestSectionPosition (TS-1), TestSectionInsideOuterFencedBody (TS-2).
 - AC-2 (FR3, FR4): the section contains both root literals of Contract MK,
   names every DM-2 feature-docs member and the DM-3 `{T}.tests.yaml`
-  member, and includes a `{placeholder}` slot for the author's own paths
-  (DM-8) -> TestRootLiteralsPresent, TestEnumerationAndCitation (member /
-  design-artifacts / test-docs-member tests), TestPlaceholderSlot
+  member, and (as of task0009, goal-vs-spec-divergence) states the
+  create-plan derivation for the feature-specific paths instead of a
+  `{placeholder}` slot for the author to hand-enumerate them (DM-8) ->
+  TestRootLiteralsPresent, TestEnumerationAndCitation (member /
+  design-artifacts / test-docs-member tests), TestDerivationStatementPresent
   (TS-5 / TS-6, spec-document half).
 - AC-3 (FR4, NFR2): the section cites `implement-phase.md` as the owner of
   the per-task test record and the phase documents /
@@ -122,9 +124,19 @@ NO_VIOLATION_PHRASE = (
     "a declared path that never materializes is not a violation"
 )
 
-# DM-8: the placeholder slot for the feature-specific paths the SPEC
-# author enumerates, in the template's existing `{placeholder}` convention.
-AUTHOR_PLACEHOLDER = (
+# DM-8 (task0009, goal-vs-spec-divergence): the create-plan derivation
+# statement that replaces the removed author-enumeration placeholder. The
+# feature-specific paths are no longer hand-authored; this section states
+# the derivation and cites create-plan-phase.md as its owner (NFR2 --
+# cite, never restate).
+DERIVATION_STATEMENT_PHRASE = (
+    "the feature-specific paths above are derived at create-plan from "
+    "every task's `files` entries in `workflow.yaml`"
+)
+CREATE_PLAN_PHASE_CITATION = "`references/phases/create-plan-phase.md`"
+
+# Regression guard (AC-4): the removed instruction must not reappear.
+REMOVED_AUTHOR_PLACEHOLDER = (
     "{Enumerate every file and directory this feature creates or modifies.}"
 )
 
@@ -295,14 +307,24 @@ class TestSemanticsStated(unittest.TestCase):
         self.assertIn(NO_VIOLATION_PHRASE, self.section)
 
 
-class TestPlaceholderSlot(unittest.TestCase):
-    """DM-8 / AC-2: a placeholder slot exists for the feature-specific
-    paths the SPEC author enumerates, in the template's existing
-    `{placeholder}` convention."""
+class TestDerivationStatementPresent(unittest.TestCase):
+    """DM-8 (task0009, goal-vs-spec-divergence) / AC-4: the section states
+    the create-plan derivation for the feature-specific paths, citing
+    `references/phases/create-plan-phase.md`, instead of asking the SPEC
+    author to hand-enumerate them."""
 
-    def test_author_placeholder_present(self):
-        section = _declared_change_set_section(_read())
-        self.assertIn(AUTHOR_PLACEHOLDER, section)
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_declared_change_set_section(_read()))
+
+    def test_derivation_statement_present(self):
+        self.assertIn(DERIVATION_STATEMENT_PHRASE, self.section)
+
+    def test_create_plan_phase_cited(self):
+        self.assertIn(CREATE_PLAN_PHASE_CITATION, self.section)
+
+    def test_author_enumeration_placeholder_removed(self):
+        self.assertNotIn(REMOVED_AUTHOR_PLACEHOLDER, self.section)
 
 
 class TestValidationDetectsRegressions(unittest.TestCase):
@@ -338,8 +360,12 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         self.assertNotIn(ZERO_IMPLEMENT_TASK_PHRASE, sample)
         self.assertNotIn(NO_VIOLATION_PHRASE, sample)
 
-    def test_placeholder_matcher_flags_absence_in_pre_change_sample(self):
-        self.assertNotIn(AUTHOR_PLACEHOLDER, PRE_CHANGE_SAMPLE)
+    def test_derivation_statement_matcher_flags_absence_in_pre_change_sample(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_SAMPLE)
+        self.assertNotIn(DERIVATION_STATEMENT_PHRASE, sample)
+        self.assertNotIn(CREATE_PLAN_PHASE_CITATION, sample)
 
 
 class TestPreChangeSampleGuards(unittest.TestCase):
