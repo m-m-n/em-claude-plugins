@@ -66,14 +66,18 @@ findings:
     を 1 度 dispatch した時点」。実際の遷移順は rework 記録 → create-spec 再入場（consumed: true）→ create-plan 再入場 → replace_all なので、create-plan
     が patch を出す時点で必ず消費済み。is_replanning は常に False になり、merged タスクありの replace_all は従来どおり拒否される。フィクスチャは consumed: false
     を直接与えているためこの順序衝突を一度も踏んでいない。'
-  suggestion: (a) consumed の消費点を「再計画 replace_all の適用完了時」へ移す、(b) create-spec 停止条件用と再計画許可用でフラグを分離する、(c) 遷移側で create-plan
-    を needs_update にして第 2 ケース自体を不要にする。いずれも create-spec dispatch → create-plan 再入の順序を再現する統合テストで固定すること。
+  suggestion: '【ユーザー決定済み・案 (b) を採る】`spec_change` のフラグを 2 つに分離する。現在の `consumed` は「create-spec を 1 度 dispatch した」ことを表す停止条件抑止用のフラグとして残し、再計画
+    replace_all の許可判定はそれとは別の未消費フラグ（例: `replan_authorized`）で行う。再計画許可用フラグは spec-change 遷移が記録時に立て、再計画 replace_all の適用完了時に消費する。根拠:
+    現在の不具合の原因は 1 つのフラグが用途の異なる 2 つの判定に使われていること。案 (a)（消費点の後ろ倒し）はその構造を残したまま到達順をずらす対症療法で、停止条件の抑止期間が延びる副作用がある。案 (c)（遷移で
+    create-plan を needs_update にする）は SPEC の FR6 が遷移を pending と定めているため要件変更を伴う。変更対象: `em-workflow/references/phase-state.md`（spec_change
+    スキーマ）、`em-workflow/references/workflow-patch.md`（再計画パス第 2 ケースの条件）、`em-workflow/scripts/validate-worker-output.py`（workflow_replace_all_spec_change_reentry）、`em-workflow/skills/develop/SKILL.md`
+    Step B（消費点の記述）。create-spec dispatch → create-spec 完了 → create-plan 再入場という正規の順序を再現する統合テストで固定すること。'
   sources:
   - claude:spec
   - claude:comprehensive
   confidence: 95
   resolution: unresolved
-  resolution_reason: 'round 3: awaiting user decision'
+  resolution_reason: 'round 3: routed to round 4 rework, approach (b) decided by user'
 - stable_id: ec89a950d5247129
   severity: high
   category: comprehensive

@@ -44,6 +44,20 @@ pending_decisions:
   scope: tests/test_guardrail_hooks_migration.py
   reason: AC-11（python3 -m unittest discover -s tests のフルスイート合格）が未達のため
   carried_into: review round 2 の rework バッチ
+- id: consumed-flag-split
+  decided_by: user
+  decided_at: '2026-08-24T05:10:00+09:00'
+  decision: 再計画許可の再入シグナルは、案 (b)「spec_change のフラグを 2 つに分離する」で直す。consumed は停止条件抑止用として残し、再計画 replace_all
+    の許可は別の未消費フラグで判定する。そのフラグは spec-change 遷移が記録時に立て、再計画 replace_all の適用完了時に消費する。
+  rejected:
+  - '(a) 消費点の後ろ倒し: 1 フラグ 2 役の構造を残す対症療法'
+  - '(c) 遷移で create-plan を needs_update: SPEC FR6 の変更を伴う'
+  scope:
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/skills/develop/SKILL.md
+  carried_into: review round 4 の rework バッチ
 protocol_slips:
 - id: orchestrator-commit-during-dispatch
   at: '2026-08-24T02:40:00+09:00'
@@ -54,3 +68,11 @@ protocol_slips:
   impact: なし。巻き込まれた 2 ファイルは planner 自身が written_artifacts に宣言した成果物で、5 本すべて正しく存在しコミット済み。scope verification
     が 3 ファイルしか観測できなかったため、検査としては空振りした
   lesson: レビュー結果の記録更新など orchestrator 側の書き込みも、worker の dispatch 窓の外で行う必要がある
+next_action:
+  phase: review-rework
+  what: reviews/round3.yaml の critical 1 + high 7 を rework-planner に渡して追加タスクを計画し、implement を pending に戻す
+  next_task_id: task0022
+  note: 'workflow.yaml の review は pending / needs_rework: true。新しいレビューラウンドを開始する前に review-phase.md の Rework
+    path（needs_rework が true のときは rework-planner を dispatch し、implement を pending に戻す patch を適用する）に入ること。round
+    4 のレビューは実装完了後。critical finding の修正方針はユーザー決定済み（pending_decisions の consumed-flag-split）で、round3.yaml
+    の当該 suggestion にも埋め込んである。'
