@@ -74,6 +74,7 @@ by the packet's absence or by an empty `questions` array.
 | `questions[].evidence[]`.`path` | Evidence file path |
 | `questions[].evidence[]`.`line` | Evidence line number |
 | `questions[].evidence[]`.`detail` | Evidence detail text |
+| `questions[].evidence[]`.`finding_stable_id` | Originating review finding's `stable_id`, when the question originates from a review finding; `references/question-resolution.md`'s Classification gate step 3 requires at least one `evidence[]` entry carrying it for a `rework.spec-change` question |
 | `questions[]`.`depends_on` | `question_id` values this question depends on |
 | `questions[]`.`supersedes` | `question_id` values this question supersedes |
 | `questions[]`.`on_unanswered` | `block` \| `record_tbd` \| `use_batch_policy` |

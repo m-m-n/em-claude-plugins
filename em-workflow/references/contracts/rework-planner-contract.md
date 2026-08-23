@@ -161,9 +161,10 @@ does not restate. Interactive mode is unchanged: the user is asked
 directly.
 
 The question packet returned for `gate_id: rework.spec-change` names each
-originating review finding's `stable_id` and the review round record path
-in the question's `evidence[]` entries — the gate's origin verification
-(`references/question-resolution.md`) reads them from there.
+originating review finding's `stable_id` in the question's
+`evidence[].finding_stable_id` entries and does not name the review round
+record path: the gate's origin verification
+(`references/question-resolution.md`) locates that record itself.
 
 ## Other conditions under which a question packet may be returned
 
