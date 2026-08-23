@@ -8,7 +8,7 @@ last_input_digest: sha256:f3b558bc8a172c62d59cc3eef566c0adb24260b52b9c726d436a5a
 active_request_id: create-spec-run-0001
 packets:
   create-spec-q0001:
-    status: issued
+    status: answered
     issued_at: "2026-08-23T19:52:00+09:00"
     questions:
       - question_id: goal.persistence-form
@@ -24,11 +24,11 @@ packets:
       - question_id: scope.optional-items
         status: answered
       - question_id: unresolved.defect2-route
-        status: issued
+        status: answered
       - question_id: edge.codex-unavailable
-        status: issued
+        status: answered
       - question_id: design-step.recommendation
-        status: issued
+        status: answered
 answers:
   goal.persistence-form:
     packet_id: create-spec-q0001
@@ -78,6 +78,30 @@ answers:
     selected_option_ids: [upstream_detection, declared_set_derivation]
     freeform: null
     normalized_answer: "上流での波及テスト検出と Declared Change Set の導出化を、どちらもこの feature のスコープに含める"
+  unresolved.defect2-route:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T20:00:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [independent_route]
+    freeform: null
+    normalized_answer: "create-plan 所有ドキュメントの文言訂正専用の独立経路を定義する（planner 再入場を伴わない、計画・タスク・要件メタデータ不変が条件）"
+  edge.codex-unavailable:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T20:00:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [claude_self_classification]
+    freeform: null
+    normalized_answer: "Codex 不在時は Claude 自身が分類し、根拠となる要件・受け入れ条件の名指しを監査記録として残したうえで進む"
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T20:00:00+09:00"
+    source: user
+    answer_mode: single_select
+    selected_option_ids: [ask_user]
+    freeform: null
+    normalized_answer: "ユーザーに確認したうえで design ステップを skipped とする"
 worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
