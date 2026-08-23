@@ -683,26 +683,91 @@ def workflow_find_step(workflow, step_id):
     return None
 
 
-def workflow_replace_all_spec_change_reentry(workflow, phase_state):
+# AC-1/AC-2 (task0017, review round 2 rework): the mandatory fields
+# references/phase-state.md defines for an unconsumed `spec_change` record.
+SPEC_CHANGE_MANDATORY_FIELDS = ("reason", "finding_stable_id", "recorded_at_commit")
+
+
+def _load_rework_phase_state_from_dir(feature_dir):
+    """Loads `{feature_dir}/phase-state/rework.yaml` -- one of the two
+    equally valid sources for the re-planning path's re-entry signal
+    (workflow-patch.md's `replace_all` permission conditions, second case).
+    This is the form create-plan-phase.md's canonical invocation actually
+    produces: `--phase-state` there points at `phase-state/create-plan.yaml`
+    (the create-plan phase's own state), never at rework.yaml directly, so
+    the signal has to be read from this path instead. Tolerates a missing
+    `feature_dir`, a missing file, an unreadable file, or a parse failure by
+    returning None (fail-closed -- never a widening; this auxiliary read has
+    no channel to report a syntax error through, so it degrades exactly
+    like "signal absent")."""
+    if feature_dir is None:
+        return None
+    path = Path(feature_dir) / "phase-state" / "rework.yaml"
+    if not path.is_file():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    data, parse_err = parse_yaml_text(text)
+    if parse_err or not isinstance(data, dict):
+        return None
+    return data
+
+
+def resolve_rework_phase_state(phase_state, feature_dir):
+    """Resolves the rework-phase state mapping the re-planning path's second
+    case reads its re-entry signal from -- one of two equally valid sources:
+
+    1. `--phase-state`, when its own `phase` is `rework` (a caller that
+       already has that file open is not forced to re-supply it).
+    2. `{feature_dir}/phase-state/rework.yaml` -- the form the canonical
+       invocation actually produces (see _load_rework_phase_state_from_dir).
+
+    Returns None when neither source is available or qualifies -- fail
+    closed: the caller must then treat the patch as the initial-planning
+    path."""
+    if isinstance(phase_state, dict) and phase_state.get("phase") == "rework":
+        return phase_state
+    return _load_rework_phase_state_from_dir(feature_dir)
+
+
+def workflow_replace_all_spec_change_reentry(workflow, phase_state, feature_dir=None):
     """workflow-patch.md's re-planning path has a second entry form: `create-
     plan` reads `pending` not because this is the first planning pass but
     because the SPEC-change transition re-entered it. That form is
-    recognizable only from phase-state, not from workflow.yaml alone --
-    both of the following must hold:
+    recognizable only from a rework-phase phase-state mapping (resolved by
+    resolve_rework_phase_state -- never from workflow.yaml alone), and ALL
+    of the following must hold:
 
-    1. `phase_state` carries a `spec_change` record (the SPEC-change
-       transition's own step 4 writes this into rework.yaml's phase-state).
-    2. `workflow.implement.base_commit` is already set (implementation has
+    1. A rework-phase state mapping is available (see
+       resolve_rework_phase_state above).
+    2. Its `feature` matches `workflow`'s own `feature`.
+    3. It carries a `spec_change` record shaped as `references/
+       phase-state.md` defines: `reason`, `finding_stable_id` and
+       `recorded_at_commit` present and non-empty, and `consumed` present.
+    4. `consumed` is `False` -- a record already marked consumed is spent,
+       not a standing permission.
+    5. `workflow.implement.base_commit` is already set (implementation has
        actually started at least once before).
 
-    Fails closed: a missing `--phase-state`, or a phase-state with no
-    `spec_change` record, is NOT this form -- the caller must fall back to
-    treating the patch as the initial-planning path. A narrower invocation
-    must never widen what replace_all permits."""
-    if not isinstance(phase_state, dict):
+    Fails closed on every one of these: a missing signal, a phase or feature
+    mismatch, a malformed or already-consumed record is NOT this form -- the
+    caller must fall back to treating the patch as the initial-planning
+    path. A narrower invocation must never widen what replace_all permits."""
+    rework_state = resolve_rework_phase_state(phase_state, feature_dir)
+    if rework_state is None:
         return False
-    spec_change = phase_state.get("spec_change")
+    if rework_state.get("feature") != (workflow or {}).get("feature"):
+        return False
+    spec_change = rework_state.get("spec_change")
     if not isinstance(spec_change, dict) or not spec_change:
+        return False
+    if not all(spec_change.get(f) for f in SPEC_CHANGE_MANDATORY_FIELDS):
+        return False
+    if "consumed" not in spec_change:
+        return False
+    if spec_change.get("consumed") is not False:
         return False
     implement_step = workflow_find_step(workflow, "implement")
     base_commit = implement_step.get("base_commit") if implement_step else None
@@ -1051,6 +1116,7 @@ def validate_workflow_patch(
     digest_source=None,
     phase_state=None,
     dry_run=False,
+    feature_dir=None,
 ):
     if not isinstance(data, dict):
         return [err("structure", "workflow patch must be a mapping")]
@@ -1148,14 +1214,18 @@ def validate_workflow_patch(
     if dry_run:
         errors.extend(
             _validate_dry_run_apply(
-                data, workflow=workflow, digest_source=digest_source, phase_state=phase_state
+                data,
+                workflow=workflow,
+                digest_source=digest_source,
+                phase_state=phase_state,
+                feature_dir=feature_dir,
             )
         )
 
     return errors
 
 
-def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state):
+def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, feature_dir=None):
     errors = []
     operation = data.get("operation")
     tasks_patch = data.get("tasks_patch") or {}
@@ -1198,6 +1268,20 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state):
     # SPEC-change re-entry -- workflow_replace_all_spec_change_reentry).
     # Rule 3, common to both: any in_progress/failed task is a protocol
     # error regardless of path.
+    #
+    # task0017 (review round 2 rework): the re-planning path carries two
+    # further, path-dependent obligations that can only be checked here --
+    # neither is knowable without the workflow.yaml this dry-run-apply
+    # already has in hand:
+    #
+    # - Mandatory `preserve` per operation (workflow-patch.md's table row):
+    #   `workflow.implement.base_commit` is mandatory on the re-planning
+    #   path, not mandatory at all on the initial-planning path.
+    # - Re-planning task-id allocation: `entries` must re-declare every
+    #   task id already registered in `workflow.yaml` (never drop one), and
+    #   any genuinely new id must be allocated above the highest registered
+    #   id -- the high-water mark is `max(registered ids)`, read directly
+    #   from `workflow`, never a number the validator has to store itself.
     if mode == "replace_all":
         tasks = workflow.get("tasks", {}) or {}
         create_plan_step = workflow_find_step(workflow, "create-plan")
@@ -1208,9 +1292,48 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state):
             if tasks and any((t or {}).get("status") in ("in_progress", "failed") for t in tasks.values()):
                 errors.append(err("replace-all-not-permitted", "replace_all requires no task to be in_progress or failed (implementation has started)"))
             else:
-                is_replanning = current_status == "needs_update" or workflow_replace_all_spec_change_reentry(workflow, phase_state)
+                is_replanning = current_status == "needs_update" or workflow_replace_all_spec_change_reentry(
+                    workflow, phase_state, feature_dir
+                )
                 if not is_replanning and tasks and any((t or {}).get("status") != "pending" for t in tasks.values()):
                     errors.append(err("replace-all-not-permitted", "replace_all requires tasks to be empty or all pending (implementation has started)"))
+                elif is_replanning:
+                    preserve_strs = [p for p in (data.get("preserve") or []) if isinstance(p, str)]
+                    if "workflow.implement.base_commit" not in preserve_strs:
+                        errors.append(
+                            err(
+                                "preserve",
+                                "replace_all on the re-planning path requires preserve to "
+                                "include 'workflow.implement.base_commit'",
+                            )
+                        )
+                    replanning_entries = (data.get("tasks_patch") or {}).get("entries") or {}
+                    existing_ids = set(tasks)
+                    entry_ids = set(replanning_entries) if isinstance(replanning_entries, dict) else set()
+                    dropped_ids = existing_ids - entry_ids
+                    if dropped_ids:
+                        errors.append(
+                            err(
+                                "replace-all-drops-task",
+                                "a re-planning replace_all must re-declare every task id "
+                                f"already registered in workflow.yaml; missing {sorted(dropped_ids)}",
+                            )
+                        )
+                    max_existing_id = 0
+                    for tid in existing_ids:
+                        m = TASK_ID_RE.match(tid)
+                        if m:
+                            max_existing_id = max(max_existing_id, int(tid[len("task"):]))
+                    for tid in sorted(entry_ids - existing_ids):
+                        m = TASK_ID_RE.match(tid)
+                        if m and int(tid[len("task"):]) <= max_existing_id:
+                            errors.append(
+                                err(
+                                    "replace-all-task-id-reused",
+                                    f"new task id {tid!r} must be allocated above the highest "
+                                    f"registered id (task{max_existing_id:04d})",
+                                )
+                            )
 
     # Rule 4: append must not overwrite existing task IDs, and
     # expected_next_task_id must match the actual next id.
@@ -1605,6 +1728,7 @@ def validate_worker_result(
                     digest_source=digest_source,
                     phase_state=phase_state,
                     dry_run=dry_run,
+                    feature_dir=feature_dir,
                 ),
                 "workflow_patch",
             )
@@ -1902,6 +2026,7 @@ def main(argv=None):
                 digest_source=digest_source,
                 phase_state=phase_state,
                 dry_run=args.dry_run_apply,
+                feature_dir=feature_dir,
             )
         elif args.kind == "phase-state":
             errors = validate_phase_state(data)

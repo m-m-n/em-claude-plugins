@@ -144,6 +144,23 @@ b28a7166e8dce876075fc550ada7fdd7027211fa):
 - TestRecycledTaskIdRuleScopedToOrchestrator's group-placement tests -> new
   wording (group anchors) ->
   test_group_anchors_absent_in_pre_change_wording
+
+task0017 (feature-docs/goal-vs-spec-divergence review round2 rework)
+strengthens the premise `TestUnreachablePendingLaunchedCombination` cites:
+`references/workflow-patch.md`'s re-planning task-id allocation rule now
+also requires a re-planning `replace_all`'s `entries` to re-declare every
+task id already registered in `workflow.yaml` (never drop one), on top of
+the existing "never re-issue a retired id, allocate new ones above the
+highest registered id" guarantee this class's tests already pin. This
+module's own assertions are unaffected: they check only that
+`implement-phase.md`'s citation contains the substring "allocation rule"
+and omits "task0001"/"renumber" (`test_unreachability_sentence_cites_
+allocation_rule`) -- a citation, not a restatement, so a stronger cited
+rule does not change what is asserted here. `implement-phase.md` itself
+belongs to task0020 this round and is not read as changed content by any
+module this task owns (Test Notes: "Do not assert over ... implement-
+phase.md from any module this task owns ... Document agreement across
+the two tasks is a verify-phase item").
 """
 
 import importlib.util
