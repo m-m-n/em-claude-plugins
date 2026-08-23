@@ -37,7 +37,7 @@ workflow:
   status: completed
   completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
 - id: implement
-  status: completed
+  status: pending
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
   completed_at_commit: 278f356642f88955bbae1da624255459d60013e3
 - id: review
@@ -435,6 +435,120 @@ tasks:
       expected_files); reported disagreement with workflow-patch.md''s documented re-entry form (task0013
       owns that document)'
     branch: em-workflow/goal-vs-spec-divergence/task0016
+  task0017:
+    title: the re-planning permission contract, end to end
+    plan: tasks/task0017.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_workflow_patch_doc.py
+    - tests/test_validate_worker_output.py
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0018:
+    title: create-spec re-entry is a partial update
+    plan: tasks/task0018.md
+    files:
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_create_spec_reentry_preservation.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: low
+    requirements:
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0019:
+    title: the classification gate's trust boundary
+    plan: tasks/task0019.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/question-packet-schema.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_worker_contract_docs.py
+    - tests/test_rework_synthesis_contract.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR7
+    - FR9
+    - FR10
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0020:
+    title: a writer, an operation and an evidence form for deviation auto-addition
+    plan: tasks/task0020.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - tests/test_deviation_auto_addition.py
+    - tests/test_change_set_derivation.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR18
+    - FR19
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0021:
+    title: realign the guardrail migration pins with the current repository
+    plan: tasks/task0021.md
+    files:
+    - tests/test_guardrail_hooks_migration.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 2
@@ -498,6 +612,7 @@ requirements:
     - task0002
     - task0013
     - task0016
+    - task0017
     tests:
     - TS-2
   FR5:
@@ -509,6 +624,8 @@ requirements:
     - task0002
     - task0013
     - task0016
+    - task0017
+    - task0018
     tests:
     - TS-2
   FR6:
@@ -520,6 +637,8 @@ requirements:
     - task0003
     - task0013
     - task0016
+    - task0017
+    - task0018
     tests:
     - TS-2
   FR7:
@@ -529,6 +648,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0004
+    - task0019
     tests:
     - TS-3
   FR8:
@@ -548,6 +668,7 @@ requirements:
     tasks:
     - task0004
     - task0012
+    - task0019
     tests:
     - TS-3
   FR10:
@@ -558,6 +679,7 @@ requirements:
     tasks:
     - task0004
     - task0012
+    - task0019
     tests:
     - TS-3
   FR11:
@@ -569,6 +691,7 @@ requirements:
     - task0004
     - task0006
     - task0012
+    - task0019
     tests:
     - TS-4
   FR12:
@@ -635,6 +758,7 @@ requirements:
     tasks:
     - task0009
     - task0015
+    - task0020
     tests:
     - TS-8
   FR19:
@@ -645,6 +769,7 @@ requirements:
     tasks:
     - task0010
     - task0015
+    - task0020
     tests:
     - TS-8
   FR20:
@@ -678,6 +803,10 @@ requirements:
     - task0013
     - task0014
     - task0015
+    - task0017
+    - task0018
+    - task0019
+    - task0020
     tests:
     - TS-12
   NFR2:
@@ -689,6 +818,7 @@ requirements:
     - task0004
     - task0006
     - task0012
+    - task0019
     tests:
     - TS-4
   NFR3:
@@ -702,6 +832,8 @@ requirements:
     - task0010
     - task0012
     - task0015
+    - task0019
+    - task0020
     tests:
     - TS-13
   NFR4:
@@ -735,6 +867,11 @@ requirements:
     - task0014
     - task0015
     - task0016
+    - task0017
+    - task0018
+    - task0019
+    - task0020
+    - task0021
     tests:
     - TS-16
   NFR6:
@@ -791,5 +928,10 @@ requirements:
     - task0014
     - task0015
     - task0016
+    - task0017
+    - task0018
+    - task0019
+    - task0020
+    - task0021
     tests:
     - TS-10
