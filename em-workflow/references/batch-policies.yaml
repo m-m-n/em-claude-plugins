@@ -18,10 +18,16 @@
 # to look up for them.
 #
 # `rework.spec-change` is intentionally NOT listed below, even though it
-# does carry a `gate_id`. An unlisted `gate_id` falls through to the
-# unlisted-gate fallback in `references/question-resolution.md`, whose
-# fail-closed classification aborts a specification-change gate rather than
-# guessing an answer for it.
+# does carry a `gate_id`. In batch, it does not fall through to a policy
+# lookup in this file at all: `references/question-resolution.md`'s
+# fail-closed classification routes it into a classification gate instead
+# of aborting the phase outright. That gate makes the decision at
+# resolution time, which is why this file still carries no entry and no
+# `option_id` for it — a policy lookup here would be answering a question
+# the gate alone settles. Every other fail-closed arm — `category:
+# security`, `category: license`, and `reversible: false` — keeps aborting
+# immediately at unchanged strength; this carve-out is exactly one gate,
+# never a relaxation of the rule as a whole.
 #
 # `preserve_and_reuse` (used by every `*.artifact-overwrite` gate — all
 # three phases now live here as one source of truth:
