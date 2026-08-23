@@ -688,11 +688,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     WORKFLOW_PATCH_SHA256 = (
         "9636ddd51d7f606457531facd67eb3d7d5958378a931bbf3a527d87eebc063b6"
     )
+    # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
+    # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
+    # brought em-workflow/scripts/** into (phase-state/rework.yaml
+    # deviation_from_transition) so the replace_all permission check could
+    # be made to agree with workflow-patch.md's two permitted paths. As with
+    # WORKFLOW_PATCH_SHA256 above, the pin is refreshed, not removed, to
+    # keep guarding against future incidental edits of these two files.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "1b86e4d4ccc9536aa170da0be3d1309d25b6c211cc388e9d2d02e6860b3eb4a7"
+        "f2f5b35fe129492344513c9e80ebec627c1d197ae5f1ea2d070d98cdeb6c11b8"
     )
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "2bac45b2a18680d696334fb2f4df16bfd11f72b95e81913de630ab1956a6aea8"
+        "417bed81829e48a8cf3b1f21773375127f3c36eec3989d51e4f0ef718a6b69be"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

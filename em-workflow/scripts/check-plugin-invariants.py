@@ -296,8 +296,9 @@ PROXIMITY_WINDOW = 120
 GATE_MENTION_RE = re.compile(r"gate[_ ]id", re.IGNORECASE)
 
 # design-input.md 5.4.4/5.9: `rework.spec-change` is deliberately never
-# given a batch-policies.yaml entry so the unlisted-gate fallback aborts it.
-# Excluded from both directions of the comparison (AC-5).
+# given a batch-policies.yaml entry -- in batch it is routed through the
+# classification gate (question-resolution.md), not the unlisted-gate
+# fallback. Excluded from both directions of the comparison (AC-5).
 INTENTIONALLY_UNLISTED_GATE_IDS = {"rework.spec-change"}
 
 
