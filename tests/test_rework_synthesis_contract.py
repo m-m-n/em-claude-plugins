@@ -25,6 +25,15 @@ markdown, not behavioral tests of running code.
 
 Per task0004.md's Test Notes: `skills/develop/SKILL.md`'s verify rework
 branches are owned by task0012 — this file asserts nothing about that file.
+
+task0019 AC-8 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45,
+confidence 95): what the `rework.spec-change` packet must carry is pinned
+here as well as in tests/test_worker_contract_docs.py -- the packet names
+each originating finding's `stable_id` via `evidence[].finding_stable_id`
+and does not name the review round record path; the orchestrator locates
+that record itself (`references/question-resolution.md`, pinned in
+tests/test_classification_gate.py). Neither document restates the other's
+rule.
 """
 
 import re
@@ -35,6 +44,9 @@ PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "em-workflow"
 SSOT_PATH = PLUGIN_ROOT / "references" / "rework-task-synthesis.md"
 IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
 REVIEW_PHASE_PATH = PLUGIN_ROOT / "references" / "review-phase.md"
+REWORK_PLANNER_CONTRACT_PATH = (
+    PLUGIN_ROOT / "references" / "contracts" / "rework-planner-contract.md"
+)
 
 # The thirteen sections design-input.md 5.10 lists, in order.
 SECTION_HEADINGS = [
@@ -335,6 +347,57 @@ class TestReviewPhaseReworkReferences(unittest.TestCase):
         normalized = re.sub(r"\s+", " ", self.text)
         self.assertNotIn(
             'batch-mode.md "Rework task synthesis"', normalized
+        )
+
+
+class TestSpecChangePacketCarriesStableIdNotRecordPath(unittest.TestCase):
+    """task0019 AC-8 (NFR1): rework-planner-contract.md states the
+    spec-change packet names stable_ids via `evidence[].finding_stable_id`
+    and does not name the review round record path -- consistent with
+    question-resolution.md's Classification gate step 3, which locates that
+    record itself. Neither document restates the other's rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(REWORK_PLANNER_CONTRACT_PATH)
+        cls.norm = re.sub(r"\s+", " ", cls.text)
+
+    def test_packet_names_stable_id_via_finding_stable_id_field(self):
+        self.assertIn(
+            "names each originating review finding's `stable_id` in the "
+            "question's `evidence[].finding_stable_id` entries",
+            self.norm,
+        )
+
+    def test_packet_does_not_name_the_record_path(self):
+        self.assertIn(
+            "does not name the review round record path", self.norm
+        )
+
+    def test_gate_cited_not_restated(self):
+        self.assertIn(
+            "the gate's origin verification "
+            "(`references/question-resolution.md`) locates that record "
+            "itself",
+            self.norm,
+        )
+
+    def test_does_not_restate_the_r5_position_or_path_formula(self):
+        # NFR1: the round-record location formula is owned by
+        # references/review-phase.md's R5 section and cited from
+        # question-resolution.md; this contract must not restate it.
+        self.assertNotIn("Phase R5", self.text)
+        self.assertNotIn("reviews/round", self.text)
+
+    def test_negative_twin_old_record_path_naming_wording_fails(self):
+        fake_text = (
+            "The question packet returned for `gate_id: rework.spec-change` "
+            "names each originating review finding's `stable_id` and the "
+            "review round record path in the question's `evidence[]` "
+            "entries."
+        )
+        self.assertNotIn(
+            "does not name the review round record path", fake_text
         )
 
 
