@@ -166,6 +166,20 @@ originating review finding's `stable_id` in the question's
 record path: the gate's origin verification
 (`references/question-resolution.md`) locates that record itself.
 
+## Gate identifiers
+
+The rework-planner raises exactly one `gate_id`: `rework.spec-change`, via
+the Specification-change transition above. Unlike the gate identifiers
+named in other contracts' equivalent sections, this one carries no entry in
+`references/batch-policies.yaml` — it is an orchestrator-side resolution
+step, not a new user-facing policy gate, so batch resolution goes entirely
+through the classification gate defined in
+`references/question-resolution.md` (cited, not restated), never through a
+batch-policy lookup. This section is what attributes `rework.spec-change`
+to `rework-planner`, which is what puts it into the validator's gate
+registry (`em-workflow/scripts/validate-worker-output.py`), binding it to
+the `spec-change` category and to this worker.
+
 ## Other conditions under which a question packet may be returned
 
 Outside the specification-change transition, the rework-planner returns a
