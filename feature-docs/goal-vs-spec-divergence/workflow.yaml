@@ -581,9 +581,11 @@ tasks:
     - NFR1
     - NFR5
     - NFR8
-    status: pending
-    notes: null
-    branch: null
+    status: merged
+    notes: 'deviation: expected_files 外の fixture 2 件 (invalid-replace-all-replanning-missing-base-commit-preserve/phase-state.json,
+      invalid-replace-all-replanning-drops-existing-task/phase-state.json) に replan_authorized: true を追加。conflict_retries=1
+      (tests/test_gate_option_vocabulary.py, task0024 と親側採用で解決)'
+    branch: em-workflow/goal-vs-spec-divergence/task0022
   task0023:
     title: carried task ids on a re-planning replace_all
     plan: tasks/task0023.md
@@ -614,9 +616,9 @@ tasks:
     - NFR1
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0023
   task0024:
     title: close the fail-closed carve-out around the spec-change category
     plan: tasks/task0024.md
@@ -641,9 +643,9 @@ tasks:
     - NFR2
     - NFR5
     - NFR8
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0024
   task0025:
     title: the classification gate's outcome closes its question
     plan: tasks/task0025.md
@@ -670,9 +672,9 @@ tasks:
     - NFR3
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0025
   task0026:
     title: create-spec re-entry upserts the requirement map
     plan: tasks/task0026.md
@@ -690,9 +692,9 @@ tasks:
     - NFR1
     - NFR5
     - NFR8
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0026
 review:
   status: pending
   rounds_completed: 3

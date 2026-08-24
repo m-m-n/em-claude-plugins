@@ -81,19 +81,21 @@ option is selected — when any of the following holds:
   revision leaves in place for a future `gate_id` the policy file marks as
   intentionally left unlisted for this reason; `rework.spec-change` no
   longer sits on it (see the routed arm below);
+- the question's `category` (`references/question-packet-schema.md`) is
+  `spec-change`, unless its `gate_id` is exactly `rework.spec-change` — the
+  routed arm below is written as this abort's single exception, admitted
+  for that exact `gate_id` alone; every other `category: spec-change`
+  question aborts here, recording its reason;
 - an `assumptions[]` entry whose `related_question_ids` names this question
   carries `reversible: false` — an irreversible operation.
 
-**Irreversibility is decided from orchestrator-held metadata, never from
-the packet alone.** The orchestrator aborts whenever the operation this
-gate stands in front of is on its own irreversible-operations list —
-decided from metadata the orchestrator holds about that operation,
-independently of whatever the packet's `assumptions[]` does or does not
-declare. The `reversible: false` assumption named in the bullet above
-still aborts, in addition to this orchestrator-held check: the two are
-independent triggers for the same abort, and omitting the assumption can
-never remove it. This abort records its reason exactly as every abort in
-this section does.
+**The irreversibility abort's basis is the packet's own declaration.** The
+`reversible: false` assumption named in the bullet above is this abort's
+only current trigger: an `assumptions[]` entry whose `related_question_ids`
+names this question, carrying `reversible: false`. This basis is
+worker-declared — a stated limitation of the current design, not a second,
+independent defence — and no orchestrator-held source constrains it today.
+This abort records its reason exactly as every abort in this section does.
 
 **Security, licensing, and irreversible operations abort the phase
 immediately, at unchanged force and outside this revision's scope** —
@@ -118,7 +120,12 @@ new interactive question.
 **Malformed pairing.** A question whose `gate_id` is `rework.spec-change`
 and whose `category` is anything other than `spec-change` is malformed and
 aborts here, recording that reason: it reaches neither the routed arm
-above nor the Unlisted-gate fallback below.
+above nor the Unlisted-gate fallback below. The reverse mismatch is
+equally malformed: a question whose `category` is `spec-change` and whose
+`gate_id` is anything other than `rework.spec-change` also aborts,
+recording that reason. Neither mismatched pairing reaches the policy
+lookup in the Batch resolution sequence below, the Unlisted-gate fallback,
+or `on_unanswered`.
 
 **Precedence reservation.** The routed arm applies only when none of the
 three immediate-abort conditions above holds (`category: security`,
