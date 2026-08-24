@@ -1,0 +1,21 @@
+schema_version: 1
+feature: rework-contract-drift
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 9748b73b673f110b638ce508ddce9c35f7ef5dca
+last_input_digest: sha256:712f104d267800265c7496814a72fed03ea2d4cc2bf4e62981783af69c8df8e5
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:712f104d267800265c7496814a72fed03ea2d4cc2bf4e62981783af69c8df8e5
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
