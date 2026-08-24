@@ -210,10 +210,23 @@ tasks:
     notes: null
     branch: em-workflow/rework-contract-drift/task0006
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
-  perspectives: {}
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: pending
+    security: pending
+    performance: pending
+    architecture: pending
+    spec: pending
   residual_critical_high: 0
   needs_rework: false
 requirements:
