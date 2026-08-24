@@ -616,8 +616,9 @@ tasks:
     - NFR1
     - NFR5
     - NFR8
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'deviation: sibling 所有の tests/test_spec_change_replan_authorization.py と fixture valid-replace-all-replanning-after-create-spec-dispatch/input.json
+      を carried_task_ids 形式へ追随修正。conflict_retries=2 (task0022 / task0025 と親側採用で解決)'
     branch: em-workflow/goal-vs-spec-divergence/task0023
   task0024:
     title: close the fail-closed carve-out around the spec-change category
