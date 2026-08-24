@@ -1,14 +1,18 @@
 schema_version: 1
 feature: rework-contract-drift
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: b1333f06a3aa2dfe09be04f55558bd9d47174f30
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:9c146ac1c3bf84a9fa410fe78307d24bd235025f72f55ea82a8846ae162c929c
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:9c146ac1c3bf84a9fa410fe78307d24bd235025f72f55ea82a8846ae162c929c
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
