@@ -81,6 +81,43 @@ Criteria covered here:
   `tests/test_spec_change_replan_authorization.py` already does, PyYAML
   being that script's existing runtime dependency (IMPLEMENTATION.md
   Technology Stack), not a new one this task adds.
+
+Extended for task0007 (rework-contract-drift,
+feature-docs/rework-contract-drift/tasks/task0007.md): task0001 fixed the
+Re-planning branch's key but left the Initial-planning branch keyed on a
+single `create-plan` status literal (`pending`) that the Re-planning
+path's second case also satisfies -- a planner following the prompt
+literally on a specification-change re-entry matched the Initial-planning
+branch instead, numbering from the first task id and emitting no
+carry-over declaration. This task's own Acceptance Criteria covered here:
+
+- AC-1: `test_initial_planning_branch_cites_owning_document_and_initial_
+  planning_path` -- the Initial-planning branch now names
+  `references/workflow-patch.md` by path and identifies its
+  Initial-planning path as the owner of which states satisfy the branch.
+- AC-2: `test_neither_branch_keyed_on_a_single_step_status_literal` (with
+  its negative proof) and `test_initial_planning_branch_states_condition_
+  not_restated` -- neither branch carries a bare step-status literal as
+  its key, and the Initial-planning branch states the condition is not
+  restated there.
+- AC-3: `test_prompt_does_not_restate_the_floor_condition_wording` and
+  `test_prompt_does_not_restate_the_re_entry_signal_field_names`, each
+  paired with a `test_matcher_detects_a_synthetic_...` negative proof --
+  the prompt names the floor condition and the re-entry signal by concept
+  only, never restating their own wording or field names.
+- AC-4: `test_two_branch_headers_present` replaces the old test that
+  pinned the now-removed `create-plan` is `pending` literal, keeping only
+  the header-presence check; every new absence assertion above is paired
+  with a negative-proof test in the same class.
+- AC-5: confirmed (TDD) to fail against the pre-change prompt where the
+  assertion is a presence check (AC-1, AC-2's `not restated here`) or an
+  absence check the pre-change literal actually violated (AC-2's combined
+  literal check); the AC-3 absence checks already held pre-change (the
+  pre-change Initial-planning branch restated neither the floor condition
+  nor the re-entry signal, it simply keyed on the bare literal), so their
+  negative-proof samples stand in for a violating pre-change text per
+  NFR4's demonstration allowance.
+- AC-6: the full suite is green and this task adds no third-party import.
 """
 
 import importlib.util
@@ -98,6 +135,17 @@ VALIDATOR_SCRIPT_PATH = PLUGIN_ROOT / "scripts" / "validate-worker-output.py"
 
 WORKFLOW_PATCH_REF = "references/workflow-patch.md"
 REPLANNING_PATH_TERM = "Re-planning path"
+INITIAL_PLANNING_PATH_TERM = "Initial-planning path"
+
+# Distinctive wording owned by workflow-patch.md's Initial-planning path
+# floor condition. A consumer containing this would be restating the
+# condition, not citing it (task0007 AC-3).
+FLOOR_CONDITION_PHRASE = "every existing task's `status` is `pending`"
+
+# Field names distinctive to the Re-planning path's second-case re-entry
+# signal (the `spec_change` record). A consumer containing any of these
+# would be restating that condition too (task0007 AC-3).
+REENTRY_SIGNAL_FIELD_NAMES = ("origin_kind", "replan_authorized", "recorded_at_commit")
 
 
 def _load_validator_module():
@@ -313,14 +361,83 @@ class TestImplementationPlannerTwoBranchAllocation(unittest.TestCase):
     def test_section_found_non_vacuous(self):
         self.assertTrue(self.section)
 
-    def test_two_branches_present_initial_planning_keyed_on_pending_status(self):
-        """task0001 AC-3: both branch headers are present; the
-        Initial-planning branch keeps its correct single-state key
-        (`create-plan` is `pending`) -- only the Re-planning branch's key
-        was ever erroneous (see the tests below)."""
+    def test_two_branch_headers_present(self):
+        """task0007 AC-4: replaces the old literal-pinning test (which
+        asserted the Initial-planning branch's now-removed `create-plan`
+        is `pending` key) with the header-presence check alone; the
+        literal's absence is covered by
+        test_neither_branch_keyed_on_a_single_step_status_literal below."""
         self.assertIn("**Initial planning**", self.section)
         self.assertIn("**Re-planning**", self.section)
-        self.assertIn("`create-plan` is `pending`", self.section)
+
+    def test_initial_planning_branch_cites_owning_document_and_initial_planning_path(self):
+        """task0007 AC-1: the Initial-planning branch names the owning
+        document by repository-relative path and identifies its
+        Initial-planning path as the source of which states satisfy the
+        branch, instead of restating the condition itself -- the same
+        citation form the Re-planning branch already uses."""
+        branch = _extract_section(
+            self.section, "**Initial planning**", "**Re-planning**"
+        )
+        self.assertIn(WORKFLOW_PATCH_REF, branch)
+        self.assertIn(INITIAL_PLANNING_PATH_TERM, branch)
+
+    def test_initial_planning_branch_states_condition_not_restated(self):
+        """task0007 AC-2: the Initial-planning branch states that which
+        states satisfy the Initial-planning path is not restated here."""
+        branch = _extract_section(
+            self.section, "**Initial planning**", "**Re-planning**"
+        )
+        self.assertIn("not restated here", branch)
+
+    def test_neither_branch_keyed_on_a_single_step_status_literal(self):
+        """task0007 AC-2: the section contains no branch key of the form
+        '`create-plan` is `pending`' or '`create-plan` is `needs_update`'
+        -- both branches now cite the owning document instead."""
+        self.assertNotIn("`create-plan` is `pending`", self.section)
+        self.assertNotIn("`create-plan` is `needs_update`", self.section)
+
+    def test_matcher_detects_a_synthetic_branch_keyed_on_pending_literal(self):
+        """Negative proof for the `pending` half of the check above (the
+        `needs_update` half is already proven by
+        test_matcher_detects_a_synthetic_needs_update_literal_branch)."""
+        violating_sample = (
+            "- **Initial planning** (`create-plan` is `pending`): number "
+            "every task taskNNNN in order, starting at `task0001`."
+        )
+        self.assertIn("`create-plan` is `pending`", violating_sample)
+
+    def test_prompt_does_not_restate_the_floor_condition_wording(self):
+        """task0007 AC-3: the prompt names the Initial-planning path's
+        floor condition by concept only ('its floor condition on existing
+        task status'); it never restates the condition's own wording,
+        which stays owned by workflow-patch.md."""
+        self.assertNotIn(FLOOR_CONDITION_PHRASE, self.text)
+
+    def test_matcher_detects_a_synthetic_floor_condition_restatement(self):
+        """Negative proof for the check above."""
+        violating_sample = (
+            "permitted only when `tasks` is empty, OR every existing "
+            "task's `status` is `pending`"
+        )
+        self.assertIn(FLOOR_CONDITION_PHRASE, violating_sample)
+
+    def test_prompt_does_not_restate_the_re_entry_signal_field_names(self):
+        """task0007 AC-3: the prompt never restates the Re-planning
+        path's second-case re-entry signal (the `spec_change` record's
+        field names) -- that stays owned by workflow-patch.md too."""
+        for term in REENTRY_SIGNAL_FIELD_NAMES:
+            self.assertNotIn(term, self.text, f"prompt must not restate {term!r}")
+
+    def test_matcher_detects_a_synthetic_re_entry_signal_restatement(self):
+        """Negative proof for the check above."""
+        violating_sample = (
+            "recognizable via an unspent re-planning authorization "
+            "carrying origin_kind, replan_authorized and "
+            "recorded_at_commit"
+        )
+        for term in REENTRY_SIGNAL_FIELD_NAMES:
+            self.assertIn(term, violating_sample)
 
     def test_re_planning_branch_no_longer_keyed_on_a_single_status_literal(self):
         """task0001 AC-1/AC-3: the erroneous single-literal re-planning

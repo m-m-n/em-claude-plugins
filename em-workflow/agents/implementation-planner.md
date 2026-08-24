@@ -122,8 +122,12 @@ allocate task ids by branching on which path this dispatch matches under
 `${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`'s `replace_all`
 permission conditions:
 
-- **Initial planning** (`create-plan` is `pending`): number every task
-  taskNNNN in order, starting at `task0001` (task0001, task0002, ...).
+- **Initial planning** (the Initial-planning path —
+  `${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`'s `replace_all`
+  permission conditions own which states satisfy it, including its floor
+  condition on existing task status, and is not restated here as a single
+  `create-plan` status literal): number every task taskNNNN in order,
+  starting at `task0001` (task0001, task0002, ...).
 - **Re-planning** (the Re-planning path —
   `${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`'s `replace_all`
   permission conditions own which states satisfy it, and is not restated
