@@ -211,7 +211,7 @@ tasks:
     branch: em-workflow/rework-contract-drift/task0006
 review:
   status: in_progress
-  rounds_completed: 0
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -222,13 +222,13 @@ review:
     discretionary: []
     cross_validation: true
   perspectives:
-    comprehensive: pending
-    security: pending
-    performance: pending
-    architecture: pending
-    spec: pending
-  residual_critical_high: 0
-  needs_rework: false
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 6
+  needs_rework: true
 requirements:
   FR1:
     title: Re-planning branch key cites workflow-patch.md instead of restating it

@@ -1,0 +1,457 @@
+round: 1
+executed_at: "2026-08-25T00:10:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 718a35ae3e93946fc94c77fb717a85b04a278b5b
+  head_commit: 1dfd5cbe97d4bb37c8963acaa0b9b8ab65d446e4
+  changed_files_count: 37
+  changed_files_note: >-
+    37 files, +3221 / -169. feature-docs/rework-contract-drift/** excluded from
+    review targets per review-phase.md R0 step 2.
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  discretionary_note: >-
+    No Layer-2 additions. The mandatory `license` check did not fire: the diff
+    touches no dependency manifest or lockfile and adds no vendored third-party
+    source (the two .claude-plugin manifests are plugin manifests, not
+    dependency manifests).
+  cross_validation: true
+  cross_validation_reason: >-
+    review-rules.yaml when_any: two tasks carry complexity high (task0004,
+    task0005) AND the final selected set includes security.
+
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+
+findings:
+  - stable_id: 88f327b55454c09c
+    severity: high
+    category: security
+    file: em-workflow/references/workflow-patch.md
+    line: 287
+    line_end: 303
+    title: >-
+      Application rule 19 が rule 2 の整合性チェック失敗を「成功 + 一回限りの再計画権限の消費」に変える
+    description: >-
+      新設の application rule 19 は、再開走行の認識条件を「rule 2 の `base_workflow_blob`
+      チェックが patch を reject する（blob が一致しない）」かつ `spec_change.replan_authorized`
+      が `true` の組み合わせだけに置いている。この述語は「rule 15 の書き込みがすでに着地した」
+      ことの証明になっていない。`base_workflow_blob` は worker が patch に載せてくる untrusted
+      な値であり、rule 2 はまさにその値を検証する整合性ゲートである。未消費の authorization が
+      立っている状態で古い/捏造された blob を持つ replace_all が返ると、orchestrator は patch を
+      reject せず「already-applied-not-yet-spent」と解釈して rule 18 の書き込みだけを行い、
+      `replan_authorized` を false にして success を返す。SPEC 変更が認可した再計画は一度も
+      適用されないまま権限だけが焼かれ、以後 Re-planning path は閉じ、merged タスクがある以上
+      Initial-planning path も拒否されるため権限は取り戻せない。orchestrator の実走行では
+      rule 16 の status 更新コミット等で blob は頻繁に変わるため、攻撃を仮定しなくても現実的に起きる。
+      さらに「Spending an authorization that is already spent is a no-op, not an error」の文が
+      直後の「Under either recognized case」と組み合わさり、「blob 不一致 + 消費済み」も認識ケースと
+      読める。この読みでは authorization 消費後に rule 2 が事実上どの patch にも効かなくなる。
+    suggestion: >-
+      認識条件を「不一致であること」ではなく「適用済みであることの証拠」に変える。(a) rule 15 の
+      書き込み時に適用した patch_id と適用後 workflow.yaml blob を phase-state に記録し、rule 19 の
+      認識条件を「記録された patch_id が処理中の patch と一致し、かつ現在の blob が記録された
+      適用後 blob と一致する」に限定する。(b) 記録を増やさないなら、認識条件を「この patch を base に
+      適用した結果が現在の workflow.yaml と一致する」という照合に置き換える。いずれも、条件を
+      満たさない blob 不一致は従来どおり rule 2 の reject のままで authorization を消費しないことを明記する。
+    sources: [claude:security, codex:security]
+    confidence: 100
+    resolution: deferred
+    resolution_reason: >-
+      batch mode: R4 conflict group skipped (review.auto-fix-conflict). Same site as
+      9987c33a95395fdb / feaf5369e6f9a227 with divergent prose prescriptions —
+      architecture prescribes citing phase-state.md's existing patches[].status
+      (add no record), security prescribes persisting a new application-intent
+      record. Not mechanically resolvable. Routed to rework.
+  - stable_id: 9987c33a95395fdb
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/workflow-patch.md
+    line: 287
+    line_end: 299
+    title: >-
+      Application rule 19 の「適用済み」判定が stale patch を誤認し、未適用のまま authorization を消費する
+    description: >-
+      rule 19 の 2 条件は「適用済み」に固有ではない。patch がビルドされてから適用されるまでの間に
+      orchestrator が別の理由で workflow.yaml を書けば（step status 更新、commit-docs.sh 経由の
+      書き換え、先行する別 patch の適用など）、patch は未適用のまま blob だけがずれ、authorization も
+      未消費のまま同じ条件を満たす。結果 authorization だけが消費され tasks は再計画されない。以後
+      Re-planning path は unspent authorization 条件を満たさず、Initial-planning path は全 task pending を
+      要求するため replace_all は恒久的に通らず、SPEC 変更を task に落とせない状態で固着する。rule 19 は
+      現在の workflow.yaml がその patch の内容を実際に反映しているかを一切確認していない。加えて
+      「All nineteen rules apply, in order, to every patch」と宣言しているのに、rule 19 は rule 2 の
+      reject を事後に覆す位置にあり順序規定と矛盾している。
+    suggestion: >-
+      認識条件に「その patch が実際に適用された痕跡」を必須で加える。例: tasks_patch.entries の全 task id と
+      carried_task_ids の全 id が現在の workflow.yaml に登録済みであること、あるいは patch を現在の
+      workflow.yaml に適用した結果が no-op になること。満たさない blob 不一致は rule 2 の reject として扱う。
+      あわせて rule 19 が rule 2 に先行する明示的な例外である旨を rule 2 側にも書き "in order" との矛盾を解消する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: R4 conflict group skipped. Routed to rework."
+  - stable_id: feaf5369e6f9a227
+    severity: high
+    category: architecture
+    file: em-workflow/references/workflow-patch.md
+    line: 287
+    line_end: 303
+    title: >-
+      Application rule 19 が「パッチ適用済みか」の判定を phase-state.md から二重所有し、より弱い代理条件で置き換えている
+    description: >-
+      references/phase-state.md の Resume decision table は resume の読み取り入力 6 として
+      「whether a patch is already applied」を所有し、patches[] の status と
+      applying_patch (not yet applied) / (applied) の分岐を定めている。新設の rule 19 はそれを引用せず、
+      独自の認識手順を workflow-patch.md 側に立てた。他ドキュメント所有ルールの新規再記述であり、
+      しかも所有者の判定より弱い（パッチ同一性を確認しないため stale patch も「適用済み」と読まれる）。
+      所有者側の applying_patch (not yet applied) 行「Apply only if the workflow-patch application rules
+      are satisfied; otherwise re-dispatch the worker to regenerate the patch」とも正面から矛盾する。
+    suggestion: >-
+      rule 19 の認識条件を自前で定義せず、phase-state.md が所有する適用済み判定
+      （patches[].status: applied / Resume decision table 入力 6）への citation に置き換える。rule 19 自身は
+      「その判定が applied を返したときに限り rule 18 の書き込みだけを再実行する。既に false なら no-op」と
+      述べるに留め、base_workflow_blob 不一致という代理条件は削除する。rule 2 との順序矛盾を避けるため、
+      この復旧手順は Application rules の列の中ではなく rule 18 の注記または独立した Recovery 節に置く。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: R4 conflict group skipped. Routed to rework."
+  - stable_id: b897fc41663841de
+    severity: high
+    category: spec
+    file: em-workflow/agents/implementation-planner.md
+    line: 125
+    line_end: 126
+    title: >-
+      FR1: Initial planning 分岐が `create-plan` is `pending` を restate したままで Re-planning path と条件が重複する
+    description: >-
+      SPEC FR1 は「Its TWO task-id allocation branches are keyed by citing workflow-patch.md's
+      Re-planning path」と要求するが、実装は Re-planning 側のみ引用形に書き換え、Initial planning 側は
+      「(`create-plan` is `pending`)」という単一ステータス literal のまま残した。workflow-patch.md の
+      Re-planning path 第2ケース（SPEC-change 遷移）も create-plan は pending なので、2 つの分岐条件が重なる。
+      プロンプトを字面どおり読む planner は先に現れる Initial planning 分岐に一致し、task0001 から採番して
+      carried_task_ids を出さない — FR1 が塞ごうとした replace-all-entry-for-registered-id /
+      replace-all-drops-task 拒否そのものを再現する。Re-planning 側が「is not restated here as a single
+      create-plan status literal」と明記しているのに直上の分岐が同じ literal を restate している点で自己矛盾でもある。
+      tests/test_replanning_producer_alignment.py:323 の
+      test_two_branches_present_initial_planning_keyed_on_pending_status がこの literal を積極的に固定している。
+    suggestion: >-
+      Initial planning 側も Re-planning 側と同じ citation 形式に揃える（workflow-patch.md の
+      replace_all permission conditions が「どの状態がこの path を満たすか」を所有し、単一の
+      create-plan status literal としては再記述しない、と書く）。あわせて
+      tests/test_replanning_producer_alignment.py の pin を、literal 存在の assert から
+      「両分岐とも workflow-patch.md を path で引用し、単一 status literal を key にしていない」の assert へ更新する。
+    sources: [claude:spec]
+    confidence: 85
+    resolution: deferred
+    resolution_reason: >-
+      R4 candidate gate excludes category == spec. Fix additionally requires a coordinated
+      2-file change (prompt + the test that pins the literal); review-editor is single-file
+      by contract. Routed to rework.
+  - stable_id: f5f1343dc0b8d389
+    severity: high
+    category: architecture
+    file: em-workflow/agents/implementation-planner.md
+    line: 125
+    line_end: 125
+    title: >-
+      Initial-planning 分岐が状態リテラルの再記述のまま残り、Re-planning path と条件が重複する
+    description: >-
+      同一サイトの architecture 観点。所有者側は tasks が空/全 pending という追加条件で両パスを弁別しているが、
+      その半分が prompt に写っていないため弁別できない。task0001 が閉じたはずの失敗経路が、リテラルを
+      入れ替えた形で残存している。さらに
+      tests/test_replanning_producer_alignment.py::test_two_branches_present_initial_planning_keyed_on_pending_status
+      がこの再記述を pin しており、ドリフト機構がテストで固定されている。
+    suggestion: >-
+      Initial planning 側も citation 形式に揃えるか、両分岐の括弧内の状態記述を削りリード文の citation 一本に委ねる。
+      tests の pin も literal 存在の assert から citation 存在 + literal 不在の assert へ更新する。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: >-
+      Aborted in R4: the fix requires editing both the prompt and
+      tests/test_replanning_producer_alignment.py, which pins the literal at line 323.
+      review-editor may modify only the finding's own file, so applying it alone would
+      leave the suite red. Routed to rework.
+  - stable_id: 47f535a25cbb9be9
+    severity: high
+    category: comprehensive
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 1283
+    line_end: 1283
+    title: >-
+      既存 workflow.yaml の failed_items に category が無いと、無関係な worker patch が全て reject される
+    description: >-
+      _validate_verify_failed_items_categories が validate_workflow_patch の入口で、workflow が渡された
+      全経路（--kind worker-result の埋め込み patch 経路と --kind workflow-patch の両方）で無条件に走る。
+      workflow-schema.md は failed_items[].category を REQUIRED にしたが schema_version は 1 のままで、
+      workflow.yaml 側には互換規則が無い（同じ変更集合の phase-state.md には Format-version compatibility が
+      新設されているのに、同種の破壊的シェイプ変更である workflow.yaml 側だけ対になる規則が無い）。
+      プラグイン更新前に verify が fail して failed_items を記録した進行中 feature は、その workflow.yaml の
+      エントリに category を持たない。以降 rework-planner / implementation-planner が返す patch は、patch 自体が
+      verify step に一切触れていなくても reject される。step_patches が set できるのは status だけで、
+      workflow.yaml は orchestrator 専有書き込みなので worker はこのエラーを構造的に直せない。無人実行では
+      worker 再 dispatch のループになり feature が止まる。fixture corpus には failed_items にエントリを持つ
+      workflow.yaml が 1 件も存在しないため、この経路は現行テストでも一度も踏まれていない。
+    suggestion: >-
+      worker が直せない欠陥を worker output の error として返さない形にする。(a) チェックの適用範囲を、
+      patch が verify step に触れる場合、または patch 自身が持ち込む failed_items に限定する。(b) 既存エントリの
+      category 欠落は診断のみで reject せず、新規に書かれるエントリだけを必須にする。(c) workflow.yaml の
+      schema_version を上げ、phase-state.md と同じ形の pre-change 互換規則を workflow-schema.md に明記する。
+      あわせて failed_items を持つ legacy workflow.yaml の fixture を corpus に追加し、この経路を実際に踏むテストを置く。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: >-
+      Attempted in R4 (batch needs-judgment -> apply as-is). The editor chose option (a) and
+      the change was reverted from backup: it broke
+      tests/test_validate_worker_output.py::TestFailedItemCategoryVocabulary::test_wired_into_validate_workflow_patch_unconditional_on_dry_run,
+      which pins that this check runs UNCONDITIONALLY, plus the sha256 pin in
+      tests/test_gate_option_vocabulary.py. Suite restored to 2380 passing. A correct fix needs a
+      coordinated change across the validator and at least two test modules. Routed to rework.
+  - stable_id: 4a5fc379eecc8bd7
+    severity: medium
+    category: security
+    file: em-workflow/references/question-resolution.md
+    line: 196
+    line_end: 202
+    title: >-
+      direction 2 の sentinel / missing / 語彙外 abort が `verify` origin にしか係らない読みを許す
+    description: >-
+      direction 2 は bound set 全体のメンバーの category を読むが、新しい文面は語彙の定義を verify origin にだけ
+      結び付けている。その直後の abort 列挙が「that vocabulary's fail-closed sentinel value」と指示語で参照するため、
+      review origin のとき指示対象が無い。review origin の bound set は review round record の findings で、その
+      category の語彙は別物（review-output-schema.json の enum は 5 値、unknown sentinel を持たず license も含まない）。
+      結果 4 つの abort 腕がまとめて verify 専用と読まれ、review origin の direction 2 は変更前と同じ
+      「security / license リテラルのときだけ abort」に戻る。round record は cross-model reviewer の JSON 由来で
+      欠損・破損しうるため、category が欠けている・読めないメンバーが素通りする経路が残る。
+    suggestion: >-
+      verify の 1 文と対になる review の 1 文を足し、bound set ごとに category の読み出し元と閉じた語彙の所有者を
+      両方明示する。abort 列挙の指示語を「その origin_kind に対応する語彙」の意味に直し、security / license /
+      sentinel / missing / unreadable / 語彙外 のすべてが origin_kind を問わず適用されることを一文で述べる。
+      既存テストが固定している語句自体はそのまま残せば pin を壊さずに曖昧さだけ解消できる。
+    sources: [claude:security]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium severity — outside the R4 candidate gate (critical/high only)."
+  - stable_id: e2ec8167c9e1056b
+    severity: medium
+    category: architecture
+    file: em-workflow/references/question-resolution.md
+    line: 196
+    line_end: 202
+    title: >-
+      category チェックの語彙が `verify` origin にしか束縛されておらず、`review` origin 側の所有者が未指定
+    description: >-
+      169-172 行の origin_kind 表では両 kind の bound set の所在をきちんと引用で埋めているのに、今回追加された
+      語彙側だけ片肺になっている。review 側の findings には sentinel 値が存在しないため「sentinel なら abort」の腕も宙に浮く。
+      実装者は failed_items の語彙を review findings にも流用するか独自に決めるかを選ぶことになり、この feature が
+      潰そうとしているドリフトの入口が新たに 1 つ開く。
+    suggestion: >-
+      origin_kind 表と同じ粒度で review 側の category ソースと語彙の所有者も 1 行引用する。sentinel の腕が
+      verify origin 限定なら、その適用範囲も明示して「全メンバーに掛かる」読みを閉じる。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium severity — outside the R4 candidate gate."
+  - stable_id: ef487ea332a17fb0
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/question-resolution.md
+    line: 190
+    line_end: 212
+    title: "direction 2 の新しい語彙チェックが `review` origin では判定基準を持たない"
+    description: >-
+      abort 条件の文は origin_kind で分岐しておらず bound set 全体に掛かるため、review origin の場合に
+      "that vocabulary" が何を指すのか、review round record の finding の category に sentinel が存在するのかが
+      文面から決まらない。結果 orchestrator は review origin の spec-change question に対しこの fail-closed abort
+      述語を評価できず、実装ごとに「常に abort」または「チェックを丸ごとスキップ」のどちらかに倒れる。
+    suggestion: >-
+      abort 条件を origin_kind ごとに書き分けるか、review origin 側の category の所有ドキュメントと閉じた語彙を
+      同じ形で cite する。review 側に sentinel が存在しないなら、sentinel 節が verify origin 専用であることを明記する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium severity — outside the R4 candidate gate."
+  - stable_id: d0029347fbfd8bd4
+    severity: medium
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 403
+    line_end: 411
+    title: >-
+      failed_items[].category の導出規則が未定義で、sentinel が事実上の既定値になり gate が常に abort する
+    description: >-
+      verify step 4 は「対応する failing な検証シナリオと verification_index を通してそのシナリオが写像する
+      要件 ID から category を導出する」と指示するが、category の語彙は review perspective 集合であり、要件 ID
+      （FR1, NFR2 …）から perspective への写像はどのドキュメントにも定義されていない。workflow-schema.md の新節も
+      値を列挙するだけで意味論を与えない。一方 step 4 は「根拠が不十分…の場合は sentinel 値を割り当てる」と
+      定めており、導出規則が無い以上この分岐が唯一到達可能な安全な選択になる。そして direction 2 は sentinel を
+      final かつ non-overridable な abort 条件にしているため、verify 由来の spec-change question は構造的に
+      ほぼ必ず abort する — FR3 が開こうとした verify→spec-change 経路が実質的に閉じる。
+    suggestion: >-
+      要件 ID / シナリオから perspective への導出経路を明示する。既存の材料で組むなら
+      tasks[].requirements → tasks[].domains → references/review-rules.yaml の domain→perspective 写像という
+      経路が既にあるので、それを workflow-schema.md の failed_items[].category 節（定義の唯一の所有者）に書き、
+      SKILL.md はそれを cite する形にする。sentinel が gate の abort を引く以上、sentinel に落ちる条件は
+      「導出規則を適用してもなお決まらない場合」に限定する必要がある。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium severity — outside the R4 candidate gate."
+  - stable_id: 468856b46b424305
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 852
+    line_end: 853
+    title: >-
+      origin_kind 語彙違反 / pre-change shape が bool に潰れ、無関係な「implementation has started」エラーになる
+    description: >-
+      新設の origin_kind 語彙チェックは workflow_replace_all_spec_change_reentry の中で return False するだけで
+      理由を返さない。呼び出し側はこの False を is_replanning = False として扱い、最終的に出るエラーは
+      「replace_all requires tasks to be empty or all pending (implementation has started)」になる。origin_kind が
+      語彙外だったことも pre-change shape の record だったこともメッセージに現れない。これは同じ変更集合で
+      phase-state.md が明示した保証「Neither refusal is silent: each states its reason」と直接矛盾する。
+    suggestion: >-
+      workflow_replace_all_spec_change_reentry を bool ではなく (bool, reason) を返す形にし、reason を err() に載せて
+      呼び出し側から出す。最低限、pre-change spec-change shape と origin_kind 語彙違反は phase-state.md が
+      名付けた診断名で区別できるようにする。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium severity — outside the R4 candidate gate."
+  - stable_id: 3c9ee9bd7d70c8f0
+    severity: medium
+    category: spec
+    file: em-workflow/references/phase-state.md
+    line: 490
+    line_end: 507
+    title: >-
+      FR7: 「re-entry is restored」と述べる remedy が、FR7 が名指しする in-flight 旧 record では到達不能
+    description: >-
+      追加された Format-version compatibility 節は (1) 読めること (2) 使用時に refuse して named diagnostic を出すこと
+      (3) remedy は「rework's spec-change transition replaces the record wholesale on its next occurrence」と述べる。
+      しかし FR7 が名指しする in-flight ケース（origin pair も replan_authorized も持たない旧 record が create-plan
+      再計画の直前に残っている状態）では remedy に到達できない: 旧 record は unspent re-planning authorization 条件を
+      満たさないため replace_all は Initial-planning path へ fail-closed で落ち、そこは「tasks が空、または全 task が
+      pending」でしか許可されないので merged task を持つ再入は拒否される。実装フェーズを再計画できない以上、次の
+      spec-change transition（remedy の前提）は発生しない。実在例:
+      feature-docs/recycled-task-id-consistency/phase-state/rework.yaml は finding_stable_id のみ・replan_authorized 欠落の旧形状。
+      結果「readable だが usable ではない」= 診断付きで再入不能のままで、FR7 が選んだ compatibility arm の実質を満たしていない。
+    suggestion: >-
+      (a) 旧形状の spec_change を検出したとき orchestrator が再計画をブロックした上で「rework 段へ戻して spec-change
+      transition をやり直す」経路を named recovery として文書化し、remedy が到達可能であることを閉じる。または
+      (b) FR7 の 3 択のうち「a justified version transition」を選び直し、schema_version を 2 に上げて旧 record を
+      明示的に version mismatch として拒否し、その診断と復旧手順を述べる。いずれの場合も TS9 のカバレッジを
+      「旧形状 record を与えたときに選ばれた解決の帰結が観測できる」形へ強化し、文言 assert だけに依存させない。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "medium severity — outside the R4 candidate gate."
+  - stable_id: 42ba1bfc497e401c
+    severity: medium
+    category: architecture
+    file: em-workflow/scripts/validate-worker-output.py
+    line: 145
+    line_end: 153
+    title: >-
+      single-owner 宣言した category 語彙を validator が script 側定数として複製している
+    description: >-
+      workflow-schema.md の新節は「This document is the single owner of the field's meaning, its required-ness and
+      its permitted values」と宣言しているが、同じ 7 値が FAILED_ITEM_CATEGORY_VALUES として validator に
+      ハードコードされ、両者の一致を確かめるテストが無い（tests 側にもさらに 2 つの複製がある）。同じファイルの
+      load_domains_vocabulary は「Parse the comment block rather than duplicating the list as a script-side constant,
+      so this stays a single SSOT」と明記して SSOT からの読み出しを採用しており、今回の追加はこの方針から外れている。
+      さらに 7 値のうち 6 値は references/reviewers.yaml の perspectives が機械可読で保持している値そのもので、
+      workflow-schema.md の単独所有宣言はそのレジストリとも所有権が衝突する。ORIGIN_KIND_VALUES も同型。
+    suggestion: >-
+      (a) references/reviewers.yaml の perspectives + sentinel から語彙を導出する loader を load_domains_vocabulary と
+      同じ形で用意し、validator と workflow-schema.md の双方をそこに従わせる。重い場合は (b) 最低限
+      FAILED_ITEM_CATEGORY_VALUES と workflow-schema.md の該当節（および tests 側の複製）が完全一致することを
+      検査するテストを 1 本足してドリフトを CI で捕まえる。ORIGIN_KIND_VALUES にも同じ扱いを適用する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity — outside the R4 candidate gate."
+  - stable_id: f92b2aa5517a691c
+    severity: medium
+    category: architecture
+    file: em-workflow/skills/develop/SKILL.md
+    line: 287
+    line_end: 288
+    title: >-
+      origin pair のフィールド定義を、所有を明示的に否認しているドキュメントへ citation している
+    description: >-
+      「フィールドの定義は references/workflow-patch.md の Re-planning path の条件が持ち、ここでは繰り返さない」と
+      書かれているが、workflow-patch.md はまさにその条件文の中で「The origin pair's own meaning is
+      references/rework-task-synthesis.md Invariant 6's — cited here, not restated」と所有を明示的に否認している。
+      フィールドがどこに載るか（spec_change レコードのスキーマ）は phase-state.md の所有で、同じ段落の 3 行下では
+      phase-state.md を正しく所有者として引いている。非所有者への citation は読者に 2 ホップを強い、workflow-patch.md の
+      条件記述の形が変わった瞬間に develop 側の引用が黙って無効になる。あわせて spec_change の必須フィールド 5 つの
+      うち 3 つだけを並べる部分再記述が残っている。
+    suggestion: >-
+      citation の宛先を所有者に向け直す — pair の意味は rework-task-synthesis.md Invariant 6、レコードのスキーマは
+      phase-state.md。さらにフィールド列挙自体を落として「spec-change 遷移は phase-state.md が定める spec_change
+      レコードを同ファイルへ書く」とだけ述べれば部分再記述も消える。テスト側の pin も所有者パスへ更新する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity — outside the R4 candidate gate."
+  - stable_id: 22d961ba63497fbb
+    severity: medium
+    category: comprehensive
+    file: feature-docs/recycled-task-id-consistency/phase-state/rework.yaml
+    line: 61
+    line_end: 61
+    title: "AC3: 旧名 `finding_stable_id` が stated exclusion 集合の外に残っている"
+    description: >-
+      IMPLEMENTATION.md D3 の Stated exclusions が挙げるのは本フィーチャー自身の SPEC.md / REQUIREMENTS.md、
+      feature-docs/goal-vs-spec-divergence/**、test-docs/** の 3 つのみ。live tree にはこの除外集合の外に旧名が残っている:
+      (1) feature-docs/recycled-task-id-consistency/phase-state/rework.yaml:61（完了済みフィーチャーの実データ record）、
+      (2) feature-docs/rework-contract-drift/workflow.yaml（FR4 の task title）、
+      (3) feature-docs/rework-contract-drift/phase-state/create-spec.yaml:56,67。
+      AC3 が列挙する具体サイト（workflow-patch.md / SKILL.md / question-packet-schema.md / question-resolution.md /
+      rework-planner-contract.md / validate-worker-output.py / references/fixtures/ / tests/）はすべてクリーンで、
+      規範面（em-workflow/ + tests/）の残存は 0 件。orchestrator が独立に grep して確認済み。
+    suggestion: >-
+      delivered record を書き換えるのは D3 自身の論拠に反するため、修正は除外集合側で行う。IMPLEMENTATION.md D3 の
+      Stated exclusions を「完了済みフィーチャーの feature-docs/<feature>/phase-state/** および workflow 生成 record
+      （workflow.yaml、phase-state/）は delivered record として除外する」旨へ広げ、本フィーチャー自身の
+      workflow.yaml / phase-state/** も名指しで加える。あわせて verify 段の repository-wide 再観測が同じ除外集合を
+      使うことを D4 に明記する。
+    sources: [claude:spec]
+    confidence: 50
+    confidence_note: >-
+      Capped at 50 and category forced to comprehensive per review-phase.md R3 step 7:
+      the finding's file is outside changed_files (diff mode).
+    resolution: unresolved
+    resolution_reason: "medium severity — outside the R4 candidate gate."
+
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  detail: >-
+    Six critical/high findings entered R4. Three (88f327b55454c09c, 9987c33a95395fdb,
+    feaf5369e6f9a227) share one site in workflow-patch.md with divergent prose
+    prescriptions and were skipped as a conflict group per batch policy
+    review.auto-fix-conflict. b897fc41663841de was outside the candidate gate
+    (category == spec). f5f1343dc0b8d389 was aborted before dispatch: the fix needs the
+    prompt AND tests/test_replanning_producer_alignment.py (which pins the literal at
+    line 323) changed together, and review-editor may write only the finding's own file.
+    47f535a25cbb9be9 was dispatched (batch needs-judgment -> apply as-is), applied, then
+    REVERTED from backup after the suite went red on two pinned tests. Working tree
+    restored; suite green at 2380 passing.
+
+residual_critical_high: 6
+rework_required: true
