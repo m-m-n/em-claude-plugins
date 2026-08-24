@@ -225,9 +225,9 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-contract-drift/task0007
   task0008:
     title: 'Patch-apply state checks: evidence-based recovery, scoped category enforcement'
     plan: tasks/task0008.md
@@ -257,9 +257,9 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-contract-drift/task0008
 review:
   status: pending
   rounds_completed: 1
