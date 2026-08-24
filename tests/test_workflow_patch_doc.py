@@ -323,18 +323,29 @@ class TestApplicationRules(unittest.TestCase):
     count below moves from "+1" to "+2" accordingly; rules 1-17 keep their
     numbers and text unchanged (C3).
 
-    task0002 (rework-contract-drift): the document now carries a
+    task0002 (rework-contract-drift): the document briefly carried a
     NINETEENTH rule (rule 18's recovery and idempotency rule for an
     interruption between the patch write and the authorization spend).
-    The count below moves from "+2" to "+3" accordingly; rules 1-18 keep
-    their numbers and text unchanged (C3)."""
+
+    task0008 (rework-contract-drift, review round1 rework, FR5, FR11,
+    NFR2): rule 19 is relocated OUT of the numbered list entirely, into its
+    own titled section ("## Interrupted authorization-spend recovery",
+    covered by TestInterruptedSpendRecoverySection below) -- its whole
+    effect was to overturn rule 2 once recognized, which contradicted the
+    list's own "in order" declaration (AC-1). The count below returns to
+    "+2" (rules 1-18, same as after task0029); `doc_rules_section` is
+    re-pointed to end at the new heading instead of "## Ownership
+    boundary" so the numbered-rule extraction never picks up the
+    relocated section's own prose."""
 
     @classmethod
     def setUpClass(cls):
         cls.fixture = DesignInputFixture()
         cls.text = _read(DOC_PATH)
         cls.doc_rules_section = _extract_section(
-            cls.text, "## Application rules", "## Ownership boundary"
+            cls.text,
+            "## Application rules",
+            "## Interrupted authorization-spend recovery",
         )
 
     def test_design_input_still_states_sixteen_rules(self):
@@ -345,37 +356,45 @@ class TestApplicationRules(unittest.TestCase):
             "sanity: design-input.md 5.5.5 states sixteen rules",
         )
 
-    def test_doc_rule_count_is_design_input_count_plus_three(self):
+    def test_doc_rule_count_is_design_input_count_plus_two(self):
         design_rules = self.fixture.application_rules()
         doc_rule_numbers = re.findall(
             r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE
         )
         self.assertEqual(
             len(doc_rule_numbers),
-            len(design_rules) + 3,
+            len(design_rules) + 2,
             "workflow-patch.md must carry design-input.md's sixteen rules "
             "plus this feature's own seventeenth (re-planning task-id "
-            "allocation), eighteenth (re-planning authorization spend, "
-            "task0029) and nineteenth (recovery and idempotency for the "
-            "interrupted spend, task0002)",
+            "allocation) and eighteenth (re-planning authorization spend, "
+            "task0029); the interrupted-spend recovery procedure "
+            "(task0002/task0008) is not a numbered rule (AC-1)",
         )
 
-    def test_rules_are_ordered_one_through_nineteen(self):
+    def test_rules_are_ordered_one_through_eighteen(self):
         doc_rule_numbers = [
             int(n)
             for n in re.findall(r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE)
         ]
-        self.assertEqual(doc_rule_numbers, list(range(1, 20)))
+        self.assertEqual(doc_rule_numbers, list(range(1, 19)))
 
     def test_rule_eighteen_states_the_authorization_spend_procedure(self):
-        # task0002: rule 19 is now the last rule in the list, so rule 18's
-        # own text is bounded by rule 19's number rather than running to
-        # the end of the section.
+        # task0008: rule 18 is once again the last rule in the list (the
+        # relocated recovery section is excluded from doc_rules_section by
+        # construction -- see setUpClass), so rule 18's own text runs to
+        # the end of the extracted section.
         idx = self.doc_rules_section.index("18. ")
-        end = self.doc_rules_section.index("19. ")
-        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:end])
+        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:])
         self.assertIn("replan_authorized", rule_text)
         self.assertIn("orchestrator", rule_text)
+
+    def test_no_nineteenth_rule_remains_in_the_numbered_list(self):
+        # task0008 AC-1 (non-vacuity companion to the count/ordering
+        # checks above): the extracted rules section itself contains no
+        # "19. " numbered item.
+        self.assertNotRegex(
+            self.doc_rules_section, re.compile(r"^19\. ", re.MULTILINE)
+        )
 
     def test_rule_seventeen_states_the_task_id_allocation_rule(self):
         # task0002: rule 17's own text is bounded by rule 18's number
@@ -412,52 +431,137 @@ class TestApplicationRules(unittest.TestCase):
         self.assertIn("applies to `entries` only", rule_text)
 
 
-class TestApplicationRuleNineteenRecoveryAndIdempotency(unittest.TestCase):
-    """task0002 (rework-contract-drift) AC-3: rule 18's authorization-
-    spending write gains a recovery and idempotency rule (rule 19) for an
-    interruption between the patch's own write (rule 15) and rule 18's
-    write. Per the task's Test Notes, these pins are over the rule's
-    substance -- recoverability/recognition, idempotency, no-op on repeat,
-    same end-state -- not its exact prose, so a later rewording that keeps
-    the substance does not fail them."""
+RECOVERY_HEADING = "## Interrupted authorization-spend recovery"
+
+# The exact sentence the pre-task0008 rule 19 used to read "already
+# applied" from a bare blob mismatch plus a standing authorization -- the
+# proxy condition task0008 replaces with the phase-state.md-owned
+# already-applied determination. Used only as a negative-proof sample
+# below (Test Notes: paired with a matcher that fires against a synthetic
+# sentence stating the old proxy condition).
+OLD_PROXY_SENTENCE = "that combination is read as already-applied-not-yet-spent"
+
+BARE_BLOB_MISMATCH_RECOGNIZED_CASE_RE = re.compile(
+    r"blob mismatch[^.]*\bis\b[^.]*\brecognized case\b", re.IGNORECASE
+)
+
+
+class TestInterruptedSpendRecoverySection(unittest.TestCase):
+    """task0002 (rework-contract-drift) AC-3, narrowed/relocated by task0008
+    (rework-contract-drift, review round1 rework, FR5, FR11, NFR2): rule
+    18's authorization-spending write is recoverable and idempotent across
+    an interruption between the patch's own write (rule 15) and rule 18's
+    write -- stated in its own titled section outside the numbered rule
+    list (AC-1), keyed by the phase-state.md-owned already-applied
+    determination rather than a bare `base_workflow_blob` mismatch
+    (AC-2/AC-3). Per the task's Test Notes, the retained pins (recognition,
+    no-op, same-end-state, phase-state citation) are over the rule's
+    substance, not its exact prose, so a later rewording that keeps the
+    substance does not fail them."""
 
     @classmethod
     def setUpClass(cls):
-        cls.doc_rules_section = _extract_section(
-            _read(DOC_PATH), "## Application rules", "## Ownership boundary"
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text, RECOVERY_HEADING, "## Ownership boundary"
         )
-        idx = cls.doc_rules_section.index("19. ")
-        cls.rule_text = re.sub(r"\s+", " ", cls.doc_rules_section[idx:])
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
 
-    def test_rule_nineteen_is_the_last_rule(self):
-        self.assertNotIn("20. ", self.doc_rules_section)
+    # -- AC-1: outside the numbered list ---------------------------------
+
+    def test_section_is_its_own_titled_heading(self):
+        self.assertIn(RECOVERY_HEADING, self.text)
+
+    def test_section_appears_after_the_application_rules_list(self):
+        rules_idx = self.text.index("## Application rules")
+        section_idx = self.text.index(RECOVERY_HEADING)
+        ownership_idx = self.text.index("## Ownership boundary")
+        self.assertTrue(rules_idx < section_idx < ownership_idx)
+
+    # -- retained substance (task0002) ------------------------------------
 
     def test_states_recognition_of_an_already_applied_patch(self):
-        self.assertIn("already been applied", self.rule_text)
-        self.assertIn("resumed run", self.rule_text)
+        self.assertIn("already been applied", self.normalized)
+        self.assertIn("resumed run", self.normalized)
 
     def test_states_no_op_on_repeated_consumption(self):
-        self.assertIn("no-op", self.rule_text)
-        self.assertIn("not an error", self.rule_text)
+        self.assertIn("no-op", self.normalized)
+        self.assertIn("not an error", self.normalized)
 
     def test_states_same_state_after_any_number_of_resumptions(self):
-        self.assertIn("any number of resumptions", self.rule_text)
-        self.assertIn("uninterrupted run", self.rule_text)
+        self.assertIn("any number of resumptions", self.normalized)
+        self.assertIn("uninterrupted run", self.normalized)
 
     def test_cites_phase_state_for_flag_location_without_restating(self):
-        self.assertIn("references/phase-state.md", self.rule_text)
-        self.assertIn("not restated", self.rule_text)
+        self.assertIn("references/phase-state.md", self.normalized)
+        self.assertIn("not restated", self.normalized)
 
-    def test_negative_proof_rule_eighteen_lacks_recovery_substance(self):
-        # Non-vacuity: rule 18's own text (pre-existing, untouched by this
-        # task) states neither idempotency nor a no-op -- proving the
-        # substance checks above are not vacuously true of any rule text.
-        idx = self.doc_rules_section.index("18. ")
-        end = self.doc_rules_section.index("19. ")
-        rule_18_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:end])
-        self.assertNotIn("no-op", rule_18_text)
-        self.assertNotIn("resumed run", rule_18_text)
-        self.assertNotIn("uninterrupted run", rule_18_text)
+    # -- AC-2: recognition condition names phase-state.md's own
+    # already-applied determination, keyed by patch identity -------------
+
+    def test_names_phase_state_as_owner_of_the_already_applied_determination(
+        self,
+    ):
+        self.assertIn("references/phase-state.md", self.normalized)
+        self.assertIn("already-applied determination", self.normalized)
+        self.assertIn(
+            "How the determination itself is computed is "
+            "`references/phase-state.md`'s own",
+            self.normalized,
+        )
+        self.assertIn("not restated", self.normalized)
+
+    def test_requires_the_determination_for_the_patch_in_hand_by_identifier(
+        self,
+    ):
+        self.assertIn("patch in hand", self.normalized)
+        self.assertIn("`patch_id`", self.normalized)
+
+    def test_requires_the_authorization_record_to_still_stand(self):
+        self.assertIn("still stand", self.normalized)
+
+    # -- AC-3: bare blob mismatch is never a recognized case on its own --
+
+    def test_blob_mismatch_not_confirmed_is_an_ordinary_rejection(self):
+        self.assertIn("ordinary rejection", self.normalized)
+        self.assertIn(
+            "no authorization is ever spent on a rejected patch",
+            self.normalized,
+        )
+
+    def test_no_op_arm_is_stated_only_within_the_recognized_case(self):
+        # The no-op sentence is inside the "Idempotency" paragraph, which
+        # opens with "Under the recognized case" -- it is never a
+        # standalone top-level statement.
+        idempotency_idx = self.normalized.index("Idempotency")
+        no_op_idx = self.normalized.index("no-op")
+        self.assertLess(idempotency_idx, no_op_idx)
+        self.assertIn("Under the recognized case", self.normalized)
+
+    def test_no_sentence_makes_a_bare_blob_mismatch_a_recognized_case(self):
+        self.assertNotRegex(self.normalized, BARE_BLOB_MISMATCH_RECOGNIZED_CASE_RE)
+
+    def test_negative_proof_matcher_fires_on_a_synthetic_bare_blob_sentence(
+        self,
+    ):
+        synthetic = (
+            "A base_workflow_blob mismatch is a recognized case on its own "
+            "once the authorization is unspent."
+        )
+        self.assertRegex(synthetic, BARE_BLOB_MISMATCH_RECOGNIZED_CASE_RE)
+
+    def test_old_proxy_condition_wording_absent(self):
+        self.assertNotIn(OLD_PROXY_SENTENCE, self.text)
+
+    def test_negative_proof_old_proxy_wording_would_be_detected(self):
+        # Non-vacuity: the absence check above can fail meaningfully --
+        # this is the exact sentence the pre-task0008 rule 19 stated.
+        synthetic = (
+            "while the spec_change record's replan_authorized is still "
+            "true: " + OLD_PROXY_SENTENCE + ", and the resumed run "
+            "performs only rule 18's write"
+        )
+        self.assertIn(OLD_PROXY_SENTENCE, synthetic)
 
 
 class TestOwnershipBoundaryAndDomainsSSOT(unittest.TestCase):

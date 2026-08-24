@@ -224,6 +224,22 @@ new test classes, covering this task's own AC-6 and AC-7:
   driven directly against the two new fixtures under
   `references/fixtures/question-packet/origin-verification/` (also swept,
   by exit code, through `TestFixtureCorpusDataDriven` above).
+
+rework-contract-drift/task0008 (review round1 rework, FR3, NFR1, NFR2, D11)
+narrows `_validate_verify_failed_items_categories`: task0004's version ran
+unconditionally over every `failed_items[]` entry regardless of what the
+patch touched, rejecting a legacy, category-less entry even when the patch
+never went near the verify step -- a defect no worker can repair (a step
+patch may set only `status`). The function now takes the patch itself and
+is scoped by the new `_verify_step_targeted_by_patch` helper: it errors
+only for the entries of a verify step the patch targets via `step_patches`.
+`TestFailedItemCategoryVocabulary` below is updated in place (every direct
+call now supplies a patch) and gains the two scoping cases (untargeted:
+no error even over a non-conforming entry; targeted: retained teeth). The
+existing wiring test's patch now targets the verify step, exercising the
+new scope instead of the removed unconditional one. Covers this task's
+AC-6 and (together with the new fixture case under
+`references/fixtures/workflow-patch/append_rework/`) AC-7.
 """
 
 import importlib.util
@@ -2551,12 +2567,17 @@ class TestOriginKindVocabulary(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# rework-contract-drift/task0004 AC-6 (FR3 validator half): a
-# `workflow.yaml` verify-step `failed_items[]` entry's `category` is
-# rejected when missing, empty, or out of the seven-value vocabulary
+# rework-contract-drift/task0004 AC-6 (FR3 validator half), scoped by
+# rework-contract-drift/task0008 (review round1 rework, FR3, NFR1, NFR2,
+# D11): a `workflow.yaml` verify-step `failed_items[]` entry's `category`
+# is rejected when missing, empty, or out of the seven-value vocabulary
 # (IMPLEMENTATION.md Shared Components), and accepted for each of the
 # seven values -- enforced by `_validate_verify_failed_items_categories`,
-# wired into `validate_workflow_patch` unconditional on --dry-run-apply.
+# wired into `validate_workflow_patch` unconditional on --dry-run-apply,
+# but ONLY for the entries of a verify step the patch targets via
+# `step_patches` (workflow-schema.md's pre-change compatibility rule): a
+# pre-existing entry outside that reach -- one a worker's step patch has no
+# way to repair -- contributes no error.
 # ---------------------------------------------------------------------------
 
 class TestFailedItemCategoryVocabulary(unittest.TestCase):
@@ -2585,9 +2606,13 @@ class TestFailedItemCategoryVocabulary(unittest.TestCase):
             ],
         }
 
-    def _errors(self, category):
+    def _patch(self, *, targets_verify):
+        step_patches = [{"step_id": "verify"}] if targets_verify else []
+        return {"step_patches": step_patches}
+
+    def _errors(self, category, *, targets_verify=True):
         return VWO._validate_verify_failed_items_categories(
-            self._workflow(category)
+            self._workflow(category), self._patch(targets_verify=targets_verify)
         )
 
     def test_each_of_the_seven_values_accepted(self):
@@ -2611,7 +2636,10 @@ class TestFailedItemCategoryVocabulary(unittest.TestCase):
     def test_no_verify_step_yields_no_errors(self):
         workflow = {"feature": "example", "workflow": []}
         self.assertEqual(
-            VWO._validate_verify_failed_items_categories(workflow), []
+            VWO._validate_verify_failed_items_categories(
+                workflow, self._patch(targets_verify=True)
+            ),
+            [],
         )
 
     def test_no_failed_items_key_yields_no_errors(self):
@@ -2620,14 +2648,100 @@ class TestFailedItemCategoryVocabulary(unittest.TestCase):
             "workflow": [{"id": "verify", "status": "pending"}],
         }
         self.assertEqual(
-            VWO._validate_verify_failed_items_categories(workflow), []
+            VWO._validate_verify_failed_items_categories(
+                workflow, self._patch(targets_verify=True)
+            ),
+            [],
         )
+
+    def test_untargeted_verify_step_yields_no_category_error(self):
+        # task0008 AC-6 (pre-change case): a patch touching no verify step
+        # produces no error even over a non-conforming (here: entirely
+        # missing) category -- the party that would receive the rejection
+        # has no way to repair a pre-existing entry.
+        self.assertEqual(
+            self._errors(_OMIT, targets_verify=False), []
+        )
+
+    def test_targeted_verify_step_retains_the_category_check(self):
+        # task0008 AC-6 (retained-teeth case): a patch that DOES target the
+        # verify step still rejects a non-conforming entry within it.
+        errors = self._errors(_OMIT, targets_verify=True)
+        self.assertTrue(errors)
+        self.assertIn("category", errors[0]["message"])
+
+    def test_verify_step_target_among_other_step_patches_still_scopes_in(self):
+        # A patch touching several steps, one of which is verify, still
+        # reaches the verify step's entries.
+        patch = {
+            "step_patches": [
+                {"step_id": "implement"},
+                {"step_id": "verify"},
+            ]
+        }
+        errors = VWO._validate_verify_failed_items_categories(
+            self._workflow(_OMIT), patch
+        )
+        self.assertTrue(errors)
 
     def test_wired_into_validate_workflow_patch_unconditional_on_dry_run(
         self,
     ):
         # AC-6: the check runs on the invocation path that already reads
-        # --workflow, not only under --dry-run-apply.
+        # --workflow, not only under --dry-run-apply. task0008: the patch
+        # now targets the verify step, exercising the new scope instead of
+        # the removed unconditional one.
+        patch = {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "append_rework",
+            "tasks_patch": {
+                "mode": "append",
+                "expected_next_task_id": "task0001",
+                "entries": {},
+            },
+            "step_patches": [{"step_id": "verify"}],
+            "preserve": ["workflow.implement.base_commit"],
+        }
+        errors = VWO.validate_workflow_patch(
+            patch,
+            workflow=self._workflow("not-a-real-category"),
+            dry_run=False,
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("category", messages)
+
+    def test_check_also_runs_under_dry_run_apply(self):
+        # AC-6: "driven ... with and without dry-run apply" -- a targeted
+        # verify step still errors when --dry-run-apply is also requested.
+        patch = {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "append_rework",
+            "tasks_patch": {
+                "mode": "append",
+                "expected_next_task_id": "task0001",
+                "entries": {},
+            },
+            "step_patches": [{"step_id": "verify"}],
+            "preserve": ["workflow.implement.base_commit"],
+        }
+        errors = VWO.validate_workflow_patch(
+            patch,
+            workflow=self._workflow("not-a-real-category"),
+            dry_run=True,
+        )
+        codes = {e.get("code") for e in errors}
+        self.assertIn("category", codes)
+
+    def test_untargeted_scope_also_holds_under_dry_run_apply(self):
+        # AC-6 (pre-change case), driven through the whole entry point with
+        # --dry-run-apply also requested: an untargeted patch still
+        # produces no category error.
         patch = {
             "schema_version": 1,
             "patch_id": "create-plan-p0001",
@@ -2644,11 +2758,11 @@ class TestFailedItemCategoryVocabulary(unittest.TestCase):
         }
         errors = VWO.validate_workflow_patch(
             patch,
-            workflow=self._workflow("not-a-real-category"),
-            dry_run=False,
+            workflow=self._workflow(_OMIT),
+            dry_run=True,
         )
-        messages = " ".join(e["message"] for e in errors)
-        self.assertIn("category", messages)
+        codes = {e.get("code") for e in errors}
+        self.assertNotIn("category", codes)
 
 
 _OMIT = object()
