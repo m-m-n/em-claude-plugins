@@ -15,7 +15,7 @@ This document does not restate the shapes it builds on — it cites them:
   `references/phase-state.md`.
 - `implementation-planner`'s input and output contract:
   `references/contracts/planner-contract.md`.
-- Workflow patch structure and its sixteen application rules:
+- Workflow patch structure and its application rules:
   `references/workflow-patch.md`.
 - `input_digest` (rule R1) and the seven validation layers:
   `references/contracts/worker-envelope.md` (provenance: design-input.md 5.0
