@@ -57,7 +57,8 @@ workflow:
     を false にする実行者とタイミングを規定。V-6: classification を追記型リスト化。テスト 2234 件 green、MV-1 / MV-4 / SC-6 も再確認済み。留意:
     task0027-task0029 の変更は review フェーズを通っていない（review は round 4 で completed、batch.review_rework_count が上限のため再レビューは行っていない）。'
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 71647aa4a5a1e0a0b2b3b62858ea3c5568cebb24
 tasks:
   task0001:
     title: goal block definition in the workflow schema
