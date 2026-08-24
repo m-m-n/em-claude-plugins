@@ -708,8 +708,16 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # unconsumed record -- `consumed`'s value is explicitly excluded from
     # the decision (references/phase-state.md's `spec_change` flag pair).
     # Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0023 (review round 3,
+    # D10, merged after task0022): the `tasks_patch` block gains
+    # `carried_task_ids`, the Re-planning task-id allocation section is
+    # rewritten around the carried_task_ids/entries disjoint-set split,
+    # application rule 12 narrows to `entries` only, rule 17 is restated in
+    # terms of `carried_task_ids`, and the `preserve` section gains the
+    # carried-id remark. Same rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "4b3c2ca5cfe65eb484135d7822d411a58a286ffa31d6b0713e00019ca007a85a"
+        "b66de6b34e660be4245bc754d53b17db44316cfe6b704e26ae7b513327fbabcd"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -750,8 +758,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # batch-only classification gate's proceed-outcome answer source,
     # references/question-resolution.md's Classification gate Outcome
     # step). Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0023 (review round 3,
+    # D10, merged after task0022 and task0025): `validate_workflow_patch`
+    # gains a structural `tasks_patch.carried_task_ids` shape check, the
+    # `elif is_replanning:` branch of `_validate_dry_run_apply` is rewritten
+    # around `carried_task_ids` (three independently reported rejection
+    # codes instead of the old drop/reuse pair), and `apply_patch`'s
+    # `replace_planning` arm now copies a carried id's record from the
+    # pre-apply workflow verbatim. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "74f3229ea4fcdf7a93a23cc5898f643a7c5297ebb92a3387e7135388e8fdb07e"
+        "55a7bd48b44785b1da936696400f8f1e494da8f92bc420801fd4e7b4b58c52a0"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -783,8 +800,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # answer object using it validates. Same rationale: refresh, don't
     # remove -- PINNED_VALIDATOR_TEST_LINE below is unaffected and still
     # asserted.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0023 (review round 3,
+    # D10, merged after task0022 and task0025): `TestCanonicalReentryInvocation.
+    # _patch_obj` and `TestReplanningMandatoryPreserveAndTaskIdAllocation`
+    # move to the carried_task_ids/entries carry-over form, and
+    # `TestReplanningCarryOverEnforcement` is new (the
+    # `replace-all-entry-for-registered-id` rejection). PINNED_VALIDATOR_
+    # TEST_LINE below is unaffected and still asserted. Same rationale:
+    # refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "baf3ba899f058399f5d875236cb53715c393b6dc3e79b29f1f8dbe1f6dc98f62"
+        "39591f33229a66a264b4748d33b69ecafc0e737d63d2ca7316ddb0840b5a0ddf"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
