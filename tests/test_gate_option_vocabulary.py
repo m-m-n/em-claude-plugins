@@ -721,8 +721,16 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # path-dependent mandatory-preserve and task-id-allocation checks move
     # into `_validate_dry_run_apply`'s `replace_all` branch. Same rationale:
     # refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0024 (review round 3,
+    # AC-4/AC-5): the gate registry's category binding gains the reverse
+    # direction -- `_gate_ids_for_category` plus the category -> gate_id
+    # check inside `validate_question`, closing the direction where
+    # `category: spec-change` paired with an unregistered or
+    # worker-unattributed `gate_id` previously passed with no error. Same
+    # rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "5e14f0383dc4864868a204f53b7a12b93dee179cd45e9e0b173ea3bf601e4e43"
+        "1f2e963d02ad7af13c68fa90c2e2dce785e00b9794143a77decec4dec196ea73"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -731,8 +739,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # TestReplanningMandatoryPreserveAndTaskIdAllocation are new. Same
     # rationale as the two refreshes above: refresh, don't remove --
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0024 (review round 3,
+    # AC-4/AC-5): TestGateRegistryDerivation gains the rework.spec-change
+    # registration pins, and TestSpecChangeCategoryGateBidirectionalBinding
+    # is new, proving the category -> gate_id direction the validator gains
+    # above. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "ee61b019978d2f87bc7faaff01b21757465eab08e343d6401c3e7d67e024352b"
+        "c36a9403950235c4d46190577a19cbc3424853ac9259768eb0a412728d822e79"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
