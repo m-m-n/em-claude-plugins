@@ -405,11 +405,17 @@ Triggered whenever a launched implementer's `Task()` call returns.
    `workflow.yaml` prior to this report, never something the report
    itself introduces. The path being added must independently pass the
    same shape check `is_safe_relative_path` applies to every
-   patch-written `tasks.*.files` entry — project-relative, no absolute
-   path, no `..` segment, no NUL, no symlink escape — applied here by
+   patch-written `tasks.*.files` entry — cited here, not restated;
+   `is_safe_relative_path` does not check for symlink escapes, and no
+   such check is claimed — applied here by
    the orchestrator itself before the append, not merely asserted by the
    report; and it must not fall under a workflow control path
-   (`.claude/**` or `em-workflow/hooks/**`) — such a path is never
+   (`.claude/**`, `em-workflow/hooks/**`, `em-workflow/scripts/**`,
+   `em-workflow/agents/**`, `em-workflow/skills/**` — these
+   `em-workflow/**` entries are paths relative to the plugin root, not a
+   project-relative namespace — `CLAUDE.md`, `.github/workflows/**`,
+   `feature-docs/*/workflow.yaml`, or `feature-docs/*/phase-state/**`)
+   — such a path is never
    auto-added regardless of how the other two parts read. A deviation
    failing any one of these parts — a missing identifier, an identifier
    that resolves to nothing or was not already registered, a path that

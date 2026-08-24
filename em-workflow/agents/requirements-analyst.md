@@ -84,8 +84,9 @@ procedure, never to you.
 When the investigation is complete and nothing is unresolved, return
 `status: completed` with `payload.resolved_requirements`,
 `payload.project_detection`, and `payload.design_system_candidates` per the
-contract, plus `payload.reference_impact` when `inspect_reference_impact` was
-part of `analysis_scope` (omit it when that category was not inspected).
+contract, plus `payload.reference_impact` — the contract requires it on every
+`full` completion, so return an empty list when `inspect_reference_impact` was
+not part of `analysis_scope`, never omit the field.
 **Any point you cannot resolve from the supplied inputs becomes a
 question in a `question_packet` — never a silently-adopted assumption.**
 Return `status: needs_user_input` with `payload.analysis_snapshot` holding
