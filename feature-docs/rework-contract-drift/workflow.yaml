@@ -139,6 +139,7 @@ tasks:
     - tests/test_spec_change_origin_binding.py
     - tests/test_spec_change_replan_authorization.py
     - tests/test_replanning_carry_over.py
+    - tests/test_worker_contracts_planning.py
     skills:
     - backend-impl
     domains:
@@ -157,8 +158,13 @@ tasks:
     - NFR4
     - NFR5
     - NFR7
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'deviation: tests/test_worker_contracts_planning.py (outside expected_files) used the substring
+      ''stable_id'' as a proxy check inside the Specification-change transition section; the FR4 rename
+      made it a genuine regression, fixed by swapping the check to ''origin_id''. Judgment call for review:
+      validate_question() gained one schema-level check not named in AC-6 - a gate_id ''rework.spec-change''
+      question is rejected unless some evidence[] entry carries a non-empty origin_id - needed so the
+      invalid-missing-origin-id fixture yields exit 1 under the generic fixture-corpus sweep.'
     branch: em-workflow/rework-contract-drift/task0004
   task0005:
     title: 'Phase-state: format-version compatibility rule and classification replay rule'
