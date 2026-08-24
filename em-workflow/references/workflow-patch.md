@@ -93,13 +93,16 @@ neither is rejected:
     mapping whose own `phase` is `rework` (an equivalent source for a
     caller that already has that file open) — either source's mapping must
     also carry a `feature` matching the workflow's `feature`. An unspent
-    re-planning authorization means the record carries `reason`,
-    `finding_stable_id` and `recorded_at_commit` (all non-empty), carries
-    `replan_authorized` as a boolean, and `replan_authorized` is `true` —
-    a record whose authorization is already spent (`replan_authorized:
-    false`) is not a standing permission. `consumed`'s value plays no part
-    in this decision (`references/phase-state.md`'s `spec_change` flag
-    pair). Any one of these conditions missing means this is not the
+    re-planning authorization means the record carries `reason`, the
+    origin pair `origin_kind` and `origin_id`, and `recorded_at_commit`
+    (all non-empty), carries `replan_authorized` as a boolean, and
+    `replan_authorized` is `true` — a record whose authorization is
+    already spent (`replan_authorized: false`) is not a standing
+    permission. The origin pair's own meaning is
+    `references/rework-task-synthesis.md` Invariant 6's — cited here, not
+    restated. `consumed`'s value plays no part in this decision
+    (`references/phase-state.md`'s `spec_change` flag pair). Any one of
+    these conditions missing means this is not the
     second case: the invocation falls back to the Initial-planning path's
     rule (fail-closed — a narrower invocation never widens what
     `replace_all` permits). The SPEC-change transition
@@ -239,7 +242,7 @@ record is copied verbatim, the invariance check (rule 14) holds.
 
 ## Application rules (in order)
 
-All eighteen rules apply, in order, to every patch:
+All nineteen rules apply, in order, to every patch:
 
 1. Reject unless `base_input_digest` matches the digest recomputed from the
    current input (rule R1).
@@ -281,6 +284,23 @@ All eighteen rules apply, in order, to every patch:
     (`references/phase-state.md`) — an authorization grounds exactly one
     re-planning pass. Does not apply to the Initial-planning path, which
     has no `spec_change` record to spend.
+19. Rule 18's authorization-spending write is recoverable and idempotent
+    across an interruption between rule 15's patch write and rule 18's own
+    write. A resumed run recognizes that the patch it is about to spend
+    the authorization for has already been applied when rule 2's
+    `base_workflow_blob` check would reject the patch — the blob no
+    longer matches, because rule 15's write already landed — while the
+    `spec_change` record's `replan_authorized` is still `true`: that
+    combination is read as already-applied-not-yet-spent, and the resumed
+    run performs only rule 18's write instead of treating the blob
+    mismatch as an ordinary rejection. Spending an authorization that is
+    already spent (`replan_authorized` already `false`) is a no-op, not
+    an error: the resumed run leaves the record unchanged and reports
+    success. Under either recognized case, the state reached after any
+    number of resumptions is the same as the state reached by one
+    uninterrupted run. Where `replan_authorized` lives is
+    `references/phase-state.md`'s own definition — cited here, not
+    restated.
 
 ## Ownership boundary
 
@@ -288,6 +308,14 @@ All eighteen rules apply, in order, to every patch:
 orchestrator-updated only. No operation, mode, or field of this contract
 targets them — they are absent from every worker patch by construction, not
 by convention workers are expected to honor voluntarily.
+
+Application rule 18's write is this contract's one crossing into
+`references/phase-state.md`: the orchestrator, never a worker, owns the
+write that sets `spec_change.replan_authorized` to `false`, and the
+crossing is permitted only once a re-planning `replace_all` (Re-planning
+path) has been applied, in the same phase-state write that records the
+application. The record's own definition is
+`references/phase-state.md`'s — cited here, not restated.
 
 ## Domains vocabulary SSOT
 

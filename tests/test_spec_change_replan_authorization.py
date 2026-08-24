@@ -645,12 +645,19 @@ class TestOneConsumptionProcedureDocument(unittest.TestCase):
         # D12: workflow-patch.md is the only document allowed to state how
         # many application rules it carries, and this task's new rule (18)
         # updates that count in the same edit.
+        #
+        # Refreshed by rework-contract-drift/task0002 (deviation -- this
+        # module is outside task0002's declared file set, but it pins a
+        # document task0002 legitimately extends; same D12 rule applies:
+        # task0002 adds Application rule 19, so the "All eighteen rules"
+        # sentence becomes "All nineteen rules" in that same edit, and this
+        # pin is refreshed rather than left stale).
         self.assertIn(
-            "All eighteen rules apply, in order, to every patch:",
+            "All nineteen rules apply, in order, to every patch:",
             self.workflow_patch_text,
         )
         self.assertNotIn(
-            "All seventeen rules apply, in order, to every patch:",
+            "All eighteen rules apply, in order, to every patch:",
             self.workflow_patch_text,
         )
 
