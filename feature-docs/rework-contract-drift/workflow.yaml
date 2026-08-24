@@ -210,7 +210,7 @@ tasks:
     notes: null
     branch: em-workflow/rework-contract-drift/task0006
 review:
-  status: in_progress
+  status: pending
   rounds_completed: 1
   plan:
     floor:
