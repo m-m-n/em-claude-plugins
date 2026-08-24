@@ -8,20 +8,102 @@ last_input_digest: sha256:9c146ac1c3bf84a9fa410fe78307d24bd235025f72f55ea82a8846
 active_request_id: null
 packets:
   create-spec-q0001:
-    status: issued
+    status: answered
     issued_at: "2026-08-24T21:52:00+09:00"
     questions:
       - question_id: requirement.fr1.replanning-branch-key
-        status: issued
+        status: answered
       - question_id: requirement.fr3.verify-origin-category-failclosed
         status: answered
       - question_id: requirement.fr4.packet-schema-origin-field
-        status: issued
+        status: answered
       - question_id: requirement.medium-item-scope
-        status: issued
+        status: answered
       - question_id: design.step-recommendation
-        status: issued
+        status: answered
 answers:
+  requirement.fr1.replanning-branch-key:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:22:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [align_to_workflow_patch]
+    freeform: null
+    normalized_answer: >-
+      Direction (a). The implementation-planner prompt stops restating the
+      re-planning condition and instead cites `references/workflow-patch.md`'s
+      Re-planning path, which already covers both cases including the `pending`
+      state the SPEC-change transition actually produces. `planner-contract.md:102`
+      and the literal string pinned by
+      tests/test_replanning_producer_alignment.py::TestImplementationPlannerTwoBranchAllocation::test_two_branches_present_keyed_on_create_plan_status
+      are aligned in the same change; the updated test asserts both owner-defined
+      paths rather than pinning the erroneous `needs_update` literal.
+    resolution_note: >-
+      Batch policy create-spec.requirement-clarification -> codex_consultation.
+      Codex mapped onto the existing option_id `align_to_workflow_patch`; the
+      orchestrator judged the mapping. Rationale adopted: citing the owning document
+      removes the restatement that drifted, which is the bug class this feature
+      exists to close. Recorded as an assumption per the policy's
+      record_as_assumption.
+  requirement.fr4.packet-schema-origin-field:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:22:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [rename_to_origin_id]
+    freeform: null
+    normalized_answer: >-
+      Rename `questions[].evidence[].finding_stable_id` to `origin_id` in
+      `references/question-packet-schema.md`, and align every consumer in the same
+      change: `question-resolution.md`, `contracts/rework-planner-contract.md`,
+      `scripts/validate-worker-output.py`, the fixtures under `references/fixtures/`
+      and every existing test reference. The pair definition (`origin_kind` ->
+      `origin_id`) stays owned by `rework-task-synthesis.md` Invariant 6 and is
+      cited, not restated. All-or-nothing within one change.
+    resolution_note: >-
+      Batch policy create-spec.requirement-clarification -> codex_consultation.
+      Codex mapped onto the existing option_id `rename_to_origin_id`; the
+      orchestrator judged the mapping. Rationale adopted: a field literally named
+      `finding_stable_id` that legitimately holds a non-finding id is exactly the
+      name/meaning drift this feature exists to close, so the larger coordinated
+      rename is preferred over broadening the description in place. This is the
+      widest-blast-radius decision in the feature and is flagged as such.
+      Recorded as an assumption per the policy's record_as_assumption.
+  requirement.medium-item-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:22:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [all_seven]
+    freeform: null
+    normalized_answer: >-
+      Include medium items 5-11 as lower-priority functional requirements of this
+      feature. Item 7 (phase-state `schema_version` left at 1 across a destructive
+      shape change) must be resolved EXPLICITLY in the SPEC with a migration rule, a
+      compatibility rule, or a justified version transition — not by silently
+      leaving in-flight features' on-disk rework.yaml non-reenterable. Item 10 is
+      the same restatement-drift class as FR1 and sits in the same file.
+    resolution_note: >-
+      Batch policy create-spec.requirement-clarification -> codex_consultation.
+      Codex mapped onto the existing option_id `all_seven`; the orchestrator judged
+      the mapping. Codex explicitly acknowledged item 7 raises acceptance risk and
+      required the SPEC to resolve that risk rather than defer it. Recorded as an
+      assumption per the policy's record_as_assumption.
+  design.step-recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:22:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: >-
+      Accept requirements-analyst's recommendation to SKIP the design step. The
+      change surface is Markdown SSOT documents, one agent prompt, the validator
+      script and unittest tests; there is no UI surface.
+    resolution_note: >-
+      Batch policy create-spec.design-step -> action: select, option_id:
+      decide_autonomously. No Codex consultation needed; the gate has a listed
+      policy entry.
   requirement.fr3.verify-origin-category-failclosed:
     packet_id: create-spec-q0001
     answered_at: "2026-08-24T22:20:00+09:00"
