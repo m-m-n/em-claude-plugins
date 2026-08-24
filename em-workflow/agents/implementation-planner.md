@@ -118,20 +118,25 @@ below): 互換ライセンスの別ライブラリへ差し替える / プロジ
 ### 4. Task decomposition → tasks/taskNNNN.md + workflow patch
 
 Decompose the feature into tasks per the plan-writing skill's rules, then
-allocate task ids by branching on the `create-plan` step's status in
-`workflow.yaml`:
+allocate task ids by branching on which path this dispatch matches under
+`${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`'s `replace_all`
+permission conditions:
 
 - **Initial planning** (`create-plan` is `pending`): number every task
   taskNNNN in order, starting at `task0001` (task0001, task0002, ...).
-- **Re-planning** (`create-plan` is `needs_update`): every id already
+- **Re-planning** (the Re-planning path —
+  `${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`'s `replace_all`
+  permission conditions own which states satisfy it, and is not restated
+  here as a single `create-plan` status literal): every id already
   registered in the target `workflow.yaml` MUST be listed in
   `tasks_patch.carried_task_ids` — write no task plan and no metadata entry
   for it, and supply it no body; its record is copied verbatim by the
   application (`${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`,
   Re-planning task-id allocation). Only ids not yet registered are numbered,
-  continuing above the high-water mark (`max(carried_task_ids ∪ entries)`),
-  and these go under `entries`; `carried_task_ids` and `entries` are
-  disjoint.
+  continuing above the high-water mark — its definition and which
+  identifiers it counts are owned by that same section and are not
+  restated here — and these go under `entries`; `carried_task_ids` and
+  `entries` are disjoint.
 
 For each task that IS numbered on the branch above (every task on the
 initial-planning branch; only the newly numbered ones on the re-planning
