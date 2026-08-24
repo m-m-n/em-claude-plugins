@@ -47,7 +47,7 @@ workflow:
   status: completed
   completed_at_commit: dfc015a0e2249947ae9f44375d1ccb961e1f5932
 - id: verify
-  status: pending
+  status: in_progress
   result: fail
   failed_items:
   - id: V-1
