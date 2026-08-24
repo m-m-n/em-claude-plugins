@@ -151,8 +151,10 @@ orchestrator's follow-up sequence is fixed to these five steps:
 1. Set the `create-spec` step to `needs_update`.
 2. Set the `create-plan` / `implement` / `review` steps to `pending`.
 3. Preserve `workflow.implement.base_commit`.
-4. Record the interruption reason and the finding's `stable_id` in the
-   `rework.yaml` phase-state.
+4. Record the `spec_change` record in the `rework.yaml` phase-state —
+   `reason`, `finding_stable_id`, `recorded_at_commit` and
+   `replan_authorized: true`; field definitions are owned by
+   `references/phase-state.md` and are not restated here.
 5. The `develop` state machine re-enters at `create-spec`.
 
 In batch mode, `rework.spec-change` is resolved through the classification
