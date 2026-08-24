@@ -257,7 +257,7 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/rework-contract-drift/task0008
 review:
