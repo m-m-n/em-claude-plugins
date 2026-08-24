@@ -179,8 +179,10 @@ tasks:
     - NFR1
     - NFR2
     - NFR5
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'incident: shared refs/stash collided with task0002 across worktrees; self-detected, backed
+      up via cp/git diff, restored with git checkout -- <path>, edits re-applied. No cross-worktree write
+      occurred (read-only diagnosis only). Merged result verified clean.'
     branch: em-workflow/rework-contract-drift/task0005
   task0006:
     title: Plugin version bump
