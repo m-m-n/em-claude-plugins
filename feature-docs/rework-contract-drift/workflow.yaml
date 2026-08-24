@@ -67,9 +67,9 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-contract-drift/task0001
   task0002:
     title: 'Patch contract: authorization field pair, rule-18 recovery, ownership crossing'
     plan: tasks/task0002.md
@@ -91,9 +91,9 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-contract-drift/task0002
   task0003:
     title: 'Required failure category: definition and verify-phase assignment'
     plan: tasks/task0003.md
@@ -112,9 +112,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-contract-drift/task0003
   task0004:
     title: Origin identity rename, closed vocabularies, and the gate's category check
     plan: tasks/task0004.md
@@ -152,9 +152,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-contract-drift/task0004
   task0005:
     title: 'Phase-state: format-version compatibility rule and classification replay rule'
     plan: tasks/task0005.md
@@ -174,9 +174,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-contract-drift/task0005
   task0006:
     title: Plugin version bump
     plan: tasks/task0006.md
@@ -192,9 +192,9 @@ tasks:
     requirements:
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-contract-drift/task0006
 review:
   status: pending
   rounds_completed: 0
