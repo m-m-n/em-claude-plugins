@@ -199,6 +199,33 @@ sequence's policy lookup or its Unlisted-gate fallback.
 10. **Unattended-run continuity.** This gate never raises, in batch, a
     confirmation nobody can answer; every stop leaves its reason and
     evidence as a record instead.
+11. **Outcome.** What each verdict writes to the packet and to the answer
+    model is stated here, in this one place — the Batch resolution
+    sequence's routed-arm exit below cites this step instead of restating
+    it (NFR1).
+    - **Proceed.** The question is answered. One answer record
+      (`references/question-packet-schema.md`'s answer object) is written
+      for it, carrying `source: batch-classification-gate` and a
+      `resolution_note` naming the verdict and the audit record above
+      (step 9) it belongs to. The question's per-question `status`
+      (`references/phase-state.md`'s `packets[].questions[]`) becomes
+      `answered`, and the packet's own `status` follows the same rule any
+      other fully-answered packet follows.
+    - **Stop.** The question is not answered and never will be by this
+      run. No answer record is written. The packet's own `status`
+      (`references/phase-state.md`'s `packets[]`) becomes `obsolete`, so a
+      resumed run's `awaiting_answers` handling
+      (`references/phase-state.md`) — which re-presents only unanswered
+      questions — never re-presents it. The stop's reason and the
+      evidence considered are the audit record above (step 9); nothing is
+      duplicated into a second record.
+    - **Inapplicable** (no `goal` block, step 2 above; FR20 / D3). The run
+      stops exactly as it did before this revision, and the packet is
+      closed by the Stop rule immediately above — the audit record above
+      already covers this pass.
+
+    No packet resolved by this gate — on proceed, on stop, or in the
+    inapplicable case — is left `issued`.
 
 ## Batch resolution sequence
 
@@ -213,8 +240,8 @@ sequence's policy lookup or its Unlisted-gate fallback.
    reaches step 3. A question the routed arm instead sends to the
    Classification gate below also leaves the sequence here: it reaches
    neither step 3's policy lookup, nor the Unlisted-gate fallback, nor
-   `on_unanswered` — the gate's own proceed/stop outcome and its audit
-   record are the resolution for that question.
+   `on_unanswered` — the Classification gate's Outcome step above (step 11)
+   is the resolution for that question; it is not restated here.
 3. Look up the `gate_id` in `references/batch-policies.yaml`.
 4. If a policy entry exists, apply its `option_id` or `action`.
 5. If no policy entry exists, proceed to the Unlisted-gate fallback below.

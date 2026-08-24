@@ -744,8 +744,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `spec_change.replan_authorized` (present, boolean, `True`) for the
     # re-planning-authorization judgement and no longer consults
     # `consumed` at all. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
+    # rework): `ANSWER_SOURCE_VALUES` gains `batch-classification-gate` (the
+    # batch-only classification gate's proceed-outcome answer source,
+    # references/question-resolution.md's Classification gate Outcome
+    # step). Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "a656eb354ad964bc52e65fc34f5a387ac4e20397be1c5bda57eb0d7621f032a9"
+        "74f3229ea4fcdf7a93a23cc5898f643a7c5297ebb92a3387e7135388e8fdb07e"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -770,8 +776,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `test_consumed_spec_change_record_is_rejected` is renamed/re-pointed
     # at the new `invalid-replace-all-replan-authorization-spent` fixture.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
+    # rework): adds TestGateResolvedAnswerSource, pinning
+    # `batch-classification-gate` in `ANSWER_SOURCE_VALUES` and that a real
+    # answer object using it validates. Same rationale: refresh, don't
+    # remove -- PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "af79477e2764df92eb0835195cca676a9a80bfc0b917e37030c6ff9fc8893989"
+        "baf3ba899f058399f5d875236cb53715c393b6dc3e79b29f1f8dbe1f6dc98f62"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
