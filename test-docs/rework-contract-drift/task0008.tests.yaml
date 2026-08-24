@@ -1,0 +1,129 @@
+task_id: task0008
+baseline_failures: []          # full suite (2380 tests) was green before any edit
+final_failures: []             # full suite (2402 tests) is green after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_doc_rule_count_is_design_input_count_plus_two
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rules_are_ordered_one_through_eighteen
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_no_nineteenth_rule_remains_in_the_numbered_list
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rule_eighteen_states_the_authorization_spend_procedure
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_section_is_its_own_titled_heading
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_section_appears_after_the_application_rules_list
+    red_confirmed: true
+    red_reason: >-
+      Verified by temporarily reverting em-workflow/references/workflow-patch.md
+      to its pre-task0008 HEAD content (git checkout HEAD --, restored afterward
+      from a cp backup) while keeping the new tests, then running
+      `python3 -m unittest tests.test_workflow_patch_doc`. TestApplicationRules
+      and TestInterruptedSpendRecoverySection both errored at setUpClass with
+      "ValueError: substring not found" -- the "## Interrupted
+      authorization-spend recovery" heading did not exist and rule 19 was still
+      a member of the numbered list, so the doc_rule_count/rules_are_ordered
+      assertions (expecting 18, not 19) and the new-section extraction both
+      failed for the right reason.
+  AC-2:
+    tests:
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_names_phase_state_as_owner_of_the_already_applied_determination
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_requires_the_determination_for_the_patch_in_hand_by_identifier
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_requires_the_authorization_record_to_still_stand
+    red_confirmed: true
+    red_reason: >-
+      Same revert as AC-1: TestInterruptedSpendRecoverySection.setUpClass
+      raised "ValueError: substring not found" against the pre-task0008
+      document (no recognition condition citing phase-state.md's
+      already-applied determination existed at all), so every test in the
+      class -- including these three -- errored before the fix.
+  AC-3:
+    tests:
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_blob_mismatch_not_confirmed_is_an_ordinary_rejection
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_no_op_arm_is_stated_only_within_the_recognized_case
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_no_sentence_makes_a_bare_blob_mismatch_a_recognized_case
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_old_proxy_condition_wording_absent
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_negative_proof_matcher_fires_on_a_synthetic_bare_blob_sentence
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_negative_proof_old_proxy_wording_would_be_detected
+    red_confirmed: true
+    red_reason: >-
+      Same revert as AC-1/AC-2: the whole class errored at setUpClass against
+      the pre-task0008 document, which still carried the old proxy sentence
+      ("that combination is read as already-applied-not-yet-spent") and the
+      "Under either recognized case" phrasing the finding flagged. The two
+      negative-proof tests assert only against synthetic strings and would
+      pass in isolation, but are reported red here too via the same
+      setUpClass cascade -- consistent with the rest of the class, since
+      nothing in this class could run at all before the section existed.
+  AC-4:
+    tests:
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_states_recognition_of_an_already_applied_patch
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_states_no_op_on_repeated_consumption
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_states_same_state_after_any_number_of_resumptions
+      - tests.test_workflow_patch_doc.TestInterruptedSpendRecoverySection.test_cites_phase_state_for_flag_location_without_restating
+    red_confirmed: true
+    red_reason: >-
+      Same setUpClass cascade as AC-1/AC-2/AC-3 for the retained-idempotency
+      half. The ownership-boundary half of this criterion (crossing, its
+      permission condition, orchestrator as owning side) is unchanged by this
+      task and stays covered by the pre-existing, already-passing
+      TestOwnershipBoundaryAndDomainsSSOT class (task0002's own pins,
+      untouched here) -- there is no red/green cycle for that half because
+      this task makes no edit to it.
+  AC-5:
+    tests:
+      - tests.test_failed_items_category.TestSchemaStatesPreChangeCompatibilityRule.test_states_pre_existing_entry_not_retroactively_rejected
+      - tests.test_failed_items_category.TestSchemaStatesPreChangeCompatibilityRule.test_states_conformance_restored_on_next_verify_write
+      - tests.test_failed_items_category.TestSchemaStatesPreChangeCompatibilityRule.test_states_fail_closed_treatment_happens_at_point_of_use
+      - tests.test_failed_items_category.TestSchemaStatesPreChangeCompatibilityRule.test_cites_workflow_patch_for_the_worker_repair_limitation
+      - tests.test_failed_items_category.TestSchemaStatesPreChangeCompatibilityRule.test_mirrors_phase_state_format_version_compatibility_shape
+    red_confirmed: true
+    red_reason: >-
+      Verified by the same revert methodology against
+      em-workflow/references/workflow-schema.md: each assertion raised
+      "AssertionError: <phrase> not found in ..." against the pre-task0008
+      `## failed_items[].category` section, which had no "Pre-change
+      compatibility" paragraph at all. test_field_required_ness_and_vocabulary_unchanged
+      and the negative-proof test in the same class are non-vacuity
+      companions over pre-existing content (required-ness/vocabulary) this
+      task does not change, so they were already green before the edit and
+      are not listed as red-confirmed evidence for this criterion.
+  AC-6:
+    tests:
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_untargeted_verify_step_yields_no_category_error
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_targeted_verify_step_retains_the_category_check
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_verify_step_target_among_other_step_patches_still_scopes_in
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_wired_into_validate_workflow_patch_unconditional_on_dry_run
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_check_also_runs_under_dry_run_apply
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_untargeted_scope_also_holds_under_dry_run_apply
+    red_confirmed: true
+    red_reason: >-
+      Verified by the same revert methodology against
+      em-workflow/scripts/validate-worker-output.py: every direct call in
+      TestFailedItemCategoryVocabulary errored with "TypeError:
+      _validate_verify_failed_items_categories() takes 1 positional argument
+      but 2 were given" -- the pre-task0008 function had no `patch` parameter
+      and no scoping at all (it ran unconditionally over every failed_items
+      entry), which is exactly the defect this task's finding
+      (47f535a25cbb9be9) named.
+  AC-7:
+    tests:
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: >-
+      The corpus-sweep subTest for the new fixture case
+      (valid-append-legacy-failed-items-without-category) failed against the
+      pre-task0008 validator with "AssertionError: 1 != 0 ... expected exit 0,
+      got 1" and a category error message, because the unconditional
+      (unscoped) check rejected the fixture's legacy category-less entry even
+      though the patch never targets the verify step. The three
+      TestFrozenMachineReadSurface byte-identity tests were confirmed
+      red-before by comparing each pre-task0008 pin constant against the
+      corresponding file's post-edit digest (all three mismatch) before the
+      pins were refreshed in this same change; the full suite
+      (python3 -m unittest discover -s tests) was re-run after every edit and
+      is green at 2402 tests, with no third-party import added and no
+      existing assertion weakened, skipped or deleted (only re-pointed, per
+      the diff on tests/test_workflow_patch_doc.py,
+      tests/test_spec_change_replan_authorization.py and
+      tests/test_failed_items_category.py).

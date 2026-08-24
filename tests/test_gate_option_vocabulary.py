@@ -737,8 +737,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # same edit -- and the Ownership boundary section gains a paragraph
     # naming rule 18's crossing into phase-state. Same rationale: refresh,
     # don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0008 (review round1
+    # rework, D9: task0008 is the sole owner of this pin for the round):
+    # rule 19 relocates entirely OUT of the numbered Application rules
+    # list into its own titled section ("## Interrupted authorization-
+    # spend recovery"), whose recognition condition now defers to
+    # `references/phase-state.md`'s own already-applied determination
+    # (keyed by the patch's own `patch_id`) instead of a bare
+    # `base_workflow_blob` mismatch -- the "All nineteen rules" count
+    # statement reverts to "All eighteen rules" in the same edit. Same
+    # rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "f5be82b6ff27f80830e4e991f19f7b2e8e3e4b8dbb3a353814b819247b3f1d57"
+        "ea6366ea7aa6296f21baec084c1d8c8205e043852f147bf0ea47142ffd882f67"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -811,8 +822,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `origin_id` in `SPEC_CHANGE_MANDATORY_FIELDS`'s neighboring comment,
     # and the retired name is removed from every comment in this script.
     # Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0008 (review round1
+    # rework, D9: task0008 is the sole owner of this pin for the round):
+    # `_validate_verify_failed_items_categories` gains a mandatory `patch`
+    # parameter and a new `_verify_step_targeted_by_patch` helper -- the
+    # category check now errors only for the entries of a verify step the
+    # patch targets via `step_patches`, never for a pre-existing entry a
+    # patch neither supplies nor targets (a defect no worker can repair).
+    # The call site inside `validate_workflow_patch` passes `data` (the
+    # patch) through. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "dcfb22cfffed47c83257a1121575c8ceef260a5ba6b9ae38baadd13bea3b8e6b"
+        "6736354620f2c70beef43295ddc0461f7ada11538b0eaf225768f4088205e26d"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -872,8 +893,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # TestFailedItemCategoryVocabulary / TestOriginKindVocabulary classes
     # cover the new enforcement. PINNED_VALIDATOR_TEST_LINE below is
     # unaffected and still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0008 (review round1
+    # rework, D9: task0008 is the sole owner of this pin for the round):
+    # `TestFailedItemCategoryVocabulary` is updated in place -- every
+    # direct call to `_validate_verify_failed_items_categories` now
+    # supplies a patch, and the class gains the untargeted/targeted
+    # scoping cases (including under `--dry-run-apply`) -- and the wiring
+    # test's patch now targets the verify step via `step_patches`.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    # Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "ce7841c8e51a6de290289fede6647cc95997011c03f68f70c96d62d0df24b200"
+        "c161714b88d0fa6d6b1885a2b52fa5510e4e1db18aed95bab876d6ef73aad730"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
