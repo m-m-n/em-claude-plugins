@@ -117,8 +117,25 @@ below): 互換ライセンスの別ライブラリへ差し替える / プロジ
 
 ### 4. Task decomposition → tasks/taskNNNN.md + workflow patch
 
-Decompose the feature into tasks per the plan-writing skill's rules. For each
-task, in order taskNNNN (task0001, task0002, ...):
+Decompose the feature into tasks per the plan-writing skill's rules, then
+allocate task ids by branching on the `create-plan` step's status in
+`workflow.yaml`:
+
+- **Initial planning** (`create-plan` is `pending`): number every task
+  taskNNNN in order, starting at `task0001` (task0001, task0002, ...).
+- **Re-planning** (`create-plan` is `needs_update`): every id already
+  registered in the target `workflow.yaml` MUST be listed in
+  `tasks_patch.carried_task_ids` — write no task plan and no metadata entry
+  for it, and supply it no body; its record is copied verbatim by the
+  application (`${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`,
+  Re-planning task-id allocation). Only ids not yet registered are numbered,
+  continuing above the high-water mark (`max(carried_task_ids ∪ entries)`),
+  and these go under `entries`; `carried_task_ids` and `entries` are
+  disjoint.
+
+For each task that IS numbered on the branch above (every task on the
+initial-planning branch; only the newly numbered ones on the re-planning
+branch):
 
 1. Write `feature-docs/{feature}/tasks/taskNNNN.md` from
    `${CLAUDE_PLUGIN_ROOT}/references/templates/task-plan.md`. **Acceptance
@@ -143,8 +160,11 @@ task, in order taskNNNN (task0001, task0002, ...):
    - `requirements`: the FR/NFR IDs this task implements.
 3. Carry the task map into the `workflow_patch`'s `tasks_patch`
    (`operation: replace_planning`, schema:
-   `${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`), each entry with
-   `initial_status: pending` and `plan: tasks/taskNNNN.md`. This agent never
+   `${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`): each newly
+   numbered task becomes an `entries` key with `initial_status: pending`
+   and `plan: tasks/taskNNNN.md`. On a re-planning pass, `tasks_patch` also
+   carries `carried_task_ids` listing every already-registered id, with no
+   body supplied for any of them. This agent never
    writes `workflow.yaml` itself — the orchestrator applies the patch.
 
 After assignment, **mechanically self-verify**: every cross-task component
@@ -235,8 +255,11 @@ On `status: completed`, the result carries `written_artifacts`
 This agent never sets `branch`, `notes`, any running/in-progress task
 status, or `completed_at_commit` in anything it returns — those are
 orchestrator-owned (rule R2 governs `completed_at_commit`; the rest reflect
-execution state this agent never observes). Every `tasks_patch` entry it
-proposes carries only `initial_status: pending`.
+execution state this agent never observes). Every entry it proposes under
+`tasks_patch.entries` carries only `initial_status: pending`; on a
+re-planning pass, `tasks_patch` also carries `carried_task_ids` naming
+every already-registered id, and this agent supplies no entry for any of
+them.
 
 ## Important Guidelines
 
