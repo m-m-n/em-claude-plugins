@@ -40,9 +40,9 @@ workflow:
   status: completed
   completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
 - id: implement
-  status: in_progress
+  status: completed
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
-  completed_at_commit: 24da58cf9d3f779309934f831048ecc567cb09f3
+  completed_at_commit: 533955625c7b902a70fd565d0f144b3d494730f2
 - id: review
   status: completed
   completed_at_commit: dfc015a0e2249947ae9f44375d1ccb961e1f5932
@@ -820,8 +820,9 @@ tasks:
     - NFR3
     - NFR5
     - NFR8
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'deviation: sibling 所有の tests/test_replanning_carry_over.py（spec_change fixture の origin_kind/origin_id
+      化）と tests/test_workflow_patch_doc.py（適用規則の本数 pin を 18 に更新 + 規則 18 の内容テスト追加）へ追随修正'
     branch: em-workflow/goal-vs-spec-divergence/task0029
 review:
   status: completed
