@@ -180,7 +180,7 @@ change, the orchestrator's transition is fixed:
 1. `create-spec` step → `needs_update`
 2. `create-plan` / `implement` / `review` steps → `pending`
 3. `workflow[implement].base_commit` is preserved unchanged
-4. phase-state `rework.yaml` records `reason`, `finding_stable_id`,
+4. phase-state `rework.yaml` records `reason`, `origin_kind`, `origin_id`,
    `recorded_at_commit`, and `replan_authorized: true` (field definitions
    owned by `references/phase-state.md`; this document does not restate
    them)
@@ -215,7 +215,16 @@ objective.
 5. `workflow[implement].base_commit` is never changed by a rework patch; it
    is always listed in the patch's `preserve` set.
 6. Review-sourced tasks carry the finding's `stable_id`, verify-sourced
-   tasks carry the failed item's ID, as `provenance`.
+   tasks carry the failed item's ID, as `provenance`. Named as a pair, this
+   is `origin_kind` (`review` | `verify`) and `origin_id`: for
+   `origin_kind: review`, `origin_id` is the finding's `stable_id`; for
+   `origin_kind: verify`, `origin_id` is the failed item's ID. This
+   document is the pair's one definition; every consumer of a
+   rework-derived question's origin — `references/question-resolution.md`
+   for what origin verification matches against and what set the
+   security / license / irreversible check runs over,
+   `references/phase-state.md` for what the `spec_change` record stores —
+   cites this pair rather than defining its own.
 7. Interactive and batch never differ in task synthesis rules; they differ
    only in how a rework round is selected and in the retry/round cap.
 8. Patch application and every workflow.yaml write are always performed by

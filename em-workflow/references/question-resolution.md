@@ -151,25 +151,53 @@ sequence's policy lookup or its Unlisted-gate fallback.
    classification gate was inapplicable because the goal block is absent.
    No backfill of the goal from `SPEC.md` / `REQUIREMENTS.md` is attempted.
 3. **Origin verification.** Before the question reaches classification, it
-   must name the originating review finding(s) by `stable_id`: at least
-   one of its `evidence[]` entries (`references/question-packet-schema.md`)
-   must carry `finding_stable_id`, and a `rework.spec-change` question with
-   no `evidence[]` entry carrying it aborts here, recording that reason.
-   The review round record that carries them is never supplied by the
-   packet: the orchestrator itself locates it, as the review round record
-   for this feature at the position `references/review-phase.md` "Phase
-   R5: Persist the round record" defines (cited, not restated), and
-   searches only there for each named `stable_id`. `evidence[].path` is a
-   human-readable hint presented to a reader; it is never opened as part
-   of this check. The orchestrator reads each named finding's `category`
-   from that record — never from the question's own worker-set `category`
-   — and aborts when any originating finding's category is `security` or
-   `license`, or when an `assumptions[]` entry naming the question carries
-   `reversible: false`. An origin that is absent, unresolvable, or does
-   not match a finding in the named record also aborts: fail-closed, so a
-   packet with no verifiable origin can never reach classification. Every
-   abort here records its reason and the evidence considered, and none of
-   them raises, in batch, a confirmation nobody can answer.
+   must name the origin(s) it is derived from: at least one of its
+   `evidence[]` entries (`references/question-packet-schema.md`) must
+   carry `finding_stable_id`, and a `rework.spec-change` question with no
+   `evidence[]` entry carrying it aborts here, recording that reason. The
+   pair this field's value identifies — `origin_kind` (`review` |
+   `verify`) and `origin_id` — is defined once, by
+   `references/rework-task-synthesis.md`'s Invariant 6 (cited, not
+   restated); this step verifies the pair, it does not redefine it.
+
+   **`origin_kind` is orchestrator-held, never packet-supplied.** It is the
+   `rework_source.type` (`references/rework-task-synthesis.md` Section 3)
+   the orchestrator itself supplied when it dispatched the rework whose
+   answer opened this gate — the same fact that determines which bound set
+   below applies. No field of the question packet ever selects it.
+
+   | `origin_kind` | bound set for this dispatch |
+   |---|---|
+   | `review` | every finding in the review round record for this feature, located at the position `references/review-phase.md` "Phase R5: Persist the round record" defines (cited, not restated) |
+   | `verify` | every entry of `workflow.yaml`'s `verify` step `failed_items` (`references/workflow-schema.md`, cited, not restated) |
+
+   The review round record that carries a `review` origin is never
+   supplied by the packet, and neither is `workflow.yaml` for a `verify`
+   origin: the orchestrator itself locates its own bound set by
+   `origin_kind` and searches only there for each named `origin_id`.
+   `evidence[].path` is a human-readable hint presented to a reader; it is
+   never opened as part of this check.
+
+   **Membership (direction 1).** Every `origin_id` the question names must
+   be a member of the bound set above; an origin that is absent,
+   unresolvable, or not a member of the bound set admits nothing, and the
+   run aborts here, recording that reason — fail-closed, so a packet with
+   no verifiable origin can never reach classification, on either
+   `origin_kind`. This abort is final and non-overridable, exactly as the
+   Fail-closed classification's Precedence reservation above states for its
+   own abort arms.
+
+   **The category / irreversibility check (direction 2).** This check runs
+   over the WHOLE bound set above — never over only the origins the packet
+   named, and never derived from `evidence[]` or any other worker-supplied
+   field. The orchestrator reads every bound-set member's `category` from
+   the located source — never from the question's own worker-set
+   `category` — and aborts, regardless of what the packet named, when any
+   bound-set member's category is `security` or `license`, or when an
+   `assumptions[]` entry naming the question carries `reversible: false`.
+   This abort is likewise final and non-overridable. Every abort here
+   records its reason and the evidence considered, and none of them
+   raises, in batch, a confirmation nobody can answer.
 4. **Question shape.** The question is posed so both directions can be
    raised: (a) the implementation cannot satisfy the goal; (b) the
    implementation satisfies the goal but diverges from the specification
