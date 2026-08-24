@@ -286,7 +286,18 @@ class TestApplicationRules(unittest.TestCase):
     it is one more than it. The sanity check that design-input.md itself
     still states sixteen rules is retained (design-input.md is untouched by
     this feature), split from the doc-side count so a future change to
-    either fails at the specific assertion that actually moved."""
+    either fails at the specific assertion that actually moved.
+
+    goal-vs-spec-divergence/task0029 (deviation -- this module is outside
+    task0029's declared file set, but the count and ordering checks below
+    pin a document task0029 legitimately extends; IMPLEMENTATION.md D12:
+    workflow-patch.md is the only document allowed to state its own
+    application-rule count, and a task that adds a rule there updates that
+    count "in the same edit"): the document now carries an EIGHTEENTH rule
+    (the orchestrator's re-planning-application procedure that spends
+    `spec_change.replan_authorized`), added after the seventeenth. The
+    count below moves from "+1" to "+2" accordingly; rules 1-17 keep their
+    numbers and text unchanged (C3)."""
 
     @classmethod
     def setUpClass(cls):
@@ -304,25 +315,34 @@ class TestApplicationRules(unittest.TestCase):
             "sanity: design-input.md 5.5.5 states sixteen rules",
         )
 
-    def test_doc_rule_count_is_design_input_count_plus_one(self):
+    def test_doc_rule_count_is_design_input_count_plus_two(self):
         design_rules = self.fixture.application_rules()
         doc_rule_numbers = re.findall(
             r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE
         )
         self.assertEqual(
             len(doc_rule_numbers),
-            len(design_rules) + 1,
+            len(design_rules) + 2,
             "workflow-patch.md must carry design-input.md's sixteen rules "
             "plus this feature's own seventeenth (re-planning task-id "
-            "allocation)",
+            "allocation) and eighteenth (re-planning authorization spend, "
+            "task0029)",
         )
 
-    def test_rules_are_ordered_one_through_seventeen(self):
+    def test_rules_are_ordered_one_through_eighteen(self):
         doc_rule_numbers = [
             int(n)
             for n in re.findall(r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE)
         ]
-        self.assertEqual(doc_rule_numbers, list(range(1, 18)))
+        self.assertEqual(doc_rule_numbers, list(range(1, 19)))
+
+    def test_rule_eighteen_states_the_authorization_spend_procedure(self):
+        # task0029: rule 18 is now the last rule in the list, so everything
+        # from its own number to the end of the section is its text.
+        idx = self.doc_rules_section.index("18. ")
+        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:])
+        self.assertIn("replan_authorized", rule_text)
+        self.assertIn("orchestrator", rule_text)
 
     def test_rule_seventeen_states_the_task_id_allocation_rule(self):
         # Rule 17 is the last rule in the list, so everything from its own
