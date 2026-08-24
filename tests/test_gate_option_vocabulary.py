@@ -716,8 +716,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # application rule 12 narrows to `entries` only, rule 17 is restated in
     # terms of `carried_task_ids`, and the `preserve` section gains the
     # carried-id remark. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0029: the document
+    # gains a new Application rule 18 -- once a re-planning `replace_all`
+    # has been applied, the orchestrator sets that record's
+    # `spec_change.replan_authorized` to `false`, in the same phase-state
+    # write that records the application (the one consumption procedure
+    # AC-1 requires) -- and the "All seventeen rules" count statement
+    # becomes "All eighteen rules" in the same edit (D12). Same rationale:
+    # refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "b66de6b34e660be4245bc754d53b17db44316cfe6b704e26ae7b513327fbabcd"
+        "063e487096e7e1df5fdfc1296a49fc81c286c589cb9a5c6852f00e660278a74e"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -767,8 +776,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # codes instead of the old drop/reuse pair), and `apply_patch`'s
     # `replace_planning` arm now copies a carried id's record from the
     # pre-apply workflow verbatim. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0029: `classifier`
+    # verdict / decision value constants are added, `validate_phase_state`
+    # gains the `classification` list-shape and field checks (an
+    # append-type list, never a wholesale-replaced mapping), and
+    # `SPEC_CHANGE_MANDATORY_FIELDS` moves from `finding_stable_id` to the
+    # `origin_kind` / `origin_id` pair (references/rework-task-synthesis.md
+    # -- a `verify`-sourced record is accepted on the same terms as a
+    # `review`-sourced one, D13). Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "55a7bd48b44785b1da936696400f8f1e494da8f92bc420801fd4e7b4b58c52a0"
+        "12dd9f2b6fbd3f03058f6de3874fcc0caa366fa5a8d8300391bb4ae8d0034507"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -809,8 +827,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `replace-all-entry-for-registered-id` rejection). PINNED_VALIDATOR_
     # TEST_LINE below is unaffected and still asserted. Same rationale:
     # refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0029: every
+    # `finding_stable_id`-keyed fixture literal moves to the `origin_kind`
+    # / `origin_id` pair (`_rework_phase_state`, the `--dry-run-apply`
+    # canonical-invocation YAML builders), matching the validator's renamed
+    # `SPEC_CHANGE_MANDATORY_FIELDS`. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "39591f33229a66a264b4748d33b69ecafc0e737d63d2ca7316ddb0840b5a0ddf"
+        "72ca53363da2e19a22a43d7768ea9bf3e533853b684f39a617caf58a2fa90007"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

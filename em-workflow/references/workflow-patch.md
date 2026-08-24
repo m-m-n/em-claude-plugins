@@ -239,7 +239,7 @@ record is copied verbatim, the invariance check (rule 14) holds.
 
 ## Application rules (in order)
 
-All seventeen rules apply, in order, to every patch:
+All eighteen rules apply, in order, to every patch:
 
 1. Reject unless `base_input_digest` matches the digest recomputed from the
    current input (rule R1).
@@ -275,6 +275,12 @@ All seventeen rules apply, in order, to every patch:
     and `tasks_patch.entries` must name only ids not registered there
     (Re-planning task-id allocation, above); omitting a registered id from
     `carried_task_ids`, or naming a registered id in `entries`, is rejected.
+18. Once a re-planning `replace_all` (Re-planning path) has been applied,
+    the orchestrator sets that record's `spec_change.replan_authorized` to
+    `false`, in the same phase-state write that records the application
+    (`references/phase-state.md`) — an authorization grounds exactly one
+    re-planning pass. Does not apply to the Initial-planning path, which
+    has no `spec_change` record to spend.
 
 ## Ownership boundary
 

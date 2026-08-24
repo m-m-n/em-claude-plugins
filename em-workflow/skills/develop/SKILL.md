@@ -298,8 +298,9 @@ create-spec 実行が `completed` に達したか `needs_update` / `failed` で
 の許可可否とは別のフラグが担う別の消費点を持つ判断である —
 `references/phase-state.md` が定義するもう一方のフラグ
 `replan_authorized` は、この create-spec の dispatch では消費されず、
-消費されるのは再計画 `replace_all` パッチが適用された時点である
-（`references/workflow-patch.md` の Re-planning path 参照）。
+消費されるのは再計画 `replace_all` パッチが適用された時点であり、
+その手順（誰が・いつ）は `references/workflow-patch.md` の Application
+rules（Re-planning path）が定義する — ここでは繰り返さない。
 
 **create-plan が `in_progress` を経ない理由**（design-system backfill と
 は別の理由）:

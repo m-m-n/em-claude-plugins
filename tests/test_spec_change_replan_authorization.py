@@ -59,6 +59,37 @@ the fixture-driven sweep in test_validate_worker_output.py
 (TestFixtureCorpusDataDriven, TestReplanningMandatoryPreserveAndTaskId
 Allocation) and AC-7 by running the whole suite / test_gate_option_
 vocabulary.py, neither of which belongs in this module.
+
+Extended for task0029 (goal-vs-spec-divergence): the record, origin and
+lifetime the two rework phase-state records carry (feature-docs/
+goal-vs-spec-divergence/tasks/task0029.md). This task's own Acceptance
+Criteria covered here:
+
+- AC-1 (FR4, NFR1): TestOneConsumptionProcedureDocument -- exactly one
+  document (workflow-patch.md) states the procedure that spends
+  `replan_authorized`, naming the actor and the moment; phase-state.md and
+  skills/develop/SKILL.md cite it, never restate it (the "exactly one"
+  half scoped to those two files this task owns, per Test Notes / C4).
+- AC-2 (FR4): TestPhaseStateNamesBothSpecChangeWriters -- phase-state.md's
+  writer list for `spec_change` names both writers for
+  `replan_authorized`.
+- AC-5 (FR6): TestOriginPairAcceptsReviewAndVerify -- `origin_kind` /
+  `origin_id` replace `finding_stable_id` as the mandatory pair, and a
+  `verify`-origin record is accepted as a re-entry signal on the same
+  terms as a `review`-origin one.
+- AC-6 (FR4, FR6): the `finding_stable_id` -> `origin_kind`/`origin_id`
+  rename above (`_phase_state`, `_rework_yaml_text`) keeps every
+  pre-existing spent/absent/fresh-authorization case in this module
+  proving the condition it names, rather than accidentally exercising the
+  now-renamed mandatory-field check instead.
+
+The renamed field pair itself is defined in
+`references/rework-task-synthesis.md` (task0028's file this round,
+IMPLEMENTATION.md Shared Components "Spec-change origin identity") --
+this module cites it, never restates its meaning (C4: this module owns
+`references/phase-state.md`, `references/workflow-patch.md`,
+`skills/develop/SKILL.md` and `scripts/validate-worker-output.py`, not
+`references/rework-task-synthesis.md`).
 """
 
 import importlib.util
@@ -264,7 +295,8 @@ class TestValidatorReadsReplanAuthorizedNotConsumed(unittest.TestCase):
     def _phase_state(self, **spec_change_overrides):
         spec_change = {
             "reason": "x",
-            "finding_stable_id": "abc",
+            "origin_kind": "review",
+            "origin_id": "abc",
             "recorded_at_commit": "deadbeef",
             "consumed": True,
             "replan_authorized": True,
@@ -406,7 +438,8 @@ class TestReentryOrdering(unittest.TestCase):
             f"feature: {self.FEATURE}\n"
             "spec_change:\n"
             "  reason: SPEC changed after implementation to add a missed requirement\n"
-            "  finding_stable_id: abc123\n"
+            "  origin_kind: review\n"
+            "  origin_id: abc123\n"
             "  recorded_at_commit: deadbeef\n"
             f"  consumed: {'true' if consumed else 'false'}\n"
             "  replan_authorized: true\n"
@@ -569,6 +602,188 @@ class TestSkillDevelopStatesTwoConsumptionPointsSeparately(unittest.TestCase):
         # not accidentally introduce the forbidden literal.
         self.assertNotIn("decision table", self.text)
         self.assertNotIn("決定表", self.text)
+
+
+# ---------------------------------------------------------------------------
+# task0029 AC-1 (FR4, NFR1): one consumption procedure, cited not restated
+# ---------------------------------------------------------------------------
+
+
+class TestOneConsumptionProcedureDocument(unittest.TestCase):
+    """task0029 AC-1: exactly one document -- references/workflow-patch.md
+    -- states the procedure that sets `spec_change.replan_authorized` to
+    `false`, naming the actor (the orchestrator) and the moment (once the
+    re-planning `replace_all` has been applied, in the same state write).
+    phase-state.md and skills/develop/SKILL.md cite that place and state no
+    procedure of their own -- the "exactly one" half is an absence
+    assertion over those two files, both of which this task owns (Test
+    Notes, C4)."""
+
+    # The distinctive sentence workflow-patch.md's new application rule
+    # carries -- pinned here so the absence checks below are a proof about
+    # THIS text, not a coincidence of unrelated wording.
+    PROCEDURE_SENTENCE = (
+        "the orchestrator sets that record's `spec_change.replan_authorized` "
+        "to `false`, in the same phase-state write that records the "
+        "application"
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        cls.workflow_patch_text = _read(WORKFLOW_PATCH_PATH)
+        cls.phase_state_text = _read(PHASE_STATE_PATH)
+        cls.skill_text = _read(DEVELOP_SKILL_PATH)
+
+    def test_workflow_patch_states_the_procedure_with_actor_and_moment(self):
+        normalized = re.sub(r"\s+", " ", self.workflow_patch_text)
+        self.assertIn(self.PROCEDURE_SENTENCE, normalized)
+        self.assertIn(
+            "an authorization grounds exactly one re-planning pass", normalized
+        )
+
+    def test_application_rule_count_is_updated_in_the_same_edit(self):
+        # D12: workflow-patch.md is the only document allowed to state how
+        # many application rules it carries, and this task's new rule (18)
+        # updates that count in the same edit.
+        self.assertIn(
+            "All eighteen rules apply, in order, to every patch:",
+            self.workflow_patch_text,
+        )
+        self.assertNotIn(
+            "All seventeen rules apply, in order, to every patch:",
+            self.workflow_patch_text,
+        )
+
+    def test_phase_state_cites_but_does_not_restate_the_procedure(self):
+        normalized = re.sub(r"\s+", " ", self.phase_state_text)
+        self.assertIn("references/workflow-patch.md", self.phase_state_text)
+        self.assertNotIn(self.PROCEDURE_SENTENCE, normalized)
+
+    def test_skill_develop_cites_but_does_not_restate_the_procedure(self):
+        normalized = re.sub(r"\s+", " ", self.skill_text)
+        self.assertIn("references/workflow-patch.md", self.skill_text)
+        self.assertNotIn(self.PROCEDURE_SENTENCE, normalized)
+
+    def test_non_vacuity_the_procedure_sentence_detection_actually_works(self):
+        # Proof the absence checks above can fail meaningfully (tdd-testing
+        # discipline): a document that DID restate the sentence would trip
+        # them.
+        synthetic_restatement = "prose... " + self.PROCEDURE_SENTENCE + " ...more prose"
+        self.assertIn(self.PROCEDURE_SENTENCE, synthetic_restatement)
+
+
+# ---------------------------------------------------------------------------
+# task0029 AC-2 (FR4): phase-state.md names both writers of
+# replan_authorized
+# ---------------------------------------------------------------------------
+
+
+class TestPhaseStateNamesBothSpecChangeWriters(unittest.TestCase):
+    """task0029 AC-2: phase-state.md's writer list for the `spec_change`
+    record names both writers -- the SPEC-change transition that sets the
+    record, and the re-planning application that spends the authorization
+    -- so no reader can conclude the flag has a single writer."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        idx = cls.text.index("| `spec_change` |")
+        end = cls.text.index("\n", idx)
+        cls.row = cls.text[idx:end]
+
+    def test_replan_authorized_has_two_writers_named(self):
+        self.assertIn("`replan_authorized` has two writers", self.row)
+        self.assertIn("rework's spec-change transition", self.row)
+        self.assertIn("orchestrator's re-planning-application", self.row)
+
+    def test_non_vacuity_a_single_writer_sentence_would_be_detected_missing(self):
+        synthetic_row = (
+            "| `spec_change` | `reason` / `replan_authorized` are written "
+            "by rework's spec-change transition; `consumed` is written by "
+            "the orchestrator. |"
+        )
+        self.assertNotIn("`replan_authorized` has two writers", synthetic_row)
+
+
+# ---------------------------------------------------------------------------
+# task0029 AC-5 (FR6): origin_kind/origin_id replace finding_stable_id
+# ---------------------------------------------------------------------------
+
+
+class TestOriginPairAcceptsReviewAndVerify(unittest.TestCase):
+    """task0029 AC-5: the `spec_change` record carries `origin_kind`
+    (`review` | `verify`) and `origin_id` in place of `finding_stable_id`;
+    a record whose `origin_kind` is `verify` is accepted as a re-entry
+    signal on the same terms as `review` -- the kind never changes what the
+    flags mean (D13)."""
+
+    FEATURE = "example"
+
+    def _workflow(self, base_commit="deadbeef"):
+        return {
+            "feature": self.FEATURE,
+            "workflow": [
+                {"id": "create-plan", "status": "pending"},
+                {"id": "implement", "status": "pending", "base_commit": base_commit},
+            ],
+        }
+
+    def _phase_state(self, **spec_change_overrides):
+        spec_change = {
+            "reason": "x",
+            "origin_kind": "review",
+            "origin_id": "abc",
+            "recorded_at_commit": "deadbeef",
+            "consumed": True,
+            "replan_authorized": True,
+        }
+        spec_change.update(spec_change_overrides)
+        return {"phase": "rework", "feature": self.FEATURE, "spec_change": spec_change}
+
+    def test_review_origin_is_a_reentry(self):
+        phase_state = self._phase_state(origin_kind="review")
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow(), phase_state)
+        )
+
+    def test_verify_origin_is_a_reentry_on_the_same_terms(self):
+        phase_state = self._phase_state(origin_kind="verify", origin_id="V-3")
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow(), phase_state)
+        )
+
+    def test_missing_origin_kind_is_not_a_reentry(self):
+        phase_state = self._phase_state()
+        del phase_state["spec_change"]["origin_kind"]
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow(), phase_state)
+        )
+
+    def test_missing_origin_id_is_not_a_reentry(self):
+        phase_state = self._phase_state()
+        del phase_state["spec_change"]["origin_id"]
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow(), phase_state)
+        )
+
+    def test_finding_stable_id_alone_no_longer_satisfies_the_mandatory_set(self):
+        # Non-vacuity / regression guard: the OLD field name, on its own,
+        # must not satisfy the renamed mandatory-field set -- proves the
+        # rename actually took effect rather than the pair being merely
+        # additive.
+        phase_state = self._phase_state()
+        del phase_state["spec_change"]["origin_kind"]
+        del phase_state["spec_change"]["origin_id"]
+        phase_state["spec_change"]["finding_stable_id"] = "abc"
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow(), phase_state)
+        )
+
+    def test_phase_state_doc_cites_rework_task_synthesis_for_the_pair(self):
+        text = _read(PHASE_STATE_PATH)
+        self.assertIn("references/rework-task-synthesis.md", text)
+        self.assertIn("origin_kind", text)
+        self.assertIn("origin_id", text)
 
 
 if __name__ == "__main__":

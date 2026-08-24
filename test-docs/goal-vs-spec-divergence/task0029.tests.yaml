@@ -1,0 +1,132 @@
+task_id: task0029
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_spec_change_replan_authorization.TestOneConsumptionProcedureDocument.test_workflow_patch_states_the_procedure_with_actor_and_moment
+      - tests.test_spec_change_replan_authorization.TestOneConsumptionProcedureDocument.test_application_rule_count_is_updated_in_the_same_edit
+      - tests.test_spec_change_replan_authorization.TestOneConsumptionProcedureDocument.test_phase_state_cites_but_does_not_restate_the_procedure
+      - tests.test_spec_change_replan_authorization.TestOneConsumptionProcedureDocument.test_skill_develop_cites_but_does_not_restate_the_procedure
+    red_confirmed: true
+    red_reason: >-
+      Before workflow-patch.md gained Application rule 18: the actor+moment
+      sentence and "All eighteen rules" text were absent (AssertionError on
+      assertIn), and the "All seventeen rules" phrase was still present
+      (AssertionError on assertNotIn).
+  AC-2:
+    tests:
+      - tests.test_spec_change_replan_authorization.TestPhaseStateNamesBothSpecChangeWriters.test_replan_authorized_has_two_writers_named
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: "`replan_authorized` has two writers" not found in the
+      pre-edit spec_change row, which named only one writer per field.
+  AC-3:
+    tests:
+      - tests.test_phase_state_doc.TestClassificationAuditRecord.test_classification_no_longer_appears_in_the_id_uniqueness_exemption
+      - tests.test_phase_state_doc.TestClassificationAuditRecord.test_classification_row_states_append_semantics_not_wholesale_replacement
+      - tests.test_phase_state_doc.TestClassificationAuditRecord.test_classification_schema_example_is_a_yaml_list
+    red_confirmed: true
+    red_reason: >-
+      Verified by temporarily reverting phase-state.md to its pre-task0029
+      content and re-running these three tests directly: the id-uniqueness
+      exemption still listed "classification", the field-table row still
+      said "Each pass replaces the record wholesale" (no "append"/"list"
+      wording), and the schema example lacked the "- classifier:" list
+      marker. All three failed for the stated reasons; production doc was
+      then restored from the pre-verification copy and the full suite
+      re-run to confirm no drift (2162/2162 green).
+  AC-4:
+    tests:
+      - tests.test_classification_audit_retention.TestClassificationListAccumulates.test_two_entries_validate
+      - tests.test_classification_audit_retention.TestClassificationListAccumulates.test_both_entries_fields_are_readable_after_validation
+      - tests.test_classification_audit_retention.TestClassificationWholesaleReplaceIsAViolation.test_classification_as_a_mapping_is_rejected
+      - tests.test_classification_audit_retention.TestClassificationWholesaleReplaceIsAViolation.test_non_mapping_entry_inside_the_list_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      validate_phase_state had no `classification` handling at all before
+      this task: assertNotEqual(errors, []) failed with errors == [] for
+      the mapping-instead-of-list and non-mapping-entry cases; the
+      accumulation/readability tests were already vacuously true against a
+      no-op validator, so their proof value comes from the negative-proof
+      siblings above turning red/green on the same code path.
+  AC-5:
+    tests:
+      - tests.test_spec_change_replan_authorization.TestOriginPairAcceptsReviewAndVerify.test_review_origin_is_a_reentry
+      - tests.test_spec_change_replan_authorization.TestOriginPairAcceptsReviewAndVerify.test_verify_origin_is_a_reentry_on_the_same_terms
+      - tests.test_spec_change_replan_authorization.TestOriginPairAcceptsReviewAndVerify.test_finding_stable_id_alone_no_longer_satisfies_the_mandatory_set
+      - tests.test_phase_state_doc.TestSpecChangeOriginPairSchemaBlock.test_origin_kind_and_origin_id_present_in_order
+      - tests.test_phase_state_doc.TestSpecChangeOriginPairSchemaBlock.test_finding_stable_id_is_gone_from_the_schema_example
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-rename SPEC_CHANGE_MANDATORY_FIELDS
+      (reason/finding_stable_id/recorded_at_commit), a fully-populated
+      origin_kind/origin_id record returned False (not a reentry) since
+      finding_stable_id was absent -- both review- and verify-origin cases
+      failed. Doc-side: verified by temporarily reverting phase-state.md
+      and re-running TestSpecChangeOriginPairSchemaBlock directly (both
+      failed: origin_kind/origin_id absent, finding_stable_id still
+      present); doc restored and full suite re-confirmed green afterward.
+  AC-6:
+    tests:
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_corrected_replanning_merged_tasks_fixture_passes
+      - tests.test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_spent_replan_authorization_record_is_rejected
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_absent_authorization_is_not_a_reentry
+      - tests.test_spec_change_replan_authorization.TestValidatorReadsReplanAuthorizedNotConsumed.test_consumed_true_with_unspent_authorization_is_a_reentry
+    red_confirmed: true
+    red_reason: >-
+      Verified by temporarily reverting only SPEC_CHANGE_MANDATORY_FIELDS
+      to the pre-task0029 tuple while keeping the renamed
+      replace_planning fixtures: the fixture-driven sweep and
+      test_corrected_replanning_merged_tasks_fixture_passes both failed
+      with code "replace-all-not-permitted" (4 failures), since the
+      renamed fixtures' origin_kind/origin_id no longer satisfied the old
+      field set. Restored afterward; full suite re-confirmed green. The
+      spent/absent-authorization rejections were already true before and
+      after (both field sets reject a record missing replan_authorized
+      entirely) -- they are regression guards proving the rename did not
+      loosen those two cases, not fresh reds.
+  AC-7:
+    tests:
+      - tests.test_classification_audit_retention.TestClassificationWholesaleReplaceIsAViolation.test_classification_as_a_mapping_is_rejected
+      - tests.test_classification_audit_retention.TestClassificationWholesaleReplaceIsAViolation.test_non_vacuity_the_same_content_wrapped_in_a_list_is_accepted
+      - tests.test_classification_audit_retention.TestEarlierEntryReasonMustSurviveAccumulation.test_earlier_stop_entrys_missing_reason_is_rejected
+      - tests.test_classification_audit_retention.TestEarlierEntryReasonMustSurviveAccumulation.test_non_vacuity_the_same_entry_with_reason_present_passes
+    red_confirmed: true
+    red_reason: >-
+      Observed directly when the new test module was first run against the
+      unmodified validator (9 of 18 tests failed): the "replaces the
+      record" matcher (mapping classification rejected) and the "drops an
+      earlier entry's reason" matcher (stop entry missing reason rejected)
+      both failed with errors == [] before validate_phase_state gained
+      classification handling; each carries a non-vacuity companion proving
+      the well-formed counterpart still passes.
+  AC-8:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: >-
+      Observed directly: `python3 -m unittest discover -s tests` was run
+      once after editing phase-state.md/workflow-patch.md/SKILL.md but
+      before refreshing the three sha256 pins, and returned 5 failures --
+      the three byte-identity checks above plus
+      test_workflow_patch_doc.TestApplicationRules.test_doc_rule_count_is_design_input_count_plus_one
+      and .test_rules_are_ordered_one_through_seventeen (a deviation fix,
+      see notes). All were refreshed/renamed in the same change with
+      comments naming task0029 and the reason; no pin was deleted or
+      relaxed. Full suite (2162 tests) is green as of the final run.
+notes: >-
+  Deviations (outside expected_files, minimal changes to prevent
+  regressions this task's own changes caused in files it does not own):
+  tests/test_replanning_carry_over.py's `_phase_state()` fixture helper
+  (finding_stable_id -> origin_kind/origin_id, so `is_replanning` stays
+  True on the Re-planning path the carry-over checks require); and
+  tests/test_workflow_patch_doc.py's `TestApplicationRules` rule-count
+  tests (seventeen -> eighteen, plus a new
+  test_rule_eighteen_states_the_authorization_spend_procedure), required
+  because workflow-patch.md's own count statement (D12) legitimately
+  changed. Both are recorded in the implementer report's `deviations`
+  field.
