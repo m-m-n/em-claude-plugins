@@ -672,8 +672,9 @@ tasks:
     - NFR3
     - NFR5
     - NFR8
-    status: in_progress
-    notes: null
+    status: merged
+    notes: conflict_retries=2 (tests/test_gate_option_vocabulary.py, tests/test_validate_worker_output.py;
+      task0024 / task0022 と親側採用で解決)
     branch: em-workflow/goal-vs-spec-divergence/task0025
   task0026:
     title: create-spec re-entry upserts the requirement map
