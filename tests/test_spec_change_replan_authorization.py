@@ -74,14 +74,14 @@ Criteria covered here:
   writer list for `spec_change` names both writers for
   `replan_authorized`.
 - AC-5 (FR6): TestOriginPairAcceptsReviewAndVerify -- `origin_kind` /
-  `origin_id` replace `finding_stable_id` as the mandatory pair, and a
-  `verify`-origin record is accepted as a re-entry signal on the same
-  terms as a `review`-origin one.
-- AC-6 (FR4, FR6): the `finding_stable_id` -> `origin_kind`/`origin_id`
-  rename above (`_phase_state`, `_rework_yaml_text`) keeps every
-  pre-existing spent/absent/fresh-authorization case in this module
-  proving the condition it names, rather than accidentally exercising the
-  now-renamed mandatory-field check instead.
+  `origin_id` replace the retired single-field origin identifier as the
+  mandatory pair, and a `verify`-origin record is accepted as a re-entry
+  signal on the same terms as a `review`-origin one.
+- AC-6 (FR4, FR6): the retired-field-to-`origin_kind`/`origin_id` rename
+  above (`_phase_state`, `_rework_yaml_text`) keeps every pre-existing
+  spent/absent/fresh-authorization case in this module proving the
+  condition it names, rather than accidentally exercising the now-renamed
+  mandatory-field check instead.
 
 The renamed field pair itself is defined in
 `references/rework-task-synthesis.md` (task0028's file this round,
@@ -202,7 +202,7 @@ class TestPhaseStateDefinesBothFlagsInOnePlaceNegativeProof(unittest.TestCase):
 
     def test_single_flag_row_fails_the_both_names_check(self):
         synthetic_row = (
-            "| `spec_change` | `reason`, `finding_stable_id`, "
+            "| `spec_change` | `reason`, `origin_kind`, `origin_id`, "
             "`recorded_at_commit`, `consumed` -- ... |"
         )
         self.assertIn("`consumed`", synthetic_row)
@@ -706,16 +706,17 @@ class TestPhaseStateNamesBothSpecChangeWriters(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# task0029 AC-5 (FR6): origin_kind/origin_id replace finding_stable_id
+# task0029 AC-5 (FR6): origin_kind/origin_id replace the retired
+# single-field origin identifier
 # ---------------------------------------------------------------------------
 
 
 class TestOriginPairAcceptsReviewAndVerify(unittest.TestCase):
     """task0029 AC-5: the `spec_change` record carries `origin_kind`
-    (`review` | `verify`) and `origin_id` in place of `finding_stable_id`;
-    a record whose `origin_kind` is `verify` is accepted as a re-entry
-    signal on the same terms as `review` -- the kind never changes what the
-    flags mean (D13)."""
+    (`review` | `verify`) and `origin_id` in place of the retired
+    single-field origin identifier; a record whose `origin_kind` is
+    `verify` is accepted as a re-entry signal on the same terms as
+    `review` -- the kind never changes what the flags mean (D13)."""
 
     FEATURE = "example"
 
@@ -766,15 +767,18 @@ class TestOriginPairAcceptsReviewAndVerify(unittest.TestCase):
             VWO.workflow_replace_all_spec_change_reentry(self._workflow(), phase_state)
         )
 
-    def test_finding_stable_id_alone_no_longer_satisfies_the_mandatory_set(self):
+    def test_retired_field_alone_no_longer_satisfies_the_mandatory_set(self):
         # Non-vacuity / regression guard: the OLD field name, on its own,
         # must not satisfy the renamed mandatory-field set -- proves the
         # rename actually took effect rather than the pair being merely
-        # additive.
+        # additive. Built at run time (never a contiguous literal) so this
+        # sample never trips the retired-identifier absence scan
+        # (IMPLEMENTATION.md Shared Components).
+        retired_field = "finding" + "_stable_id"
         phase_state = self._phase_state()
         del phase_state["spec_change"]["origin_kind"]
         del phase_state["spec_change"]["origin_id"]
-        phase_state["spec_change"]["finding_stable_id"] = "abc"
+        phase_state["spec_change"][retired_field] = "abc"
         self.assertFalse(
             VWO.workflow_replace_all_spec_change_reentry(self._workflow(), phase_state)
         )
