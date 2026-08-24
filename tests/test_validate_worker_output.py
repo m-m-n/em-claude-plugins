@@ -131,6 +131,32 @@ and task0016 (validator) disagreed when changed in separate worktrees:
   its name and its outcome (unchanged in this round) -- already asserted by
   name throughout `TestReplaceAllCreatePlanEntryStatus`, unaffected by this
   round's edits.
+
+task0022 (goal-vs-spec-divergence, review round 3, finding
+consumed-flag-split) splits the single `consumed` flag into two independent
+flags -- `consumed` (stop-condition-3 suppression) and `replan_authorized`
+(the re-planning authorization) -- because the ordering the re-planning path
+actually runs through always has `consumed: true` by the time `create-plan`
+is reached, so the pre-existing helper always fell back to the
+initial-planning rule (FR6 never held):
+
+- AC-3 (FR4, FR6): `workflow_replace_all_spec_change_reentry` now reads
+  `replan_authorized` instead of `consumed` -- `TestReplanningReentrySignal
+  Helper` below is updated so its "spent authorization" / "malformed
+  authorization" cases key on `replan_authorized`, not `consumed`.
+- AC-4 (FR6): `TestReentryOrdering` reproduces the transition's real
+  sequence (record written -> `create-spec` dispatched, `consumed` becomes
+  `true` -> `create-plan` read `pending` with `merged` tasks present) and
+  asserts the re-planning `replace_all` is accepted despite `consumed:
+  true`, via `valid-replace-all-replanning-after-create-spec-dispatch`.
+- AC-6 (FR5, NFR8): the pre-existing `invalid-replace-all-replanning-
+  consumed-spec-change` fixture is retired -- the reading it pinned
+  (`consumed: true` alone forces rejection) is exactly what this task
+  removes -- in favour of the new `invalid-replace-all-replan-authorization-
+  spent` fixture, which pins the surviving reading (an already-spent
+  `replan_authorized` forces rejection, regardless of `consumed`).
+  `valid-replace-all-replanning-merged-tasks` gains `replan_authorized:
+  true` alongside its existing `consumed: false`.
 """
 
 import importlib.util
@@ -1738,11 +1764,17 @@ class TestReplanningMandatoryPreserveAndTaskIdAllocation(unittest.TestCase):
         messages = " ".join(e["message"] for e in payload["errors"])
         self.assertIn("task0009", messages)
 
-    def test_consumed_spec_change_record_is_rejected(self):
-        # AC-2: the same corrected patch shape, but the spec_change record
-        # is already consumed -- fails closed to the initial-planning
-        # path's rule, and the merged task fails that rule's floor.
-        result = self._run("invalid-replace-all-replanning-consumed-spec-change")
+    def test_spent_replan_authorization_record_is_rejected(self):
+        # task0022 (review round 3, AC-6): the same corrected patch shape,
+        # but the spec_change record's re-planning authorization is already
+        # spent (`replan_authorized: false`, `consumed: true`) -- fails
+        # closed to the initial-planning path's rule, and the merged task
+        # fails that rule's floor. Supersedes the pre-task0022
+        # `invalid-replace-all-replanning-consumed-spec-change` fixture,
+        # which pinned a reading (`consumed: true` alone forces rejection)
+        # this task removes -- see TestReentryOrdering below for the
+        # `consumed: true` + unspent-authorization acceptance case.
+        result = self._run("invalid-replace-all-replan-authorization-spent")
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
         codes = {e["code"] for e in payload["errors"]}
@@ -1762,11 +1794,22 @@ class TestReplanningReentrySignalHelper(unittest.TestCase):
     at all, so nothing in the suite noticed create-plan-phase.md's canonical
     invocation could never actually produce it). A rework-shaped mapping
     must now also declare `phase: rework` and a `feature` matching the
-    workflow's own, and its `spec_change` record must be UNCONSUMED and
-    carry every mandatory phase-state.md field. Every pre-existing test
-    below now supplies `phase`/`feature` so it continues to prove the
-    condition it names, rather than accidentally exercising the
-    now-mandatory phase/feature check instead."""
+    workflow's own, and its `spec_change` record must carry every
+    mandatory phase-state.md field. Every pre-existing test below now
+    supplies `phase`/`feature` so it continues to prove the condition it
+    names, rather than accidentally exercising the now-mandatory
+    phase/feature check instead.
+
+    task0022 (review round 3, consumed-flag-split): the helper's
+    re-planning-authorization judgement moved from `consumed` to the
+    independent `replan_authorized` flag (`references/phase-state.md`'s
+    `spec_change` flag pair) -- `consumed` is never consulted here any
+    more. `_rework_phase_state`'s default record now carries
+    `replan_authorized: True` (an unspent authorization) so every
+    pre-existing test below keeps proving the condition it names rather
+    than failing on the newly-mandatory field; the two `consumed`-keyed
+    tests this superseded are renamed and re-pointed at
+    `replan_authorized` below."""
 
     FEATURE = "example"
 
@@ -1788,6 +1831,7 @@ class TestReplanningReentrySignalHelper(unittest.TestCase):
                 "finding_stable_id": "abc",
                 "recorded_at_commit": "deadbeef",
                 "consumed": False,
+                "replan_authorized": True,
             },
         }
         base.update(overrides)
@@ -1848,19 +1892,61 @@ class TestReplanningReentrySignalHelper(unittest.TestCase):
                     )
                 )
 
-    def test_spec_change_missing_consumed_field_is_not_a_reentry(self):
+    def test_missing_consumed_field_does_not_block_reentry(self):
+        # task0022 (review round 3, consumed-flag-split): `consumed` is no
+        # longer consulted by this helper at all -- its presence or
+        # absence must not affect the outcome. Supersedes the pre-task0022
+        # test_spec_change_missing_consumed_field_is_not_a_reentry, which
+        # pinned exactly the reading this task removes.
         phase_state = self._rework_phase_state()
         del phase_state["spec_change"]["consumed"]
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_consumed_true_no_longer_blocks_reentry(self):
+        # task0022 (review round 3, AC-3/AC-4): this is exactly the
+        # ordering the SPEC-change transition -> create-spec dispatch ->
+        # create-plan re-entry sequence always produces (create-plan is
+        # never reached before the record is marked consumed) -- FR6
+        # requires it to still be a re-planning re-entry when the
+        # authorization is unspent. Supersedes the pre-task0022
+        # test_consumed_true_is_not_a_reentry, which pinned exactly the
+        # reading this task removes. See TestReentryOrdering in
+        # test_spec_change_replan_authorization.py for the full sequential
+        # (not merely state-final) proof.
+        phase_state = self._rework_phase_state()
+        phase_state["spec_change"]["consumed"] = True
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_replan_authorized_missing_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state()
+        del phase_state["spec_change"]["replan_authorized"]
         self.assertFalse(
             VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
         )
 
-    def test_consumed_true_is_not_a_reentry(self):
+    def test_replan_authorized_false_is_not_a_reentry(self):
+        # The spent-authorization direction (AC-3): the mirror of
+        # test_spec_change_record_with_base_commit_is_a_reentry above.
         phase_state = self._rework_phase_state()
-        phase_state["spec_change"]["consumed"] = True
+        phase_state["spec_change"]["replan_authorized"] = False
         self.assertFalse(
             VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
         )
+
+    def test_replan_authorized_non_boolean_is_not_a_reentry(self):
+        for bad_value in ("true", 1, 0, None, []):
+            with self.subTest(bad_value=bad_value):
+                phase_state = self._rework_phase_state()
+                phase_state["spec_change"]["replan_authorized"] = bad_value
+                self.assertFalse(
+                    VWO.workflow_replace_all_spec_change_reentry(
+                        self._workflow("deadbeef"), phase_state
+                    )
+                )
 
     # --- task0017 (AC-1): {feature-dir}/phase-state/rework.yaml is an
     # equivalent source, resolved even when --phase-state carries a
@@ -1881,7 +1967,8 @@ class TestReplanningReentrySignalHelper(unittest.TestCase):
                 "  reason: x\n"
                 "  finding_stable_id: abc\n"
                 "  recorded_at_commit: deadbeef\n"
-                "  consumed: false\n",
+                "  consumed: false\n"
+                "  replan_authorized: true\n",
                 encoding="utf-8",
             )
             # --phase-state carries the CREATE-PLAN phase's own state (the
@@ -2014,7 +2101,8 @@ class TestCanonicalReentryInvocation(unittest.TestCase):
                 "  reason: x\n"
                 "  finding_stable_id: abc\n"
                 "  recorded_at_commit: deadbeef\n"
-                "  consumed: false\n",
+                "  consumed: false\n"
+                "  replan_authorized: true\n",
                 encoding="utf-8",
             )
 
@@ -2074,7 +2162,8 @@ class TestCanonicalReentryInvocation(unittest.TestCase):
                 "  reason: x\n"
                 "  finding_stable_id: abc\n"
                 "  recorded_at_commit: deadbeef\n"
-                "  consumed: false\n",
+                "  consumed: false\n"
+                "  replan_authorized: true\n",
                 encoding="utf-8",
             )
             digest_source = self._digest_source_obj()

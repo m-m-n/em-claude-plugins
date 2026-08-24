@@ -83,6 +83,10 @@ spec_change:                   # `phase: rework` only.
   recorded_at_commit: a3c91f2…
   consumed: false              #   orchestrator sets true once this record
                                #   has grounded one create-spec dispatch
+  replan_authorized: true      #   spec-change transition sets true when it
+                               #   writes the record; set false once a
+                               #   re-planning replace_all has been applied
+                               #   -- never read for stop-condition-3
 classification:                # `phase: rework` only, sibling of spec_change.
   classifier: codex             #   codex | claude
   verdict: goal_not_met         #   goal_not_met | spec_gap | not_applicable
@@ -112,7 +116,7 @@ Every top-level field:
 | `stale_redispatch_count` | See "Consecutive retry limit". |
 | `resolved_input_cache` | See "resolved_input_cache" below. |
 | `last_error` | `null`, or the last recorded phase-state/artifact-commit failure. |
-| `spec_change` | `reason`, `finding_stable_id`, `recorded_at_commit`, `consumed` — the interruption reason and finding's `stable_id` that rework's spec-change transition records, and the flag the orchestrator sets `true` once that record has grounded one `create-spec` dispatch (regardless of that dispatch's outcome). Present only when `phase: rework`. Written by rework's spec-change transition; `consumed` is written by the orchestrator. Every occurrence of rework's spec-change transition writes this record afresh, **replacing** any previous record including its `consumed` value — a newly written record is always unconsumed. Which `needs_update` this grounds, and when it triggers a stop, is `skills/develop/SKILL.md` Step B's rule, not restated here. |
+| `spec_change` | `reason`, `finding_stable_id`, `recorded_at_commit`, `consumed`, `replan_authorized` — the interruption reason and finding's `stable_id` that rework's spec-change transition records, plus **two independent flags** the record carries (the `spec_change` flag pair): `consumed` — written `true` by the orchestrator once the record has grounded one `create-spec` dispatch (regardless of that dispatch's outcome); never read as a re-planning permission — and `replan_authorized` — written `true` by rework's spec-change transition when it writes the record, set `false` once a re-planning `replace_all` has been applied; never read as a stop-condition-3 suppressor. **Neither flag is ever read for the other's judgement.** Present only when `phase: rework`. `reason` / `finding_stable_id` / `recorded_at_commit` / `replan_authorized` are written by rework's spec-change transition; `consumed` is written by the orchestrator. Every occurrence of rework's spec-change transition writes this record afresh, **replacing** any previous record including both flags' prior values — a newly written record is always unconsumed AND authorized. Which `needs_update` `consumed`'s suppression grounds, and when it triggers a stop, is `skills/develop/SKILL.md` Step B's rule, not restated here. |
 | `classification` | `classifier` (`codex` \| `claude`), `verdict` (`goal_not_met` \| `spec_gap` \| `not_applicable`), `evidence_ids` (list of requirement / acceptance-criterion IDs; non-empty required when `verdict: spec_gap`), `decision` (`proceed` \| `stop`), `reason` (short text; mandatory whenever `decision: stop`) — one record per pass through the classification gate, including passes that end in a stop and passes where the gate was inapplicable. Present only when `phase: rework`, as a sibling of `spec_change`. The verdict rule that produces this record is `references/question-resolution.md`'s classification gate — cited here, not restated. Each pass replaces the record wholesale, the same exemption `spec_change` uses (see "ID uniqueness and idempotency" below). |
 
 ## ID uniqueness and idempotency

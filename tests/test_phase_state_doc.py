@@ -835,5 +835,46 @@ class TestClassificationAuditRecordNegativeProof(unittest.TestCase):
         self.assertNotIn("wholesale", section_without_statement)
 
 
+class TestSpecChangeFlagPairSchemaBlock(unittest.TestCase):
+    """task0022 (goal-vs-spec-divergence, review round 3, finding
+    consumed-flag-split; feature-docs/goal-vs-spec-divergence/tasks/
+    task0022.md), AC-1 (NFR1): the `spec_change` schema example block
+    shows both flags, `replan_authorized` immediately alongside the
+    pre-existing `consumed`, so the two are visibly a pair rather than an
+    unrelated addition elsewhere in the record.
+
+    The row-level content assertions (writer / judgement / spend-point /
+    "neither flag read for the other's judgement" / wholesale-replacement
+    coverage) live in tests/test_spec_change_replan_authorization.py
+    (TestPhaseStateDefinesBothFlagsInOnePlace), the dedicated cross-
+    document module for this task's two-flag rule -- not duplicated here."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        schema_start = cls.text.index("## Schema")
+        fence_end = cls.text.index("\n```\n", schema_start)
+        schema_block = cls.text[schema_start:fence_end]
+        spec_change_idx = schema_block.index("spec_change:")
+        classification_idx = schema_block.index("classification:")
+        cls.record_block = schema_block[spec_change_idx:classification_idx]
+
+    def test_replan_authorized_present_alongside_consumed(self):
+        self.assertIn("consumed:", self.record_block)
+        self.assertIn("replan_authorized:", self.record_block)
+        consumed_idx = self.record_block.index("consumed:")
+        replan_idx = self.record_block.index("replan_authorized:")
+        self.assertLess(
+            consumed_idx,
+            replan_idx,
+            "replan_authorized must follow consumed within the spec_change record",
+        )
+
+    def test_replan_authorized_still_scoped_to_the_spec_change_record(self):
+        # Non-vacuity: the slice must not have accidentally run past
+        # spec_change into the classification record's own fields.
+        self.assertNotIn("classifier:", self.record_block)
+
+
 if __name__ == "__main__":
     unittest.main()
