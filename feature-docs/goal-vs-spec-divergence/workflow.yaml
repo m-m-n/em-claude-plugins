@@ -789,8 +789,8 @@ tasks:
     - NFR2
     - NFR5
     - NFR8
-    status: in_progress
-    notes: null
+    status: merged
+    notes: tests/test_question_resolution_doc.py は計画に含まれていたが、Origin verification 節に触れる assertion が無く変更不要だった
     branch: em-workflow/goal-vs-spec-divergence/task0028
   task0029:
     title: the phase-state records' writer, origin and lifetime
