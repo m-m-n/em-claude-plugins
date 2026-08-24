@@ -1,16 +1,30 @@
 schema_version: 1
 feature: rework-contract-drift
 phase: create-spec
-status: dispatching
+status: failed
 generation: 1
 base_revision: b1333f06a3aa2dfe09be04f55558bd9d47174f30
 last_input_digest: sha256:9c146ac1c3bf84a9fa410fe78307d24bd235025f72f55ea82a8846ae162c929c
-active_request_id: create-spec-run-0001
-packets: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: "2026-08-24T21:52:00+09:00"
+    questions:
+      - question_id: requirement.fr1.replanning-branch-key
+        status: issued
+      - question_id: requirement.fr3.verify-origin-category-failclosed
+        status: issued
+      - question_id: requirement.fr4.packet-schema-origin-field
+        status: issued
+      - question_id: requirement.medium-item-scope
+        status: issued
+      - question_id: design.step-recommendation
+        status: issued
 answers: {}
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:9c146ac1c3bf84a9fa410fe78307d24bd235025f72f55ea82a8846ae162c929c
     output_digest: null
 artifacts: []
@@ -32,4 +46,21 @@ resolved_input_cache:
     paths: []
     digests: {}
     truncated: false
-last_error: null
+last_error:
+  kind: fail_closed_abort
+  at: "2026-08-24T21:52:00+09:00"
+  gate_id: create-spec.requirement-clarification
+  question_id: requirement.fr3.verify-origin-category-failclosed
+  category: security
+  on_unanswered: block
+  rule: "references/question-resolution.md — Fail-closed classification: a question whose category is spec-change, security or license aborts the phase before any policy-table lookup."
+  detail: >-
+    requirements-analyst raised a security-category question asking which of two
+    directions FR3 should specify for restoring the fail-closed security/license
+    abort on verify-origin rework questions: (a) add non-overridable fail-closed
+    wording to question-resolution.md direction 2 when `category` cannot be
+    resolved, or (b) structure workflow-schema.md `failed_items` to carry
+    `category`. Batch mode may not decide a security-category question.
+  human_decision_needed:
+    - "Choose FR3 direction (a) failclosed_wording or (b) structure_failed_items."
+  resolvable_by_policy_if_answered: true
