@@ -123,6 +123,11 @@ ANSWER_SOURCE_VALUES = {
     "batch-decision-table",
     "batch-codex-consultation",
     "batch-safe-default",
+    # goal-vs-spec-divergence/task0025: the batch-only classification
+    # gate's proceed outcome (references/question-resolution.md's
+    # Classification gate, Outcome step; vocabulary SSOT is
+    # references/question-packet-schema.md's `source` vocabulary).
+    "batch-classification-gate",
 }
 
 IMPACT_VALUES = {"low", "medium", "high"}
