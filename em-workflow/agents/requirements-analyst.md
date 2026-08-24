@@ -68,8 +68,8 @@ which categories this dispatch inspects:
   symbols and strings the feature intends to delete or rename (test files
   included), examining only the paths supplied via
   `resolved_input_paths.reference_scan_targets` for references to them, and
-  report the affected files as `reference_impact` (see
-  `payload.analysis_snapshot` / `payload.reference_impact` below).
+  report the affected files as `reference_impact` per
+  `references/contracts/analyst-contract.md`.
 
 Regardless of `analysis_scope` (this category is always inspected in `full`
 mode): classify every path in
@@ -84,7 +84,9 @@ procedure, never to you.
 When the investigation is complete and nothing is unresolved, return
 `status: completed` with `payload.resolved_requirements`,
 `payload.project_detection`, and `payload.design_system_candidates` per the
-contract. **Any point you cannot resolve from the supplied inputs becomes a
+contract, plus `payload.reference_impact` when `inspect_reference_impact` was
+part of `analysis_scope` (omit it when that category was not inspected).
+**Any point you cannot resolve from the supplied inputs becomes a
 question in a `question_packet` — never a silently-adopted assumption.**
 Return `status: needs_user_input` with `payload.analysis_snapshot` holding
 everything already resolved so far.

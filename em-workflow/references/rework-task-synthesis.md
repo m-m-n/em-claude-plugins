@@ -180,8 +180,10 @@ change, the orchestrator's transition is fixed:
 1. `create-spec` step → `needs_update`
 2. `create-plan` / `implement` / `review` steps → `pending`
 3. `workflow[implement].base_commit` is preserved unchanged
-4. phase-state `rework.yaml` records the interruption reason and the
-   finding's `stable_id`
+4. phase-state `rework.yaml` records `reason`, `finding_stable_id`,
+   `recorded_at_commit`, and `replan_authorized: true` (field definitions
+   owned by `references/phase-state.md`; this document does not restate
+   them)
 5. The develop state machine re-enters at `create-spec`
 
 Step 2's `create-plan` re-entry is not rejected merely because merged tasks
