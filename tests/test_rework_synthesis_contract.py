@@ -27,13 +27,13 @@ Per task0004.md's Test Notes: `skills/develop/SKILL.md`'s verify rework
 branches are owned by task0012 — this file asserts nothing about that file.
 
 task0019 AC-8 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45,
-confidence 95): what the `rework.spec-change` packet must carry is pinned
-here as well as in tests/test_worker_contract_docs.py -- the packet names
-each originating finding's `stable_id` via `evidence[].finding_stable_id`
-and does not name the review round record path; the orchestrator locates
-that record itself (`references/question-resolution.md`, pinned in
-tests/test_classification_gate.py). Neither document restates the other's
-rule.
+confidence 95), field renamed by rework-contract-drift/task0004 (FR4): what
+the `rework.spec-change` packet must carry is pinned here as well as in
+tests/test_worker_contract_docs.py -- the packet names its origin(s) via
+`evidence[].origin_id` and does not name the review round record path; the
+orchestrator locates that record itself (`references/question-
+resolution.md`, pinned in tests/test_classification_gate.py). Neither
+document restates the other's rule.
 """
 
 import re
@@ -350,27 +350,28 @@ class TestReviewPhaseReworkReferences(unittest.TestCase):
         )
 
 
-class TestSpecChangePacketCarriesStableIdNotRecordPath(unittest.TestCase):
-    """task0019 AC-8 (NFR1): rework-planner-contract.md states the
-    spec-change packet names stable_ids via `evidence[].finding_stable_id`
-    and does not name the review round record path -- consistent with
-    question-resolution.md's Classification gate step 3, which locates that
-    record itself. Neither document restates the other's rule."""
+class TestSpecChangePacketCarriesOriginIdNotRecordPath(unittest.TestCase):
+    """task0019 AC-8 (NFR1), renamed by rework-contract-drift/task0004
+    (FR4): rework-planner-contract.md states the spec-change packet names
+    its origin(s) via `evidence[].origin_id` and does not name the review
+    round record path -- consistent with question-resolution.md's
+    Classification gate step 3, which locates that record itself. Neither
+    document restates the other's rule."""
 
     @classmethod
     def setUpClass(cls):
         cls.text = _read(REWORK_PLANNER_CONTRACT_PATH)
         cls.norm = re.sub(r"\s+", " ", cls.text)
 
-    def test_packet_names_origins_via_finding_stable_id_field(self):
-        # task0028 AC-5: the packet names its origin(s) via the same
-        # `evidence[].finding_stable_id` field, generalized to the
-        # origin_kind/origin_id pair rework-task-synthesis.md's Invariant 6
-        # defines (both origin kinds, not review findings alone).
+    def test_packet_names_origins_via_origin_id_field(self):
+        # task0028 AC-5: the packet names its origin(s) via the
+        # `evidence[].origin_id` field, generalized to the origin_kind/
+        # origin_id pair rework-task-synthesis.md's Invariant 6 defines
+        # (both origin kinds, not review findings alone).
         self.assertIn(
             "names its origin(s) — the `origin_kind` / `origin_id` pair "
             "`references/rework-task-synthesis.md`'s Invariant 6 defines "
-            "(cited, not restated) — via `evidence[].finding_stable_id`",
+            "(cited, not restated) — via `evidence[].origin_id`",
             self.norm,
         )
 
@@ -407,11 +408,15 @@ class TestSpecChangePacketCarriesStableIdNotRecordPath(unittest.TestCase):
 
     def test_old_review_only_packet_naming_wording_is_gone(self):
         # task0028 AC-8: the pre-task0028 wording, which named review
-        # findings alone as the packet's origin vocabulary, must not
-        # survive anywhere in the document.
+        # findings alone as the packet's origin vocabulary via the now-
+        # retired single-field name, must not survive anywhere in the
+        # document. Built at run time (never a contiguous literal) so this
+        # sample never trips the retired-identifier absence scan
+        # (IMPLEMENTATION.md Shared Components).
+        retired_field = "finding" + "_stable_id"
         self.assertNotIn(
             "names each originating review finding's `stable_id` in the "
-            "question's `evidence[].finding_stable_id` entries",
+            f"question's `evidence[].{retired_field}` entries",
             self.text,
         )
 

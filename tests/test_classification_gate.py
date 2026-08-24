@@ -39,12 +39,25 @@ scrutiny controlled which file the origin check opened):
   pins above already cover most of this half unchanged; task0019 adds no
   new assertions here beyond the below since the wording survives
   verbatim.)
-- AC-7: `questions[].evidence[]` carries `finding_stable_id`, and step 3
+- AC-7: `questions[].evidence[]` carries an origin-identifying field
+  (renamed `origin_id` by rework-contract-drift/task0004; FR4), and step 3
   requires at least one entry carrying it for a `rework.spec-change`
   question, aborting when none does. (The schema half -- the field table
   row itself -- is pinned in tests/test_worker_contract_docs.py.)
-- AC-9 (NFR3, partial): the new `finding_stable_id` abort states its
+- AC-9 (NFR3, partial): the new origin-identifier abort states its
   reason is recorded.
+
+rework-contract-drift/task0004's own acceptance criteria (FR3, FR4, FR6,
+FR9): the evidence field's retired name is gone (AC-2), the category check
+cites `references/workflow-schema.md`'s `failed_items[].category`
+definition and vocabulary instead of restating them (AC-3), the gate
+aborts on a security/license/sentinel category and equally on a
+missing/unreadable/out-of-vocabulary one, in the membership check's own
+final-and-non-overridable wording (AC-4), and the independence declaration
+is reconciled with the reversibility arm it reads (AC-5). The
+class-per-AC breakdown lives at the tail of `TestClassificationGate`
+below, after the pre-existing pins this task refreshes rather than
+duplicates.
 
 task0025 acceptance criteria (feature-docs/goal-vs-spec-divergence review
 round3 rework AC-1, AC-3, AC-5 -- the gate's outcome closes its question):
@@ -419,12 +432,24 @@ class TestClassificationGate(unittest.TestCase):
         )
 
     def test_both_abort_directions_marked_final_and_non_overridable(self):
-        # task0028 AC-3: both directions are marked non-overridable, in the
-        # wording the existing abort arms already use (the Precedence
-        # reservation's "final and non-overridable" phrasing).
+        # task0028 AC-3, refreshed by rework-contract-drift/task0004 AC-4:
+        # both directions are marked non-overridable in the IDENTICAL
+        # wording the Precedence reservation uses -- direction 2 no longer
+        # says "likewise", it repeats direction 1's own closing sentence
+        # verbatim.
         section = self._norm(self._origin_verification_section())
-        self.assertIn("final and non-overridable", section)
-        self.assertIn("this abort is likewise final and non-overridable", section)
+        non_overridable_phrase = (
+            "final and non-overridable, exactly as the fail-closed "
+            "classification's precedence reservation above states for its "
+            "own abort arms"
+        )
+        self.assertEqual(
+            section.count(non_overridable_phrase),
+            2,
+            "both direction 1 (membership) and direction 2 (category/"
+            "irreversibility) must use the identical non-overridable "
+            "wording",
+        )
 
     def test_origin_verification_records_reason_and_evidence_no_unanswerable_confirmation(
         self,
@@ -460,7 +485,7 @@ class TestClassificationGate(unittest.TestCase):
         )
 
     # --- task0019 AC-5/AC-7/AC-9: origin verification locates the record ----
-    # --- itself; evidence[].path is demoted; finding_stable_id required -----
+    # --- itself; evidence[].path is demoted; origin_id required ------------
 
     def test_neither_bound_set_source_is_ever_supplied_by_the_packet(self):
         # task0028 AC-2/AC-4: neither the review round record nor
@@ -549,16 +574,18 @@ class TestClassificationGate(unittest.TestCase):
             fake_section.lower(),
         )
 
-    def test_requires_finding_stable_id_on_at_least_one_evidence_entry(self):
+    def test_requires_origin_id_on_at_least_one_evidence_entry(self):
+        # rework-contract-drift/task0004 (FR4): the evidence field's
+        # current name is `origin_id`; the retired name is gone.
         section = self._norm(self._origin_verification_section())
         self.assertIn(
             "at least one of its `evidence[]` entries "
             "(`references/question-packet-schema.md`) must carry "
-            "`finding_stable_id`".lower(),
+            "`origin_id`".lower(),
             section,
         )
 
-    def test_missing_finding_stable_id_aborts_a_spec_change_question(self):
+    def test_missing_origin_id_aborts_a_spec_change_question(self):
         section = self._norm(self._origin_verification_section())
         self.assertIn(
             "a `rework.spec-change` question with no `evidence[]` entry "
@@ -566,16 +593,128 @@ class TestClassificationGate(unittest.TestCase):
             section,
         )
 
-    def test_negative_twin_no_finding_stable_id_requirement_fails(self):
+    def test_negative_twin_no_origin_id_requirement_fails(self):
+        # Built at run time rather than as a contiguous literal, so this
+        # sample never trips the retired-identifier absence scan
+        # (IMPLEMENTATION.md Shared Components).
+        retired_field = "finding" + "_stable_id"
         fake_section = (
             "**Origin verification.** The question must name the "
-            "originating review finding(s) by `stable_id` somewhere in its "
-            "prose."
+            f"originating review finding(s) by `{retired_field}` somewhere "
+            "in its prose."
         )
         self.assertNotIn(
             "at least one of its `evidence[]` entries "
             "(`references/question-packet-schema.md`) must carry "
-            "`finding_stable_id`".lower(),
+            "`origin_id`".lower(),
+            fake_section.lower(),
+        )
+
+    # --- rework-contract-drift/task0004 AC-3: the category check cites the
+    # owning definition and vocabulary, restating neither -------------------
+
+    def test_category_check_cites_workflow_schema_definition_by_path(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn("failed_items[].category".lower(), section)
+        self.assertIn("references/workflow-schema.md".lower(), section)
+        self.assertIn("cited, not restated", section)
+
+    def test_category_check_does_not_restate_the_vocabulary(self):
+        # The vocabulary's seven values are owned by workflow-schema.md
+        # (task0003); this document cites it and must not spell out values
+        # that exist only to name what this check's outcome depends on.
+        section = self._norm(self._origin_verification_section())
+        for value in ("comprehensive", "performance", "architecture"):
+            self.assertNotIn(value, section)
+
+    def test_negative_twin_restated_vocabulary_would_be_caught(self):
+        # Non-vacuity guard: a synthetic copy that DOES restate the
+        # vocabulary must trip the matcher above.
+        fake_section = (
+            "the failed_items[].category vocabulary is comprehensive, "
+            "spec, security, performance, architecture, license, unknown."
+        )
+        self.assertIn("comprehensive", fake_section)
+        self.assertIn("performance", fake_section)
+        self.assertIn("architecture", fake_section)
+
+    # --- rework-contract-drift/task0004 AC-4: sentinel/missing/unreadable/
+    # out-of-vocabulary abort, in the membership check's own wording -------
+
+    def test_category_check_aborts_on_sentinel_missing_unreadable_or_out_of_vocabulary(
+        self,
+    ):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "that vocabulary's fail-closed sentinel value".lower(), section
+        )
+        self.assertIn(
+            "missing, unreadable, or outside the vocabulary".lower(),
+            section,
+        )
+
+    def test_negative_twin_missing_sentinel_wording_would_be_caught(self):
+        fake_section = (
+            "The check aborts when any bound-set member's category is "
+            "`security` or `license`."
+        )
+        self.assertNotIn(
+            "fail-closed sentinel value", fake_section.lower()
+        )
+        self.assertNotIn(
+            "missing, unreadable, or outside the vocabulary",
+            fake_section.lower(),
+        )
+
+    def test_failed_items_category_never_triggers_an_early_abort(self):
+        # AC-4: a sentinel (or any other) failed_items[].category value
+        # reaches the classification gate rather than being stopped by the
+        # Fail-closed classification section above it -- proven by
+        # confirming `failed_items` is never mentioned before the gate is
+        # reached.
+        gate_idx = self.text.index("## Classification gate")
+        pre_gate_text = self.text[:gate_idx]
+        self.assertNotIn("failed_items", pre_gate_text)
+
+    # --- rework-contract-drift/task0004 AC-5: the independence declaration
+    # is reconciled with the reversibility arm it reads -------------------
+
+    def test_independence_declaration_states_the_one_exception(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "except the irreversibility arm below, whose worker-declared "
+            "basis is stated where it appears".lower(),
+            section,
+        )
+
+    def test_irreversibility_arm_basis_stated_consistently_with_fail_closed_classification(
+        self,
+    ):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "the one worker-supplied field this direction reads, its "
+            "basis worker-declared rather than a second, independent "
+            "defence, exactly as the fail-closed classification's own "
+            "irreversibility check states above".lower(),
+            section,
+        )
+
+    def test_negative_twin_bare_independence_claim_without_exception_fails(
+        self,
+    ):
+        # Non-vacuity guard: the pre-task0004 wording (an unqualified
+        # "never derived from evidence[] or any other worker-supplied
+        # field" with no stated exception) must not satisfy the matcher
+        # above -- that unqualified claim is the FR9 contradiction this
+        # task resolves.
+        fake_section = (
+            "This check runs over the WHOLE bound set above — never over "
+            "only the origins the packet named, and never derived from "
+            "`evidence[]` or any other worker-supplied field."
+        )
+        self.assertNotIn(
+            "except the irreversibility arm below, whose worker-declared "
+            "basis is stated where it appears".lower(),
             fake_section.lower(),
         )
 

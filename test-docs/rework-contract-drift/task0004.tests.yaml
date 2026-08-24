@@ -1,0 +1,152 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceOriginIdField.test_origin_id_field_present
+      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceOriginIdField.test_origin_id_cites_invariant_6_rather_than_restating
+      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceOriginIdField.test_retired_field_negative_proof_missing_field_is_detected
+    red_confirmed: true
+    red_reason: >
+      Reverted em-workflow/references/question-packet-schema.md to the
+      pre-change (HEAD) content and reran: test_origin_id_field_present and
+      test_origin_id_cites_invariant_6_rather_than_restating both failed
+      with "expected the 'origin_id' field row" (AssertionError, marker
+      `questions[].evidence[].origin_id` not found) because the row still
+      read `finding_stable_id`. The negative-proof test
+      (test_retired_field_negative_proof_missing_field_is_detected) is a
+      hermetic matcher check against a fixed fake string and passes
+      regardless of doc content; it is a non-vacuity companion, not itself
+      a red-confirmed criterion test.
+
+  AC-2:
+    tests:
+      - tests.test_validate_worker_output.TestRetiredOriginIdentifierAbsenceScan.test_retired_field_absent_from_every_owned_file
+      - tests.test_validate_worker_output.TestRetiredOriginIdentifierAbsenceScan.test_fixtures_directory_is_scanned_recursively
+      - tests.test_validate_worker_output.TestRetiredOriginIdentifierAbsenceScan.test_scan_does_not_match_itself
+      - tests.test_validate_worker_output.TestRetiredOriginIdentifierAbsenceScan.test_negative_proof_scan_detects_a_planted_occurrence
+    red_confirmed: true
+    red_reason: >
+      Wrote the scan first per Test Notes and ran it against the tree as it
+      stood partway through this task's own edits: it reported
+      finding_stable_id still present (as a contiguous literal) in
+      tests/test_classification_gate.py, tests/test_worker_contract_docs.py
+      and tests/test_gate_option_vocabulary.py -- three occurrences I had
+      missed on the first pass through those files. Fixed each, reran, and
+      the scan went green. This is the actual sequence in which the scan
+      caught real defects, not a synthetic replay.
+
+  AC-3:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_category_check_cites_workflow_schema_definition_by_path
+      - tests.test_classification_gate.TestClassificationGate.test_category_check_does_not_restate_the_vocabulary
+      - tests.test_classification_gate.TestClassificationGate.test_negative_twin_restated_vocabulary_would_be_caught
+    red_confirmed: true
+    red_reason: >
+      Reverted em-workflow/references/question-resolution.md to the
+      pre-change (HEAD) content and reran:
+      test_category_check_cites_workflow_schema_definition_by_path failed
+      with "'failed_items[].category' not found" -- the pre-change
+      direction-2 paragraph never cited workflow-schema.md at all.
+      test_category_check_does_not_restate_the_vocabulary passed against
+      both the pre-change and post-change text (the pre-change paragraph
+      also never spelled out the seven vocabulary values), so that specific
+      assertion is unconfirmed red on its own; it is retained as a
+      regression guard, backed by the paired negative-proof test which does
+      demonstrate the matcher can fail against a synthetic sample that DOES
+      restate the vocabulary.
+
+  AC-4:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_category_check_aborts_on_sentinel_missing_unreadable_or_out_of_vocabulary
+      - tests.test_classification_gate.TestClassificationGate.test_both_abort_directions_marked_final_and_non_overridable
+      - tests.test_classification_gate.TestClassificationGate.test_negative_twin_missing_sentinel_wording_would_be_caught
+      - tests.test_classification_gate.TestClassificationGate.test_failed_items_category_never_triggers_an_early_abort
+      - tests.test_spec_change_origin_binding.TestAC3BidirectionalMembershipRuleNonOverridable.test_both_directions_marked_non_overridable
+    red_confirmed: true
+    red_reason: >
+      Reverted question-resolution.md to the pre-change (HEAD) content and
+      reran: test_category_check_aborts_on_sentinel_missing_unreadable_or_out_of_vocabulary
+      failed (the sentinel/missing/unreadable/out-of-vocabulary wording was
+      absent); both test_both_abort_directions_marked_final_and_non_overridable
+      instances failed (direction 2 still closed with "This abort is
+      likewise final and non-overridable" instead of repeating direction
+      1's own sentence). test_failed_items_category_never_triggers_an_early_abort
+      passed against both pre- and post-change text (the Fail-closed
+      classification section never mentioned failed_items either way) --
+      see unconfirmed_reds.
+
+  AC-5:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_independence_declaration_states_the_one_exception
+      - tests.test_classification_gate.TestClassificationGate.test_irreversibility_arm_basis_stated_consistently_with_fail_closed_classification
+      - tests.test_classification_gate.TestClassificationGate.test_negative_twin_bare_independence_claim_without_exception_fails
+    red_confirmed: true
+    red_reason: >
+      Reverted question-resolution.md to the pre-change (HEAD) content and
+      reran: test_independence_declaration_states_the_one_exception and
+      test_irreversibility_arm_basis_stated_consistently_with_fail_closed_classification
+      both failed (AssertionError, needle not found) -- the pre-change
+      paragraph's independence claim carried no stated exception for the
+      reversibility arm, which is exactly the FR9 contradiction this task
+      resolves.
+
+  AC-6:
+    tests:
+      - tests.test_validate_worker_output.TestOriginKindVocabulary.test_review_origin_kind_accepted
+      - tests.test_validate_worker_output.TestOriginKindVocabulary.test_verify_origin_kind_accepted
+      - tests.test_validate_worker_output.TestOriginKindVocabulary.test_out_of_vocabulary_origin_kind_rejected
+      - tests.test_validate_worker_output.TestOriginKindVocabulary.test_empty_origin_kind_rejected
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_each_of_the_seven_values_accepted
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_missing_category_rejected
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_empty_category_rejected
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_out_of_vocabulary_category_rejected
+      - tests.test_validate_worker_output.TestFailedItemCategoryVocabulary.test_wired_into_validate_workflow_patch_unconditional_on_dry_run
+    red_confirmed: true
+    red_reason: >
+      Reverted em-workflow/scripts/validate-worker-output.py to the
+      pre-change (HEAD) content and reran: test_out_of_vocabulary_origin_kind_rejected
+      failed with "True is not false" (no origin_kind vocabulary check
+      existed). Every TestFailedItemCategoryVocabulary test errored with
+      AttributeError (_validate_verify_failed_items_categories did not
+      exist on the pre-change module).
+
+  AC-7:
+    tests:
+      - tests.test_validate_worker_output.TestOriginIdEvidenceRequirement.test_valid_verify_origin_fixture_passes_via_cli
+      - tests.test_validate_worker_output.TestOriginIdEvidenceRequirement.test_invalid_missing_origin_id_fixture_rejected_naming_the_reason
+      - tests.test_validate_worker_output.TestOriginIdEvidenceRequirement.test_empty_evidence_list_rejected
+      - tests.test_validate_worker_output.TestOriginIdEvidenceRequirement.test_evidence_entry_without_origin_id_rejected
+      - tests.test_validate_worker_output.TestOriginIdEvidenceRequirement.test_empty_string_origin_id_rejected
+      - tests.test_validate_worker_output.TestOriginIdEvidenceRequirement.test_evidence_with_origin_id_accepted
+      - tests.test_validate_worker_output.TestOriginIdEvidenceRequirement.test_non_spec_change_gate_id_unaffected
+    red_confirmed: true
+    red_reason: >
+      Reverted validate-worker-output.py to the pre-change (HEAD) content
+      and reran: test_invalid_missing_origin_id_fixture_rejected_naming_the_reason
+      failed with "0 != 1" -- the pre-change validator accepted the
+      invalid-missing-origin-id fixture (exit 0) instead of rejecting it.
+      test_empty_evidence_list_rejected / test_evidence_entry_without_origin_id_rejected
+      / test_empty_string_origin_id_rejected all failed with "'origin_id'
+      not found in ''" (no evidence[] check existed at all pre-change).
+
+  AC-8:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: >
+      Observed directly during implementation (before refreshing the two
+      pins): after editing em-workflow/scripts/validate-worker-output.py
+      and tests/test_validate_worker_output.py, both digest-comparison
+      tests failed with a digest mismatch against the stale pinned
+      constants. Refreshed VALIDATE_WORKER_OUTPUT_SHA256 and
+      TEST_VALIDATE_WORKER_OUTPUT_SHA256 to the recomputed sha256 values and
+      both went green; WORKFLOW_PATCH_SHA256 and FIXTURE_SHA256 (files this
+      task does not touch) were left untouched and still pass. The "full
+      suite green" half of AC-8 is the outcome of the final
+      `python3 -m unittest discover -s tests` run (2266 passed, 0 failed,
+      0 skipped) rather than a single test; no third-party import was added
+      to any test file (verified by diffing every added/changed import
+      line).

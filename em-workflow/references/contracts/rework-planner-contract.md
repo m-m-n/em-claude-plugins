@@ -165,7 +165,7 @@ directly.
 The question packet returned for `gate_id: rework.spec-change` names its
 origin(s) — the `origin_kind` / `origin_id` pair
 `references/rework-task-synthesis.md`'s Invariant 6 defines (cited, not
-restated) — via `evidence[].finding_stable_id`, and does not name the
+restated) — via `evidence[].origin_id`, and does not name the
 review round record path or the `workflow.yaml` path either kind's bound
 set lives in: the gate's origin verification
 (`references/question-resolution.md`) locates its own bound set itself.
