@@ -1150,6 +1150,28 @@ def validate_workflow_patch(
     for task_id, entry in entries.items():
         errors.extend(validate_task_entry(task_id, entry, mode, registries, workflow))
 
+    # Re-planning carry-over declaration (workflow-patch.md "Re-planning
+    # task-id allocation"): tasks_patch.carried_task_ids -- structural shape
+    # only (each entry is a taskNNNN-shaped string). The semantic checks
+    # (every registered id carried, no unregistered id carried, no
+    # registered id re-entered under entries) need workflow.yaml and the
+    # re-planning/initial-planning distinction, so they live in
+    # _validate_dry_run_apply instead, alongside the other replace_all
+    # permission checks that already depend on the same distinction.
+    carried_task_ids = tasks_patch.get("carried_task_ids")
+    if carried_task_ids is not None:
+        if not isinstance(carried_task_ids, list):
+            errors.append(err("tasks_patch.carried_task_ids", "tasks_patch.carried_task_ids must be a list"))
+        else:
+            for cid in carried_task_ids:
+                if not isinstance(cid, str) or not TASK_ID_RE.match(cid):
+                    errors.append(
+                        err(
+                            "tasks_patch.carried_task_ids",
+                            f"tasks_patch.carried_task_ids entry {cid!r} must match {TASK_ID_RE.pattern}",
+                        )
+                    )
+
     requirements_patch = data.get("requirements_patch")
     if requirements_patch is not None:
         if not isinstance(requirements_patch, dict):
@@ -1307,16 +1329,49 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, featu
                                 "include 'workflow.implement.base_commit'",
                             )
                         )
+                    # Re-planning carry-over declaration
+                    # (workflow-patch.md "Re-planning task-id allocation"):
+                    # `entries` may name only ids not yet registered; every
+                    # already-registered id must instead appear in
+                    # `carried_task_ids`, whose record is copied from
+                    # `workflow.yaml` verbatim (apply_patch's
+                    # `replace_planning` arm) -- three independently
+                    # reported rejections so a fixture proving one never
+                    # rides along with the other two.
                     replanning_entries = (data.get("tasks_patch") or {}).get("entries") or {}
-                    existing_ids = set(tasks)
                     entry_ids = set(replanning_entries) if isinstance(replanning_entries, dict) else set()
-                    dropped_ids = existing_ids - entry_ids
+                    carried_raw = (data.get("tasks_patch") or {}).get("carried_task_ids")
+                    carried_ids = {c for c in carried_raw if isinstance(c, str)} if isinstance(carried_raw, list) else set()
+                    existing_ids = set(tasks)
+
+                    registered_in_entries = sorted(entry_ids & existing_ids)
+                    if registered_in_entries:
+                        errors.append(
+                            err(
+                                "replace-all-entry-for-registered-id",
+                                "a re-planning replace_all's tasks_patch.entries must name "
+                                f"only ids not yet registered; {registered_in_entries} are "
+                                "already registered in workflow.yaml (carry them in "
+                                "tasks_patch.carried_task_ids instead)",
+                            )
+                        )
+                    dropped_ids = existing_ids - carried_ids
                     if dropped_ids:
                         errors.append(
                             err(
                                 "replace-all-drops-task",
-                                "a re-planning replace_all must re-declare every task id "
-                                f"already registered in workflow.yaml; missing {sorted(dropped_ids)}",
+                                "a re-planning replace_all must carry every task id already "
+                                "registered in workflow.yaml in tasks_patch.carried_task_ids; "
+                                f"missing {sorted(dropped_ids)}",
+                            )
+                        )
+                    unregistered_carried = sorted(carried_ids - existing_ids)
+                    if unregistered_carried:
+                        errors.append(
+                            err(
+                                "replace-all-carried-id-unregistered",
+                                "tasks_patch.carried_task_ids names ids not registered in "
+                                f"workflow.yaml: {unregistered_carried}",
                             )
                         )
                     max_existing_id = 0
@@ -1395,7 +1450,17 @@ def apply_patch(workflow, patch):
     entries = tasks_patch.get("entries") or {}
 
     if operation == "replace_planning":
+        # Re-planning carry-over declaration (workflow-patch.md
+        # "Re-planning task-id allocation"): a carried id's record is
+        # copied from the ORIGINAL workflow verbatim -- not re-derived from
+        # any patch-supplied body, because the patch supplies none.
+        carried_ids = tasks_patch.get("carried_task_ids")
+        carried_ids = carried_ids if isinstance(carried_ids, list) else []
+        existing_tasks = (workflow or {}).get("tasks", {}) or {}
         new_tasks = {}
+        for task_id in carried_ids:
+            if isinstance(task_id, str) and isinstance(existing_tasks.get(task_id), dict):
+                new_tasks[task_id] = copy.deepcopy(existing_tasks[task_id])
         for task_id, entry in entries.items():
             new_entry = dict(entry)
             new_entry["status"] = new_entry.pop("initial_status", "pending")

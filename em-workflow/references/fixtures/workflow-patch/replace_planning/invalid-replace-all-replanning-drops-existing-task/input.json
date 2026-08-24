@@ -10,6 +10,7 @@
   "schema_version": 1,
   "step_patches": [],
   "tasks_patch": {
+    "carried_task_ids": [],
     "entries": {
       "task0010": {
         "complexity": "medium",

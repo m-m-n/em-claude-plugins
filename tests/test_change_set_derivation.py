@@ -62,6 +62,18 @@ test_deviation_auto_addition.py):
 - AC-7 (NFR1): `TestTask0020AC7NoRestatementInSection12` -- the evidence
   form and the write procedure (implement-phase.md's own content) are not
   restated in this section.
+
+Round-3 rework (task0023, review round 3, D10) refreshes
+`TestTask0020AC5RetentionSurvivesReplanning`'s no-drop pin only: the
+Retention bullet's cited mechanism moves from "a re-planning replace_all
+may not drop an already-registered task entry" (task0017's rule 17) to the
+carry-over declaration -- a re-planning replace_all now carries an
+already-registered task id verbatim rather than re-declaring it
+(workflow-patch.md's Re-planning task-id allocation section, task0023's own
+document). `WORKFLOW_PATCH_CITATION` (the citation target) and the rest of
+this module's pins (Inputs, Guard status, Semantics/Timing, the third
+input/trigger, AC-7's no-restatement pins) are unaffected -- task0023 owns
+`workflow-patch.md`, not `create-plan-phase.md`'s other content.
 """
 
 import re
@@ -127,9 +139,20 @@ TRIGGER_IMPLEMENT_WAKE_PHRASE = "an implement wake that admitted a deviation"
 # task0020 AC-5 literals: the Retention bullet's no-drop reason, cited by
 # path to workflow-patch.md (task0017 owns that document this round; never
 # restated here).
+#
+# task0023 (goal-vs-spec-divergence, review round 3, D10): the mechanism
+# the Retention bullet cites changes from "a re-planning replace_all may
+# not drop an already-registered task entry" (task0017's rule 17, the
+# re-declare-every-registered-id form) to the carry-over declaration -- a
+# re-planning replace_all now carries an already-registered task id
+# verbatim rather than re-declaring it, which is what workflow-patch.md's
+# Re-planning task-id allocation section actually guarantees (task0017's
+# old wording cited a guarantee the permission-conditions/protocol-error
+# rules never provided). WORKFLOW_PATCH_CITATION is unaffected -- the
+# citation target (by path) does not change, only the reason text.
 RETENTION_NO_DROP_PHRASE = (
-    "a re-planning `replace_all` may not drop an already-registered task "
-    "entry"
+    "a re-planning `replace_all` carries every already-registered task id "
+    "verbatim rather than re-declaring it"
 )
 WORKFLOW_PATCH_CITATION = "references/workflow-patch.md"
 
@@ -474,8 +497,9 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         good_sample = _normalize_ws(
             "## 12. Declared change set derivation\n\n"
             "- **Retention**: survives every later re-derivation because a "
-            "re-planning `replace_all` may not drop an already-registered "
-            "task entry (references/workflow-patch.md)."
+            "re-planning `replace_all` carries every already-registered "
+            "task id verbatim rather than re-declaring it "
+            "(references/workflow-patch.md)."
         )
         self.assertIn(RETENTION_NO_DROP_PHRASE, good_sample)
         self.assertIn(WORKFLOW_PATCH_CITATION, good_sample)

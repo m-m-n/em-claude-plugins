@@ -18,7 +18,8 @@
       "complexity": "low",
       "domains": [],
       "files": [
-        "x.go"
+        "x.go",
+        "x-deviation-admitted.go"
       ],
       "notes": null,
       "plan": "tasks/task0009.md",

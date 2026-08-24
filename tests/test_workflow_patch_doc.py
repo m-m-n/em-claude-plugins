@@ -232,6 +232,33 @@ class TestPreserveVocabulary(unittest.TestCase):
             )
 
 
+class TestPreserveSectionCarriedIdRemark(unittest.TestCase):
+    """task0023 (goal-vs-spec-divergence, review round 3), AC-2/AC-4: the
+    `preserve` section states that a re-planning `replace_all`'s carried
+    task ids need no `tasks.<task_id>.status` / `tasks.<task_id>.branch`
+    entry in `preserve` to survive the patch -- the carry-over declaration
+    guarantees it structurally -- while a patch that lists them anyway still
+    passes the invariance check."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text, "## `preserve`", "## Application rules"
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_carried_ids_need_no_preserve_entry(self):
+        self.assertIn("Re-planning task-id allocation", self.normalized)
+        self.assertIn("`tasks.<task_id>.status`", self.normalized)
+        self.assertIn("`tasks.<task_id>.branch`", self.normalized)
+        self.assertIn("need no", self.normalized)
+
+    def test_listing_them_anyway_still_holds(self):
+        self.assertIn("MAY still list them", self.normalized)
+        self.assertIn("invariance check", self.normalized)
+
+
 class TestApplicationRules(unittest.TestCase):
     """AC-5: all sixteen application rules from design-input.md, ordered,
     single-write + R2.
@@ -287,9 +314,14 @@ class TestApplicationRules(unittest.TestCase):
         # number to the end of the section is its text. Whitespace is
         # normalized so a line-wrap inside the citation never makes this
         # brittle.
+        #
+        # task0023 (goal-vs-spec-divergence, review round 3): the rule no
+        # longer says "re-declare" -- a re-planning replace_all now carries
+        # already-registered ids via `carried_task_ids` instead of
+        # re-declaring their bodies under `entries` (D10).
         idx = self.doc_rules_section.index("17. ")
         rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:])
-        self.assertIn("re-declare", rule_text)
+        self.assertIn("carried_task_ids", rule_text)
         self.assertIn("Re-planning task-id allocation", rule_text)
 
     def test_single_write_application_rule_present(self):
@@ -299,6 +331,16 @@ class TestApplicationRules(unittest.TestCase):
     def test_rule_r2_commit_sequence_present(self):
         self.assertIn("R2", self.doc_rules_section)
         self.assertIn("commit", self.doc_rules_section.lower())
+
+    def test_rule_twelve_applies_to_entries_only(self):
+        # AC-2 (task0023): rule 12 (`initial_status: pending`) is stated to
+        # apply to `tasks_patch.entries` only -- a carried id carries no
+        # entry at all.
+        idx = self.doc_rules_section.index("12. ")
+        end = self.doc_rules_section.index("13. ")
+        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:end])
+        self.assertIn("tasks_patch.entries", rule_text)
+        self.assertIn("applies to `entries` only", rule_text)
 
 
 class TestOwnershipBoundaryAndDomainsSSOT(unittest.TestCase):
@@ -609,33 +651,79 @@ class TestReplanningTaskIdAllocationRule(unittest.TestCase):
             "is never re-issued to a different task", self.normalized
         )
 
-    def test_replace_all_must_redeclare_every_registered_id(self):
-        # task0017 (review round 2 rework): the allocation rule gets an
-        # anchor -- a re-planning replace_all may not drop an existing task
-        # entry, because that is what keeps the highest registered id
-        # readable directly from workflow.yaml (no id is ever released).
+    def test_replace_all_must_carry_every_registered_id_via_carried_task_ids(self):
+        # task0023 (goal-vs-spec-divergence, review round 3, D10): the
+        # task0017 wording ("MUST re-declare every task id already
+        # registered" / "Dropping a registered id is rejected") is
+        # superseded -- a re-planning replace_all no longer re-declares a
+        # registered id's body under `entries` at all. It carries the id in
+        # `tasks_patch.carried_task_ids` instead, whose record is copied
+        # from `workflow.yaml` verbatim; omitting a registered id from
+        # `carried_task_ids` is rejected exactly like the old "dropping"
+        # rule was.
+        self.assertIn("tasks_patch.carried_task_ids", self.normalized)
+        self.assertIn("tasks_patch.entries", self.normalized)
         self.assertIn(
-            "MUST re-declare every task id already registered",
+            "Omitting a registered id from `carried_task_ids`",
             self.normalized,
         )
-        self.assertIn("Dropping a registered id is rejected", self.normalized)
+        self.assertIn(
+            "naming a registered id under `entries`, is rejected",
+            self.normalized,
+        )
+
+    def test_carried_record_copied_verbatim_naming_the_fields(self):
+        # AC-2: the document names every field a carried id's record
+        # carries over, so a merged task's status/branch/files survive
+        # without either field entering the `preserve` vocabulary.
+        for field in (
+            "`title`", "`plan`", "`files`", "`skills`", "`domains`",
+            "`complexity`", "`requirements`", "`status`", "`branch`",
+            "`notes`",
+        ):
+            self.assertIn(field, self.normalized)
+        self.assertIn("copied from that `workflow.yaml` **verbatim**", self.normalized)
+        self.assertIn(
+            "a `merged` task keeps its `status`, its `branch` and its "
+            "`files` across the patch without either field entering the "
+            "`preserve` vocabulary",
+            self.normalized,
+        )
+
+    def test_carried_task_ids_and_entries_disjoint(self):
+        # AC-1: the two sets are stated disjoint -- a carried id's body is
+        # never re-supplied under entries.
+        self.assertIn(
+            "a carried id must not also be a key of `tasks_patch.entries`",
+            self.normalized,
+        )
 
     def test_redeclare_matcher_fails_on_pre_change_wording(self):
         # Negative proof: the pre-task0017 section said nothing about
-        # dropping a registered id.
+        # dropping a registered id, and the pre-task0023 (task0017) section
+        # said nothing about carried_task_ids.
         synthetic_old_wording = (
             "A `replace_all` re-planning pass allocates its new task ids "
             "continuing ABOVE the highest `taskNNNN` id the feature has "
             "ever registered. A task id already used by any task -- "
             "retired or not -- is never re-issued to a different task, on "
-            "either case of the Re-planning path above."
+            "either case of the Re-planning path above. Because "
+            "`replace_all` replaces `tasks` wholesale, the high-water mark "
+            "has no storage of its own: a re-planning `replace_all`'s "
+            "`entries` MUST re-declare every task id already registered in "
+            "the `workflow.yaml` it is applied to -- a `merged` task keeps "
+            "its `status`, its `branch` and its `files` -- and any "
+            "genuinely new task is numbered above the highest id present. "
+            "Dropping a registered id is rejected; this is what keeps the "
+            "highest id readable directly from the workflow the patch is "
+            "applied to, instead of a number nothing stores."
         )
         self.assertNotIn(
-            "MUST re-declare every task id already registered",
+            "tasks_patch.carried_task_ids", synthetic_old_wording
+        )
+        self.assertNotIn(
+            "Omitting a registered id from `carried_task_ids`",
             synthetic_old_wording,
-        )
-        self.assertNotIn(
-            "Dropping a registered id is rejected", synthetic_old_wording
         )
 
     def test_allocation_matcher_fails_on_reissuing_wording(self):

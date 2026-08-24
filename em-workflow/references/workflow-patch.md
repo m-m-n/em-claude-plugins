@@ -66,6 +66,12 @@ requires `files` / `skills` / `domains` / `complexity` / `requirements` on
 every task entry, so a partial apply must never leave that mandatory set
 incomplete.
 
+`tasks_patch.carried_task_ids` (a list of `taskNNNN` strings) is present
+only on a re-planning `replace_all` (Re-planning task-id allocation,
+below): it is empty or absent on the Initial-planning path and on
+`append`. `carried_task_ids` and `entries` are disjoint — a carried id's
+body is never re-supplied under `entries`.
+
 ### `replace_all` permission conditions
 
 `replace_all` is permitted through exactly two paths; a patch matching
@@ -121,14 +127,30 @@ ABOVE the highest `taskNNNN` id the feature has ever registered. A task id
 already used by any task — retired or not — is never re-issued to a
 different task, on either case of the Re-planning path above.
 
-Because `replace_all` replaces `tasks` wholesale, the high-water mark has no
-storage of its own: a re-planning `replace_all`'s `entries` MUST re-declare
-every task id already registered in the `workflow.yaml` it is applied to — a
-`merged` task keeps its `status`, its `branch` and its `files` — and any
-genuinely new task is numbered above the highest id present. Dropping a
-registered id is rejected; this is what keeps the highest id readable
-directly from the workflow the patch is applied to, instead of a number
-nothing stores.
+Because `replace_all` replaces `tasks` wholesale, a re-planning pass
+declares two disjoint sets rather than re-declaring registered ids as
+`entries`:
+
+- `tasks_patch.carried_task_ids` — every task id already registered in the
+  `workflow.yaml` the patch is applied to. Each carried id's record is
+  copied from that `workflow.yaml` **verbatim** — `title`, `plan`, `files`,
+  `skills`, `domains`, `complexity`, `requirements`, `status`, `branch`,
+  `notes` — and the patch supplies no body for it: a carried id must not
+  also be a key of `tasks_patch.entries`.
+- `tasks_patch.entries` — only task ids NOT yet registered in that
+  `workflow.yaml`. Every field of an entry (including `initial_status:
+  pending`, application rule 12) is worker-supplied and validated exactly as
+  on the Initial-planning path.
+
+Omitting a registered id from `carried_task_ids`, naming an unregistered id
+in `carried_task_ids`, or naming a registered id under `entries`, is
+rejected. Because a carried id's record is copied verbatim, a `merged` task
+keeps its `status`, its `branch` and its `files` across the patch without
+either field entering the `preserve` vocabulary.
+
+The high-water mark is `max(carried_task_ids ∪ entries)`, still readable
+directly from the `workflow.yaml` the patch is applied to — any genuinely
+new task in `entries` is numbered above it.
 
 ### `append` requirements
 
@@ -205,6 +227,12 @@ is RECOMMENDED, not mandatory — rule 4 below already forbids `append` from
 overwriting an existing task ID, so the recommendation is a belt-and-braces
 check rather than the only thing preventing the overwrite.
 
+A re-planning `replace_all`'s carried task ids (Re-planning task-id
+allocation, above) need no `tasks.<task_id>.status` / `tasks.<task_id>.branch`
+entry in `preserve` to survive the patch — the carry-over declaration
+guarantees it structurally. A patch MAY still list them; because the carried
+record is copied verbatim, the invariance check (rule 14) holds.
+
 ## Application rules (in order)
 
 All seventeen rules apply, in order, to every patch:
@@ -227,7 +255,9 @@ All seventeen rules apply, in order, to every patch:
    (see Domains vocabulary SSOT below).
 10. `complexity` must be one of `low` / `medium` / `high`.
 11. `requirements` entries must be IDs that already exist in `workflow.yaml`.
-12. `initial_status` must be `pending`.
+12. Every entry under `tasks_patch.entries` must set `initial_status` to
+    `pending`. This rule applies to `entries` only — a `carried_task_ids`
+    id carries no entry at all (Re-planning task-id allocation, above).
 13. The operation's mandatory `preserve` set must be present.
 14. Every path listed in `preserve` must hold the same value before and
     after the patch.
@@ -236,9 +266,11 @@ All seventeen rules apply, in order, to every patch:
     (single-write application — no partial or incremental writes).
 16. The commit sequence follows rule R2: the artifact commit first, then the
     status-update commit.
-17. A re-planning `replace_all`'s `entries` must re-declare every task id
-    already registered in the current `workflow.yaml` (Re-planning task-id
-    allocation, above); dropping a registered id is rejected.
+17. A re-planning `replace_all` must carry `tasks_patch.carried_task_ids`
+    listing every task id already registered in the current `workflow.yaml`,
+    and `tasks_patch.entries` must name only ids not registered there
+    (Re-planning task-id allocation, above); omitting a registered id from
+    `carried_task_ids`, or naming a registered id in `entries`, is rejected.
 
 ## Ownership boundary
 
