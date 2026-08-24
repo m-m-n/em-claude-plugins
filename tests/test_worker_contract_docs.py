@@ -1282,5 +1282,73 @@ class TestReworkPlannerContractSpecChangeCitation(unittest.TestCase):
         self.assertEqual(numbered, ["1", "2", "3", "4", "5"])
 
 
+class TestReworkPlannerContractGateIdentifiers(unittest.TestCase):
+    """task0024 AC-4 (FR11): rework-planner-contract.md carries a
+    "## Gate identifiers" section naming `rework.spec-change` -- this is
+    what attributes the gate to the `rework-planner` worker and puts it
+    into the validator's gate registry (see
+    tests/test_validate_worker_output.py's TestGateRegistryDerivation and
+    tests/test_spec_change_gate_binding.py, which assert the registry
+    entry the section produces, rather than asserting this sentence)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(REWORK_PLANNER_CONTRACT_PATH)
+
+    def _gate_identifiers_section(self):
+        return _section(
+            self.text,
+            "## Gate identifiers",
+            "## Other conditions under which a question packet may be returned",
+        )
+
+    def test_section_exists_and_names_the_gate_id(self):
+        section = self._gate_identifiers_section()
+        self.assertIn("`rework.spec-change`", section)
+
+    def test_section_states_no_batch_policies_entry(self):
+        section = re.sub(r"\s+", " ", self._gate_identifiers_section())
+        self.assertIn(
+            "carries no entry in `references/batch-policies.yaml`", section
+        )
+
+    def test_section_cites_classification_gate_not_restated(self):
+        section = re.sub(r"\s+", " ", self._gate_identifiers_section())
+        self.assertIn(
+            "the classification gate defined in "
+            "`references/question-resolution.md`",
+            section,
+        )
+        self.assertIn("cited, not restated", section)
+
+    def test_section_states_the_registry_consequence(self):
+        section = re.sub(r"\s+", " ", self._gate_identifiers_section())
+        self.assertIn(
+            "puts it into the validator's gate registry "
+            "(`em-workflow/scripts/validate-worker-output.py`)",
+            section,
+        )
+        self.assertIn("binding it to the `spec-change` category", section)
+
+    def test_negative_twin_no_gate_identifiers_heading_fails(self):
+        # Non-vacuity guard: text that names the gate_id in prose without
+        # the "## Gate identifiers" heading (the pre-task0024 state -- the
+        # heading and its parser attribution did not exist at all) must not
+        # satisfy the section locator above.
+        fake_text = (
+            "## Specification-change transition\n\n"
+            "The rework-planner raises `rework.spec-change` via the "
+            "transition above.\n\n"
+            "## Other conditions under which a question packet may be "
+            "returned\n"
+        )
+        with self.assertRaises(ValueError):
+            _section(
+                fake_text,
+                "## Gate identifiers",
+                "## Other conditions under which a question packet may be returned",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
