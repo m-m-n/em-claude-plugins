@@ -79,6 +79,7 @@ tasks:
     - tests/test_workflow_patch_doc.py
     - tests/test_gate_option_vocabulary.py
     - tests/test_develop_skill_rewiring.py
+    - tests/test_spec_change_replan_authorization.py
     skills: []
     domains:
     - api-contract
@@ -91,8 +92,12 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'deviation: tests/test_spec_change_replan_authorization.py (task0004-owned per D3) pins the
+      application-rule count sentence in workflow-patch.md; adding rule 19 required refreshing that literal
+      in the same edit (D12 precedent). Incident: git stash is shared across worktrees in this repo layout;
+      a cross-worktree stash collision was detected and fully resolved before commit (merged result verified
+      clean).'
     branch: em-workflow/rework-contract-drift/task0002
   task0003:
     title: 'Required failure category: definition and verify-phase assignment'
