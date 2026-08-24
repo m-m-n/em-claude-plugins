@@ -4,7 +4,7 @@ created: 2026-08-23
 base_branch: main
 parent_branch: em-workflow/goal-vs-spec-divergence/integration
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 0
 project:
   license: none
@@ -40,7 +40,7 @@ workflow:
   status: completed
   completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
 - id: implement
-  status: completed
+  status: pending
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
   completed_at_commit: 2028bc9cf38e56466a8a18378276365d86469baf
 - id: review
@@ -552,6 +552,147 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0021
+  task0022:
+    title: one flag per judgement in the spec_change record
+    plan: tasks/task0022.md
+    files:
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/phase-state.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replanning-consumed-spec-change/phase-state.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-after-create-spec-dispatch/
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replan-authorization-spent/
+    - tests/test_spec_change_replan_authorization.py
+    - tests/test_phase_state_doc.py
+    - tests/test_workflow_patch_doc.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0023:
+    title: carried task ids on a re-planning replace_all
+    plan: tasks/task0023.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/workflow.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replanning-drops-existing-task/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replanning-entry-for-registered-id/
+    - tests/test_replanning_carry_over.py
+    - tests/test_workflow_patch_doc.py
+    - tests/test_validate_worker_output.py
+    - tests/test_change_set_derivation.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR18
+    - FR19
+    - NFR1
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0024:
+    title: close the fail-closed carve-out around the spec-change category
+    plan: tasks/task0024.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_spec_change_gate_binding.py
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_worker_contract_docs.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0025:
+    title: the classification gate's outcome closes its question
+    plan: tasks/task0025.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/question-packet-schema.md
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_gate_outcome_packet_lifecycle.py
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    - input-handling
+    complexity: high
+    requirements:
+    - FR7
+    - FR8
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0026:
+    title: create-spec re-entry upserts the requirement map
+    plan: tasks/task0026.md
+    files:
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_create_spec_reentry_preservation.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 3
@@ -616,8 +757,12 @@ requirements:
     - task0013
     - task0016
     - task0017
+    - task0022
+    - task0023
     tests:
     - TS-2
+    - TS-18
+    - TS-19
   FR5:
     title: base_commit preservation on replanning
     status: ok
@@ -629,6 +774,9 @@ requirements:
     - task0016
     - task0017
     - task0018
+    - task0022
+    - task0023
+    - task0026
     tests:
     - TS-2
   FR6:
@@ -642,8 +790,12 @@ requirements:
     - task0016
     - task0017
     - task0018
+    - task0022
+    - task0026
     tests:
     - TS-2
+    - TS-18
+    - TS-22
   FR7:
     title: Classification gate (batch-only)
     status: ok
@@ -652,8 +804,10 @@ requirements:
     tasks:
     - task0004
     - task0019
+    - task0025
     tests:
     - TS-3
+    - TS-21
   FR8:
     title: Interactive behaviour unchanged
     status: ok
@@ -661,6 +815,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0004
+    - task0025
     tests:
     - TS-3
   FR9:
@@ -695,8 +850,10 @@ requirements:
     - task0006
     - task0012
     - task0019
+    - task0024
     tests:
     - TS-4
+    - TS-20
   FR12:
     title: Handling of Codex output
     status: ok
@@ -762,8 +919,10 @@ requirements:
     - task0009
     - task0015
     - task0020
+    - task0023
     tests:
     - TS-8
+    - TS-19
   FR19:
     title: Conditional auto-addition of deviations, containment check retained
     status: ok
@@ -773,6 +932,7 @@ requirements:
     - task0010
     - task0015
     - task0020
+    - task0023
     tests:
     - TS-8
   FR20:
@@ -810,6 +970,11 @@ requirements:
     - task0018
     - task0019
     - task0020
+    - task0022
+    - task0023
+    - task0024
+    - task0025
+    - task0026
     tests:
     - TS-12
   NFR2:
@@ -822,8 +987,10 @@ requirements:
     - task0006
     - task0012
     - task0019
+    - task0024
     tests:
     - TS-4
+    - TS-20
   NFR3:
     title: Unattended-run continuity
     status: ok
@@ -837,8 +1004,10 @@ requirements:
     - task0015
     - task0019
     - task0020
+    - task0025
     tests:
     - TS-13
+    - TS-21
   NFR4:
     title: Codex independence
     status: ok
@@ -875,6 +1044,11 @@ requirements:
     - task0019
     - task0020
     - task0021
+    - task0022
+    - task0023
+    - task0024
+    - task0025
+    - task0026
     tests:
     - TS-16
   NFR6:
@@ -936,5 +1110,10 @@ requirements:
     - task0019
     - task0020
     - task0021
+    - task0022
+    - task0023
+    - task0024
+    - task0025
+    - task0026
     tests:
     - TS-10

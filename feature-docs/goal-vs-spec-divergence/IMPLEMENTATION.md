@@ -45,6 +45,10 @@ renaming it locally.
 | Reference-impact scan I/O | Carries create-spec's referenced-side scan across the envelope | Request side: `analysis_scope.inspect_reference_impact` (boolean) and the `resolved_input_paths` category `reference_scan_targets` (orchestrator-resolved before dispatch; the analyst never discovers paths itself). Result side: analyst payload / `analysis_snapshot` field `reference_impact`, a list whose entries pair the symbol or string scheduled for deletion or renaming with the affected file paths (test files included). | task0008 (defines), task0007 (resolves the category before dispatch) |
 | Declared change set derivation | Replaces the hand-authored SPEC declaration | Defined in `references/phases/create-plan-phase.md` as: the union of every `tasks.*.files` entry in `workflow.yaml`, plus the default entries whose enumeration and semantics stay in the two document templates (cited, never copied — see Conventions C6c). It is a guard, not a statement of the goal. The containment check (observed ⊆ declared) is unchanged. | task0009 (defines), task0010 (cites when auto-adding a deviation) |
 | Document-change route selection | Decides which route a needed document change takes | Defined in `references/rework-task-synthesis.md`. Order: (1) wording-only correction to a create-plan-owned document, eligible only when no planner re-entry is needed AND plan, task and requirement metadata are unchanged → the independent route; (2) otherwise the existing rework-task or SPEC-change transition. The classification gate is reached only on route (2). | task0003 (defines), task0004 (gate side cites it) |
+| `spec_change` flag pair | Separates the two judgements one `spec_change` record grounds | Defined in `references/phase-state.md`. The record carries BOTH `consumed` — stop-condition-3 suppression, set `true` by the orchestrator once the record has grounded one `create-spec` dispatch, whatever that dispatch's outcome — AND `replan_authorized` — the re-planning `replace_all` authorization, set `true` by the SPEC-change transition when it writes the record, and spent (`false`) once a re-planning `replace_all` has been applied. Neither flag is ever read for the other's judgement. Each occurrence of the transition replaces the record wholesale, so a freshly written record is unconsumed AND authorized. Names are FIXED. | task0022 (defines), task0023 (its re-planning content rules sit behind this permission) |
+| Re-planning carry-over declaration | Re-declares registered task ids without re-supplying their bodies | Defined in `references/workflow-patch.md`. A re-planning `replace_all` carries `tasks_patch.carried_task_ids` (every id already registered in the target `workflow.yaml`) and `tasks_patch.entries` (only ids not yet registered); the two sets are disjoint. A carried id's record is copied from the current `workflow.yaml` verbatim — `title`, `plan`, `files`, `skills`, `domains`, `complexity`, `requirements`, `status`, `branch`, `notes` — and the patch supplies no body for it. Application rule 12 (`initial_status: pending`) applies to `entries` only. High-water mark = `max(carried_task_ids ∪ entries)`. Names are FIXED. | task0023 (defines), task0022 (its fixtures use this form) |
+| Spec-change gate binding | Binds the spec-change category to its only gate | Defined in `references/question-resolution.md`, with the registry side derived from a `## Gate identifiers` section in `references/contracts/rework-planner-contract.md` attributing `rework.spec-change` to `rework-planner`. `category: spec-change` ⇔ `gate_id: rework.spec-change`, enforced in both directions; every other pairing aborts. `rework.spec-change` remains the only gate the routed arm admits. | task0024 (defines), task0025 (its outcome path names the same gate and adds no second one) |
+| Gate-resolved answer source | Names how a classification-gate outcome appears in the answer model | `source: batch-classification-gate`, defined in `references/question-packet-schema.md` (the vocabulary's SSOT) and mirrored in the validator's vocabulary constant. One answer record per question the gate resolved; no gate-resolved packet is left `issued`. Name is FIXED. | task0025 (defines), task0024 (must not introduce a second value for the same outcome) |
 
 ## Conventions
 
@@ -92,6 +96,15 @@ renaming it locally.
   existing modules' discipline). A new module must not combine a wildcard
   scan of SPEC paths under `feature-docs/` with a requirement that a section
   be present.
+- **C10 — Byte-identity pins**: `tests/test_gate_option_vocabulary.py` pins
+  the sha256 of `em-workflow/references/workflow-patch.md`,
+  `em-workflow/scripts/validate-worker-output.py`,
+  `tests/test_validate_worker_output.py` and one question-packet fixture. A
+  task that intentionally edits any of them refreshes the corresponding pin
+  in the same change, with a comment naming the task and the reason. The
+  assertion is refreshed, never deleted. Two round-1/round-2 tasks hit this
+  as an unplanned deviation; from round 3 on it is declared in the file set
+  of every task that touches a pinned file.
 
 ## Cross-task Design Decisions
 
@@ -158,6 +171,44 @@ Components row 2). Affects task0010, task0005.
 Every new rule is written as batch-only. The interactive route keeps asking
 the user directly, and no new interactive question is introduced anywhere in
 this feature (FR8). Affects task0003, task0004.
+
+### D9 — One flag per judgement, not one flag reused (review round 3)
+
+The `spec_change` record grounds two different judgements: suppressing the
+develop state machine's stop condition 3, and authorizing a re-planning
+`replace_all`. A single `consumed` flag cannot serve both — the point at
+which it is spent (the create-spec dispatch) always precedes the point at
+which the second judgement is made (create-plan's patch), so the second
+judgement was structurally always "no". The record therefore carries two
+independent flags (Shared Components, `spec_change` flag pair). The user
+settled this: moving `consumed`'s consumption point later, and setting
+`create-plan` to `needs_update` in the transition, were both rejected — the
+first keeps one flag doing two jobs, the second changes SPEC.md FR6.
+Affects task0022, task0023.
+
+### D10 — Registered task entries are carried, not re-declared (review round 3)
+
+Protecting a merged task entry field by field — growing the `preserve`
+vocabulary until `files`, `domains`, `complexity` and the rest are each
+individually preserved — was rejected in favour of removing the worker's
+ability to state those fields at all on a re-planning pass. A registered id
+is carried over by id and its record copied verbatim; only genuinely new ids
+carry a worker-supplied body (Shared Components, Re-planning carry-over
+declaration). This is also what makes `create-plan-phase.md` §12's retention
+claim true, without §12 stating a rule of its own. Affects task0023,
+task0022.
+
+### D11 — The irreversible-operations claim is withdrawn, not implemented (review round 3)
+
+`question-resolution.md` asserted that irreversibility is decided from an
+orchestrator-held list of irreversible operations. No such list exists in
+this repository, and the only trigger that can fire is the packet's own
+`assumptions[].reversible: false`. SPEC.md FR11 puts that abort **outside**
+this revision's scope and requires only that it not be weakened, so building
+a new plugin-wide registry would be a mechanism no requirement asks for,
+while withdrawing the claim restores the documented state to exactly the
+unchanged strength FR11 requires. The replacement text states the real basis
+and names its limitation (worker-declared). Affects task0024.
 
 ## Risk Assessment
 

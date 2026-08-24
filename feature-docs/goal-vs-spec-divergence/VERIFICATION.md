@@ -47,6 +47,11 @@ repeated here.
 | TS-15 | Traceability: every FR1–FR19 has at least one task and at least one test in `workflow.yaml`'s requirements mapping, and every listed ID exists | No requirement with an empty `tasks` or `tests` array except FR20's own entry, which carries both | Manual / integrated |
 | TS-16 | Every test module added by this feature is discovered by the run command and imports only the standard library | Discovery finds each new module; no third-party import | Unit |
 | TS-17 | Scan for the goal-absent inapplicability rule (FR20 / assumption A-6) | `question-resolution.md` states the gate is inapplicable without a `goal` block, the run stops as before, no backfill occurs, and the stop reason records the inapplicability; `workflow-schema.md` states the block is optional | Unit |
+| TS-18 | Drive the SPEC-change transition's real ordering — record written, `create-spec` dispatched and the record marked consumed, `create-spec` completed, `create-plan` re-entered as `pending` with `merged` tasks present — and validate the re-planning `replace_all` produced there, through the canonical validator invocation | The patch is permitted: the re-planning authorization flag is independent of `consumed`, and a spent or absent authorization is still rejected | Unit |
+| TS-19 | Apply a re-planning `replace_all` that carries its registered task ids and compare each carried record field by field before and after, including a `files` path admitted by an implement deviation | Every carried record is identical after the patch — `status`, `branch`, `files`, and the rest — and a patch that drops a registered id, re-supplies a body for one, or re-issues an id below the high-water mark is rejected | Unit |
+| TS-20 | Scan the fail-closed classification for the spec-change category's abort arm and its single gate-keyed exception, and drive the validator with both mismatched category / `gate_id` pairings | The category is an abort condition again, the routed arm is admitted only for `rework.spec-change`, both mismatch directions abort, the gate is present in the validator's gate registry, and no statement asserts an irreversible-operations source that has no definition | Unit |
+| TS-21 | Scan the classification gate's outcome wiring and develop Step B, and validate an answer object produced by a gate outcome | The proceed and stop outcomes each name what they write to the packet and answer model in exactly one place, no gate-resolved packet stays `issued`, `batch-classification-gate` is a valid answer `source` in both the schema and the validator, and Step B carries the gate's call point and stop branch with interactive unchanged | Unit |
+| TS-22 | Scan `create-spec-phase.md`'s re-entry rule for the requirement upsert | `requirements` is no longer listed as untouched; new ids are created from `spec_index`, surviving ids keep their `tasks` and `tests`, the disappearing-id case has exactly one stated outcome, and the rest of the partial-update list is intact | Unit |
 
 ## Code Quality Verification
 
@@ -78,31 +83,31 @@ repeated here.
 | FR1 | task0001, task0007 | TS-1 |
 | FR2 | task0001, task0007 | TS-1 |
 | FR3 | task0001, task0004 | TS-1 |
-| FR4 | task0002 | TS-2 |
-| FR5 | task0002 | TS-2 |
-| FR6 | task0003 | TS-2 |
-| FR7 | task0004 | TS-3 |
-| FR8 | task0004 | TS-3 |
+| FR4 | task0002, task0022, task0023 | TS-2, TS-18, TS-19 |
+| FR5 | task0002, task0022, task0023, task0026 | TS-2 |
+| FR6 | task0003, task0022, task0026 | TS-2, TS-18, TS-22 |
+| FR7 | task0004, task0025 | TS-3, TS-21 |
+| FR8 | task0004, task0025 | TS-3 |
 | FR9 | task0004 | TS-3 |
 | FR10 | task0004 | TS-3 |
-| FR11 | task0004, task0006 | TS-4 |
+| FR11 | task0004, task0006, task0024 | TS-4, TS-20 |
 | FR12 | task0004 | TS-11 |
 | FR13 | task0004 | TS-5 |
 | FR14 | task0004, task0005 | TS-5 |
 | FR15 | task0003 | TS-6 |
 | FR16 | task0003 | TS-6 |
 | FR17 | task0007, task0008 | TS-7 |
-| FR18 | task0009 | TS-8 |
-| FR19 | task0010 | TS-8 |
+| FR18 | task0009, task0023 | TS-8, TS-19 |
+| FR19 | task0010, task0023 | TS-8 |
 | FR20 | task0001, task0004, task0007 | TS-17 |
-| NFR1 | task0001 … task0010 | TS-12 |
-| NFR2 | task0004, task0006 | TS-4 |
-| NFR3 | task0004, task0005, task0010 | TS-13 |
+| NFR1 | task0001 … task0010, task0022 … task0026 | TS-12 |
+| NFR2 | task0004, task0006, task0024 | TS-4, TS-20 |
+| NFR3 | task0004, task0005, task0010, task0025 | TS-13, TS-21 |
 | NFR4 | task0004 | TS-14 |
-| NFR5 | task0001 … task0011 | TS-16 |
+| NFR5 | task0001 … task0011, task0022 … task0026 | TS-16 |
 | NFR6 | task0011 | TS-9 |
 | NFR7 | task0001 … task0011 | TS-15 |
-| NFR8 | task0001 … task0011 | TS-10 |
+| NFR8 | task0001 … task0011, task0022 … task0026 | TS-10 |
 
 ## E2E Testing
 
@@ -137,9 +142,11 @@ this feature and no design artifact exists.
 
 - **Performance**: no performance requirement is stated; no threshold to
   check.
-- **Security — fail-closed retention (NFR2)**: TS-4 plus MV-5. The three
-  immediate-abort arms must be individually present with their
-  non-overridable clauses intact.
+- **Security — fail-closed retention (NFR2)**: TS-4, TS-20 plus MV-5. The
+  three immediate-abort arms must be individually present with their
+  non-overridable clauses intact, no fourth arm may be reachable by a
+  category / `gate_id` pairing the routed arm does not admit, and no arm may
+  claim a decision source that has no definition in the repository.
 - **Security — untrusted data (FR3, FR12)**: TS-1 and TS-11. The goal text
   and Codex output must be stated as data to read, never as instructions to
   follow, at every site that consumes them.
@@ -151,7 +158,7 @@ this feature and no design artifact exists.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 17 | 16 | 0 | 1 (TS-15) |
+| Test scenarios | 22 | 21 | 0 | 1 (TS-15) |
 | Success criteria | 8 | 5 | 0 | 3 (SC-2, SC-5, SC-7) |
 | Manual verification | 5 | 0 | 0 | 5 |
 | Security items | 3 | 3 | 0 | 1 overlap (MV-5) |
