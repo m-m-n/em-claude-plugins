@@ -52,6 +52,9 @@ repeated here.
 | TS-20 | Scan the fail-closed classification for the spec-change category's abort arm and its single gate-keyed exception, and drive the validator with both mismatched category / `gate_id` pairings | The category is an abort condition again, the routed arm is admitted only for `rework.spec-change`, both mismatch directions abort, the gate is present in the validator's gate registry, and no statement asserts an irreversible-operations source that has no definition | Unit |
 | TS-21 | Scan the classification gate's outcome wiring and develop Step B, and validate an answer object produced by a gate outcome | The proceed and stop outcomes each name what they write to the packet and answer model in exactly one place, no gate-resolved packet stays `issued`, `batch-classification-gate` is a valid answer `source` in both the schema and the validator, and Step B carries the gate's call point and stop branch with interactive unchanged | Unit |
 | TS-22 | Scan `create-spec-phase.md`'s re-entry rule for the requirement upsert | `requirements` is no longer listed as untouched; new ids are created from `spec_index`, surviving ids keep their `tasks` and `tests`, the disappearing-id case has exactly one stated outcome, and the rest of the partial-update list is intact | Unit |
+| TS-23 | Scan the three consumers of the re-planning carry-over rule — `create-plan-phase.md`, `planner-contract.md` and the implementation-planner prompt — for a restated count of `workflow-patch.md`'s application rules and for the producer-side allocation instruction | No count of the rule set survives outside `workflow-patch.md`, each site cites the SSOT by path instead, and the prompt's allocation instruction branches on the planning pass, requiring `carried_task_ids` for every registered id and bodies only for unregistered ones | Unit |
+| TS-24 | Drive the spec-change route's origin verification with a dispatch whose bound origin set holds both a benign and a `category: security` origin, and with a verify-sourced origin | The security / license / irreversible check runs over the orchestrator's bound set, so naming only the benign origin does not admit the routed arm; an origin outside the bound set aborts; and an `origin_kind: verify` origin is verified against the verify failed items and reaches the gate | Unit |
+| TS-25 | Scan `phase-state.md`, `workflow-patch.md` and develop's SKILL for the authorization's consumption procedure, and drive the validator with a two-pass classification record and with a `spec_change` record of each `origin_kind` | Exactly one document states the consumption procedure with a named actor and moment while the others cite it; the writer list names both writers; both classification entries survive a second pass; and the validator accepts either origin kind while still rejecting a spent or absent authorization | Unit |
 
 ## Code Quality Verification
 
@@ -67,13 +70,13 @@ repeated here.
 
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
-| SC-1 | FR1–FR19 implemented and covered by the scenarios above (FR20 resolved as an assumption) | TS-1 … TS-8, TS-11 … TS-14, TS-17; requirements mapping check TS-15 |
+| SC-1 | FR1–FR19 implemented and covered by the scenarios above (FR20 resolved as an assumption) | TS-1 … TS-8, TS-11 … TS-14, TS-17, TS-23 … TS-25; requirements mapping check TS-15 |
 | SC-2 | AC-1 … AC-11 of the user stories satisfied | Read each user story's acceptance criterion against the merged documents; each maps to the scenarios above |
 | SC-3 | `python3 -m unittest discover -s tests` passes in full | TS-10 |
-| SC-4 | Fail-closed strength for security / license / `reversible: false` unchanged | TS-4 (retention pin), reviewed as a security item |
+| SC-4 | Fail-closed strength for security / license / `reversible: false` unchanged | TS-4 (retention pin), TS-24 (the checked origin set is orchestrator-bound), reviewed as a security item |
 | SC-5 | Existing `tests/` modules green or updated consistently, no guard deleted | TS-10 plus a diff review of every pre-existing module touched: each change must be traceable to an intended document change |
 | SC-6 | Both manifests carry the same raised version | TS-9 |
-| SC-7 | Documents cite existing SSOTs rather than restating rules | TS-12, reviewed as an architecture item |
+| SC-7 | Documents cite existing SSOTs rather than restating rules | TS-12, TS-23 (no restated application-rule count), reviewed as an architecture item |
 | SC-8 | FR1–FR19 delivered as one feature without splitting | TS-15 |
 
 ### Functional Requirements Coverage
@@ -83,31 +86,31 @@ repeated here.
 | FR1 | task0001, task0007 | TS-1 |
 | FR2 | task0001, task0007 | TS-1 |
 | FR3 | task0001, task0004 | TS-1 |
-| FR4 | task0002, task0022, task0023 | TS-2, TS-18, TS-19 |
-| FR5 | task0002, task0022, task0023, task0026 | TS-2 |
-| FR6 | task0003, task0022, task0026 | TS-2, TS-18, TS-22 |
-| FR7 | task0004, task0025 | TS-3, TS-21 |
+| FR4 | task0002, task0022, task0023, task0027, task0029 | TS-2, TS-18, TS-19, TS-23 |
+| FR5 | task0002, task0022, task0023, task0026, task0027 | TS-2 |
+| FR6 | task0003, task0022, task0026, task0027, task0029 | TS-2, TS-18, TS-22 |
+| FR7 | task0004, task0025, task0028 | TS-3, TS-21, TS-24 |
 | FR8 | task0004, task0025 | TS-3 |
 | FR9 | task0004 | TS-3 |
 | FR10 | task0004 | TS-3 |
-| FR11 | task0004, task0006, task0024 | TS-4, TS-20 |
+| FR11 | task0004, task0006, task0024, task0028 | TS-4, TS-20 |
 | FR12 | task0004 | TS-11 |
 | FR13 | task0004 | TS-5 |
-| FR14 | task0004, task0005 | TS-5 |
+| FR14 | task0004, task0005, task0029 | TS-5, TS-25 |
 | FR15 | task0003 | TS-6 |
 | FR16 | task0003 | TS-6 |
 | FR17 | task0007, task0008 | TS-7 |
 | FR18 | task0009, task0023 | TS-8, TS-19 |
 | FR19 | task0010, task0023 | TS-8 |
 | FR20 | task0001, task0004, task0007 | TS-17 |
-| NFR1 | task0001 … task0010, task0022 … task0026 | TS-12 |
-| NFR2 | task0004, task0006, task0024 | TS-4, TS-20 |
-| NFR3 | task0004, task0005, task0010, task0025 | TS-13, TS-21 |
+| NFR1 | task0001 … task0010, task0022 … task0029 | TS-12, TS-23 |
+| NFR2 | task0004, task0006, task0024, task0028 | TS-4, TS-20, TS-24 |
+| NFR3 | task0004, task0005, task0010, task0025, task0029 | TS-13, TS-21, TS-25 |
 | NFR4 | task0004 | TS-14 |
-| NFR5 | task0001 … task0011, task0022 … task0026 | TS-16 |
+| NFR5 | task0001 … task0011, task0022 … task0029 | TS-16 |
 | NFR6 | task0011 | TS-9 |
 | NFR7 | task0001 … task0011 | TS-15 |
-| NFR8 | task0001 … task0011, task0022 … task0026 | TS-10 |
+| NFR8 | task0001 … task0011, task0022 … task0029 | TS-10 |
 
 ## E2E Testing
 
@@ -158,7 +161,7 @@ this feature and no design artifact exists.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 22 | 21 | 0 | 1 (TS-15) |
+| Test scenarios | 25 | 24 | 0 | 1 (TS-15) |
 | Success criteria | 8 | 5 | 0 | 3 (SC-2, SC-5, SC-7) |
 | Manual verification | 5 | 0 | 0 | 5 |
 | Security items | 3 | 3 | 0 | 1 overlap (MV-5) |

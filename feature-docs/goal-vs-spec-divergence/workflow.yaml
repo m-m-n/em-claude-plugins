@@ -5,7 +5,7 @@ base_branch: main
 parent_branch: em-workflow/goal-vs-spec-divergence/integration
 batch:
   review_rework_count: 1
-  verify_rework_count: 0
+  verify_rework_count: 1
 project:
   license: none
   design_system:
@@ -40,14 +40,14 @@ workflow:
   status: completed
   completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
 - id: implement
-  status: completed
+  status: pending
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
   completed_at_commit: 24da58cf9d3f779309934f831048ecc567cb09f3
 - id: review
   status: completed
   completed_at_commit: dfc015a0e2249947ae9f44375d1ccb961e1f5932
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: V-1
@@ -742,6 +742,87 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0026
+  task0027:
+    title: the carry-over rule reaches its producer and its consumers
+    plan: tasks/task0027.md
+    files:
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/references/contracts/planner-contract.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - tests/test_replanning_producer_alignment.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: medium
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0028:
+    title: origin identity, and who chooses what gets checked
+    plan: tasks/task0028.md
+    files:
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - tests/test_spec_change_origin_binding.py
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_rework_synthesis_contract.py
+    - tests/test_worker_contract_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR7
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0029:
+    title: the phase-state records' writer, origin and lifetime
+    plan: tasks/task0029.md
+    files:
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/
+    - tests/test_classification_audit_retention.py
+    - tests/test_phase_state_doc.py
+    - tests/test_spec_change_replan_authorization.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR6
+    - FR14
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
 review:
   status: completed
   rounds_completed: 4
@@ -808,10 +889,13 @@ requirements:
     - task0017
     - task0022
     - task0023
+    - task0027
+    - task0029
     tests:
     - TS-2
     - TS-18
     - TS-19
+    - TS-23
   FR5:
     title: base_commit preservation on replanning
     status: ok
@@ -826,6 +910,7 @@ requirements:
     - task0022
     - task0023
     - task0026
+    - task0027
     tests:
     - TS-2
   FR6:
@@ -841,6 +926,8 @@ requirements:
     - task0018
     - task0022
     - task0026
+    - task0027
+    - task0029
     tests:
     - TS-2
     - TS-18
@@ -854,9 +941,11 @@ requirements:
     - task0004
     - task0019
     - task0025
+    - task0028
     tests:
     - TS-3
     - TS-21
+    - TS-24
   FR8:
     title: Interactive behaviour unchanged
     status: ok
@@ -900,6 +989,7 @@ requirements:
     - task0012
     - task0019
     - task0024
+    - task0028
     tests:
     - TS-4
     - TS-20
@@ -929,8 +1019,10 @@ requirements:
     tasks:
     - task0004
     - task0005
+    - task0029
     tests:
     - TS-5
+    - TS-25
   FR15:
     title: Independent wording-correction route
     status: ok
@@ -1024,8 +1116,12 @@ requirements:
     - task0024
     - task0025
     - task0026
+    - task0027
+    - task0028
+    - task0029
     tests:
     - TS-12
+    - TS-23
   NFR2:
     title: Fail-closed strength not regressed
     status: ok
@@ -1037,9 +1133,11 @@ requirements:
     - task0012
     - task0019
     - task0024
+    - task0028
     tests:
     - TS-4
     - TS-20
+    - TS-24
   NFR3:
     title: Unattended-run continuity
     status: ok
@@ -1054,9 +1152,11 @@ requirements:
     - task0019
     - task0020
     - task0025
+    - task0029
     tests:
     - TS-13
     - TS-21
+    - TS-25
   NFR4:
     title: Codex independence
     status: ok
@@ -1098,6 +1198,9 @@ requirements:
     - task0024
     - task0025
     - task0026
+    - task0027
+    - task0028
+    - task0029
     tests:
     - TS-16
   NFR6:
@@ -1164,5 +1267,8 @@ requirements:
     - task0024
     - task0025
     - task0026
+    - task0027
+    - task0028
+    - task0029
     tests:
     - TS-10

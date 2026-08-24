@@ -48,6 +48,7 @@ renaming it locally.
 | `spec_change` flag pair | Separates the two judgements one `spec_change` record grounds | Defined in `references/phase-state.md`. The record carries BOTH `consumed` — stop-condition-3 suppression, set `true` by the orchestrator once the record has grounded one `create-spec` dispatch, whatever that dispatch's outcome — AND `replan_authorized` — the re-planning `replace_all` authorization, set `true` by the SPEC-change transition when it writes the record, and spent (`false`) once a re-planning `replace_all` has been applied. Neither flag is ever read for the other's judgement. Each occurrence of the transition replaces the record wholesale, so a freshly written record is unconsumed AND authorized. Names are FIXED. | task0022 (defines), task0023 (its re-planning content rules sit behind this permission) |
 | Re-planning carry-over declaration | Re-declares registered task ids without re-supplying their bodies | Defined in `references/workflow-patch.md`. A re-planning `replace_all` carries `tasks_patch.carried_task_ids` (every id already registered in the target `workflow.yaml`) and `tasks_patch.entries` (only ids not yet registered); the two sets are disjoint. A carried id's record is copied from the current `workflow.yaml` verbatim — `title`, `plan`, `files`, `skills`, `domains`, `complexity`, `requirements`, `status`, `branch`, `notes` — and the patch supplies no body for it. Application rule 12 (`initial_status: pending`) applies to `entries` only. High-water mark = `max(carried_task_ids ∪ entries)`. Names are FIXED. | task0023 (defines), task0022 (its fixtures use this form) |
 | Spec-change gate binding | Binds the spec-change category to its only gate | Defined in `references/question-resolution.md`, with the registry side derived from a `## Gate identifiers` section in `references/contracts/rework-planner-contract.md` attributing `rework.spec-change` to `rework-planner`. `category: spec-change` ⇔ `gate_id: rework.spec-change`, enforced in both directions; every other pairing aborts. `rework.spec-change` remains the only gate the routed arm admits. | task0024 (defines), task0025 (its outcome path names the same gate and adds no second one) |
+| Spec-change origin identity | Identifies what a rework-derived spec-change question came from, for both rework sources | Defined in `references/rework-task-synthesis.md` (inside Section 11 Invariant 6, which already draws the distinction) as the pair `origin_kind` (`review` \| `verify`) and `origin_id`: for `review` the review finding's `stable_id`, for `verify` the verify failed item's `id`. Every consumer cites that definition and states only its own use of it — `question-resolution.md` for what origin verification matches against and what set the fail-closed check runs over, `phase-state.md` for what the `spec_change` record stores (the pair replaces `finding_stable_id`), the validator's mandatory-field set and the `replace_planning` fixtures for the persisted form. `origin_kind` never changes what the record's flags mean. Names are FIXED. | task0028 (defines; gate side), task0029 (record, validator and fixture side) |
 | Gate-resolved answer source | Names how a classification-gate outcome appears in the answer model | `source: batch-classification-gate`, defined in `references/question-packet-schema.md` (the vocabulary's SSOT) and mirrored in the validator's vocabulary constant. One answer record per question the gate resolved; no gate-resolved packet is left `issued`. Name is FIXED. | task0025 (defines), task0024 (must not introduce a second value for the same outcome) |
 
 ## Conventions
@@ -209,6 +210,27 @@ a new plugin-wide registry would be a mechanism no requirement asks for,
 while withdrawing the claim restores the documented state to exactly the
 unchanged strength FR11 requires. The replacement text states the real basis
 and names its limitation (worker-declared). Affects task0024.
+
+### D12 — The application-rule set is counted only where it is defined (verify round 1)
+
+`references/workflow-patch.md` is the only document allowed to state how
+many application rules it carries. Its consumers cite it by path and state
+no count, so a rule added there can never leave a consumer's measure of
+"what create-plan must satisfy" behind — which is exactly how the carry-over
+rule (rule 17) went missing from two documents at once. task0027 removes the
+two restatements; task0029, if stating the authorization-consumption
+procedure requires a new rule in `workflow-patch.md`, updates that
+document's own count in the same edit. Affects task0027, task0029.
+
+### D13 — A verify-sourced spec change is admitted, not excluded (verify round 1)
+
+The alternative on the table was to declare verify-sourced rework outside
+the classification gate's scope and say so in SPEC.md. It was rejected: FR7
+requires every case reaching `gate_id: rework.spec-change` in batch to pass
+through the gate, so excluding a whole rework source is a requirement
+change, not an implementation of the requirement. The origin vocabulary is
+widened instead (Shared Components, Spec-change origin identity), which
+leaves FR7 as written and needs no SPEC change. Affects task0028, task0029.
 
 ## Risk Assessment
 
