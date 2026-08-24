@@ -1,0 +1,87 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_unspent_authorization_definition_stated
+      - tests.test_workflow_patch_doc.TestRetiredOriginFieldNameAbsenceScan.test_retired_name_absent_from_owned_paths
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document, test_unspent_authorization_definition_stated
+      failed with AssertionError: 'An unspent re-planning authorization means
+      the record carries `reason`, the origin pair `origin_kind` and
+      `origin_id`, and `recorded_at_commit` (all non-empty)' not found in the
+      normalized section text (the pre-change doc still read
+      `finding_stable_id`). test_retired_name_absent_from_owned_paths failed
+      with the retired name present in workflow-patch.md.
+  AC-2:
+    tests:
+      - tests.test_develop_skill_rewiring.TestStopCondition3AutomaticReentryCarveOut.test_discriminator_names_consumed_rework_yaml_record
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change SKILL.md, failed with AssertionError:
+      'origin_kind' not found in the carve-out section (the pre-change text
+      read "finding の `stable_id`" instead of the origin pair, and had no
+      citation to references/workflow-patch.md for the field definitions).
+  AC-3:
+    tests:
+      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_rule_nineteen_is_the_last_rule
+      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_states_recognition_of_an_already_applied_patch
+      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_states_no_op_on_repeated_consumption
+      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_states_same_state_after_any_number_of_resumptions
+      - tests.test_workflow_patch_doc.TestApplicationRuleNineteenRecoveryAndIdempotency.test_cites_phase_state_for_flag_location_without_restating
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document (rule 19 did not exist), setUpClass
+      itself raised ValueError: substring "19. " not found (doc_rules_section
+      .index("19. ") failed), so every test in the class errored.
+  AC-4:
+    tests:
+      - tests.test_workflow_patch_doc.TestOwnershipBoundaryAndDomainsSSOT.test_names_the_orchestrator_as_the_owning_side_of_the_crossing
+      - tests.test_workflow_patch_doc.TestOwnershipBoundaryAndDomainsSSOT.test_names_rule_eighteen_as_the_crossing
+      - tests.test_workflow_patch_doc.TestOwnershipBoundaryAndDomainsSSOT.test_states_the_permission_condition_for_the_crossing
+      - tests.test_workflow_patch_doc.TestOwnershipBoundaryAndDomainsSSOT.test_cites_phase_state_for_the_records_definition_without_restating
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document, all four failed with AssertionError
+      (e.g. 'orchestrator' / 'never a worker' / 'Application rule 18' /
+      'replan_authorized' not found in the Ownership boundary section, which
+      pre-change contained only the project/review-summary paragraph).
+  AC-5:
+    tests:
+      - tests.test_workflow_patch_doc.TestReplanningReentrySignalStrengthenedRound2.test_unspent_authorization_definition_stated
+    red_confirmed: true
+    red_reason: >-
+      Same observation as AC-1 above -- this is the same live-reading
+      assertion, which is the point of AC-5 (the existing pin is updated in
+      place rather than duplicated).
+  AC-6:
+    tests:
+      - tests.test_workflow_patch_doc.TestRetiredOriginFieldNameAbsenceScan.test_retired_name_absent_from_owned_paths
+      - tests.test_workflow_patch_doc.TestRetiredOriginFieldNameAbsenceScan.test_negative_proof_matcher_fires_on_a_synthetic_violating_sample
+      - tests.test_workflow_patch_doc.TestRetiredOriginFieldNameAbsenceScan.test_scan_does_not_match_its_own_source
+    red_confirmed: true
+    red_reason: >-
+      test_retired_name_absent_from_owned_paths failed against the pre-change
+      workflow-patch.md (it still carried `finding_stable_id`). The negative
+      proof and self-non-match tests were green from the start by
+      construction (they assert properties of the scan mechanism itself, not
+      of the document), which is the expected shape for a non-vacuity/self-
+      proof pair per tdd-testing -- they are listed here because they are the
+      tests that establish AC-6's "paired with a negative proof" and "does
+      not match itself" clauses, not because they went red first.
+  AC-7:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenFilesByteIdentity.test_workflow_patch_md_byte_identical
+    red_confirmed: true
+    red_reason: >-
+      Against the refreshed workflow-patch.md content with the pre-task0002
+      pinned SHA256 (063e487096e7e1df5fdfc1296a49fc81c286c589cb9a5c6852f00e660278a74e),
+      the digest comparison failed (actual digest
+      f5be82b6ff27f80830e4e991f19f7b2e8e3e4b8dbb3a353814b819247b3f1d57). The
+      "no other pinned constant modified" and "full suite green" halves of
+      AC-7 are verified by diff inspection (only WORKFLOW_PATCH_SHA256 changed
+      in tests/test_gate_option_vocabulary.py) and by the full
+      `python3 -m unittest discover -s tests` run (2248 passed, 0 failed,
+      matching the 2234-test baseline plus the 14 tests this task adds).
