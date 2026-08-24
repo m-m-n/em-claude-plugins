@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-contract-drift
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 9748b73b673f110b638ce508ddce9c35f7ef5dca
 last_input_digest: sha256:712f104d267800265c7496814a72fed03ea2d4cc2bf4e62981783af69c8df8e5
