@@ -1169,18 +1169,46 @@ def validate_answers_list(data, packet=None):
 # --kind workflow-patch (5.5)
 # ---------------------------------------------------------------------------
 
-def _validate_verify_failed_items_categories(workflow):
-    """rework-contract-drift/task0004 (FR3 validator half, FR6): every
-    entry of `workflow.yaml`'s `verify` step `failed_items[]` carries a
-    REQUIRED, non-empty `category` drawn from FAILED_ITEM_CATEGORY_VALUES
-    (references/workflow-schema.md owns the field's definition and
-    vocabulary; this function enforces it, never restates the vocabulary
-    in prose elsewhere). Runs on the invocation path that already reads
+def _verify_step_targeted_by_patch(patch):
+    """rework-contract-drift/task0008 (FR3, NFR1, NFR2, D11): True when
+    `patch`'s `step_patches` names `step_id` `verify` -- the only channel a
+    worker patch has for reaching the verify step at all (a `step_patches`
+    entry's `set` may touch only `status`; workflow-patch.md's
+    `step_patches` contract, cited not restated). None/absent
+    `step_patches`, a non-list, or `step_patches` naming other steps only,
+    is not targeting."""
+    if not isinstance(patch, dict):
+        return False
+    step_patches = patch.get("step_patches")
+    if not isinstance(step_patches, list):
+        return False
+    return any(
+        isinstance(sp, dict) and sp.get("step_id") == "verify"
+        for sp in step_patches
+    )
+
+
+def _validate_verify_failed_items_categories(workflow, patch):
+    """rework-contract-drift/task0004 (FR3 validator half, FR6), scoped by
+    rework-contract-drift/task0008 (FR3 rework, NFR1, NFR2, D11): every
+    entry of `workflow.yaml`'s `verify` step `failed_items[]` that `patch`
+    REACHES carries a REQUIRED, non-empty `category` drawn from
+    FAILED_ITEM_CATEGORY_VALUES (references/workflow-schema.md owns the
+    field's definition, vocabulary and the pre-change compatibility rule
+    this scoping implements; this function enforces it, never restates the
+    vocabulary in prose elsewhere). `patch` reaches the verify step's
+    entries only when it targets that step via `step_patches` (see
+    `_verify_step_targeted_by_patch`) -- a pre-existing entry a patch
+    neither supplies nor targets contributes no error here, because the
+    party that would receive the rejection (a worker's step patch) has no
+    way to repair it. Runs on the invocation path that already reads
     `--workflow` (validate_workflow_patch), unconditional on
     --dry-run-apply. Tolerates a missing/absent verify step or
     failed_items list (nothing to check yet) and a non-mapping entry
     (reported elsewhere, not this function's job) rather than crashing."""
     errors = []
+    if not _verify_step_targeted_by_patch(patch):
+        return errors
     verify_step = workflow_find_step(workflow, "verify")
     if not isinstance(verify_step, dict):
         return errors
@@ -1276,11 +1304,13 @@ def validate_workflow_patch(
         return [err("structure", "workflow patch must be a mapping")]
     errors = []
     if workflow is not None:
-        # FR3 validator half / FR6: this is the invocation path that
-        # already reads --workflow (workflow_requirement_ids below); the
-        # verify-step failed_items[].category vocabulary is enforced here
-        # too, unconditional on --dry-run-apply.
-        errors.extend(_validate_verify_failed_items_categories(workflow))
+        # FR3 validator half / FR6, scoped by task0008 (FR3 rework, D11):
+        # this is the invocation path that already reads --workflow
+        # (workflow_requirement_ids below); the verify-step
+        # failed_items[].category vocabulary is enforced here too,
+        # unconditional on --dry-run-apply, scoped to what `data` (this
+        # patch) reaches -- see _validate_verify_failed_items_categories.
+        errors.extend(_validate_verify_failed_items_categories(workflow, data))
     if data.get("schema_version") != 1:
         errors.append(err("schema_version", "schema_version must be 1"))
     patch_id = data.get("patch_id")

@@ -1,0 +1,72 @@
+{
+  "feature": "example",
+  "project": {
+    "license": "MIT"
+  },
+  "requirements": {
+    "FR1": {
+      "status": "ok",
+      "tasks": [],
+      "tests": [],
+      "title": "x"
+    }
+  },
+  "schema_version": 1,
+  "tasks": {
+    "task0001": {
+      "branch": "em-workflow/example/task0001",
+      "complexity": "low",
+      "domains": [],
+      "files": [
+        "x.go"
+      ],
+      "notes": null,
+      "plan": "tasks/task0001.md",
+      "requirements": [
+        "FR1"
+      ],
+      "skills": [],
+      "status": "merged",
+      "title": "existing"
+    }
+  },
+  "workflow": [
+    {
+      "completed_at_commit": "aaa",
+      "id": "create-spec",
+      "status": "completed"
+    },
+    {
+      "id": "design",
+      "skipped_reason": "no UI",
+      "status": "skipped"
+    },
+    {
+      "id": "create-plan",
+      "status": "pending"
+    },
+    {
+      "base_commit": "deadbeef",
+      "id": "implement",
+      "status": "completed"
+    },
+    {
+      "id": "review",
+      "status": "pending"
+    },
+    {
+      "id": "verify",
+      "status": "pending",
+      "failed_items": [
+        {
+          "id": "TS-1",
+          "note": "recorded before the category field was defined"
+        }
+      ]
+    },
+    {
+      "id": "retrospect",
+      "status": "pending"
+    }
+  ]
+}

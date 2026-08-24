@@ -210,6 +210,21 @@ section by repository-relative path instead of restating it. A missing,
 empty or out-of-vocabulary value is never interpreted as a default of any
 kind — it is invalid input, to be rejected by whatever reads it.
 
+**Pre-change compatibility.** A `failed_items[]` entry recorded before this
+field was defined is a pre-change record: it is not made conforming by
+being read, and it is not patch validation's to reject, because the party
+receiving that rejection — a worker's step patch — can set only a step's
+`status` (`references/workflow-patch.md`'s `step_patches` contract — cited
+here, not restated) and has no way to repair the entry. Conformance is
+restored the next time the verify phase writes the `failed_items` list.
+The fail-closed treatment of a missing, empty or out-of-vocabulary value
+happens at the point of use, the classification gate
+(`references/question-resolution.md` — cited here, not restated), not at
+patch-validation time. This compatibility rule changes neither the field's
+required-ness nor its seven-value vocabulary above — this is the same
+shape `references/phase-state.md`'s own Format-version compatibility rule
+takes for its own destructive shape change.
+
 ## Command approval store (outside the repository)
 
 The four `*_command` fields are repository-controlled shell strings. They

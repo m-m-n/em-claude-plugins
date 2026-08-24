@@ -242,7 +242,7 @@ record is copied verbatim, the invariance check (rule 14) holds.
 
 ## Application rules (in order)
 
-All nineteen rules apply, in order, to every patch:
+All eighteen rules apply, in order, to every patch:
 
 1. Reject unless `base_input_digest` matches the digest recomputed from the
    current input (rule R1).
@@ -284,23 +284,48 @@ All nineteen rules apply, in order, to every patch:
     (`references/phase-state.md`) — an authorization grounds exactly one
     re-planning pass. Does not apply to the Initial-planning path, which
     has no `spec_change` record to spend.
-19. Rule 18's authorization-spending write is recoverable and idempotent
-    across an interruption between rule 15's patch write and rule 18's own
-    write. A resumed run recognizes that the patch it is about to spend
-    the authorization for has already been applied when rule 2's
-    `base_workflow_blob` check would reject the patch — the blob no
-    longer matches, because rule 15's write already landed — while the
-    `spec_change` record's `replan_authorized` is still `true`: that
-    combination is read as already-applied-not-yet-spent, and the resumed
-    run performs only rule 18's write instead of treating the blob
-    mismatch as an ordinary rejection. Spending an authorization that is
-    already spent (`replan_authorized` already `false`) is a no-op, not
-    an error: the resumed run leaves the record unchanged and reports
-    success. Under either recognized case, the state reached after any
-    number of resumptions is the same as the state reached by one
-    uninterrupted run. Where `replan_authorized` lives is
-    `references/phase-state.md`'s own definition — cited here, not
-    restated.
+
+## Interrupted authorization-spend recovery
+
+Rule 18's authorization-spending write is recoverable and idempotent
+across an interruption between rule 15's patch write and rule 18's own
+write. This procedure is not one of the numbered application rules above —
+its whole effect is to recognize a patch as already applied and thereby
+short-circuit rule 2, so stating it inside a list declared to apply "in
+order" would contradict that ordering. It is a recovery procedure the
+orchestrator runs on resume, not a rule every patch is checked against.
+
+**Recognition.** For the patch in hand, a resumed run recognizes that this
+patch has already been applied only when BOTH of the following hold:
+
+- `references/phase-state.md` owns the already-applied determination — the
+  Resume decision table's own read input "whether a patch is already
+  applied", backed by the recorded per-patch entry (`patches[]`) whose
+  `status` is `applied` — and that determination returns applied for this
+  patch, matched on the patch's own `patch_id` against that entry's
+  `patch_id`. How the determination itself is computed is
+  `references/phase-state.md`'s own — cited here, not restated.
+- the `spec_change` record this patch's re-planning pass was authorized
+  under still stands: rework's spec-change transition has not since
+  replaced it wholesale with a fresh record (`references/phase-state.md`'s
+  "ID uniqueness and idempotency" — every occurrence of the transition
+  replaces the record afresh).
+
+A `base_workflow_blob` mismatch (rule 2) that the already-applied
+determination above does not confirm remains an ordinary rejection under
+rule 2 on its own — no authorization is ever spent on a rejected patch. No
+sentence in this section makes a bare blob mismatch a recognized case on
+its own; recognition depends only on the determination above.
+
+**Idempotency.** Under the recognized case, the resumed run performs only
+rule 18's write instead of treating a `base_workflow_blob` mismatch as an
+ordinary rejection. If `replan_authorized` is already `false` (a prior
+resumption already performed the spend), repeating the write is a no-op,
+not an error: the resumed run leaves the record unchanged and reports
+success. The state reached after any number of resumptions is the same as
+the state reached by one uninterrupted run. Where `replan_authorized`
+lives is `references/phase-state.md`'s own definition — cited here, not
+restated.
 
 ## Ownership boundary
 
