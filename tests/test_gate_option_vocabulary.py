@@ -729,8 +729,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `category: spec-change` paired with an unregistered or
     # worker-unattributed `gate_id` previously passed with no error. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
+    # rework): `ANSWER_SOURCE_VALUES` gains `batch-classification-gate` (the
+    # batch-only classification gate's proceed-outcome answer source,
+    # references/question-resolution.md's Classification gate Outcome
+    # step). Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "1f2e963d02ad7af13c68fa90c2e2dce785e00b9794143a77decec4dec196ea73"
+        "643826711a909f5efbd625bb45e9bd83f4523012396435c656ea2265ae6e99a3"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -746,8 +752,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # is new, proving the category -> gate_id direction the validator gains
     # above. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
     # asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
+    # rework): adds TestGateResolvedAnswerSource, pinning
+    # `batch-classification-gate` in `ANSWER_SOURCE_VALUES` and that a real
+    # answer object using it validates. Same rationale: refresh, don't
+    # remove -- PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "c36a9403950235c4d46190577a19cbc3424853ac9259768eb0a412728d822e79"
+        "b49c904422eeb67f7c772ee91c678f005375e21346b0d4f359947c9a4670a31a"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
