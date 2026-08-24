@@ -183,6 +183,61 @@ written in `references/workflow-patch.md` (task0002), which owns the application
 `references/phase-state.md`'s idempotency section (task0005) gains only the replay rule
 for the append-type classification record. Neither document restates the other's rule.
 
+### D9 — Rework round 1: the pin module and every pinned file have a single owner
+
+D2 assigned each digest-pinned file an owning task and allowed two tasks to edit
+`tests/test_gate_option_vocabulary.py` concurrently on disjoint constants. Round
+1 delivery showed the cost of that allowance: the concurrent edits produced a
+cross-worktree incident and a deviation on the neighbouring count-sentence pin.
+For the rework round the rule is tightened rather than repeated — **task0008 is
+the sole owner of `tests/test_gate_option_vocabulary.py` and of every file it
+pins**, and no other rework task changes a pinned file:
+
+| Pinned file | Owning task (rework round 1) |
+|---|---|
+| `em-workflow/references/workflow-patch.md` | task0008 |
+| `em-workflow/scripts/validate-worker-output.py` | task0008 |
+| `tests/test_validate_worker_output.py` | task0008 |
+| `em-workflow/references/fixtures/` (the pinned case) | unchanged this round |
+
+The count-sentence pin over the patch contract document in
+`tests/test_spec_change_replan_authorization.py` follows the same rule and is
+task0008's this round. This supersedes D2's owner rows for the duration of the
+rework round; D2's rationale (a pinned file changed by two tasks in parallel
+leaves at least one pin wrong after integration) is unchanged — only the
+allowance for a shared module is withdrawn.
+
+### D10 — The patch contract may cite the phase-state document within the Definition layer
+
+The Layer Structure table gives the Definition layer no dependencies inside this
+feature. The rework round adds exactly one, in citation form only: the patch
+contract's interrupted-spend recovery procedure defers its already-applied
+determination to `references/phase-state.md`, which already owns that
+determination and the per-patch record it reads. The dependency direction is
+one-way (the phase-state document neither cites nor restates the recovery
+procedure), no new field is introduced on either side, and D8 still holds — the
+recovery rule's own text lives in the patch contract, not in phase-state. A
+Definition-layer document citing another Definition-layer document is permitted
+under this decision; restating one in the other is not.
+
+### D11 — The failing-item category contract distinguishes definition, reach and point of use
+
+The Shared Components row for the failing-item category vocabulary states that a
+consumer presented with a missing, empty, unreadable or out-of-vocabulary value
+resolves to abort or reject, never to a default. That postcondition is kept and
+refined by a scope clause: **the patch validator's rejection surface is what the
+patch reaches** — a failing item the patch supplies, or the entries of a verify
+step the patch targets — while a pre-existing entry that the patch neither
+supplies nor targets is not rejected there, because the party receiving the
+rejection cannot repair it (the workflow record is orchestrator-owned and a step
+patch may set only a status). The fail-closed treatment of such an entry happens
+at its point of use, the classification gate, which is unchanged. The rule
+itself is owned by `references/workflow-schema.md` as a pre-change compatibility
+rule alongside the field's definition — the same shape the phase-state document
+takes for its own destructive shape change (D5) — and the validator cites it.
+This refines the row for task0008 without changing the field's required-ness or
+its seven values, so task0003's and task0004's delivered halves stay valid.
+
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |

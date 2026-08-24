@@ -46,6 +46,8 @@ comparison is part of this verification.
 | TS14 | The delivered change is checked for the two rejected items | No fixture is migrated on the grounds of the rejected claim, and no performance work is present in any requirement, criterion, task or test | Integration |
 | TS15 | The planner prompt is checked for the high-water-mark restatement | No formula and no restated statement of which identifiers it counts survives; the owning definition is cited | Unit |
 | TS16 | The gate's category check is read for its independence declaration and its reversibility arm | The declaration and the arm agree; the arm is retained with its fail-closed handling unchanged | Unit |
+| TS17 | The patch contract document's interrupted-spend recovery procedure is read from the live document (review round 1 rework) | It sits outside the numbered application-rule list and the list's count statement matches the numbered rules it holds; its recognition condition defers to the phase-state document's already-applied determination for the patch in hand, identified by the patch's own identifier; a base-workflow-blob mismatch the determination does not confirm is stated to remain an ordinary rejection that spends no authorization; the idempotency properties and the ownership-boundary crossing survive | Unit |
+| TS18 | A workflow record whose verify-step failing items predate the required category is driven through the validator, once with a patch that touches no verify step and once with a patch that targets it (review round 1 rework) | The first is accepted with no category error; the second is still rejected, as is a non-conforming item the patch itself supplies; the field's required-ness, its vocabulary and the gate-side abort are unchanged, and the owning schema document states the pre-change compatibility rule | Integration |
 
 ## Code Quality Verification
 
@@ -76,22 +78,22 @@ comparison is part of this verification.
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS1, TS2 |
+| FR1 | task0001, task0007 | TS1, TS2 |
 | FR2 | task0002 | TS3, TS4 |
-| FR3 | task0003, task0004 | TS5, TS6 |
+| FR3 | task0003, task0004, task0008 | TS5, TS6, TS18 |
 | FR4 | task0004 | TS3, TS7 |
-| FR5 | task0002 | TS12 |
+| FR5 | task0002, task0008 | TS12, TS17 |
 | FR6 | task0004 | TS8 |
 | FR7 | task0005 | TS9 |
 | FR8 | task0005 | TS13 |
 | FR9 | task0004 | TS16 |
 | FR10 | task0001 | TS15 |
-| FR11 | task0002 | TS12 |
-| NFR1 | task0003, task0004 | TS6 |
-| NFR2 | task0001, task0002, task0003, task0004, task0005 | TS11 |
+| FR11 | task0002, task0008 | TS12, TS17 |
+| NFR1 | task0003, task0004, task0008 | TS6, TS18 |
+| NFR2 | task0001, task0002, task0003, task0004, task0005, task0007, task0008 | TS11, TS17 |
 | NFR3 | task0004 | TS3, TS7 |
-| NFR4 | task0001, task0002, task0004 | TS1, TS3, TS4, TS5, TS7 |
-| NFR5 | task0001, task0002, task0003, task0004, task0005, task0006 | TS10 |
+| NFR4 | task0001, task0002, task0004, task0007, task0008 | TS1, TS3, TS4, TS5, TS7, TS17, TS18 |
+| NFR5 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS10 |
 | NFR6 | task0006 | TS10 |
 | NFR7 | task0004 | TS14 |
 
@@ -149,7 +151,7 @@ findings are excluded.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 16 | 16 | 0 | 0 |
+| Test scenarios | 18 | 18 | 0 | 0 |
 | Success criteria | 10 | 10 | 0 | 0 |
 | Integration-only checks | 5 | 5 | 0 | 0 |
 | Manual confirmations | 3 | 0 | 0 | 3 |
