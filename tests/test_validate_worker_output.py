@@ -1351,6 +1351,124 @@ class TestGateRegistryDerivation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(VWO.build_gate_registry(Path(tmp) / "does-not-exist"), {})
 
+    def test_rework_spec_change_is_registered_via_the_contract_section(self):
+        # goal-vs-spec-divergence/task0024 AC-4: rework-planner-contract.md's
+        # own "## Gate identifiers" section (tests/test_worker_contract_docs.
+        # py pins that document's half) is what makes this entry exist --
+        # this test asserts the registry entry itself, per the task's
+        # Acceptance Criterion, rather than asserting the contract sentence.
+        registry = VWO.build_gate_registry(self.REFERENCES_DIR)
+        entry = registry.get("rework.spec-change")
+        self.assertIsNotNone(
+            entry, "expected rework.spec-change in the derived registry"
+        )
+        self.assertEqual(entry["worker"], "rework-planner")
+        self.assertEqual(entry["category"], "spec-change")
+
+    def test_rework_spec_change_carries_no_required_option_id(self):
+        # D1: rework.spec-change stays intentionally unlisted in
+        # batch-policies.yaml (no action: select gate), so it has no
+        # option_id to require -- unlike create-spec.design-step.
+        registry = VWO.build_gate_registry(self.REFERENCES_DIR)
+        entry = registry.get("rework.spec-change")
+        self.assertIsNotNone(entry)
+        self.assertIsNone(entry["required_option_id"])
+
+
+# ---------------------------------------------------------------------------
+# goal-vs-spec-divergence/task0024 (AC-5): the gate registry's category
+# binding, previously enforced in one direction only (gate_id -> category,
+# TestGateRegistryBinding above), now also rejects the missing direction --
+# category: spec-change paired with any gate_id other than
+# rework.spec-change. Driven directly through validate_question (not a
+# document scan, per Test Notes), against the plugin's own real registry so
+# the fixture corpus's actual attribution (rework-planner-contract.md) is
+# what proves the binding, not a synthetic stand-in.
+# ---------------------------------------------------------------------------
+
+class TestSpecChangeCategoryGateBidirectionalBinding(unittest.TestCase):
+    REFERENCES_DIR = REPO_ROOT / "em-workflow" / "references"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.registry = VWO.build_gate_registry(cls.REFERENCES_DIR)
+
+    @staticmethod
+    def _question(gate_id, category):
+        return {
+            "question_id": "q.spec-change-binding",
+            "gate_id": gate_id,
+            "category": category,
+            "priority": "high",
+            "blocking": True,
+            "prompt": "p",
+            "header": "h",
+            "answer_mode": "freeform",
+            "options": [],
+            "why_needed": "w",
+            "on_unanswered": "block",
+        }
+
+    def _errors(self, gate_id, category):
+        return VWO.validate_question(
+            self._question(gate_id, category),
+            0,
+            gate_registry=self.registry,
+            packet_phase="rework",
+            packet_worker="rework-planner",
+        )
+
+    def test_spec_change_category_with_foreign_gate_id_is_rejected(self):
+        # AC-5 direction 1: category: spec-change paired with a gate_id
+        # that is not rework.spec-change -- the direction bs2's original
+        # fix left open (Design section, Defect 1).
+        errors = self._errors("create-spec.requirement-clarification", "spec-change")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn(
+            "category 'spec-change' requires gate_id to be one of "
+            "['rework.spec-change']",
+            messages,
+        )
+
+    def test_spec_change_category_with_wholly_unregistered_gate_id_is_rejected(
+        self,
+    ):
+        # The exact reproduction from the Design section: a gate_id that is
+        # neither on batch-policies.yaml's gate list nor attributed by any
+        # contract -- previously silent (no registry entry to compare
+        # against at all).
+        errors = self._errors("not-a-registered-gate.foo", "spec-change")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn(
+            "category 'spec-change' requires gate_id to be one of "
+            "['rework.spec-change']",
+            messages,
+        )
+
+    def test_rework_spec_change_gate_id_with_foreign_category_is_rejected(self):
+        # AC-5 direction 2: gate_id: rework.spec-change paired with a
+        # category other than spec-change (the pre-existing forward-
+        # direction check, re-asserted here alongside its new counterpart
+        # for a single side-by-side proof of both directions).
+        errors = self._errors("rework.spec-change", "other")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("requires category 'spec-change'", messages)
+
+    def test_correctly_paired_spec_change_question_has_no_binding_error(self):
+        errors = self._errors("rework.spec-change", "spec-change")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("requires gate_id", messages)
+        self.assertNotIn("requires category", messages)
+
+    def test_unrelated_category_is_unaffected_by_the_new_direction(self):
+        # The new category -> gate_id direction must not fire for a
+        # category that has no worker-attributed gate_id binding at all
+        # (an as-yet-unconstrained category stays unconstrained -- see
+        # _gate_ids_for_category's docstring).
+        errors = self._errors("gate.unrelated", "other")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("requires gate_id", messages)
+
 
 # ---------------------------------------------------------------------------
 # bs9 (round 2, comprehensive) / AC-3: every element of the patch entries,

@@ -722,13 +722,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # into `_validate_dry_run_apply`'s `replace_all` branch. Same rationale:
     # refresh, don't remove.
     #
-    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
-    # rework): `ANSWER_SOURCE_VALUES` gains `batch-classification-gate` (the
-    # batch-only classification gate's proceed-outcome answer source,
-    # references/question-resolution.md's Classification gate Outcome
-    # step). Same rationale: refresh, don't remove.
+    # Refreshed again by goal-vs-spec-divergence/task0024 (review round 3,
+    # AC-4/AC-5): the gate registry's category binding gains the reverse
+    # direction -- `_gate_ids_for_category` plus the category -> gate_id
+    # check inside `validate_question`, closing the direction where
+    # `category: spec-change` paired with an unregistered or
+    # worker-unattributed `gate_id` previously passed with no error. Same
+    # rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "bd08899333e9dee2a125492c21eedc6ed613eb4ecc9d80824dc11994fb05a52f"
+        "1f2e963d02ad7af13c68fa90c2e2dce785e00b9794143a77decec4dec196ea73"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -738,14 +740,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # rationale as the two refreshes above: refresh, don't remove --
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
     #
-    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
-    # rework): adds TestGateResolvedAnswerSource, pinning
-    # `batch-classification-gate` in `ANSWER_SOURCE_VALUES` and that a real
-    # answer object using it validates. Same rationale: refresh, don't
-    # remove -- PINNED_VALIDATOR_TEST_LINE below is unaffected and still
-    # asserted.
+    # Refreshed again by goal-vs-spec-divergence/task0024 (review round 3,
+    # AC-4/AC-5): TestGateRegistryDerivation gains the rework.spec-change
+    # registration pins, and TestSpecChangeCategoryGateBidirectionalBinding
+    # is new, proving the category -> gate_id direction the validator gains
+    # above. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "3d0d2cbede7ba475e0299701df9d02aefa5b025c66ab223155575e7fe015a747"
+        "c36a9403950235c4d46190577a19cbc3424853ac9259768eb0a412728d822e79"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

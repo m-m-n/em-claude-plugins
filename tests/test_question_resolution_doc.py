@@ -825,6 +825,11 @@ class TestClassificationTrustBoundaryFix(unittest.TestCase):
       about the operation, independent of the packet; a packet's
       `reversible: false` assumption still aborts in addition, and
       omitting it can never remove the orchestrator-held abort.
+      **Superseded by task0024 (D11, round 3): no orchestrator-held
+      metadata source exists anywhere in the repository, so this claim is
+      withdrawn and replaced by an accurate statement of the abort's only
+      actual basis — see the AC-3 methods below, now pinning the
+      replacement text instead of the withdrawn claim.**
     - AC-4: the three pre-existing abort arms and the precedence
       reservation are not weakened, merged or removed by the above.
     - AC-9 (partial): the two new stop paths each state their reason is
@@ -901,33 +906,87 @@ class TestClassificationTrustBoundaryFix(unittest.TestCase):
         )
         self.assertNotIn("is malformed and aborts", fake_section.lower())
 
-    # --- AC-3: irreversibility from orchestrator-held metadata --------------
+    # --- task0024 AC-2: malformed pairing becomes bidirectional -------------
 
-    def test_irreversibility_decided_from_orchestrator_held_metadata(self):
+    def test_malformed_pairing_reverse_direction_also_aborts(self):
         section = self._fail_closed_norm()
         self.assertIn(
-            "decided from metadata the orchestrator holds about that "
-            "operation",
-            section,
+            "the reverse mismatch is equally malformed", section
         )
         self.assertIn(
-            "independently of whatever the packet's `assumptions[]` does "
-            "or does not declare",
-            section,
-        )
-
-    def test_reversible_false_still_aborts_in_addition(self):
-        section = self._fail_closed_norm()
-        self.assertIn(
-            "still aborts, in addition to this orchestrator-held check",
+            "a question whose `category` is `spec-change` and whose "
+            "`gate_id` is anything other than `rework.spec-change` also "
+            "aborts, recording that reason",
             section,
         )
 
-    def test_omitting_the_assumption_cannot_remove_the_abort(self):
+    def test_malformed_pairing_neither_direction_reaches_policy_lookup_or_on_unanswered(
+        self,
+    ):
         section = self._fail_closed_norm()
-        self.assertIn("omitting the assumption can never remove it", section)
+        self.assertIn(
+            "neither mismatched pairing reaches the policy lookup in the "
+            "batch resolution sequence below, the unlisted-gate fallback, "
+            "or `on_unanswered`",
+            section,
+        )
 
-    def test_orchestrator_held_abort_records_its_reason(self):
+    def test_malformed_pairing_reverse_direction_negative_twin_fails(self):
+        # Non-vacuity guard: the pre-task0024 single-direction wording alone
+        # must not satisfy the reverse-direction matcher above.
+        fake_section = (
+            "**Malformed pairing.** A question whose `gate_id` is "
+            "`rework.spec-change` and whose `category` is anything other "
+            "than `spec-change` is malformed and aborts here, recording "
+            "that reason: it reaches neither the routed arm above nor the "
+            "Unlisted-gate fallback below."
+        )
+        self.assertNotIn(
+            "the reverse mismatch is equally malformed",
+            fake_section.lower(),
+        )
+
+    # --- AC-3 (superseded by task0024's own AC-3, D11): the task0019-era
+    # --- orchestrator-held-metadata claim named a defence with no
+    # --- definition anywhere in the repository; task0024 withdraws it and
+    # --- replaces it with an accurate statement of the abort's only actual
+    # --- basis (the packet's own `assumptions[].reversible: false`,
+    # --- worker-declared). The four methods below pin the replacement text
+    # --- in place of the withdrawn claim; the abort's own force (it still
+    # --- fires, still records its reason) is retained, per AC-3/AC-6.
+
+    def test_irreversibility_basis_is_the_packets_own_declaration(self):
+        section = self._fail_closed_norm()
+        self.assertIn(
+            "the irreversibility abort's basis is the packet's own "
+            "declaration",
+            section,
+        )
+        self.assertIn(
+            "is this abort's only current trigger", section
+        )
+
+    def test_irreversibility_basis_named_worker_declared_limitation(self):
+        section = self._fail_closed_norm()
+        self.assertIn(
+            "this basis is worker-declared", section
+        )
+        self.assertIn(
+            "a stated limitation of the current design, not a second, "
+            "independent defence",
+            section,
+        )
+
+    def test_no_orchestrator_held_source_claimed(self):
+        section = self._fail_closed_norm()
+        self.assertIn(
+            "no orchestrator-held source constrains it today", section
+        )
+
+    def test_irreversibility_abort_still_records_its_reason(self):
+        # Retention (AC-3: "the abort's own force is unchanged"): the abort
+        # still fires and still records its reason, exactly as before the
+        # claim was withdrawn.
         section = self._fail_closed_norm()
         self.assertIn(
             "this abort records its reason exactly as every abort in this "
@@ -935,17 +994,37 @@ class TestClassificationTrustBoundaryFix(unittest.TestCase):
             section,
         )
 
-    def test_irreversibility_negative_twin_packet_only_wording_fails(self):
-        # The pre-task0019 bullet alone (packet-declared reversible: false
-        # only) must not satisfy the orchestrator-held-metadata matcher.
+    def test_orchestrator_held_irreversible_operations_list_claim_is_gone(
+        self,
+    ):
+        # AC-3 negative proof: no sentence claims an orchestrator-held
+        # metadata source or irreversible-operations list -- the withdrawn
+        # task0019-era claim must not survive anywhere in the document.
+        self.assertNotIn(
+            "decided from metadata the orchestrator holds about that "
+            "operation",
+            self.norm.lower(),
+        )
+        self.assertNotIn("irreversible-operations list", self.text.lower())
+        self.assertNotIn(
+            "independently of whatever the packet's `assumptions[]` does "
+            "or does not declare",
+            self.norm,
+        )
+
+    def test_irreversibility_negative_twin_bare_bullet_wording_fails(self):
+        # Non-vacuity guard (Test Notes): the bare bullet alone (no
+        # replacement paragraph) must not satisfy the replacement-statement
+        # matchers above -- proves the matcher is not vacuous against an
+        # empty/renamed section.
         fake_section = (
             "- an `assumptions[]` entry whose `related_question_ids` names "
             "this question carries `reversible: false` — an irreversible "
             "operation."
         )
         self.assertNotIn(
-            "decided from metadata the orchestrator holds about that "
-            "operation",
+            "the irreversibility abort's basis is the packet's own "
+            "declaration",
             fake_section.lower(),
         )
 
