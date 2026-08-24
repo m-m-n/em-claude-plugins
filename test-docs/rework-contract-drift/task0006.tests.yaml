@@ -1,0 +1,57 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_equals_plugin_manifest_exactly
+    red_confirmed: false
+    red_reason: >-
+      This matcher (_assert_versions_equal) was already satisfied before the
+      implementation existed, because both manifests already agreed (both
+      read 0.1.49 pre-change) -- the criterion's failure mode is a divergence
+      between the two files, which this task's single-owner edit does not
+      introduce. The negative proof
+      test_equality_matcher_rejects_forged_differing_versions exercises the
+      matcher's ability to fail on a synthetic mismatched pair, proving the
+      matcher itself is not vacuous even though this particular call was
+      green from the start.
+  AC-2:
+    tests:
+      - tests.test_rework_contract_drift_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 49 not greater than 49 -- observed on the pre-change
+      manifests (both at 0.1.49) before plugin.json / marketplace.json were
+      edited.
+  AC-3:
+    tests:
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_name_unchanged
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_author_unchanged
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_category_unchanged
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_description_retains_stable_anchor
+      - tests.test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+    red_confirmed: false
+    red_reason: >-
+      These are pure regression guards over the em-review entry, which this
+      task's plan states must not change at all. Since this task's edit only
+      touches the em-workflow entry's version field, the em-review entry was
+      never at risk and these assertions were green before any
+      implementation existed -- there is no observable outcome to force red,
+      because the criterion is "this task does not touch it," not a behavior
+      change. Carried forward as an honest non-red per tdd-testing's
+      when-TDD-fits-poorly guidance.
+  AC-4:
+    tests: []
+    red_reason: >-
+      Verified by running `python3 -m unittest discover -s tests` twice: once
+      before the version bump (2 failures in this new module:
+      test_version_is_past_baseline and
+      test_em_workflow_entry_version_is_past_baseline, both "49 not greater
+      than 49"), and once after (2267 tests, 0 failures -- the 2234-test
+      pre-task baseline plus this module's 33 tests, all green). The module's
+      import block (json, re, unittest, pathlib) is stdlib-only by manual
+      review; no third-party import was added.
