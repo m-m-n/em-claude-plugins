@@ -641,7 +641,7 @@ tasks:
     - NFR2
     - NFR5
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/goal-vs-spec-divergence/task0024
   task0025:
