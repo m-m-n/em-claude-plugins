@@ -447,5 +447,96 @@ class TestClassificationGate(unittest.TestCase):
         self.assertNotIn("決定表", self.text)
 
 
+class TestRoutedArmSingleExceptionToRestoredAbort(unittest.TestCase):
+    """task0024 AC-1 (FR11, NFR2, round 3): `category: spec-change` returns
+    to the Fail-closed classification's immediate-abort list, and the
+    routed arm is written as that abort's single exception, admitted only
+    for the exact `gate_id: rework.spec-change` pairing. This class owns
+    the routed-arm-adjacent pins for that restoration; the abort-list
+    bullet's own retention (security/license/reversible:false) and the
+    bidirectional malformed-pairing rule (AC-2) are pinned in
+    tests/test_question_resolution_doc.py, alongside the rest of the
+    Fail-closed classification section's pre-existing pins (the routed
+    arm's own gate_id-keyed entry condition and interactive-mode statement
+    are unaffected by this task and stay pinned there too)."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(DOC_PATH, encoding="utf-8") as fh:
+            cls.text = fh.read()
+        cls.norm = re.sub(r"\s+", " ", cls.text)
+
+    def _abort_list_section(self):
+        start = self.text.index("Abort the phase immediately")
+        end = self.text.index("**The irreversibility abort's basis")
+        return self.text[start:end]
+
+    def _norm(self, section):
+        return re.sub(r"\s+", " ", section).lower()
+
+    def test_category_spec_change_is_back_on_the_immediate_abort_list(self):
+        section = self._norm(self._abort_list_section())
+        self.assertIn(
+            "the question's `category` "
+            "(`references/question-packet-schema.md`) is `spec-change`",
+            section,
+        )
+
+    def test_routed_arm_written_as_the_abort_lists_single_exception(self):
+        section = self._norm(self._abort_list_section())
+        self.assertIn(
+            "unless its `gate_id` is exactly `rework.spec-change`", section
+        )
+        self.assertIn(
+            "the routed arm below is written as this abort's single "
+            "exception",
+            section,
+        )
+        self.assertIn("admitted for that exact `gate_id` alone", section)
+
+    def test_any_other_gate_id_is_stated_to_abort_recording_its_reason(self):
+        section = self._norm(self._abort_list_section())
+        self.assertIn(
+            "every other `category: spec-change` question aborts here, "
+            "recording its reason",
+            section,
+        )
+
+    def test_negative_twin_plain_spec_change_bullet_without_exception_fails(
+        self,
+    ):
+        # Non-vacuity guard: a bullet that restores `category: spec-change`
+        # to the abort list WITHOUT the routed-arm exception clause (which
+        # would make the routed arm unreachable for any spec-change
+        # question) must not satisfy the exception matcher above.
+        fake_section = (
+            "- the question's `category` "
+            "(`references/question-packet-schema.md`) is `spec-change`;"
+        )
+        self.assertNotIn(
+            "unless its `gate_id` is exactly `rework.spec-change`",
+            fake_section.lower(),
+        )
+
+    def test_routed_arm_still_reachable_after_restored_abort(self):
+        # The abort-list bullet's own exception is what keeps "The routed
+        # arm" paragraph (still keyed on gate_id alone, unchanged by this
+        # task) reachable for the one pairing it exists to route: its
+        # gate_id-keyed entry condition and "does not abort here" statement
+        # must survive verbatim after the abort list is restored.
+        routed_idx = self.text.index("**The routed arm.**")
+        abort_list_idx = self.text.index("Abort the phase immediately")
+        self.assertLess(abort_list_idx, routed_idx)
+        start = self.text.index("**The routed arm.**")
+        end = self.text.index("**Malformed pairing.**")
+        section = self._norm(self.text[start:end])
+        self.assertIn(
+            "the routed arm's entry condition is the question's `gate_id` "
+            "being `rework.spec-change`",
+            section,
+        )
+        self.assertIn("does not abort here", section)
+
+
 if __name__ == "__main__":
     unittest.main()
