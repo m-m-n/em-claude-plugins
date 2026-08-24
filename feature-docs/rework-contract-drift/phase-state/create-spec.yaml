@@ -1,0 +1,31 @@
+schema_version: 1
+feature: rework-contract-drift
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: b1333f06a3aa2dfe09be04f55558bd9d47174f30
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:bd0ee5db26f101a44cca0f4978ae5c1824bc97f224b767be2331e49b4849b3fb
+    resolved_at_generation: 1
+    paths:
+      - em-workflow/references/templates/design-tokens.yaml
+    digests:
+      em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    truncated: false
+  e2e:
+    generation_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null
