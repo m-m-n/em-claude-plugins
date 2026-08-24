@@ -139,6 +139,16 @@ content matches, it is a no-op; if it diverges, it is a **protocol error**.
   occurrence of rework's spec-change transition replaces the record wholesale
   (see the `spec_change` row above), which is expected overwrite behavior,
   not a protocol error.
+- `classification` has no per-entry ID; each entry's identity is its
+  **position** in the list — the Nth classification-gate pass writes the
+  Nth entry. A repeated write of the same pass (e.g. a retried phase-state
+  commit after the Phase-state exit-4 recovery below) is a **re-statement
+  of the same entity**, on the same terms as an ID-keyed record above:
+  writing the Nth entry again with matching content is a no-op; writing it
+  with diverging content is a **protocol error**. Because a resumed run
+  never re-runs a gate pass whose entry is already recorded, it appends no
+  further entry for that pass — a resumed run's `classification` list ends
+  identical, in length and content, to an uninterrupted run's.
 
 ### worker_runs[].status transitions
 
@@ -455,7 +465,44 @@ backfill's own once-only guard (see below); step 4 MAY delete
 Backfill runs **at most once** per feature; afterward the ordinary
 resolution rule applies.
 
+### Format-version compatibility
+
 **Unknown `schema_version`**: if a phase-state file's `schema_version` is
 not the value this document defines (currently `1`; anything greater is
 unknown), abort and report a plugin version mismatch. Do not attempt to
 interpret an unknown schema.
+
+**Pre-change record compatibility**: `origin_kind` / `origin_id` becoming
+mandatory on `spec_change`, and `classification` becoming the append-type
+list defined above, were both destructive shape changes to a record this
+document already owned; neither one moved `schema_version`.
+
+1. A record written before either change is not an unknown version: it is
+   still read as `schema_version: 1`, the same as any other record, and
+   never triggers the abort above.
+2. Being read as the current version does not make a pre-change record's
+   own shape usable. Its `spec_change` — missing the origin pair
+   (`references/rework-task-synthesis.md` Invariant 6, cited here, not
+   restated) — is refused at the point of use: the requirement that
+   `origin_kind` / `origin_id` be present and non-empty already fails
+   closed on an absent or empty pair wherever it is checked. That failure
+   is diagnosed here as **pre-change spec-change shape**, distinguishing a
+   record that predates the pair from one that is simply missing an
+   unrelated field. A pre-change `classification` entry — not the
+   append-type list defined above — is refused on the same terms,
+   diagnosed as **pre-change classification shape**.
+3. The remedy for `spec_change` is the guarantee this document already
+   states above (see "ID uniqueness and idempotency"): rework's
+   spec-change transition replaces the record wholesale on its next
+   occurrence, so a well-shaped record supersedes the pre-change one and
+   re-entry is restored. `classification`'s own append semantics (see the
+   field table above) are its remedy: a pre-change entry is never
+   rewritten, but every subsequent gate pass still appends a new,
+   well-shaped entry, so no later read ever depends on an earlier entry's
+   shape.
+4. Neither refusal is silent: each states its reason — the named
+   diagnostic above — and its remedy, so an in-flight rework record is
+   never left silently non-re-enterable.
+
+This is a compatibility rule, not a migration: `schema_version` stays
+unchanged, and no value for a missing pair is ever synthesized.

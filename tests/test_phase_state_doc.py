@@ -804,7 +804,7 @@ class TestClassificationAuditRecord(unittest.TestCase):
     def test_cites_question_resolution_doc_instead_of_restating_the_rule(self):
         self.assertIn("references/question-resolution.md", self.table_row)
 
-    def test_classification_no_longer_appears_in_the_id_uniqueness_exemption(self):
+    def test_classification_never_shares_the_spec_change_wholesale_exemption(self):
         # task0029 (goal-vs-spec-divergence) AC-3: classification leaves
         # the wholesale-replacement exemption (it is now an append-only
         # list, never rewritten or removed) -- this supersedes the
@@ -812,11 +812,22 @@ class TestClassificationAuditRecord(unittest.TestCase):
         # wholesale_exemption, which pinned exactly the reading this task
         # removes. The retention half (spec_change's own exemption, which
         # this task does not touch) stays asserted below.
+        #
+        # Extended for task0005 (rework-contract-drift; feature-docs/
+        # rework-contract-drift/tasks/task0005.md) AC-5: the idempotency
+        # section now also carries classification's own (distinct) replay
+        # rule, so "classification never appears in the section at all" is
+        # no longer the right negative proof -- narrowed to what the
+        # original test actually protected: spec_change's own
+        # wholesale-replacement bullet never absorbs classification.
         section = self.idempotency_section
         self.assertIn("spec_change", section)
         self.assertIn("wholesale", section)
         self.assertIn("not a protocol error", section)
-        self.assertNotIn("classification", section)
+        spec_change_bullet_start = section.index("`spec_change` is **not**")
+        spec_change_bullet_end = section.index("\n- `classification`", spec_change_bullet_start)
+        spec_change_bullet = section[spec_change_bullet_start:spec_change_bullet_end]
+        self.assertNotIn("classification", spec_change_bullet)
 
     def test_classification_row_states_append_semantics_not_wholesale_replacement(self):
         # task0029 AC-3: the field-table row's own wholesale-replacement
@@ -901,16 +912,36 @@ class TestSpecChangeFlagPairSchemaBlock(unittest.TestCase):
         self.assertNotIn("classifier:", self.record_block)
 
 
+def _retired_spec_change_origin_field_name():
+    """The pre-rename `spec_change` origin field name -- the single field
+    `origin_kind` / `origin_id` replaced. Built from parts at run time per
+    the "Retired-identifier absence scan" contract (IMPLEMENTATION.md
+    Shared Components, feature-docs/rework-contract-drift/
+    IMPLEMENTATION.md): this module's own absence assertions below, and
+    their negative-proof samples, must never carry the name as a
+    contiguous literal in this file's own source, or a repository-wide
+    scan for the retired name would match this scanner itself."""
+    return "_".join(["finding", "stable", "id"])
+
+
 class TestSpecChangeOriginPairSchemaBlock(unittest.TestCase):
     """task0029 (goal-vs-spec-divergence) AC-5 (FR6): the `spec_change`
-    schema example block shows `origin_kind` / `origin_id` in place of
-    `finding_stable_id`. The row-level citation of `references/
-    rework-task-synthesis.md` for the pair's meaning lives in
-    tests/test_spec_change_replan_authorization.py
+    schema example block shows `origin_kind` / `origin_id` in place of the
+    retired single-field origin identifier (see
+    `_retired_spec_change_origin_field_name` above). The row-level
+    citation of `references/rework-task-synthesis.md` for the pair's
+    meaning lives in tests/test_spec_change_replan_authorization.py
     (TestOriginPairAcceptsReviewAndVerify), the dedicated cross-document
     module for this task's validator-facing checks -- not duplicated
     here (same split TestSpecChangeFlagPairSchemaBlock above already
-    established for task0022's flag pair)."""
+    established for task0022's flag pair).
+
+    Extended for task0005 (rework-contract-drift; feature-docs/
+    rework-contract-drift/tasks/task0005.md) AC-7: the absence assertion
+    below carried the retired name as a contiguous literal in this
+    module's own source -- rebuilt here so the scan never matches
+    itself, per the Retired-identifier absence scan contract, keeping the
+    same negative proof."""
 
     @classmethod
     def setUpClass(cls):
@@ -930,12 +961,13 @@ class TestSpecChangeOriginPairSchemaBlock(unittest.TestCase):
             self.record_block.index("origin_id:"),
         )
 
-    def test_finding_stable_id_is_gone_from_the_schema_example(self):
-        self.assertNotIn("finding_stable_id", self.record_block)
+    def test_retired_origin_field_name_is_gone_from_the_schema_example(self):
+        self.assertNotIn(_retired_spec_change_origin_field_name(), self.record_block)
 
     def test_non_vacuity_a_synthetic_pre_rename_block_would_still_carry_it(self):
-        pre_rename_block = "spec_change:\n  finding_stable_id: abc123\n"
-        self.assertIn("finding_stable_id", pre_rename_block)
+        retired_name = _retired_spec_change_origin_field_name()
+        pre_rename_block = f"spec_change:\n  {retired_name}: abc123\n"
+        self.assertIn(retired_name, pre_rename_block)
 
 
 if __name__ == "__main__":
