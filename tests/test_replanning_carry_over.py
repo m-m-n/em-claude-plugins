@@ -171,7 +171,13 @@ def _phase_state():
         "feature": "example",
         "spec_change": {
             "consumed": False,
-            "finding_stable_id": "abc123",
+            # task0029 (goal-vs-spec-divergence) deviation: `origin_kind` /
+            # `origin_id` replace `finding_stable_id` as the mandatory
+            # origin pair (references/phase-state.md); this fixture is
+            # updated to keep `is_replanning` True on the Re-planning path,
+            # which the carry-over checks below require to run at all.
+            "origin_kind": "review",
+            "origin_id": "abc123",
             "reason": "SPEC changed after implementation to add a missed requirement",
             "recorded_at_commit": "deadbeef",
             "replan_authorized": True,

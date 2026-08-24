@@ -85,6 +85,16 @@ PHASE_STATE_STATUS_VALUES = {
 
 PHASE_VALUES = {"create-spec", "create-plan", "review", "verify", "rework"}
 
+# goal-vs-spec-divergence/task0029: the classification audit record's field
+# vocabularies (references/phase-state.md's `classification` list entry;
+# field set unchanged from task0005 -- only the record's shape and
+# lifetime changed this round).
+CLASSIFIER_VALUES = {"codex", "claude"}
+
+CLASSIFICATION_VERDICT_VALUES = {"goal_not_met", "spec_gap", "not_applicable"}
+
+CLASSIFICATION_DECISION_VALUES = {"proceed", "stop"}
+
 CATEGORY_VALUES = {
     "feature-identity",
     "business-objective",
@@ -718,7 +728,14 @@ def workflow_find_step(workflow, step_id):
 # boolean-type + True check) -- it is the flag that carries the
 # re-planning authorization judgement. `consumed` is never consulted here
 # (references/phase-state.md's `spec_change` flag pair).
-SPEC_CHANGE_MANDATORY_FIELDS = ("reason", "finding_stable_id", "recorded_at_commit")
+#
+# goal-vs-spec-divergence/task0029: `origin_kind` / `origin_id` replace
+# `finding_stable_id` -- the origin pair defined in references/
+# rework-task-synthesis.md (Spec-change origin identity). Presence/
+# non-emptiness is all this check requires; a `verify`-sourced record
+# (`origin_kind: verify`) satisfies it on the same terms as a
+# `review`-sourced one (D13) -- neither value is special-cased here.
+SPEC_CHANGE_MANDATORY_FIELDS = ("reason", "origin_kind", "origin_id", "recorded_at_commit")
 
 
 def _load_rework_phase_state_from_dir(feature_dir):
@@ -777,7 +794,7 @@ def workflow_replace_all_spec_change_reentry(workflow, phase_state, feature_dir=
        resolve_rework_phase_state above).
     2. Its `feature` matches `workflow`'s own `feature`.
     3. It carries a `spec_change` record shaped as `references/
-       phase-state.md` defines: `reason`, `finding_stable_id` and
+       phase-state.md` defines: `reason`, `origin_kind`, `origin_id` and
        `recorded_at_commit` present and non-empty, and `replan_authorized`
        present as a boolean.
     4. `replan_authorized` is `True` -- an authorization already spent
@@ -1656,6 +1673,36 @@ def validate_phase_state(data):
     stale_count = data.get("stale_redispatch_count", 0)
     if not isinstance(stale_count, int) or stale_count < 0:
         errors.append(err("stale_redispatch_count", "stale_redispatch_count must be a non-negative integer"))
+
+    # goal-vs-spec-divergence/task0029: `classification` is an append-type
+    # list (references/phase-state.md) -- one entry per gate pass, never
+    # rewritten or removed. A mapping here (what a wholesale-replace would
+    # leave behind, the pre-task0029 shape) is a structural violation, not
+    # a degraded-but-valid document.
+    classification = data.get("classification")
+    if classification is not None:
+        if not isinstance(classification, list):
+            errors.append(err(
+                "classification",
+                "classification must be a list -- one entry appended per "
+                "gate pass, never replaced wholesale (references/"
+                "phase-state.md)",
+            ))
+        else:
+            for i, entry in enumerate(classification):
+                if not isinstance(entry, dict):
+                    errors.append(err("classification", f"classification[{i}] must be a mapping"))
+                    continue
+                if entry.get("classifier") not in CLASSIFIER_VALUES:
+                    errors.append(err("classification", f"classification[{i}].classifier must be one of {sorted(CLASSIFIER_VALUES)}"))
+                if entry.get("verdict") not in CLASSIFICATION_VERDICT_VALUES:
+                    errors.append(err("classification", f"classification[{i}].verdict must be one of {sorted(CLASSIFICATION_VERDICT_VALUES)}"))
+                if entry.get("decision") not in CLASSIFICATION_DECISION_VALUES:
+                    errors.append(err("classification", f"classification[{i}].decision must be one of {sorted(CLASSIFICATION_DECISION_VALUES)}"))
+                if entry.get("verdict") == "spec_gap" and not entry.get("evidence_ids"):
+                    errors.append(err("classification", f"classification[{i}].evidence_ids is required (non-empty) when verdict is spec_gap"))
+                if entry.get("decision") == "stop" and not entry.get("reason"):
+                    errors.append(err("classification", f"classification[{i}].reason is required when decision is stop"))
 
     return errors
 
