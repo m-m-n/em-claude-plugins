@@ -40,6 +40,18 @@ Covers task0003 Acceptance Criteria
   legitimately names the vocabulary already.
 - AC-7: exercised by running the whole suite, not by a test in this
   module.
+
+rework-contract-drift/task0008 (review round1 rework, FR3, NFR1, NFR2, D11)
+adds the field's own pre-change compatibility rule (AC-5): a
+`failed_items[]` entry recorded before this field was defined is not
+retroactively rejected by patch validation, conformance is restored when
+the verify phase next writes the list, and the fail-closed treatment of a
+missing value happens at the classification gate (point of use) --
+mirroring the shape `references/phase-state.md`'s own Format-version
+compatibility rule already takes for its own destructive shape change.
+`TestSchemaStatesPreChangeCompatibilityRule` below covers this; the
+field's required-ness and seven-value vocabulary (already covered by
+`TestSchemaDefinesCategoryField` above) are unchanged by it.
 """
 
 import os
@@ -212,6 +224,76 @@ class TestSchemaDefinesCategoryField(SchemaDocTestCase):
         idx = self.text.index("failed_items: []")
         window = self.text[idx : idx + 400]
         self.assertIn("failed_items[].category", window)
+
+
+# --- task0008 AC-5: pre-change compatibility rule --------------------------
+
+
+class TestSchemaStatesPreChangeCompatibilityRule(SchemaDocTestCase):
+    """rework-contract-drift/task0008 (review round1 rework): the
+    `failed_items[].category` section states its own pre-change
+    compatibility rule -- a pre-existing entry recorded before the field
+    was defined is not retroactively rejected, conformance is restored the
+    next time the verify phase writes the list, and the fail-closed
+    treatment of a missing value happens at the point of use."""
+
+    def _category_section(self):
+        return _section(
+            self.text,
+            "## `failed_items[].category`",
+            "## Command approval store",
+        )
+
+    def test_states_pre_existing_entry_not_retroactively_rejected(self):
+        section = _norm(self._category_section())
+        self.assertIn("pre-change record", section)
+        self.assertIn("not patch validation's to reject", section)
+
+    def test_states_conformance_restored_on_next_verify_write(self):
+        section = _norm(self._category_section())
+        self.assertIn(
+            "Conformance is restored the next time the verify phase "
+            "writes the `failed_items` list",
+            section,
+        )
+
+    def test_states_fail_closed_treatment_happens_at_point_of_use(self):
+        section = _norm(self._category_section())
+        self.assertIn(
+            "fail-closed treatment of a missing, empty or "
+            "out-of-vocabulary value happens at the point of use",
+            section,
+        )
+        self.assertIn("classification gate", section)
+
+    def test_field_required_ness_and_vocabulary_unchanged(self):
+        # Non-vacuity companion: the pre-change rule sits alongside, and
+        # does not replace, the required-ness/vocabulary statements
+        # TestSchemaDefinesCategoryField already pins.
+        section = _norm(self._category_section())
+        self.assertIn("REQUIRED and non-empty", section)
+        found = re.findall(r"^- `([a-z]+)`", self._category_section(), re.MULTILINE)
+        self.assertEqual(found, VOCAB_VALUES)
+
+    def test_cites_workflow_patch_for_the_worker_repair_limitation(self):
+        section = self._category_section()
+        self.assertIn("references/workflow-patch.md", section)
+
+    def test_mirrors_phase_state_format_version_compatibility_shape(self):
+        section = _norm(self._category_section())
+        self.assertIn("references/phase-state.md", section)
+        self.assertIn(
+            "Format-version compatibility rule", section
+        )
+
+    def test_negative_proof_matcher_fires_on_a_synthetic_pre_change_sample(
+        self,
+    ):
+        synthetic = (
+            "Pre-change compatibility. A failed_items[] entry recorded "
+            "before this field was defined is a pre-change record."
+        )
+        self.assertIn("pre-change record", synthetic)
 
 
 # --- AC-2: assignment timing + derivation from scenario/requirement IDs ---

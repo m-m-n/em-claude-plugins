@@ -652,12 +652,19 @@ class TestOneConsumptionProcedureDocument(unittest.TestCase):
         # task0002 adds Application rule 19, so the "All eighteen rules"
         # sentence becomes "All nineteen rules" in that same edit, and this
         # pin is refreshed rather than left stale).
+        #
+        # Refreshed again by rework-contract-drift/task0008 (review round1
+        # rework, D9 -- this task is the sole owner of this count-sentence
+        # pin for the round): rule 19 relocates entirely out of the
+        # numbered list into its own titled section ("## Interrupted
+        # authorization-spend recovery"), so the list once again holds only
+        # rules 1-18 and the sentence reverts to "All eighteen rules".
         self.assertIn(
-            "All nineteen rules apply, in order, to every patch:",
+            "All eighteen rules apply, in order, to every patch:",
             self.workflow_patch_text,
         )
         self.assertNotIn(
-            "All eighteen rules apply, in order, to every patch:",
+            "All nineteen rules apply, in order, to every patch:",
             self.workflow_patch_text,
         )
 
