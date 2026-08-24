@@ -1,0 +1,111 @@
+task_id: task0025
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_outcome_step_present_and_non_empty
+      - tests.test_classification_gate.TestClassificationGate.test_outcome_step_is_the_one_place_stating_packet_effects
+      - tests.test_classification_gate.TestClassificationGate.test_outcome_step_cites_owning_documents_rather_than_restating
+      - tests.test_classification_gate.TestClassificationGate.test_outcome_step_precedes_batch_resolution_sequence
+      - tests.test_classification_gate.TestClassificationGate.test_outcome_step_follows_unattended_run_continuity
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_step_2_cites_the_outcome_step_instead_of_restating
+    red_confirmed: true
+    red_reason: >-
+      test_outcome_step_present_and_non_empty and every other
+      test_outcome_step_* / test_proceed_* / test_stop_* test in
+      test_classification_gate.py failed with "ValueError: substring not
+      found" from `_outcome_step_section()`'s `section.index("**Outcome.**")`
+      -- the Classification gate section had no step 11 yet.
+      test_step_2_cites_the_outcome_step_instead_of_restating failed with
+      "AssertionError: 'the Classification gate's Outcome step above' not
+      found in" the Batch resolution sequence's step-2 text, which still
+      ended with the old "the gate's own proceed/stop outcome and its audit
+      record are the resolution for that question" sentence.
+  AC-2:
+    tests:
+      - tests.test_validate_worker_output.TestGateResolvedAnswerSource.test_batch_classification_gate_is_in_answer_source_values
+      - tests.test_validate_worker_output.TestGateResolvedAnswerSource.test_answer_object_using_batch_classification_gate_validates
+      - tests.test_gate_outcome_packet_lifecycle.TestSourceVocabularyAgreement.test_batch_classification_gate_is_in_the_agreed_set
+    red_confirmed: true
+    red_reason: >-
+      test_batch_classification_gate_is_in_answer_source_values failed with
+      "AssertionError: 'batch-classification-gate' not found in {'user',
+      'batch-safe-default', 'batch-codex-consultation',
+      'batch-decision-table'}".
+      test_answer_object_using_batch_classification_gate_validates failed
+      with validate_answer() returning
+      [{'code': 'source', 'message': "source must be one of
+      ['batch-codex-consultation', 'batch-decision-table',
+      'batch-safe-default', 'user']"}] instead of the expected empty list.
+      test_batch_classification_gate_is_in_the_agreed_set failed the same
+      way against question-packet-schema.md's (then 4-value) `source`
+      vocabulary.
+  AC-3:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_no_packet_resolved_by_gate_left_issued
+      - tests.test_classification_gate.TestClassificationGate.test_proceed_names_the_answered_status
+      - tests.test_classification_gate.TestClassificationGate.test_stop_names_the_obsolete_status
+      - tests.test_classification_gate.TestClassificationGate.test_inapplicable_closes_by_the_stop_rule
+    red_confirmed: true
+    red_reason: >-
+      All four failed with "ValueError: substring not found" from
+      `_outcome_step_section()` -- same missing section as AC-1 (the
+      "no packet ... is left `issued`" sentence and the per-outcome status
+      names did not exist yet).
+  AC-4:
+    tests:
+      - tests.test_gate_outcome_packet_lifecycle.TestDevelopSkillStepBSpecChangeGateCall.test_call_point_named_after_gate_id_and_routed_arm_before_any_step
+      - tests.test_gate_outcome_packet_lifecycle.TestDevelopSkillStepBSpecChangeGateCall.test_stop_branch_halts_before_any_step_and_records_reason
+      - tests.test_gate_outcome_packet_lifecycle.TestDevelopSkillStepBSpecChangeGateCall.test_proceed_continues_all_five_steps
+      - tests.test_gate_outcome_packet_lifecycle.TestDevelopSkillStepBSpecChangeGateCall.test_interactive_stated_unchanged
+      - tests.test_gate_outcome_packet_lifecycle.TestDevelopSkillStepBSpecChangeGateCall.test_gate_call_paragraph_present_and_non_empty
+      - tests.test_gate_outcome_packet_lifecycle.TestDevelopSkillStepBSpecChangeGateCall.test_gate_call_paragraph_follows_the_transition_enumeration
+    red_confirmed: true
+    red_reason: >-
+      All six failed with "AssertionError: expected the spec-change
+      gate-call paragraph in Step B" from `_gate_call_paragraph()`'s
+      `self.assertIn(marker, section, ...)` -- Step B's spec-change
+      transition bullet carried no gate-call/stop-branch paragraph yet.
+  AC-5:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_stop_writes_no_answer_record
+      - tests.test_classification_gate.TestClassificationGate.test_stop_cites_the_audit_record_not_a_second_record
+    red_confirmed: true
+    red_reason: >-
+      Both failed with "ValueError: substring not found" from
+      `_outcome_step_section()` -- same missing section as AC-1/AC-3.
+  AC-6:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_negative_twin_missing_answer_record_language_fails
+      - tests.test_classification_gate.TestClassificationGate.test_negative_twin_packet_still_issued_fails
+      - tests.test_gate_outcome_packet_lifecycle.TestDevelopSkillStepBSpecChangeGateCall.test_negative_twin_call_point_without_stop_branch_fails
+    red_confirmed: false
+    red_reason: >-
+      These three assert only over a locally-constructed synthetic
+      "fake_section" / "fake_paragraph" string literal (never `self.text`
+      or any file read), so they are implementation-independent by
+      construction -- they passed identically when re-run against the
+      pristine pre-task worktree (git stash of every production edit) as
+      they do now. Their purpose (per AC-6 and the sibling modules'
+      existing convention, e.g. test_precedence_reservation_negative_proof
+      _omitted_reservation_fails) is to prove the corresponding positive
+      matcher is non-vacuous, not to red/green against the implementation
+      itself; the AC they defend (AC-1/AC-3 for the first two,
+      AC-4 for the third) already has its own red-confirmed positive
+      pin above.
+  AC-7:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: >-
+      Both failed with an AssertionError sha256 mismatch (old pinned digest
+      vs. the file's new content) when the full suite was run immediately
+      after em-workflow/scripts/validate-worker-output.py and
+      tests/test_validate_worker_output.py were edited but before the C10
+      pins in tests/test_gate_option_vocabulary.py were refreshed; the
+      "full suite passes" half of AC-7 is the `python3 -m unittest discover
+      -s tests` run itself (2023 tests, 0 failures after every edit in this
+      task, versus the 1991-test/0-failure baseline recorded in Step 4a) --
+      not a single test that can be red/green on its own.

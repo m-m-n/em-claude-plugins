@@ -76,6 +76,18 @@ C4's one-module-per-section convention; question-packet-schema.md's new
 `finding_stable_id` field (AC-7's schema half) is pinned in
 tests/test_worker_contract_docs.py, alongside that document's other field
 pins.
+
+task0025 acceptance criteria (feature-docs/goal-vs-spec-divergence review
+round3 rework, AC-1 half): the routed arm's exit sentence at Batch
+resolution sequence step 2 no longer ends the question's story in place
+("the gate's own proceed/stop outcome and its audit record are the
+resolution for that question") -- it now points at the Classification
+gate's own Outcome step (pinned in tests/test_classification_gate.py,
+alongside the section it belongs to, per C4). The pins below cover only
+the citation change at step 2 and the NFR1 non-duplication guard (the
+packet/answer-model rule the Outcome step states must not be restated a
+second time anywhere else in this document, including the Batch resolution
+sequence itself).
 """
 
 import os
@@ -466,6 +478,72 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             "gate below also leaves the sequence here",
             fake_step_2.lower(),
         )
+
+    # --- task0025 AC-1: step 2's exit cites the Outcome step instead of ----
+    # --- ending the question's story in place -------------------------------
+
+    def test_step_2_cites_the_outcome_step_instead_of_restating(self):
+        section = re.sub(r"\s+", " ", self._batch_sequence_section())
+        self.assertIn(
+            "the Classification gate's Outcome step above", section
+        )
+        self.assertIn(
+            "is the resolution for that question; it is not restated here",
+            section,
+        )
+
+    def test_step_2_old_ending_wording_is_gone(self):
+        # Negative proof (Test Notes): the pre-task0025 wording, which ended
+        # the question's story in place instead of pointing at a named
+        # section, must not survive anywhere in the document.
+        self.assertNotIn(
+            "the gate's own proceed/stop outcome and its audit record are "
+            "the resolution for that question",
+            self.text,
+        )
+
+    def test_step_2_negative_proof_old_ending_would_have_satisfied_neither_matcher(
+        self,
+    ):
+        # Non-vacuity guard: proves the two matchers above actually
+        # distinguish the old wording from the new one -- the old ending
+        # does not contain the new citation, and (trivially) the new
+        # citation string is not the old sentence.
+        fake_old_ending = (
+            "it reaches neither step 3's policy lookup, nor the "
+            "Unlisted-gate fallback, nor `on_unanswered` -- the gate's own "
+            "proceed/stop outcome and its audit record are the resolution "
+            "for that question."
+        )
+        self.assertNotIn(
+            "the Classification gate's Outcome step above", fake_old_ending
+        )
+
+    # --- task0025 NFR1: the packet/answer-model rule is stated exactly once
+
+    def test_batch_resolution_sequence_does_not_restate_packet_effects(self):
+        # NFR1 (Test Notes: "check the whole file for a second statement of
+        # the packet effects"): the Outcome step's own vocabulary -- the
+        # answer-source value it introduces and the packet status it names
+        # for a stopped gate -- must appear nowhere inside the Batch
+        # resolution sequence section, which now only cites the Outcome
+        # step instead of restating what it says.
+        section = self._batch_sequence_section()
+        self.assertNotIn("batch-classification-gate", section)
+        self.assertNotIn("obsolete", section)
+
+    def test_outcome_step_vocabulary_appears_in_the_classification_gate_section(
+        self,
+    ):
+        # Non-vacuity companion to the guard above: proves the vocabulary
+        # searched for there is genuinely present somewhere in the
+        # document (inside the Classification gate section), so an absent
+        # feature could not trivially pass the restatement guard too.
+        classify_idx = self.text.index("## Classification gate")
+        sequence_idx = self.text.index("## Batch resolution sequence")
+        gate_section = self.text[classify_idx:sequence_idx]
+        self.assertIn("batch-classification-gate", gate_section)
+        self.assertIn("obsolete", gate_section)
 
     # --- task0012 AC-3 (NFR2): precedence reservation on the routed arm ----
 

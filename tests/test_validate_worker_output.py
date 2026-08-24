@@ -131,6 +131,16 @@ and task0016 (validator) disagreed when changed in separate worktrees:
   its name and its outcome (unchanged in this round) -- already asserted by
   name throughout `TestReplaceAllCreatePlanEntryStatus`, unaffected by this
   round's edits.
+
+task0025 (feature-docs/goal-vs-spec-divergence review round3 rework, AC-2)
+adds `TestGateResolvedAnswerSource`: `batch-classification-gate` (the
+classification gate's proceed-outcome answer source,
+references/question-resolution.md's Classification gate Outcome step) is
+present in `ANSWER_SOURCE_VALUES`, and a real answer object using it
+validates with `validate_answer()`. The cross-document agreement between
+this constant and references/question-packet-schema.md's `source`
+vocabulary is asserted in tests/test_gate_outcome_packet_lifecycle.py, not
+here (C4: this module owns the validator script, not the schema document).
 """
 
 import importlib.util
@@ -2099,6 +2109,59 @@ class TestCanonicalReentryInvocation(unittest.TestCase):
                 ]
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+# ---------------------------------------------------------------------------
+# task0025 AC-2: the batch-classification-gate answer source.
+#
+# References/question-resolution.md's Classification gate (Outcome step) and
+# references/question-packet-schema.md's `source` vocabulary (the SSOT for
+# this value) are covered in tests/test_gate_outcome_packet_lifecycle.py,
+# alongside the cross-document agreement check between that vocabulary and
+# ANSWER_SOURCE_VALUES below (C4: this module owns the validator, not the
+# schema document). This class owns only the validator's own half: the
+# constant carries the value, and a real answer object using it validates.
+# ---------------------------------------------------------------------------
+
+class TestGateResolvedAnswerSource(unittest.TestCase):
+    def test_batch_classification_gate_is_in_answer_source_values(self):
+        self.assertIn("batch-classification-gate", VWO.ANSWER_SOURCE_VALUES)
+
+    def test_answer_object_using_batch_classification_gate_validates(self):
+        answer = {
+            "question_id": "q.spec-change",
+            "packet_id": "rework-q0001",
+            "answered_at": "2026-08-24T10:00:00+09:00",
+            "source": "batch-classification-gate",
+            "answer_mode": "freeform",
+            "selected_option_ids": [],
+            "freeform": "proceed: spec gap confirmed against FR14",
+            "normalized_answer": "proceed",
+            "resolution_note": (
+                "classification gate verdict: spec_gap; see the "
+                "rework.yaml classification record"
+            ),
+        }
+        errors = VWO.validate_answer(answer)
+        self.assertEqual(errors, [], errors)
+
+    def test_unrecognized_source_value_is_still_rejected(self):
+        # Non-vacuity guard: proves the check above is not vacuously
+        # passing on a validator that accepts any string as `source`.
+        answer = {
+            "question_id": "q.spec-change",
+            "packet_id": "rework-q0001",
+            "answered_at": "2026-08-24T10:00:00+09:00",
+            "source": "not-a-real-source",
+            "answer_mode": "freeform",
+            "selected_option_ids": [],
+            "freeform": "x",
+            "normalized_answer": "x",
+            "resolution_note": None,
+        }
+        errors = VWO.validate_answer(answer)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("source", messages)
 
 
 if __name__ == "__main__":

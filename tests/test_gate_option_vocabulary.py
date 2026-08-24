@@ -721,8 +721,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # path-dependent mandatory-preserve and task-id-allocation checks move
     # into `_validate_dry_run_apply`'s `replace_all` branch. Same rationale:
     # refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
+    # rework): `ANSWER_SOURCE_VALUES` gains `batch-classification-gate` (the
+    # batch-only classification gate's proceed-outcome answer source,
+    # references/question-resolution.md's Classification gate Outcome
+    # step). Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "5e14f0383dc4864868a204f53b7a12b93dee179cd45e9e0b173ea3bf601e4e43"
+        "bd08899333e9dee2a125492c21eedc6ed613eb4ecc9d80824dc11994fb05a52f"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -731,8 +737,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # TestReplanningMandatoryPreserveAndTaskIdAllocation are new. Same
     # rationale as the two refreshes above: refresh, don't remove --
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
+    # rework): adds TestGateResolvedAnswerSource, pinning
+    # `batch-classification-gate` in `ANSWER_SOURCE_VALUES` and that a real
+    # answer object using it validates. Same rationale: refresh, don't
+    # remove -- PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "ee61b019978d2f87bc7faaff01b21757465eab08e343d6401c3e7d67e024352b"
+        "3d0d2cbede7ba475e0299701df9d02aefa5b025c66ab223155575e7fe015a747"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
