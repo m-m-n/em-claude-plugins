@@ -955,12 +955,15 @@ class TestQuestionPacketFields(unittest.TestCase):
         self.assertIn("does not", lowered)
 
 
-class TestQuestionPacketEvidenceFindingStableIdField(unittest.TestCase):
+class TestQuestionPacketEvidenceOriginIdField(unittest.TestCase):
     """task0019 AC-7 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45,
-    cbb5659c4025c46e): `questions[].evidence[]` gains `finding_stable_id` in
-    the packet schema's field table -- the structured field the
-    Classification gate's origin verification requires
-    (tests/test_classification_gate.py)."""
+    cbb5659c4025c46e), renamed by rework-contract-drift/task0004 (FR4):
+    `questions[].evidence[]` carries `origin_id` in the packet schema's
+    field table -- the structured field the Classification gate's origin
+    verification requires (tests/test_classification_gate.py), naming the
+    `origin_kind` / `origin_id` pair `references/rework-task-synthesis.md`'s
+    Invariant 6 defines, cited rather than restated here. The retired
+    single-field name is gone."""
 
     @classmethod
     def setUpClass(cls):
@@ -980,18 +983,24 @@ class TestQuestionPacketEvidenceFindingStableIdField(unittest.TestCase):
         self._evidence_row("line")
         self._evidence_row("detail")
 
-    def test_finding_stable_id_field_present(self):
-        row = self._evidence_row("finding_stable_id")
-        self.assertIn("stable_id", row.lower())
+    def test_origin_id_field_present(self):
+        row = self._evidence_row("origin_id")
+        self.assertIn("origin_kind", row)
+        self.assertIn("rework-task-synthesis.md", row)
 
-    def test_finding_stable_id_negative_proof_missing_field_is_detected(self):
+    def test_origin_id_cites_invariant_6_rather_than_restating(self):
+        row = self._evidence_row("origin_id")
+        self.assertIn("invariant 6", row.lower())
+        self.assertIn("cited, not restated", row)
+
+    def test_retired_field_negative_proof_missing_field_is_detected(self):
         fake_text = (
             "| `questions[].evidence[]`.`path` | Evidence file path |\n"
             "| `questions[].evidence[]`.`line` | Evidence line number |\n"
             "| `questions[].evidence[]`.`detail` | Evidence detail text |\n"
         )
         self.assertNotIn(
-            "`questions[].evidence[]`.`finding_stable_id`", fake_text
+            "`questions[].evidence[]`.`origin_id`", fake_text
         )
 
 
@@ -1205,18 +1214,19 @@ class TestReworkPlannerContractSpecChangeCitation(unittest.TestCase):
         self.assertIn("falls to the unlisted-gate fallback", fake_section)
         self.assertIn("aborts rather than proceeding", fake_section)
 
-    def test_states_packet_names_origins_via_finding_stable_id_field(self):
+    def test_states_packet_names_origins_via_origin_id_field(self):
         # task0019 AC-8 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45),
-        # generalized by task0028: the packet names its origin(s) through
-        # the structured `evidence[].finding_stable_id` field -- now stated
-        # as the origin_kind/origin_id pair, covering both review- and
-        # verify-sourced origins -- never the record path.
+        # generalized by task0028, renamed by rework-contract-drift/task0004
+        # (FR4): the packet names its origin(s) through the structured
+        # `evidence[].origin_id` field -- the origin_kind/origin_id pair,
+        # covering both review- and verify-sourced origins -- never the
+        # record path.
         section = re.sub(r"\s+", " ", self._transition_section())
         self.assertIn(
             "The question packet returned for `gate_id: rework.spec-change` "
             "names its origin(s) — the `origin_kind` / `origin_id` pair "
             "`references/rework-task-synthesis.md`'s Invariant 6 defines "
-            "(cited, not restated) — via `evidence[].finding_stable_id`",
+            "(cited, not restated) — via `evidence[].origin_id`",
             section,
         )
         self.assertIn(
@@ -1228,11 +1238,15 @@ class TestReworkPlannerContractSpecChangeCitation(unittest.TestCase):
 
     def test_old_review_only_packet_naming_wording_is_gone(self):
         # Negative proof (task0028 AC-8): the pre-task0028 wording, which
-        # named review findings alone as the packet's origin vocabulary,
-        # must not survive anywhere in the document.
+        # named review findings alone as the packet's origin vocabulary via
+        # the now-retired single-field name, must not survive anywhere in
+        # the document. Built at run time (never a contiguous literal) so
+        # this sample never trips the retired-identifier absence scan
+        # (IMPLEMENTATION.md Shared Components).
+        retired_field = "finding" + "_stable_id"
         self.assertNotIn(
             "names each originating review finding's `stable_id` in the "
-            "question's `evidence[].finding_stable_id` entries",
+            f"question's `evidence[].{retired_field}` entries",
             self.text,
         )
 

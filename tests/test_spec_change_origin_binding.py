@@ -6,7 +6,7 @@ documents it owns:
 - `em-workflow/references/rework-task-synthesis.md` (AC-1, AC-7): the
   origin-identity pair `origin_kind` / `origin_id` is named once, inside
   Invariant 6, and is the field list Section 10's SPEC-change transition
-  now names in place of `finding_stable_id`.
+  now names in place of the retired single-field origin identifier.
 - `em-workflow/references/question-resolution.md` (AC-2, AC-3, AC-4): the
   security / license / `reversible: false` check runs over the
   orchestrator-held bound set for the dispatch -- never over the subset an
@@ -154,8 +154,8 @@ class TestAC1OriginIdentityPairDefinedInSynthesisInvariant6(unittest.TestCase):
 
 class TestAC7SpecChangeTransitionFieldListUsesOriginPair(unittest.TestCase):
     """AC-7 (FR7, NFR1): Section 10's SPEC-change transition step 4 names
-    the origin pair in place of `finding_stable_id`; step count and section
-    numbering are unchanged (C3)."""
+    the origin pair in place of the retired single-field origin
+    identifier; step count and section numbering are unchanged (C3)."""
 
     @classmethod
     def setUpClass(cls):
@@ -175,16 +175,21 @@ class TestAC7SpecChangeTransitionFieldListUsesOriginPair(unittest.TestCase):
             section,
         )
 
-    def test_step_4_no_longer_names_finding_stable_id(self):
-        self.assertNotIn("`reason`, `finding_stable_id`,", self.text)
+    def test_step_4_no_longer_names_the_retired_field(self):
+        # Built at run time (never a contiguous literal) so this needle
+        # never trips the retired-identifier absence scan (IMPLEMENTATION.md
+        # Shared Components).
+        retired_field = "finding" + "_stable_id"
+        self.assertNotIn(f"`reason`, `{retired_field}`,", self.text)
 
     def test_negative_proof_old_field_list_would_be_caught(self):
+        retired_field = "finding" + "_stable_id"
         fake_step_4 = (
             "4. phase-state `rework.yaml` records `reason`, "
-            "`finding_stable_id`, `recorded_at_commit`, and "
+            f"`{retired_field}`, `recorded_at_commit`, and "
             "`replan_authorized: true`"
         )
-        self.assertIn("`reason`, `finding_stable_id`,", fake_step_4)
+        self.assertIn(f"`reason`, `{retired_field}`,", fake_step_4)
 
     def test_still_defers_field_definitions_to_phase_state(self):
         section = _norm(self._section_10())
@@ -302,14 +307,16 @@ class TestAC3BidirectionalMembershipRuleNonOverridable(unittest.TestCase):
         )
 
     def test_both_directions_marked_non_overridable(self):
+        # Refreshed by rework-contract-drift/task0004 AC-4: direction 2 no
+        # longer says "likewise" -- it repeats direction 1's own closing
+        # sentence verbatim, so both directions use the IDENTICAL wording.
         section = _norm(self._origin_verification_section()).lower()
-        self.assertIn(
+        non_overridable_phrase = (
             "this abort is final and non-overridable, exactly as the "
             "fail-closed classification's precedence reservation above "
-            "states for its own abort arms",
-            section,
+            "states for its own abort arms"
         )
-        self.assertIn("this abort is likewise final and non-overridable", section)
+        self.assertEqual(section.count(non_overridable_phrase), 2)
 
     def test_negative_proof_single_direction_membership_rule_fails_matcher(
         self,

@@ -153,7 +153,7 @@ sequence's policy lookup or its Unlisted-gate fallback.
 3. **Origin verification.** Before the question reaches classification, it
    must name the origin(s) it is derived from: at least one of its
    `evidence[]` entries (`references/question-packet-schema.md`) must
-   carry `finding_stable_id`, and a `rework.spec-change` question with no
+   carry `origin_id`, and a `rework.spec-change` question with no
    `evidence[]` entry carrying it aborts here, recording that reason. The
    pair this field's value identifies — `origin_kind` (`review` |
    `verify`) and `origin_id` — is defined once, by
@@ -190,14 +190,25 @@ sequence's policy lookup or its Unlisted-gate fallback.
    **The category / irreversibility check (direction 2).** This check runs
    over the WHOLE bound set above — never over only the origins the packet
    named, and never derived from `evidence[]` or any other worker-supplied
-   field. The orchestrator reads every bound-set member's `category` from
-   the located source — never from the question's own worker-set
-   `category` — and aborts, regardless of what the packet named, when any
-   bound-set member's category is `security` or `license`, or when an
-   `assumptions[]` entry naming the question carries `reversible: false`.
-   This abort is likewise final and non-overridable. Every abort here
-   records its reason and the evidence considered, and none of them
-   raises, in batch, a confirmation nobody can answer.
+   field — except the irreversibility arm below, whose worker-declared
+   basis is stated where it appears. The orchestrator reads every
+   bound-set member's `category` from the located source — never from the
+   question's own worker-set `category`. For a `verify` origin, that
+   source's `category` field and its closed vocabulary are the
+   `failed_items[].category` definition `references/workflow-schema.md`
+   owns (cited, not restated). The check aborts, regardless of what the
+   packet named, when any bound-set member's category is `security` or
+   `license`, when it is that vocabulary's fail-closed sentinel value, or
+   when it is missing, unreadable, or outside the vocabulary, or when an
+   `assumptions[]` entry naming the question carries `reversible: false` —
+   the one worker-supplied field this direction reads, its basis
+   worker-declared rather than a second, independent defence, exactly as
+   the Fail-closed classification's own irreversibility check states
+   above. This abort is final and non-overridable, exactly as the
+   Fail-closed classification's Precedence reservation above states for
+   its own abort arms. Every abort here records its reason and the
+   evidence considered, and none of them raises, in batch, a confirmation
+   nobody can answer.
 4. **Question shape.** The question is posed so both directions can be
    raised: (a) the implementation cannot satisfy the goal; (b) the
    implementation satisfies the goal but diverges from the specification

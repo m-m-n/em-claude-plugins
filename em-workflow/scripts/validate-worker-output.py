@@ -128,6 +128,30 @@ ON_UNANSWERED_VALUES = {"block", "record_tbd", "use_batch_policy"}
 # choosing record_tbd / use_batch_policy for one of these categories.
 BLOCKING_REQUIRED_CATEGORIES = {"spec-change", "security", "license"}
 
+# rework-contract-drift/task0004 (FR6): the origin-identity pair's
+# `origin_kind` half (references/rework-task-synthesis.md Invariant 6) is
+# closed to these two values. Enforced wherever a `spec_change` record's
+# `origin_kind` is read, mirroring the vocabulary enforcement `classifier`/
+# `verdict`/`decision` already have below.
+ORIGIN_KIND_VALUES = {"review", "verify"}
+
+# rework-contract-drift/task0004 (FR3 validator half): the single closed
+# value set for a verify-step failed_items[] entry's `category`
+# (IMPLEMENTATION.md Shared Components "failed_items[].category
+# vocabulary"; the field itself is defined once by references/
+# workflow-schema.md, cited here, never restated in prose). Required and
+# non-empty on every entry; a missing, empty or out-of-vocabulary value is
+# rejected.
+FAILED_ITEM_CATEGORY_VALUES = {
+    "comprehensive",
+    "spec",
+    "security",
+    "performance",
+    "architecture",
+    "license",
+    "unknown",
+}
+
 ANSWER_SOURCE_VALUES = {
     "user",
     "batch-decision-table",
@@ -730,8 +754,8 @@ def workflow_find_step(workflow, step_id):
 # (references/phase-state.md's `spec_change` flag pair).
 #
 # goal-vs-spec-divergence/task0029: `origin_kind` / `origin_id` replace
-# `finding_stable_id` -- the origin pair defined in references/
-# rework-task-synthesis.md (Spec-change origin identity). Presence/
+# the retired single-field origin identifier -- the origin pair defined in
+# references/rework-task-synthesis.md (Spec-change origin identity). Presence/
 # non-emptiness is all this check requires; a `verify`-sourced record
 # (`origin_kind: verify`) satisfies it on the same terms as a
 # `review`-sourced one (D13) -- neither value is special-cased here.
@@ -820,6 +844,12 @@ def workflow_replace_all_spec_change_reentry(workflow, phase_state, feature_dir=
     if not isinstance(spec_change, dict) or not spec_change:
         return False
     if not all(spec_change.get(f) for f in SPEC_CHANGE_MANDATORY_FIELDS):
+        return False
+    # rework-contract-drift/task0004 (FR6): `origin_kind`'s closed
+    # vocabulary is enforced here, removing the asymmetry with
+    # `classification`'s classifier/verdict/decision vocabularies below --
+    # presence alone (the mandatory-fields check above) is not enough.
+    if spec_change.get("origin_kind") not in ORIGIN_KIND_VALUES:
         return False
     replan_authorized = spec_change.get("replan_authorized")
     if not isinstance(replan_authorized, bool):
@@ -933,6 +963,22 @@ def validate_question(q, index, *, gate_registry=None, packet_phase=None, packet
                     "category",
                     f"{p}.category {q.get('category')!r} requires gate_id to be one of "
                     f"{sorted(required_gate_ids)}, got {gate_id!r}",
+                )
+            )
+    # rework-contract-drift/task0004 (FR4): the packet's own origin-naming
+    # obligation (references/question-packet-schema.md's evidence[].
+    # origin_id row; references/question-resolution.md's Classification
+    # gate, Origin verification) -- a `rework.spec-change` question with no
+    # `evidence[]` entry carrying a non-empty `origin_id` can never pass
+    # origin verification, so it is rejected here too.
+    if gate_id == "rework.spec-change":
+        evidence_entries = q.get("evidence") or []
+        if not any(isinstance(e, dict) and e.get("origin_id") for e in evidence_entries):
+            errors.append(
+                err(
+                    "evidence",
+                    f"{p}.evidence must carry at least one entry with a non-empty "
+                    "origin_id when gate_id is 'rework.spec-change'",
                 )
             )
     if q.get("category") not in CATEGORY_VALUES:
@@ -1123,6 +1169,39 @@ def validate_answers_list(data, packet=None):
 # --kind workflow-patch (5.5)
 # ---------------------------------------------------------------------------
 
+def _validate_verify_failed_items_categories(workflow):
+    """rework-contract-drift/task0004 (FR3 validator half, FR6): every
+    entry of `workflow.yaml`'s `verify` step `failed_items[]` carries a
+    REQUIRED, non-empty `category` drawn from FAILED_ITEM_CATEGORY_VALUES
+    (references/workflow-schema.md owns the field's definition and
+    vocabulary; this function enforces it, never restates the vocabulary
+    in prose elsewhere). Runs on the invocation path that already reads
+    `--workflow` (validate_workflow_patch), unconditional on
+    --dry-run-apply. Tolerates a missing/absent verify step or
+    failed_items list (nothing to check yet) and a non-mapping entry
+    (reported elsewhere, not this function's job) rather than crashing."""
+    errors = []
+    verify_step = workflow_find_step(workflow, "verify")
+    if not isinstance(verify_step, dict):
+        return errors
+    failed_items = verify_step.get("failed_items")
+    if not isinstance(failed_items, list):
+        return errors
+    for i, item in enumerate(failed_items):
+        if not isinstance(item, dict):
+            continue
+        if item.get("category") not in FAILED_ITEM_CATEGORY_VALUES:
+            errors.append(
+                err(
+                    "category",
+                    f"workflow.yaml verify.failed_items[{i}].category must "
+                    f"be one of {sorted(FAILED_ITEM_CATEGORY_VALUES)} "
+                    "(missing, empty, or out of vocabulary)",
+                )
+            )
+    return errors
+
+
 def _as_checked_list(container, key, p, field_label, errors):
     """bs9 (round 2): returns `container.get(key)` coerced to a list for
     iteration, appending a machine-readable error (instead of raising) when
@@ -1196,6 +1275,12 @@ def validate_workflow_patch(
     if not isinstance(data, dict):
         return [err("structure", "workflow patch must be a mapping")]
     errors = []
+    if workflow is not None:
+        # FR3 validator half / FR6: this is the invocation path that
+        # already reads --workflow (workflow_requirement_ids below); the
+        # verify-step failed_items[].category vocabulary is enforced here
+        # too, unconditional on --dry-run-apply.
+        errors.extend(_validate_verify_failed_items_categories(workflow))
     if data.get("schema_version") != 1:
         errors.append(err("schema_version", "schema_version must be 1"))
     patch_id = data.get("patch_id")
