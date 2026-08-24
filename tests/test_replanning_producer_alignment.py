@@ -28,8 +28,62 @@ itself (Test Notes / Out of Scope), which stays task0029's to change.
 These deliverables are specification/prompt documents, so acceptance
 criteria are verified by structural/textual assertions over the Markdown
 rather than behavioral tests of running code (Test Notes).
+
+Extended for task0001 (rework-contract-drift,
+feature-docs/rework-contract-drift/tasks/task0001.md): the prompt's second
+task-id allocation branch and the contract's mirroring sentence keyed the
+Re-planning path on a single `create-plan` status literal (`needs_update`)
+that the specification-change transition does not actually produce (it
+produces `pending`, recognized instead through a `spec_change` re-entry
+signal -- `references/workflow-patch.md`'s `replace_all` permission
+conditions, Re-planning path, second case). A planner following the
+erroneous literal took the Initial-planning branch on a real re-planning
+pass and emitted a patch the validator rejects. This task's own Acceptance
+Criteria covered here:
+
+- AC-1: `TestImplementationPlannerTwoBranchAllocation.
+  test_re_planning_branch_no_longer_keyed_on_a_single_status_literal` /
+  `test_re_planning_branch_cites_owning_document_and_re_planning_path` (the
+  prompt) and `TestPlannerContractReplanningNotKeyedOnStatusLiteral` (the
+  contract) -- neither document keys the Re-planning condition on a
+  `create-plan` status literal any longer; both name
+  `references/workflow-patch.md` by path and identify its Re-planning path
+  as the source of the rule.
+- AC-2: `TestImplementationPlannerTwoBranchAllocation.
+  test_re_planning_branch_states_no_high_water_mark_formula` -- the prompt
+  carries no restated `max(carried_task_ids ...)` formula and no restated
+  characterization of which identifiers the high-water mark counts; it
+  cites the owning definition instead.
+- AC-3: `test_two_branches_present_initial_planning_keyed_on_pending_status`
+  plus the two tests under AC-1 above -- this is the same two-branch test
+  task0027 wrote, rewritten so it no longer pins the erroneous literal and
+  instead asserts the erroneous literal's absence and the citation form's
+  presence. Confirmed (TDD) to fail against the pre-change prompt before
+  the prompt was edited.
+- AC-4: every absence assertion above (`test_re_planning_branch_no_longer_
+  keyed_on_a_single_status_literal`, `test_re_planning_branch_states_no_
+  high_water_mark_formula`, `TestPlannerContractReplanningNotKeyedOnStatus
+  Literal.test_no_single_status_literal_condition`) is paired with a
+  `test_matcher_detects_a_synthetic_...` negative proof in the same class.
+- AC-5: `TestReplanningReentryDryRunAcceptance` -- a synthetic re-planning
+  patch representing the specification-change transition (create-plan
+  `pending`, a `spec_change` re-entry signal, one already-`merged` task) is
+  accepted by the validator's `--dry-run-apply` mode via a direct
+  `validate_workflow_patch()` call, with neither
+  `replace-all-entry-for-registered-id` nor `replace-all-drops-task` among
+  the reported error codes. Self-contained in this module (Test Notes: does
+  not depend on `em-workflow/references/fixtures/`, which task0004 owns).
+  Its synthetic `spec_change` record follows IMPLEMENTATION.md Shared
+  Components' "Synthetic spec-change record shape in tests" contract.
+- AC-6: the full suite (`python3 -m unittest discover -s tests`) is green
+  and this task adds no third-party import -- `TestReplanningReentryDryRun
+  Acceptance` loads `scripts/validate-worker-output.py` the same way
+  `tests/test_spec_change_replan_authorization.py` already does, PyYAML
+  being that script's existing runtime dependency (IMPLEMENTATION.md
+  Technology Stack), not a new one this task adds.
 """
 
+import importlib.util
 import re
 import unittest
 from pathlib import Path
@@ -40,8 +94,19 @@ PLUGIN_ROOT = REPO_ROOT / "em-workflow"
 PLANNER_AGENT_PATH = PLUGIN_ROOT / "agents" / "implementation-planner.md"
 PLANNER_CONTRACT_PATH = PLUGIN_ROOT / "references" / "contracts" / "planner-contract.md"
 CREATE_PLAN_PHASE_PATH = PLUGIN_ROOT / "references" / "phases" / "create-plan-phase.md"
+VALIDATOR_SCRIPT_PATH = PLUGIN_ROOT / "scripts" / "validate-worker-output.py"
 
 WORKFLOW_PATCH_REF = "references/workflow-patch.md"
+REPLANNING_PATH_TERM = "Re-planning path"
+
+
+def _load_validator_module():
+    spec = importlib.util.spec_from_file_location(
+        "validate_worker_output_replanning_producer_alignment", VALIDATOR_SCRIPT_PATH
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 NUMBER_WORDS = (
     r"zero|one|two|three|four|five|six|seven|eight|nine|ten|"
@@ -198,6 +263,41 @@ class TestPlannerContractCarryOverField(unittest.TestCase):
         self.assertNotIn("carried_task_ids", section)
 
 
+class TestPlannerContractReplanningNotKeyedOnStatusLiteral(unittest.TestCase):
+    """task0001 AC-1: planner-contract.md's re-planning sentence is aligned
+    to the same citation form as the prompt -- it no longer keys the
+    re-planning condition on a single `create-plan` status literal, and
+    instead names the owning document by path and its Re-planning path as
+    the source."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PLANNER_CONTRACT_PATH)
+        cls.section = _extract_section(
+            cls.text, "## `completed` payload", "## Prohibited fields"
+        )
+
+    def test_section_found_non_vacuous(self):
+        self.assertTrue(self.section)
+
+    def test_no_single_status_literal_condition(self):
+        self.assertNotIn("the `create-plan` step is `needs_update`", self.section)
+        self.assertNotIn("needs_update", self.section)
+
+    def test_matcher_detects_a_synthetic_needs_update_literal_sentence(self):
+        """Negative proof for the absence check above."""
+        violating_sample = (
+            "On a re-planning pass (the `create-plan` step is "
+            "`needs_update`), `tasks_patch` also carries `carried_task_ids`."
+        )
+        self.assertIn("the `create-plan` step is `needs_update`", violating_sample)
+        self.assertIn("needs_update", violating_sample)
+
+    def test_re_planning_sentence_cites_owning_document_and_re_planning_path(self):
+        self.assertIn(WORKFLOW_PATCH_REF, self.section)
+        self.assertIn(REPLANNING_PATH_TERM, self.section)
+
+
 class TestImplementationPlannerTwoBranchAllocation(unittest.TestCase):
     """AC-3."""
 
@@ -213,11 +313,63 @@ class TestImplementationPlannerTwoBranchAllocation(unittest.TestCase):
     def test_section_found_non_vacuous(self):
         self.assertTrue(self.section)
 
-    def test_two_branches_present_keyed_on_create_plan_status(self):
+    def test_two_branches_present_initial_planning_keyed_on_pending_status(self):
+        """task0001 AC-3: both branch headers are present; the
+        Initial-planning branch keeps its correct single-state key
+        (`create-plan` is `pending`) -- only the Re-planning branch's key
+        was ever erroneous (see the tests below)."""
         self.assertIn("**Initial planning**", self.section)
         self.assertIn("**Re-planning**", self.section)
         self.assertIn("`create-plan` is `pending`", self.section)
-        self.assertIn("`create-plan` is `needs_update`", self.section)
+
+    def test_re_planning_branch_no_longer_keyed_on_a_single_status_literal(self):
+        """task0001 AC-1/AC-3: the erroneous single-literal re-planning
+        condition (`create-plan` is `needs_update`) is gone. The owning
+        document permits the Re-planning path through two distinct states,
+        and the specification-change transition produces the OTHER one, so
+        keying on this single literal caused a planner following the prompt
+        to take the Initial-planning branch on a real re-planning pass."""
+        branch = self.section[self.section.index("**Re-planning**"):]
+        self.assertNotIn("`create-plan` is `needs_update`", branch)
+        self.assertNotIn("needs_update", branch)
+
+    def test_matcher_detects_a_synthetic_needs_update_literal_branch(self):
+        """Negative proof: the substring checks above must actually detect
+        the erroneous shape before their absence in the real prompt means
+        anything."""
+        violating_sample = (
+            "- **Re-planning** (`create-plan` is `needs_update`): every id "
+            "already registered ..."
+        )
+        self.assertIn("`create-plan` is `needs_update`", violating_sample)
+        self.assertIn("needs_update", violating_sample)
+
+    def test_re_planning_branch_cites_owning_document_and_re_planning_path(self):
+        """task0001 AC-1: the Re-planning branch names the owning document
+        by repository-relative path and identifies its Re-planning path as
+        the source of the rule, instead of restating the condition itself."""
+        branch = self.section[self.section.index("**Re-planning**"):]
+        self.assertIn(WORKFLOW_PATCH_REF, branch)
+        self.assertIn(REPLANNING_PATH_TERM, branch)
+
+    def test_re_planning_branch_states_no_high_water_mark_formula(self):
+        """task0001 AC-2: no restated high-water-mark formula and no
+        restated statement of which identifiers it counts survive in the
+        prompt; the "high-water mark" term itself may remain (other tests
+        pin its surrounding obligations), but the union-of-ids formula that
+        characterizes what it counts must not."""
+        self.assertNotIn("max(carried_task_ids", self.text)
+        self.assertIn("high-water mark", self.section)
+
+    def test_matcher_detects_a_synthetic_high_water_mark_formula(self):
+        """Negative proof for the high-water-mark formula absence check
+        above."""
+        violating_sample = (
+            "continuing above the high-water mark "
+            "(`max(carried_task_ids ∪ entries)`), and these go under "
+            "`entries`"
+        )
+        self.assertIn("max(carried_task_ids", violating_sample)
 
     def test_initial_planning_branch_numbers_from_task0001(self):
         branch = _extract_section(
@@ -300,6 +452,144 @@ class TestImplementationPlannerOutputNamesCarriedTaskIds(unittest.TestCase):
         superseded instruction before its absence means anything."""
         violating_sample = "every task goes in `entries` with initial_status: pending"
         self.assertRegex(violating_sample, self.EVERY_TASK_INTO_ENTRIES_RE)
+
+
+# ---------------------------------------------------------------------------
+# task0001 AC-5
+# ---------------------------------------------------------------------------
+
+
+class TestReplanningReentryDryRunAcceptance(unittest.TestCase):
+    """task0001 AC-5: a synthetic re-planning patch representing the
+    specification-change transition -- the create-plan step at the status
+    that transition actually produces (`pending`, recognized via the
+    `spec_change` re-entry signal, never `needs_update`), with at least one
+    already-`merged` task -- is accepted by the validator's
+    `--dry-run-apply` mode, with neither the registered-identifier
+    rejection (`replace-all-entry-for-registered-id`) nor the dropped-task
+    rejection (`replace-all-drops-task`) raised.
+
+    Kept self-contained in this module (not depending on
+    `em-workflow/references/fixtures/`, which task0004 owns) per Test
+    Notes. Its synthetic `spec_change` record follows IMPLEMENTATION.md
+    Shared Components' "Synthetic spec-change record shape in tests"
+    contract: a valid `origin_kind`, non-empty `origin_id`, `reason` and
+    `recorded_at_commit`, and a boolean `replan_authorized`."""
+
+    FEATURE = "rework-contract-drift-example"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.vwo = _load_validator_module()
+
+    def _workflow(self):
+        return {
+            "feature": self.FEATURE,
+            "requirements": {},
+            "tasks": {
+                "task0009": {
+                    "branch": "em-workflow/rework-contract-drift-example/task0009",
+                    "complexity": "low",
+                    "domains": [],
+                    "files": ["x.go"],
+                    "notes": None,
+                    "plan": "tasks/task0009.md",
+                    "requirements": [],
+                    "skills": [],
+                    "status": "merged",
+                    "title": "existing merged task",
+                }
+            },
+            "workflow": [
+                {"id": "create-plan", "status": "pending"},
+                {"id": "implement", "status": "pending", "base_commit": "deadbeef"},
+            ],
+        }
+
+    def _phase_state(self):
+        return {
+            "phase": "rework",
+            "feature": self.FEATURE,
+            "spec_change": {
+                "reason": "spec changed after review",
+                "origin_kind": "review",
+                "origin_id": "abc123",
+                "recorded_at_commit": "deadbeef",
+                "consumed": False,
+                "replan_authorized": True,
+            },
+        }
+
+    def _digest_source(self):
+        return {
+            "answers_digest": "sha256:" + "2" * 64,
+            "digest_inputs": {},
+            "mode": "interactive",
+            "value_inputs": {"task_description": None},
+            "worker": "implementation-planner",
+            "workflow_blob": "8f17c04",
+            "write_policy_digest": "sha256:" + "3" * 64,
+        }
+
+    def _patch(self, base_input_digest):
+        return {
+            "base_input_digest": base_input_digest,
+            "base_workflow_blob": "8f17c04",
+            "operation": "replace_planning",
+            "patch_id": "create-plan-p0002",
+            "preserve": ["workflow.implement.base_commit"],
+            "requirements_patch": None,
+            "schema_version": 1,
+            "step_patches": [],
+            "tasks_patch": {
+                "carried_task_ids": ["task0009"],
+                "entries": {},
+                "mode": "replace_all",
+            },
+        }
+
+    def _validate(self, phase_state):
+        digest_source = self._digest_source()
+        base_input_digest = self.vwo.normalize_json_sha256(digest_source)
+        return self.vwo.validate_workflow_patch(
+            self._patch(base_input_digest),
+            workflow=self._workflow(),
+            registries=None,
+            digest_source=digest_source,
+            phase_state=phase_state,
+            dry_run=True,
+            feature_dir=None,
+        )
+
+    def test_create_plan_status_used_is_the_one_the_transition_actually_produces(self):
+        """Non-vacuity: confirms the workflow this test builds keys
+        create-plan at `pending`, not `needs_update` -- the state the
+        erroneous prompt literal missed (task plan Design: 'the state the
+        specification-change transition actually produces is the other
+        one')."""
+        create_plan = next(
+            s for s in self._workflow()["workflow"] if s["id"] == "create-plan"
+        )
+        self.assertEqual(create_plan["status"], "pending")
+
+    def test_spec_change_transition_replanning_patch_is_accepted(self):
+        errors = self._validate(self._phase_state())
+        self.assertEqual(errors, [], errors)
+
+    def test_neither_registered_identifier_nor_dropped_task_rejection_raised(self):
+        errors = self._validate(self._phase_state())
+        codes = {e.get("code") for e in errors}
+        self.assertNotIn("replace-all-entry-for-registered-id", codes)
+        self.assertNotIn("replace-all-drops-task", codes)
+
+    def test_without_the_reentry_signal_the_same_patch_is_rejected(self):
+        """Negative proof: the acceptance above is not a coincidence of some
+        other fixture detail -- without the `spec_change` re-entry signal,
+        the validator falls back to the Initial-planning rule and this same
+        patch (a `merged` task present, not all `pending`) is rejected."""
+        errors = self._validate(None)
+        codes = {e.get("code") for e in errors}
+        self.assertIn("replace-all-not-permitted", codes)
 
 
 if __name__ == "__main__":

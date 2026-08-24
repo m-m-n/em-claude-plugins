@@ -99,11 +99,13 @@ targeting the `create-plan` step); the operation's permission conditions,
 the `tasks_patch` entry shape, and the application rules are owned by
 `references/workflow-patch.md` and are not restated here.
 
-On a re-planning pass (the `create-plan` step is `needs_update`),
-`tasks_patch` also carries `carried_task_ids` alongside `entries`. What the
-two fields mean — eligibility, disjointness, and how a carried id's record
-is copied — is owned by `references/workflow-patch.md`'s Re-planning
-task-id allocation section and is not restated here.
+On a re-planning pass (the Re-planning path —
+`references/workflow-patch.md`'s `replace_all` permission conditions own
+which states satisfy it, and is not restated here as a single `create-plan`
+status literal), `tasks_patch` also carries `carried_task_ids` alongside
+`entries`. What the two fields mean — eligibility, disjointness, and how a
+carried id's record is copied — is owned by `references/workflow-patch.md`'s
+Re-planning task-id allocation section and is not restated here.
 
 ## Prohibited fields
 
