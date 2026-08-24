@@ -365,6 +365,14 @@ class TestReentryOrdering(unittest.TestCase):
         }
 
     def _patch_obj(self, base_input_digest):
+        # task0023 (goal-vs-spec-divergence, review round 3, D10): a
+        # re-planning replace_all carries an already-registered id in
+        # tasks_patch.carried_task_ids (record copied from workflow.yaml
+        # verbatim) rather than re-declaring its body under
+        # tasks_patch.entries -- entries may name only ids not yet
+        # registered (workflow-patch.md's Re-planning task-id allocation
+        # section). This test's patch creates no new task, so entries is
+        # empty.
         return {
             "base_input_digest": base_input_digest,
             "base_workflow_blob": "8f17c04",
@@ -375,18 +383,8 @@ class TestReentryOrdering(unittest.TestCase):
             "schema_version": 1,
             "step_patches": [],
             "tasks_patch": {
-                "entries": {
-                    "task0009": {
-                        "complexity": "low",
-                        "domains": [],
-                        "files": ["x.go"],
-                        "initial_status": "pending",
-                        "plan": "tasks/task0009.md",
-                        "requirements": ["FR1"],
-                        "skills": [],
-                        "title": "existing",
-                    },
-                },
+                "carried_task_ids": ["task0009"],
+                "entries": {},
                 "mode": "replace_all",
             },
         }
