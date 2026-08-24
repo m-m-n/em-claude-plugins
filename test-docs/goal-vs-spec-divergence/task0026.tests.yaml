@@ -1,0 +1,50 @@
+task_id: task0026
+baseline_failures: []          # python3 -m unittest discover -s tests: 1991 tests, 0 failures (step 4a, run against the doc's pre-implementation text)
+final_failures: []             # same command after implementation: 2007 tests (1991 + 16 new), 0 failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestRequirementsUpsertHeadingPresentAndBounded.test_requirements_upsert_heading_present_with_non_empty_slices_around_it
+      - tests.test_create_spec_reentry_preservation.TestRequirementsLeavesUntouchedListAndGainsUpsertRule.test_requirements_not_named_in_the_untouched_list
+      - tests.test_create_spec_reentry_preservation.TestRequirementsLeavesUntouchedListAndGainsUpsertRule.test_upsert_rule_sourced_from_spec_writers_spec_index
+      - tests.test_create_spec_reentry_preservation.TestRequirementsLeavesUntouchedListAndGainsUpsertRule.test_synthetic_sample_still_listing_requirements_as_untouched_is_a_non_vacuous_check
+    red_confirmed: true
+    red_reason: "Against the pre-implementation doc text (`project` and `requirements`; bundled in the untouched list, no `**The `requirements` upsert**` heading), setUpClass for TestRequirementsLeavesUntouchedListAndGainsUpsertRule raised ValueError: substring not found (REQUIREMENTS_UPSERT_HEADING absent), and TestRequirementsUpsertHeadingPresentAndBounded's own test failed with AssertionError: heading not found in statement."
+  AC-2:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestSurvivingRequirementPreservesTasksAndTests.test_surviving_id_tasks_and_tests_preserved_and_only_index_owned_fields_refreshed
+      - tests.test_create_spec_reentry_preservation.TestSurvivingRequirementPreservesTasksAndTests.test_merged_task_reference_is_stated_to_survive
+      - tests.test_create_spec_reentry_preservation.TestSurvivingRequirementPreservesTasksAndTests.test_synthetic_sample_without_the_preservation_wording_fails_the_check
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found (REQUIREMENTS_UPSERT_HEADING absent from the pre-implementation doc text), so every test in the class errored before the upsert rule's surviving-id wording existed."
+  AC-3:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestDisappearingRequirementKeepsExactlyOneResolvableOutcome.test_states_a_named_outcome_that_stays_resolvable
+      - tests.test_create_spec_reentry_preservation.TestDisappearingRequirementKeepsExactlyOneResolvableOutcome.test_states_exactly_one_outcome_literally
+      - tests.test_create_spec_reentry_preservation.TestDisappearingRequirementKeepsExactlyOneResolvableOutcome.test_no_wording_permits_dropping_the_entry
+      - tests.test_create_spec_reentry_preservation.TestDisappearingRequirementKeepsExactlyOneResolvableOutcome.test_synthetic_sample_missing_the_named_outcome_fails_the_check
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found (REQUIREMENTS_UPSERT_HEADING absent from the pre-implementation doc text), so every test in the class errored before the disappearing-id outcome wording existed."
+  AC-4:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestUpsertOrderingPrecedesReplanningPatchValidation.test_states_the_upsert_precedes_replanning_patch_validation
+      - tests.test_create_spec_reentry_preservation.TestUpsertOrderingPrecedesReplanningPatchValidation.test_synthetic_sample_missing_the_ordering_statement_fails_the_check
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found (REQUIREMENTS_UPSERT_HEADING absent from the pre-implementation doc text), so every test in the class errored before the ordering sentence existed."
+  AC-5:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestRequirementsLeavesUntouchedListAndGainsUpsertRule.test_project_still_named_on_its_own_in_the_untouched_list
+      - tests.test_create_spec_reentry_preservation.TestPreservedSetEnumeratesAllFourNamesIndividually.test_tasks_named_as_preserved
+      - tests.test_create_spec_reentry_preservation.TestPreservedSetEnumeratesAllFourNamesIndividually.test_each_steps_status_named_as_preserved
+      - tests.test_create_spec_reentry_preservation.TestPreservedSetEnumeratesAllFourNamesIndividually.test_base_commit_named_as_preserved
+      - tests.test_create_spec_reentry_preservation.TestPreservedSetEnumeratesAllFourNamesIndividually.test_completed_at_commit_named_as_preserved
+      - tests.test_create_spec_reentry_preservation.TestGoalCarveoutRetainedUnabsorbed.test_goal_carveout_sentence_one_still_present_verbatim
+      - tests.test_create_spec_reentry_preservation.TestGoalCarveoutRetainedUnabsorbed.test_goal_carveout_sentence_two_still_present_verbatim
+    red_confirmed: true
+    red_reason: "test_project_still_named_on_its_own_in_the_untouched_list is a new task0026 assertion: its class's setUpClass errored (ValueError: substring not found) against the pre-implementation doc text and went green only once `project` stood alone in the untouched-list slice. The remaining task0018 pins listed here are the pre-existing guards this task must not weaken -- they were already green pre-task0026 (unrelated to this task's edit) and are re-run here unchanged and still green, per Test Notes / C5: none was deleted or reworded to make an AC above pass."
+  AC-6:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestUpsertCitesWorkflowSchemaForEntryShapeWithoutRestating.test_cites_workflow_schema_path
+      - tests.test_create_spec_reentry_preservation.TestUpsertCitesWorkflowSchemaForEntryShapeWithoutRestating.test_synthetic_sample_without_the_citation_fails_the_check
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found (REQUIREMENTS_UPSERT_HEADING absent from the pre-implementation doc text), so the citation test errored before the upsert rule's own `references/workflow-schema.md` citation existed. The AC's second clause (`python3 -m unittest discover -s tests` passes in full) is verified by the full-suite run recorded in baseline_failures/final_failures above, not by a single test."
