@@ -725,8 +725,20 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # AC-1 requires) -- and the "All seventeen rules" count statement
     # becomes "All eighteen rules" in the same edit (D12). Same rationale:
     # refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0002 (D2: task0002 is
+    # this file's sole owner for this specific pin): the unspent
+    # re-planning authorization condition now names the origin pair
+    # (`origin_kind` / `origin_id`) instead of the retired single-field
+    # name it used to require, the document gains a new Application rule
+    # 19 (recovery and idempotency for an interruption between rule 15's
+    # patch write and rule 18's authorization-spending write) -- the "All
+    # eighteen rules" count statement becomes "All nineteen rules" in the
+    # same edit -- and the Ownership boundary section gains a paragraph
+    # naming rule 18's crossing into phase-state. Same rationale: refresh,
+    # don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "063e487096e7e1df5fdfc1296a49fc81c286c589cb9a5c6852f00e660278a74e"
+        "f5be82b6ff27f80830e4e991f19f7b2e8e3e4b8dbb3a353814b819247b3f1d57"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension

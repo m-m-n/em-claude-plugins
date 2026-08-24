@@ -47,6 +47,30 @@ by this task. tests/test_spec_change_replan_authorization.py is the
 dedicated cross-document module for this task's two-flag rule (phase-
 state.md, workflow-patch.md, skills/develop/SKILL.md and the validator
 together).
+
+task0002 (rework-contract-drift/tasks/task0002.md) closes a producer/
+consumer contract break: the unspent re-planning authorization condition
+named a retired single-field identifier no producer writes any more (its
+name is never spelled out as a contiguous literal in this module -- see
+`TestRetiredOriginFieldNameAbsenceScan` below). This task:
+
+- AC-1/AC-5: rewrites the condition to name the origin pair (`origin_kind`,
+  `origin_id` -- IMPLEMENTATION.md Shared Components) in place of the
+  retired name, updating `test_unspent_authorization_definition_stated` in
+  place (not adding a second assertion beside it) so the pin actually
+  guards the new wording.
+- AC-3: adds Application rule 19, a recovery and idempotency rule for an
+  interruption between rule 15's patch write and rule 18's authorization
+  spend (`TestApplicationRuleNineteenRecoveryAndIdempotency`).
+- AC-4: extends `TestOwnershipBoundaryAndDomainsSSOT` to cover the
+  ownership-boundary section's new paragraph naming rule 18's crossing
+  into phase-state.
+- AC-6: `TestRetiredOriginFieldNameAbsenceScan` is the owner-scoped
+  absence scan over this task's two D3 sites (workflow-patch.md and this
+  module itself), built at run time so it cannot match itself.
+- AC-7: the byte-identity pin in tests/test_gate_option_vocabulary.py is
+  refreshed in the same change (that module's own docstring/comments carry
+  the detail).
 """
 
 import re
@@ -297,7 +321,13 @@ class TestApplicationRules(unittest.TestCase):
     (the orchestrator's re-planning-application procedure that spends
     `spec_change.replan_authorized`), added after the seventeenth. The
     count below moves from "+1" to "+2" accordingly; rules 1-17 keep their
-    numbers and text unchanged (C3)."""
+    numbers and text unchanged (C3).
+
+    task0002 (rework-contract-drift): the document now carries a
+    NINETEENTH rule (rule 18's recovery and idempotency rule for an
+    interruption between the patch write and the authorization spend).
+    The count below moves from "+2" to "+3" accordingly; rules 1-18 keep
+    their numbers and text unchanged (C3)."""
 
     @classmethod
     def setUpClass(cls):
@@ -315,38 +345,41 @@ class TestApplicationRules(unittest.TestCase):
             "sanity: design-input.md 5.5.5 states sixteen rules",
         )
 
-    def test_doc_rule_count_is_design_input_count_plus_two(self):
+    def test_doc_rule_count_is_design_input_count_plus_three(self):
         design_rules = self.fixture.application_rules()
         doc_rule_numbers = re.findall(
             r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE
         )
         self.assertEqual(
             len(doc_rule_numbers),
-            len(design_rules) + 2,
+            len(design_rules) + 3,
             "workflow-patch.md must carry design-input.md's sixteen rules "
             "plus this feature's own seventeenth (re-planning task-id "
-            "allocation) and eighteenth (re-planning authorization spend, "
-            "task0029)",
+            "allocation), eighteenth (re-planning authorization spend, "
+            "task0029) and nineteenth (recovery and idempotency for the "
+            "interrupted spend, task0002)",
         )
 
-    def test_rules_are_ordered_one_through_eighteen(self):
+    def test_rules_are_ordered_one_through_nineteen(self):
         doc_rule_numbers = [
             int(n)
             for n in re.findall(r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE)
         ]
-        self.assertEqual(doc_rule_numbers, list(range(1, 19)))
+        self.assertEqual(doc_rule_numbers, list(range(1, 20)))
 
     def test_rule_eighteen_states_the_authorization_spend_procedure(self):
-        # task0029: rule 18 is now the last rule in the list, so everything
-        # from its own number to the end of the section is its text.
+        # task0002: rule 19 is now the last rule in the list, so rule 18's
+        # own text is bounded by rule 19's number rather than running to
+        # the end of the section.
         idx = self.doc_rules_section.index("18. ")
-        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:])
+        end = self.doc_rules_section.index("19. ")
+        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:end])
         self.assertIn("replan_authorized", rule_text)
         self.assertIn("orchestrator", rule_text)
 
     def test_rule_seventeen_states_the_task_id_allocation_rule(self):
-        # Rule 17 is the last rule in the list, so everything from its own
-        # number to the end of the section is its text. Whitespace is
+        # task0002: rule 17's own text is bounded by rule 18's number
+        # (rule 17 is no longer the last rule in the list). Whitespace is
         # normalized so a line-wrap inside the citation never makes this
         # brittle.
         #
@@ -355,7 +388,8 @@ class TestApplicationRules(unittest.TestCase):
         # already-registered ids via `carried_task_ids` instead of
         # re-declaring their bodies under `entries` (D10).
         idx = self.doc_rules_section.index("17. ")
-        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:])
+        end = self.doc_rules_section.index("18. ")
+        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:end])
         self.assertIn("carried_task_ids", rule_text)
         self.assertIn("Re-planning task-id allocation", rule_text)
 
@@ -378,12 +412,74 @@ class TestApplicationRules(unittest.TestCase):
         self.assertIn("applies to `entries` only", rule_text)
 
 
+class TestApplicationRuleNineteenRecoveryAndIdempotency(unittest.TestCase):
+    """task0002 (rework-contract-drift) AC-3: rule 18's authorization-
+    spending write gains a recovery and idempotency rule (rule 19) for an
+    interruption between the patch's own write (rule 15) and rule 18's
+    write. Per the task's Test Notes, these pins are over the rule's
+    substance -- recoverability/recognition, idempotency, no-op on repeat,
+    same end-state -- not its exact prose, so a later rewording that keeps
+    the substance does not fail them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.doc_rules_section = _extract_section(
+            _read(DOC_PATH), "## Application rules", "## Ownership boundary"
+        )
+        idx = cls.doc_rules_section.index("19. ")
+        cls.rule_text = re.sub(r"\s+", " ", cls.doc_rules_section[idx:])
+
+    def test_rule_nineteen_is_the_last_rule(self):
+        self.assertNotIn("20. ", self.doc_rules_section)
+
+    def test_states_recognition_of_an_already_applied_patch(self):
+        self.assertIn("already been applied", self.rule_text)
+        self.assertIn("resumed run", self.rule_text)
+
+    def test_states_no_op_on_repeated_consumption(self):
+        self.assertIn("no-op", self.rule_text)
+        self.assertIn("not an error", self.rule_text)
+
+    def test_states_same_state_after_any_number_of_resumptions(self):
+        self.assertIn("any number of resumptions", self.rule_text)
+        self.assertIn("uninterrupted run", self.rule_text)
+
+    def test_cites_phase_state_for_flag_location_without_restating(self):
+        self.assertIn("references/phase-state.md", self.rule_text)
+        self.assertIn("not restated", self.rule_text)
+
+    def test_negative_proof_rule_eighteen_lacks_recovery_substance(self):
+        # Non-vacuity: rule 18's own text (pre-existing, untouched by this
+        # task) states neither idempotency nor a no-op -- proving the
+        # substance checks above are not vacuously true of any rule text.
+        idx = self.doc_rules_section.index("18. ")
+        end = self.doc_rules_section.index("19. ")
+        rule_18_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:end])
+        self.assertNotIn("no-op", rule_18_text)
+        self.assertNotIn("resumed run", rule_18_text)
+        self.assertNotIn("uninterrupted run", rule_18_text)
+
+
 class TestOwnershipBoundaryAndDomainsSSOT(unittest.TestCase):
-    """AC-6: project/review summary not worker-patchable; domains SSOT."""
+    """AC-6: project/review summary not worker-patchable; domains SSOT.
+
+    task0002 (rework-contract-drift) AC-4 adds coverage of the
+    ownership-boundary section's second crossing: application rule 18's
+    write into `references/phase-state.md`, naming the orchestrator as the
+    owning side and the condition under which the crossing is permitted,
+    citing phase-state.md for the record's own definition rather than
+    restating it."""
 
     @classmethod
     def setUpClass(cls):
         cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text, "## Ownership boundary", "## Domains vocabulary SSOT"
+        )
+        # Normalized (whitespace collapsed to a single space) so a phrase
+        # spanning a hard-wrap line break still matches -- same pattern as
+        # TestReplanningReentrySignalStrengthenedRound2 above.
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
 
     def test_project_and_review_summary_are_orchestrator_updated(self):
         self.assertIn("orchestrator-updated", self.text)
@@ -392,6 +488,38 @@ class TestOwnershipBoundaryAndDomainsSSOT(unittest.TestCase):
 
     def test_domains_ssot_is_review_rules_yaml(self):
         self.assertIn("references/review-rules.yaml", self.text)
+
+    def test_names_the_orchestrator_as_the_owning_side_of_the_crossing(self):
+        self.assertIn("orchestrator", self.normalized)
+        self.assertIn("never a worker", self.normalized)
+
+    def test_names_rule_eighteen_as_the_crossing(self):
+        self.assertIn("Application rule 18", self.normalized)
+        self.assertIn("replan_authorized", self.normalized)
+
+    def test_states_the_permission_condition_for_the_crossing(self):
+        self.assertIn("replace_all", self.normalized)
+        self.assertIn("Re-planning path", self.normalized)
+
+    def test_cites_phase_state_for_the_records_definition_without_restating(
+        self,
+    ):
+        self.assertIn("references/phase-state.md", self.normalized)
+        self.assertIn("not restated", self.normalized)
+
+    def test_negative_proof_pre_change_section_lacks_crossing_coverage(self):
+        # Non-vacuity: the pre-task0002 ownership-boundary section (the
+        # project/review-summary paragraph alone) never mentions
+        # phase-state or the authorization-spending flag.
+        synthetic_old_section = (
+            "`project` and the review summary block (including "
+            "`needs_rework`) are orchestrator-updated only. No operation, "
+            "mode, or field of this contract targets them -- they are "
+            "absent from every worker patch by construction, not by "
+            "convention workers are expected to honor voluntarily."
+        )
+        self.assertNotIn("phase-state", synthetic_old_section)
+        self.assertNotIn("replan_authorized", synthetic_old_section)
 
 
 class TestReplaceAllPermissionConditionsPinned(unittest.TestCase):
@@ -817,9 +945,21 @@ class TestReplanningReentrySignalStrengthenedRound2(unittest.TestCase):
         # test's pre-task0022 name and wording (formerly
         # test_unconsumed_definition_stated, pinning `consumed`) -- the
         # signal is now `replan_authorized`, never `consumed`.
+        #
+        # task0002 (rework-contract-drift) supersedes the retired
+        # single-field name's pin with the origin pair `origin_kind` /
+        # `origin_id` (Shared Components: Origin identity pair, defined by
+        # references/rework-task-synthesis.md Invariant 6) -- this test
+        # reads the document live, so it fails against the
+        # pre-task0002 document (AC-5).
         self.assertIn(
             "An unspent re-planning authorization means the record "
-            "carries `reason`, `finding_stable_id` and `recorded_at_commit`",
+            "carries `reason`, the origin pair `origin_kind` and "
+            "`origin_id`, and `recorded_at_commit` (all non-empty)",
+            self.normalized,
+        )
+        self.assertIn(
+            "references/rework-task-synthesis.md` Invariant 6",
             self.normalized,
         )
         self.assertIn(
@@ -915,6 +1055,48 @@ class TestMandatoryPreserveReplanningRowRequiresBaseCommit(unittest.TestCase):
             synthetic_old_row, r"\| `replace_planning` \| \(none\) \|"
         )
         self.assertNotIn("workflow.implement.base_commit", synthetic_old_row)
+
+
+class TestRetiredOriginFieldNameAbsenceScan(unittest.TestCase):
+    """task0002 (rework-contract-drift) AC-6: an owner-scoped absence scan
+    proving the retired single-field origin identifier is gone from this
+    task's two owned sites (IMPLEMENTATION.md D3: workflow-patch.md and
+    this test module itself -- every other site is a different task's to
+    scan, per the single-owner partition in D3/D4).
+
+    The search term is assembled at run time from parts, rather than
+    carried as a contiguous literal in this file's own source (Shared
+    Components: Retired-identifier absence scan), so scanning this very
+    module never matches itself."""
+
+    RETIRED_NAME = "_".join(["finding", "stable", "id"])
+
+    SCANNED_PATHS = (DOC_PATH, Path(__file__).resolve())
+
+    def test_retired_name_absent_from_owned_paths(self):
+        for path in self.SCANNED_PATHS:
+            text = _read(path)
+            self.assertNotIn(
+                self.RETIRED_NAME,
+                text,
+                f"{path} must not contain the retired `{self.RETIRED_NAME}` "
+                "field name (D3)",
+            )
+
+    def test_negative_proof_matcher_fires_on_a_synthetic_violating_sample(self):
+        synthetic = (
+            "the record carries `reason`, `" + self.RETIRED_NAME
+            + "` and `recorded_at_commit`"
+        )
+        self.assertIn(self.RETIRED_NAME, synthetic)
+
+    def test_scan_does_not_match_its_own_source(self):
+        # Non-vacuity of the "never carried as a contiguous literal" claim:
+        # this module's own source, read as plain text, never contains the
+        # assembled retired name -- it exists only as three separate
+        # string-literal parts joined at run time above.
+        own_source = _read(Path(__file__).resolve())
+        self.assertNotIn(self.RETIRED_NAME, own_source)
 
 
 if __name__ == "__main__":

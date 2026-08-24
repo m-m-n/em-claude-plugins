@@ -283,7 +283,9 @@ step が続けて実行される。interactive はこの改訂で変更しない
 停止条件 3 はそこでは通常どおり発火する。workflow.yaml 単独では create-spec
 の 2 つの `needs_update` を区別できないため、両者を分ける根拠は
 `phase-state/rework.yaml` に置く: spec-change 遷移はその所有 SSOT の定めに
-従い、中断理由と finding の `stable_id` を同ファイルへ記録する。この除外が
+従い、中断理由と origin を示す `origin_kind` / `origin_id` のペアを同
+ファイルへ記録する（フィールドの定義は `references/workflow-patch.md` の
+Re-planning path の条件が持ち、ここでは繰り返さない）。この除外が
 create-spec の `needs_update` に適用されるのは、その記録が存在し、かつ
 `consumed`（`phase-state/rework.yaml` のスキーマは `references/phase-state.md`
 が所有する）でない間だけであり、記録が無ければ停止する。記録は、それを
