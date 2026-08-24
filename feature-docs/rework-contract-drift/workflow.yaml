@@ -1,0 +1,187 @@
+schema_version: 1
+feature: rework-contract-drift
+created: 2026-08-24
+base_branch: em-workflow/goal-vs-spec-divergence/integration
+parent_branch: em-workflow/rework-contract-drift/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: "Python 3.14 (stdlib unittest) + Markdown SSOT documents"
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 3aee0e4499daedf3e657c7ec52eb57ed9a8d26e7
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      There is no UI surface. The change surface is Markdown SSOT documents,
+      one agent prompt, one Python validator script, and stdlib unittest tests.
+      No screen, component, style, or design token is created or altered.
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: Re-planning branch key cites workflow-patch.md instead of restating it
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS2]
+  FR2:
+    title: Re-planning authorization condition uses the origin_kind/origin_id pair
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3, TS4]
+  FR3:
+    title: verify-origin failed_items carry a required category; fail-closed lives at the gate
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS5, TS6]
+  FR4:
+    title: Rename finding_stable_id to origin_id across schema and every consumer
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3, TS7]
+  FR5:
+    title: Rule 18 authorization consumption is recoverable and idempotent
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: origin_kind's closed vocabulary is enforced by the validator
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS8]
+  FR7:
+    title: phase-state schema_version is resolved explicitly for the destructive shape change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS9]
+  FR8:
+    title: classification's replay rule under the idempotency section
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: Direction 2's independence claim is reconciled with the reversible arm
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: High-water mark restatement is replaced by a citation of its SSOT
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: Rule 18's phase-state crossing is covered by the Ownership boundary section
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: No fail-closed regression
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS6]
+  NFR2:
+    title: Single ownership, citation over restatement
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Coordinated rename atomicity
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Detection, not just correction
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3, TS4]
+  NFR5:
+    title: Suite stays green under the project's own runner
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: Rejected findings stay out
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
