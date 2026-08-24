@@ -793,12 +793,26 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # verdict / decision value constants are added, `validate_phase_state`
     # gains the `classification` list-shape and field checks (an
     # append-type list, never a wholesale-replaced mapping), and
-    # `SPEC_CHANGE_MANDATORY_FIELDS` moves from `finding_stable_id` to the
-    # `origin_kind` / `origin_id` pair (references/rework-task-synthesis.md
-    # -- a `verify`-sourced record is accepted on the same terms as a
-    # `review`-sourced one, D13). Same rationale: refresh, don't remove.
+    # `SPEC_CHANGE_MANDATORY_FIELDS` moves from the retired single-field
+    # origin identifier to the `origin_kind` / `origin_id` pair
+    # (references/rework-task-synthesis.md -- a `verify`-sourced record is
+    # accepted on the same terms as a `review`-sourced one, D13). Same
+    # rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0004 (FR3, FR4, FR6):
+    # `ORIGIN_KIND_VALUES` and `FAILED_ITEM_CATEGORY_VALUES` are added;
+    # `workflow_replace_all_spec_change_reentry` enforces `origin_kind`'s
+    # closed vocabulary; `validate_workflow_patch` enforces
+    # `workflow.yaml`'s verify-step `failed_items[].category` closed
+    # vocabulary via the new `_validate_verify_failed_items_categories`;
+    # `validate_question` rejects a `rework.spec-change` question with no
+    # `evidence[]` entry carrying a non-empty `origin_id`; the packet
+    # schema's evidence field's retired single-field name is renamed to
+    # `origin_id` in `SPEC_CHANGE_MANDATORY_FIELDS`'s neighboring comment,
+    # and the retired name is removed from every comment in this script.
+    # Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "12dd9f2b6fbd3f03058f6de3874fcc0caa366fa5a8d8300391bb4ae8d0034507"
+        "dcfb22cfffed47c83257a1121575c8ceef260a5ba6b9ae38baadd13bea3b8e6b"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -841,13 +855,25 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # refresh, don't remove.
     #
     # Refreshed again by goal-vs-spec-divergence/task0029: every
-    # `finding_stable_id`-keyed fixture literal moves to the `origin_kind`
+    # retired-single-field-keyed fixture literal moves to the `origin_kind`
     # / `origin_id` pair (`_rework_phase_state`, the `--dry-run-apply`
     # canonical-invocation YAML builders), matching the validator's renamed
     # `SPEC_CHANGE_MANDATORY_FIELDS`. PINNED_VALIDATOR_TEST_LINE below is
     # unaffected and still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0004: origin_kind's
+    # closed vocabulary is enforced in
+    # workflow_replace_all_spec_change_reentry (FR6); a
+    # rework.spec-change question's evidence[] origin-naming obligation is
+    # enforced in validate_question (FR4); the packet schema's evidence
+    # field's retired single-field name is renamed to origin_id, and the
+    # retired name is removed from every comment. New
+    # TestOriginIdEvidenceRequirement /
+    # TestFailedItemCategoryVocabulary / TestOriginKindVocabulary classes
+    # cover the new enforcement. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "72ca53363da2e19a22a43d7768ea9bf3e533853b684f39a617caf58a2fa90007"
+        "ce7841c8e51a6de290289fede6647cc95997011c03f68f70c96d62d0df24b200"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

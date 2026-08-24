@@ -203,6 +203,27 @@ task0022 (D10 meets the consumed-flag-split): `TestCanonicalReentryInvocation.
 _patch_obj` (task0022's version still re-declared task0009 under `entries`;
 moved to `carried_task_ids`) -- see this module's own git history for the
 exact hunk, not restated as a separate docstring paragraph.
+
+rework-contract-drift/task0004 (FR3 validator half, FR4, FR6) adds three
+new test classes, covering this task's own AC-6 and AC-7:
+
+- `TestOriginKindVocabulary`: `workflow_replace_all_spec_change_reentry`
+  rejects an out-of-vocabulary `spec_change.origin_kind`, accepting only
+  `review` and `verify` (mirroring `classification`'s classifier/verdict/
+  decision vocabulary enforcement).
+- `TestFailedItemCategoryVocabulary`: the new
+  `_validate_verify_failed_items_categories` (wired into
+  `validate_workflow_patch`, unconditional on `--dry-run-apply`) rejects a
+  `workflow.yaml` verify-step `failed_items[]` entry whose `category` is
+  missing, empty, or out of the seven-value vocabulary
+  (IMPLEMENTATION.md Shared Components), accepting each of the seven.
+- `TestOriginIdEvidenceRequirement`: `validate_question` rejects a
+  `rework.spec-change` question with no `evidence[]` entry carrying a
+  non-empty `origin_id` (the mechanical half of `references/
+  question-resolution.md`'s Classification gate origin verification),
+  driven directly against the two new fixtures under
+  `references/fixtures/question-packet/origin-verification/` (also swept,
+  by exit code, through `TestFixtureCorpusDataDriven` above).
 """
 
 import importlib.util
@@ -2468,6 +2489,356 @@ class TestGateResolvedAnswerSource(unittest.TestCase):
         errors = VWO.validate_answer(answer)
         messages = " ".join(e["message"] for e in errors)
         self.assertIn("source", messages)
+
+
+# ---------------------------------------------------------------------------
+# rework-contract-drift/task0004 AC-6 (FR6): origin_kind's closed
+# vocabulary is enforced by the validator.
+# ---------------------------------------------------------------------------
+
+class TestOriginKindVocabulary(unittest.TestCase):
+    FEATURE = "example"
+
+    def _workflow(self, base_commit="deadbeef"):
+        return {
+            "feature": self.FEATURE,
+            "workflow": [
+                {"id": "create-plan", "status": "pending"},
+                {"id": "implement", "status": "pending", "base_commit": base_commit},
+            ],
+        }
+
+    def _phase_state(self, origin_kind):
+        return {
+            "phase": "rework",
+            "feature": self.FEATURE,
+            "spec_change": {
+                "reason": "x",
+                "origin_kind": origin_kind,
+                "origin_id": "abc",
+                "recorded_at_commit": "deadbeef",
+                "replan_authorized": True,
+            },
+        }
+
+    def test_review_origin_kind_accepted(self):
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(
+                self._workflow(), self._phase_state("review")
+            )
+        )
+
+    def test_verify_origin_kind_accepted(self):
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(
+                self._workflow(), self._phase_state("verify")
+            )
+        )
+
+    def test_out_of_vocabulary_origin_kind_rejected(self):
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(
+                self._workflow(), self._phase_state("audit")
+            )
+        )
+
+    def test_empty_origin_kind_rejected(self):
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(
+                self._workflow(), self._phase_state("")
+            )
+        )
+
+
+# ---------------------------------------------------------------------------
+# rework-contract-drift/task0004 AC-6 (FR3 validator half): a
+# `workflow.yaml` verify-step `failed_items[]` entry's `category` is
+# rejected when missing, empty, or out of the seven-value vocabulary
+# (IMPLEMENTATION.md Shared Components), and accepted for each of the
+# seven values -- enforced by `_validate_verify_failed_items_categories`,
+# wired into `validate_workflow_patch` unconditional on --dry-run-apply.
+# ---------------------------------------------------------------------------
+
+class TestFailedItemCategoryVocabulary(unittest.TestCase):
+    SEVEN_VALUES = (
+        "comprehensive",
+        "spec",
+        "security",
+        "performance",
+        "architecture",
+        "license",
+        "unknown",
+    )
+
+    def _workflow(self, category):
+        failed_item = {"id": "TS-1"}
+        if category is not _OMIT:
+            failed_item["category"] = category
+        return {
+            "feature": "example",
+            "workflow": [
+                {
+                    "id": "verify",
+                    "status": "pending",
+                    "failed_items": [failed_item],
+                },
+            ],
+        }
+
+    def _errors(self, category):
+        return VWO._validate_verify_failed_items_categories(
+            self._workflow(category)
+        )
+
+    def test_each_of_the_seven_values_accepted(self):
+        for value in self.SEVEN_VALUES:
+            with self.subTest(category=value):
+                self.assertEqual(self._errors(value), [])
+
+    def test_missing_category_rejected(self):
+        errors = self._errors(_OMIT)
+        self.assertTrue(errors)
+        self.assertIn("category", errors[0]["message"])
+
+    def test_empty_category_rejected(self):
+        errors = self._errors("")
+        self.assertTrue(errors)
+
+    def test_out_of_vocabulary_category_rejected(self):
+        errors = self._errors("not-a-real-category")
+        self.assertTrue(errors)
+
+    def test_no_verify_step_yields_no_errors(self):
+        workflow = {"feature": "example", "workflow": []}
+        self.assertEqual(
+            VWO._validate_verify_failed_items_categories(workflow), []
+        )
+
+    def test_no_failed_items_key_yields_no_errors(self):
+        workflow = {
+            "feature": "example",
+            "workflow": [{"id": "verify", "status": "pending"}],
+        }
+        self.assertEqual(
+            VWO._validate_verify_failed_items_categories(workflow), []
+        )
+
+    def test_wired_into_validate_workflow_patch_unconditional_on_dry_run(
+        self,
+    ):
+        # AC-6: the check runs on the invocation path that already reads
+        # --workflow, not only under --dry-run-apply.
+        patch = {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "append_rework",
+            "tasks_patch": {
+                "mode": "append",
+                "expected_next_task_id": "task0001",
+                "entries": {},
+            },
+            "step_patches": [],
+            "preserve": ["workflow.implement.base_commit"],
+        }
+        errors = VWO.validate_workflow_patch(
+            patch,
+            workflow=self._workflow("not-a-real-category"),
+            dry_run=False,
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("category", messages)
+
+
+_OMIT = object()
+
+
+# ---------------------------------------------------------------------------
+# rework-contract-drift/task0004 AC-7 (FR4): a `rework.spec-change`
+# question with no `evidence[]` entry carrying a non-empty `origin_id` is
+# rejected -- the mechanical half of `references/question-resolution.md`'s
+# Classification gate origin verification -- driven both directly against
+# `validate_question` and against the two new fixtures under
+# `references/fixtures/question-packet/origin-verification/`.
+# ---------------------------------------------------------------------------
+
+class TestOriginIdEvidenceRequirement(unittest.TestCase):
+    ORIGIN_VERIFICATION_DIR = (
+        FIXTURES_ROOT / "question-packet" / "origin-verification"
+    )
+
+    @staticmethod
+    def _question(evidence):
+        return {
+            "question_id": "rework.spec-change.probe",
+            "gate_id": "rework.spec-change",
+            "category": "spec-change",
+            "priority": "high",
+            "blocking": True,
+            "prompt": "p",
+            "header": "h",
+            "answer_mode": "freeform",
+            "options": [],
+            "why_needed": "w",
+            "on_unanswered": "block",
+            "evidence": evidence,
+        }
+
+    def test_evidence_with_origin_id_accepted(self):
+        errors = VWO.validate_question(
+            self._question([{"path": "x", "origin_id": "TS-9"}]), 0
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("evidence", messages)
+
+    def test_empty_evidence_list_rejected(self):
+        errors = VWO.validate_question(self._question([]), 0)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("origin_id", messages)
+
+    def test_evidence_entry_without_origin_id_rejected(self):
+        errors = VWO.validate_question(
+            self._question([{"path": "x", "line": 1, "detail": "d"}]), 0
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("origin_id", messages)
+
+    def test_empty_string_origin_id_rejected(self):
+        errors = VWO.validate_question(
+            self._question([{"path": "x", "origin_id": ""}]), 0
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("origin_id", messages)
+
+    def test_non_spec_change_gate_id_unaffected(self):
+        # Non-vacuity guard: the check is scoped to gate_id
+        # rework.spec-change, never applied to unrelated questions.
+        question = self._question([])
+        question["gate_id"] = "create-plan.tbd-resolution"
+        question["category"] = "tbd-resolution"
+        errors = VWO.validate_question(question, 0)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("origin_id", messages)
+
+    def test_valid_verify_origin_fixture_passes_via_cli(self):
+        case_dir = self.ORIGIN_VERIFICATION_DIR / "valid-verify-origin"
+        result = run_cli(
+            [
+                "--kind",
+                "question-packet",
+                "--worker",
+                "rework-planner",
+                "--input",
+                str(case_dir / "input.json"),
+            ]
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_invalid_missing_origin_id_fixture_rejected_naming_the_reason(
+        self,
+    ):
+        case_dir = self.ORIGIN_VERIFICATION_DIR / "invalid-missing-origin-id"
+        result = run_cli(
+            [
+                "--kind",
+                "question-packet",
+                "--worker",
+                "rework-planner",
+                "--input",
+                str(case_dir / "input.json"),
+            ]
+        )
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("origin_id", messages)
+
+
+# ---------------------------------------------------------------------------
+# rework-contract-drift/task0004 AC-2 (FR4, NFR3): owner-scoped absence
+# scan. Shared Components "Retired-identifier absence scan": reads live
+# files, covers this task's own closed path set (IMPLEMENTATION.md D3's
+# task0004 partition), and builds its search term at run time rather than
+# carrying it as a contiguous literal in its own source, so the scan never
+# matches itself.
+#
+# Stated exclusions (D3), never scanned here: this feature's own
+# feature-docs/rework-contract-drift/REQUIREMENTS.md and SPEC.md (which
+# name the retired field in order to require its removal), the completed
+# feature-docs/goal-vs-spec-divergence/ and test-docs/ records of the
+# previous feature (rewriting a delivered record would falsify history),
+# and git history.
+# ---------------------------------------------------------------------------
+
+class TestRetiredOriginIdentifierAbsenceScan(unittest.TestCase):
+    OWNED_PATHS = [
+        REPO_ROOT / "em-workflow" / "references" / "question-packet-schema.md",
+        REPO_ROOT / "em-workflow" / "references" / "question-resolution.md",
+        REPO_ROOT
+        / "em-workflow"
+        / "references"
+        / "contracts"
+        / "rework-planner-contract.md",
+        SCRIPT_PATH,
+        REPO_ROOT / "tests" / "test_classification_gate.py",
+        REPO_ROOT / "tests" / "test_worker_contract_docs.py",
+        REPO_ROOT / "tests" / "test_rework_synthesis_contract.py",
+        REPO_ROOT / "tests" / "test_question_resolution_doc.py",
+        REPO_ROOT / "tests" / "test_validate_worker_output.py",
+        REPO_ROOT / "tests" / "test_gate_option_vocabulary.py",
+        REPO_ROOT / "tests" / "test_spec_change_origin_binding.py",
+        REPO_ROOT / "tests" / "test_spec_change_replan_authorization.py",
+        REPO_ROOT / "tests" / "test_replanning_carry_over.py",
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        # Built at run time -- never a contiguous literal anywhere in this
+        # module's own source -- so this scan cannot match itself merely
+        # because it TALKS ABOUT the retired field.
+        cls.retired_field = "finding" + "_stable_id"
+
+    def _scan(self, paths):
+        offenders = []
+        for path in paths:
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            if self.retired_field in text:
+                offenders.append(str(path))
+        return offenders
+
+    def test_retired_field_absent_from_every_owned_file(self):
+        for path in self.OWNED_PATHS:
+            with self.subTest(path=str(path.relative_to(REPO_ROOT))):
+                self.assertEqual(self._scan([path]), [])
+
+    def test_fixtures_directory_is_scanned_recursively(self):
+        fixtures_root = REPO_ROOT / "em-workflow" / "references" / "fixtures"
+        offenders = self._scan(p for p in fixtures_root.rglob("*") if p.is_file())
+        self.assertEqual(offenders, [])
+
+    def test_scan_does_not_match_itself(self):
+        # Non-vacuity guard: the scan's own source file, read live, must
+        # not trip the matcher -- proving the search term genuinely never
+        # appears as a contiguous literal anywhere in this module.
+        this_file = REPO_ROOT / "tests" / "test_validate_worker_output.py"
+        self.assertNotIn(
+            self.retired_field, this_file.read_text(encoding="utf-8")
+        )
+
+    def test_negative_proof_scan_detects_a_planted_occurrence(self):
+        # Non-vacuity guard (Test Notes): the scan logic, applied to a
+        # synthetic file that DOES carry the retired field, must report
+        # it -- proving the absence above cannot pass vacuously.
+        with tempfile.TemporaryDirectory() as tmp:
+            planted = Path(tmp) / "planted.md"
+            planted.write_text(
+                f"evidence[].{self.retired_field} was here", encoding="utf-8"
+            )
+            self.assertEqual(self._scan([planted]), [str(planted)])
 
 
 if __name__ == "__main__":

@@ -72,8 +72,9 @@ both consumed values the worker under scrutiny supplied):
 
 The Classification gate's own step 3 (origin verification) rewrite --
 AC-5 through AC-7 -- is pinned in tests/test_classification_gate.py, per
-C4's one-module-per-section convention; question-packet-schema.md's new
-`finding_stable_id` field (AC-7's schema half) is pinned in
+C4's one-module-per-section convention; question-packet-schema.md's
+evidence-carried origin identifier field (renamed `origin_id` by
+rework-contract-drift/task0004, AC-7's schema half) is pinned in
 tests/test_worker_contract_docs.py, alongside that document's other field
 pins.
 
