@@ -266,6 +266,18 @@ create-plan フェーズの planner は、その step がエントリした時�
 この列挙は、所有 SSOT 自身がフェーズの自動再エントリを明記している遷移
 だけが対象という構成上の理由で網羅的であり、他の遷移はこの除外の対象外。
 
+**spec-change 遷移のゲート呼び出し（バッチのみ）**: バッチ実行でこの
+spec-change 遷移の question の `gate_id` が特定され、
+`references/question-resolution.md` の routed arm がそれを Classification
+gate へ送った直後、上記の Specification-change transition が定める 5 つの
+step のいずれも実行する前に、その Classification gate を呼ぶ — これが
+バッチにおける唯一の呼び出し位置。ゲートの verdict が stop
+（inapplicable の場合を含む）なら、5 つの step は 1 つも実行せずその時点
+で run を停止し、理由を記録する。verdict が proceed のときだけ、5 つの
+step が続けて実行される。interactive はこの改訂で変更しない — ユーザーへ
+直接質問する既存の挙動のままであり、新しい interactive の質問は追加され
+ない。
+
 一方、`create-spec.stalled` の選択肢 3（create-spec を `needs_update` として
 中断する）が設定する `needs_update` は正真正銘のユーザー介入待ちであり、
 停止条件 3 はそこでは通常どおり発火する。workflow.yaml 単独では create-spec

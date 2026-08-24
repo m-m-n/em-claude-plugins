@@ -138,7 +138,7 @@ resolution_note: null
 ### `source` vocabulary
 
 `user`, `batch-decision-table`, `batch-codex-consultation`,
-`batch-safe-default`.
+`batch-safe-default`, `batch-classification-gate`.
 
 ### Consistency rules
 
