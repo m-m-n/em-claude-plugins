@@ -1,11 +1,11 @@
 schema_version: 1
 feature: goal-vs-spec-divergence
 phase: rework
-status: dispatching
+status: completed
 generation: 4
 base_revision: 08a86cbb21e94dd842d8073ab440b575f698cff7
 last_input_digest: sha256:03bc82fa41594191ca908593d70913a9e391acc9205e02b1e571f6b123d81d7d
-active_request_id: rework-run-0004
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -18,9 +18,9 @@ worker_runs:
   input_digest: null
   output_digest: null
 - request_id: rework-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:03bc82fa41594191ca908593d70913a9e391acc9205e02b1e571f6b123d81d7d
-  output_digest: null
+  output_digest: sha256:f65fd9d0454c3cb634d4fba9bb3492a53fba1d76ff71c634e67a68a3d7901ff9
 - request_id: rework-run-0003
   status: completed
   input_digest: sha256:c25861f787e0c79c4944eb428ef1998a25607ec2e88cc32583aa37e589af3656
@@ -47,7 +47,26 @@ artifacts:
 - path: feature-docs/goal-vs-spec-divergence/IMPLEMENTATION.md
   sha256: sha256:5558e5644b11307e818a82ef84eb3c606d86e6a8e1c50716db013b22bffb19d9
   produced_by: rework-run-0003
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0027.md
+  sha256: sha256:c4cc4369340e2931bd3b9fd0f3049dbafdd510f2b5e1d53b3011f620ce426ef6
+  produced_by: rework-run-0004
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0028.md
+  sha256: sha256:97274b6889cefe29985a19f43642cf96e473824dbeda4fb539362bac41831628
+  produced_by: rework-run-0004
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0029.md
+  sha256: sha256:cce0dd74acc0d88922f077ca377d49890004ab3951bcfcbd220ffacd420edd99
+  produced_by: rework-run-0004
+- path: feature-docs/goal-vs-spec-divergence/VERIFICATION.md
+  sha256: sha256:b5bfb477051755ab37c97cb90818eb67bfac1535adaf23482a293aaaeb9180d4
+  produced_by: rework-run-0004
+- path: feature-docs/goal-vs-spec-divergence/IMPLEMENTATION.md
+  sha256: sha256:5e1db06c796aebdb73500d892d624a9af1e566a09def711078668e6bb8327ea7
+  produced_by: rework-run-0004
 patches:
+- patch_id: rework-run-0004-p0001
+  status: applied
+  base_input_digest: sha256:03bc82fa41594191ca908593d70913a9e391acc9205e02b1e571f6b123d81d7d
+  base_workflow_blob: 7f95c14e2588ba489866b48d94a4c624b260a996
 - patch_id: rework-run-0003-p0001
   status: applied
   base_input_digest: sha256:c25861f787e0c79c4944eb428ef1998a25607ec2e88cc32583aa37e589af3656
@@ -113,8 +132,8 @@ protocol_slips:
   lesson: レビュー結果の記録更新など orchestrator 側の書き込みも、worker の dispatch 窓の外で行う必要がある
 next_action:
   phase: implement
-  what: verify 由来の rework バッチ（V-1〜V-6）。task0027 以降で計画し、implement を pending に戻す
-  next_task_id: task0027
-  note: 'review round 4 は completed（残存 critical/high 8 件は batch の rework 上限到達により deferred）。verify
-    が fail し、batch.verify_rework_count == 0 のため自動 rework を 1 回だけ実行する。失敗項目は workflow.yaml の
-    verify.failed_items にあり、それぞれ round4.yaml の findings に紐づけてある。'
+  what: task0027〜task0029 の 3 本を実装する。verify 由来の rework バッチ（V-1〜V-6）
+  next_task_id: task0030
+  note: 'batch.review_rework_count と batch.verify_rework_count がどちらも 1（上限）に達している。implement
+    完了後は verify に進み、そこで再度 fail した場合は failed のまま停止して報告する（自動 rework は残っていない）。review
+    は completed のままで、再レビューは行わない。'
