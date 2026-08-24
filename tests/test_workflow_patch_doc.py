@@ -32,6 +32,21 @@ future relaxation of `workflow-patch.md` -- which this feature's D1 requires
 to stay byte-identical -- fails loudly. Scoped to the permission-conditions
 section and the application-rule list so an occurrence of the same words
 elsewhere in the document cannot satisfy them.
+
+task0022 (goal-vs-spec-divergence, review round 3, finding
+consumed-flag-split) updates the Re-planning path's second-case wording:
+the re-entry signal is a `spec_change` record carrying an unspent
+re-planning authorization, and `consumed`'s value is explicitly no longer
+part of the condition (AC-2). The pre-existing
+`test_pending_reentry_case_states_recognizable_signal` and
+`TestReplanningReentrySignalStrengthenedRound2.test_unspent_authorization_
+definition_stated` (formerly `test_unconsumed_definition_stated`) are
+updated in place to pin the new wording; their retained halves -- reading
+position, feature-match requirement, fail-closed fallback -- are unchanged
+by this task. tests/test_spec_change_replan_authorization.py is the
+dedicated cross-document module for this task's two-flag rule (phase-
+state.md, workflow-patch.md, skills/develop/SKILL.md and the validator
+together).
 """
 
 import re
@@ -501,11 +516,14 @@ class TestReplanningPathWidenedForSpecChangeReentry(unittest.TestCase):
 
     def test_pending_reentry_case_states_recognizable_signal(self):
         # task0017 (review round 2 rework) supersedes this wording: the
-        # signal is now an UNCONSUMED spec_change record, not merely one
-        # "present" -- see TestReplanningReentrySignalStrengthenedRound2
-        # below for the rest of this task's own pins.
+        # signal is now a spec_change record carrying an unspent
+        # re-planning authorization, not merely one "present" -- see
+        # TestReplanningReentrySignalStrengthenedRound2 below for the rest
+        # of this task's own pins. task0022 (review round 3,
+        # consumed-flag-split) supersedes the "unconsumed" wording further
+        # -- see TestReplanningPathReadsReplanAuthorizedNotConsumed below.
         self.assertIn(
-            "an **unconsumed** `spec_change` record",
+            "carrying an **unspent re-planning authorization**",
             self.normalized,
         )
         self.assertIn(
@@ -531,7 +549,7 @@ class TestReplanningPathWidenedForSpecChangeReentry(unittest.TestCase):
             "existing `merged` tasks."
         )
         self.assertNotIn(
-            "an **unconsumed** `spec_change` record",
+            "carrying an **unspent re-planning authorization**",
             synthetic_old_wording,
         )
         self.assertNotIn(
@@ -686,13 +704,24 @@ class TestReplanningReentrySignalStrengthenedRound2(unittest.TestCase):
             self.normalized,
         )
 
-    def test_unconsumed_definition_stated(self):
+    def test_unspent_authorization_definition_stated(self):
+        # task0022 (review round 3, consumed-flag-split) supersedes this
+        # test's pre-task0022 name and wording (formerly
+        # test_unconsumed_definition_stated, pinning `consumed`) -- the
+        # signal is now `replan_authorized`, never `consumed`.
         self.assertIn(
-            '"Unconsumed" means the record carries `reason`, '
-            "`finding_stable_id` and `recorded_at_commit`",
+            "An unspent re-planning authorization means the record "
+            "carries `reason`, `finding_stable_id` and `recorded_at_commit`",
             self.normalized,
         )
-        self.assertIn("`consumed` is `false`", self.normalized)
+        self.assertIn(
+            "carries `replan_authorized` as a boolean", self.normalized
+        )
+        self.assertIn("`replan_authorized` is `true`", self.normalized)
+        self.assertIn(
+            "`consumed`'s value plays no part in this decision",
+            self.normalized,
+        )
 
     def test_fail_closed_fallback_to_initial_planning_stated(self):
         self.assertIn(
@@ -707,7 +736,8 @@ class TestReplanningReentrySignalStrengthenedRound2(unittest.TestCase):
     def test_negative_proof_pre_change_wording_lacks_all_of_the_above(self):
         # Non-vacuity: the pre-task0017 wording (task0013's own text) states
         # none of these -- it never named a reading position, never
-        # required a feature match, and never defined "unconsumed".
+        # required a feature match, and never defined an authorization
+        # signal.
         synthetic_old_wording = (
             "`create-plan` reads `pending` on a re-entry recognizable as "
             "having come through a `create-spec: needs_update` cycle -- "
@@ -725,7 +755,8 @@ class TestReplanningReentrySignalStrengthenedRound2(unittest.TestCase):
             synthetic_old_wording,
         )
         self.assertNotIn(
-            '"Unconsumed" means the record carries', synthetic_old_wording
+            "An unspent re-planning authorization means the record carries",
+            synthetic_old_wording,
         )
         self.assertNotIn(
             "the invocation falls back to the Initial-planning path's rule",
