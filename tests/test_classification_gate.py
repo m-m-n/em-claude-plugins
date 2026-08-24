@@ -45,6 +45,29 @@ scrutiny controlled which file the origin check opened):
   row itself -- is pinned in tests/test_worker_contract_docs.py.)
 - AC-9 (NFR3, partial): the new `finding_stable_id` abort states its
   reason is recorded.
+
+task0025 acceptance criteria (feature-docs/goal-vs-spec-divergence review
+round3 rework AC-1, AC-3, AC-5 -- the gate's outcome closes its question):
+
+- AC-1 (FR7, NFR1): the new step 11 ("Outcome") is the one place stating
+  what the proceed and stop verdicts each write to the packet and to the
+  answer model, citing the field shapes from
+  `references/question-packet-schema.md` (answer object) and
+  `references/phase-state.md` (`packets[]` / `packets[].questions[]`)
+  rather than restating them. (The Batch resolution sequence's citation of
+  this step, and the cross-section non-duplication guard, are pinned in
+  tests/test_question_resolution_doc.py, alongside the section that cites
+  it -- C4.)
+- AC-2 (FR7): the proceed bullet names `source: batch-classification-gate`.
+  (The schema/validator vocabulary-agreement half of AC-2 is pinned in
+  tests/test_gate_outcome_packet_lifecycle.py, which is this task's own
+  new cross-document module -- C4.)
+- AC-3 (NFR3): no packet resolved by this gate -- proceed, stop, or
+  inapplicable -- is left `issued`; the status each outcome leaves is
+  named (`answered` on proceed, `obsolete` on stop/inapplicable).
+- AC-5 (NFR3): the stop bullet cites the classification audit record
+  (step 9) for the stop's reason and evidence rather than defining a
+  second record.
 """
 
 import os
@@ -432,6 +455,141 @@ class TestClassificationGate(unittest.TestCase):
             "`finding_stable_id`".lower(),
             fake_section.lower(),
         )
+
+    # --- task0025 AC-1/AC-2/AC-3/AC-5: the "Outcome" step (step 11) --------
+
+    def _outcome_step_section(self):
+        section = self._gate_section()
+        start = section.index("**Outcome.**")
+        return section[start:]
+
+    def test_outcome_step_present_and_non_empty(self):
+        # Non-vacuity guard (Test Notes): the section exists and carries
+        # content before any content matcher below is trusted.
+        section = self._outcome_step_section()
+        self.assertTrue(section.strip())
+        self.assertGreater(len(section), len("**Outcome.**"))
+
+    def test_outcome_step_is_the_one_place_stating_packet_effects(self):
+        section = self._norm(self._outcome_step_section())
+        self.assertIn(
+            "what each verdict writes to the packet and to the answer "
+            "model is stated here, in this one place",
+            section,
+        )
+
+    def test_outcome_step_cites_owning_documents_rather_than_restating(self):
+        section = self._outcome_step_section()
+        self.assertIn("`references/question-packet-schema.md`'s answer object", section)
+        self.assertIn(
+            "`references/phase-state.md`'s `packets[].questions[]`", section
+        )
+        self.assertIn("`references/phase-state.md`'s `packets[]`", section)
+
+    # --- AC-2: proceed writes one answer record with the gate's source ----
+
+    def test_proceed_writes_one_answer_record_with_gate_source(self):
+        section = self._outcome_step_section()
+        self.assertIn("**Proceed.**", section)
+        norm_section = self._norm(section)
+        self.assertIn(
+            "one answer record", norm_section
+        )
+        self.assertIn("`source: batch-classification-gate`", section)
+        self.assertIn("`resolution_note`", section)
+
+    def test_proceed_names_the_answered_status(self):
+        section = self._norm(self._outcome_step_section())
+        self.assertIn(
+            "the question's per-question `status`".lower(), section
+        )
+        self.assertIn("becomes `answered`", section)
+        self.assertIn(
+            "the packet's own `status` follows the same rule any other "
+            "fully-answered packet follows",
+            section,
+        )
+
+    # --- AC-3/AC-5: stop writes no answer record, closes the packet -------
+
+    def test_stop_writes_no_answer_record(self):
+        section = self._outcome_step_section()
+        self.assertIn("**Stop.**", section)
+        norm_section = self._norm(section)
+        self.assertIn("no answer record is written", norm_section)
+
+    def test_stop_names_the_obsolete_status(self):
+        section = self._norm(self._outcome_step_section())
+        self.assertIn("becomes `obsolete`", section)
+        self.assertIn("never re-presents it", section)
+
+    def test_stop_cites_the_audit_record_not_a_second_record(self):
+        # AC-5 (NFR1): the stop's reason/evidence are the audit record
+        # (step 9) above, not a newly defined second record.
+        section = self._norm(self._outcome_step_section())
+        self.assertIn(
+            "the stop's reason and the evidence considered are the audit "
+            "record above",
+            section,
+        )
+        self.assertIn("nothing is duplicated into a second record", section)
+
+    def test_inapplicable_closes_by_the_stop_rule(self):
+        section = self._norm(self._outcome_step_section())
+        self.assertIn("**inapplicable**".lower(), section)
+        self.assertIn(
+            "the packet is closed by the stop rule immediately above",
+            section,
+        )
+
+    def test_no_packet_resolved_by_gate_left_issued(self):
+        section = self._norm(self._outcome_step_section())
+        self.assertIn(
+            "no packet resolved by this gate", section
+        )
+        self.assertIn(
+            "on proceed, on stop, or in the inapplicable case", section
+        )
+        self.assertIn("is left `issued`", section)
+
+    # --- AC-6 (this task's own new matchers): negative proofs -------------
+
+    def test_negative_twin_missing_answer_record_language_fails(self):
+        # A synthetic Outcome step that changes packet status but never
+        # mentions writing an answer record must not satisfy the proceed
+        # matcher above.
+        fake_section = (
+            "**Outcome.**\n"
+            "- **Proceed.** The question's per-question `status` becomes "
+            "`answered`."
+        )
+        self.assertNotIn("one answer record", fake_section.lower())
+
+    def test_negative_twin_packet_still_issued_fails(self):
+        # A synthetic Outcome step that leaves the packet `issued` after a
+        # stop must not satisfy either the `obsolete`-status matcher or the
+        # "no packet resolved by this gate ... left issued" matcher above.
+        fake_section = (
+            "**Outcome.**\n"
+            "- **Stop.** The packet's own `status` stays `issued` until a "
+            "human resumes the run."
+        )
+        self.assertNotIn("becomes `obsolete`", fake_section)
+        self.assertNotIn(
+            "no packet resolved by this gate", fake_section.lower()
+        )
+
+    # --- section position (extends the existing position pins above) -----
+
+    def test_outcome_step_precedes_batch_resolution_sequence(self):
+        outcome_idx = self.text.index("**Outcome.**")
+        sequence_idx = self.text.index("## Batch resolution sequence")
+        self.assertLess(outcome_idx, sequence_idx)
+
+    def test_outcome_step_follows_unattended_run_continuity(self):
+        continuity_idx = self.text.index("**Unattended-run continuity.**")
+        outcome_idx = self.text.index("**Outcome.**")
+        self.assertLess(continuity_idx, outcome_idx)
 
     # --- Constraints: forbidden literals (C6a, C6b) -------------------------
 
