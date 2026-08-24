@@ -225,8 +225,8 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'unconfirmed reds: AC-3's two absence assertions already passed pre-change (the old Initial-planning branch under-cited rather than over-restated), compensated with negative-proof tests that fire against synthetic violating samples; AC-6 is a suite-health criterion, verified by running the suite rather than by a red test.'
     branch: em-workflow/rework-contract-drift/task0007
   task0008:
     title: 'Patch-apply state checks: evidence-based recovery, scoped category enforcement'
