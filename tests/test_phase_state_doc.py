@@ -804,12 +804,37 @@ class TestClassificationAuditRecord(unittest.TestCase):
     def test_cites_question_resolution_doc_instead_of_restating_the_rule(self):
         self.assertIn("references/question-resolution.md", self.table_row)
 
-    def test_idempotency_uses_the_spec_change_replace_wholesale_exemption(self):
+    def test_classification_no_longer_appears_in_the_id_uniqueness_exemption(self):
+        # task0029 (goal-vs-spec-divergence) AC-3: classification leaves
+        # the wholesale-replacement exemption (it is now an append-only
+        # list, never rewritten or removed) -- this supersedes the
+        # pre-task0029 test_idempotency_uses_the_spec_change_replace_
+        # wholesale_exemption, which pinned exactly the reading this task
+        # removes. The retention half (spec_change's own exemption, which
+        # this task does not touch) stays asserted below.
         section = self.idempotency_section
-        self.assertIn("classification", section)
         self.assertIn("spec_change", section)
         self.assertIn("wholesale", section)
         self.assertIn("not a protocol error", section)
+        self.assertNotIn("classification", section)
+
+    def test_classification_row_states_append_semantics_not_wholesale_replacement(self):
+        # task0029 AC-3: the field-table row's own wholesale-replacement
+        # sentence is gone, replaced by an append statement.
+        row = self.table_row
+        self.assertIn("list", row.lower())
+        self.assertIn("append", row.lower())
+        self.assertIn("never rewritten or removed", row)
+        self.assertNotIn("replaces the record wholesale", row)
+        self.assertNotIn("the same exemption `spec_change` uses", row)
+
+    def test_classification_schema_example_is_a_yaml_list(self):
+        # task0029 AC-3: the schema example itself shows `classification`
+        # as a `-`-prefixed list entry, not a bare mapping.
+        self.assertIn("classification:", self.schema_block)
+        idx = self.schema_block.index("classification:")
+        after = self.schema_block[idx : idx + 200]
+        self.assertIn("\n  - classifier:", after)
 
 
 class TestClassificationAuditRecordNegativeProof(unittest.TestCase):
@@ -874,6 +899,43 @@ class TestSpecChangeFlagPairSchemaBlock(unittest.TestCase):
         # Non-vacuity: the slice must not have accidentally run past
         # spec_change into the classification record's own fields.
         self.assertNotIn("classifier:", self.record_block)
+
+
+class TestSpecChangeOriginPairSchemaBlock(unittest.TestCase):
+    """task0029 (goal-vs-spec-divergence) AC-5 (FR6): the `spec_change`
+    schema example block shows `origin_kind` / `origin_id` in place of
+    `finding_stable_id`. The row-level citation of `references/
+    rework-task-synthesis.md` for the pair's meaning lives in
+    tests/test_spec_change_replan_authorization.py
+    (TestOriginPairAcceptsReviewAndVerify), the dedicated cross-document
+    module for this task's validator-facing checks -- not duplicated
+    here (same split TestSpecChangeFlagPairSchemaBlock above already
+    established for task0022's flag pair)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        schema_start = cls.text.index("## Schema")
+        fence_end = cls.text.index("\n```\n", schema_start)
+        schema_block = cls.text[schema_start:fence_end]
+        spec_change_idx = schema_block.index("spec_change:")
+        classification_idx = schema_block.index("classification:")
+        cls.record_block = schema_block[spec_change_idx:classification_idx]
+
+    def test_origin_kind_and_origin_id_present_in_order(self):
+        self.assertIn("origin_kind:", self.record_block)
+        self.assertIn("origin_id:", self.record_block)
+        self.assertLess(
+            self.record_block.index("origin_kind:"),
+            self.record_block.index("origin_id:"),
+        )
+
+    def test_finding_stable_id_is_gone_from_the_schema_example(self):
+        self.assertNotIn("finding_stable_id", self.record_block)
+
+    def test_non_vacuity_a_synthetic_pre_rename_block_would_still_carry_it(self):
+        pre_rename_block = "spec_change:\n  finding_stable_id: abc123\n"
+        self.assertIn("finding_stable_id", pre_rename_block)
 
 
 if __name__ == "__main__":

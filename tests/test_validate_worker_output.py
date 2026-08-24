@@ -2055,7 +2055,8 @@ class TestReplanningReentrySignalHelper(unittest.TestCase):
             "feature": self.FEATURE,
             "spec_change": {
                 "reason": "x",
-                "finding_stable_id": "abc",
+                "origin_kind": "review",
+                "origin_id": "abc",
                 "recorded_at_commit": "deadbeef",
                 "consumed": False,
                 "replan_authorized": True,
@@ -2109,7 +2110,7 @@ class TestReplanningReentrySignalHelper(unittest.TestCase):
         )
 
     def test_spec_change_missing_mandatory_field_is_not_a_reentry(self):
-        for missing in ("reason", "finding_stable_id", "recorded_at_commit"):
+        for missing in ("reason", "origin_kind", "origin_id", "recorded_at_commit"):
             with self.subTest(missing=missing):
                 phase_state = self._rework_phase_state()
                 del phase_state["spec_change"][missing]
@@ -2192,7 +2193,8 @@ class TestReplanningReentrySignalHelper(unittest.TestCase):
                 f"feature: {self.FEATURE}\n"
                 "spec_change:\n"
                 "  reason: x\n"
-                "  finding_stable_id: abc\n"
+                "  origin_kind: review\n"
+                "  origin_id: abc\n"
                 "  recorded_at_commit: deadbeef\n"
                 "  consumed: false\n"
                 "  replan_authorized: true\n",
@@ -2322,7 +2324,8 @@ class TestCanonicalReentryInvocation(unittest.TestCase):
                 f"feature: {self.FEATURE}\n"
                 "spec_change:\n"
                 "  reason: x\n"
-                "  finding_stable_id: abc\n"
+                "  origin_kind: review\n"
+                "  origin_id: abc\n"
                 "  recorded_at_commit: deadbeef\n"
                 "  consumed: false\n"
                 "  replan_authorized: true\n",
@@ -2383,7 +2386,8 @@ class TestCanonicalReentryInvocation(unittest.TestCase):
                 f"feature: {self.FEATURE}\n"
                 "spec_change:\n"
                 "  reason: x\n"
-                "  finding_stable_id: abc\n"
+                "  origin_kind: review\n"
+                "  origin_id: abc\n"
                 "  recorded_at_commit: deadbeef\n"
                 "  consumed: false\n"
                 "  replan_authorized: true\n",
