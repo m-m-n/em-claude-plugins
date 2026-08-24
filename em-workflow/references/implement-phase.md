@@ -397,7 +397,11 @@ Triggered whenever a launched implementer's `Task()` call returns.
    existing acceptance criterion would otherwise be dropped: the path
    being added; the identifier of the acceptance criterion or requirement
    that would otherwise be dropped — an `AC-n` of the reporting task's own
-   plan, or a requirement id already registered in `workflow.yaml`; and
+   plan, restricted the same way as the requirement id below: existence
+   means the AC-n was already present in that plan document as written by
+   create-plan / rework-planner, never something the reporting
+   implementer's own branch added to the plan document — or a requirement
+   id already registered in `workflow.yaml`; and
    how it fails without the path, stated as an observable outcome (a named
    test that cannot be written or cannot pass), never as a preference. The
    named identifier must resolve to something that exists — for a
@@ -409,13 +413,18 @@ Triggered whenever a launched implementer's `Task()` call returns.
    `is_safe_relative_path` does not check for symlink escapes, and no
    such check is claimed — applied here by
    the orchestrator itself before the append, not merely asserted by the
-   report; and it must not fall under a workflow control path
-   (`.claude/**`, `em-workflow/hooks/**`, `em-workflow/scripts/**`,
-   `em-workflow/agents/**`, `em-workflow/skills/**` — these
-   `em-workflow/**` entries are paths relative to the plugin root, not a
-   project-relative namespace — `CLAUDE.md`, `.github/workflows/**`,
-   `feature-docs/*/workflow.yaml`, or `feature-docs/*/phase-state/**`)
-   — such a path is never
+   report; and it must not fall under a workflow control path — matched,
+   like every other `tasks.*.files` entry, as a project-relative path:
+   `.claude/**`, `em-workflow/**` (the whole plugin tree —
+   `references/**`, `.claude-plugin/**`, `hooks/**`, `scripts/**`,
+   `agents/**`, `skills/**`, and so on, not individually enumerated),
+   `CLAUDE.md` (including nested occurrences), `.github/workflows/**`,
+   `feature-docs/*/workflow.yaml`, `feature-docs/*/phase-state/**`, or
+   `feature-docs/*/tasks/**`.
+   When the target repository is this plugin's own repository,
+   `em-workflow/**` matches its project-relative occurrences there
+   exactly as any other path does — this rule is not suspended for that
+   case. Such a path is never
    auto-added regardless of how the other two parts read. A deviation
    failing any one of these parts — a missing identifier, an identifier
    that resolves to nothing or was not already registered, a path that

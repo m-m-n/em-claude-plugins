@@ -207,7 +207,15 @@ sequence's policy lookup or its Unlisted-gate fallback.
       (`references/question-packet-schema.md`'s answer object) is written
       for it, carrying `source: batch-classification-gate` and a
       `resolution_note` naming the verdict and the audit record above
-      (step 9) it belongs to. The question's per-question `status`
+      (step 9) it belongs to. Its `answer_mode` echoes the question's own
+      `answer_mode`, and its `selected_option_ids` names the option the
+      question itself defines for the "specification changes" side of this
+      gate's question shape (step 4) — the option's definition belongs to
+      the question's issuing site (`references/question-packet-schema.md`),
+      not to this step. When no such option exists among the question's
+      `options[].option_id`, this is a protocol error: the gate does not
+      proceed, and Stop below applies instead. The question's per-question
+      `status`
       (`references/phase-state.md`'s `packets[].questions[]`) becomes
       `answered`, and the packet's own `status` follows the same rule any
       other fully-answered packet follows.
