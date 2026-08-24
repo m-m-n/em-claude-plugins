@@ -156,12 +156,16 @@ def _digest_source():
 
 
 def _phase_state():
-    # A rework-shaped phase-state carrying the unconsumed spec_change
-    # record the re-planning path's second re-entry case reads
+    # A rework-shaped phase-state carrying an authorized (unspent)
+    # spec_change record the re-planning path's second re-entry case reads
     # (workflow-patch.md's `replace_all` permission conditions) -- needed
     # so `is_replanning` is True and the carry-over checks below actually
     # run (they are scoped to the Re-planning path, never the
-    # Initial-planning one).
+    # Initial-planning one). `replan_authorized: True` is the re-planning
+    # permission signal (task0022, review round 3, consumed-flag-split) --
+    # `consumed` grounds a DIFFERENT judgement (stop-condition-3
+    # suppression) and is never read for this one, but is kept here since
+    # a real record always carries both flags.
     return {
         "phase": "rework",
         "feature": "example",
@@ -170,6 +174,7 @@ def _phase_state():
             "finding_stable_id": "abc123",
             "reason": "SPEC changed after implementation to add a missed requirement",
             "recorded_at_commit": "deadbeef",
+            "replan_authorized": True,
         },
     }
 

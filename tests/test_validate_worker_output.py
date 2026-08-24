@@ -157,6 +157,42 @@ initial-planning rule (FR6 never held):
   `replan_authorized` forces rejection, regardless of `consumed`).
   `valid-replace-all-replanning-merged-tasks` gains `replan_authorized:
   true` alongside its existing `consumed: false`.
+
+task0023 (feature-docs/goal-vs-spec-divergence review round 3, D10) revises
+task0017's "entries must re-declare every registered id" form: a
+re-planning `replace_all` now carries an already-registered id in
+`tasks_patch.carried_task_ids` (record copied from `workflow.yaml`
+verbatim) rather than re-declaring its body under `tasks_patch.entries`.
+Covers task0023 Acceptance Criteria
+(feature-docs/goal-vs-spec-divergence/tasks/task0023.md):
+
+- AC-3: `TestReplanningCarryOverEnforcement` -- a new
+  `invalid-replace-all-replanning-entry-for-registered-id` fixture pins the
+  `replace-all-entry-for-registered-id` identifier (an `entries` key naming
+  a registered id), reported alone. The other two AC-3 rejections
+  (`carried_task_ids` omitting a registered id; a new id at or below the
+  high-water mark) are `replace-all-drops-task` (re-grounded, see
+  `TestReplanningMandatoryPreserveAndTaskIdAllocation` above) and the
+  unchanged `replace-all-task-id-reused`.
+- AC-4: field-by-field carry-over (the applied workflow's carried task
+  record equals the pre-apply record, including `files`) is proven directly
+  against `apply_patch()` in `tests/test_replanning_carry_over.py`, not
+  re-tested here (this module stops at the validator's error-identifier
+  surface, C4).
+- AC-6: `valid-replace-all-replanning-merged-tasks`'s `entries` stop
+  re-issuing `task0009` -- it moves to `carried_task_ids` instead (a
+  positive demonstration of the rule, not a counter-example pinned as
+  valid); `invalid-replace-all-replanning-drops-existing-task` is
+  re-grounded on an empty `carried_task_ids` rather than an incomplete
+  `entries`. `test_corrected_replanning_merged_tasks_fixture_passes` and
+  `test_drops_existing_registered_task_id_rejected` above still assert
+  both fixtures by name.
+
+Also touched by task0023 as a necessary follow-on of the merge with
+task0022 (D10 meets the consumed-flag-split): `TestCanonicalReentryInvocation.
+_patch_obj` (task0022's version still re-declared task0009 under `entries`;
+moved to `carried_task_ids`) -- see this module's own git history for the
+exact hunk, not restated as a separate docstring paragraph.
 """
 
 import importlib.util
@@ -1837,9 +1873,16 @@ class TestReplaceAllCreatePlanEntryStatus(unittest.TestCase):
 class TestReplanningMandatoryPreserveAndTaskIdAllocation(unittest.TestCase):
     """task0017 (goal-vs-spec-divergence, review round 2 rework), AC-3 /
     AC-5: on the re-planning path, `workflow.implement.base_commit` is
-    mandatory in `preserve`, and `entries` must re-declare every task id
-    already registered in workflow.yaml -- new ids allocated above the
-    highest registered one."""
+    mandatory in `preserve`, and new ids are allocated above the highest
+    registered one.
+
+    task0023 (review round 3, D10) re-grounds
+    `test_drops_existing_registered_task_id_rejected` below on
+    `tasks_patch.carried_task_ids` instead of `tasks_patch.entries` -- a
+    re-planning `replace_all` no longer re-declares a registered id's body
+    under `entries` at all (see `TestReplanningCarryOverEnforcement`
+    below); omitting the id from `carried_task_ids` is what the
+    `replace-all-drops-task` identifier now names."""
 
     def _run(self, case_name):
         case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / case_name
@@ -1897,6 +1940,62 @@ class TestReplanningMandatoryPreserveAndTaskIdAllocation(unittest.TestCase):
         payload = json.loads(result.stdout)
         codes = {e["code"] for e in payload["errors"]}
         self.assertEqual(codes, {"replace-all-not-permitted"})
+
+
+class TestReplanningCarryOverEnforcement(unittest.TestCase):
+    """task0023 (goal-vs-spec-divergence, review round 3), AC-3: the
+    validator's carry-over declaration checks (workflow-patch.md's
+    "Re-planning task-id allocation" section / D10) -- three independently
+    reported rejections, exercised each by its own fixture so a case
+    proving one never rides along with the other two:
+
+    - `entries` naming an id already registered in `workflow.yaml`
+      (`replace-all-entry-for-registered-id`), pinned here.
+    - `carried_task_ids` omitting a registered id
+      (`replace-all-drops-task`), already pinned by
+      `TestReplanningMandatoryPreserveAndTaskIdAllocation.
+      test_drops_existing_registered_task_id_rejected` above -- re-grounded
+      on `carried_task_ids` rather than `entries` by this task's fixture
+      edit, not re-tested a second time here.
+    - a new id in `entries` at or below the high-water mark
+      (`replace-all-task-id-reused`) -- unchanged behaviour, no dedicated
+      fixture in this group; covered structurally by the max-id computation
+      carried over unmodified from task0017.
+    """
+
+    def _run(self, case_name):
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / case_name
+        return run_cli(build_case_args("workflow-patch", "replace_planning", case_dir))
+
+    def test_entry_for_registered_id_rejected(self):
+        result = self._run("invalid-replace-all-replanning-entry-for-registered-id")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertIn("replace-all-entry-for-registered-id", codes)
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("task0009", messages)
+
+    def test_entry_for_registered_id_rejected_for_exactly_one_reason(self):
+        # Test Notes: each of AC-3's three rejections must report exactly
+        # one error identifier -- a fixture that also trips the drop check
+        # or the reused-id check would not isolate the finding this AC
+        # names.
+        result = self._run("invalid-replace-all-replanning-entry-for-registered-id")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-entry-for-registered-id"})
+
+    def test_carried_task_ids_field_present_and_correct_in_the_new_fixture(self):
+        # Sanity check on the fixture itself: carried_task_ids DOES list the
+        # registered id (so the failure is isolated to the entries-side
+        # re-declaration, not to an incidentally-also-missing carry).
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / "invalid-replace-all-replanning-entry-for-registered-id"
+        input_data = json.loads((case_dir / "input.json").read_text(encoding="utf-8"))
+        tasks_patch = input_data["tasks_patch"]
+        self.assertEqual(tasks_patch["carried_task_ids"], ["task0009"])
+        self.assertIn("task0009", tasks_patch["entries"])
 
 
 class TestReplanningReentrySignalHelper(unittest.TestCase):
@@ -2155,6 +2254,11 @@ class TestCanonicalReentryInvocation(unittest.TestCase):
         }
 
     def _patch_obj(self, base_input_digest):
+        # task0023 (goal-vs-spec-divergence, review round 3, D10): a
+        # re-planning replace_all carries an already-registered id
+        # (task0009) in tasks_patch.carried_task_ids rather than
+        # re-declaring its body under tasks_patch.entries -- entries names
+        # only the genuinely new task0010.
         return {
             "base_input_digest": base_input_digest,
             "base_workflow_blob": "8f17c04",
@@ -2165,17 +2269,8 @@ class TestCanonicalReentryInvocation(unittest.TestCase):
             "schema_version": 1,
             "step_patches": [],
             "tasks_patch": {
+                "carried_task_ids": ["task0009"],
                 "entries": {
-                    "task0009": {
-                        "complexity": "low",
-                        "domains": [],
-                        "files": ["x.go"],
-                        "initial_status": "pending",
-                        "plan": "tasks/task0009.md",
-                        "requirements": ["FR1"],
-                        "skills": [],
-                        "title": "existing",
-                    },
                     "task0010": {
                         "complexity": "medium",
                         "domains": ["api-contract"],
