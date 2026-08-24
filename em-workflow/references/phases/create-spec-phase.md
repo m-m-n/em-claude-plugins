@@ -198,13 +198,38 @@ untouched:
 - each step's `status` and `completed_at_commit`, except the statuses the
   SPEC-change transition itself assigns;
 - `workflow.implement.base_commit`;
-- `project` and `requirements`;
+- `project`;
 - `goal` (carved out separately below).
 
+**The `requirements` upsert**: `requirements` is not in the untouched list
+above. On this same re-entry it is rebuilt from spec-writer's `spec_index`
+— the same source the first construction uses
+(`references/workflow-schema.md` defines the requirement entry's shape,
+cited here and not restated) — under three rules:
+
+- an id present in the new `spec_index` and absent from `workflow.yaml` is
+  created, with its `title`, `status`, `tbd_reason` and `excluded_reason`
+  from the index and empty `tasks` and `tests`;
+- an id present in both keeps its `tasks` and `tests` arrays exactly as
+  they are; only the fields `spec_index` owns — `title`, `status`,
+  `tbd_reason` and `excluded_reason` — are refreshed from it. A requirement
+  that merged tasks already reference does not lose that reference;
+- an id present in `workflow.yaml` and absent from the new `spec_index`
+  gets exactly one outcome: its entry is kept in `workflow.yaml` exactly as
+  it is, so the id stays resolvable for any merged task whose
+  `requirements` names it. No wording here permits dropping such an entry.
+
+This upsert happens during create-spec, before the re-planning patch that
+follows it is validated — which is what makes a re-planning task entry
+naming a newly added requirement id acceptable when that patch is applied.
+
 What the re-entry DOES write: the create-spec artifacts this phase
-produces, and the step statuses the transition assigns. The re-planning
-path in `references/workflow-patch.md` depends on this survival; that
-document's rules are cited here, never restated.
+produces, and the `requirements` upsert above.
+
+The step statuses the transition assigns are also part of what the
+re-entry writes. The re-planning path in `references/workflow-patch.md`
+depends on this survival; that document's rules are cited here, never
+restated.
 
 **The `goal` field**: `references/workflow-schema.md` defines its schema and
 semantics — cited here, not restated.
