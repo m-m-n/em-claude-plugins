@@ -398,8 +398,20 @@ integration worktree（implement-phase.md の Branch & Worktree Model 参照）�
    excluded_reason）としてレポートに明記する
 4. 結果サマリを workflow.yaml の verify step に記録
    （`result: pass|fail`、失敗項目リスト）→ Step B の規律どおり
-   commit-docs.sh でコミット
-5. fail → verify を `failed` にし、AskUserQuestion で差し戻し先を確認
+   commit-docs.sh でコミット。失敗項目を記録する時点で、orchestrator は
+   その項目の `category` を確定する — 対応する failing な検証シナリオと、
+   `verification_index`（`references/rework-task-synthesis.md` 参照）を
+   通してそのシナリオが写像する要件 ID から導出する。根拠が不十分、
+   シナリオが要件に写像しない、矛盾する、またはセキュリティ・ライセンス
+   上の懸念を排除できない場合は sentinel 値を割り当てる。`category` の
+   定義・必須性・閉じた語彙は `references/workflow-schema.md` の
+   `failed_items[].category` 節が唯一の定義元であり、ここでは繰り返さ
+   ない
+5. verify フェーズは `category` がどの値であっても中断しない — sentinel
+   を含め、すべてのケースを classification gate まで到達させる。gate 側
+   の中断は `references/question-resolution.md` の Classification gate
+   節が定義し、ここでは記述しない
+6. fail → verify を `failed` にし、AskUserQuestion で差し戻し先を確認
    （implement へ rework / review へ / 中断）。「implement へ rework」を
    選んだ場合は `${CLAUDE_PLUGIN_ROOT}/references/rework-task-synthesis.md`
    Section 10 が定める verify 由来の遷移に従う（`needs_rework` は review
