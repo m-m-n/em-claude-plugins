@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: b1333f06a3aa2dfe09be04f55558bd9d47174f30
 last_input_digest: sha256:8e1e2981f0b2440aeaa6c0eadd3bb0089c62bd2aa0f83b5a1d60def8a3165de9
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -146,7 +146,7 @@ answers:
       `unknown` sentinel and the gate-side placement of the fail-closed rule.
 worker_runs:
   - request_id: create-spec-run-0002
-    status: dispatched
+    status: completed
     input_digest: sha256:8e1e2981f0b2440aeaa6c0eadd3bb0089c62bd2aa0f83b5a1d60def8a3165de9
     output_digest: null
   - request_id: create-spec-run-0001
