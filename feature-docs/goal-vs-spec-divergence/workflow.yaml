@@ -47,9 +47,53 @@ workflow:
   status: completed
   completed_at_commit: dfc015a0e2249947ae9f44375d1ccb961e1f5932
 - id: verify
-  status: in_progress
-  result: null
-  failed_items: []
+  status: failed
+  result: fail
+  failed_items:
+  - id: V-1
+    criterion: MV-3 / SC-7
+    detail: workflow-patch.md の適用規則本数が 2 つの consumer に再掲されたままドリフトしている。SSOT は 17 本だが create-plan-phase.md:18
+      と contracts/planner-contract.md:99 は sixteen のまま。create-plan の検証範囲の目安がこの本数なので、16 と読んだ実装は規則 17（carried_task_ids
+      の carry-over 義務）を落とす。SC-7『ドキュメントは SSOT を引用し規則を再掲しない』が成立していない。
+    findings:
+    - 750f0246a0ef131a
+    - ac80a0334fd58a39
+  - id: V-2
+    criterion: MV-5 / SC-4
+    detail: origin verification は finding_stable_id を 1 件要求するだけで、照合対象そのものを untrusted な worker 出力（question
+      packet の evidence[]）が選ぶ。同一ラウンドに security / license の finding と良性の finding が並ぶ場合、良性の ID だけを名指せば検査を通過し、保護対象の
+      origin は一度も検査されないまま classification gate に到達する。MV-5『security / license / irreversible の各 arm から classification
+      gate へ到達できる経路が無いこと』が成立していない。
+    findings:
+    - e04b7c2915da683f
+  - id: V-3
+    criterion: SC-1 / FR7
+    detail: verify 由来の rework は failed item の ID しか持たないため origin verification を通過できず必ず abort する。FR7『batch
+      では rework.spec-change に到達する every case が分類ゲートを通る』が成立しない。phase-state の spec_change.finding_stable_id
+      も埋められないため FR4/FR6 が開いた再計画ルートにも乗れない。
+    findings:
+    - 112aadaef68d8fd8
+  - id: V-4
+    criterion: SC-1 / FR4・FR5・FR6
+    detail: 再計画 replace_all の唯一の生産者である implementation-planner が carried_task_ids と高位番号採番を知らない（プロンプトにも
+      planner-contract.md にも記述が無く、採番指示は task0001 からのまま）。生成されるパッチは validator に必ず拒否されるため、この feature の中心動線である『merged
+      タスクを保持したままの再計画』が一度も通らない。
+    findings:
+    - da9f5137cf823e35
+  - id: V-5
+    criterion: SC-1 / FR4
+    detail: replan_authorized を false にする書き手がどのドキュメントにも割り当てられていない。SKILL.md は workflow-patch.md の Re-planning
+      path を指すが、そこはフラグを読むだけで書き戻し手順が無い。authorization が恒久的に true のまま残り、FR4『create-plan pending パスの条件は不変』が崩れる。
+    findings:
+    - 4c4cdbf7dbb5c61f
+    - 6b3cf01264fe8136
+    - 795711cc9c7857e7
+  - id: V-6
+    criterion: SC-1 / FR14・NFR3
+    detail: classification 監査レコードが『one record per pass』と言いながら pass ごとに全置換される。2 回以上通過すると先の classifier /
+      verdict / evidence_ids / decision が消え、FR14 の every case と NFR3『停止したときの理由と根拠が記録として残る』が成立しない。
+    findings:
+    - 6b3cf01264fe8136
 - id: retrospect
   status: pending
 tasks:
