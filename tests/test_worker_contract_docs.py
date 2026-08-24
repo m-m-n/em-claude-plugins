@@ -1205,22 +1205,35 @@ class TestReworkPlannerContractSpecChangeCitation(unittest.TestCase):
         self.assertIn("falls to the unlisted-gate fallback", fake_section)
         self.assertIn("aborts rather than proceeding", fake_section)
 
-    def test_states_packet_names_stable_id_via_finding_stable_id_field(self):
-        # task0019 AC-8 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45):
-        # the packet names stable_ids through the structured
-        # `evidence[].finding_stable_id` field, never the record path.
+    def test_states_packet_names_origins_via_finding_stable_id_field(self):
+        # task0019 AC-8 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45),
+        # generalized by task0028: the packet names its origin(s) through
+        # the structured `evidence[].finding_stable_id` field -- now stated
+        # as the origin_kind/origin_id pair, covering both review- and
+        # verify-sourced origins -- never the record path.
         section = re.sub(r"\s+", " ", self._transition_section())
         self.assertIn(
             "The question packet returned for `gate_id: rework.spec-change` "
-            "names each originating review finding's `stable_id` in the "
-            "question's `evidence[].finding_stable_id` entries",
+            "names its origin(s) — the `origin_kind` / `origin_id` pair "
+            "`references/rework-task-synthesis.md`'s Invariant 6 defines "
+            "(cited, not restated) — via `evidence[].finding_stable_id`",
             section,
         )
         self.assertIn(
             "the gate's origin verification "
-            "(`references/question-resolution.md`) locates that record "
-            "itself",
+            "(`references/question-resolution.md`) locates its own bound "
+            "set itself",
             section,
+        )
+
+    def test_old_review_only_packet_naming_wording_is_gone(self):
+        # Negative proof (task0028 AC-8): the pre-task0028 wording, which
+        # named review findings alone as the packet's origin vocabulary,
+        # must not survive anywhere in the document.
+        self.assertNotIn(
+            "names each originating review finding's `stable_id` in the "
+            "question's `evidence[].finding_stable_id` entries",
+            self.text,
         )
 
     def test_states_packet_does_not_name_the_record_path(self):
@@ -1269,7 +1282,7 @@ class TestReworkPlannerContractSpecChangeCitation(unittest.TestCase):
             "not restate."
         )
         self.assertNotIn(
-            "names each originating review finding's `stable_id`",
+            "names its origin(s)",
             fake_section,
         )
 
