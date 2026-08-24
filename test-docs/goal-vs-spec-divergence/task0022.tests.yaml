@@ -1,0 +1,112 @@
+task_id: task0022
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests/test_spec_change_replan_authorization.py::TestPhaseStateDefinesBothFlagsInOnePlace
+      - tests/test_spec_change_replan_authorization.py::TestPhaseStateDefinesBothFlagsInOnePlaceNegativeProof
+      - tests/test_phase_state_doc.py::TestSpecChangeFlagPairSchemaBlock
+    red_confirmed: false
+    red_reason: >
+      phase-state.md's row/schema-block edit and these pin tests were
+      authored together (implementation before test); never run against the
+      pre-edit document to observe a failure. Structurally verified
+      post-hoc: the negative-proof class confirms the assertions fail
+      against a synthetic single-flag sample, giving indirect confidence,
+      not an observed red-then-green cycle.
+
+  AC-2:
+    tests:
+      - "tests/test_workflow_patch_doc.py::TestReplanningPathWidenedForSpecChangeReentry::test_pending_reentry_case_states_recognizable_signal"
+      - "tests/test_workflow_patch_doc.py::TestReplanningPathWidenedForSpecChangeReentry::test_new_case_matcher_fails_on_needs_update_only_wording"
+      - "tests/test_workflow_patch_doc.py::TestReplanningReentrySignalStrengthenedRound2::test_unspent_authorization_definition_stated"
+      - "tests/test_workflow_patch_doc.py::TestReplanningReentrySignalStrengthenedRound2::test_negative_proof_pre_change_wording_lacks_all_of_the_above"
+      - tests/test_spec_change_replan_authorization.py::TestWorkflowPatchReadsReplanAuthorizationNotConsumed
+    red_confirmed: false
+    red_reason: >
+      workflow-patch.md's wording change and its pin-test updates were made
+      in the same edit pass, never run against the pre-edit document. The
+      negative-proof test confirms the matcher rejects the superseded
+      "unconsumed" wording, but that is indirect structural evidence, not
+      an observed red-then-green cycle.
+
+  AC-3:
+    tests:
+      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_missing_consumed_field_does_not_block_reentry"
+      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_consumed_true_no_longer_blocks_reentry"
+      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_replan_authorized_missing_is_not_a_reentry"
+      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_replan_authorized_false_is_not_a_reentry"
+      - "tests/test_validate_worker_output.py::TestReplanningReentrySignalHelper::test_replan_authorized_non_boolean_is_not_a_reentry"
+      - tests/test_spec_change_replan_authorization.py::TestValidatorReadsReplanAuthorizedNotConsumed
+    red_confirmed: false
+    red_reason: >
+      the validator's helper was edited before these unit tests, so they
+      were never observed failing against the pre-edit implementation.
+      Partial indirect evidence exists: updating the helper before updating
+      two unrelated pre-existing fixtures (invalid-replace-all-replanning-
+      missing-base-commit-preserve, invalid-replace-all-replanning-drops-
+      existing-task) produced a genuine observed red of 4 pre-existing
+      tests (see AC-6's red_reason), resolved only by adding
+      replan_authorized to those fixtures -- confirming the helper now
+      actually runs replan_authorized-only logic -- but that is not itself
+      a red-then-green proof of the specific tests listed here.
+
+  AC-4:
+    tests:
+      - "tests/test_spec_change_replan_authorization.py::TestReentryOrdering::test_replace_all_accepted_after_create_spec_dispatch_consumed_the_record"
+      - "tests/test_spec_change_replan_authorization.py::TestReentryOrdering::test_same_sequence_without_the_consumed_mark_is_also_accepted"
+      - "em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-after-create-spec-dispatch (fixture, exercised via TestFixtureCorpusDataDriven)"
+    red_confirmed: false
+    red_reason: >
+      the ordering test was written and first run only after
+      workflow_replace_all_spec_change_reentry already read
+      replan_authorized; it passed on its first run. Never run against the
+      pre-task0022 (consumed-keyed) implementation to observe the failure
+      this AC exists to prevent -- FR6 never held in this exact sequence
+      before this task.
+
+  AC-5:
+    tests:
+      - tests/test_spec_change_replan_authorization.py::TestSkillDevelopStatesTwoConsumptionPointsSeparately
+    red_confirmed: false
+    red_reason: >
+      SKILL.md's addition and this pin test were written together; never
+      run against the pre-edit SKILL.md to observe a failure.
+
+  AC-6:
+    tests:
+      - "tests/test_validate_worker_output.py::TestFixtureCorpusDataDriven::test_every_fixture_matches_its_declared_exit_code"
+      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_corrected_replanning_merged_tasks_fixture_passes"
+      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_drops_existing_registered_task_id_rejected"
+      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_missing_base_commit_preserve_on_replanning_path_rejected"
+      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_missing_base_commit_preserve_rejected_for_exactly_one_reason"
+      - "tests/test_validate_worker_output.py::TestReplanningMandatoryPreserveAndTaskIdAllocation::test_spent_replan_authorization_record_is_rejected"
+    red_confirmed: true
+    red_reason: >
+      genuinely observed: after updating workflow_replace_all_spec_change_
+      reentry to require replan_authorized but before adding that field to
+      invalid-replace-all-replanning-missing-base-commit-preserve/phase-
+      state.json and invalid-replace-all-replanning-drops-existing-task/
+      phase-state.json, the suite failed with 4 real errors -- two
+      "AssertionError: 0 != 1" (missing-base-commit-preserve, both direct
+      assertions), a wrong error-code set for drops-existing-task
+      (replace-all-not-permitted instead of replace-all-drops-task), and
+      test_every_fixture_matches_its_declared_exit_code failing for the
+      missing-base-commit-preserve case. Adding replan_authorized: true to
+      both fixtures' phase-state.json turned all four green.
+
+  AC-7:
+    tests:
+      - "python3 -m unittest discover -s tests (full suite)"
+      - "tests/test_gate_option_vocabulary.py::TestFrozenMachineReadSurface::test_workflow_patch_md_byte_identical"
+      - "tests/test_gate_option_vocabulary.py::TestFrozenMachineReadSurface::test_validate_worker_output_py_byte_identical"
+      - "tests/test_gate_option_vocabulary.py::TestFrozenMachineReadSurface::test_test_validate_worker_output_py_byte_identical"
+    red_confirmed: true
+    red_reason: >
+      genuinely observed: the full-suite run after all doc/validator/test
+      edits failed with 3 AssertionErrors showing the old sha256 != the new
+      sha256 for workflow-patch.md, validate-worker-output.py and
+      test_validate_worker_output.py. Updated the three SHA256 constants
+      (with dated refresh comments explaining what changed) and the full
+      suite (2022 tests) went green.

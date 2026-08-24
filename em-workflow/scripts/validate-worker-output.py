@@ -711,8 +711,13 @@ def workflow_find_step(workflow, step_id):
     return None
 
 
-# AC-1/AC-2 (task0017, review round 2 rework): the mandatory fields
-# references/phase-state.md defines for an unconsumed `spec_change` record.
+# AC-1/AC-2 (task0017, review round 2 rework); wording updated task0022
+# (review round 3, consumed-flag-split): the mandatory fields references/
+# phase-state.md defines for a `spec_change` record eligible for
+# re-planning. `replan_authorized` is checked separately below (its own
+# boolean-type + True check) -- it is the flag that carries the
+# re-planning authorization judgement. `consumed` is never consulted here
+# (references/phase-state.md's `spec_change` flag pair).
 SPEC_CHANGE_MANDATORY_FIELDS = ("reason", "finding_stable_id", "recorded_at_commit")
 
 
@@ -773,16 +778,22 @@ def workflow_replace_all_spec_change_reentry(workflow, phase_state, feature_dir=
     2. Its `feature` matches `workflow`'s own `feature`.
     3. It carries a `spec_change` record shaped as `references/
        phase-state.md` defines: `reason`, `finding_stable_id` and
-       `recorded_at_commit` present and non-empty, and `consumed` present.
-    4. `consumed` is `False` -- a record already marked consumed is spent,
-       not a standing permission.
+       `recorded_at_commit` present and non-empty, and `replan_authorized`
+       present as a boolean.
+    4. `replan_authorized` is `True` -- an authorization already spent
+       (`False`) is not a standing permission. `consumed` is never
+       consulted for this judgement: `references/phase-state.md`'s
+       `spec_change` flag pair keeps the two flags independent, and this
+       helper's re-planning-authorization check does not read `consumed`
+       (task0022, review round 3, consumed-flag-split).
     5. `workflow.implement.base_commit` is already set (implementation has
        actually started at least once before).
 
     Fails closed on every one of these: a missing signal, a phase or feature
-    mismatch, a malformed or already-consumed record is NOT this form -- the
-    caller must fall back to treating the patch as the initial-planning
-    path. A narrower invocation must never widen what replace_all permits."""
+    mismatch, a malformed record, or a `replan_authorized` that is absent,
+    non-boolean or spent is NOT this form -- the caller must fall back to
+    treating the patch as the initial-planning path. A narrower invocation
+    must never widen what replace_all permits."""
     rework_state = resolve_rework_phase_state(phase_state, feature_dir)
     if rework_state is None:
         return False
@@ -793,9 +804,10 @@ def workflow_replace_all_spec_change_reentry(workflow, phase_state, feature_dir=
         return False
     if not all(spec_change.get(f) for f in SPEC_CHANGE_MANDATORY_FIELDS):
         return False
-    if "consumed" not in spec_change:
+    replan_authorized = spec_change.get("replan_authorized")
+    if not isinstance(replan_authorized, bool):
         return False
-    if spec_change.get("consumed") is not False:
+    if replan_authorized is not True:
         return False
     implement_step = workflow_find_step(workflow, "implement")
     base_commit = implement_step.get("base_commit") if implement_step else None

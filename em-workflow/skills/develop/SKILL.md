@@ -294,6 +294,13 @@ create-spec 実行が `completed` に達したか `needs_update` / `failed` で
 直後は記録が必ず消費済みになっているため、停止条件 3 は通常どおり発火
 してユーザーへ制御が返る。
 
+この `consumed` は停止条件 3 の抑制にのみ用いられ、再計画 `replace_all`
+の許可可否とは別のフラグが担う別の消費点を持つ判断である —
+`references/phase-state.md` が定義するもう一方のフラグ
+`replan_authorized` は、この create-spec の dispatch では消費されず、
+消費されるのは再計画 `replace_all` パッチが適用された時点である
+（`references/workflow-patch.md` の Re-planning path 参照）。
+
 **create-plan が `in_progress` を経ない理由**（design-system backfill と
 は別の理由）:
 - `replace_all` パッチは create-plan がこの 2 つのエントリ status の

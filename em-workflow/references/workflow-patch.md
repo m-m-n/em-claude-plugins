@@ -79,20 +79,24 @@ neither is rejected:
   `merged` tasks. Either of two states satisfies this path:
   - the `create-plan` step is `needs_update`, OR
   - `create-plan` reads `pending` on a re-entry recognizable as having come
-    through a `create-spec: needs_update` cycle — the signal is an
-    **unconsumed** `spec_change` record (`references/phase-state.md`)
-    together with `workflow.implement.base_commit` already being set. The
-    record is read from `{feature-dir}/phase-state/rework.yaml`, or from a
-    `--phase-state` mapping whose own `phase` is `rework` (an equivalent
-    source for a caller that already has that file open) — either source's
-    mapping must also carry a `feature` matching the workflow's `feature`.
-    "Unconsumed" means the record carries `reason`, `finding_stable_id` and
-    `recorded_at_commit` (all non-empty), carries `consumed`, and
-    `consumed` is `false` — a record already marked `consumed: true` is
-    spent, not a standing permission. Any one of these conditions missing
-    means this is not the second case: the invocation falls back to the
-    Initial-planning path's rule (fail-closed — a narrower invocation never
-    widens what `replace_all` permits). The SPEC-change transition
+    through a `create-spec: needs_update` cycle — the signal is a
+    `spec_change` record (`references/phase-state.md`) carrying an
+    **unspent re-planning authorization** together with
+    `workflow.implement.base_commit` already being set. The record is read
+    from `{feature-dir}/phase-state/rework.yaml`, or from a `--phase-state`
+    mapping whose own `phase` is `rework` (an equivalent source for a
+    caller that already has that file open) — either source's mapping must
+    also carry a `feature` matching the workflow's `feature`. An unspent
+    re-planning authorization means the record carries `reason`,
+    `finding_stable_id` and `recorded_at_commit` (all non-empty), carries
+    `replan_authorized` as a boolean, and `replan_authorized` is `true` —
+    a record whose authorization is already spent (`replan_authorized:
+    false`) is not a standing permission. `consumed`'s value plays no part
+    in this decision (`references/phase-state.md`'s `spec_change` flag
+    pair). Any one of these conditions missing means this is not the
+    second case: the invocation falls back to the Initial-planning path's
+    rule (fail-closed — a narrower invocation never widens what
+    `replace_all` permits). The SPEC-change transition
     (`references/rework-task-synthesis.md` Section 10) sets `create-plan`
     to `pending`, not `needs_update` — this second case is the state that
     transition actually produces, which is why the first case alone does
