@@ -40,7 +40,7 @@ workflow:
   status: completed
   completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
 - id: implement
-  status: pending
+  status: in_progress
   base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
   completed_at_commit: 24da58cf9d3f779309934f831048ecc567cb09f3
 - id: review
@@ -762,9 +762,9 @@ tasks:
     - NFR1
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0027
   task0028:
     title: origin identity, and who chooses what gets checked
     plan: tasks/task0028.md
@@ -789,9 +789,9 @@ tasks:
     - NFR2
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0028
   task0029:
     title: the phase-state records' writer, origin and lifetime
     plan: tasks/task0029.md
@@ -820,9 +820,9 @@ tasks:
     - NFR3
     - NFR5
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/goal-vs-spec-divergence/task0029
 review:
   status: completed
   rounds_completed: 4
