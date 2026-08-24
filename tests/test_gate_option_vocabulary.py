@@ -700,16 +700,8 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # every registered id" rule, and the Application rules list gains rule
     # 17 for it. Same rationale as the two refreshes above: refresh, don't
     # remove.
-    #
-    # Refreshed again by goal-vs-spec-divergence/task0022 (review round 3
-    # rework, finding consumed-flag-split): the Re-planning path's second
-    # case now reads a `spec_change` record carrying an UNSPENT
-    # RE-PLANNING AUTHORIZATION (`replan_authorized`) instead of an
-    # unconsumed record -- `consumed`'s value is explicitly excluded from
-    # the decision (references/phase-state.md's `spec_change` flag pair).
-    # Same rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "4b3c2ca5cfe65eb484135d7822d411a58a286ffa31d6b0713e00019ca007a85a"
+        "59dbf4316130de2bd3e04a842439cd06209190256d15ea79090f5b4f49ef4d0b"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -730,14 +722,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # into `_validate_dry_run_apply`'s `replace_all` branch. Same rationale:
     # refresh, don't remove.
     #
-    # Refreshed again by goal-vs-spec-divergence/task0022 (review round 3
-    # rework, finding consumed-flag-split):
-    # `workflow_replace_all_spec_change_reentry` now checks
-    # `spec_change.replan_authorized` (present, boolean, `True`) for the
-    # re-planning-authorization judgement and no longer consults
-    # `consumed` at all. Same rationale: refresh, don't remove.
+    # Refreshed again by goal-vs-spec-divergence/task0024 (review round 3,
+    # AC-4/AC-5): the gate registry's category binding gains the reverse
+    # direction -- `_gate_ids_for_category` plus the category -> gate_id
+    # check inside `validate_question`, closing the direction where
+    # `category: spec-change` paired with an unregistered or
+    # worker-unattributed `gate_id` previously passed with no error. Same
+    # rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "46178e718c463a3b536c19482609ab3e3c2bab80e3d771c9301da7c08f76762e"
+        "1f2e963d02ad7af13c68fa90c2e2dce785e00b9794143a77decec4dec196ea73"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -747,16 +740,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # rationale as the two refreshes above: refresh, don't remove --
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
     #
-    # Refreshed again by goal-vs-spec-divergence/task0022 (review round 3
-    # rework, finding consumed-flag-split): TestReplanningReentrySignal
-    # Helper's `consumed`-keyed cases are renamed/re-pointed at
-    # `replan_authorized` (`consumed: true` no longer blocks re-entry), new
-    # `replan_authorized` direction cases are added, and
-    # `test_consumed_spec_change_record_is_rejected` is renamed/re-pointed
-    # at the new `invalid-replace-all-replan-authorization-spent` fixture.
-    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    # Refreshed again by goal-vs-spec-divergence/task0024 (review round 3,
+    # AC-4/AC-5): TestGateRegistryDerivation gains the rework.spec-change
+    # registration pins, and TestSpecChangeCategoryGateBidirectionalBinding
+    # is new, proving the category -> gate_id direction the validator gains
+    # above. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "ac863469232ec1ef0d8302be1de1fdc340357819ba26dbd13b9876d6ed03a7f0"
+        "c36a9403950235c4d46190577a19cbc3424853ac9259768eb0a412728d822e79"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

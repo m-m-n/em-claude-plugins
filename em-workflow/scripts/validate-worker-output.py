@@ -562,6 +562,29 @@ def build_gate_registry(references_dir):
     return registry
 
 
+def _gate_ids_for_category(gate_registry, category):
+    """goal-vs-spec-divergence/task0024 (AC-4/AC-5): the reverse of
+    `_category_for_gate_id` -- every gate_id in `gate_registry` a contract's
+    own "## Gate identifiers" section attributes to a worker (never an
+    orchestrator-opened, worker-unattributed gate_id -- see
+    `_worker_gate_ids_from_contracts`'s docstring for why that distinction
+    matters) AND whose suffix derives exactly `category`. `rework.spec-change`
+    lands here once `rework-planner-contract.md`'s own section attributes it
+    (this is what AC-4 requires: the registry entry, not a restated
+    sentence). Returns an empty set for a `category` with no such
+    worker-attributed gate_id -- callers must treat that as "no
+    category -> gate_id constraint today", never as "reject every gate_id",
+    so an as-yet-unattributed category stays unconstrained rather than
+    universally rejected."""
+    if not category:
+        return set()
+    return {
+        gate_id
+        for gate_id, entry in (gate_registry or {}).items()
+        if entry.get("worker") is not None and entry.get("category") == category
+    }
+
+
 # ---------------------------------------------------------------------------
 # extend_only comparability (design-input.md 5.4.2)
 #
@@ -872,6 +895,24 @@ def validate_question(q, index, *, gate_registry=None, packet_phase=None, packet
                             f"{entry['required_option_id']!r} to be offered among options",
                         )
                     )
+        # goal-vs-spec-divergence/task0024 (AC-5): the check above only
+        # constrains gate_id -> category, and only when gate_id is itself
+        # a registered entry -- a category: spec-change question paired
+        # with an unregistered, or worker-attributed-but-uncategorized,
+        # gate_id passed through with no error. Close the missing
+        # direction: category -> gate_id, derived the same way (never a
+        # hardcoded gate_id literal here) from the same registry, via
+        # whichever worker-attributed gate_id(s) that category's suffix
+        # binds to.
+        required_gate_ids = _gate_ids_for_category(gate_registry, q.get("category"))
+        if required_gate_ids and gate_id not in required_gate_ids:
+            errors.append(
+                err(
+                    "category",
+                    f"{p}.category {q.get('category')!r} requires gate_id to be one of "
+                    f"{sorted(required_gate_ids)}, got {gate_id!r}",
+                )
+            )
     if q.get("category") not in CATEGORY_VALUES:
         errors.append(err("category", f"{p}.category must be one of the fixed vocabulary"))
     if q.get("priority") not in PRIORITY_VALUES:
