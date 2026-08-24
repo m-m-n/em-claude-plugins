@@ -291,27 +291,65 @@ class TestClassificationGate(unittest.TestCase):
         self.assertLess(applicability_idx, origin_idx)
         self.assertLess(origin_idx, classifier_idx)
 
-    def test_origin_verification_requires_stable_id_and_round_record(self):
+    def test_origin_verification_requires_naming_its_origins(self):
+        # task0028 AC-4: naming is stated generically ("origin(s)"), never
+        # narrowed to review findings alone -- so a verify-sourced origin
+        # is not excluded by the naming requirement's own wording.
         section = self._norm(self._origin_verification_section())
         self.assertIn(
-            "must name the originating review finding(s) by `stable_id`".lower(),
-            section,
-        )
-        self.assertIn(
-            "the review round record that carries them".lower(), section
+            "must name the origin(s) it is derived from".lower(), section
         )
 
-    def test_origin_verification_reads_category_from_record_not_worker_set(
+    def test_old_review_only_naming_wording_is_gone(self):
+        # Negative proof (task0028 AC-4): the pre-task0028 wording that
+        # required a review `stable_id` as the only admissible origin must
+        # not survive anywhere in the document.
+        self.assertNotIn(
+            "must name the originating review finding(s) by `stable_id`",
+            self.text,
+        )
+
+    def test_old_review_only_naming_negative_proof_would_be_caught(self):
+        # Non-vacuity guard: the matcher above must actually flag the
+        # pre-task0028 wording it supersedes.
+        fake_section = (
+            "**Origin verification.** Before the question reaches "
+            "classification, it must name the originating review "
+            "finding(s) by `stable_id`."
+        )
+        self.assertIn(
+            "must name the originating review finding(s) by `stable_id`",
+            fake_section,
+        )
+
+    def test_origin_verification_reads_category_from_bound_set_not_worker_set(
         self,
     ):
+        # task0028 AC-2: the check reads every BOUND-SET member's category
+        # (not just the origins the packet named), never the packet's own
+        # worker-set `category`.
         section = self._norm(self._origin_verification_section())
         self.assertIn(
-            "the orchestrator reads each named finding's `category` from "
-            "that record".lower(),
+            "the orchestrator reads every bound-set member's `category` "
+            "from the located source".lower(),
             section,
         )
         self.assertIn(
             "never from the question's own worker-set `category`".lower(),
+            section,
+        )
+
+    def test_check_target_explicitly_not_derived_from_evidence_or_packet(
+        self,
+    ):
+        # task0028 AC-2: an explicit statement that the check target is not
+        # derived from the question packet or any other worker-supplied
+        # field.
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "never over only the origins the packet named, and never "
+            "derived from `evidence[]` or any other worker-supplied "
+            "field".lower(),
             section,
         )
 
@@ -320,8 +358,9 @@ class TestClassificationGate(unittest.TestCase):
     ):
         section = self._norm(self._origin_verification_section())
         self.assertIn(
-            "aborts when any originating finding's category is `security` "
-            "or `license`".lower(),
+            "aborts, regardless of what the packet named, when any "
+            "bound-set member's category is `security` or "
+            "`license`".lower(),
             section,
         )
         self.assertIn(
@@ -330,16 +369,62 @@ class TestClassificationGate(unittest.TestCase):
             section,
         )
 
-    def test_origin_verification_aborts_on_absent_unresolvable_or_unmatched_origin(
+    def test_origin_verification_aborts_on_absent_unresolvable_or_not_bound_set_member(
         self,
     ):
+        # task0028 AC-3 (direction 1): an origin named by the packet that
+        # is not in the bound set aborts.
         section = self._norm(self._origin_verification_section())
         self.assertIn(
-            "an origin that is absent, unresolvable, or does not match a "
-            "finding in the named record also aborts".lower(),
+            "an origin that is absent, unresolvable, or not a member of "
+            "the bound set admits nothing, and the run aborts here".lower(),
             section,
         )
         self.assertIn("fail-closed", section)
+
+    def test_old_finding_scoped_wording_is_gone(self):
+        # Negative proof (task0028 AC-2/AC-3): the pre-task0028 wording,
+        # which read category from a single "named finding" and aborted
+        # only on a packet/record mismatch (never over the whole bound
+        # set), must not survive anywhere in the document.
+        self.assertNotIn(
+            "the orchestrator reads each named finding's `category` from "
+            "that record",
+            self.text,
+        )
+        self.assertNotIn(
+            "does not match a finding in the named record also aborts",
+            self.text,
+        )
+
+    def test_old_finding_scoped_wording_negative_proof_would_be_caught(self):
+        # Non-vacuity guard: the matchers above must actually flag the
+        # pre-task0028 wording they supersede.
+        fake_section = (
+            "The orchestrator reads each named finding's `category` from "
+            "that record — never from the question's own worker-set "
+            "`category` — and aborts when any originating finding's "
+            "category is `security` or `license`. An origin that is "
+            "absent, unresolvable, or does not match a finding in the "
+            "named record also aborts."
+        )
+        self.assertIn(
+            "the orchestrator reads each named finding's `category` from "
+            "that record".lower(),
+            fake_section.lower(),
+        )
+        self.assertIn(
+            "does not match a finding in the named record also aborts".lower(),
+            fake_section.lower(),
+        )
+
+    def test_both_abort_directions_marked_final_and_non_overridable(self):
+        # task0028 AC-3: both directions are marked non-overridable, in the
+        # wording the existing abort arms already use (the Precedence
+        # reservation's "final and non-overridable" phrasing).
+        section = self._norm(self._origin_verification_section())
+        self.assertIn("final and non-overridable", section)
+        self.assertIn("this abort is likewise final and non-overridable", section)
 
     def test_origin_verification_records_reason_and_evidence_no_unanswerable_confirmation(
         self,
@@ -362,34 +447,38 @@ class TestClassificationGate(unittest.TestCase):
         self,
     ):
         # Non-vacuity guard (Test Notes): a synthetic gate step that reads
-        # `category` from the packet (worker-set) instead of from the named
-        # review round record must NOT satisfy the matcher above.
+        # `category` from the packet (worker-set) instead of from the
+        # located bound-set source must NOT satisfy the matcher above.
         fake_step = (
             "3. **Origin verification.** The orchestrator reads the "
             "question's own `category` field to decide whether to abort."
         )
         self.assertNotIn(
-            "the orchestrator reads each named finding's `category` from "
-            "that record".lower(),
+            "the orchestrator reads every bound-set member's `category` "
+            "from the located source".lower(),
             fake_step.lower(),
         )
 
     # --- task0019 AC-5/AC-7/AC-9: origin verification locates the record ----
     # --- itself; evidence[].path is demoted; finding_stable_id required -----
 
-    def test_record_never_supplied_by_the_packet(self):
+    def test_neither_bound_set_source_is_ever_supplied_by_the_packet(self):
+        # task0028 AC-2/AC-4: neither the review round record nor
+        # workflow.yaml (the two bound-set sources) is ever supplied by the
+        # packet -- true of both origin_kind values, not review alone.
         section = self._norm(self._origin_verification_section())
         self.assertIn(
-            "the review round record that carries them is never supplied "
-            "by the packet",
+            "the review round record that carries a `review` origin is "
+            "never supplied by the packet, and neither is "
+            "`workflow.yaml` for a `verify` origin".lower(),
             section,
         )
 
     def test_orchestrator_locates_record_from_r5_position(self):
         section = self._norm(self._origin_verification_section())
         self.assertIn(
-            "the orchestrator itself locates it, as the review round "
-            "record for this feature at the position "
+            "every finding in the review round record for this feature, "
+            "located at the position "
             "`references/review-phase.md`".lower(),
             section,
         )
@@ -398,10 +487,44 @@ class TestClassificationGate(unittest.TestCase):
         )
         self.assertIn("cited, not restated", section)
 
+    def test_verify_bound_set_located_at_workflow_yaml_failed_items(self):
+        # task0028 AC-4: origin verification accepts an origin whose
+        # origin_kind is verify, matching it against workflow.yaml's verify
+        # failed items -- the symmetric row to the review row above.
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "every entry of `workflow.yaml`'s `verify` step "
+            "`failed_items`".lower(),
+            section,
+        )
+        self.assertIn("`references/workflow-schema.md`".lower(), section)
+
+    def test_origin_kind_table_has_exactly_the_two_known_rows(self):
+        # Test Notes: driven as a table over both origin_kind values so a
+        # future third kind fails loudly (this test's row count) rather
+        # than silently.
+        section = self._origin_verification_section()
+        rows = re.findall(r"^\s*\|\s*`(review|verify)`\s*\|", section, re.MULTILINE)
+        self.assertEqual(sorted(rows), ["review", "verify"])
+
+    def test_origin_kind_is_orchestrator_held_not_packet_supplied(self):
+        # task0028 AC-2/AC-4: origin_kind itself is orchestrator-held (the
+        # dispatch's own rework_source.type), never read from the packet.
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "`origin_kind` is orchestrator-held, never "
+            "packet-supplied".lower(),
+            section,
+        )
+        self.assertIn(
+            "no field of the question packet ever selects it".lower(),
+            section,
+        )
+
     def test_searches_only_the_located_record(self):
         section = self._norm(self._origin_verification_section())
         self.assertIn(
-            "searches only there for each named `stable_id`".lower(), section
+            "searches only there for each named `origin_id`".lower(), section
         )
 
     def test_evidence_path_demoted_to_never_opened_hint(self):
@@ -421,8 +544,8 @@ class TestClassificationGate(unittest.TestCase):
             "`evidence[].path` and reads the finding's category from it."
         )
         self.assertNotIn(
-            "the review round record that carries them is never supplied "
-            "by the packet",
+            "the review round record that carries a `review` origin is "
+            "never supplied by the packet",
             fake_section.lower(),
         )
 
