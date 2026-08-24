@@ -1,11 +1,11 @@
 schema_version: 1
 feature: goal-vs-spec-divergence
 phase: rework
-status: completed
-generation: 3
-base_revision: 3d4bc54544f516ea05d9cc67f45dec44f50fe2f9
-last_input_digest: sha256:c25861f787e0c79c4944eb428ef1998a25607ec2e88cc32583aa37e589af3656
-active_request_id: null
+status: dispatching
+generation: 4
+base_revision: 08a86cbb21e94dd842d8073ab440b575f698cff7
+last_input_digest: sha256:03bc82fa41594191ca908593d70913a9e391acc9205e02b1e571f6b123d81d7d
+active_request_id: rework-run-0004
 packets: {}
 answers: {}
 worker_runs:
@@ -16,6 +16,10 @@ worker_runs:
 - request_id: rework-run-0002
   status: completed
   input_digest: null
+  output_digest: null
+- request_id: rework-run-0004
+  status: dispatched
+  input_digest: sha256:03bc82fa41594191ca908593d70913a9e391acc9205e02b1e571f6b123d81d7d
   output_digest: null
 - request_id: rework-run-0003
   status: completed
@@ -109,8 +113,8 @@ protocol_slips:
   lesson: レビュー結果の記録更新など orchestrator 側の書き込みも、worker の dispatch 窓の外で行う必要がある
 next_action:
   phase: implement
-  what: task0022〜task0026 の 5 本を実装する。round 3 の critical 1 + high 7 に対応する rework バッチ
+  what: verify 由来の rework バッチ（V-1〜V-6）。task0027 以降で計画し、implement を pending に戻す
   next_task_id: task0027
-  note: 'workflow.yaml の implement は pending、review は pending / needs_rework: true のまま。implement
-    が完了したら review に進み、round 4 のレビューを行う。batch.review_rework_count は 1（上限）に達しているので、round
-    4 で residual critical/high が残った場合は deferred として記録して review を completed にする。'
+  note: 'review round 4 は completed（残存 critical/high 8 件は batch の rework 上限到達により deferred）。verify
+    が fail し、batch.verify_rework_count == 0 のため自動 rework を 1 回だけ実行する。失敗項目は workflow.yaml の
+    verify.failed_items にあり、それぞれ round4.yaml の findings に紐づけてある。'
