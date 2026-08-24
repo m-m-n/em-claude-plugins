@@ -400,14 +400,29 @@ Triggered whenever a launched implementer's `Task()` call returns.
    plan, or a requirement id already registered in `workflow.yaml`; and
    how it fails without the path, stated as an observable outcome (a named
    test that cannot be written or cannot pass), never as a preference. The
-   named identifier must resolve to something that exists. A deviation
-   failing any one of these three parts — a missing identifier, an
-   identifier that resolves to nothing, or a rationale of implementer
-   convenience, a nicer structure, an unrelated cleanup — is not
-   auto-added; it surfaces as an ordinary deviation and the containment
-   check (observed change set ⊆ declared change set) handles it exactly
-   as before, and unjustified scope expansion is still stopped. The
-   containment check itself is unchanged by this rule.
+   named identifier must resolve to something that exists — for a
+   requirement id, existence means it is already registered in
+   `workflow.yaml` prior to this report, never something the report
+   itself introduces. The path being added must independently pass the
+   same shape check `is_safe_relative_path` applies to every
+   patch-written `tasks.*.files` entry — project-relative, no absolute
+   path, no `..` segment, no NUL, no symlink escape — applied here by
+   the orchestrator itself before the append, not merely asserted by the
+   report; and it must not fall under a workflow control path
+   (`.claude/**` or `em-workflow/hooks/**`) — such a path is never
+   auto-added regardless of how the other two parts read. A deviation
+   failing any one of these parts — a missing identifier, an identifier
+   that resolves to nothing or was not already registered, a path that
+   fails the shape check, a path under a workflow control path, or a
+   rationale of implementer convenience, a nicer structure, an unrelated
+   cleanup — is not auto-added; it surfaces as an ordinary deviation and
+   the containment check (observed change set ⊆ declared change set)
+   handles it exactly as before, and unjustified scope expansion is
+   still stopped. The containment check itself is unchanged by this
+   rule. Every admission or rejection of a deviation under this rule —
+   admitted path, or declined path with which check it failed — is
+   listed in this wake phase's own report, and, for a `--batch` run,
+   also in the run report.
 
    **Where the decision persists**: an admission's audit record is the
    `files` entry this step just appended plus the wake commit that added
