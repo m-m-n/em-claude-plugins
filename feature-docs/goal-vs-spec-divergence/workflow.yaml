@@ -710,11 +710,11 @@ review:
     discretionary: []
     cross_validation: true
   perspectives:
-    comprehensive: completed
-    security: completed
-    performance: completed
-    architecture: completed
-    spec: completed
+    comprehensive: pending
+    security: pending
+    performance: pending
+    architecture: pending
+    spec: pending
   residual_critical_high: 8
   needs_rework: true
 requirements:
