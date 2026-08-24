@@ -152,7 +152,7 @@ orchestrator's follow-up sequence is fixed to these five steps:
 2. Set the `create-plan` / `implement` / `review` steps to `pending`.
 3. Preserve `workflow.implement.base_commit`.
 4. Record the `spec_change` record in the `rework.yaml` phase-state —
-   `reason`, `finding_stable_id`, `recorded_at_commit` and
+   `reason`, `origin_kind`, `origin_id`, `recorded_at_commit` and
    `replan_authorized: true`; field definitions are owned by
    `references/phase-state.md` and are not restated here.
 5. The `develop` state machine re-enters at `create-spec`.
@@ -162,11 +162,22 @@ gate defined in `references/question-resolution.md`, which this document
 does not restate. Interactive mode is unchanged: the user is asked
 directly.
 
-The question packet returned for `gate_id: rework.spec-change` names each
-originating review finding's `stable_id` in the question's
-`evidence[].finding_stable_id` entries and does not name the review round
-record path: the gate's origin verification
-(`references/question-resolution.md`) locates that record itself.
+The question packet returned for `gate_id: rework.spec-change` names its
+origin(s) — the `origin_kind` / `origin_id` pair
+`references/rework-task-synthesis.md`'s Invariant 6 defines (cited, not
+restated) — via `evidence[].finding_stable_id`, and does not name the
+review round record path or the `workflow.yaml` path either kind's bound
+set lives in: the gate's origin verification
+(`references/question-resolution.md`) locates its own bound set itself.
+
+These declared origins are traceability only — untrusted, exactly like the
+rest of the rework-planner's output. They never select what the
+classification gate's security / license / irreversible check runs over:
+that check target is the orchestrator's own bound set for this dispatch,
+never `evidence[]` or any other worker-supplied field. This document
+restates neither that check's abort arms nor its verification procedure;
+both belong to `references/question-resolution.md`, cited here and not
+restated.
 
 ## Gate identifiers
 

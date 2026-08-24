@@ -362,10 +362,15 @@ class TestSpecChangePacketCarriesStableIdNotRecordPath(unittest.TestCase):
         cls.text = _read(REWORK_PLANNER_CONTRACT_PATH)
         cls.norm = re.sub(r"\s+", " ", cls.text)
 
-    def test_packet_names_stable_id_via_finding_stable_id_field(self):
+    def test_packet_names_origins_via_finding_stable_id_field(self):
+        # task0028 AC-5: the packet names its origin(s) via the same
+        # `evidence[].finding_stable_id` field, generalized to the
+        # origin_kind/origin_id pair rework-task-synthesis.md's Invariant 6
+        # defines (both origin kinds, not review findings alone).
         self.assertIn(
-            "names each originating review finding's `stable_id` in the "
-            "question's `evidence[].finding_stable_id` entries",
+            "names its origin(s) — the `origin_kind` / `origin_id` pair "
+            "`references/rework-task-synthesis.md`'s Invariant 6 defines "
+            "(cited, not restated) — via `evidence[].finding_stable_id`",
             self.norm,
         )
 
@@ -377,8 +382,8 @@ class TestSpecChangePacketCarriesStableIdNotRecordPath(unittest.TestCase):
     def test_gate_cited_not_restated(self):
         self.assertIn(
             "the gate's origin verification "
-            "(`references/question-resolution.md`) locates that record "
-            "itself",
+            "(`references/question-resolution.md`) locates its own bound "
+            "set itself",
             self.norm,
         )
 
@@ -398,6 +403,16 @@ class TestSpecChangePacketCarriesStableIdNotRecordPath(unittest.TestCase):
         )
         self.assertNotIn(
             "does not name the review round record path", fake_text
+        )
+
+    def test_old_review_only_packet_naming_wording_is_gone(self):
+        # task0028 AC-8: the pre-task0028 wording, which named review
+        # findings alone as the packet's origin vocabulary, must not
+        # survive anywhere in the document.
+        self.assertNotIn(
+            "names each originating review finding's `stable_id` in the "
+            "question's `evidence[].finding_stable_id` entries",
+            self.text,
         )
 
 
