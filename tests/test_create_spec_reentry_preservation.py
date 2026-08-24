@@ -4,6 +4,15 @@
 needs_update` is a partial update, not a reconstruction, and enumerates what
 survives it.
 
+Also covers task0026 (goal-vs-spec-divergence, review round 3 finding
+b5f85c29102b8c97): the same section's `requirements` member of the
+partial-update list is replaced with an upsert rule, sourced from
+spec-writer's `spec_index`, so that a SPEC change adding or altering a
+requirement produces a `workflow.yaml` requirement map the following
+re-planning pass can register tasks against, while every surviving
+requirement's already-earned `tasks` and `tests` history survives the
+re-entry.
+
 Covers task0018 Acceptance Criteria
 (feature-docs/goal-vs-spec-divergence/tasks/task0018.md):
 
@@ -26,6 +35,40 @@ Covers task0018 Acceptance Criteria
 - AC-6 (NFR5, NFR8): standard-library only, a negative proof against a
   synthetic sample missing the preservation statement, and a non-vacuity
   guard for every absence assertion.
+
+Covers task0026 Acceptance Criteria
+(feature-docs/goal-vs-spec-divergence/tasks/task0026.md):
+
+- AC-1 (FR6): `requirements` is no longer listed among the things a
+  `needs_update` re-entry leaves untouched, and the section states an
+  upsert rule in its place, sourced from spec-writer's `spec_index`.
+- AC-2 (FR5): the upsert rule states that a surviving requirement's `tasks`
+  and `tests` arrays are preserved and that only the fields the
+  `spec_index` owns are refreshed -- a requirement that merged tasks
+  already reference does not lose that reference.
+- AC-3 (FR6): the rule states exactly one outcome for a requirement that
+  disappears from the new `spec_index`, and that outcome keeps the id
+  resolvable for any merged task whose `requirements` names it. No wording
+  permits dropping such an entry.
+- AC-4 (FR6): the section states that the upsert happens during create-spec
+  and therefore precedes the re-planning patch's validation, so a task
+  entry naming a newly added requirement id is acceptable when that patch
+  is applied.
+- AC-5 (NFR8): every other member of the partial-update list is still
+  present with the same force -- covered by the pre-existing task0018
+  classes above, left untouched by this task's edit.
+- AC-6 (NFR1, NFR5): the rule is stated once, in create-spec-phase.md, and
+  cites `references/workflow-schema.md` for the requirement entry's shape
+  rather than restating it.
+
+Per task0026's Test Notes: the "untouched" list matcher is kept (not
+weakened), a positive matcher is added for the upsert rule, and a negative
+proof shows a document still listing `requirements` as untouched fails.
+AC-3's matcher asserts the presence of a named outcome, not merely the
+absence of the word "delete". This module never asserts over
+`references/workflow-patch.md`, `references/phase-state.md` or
+`skills/develop/SKILL.md` -- task0022 and task0023 own those this round
+(C4).
 
 Per the task's Test Notes: assertions here scan only section 11 of
 `em-workflow/references/phases/create-spec-phase.md` (C4) -- not the whole
@@ -82,6 +125,41 @@ GOAL_CARVEOUT_UNCHANGED_SENTENCE_2 = (
     "Only a first construction of `workflow.yaml` writes it."
 )
 
+# task0026: the `requirements` upsert rule's own heading. It bounds the
+# untouched-list slice (everything before it, within REENTRY_STATEMENT) from
+# the upsert rule's own text (everything from it onward, up to the
+# pre-existing `goal`-field heading).
+REQUIREMENTS_UPSERT_HEADING = "**The `requirements` upsert**"
+
+# task0026 AC-2: ties the surviving-id preservation rule to `tasks` and
+# `tests` specifically, and to "refreshed" for the index-owned fields --
+# not to any generic mention of "requirements" or "preserved".
+SURVIVING_ID_PRESERVED_RE = re.compile(
+    r"present in both.{0,300}`tasks`.{0,50}`tests`.{0,200}exactly\s+as\s+"
+    r"they\s+are.{0,400}refreshed",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# task0026 AC-3: ties the disappearing-id rule to `spec_index` absence and
+# to resolvability for a merged task, requiring a POSITIVE outcome word
+# (kept/retained/remains) rather than merely the absence of "delete" (Test
+# Notes: an absence-only assertion passes against a document that says
+# nothing at all).
+DISAPPEARING_ID_OUTCOME_RE = re.compile(
+    r"absent from the new `spec_index`.{0,300}(kept|retained|remains?)"
+    r".{0,200}resolvable",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# task0026 AC-4: ties the ordering claim to create-spec preceding the
+# re-planning patch's validation, and to that ordering being what makes a
+# newly named requirement id acceptable.
+UPSERT_ORDERING_RE = re.compile(
+    r"during create-spec.{0,200}before.{0,200}re-planning\s+patch.{0,200}"
+    r"validated.{0,300}acceptable",
+    re.IGNORECASE | re.DOTALL,
+)
+
 
 def _read(path):
     return path.read_text(encoding="utf-8")
@@ -91,6 +169,27 @@ def _slice(text, start_marker, end_marker):
     start = text.index(start_marker)
     end = text.index(end_marker, start)
     return text[start:end]
+
+
+def _reentry_statement(text):
+    section = _slice(text, CONSTRUCTION_START, CONSTRUCTION_END)
+    return _slice(section, REENTRY_STATEMENT_START, REENTRY_STATEMENT_END)
+
+
+def _untouched_list_slice(statement):
+    """task0026: the portion of the re-entry statement that lists what is
+    left untouched -- bounded before the `requirements` upsert rule's own
+    heading, so a mention of `requirements` inside the upsert rule itself
+    can never satisfy an assertion scoped to this slice."""
+    return _slice(statement, REENTRY_STATEMENT_START, REQUIREMENTS_UPSERT_HEADING)
+
+
+def _upsert_rule_slice(statement):
+    """task0026: the portion of the re-entry statement from the
+    `requirements` upsert rule's own heading onward (to the end of the
+    REENTRY_STATEMENT slice)."""
+    idx = statement.index(REQUIREMENTS_UPSERT_HEADING)
+    return statement[idx:]
 
 
 class TestFileExists(unittest.TestCase):
@@ -388,6 +487,186 @@ class TestCitesWithoutRestatingSiblingDocuments(unittest.TestCase):
         self.assertIn(
             "records the interruption reason and the finding's", sample
         )
+
+
+class TestRequirementsUpsertHeadingPresentAndBounded(unittest.TestCase):
+    """task0026 non-vacuity guard: the upsert rule's own heading must be
+    found inside the re-entry statement, and both the slice before it (the
+    untouched list) and the slice from it onward (the upsert rule) must be
+    non-empty -- otherwise a marker typo could make every task0026 test
+    below silently pass against an empty slice."""
+
+    def test_requirements_upsert_heading_present_with_non_empty_slices_around_it(
+        self,
+    ):
+        text = _read(CREATE_SPEC_PATH)
+        statement = _reentry_statement(text)
+        self.assertIn(REQUIREMENTS_UPSERT_HEADING, statement)
+        untouched_list = _untouched_list_slice(statement)
+        upsert_rule = _upsert_rule_slice(statement)
+        self.assertGreater(len(untouched_list.strip()), 0)
+        self.assertGreater(len(upsert_rule.strip()), 0)
+
+
+class TestRequirementsLeavesUntouchedListAndGainsUpsertRule(unittest.TestCase):
+    """task0026 AC-1 (FR6): `requirements` is no longer listed among the
+    things a `needs_update` re-entry leaves untouched, and the section
+    states an upsert rule in its place, sourced from spec-writer's
+    `spec_index`."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = _read(CREATE_SPEC_PATH)
+        statement = _reentry_statement(text)
+        cls.untouched_list = _untouched_list_slice(statement)
+        cls.upsert_rule = _upsert_rule_slice(statement)
+
+    def test_requirements_not_named_in_the_untouched_list(self):
+        self.assertNotIn("`requirements`", self.untouched_list)
+
+    def test_project_still_named_on_its_own_in_the_untouched_list(self):
+        # AC-5: `project` keeps standing on its own, with the same force,
+        # once `requirements` is removed from the same bullet.
+        self.assertIn("`project`", self.untouched_list)
+
+    def test_upsert_rule_sourced_from_spec_writers_spec_index(self):
+        self.assertIn("`requirements`", self.upsert_rule)
+        self.assertIn("spec_index", self.upsert_rule)
+        self.assertIn("spec-writer", self.upsert_rule.lower())
+
+    def test_synthetic_sample_still_listing_requirements_as_untouched_is_a_non_vacuous_check(
+        self,
+    ):
+        # Non-vacuity: proves the assertNotIn above is discriminating
+        # against exactly the old wording, not vacuously true against any
+        # text.
+        sample = (
+            "- `workflow.implement.base_commit`;\n"
+            "- `project` and `requirements`;\n"
+            "- `goal` (carved out separately below).\n"
+        )
+        self.assertIn("`requirements`", sample)
+
+
+class TestSurvivingRequirementPreservesTasksAndTests(unittest.TestCase):
+    """task0026 AC-2 (FR5): a surviving requirement's `tasks` and `tests`
+    arrays are preserved, and only the fields `spec_index` owns are
+    refreshed -- a requirement that merged tasks already reference does not
+    lose that reference."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = _read(CREATE_SPEC_PATH)
+        statement = _reentry_statement(text)
+        cls.upsert_rule = _upsert_rule_slice(statement)
+
+    def test_surviving_id_tasks_and_tests_preserved_and_only_index_owned_fields_refreshed(
+        self,
+    ):
+        self.assertRegex(self.upsert_rule, SURVIVING_ID_PRESERVED_RE)
+
+    def test_merged_task_reference_is_stated_to_survive(self):
+        self.assertIn(
+            "does not lose that reference", self.upsert_rule.lower()
+        )
+
+    def test_synthetic_sample_without_the_preservation_wording_fails_the_check(
+        self,
+    ):
+        sample = (
+            "an id present in both is refreshed from `spec_index`, "
+            "including its status."
+        )
+        self.assertNotRegex(sample, SURVIVING_ID_PRESERVED_RE)
+        self.assertNotIn("does not lose that reference", sample.lower())
+
+
+class TestDisappearingRequirementKeepsExactlyOneResolvableOutcome(
+    unittest.TestCase
+):
+    """task0026 AC-3 (FR6): exactly one outcome is stated for a
+    requirement that disappears from the new `spec_index`, and that
+    outcome keeps the id resolvable for any merged task whose
+    `requirements` names it. No wording permits dropping such an entry."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = _read(CREATE_SPEC_PATH)
+        statement = _reentry_statement(text)
+        cls.upsert_rule = _upsert_rule_slice(statement)
+
+    def test_states_a_named_outcome_that_stays_resolvable(self):
+        self.assertRegex(self.upsert_rule, DISAPPEARING_ID_OUTCOME_RE)
+
+    def test_states_exactly_one_outcome_literally(self):
+        self.assertIn("exactly one outcome", self.upsert_rule)
+
+    def test_no_wording_permits_dropping_the_entry(self):
+        self.assertIn(
+            "No wording here permits dropping such an entry",
+            self.upsert_rule,
+        )
+
+    def test_synthetic_sample_missing_the_named_outcome_fails_the_check(self):
+        # Test Notes: an absence-only assertion (e.g. only checking that
+        # "delete" is not mentioned) would pass against a document that
+        # says nothing at all about the disappearing case -- so the
+        # positive-outcome regex above must reject a sample that is silent
+        # on the outcome, proven here.
+        sample = (
+            "an id present in `workflow.yaml` and absent from the new "
+            "`spec_index` is handled per the usual process."
+        )
+        self.assertNotRegex(sample, DISAPPEARING_ID_OUTCOME_RE)
+        self.assertNotIn("exactly one outcome", sample)
+
+
+class TestUpsertOrderingPrecedesReplanningPatchValidation(unittest.TestCase):
+    """task0026 AC-4 (FR6): the upsert happens during create-spec and
+    therefore precedes the re-planning patch's validation, so a task entry
+    naming a newly added requirement id is acceptable when that patch is
+    applied."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = _read(CREATE_SPEC_PATH)
+        statement = _reentry_statement(text)
+        cls.upsert_rule = _upsert_rule_slice(statement)
+
+    def test_states_the_upsert_precedes_replanning_patch_validation(self):
+        self.assertRegex(self.upsert_rule, UPSERT_ORDERING_RE)
+
+    def test_synthetic_sample_missing_the_ordering_statement_fails_the_check(
+        self,
+    ):
+        sample = (
+            "the upsert rebuilds `requirements` from `spec_index` "
+            "whenever create-spec runs."
+        )
+        self.assertNotRegex(sample, UPSERT_ORDERING_RE)
+
+
+class TestUpsertCitesWorkflowSchemaForEntryShapeWithoutRestating(
+    unittest.TestCase
+):
+    """task0026 AC-6 (NFR1, NFR5): the requirement entry's shape is cited
+    from `references/workflow-schema.md`, not restated here."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = _read(CREATE_SPEC_PATH)
+        statement = _reentry_statement(text)
+        cls.upsert_rule = _upsert_rule_slice(statement)
+
+    def test_cites_workflow_schema_path(self):
+        self.assertIn("references/workflow-schema.md", self.upsert_rule)
+
+    def test_synthetic_sample_without_the_citation_fails_the_check(self):
+        sample = (
+            "an id present in the new `spec_index` and absent from "
+            "`workflow.yaml` is created with its title and status."
+        )
+        self.assertNotIn("references/workflow-schema.md", sample)
 
 
 class TestSectionHeadingsUnchangedAndInOrder(unittest.TestCase):
