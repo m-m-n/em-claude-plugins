@@ -1,11 +1,11 @@
 schema_version: 1
 feature: rework-contract-drift
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: b1333f06a3aa2dfe09be04f55558bd9d47174f30
-last_input_digest: sha256:9c146ac1c3bf84a9fa410fe78307d24bd235025f72f55ea82a8846ae162c929c
-active_request_id: null
+last_input_digest: sha256:8e1e2981f0b2440aeaa6c0eadd3bb0089c62bd2aa0f83b5a1d60def8a3165de9
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -145,6 +145,10 @@ answers:
       Codex agreed on turn 2 once given the FR7 evidence and contributed the
       `unknown` sentinel and the gate-side placement of the fail-closed rule.
 worker_runs:
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: sha256:8e1e2981f0b2440aeaa6c0eadd3bb0089c62bd2aa0f83b5a1d60def8a3165de9
+    output_digest: null
   - request_id: create-spec-run-0001
     status: needs_user_input
     input_digest: sha256:9c146ac1c3bf84a9fa410fe78307d24bd235025f72f55ea82a8846ae162c929c
