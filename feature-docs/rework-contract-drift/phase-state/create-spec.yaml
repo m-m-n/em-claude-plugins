@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-contract-drift
 phase: create-spec
-status: failed
+status: awaiting_answers
 generation: 1
 base_revision: b1333f06a3aa2dfe09be04f55558bd9d47174f30
 last_input_digest: sha256:9c146ac1c3bf84a9fa410fe78307d24bd235025f72f55ea82a8846ae162c929c
@@ -14,14 +14,54 @@ packets:
       - question_id: requirement.fr1.replanning-branch-key
         status: issued
       - question_id: requirement.fr3.verify-origin-category-failclosed
-        status: issued
+        status: answered
       - question_id: requirement.fr4.packet-schema-origin-field
         status: issued
       - question_id: requirement.medium-item-scope
         status: issued
       - question_id: design.step-recommendation
         status: issued
-answers: {}
+answers:
+  requirement.fr3.verify-origin-category-failclosed:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:20:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [structure_failed_items]
+    freeform: null
+    normalized_answer: >-
+      Direction (b): structure `workflow.yaml`'s verify-step `failed_items` so each
+      entry carries a required `category`, and have question-resolution.md's
+      direction 2 cite that definition instead of reading a field that cannot exist.
+      Vocabulary reuses the review-perspective set plus an `unknown` fail-closed
+      sentinel: comprehensive | spec | security | performance | architecture |
+      license | unknown. The verify-phase orchestrator assigns it when recording
+      `failed_items` (evidence: the failing VERIFICATION.md scenario and the
+      requirement IDs it maps to via verification_index); it assigns `unknown`
+      whenever the evidence is insufficient, unmapped, contradictory, or cannot
+      exclude security/license. The fail-closed abort lives at the classification
+      gate, NOT in the verify phase: the gate aborts on `security`, `license`,
+      `unknown`, missing, unreadable, or out-of-vocabulary. Verify still records
+      `unknown` and lets the case reach the gate, because aborting during verify
+      would recreate the FR7 violation. Documents to change: workflow-schema.md,
+      skills/develop/SKILL.md verify step 4, question-resolution.md, and the
+      validator; SPEC, VERIFICATION.md format, verification_index, retrospect and
+      rework-planner do NOT change.
+    resolution_note: >-
+      Decided by the user across two turns with a two-turn Codex consultation
+      (references/question-resolution.md "Codex consultation procedure"; wrapper
+      run readonly). Codex's first-turn recommendation — a third option making
+      origin_kind=verify structurally ineligible for rework.spec-change — was
+      rejected on evidence: the task0028 plan that introduced origin_kind=verify
+      had already considered and rejected that exact alternative because it
+      contradicts FR7 ("every case that reaches gate_id: rework.spec-change passes
+      through the gate") and would require a SPEC change. Option (a) was rejected
+      as functionally identical to that third option: with no `category` on
+      `failed_items`, "unreadable category -> abort" makes every verify-origin
+      spec-change question abort, the same FR7 violation by another mechanism.
+      Option (b) is the only direction satisfying FR7 and NFR2 simultaneously.
+      Codex agreed on turn 2 once given the FR7 evidence and contributed the
+      `unknown` sentinel and the gate-side placement of the fail-closed rule.
 worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
@@ -46,21 +86,4 @@ resolved_input_cache:
     paths: []
     digests: {}
     truncated: false
-last_error:
-  kind: fail_closed_abort
-  at: "2026-08-24T21:52:00+09:00"
-  gate_id: create-spec.requirement-clarification
-  question_id: requirement.fr3.verify-origin-category-failclosed
-  category: security
-  on_unanswered: block
-  rule: "references/question-resolution.md — Fail-closed classification: a question whose category is spec-change, security or license aborts the phase before any policy-table lookup."
-  detail: >-
-    requirements-analyst raised a security-category question asking which of two
-    directions FR3 should specify for restoring the fail-closed security/license
-    abort on verify-origin rework questions: (a) add non-overridable fail-closed
-    wording to question-resolution.md direction 2 when `category` cannot be
-    resolved, or (b) structure workflow-schema.md `failed_items` to carry
-    `category`. Batch mode may not decide a security-category question.
-  human_decision_needed:
-    - "Choose FR3 direction (a) failclosed_wording or (b) structure_failed_items."
-  resolvable_by_policy_if_answered: true
+last_error: null
