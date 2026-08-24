@@ -581,8 +581,10 @@ tasks:
     - NFR1
     - NFR5
     - NFR8
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'deviation: expected_files 外の fixture 2 件 (invalid-replace-all-replanning-missing-base-commit-preserve/phase-state.json,
+      invalid-replace-all-replanning-drops-existing-task/phase-state.json) に replan_authorized: true を追加。conflict_retries=1
+      (tests/test_gate_option_vocabulary.py, task0024 と親側採用で解決)'
     branch: em-workflow/goal-vs-spec-divergence/task0022
   task0023:
     title: carried task ids on a re-planning replace_all
