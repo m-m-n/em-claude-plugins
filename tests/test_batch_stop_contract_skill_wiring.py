@@ -74,6 +74,44 @@ Acceptance Criteria
   non-vacuity check that the words actually occur.
 - AC-7 (NFR2, NFR3): this module keeps importing the standard library only.
 
+Extended again by develop-once-option/task0006 (review round 1 rework;
+source findings 133dad87f620ed69, d19b6a0240c04f8d, 5a7d022d8ac79472).
+Covers task0006 Acceptance Criteria
+(feature-docs/develop-once-option/tasks/task0006.md):
+
+- AC-1 (FR9, FR11, NFR3): the 「バッチ終端行」 subsection's opening definition
+  sentence now states the output condition as "the run reached one of the
+  SSOT's terminal states this turn" rather than additionally limiting it to
+  "a turn that ends the run" -- the old double-limiting wording put the
+  `--once` phase-boundary turn (which does not end the run) outside the
+  definition's own words even though the enumeration further down already
+  listed it.
+- AC-2/AC-3/AC-6/AC-7: every other pre-existing guarantee this module pins
+  for the subsection, `batch-mode.md`, and the whole-file literal guard is
+  unchanged (regression only; no new assertions needed).
+- AC-4/AC-5: `TestStateValueGuardWholeFileScope` no longer asserts that
+  `stopped` is absent from the real files' text -- that assertion was never
+  a contractual requirement and made the class's own whitelist claim
+  (a whitelisted word appearing there would be harmless) permanently
+  unfalsifiable for `stopped`. The whitelist behavior is instead proven
+  directly against a synthetic sample containing `completed` / `skipped` /
+  `stopped` as ordinary prose.
+
+Matcher -> negative-proof inventory (task0006 additions):
+
+- `_states_definition_condition_correctly` (AC-1's opening-definition
+  matcher): negative proof is
+  TestDefinitionConditionMatcherCanFail.test_matcher_rejects_old_double_limiting_definition
+  (a forged subsection reproducing the pre-task0006 「ランを終わらせるターン」
+  double-limiting wording verbatim), non-vacuity guard is
+  TestDefinitionConditionMatcherCanFail.test_forged_old_definition_is_well_formed_and_found.
+- `TestStateValueGuardWholeFileScope.test_guard_does_not_flag_step_status_vocabulary_in_a_synthetic_sample`
+  (AC-5) replaces the removed real-file `stopped`-absence assertion: a
+  direct whitelist-behavior proof over a synthetic sample rather than a
+  negative/non-vacuity pair, matching this class's pre-existing convention
+  for the same reason (`stopped` does not occur in either real file, so a
+  real-file non-vacuity proof for it would be vacuous).
+
 Matcher -> negative-proof inventory (task0002 additions):
 
 - The state-value shape extension to `_find_contract_literal_violations`
@@ -182,6 +220,16 @@ STATE_DOMAIN = ("completed", "stopped", "phase_done")
 # no false-positive surface.
 ONCE_BOUNDARY_STATE_VALUE = "phase_done"
 
+# feature-docs/develop-once-option/tasks/task0006.md AC-1: the opening
+# definition sentence of 「## バッチ終端行」 must state the output condition
+# as "the run reached one of the SSOT's terminal states this turn" and must
+# NOT additionally limit it to "a turn that ends the run" -- the old
+# double-limiting wording put the `--once` phase-boundary turn (which does
+# not end the run) outside the definition's own words, even though the
+# enumeration further down already lists it as a target.
+DEFINITION_CONDITION_PHRASE = "ランが同 SSOT の定める終端状態に達した"
+OLD_RUN_ENDING_TURN_PHRASE = "ランを終わらせるターン"
+
 # IMPLEMENTATION.md D7's forbidden-literal list, restricted to the items
 # applicable to skills/develop/SKILL.md (items 2 and 5 name batch-mode.md
 # only and are out of this file's scope).
@@ -280,6 +328,20 @@ def _has_read_instruction_for_contract_doc(text, doc_reference):
     serves both SKILL.md's `${CLAUDE_PLUGIN_ROOT}`-prefixed convention and
     batch-mode.md's bare-relative-path convention."""
     return doc_reference in text and "Read" in text
+
+
+def _states_definition_condition_correctly(text):
+    """AC-1's opening-definition matcher (task0006): true iff `text` states
+    the terminal-line output condition as "the run reached one of the
+    SSOT's terminal states this turn" AND does not additionally limit that
+    condition to "a turn that ends the run" (task0006's fix -- the old
+    double-limiting wording, since a `--once` phase-boundary turn does not
+    end the run)."""
+    stripped = _strip_ws(text)
+    return (
+        _strip_ws(DEFINITION_CONDITION_PHRASE) in stripped
+        and OLD_RUN_ENDING_TURN_PHRASE not in text
+    )
 
 
 class TestBatchTerminalLineSubsectionWiring(unittest.TestCase):
@@ -388,6 +450,63 @@ class TestBatchTerminalLineSubsectionWiring(unittest.TestCase):
         self.assertIn(
             _strip_ws("`--once` のフェーズ境界で終わるターン"),
             _strip_ws(self.section),
+        )
+
+
+class TestBatchTerminalLineDefinitionCondition(unittest.TestCase):
+    """AC-1 (task0006, review round 1 finding 133dad87f620ed69): the opening
+    definition sentence of 「## バッチ終端行」 states the output condition as
+    "the run reached one of the SSOT's terminal states this turn" and no
+    longer additionally limits it to "a turn that ends the run" -- the old
+    double-limiting wording that put the `--once` phase-boundary turn
+    (which does not end the run) outside the definition's own words even
+    though the enumeration further down already lists it as a target."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(SKILL_PATH)
+        cls.section = _section(cls.text, NEW_SUBSECTION_HEADING, FILE_END_MARKER)
+
+    def test_definition_states_terminal_state_condition_without_old_limit(self):
+        self.assertTrue(
+            _states_definition_condition_correctly(self.section),
+            "expected the opening definition to state the terminal-state "
+            "condition without the old run-ending-turn limiting phrase",
+        )
+
+
+class TestDefinitionConditionMatcherCanFail(unittest.TestCase):
+    """AC-1 / Test Notes (task0006): negative proof plus non-vacuity guard
+    for `_states_definition_condition_correctly` -- a forged subsection
+    reproducing the pre-task0006 double-limiting wording verbatim (`ランを
+    終わらせるターン（Step C の完了処理、または下記に列挙する終端の停止条件で
+    終わるターン）`)."""
+
+    FORGED_OLD_DEFINITION_TEXT = (
+        "...\n\n"
+        f"{NEW_SUBSECTION_HEADING}\n\n"
+        "`--batch` 実行では、ランを終わらせるターン（Step C の完了処理、"
+        "または下記に列挙する終端の停止条件で終わるターン）が、最後の "
+        "assistant メッセージの末尾に終端行を 1 行出力する。\n\n"
+        f"{FILE_END_MARKER}\n"
+    )
+
+    def test_forged_old_definition_is_well_formed_and_found(self):
+        # Non-vacuity guard: the slicer finds it, and it genuinely carries
+        # the old limiting phrase -- so the rejection below exercises the
+        # limiting-phrase check, not a slicing or fixture defect.
+        section = _section(
+            self.FORGED_OLD_DEFINITION_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER
+        )
+        self.assertIn(OLD_RUN_ENDING_TURN_PHRASE, section)
+
+    def test_matcher_rejects_old_double_limiting_definition(self):
+        section = _section(
+            self.FORGED_OLD_DEFINITION_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER
+        )
+        self.assertFalse(
+            _states_definition_condition_correctly(section),
+            "matcher failed to detect the old run-ending-turn limiting phrase",
         )
 
 
@@ -712,27 +831,28 @@ class TestOnceBoundaryBareLiteralMatcherCanFail(unittest.TestCase):
 
 
 class TestStateValueGuardWholeFileScope(unittest.TestCase):
-    """AC-4 and AC-6 (develop-once-option/task0002, D2): the extended guard
-    applied to the WHOLE FILE (not just the edited section) of both real
-    pointer documents finds 0 violations -- including where `completed` /
-    `skipped` are used as ordinary `workflow.yaml` step-status vocabulary
-    elsewhere in each file. AC-6's false-positive proof would be vacuous if
-    those words never actually occurred, so their presence is checked
-    directly first (non-vacuity).
+    """AC-4 and AC-6 (whole-file guard scope, real-file guarantees) plus
+    AC-5 (whitelist proof via synthetic sample) -- task0006 rework of
+    task0002's class (review round 1 finding 5a7d022d8ac79472 /
+    d19b6a0240c04f8d): the extended guard applied to the WHOLE FILE (not
+    just the edited section) of both real pointer documents finds 0
+    violations -- including where `completed` / `skipped` are used as
+    ordinary `workflow.yaml` step-status vocabulary elsewhere in each file.
+    AC-6's false-positive proof would be vacuous if those words never
+    actually occurred, so their presence is checked directly first
+    (non-vacuity).
 
-    `stopped` is part of the guard's whitelist too (D2), but unlike
-    `completed` / `skipped` it is not actually `workflow.yaml` step-status
-    vocabulary (that closed set is `pending` / `in_progress` / `completed`
-    / `skipped` / `failed` / `needs_update` -- confirmed against SKILL.md's
-    own 「ターンを終わらせていい唯一の条件」 enumeration) and does not occur
-    literally in either real pointer document as of this task. A real-file
-    non-vacuity proof for it would therefore be vacuous; instead
-    `test_guard_does_not_flag_bare_stopped_if_it_were_present` exercises
-    the matcher directly against a synthetic sample, documented as a
-    narrower proof than the real-file one above (plan-wording note, not a
-    file deviation: IMPLEMENTATION.md D2 describes `stopped` as ordinary
-    vocabulary "in both pointer documents", which does not hold for the
-    current baseline text of either)."""
+    This class makes no claim about whether `stopped` (also part of the
+    guard's whitelist, D2) occurs in either real pointer document -- that
+    was never a contractual requirement, and asserting it made the
+    whitelist's own claim (that a whitelisted word appearing there would be
+    harmless) permanently unfalsifiable for `stopped` specifically. The
+    real-file guarantee is carried entirely by the two whole-file
+    0-violation checks below. The whitelist BEHAVIOR itself -- `completed` /
+    `skipped` / `stopped` used as ordinary prose never trip the guard -- is
+    proven directly against a synthetic sample in
+    `test_guard_does_not_flag_step_status_vocabulary_in_a_synthetic_sample`,
+    which includes `stopped` alongside the other two."""
 
     @classmethod
     def setUpClass(cls):
@@ -749,14 +869,17 @@ class TestStateValueGuardWholeFileScope(unittest.TestCase):
                 "files for the false-positive proof below to mean anything",
             )
 
-    def test_guard_does_not_flag_bare_stopped_if_it_were_present(self):
-        # See class docstring: `stopped` does not occur in either real
-        # pointer document, so this checks the whitelist behavior directly
-        # rather than proving non-vacuity against real-file text.
-        self.assertNotIn("stopped", self.skill_text + self.batch_mode_text)
-        self.assertEqual(
-            _find_contract_literal_violations("the run stopped cleanly"), []
+    def test_guard_does_not_flag_step_status_vocabulary_in_a_synthetic_sample(self):
+        # AC-5 (task0006): whitelist behavior proven against a synthetic
+        # sample containing `completed` / `skipped` / `stopped` as ordinary
+        # prose. This module asserts nothing about whether these words
+        # occur in the real files (see class docstring); the real-file
+        # guarantee is the two whole-file 0-violation checks below.
+        sample = (
+            "The step completed, another step was skipped, and the run "
+            "stopped cleanly afterward."
         )
+        self.assertEqual(_find_contract_literal_violations(sample), [])
 
     def test_guard_raises_no_violation_over_whole_skill_md(self):
         self.assertEqual(_find_contract_literal_violations(self.skill_text), [])
