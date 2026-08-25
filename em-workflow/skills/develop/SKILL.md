@@ -1,7 +1,7 @@
 ---
 name: develop
 description: em-workflow の統合開発エントリポイント。SDD（spec → plan + タスク分割）から worktree 並列実装、動的レビュー、統合検証、retrospect 収集までを workflow.yaml の状態だけを根拠に自走させるステートマシン。軽い変更もタスク1個として同じフローを通します
-argument-hint: "[feature-path] [--report-only] [--batch] [task-description]"
+argument-hint: "[feature-path] [--report-only] [--batch] [--once] [task-description]"
 disable-model-invocation: true
 model: opus
 effort: medium
@@ -43,6 +43,8 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
    終える」ターンだけを exit 2 で弾き、failed 存在時はブロックしない）
 6. Step 0 の git-setup ゲートが中断を報告したとき
    （gitleaks 不在 / git リポジトリでない / guard 失敗）
+7. `--once` 指定時、1 フェーズが完了したとき（フェーズ境界の定義は下記
+   「`--once` のフェーズ境界」参照）
 
 これらに該当しない限り、フェーズ完了のたびに workflow.yaml を Read し直して
 **必ず**次の pending step を実行する。サブエージェントやフェーズプロトコルの
@@ -79,6 +81,9 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
   batch モード中は AskUserQuestion を一切呼ばない。workflow.yaml が存在
   するのに `batch` ブロックが無ければ作成する（カウンタ永続化のみ —
   モード判定は常にこのフラグ）
+- `--once`: 起動ごとの設定であり、`workflow.yaml` にも `phase-state/` にも
+  一切記録しない。指定時は 1 フェーズを実行してターンを終える（フェーズ
+  境界の定義は下記「`--once` のフェーズ境界」参照）。`--batch` と併用できる
 - パス引数（存在するディレクトリ、または feature 名の文字列）: 末尾要素を
   feature 名として扱う。main 作業ツリーのディレクトリとして中身を読むこと
   はしない — Step A でその feature 名に対応する
@@ -520,6 +525,26 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
    を必ず含める — 外部サービス経由で人間の評価者に届く唯一の確認面。
    batch はこの報告のあとに終端行を追記する
    （`references/batch-terminal-line.md`、下記「バッチ終端行」参照）
+
+## `--once` のフェーズ境界
+
+`--once` 指定時にターンを終える 1 フェーズの境界は次の 4 種。いずれも、
+該当する状態変化が**コミット済みになった時点で**その場でターンを終える。
+
+| 境界 | ターンが終わる条件 | 次の起動が再開する位置 |
+|---|---|---|
+| 通常の step | step の `status` が `completed`（`design` のみ `skipped`）になり、コミット済み | 次の step |
+| `retrospect` | `retrospect` が `completed` に達し、コミット済み（Step C（完了処理）はここでは実行せず、独立した 1 フェーズとして次の起動に持ち越す） | Step C（完了処理） |
+| verify 失敗時の rework | rework パッチを適用し、`implement` と `verify` を `pending` に戻し、コミット済み | `implement` |
+| 自動再エントリ | ルーティングパッチを適用してコミット済み（implement I.2.c の `create-plan` → `needs_update`、または rework の spec-change 遷移による `create-spec` → `needs_update`） | 再エントリした step |
+
+**非境界**: `--once` は implement フェーズの途中ではターンを終えない
+（in-flight の実装者がプロセス終了で失われるため）。停止条件 5 の待機ターン、
+および implement の launch / wake ターンは非終端。
+
+**対話モードの終了行**: 対話モードで `--once` 指定のターンが上記いずれかの
+境界で終わるとき、終了報告に次の 1 行を追加する:
+`{step} が完了したよ。続きは /clear してから /em-workflow:develop {feature} を実行してね`
 
 ## 停止時の報告（停止条件 2-4 のみ）
 
