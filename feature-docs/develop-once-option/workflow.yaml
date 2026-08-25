@@ -129,9 +129,23 @@ workflow:
     status: completed
     completed_at_commit: 93291dd01ebd258d184029b268b07b7750cc7bc6
   - id: verify
-    status: in_progress
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: SC4
+        category: architecture
+        note: >-
+          「Documentation is complete — the three documents state argument handling,
+          all four phase boundaries, the emission occasions and the value domain,
+          each in its owning layer」が未達。(1) 値ドメイン: batch-terminal-line.md は
+          冒頭で `state` / `step` / `reason` の値ドメインの唯一の所有者を宣言しているが、
+          task0005 の書き換えで `step` の値域列挙（7 つの workflow step id と sentinel）が
+          消え、リポジトリのどこにも残っていない（同ファイルに `create-spec` は 0 出現）。
+          ポインタ文書はリテラルガードで再掲を禁止されているため、`step` の閉集合が
+          どの層にも無い。NFR1 違反。(2) 出力機会: batch-mode.md の `## Terminal line` の
+          定義文が「ランの終わり」を主語に保ったまま `--once` 境界を第 3 項に並べており、
+          ラウンド 1 で SKILL.md 側だけ直された同型の矛盾が残っている。
+          自動シナリオ TS1-TS19 と check-plugin-invariants.py はいずれも green。
   - id: retrospect
     status: pending
 
