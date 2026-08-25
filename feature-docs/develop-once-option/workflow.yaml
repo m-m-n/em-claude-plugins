@@ -121,7 +121,7 @@ workflow:
     status: completed
     completed_at_commit: 64dbec80e2d2afe567d397b173ce604751a6ede1
   - id: implement
-    status: completed
+    status: pending
     completed_at_commit: 9eef1ce72b43b133ee9692913332cb2966459e48
     base_commit: cf2d345c74114de1939c798a1e31f80aea624cbe
   - id: review
@@ -189,6 +189,41 @@ tasks:
     notes: null
     branch: em-workflow/develop-once-option/task0004
 
+  task0005:
+    title: "終端行契約 SSOT の reason / step 値域記述を phase_done と整合させる"
+    plan: tasks/task0005.md
+    files:
+      - em-workflow/references/batch-terminal-line.md
+      - tests/test_batch_stop_contract.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR7, FR8, FR11, NFR2, NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      source_ids: [e8b3fe02b7aaeec0, f9dba34e27373999, 2024821d09d85f38, e821c93438f161a8]
+      review_round: 1
+  task0006:
+    title: "SKILL.md 終端行の出力条件定義と、ガード偽陽性証明の形を直す"
+    plan: tasks/task0006.md
+    files:
+      - em-workflow/skills/develop/SKILL.md
+      - tests/test_batch_stop_contract_skill_wiring.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR9, FR10, FR11, FR14, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      source_ids: [133dad87f620ed69, d19b6a0240c04f8d, 5a7d022d8ac79472]
+      review_round: 1
+
 review:
   status: pending
   rounds_completed: 1
@@ -251,36 +286,36 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0003]
-    tests: [TS3, TS10]
+    tasks: [task0003, task0005]
+    tests: [TS3, TS10, TS16]
   FR8:
     title: "Terminal line `step` at a `--once` boundary"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0003]
-    tests: [TS3]
+    tasks: [task0003, task0005]
+    tests: [TS3, TS17]
   FR9:
     title: "SSOT partition: no state-value literal in SKILL.md"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
-    tests: [TS4, TS8]
+    tasks: [task0002, task0006]
+    tests: [TS4, TS8, TS18]
   FR10:
     title: "Literal guard extended to `state` values"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003]
-    tests: [TS4, TS5, TS6]
+    tasks: [task0002, task0003, task0006]
+    tests: [TS4, TS5, TS6, TS19]
   FR11:
     title: "Terminal-state cardinality wording"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003]
-    tests: [TS3, TS4]
+    tasks: [task0002, task0003, task0005, task0006]
+    tests: [TS3, TS4, TS16, TS18]
   FR12:
     title: "Interactive closing line"
     status: ok
@@ -300,44 +335,44 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS14]
+    tasks: [task0001, task0006]
+    tests: [TS14, TS18]
   NFR1:
     title: "SSOT partition preserved"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003]
+    tasks: [task0002, task0003, task0006]
     tests: [TS4, TS9]
   NFR2:
     title: "Documentation-only change surface"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006]
     tests: [TS1]
   NFR3:
     title: "Test conventions"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004]
-    tests: [TS1, TS5]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006]
+    tests: [TS1, TS5, TS19]
   NFR4:
     title: "Backward compatibility"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
-    tests: [TS3, TS7, TS8, TS10]
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS3, TS7, TS8, TS10, TS16, TS17]
   NFR5:
     title: "Reporting completeness in batch"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003]
-    tests: [TS3, TS4]
+    tasks: [task0002, task0003, task0006]
+    tests: [TS3, TS4, TS18]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 0

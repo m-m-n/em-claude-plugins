@@ -47,7 +47,8 @@ all of them.
 | Contract-literal guard rule, `state`-value scope | The rule both pointer guards implement to enforce FR9 mechanically | For each value of the `state` domain, the contract-specific shape `state={value}` (bare, backticked or quoted) must be absent; additionally the `--once` boundary value's bare literal must be absent. Bare `completed` / `stopped` / `skipped` are NEVER flagged — both pointer documents use them as ordinary `workflow.yaml` step-status vocabulary. Scope: the whole file, for both `SKILL.md` and `batch-mode.md`. The pre-existing checks (prefix literal, four field-name tokens as a group, reason codes, sentinel) keep their current scope and semantics (D2) | task0002 (`tests/test_batch_stop_contract_skill_wiring.py`), task0003 (`tests/test_batch_stop_contract.py`) |
 | SKILL.md region ownership | Which task edits which region of the one file two tasks share | task0001 owns the frontmatter, 「引数処理」, 「ターンを終わらせていい唯一の条件」 and the new `--once` section; task0002 owns the body of 「## バッチ終端行」 and nothing else. Placement invariants in D3 hold after both merges | task0001, task0002 |
 | Terminal-state cardinality rule | Keeps every count-bearing sentence true after a third value exists | No document states how many terminal states exist. The Contract SSOT enumerates the set; every other document refers to "the terminal states the SSOT defines" without a count and without naming a member (D4) | task0002, task0003 |
-| Phase-boundary set and `step` semantics | The shared meaning of "one phase" | Four boundary kinds (D5), each ending the turn only after the state change is committed. The terminal line's `step` always names the step EXECUTED in that turn — `verify` at the verify-fail rework boundary — never the step the next launch resumes at | task0001 (defines the boundaries), task0003 (states the `step` rule) |
+| Phase-boundary set and `step` semantics | The shared meaning of "one phase" | Four boundary kinds (D5), each ending the turn only after the state change is committed. The terminal line's `step` names the step EXECUTED in that turn — `verify` at the verify-fail rework boundary — never the step the next launch resumes at. This is the general rule; two pre-existing rules take precedence over it, in the order given by D9 | task0001 (defines the boundaries), task0003 (states the `step` rule), task0005 (states the precedence) |
+| Terminal-line `reason` domain | Which `state` values admit the reserved value `none` | `none` is reserved for the non-stop terminal states — currently `state=completed` and `state=phase_done`. It is not a stop reason code and never accompanies `state=stopped`. Every statement of this rule in the contract document states the same range (D9) | task0003 (introduced `phase_done` with `reason=none`), task0005 (states the range at both sites) |
 | Test-module ownership map | One owner per test module, so no two tasks edit the same module | D6's table. A task that must change a module it does not own reports a plan deviation instead of editing it silently | all tasks |
 
 ## Conventions
@@ -168,8 +169,8 @@ contract).
 | Module | Owner | Pins |
 |---|---|---|
 | `tests/test_develop_once_option.py` (new) | task0001 | SKILL.md's `--once` semantics: argument handling, phase boundaries, stop condition 7, interactive closing line, non-boundaries |
-| `tests/test_batch_stop_contract_skill_wiring.py` | task0002 | SKILL.md's 「バッチ終端行」 subsection and `batch-mode.md`'s `## Terminal line`; the SKILL.md-side literal guard |
-| `tests/test_batch_stop_contract.py` | task0003 | `batch-terminal-line.md`'s structure and value domains; the `batch-mode.md` pointer literal-absence guard; the prefix-uniqueness sweep |
+| `tests/test_batch_stop_contract_skill_wiring.py` | task0002, then task0006 | SKILL.md's 「バッチ終端行」 subsection and `batch-mode.md`'s `## Terminal line`; the SKILL.md-side literal guard |
+| `tests/test_batch_stop_contract.py` | task0003, then task0005 | `batch-terminal-line.md`'s structure and value domains; the `batch-mode.md` pointer literal-absence guard; the prefix-uniqueness sweep |
 | `tests/test_plugin_version_parity.py` (new) | task0004 | the two manifests' `version` agreement |
 | `tests/test_develop_skill_rewiring.py` | nobody | pre-existing SKILL.md wording that must survive this feature unchanged |
 
@@ -196,6 +197,31 @@ phase boundary, stated as an occasion only — no value literal, no field
 grammar (FR9, NFR1). This is a planner decision: no FR mandates the
 `batch-mode.md` sentence change, but leaving it as-is would make the pointer
 document state something false. Affected: task0002.
+
+### D9 — Value-domain coherence when a `state` value is added (review round 1 rework)
+
+Adding a third `state` value changes what OTHER field domains must admit. Two
+rules make that dependency explicit, so a future `state` addition has a
+checklist rather than a habit:
+
+1. **`reason` range.** `none` is reserved for the non-stop terminal states,
+   currently `state=completed` and `state=phase_done`. Every place the
+   contract document states this rule states the same range — today the
+   `## Field values` `reason` bullet and the closing prose of
+   `## Stop reason codes`. The eleven stop reason codes remain
+   `state=stopped`-only.
+2. **`step` rule precedence.** The executed-step rule (Shared Components,
+   above) is the general rule. Two rules take precedence over it: the
+   `no-step` sentinel when no `workflow.yaml` step is in effect at the stop
+   point, and `retrospect` on `state=completed`. Because Step C is not a
+   `workflow.yaml` step, a Step C turn's value differs by outcome
+   (`retrospect` on normal completion, `no-step` on `step-c-abort`); the
+   contract states that asymmetry rather than leaving it to be inferred.
+
+Both rules are stated only in `em-workflow/references/batch-terminal-line.md`
+— the pointer documents carry no value literal (FR9, NFR1) and are unaffected.
+Affected: task0005 (states both), task0003 / task0001 (their merged output is
+what these rules make coherent).
 
 ## Risk Assessment
 
