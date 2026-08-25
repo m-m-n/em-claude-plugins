@@ -190,14 +190,18 @@ tasks:
     branch: em-workflow/develop-once-option/task0004
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor: [comprehensive, architecture, spec]
     discretionary: []
     cross_validation: true
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+    comprehensive: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 3
+  needs_rework: true
 
 requirements:
   FR1:
