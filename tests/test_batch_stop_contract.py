@@ -158,6 +158,44 @@ numbering above):
   (unchanged: `os`, `re`, `unittest`, `pathlib`) are verified by the
   implementer's report, per IMPLEMENTATION.md's Test authoring
   convention.
+
+Rework round 3 (develop-once-option task0003, feature-docs/develop-once-
+option/tasks/task0005.md, review round 1 D9) fixes a contract-drift defect
+introduced by rework round 2: the `state` domain grew to include
+`phase_done`, but the `reason` and `step` value-domain descriptions were
+left in their pre-`phase_done` wording in two places each. This addendum
+uses task0005's own AC numbering, distinct from the numbering above:
+
+- AC-1 / AC-2: `none`'s reserved range (D9 rule 1) is stated identically
+  at both sites -- the `## Field values` `reason` bullet and the `##
+  Stop reason codes` closing prose -- naming both `state=completed` and
+  `state=phase_done`, with the old `state=completed`-only restrictive
+  phrasing removed from both
+  (`test_field_values_reason_bullet_reserved_for_non_stop_states`,
+  `test_none_documented_as_reserved_for_non_stop_states`; matcher
+  `_assert_none_reserved_for_non_stop_states_stated`).
+- AC-3: both sites' negative proof + non-vacuity guard live in
+  `TestNoneReservedRangeMatcherNegativeProofs`, replacing (strengthening,
+  not deleting) the pre-task0005
+  `test_none_documented_as_reserved_for_completed`, whose bare
+  `none`/`reserved`/`state=completed` co-occurrence check passed even
+  with the old restrictive phrasing still present -- the exact defect
+  this rework fixes.
+- AC-4 / AC-5: the `step` bullet's rule precedence (D9 rule 2) and the
+  Step C outcome asymmetry are each stated explicitly
+  (`test_field_values_step_precedence_stated`,
+  `test_field_values_step_c_asymmetry_stated`; matchers
+  `_assert_step_precedence_stated`, `_assert_step_c_asymmetry_stated`).
+- AC-6: both matchers' negative proof + non-vacuity guard use the same
+  forged sample -- the exact pre-task0005 `step` bullet text, which
+  states the general rule and the two now-precedent rules but neither
+  the priority relation nor the Step C asymmetry
+  (`TestStepPrecedenceMatcherNegativeProof`,
+  `TestStepCAsymmetryMatcherNegativeProof`).
+- AC-7: no new test -- the pre-existing regression guards (heading
+  order/count, eleven reason codes with `Applies to state` all
+  `stopped`, coverage table, task0003's `phase_done` wording) staying
+  green unmodified, plus the implementer's report on the whole-suite run.
 """
 
 import os
@@ -232,6 +270,14 @@ STATE_VALUES = frozenset({"completed", "stopped", "phase_done"})
 # that occurs nowhere else, so D2 rule 2 checks its bare literal for
 # absence too, not just the `state={value}` shape.
 ONCE_BOUNDARY_STATE_VALUE = "phase_done"
+
+# develop-once-option task0005 (D9 rule 1): the old restrictive phrasing,
+# verbatim from before this task, that limited `none`'s use to
+# `state=completed` alone at each of the two sites this task synchronizes.
+# Used both to build forged negative-proof samples and to assert the real
+# document no longer contains them.
+NONE_RESERVED_OLD_PHRASE_FIELD_VALUES = "(used only when `state=completed`)"
+NONE_RESERVED_OLD_PHRASE_STOP_REASON_CODES = "is reserved for `state=completed`;"
 
 # Ordered pairing used only to build forged coverage samples below -- the
 # contract itself treats both STOP_POINT_KEYS and REASON_CODES as unordered.
@@ -480,6 +526,48 @@ def _assert_no_state_value_literal(test, text, state_values, boundary_value):
     )
 
 
+def _assert_none_reserved_for_non_stop_states_stated(test, section_text, old_phrase):
+    """R-A (develop-once-option task0005, D9 rule 1): `none` is reserved
+    for the non-stop terminal states -- `state=completed` and
+    `state=phase_done` -- named together in the same passage, with the
+    old `state=completed`-only restrictive phrasing (`old_phrase`,
+    verbatim from before this task) gone. Applied identically at both
+    sites this task synchronizes: the `## Field values` `reason` bullet
+    and the `## Stop reason codes` closing prose."""
+    normalized = _normalize(section_text)
+    test.assertIn("`none`", section_text)
+    test.assertIn("reserved", normalized)
+    test.assertIn("`state=completed`", section_text)
+    test.assertIn("`state=phase_done`", section_text)
+    test.assertIn("non-stop terminal state", normalized)
+    test.assertNotIn(old_phrase, section_text)
+
+
+def _assert_step_precedence_stated(test, field_values_section_text):
+    """R-B (develop-once-option task0005, D9 rule 2): the general
+    executed-step rule, and the two rules that take precedence over it
+    (the `no-step` sentinel; `state=completed` -> `retrospect`), stated
+    with a readable priority relation rather than three unordered
+    sentences."""
+    normalized = _normalize(field_values_section_text)
+    test.assertIn("names the step EXECUTED in that turn", normalized)
+    test.assertIn("take precedence over the general rule", normalized)
+    test.assertIn("`no-step`", field_values_section_text)
+    test.assertIn("`state=completed`", field_values_section_text)
+    test.assertIn("`retrospect`", field_values_section_text)
+
+
+def _assert_step_c_asymmetry_stated(test, field_values_section_text):
+    """R-B (develop-once-option task0005, D9 rule 2): a Step C turn's
+    value differs by outcome -- `retrospect` on normal completion,
+    `no-step` on `step-c-abort` -- stated explicitly rather than left to
+    be inferred from the precedence rules alone."""
+    normalized = _normalize(field_values_section_text)
+    test.assertIn("Step C is not a `workflow.yaml` step", normalized)
+    test.assertIn("normal completion is `retrospect`", normalized)
+    test.assertIn("`step-c-abort` is `no-step`", normalized)
+
+
 def _iter_em_workflow_files(plugin_root):
     for dirpath, _dirnames, filenames in os.walk(plugin_root):
         for filename in filenames:
@@ -584,6 +672,31 @@ class TestContractDocumentStructure(unittest.TestCase):
         )
         self.assertIn("next launch resumes at `implement`", section)
 
+    def test_field_values_reason_bullet_reserved_for_non_stop_states(self):
+        """AC-1 (develop-once-option task0005, D9 rule 1): the `##
+        Field values` `reason` bullet states `none` is reserved for the
+        non-stop terminal states, naming both `state=completed` and
+        `state=phase_done`, with the old `state=completed`-only
+        restrictive phrasing gone."""
+        _assert_none_reserved_for_non_stop_states_stated(
+            self,
+            self.sections["Field values"],
+            NONE_RESERVED_OLD_PHRASE_FIELD_VALUES,
+        )
+
+    def test_field_values_step_precedence_stated(self):
+        """AC-4 (develop-once-option task0005, D9 rule 2): the `step`
+        bullet states the general executed-step rule and the two rules
+        that take precedence over it with a readable priority relation."""
+        _assert_step_precedence_stated(self, self.sections["Field values"])
+
+    def test_field_values_step_c_asymmetry_stated(self):
+        """AC-5 (develop-once-option task0005, D9 rule 2): the `step`
+        bullet states that a Step C turn's value differs by outcome --
+        `retrospect` on normal completion, `no-step` on
+        `step-c-abort`."""
+        _assert_step_c_asymmetry_stated(self, self.sections["Field values"])
+
     def test_no_document_wording_states_a_terminal_state_count(self):
         """AC-4 (FR11, IMPLEMENTATION.md D4): neither of the two
         originally count-pinning sentences (the `state` bullet's "closed
@@ -620,10 +733,19 @@ class TestStopReasonCodes(unittest.TestCase):
         self.assertEqual(len(self.codes), 11)
         self.assertEqual(len(self.codes), len(REASON_CODES))
 
-    def test_none_documented_as_reserved_for_completed(self):
-        self.assertIn("`none`", self.section)
-        self.assertIn("reserved", self.section)
-        self.assertIn("`state=completed`", self.section)
+    def test_none_documented_as_reserved_for_non_stop_states(self):
+        """AC-2 (develop-once-option task0005, D9 rule 1). Replaces the
+        pre-task0005 `test_none_documented_as_reserved_for_completed`,
+        which only checked `none` / `reserved` / `state=completed`
+        co-occurrence and therefore passed even with the old
+        `state=completed`-only restrictive phrasing still in place (the
+        contract drift this task fixes): the closing prose now states
+        the same non-stop reserved range as the `## Field values`
+        `reason` bullet, naming both `state=completed` and
+        `state=phase_done`, with the old restrictive phrasing gone."""
+        _assert_none_reserved_for_non_stop_states_stated(
+            self, self.section, NONE_RESERVED_OLD_PHRASE_STOP_REASON_CODES
+        )
 
     def test_states_step_and_detail_fields_also_carried(self):
         self.assertIn("`step`", self.section)
@@ -678,6 +800,129 @@ class TestReasonCodeExtractorNegativeProofs(unittest.TestCase):
         codes = _extract_reason_code_table(FORGED_EMPTY_CELL_TABLE)
         with self.assertRaises(AssertionError):
             _assert_well_formed_code_list(self, codes)
+
+
+# Forged samples for the reserved-range matcher's negative proof /
+# non-vacuity guard (AC-3, develop-once-option task0005): the exact old
+# wording at each of the two sites, verbatim from before this task, so a
+# regression back to the old restrictive phrasing reproduces exactly this
+# forged text.
+FORGED_FIELD_VALUES_REASON_BULLET_OLD_RESTRICTIVE = (
+    "- `reason` — one of the eleven stop reason codes listed below, or the "
+    "reserved value `none` (used only when `state=completed`)."
+)
+
+FORGED_STOP_REASON_CODES_PROSE_OLD_RESTRICTIVE = (
+    "The value `none` is reserved for `state=completed`; it is not itself a "
+    "stop reason code and is never used together with `state=stopped`. Every "
+    "stop line also carries a `step` field alongside `reason`, and always "
+    "carries a `detail` field."
+)
+
+
+class TestNoneReservedRangeMatcherNegativeProofs(unittest.TestCase):
+    """NFR3: negative proof + non-vacuity guard for the reserved-range
+    matcher (`_assert_none_reserved_for_non_stop_states_stated`, AC-3,
+    develop-once-option task0005), exercised over both sites this task
+    synchronizes."""
+
+    def test_field_values_forged_bullet_is_otherwise_well_formed(self):
+        """Non-vacuity: the forged bullet is well-formed reason-bullet
+        prose (mentions `none` / `reserved` / `state=completed`) -- the
+        rejection below is caused by the missing `state=phase_done` and
+        the old restrictive phrasing, not by unrelated malformation."""
+        self.assertIn("`none`", FORGED_FIELD_VALUES_REASON_BULLET_OLD_RESTRICTIVE)
+        self.assertIn("reserved", FORGED_FIELD_VALUES_REASON_BULLET_OLD_RESTRICTIVE)
+        self.assertIn(
+            "`state=completed`", FORGED_FIELD_VALUES_REASON_BULLET_OLD_RESTRICTIVE
+        )
+
+    def test_field_values_old_restrictive_phrasing_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_none_reserved_for_non_stop_states_stated(
+                self,
+                FORGED_FIELD_VALUES_REASON_BULLET_OLD_RESTRICTIVE,
+                NONE_RESERVED_OLD_PHRASE_FIELD_VALUES,
+            )
+
+    def test_stop_reason_codes_forged_prose_is_otherwise_well_formed(self):
+        """Non-vacuity: the forged prose is well-formed (mentions `none`
+        / `reserved` / `state=completed` / `step` / `detail`) -- the
+        rejection below is caused by the missing `state=phase_done` and
+        the old restrictive phrasing, not by unrelated malformation."""
+        self.assertIn("`none`", FORGED_STOP_REASON_CODES_PROSE_OLD_RESTRICTIVE)
+        self.assertIn("reserved", FORGED_STOP_REASON_CODES_PROSE_OLD_RESTRICTIVE)
+        self.assertIn(
+            "`state=completed`", FORGED_STOP_REASON_CODES_PROSE_OLD_RESTRICTIVE
+        )
+        self.assertIn("`step`", FORGED_STOP_REASON_CODES_PROSE_OLD_RESTRICTIVE)
+        self.assertIn("`detail`", FORGED_STOP_REASON_CODES_PROSE_OLD_RESTRICTIVE)
+
+    def test_stop_reason_codes_old_restrictive_phrasing_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_none_reserved_for_non_stop_states_stated(
+                self,
+                FORGED_STOP_REASON_CODES_PROSE_OLD_RESTRICTIVE,
+                NONE_RESERVED_OLD_PHRASE_STOP_REASON_CODES,
+            )
+
+
+# Forged sample for the step-precedence / Step C asymmetry matchers'
+# negative proof (AC-6, develop-once-option task0005): the exact old
+# `step` bullet, verbatim from before this task -- well-formed prose that
+# states the general rule and the two now-precedent rules, but without the
+# explicit priority relation or the Step C asymmetry statement.
+FORGED_OLD_STEP_BULLET_WITHOUT_PRECEDENCE = (
+    "`step` — a `workflow.yaml` step id (`create-spec`, `design`, "
+    "`create-plan`, `implement`, `review`, `verify`, `retrospect`), or the "
+    "single sentinel `no-step`. `no-step` applies whenever no "
+    "`workflow.yaml` step is in effect at the stop point: "
+    "`stop-condition-6` (Step 0's git-setup abort), `step-a-abort` (Step "
+    "A's feature-resolution failure), and `step-c-abort` (Step C's abort "
+    "— every workflow step has already completed by then, and the stop "
+    "happens outside any of them). `step` always names the step EXECUTED "
+    "in that turn, never the step the next launch resumes at; at the "
+    "verify-fail rework boundary the value is `verify`, even though the "
+    "next launch resumes at `implement`. On `state=completed` the value "
+    "is always `retrospect` — the final workflow step, which a completed "
+    "run has always reached."
+)
+
+
+class TestStepPrecedenceMatcherNegativeProof(unittest.TestCase):
+    """NFR3: negative proof + non-vacuity guard for the step-precedence
+    matcher (`_assert_step_precedence_stated`, AC-6, develop-once-option
+    task0005)."""
+
+    def test_forged_old_bullet_is_otherwise_well_formed(self):
+        self.assertIn(
+            "names the step EXECUTED in that turn",
+            _normalize(FORGED_OLD_STEP_BULLET_WITHOUT_PRECEDENCE),
+        )
+        self.assertIn("`no-step`", FORGED_OLD_STEP_BULLET_WITHOUT_PRECEDENCE)
+        self.assertIn("`retrospect`", FORGED_OLD_STEP_BULLET_WITHOUT_PRECEDENCE)
+
+    def test_missing_precedence_wording_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_step_precedence_stated(
+                self, FORGED_OLD_STEP_BULLET_WITHOUT_PRECEDENCE
+            )
+
+
+class TestStepCAsymmetryMatcherNegativeProof(unittest.TestCase):
+    """NFR3: negative proof + non-vacuity guard for the Step C asymmetry
+    matcher (`_assert_step_c_asymmetry_stated`, AC-6, develop-once-option
+    task0005)."""
+
+    def test_forged_old_bullet_is_otherwise_well_formed(self):
+        self.assertIn("`step-c-abort`", FORGED_OLD_STEP_BULLET_WITHOUT_PRECEDENCE)
+        self.assertIn("`retrospect`", FORGED_OLD_STEP_BULLET_WITHOUT_PRECEDENCE)
+
+    def test_missing_asymmetry_wording_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_step_c_asymmetry_stated(
+                self, FORGED_OLD_STEP_BULLET_WITHOUT_PRECEDENCE
+            )
 
 
 class TestStopPointCoverage(unittest.TestCase):
