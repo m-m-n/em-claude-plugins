@@ -226,7 +226,7 @@ tasks:
       review_round: 1
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 1
   plan:
     floor: [comprehensive, architecture, spec]
