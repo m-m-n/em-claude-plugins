@@ -1,11 +1,11 @@
 schema_version: 1
 feature: develop-once-option
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 4323beb
-last_input_digest: sha256:95d050750eaaa886fbf95a6d2da1bd9ced553f2a1214c479505a3b1d141e9f9b
-active_request_id: null
+last_input_digest: sha256:ac24381c5279cd41978bcdc8da5072c8f15826534ba2cc8625878ad973c778df
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -81,8 +81,12 @@ answers:
       option_id decide_autonomously。
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:95d050750eaaa886fbf95a6d2da1bd9ced553f2a1214c479505a3b1d141e9f9b
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: sha256:ac24381c5279cd41978bcdc8da5072c8f15826534ba2cc8625878ad973c778df
     output_digest: null
 artifacts: []
 patches: []
