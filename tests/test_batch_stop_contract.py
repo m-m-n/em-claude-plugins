@@ -115,6 +115,49 @@ TestCoverageMatcherNegativeProofs' expected pair counts are derived from
 `len(_KEY_CODE_PAIRS_IN_ORDER)` rather than re-pinned as literals (Test
 Notes trap), so the eleven-member set change does not silently make those
 non-vacuity guards vacuous.
+
+Rework round 2 (develop-once-option task0003,
+feature-docs/develop-once-option/tasks/task0003.md) extends the module
+above again -- a third terminal-line `state` value (`phase_done`, marking
+a `--once` phase-boundary turn) is added to the domain, `step`'s meaning
+is clarified, and the two count-bearing sentences that pinned the domain
+at two members are replaced with non-counting phrasing (this addendum
+uses task0003's own AC numbering, distinct from the task0001 / task0004
+numbering above):
+
+- AC-1: the `state` bullet's domain now includes `phase_done`, stated
+  with its `reason=none` / non-empty single-line `detail` / same-prefix/
+  same-fields/same-order conditions
+  (`test_field_values_state_domain_includes_phase_done`,
+  `test_field_values_phase_done_conditions_stated`).
+- AC-2: a consumer that sees `state=phase_done` re-launches the same
+  feature
+  (`test_field_values_phase_done_consumer_relaunches_same_feature`).
+- AC-3: `step` names the step EXECUTED in that turn, never the step the
+  next launch resumes at, and is `verify` at the verify-fail rework
+  boundary (`test_field_values_step_names_the_executed_step`,
+  `test_field_values_step_at_verify_fail_rework_is_verify`).
+- AC-4: the `state` bullet and the `## No line on a wait turn` sentence
+  no longer pin the domain's size at two
+  (`test_no_document_wording_states_a_terminal_state_count`); the
+  pre-existing assertion pinning the old "either ... two terminal
+  states" wording (`test_states_general_no_line_rule`) is updated in
+  this same change rather than left to go stale (IMPLEMENTATION.md D4).
+- AC-5: no new test -- this criterion is the pre-existing regression
+  guards (heading order/count, reason-code count, coverage table,
+  `state=completed` / `state=stopped` semantics, prefix-in-fence scope)
+  staying green unmodified, proving the addition did not disturb them.
+- AC-6: the `batch-mode.md` pointer guard (D2) is extended from the
+  four-field-name / prefix / reason-code / sentinel checks to the full
+  `state` value set, via its own matcher
+  (`_assert_no_state_value_literal`), with a negative proof, a
+  non-vacuity guard and a false-positive proof over ordinary
+  `completed` / `skipped` / `stopped` step-status vocabulary
+  (`TestStateValueGuardMatcher`).
+- AC-7: no new test -- the whole-suite run and the stdlib-only imports
+  (unchanged: `os`, `re`, `unittest`, `pathlib`) are verified by the
+  implementer's report, per IMPLEMENTATION.md's Test authoring
+  convention.
 """
 
 import os
@@ -179,6 +222,16 @@ STOP_POINT_KEYS = frozenset(
 # The no-step sentinel's stop points (AC-3) -- a subset of STOP_POINT_KEYS,
 # checked as a set relation against the real coverage table, not as prose.
 NO_STEP_STOP_POINTS = frozenset({"stop-condition-6", "step-a-abort", "step-c-abort"})
+
+# The full `state` value domain (D1, develop-once-option task0003) --
+# re-declared locally per the Cross-module isolation convention rather
+# than imported from another test module.
+STATE_VALUES = frozenset({"completed", "stopped", "phase_done"})
+
+# The `--once` phase-boundary value alone (D1): contract-only vocabulary
+# that occurs nowhere else, so D2 rule 2 checks its bare literal for
+# absence too, not just the `state={value}` shape.
+ONCE_BOUNDARY_STATE_VALUE = "phase_done"
 
 # Ordered pairing used only to build forged coverage samples below -- the
 # contract itself treats both STOP_POINT_KEYS and REASON_CODES as unordered.
@@ -404,6 +457,29 @@ def _assert_detail_normalization_stated(test, line_format_section_text):
     test.assertIn("non-empty", normalized.lower())
 
 
+def _assert_no_state_value_literal(test, text, state_values, boundary_value):
+    """D2's `state`-value guard shape (develop-once-option task0003),
+    implemented independently by this module and
+    `tests/test_batch_stop_contract_skill_wiring.py` (task0002): for
+    every value in `state_values`, the `state={value}` form (bare,
+    backticked or quoted) must be absent from `text`; additionally
+    `boundary_value`'s bare literal must be absent on its own, since it
+    is contract-only vocabulary that occurs nowhere else. Ordinary
+    step-status words (`completed` / `stopped` / `skipped`) are never
+    checked bare here -- only the `state=` shape and the boundary value
+    are -- so this cannot false-positive on that vocabulary."""
+    for value in sorted(state_values):
+        for spelling in (f"state={value}", f"`state={value}`", f'"state={value}"'):
+            test.assertNotIn(
+                spelling, text, f"found forbidden literal: {spelling!r}"
+            )
+    test.assertNotIn(
+        boundary_value,
+        text,
+        f"found forbidden bare literal: {boundary_value!r}",
+    )
+
+
 def _iter_em_workflow_files(plugin_root):
     for dirpath, _dirnames, filenames in os.walk(plugin_root):
         for filename in filenames:
@@ -462,6 +538,60 @@ class TestContractDocumentStructure(unittest.TestCase):
         true."""
         detail_bullet_text = self.sections["Field values"]
         self.assertIn("non-empty", detail_bullet_text)
+
+    def test_field_values_state_domain_includes_phase_done(self):
+        """AC-1 (develop-once-option task0003, D1): the `state` bullet's
+        value domain now includes the third value `phase_done` alongside
+        the original `completed` / `stopped`."""
+        section = self.sections["Field values"]
+        for value in ("completed", "stopped", "phase_done"):
+            with self.subTest(value=value):
+                self.assertIn(f"`{value}`", section)
+
+    def test_field_values_phase_done_conditions_stated(self):
+        """AC-1: `phase_done` is emitted with `reason=none` and a
+        non-empty, single-line `detail`, using the same prefix, the same
+        four fields and the same field order as every other terminal
+        line."""
+        section = _normalize(self.sections["Field values"])
+        self.assertIn("`reason=none`", section)
+        self.assertIn("non-empty, single-line `detail`", section)
+        self.assertIn("same prefix", section)
+        self.assertIn("same four fields", section)
+        self.assertIn("same field order", section)
+
+    def test_field_values_phase_done_consumer_relaunches_same_feature(self):
+        """AC-2: a consumer that sees `state=phase_done` re-launches the
+        same feature to continue it."""
+        section = _normalize(self.sections["Field values"])
+        self.assertIn("`state=phase_done`", section)
+        self.assertIn("re-launches the same feature", section)
+
+    def test_field_values_step_names_the_executed_step(self):
+        """AC-3: `step` always names the step EXECUTED in that turn,
+        never the step the next launch resumes at."""
+        section = _normalize(self.sections["Field values"])
+        self.assertIn("names the step EXECUTED in that turn", section)
+        self.assertIn("never the step the next", section)
+        self.assertIn("launch resumes at", section)
+
+    def test_field_values_step_at_verify_fail_rework_is_verify(self):
+        """AC-3: at the verify-fail rework boundary, `step`'s value is
+        `verify`, even though the next launch resumes at `implement`."""
+        section = _normalize(self.sections["Field values"])
+        self.assertIn(
+            "verify-fail rework boundary the value is `verify`", section
+        )
+        self.assertIn("next launch resumes at `implement`", section)
+
+    def test_no_document_wording_states_a_terminal_state_count(self):
+        """AC-4 (FR11, IMPLEMENTATION.md D4): neither of the two
+        originally count-pinning sentences (the `state` bullet's "closed
+        set of two values", the `## No line on a wait turn` opening
+        sentence's "two terminal states") states a fixed number of
+        terminal states any more."""
+        self.assertNotIn("two values", self.text)
+        self.assertNotIn("two terminal states", self.text)
 
 
 class TestStopReasonCodes(unittest.TestCase):
@@ -742,11 +872,18 @@ class TestNoLineOnWaitTurnAndSentinel(unittest.TestCase):
         self.assertIn("no terminal line", section)
 
     def test_states_general_no_line_rule(self):
-        """AC-6: the general rule -- a turn that has not reached either
-        terminal state emits no line -- with the implement launch/wake
-        turns named as further instances alongside stop condition 5."""
+        """AC-6 (task0004 rework round 1); AC-4 (develop-once-option
+        task0003 rework round 2): the general rule -- a turn that has
+        not reached any terminal state emits no line -- with the
+        implement launch/wake turns named as further instances alongside
+        stop condition 5. The wording moved from "either ... two
+        terminal states" to a non-counting form once a third terminal
+        state (`phase_done`) exists, so this assertion's checked phrase
+        is updated in the same change that rewrites the sentence
+        (IMPLEMENTATION.md D4) -- it still pins the underlying rule, not
+        merely the count-free rephrasing."""
         section = _normalize(self.sections["No line on a wait turn"])
-        self.assertIn("has not reached either", section)
+        self.assertIn("has not reached any", section)
         self.assertIn("terminal state", section)
         self.assertIn("launch", section)
         self.assertIn("wake", section)
@@ -809,6 +946,18 @@ class TestBatchModePointer(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertNotIn(field, self.text)
 
+    def test_restates_no_state_value_shape(self):
+        """AC-6 (FR10, D2, develop-once-option task0003): the literal-
+        absence guard is extended to the grown three-member `state`
+        value set. The pre-existing whole-file `state=` substring check
+        above already subsumes every spelling of `state={value}` for any
+        value, so this test additionally proves the checked value SET is
+        the grown domain (not the stale two), and that the `--once`
+        boundary value's bare literal (D2 rule 2) is absent too."""
+        _assert_no_state_value_literal(
+            self, self.text, STATE_VALUES, ONCE_BOUNDARY_STATE_VALUE
+        )
+
     def test_non_packet_gates_table_row_count_unchanged(self):
         rows = _table_rows(self.sections["Non-packet gates"])
         self.assertEqual(len(rows), 10)
@@ -835,6 +984,101 @@ class TestBatchModePointer(unittest.TestCase):
             match, "per-command approval fallback row not found in batch-mode.md"
         )
         self.assertIn("per literal command string", match.group(0))
+
+
+# Forged batch-mode.md-shaped excerpts for the state-value guard matcher's
+# negative proof / non-vacuity guard / false-positive proof (AC-6, D2,
+# develop-once-option task0003).
+FORGED_BATCH_MODE_EXCERPT_WITH_STATE_VALUE = (
+    "See `references/batch-terminal-line.md` for the field grammar. "
+    "After a `--once` launch reaches a phase boundary, the run emits "
+    "`state=phase_done` as its terminal line."
+)
+
+FORGED_BATCH_MODE_EXCERPT_WITH_BARE_BOUNDARY_VALUE = (
+    "See `references/batch-terminal-line.md` for the field grammar. "
+    "The phase_done outcome ends a --once launch's turn."
+)
+
+FORGED_BATCH_MODE_EXCERPT_WITH_STEP_STATUS_WORDS = (
+    "workflow.yaml marks a step `completed` (or `skipped` for design "
+    "only); a task that instead ends `stopped` is reported separately."
+)
+
+
+class TestStateValueGuardMatcher(unittest.TestCase):
+    """NFR4: negative proof + non-vacuity guard for the state-value guard
+    matcher (`_assert_no_state_value_literal`, AC-6, D2, develop-once-
+    option task0003)."""
+
+    def test_forged_state_value_excerpt_is_otherwise_well_formed(self):
+        self.assertIn(
+            "references/batch-terminal-line.md",
+            FORGED_BATCH_MODE_EXCERPT_WITH_STATE_VALUE,
+        )
+
+    def test_state_value_shape_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_no_state_value_literal(
+                self,
+                FORGED_BATCH_MODE_EXCERPT_WITH_STATE_VALUE,
+                STATE_VALUES,
+                ONCE_BOUNDARY_STATE_VALUE,
+            )
+
+    def test_forged_bare_boundary_excerpt_is_otherwise_well_formed(self):
+        self.assertIn(
+            "references/batch-terminal-line.md",
+            FORGED_BATCH_MODE_EXCERPT_WITH_BARE_BOUNDARY_VALUE,
+        )
+
+    def test_bare_boundary_literal_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_no_state_value_literal(
+                self,
+                FORGED_BATCH_MODE_EXCERPT_WITH_BARE_BOUNDARY_VALUE,
+                STATE_VALUES,
+                ONCE_BOUNDARY_STATE_VALUE,
+            )
+
+    def test_step_status_vocabulary_excerpt_is_otherwise_well_formed(self):
+        for word in ("completed", "skipped", "stopped"):
+            with self.subTest(word=word):
+                self.assertIn(
+                    word, FORGED_BATCH_MODE_EXCERPT_WITH_STEP_STATUS_WORDS
+                )
+
+    def test_step_status_vocabulary_does_not_false_positive(self):
+        """AC-6: bare `completed` / `skipped` / `stopped`, used as
+        ordinary workflow.yaml step-status words (never in the
+        `state={value}` shape, never the boundary value's bare literal),
+        must not trip the guard."""
+        _assert_no_state_value_literal(
+            self,
+            FORGED_BATCH_MODE_EXCERPT_WITH_STEP_STATUS_WORDS,
+            STATE_VALUES,
+            ONCE_BOUNDARY_STATE_VALUE,
+        )
+
+    def test_step_status_vocabulary_occurs_in_a_real_pointer_document(self):
+        """Non-vacuity grounding (Test Notes): `completed` / `skipped` /
+        `stopped` are not merely hypothetical words invented for the
+        forged sample above -- a real, stable document under
+        `em-workflow/` genuinely uses them as ordinary workflow.yaml
+        step-status vocabulary (D2), and this task's guard matcher
+        raises nothing when run over that real prose. `batch-mode.md`
+        itself does not yet use these words (it is not this document
+        that is being false-positive-tested here -- that is
+        `test_restates_no_state_value_shape` above -- this test proves
+        the matcher's tolerance against real prose that does), so
+        `implement-phase.md` grounds the proof instead."""
+        real_text = _read(PLUGIN_ROOT / "references" / "implement-phase.md")
+        for word in ("completed", "skipped", "stopped"):
+            with self.subTest(word=word):
+                self.assertIn(word, real_text)
+        _assert_no_state_value_literal(
+            self, real_text, STATE_VALUES, ONCE_BOUNDARY_STATE_VALUE
+        )
 
 
 class TestPrefixUniqueness(unittest.TestCase):
