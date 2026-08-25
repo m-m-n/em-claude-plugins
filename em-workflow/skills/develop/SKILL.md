@@ -554,11 +554,13 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 
 ## バッチ終端行
 
-`--batch` 実行では、ランを終わらせるターン（Step C の完了処理、または
-下記に列挙する終端の停止条件で終わるターン）が、最後の assistant
-メッセージの末尾に終端行を 1 行出力する。行の書式・フィールドの意味・
-値の集合は `references/batch-terminal-line.md` を唯一の SSOT とし、
-ここでは「いつ出すか」だけを定める。出力の直前に
+`--batch` 実行では、そのターンでランが同 SSOT の定める終端状態に達した
+場合、最後の assistant メッセージの末尾に終端行を 1 行出力する。Step C
+の完了処理・`--once` のフェーズ境界・下記に列挙する終端の停止条件は、
+いずれもこの条件が成り立つ場合の列挙であり、条件に対する追加の制限では
+ない。行の書式・フィールドの意味・値の集合は
+`references/batch-terminal-line.md` を唯一の SSOT とし、ここでは
+「いつ出すか」だけを定める。出力の直前に
 `${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md` を Read し、
 そこに定義された prefix・フィールド文法・値の集合をそのまま使う。
 
