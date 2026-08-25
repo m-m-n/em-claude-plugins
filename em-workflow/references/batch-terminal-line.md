@@ -63,8 +63,11 @@ EM_WORKFLOW_TERMINAL: state=completed step=retrospect reason=none detail=feature
   fields and the same field order as every other terminal line. A
   consumer that sees `state=phase_done` re-launches the same feature to
   continue it.
-- `step` — the general rule: `step` names the step EXECUTED in that
-  turn, never the step the next launch resumes at; at the verify-fail
+- `step` — a closed value domain: one of the seven `workflow.yaml`
+  step ids (`create-spec`, `design`, `create-plan`, `implement`,
+  `review`, `verify`, `retrospect`), or the single sentinel `no-step`.
+  The general rule: `step` names the step EXECUTED in that turn,
+  never the step the next launch resumes at; at the verify-fail
   rework boundary the value is `verify`, even though the next launch
   resumes at `implement`. Two rules take precedence over the general
   rule: the single sentinel `no-step`, and the `state=completed` rule.
