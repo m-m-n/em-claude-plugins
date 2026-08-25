@@ -249,7 +249,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR7, FR8, NFR1, NFR2, NFR3, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/develop-once-option/task0007
     provenance:
