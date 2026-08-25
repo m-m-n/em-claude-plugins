@@ -1,11 +1,11 @@
 schema_version: 1
 feature: develop-once-option
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 4323beb
 last_input_digest: sha256:896a133820cd6cab0884740805280a48f34724030cb8411fe301b87d9070e900
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -89,12 +89,18 @@ worker_runs:
     input_digest: sha256:ac24381c5279cd41978bcdc8da5072c8f15826534ba2cc8625878ad973c778df
     output_digest: null
   - request_id: create-spec-run-0003
-    status: dispatched
+    status: completed
     input_digest: sha256:896a133820cd6cab0884740805280a48f34724030cb8411fe301b87d9070e900
     output_digest: null
-artifacts: []
+artifacts:
+  - path: feature-docs/develop-once-option/REQUIREMENTS.md
+    sha256: sha256:5ebfef307e580de3eca063b8bb30d3f62889ff5556bae8c08d75eeb3c497e766
+    produced_by: create-spec-run-0003
+  - path: feature-docs/develop-once-option/SPEC.md
+    sha256: sha256:9d1e7bb4b53b55db3bda01f53e0d244591c3ceef095f111ca9d133f525789316
+    produced_by: create-spec-run-0003
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:9d2f41d1041c9aa97ab3ce63d0aa1ead035e8aa348785eb36002424e807601eb
 stale_redispatch_count: 0
 resolved_input_cache:
   design_system_candidates:

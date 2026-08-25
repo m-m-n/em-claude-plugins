@@ -1,0 +1,279 @@
+schema_version: 1
+feature: develop-once-option
+created: 2026-08-25
+base_branch: main
+goal: |
+  # em-workflow:develop `--once` オプション 企画書
+
+  ## 目的
+
+  オーケストレーターのコンテキスト消費をフェーズ境界で切る。
+
+  ## 仕様
+
+  ### フラグ
+
+  `--once` — 1 フェーズを実行したら、次の step に進まずターンを終える。
+
+  - 起動ごとの挙動指定であり、`workflow.yaml` にも `phase-state/` にも記録しない。
+  - `--batch` と併用できる。
+  - フラグを付けない起動は従来どおり、全 step が `completed`（design のみ
+    `skipped` 可）になるまで自走する。
+
+  ### 使用例
+
+  ```
+  /em-workflow:develop --once             → create-spec を実行して終了
+  /em-workflow:develop {feature} --once   → design を実行して終了
+  /em-workflow:develop {feature}          → create-plan 以降を最後まで
+  ```
+
+  毎フェーズ切る場合は外側で `--once` を繰り返し起動する。
+
+  ### 1 フェーズの定義
+
+  `workflow.yaml` の `workflow[]` の 1 step を実行し、その `status` が
+  `completed`（design のみ `skipped` 可）に確定してコミットされた時点を
+  1 フェーズ完了とする。
+
+  - **Step C（完了処理）は独立した 1 フェーズとして数える。** retrospect が
+    `completed` になった時点で `--once` は終了し、Step C は次の起動で実行する。
+  - **verify fail からの rework** は、verify が `fail` を記録し、rework patch を
+    適用して implement / verify を `pending` に戻した時点を 1 フェーズ完了とする。
+    次の起動は implement から再開する。
+
+  ### 停止条件
+
+  `skills/develop/SKILL.md` の「ターンを終わらせていい唯一の条件」に停止条件 7 を
+  追加する。
+
+  > 7. `--once` 指定時、1 フェーズが完了したとき
+
+  ### batch モード
+
+  `--batch` でも `--once` を適用する。終端行
+  （`references/batch-terminal-line.md`）に 3 つ目の `state` を追加する。
+
+  | フィールド | 値 |
+  |---|---|
+  | `state` | `phase_done` |
+  | `step` | 完了した step 名 |
+  | `reason` | `none` |
+  | `detail` | 従来どおり非空の 1 行 |
+
+  `state=completed` / `state=stopped` の意味は変更しない。外側ドライバは
+  `phase_done` を見て同じ feature を再起動する。
+
+  ### interactive モード
+
+  終了報告に次の 1 行を添える。
+
+  ```
+  {step} が完了したよ。続きは /clear してから /em-workflow:develop {feature} を実行してね
+  ```
+
+  ## 制約
+
+  implement フェーズの途中では終了しない。in-flight のバックグラウンド
+  implementer はプロセス終了で失われるため、フェーズ完了時点でのみ終える。
+
+  ## 変更箇所
+
+  - `em-workflow/skills/develop/SKILL.md`
+    - 引数処理に `--once` を追加
+    - 停止条件 7 を追加
+    - 停止時の報告に `--once` の分岐を追加
+    - バッチ終端行の出力対象に `phase_done` を追加
+  - `em-workflow/references/batch-terminal-line.md`
+    - `state` の値に `phase_done` を追加
+  - `em-workflow/.claude-plugin/plugin.json` / `.claude-plugin/marketplace.json`
+    - `version` 0.1.50 → 0.1.51
+parent_branch: em-workflow/develop-once-option/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Markdown SSOT documents + Python 3 (stdlib unittest) + JSON manifests
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 7868bd78a8ec607c7c40605cda53548f9f48d56f
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      変更対象は Markdown のプロンプト/リファレンス文書とそのテストモジュール、
+      および JSON の version フィールド 2 箇所に閉じている。UI も視覚的な表面も
+      design system も存在しない（design-system 候補は 0 件）ため、design
+      ステップが生む成果物が無い。
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "`--once` argument handling"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: "Definition of one phase (the `completed` boundary)"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: "Step C is its own phase"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: "verify-fail rework boundary"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: "Non-`completed` phase boundaries"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS7]
+  FR6:
+    title: "Stop condition 7"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS7]
+  FR7:
+    title: "Batch terminal line: third `state` value"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3, TS10]
+  FR8:
+    title: "Terminal line `step` at a `--once` boundary"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3]
+  FR9:
+    title: "SSOT partition: no state-value literal in SKILL.md"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS4, TS8]
+  FR10:
+    title: "Literal guard extended to `state` values"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS4, TS5, TS6]
+  FR11:
+    title: "Terminal-state cardinality wording"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3]
+  FR12:
+    title: "Interactive closing line"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR13:
+    title: "Plugin version bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2]
+  FR14:
+    title: "No mid-implement termination"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "SSOT partition preserved"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS4, TS9]
+  NFR2:
+    title: "Documentation-only change surface"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1]
+  NFR3:
+    title: "Test conventions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS5]
+  NFR4:
+    title: "Backward compatibility"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3, TS7, TS8, TS10]
+  NFR5:
+    title: "Reporting completeness in batch"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
