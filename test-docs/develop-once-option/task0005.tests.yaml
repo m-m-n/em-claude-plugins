@@ -1,0 +1,86 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_reason_bullet_reserved_for_non_stop_states
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'non-stop terminal state' not found in the
+      `## Field values` section text -- the `reason` bullet still said
+      "(used only when `state=completed`)" and never mentioned
+      `state=phase_done`.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_none_documented_as_reserved_for_non_stop_states
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: '`state=phase_done`' not found in the
+      `## Stop reason codes` closing prose -- it still said "The value
+      `none` is reserved for `state=completed`;" with no mention of
+      `state=phase_done`.
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract.TestNoneReservedRangeMatcherNegativeProofs.test_field_values_old_restrictive_phrasing_is_rejected
+      - tests.test_batch_stop_contract.TestNoneReservedRangeMatcherNegativeProofs.test_field_values_forged_bullet_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestNoneReservedRangeMatcherNegativeProofs.test_stop_reason_codes_old_restrictive_phrasing_is_rejected
+      - tests.test_batch_stop_contract.TestNoneReservedRangeMatcherNegativeProofs.test_stop_reason_codes_forged_prose_is_otherwise_well_formed
+    red_confirmed: false
+    red_reason: >-
+      This AC is the negative-proof / non-vacuity-guard requirement for
+      the AC-1/AC-2 matcher itself, not a new production-code behavior:
+      the negative-proof tests assert AssertionError is raised for
+      forged old-wording samples, and the matcher
+      (_assert_none_reserved_for_non_stop_states_stated) they exercise
+      was written new in this task, so there is no prior "green before
+      implementation" state to distinguish from. The matcher's own
+      correctness is exercised end-to-end by AC-1/AC-2's red->green
+      cycle against the real document.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_precedence_stated
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'take precedence over the general rule' not found
+      in the `## Field values` section text -- the `step` bullet stated
+      the executed-step rule, the `no-step` sentinel and the
+      `state=completed` rule as three unordered sentences with no
+      explicit priority relation.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_c_asymmetry_stated
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'Step C is not a `workflow.yaml` step' not found
+      in the `## Field values` section text -- the old `step` bullet
+      never named Step C explicitly, so the value asymmetry between a
+      normal-completion Step C turn (`retrospect`) and a `step-c-abort`
+      turn (`no-step`) was left to be inferred rather than stated.
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract.TestStepPrecedenceMatcherNegativeProof.test_missing_precedence_wording_is_rejected
+      - tests.test_batch_stop_contract.TestStepPrecedenceMatcherNegativeProof.test_forged_old_bullet_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestStepCAsymmetryMatcherNegativeProof.test_missing_asymmetry_wording_is_rejected
+      - tests.test_batch_stop_contract.TestStepCAsymmetryMatcherNegativeProof.test_forged_old_bullet_is_otherwise_well_formed
+    red_confirmed: false
+    red_reason: >-
+      Same shape as AC-3: this AC is the negative-proof / non-vacuity-
+      guard requirement for the AC-4/AC-5 matchers
+      (_assert_step_precedence_stated, _assert_step_c_asymmetry_stated),
+      both written new in this task, exercised against the verbatim
+      pre-task0005 `step` bullet text as the forged sample. No prior
+      green-before-implementation state exists for a brand-new matcher;
+      the matchers' correctness is exercised end-to-end by AC-4/AC-5's
+      red->green cycle against the real document.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Non-regression criterion, not a new-behavior test: verified by the
+      pre-existing regression-guard tests (heading count/order, eleven
+      reason codes with Applies-to-state all `stopped`, coverage table,
+      task0003's phase_done wording) staying green unmodified through
+      this change, plus the whole-suite run
+      (`python3 -m unittest discover -s tests`) reported as exit 0 by
+      the implementer.
