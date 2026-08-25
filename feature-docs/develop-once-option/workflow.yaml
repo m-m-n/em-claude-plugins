@@ -121,7 +121,7 @@ workflow:
     status: completed
     completed_at_commit: 64dbec80e2d2afe567d397b173ce604751a6ede1
   - id: implement
-    status: pending
+    status: in_progress
     completed_at_commit: 7037cfc7fc2103e6381f2170bba9193b8f2bc27c
     base_commit: cf2d345c74114de1939c798a1e31f80aea624cbe
   - id: review
@@ -249,9 +249,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR7, FR8, NFR1, NFR2, NFR3, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/develop-once-option/task0007
     provenance:
       source: verify
       source_ids: [SC4]
@@ -266,9 +266,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: low
     requirements: [FR9, NFR1, NFR2, NFR3, NFR4, NFR5]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/develop-once-option/task0008
     provenance:
       source: verify
       source_ids: [SC4]
