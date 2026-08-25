@@ -93,13 +93,13 @@ the `--batch` flag's job, per-invocation).
 
 ## Terminal line
 
-At the end of every batch run — both on normal completion and on every
-terminating stop — the final assistant message carries a machine-readable
-terminal line as its last line. `references/batch-terminal-line.md` is the
-sole owner of that line's format and is referenced here rather than
-restated. Immediately before emitting that line, Read
-`references/batch-terminal-line.md` and use the prefix, field grammar and
-value sets it defines as-is.
+At the end of every batch run — on normal completion, on every terminating
+stop, and on a turn that ends at a `--once` phase boundary — the final
+assistant message carries a machine-readable terminal line as its last
+line. `references/batch-terminal-line.md` is the sole owner of that line's
+format and is referenced here rather than restated. Immediately before
+emitting that line, Read `references/batch-terminal-line.md` and use the
+prefix, field grammar and value sets it defines as-is.
 
 ## Reporting
 
