@@ -226,8 +226,8 @@ tasks:
       review_round: 1
 
 review:
-  status: in_progress
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor: [comprehensive, architecture, spec]
     discretionary: []
@@ -236,8 +236,8 @@ review:
     comprehensive: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 3
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 
 requirements:
   FR1:
