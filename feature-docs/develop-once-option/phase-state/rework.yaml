@@ -1,16 +1,21 @@
 schema_version: 1
 feature: develop-once-option
 phase: rework
-status: completed
-generation: 1
-base_revision: f85f95308a4a427d843e05599a009a26a2f996be
-last_input_digest: sha256:894419cb13fcdf5f5e7b3848381e97c1fd543c71fdc875cb46dd4ed4cb8bf1db
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: 804482df354afd620e1f0ee13d054fdc671957c9
+last_input_digest: sha256:26101a0d65a424bab0c605c24dfd68b5b7ba713a20f9e76dc65cee292283974b
+active_request_id: rework-run-0002
 packets: {}
 answers: {}
 worker_runs:
   - request_id: rework-run-0001
     status: completed
+    note: review-sourced (round 1)
+  - request_id: rework-run-0002
+    status: dispatched
+    input_digest: sha256:26101a0d65a424bab0c605c24dfd68b5b7ba713a20f9e76dc65cee292283974b
+    output_digest: null
     input_digest: sha256:894419cb13fcdf5f5e7b3848381e97c1fd543c71fdc875cb46dd4ed4cb8bf1db
     output_digest: null
 artifacts:
