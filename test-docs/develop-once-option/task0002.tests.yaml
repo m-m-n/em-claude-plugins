@@ -1,0 +1,183 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_once_boundary_occasion
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_is_placed_immediately_after_stop_report_section
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_instructs_reading_the_contract_doc_before_emitting
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_terminal_line_is_last_line_of_final_message
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_no_line_rule_is_generalized_over_non_terminal_turn_ends
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_the_terminating_stops
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_covers_step_a_and_docs_commit_conflict_stops
+    red_confirmed: true
+    red_reason: >-
+      test_subsection_covers_once_boundary_occasion failed against the
+      pre-edit SKILL.md with "AssertionError:
+      '`--once`のフェーズ境界で終わるターン' not found in
+      '##バッチ終端行`--batch`実行では、...'" (whitespace-stripped section
+      text; confirmed by running the test module before touching the
+      implementation files, per 4a/4b). Green after the enumeration
+      paragraph gained "`--once` のフェーズ境界で終わるターン" alongside
+      Step C's completion processing. The other six tests listed are the
+      Design "維持しなければならない既存の保証" items 1-5 (placement,
+      Read-before-emit instruction, last-line rule, the generalized
+      no-line rule, the pre-existing stop-point enumeration) -- pure
+      regression guards over wording this task's edit does not touch; they
+      were green before this task's edit and stayed green after, proving
+      the guarantees survived.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestSkillMdNamesNoTerminalStateCount.test_old_fixed_terminal_state_count_wording_is_gone
+      - tests.test_batch_stop_contract_skill_wiring.TestSkillMdNamesNoTerminalStateCount.test_replacement_wording_present
+      - tests.test_batch_stop_contract_skill_wiring.TestSkillMdNamesNoTerminalStateCount.test_replacement_names_no_state_value
+    red_confirmed: true
+    red_reason: >-
+      test_old_fixed_terminal_state_count_wording_is_gone and
+      test_replacement_wording_present both failed against the pre-edit
+      SKILL.md (the former because 「2つの終端状態」 was still present, the
+      latter because the replacement phrase 「同SSOTが定める終端状態のいずれか」
+      did not exist yet) -- confirmed by running the test module before
+      touching the implementation files. Green after 「2 つの終端状態の
+      いずれか」 was rewritten to 「終端状態のいずれか」.
+      test_replacement_names_no_state_value calls the same
+      `_find_contract_literal_violations` matcher exercised (green by
+      construction) under AC-4/AC-5 below; it was already true on the
+      pre-edit text (which named no state value either, only a count) and
+      remains true, so it is a companion regression check rather than a
+      second red-to-green transition.
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_covers_once_boundary_occasion
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_names_the_contract_document
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_instructs_reading_the_contract_doc_before_emitting
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_restates_no_contract_literal
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeNonPacketGatesTableUnchanged.test_table_has_exactly_ten_data_rows
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeNonPacketGatesTableUnchanged.test_catch_all_diff_size_and_per_command_wording_intact
+    red_confirmed: true
+    red_reason: >-
+      test_section_covers_once_boundary_occasion failed against the
+      pre-edit batch-mode.md with "AssertionError: \"a `--once` phase
+      boundary\" not found in ...'## Terminal line' section text"
+      (confirmed by running the test module before touching the
+      implementation files). Green after `## Terminal line`'s occasion
+      list gained "and on a turn that ends at a `--once` phase boundary".
+      The other five tests are pre-existing regression guards -- the
+      contract-document naming, the Read-before-emit instruction, the
+      literal-absence check, and the Non-packet gates table's row-count /
+      wording -- all true before this task's single-paragraph edit (which
+      never touches the Non-packet gates table) and true after.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_skill_md
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_batch_mode_md
+      - tests.test_batch_stop_contract_skill_wiring.TestSubsectionRestatesNoContractLiteral.test_prefix_literal_absent_from_whole_skill_md
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_prefix_literal_absent_from_whole_batch_mode_md
+    red_confirmed: false
+    red_reason: >-
+      The extended guard (`_find_contract_literal_violations`'s new
+      `state={value}` shape check and bare `phase_done` check, D2) and the
+      two whole-file 0-violations tests were written together with the
+      matcher in the same edit -- there is no separate implementation step
+      for a test module to observe red against; the matcher was correct by
+      construction the moment it was written (its ability to actually
+      detect a violation is what TestStateValueMatcherCanFail and
+      TestOnceBoundaryBareLiteralMatcherCanFail prove under AC-5, both
+      red-confirmed there). The two prefix-absence tests are pre-existing
+      regression guards, true before and after this task's edits to both
+      real files.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueMatcherCanFail.test_forged_skill_excerpt_is_well_formed_and_found
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueMatcherCanFail.test_matcher_rejects_forged_skill_state_value_restatement
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueMatcherCanFail.test_forged_batch_mode_excerpt_is_well_formed_and_found
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueMatcherCanFail.test_matcher_rejects_forged_batch_mode_state_value_restatement
+      - tests.test_batch_stop_contract_skill_wiring.TestOnceBoundaryBareLiteralMatcherCanFail.test_forged_bare_literal_excerpt_is_well_formed_and_found
+      - tests.test_batch_stop_contract_skill_wiring.TestOnceBoundaryBareLiteralMatcherCanFail.test_matcher_rejects_bare_once_boundary_literal
+    red_confirmed: true
+    red_reason: >-
+      The negative-proof tests and the matcher's state-value extension were
+      authored together in the same edit, so after that edit they already
+      passed. To confirm a genuine red observation rather than "correct by
+      construction", the two new rule blocks (`state={value}` shape loop and
+      the bare `ONCE_BOUNDARY_STATE_VALUE` check) were temporarily deleted
+      from `_find_contract_literal_violations` and just this AC's two test
+      classes were re-run: both
+      test_matcher_rejects_forged_skill_state_value_restatement and
+      test_matcher_rejects_forged_batch_mode_state_value_restatement failed
+      with "AssertionError: [] is not true : matcher failed to detect the
+      forged state-value restatement" (the reverted matcher returned an
+      empty violations list for text containing `state=phase_done`), and
+      test_matcher_rejects_bare_once_boundary_literal failed the same way
+      for the bare `phase_done` literal. The matcher body was then restored
+      verbatim and the full suite re-run to confirm 2425 tests OK (no
+      regression from the round trip). The three
+      `*_is_well_formed_and_found` non-vacuity tests confirm the slicer
+      finds each forged excerpt and that it genuinely carries the literal
+      being tested (`state=phase_done` for the first two, bare `phase_done`
+      without the `state=` prefix for the third) -- true by construction of
+      the fixture strings themselves, and unaffected by the matcher
+      revert/restore since they never call the matcher.
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_step_status_words_actually_occur_in_the_real_files
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_does_not_flag_bare_stopped_if_it_were_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_skill_md
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_batch_mode_md
+    red_confirmed: false
+    red_reason: >-
+      Structural/textual non-vacuity and false-positive checks with no
+      implementation-driven red-to-green transition: `completed` and
+      `skipped` already occurred as ordinary `workflow.yaml` step-status
+      vocabulary in both real files before this task's edits (verified by
+      direct grep against the pre-edit worktree), and the extended guard
+      never checks bare step-status words at all (only the `state={value}`
+      shape and the bare `phase_done` literal), so it could not have
+      flagged them before or after. `stopped` does NOT occur literally in
+      either real pointer document (confirmed by grep against the pre-edit
+      worktree) -- this is a discrepancy from IMPLEMENTATION.md D2's
+      description of it as "ordinary step-status vocabulary in both
+      pointer documents", noted in this task's report rather than silently
+      reinterpreted; workflow.yaml's own step-status closed set (per
+      SKILL.md's 「ターンを終わらせていい唯一の条件」) is `pending` /
+      `in_progress` / `completed` / `skipped` / `failed` / `needs_update`,
+      which never includes `stopped`. `stopped` is still whitelisted in the
+      matcher for structural completeness (never flagged if it appears),
+      verified against a synthetic sample since no real-file non-vacuity
+      proof is possible for it.
+  AC-7:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: >-
+      Structural/static check with no implementation-driven red-to-green
+      transition: it inspects this module's own AST for non-stdlib
+      imports, true the moment the file was written (no new import was
+      added by this task's extension). Discovery and whole-suite-green are
+      verified operationally instead: `python3 -m unittest discover -s
+      tests` ran 2410 tests OK before this task's edits (4a baseline) and
+      2425 tests OK after (2410 + 15 net new test methods this task adds:
+      1 once-boundary occasion test in TestBatchTerminalLineSubsectionWiring
+      + 1 in TestBatchModeTerminalLineWiring, the 3
+      TestSkillMdNamesNoTerminalStateCount tests, the 6
+      TestStateValueMatcherCanFail / TestOnceBoundaryBareLiteralMatcherCanFail
+      matcher-proof tests, and the 4 TestStateValueGuardWholeFileScope tests
+      -- 1 + 1 + 3 + 6 + 4 = 15). No regression: the diff between the
+      pre-edit and post-edit full-suite runs is empty.
+notes: >-
+  Implementer note (not a file-scope deviation): IMPLEMENTATION.md D2
+  states that `completed`, `stopped` and `skipped` are "ordinary
+  step-status vocabulary in both pointer documents". This holds for
+  `completed` and `skipped` (both occur repeatedly in SKILL.md as
+  workflow.yaml step-status values) but NOT for `stopped`, which does not
+  occur literally in either `skills/develop/SKILL.md` or
+  `references/batch-mode.md` as of this task, and is not part of
+  workflow.yaml's own step-status closed set at all (that vocabulary has no
+  `stopped` value; `stopped` is exclusively the terminal-line contract's
+  own `state` domain member). The guard still whitelists it correctly (it
+  is never flagged by shape or bare-literal checks either way), so this
+  does not affect AC-4/AC-5/AC-6's pass/fail outcome -- it only means the
+  AC-6 false-positive proof for `stopped` specifically is demonstrated
+  against a synthetic sample rather than real-file text, documented in
+  TestStateValueGuardWholeFileScope's class docstring and reasserted here.

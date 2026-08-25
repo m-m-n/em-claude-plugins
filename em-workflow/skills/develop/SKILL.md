@@ -537,7 +537,8 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 `${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md` を Read し、
 そこに定義された prefix・フィールド文法・値の集合をそのまま使う。
 
-対象は Step C の完了処理（通常完了）に加えて、停止条件 2（スタック）、
+対象は Step C の完了処理（通常完了）と `--once` のフェーズ境界で終わる
+ターンに加えて、停止条件 2（スタック）、
 停止条件 3（failed / needs_update）、停止条件 4（YAML parse エラー）、
 停止条件 6（git-setup 中断）、フェーズ内のゲート中断、Step C 内の中断、
 Step A の feature 解決失敗（fail-closed 識別子ゲート、またはパス引数も
@@ -545,8 +546,8 @@ Step A の feature 解決失敗（fail-closed 識別子ゲート、またはパ�
 exit 4 によるフェーズ中断、そして implement / verify フェーズが定める
 終端停止 — 同 SSOT が列挙する停止点のすべてを含む。
 
-ターンが終わる時点でランが終端状態（同 SSOT が定める 2 つの終端状態の
-いずれか）に達していない場合は、終端行を出力しない。停止条件 5
+ターンが終わる時点でランが終端状態（同 SSOT が定める終端状態のいずれか）
+に達していない場合は、終端行を出力しない。停止条件 5
 （implementer の完了通知待ち）はこの規則のインスタンスであり、implement
 フェーズの launch ターン（起動直後にターンを終える）と wake ターン
 （補充後にターンを終える）も同様である。
