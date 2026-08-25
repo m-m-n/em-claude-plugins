@@ -97,6 +97,40 @@ Covers task0006 Acceptance Criteria
   directly against a synthetic sample containing `completed` / `skipped` /
   `stopped` as ordinary prose.
 
+Extended again by develop-once-option/task0008 (verify rework, SC4's
+emission-occasion half; IMPLEMENTATION.md D11). Covers task0008 Acceptance
+Criteria (feature-docs/develop-once-option/tasks/task0008.md):
+
+- AC-1/AC-2: `batch-mode.md`'s `## Terminal line` opening definition states
+  the output condition as "a batch turn reaches one of the terminal states
+  the contract SSOT defines", with normal completion, every terminating
+  stop and a turn ending at a `--once` phase boundary named as occasions on
+  which that condition holds -- not, as the pre-task0008 wording had it,
+  "At the end of every batch run" with the `--once` boundary listed as a
+  third item under a run-ending subject that boundary does not satisfy. The
+  substring "a `--once` phase boundary" stays present (unchanged pre-
+  existing test `test_section_covers_once_boundary_occasion`).
+- AC-3: a new matcher, independent of SKILL.md's Japanese
+  `_states_definition_condition_correctly` (D11 -- each pointer document
+  states the rule in its own language with its own matcher, neither
+  reusable across the two), carries its own negative proof (a forged
+  section reproducing the old "At the end of every batch run" wording
+  verbatim) and non-vacuity guard (the forged section is sliceable and
+  genuinely names the contract document and the `--once` occasion).
+- AC-4/AC-5/AC-6/AC-7: unaffected -- the contract-literal guard, the
+  Read-before-emit instruction, the Non-packet gates table and SKILL.md are
+  regression-guarded only (no new assertions needed beyond the pre-existing
+  ones already in this module).
+
+Matcher -> negative-proof inventory (task0008 addition):
+
+- `_batch_mode_states_definition_condition_correctly` (AC-1/AC-2's
+  batch-mode.md opening-definition matcher): negative proof is
+  TestBatchModeDefinitionConditionMatcherCanFail.test_matcher_rejects_old_run_ending_definition
+  (a forged `## Terminal line` section reproducing the pre-task0008
+  "At the end of every batch run" wording verbatim), non-vacuity guard is
+  TestBatchModeDefinitionConditionMatcherCanFail.test_forged_old_definition_is_well_formed_and_found.
+
 Matcher -> negative-proof inventory (task0006 additions):
 
 - `_states_definition_condition_correctly` (AC-1's opening-definition
@@ -230,6 +264,20 @@ ONCE_BOUNDARY_STATE_VALUE = "phase_done"
 DEFINITION_CONDITION_PHRASE = "ランが同 SSOT の定める終端状態に達した"
 OLD_RUN_ENDING_TURN_PHRASE = "ランを終わらせるターン"
 
+# feature-docs/develop-once-option/tasks/task0008.md AC-1/AC-2:
+# `batch-mode.md`'s `## Terminal line` opening definition must state the
+# output condition as "a batch turn reaches one of the terminal states the
+# contract SSOT defines" and must NOT state "At the end of every batch
+# run" -- the old wording's subject was the run's end, with the `--once`
+# phase-boundary turn (which does not end the run) listed as a third
+# occasion under that same run-ending subject (IMPLEMENTATION.md D11).
+# Independent of `_states_definition_condition_correctly` /
+# DEFINITION_CONDITION_PHRASE / OLD_RUN_ENDING_TURN_PHRASE above: D11 has
+# each pointer document state the rule in its own language, with its own
+# matcher -- neither is reusable across the two documents.
+BATCH_MODE_DEFINITION_CONDITION_PHRASE = "reaches one of the terminal states"
+BATCH_MODE_OLD_RUN_ENDING_PHRASE = "At the end of every batch run"
+
 # IMPLEMENTATION.md D7's forbidden-literal list, restricted to the items
 # applicable to skills/develop/SKILL.md (items 2 and 5 name batch-mode.md
 # only and are out of this file's scope).
@@ -341,6 +389,21 @@ def _states_definition_condition_correctly(text):
     return (
         _strip_ws(DEFINITION_CONDITION_PHRASE) in stripped
         and OLD_RUN_ENDING_TURN_PHRASE not in text
+    )
+
+
+def _batch_mode_states_definition_condition_correctly(text):
+    """AC-1/AC-2's opening-definition matcher for batch-mode.md's
+    `## Terminal line` (task0008): true iff `text` states the terminal-line
+    output condition as "a batch turn reaches one of the terminal states
+    [the contract SSOT] defines" AND does not state the old run-ending
+    wording ("At the end of every batch run"). The English counterpart of
+    `_states_definition_condition_correctly` above, kept as an independent
+    matcher per D11 (each pointer document states the rule in its own
+    language, with its own matcher)."""
+    return (
+        BATCH_MODE_DEFINITION_CONDITION_PHRASE in text
+        and BATCH_MODE_OLD_RUN_ENDING_PHRASE not in text
     )
 
 
@@ -709,6 +772,71 @@ class TestBatchModeTerminalLineWiring(unittest.TestCase):
         # extended to include a turn ending at a `--once` phase boundary,
         # stated as an occasion only -- no value literal, no field grammar.
         self.assertIn("a `--once` phase boundary", self.section)
+
+
+class TestBatchModeTerminalLineDefinitionCondition(unittest.TestCase):
+    """AC-1/AC-2 (task0008, verify rework SC4 / IMPLEMENTATION.md D11):
+    `## Terminal line`'s opening definition states the output condition as
+    "a batch turn reaches one of the terminal states the contract SSOT
+    defines" and no longer states "At the end of every batch run" -- the
+    old wording's subject was the run's end, with the `--once`
+    phase-boundary turn (which does not end the run) listed as a third
+    occasion under that same run-ending subject."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(BATCH_MODE_PATH)
+        cls.section = _section(cls.text, TERMINAL_LINE_HEADING, REPORTING_HEADING)
+
+    def test_definition_states_terminal_state_condition_without_old_wording(self):
+        self.assertTrue(
+            _batch_mode_states_definition_condition_correctly(self.section),
+            "expected the opening definition to state the terminal-state "
+            "condition without the old 'At the end of every batch run' "
+            "wording",
+        )
+
+
+class TestBatchModeDefinitionConditionMatcherCanFail(unittest.TestCase):
+    """AC-3 (task0008): negative proof plus non-vacuity guard for
+    `_batch_mode_states_definition_condition_correctly` -- a forged
+    `## Terminal line` section reproducing the pre-task0008 run-ending
+    definition verbatim ("At the end of every batch run — on normal
+    completion, on every terminating stop, and on a turn that ends at a
+    `--once` phase boundary —")."""
+
+    FORGED_OLD_TERMINAL_LINE_TEXT = (
+        "...\n\n"
+        f"{TERMINAL_LINE_HEADING}\n\n"
+        "At the end of every batch run — on normal completion, on every "
+        "terminating stop, and on a turn that ends at a `--once` phase "
+        "boundary — the final assistant message carries a machine-readable "
+        "terminal line as its last line. "
+        f"`{CONTRACT_DOC_REFERENCE}` is the sole owner of that line's "
+        "format and is referenced here rather than restated.\n\n"
+        f"{REPORTING_HEADING}\n"
+    )
+
+    def test_forged_old_definition_is_well_formed_and_found(self):
+        # Non-vacuity guard: the slicer finds it, and it genuinely names the
+        # contract document and the `--once` occasion -- so the rejection
+        # below exercises the definition-condition check, not a slicing or
+        # fixture defect.
+        section = _section(
+            self.FORGED_OLD_TERMINAL_LINE_TEXT, TERMINAL_LINE_HEADING, REPORTING_HEADING
+        )
+        self.assertIn(CONTRACT_DOC_REFERENCE, section)
+        self.assertIn("a `--once` phase boundary", section)
+
+    def test_matcher_rejects_old_run_ending_definition(self):
+        section = _section(
+            self.FORGED_OLD_TERMINAL_LINE_TEXT, TERMINAL_LINE_HEADING, REPORTING_HEADING
+        )
+        self.assertFalse(
+            _batch_mode_states_definition_condition_correctly(section),
+            "matcher failed to detect the old 'At the end of every batch "
+            "run' definition",
+        )
 
 
 class TestBatchModeLiteralMatcherCanFail(unittest.TestCase):

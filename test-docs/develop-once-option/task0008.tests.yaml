@@ -1,0 +1,89 @@
+task_id: task0008
+baseline_failures: []          # 4a: full suite (2496 tests) was fully green before any edit
+final_failures: []             # after implementation: full suite (2499 tests, +3 new) fully green
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineDefinitionCondition.test_definition_states_terminal_state_condition_without_old_wording
+    red_confirmed: true
+    red_reason: >-
+      Before editing batch-mode.md: AssertionError: False is not true :
+      expected the opening definition to state the terminal-state condition
+      without the old 'At the end of every batch run' wording. Matcher and
+      test were written first, real file still carried the old wording.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineDefinitionCondition.test_definition_states_terminal_state_condition_without_old_wording
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_covers_once_boundary_occasion
+    red_confirmed: true
+    red_reason: >-
+      Same matcher/test as AC-1 covers the "instances, not additional
+      limits" framing (same red observation as AC-1). The `--once`
+      substring-preservation test (test_section_covers_once_boundary_occasion)
+      is pre-existing and unmodified; it was already green before this task
+      (pure regression guard per Test Notes) and stayed green after the
+      rewrite, confirming the substring survived the rewording.
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeDefinitionConditionMatcherCanFail.test_forged_old_definition_is_well_formed_and_found
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeDefinitionConditionMatcherCanFail.test_matcher_rejects_old_run_ending_definition
+    red_confirmed: true
+    red_reason: >-
+      Matcher and its negative-proof test were authored together, so both
+      passed immediately on first run (matcher was correct by construction).
+      To genuinely red-confirm the negative proof, the matcher body was
+      temporarily replaced with a version that dropped the
+      "old wording absent" check; test_matcher_rejects_old_run_ending_definition
+      then failed with: AssertionError: True is not false : matcher failed
+      to detect the old 'At the end of every batch run' definition. The
+      correct matcher was restored immediately afterward and the full suite
+      re-verified green. The non-vacuity companion test
+      (test_forged_old_definition_is_well_formed_and_found) asserts the
+      forged fixture is genuinely sliceable and carries the contract-doc
+      name and the `--once` occasion, independent of the matcher under test.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_restates_no_contract_literal
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_prefix_literal_absent_from_whole_batch_mode_md
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_batch_mode_md
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing regression guards (module already carried the
+      _find_contract_literal_violations matcher and its whole-file
+      application from earlier tasks). The task0008 rewrite deliberately
+      introduces no contract literal, so these stayed green before and
+      after the edit -- there is no behavior to drive red-first since AC-4
+      is "continue avoiding literals I never added", not new behavior.
+      Verified green after the edit as part of the full-suite run.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_names_the_contract_document
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_instructs_reading_the_contract_doc_before_emitting
+    red_confirmed: false
+    red_reason: >-
+      Task plan explicitly requires these two pre-existing tests stay green
+      "unchanged" (AC-5 wording) -- a pure non-regression guard, not a
+      criterion this task drives from red. Verified they remain green,
+      unmodified, after the rewrite.
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeNonPacketGatesTableUnchanged.test_table_has_exactly_ten_data_rows
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeNonPacketGatesTableUnchanged.test_catch_all_diff_size_and_per_command_wording_intact
+    red_confirmed: false
+    red_reason: >-
+      Pure non-regression criterion. Verified via `git diff --stat` that
+      em-workflow/skills/develop/SKILL.md has zero changes (only
+      em-workflow/references/batch-mode.md and
+      tests/test_batch_stop_contract_skill_wiring.py were touched), and the
+      two pinned Non-packet-gates-table tests stayed green throughout.
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Verifiable outcome is the exit code of
+      `python3 -m unittest discover -s tests`. Baseline (before any edit):
+      2496 tests, 0 failures (exit 0). Interim (test written, doc not yet
+      edited): 1 failure (AC-1's test), non-zero exit -- observed directly.
+      Final (after the doc edit): 2499 tests, 0 failures, exit 0.
+      tests/test_batch_stop_contract.py was not touched (module ownership,
+      D6) and stayed green throughout.
