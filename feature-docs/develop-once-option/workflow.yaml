@@ -128,23 +128,24 @@ workflow:
     status: completed
     completed_at_commit: 93291dd01ebd258d184029b268b07b7750cc7bc6
   - id: verify
-    status: in_progress
-    result: fail
-    failed_items:
-      - id: SC4
-        category: architecture
-        note: >-
-          「Documentation is complete — the three documents state argument handling,
-          all four phase boundaries, the emission occasions and the value domain,
-          each in its owning layer」が未達。(1) 値ドメイン: batch-terminal-line.md は
-          冒頭で `state` / `step` / `reason` の値ドメインの唯一の所有者を宣言しているが、
-          task0005 の書き換えで `step` の値域列挙（7 つの workflow step id と sentinel）が
-          消え、リポジトリのどこにも残っていない（同ファイルに `create-spec` は 0 出現）。
-          ポインタ文書はリテラルガードで再掲を禁止されているため、`step` の閉集合が
-          どの層にも無い。NFR1 違反。(2) 出力機会: batch-mode.md の `## Terminal line` の
-          定義文が「ランの終わり」を主語に保ったまま `--once` 境界を第 3 項に並べており、
-          ラウンド 1 で SKILL.md 側だけ直された同型の矛盾が残っている。
-          自動シナリオ TS1-TS19 と check-plugin-invariants.py はいずれも green。
+    status: completed
+    result: pass
+    failed_items: []
+    completed_at_commit: 3119439aa1b80a43845b5ec2fcc65f89467119a4
+    notes: >-
+      検証コマンド: `python3 -m unittest discover -s tests` → 2506 tests / 0 failures,
+      exit 0（TS1）。`python3 em-workflow/scripts/check-plugin-invariants.py .` → 7/7 PASS,
+      exit 0（TS2）。build / format / e2e コマンドは workflow.yaml で空のため対象外。
+      Success Criteria: SC1（要件カバレッジ表に空セル無し — 19 要件すべて tasks / tests
+      非空、status はすべて ok）、SC2（TS1-TS21 green）、SC3（`detail` の非機密性は TS3
+      が担保）、SC4（値ドメイン: `step` の 7 step id と sentinel の列挙が task0007 で
+      SSOT に復元済み。出力機会: batch-mode.md の `## Terminal line` が task0008 で
+      到達状態を主語とする定義に書き換わり、SKILL.md 側と一致）— いずれも達成。
+      手動確認項目のうち「境界で終端行 1 行、wait / launch / wake では出さない」は、
+      reviews/round2.yaml の deferred finding 77ba577919799b8a（境界表と非境界文が
+      implement の wake ターンで割れる。SPEC FR5 と FR14 の矛盾に由来し、修正には
+      仕様レイヤの判断が要る）が残っているため曖昧さを含む。review の rework 上限に
+      達したため deferred として記録済みで、この検証では新たな failed item にはしない。
   - id: retrospect
     status: pending
 
