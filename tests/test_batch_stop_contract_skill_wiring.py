@@ -46,6 +46,50 @@ pattern established by tests/test_develop_skill_rewiring.py -- same target
 files, independent helper functions (no cross-module import, matching that
 module's own convention of self-contained helpers).
 
+Extended again by develop-once-option/task0002 (a DIFFERENT feature from the
+batch-stop-contract one above; task IDs collide across features by
+coincidence, not by relationship). Covers develop-once-option task0002
+Acceptance Criteria
+(feature-docs/develop-once-option/tasks/task0002.md):
+
+- AC-1 (FR9): the 「バッチ終端行」 subsection additionally states that a turn
+  ending at a `--once` phase boundary is also a terminal-line output
+  target, while every pre-existing guarantee (subsection placement, the
+  Read-before-emit instruction, the last-line rule, the generalized
+  no-line rule, the pre-existing stop-point enumeration) is unchanged.
+- AC-2 (FR11): the old cardinality-pinning wording (「2 つの終端状態」) is
+  gone from `skills/develop/SKILL.md`, and the replacement wording names no
+  `state` value.
+- AC-3 (FR9, NFR1): `batch-mode.md`'s `## Terminal line` section states the
+  same `--once` phase-boundary occasion, with no value literal, keeping its
+  Read-before-emit instruction naming the contract document.
+- AC-4 (FR10): the literal guard is extended with a `state`-value shape
+  check (D2) and applied whole-file (not just section-scoped) to both real
+  files, with 0 violations.
+- AC-5 (FR10, NFR3): forged SKILL.md and batch-mode.md excerpts that
+  restate the new `--once` boundary state value are both rejected, each
+  with a non-vacuity guard.
+- AC-6 (FR10): `completed` / `skipped` / `stopped` used as ordinary step
+  status in the real files never trip the extended guard -- proven with a
+  non-vacuity check that the words actually occur.
+- AC-7 (NFR2, NFR3): this module keeps importing the standard library only.
+
+Matcher -> negative-proof inventory (task0002 additions):
+
+- The state-value shape extension to `_find_contract_literal_violations`
+  (D2 rules 1 and 2): negative proof is
+  TestStateValueMatcherCanFail (SKILL.md and batch-mode.md forged
+  restatements of `state=phase_done`) and
+  TestOnceBoundaryBareLiteralMatcherCanFail (a bare `phase_done` literal
+  dodging the `state=` shape); each has a matching non-vacuity guard in the
+  same class.
+- `TestSkillMdNamesNoTerminalStateCount` (AC-2) is a pure regression guard
+  over retained/removed wording (Test Notes) and is exempt from a negative
+  proof, matching this module's own convention for that category.
+- `TestStateValueGuardWholeFileScope` (AC-4/AC-6) is the whole-file
+  false-positive proof plus non-vacuity check; it reuses the matcher
+  negative-proofed above rather than introducing a new one.
+
 Matcher -> negative-proof inventory (Test Notes):
 
 - `_find_contract_literal_violations` (the contract-literal absence
@@ -126,6 +170,18 @@ FIELD_NAME_TOKENS = ("`state`", "`step`", "`reason`", "`detail`")
 PREFIX_LITERAL = "EM_WORKFLOW_TERMINAL:"
 SENTINEL_VALUE = "no-step"
 
+# IMPLEMENTATION.md (develop-once-option) D1/D2: the `state` domain once the
+# `--once` phase boundary adds a third value. Declared locally for absence
+# checks ONLY (D2, and this module's own cross-task-safety convention above
+# for REASON_CODES) -- this module never asserts that any contract document
+# DEFINES `phase_done`; that is task0003's document, which may not have
+# merged into this worktree yet.
+STATE_DOMAIN = ("completed", "stopped", "phase_done")
+# The `--once` boundary's value: contract-only vocabulary occurring nowhere
+# else in either pointer document (D2 rule 2), so a bare-literal check adds
+# no false-positive surface.
+ONCE_BOUNDARY_STATE_VALUE = "phase_done"
+
 # IMPLEMENTATION.md D7's forbidden-literal list, restricted to the items
 # applicable to skills/develop/SKILL.md (items 2 and 5 name batch-mode.md
 # only and are out of this file's scope).
@@ -163,7 +219,19 @@ def _find_contract_literal_violations(text):
     checked as a GROUP (all four backticked together) rather than as
     individual words, since `step` alone is ordinary vocabulary both
     documents already use for workflow steps -- checking it in isolation
-    would false-positive on unrelated prose."""
+    would false-positive on unrelated prose.
+
+    develop-once-option/task0002 (D2) extension: checks the `state` domain
+    by SHAPE rather than bare word, for the same false-positive reason --
+    `completed` / `stopped` / `skipped` are ordinary `workflow.yaml`
+    step-status vocabulary in both pointer documents and must never be
+    flagged (AC-6). Rule 1: the contract-specific `state={value}` form (this
+    substring check already covers bare, backticked and quoted spellings,
+    since backticks/quotes only wrap the substring rather than interleave
+    it). Rule 2: the `--once` boundary value's bare literal, which is
+    contract-only vocabulary appearing nowhere else, so without this a
+    pointer document could restate the value while dodging rule 1 (e.g.
+    'the state becomes phase_done' with no `state=` prefix)."""
     violations = []
     if PREFIX_LITERAL in text:
         violations.append(f"prefix literal {PREFIX_LITERAL!r} restated")
@@ -174,6 +242,14 @@ def _find_contract_literal_violations(text):
             violations.append(f"reason code {code!r} restated")
     if SENTINEL_VALUE in text:
         violations.append(f"sentinel value {SENTINEL_VALUE!r} restated")
+    for value in STATE_DOMAIN:
+        shape = f"state={value}"
+        if shape in text:
+            violations.append(f"state-value shape {shape!r} restated")
+    if ONCE_BOUNDARY_STATE_VALUE in text:
+        violations.append(
+            f"once-boundary state value {ONCE_BOUNDARY_STATE_VALUE!r} restated"
+        )
     return violations
 
 
@@ -303,6 +379,46 @@ class TestBatchTerminalLineSubsectionWiring(unittest.TestCase):
             _strip_ws("この報告のあとに終端行を追記する"),
             _strip_ws(self.step_c_section),
         )
+
+    def test_subsection_covers_once_boundary_occasion(self):
+        # AC-1 (develop-once-option/task0002): the subsection additionally
+        # states that a turn ending at a `--once` phase boundary is also a
+        # terminal-line output target ("when", not the boundary's own
+        # definition -- that stays owned by the section task0001 writes).
+        self.assertIn(
+            _strip_ws("`--once` のフェーズ境界で終わるターン"),
+            _strip_ws(self.section),
+        )
+
+
+class TestSkillMdNamesNoTerminalStateCount(unittest.TestCase):
+    """AC-2 (FR11, develop-once-option/task0002): SKILL.md no longer pins
+    the terminal-state count at two -- a third state (`phase_done`) now
+    exists once `--once` is wired, so a document naming a fixed count of
+    two would become false. The Contract SSOT owns the count; every other
+    document refers to the set without naming it (IMPLEMENTATION.md D4).
+    Pure regression guard over retained/removed wording (Test Notes),
+    exempt from a negative proof."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(SKILL_PATH)
+
+    def test_old_fixed_terminal_state_count_wording_is_gone(self):
+        self.assertNotIn(_strip_ws("2 つの終端状態"), _strip_ws(self.text))
+
+    def test_replacement_wording_present(self):
+        self.assertIn(
+            _strip_ws("同 SSOT が定める終端状態のいずれか"),
+            _strip_ws(self.text),
+        )
+
+    def test_replacement_names_no_state_value(self):
+        # Subsumed by TestStateValueGuardWholeFileScope but re-asserted
+        # directly here as the AC-2-specific regression guard, since AC-2's
+        # wording explicitly requires the replacement to name no `state`
+        # value (not merely to drop the count).
+        self.assertEqual(_find_contract_literal_violations(self.text), [])
 
 
 class TestNoLineGeneralizationMatcherCanFail(unittest.TestCase):
@@ -469,6 +585,12 @@ class TestBatchModeTerminalLineWiring(unittest.TestCase):
         # D6 (IMPLEMENTATION.md): the prefix's single-file property.
         self.assertNotIn(PREFIX_LITERAL, self.text)
 
+    def test_section_covers_once_boundary_occasion(self):
+        # AC-3 (develop-once-option/task0002, D8): the occasion list is
+        # extended to include a turn ending at a `--once` phase boundary,
+        # stated as an occasion only -- no value literal, no field grammar.
+        self.assertIn("a `--once` phase boundary", self.section)
+
 
 class TestBatchModeLiteralMatcherCanFail(unittest.TestCase):
     """AC-4 / Test Notes (c): the batch-mode.md literal-absence matcher
@@ -500,6 +622,149 @@ class TestBatchModeLiteralMatcherCanFail(unittest.TestCase):
         )
         violations = _find_contract_literal_violations(section)
         self.assertTrue(violations, "matcher failed to detect the forged restatement")
+
+
+class TestStateValueMatcherCanFail(unittest.TestCase):
+    """AC-5 (develop-once-option/task0002): negative proof plus non-vacuity
+    guard for the D2 state-value shape extension -- forged SKILL.md and
+    batch-mode.md excerpts that restate the new `--once` boundary state
+    value in the contract-specific `state={value}` shape, built the same
+    way as the pre-existing field-name / reason-code negative proofs above
+    (Test Notes): the slicer finds a minimal forged section, and the forged
+    text genuinely carries the new state value."""
+
+    FORGED_SKILL_TEXT = (
+        "...\n\n"
+        f"{NEW_SUBSECTION_HEADING}\n\n"
+        "`--once` のフェーズ境界で終わるターンでは `state=phase_done` を出す。\n\n"
+        f"{FILE_END_MARKER}\n"
+    )
+
+    FORGED_BATCH_MODE_TEXT = (
+        "...\n\n"
+        f"{TERMINAL_LINE_HEADING}\n\n"
+        "On a `--once` phase boundary the line carries `state=phase_done`.\n\n"
+        f"{REPORTING_HEADING}\n"
+    )
+
+    def test_forged_skill_excerpt_is_well_formed_and_found(self):
+        section = _section(
+            self.FORGED_SKILL_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER
+        )
+        self.assertIn("state=phase_done", section)
+
+    def test_matcher_rejects_forged_skill_state_value_restatement(self):
+        section = _section(
+            self.FORGED_SKILL_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER
+        )
+        violations = _find_contract_literal_violations(section)
+        self.assertTrue(
+            violations, "matcher failed to detect the forged state-value restatement"
+        )
+
+    def test_forged_batch_mode_excerpt_is_well_formed_and_found(self):
+        section = _section(
+            self.FORGED_BATCH_MODE_TEXT, TERMINAL_LINE_HEADING, REPORTING_HEADING
+        )
+        self.assertIn("state=phase_done", section)
+
+    def test_matcher_rejects_forged_batch_mode_state_value_restatement(self):
+        section = _section(
+            self.FORGED_BATCH_MODE_TEXT, TERMINAL_LINE_HEADING, REPORTING_HEADING
+        )
+        violations = _find_contract_literal_violations(section)
+        self.assertTrue(
+            violations, "matcher failed to detect the forged state-value restatement"
+        )
+
+
+class TestOnceBoundaryBareLiteralMatcherCanFail(unittest.TestCase):
+    """D2 rule 2 (develop-once-option/task0002): a bare `phase_done`
+    literal, dodging rule 1's `state={value}` shape check by omitting the
+    `state=` prefix, must still be rejected -- it is contract-only
+    vocabulary occurring nowhere else in either pointer document."""
+
+    FORGED_BARE_LITERAL_TEXT = (
+        "...\n\n"
+        f"{NEW_SUBSECTION_HEADING}\n\n"
+        "`--once` のフェーズ境界で終わるターンの状態は phase_done。\n\n"
+        f"{FILE_END_MARKER}\n"
+    )
+
+    def test_forged_bare_literal_excerpt_is_well_formed_and_found(self):
+        # Non-vacuity guard, and confirms this specifically exercises rule
+        # 2: the forged text carries the bare literal but NOT the
+        # `state=phase_done` shape rule 1 already covers.
+        section = _section(
+            self.FORGED_BARE_LITERAL_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER
+        )
+        self.assertIn("phase_done", section)
+        self.assertNotIn("state=phase_done", section)
+
+    def test_matcher_rejects_bare_once_boundary_literal(self):
+        section = _section(
+            self.FORGED_BARE_LITERAL_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER
+        )
+        violations = _find_contract_literal_violations(section)
+        self.assertTrue(
+            violations, "matcher failed to detect the bare once-boundary literal"
+        )
+
+
+class TestStateValueGuardWholeFileScope(unittest.TestCase):
+    """AC-4 and AC-6 (develop-once-option/task0002, D2): the extended guard
+    applied to the WHOLE FILE (not just the edited section) of both real
+    pointer documents finds 0 violations -- including where `completed` /
+    `skipped` are used as ordinary `workflow.yaml` step-status vocabulary
+    elsewhere in each file. AC-6's false-positive proof would be vacuous if
+    those words never actually occurred, so their presence is checked
+    directly first (non-vacuity).
+
+    `stopped` is part of the guard's whitelist too (D2), but unlike
+    `completed` / `skipped` it is not actually `workflow.yaml` step-status
+    vocabulary (that closed set is `pending` / `in_progress` / `completed`
+    / `skipped` / `failed` / `needs_update` -- confirmed against SKILL.md's
+    own 「ターンを終わらせていい唯一の条件」 enumeration) and does not occur
+    literally in either real pointer document as of this task. A real-file
+    non-vacuity proof for it would therefore be vacuous; instead
+    `test_guard_does_not_flag_bare_stopped_if_it_were_present` exercises
+    the matcher directly against a synthetic sample, documented as a
+    narrower proof than the real-file one above (plan-wording note, not a
+    file deviation: IMPLEMENTATION.md D2 describes `stopped` as ordinary
+    vocabulary "in both pointer documents", which does not hold for the
+    current baseline text of either)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.skill_text = _read(SKILL_PATH)
+        cls.batch_mode_text = _read(BATCH_MODE_PATH)
+
+    def test_step_status_words_actually_occur_in_the_real_files(self):
+        combined = self.skill_text + self.batch_mode_text
+        for word in ("completed", "skipped"):
+            self.assertIn(
+                word,
+                combined,
+                f"non-vacuity: {word!r} must occur somewhere in the real "
+                "files for the false-positive proof below to mean anything",
+            )
+
+    def test_guard_does_not_flag_bare_stopped_if_it_were_present(self):
+        # See class docstring: `stopped` does not occur in either real
+        # pointer document, so this checks the whitelist behavior directly
+        # rather than proving non-vacuity against real-file text.
+        self.assertNotIn("stopped", self.skill_text + self.batch_mode_text)
+        self.assertEqual(
+            _find_contract_literal_violations("the run stopped cleanly"), []
+        )
+
+    def test_guard_raises_no_violation_over_whole_skill_md(self):
+        self.assertEqual(_find_contract_literal_violations(self.skill_text), [])
+
+    def test_guard_raises_no_violation_over_whole_batch_mode_md(self):
+        self.assertEqual(
+            _find_contract_literal_violations(self.batch_mode_text), []
+        )
 
 
 class TestBatchModeNonPacketGatesTableUnchanged(unittest.TestCase):
