@@ -118,7 +118,8 @@ workflow:
       ステップが生む成果物が無い。
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 64dbec80e2d2afe567d397b173ce604751a6ede1
   - id: implement
     status: pending
     base_commit: null
