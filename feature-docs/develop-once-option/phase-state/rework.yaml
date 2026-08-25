@@ -1,11 +1,11 @@
 schema_version: 1
 feature: develop-once-option
 phase: rework
-status: dispatching
+status: completed
 generation: 2
 base_revision: 804482df354afd620e1f0ee13d054fdc671957c9
 last_input_digest: sha256:26101a0d65a424bab0c605c24dfd68b5b7ba713a20f9e76dc65cee292283974b
-active_request_id: rework-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -13,7 +13,7 @@ worker_runs:
     status: completed
     note: review-sourced (round 1)
   - request_id: rework-run-0002
-    status: dispatched
+    status: completed
     input_digest: sha256:26101a0d65a424bab0c605c24dfd68b5b7ba713a20f9e76dc65cee292283974b
     output_digest: null
     input_digest: sha256:894419cb13fcdf5f5e7b3848381e97c1fd543c71fdc875cb46dd4ed4cb8bf1db
@@ -32,6 +32,15 @@ artifacts:
     sha256: sha256:e649fa3864220ad496c086cd05f55e63673d19299a740cbec7886b6334e1a99f
     produced_by: rework-run-0001
 patches:
+  - patch_id: develop-once-option-rework2-p0002
+    status: applied
+    base_input_digest: sha256:26101a0d65a424bab0c605c24dfd68b5b7ba713a20f9e76dc65cee292283974b
+    base_workflow_blob: e87834f1da0554cfba3701754f3c7b416b334ab6
+    note: >-
+      verify-sourced rework (failed item SC4). 適用と同じ write で、
+      orchestrator が過去に持ち込んだ workflow.yaml の implement step の
+      completed_at_commit 重複キーも修復した（正しい値 7037cfc… を残し、
+      初回 implement 完了時の古い値を削除）。
   - patch_id: develop-once-option-rw0001
     status: applied
     base_input_digest: sha256:894419cb13fcdf5f5e7b3848381e97c1fd543c71fdc875cb46dd4ed4cb8bf1db

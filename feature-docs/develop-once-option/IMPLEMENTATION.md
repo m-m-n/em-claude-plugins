@@ -49,6 +49,8 @@ all of them.
 | Terminal-state cardinality rule | Keeps every count-bearing sentence true after a third value exists | No document states how many terminal states exist. The Contract SSOT enumerates the set; every other document refers to "the terminal states the SSOT defines" without a count and without naming a member (D4) | task0002, task0003 |
 | Phase-boundary set and `step` semantics | The shared meaning of "one phase" | Four boundary kinds (D5), each ending the turn only after the state change is committed. The terminal line's `step` names the step EXECUTED in that turn — `verify` at the verify-fail rework boundary — never the step the next launch resumes at. This is the general rule; two pre-existing rules take precedence over it, in the order given by D9 | task0001 (defines the boundaries), task0003 (states the `step` rule), task0005 (states the precedence) |
 | Terminal-line `reason` domain | Which `state` values admit the reserved value `none` | `none` is reserved for the non-stop terminal states — currently `state=completed` and `state=phase_done`. It is not a stop reason code and never accompanies `state=stopped`. Every statement of this rule in the contract document states the same range (D9) | task0003 (introduced `phase_done` with `reason=none`), task0005 (states the range at both sites) |
+| Terminal-line `step` value domain | The closed set of values the `step` field may carry | The domain is exactly the seven `workflow.yaml` step ids (`create-spec`, `design`, `create-plan`, `implement`, `review`, `verify`, `retrospect`) plus the sentinel `no-step`. It is DECLARED in `em-workflow/references/batch-terminal-line.md`'s `## Field values` `step` bullet and nowhere else — the pointer documents cannot hold it (the sentinel is guard-forbidden there). The declaration coexists with the general / precedence / asymmetry rules in the same bullet, and precedes the `no-step` sentence they end in (D10) | task0003 / task0005 (wrote the rules the declaration precedes), task0007 (declares the domain) |
+| Pointer-layer emission-occasion wording | The condition under which a pointer document says the terminal line is emitted | Emission is conditioned on the TURN having reached one of the terminal states the contract SSOT defines — never on the turn ending the run. Normal completion, every terminating stop and the `--once` phase boundary are instances of that condition, not limits on it. Both pointer documents state this rule, each in its own language, each with its own matcher (D11) | task0006 (`SKILL.md`), task0008 (`batch-mode.md`) |
 | Test-module ownership map | One owner per test module, so no two tasks edit the same module | D6's table. A task that must change a module it does not own reports a plan deviation instead of editing it silently | all tasks |
 
 ## Conventions
@@ -169,8 +171,8 @@ contract).
 | Module | Owner | Pins |
 |---|---|---|
 | `tests/test_develop_once_option.py` (new) | task0001 | SKILL.md's `--once` semantics: argument handling, phase boundaries, stop condition 7, interactive closing line, non-boundaries |
-| `tests/test_batch_stop_contract_skill_wiring.py` | task0002, then task0006 | SKILL.md's 「バッチ終端行」 subsection and `batch-mode.md`'s `## Terminal line`; the SKILL.md-side literal guard |
-| `tests/test_batch_stop_contract.py` | task0003, then task0005 | `batch-terminal-line.md`'s structure and value domains; the `batch-mode.md` pointer literal-absence guard; the prefix-uniqueness sweep |
+| `tests/test_batch_stop_contract_skill_wiring.py` | task0002, then task0006, then task0008 | SKILL.md's 「バッチ終端行」 subsection and `batch-mode.md`'s `## Terminal line`; the SKILL.md-side literal guard |
+| `tests/test_batch_stop_contract.py` | task0003, then task0005, then task0007 | `batch-terminal-line.md`'s structure and value domains; the `batch-mode.md` pointer literal-absence guard; the prefix-uniqueness sweep |
 | `tests/test_plugin_version_parity.py` (new) | task0004 | the two manifests' `version` agreement |
 | `tests/test_develop_skill_rewiring.py` | nobody | pre-existing SKILL.md wording that must survive this feature unchanged |
 
@@ -222,6 +224,67 @@ Both rules are stated only in `em-workflow/references/batch-terminal-line.md`
 — the pointer documents carry no value literal (FR9, NFR1) and are unaffected.
 Affected: task0005 (states both), task0003 / task0001 (their merged output is
 what these rules make coherent).
+
+### D10 — A declared value domain survives a bullet rewrite (verify rework, SC4)
+
+`em-workflow/references/batch-terminal-line.md` declares itself the sole owner
+of the `state` / `step` / `reason` value domains. Ownership is only real while
+the document actually ENUMERATES each domain: a pointer document cannot hold
+the enumeration (FR9 / NFR1), so a domain deleted here exists in no layer at
+all. D9's rewrite of the `step` bullet replaced the domain declaration with the
+general rule rather than adding the general rule in front of it, which is what
+SC4's value-domain half reports.
+
+The rule this makes explicit, for any future value-domain change:
+
+1. Adding, narrowing or re-ordering a rule ABOUT a field never removes the
+   declaration OF that field's domain. The two answer different questions —
+   "what values exist" and "which one this line carries" — and the document
+   answers both, in that order.
+2. In the `step` bullet the domain declaration comes FIRST, ahead of the
+   general rule, the two precedence rules and the Step C asymmetry, all of
+   which stay as D9 left them. The ordering is load-bearing, not stylistic:
+   `tests/test_batch_stop_contract.py`'s `no-step` stop-point extractor is
+   anchored at the phrase `` `no-step` applies whenever `` and collects the
+   hyphenated backtick tokens after it, so a domain declaration placed after
+   that anchor would inject `create-spec` / `create-plan` into the extracted
+   stop-point set. The anchor phrase must also stay on one physical line —
+   the extractor matches raw text, and a hard wrap inside the phrase silently
+   empties the extraction.
+3. The test module re-declares the domain as a local constant and compares it
+   against a structural extraction from the document (Conventions,
+   Cross-module isolation) — the `state` domain is already pinned this way,
+   and `step` was the asymmetry SC4 found.
+
+Affected: task0007 (declares the domain), task0003 / task0005 (their merged
+rules are what the declaration is placed in front of).
+
+### D11 — One emission-occasion rule for both pointer documents (verify rework, SC4)
+
+`SKILL.md` and `batch-mode.md` are one layer with one rule, and a fix applied
+to only one of them leaves the layer self-contradictory. The rule: the terminal
+line's emission condition is the TURN having reached one of the terminal states
+the contract SSOT defines; normal completion, every terminating stop and the
+`--once` phase boundary are instances of that condition. Conditioning emission
+on "the end of a run" instead excludes the `--once` boundary by its own words,
+because that boundary does not end the run — while the same document's occasion
+list names it. Round 1 corrected `SKILL.md` (task0006) and left `batch-mode.md`
+stating the run-ending form, which is SC4's emission-occasion half.
+
+Consequences for the two documents:
+
+- Each states the rule in its own language (Japanese / English) and keeps its
+  own document-naming convention (`${CLAUDE_PLUGIN_ROOT}`-prefixed vs. bare
+  relative path), so neither matcher is reusable across them; each pointer
+  document's guard module carries its own matcher, negative proof and
+  non-vacuity guard.
+- The rule is about WHEN only. Neither document gains a value literal, a field
+  grammar or the prefix — the contract-literal guard's whole-file scope over
+  both files is unchanged (D2).
+- A future change to the emission occasions updates both documents in the same
+  change set, or the layer is inconsistent again.
+
+Affected: task0008 (`batch-mode.md`), task0006 (`SKILL.md`, already merged).
 
 ## Risk Assessment
 

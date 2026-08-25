@@ -121,15 +121,14 @@ workflow:
     status: completed
     completed_at_commit: 64dbec80e2d2afe567d397b173ce604751a6ede1
   - id: implement
-    status: completed
+    status: pending
     completed_at_commit: 7037cfc7fc2103e6381f2170bba9193b8f2bc27c
-    completed_at_commit: 9eef1ce72b43b133ee9692913332cb2966459e48
     base_commit: cf2d345c74114de1939c798a1e31f80aea624cbe
   - id: review
     status: completed
     completed_at_commit: 93291dd01ebd258d184029b268b07b7750cc7bc6
   - id: verify
-    status: failed
+    status: pending
     result: fail
     failed_items:
       - id: SC4
@@ -240,6 +239,41 @@ tasks:
       source_ids: [133dad87f620ed69, d19b6a0240c04f8d, 5a7d022d8ac79472]
       review_round: 1
 
+  task0007:
+    title: "終端行契約 SSOT に `step` の閉じた値域を復元する"
+    plan: tasks/task0007.md
+    files:
+      - em-workflow/references/batch-terminal-line.md
+      - tests/test_batch_stop_contract.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR7, FR8, NFR1, NFR2, NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: verify
+      source_ids: [SC4]
+      review_round: null
+  task0008:
+    title: "`batch-mode.md` の終端行の出力条件を到達状態で定義し直す"
+    plan: tasks/task0008.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - tests/test_batch_stop_contract_skill_wiring.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: low
+    requirements: [FR9, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: verify
+      source_ids: [SC4]
+      review_round: null
+
 review:
   status: completed
   rounds_completed: 2
@@ -302,22 +336,22 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0003, task0005]
+    tasks: [task0003, task0005, task0007]
     tests: [TS3, TS10, TS16]
   FR8:
     title: "Terminal line `step` at a `--once` boundary"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0003, task0005]
-    tests: [TS3, TS17]
+    tasks: [task0003, task0005, task0007]
+    tests: [TS3, TS17, TS20]
   FR9:
     title: "SSOT partition: no state-value literal in SKILL.md"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0006]
-    tests: [TS4, TS8, TS18]
+    tasks: [task0002, task0006, task0008]
+    tests: [TS4, TS8, TS18, TS21]
   FR10:
     title: "Literal guard extended to `state` values"
     status: ok
@@ -358,37 +392,37 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003, task0006]
-    tests: [TS4, TS9]
+    tasks: [task0002, task0003, task0006, task0007, task0008]
+    tests: [TS4, TS9, TS20]
   NFR2:
     title: "Documentation-only change surface"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004, task0005, task0006]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008]
     tests: [TS1]
   NFR3:
     title: "Test conventions"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004, task0005, task0006]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008]
     tests: [TS1, TS5, TS19]
   NFR4:
     title: "Backward compatibility"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tasks: [task0001, task0002, task0003, task0005, task0006, task0007, task0008]
     tests: [TS3, TS7, TS8, TS10, TS16, TS17]
   NFR5:
     title: "Reporting completeness in batch"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003, task0006]
-    tests: [TS3, TS4, TS18]
+    tasks: [task0002, task0003, task0006, task0008]
+    tests: [TS3, TS4, TS18, TS21]
 
 batch:
   review_rework_count: 1
-  verify_rework_count: 0
+  verify_rework_count: 1
