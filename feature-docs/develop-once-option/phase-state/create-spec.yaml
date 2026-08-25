@@ -1,13 +1,84 @@
 schema_version: 1
 feature: develop-once-option
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 4323beb
 last_input_digest: sha256:95d050750eaaa886fbf95a6d2da1bd9ced553f2a1214c479505a3b1d141e9f9b
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-25T23:17:04+09:00"
+    questions:
+      - question_id: requirement.phase-boundary.non-completed-transitions
+        status: answered
+      - question_id: requirement.phase-done.step-field-value
+        status: answered
+      - question_id: requirement.ssot.phase-done-literal-in-skill-md
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  requirement.phase-boundary.non-completed-transitions:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-25T23:17:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [treat_as_phase_done]
+    freeform: null
+    normalized_answer: >-
+      implement I.2.c の route back to planning と rework の spec-change 遷移も
+      1 フェーズ完了として扱い、patch 適用とコミットが済んだ時点でターンを終える。
+    resolution_note: >-
+      gate create-spec.requirement-clarification / policy action
+      codex_consultation。Codex は「--once は completed 状態遷移ではなく
+      1 フェーズを約束するもので、両遷移は routing 変更のコミット後に
+      当該フェーズを明示的に終える」と判断。orchestrator が option_id
+      treat_as_phase_done への写像を確認して採用。record_as_assumption: true。
+  requirement.phase-done.step-field-value:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-25T23:17:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [executed_step]
+    freeform: null
+    normalized_answer: >-
+      終端行の step には、そのターンで実行されたフェーズの step 名を書く
+      （verify fail rework の境界では verify）。
+    resolution_note: >-
+      gate create-spec.requirement-clarification / policy action
+      codex_consultation。Codex は「終端行は当該起動を終わらせたフェーズを
+      表すものであり、再開カーソルではない」と判断。orchestrator が option_id
+      executed_step への写像を確認して採用。record_as_assumption: true。
+  requirement.ssot.phase-done-literal-in-skill-md:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-25T23:17:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [no_literal_extend_guard]
+    freeform: null
+    normalized_answer: >-
+      SKILL.md には state の値リテラルを書かず「いつ出すか」だけを定める。
+      既存の literal guard を state 値まで拡張して機械的に強制する。
+    resolution_note: >-
+      gate create-spec.requirement-clarification / policy action
+      codex_consultation。Codex は「値集合の所有権は終端行ドキュメントにあり、
+      guard の現状の抜けは permission ではなく enforcement gap」と判断。
+      orchestrator が option_id no_literal_extend_guard への写像を確認して採用。
+      record_as_assumption: true。
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-25T23:17:04+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: >-
+      requirements-analyst の推奨（design を skipped）をそのまま採用する。
+    resolution_note: >-
+      gate create-spec.design-step / batch-policies.yaml action select,
+      option_id decide_autonomously。
 worker_runs:
   - request_id: create-spec-run-0001
     status: dispatched
