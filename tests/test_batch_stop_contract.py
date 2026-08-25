@@ -271,6 +271,23 @@ STATE_VALUES = frozenset({"completed", "stopped", "phase_done"})
 # absence too, not just the `state={value}` shape.
 ONCE_BOUNDARY_STATE_VALUE = "phase_done"
 
+# The full `step` value domain (D10, develop-once-option task0007): the
+# seven `workflow.yaml` step ids plus the single sentinel `no-step`,
+# re-declared locally per the Cross-module isolation convention rather
+# than imported from another test module.
+STEP_VALUE_DOMAIN = frozenset(
+    {
+        "create-spec",
+        "design",
+        "create-plan",
+        "implement",
+        "review",
+        "verify",
+        "retrospect",
+        "no-step",
+    }
+)
+
 # develop-once-option task0005 (D9 rule 1): the old restrictive phrasing,
 # verbatim from before this task, that limited `none`'s use to
 # `state=completed` alone at each of the two sites this task synchronizes.
@@ -298,6 +315,23 @@ _KEY_CODE_PAIRS_IN_ORDER = [
 
 HEADING_RE = re.compile(r"^## (.+?)\s*$", re.MULTILINE)
 BACKTICK_CELL_RE = re.compile(r"^`([^`]*)`$")
+
+# The `step` value-domain declaration's own literal shape (develop-once-
+# option task0007, D10): anchored on the declaration's fixed lead-in
+# phrase and its closing "or the single sentinel `<token>`." clause, so
+# it structurally isolates the declaration's parenthesized step-id list
+# from the general/precedence/asymmetry rules that follow it in the same
+# bullet -- those rules also mention `no-step` and hyphenated stop-point
+# tokens, which a prose substring search would conflate with the domain
+# itself. Matched against `_normalize`d text (never raw text) so the
+# extraction does not depend on where the source document happens to
+# wrap a line.
+STEP_DOMAIN_DECLARATION_RE = re.compile(
+    r"`step` — a closed value domain: one of the seven "
+    r"`workflow\.yaml` step ids \(([^)]*)\), or the single sentinel "
+    r"`([a-z-]+)`\."
+)
+_BACKTICK_WORD_TOKEN_RE = re.compile(r"`([a-z][a-z0-9-]*)`")
 
 
 def _read(path):
@@ -568,6 +602,38 @@ def _assert_step_c_asymmetry_stated(test, field_values_section_text):
     test.assertIn("`step-c-abort` is `no-step`", normalized)
 
 
+def _extract_step_value_domain(field_values_section_text):
+    """R-C (develop-once-option task0007, D10): extracts the closed
+    `step` value domain declared at the FRONT of the `## Field values`
+    `step` bullet -- the backticked `workflow.yaml` step ids inside the
+    declaration's own parenthesized list, plus the backticked sentinel
+    that closes it. Structural (anchored on `STEP_DOMAIN_DECLARATION_RE`,
+    matched against normalized text), not a prose substring search over
+    the whole bullet -- a substring search would also pick up the
+    `no-step` / `create-spec`-shaped tokens used later by the general,
+    precedence and Step C asymmetry rules. Returns an empty set when the
+    declaration is absent (AC-3's forged pre-task0007 bullet), matching
+    the convention of `_extract_no_step_stop_points`."""
+    match = STEP_DOMAIN_DECLARATION_RE.search(_normalize(field_values_section_text))
+    if match is None:
+        return set()
+    step_ids = set(_BACKTICK_WORD_TOKEN_RE.findall(match.group(1)))
+    return step_ids | {match.group(2)}
+
+
+def _assert_step_value_domain_declared(test, field_values_section_text, expected_domain):
+    """Validation for the `step` value-domain extractor (AC-2): the
+    declaration must be present (a non-empty extraction) and must equal
+    `expected_domain` exactly -- neither narrower nor wider."""
+    domain = _extract_step_value_domain(field_values_section_text)
+    test.assertTrue(
+        domain,
+        "no `step` value-domain declaration found at the front of the "
+        "`step` bullet",
+    )
+    test.assertEqual(domain, expected_domain)
+
+
 def _iter_em_workflow_files(plugin_root):
     for dirpath, _dirnames, filenames in os.walk(plugin_root):
         for filename in filenames:
@@ -696,6 +762,27 @@ class TestContractDocumentStructure(unittest.TestCase):
         `retrospect` on normal completion, `no-step` on
         `step-c-abort`."""
         _assert_step_c_asymmetry_stated(self, self.sections["Field values"])
+
+    def test_field_values_step_domain_declared(self):
+        """AC-1 / AC-2 (develop-once-option task0007, D10): the `step`
+        bullet declares its closed value domain -- the seven
+        `workflow.yaml` step ids plus the `no-step` sentinel -- at the
+        front of the bullet, extracted structurally and checked against
+        the module's locally-declared STEP_VALUE_DOMAIN constant."""
+        _assert_step_value_domain_declared(
+            self, self.sections["Field values"], STEP_VALUE_DOMAIN
+        )
+
+    def test_step_domain_declaration_precedes_no_step_anchor(self):
+        """AC-1: the domain declaration sits at the FRONT of the `step`
+        bullet, before the `` `no-step` applies whenever `` anchor --
+        position, not mere presence, since a declaration placed after
+        the anchor would inject `create-spec` / `create-plan` into
+        `_extract_no_step_stop_points`'s captured stop-point set (R-C)."""
+        section = self.sections["Field values"]
+        declaration_index = section.index("a closed value domain:")
+        anchor_index = section.index("`no-step` applies whenever")
+        self.assertLess(declaration_index, anchor_index)
 
     def test_no_document_wording_states_a_terminal_state_count(self):
         """AC-4 (FR11, IMPLEMENTATION.md D4): neither of the two
@@ -923,6 +1010,105 @@ class TestStepCAsymmetryMatcherNegativeProof(unittest.TestCase):
             _assert_step_c_asymmetry_stated(
                 self, FORGED_OLD_STEP_BULLET_WITHOUT_PRECEDENCE
             )
+
+
+# Forged sample for the `step` value-domain matcher's negative proof
+# (AC-3, develop-once-option task0007, verify rework SC4): the `step`
+# bullet exactly as task0005 left it -- well-formed general rule,
+# precedence relation and Step C asymmetry prose, but with the domain
+# declaration this task restores still missing (the defect the plan
+# describes: "7 個の step id 列挙は em-workflow/ 配下のどこにも残って
+# いない").
+FORGED_STEP_BULLET_WITHOUT_DOMAIN_DECLARATION = (
+    "`step` — the general rule: `step` names the step EXECUTED in that "
+    "turn, never the step the next launch resumes at; at the "
+    "verify-fail rework boundary the value is `verify`, even though "
+    "the next launch resumes at `implement`. Two rules take precedence "
+    "over the general rule: the single sentinel `no-step`, and the "
+    "`state=completed` rule. `no-step` applies whenever no "
+    "`workflow.yaml` step is in effect at the stop point: "
+    "`stop-condition-6` (Step 0's git-setup abort), `step-a-abort` "
+    "(Step A's feature-resolution failure), and `step-c-abort` (Step "
+    "C's abort — every workflow step has already completed by then, "
+    "and the stop happens outside any of them). On `state=completed` "
+    "the value is always `retrospect` — the final workflow step, which "
+    "a completed run has always reached. Because Step C is not a "
+    "`workflow.yaml` step, a turn that executes Step C takes its value "
+    "from whichever precedence rule applies rather than from the "
+    "general rule: normal completion is `retrospect` (the "
+    "`state=completed` rule), while `step-c-abort` is `no-step` (the "
+    "sentinel rule) — this asymmetry is intentional, not an omission."
+)
+
+
+class TestStepValueDomainMatcherNegativeProof(unittest.TestCase):
+    """NFR3: negative proof + non-vacuity guard for the `step`
+    value-domain matcher (`_assert_step_value_domain_declared`, AC-3,
+    develop-once-option task0007). Non-vacuity: the forged sample is
+    well-formed on every other point this bullet must state -- the
+    general rule, the precedence relation and the Step C asymmetry --
+    so the rejection below is caused specifically by the missing domain
+    declaration, not by unrelated malformation."""
+
+    def test_forged_bullet_is_otherwise_well_formed(self):
+        normalized = _normalize(FORGED_STEP_BULLET_WITHOUT_DOMAIN_DECLARATION)
+        self.assertIn("names the step EXECUTED in that turn", normalized)
+        self.assertIn("take precedence over the general rule", normalized)
+        self.assertIn("Step C is not a `workflow.yaml` step", normalized)
+
+    def test_missing_domain_declaration_is_rejected(self):
+        self.assertEqual(
+            _extract_step_value_domain(FORGED_STEP_BULLET_WITHOUT_DOMAIN_DECLARATION),
+            set(),
+        )
+        with self.assertRaises(AssertionError):
+            _assert_step_value_domain_declared(
+                self,
+                FORGED_STEP_BULLET_WITHOUT_DOMAIN_DECLARATION,
+                STEP_VALUE_DOMAIN,
+            )
+
+
+class TestNoStepAnchorUnaffectedByDomainDeclaration(unittest.TestCase):
+    """AC-4 (develop-once-option task0007, R-C): the domain declaration
+    prepended in front of the `step` bullet's general rule must not leak
+    into `_extract_no_step_stop_points`'s captured range -- the anchor
+    `` `no-step` applies whenever `` must still match on one physical
+    line (`_extract_no_step_stop_points` returns an empty set on match
+    failure, so a silent regression here would otherwise go undetected),
+    and the extracted stop-point set must still equal exactly
+    {stop-condition-6, step-a-abort, step-c-abort}, with `create-spec`
+    and `create-plan` -- both members of the newly restored domain
+    declaration -- absent from it. Reuses the pre-existing
+    `NO_STEP_BULLET_RE` / `_extract_no_step_stop_points` rather than
+    introducing a new matcher, so this is a pure regression guard."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _sections(_read(CONTRACT_PATH))["Field values"]
+
+    def test_anchor_matches_on_one_physical_line(self):
+        match = NO_STEP_BULLET_RE.search(self.section)
+        self.assertIsNotNone(
+            match,
+            "the `` `no-step` applies whenever `` anchor did not match -- "
+            "likely a hard wrap inside the anchor phrase, which silently "
+            "empties the extraction",
+        )
+
+    def test_extracted_stop_points_still_match_the_coverage_table(self):
+        coverage_section = _sections(_read(CONTRACT_PATH))["Stop point coverage"]
+        coverage_keys = {
+            key for key, _code in _extract_coverage_table(coverage_section)
+        }
+        extracted = _extract_no_step_stop_points(self.section)
+        self.assertEqual(extracted, NO_STEP_STOP_POINTS)
+        self.assertTrue(extracted <= coverage_keys)
+
+    def test_create_spec_and_create_plan_are_excluded(self):
+        extracted = _extract_no_step_stop_points(self.section)
+        self.assertNotIn("create-spec", extracted)
+        self.assertNotIn("create-plan", extracted)
 
 
 class TestStopPointCoverage(unittest.TestCase):
