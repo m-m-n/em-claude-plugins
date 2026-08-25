@@ -1,0 +1,21 @@
+schema_version: 1
+feature: develop-once-option
+phase: rework
+status: dispatching
+generation: 1
+base_revision: f85f95308a4a427d843e05599a009a26a2f996be
+last_input_digest: sha256:894419cb13fcdf5f5e7b3848381e97c1fd543c71fdc875cb46dd4ed4cb8bf1db
+active_request_id: rework-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: rework-run-0001
+    status: dispatched
+    input_digest: sha256:894419cb13fcdf5f5e7b3848381e97c1fd543c71fdc875cb46dd4ed4cb8bf1db
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
