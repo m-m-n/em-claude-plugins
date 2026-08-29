@@ -40,11 +40,11 @@ workflow:
     status: completed
     completed_at_commit: 53c643b89cd4f1d8b434d37eb2247c43953554e2
   - id: implement
-    status: completed
+    status: pending
     base_commit: 4dc8c598399daad7e89ba07d98f32e31a2e20cf9
     completed_at_commit: 108944174e61bad2b640f194db7241874c593302
   - id: review
-    status: in_progress
+    status: pending
   - id: verify
     status: pending
     result: null
@@ -111,6 +111,29 @@ tasks:
     notes: null
     branch: em-workflow/batch-quiet-output/task0004
 
+  task0005:
+    title: "Persist batch audit records instead of routing them to output or commit messages"
+    plan: tasks/task0005.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/implement-phase.md
+      - em-workflow/references/phase-state.md
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_batch_quiet_output_audit_persistence.py
+      - tests/test_batch_quiet_output_phase_wiring.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR2, FR4, FR5, FR9, FR10, FR11, FR12, FR13, NFR1, NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      source_ids: [1cd0e6ab9dba1fef, 48ac1e2b5f7d90c3, b0f4c7d2e819a635, 2a6b8f0c3d5e7192, 9d1f4e6a2c8b0537, 7e3a95c14b0d82ff]
+      review_round: 1
+
 review:
   status: pending
   rounds_completed: 1
@@ -138,8 +161,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
-    tests: [TS-2]
+    tasks: [task0001, task0002, task0003, task0005]
+    tests: [TS-2, TS-8]
   FR3:
     title: "1 行マーカーの書式と終端行との識別"
     status: ok
@@ -152,14 +175,14 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
-    tests: [TS-2]
+    tasks: [task0001, task0002, task0003, task0005]
+    tests: [TS-2, TS-8]
   FR5:
     title: "Step C 終了報告は全文維持"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
+    tasks: [task0001, task0002, task0005]
     tests: [TS-4]
   FR6:
     title: "停止・中断ターンは抑制の例外"
@@ -187,42 +210,42 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
-    tests: [TS-5]
+    tasks: [task0001, task0002, task0003, task0005]
+    tests: [TS-5, TS-8]
   FR10:
     title: "ゲート解決・状態遷移の挙動は不変"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0005]
     tests: [TS-6]
   FR11:
     title: "Step C 監査項目の出所を成果物に固定"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
-    tests: [TS-5]
+    tasks: [task0001, task0002, task0003, task0005]
+    tests: [TS-5, TS-8]
   FR12:
     title: "規律の定義箇所"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0005]
     tests: [TS-7]
   FR13:
     title: "プラグイン version の更新"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0004]
+    tasks: [task0004, task0005]
     tests: [TS-6]
   NFR1:
     title: "対話モードへの非回帰"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0005]
     tests: [TS-1]
   NFR2:
     title: "既存 consumer の互換性"
@@ -236,14 +259,14 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0005]
     tests: [TS-4]
   NFR4:
     title: "SSOT の単一性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
+    tasks: [task0001, task0002, task0003, task0005]
     tests: [TS-7]
   NFR5:
     title: "文体"
@@ -254,5 +277,5 @@ requirements:
     tests: [TS-7]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 0
