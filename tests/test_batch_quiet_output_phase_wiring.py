@@ -15,10 +15,21 @@ Covers task0003 Acceptance Criteria
   (reconcile, commits, journal, worktree cleanup, task status, counters)
   are unchanged.
 - AC-3 (FR11, NFR3): a declined `files` deviation's audit record is stated
-  to be carried, for a `--batch` run, in the wake commit's message naming
-  the failed evidence part, with the run-report obligation satisfied from
-  that channel; the admitted-deviation record and the interactive
-  wake-report behaviour are unchanged.
+  to be written, for a `--batch` run, to the persisted batch audit record
+  file under `phase-state/` in the same wake commit, naming the failed
+  evidence part, with the run-report obligation satisfied from that
+  channel; the admitted-deviation record and the interactive wake-report
+  behaviour are unchanged.
+
+  Amended by task0005 (rework round 1, finding `9d1f4e6a2c8b0537`): the
+  channel a decline's audit record rides is no longer the wake commit's
+  message body -- it is `references/phase-state.md`'s
+  `phase-state/batch-audit.yaml`, written in that same wake commit. This
+  docstring and this module's own assertions naming that channel were
+  updated to match; `_decline_channel_stated` itself asserts only the
+  contract-level property (record directed away from the suppressed wake
+  report, run-report obligation satisfied from elsewhere) and needed no
+  change.
 - AC-4 (FR4, FR9): `review-phase.md` Phase R6 states the report body is not
   emitted into the main context in `--batch` while the round record's
   content/fields/write timing are unchanged; Phase R5's auto-rework/defer
@@ -386,7 +397,8 @@ class TestAC2WakePhaseWithheldWritesUnchanged(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# AC-3: declined-deviation audit channel moves to the wake commit message
+# AC-3: declined-deviation audit channel moves to the persisted batch
+# audit record file, written in the wake commit (task0005)
 # ---------------------------------------------------------------------------
 
 

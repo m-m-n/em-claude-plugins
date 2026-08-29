@@ -382,19 +382,11 @@ Triggered whenever a launched implementer's `Task()` call returns.
    update: never a second write, never a second commit, never a new patch
    operation. The append is stated as an append: an existing entry is
    never removed or rewritten by this rule, and re-admitting an already
-   listed path is a no-op. Then commit — for an interactive run, with a
-   single-line message; for a `--batch` run, whose message's first line
-   is the subject and, when this wake phase declined any deviation, one
-   additional body line per declined task naming which of the three
-   evidence parts was missing or unresolved (the `$RECONCILE_TIP` third
-   argument is `commit-docs.sh`'s `expected_base_tip` check value, never
-   message body text):
+   listed path is a no-op. Then commit, with a single-line message
+   mode-independently (the `$RECONCILE_TIP` third argument is
+   `commit-docs.sh`'s `expected_base_tip` check value):
    `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
-   phase reconcile" "$RECONCILE_TIP"` — in `--batch` mode with declined
-   deviations to record, the same call with that subject unchanged and the
-   message extended by a blank line plus one
-   `DECLINED {task_id}: {failed evidence part}` line per declined task.
-   (exit-4 recovery: Branch & Worktree
+   phase reconcile" "$RECONCILE_TIP"` (exit-4 recovery: Branch & Worktree
    Model above — on a second exit 4, stop the wake phase with a report
    naming the task(s) involved rather than looping).
 
@@ -460,12 +452,14 @@ Triggered whenever a launched implementer's `Task()` call returns.
    channel is the one this step already defines.
 
    **Batch mode**: for a `--batch` run, a decline's audit record instead
-   rides in step 3's wake commit message body — one line per declined
-   task, naming which of the three evidence parts was missing or
-   unresolved, per step 3's message-construction rule above — rather
+   is written to `feature-docs/{feature}/phase-state/batch-audit.yaml`
+   (`references/phase-state.md`'s batch audit record file) in the same
+   wake commit — one entry per declined task, naming the `task_id` and
+   which of the three evidence parts was missing or unresolved — rather
    than in this wake phase's own report; the run-report obligation stated
-   above for a `--batch` run is satisfied by reading that commit message
-   body. An admission's audit record is unchanged. An interactive run keeps
+   above for a `--batch` run is satisfied by reading that persisted
+   record rather than this wake phase's own report.
+   An admission's audit record is unchanged. An interactive run keeps
    recording a decline in this wake phase's own report exactly as before.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
