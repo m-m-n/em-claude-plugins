@@ -193,11 +193,17 @@ Step B に入る前に、`${CLAUDE_PLUGIN_ROOT}/references/command-execution-pro
    （batch: 提示せず自動 `--record`。refusal パターンは従来どおり hard
    fail。`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律
    により、承認結果はランニング出力に出さず、自動承認した文字列を
-   `feature-docs/{feature}/phase-state/batch-audit.yaml` に記録する —
-   ゲート解決の判定・ステータス遷移は対話時と変わらず、変わるのは提示の
-   有無と、対話時は `bash_guard.py --record` にしか記録されない承認結果を
-   batch-audit.yaml にも残す点。`batch-policies.yaml` の
-   `create-spec.command-approval`）
+   `create-spec.command-approval` ゲートの解決結果として、`answers` の
+   既存エントリ形式で `feature-docs/{feature}/phase-state/batch-audit.yaml`
+   に記録する（レコードの形は
+   `${CLAUDE_PLUGIN_ROOT}/references/phase-state.md` の batch audit record
+   file 節を参照） — ゲート解決の判定・ステータス遷移は対話時と変わらず、
+   変わるのは提示の有無と、対話時は `bash_guard.py --record` にしか記録
+   されない承認結果を batch-audit.yaml にも残す点。この時点ではまだどの
+   step も自身のコミットを済ませていないため、記録した直後にこの場で
+   `commit-docs.sh` を実行してコミットする。コミットしないまま残すと、
+   implement の wake フェーズが integration worktree に対して行う
+   `git reset --hard` で最初の wake 時に記録が消える）
 4. 全て承認済みなら何も出さずに Step B へ
 
 以降のフェーズで PreToolUse hook の deny（未承認）に遭遇したら、承認後に
