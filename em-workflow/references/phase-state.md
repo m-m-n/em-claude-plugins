@@ -368,7 +368,7 @@ records:
   - question_id: review.diff-size-gate
     packet_id: null
     answered_at: "2026-01-30T12:00:00+09:00"
-    source: batch-decision-table
+    source: batch-safe-default
     answer_mode: freeform
     selected_option_ids: []
     freeform: "smallest / most reversible side effect option"

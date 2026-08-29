@@ -192,10 +192,13 @@ Step B に入る前に、`${CLAUDE_PLUGIN_ROOT}/references/command-execution-pro
    AskUserQuestion（multiSelect）で一括承認 → `--record` で記録
    （batch: 提示せず自動 `--record`。refusal パターンは従来どおり hard
    fail。`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律
-   により、承認結果はランニング出力に出さず、自動承認した文字列を
-   `create-spec.command-approval` ゲートの解決結果として、`answers` の
-   既存エントリ形式で `feature-docs/{feature}/phase-state/batch-audit.yaml`
-   に記録する（レコードの形は
+   により、承認結果はランニング出力に出さず、`gate_id` を持つ
+   `create-spec.command-approval` ゲートは
+   `${CLAUDE_PLUGIN_ROOT}/references/question-resolution.md` の batch
+   resolution sequence を `${CLAUDE_PLUGIN_ROOT}/references/batch-policies.yaml`
+   に照らして解決し、その結果として、`answers` エントリと同じフィールド
+   構成の要素を `feature-docs/{feature}/phase-state/batch-audit.yaml` の
+   `records` に 1 件 append する（要素の形は
    `${CLAUDE_PLUGIN_ROOT}/references/phase-state.md` の batch audit record
    file 節を参照） — ゲート解決の判定・ステータス遷移は対話時と変わらず、
    変わるのは提示の有無と、対話時は `bash_guard.py --record` にしか記録

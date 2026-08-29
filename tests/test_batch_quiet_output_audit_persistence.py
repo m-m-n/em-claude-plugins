@@ -42,9 +42,10 @@ Covers task0005 Acceptance Criteria
   phase's own report.
 - AC-6 (FR11, FR9): `phase-state.md` defines the batch audit record file
   in its File layout and in one new subsection stating its purpose, its
-  entry shape (reusing the existing `answers` entry shape), its two
-  writers, its append-only rule, and that it is committed by an existing
-  `commit-docs.sh` call and never causes an additional commit.
+  entry shape (a `records` list whose elements reuse the existing
+  `answers` entry's per-field shape), its three writers, its append-only
+  rule, and that it is committed by an existing `commit-docs.sh` call and
+  never causes an additional commit.
 - AC-7 (FR12, NFR4): `batch-mode.md` cites `references/phase-state.md` for
   the record's shape, and `implement-phase.md` cites both documents for
   the channel it writes; delegated in full to
@@ -626,13 +627,19 @@ class TestAC6PhaseStateDocDefinesBatchAuditFile(unittest.TestCase):
 
     def test_subsection_states_entry_shape_reuses_answers(self):
         normalized = _normalize_ws(self.subsection)
-        self.assertIn("reuses the `answers` entry shape", normalized)
+        self.assertIn("`records` is a", normalized)
+        self.assertIn("list", normalized)
+        self.assertIn(
+            "Each element keeps the same per-field shape as an answer record",
+            normalized,
+        )
 
-    def test_subsection_states_two_writers(self):
+    def test_subsection_states_three_writers(self):
         self.assertIn("references/batch-mode.md", self.subsection)
         self.assertIn("references/implement-phase.md", self.subsection)
+        self.assertIn("skills/develop/SKILL.md", self.subsection)
         self.assertEqual(
-            self.subsection.count("Two writers append to this file"), 1
+            self.subsection.count("Three writers append to this file"), 1
         )
 
     def test_subsection_states_append_only_rule(self):
