@@ -1,0 +1,31 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_quiet_output_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_batch_quiet_output_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+    red_confirmed: true
+    red_reason: "AssertionError: 51 not greater than 51 (patch was still 51, pre-bump)"
+  AC-2:
+    tests:
+      - tests.test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+    red_confirmed: true
+    red_reason: "AssertionError: 51 not greater than 51 (marketplace em-workflow entry's patch was still 51, pre-bump)"
+  AC-3:
+    tests:
+      - tests.test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_batch_quiet_output_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+    red_confirmed: false
+    red_reason: "These tests assert that the matchers reject forged/synthetic samples defined inside the test module itself (not the real registry files), so they were green from the moment the module was written -- there is no pre-implementation state in which they fail. This is the negative-proof/non-vacuity guard pattern from tests/test_batch_stop_contract_version_bump.py, which has the same property."
+  AC-4:
+    tests: []
+    red_confirmed: true
+    red_reason: "Verified by execution, not a dedicated test: `python3 -m unittest discover -s tests` from the repo root discovers and runs the new module (confirmed both before the version bump, where it reported 2 failures among 2506 baseline-passing tests, and after, where all 2516 tests pass); the module's only imports are json, re, unittest, pathlib.Path, all standard library; `git status` after the commit shows no pre-existing module modified."
+notes: "AC-3's matchers exercise forged literals defined inside the test module (FORGED_PRE_BUMP_VERSION etc.), which are inherently red->pass-immediately once written since they don't depend on the implementation files -- flagged as unconfirmed_reds per the tdd-testing skill's guidance, matching the same property in the reference module tests/test_batch_stop_contract_version_bump.py this one follows."
