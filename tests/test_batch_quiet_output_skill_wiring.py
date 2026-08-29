@@ -184,10 +184,26 @@ def _extract_batch_clause(section, end_marker):
     "no `gate_id` mention added" is scoped to what this task actually
     added, not to pre-existing unrelated prose elsewhere in the same
     section (e.g. verify フェーズ's step 4 already discusses `gate_id` for an
-    unrelated reason)."""
+    unrelated reason).
+
+    `end_marker` may be a single literal, or a tuple/list of candidate
+    literals when the clause's closing wording can legitimately vary
+    (e.g. verify's clause gained a rework-cap exception sentence that
+    moved its closing `）` to a different literal) -- the first candidate
+    found after `batch:\n` wins."""
     start = section.index("batch:\n")
-    end = section.index(end_marker, start) + len(end_marker)
-    return section[start:end]
+    candidates = (end_marker,) if isinstance(end_marker, str) else tuple(end_marker)
+    best_end = None
+    for candidate in candidates:
+        try:
+            idx = section.index(candidate, start) + len(candidate)
+        except ValueError:
+            continue
+        if best_end is None or idx < best_end:
+            best_end = idx
+    if best_end is None:
+        raise ValueError(f"none of {candidates!r} found in section after 'batch:\\n'")
+    return section[start:best_end]
 
 
 def _find_forbidden_literal_violations(text):
@@ -365,7 +381,14 @@ class TestStopCondition5MarkerOnly(unittest.TestCase):
 
 
 DESIGN_CLAUSE_END = "design step の status 遷移は対話時と変わらない）"
-VERIFY_CLAUSE_END = "verify step の status 遷移は対話時と変わらない）"
+# verify's batch clause may end either at the plain "...対話時と変わらない）"
+# closer, or (after the rework-cap exception sentence was appended) at
+# "...対話時と同じ内容を全文出力する）" -- both close the same batch: 括弧,
+# so accept either wording rather than hardcoding one.
+VERIFY_CLAUSE_END = (
+    "verify step の status 遷移は対話時と変わらない）",
+    "対話時と同じ内容を全文出力する）",
+)
 RETROSPECT_CLAUSE_END = "status 遷移は対話時と変わらない）"
 
 
