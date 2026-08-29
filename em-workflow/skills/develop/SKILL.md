@@ -193,10 +193,11 @@ Step B に入る前に、`${CLAUDE_PLUGIN_ROOT}/references/command-execution-pro
    （batch: 提示せず自動 `--record`。refusal パターンは従来どおり hard
    fail。`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律
    により、承認結果はランニング出力に出さず、自動承認した文字列を
-   `create-spec.command-approval` ゲートの解決として feature の
-   phase-state に既存の `answers` エントリ形式で記録する — ゲート解決の
-   判定・記録先・ステータス遷移は対話時と変わらず、変わるのは提示の
-   有無だけ。`batch-policies.yaml` の `create-spec.command-approval`）
+   `feature-docs/{feature}/phase-state/batch-audit.yaml` に記録する —
+   ゲート解決の判定・ステータス遷移は対話時と変わらず、変わるのは提示の
+   有無と、対話時は `bash_guard.py --record` にしか記録されない承認結果を
+   batch-audit.yaml にも残す点。`batch-policies.yaml` の
+   `create-spec.command-approval`）
 4. 全て承認済みなら何も出さずに Step B へ
 
 以降のフェーズで PreToolUse hook の deny（未承認）に遭遇したら、承認後に

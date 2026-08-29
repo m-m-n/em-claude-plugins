@@ -177,7 +177,7 @@ resolves to a persisted source:
 
 | Audit item | Persisted source |
 |---|---|
-| Every auto-approved command string | The phase-state record of the `create-spec.command-approval` gate resolution, written by Step A.5's batch branch when it auto-records |
+| Every auto-approved command string | `create-spec.command-approval` gate resolution recorded to `feature-docs/{feature}/phase-state/batch-audit.yaml` `answers` / `resolution_note`, written by Step A.5's batch branch when it auto-records (`references/phase-state.md`'s batch audit record file) |
 | Every assumption recorded during create-spec/planning | `feature-docs/{feature}/phase-state/*.yaml` `answers` / resolution notes |
 | Auto-rework rounds consumed (review / verify) | `workflow.yaml`'s `batch` block |
 | Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id` |
