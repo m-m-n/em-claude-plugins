@@ -37,7 +37,8 @@ workflow:
     skipped_reason: "変更対象が em-workflow プラグインの protocol ドキュメントとオーケストレーターの出力規律のみで、画面・視覚要素・デザイントークンを一切持たない。design system 候補も 0 件。"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 53c643b89cd4f1d8b434d37eb2247c43953554e2
   - id: implement
     status: pending
     base_commit: null
@@ -50,7 +51,64 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "Define the batch output-suppression discipline in batch-mode.md"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/batch-terminal-line.md
+      - tests/test_batch_quiet_output_discipline.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0001
+  task0002:
+    title: "Wire develop/SKILL.md to the suppression discipline"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/skills/develop/SKILL.md
+      - tests/test_batch_quiet_output_skill_wiring.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR1, FR2, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0002
+  task0003:
+    title: "Wire the phase protocols to the suppression discipline"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/references/review-phase.md
+      - em-workflow/references/phases/create-spec-phase.md
+      - em-workflow/references/phases/create-plan-phase.md
+      - tests/test_batch_quiet_output_phase_wiring.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR2, FR4, FR6, FR9, FR10, FR11, FR12, NFR1, NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0003
+  task0004:
+    title: "Plugin version bump in both registries"
+    plan: tasks/task0004.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_batch_quiet_output_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR13]
+    status: pending
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0004
 
 review:
   status: pending
@@ -65,126 +123,126 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-1]
   FR2:
     title: "非終端ターンは 1 行マーカーのみ"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-2]
   FR3:
     title: "1 行マーカーの書式と終端行との識別"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-3]
   FR4:
     title: "抑制される中間出力の範囲"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-2]
   FR5:
     title: "Step C 終了報告は全文維持"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-4]
   FR6:
     title: "停止・中断ターンは抑制の例外"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-4]
   FR7:
     title: "終端行の契約は不変"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-3]
   FR8:
     title: "`--once` フェーズ境界ターンの出力"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-4]
   FR9:
     title: "ファイル成果物への書き込みは不変"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-5]
   FR10:
     title: "ゲート解決・状態遷移の挙動は不変"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-6]
   FR11:
     title: "Step C 監査項目の出所を成果物に固定"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-5]
   FR12:
     title: "規律の定義箇所"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-7]
   FR13:
     title: "プラグイン version の更新"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests: [TS-6]
   NFR1:
     title: "対話モードへの非回帰"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-1]
   NFR2:
     title: "既存 consumer の互換性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-3]
   NFR3:
     title: "停止時の診断可能性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-4]
   NFR4:
     title: "SSOT の単一性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-7]
   NFR5:
     title: "文体"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-7]
 
 batch:
