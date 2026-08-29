@@ -137,7 +137,7 @@ def _normalize_ws(text):
 # ---------------------------------------------------------------------------
 
 _MARKER_ONLY_TURN_RE = re.compile(
-    r"[Ii]n a `--batch` run,? this (?:wake )?turn's final assistant "
+    r"[Ii]n a `--batch` run,? .{0,200}?this (?:wake )?turn's final assistant "
     r"message is the marker line `references/batch-mode\.md` defines "
     r"and nothing else"
 )

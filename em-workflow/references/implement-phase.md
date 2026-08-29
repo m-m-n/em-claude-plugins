@@ -389,17 +389,11 @@ Triggered whenever a launched implementer's `Task()` call returns.
    evidence parts was missing or unresolved (the `$RECONCILE_TIP` third
    argument is `commit-docs.sh`'s `expected_base_tip` check value, never
    message body text):
-   ```
-   commit-docs.sh {integration_worktree} "docs({feature}): implement wake
-   phase reconcile" "$RECONCILE_TIP"
-   ```
-   or, in `--batch` mode with declined deviations to record:
-   ```
-   commit-docs.sh {integration_worktree} "docs({feature}): implement wake
-   phase reconcile
-
-   DECLINED {task_id}: {failed evidence part}" "$RECONCILE_TIP"
-   ```
+   `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
+   phase reconcile" "$RECONCILE_TIP"` — in `--batch` mode with declined
+   deviations to record, the same call with that subject unchanged and the
+   message extended by a blank line plus one
+   `DECLINED {task_id}: {failed evidence part}` line per declined task.
    (exit-4 recovery: Branch & Worktree
    Model above — on a second exit 4, stop the wake phase with a report
    naming the task(s) involved rather than looping).

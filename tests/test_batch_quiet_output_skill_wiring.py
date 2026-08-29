@@ -77,8 +77,9 @@ wording and are exempt):
   TestStepA5RecordingMatcherCanFail.test_forged_section_is_well_formed_and_found.
 - `_states_step_c_sources_audit_items_from_persisted_map` (Step C sourcing
   matcher, AC-4): negative proof is
-  TestStepCSourcingMatcherCanFail.test_matcher_rejects_section_missing_the_wake_commit_source,
-  non-vacuity guard is
+  TestStepCSourcingMatcherCanFail.test_matcher_rejects_section_missing_the_wake_commit_source
+  (forged section names the source map but omits the DECLINE-deviation
+  source traced to `implement-phase.md`), non-vacuity guard is
   TestStepCSourcingMatcherCanFail.test_forged_section_is_well_formed_and_found.
 - `_find_forbidden_literal_violations` (whole-file literal-absence guard,
   AC-2): negative proof is
@@ -260,16 +261,14 @@ def _states_step_a5_records_gate_resolution_in_phase_state(section):
 
 def _states_step_c_sources_audit_items_from_persisted_map(section):
     """Step C sourcing matcher (AC-4): true iff `section` names the
-    discipline document's source map and both newly-defined sources it
-    fixes for this task -- the Step A.5 phase-state record (auto-approved
-    commands) and the implement wake commit message (declined
-    deviations)."""
+    discipline document's source map that the batch audit items are
+    assembled from, and traces the DECLINE-deviation source to
+    `implement-phase.md`."""
     return (
         BATCH_MODE_REFERENCE in section
-        and "Step A.5" in section
-        and "phase-state" in section
-        and "wake" in section
-        and "コミットメッセージ" in section
+        and "ソースマップ" in section
+        and "implement-phase.md" in section
+        and "DECLINE" in section
     )
 
 
@@ -432,8 +431,8 @@ class TestDesignVerifyRetrospectBatchClauses(unittest.TestCase):
 
 class TestStepCSourcingWiring(unittest.TestCase):
     """AC-4, Design item 6: Step C's batch audit items are stated as
-    assembled from the discipline's persisted source map, including the
-    Step A.5 phase-state source and the implement wake commit source."""
+    assembled from the discipline's persisted source map, with the
+    DECLINE-deviation source traced to `implement-phase.md`."""
 
     @classmethod
     def setUpClass(cls):
@@ -447,8 +446,8 @@ class TestStepCSourcingWiring(unittest.TestCase):
         self.assertTrue(
             _states_step_c_sources_audit_items_from_persisted_map(self.section),
             "expected Step C to state that the batch audit items are "
-            "assembled from the persisted source map, naming both the "
-            "Step A.5 phase-state source and the wake-commit source",
+            "assembled from the persisted source map, tracing the "
+            "DECLINE-deviation source to implement-phase.md",
         )
 
     def test_section_restates_no_forbidden_literal(self):
@@ -749,20 +748,19 @@ class TestStepA5RecordingMatcherCanFail(unittest.TestCase):
 class TestStepCSourcingMatcherCanFail(unittest.TestCase):
     """Test Notes: negative proof plus non-vacuity guard for
     `_states_step_c_sources_audit_items_from_persisted_map` -- a forged
-    section naming the discipline and the Step A.5 source but missing the
-    wake-commit source for declined deviations."""
+    section naming the discipline and its source map but missing the
+    DECLINE-deviation source traced to `implement-phase.md`."""
 
     FORGED_SECTION = (
         f"batch の監査項目は {BATCH_MODE_REFERENCE} が定めるソースマップから "
-        "組み立てる。自動承認コマンドは Step A.5 の phase-state 記録から読む。"
+        "組み立てる。"
     )
 
     def test_forged_section_is_well_formed_and_found(self):
         self.assertIn(BATCH_MODE_REFERENCE, self.FORGED_SECTION)
-        self.assertIn("Step A.5", self.FORGED_SECTION)
-        self.assertIn("phase-state", self.FORGED_SECTION)
-        self.assertNotIn("wake", self.FORGED_SECTION)
-        self.assertNotIn("コミットメッセージ", self.FORGED_SECTION)
+        self.assertIn("ソースマップ", self.FORGED_SECTION)
+        self.assertNotIn("implement-phase.md", self.FORGED_SECTION)
+        self.assertNotIn("DECLINE", self.FORGED_SECTION)
 
     def test_matcher_rejects_section_missing_the_wake_commit_source(self):
         self.assertFalse(
@@ -770,7 +768,11 @@ class TestStepCSourcingMatcherCanFail(unittest.TestCase):
         )
 
     def test_matcher_accepts_section_with_the_wake_commit_source(self):
-        extended = self.FORGED_SECTION + "deviation の DECLINE は wake コミットのコミットメッセージから読む。"
+        extended = (
+            self.FORGED_SECTION
+            + "deviation の DECLINE のソースは "
+            + "${CLAUDE_PLUGIN_ROOT}/references/implement-phase.md が定める。"
+        )
         self.assertTrue(
             _states_step_c_sources_audit_items_from_persisted_map(extended)
         )
