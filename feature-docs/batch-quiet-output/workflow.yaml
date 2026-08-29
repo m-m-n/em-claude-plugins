@@ -40,14 +40,14 @@ workflow:
     status: completed
     completed_at_commit: 53c643b89cd4f1d8b434d37eb2247c43953554e2
   - id: implement
-    status: completed
+    status: pending
     base_commit: 4dc8c598399daad7e89ba07d98f32e31a2e20cf9
     completed_at_commit: 5727adaa21c92b2d76ff4c32e3a2d4646d3ff33d
   - id: review
-    status: completed
+    status: pending
     completed_at_commit: c77237112b42b63ffd79c90f82bc5f76909a4e0e
   - id: verify
-    status: failed
+    status: pending
     result: fail
     failed_items:
       - id: SC-6
@@ -161,6 +161,27 @@ tasks:
       source_ids: [1cd0e6ab9dba1fef, 48ac1e2b5f7d90c3, b0f4c7d2e819a635, 2a6b8f0c3d5e7192, 9d1f4e6a2c8b0537, 7e3a95c14b0d82ff]
       review_round: 1
 
+  task0006:
+    title: "Align the batch audit record file's consumers and rules with its own schema"
+    plan: tasks/task0006.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/phase-state.md
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_batch_quiet_output_audit_record_contract.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR9, FR10, FR11, FR12, FR13, NFR4]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: verify
+      source_ids: [SC-6, SC-6-b]
+      review_round: null
+
 review:
   status: completed
   rounds_completed: 2
@@ -237,35 +258,35 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0005]
-    tests: [TS-5, TS-8]
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS-5, TS-8, TS-9]
   FR10:
     title: "ゲート解決・状態遷移の挙動は不変"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0005]
+    tasks: [task0001, task0002, task0003, task0005, task0006]
     tests: [TS-6]
   FR11:
     title: "Step C 監査項目の出所を成果物に固定"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0005]
-    tests: [TS-5, TS-8]
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS-5, TS-8, TS-9]
   FR12:
     title: "規律の定義箇所"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0005]
-    tests: [TS-7]
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS-7, TS-9]
   FR13:
     title: "プラグイン version の更新"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0004, task0005]
+    tasks: [task0004, task0005, task0006]
     tests: [TS-6]
   NFR1:
     title: "対話モードへの非回帰"
@@ -293,8 +314,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0005]
-    tests: [TS-7]
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS-7, TS-9]
   NFR5:
     title: "文体"
     status: ok
@@ -305,4 +326,4 @@ requirements:
 
 batch:
   review_rework_count: 1
-  verify_rework_count: 0
+  verify_rework_count: 1

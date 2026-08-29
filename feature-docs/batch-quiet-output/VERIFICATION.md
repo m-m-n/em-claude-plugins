@@ -22,12 +22,13 @@ from the integration worktree root.
 
 - Command: `python3 -m unittest discover -s tests`
 - Expected: exit code 0, no failures and no errors. This suite carries the
-  five modules this feature adds
+  six modules this feature adds
   (`test_batch_quiet_output_discipline.py`,
   `test_batch_quiet_output_skill_wiring.py`,
   `test_batch_quiet_output_phase_wiring.py`,
   `test_batch_quiet_output_version_bump.py`,
-  `test_batch_quiet_output_audit_persistence.py`) alongside every pre-existing
+  `test_batch_quiet_output_audit_persistence.py`,
+  `test_batch_quiet_output_audit_record_contract.py`) alongside every pre-existing
   module, including `test_batch_stop_contract.py`,
   `test_batch_stop_contract_skill_wiring.py`, `test_batch_policies.py`,
   `test_plugin_version_parity.py` and `test_check_plugin_invariants.py`
@@ -51,6 +52,7 @@ from the integration worktree root.
 | TS-6 | Existing suites pass, including the version bump | `python3 -m unittest discover -s tests` and `python3 em-workflow/hooks/tests/run-destructive-guard.py` both exit 0; both registries carry the same raised version | Integration (regression) |
 | TS-7 | Plugin invariants and SSOT singularity: the added text contradicts no existing SSOT under `em-workflow/scripts/check-plugin-invariants.py`'s criteria | `tests/test_check_plugin_invariants.py` passes (it runs the checker against the real repository root); the discipline exists in exactly one definition site | Integration (invariant checker) + Manual |
 | TS-8 | Batch audit record persistence (rework round 1, IMPLEMENTATION.md D9): the two audit records no per-phase phase-state file owns — non-packet unlisted-gate fallback resolutions and the wake phase's declined `files` deviations — resolve to one persisted, committed source, and the two volatile channels they used are gone | `phase-state.md` defines `phase-state/batch-audit.yaml` (purpose, `answers`-shaped entries, its two writers, append-only, committed by an existing `commit-docs.sh` call and never causing an extra commit); batch-mode.md's source map row names it and its Exceptions list holds exactly the three SPEC-defined exceptions with no unsuppressed-resolution-line bullet; both Non-packet gates rows name that record site with the run report assembled from it, the table still having ten data rows; implement-phase.md I.2.b step 3 has one mode-independent `commit-docs.sh` message with no `DECLINED` body rule anywhere in the document | Unit (document contract, cross-document) |
+| TS-9 | Batch audit record contract conformance (verify rework, failed items SC-6 / SC-6-b): the record file's consumer table and the two disputed rules of its own definition agree with the schema `phase-state.md` defines | batch-mode.md's two source-map rows that name `phase-state/batch-audit.yaml` name the `records[]` container (and `records[].resolution_note`) and carry no `answers` token, while the per-phase `phase-state/*.yaml` `answers` row is untouched and the Non-packet gates table still has ten rows; phase-state.md's Batch audit record file section states the `question_id` rule for the two gate-id-less writers on its own authority (citing `question-resolution.md` step 7 only for the `create-spec.command-approval` gate), prescribes only values matching `^[a-z][a-z0-9._-]*$` (no `null` for the wake decline record), and gives the per-command approval fallback a commit reach-point that holds when it fires outside any phase step, with the writer count still three. Where this row and TS-8's parenthetical differ on the container name and the writer count, this row is the current one | Unit (document contract, cross-document) |
 
 ## Code Quality Verification
 
@@ -69,7 +71,7 @@ from the integration worktree root.
 |----|-----------|---------------|
 | SC-1 | All functional requirements (FR1-FR13) implemented | The coverage table below; every FR maps to ≥ 1 task and ≥ 1 passing scenario |
 | SC-2 | All non-functional requirements (NFR1-NFR5) satisfied | TS-1 (NFR1), TS-3 (NFR2), TS-4 (NFR3), TS-7 (NFR4, NFR5) plus manual item M-2 |
-| SC-3 | All test scenarios (TS-1 - TS-8) pass | Run both suites; every scenario's owning assertions green |
+| SC-3 | All test scenarios (TS-1 - TS-9) pass | Run both suites; every scenario's owning assertions green |
 | SC-4 | Every acceptance criterion in REQUIREMENTS.md 11.1 is met | Walk REQUIREMENTS.md 11.1 against the task Acceptance Criteria and the suite result |
 | SC-5 | The suppression discipline exists in exactly one definition site (`references/batch-mode.md`) | TS-7 plus manual item M-1: grep the plugin tree for a second statement of the marker format or the suppressed-scope list |
 | SC-6 | Code review completed | The review phase's round record shows no residual critical/high finding |
@@ -86,15 +88,15 @@ from the integration worktree root.
 | FR6 | task0001, task0002, task0003 | TS-4 |
 | FR7 | task0001, task0002 | TS-3 |
 | FR8 | task0001, task0002 | TS-4 |
-| FR9 | task0001, task0002, task0003, task0005 | TS-5, TS-8 |
-| FR10 | task0001, task0002, task0003, task0005 | TS-6 |
-| FR11 | task0001, task0002, task0003, task0005 | TS-5, TS-8 |
-| FR12 | task0001, task0002, task0003, task0005 | TS-7 |
-| FR13 | task0004, task0005 | TS-6 |
+| FR9 | task0001, task0002, task0003, task0005, task0006 | TS-5, TS-8, TS-9 |
+| FR10 | task0001, task0002, task0003, task0005, task0006 | TS-6 |
+| FR11 | task0001, task0002, task0003, task0005, task0006 | TS-5, TS-8, TS-9 |
+| FR12 | task0001, task0002, task0003, task0005, task0006 | TS-7, TS-9 |
+| FR13 | task0004, task0005, task0006 | TS-6 |
 | NFR1 | task0001, task0002, task0003, task0005 | TS-1 |
 | NFR2 | task0001, task0002 | TS-3 |
 | NFR3 | task0001, task0002, task0003, task0005 | TS-4 |
-| NFR4 | task0001, task0002, task0003, task0005 | TS-7 |
+| NFR4 | task0001, task0002, task0003, task0005, task0006 | TS-7, TS-9 |
 | NFR5 | task0001, task0002 | TS-7 |
 
 ## E2E Testing
@@ -139,7 +141,7 @@ scenario to automate.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1 - TS-8) | 8 | 8 | 0 | 1 (TS-7 also has a manual half) |
+| Test scenarios (TS-1 - TS-9) | 9 | 9 | 0 | 1 (TS-7 also has a manual half) |
 | Success criteria (SC-1 - SC-6) | 6 | 4 | 0 | 2 |
 | Manual checks (M-1 - M-5) | 5 | 0 | 0 | 5 |
 | Security checks | 1 | 0 | 0 | 1 |
