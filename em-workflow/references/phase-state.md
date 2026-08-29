@@ -365,44 +365,63 @@ not-owned-by-one-phase exemption this document already grants
 schema_version: 1
 feature: example-feature
 answers:
-  batch-audit-0001:
+  review.diff-size-gate:
+    question_id: review.diff-size-gate
     packet_id: null
     answered_at: "2026-01-30T12:00:00+09:00"
-    source: batch_fallback
-    answer_mode: select_or_freeform
-    selected_option_ids: [smallest_side_effect]
-    freeform: null
-    normalized_answer: "smallest_side_effect"
-    resolution_note: "gate: review phase diff-size gate; options: [...]; choice: smallest_side_effect; codex_consulted: true"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "smallest / most reversible side effect option"
+    normalized_answer: "smallest / most reversible side effect option"
+    resolution_note: "gate: review phase diff-size gate; codex_consulted: true; no Codex suggestion mapped, fell through to the minimum-side-effect default"
 ```
 
 Each entry reuses the `answers` entry shape "## Schema" above already
-defines (`packet_id`, `answered_at`, `source`, `answer_mode`,
-`selected_option_ids`, `freeform`, `normalized_answer`), keyed the same way
-that map already is — by an identifier unique within the file — plus one
-additional field, `resolution_note`, carrying the detail
-`references/batch-mode.md`'s `## Reporting` already requires. No field of
-the per-phase `answers` shape changes.
+defines (`question_id`, `packet_id`, `answered_at`, `source`, `answer_mode`,
+`selected_option_ids`, `freeform`, `normalized_answer`, `resolution_note`),
+keyed the same way that map already is — by `question_id`. None of these
+gates (`references/batch-mode.md`'s Non-packet gates table) carries a
+worker-minted `question_id`, since none carries a `gate_id` either: per
+`references/question-resolution.md` step 7's rule for an orchestrator-opened
+gate with no worker packet, `packet_id` stays `null` and `question_id`
+takes the gate's own identifying name instead, since no worker minted one
+(e.g. `review.diff-size-gate` above, or a per-literal-command identifier for
+the per-command approval fallback). `source` is `batch-safe-default` when no
+Codex suggestion mapped onto an option and the minimum-side-effect default
+was taken, or `batch-codex-consultation` when Codex's suggestion did map
+onto one — both drawn from `references/question-packet-schema.md`'s closed
+`source` vocabulary, not a value outside it. No field of the per-phase
+`answers` shape changes.
 
-Two writers append to this file, each at resolution time:
+Three writers append to this file, each at resolution time:
 
 - `references/batch-mode.md`'s Non-packet gates table: the review phase
   diff-size gate and the per-command approval fallback each append one
-  entry, with `resolution_note` naming the gate site, the options, the
-  choice, and whether Codex was consulted.
+  entry, with `resolution_note` naming the gate site, the options
+  considered, the choice, and whether Codex was consulted. Each entry is
+  committed by the next `commit-docs.sh` call the same phase step already
+  makes for its own reasons.
 - `references/implement-phase.md` Step I.2.b step 3: the wake phase appends
   one entry per declined `files` deviation, with `resolution_note` naming
   the `task_id` and which of the three evidence parts was missing or
-  unresolved.
+  unresolved. Committed by Step I.2.b step 3's own wake commit.
+- `references/batch-mode.md` Step A.5's batch branch: when it auto-approves
+  a command string without a human confirmation, it appends one entry
+  recording the command string, with `resolution_note` naming the command
+  and the basis for the auto-approval. Since this can happen before any
+  step has made its own commit, Step A.5's batch branch commits the entry
+  itself immediately, via the same `commit-docs.sh` path every other writer
+  here uses.
 
 Entries are append-only: an existing entry is never rewritten or removed.
-The file is committed by whichever `commit-docs.sh` call its writer already
-makes for its own reasons — for the wake decline, Step I.2.b step 3's own
-wake commit — and is never itself the reason to create a commit that would
-not otherwise happen. `references/batch-mode.md`'s audit-item source map
-and `references/implement-phase.md`'s wake "Batch mode" paragraph both read
-this file; it introduces no change to any per-phase phase-state file's
-schema.
+Every writer above states its own commit reach-point, so an appended entry
+never stays uncommitted; a writer's own commit is never itself the reason
+to create a commit that would not otherwise happen, except for Step A.5's
+immediate commit stated above. `references/batch-mode.md`'s audit-item
+source map and `references/implement-phase.md`'s wake "Batch mode"
+paragraph both read this file; it introduces no change to any per-phase
+phase-state file's schema.
 
 ## Legacy feature compatibility
 
