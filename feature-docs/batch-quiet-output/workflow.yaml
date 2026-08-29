@@ -47,35 +47,18 @@ workflow:
     status: completed
     completed_at_commit: 010d8f8f5159e1497274618e1c6d3c68ccc8176b
   - id: verify
-    status: pending
-    result: fail
-    failed_items:
-      - id: SC-6
-        category: spec
-        title: "レビュー round 記録に残存 critical/high finding があり Success Criteria SC-6 が未達"
-        evidence: >-
-          reviews/round2.yaml の residual_critical_high が 3。いずれも同一サイト
-          （em-workflow/references/batch-mode.md:180 / :184 の audit-item source map）で、
-          記録先を batch-audit.yaml の `answers` と書いているが、phase-state.md が定義する
-          コンテナは append-only の `records` リストで `answers` キーは存在しない。
-          comprehensive / architecture / spec の 3 観点が独立に指摘し、review の
-          auto-fix loop 3 では conflict グループ（非等価な diff が 2 件）となり
-          batch の review.auto-fix-conflict 規約でサイトごとスキップされた。
-          workflow-schema.md の `residual_critical_high` は 0 でなければ workflow を
-          完了できないゲートでもある。
-        scenario: TS-5
-        requirements: [FR9, FR11, NFR4]
-      - id: SC-6-b
-        category: spec
-        title: "phase-state.md の batch audit record 節に medium 2 件の未解決ドリフトが残る"
-        evidence: >-
-          reviews/round2.yaml の 546089d1de91e7dd（question-resolution.md step 7 の誤引用と
-          `question_id: null` のパターン違反）と 8efe209e0d97bda5（per-command approval
-          fallback にコミット到達点が無く、implement wake の reset --hard で監査レコードが
-          失われうる）。どちらも medium のため R4 の候補外で、rework cap 到達により
-          deferred のまま残った。
-        scenario: TS-5
-        requirements: [FR9, FR11]
+    status: completed
+    completed_at_commit: c9650c3563f00c84790e7fb4c76596714d08ade1
+    result: pass
+    failed_items: []
+    notes: >-
+      TS-1 - TS-9 / SC-1 - SC-6 すべて成立。`python3 -m unittest discover -s tests` は
+      2758 tests OK、`python3 em-workflow/hooks/tests/run-destructive-guard.py` は 36/36 passed。
+      build / format / E2E コマンドは project.components に未定義のため対象外。
+      FR13 の version は plugin.json と marketplace.json とも 0.1.54 で一致。
+      SC-6 は reviews/round3.yaml の residual_critical_high: 0 で成立（前回 fail の直接原因を解消）。
+      excluded 状態の要件は無し。手動項目 M-1 - M-5 は無人実行のため未実施で、
+      成果物（reviews/round*.yaml と各 SSOT ドキュメント）から人間が確認できる。
   - id: retrospect
     status: pending
 
