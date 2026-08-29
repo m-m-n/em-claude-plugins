@@ -46,6 +46,11 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 7. `--once` 指定時、1 フェーズが完了したとき（フェーズ境界の定義は下記
    「`--once` のフェーズ境界」参照）
 
+batch: 停止条件 5 の待機ターンは、(a)(b) いずれの形でも最後の assistant
+メッセージとして `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の
+出力抑制規律が定めるマーカー行のみを出す（implement の launch / wake
+ターンについては下記「`--once` のフェーズ境界」の非境界の note も参照）。
+
 これらに該当しない限り、フェーズ完了のたびに workflow.yaml を Read し直して
 **必ず**次の pending step を実行する。サブエージェントやフェーズプロトコルの
 自然言語出力を判断材料にしない — 根拠は **workflow.yaml の status のみ**。
@@ -69,7 +74,9 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 - `--report-only`（別名 `--no-auto-fix`, `--no-fix`）: review フェーズの
   auto-fix をスキップするフラグとして保持し、review フェーズに引き渡す
 - `--batch`: 無人実行モード。**最初に**
-  `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` を Read する。ゲートの
+  `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` を Read する（同
+  ドキュメントはゲート挙動に加えて出力抑制の規律も定める。適用箇所は
+  本ファイルの該当ステップで個別に参照する）。ゲートの
   管轄は「誰が提示するか」ではなく「`gate_id` を持つか」で決まる —
   worker がパケットで返したか orchestrator が直接開いたか（例: Step A.5
   の `create-spec.command-approval`、`{phase}.artifact-overwrite` 系）を
@@ -184,8 +191,12 @@ Step B に入る前に、`${CLAUDE_PLUGIN_ROOT}/references/command-execution-pro
    （package.json のどのスクリプトに解決されるか等）を提示して
    AskUserQuestion（multiSelect）で一括承認 → `--record` で記録
    （batch: 提示せず自動 `--record`。refusal パターンは従来どおり hard
-   fail。自動承認した文字列は終了報告に列挙する —
-   `batch-policies.yaml` の `create-spec.command-approval`）
+   fail。`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律
+   により、承認結果はランニング出力に出さず、自動承認した文字列を
+   `create-spec.command-approval` ゲートの解決として feature の
+   phase-state に既存の `answers` エントリ形式で記録する — ゲート解決の
+   判定・記録先・ステータス遷移は対話時と変わらず、変わるのは提示の
+   有無だけ。`batch-policies.yaml` の `create-spec.command-approval`）
 4. 全て承認済みなら何も出さずに Step B へ
 
 以降のフェーズで PreToolUse hook の deny（未承認）に遭遇したら、承認後に
@@ -385,12 +396,20 @@ design 専用の phase protocol は作らないため、ここが design 側の�
    mockup）を検証し、design step の `status` と `completed_at_commit`
    （規則 R2）を設定して commit-docs.sh でコミットする
    （`payload.design_summary`: decisions_count / open_items / tokens /
-   mockups をレポートに反映）
+   mockups をレポートに反映。batch:
+   `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律により、
+   進捗のナラティブと `payload.design_summary` の結果サマリ本文はランニング
+   出力に出さない。workflow.yaml への書き込み・commit-docs.sh でのコミット・
+   ゲート解決・design step の status 遷移は対話時と変わらない）
 
 ### verify フェーズ
 
 integration worktree（implement-phase.md の Branch & Worktree Model 参照）で
-統合検証を実行する:
+統合検証を実行する（batch:
+`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律により、
+進捗のナラティブと結果サマリ本文はランニング出力に出さない。
+workflow.yaml への書き込み・commit-docs.sh でのコミット・ゲート解決・
+verify step の status 遷移は対話時と変わらない）:
 
 1. `{integration worktree}/feature-docs/{feature}/VERIFICATION.md` を Read
 2. workflow.yaml `project.components` の build / test / format コマンドを
@@ -447,7 +466,11 @@ integration worktree（implement-phase.md の Branch & Worktree Model 参照）�
 ### retrospect フェーズ（収集は自動・承認不要）
 
 `{integration worktree}/feature-docs/{feature}/retrospect.yaml` を機械的に
-書き出す軽量ステップ:
+書き出す軽量ステップ（batch:
+`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律により、
+進捗のナラティブと結果サマリ本文はランニング出力に出さない。
+retrospect.yaml への書き込み・commit-docs.sh でのコミット・ゲート解決・
+status 遷移は対話時と変わらない）:
 
 ```yaml
 feature: {feature}
@@ -523,6 +546,11 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
    を 1 行添える。batch: batch-mode.md「Reporting」の監査項目
    （自動承認コマンド / 記録した仮定 / rework 消費 / deferred findings）
    を必ず含める — 外部サービス経由で人間の評価者に届く唯一の確認面。
+   これらの監査項目は
+   `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律が定める
+   ソースマップから組み立てる — 自動承認コマンドは Step A.5 が
+   phase-state に記録したゲート解決から、deviation の DECLINE は
+   implement wake コミットのコミットメッセージから読む。
    batch はこの報告のあとに終端行を追記する
    （`references/batch-terminal-line.md`、下記「バッチ終端行」参照）
 
@@ -540,13 +568,27 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 
 **非境界**: `--once` は implement フェーズの途中ではターンを終えない
 （in-flight の実装者がプロセス終了で失われるため）。停止条件 5 の待機ターン、
-および implement の launch / wake ターンは非終端。
+および implement の launch / wake ターンは非終端（batch: これらのターンは
+終端行の代わりに、`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の
+出力抑制規律が定めるマーカー行だけを最後の assistant メッセージとして
+出す）。
 
 **対話モードの終了行**: 対話モードで `--once` 指定のターンが上記いずれかの
 境界で終わるとき、終了報告に次の 1 行を追加する:
 `{step} が完了したよ。続きは /clear してから /em-workflow:develop {feature} を実行してね`
 
+**batch モードの終了行**: batch モードで `--once` 指定のターンが上記いずれ
+かの境界で終わるとき、`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の
+出力抑制規律に従い、下記「バッチ終端行」が定める終端行以外のナラティブは
+一切出さない。
+
 ## 停止時の報告（停止条件 2-4 のみ）
+
+batch: 下記 3 件に加えて、停止条件 6、フェーズ内のゲート中断、Step A の
+feature 解決失敗、commit-docs.sh の 2 回目の exit 4 によるフェーズ中断、
+Step C 内の中断は、いずれも
+`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律が定める
+停止/中断の例外であり、対話時と同じ内容を全文報告する。
 
 - スタック: `{step} が {status} のままだよ。フェーズ出力を確認してね`
 - 中断: `{step} が {status} のため中断。再開するには /em-workflow:develop を実行してね`
@@ -562,7 +604,10 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 `references/batch-terminal-line.md` を唯一の SSOT とし、ここでは
 「いつ出すか」だけを定める。出力の直前に
 `${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md` を Read し、
-そこに定義された prefix・フィールド文法・値の集合をそのまま使う。
+そこに定義された prefix・フィールド文法・値の集合をそのまま使う。この
+終端行は、ランが終端状態に達していないターンの最後の assistant メッセージ
+として `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律が
+定める非終端のマーカー行とは別物である。
 
 対象は Step C の完了処理（通常完了）と `--once` のフェーズ境界で終わる
 ターンに加えて、停止条件 2（スタック）、
