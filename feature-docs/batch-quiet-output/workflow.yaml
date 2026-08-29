@@ -1,0 +1,192 @@
+schema_version: 1
+feature: batch-quiet-output
+created: 2026-08-29
+base_branch: main
+goal: |
+  `develop`コマンドで`--batch`を指定した際、メインコンテキストの出力はほぼ行わなくて良いです
+  --batchコマンドは`claude -p`や`claude-batch`を経由して実行されることを念頭に置きます
+parent_branch: em-workflow/batch-quiet-output/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+    hooks:
+      language: python
+      build_command: ""
+      test_command: "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 446c5c6c0cfd63bafcc08954b99783c9c8ba028b
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "変更対象が em-workflow プラグインの protocol ドキュメントとオーケストレーターの出力規律のみで、画面・視覚要素・デザイントークンを一切持たない。design system 候補も 0 件。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "抑制の適用条件"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR2:
+    title: "非終端ターンは 1 行マーカーのみ"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  FR3:
+    title: "1 行マーカーの書式と終端行との識別"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR4:
+    title: "抑制される中間出力の範囲"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  FR5:
+    title: "Step C 終了報告は全文維持"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR6:
+    title: "停止・中断ターンは抑制の例外"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR7:
+    title: "終端行の契約は不変"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR8:
+    title: "`--once` フェーズ境界ターンの出力"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR9:
+    title: "ファイル成果物への書き込みは不変"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR10:
+    title: "ゲート解決・状態遷移の挙動は不変"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  FR11:
+    title: "Step C 監査項目の出所を成果物に固定"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR12:
+    title: "規律の定義箇所"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+  FR13:
+    title: "プラグイン version の更新"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  NFR1:
+    title: "対話モードへの非回帰"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  NFR2:
+    title: "既存 consumer の互換性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  NFR3:
+    title: "停止時の診断可能性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  NFR4:
+    title: "SSOT の単一性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+  NFR5:
+    title: "文体"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0

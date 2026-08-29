@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-quiet-output
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: fe214726837bb03bc94b539f3241d15ca9b95e1d
 last_input_digest: "sha256:a87e648c449ef718180ee67eac86d030970e536a9b2d754be0a9c854bf25a418"
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets:
   batch-quiet-output-q0001:
     status: answered
@@ -62,10 +62,20 @@ worker_runs:
     input_digest: "sha256:ca8e97bc04f59f994015db7c818dff4f353ce092a319711b561ba75f9f005b74"
     output_digest: null
   - request_id: create-spec-run-0002
-    status: dispatched
+    status: completed
     input_digest: "sha256:a87e648c449ef718180ee67eac86d030970e536a9b2d754be0a9c854bf25a418"
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:7500745146148a426d42744785cf93728ce10f90f85ad2233bcfdce6a1177f7b"
+    output_digest: null
+artifacts:
+  - path: feature-docs/batch-quiet-output/REQUIREMENTS.md
+    sha256: null
+    produced_by: create-spec-run-0003
+  - path: feature-docs/batch-quiet-output/SPEC.md
+    sha256: null
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: "sha256:2893722b851eb02b5f74d963863fb83a6502cdd1b6510f08d00b046a43b7a688"
 stale_redispatch_count: 0
