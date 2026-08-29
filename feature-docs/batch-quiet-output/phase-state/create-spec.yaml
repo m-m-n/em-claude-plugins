@@ -3,19 +3,71 @@ feature: batch-quiet-output
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 793c5991912f1d4e82fdaba4fc7191f6c6f5c6c0
-last_input_digest: "sha256:ca8e97bc04f59f994015db7c818dff4f353ce092a319711b561ba75f9f005b74"
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+base_revision: fe214726837bb03bc94b539f3241d15ca9b95e1d
+last_input_digest: "sha256:a87e648c449ef718180ee67eac86d030970e536a9b2d754be0a9c854bf25a418"
+active_request_id: create-spec-run-0002
+packets:
+  batch-quiet-output-q0001:
+    status: answered
+    issued_at: "2026-08-29T21:29:50+09:00"
+    questions:
+      - question_id: output.batch-final-report-scope
+        status: answered
+      - question_id: output.batch-stop-report-detail
+        status: answered
+      - question_id: output.batch-nonterminal-turn-output
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  output.batch-final-report-scope:
+    packet_id: batch-quiet-output-q0001
+    answered_at: "2026-08-29T21:29:28+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [keep_full_report]
+    freeform: null
+    normalized_answer: "Step C の batch 終了報告は現行どおり監査項目を全文出力する。抑制対象はフェーズ進行中の中間出力に限る。"
+    resolution_note: "gate create-spec.requirement-clarification / action codex_consultation。claude -p は最終 assistant メッセージのみを呼び出し元へ返すため、最終レポートを削ると唯一の確認面が消える。Codex 提案 keep_full_report をオーケストレーターが自ら option_id に写像して採用。record_as_assumption: true。"
+  output.batch-stop-report-detail:
+    packet_id: batch-quiet-output-q0001
+    answered_at: "2026-08-29T21:29:28+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [keep_full_stop_report]
+    freeform: null
+    normalized_answer: "停止・中断ターンは抑制の例外とし、原因・該当パス・復旧の手掛かりを現行どおり出力する。"
+    resolution_note: "gate create-spec.requirement-clarification / action codex_consultation。batch-mode.md の『failure は隠さない』を維持。Codex 提案 keep_full_stop_report を写像して採用。record_as_assumption: true。"
+  output.batch-nonterminal-turn-output:
+    packet_id: batch-quiet-output-q0001
+    answered_at: "2026-08-29T21:29:28+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [one_line_marker]
+    freeform: null
+    normalized_answer: "非終端ターンは固定書式の 1 行マーカーのみを出力する。実況・サブエージェント報告の転送・中間サマリは出さない。"
+    resolution_note: "gate create-spec.requirement-clarification / action codex_consultation。完全無音のターンは異常終了と区別できないため 1 行を残す。Codex 提案 one_line_marker を写像して採用。record_as_assumption: true。"
+  design-step.recommendation:
+    packet_id: batch-quiet-output-q0001
+    answered_at: "2026-08-29T21:29:28+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "analyst の推奨どおり design ステップを skipped にする。"
+    resolution_note: "gate create-spec.design-step / batch-policies.yaml: action select, option_id decide_autonomously。"
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: "sha256:ca8e97bc04f59f994015db7c818dff4f353ce092a319711b561ba75f9f005b74"
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: "sha256:a87e648c449ef718180ee67eac86d030970e536a9b2d754be0a9c854bf25a418"
     output_digest: null
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: "sha256:2893722b851eb02b5f74d963863fb83a6502cdd1b6510f08d00b046a43b7a688"
 stale_redispatch_count: 0
 resolved_input_cache:
   design_system_candidates:
