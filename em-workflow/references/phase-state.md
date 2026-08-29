@@ -364,12 +364,11 @@ not-owned-by-one-phase exemption this document already grants
 ```yaml
 schema_version: 1
 feature: example-feature
-answers:
-  review.diff-size-gate:
-    question_id: review.diff-size-gate
+records:
+  - question_id: review.diff-size-gate
     packet_id: null
     answered_at: "2026-01-30T12:00:00+09:00"
-    source: batch-safe-default
+    source: batch-decision-table
     answer_mode: freeform
     selected_option_ids: []
     freeform: "smallest / most reversible side effect option"
@@ -377,22 +376,42 @@ answers:
     resolution_note: "gate: review phase diff-size gate; codex_consulted: true; no Codex suggestion mapped, fell through to the minimum-side-effect default"
 ```
 
-Each entry reuses the `answers` entry shape "## Schema" above already
-defines (`question_id`, `packet_id`, `answered_at`, `source`, `answer_mode`,
-`selected_option_ids`, `freeform`, `normalized_answer`, `resolution_note`),
-keyed the same way that map already is — by `question_id`. None of these
-gates (`references/batch-mode.md`'s Non-packet gates table) carries a
-worker-minted `question_id`, since none carries a `gate_id` either: per
-`references/question-resolution.md` step 7's rule for an orchestrator-opened
-gate with no worker packet, `packet_id` stays `null` and `question_id`
-takes the gate's own identifying name instead, since no worker minted one
-(e.g. `review.diff-size-gate` above, or a per-literal-command identifier for
-the per-command approval fallback). `source` is `batch-safe-default` when no
-Codex suggestion mapped onto an option and the minimum-side-effect default
-was taken, or `batch-codex-consultation` when Codex's suggestion did map
-onto one — both drawn from `references/question-packet-schema.md`'s closed
-`source` vocabulary, not a value outside it. No field of the per-phase
-`answers` shape changes.
+`records` is a **list**, not a map: each writer appends one new element per
+record, so there is no key to collide and no possibility of one record
+silently overwriting another. Each element keeps the same per-field shape
+as an answer record — `question_id`, `packet_id`, `answered_at`, `source`,
+`answer_mode`, `selected_option_ids`, `freeform`, `normalized_answer`,
+`resolution_note`. Of these, `question_id` and `resolution_note` are
+defined by `references/question-packet-schema.md`'s answer object, not by
+this document's `## Schema` `answers` row above (which defines only
+`packet_id`, `answered_at`, `source`, `answer_mode`, `selected_option_ids`,
+`freeform`, and `normalized_answer`); `resolution_note` is required on
+every element here. This subsection's records cover every batch audit record that no
+per-phase phase-state file owns, regardless of whether the record's gate
+carries a `gate_id`; `gate_id` presence still decides which resolution
+path a gate takes, per `references/question-resolution.md`. For a gate
+with no `gate_id` — the review phase diff-size gate and the per-command
+approval fallback — `question_id` is present, and equal to the gate's own
+identifying name (e.g. `review.diff-size-gate` above, or a
+per-literal-command identifier for the per-command approval fallback),
+per `references/question-resolution.md` step 7's rule for an
+orchestrator-opened gate with no worker packet and no `gate_id`; each
+resolves through `references/batch-mode.md`'s Non-packet gates table,
+with `source` `batch-safe-default` or `batch-codex-consultation`. For a
+gate with a `gate_id` — `skills/develop/SKILL.md` Step A.5's
+`create-spec.command-approval` gate — `question_id` is that `gate_id`,
+resolved through `references/question-resolution.md`'s batch resolution
+sequence against `references/batch-policies.yaml`'s decision table, with
+`source` `batch-decision-table`. `question_id` is `null` for the
+implement wake decline record, which is not a gate. `packet_id` is always
+`null`, because the orchestrator raises these records rather than a worker
+packet. `source` is drawn from `references/question-packet-schema.md`'s
+closed `source` vocabulary: `batch-safe-default` when no Codex suggestion
+mapped onto an option and the minimum-side-effect default was taken,
+`batch-codex-consultation` when Codex's suggestion did map onto one, or
+`batch-decision-table` for a record whose gate resolves through
+`references/batch-policies.yaml`. No field of the per-phase `answers`
+shape changes.
 
 Three writers append to this file, each at resolution time:
 
@@ -406,7 +425,7 @@ Three writers append to this file, each at resolution time:
   one entry per declined `files` deviation, with `resolution_note` naming
   the `task_id` and which of the three evidence parts was missing or
   unresolved. Committed by Step I.2.b step 3's own wake commit.
-- `references/batch-mode.md` Step A.5's batch branch: when it auto-approves
+- `skills/develop/SKILL.md` Step A.5's batch branch: when it auto-approves
   a command string without a human confirmation, it appends one entry
   recording the command string, with `resolution_note` naming the command
   and the basis for the auto-approval. Since this can happen before any
@@ -414,8 +433,9 @@ Three writers append to this file, each at resolution time:
   itself immediately, via the same `commit-docs.sh` path every other writer
   here uses.
 
-Entries are append-only: an existing entry is never rewritten or removed.
-Every writer above states its own commit reach-point, so an appended entry
+Records are append-only: an existing element of the `records` list is
+never rewritten or removed. Every writer above states its own commit
+reach-point, so an appended record
 never stays uncommitted; a writer's own commit is never itself the reason
 to create a commit that would not otherwise happen, except for Step A.5's
 immediate commit stated above. `references/batch-mode.md`'s audit-item
