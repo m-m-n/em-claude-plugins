@@ -43,7 +43,8 @@ the SSOT never depends on a pointer document.
 | Marker / terminal non-collision (D2) | Keeps the terminal-line contract's "no line = abnormal outcome" signal intact | Neither prefix is a prefix of the other, so a consumer matching the terminal-line prefix never matches a marker line. batch-mode.md states this property by naming `references/batch-terminal-line.md`, never by reproducing that document's prefix literal (see D6) | task0001, task0002, task0003 |
 | Pointer convention (D3) | How a pointer document applies the discipline | A pointer site names `references/batch-mode.md` (SKILL.md uses its own `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` convention) and states only WHERE the rule applies — never the marker prefix, never its fields, never the suppressed-scope list, never an exception list | task0002, task0003 |
 | Audit-item source map (D4) | Every audit item batch-mode.md "Reporting" requires resolves to a persisted source, so Step C's report survives suppression | Auto-rework counts consumed ← `workflow.yaml`'s `batch` block. Recorded assumptions and unlisted-gate fallback resolutions ← `feature-docs/{feature}/phase-state/*.yaml` `answers` / resolution notes. Deferred findings with `stable_id` ← `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id`. Auto-approved command strings ← the phase-state record of the `create-spec.command-approval` gate resolution, which Step A.5's batch branch writes when it auto-records (this is FR11's "newly defined source"; it uses the existing `answers` entry shape, so `references/phase-state.md` needs no schema change and is NOT in any task's file set). Kept integration branch name ← `workflow.yaml` `parent_branch` plus the feature name | task0001 (defines the map), task0002 (Step A.5 write site + Step C assembly) |
-| Declined-deviation audit channel (D5) | implement-phase.md's wake-phase obligation to list an admitted/declined `files` deviation stays satisfiable once the wake turn emits only the marker line | The admission's audit record is unchanged (the appended `files` entry plus the wake commit). A DECLINE's record moves from the wake turn's main-context report to the wake commit's message, from which Step C's batch report assembles it. No file artifact's content changes, so FR9 holds | task0003 (records it), task0002 (Step C reads it) |
+| Declined-deviation audit channel (D5) | implement-phase.md's wake-phase obligation to list an admitted/declined `files` deviation stays satisfiable once the wake turn emits only the marker line | The admission's audit record is unchanged (the appended `files` entry plus the wake commit). A DECLINE's record moves from the wake turn's main-context report to the wake commit's message, from which Step C's batch report assembles it. No file artifact's content changes, so FR9 holds. **Superseded by D9** (rework round 1, finding `9d1f4e6a2c8b0537`): the decline's record moves to D9's persisted file instead of the commit message; the admission's record and the interactive behaviour are unaffected | task0003 (records it), task0002 (Step C reads it), task0005 (moves it to D9) |
+| Batch audit record file (D9) | The one persisted home for the batch audit records no per-phase phase-state file owns | `feature-docs/{feature}/phase-state/batch-audit.yaml`, one per feature, not owned by a single phase — the same exemption `references/phase-state.md` already grants `backfill.yaml`. Holds: an `answers`-shaped entry per non-packet unlisted-gate fallback resolution (gate site / options / choice / Codex consulted or not, in `resolution_note`), and one entry per declined `files` deviation (`task_id` + which of the three evidence parts failed). Reuses the existing `answers` entry shape, so no per-phase schema field changes. Append-only. Written at resolution time; committed by an existing `commit-docs.sh` call (the wake commit for a decline) and never the cause of an additional commit. Read by Step C through batch-mode.md's source map and implement-phase.md's decline pointer | task0005 (defines it in `phase-state.md`, points batch-mode.md's source map and the two Non-packet gates rows at it, writes it from implement-phase.md's wake step); task0002's Step C assembly reaches it unchanged, through the pointers it already follows |
 | Existing-guard constraints (D6) | The pre-existing test modules that already pin these files must stay green | (a) `EM_WORKFLOW_TERMINAL:` must not appear in `batch-mode.md` or `SKILL.md` (whole-file absence guards). (b) The terminal-line contract's eleven reason codes, the `no-step` sentinel, the four field names as a backticked group, any `state={value}` shape and the bare `phase_done` literal must not appear anywhere in those two files. (c) batch-terminal-line.md's seven level-2 headings and their order are pinned by exact equality — no heading may be added, removed, renamed or reordered. (d) batch-mode.md's Non-packet gates table must keep exactly ten data rows and its catch-all wording; `## Terminal line` and `## Reporting` must keep their headings and relative order | task0001, task0002, task0003 |
 
 ## Conventions
@@ -114,6 +115,13 @@ phase-state using the existing `answers` entry shape, so no phase-state
 schema change is needed and `references/phase-state.md` stays out of the
 change set. Affects task0001 (map) and task0002 (write site + assembly).
 
+Amended by D9 (rework round 1): the auto-approved command strings were not
+the only item lacking a persisted source — the non-packet unlisted-gate
+fallback resolutions lacked one too, and D9 supplies it. This row's mapping
+of that item to `phase-state/*.yaml`'s `answers` / resolution notes is
+unchanged and is what D9 makes true; `references/phase-state.md` enters the
+change set with D9's file definition (task0005).
+
 ### D5 — Declined-deviation records move to the wake commit message
 
 `implement-phase.md`'s wake phase currently records a DECLINED `files`
@@ -158,6 +166,32 @@ up merging without touching `em-workflow/`, the bump would be unnecessary —
 that is the only condition under which task0004 is void, and it cannot occur
 given their file sets.
 
+### D9 — Both unowned batch audit records share one persisted file
+
+Added by rework round 1 (findings `1cd0e6ab9dba1fef`, `48ac1e2b5f7d90c3`,
+`b0f4c7d2e819a635`, `2a6b8f0c3d5e7192`, `9d1f4e6a2c8b0537`,
+`7e3a95c14b0d82ff`). Two audit records had no phase-state file to live in —
+the non-packet unlisted-gate fallback resolutions (the review diff-size gate
+and the per-command approval fallback carry no `gate_id`, so no `answers`
+entry is raised for them) and the wake phase's declined `files` deviations.
+D4's original text routed the first to an unsuppressed output line and D5
+routed the second to a batch-only commit message; both are volatile or
+mode-divergent channels, contradicting FR11 (audit items come from committed
+artifacts and persisted state), FR4/FR2 (a non-terminal turn emits one marker
+line and nothing else) and FR9 (commits are unchanged between modes).
+
+One file resolves both, because both are the same kind of record: a batch
+decision that no phase owns. `phase-state/batch-audit.yaml` sits inside
+FR11's own named source (`phase-state/*.yaml`'s `answers` /
+`resolution_note`) and inside `commit-docs.sh`'s existing `ARTIFACT_PATHS`,
+so it needs no script change and no per-phase schema change — it is exactly
+FR11's "if any audit item has no persisted source, that source is newly
+defined", taking `backfill.yaml`'s existing not-owned-by-one-phase shape as
+its precedent. The fourth suppression exception and the batch-only wake
+commit-message construction are removed with it, since each existed only to
+carry one of these two records. Affects task0005; D4's unlisted-gate row and
+D5 are amended accordingly.
+
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
@@ -171,11 +205,15 @@ given their file sets.
 
 ## Open Questions
 
-- [ ] D5 reads FR9 as constraining file-artifact content only, so a commit
+- [x] D5 reads FR9 as constraining file-artifact content only, so a commit
       MESSAGE may carry the declined-deviation record. If review reads FR9 as
       covering commit messages too, the channel has to move (the only other
       candidate without a phase-state schema change is leaving the decline
       unreported in batch, which contradicts implement-phase.md).
+      **Resolved by rework round 1** (finding `9d1f4e6a2c8b0537`): review read
+      FR9 as covering the commit itself, so the channel moves to D9's
+      persisted file — a third candidate this question had not considered,
+      which needs no per-phase schema change either.
 - [ ] D4 assumes Step A.5's batch auto-record can write the feature's
       phase-state at that point in the run (workflow.yaml exists by then, so
       the feature directory does). If it cannot, task0002 must report a plan
