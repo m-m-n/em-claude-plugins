@@ -254,6 +254,11 @@ invocation above is a coverage regression, not a smaller valid invocation.
   `references/phase-state.md`'s Resume decision table
   (`applying_patch`, not yet applied).
 
+In a `--batch` run, this phase's completion narration above is withheld
+per `references/batch-mode.md`'s output-suppression discipline; the patch
+application (section 10) and this section's completion / resumable-
+partial-completion writes above are unchanged.
+
 ## 12. Declared change set derivation
 
 A feature's declared change set is derived — not authored.

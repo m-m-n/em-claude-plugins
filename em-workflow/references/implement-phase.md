@@ -335,7 +335,9 @@ the path yourself and pass it — the implementer does not know `{feature}`
 and must not derive it from other paths.
 
 **End the turn** immediately after launching — no polling, no synchronous
-wait. The PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
+wait. In a `--batch` run, this turn's final assistant message is the
+marker line `references/batch-mode.md` defines and nothing else. The
+PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
 each allowed launch as a `launched` journal event as the call goes through
 (the only writer of `launched`); it also denies double-launching a task
 that is already in flight or already merged, as a net under the
@@ -446,6 +448,14 @@ Triggered whenever a launched implementer's `Task()` call returns.
    which of the three evidence parts was missing or unresolved. No new
    phase-state field is introduced for this record (D7 unchanged) — the
    channel is the one this step already defines.
+
+   **Batch mode**: for a `--batch` run, a decline's audit record instead
+   rides in step 3's wake commit message — appended for the task, naming
+   which of the three evidence parts was missing or unresolved — rather
+   than in this wake phase's own report; the run-report obligation stated
+   above for a `--batch` run is satisfied by reading that commit message.
+   An admission's audit record is unchanged. An interactive run keeps
+   recording a decline in this wake phase's own report exactly as before.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
    git worktree remove "$WT_ROOT/{T}"
@@ -462,6 +472,14 @@ Triggered whenever a launched implementer's `Task()` call returns.
    launch phase (I.2.a) with the freed slot(s) and any still-unlaunched
    tasks, then end the turn again. If every task is now `merged`, proceed to
    Step I.3.
+
+**Batch mode**: in a `--batch` run, this wake turn's final assistant
+message is the marker line `references/batch-mode.md` defines and nothing
+else — step 1's reconcile enumeration, step 4's cleanup listing and step
+5's refill narration are withheld from the main context, while the
+reconcile itself, the wake commit in step 3, the journal it records
+against, the worktree cleanup in step 4 and step 5's re-entry into I.2.a
+are unchanged.
 
 ### I.2.c: Failed handling
 
@@ -572,6 +590,13 @@ There is NO skip option: a task is either merged, retried, or re-planned —
 never dropped mid-phase. "実装完了 = 親ブランチへのマージ完了" admits no
 carve-out; scope changes belong to the planning/spec layer, not to the
 implement phase.
+
+The drain narration below and the retry narration below are withheld
+from the main context in `--batch` (`references/batch-mode.md`); the
+task status, the `implement` step's `failed` write and their commits are
+unchanged. The **abort phase** branch below is a stop under
+`references/batch-mode.md`'s stop/abort exception, so its report keeps
+its full output.
 
 Batch mode (`references/batch-mode.md`'s Non-packet gates table,
 `implement.failed-task`): no AskUserQuestion —
