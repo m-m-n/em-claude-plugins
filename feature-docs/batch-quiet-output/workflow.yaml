@@ -63,7 +63,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, NFR1, NFR2, NFR3, NFR4, NFR5]
-    status: pending
+    status: in_progress
     notes: null
     branch: em-workflow/batch-quiet-output/task0001
   task0002:
@@ -76,7 +76,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR1, FR2, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, NFR1, NFR2, NFR3, NFR4, NFR5]
-    status: pending
+    status: in_progress
     notes: null
     branch: em-workflow/batch-quiet-output/task0002
   task0003:
@@ -92,7 +92,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR2, FR4, FR6, FR9, FR10, FR11, FR12, NFR1, NFR3, NFR4]
-    status: pending
+    status: in_progress
     notes: null
     branch: em-workflow/batch-quiet-output/task0003
   task0004:
@@ -106,7 +106,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR13]
-    status: pending
+    status: in_progress
     notes: null
     branch: em-workflow/batch-quiet-output/task0004
 
