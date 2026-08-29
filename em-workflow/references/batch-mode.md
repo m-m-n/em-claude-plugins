@@ -114,4 +114,72 @@ integration branch name
 with the take-over guidance (batch never merges — the human switches to the
 branch in the main working tree and merges locally or pushes + opens a PR).
 The external service relays this to the human evaluator — it is the only
-confirmation surface batch mode has.
+confirmation surface batch mode has. See `## Batch quiet output`'s
+audit-item source map for where each of these items is persisted.
+
+## Batch quiet output
+
+**Activation.** Active exactly when the current invocation's arguments
+contain `--batch`, per `## Purpose & activation`'s activation rule. The
+`batch` block in workflow.yaml never activates it. An interactive launch's
+output is unaffected.
+
+**What is suppressed.** Main-context assistant text loses these eight
+kinds of output:
+
+- phase start/completion narration
+- forwarding of sub-agent reports (implementer / reviewer / each worker)
+- per-step interim summaries
+- the review phase's Phase R6 report body
+- the reconcile results the implement wake turn enumerates
+- the verify result-summary body
+- design-step progress
+- the running presentation of Step A.5's command-approval results
+
+**What suppression does NOT touch.** Suppression targets main-context
+assistant text only — file writes and commits, gate resolution, the
+auto-rework caps, the counters and workflow.yaml status transitions all
+follow the same path as before.
+
+**Non-terminal turns.** A turn that ends without the run reaching any
+terminal state `references/batch-terminal-line.md` defines emits ONLY the
+marker line below, and nothing else. The turns in scope: stop condition
+5's wait turn, the implement phase's launch turn, and its wake turn.
+
+**The marker line.** Prefix literal `EM_WORKFLOW_PROGRESS:` followed by
+one ASCII space, then exactly two `key=value` fields in fixed order:
+`phase`, then `point`. No space appears around `=`; a single ASCII space
+separates the two fields; the line is always exactly one physical line
+and the message consists of this line and nothing else.
+
+- `phase` — the `workflow.yaml` step id in effect for that turn (domain
+  owned by `references/workflow-schema.md`).
+- `point` — one of the closed set `wait`, `launch`, `wake`.
+
+Neither this marker's prefix nor the prefix
+references/batch-terminal-line.md defines is a prefix of the other, so a
+consumer matching that document's prefix never matches this marker line —
+the terminal-line contract's "no line = abnormal outcome" signal for a
+genuine terminal state is preserved.
+
+**Exceptions.**
+
+- A turn that reaches any stop point in the terminal-line contract's
+  stop-point coverage table keeps its full output — cause, affected
+  paths, recovery hints — unsuppressed.
+- Step C's completion processing emits its final report in full, with the
+  terminal line appended after it.
+- A `--once` phase-boundary turn emits the terminal line and withholds
+  all other narration.
+
+**Audit-item source map.** Every audit item `## Reporting` requires
+resolves to a persisted source:
+
+| Audit item | Persisted source |
+|---|---|
+| Every auto-approved command string | The phase-state record of the `create-spec.command-approval` gate resolution, written by Step A.5's batch branch when it auto-records |
+| Every assumption recorded during create-spec/planning | `feature-docs/{feature}/phase-state/*.yaml` `answers` / resolution notes |
+| Auto-rework rounds consumed (review / verify) | `workflow.yaml`'s `batch` block |
+| Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id` |
+| Every unlisted-gate fallback resolution | `feature-docs/{feature}/phase-state/*.yaml` `answers` / resolution notes |
+| The kept integration branch name | `workflow.yaml` `parent_branch` plus the feature name |

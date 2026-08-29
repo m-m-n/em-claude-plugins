@@ -154,7 +154,8 @@ notification arrives — a terminal line at that point would be misread as a
 stop by a consumer parsing the output. Implement's launch turn and wake
 turn (`references/implement-phase.md`) are further instances: both end the
 turn mid-run, without the batch run itself having reached a terminal
-state.
+state. What such a turn emits instead is owned by
+`references/batch-mode.md`, not by this document.
 
 ## Responsibility boundary
 
