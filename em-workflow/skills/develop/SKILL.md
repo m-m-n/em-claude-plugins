@@ -548,9 +548,8 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
    を必ず含める — 外部サービス経由で人間の評価者に届く唯一の確認面。
    これらの監査項目は
    `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律が定める
-   ソースマップから組み立てる — 自動承認コマンドは Step A.5 が
-   phase-state に記録したゲート解決から、deviation の DECLINE は
-   implement wake コミットのコミットメッセージから読む。
+   ソースマップから組み立てる（deviation の DECLINE のソースは
+   `${CLAUDE_PLUGIN_ROOT}/references/implement-phase.md` が定める）。
    batch はこの報告のあとに終端行を追記する
    （`references/batch-terminal-line.md`、下記「バッチ終端行」参照）
 

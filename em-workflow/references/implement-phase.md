@@ -382,9 +382,25 @@ Triggered whenever a launched implementer's `Task()` call returns.
    update: never a second write, never a second commit, never a new patch
    operation. The append is stated as an append: an existing entry is
    never removed or rewritten by this rule, and re-admitting an already
-   listed path is a no-op. Then commit:
-   `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
-   phase reconcile" "$RECONCILE_TIP"` (exit-4 recovery: Branch & Worktree
+   listed path is a no-op. Then commit — for an interactive run, with a
+   single-line message; for a `--batch` run, whose message's first line
+   is the subject and, when this wake phase declined any deviation, one
+   additional body line per declined task naming which of the three
+   evidence parts was missing or unresolved (the `$RECONCILE_TIP` third
+   argument is `commit-docs.sh`'s `expected_base_tip` check value, never
+   message body text):
+   ```
+   commit-docs.sh {integration_worktree} "docs({feature}): implement wake
+   phase reconcile" "$RECONCILE_TIP"
+   ```
+   or, in `--batch` mode with declined deviations to record:
+   ```
+   commit-docs.sh {integration_worktree} "docs({feature}): implement wake
+   phase reconcile
+
+   DECLINED {task_id}: {failed evidence part}" "$RECONCILE_TIP"
+   ```
+   (exit-4 recovery: Branch & Worktree
    Model above — on a second exit 4, stop the wake phase with a report
    naming the task(s) involved rather than looping).
 
@@ -450,11 +466,12 @@ Triggered whenever a launched implementer's `Task()` call returns.
    channel is the one this step already defines.
 
    **Batch mode**: for a `--batch` run, a decline's audit record instead
-   rides in step 3's wake commit message — appended for the task, naming
-   which of the three evidence parts was missing or unresolved — rather
+   rides in step 3's wake commit message body — one line per declined
+   task, naming which of the three evidence parts was missing or
+   unresolved, per step 3's message-construction rule above — rather
    than in this wake phase's own report; the run-report obligation stated
-   above for a `--batch` run is satisfied by reading that commit message.
-   An admission's audit record is unchanged. An interactive run keeps
+   above for a `--batch` run is satisfied by reading that commit message
+   body. An admission's audit record is unchanged. An interactive run keeps
    recording a decline in this wake phase's own report exactly as before.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
@@ -473,13 +490,18 @@ Triggered whenever a launched implementer's `Task()` call returns.
    tasks, then end the turn again. If every task is now `merged`, proceed to
    Step I.3.
 
-**Batch mode**: in a `--batch` run, this wake turn's final assistant
-message is the marker line `references/batch-mode.md` defines and nothing
-else — step 1's reconcile enumeration, step 4's cleanup listing and step
-5's refill narration are withheld from the main context, while the
-reconcile itself, the wake commit in step 3, the journal it records
-against, the worktree cleanup in step 4 and step 5's re-entry into I.2.a
-are unchanged.
+**Batch mode**: in a `--batch` run, this applies only when step 5 re-enters
+the launch phase (I.2.a) and ends the turn again — in that case, this wake
+turn's final assistant message is the marker line `references/batch-mode.md`
+defines and nothing else: step 1's reconcile enumeration, step 4's cleanup
+listing and step 5's refill narration are withheld from the main context,
+while the reconcile itself, the wake commit in step 3, the journal it
+records against, the worktree cleanup in step 4 and step 5's re-entry into
+I.2.a are unchanged. If instead every task is now `merged` and step 5
+proceeds to Step I.3, this turn has not reached a terminal state and does
+not end here, so the marker line is not emitted; execution continues into
+Step I.3 and beyond, with output suppression still applying to this wake
+turn's own steps 1/4/5 narration as above.
 
 ### I.2.c: Failed handling
 

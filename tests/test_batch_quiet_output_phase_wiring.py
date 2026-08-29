@@ -186,19 +186,25 @@ def _withheld_paired_with_unchanged(text, suppression_terms, max_gap=700):
 
 def _decline_channel_stated(text):
     """AC-3 matcher: a `--batch` decline's audit record is stated to be
-    carried in the wake commit's message, naming the failed evidence part,
-    and the run-report obligation is stated to be satisfied from that
+    carried by a channel other than this wake phase's own (suppressed)
+    report, naming the failed evidence part, and the run-report obligation
+    is stated to be satisfied from that other channel. This validates the
+    contract-level property (record directed away from the suppressed
+    report) rather than hardcoding the phase protocol's literal choice of
     channel."""
     text = _normalize_ws(text)
-    idx = text.find("wake commit message")
-    if idx == -1:
-        return False
-    window = text[max(0, idx - 200): idx + 500]
-    if "evidence part" not in window:
-        return False
-    if "run-report obligation" not in window or "satisfied" not in window:
-        return False
-    return True
+    idx = text.find("evidence part")
+    while idx != -1:
+        window = text[max(0, idx - 300): idx + 500]
+        if (
+            "run-report obligation" in window
+            and "satisfied" in window
+            and "own report" in window
+            and ("rather than" in window or "instead" in window)
+        ):
+            return True
+        idx = text.find("evidence part", idx + 1)
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -255,21 +261,31 @@ class TestWithheldPairedWithUnchangedMatcher(unittest.TestCase):
 
 class TestDeclineChannelMatcher(unittest.TestCase):
     def test_rejects_sample_missing_evidence_part(self):
-        forged = "the decline rides in the wake commit message for the task."
+        forged = "the decline rides elsewhere rather than in this own report."
         self.assertFalse(_decline_channel_stated(forged))
 
     def test_rejects_sample_missing_satisfied(self):
         forged = (
-            "the decline rides in the wake commit message, naming which "
-            "evidence part failed; the run-report obligation is separate."
+            "a decline's record rides elsewhere, naming which evidence "
+            "part failed, rather than in this wake phase's own report; "
+            "the run-report obligation is separate."
+        )
+        self.assertFalse(_decline_channel_stated(forged))
+
+    def test_rejects_sample_not_distinguished_from_report(self):
+        forged = (
+            "a decline's audit record is carried elsewhere, naming which "
+            "of the three evidence parts was missing; the run-report "
+            "obligation is satisfied by reading it."
         )
         self.assertFalse(_decline_channel_stated(forged))
 
     def test_accepts_well_formed_forged_sample(self):
         forged = (
-            "a decline's audit record rides in the wake commit message, "
-            "naming which of the three evidence parts was missing; the "
-            "run-report obligation is satisfied by reading that message."
+            "a decline's audit record is carried elsewhere, naming which "
+            "of the three evidence parts was missing, rather than in this "
+            "wake phase's own report; the run-report obligation is "
+            "satisfied by reading it there."
         )
         self.assertTrue(_decline_channel_stated(forged))
 
