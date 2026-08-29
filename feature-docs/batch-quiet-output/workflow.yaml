@@ -117,6 +117,10 @@ review:
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor: [comprehensive, architecture, spec]
+    discretionary: []
+    cross_validation: true
 
 requirements:
   FR1:
