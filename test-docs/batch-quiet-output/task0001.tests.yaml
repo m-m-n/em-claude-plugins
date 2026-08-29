@@ -1,0 +1,83 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_batch_quiet_output_discipline.TestBatchModeSectionStructure.test_new_section_positioned_last
+      - test_batch_quiet_output_discipline.TestBatchModeSectionStructure.test_exactly_one_new_level_2_section
+      - test_batch_quiet_output_discipline.TestBatchModeSectionStructure.test_terminal_line_and_reporting_headings_unchanged
+      - test_batch_quiet_output_discipline.TestBatchModeSectionStructure.test_non_packet_gates_table_still_has_ten_data_rows
+      - test_batch_quiet_output_discipline.TestBatchModeSectionStructure.test_non_packet_gates_catch_all_wording_intact
+      - test_batch_quiet_output_discipline.TestNewSectionPlacementMatcherNegativeProof.test_missing_new_section_is_rejected
+      - test_batch_quiet_output_discipline.TestNewSectionPlacementMatcherNegativeProof.test_forged_sections_without_new_heading_otherwise_well_formed
+    red_confirmed: true
+    red_reason: "KeyError: 'Batch quiet output' (section absent) / AssertionError: 5 != 6 before the new section was added"
+  AC-2:
+    tests:
+      - test_batch_quiet_output_discipline.TestActivation.test_active_exactly_when_batch_flag_present
+      - test_batch_quiet_output_discipline.TestActivation.test_batch_block_never_activates_it
+      - test_batch_quiet_output_discipline.TestActivation.test_interactive_launch_unaffected
+    red_confirmed: true
+    red_reason: "KeyError: 'Batch quiet output' raised in setUpClass before the section existed"
+  AC-3:
+    tests:
+      - test_batch_quiet_output_discipline.TestSuppressedScope.test_all_eight_suppressed_items_named
+      - test_batch_quiet_output_discipline.TestSuppressedScope.test_suppression_targets_main_context_assistant_text_only
+      - test_batch_quiet_output_discipline.TestSuppressedScope.test_file_writes_and_commits_unchanged
+      - test_batch_quiet_output_discipline.TestSuppressedScope.test_gate_resolution_unchanged
+      - test_batch_quiet_output_discipline.TestSuppressedScope.test_auto_rework_caps_unchanged
+      - test_batch_quiet_output_discipline.TestSuppressedScope.test_counters_and_status_transitions_unchanged
+    red_confirmed: true
+    red_reason: "KeyError: 'Batch quiet output' raised in setUpClass before the section existed"
+  AC-4:
+    tests:
+      - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_three_non_terminal_turns_named
+      - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_marker_line_format_stated
+      - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_non_collision_stated
+      - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_terminal_prefix
+      - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_reason_codes
+      - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_no_step_sentinel
+      - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_four_field_names_as_group
+      - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_state_value_shape
+      - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_bare_phase_done_literal
+      - test_batch_quiet_output_discipline.TestMarkerFormatMatcherNegativeProof.test_incomplete_marker_section_is_rejected
+      - test_batch_quiet_output_discipline.TestMarkerFormatMatcherNegativeProof.test_forged_marker_section_otherwise_well_formed
+      - test_batch_quiet_output_discipline.TestNonCollisionMatcherNegativeProof.test_missing_non_collision_statement_is_rejected
+      - test_batch_quiet_output_discipline.TestNonCollisionMatcherNegativeProof.test_forged_non_collision_text_otherwise_well_formed
+    red_confirmed: true
+    red_reason: "KeyError: 'Batch quiet output' raised in setUpClass before the section existed; whole-file absence checks passed vacuously before edits since the doc-independent matcher negative-proof tests confirmed rejection logic separately"
+  AC-5:
+    tests:
+      - test_batch_quiet_output_discipline.TestExceptions.test_stop_point_coverage_table_has_eleven_keys
+      - test_batch_quiet_output_discipline.TestExceptions.test_stop_abort_exception_is_set_level_rule
+      - test_batch_quiet_output_discipline.TestExceptions.test_stop_abort_exception_keeps_full_output
+      - test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+      - test_batch_quiet_output_discipline.TestExceptions.test_once_boundary_exception_stated
+      - test_batch_quiet_output_discipline.TestStopAbortExceptionMatcherNegativeProof.test_enumerated_stop_point_is_rejected
+      - test_batch_quiet_output_discipline.TestStopAbortExceptionMatcherNegativeProof.test_missing_table_reference_is_rejected
+      - test_batch_quiet_output_discipline.TestStopAbortExceptionMatcherNegativeProof.test_forged_enumeration_text_otherwise_well_formed
+      - test_batch_quiet_output_discipline.TestStopAbortExceptionMatcherNegativeProof.test_forged_no_table_reference_text_otherwise_well_formed
+    red_confirmed: true
+    red_reason: "KeyError: 'Batch quiet output' raised in setUpClass before the section existed"
+  AC-6:
+    tests:
+      - test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_reporting_item_list_unchanged
+      - test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_reporting_carries_pointer_sentence
+      - test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_source_map_has_one_row_per_audit_item
+      - test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_source_map_row_count_matches_reporting_item_count
+      - test_batch_quiet_output_discipline.TestSourceMapMatcherNegativeProof.test_missing_source_row_is_rejected
+      - test_batch_quiet_output_discipline.TestSourceMapMatcherNegativeProof.test_forged_source_map_missing_one_row_otherwise_well_formed
+    red_confirmed: true
+    red_reason: "KeyError: 'Batch quiet output' raised in setUpClass before the section existed"
+  AC-7:
+    tests:
+      - test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_seven_headings_unchanged_and_in_order
+      - test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_prefix_literal_unchanged
+      - test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_reason_codes_unchanged
+      - test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_stop_point_table_row_count_unchanged
+      - test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_marker_prefix_literal_absent
+      - test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_no_line_on_wait_turn_section_gains_cross_reference
+      - test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_new_sentence_does_not_restate_marker_prefix
+    red_confirmed: true
+    red_reason: "AssertionError: 'references/batch-mode.md' not found in the '## No line on a wait turn' section text before the cross-reference sentence was added"
