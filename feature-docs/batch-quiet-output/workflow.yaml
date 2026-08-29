@@ -113,10 +113,13 @@ tasks:
 
 review:
   status: pending
-  rounds_completed: 0
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  rounds_completed: 1
+  perspectives:
+    comprehensive: {claude: completed}
+    architecture: {claude: completed, litellm: completed}
+    spec: {claude: completed, litellm: completed}
+  residual_critical_high: 6
+  needs_rework: true
   plan:
     floor: [comprehensive, architecture, spec]
     discretionary: []
