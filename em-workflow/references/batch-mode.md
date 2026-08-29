@@ -177,9 +177,9 @@ resolves to a persisted source:
 
 | Audit item | Persisted source |
 |---|---|
-| Every auto-approved command string | `create-spec.command-approval` gate resolution recorded to `feature-docs/{feature}/phase-state/batch-audit.yaml` `answers` / `resolution_note`, written by Step A.5's batch branch when it auto-records (`references/phase-state.md`'s batch audit record file) |
+| Every auto-approved command string | `create-spec.command-approval` gate resolution recorded to `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note`, written by Step A.5's batch branch when it auto-records (`references/phase-state.md`'s batch audit record file) |
 | Every assumption recorded during create-spec/planning | `feature-docs/{feature}/phase-state/*.yaml` `answers` / resolution notes |
 | Auto-rework rounds consumed (review / verify) | `workflow.yaml`'s `batch` block |
 | Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id` |
-| Every unlisted-gate fallback resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `answers` / `resolution_note` (`references/phase-state.md`'s batch audit record file) |
+| Every unlisted-gate fallback resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
 | The kept integration branch name | `workflow.yaml` `parent_branch` plus the feature name |
