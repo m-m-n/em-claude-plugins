@@ -1,0 +1,212 @@
+round: 2
+executed_at: "2026-08-30T00:53:14+09:00"
+scope:
+  review_mode: diff
+  base_commit: 4dc8c598399daad7e89ba07d98f32e31a2e20cf9
+  head_commit: c77237112b42b63ffd79c90f82bc5f76909a4e0e
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - em-workflow/references/review-phase.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/batch-quiet-output/task0001.tests.yaml
+    - test-docs/batch-quiet-output/task0002.tests.yaml
+    - test-docs/batch-quiet-output/task0003.tests.yaml
+    - test-docs/batch-quiet-output/task0004.tests.yaml
+    - test-docs/batch-quiet-output/task0005.tests.yaml
+    - tests/test_batch_quiet_output_audit_persistence.py
+    - tests/test_batch_quiet_output_discipline.py
+    - tests/test_batch_quiet_output_phase_wiring.py
+    - tests/test_batch_quiet_output_skill_wiring.py
+    - tests/test_batch_quiet_output_version_bump.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: 36495ad7f13ff244
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/batch-mode.md
+    line: 180
+    title: "audit-item source map が batch-audit.yaml の格納キーを `answers` と書いており、phase-state.md の `records` リストと矛盾"
+    description: >-
+      audit-item source map の 2 行（自動承認コマンド、unlisted-gate fallback）は記録先を
+      batch-audit.yaml の `answers` / `resolution_note` と書いているが、auto-fix loop 2 で
+      phase-state.md がコンテナを append-only の `records` リストへ変更したため、
+      batch-audit.yaml に `answers` キーは存在しない。監査項目の辿り先が実在しないフィールドに
+      なり、この表を読む書き手が question_id をキーにしたマップを作ると loop 2 が排除した
+      キー衝突を再導入する。comprehensive / architecture / spec の 3 観点が独立に同じ箇所を指摘した。
+    suggestion: >-
+      source map の 2 行の `answers` を `records[]` に置き換える（`resolution_note` は
+      `records[].resolution_note`）。SSOT は phase-state.md 側なので batch-mode.md を合わせる。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached. R4 loop 3 でこのサイトは conflict グループになり（comprehensive と architecture が非等価な diff を提示）、batch の review.auto-fix-conflict 規約によりサイトごとスキップした"
+  - stable_id: 7879cf84b057b98e
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-mode.md
+    line: 180
+    title: "audit-item source map が batch-audit.yaml の存在しないキー `answers` を指している"
+    description: >-
+      同一サイトの architecture 観点からの指摘。SSOT（phase-state.md の Batch audit record file）と
+      consumer（source map）の契約ドリフト。batch 実行の最終レポートは無人実行で人間に届く唯一の
+      監査面なので、`answers` キーを探して見つからないアセンブラは必須監査項目を落とす。
+    suggestion: "source map の 2 行を `records[]` / `records[].resolution_note` に直す"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached. 36495ad7f13ff244 と同一サイトの conflict グループ"
+  - stable_id: 36495ad7f13ff244-spec
+    severity: high
+    category: spec
+    file: em-workflow/references/batch-mode.md
+    line: 180
+    title: "audit-item source map が batch-audit.yaml の `answers` を指すが、phase-state.md が定義するコンテナは `records`"
+    description: >-
+      TS-5（batch-mode.md「Reporting」の各監査項目が committed artifact または特定の phase-state
+      フィールドへ 1:1 で辿れる）が成立せず、NFR4（矛盾を持ち込まない）にも反する。
+    suggestion: "source map を `records[]` に合わせる（スキーマ所有者は phase-state.md）"
+    sources: [claude:spec]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached. 36495ad7f13ff244 と同一サイトの conflict グループ"
+  - stable_id: dbed4a5e830c66da
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 191
+    title: "Step A.5 の batch 分岐から `batch-policies.yaml` の参照が消え、gate_id ゲートのルーティング SSOT が失われた"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（loop cap のため再レビュー未実施。test_develop_skill_rewiring の該当テストは green を確認）"
+  - stable_id: be85157a55751967
+    severity: high
+    category: spec
+    file: em-workflow/skills/develop/SKILL.md
+    line: 193
+    title: "Step A.5 の batch 分岐から `batch-policies.yaml` の経路記述が消え、既存回帰テストと FR10 に反する"
+    sources: [claude:spec]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（dbed4a5e830c66da と同一の修正で解消）"
+  - stable_id: 86b67a398d64876d
+    severity: medium
+    category: architecture
+    file: em-workflow/skills/develop/SKILL.md
+    line: 196
+    title: "Step A.5 の記録指示が旧コンテナ `answers` の形式を指しており、必須の `resolution_note` が落ちる"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（同じ編集でコンテナを `records` への 1 件 append に改めた）"
+  - stable_id: 206c024d45007911
+    severity: high
+    category: comprehensive
+    file: tests/test_batch_quiet_output_audit_persistence.py
+    line: 629
+    title: "本変更が同梱するテストモジュールが、同じ変更で書き換えた phase-state.md の文言と食い違い、スイートが赤のまま"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（entry-shape と writer 数のアサーションを現行文言へ更新。全 2729 テスト green を確認）"
+  - stable_id: a9e7c1383700b4e4
+    severity: medium
+    category: spec
+    file: tests/test_batch_quiet_output_audit_persistence.py
+    line: 629
+    title: "新規テストがループ2で書き換わった phase-state.md の文言に追随しておらず 2 件失敗する"
+    sources: [claude:spec]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（206c024d45007911 と同一の修正で解消）"
+  - stable_id: 0ae77252f1e07d42
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/phase-state.md
+    line: 371
+    title: "batch-audit.yaml の見本レコードの `source` が、同じ節の語彙規則と自身の `resolution_note` の両方に矛盾"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（`batch-decision-table` → `batch-safe-default`。auto-applicable diff）"
+  - stable_id: b3ab64e7b728fff2
+    severity: medium
+    category: architecture
+    file: em-workflow/references/phase-state.md
+    line: 371
+    title: "batch-audit.yaml の正規例の `source` が同節の規則と自身の resolution_note に矛盾（原因は question-resolution.md step 7 の誤引用）"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（見本の `source` 部分のみ。引用そのものの修正は 546089d1de91e7dd に残る）"
+  - stable_id: 546089d1de91e7dd
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/phase-state.md
+    line: 393
+    title: "`question_id` の規則が question-resolution.md step 7 を誤引用し、`null` 値も question-packet-schema.md のパターンに反する"
+    description: >-
+      (1) question-resolution.md の Batch resolution sequence は step 1 で「A gate identified by a
+      `gate_id`」と限定しており、step 7 は gate_id を持つゲート専用。gate_id を持たない diff-size
+      gate / per-command approval fallback には適用できない。(2) wake decline レコードの
+      `question_id: null` は question-packet-schema.md の answer object のパターン
+      （`^[a-z][a-z0-9._-]*$`、null 不可）に反する。per-literal-command identifier も同様。
+    suggestion: >-
+      gate_id を持たないゲートの `question_id` 規則はこの節が独自に宣言する形にし、step 7 の
+      引用は gate_id 持ちの `create-spec.command-approval` 側だけに限る。wake decline には
+      パターン適合の固定値（例: `implement.files-deviation-decline`）を与える。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（medium のため R4 候補外）"
+  - stable_id: 8efe209e0d97bda5
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/phase-state.md
+    line: 418
+    title: "「an appended record never stays uncommitted」が per-command approval fallback には成り立たない"
+    description: >-
+      per-command approval fallback は PreToolUse hook が無効なときに command-execution-protocol が
+      使う経路で、特定のフェーズ step に属さない。Step 0 / Step A / Step A.5 のようにまだ
+      commit-docs.sh を 1 度も呼んでいない区間でも発火しうるため、未コミットのまま implement wake の
+      `git reset --hard` で消える経路が残る。
+    suggestion: >-
+      1 つ目の writer の記述を、fallback がフェーズ step の外で発火した場合に Step A.5 と同じく
+      その場で commit-docs.sh を実行する形に広げる。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（medium のため R4 候補外）"
+auto_fix:
+  loops_run: 3
+  applied_total: 8
+  termination: loop-cap
+  notes: >-
+    loop 1: batch-mode.md / phase-state.md / SKILL.md の 3 件を適用。うち 1 件
+    （8df536317e57e383, batch-mode ↔ phase-state の循環参照解消）は適用後に既存の
+    document-contract テスト 4 件を落とし、同一ループで適用済みの 0ec289e102f1ddee の修正を
+    打ち消したため差し戻した — 2 つの処方は同時に満たせない。
+    loop 2: phase-state.md（コンテナを `records` リスト化、スコープ前提の拡張、writer 帰属の訂正）と
+    SKILL.md（Step A.5 の記録先・commit 義務）を適用。
+    loop 3: phase-state.md の見本 `source`、SKILL.md の batch-policies.yaml 経路とコンテナ表現、
+    テストモジュールの AC-6 アサーション更新を適用し、全 2729 テストが green になった。
+    loop 3 の wave 検証で追跡外ファイル tmp_diff_out.txt を検出し、`gio trash` で退避した
+    （追跡対象の delta は 3 つのターゲットと完全一致していたため wave の revert は行っていない）。
+residual_critical_high: 3
+rework_required: false
