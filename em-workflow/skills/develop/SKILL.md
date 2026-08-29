@@ -409,9 +409,7 @@ integration worktree（implement-phase.md の Branch & Worktree Model 参照）�
 `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律により、
 進捗のナラティブと結果サマリ本文はランニング出力に出さない。
 workflow.yaml への書き込み・commit-docs.sh でのコミット・ゲート解決・
-verify step の status 遷移は対話時と変わらない。ただし下記 6 の rework cap
-到達による停止は同ドキュメントの停止/中断の例外にあたり、報告本文は
-対話時と同じ内容を全文出力する）:
+verify step の status 遷移は対話時と変わらない）:
 
 1. `{integration worktree}/feature-docs/{feature}/VERIFICATION.md` を Read
 2. workflow.yaml `project.components` の build / test / format コマンドを
