@@ -313,6 +313,10 @@ execute it.
 3. Set the `design` step to `pending` or `skipped` per section 11a.
 4. Set `phase-state/create-spec.yaml`'s `status` to `completed`.
 
+In a `--batch` run, this phase's completion narration above is withheld
+per `references/batch-mode.md`'s output-suppression discipline; its
+artifact commit, status commit and step transitions above are unchanged.
+
 ## Termination conditions
 
 No fixed round limit is imposed. The phase ends when ALL of the following
