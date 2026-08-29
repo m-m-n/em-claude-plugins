@@ -1,0 +1,63 @@
+feature: batch-quiet-output
+collected_at: "2026-08-30T01:56:11+09:00"
+session_ids: [3057bfed-02e5-460e-a129-ebdc04a74879]
+signals:
+  review_critical_high:
+    - {stable_id: 1cd0e6ab9dba1fef, category: spec, file: em-workflow/references/batch-mode.md, title: "FR11 の永続ソース欠落（round 1）", resolution: unresolved}
+    - {stable_id: 48ac1e2b5f7d90c3, category: comprehensive, file: em-workflow/references/batch-mode.md, title: "監査項目の保存先未定義（round 1）", resolution: unresolved}
+    - {stable_id: b0f4c7d2e819a635, category: architecture, file: em-workflow/references/batch-mode.md, title: "監査項目の保存先未定義（round 1）", resolution: unresolved}
+    - {stable_id: 7e3a95c14b0d82ff, category: architecture, file: em-workflow/references/batch-mode.md, title: "round 1 architecture finding", resolution: unresolved}
+    - {stable_id: 2a6b8f0c3d5e7192, category: spec, file: em-workflow/references/batch-mode.md, title: "round 1 spec finding", resolution: unresolved}
+    - {stable_id: 9d1f4e6a2c8b0537, category: spec, file: em-workflow/references/implement-phase.md, title: "round 1 spec finding", resolution: unresolved}
+    - {stable_id: 06e0a365d14d1e00, category: comprehensive, file: em-workflow/references/phase-state.md, title: "batch-audit.yaml の source が閉じた語彙外", resolution: unresolved}
+    - {stable_id: 03cd4a8c2f79414d, category: architecture, file: em-workflow/references/phase-state.md, title: "batch-audit.yaml の source が閉じた語彙外", resolution: unresolved}
+    - {stable_id: 0ec289e102f1ddee, category: comprehensive, file: em-workflow/references/batch-mode.md, title: "自動承認コマンド文字列の保存先未定義", resolution: fixed}
+    - {stable_id: 72efe8601664f8f9, category: architecture, file: em-workflow/skills/develop/SKILL.md, title: "Step A.5 監査レコードの書き込み先が無い", resolution: fixed}
+    - {stable_id: 5ff88312a285f044, category: architecture, file: em-workflow/references/phase-state.md, title: "answer object 形状の流用と key 定義の書き換え", resolution: fixed}
+    - {stable_id: 8df536317e57e383, category: architecture, file: em-workflow/references/batch-mode.md, title: "batch-mode ↔ phase-state の循環参照", resolution: declined}
+    - {stable_id: f2cdcd60dee73a3e, category: spec, file: em-workflow/skills/develop/SKILL.md, title: "FR11 永続ソースが実質未定義", resolution: fixed}
+    - {stable_id: 36495ad7f13ff244, category: comprehensive, file: em-workflow/references/batch-mode.md, title: "source map が batch-audit.yaml の存在しない answers キーを指す", resolution: fixed}
+    - {stable_id: 7879cf84b057b98e, category: architecture, file: em-workflow/references/batch-mode.md, title: "source map が存在しないキーを指す", resolution: fixed}
+    - {stable_id: dbed4a5e830c66da, category: comprehensive, file: em-workflow/skills/develop/SKILL.md, title: "Step A.5 から batch-policies.yaml の参照が消えた", resolution: fixed}
+    - {stable_id: 206c024d45007911, category: comprehensive, file: tests/test_batch_quiet_output_audit_persistence.py, title: "同梱テストが自分で書き換えた文言と食い違う", resolution: fixed}
+    - {stable_id: 0ae77252f1e07d42, category: comprehensive, file: em-workflow/references/phase-state.md, title: "見本レコードの source が節内規則と矛盾", resolution: fixed}
+    - {stable_id: 5a1da9452765c892, category: spec, file: tests/test_batch_quiet_output_audit_persistence.py, title: "TS-6 が red", resolution: fixed}
+    - {stable_id: r3-stepc-ordering, category: architecture, file: em-workflow/skills/develop/SKILL.md, title: "Step C が監査ソース削除後に報告を組み立てる", resolution: fixed}
+    - {stable_id: r3-step7-citation, category: architecture, file: em-workflow/references/phase-state.md, title: "step 7 引用の gate_id 自己矛盾", resolution: fixed}
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - {id: SC-6, category: spec, scenario: TS-5, note: "reviews/round2.yaml の residual_critical_high が 3 で Success Criteria SC-6 未達。verify 自動 rework 1 回で task0006 を合成し解消"}
+    - {id: SC-6-b, category: spec, scenario: TS-5, note: "phase-state.md の batch audit record 節に medium 2 件のドリフト。task0006 で解消"}
+  discretionary_perspectives: []
+  declined_findings:
+    - {stable_id: 8df536317e57e383, category: architecture, resolution_reason: "適用すると同一ループで適用済みの 0ec289e102f1ddee の修正を打ち消し、既存の document-contract テスト 4 件を落とした。2 つの処方は同時に満たせない"}
+lessons_candidates:
+  - >-
+    review の auto-fix（R4）は 1 ファイル 1 エディタなので、複数の SSOT ドキュメントにまたがる
+    1 つの契約を直す処方には構造的に向いていない。round 2 では loop 1 が high 7 件を潰す一方で
+    新たな high を持ち込み、loop 2 も同様で、3 ループ回して初めて収束した。同一サイトでない
+    2 つの finding が互いの処方を打ち消すケース（batch-mode.md の source map 具体化 vs
+    循環参照の抽象化）は same_site による conflict 判定では検出できない。
+  - >-
+    task0005 が新設した document-contract テストが、その後の auto-fix が意図的に変える文言を
+    pin していたため、修正のたびにスイートが赤くなった。ドキュメント契約テストは
+    「変えてはいけない文言」と「この変更で決めた文言」を区別できる形にしないと、
+    後続の修正コストが上がる。
+  - >-
+    verify の失敗を rework に回す経路は有効だった。review の rework cap を使い切った後でも
+    verify の cap 1 が残っており、task0006 という適切にスコープされた 1 タスクとして
+    残存 findings をまとめて解消できた。
+  - >-
+    orchestrator が auto-fix の revert に `git cat-file` でハッシュ復元を試みたが、
+    `git hash-object` は -w なしではオブジェクトを書かないため失敗し、
+    batch-mode.md を空にした。BACKUP_DIR からの復元で回復したが、
+    ロールバックは常にループ開始時のスナップショットから行うべき。
+  - >-
+    `cp` がユーザー環境で `cp -i` にエイリアスされており、スクリプト内の上書きが
+    対話プロンプトで無言に失敗した。無人実行のスクリプトでは `cat src > dst` か
+    `command cp` を使う。
+  - >-
+    `git branch -D` は destructive-guard に弾かれる。マージ済みタスクブランチの削除は
+    integration worktree から `git -C {worktree} branch -d` で行えば通る
+    （HEAD が integration ブランチなのでマージ済み判定が成立する）。
