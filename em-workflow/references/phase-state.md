@@ -12,6 +12,9 @@ feature-docs/{feature}/phase-state/
 ├── create-spec.yaml
 ├── create-plan.yaml
 ├── rework.yaml
+├── batch-audit.yaml         # present only in a `--batch` run that
+│                             # recorded one of these (see "Batch audit
+│                             # record file" below)
 └── backfill.yaml            # present only while a project.design_system
                               # backfill's discovery result is unresolved
                               # into workflow.yaml (see "Backfill discovery
@@ -350,6 +353,56 @@ phase's loop-termination condition.
 
 `worker_runs[].output_digest` retains **only a digest**; the full worker
 output body is never stored in phase-state.
+
+## Batch audit record file
+
+`feature-docs/{feature}/phase-state/batch-audit.yaml` holds the batch audit
+records that no per-phase phase-state file owns, following the same
+not-owned-by-one-phase exemption this document already grants
+`backfill.yaml` above. One file per feature.
+
+```yaml
+schema_version: 1
+feature: example-feature
+answers:
+  batch-audit-0001:
+    packet_id: null
+    answered_at: "2026-01-30T12:00:00+09:00"
+    source: batch_fallback
+    answer_mode: select_or_freeform
+    selected_option_ids: [smallest_side_effect]
+    freeform: null
+    normalized_answer: "smallest_side_effect"
+    resolution_note: "gate: review phase diff-size gate; options: [...]; choice: smallest_side_effect; codex_consulted: true"
+```
+
+Each entry reuses the `answers` entry shape "## Schema" above already
+defines (`packet_id`, `answered_at`, `source`, `answer_mode`,
+`selected_option_ids`, `freeform`, `normalized_answer`), keyed the same way
+that map already is — by an identifier unique within the file — plus one
+additional field, `resolution_note`, carrying the detail
+`references/batch-mode.md`'s `## Reporting` already requires. No field of
+the per-phase `answers` shape changes.
+
+Two writers append to this file, each at resolution time:
+
+- `references/batch-mode.md`'s Non-packet gates table: the review phase
+  diff-size gate and the per-command approval fallback each append one
+  entry, with `resolution_note` naming the gate site, the options, the
+  choice, and whether Codex was consulted.
+- `references/implement-phase.md` Step I.2.b step 3: the wake phase appends
+  one entry per declined `files` deviation, with `resolution_note` naming
+  the `task_id` and which of the three evidence parts was missing or
+  unresolved.
+
+Entries are append-only: an existing entry is never rewritten or removed.
+The file is committed by whichever `commit-docs.sh` call its writer already
+makes for its own reasons — for the wake decline, Step I.2.b step 3's own
+wake commit — and is never itself the reason to create a commit that would
+not otherwise happen. `references/batch-mode.md`'s audit-item source map
+and `references/implement-phase.md`'s wake "Batch mode" paragraph both read
+this file; it introduces no change to any per-phase phase-state file's
+schema.
 
 ## Legacy feature compatibility
 
