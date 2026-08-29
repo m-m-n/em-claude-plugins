@@ -174,9 +174,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR9, FR10, FR11, FR12, FR13, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-quiet-output/task0006
     provenance:
       source: verify
       source_ids: [SC-6, SC-6-b]
