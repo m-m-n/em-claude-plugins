@@ -106,7 +106,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR13]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/batch-quiet-output/task0004
 
