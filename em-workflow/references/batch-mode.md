@@ -171,6 +171,9 @@ genuine terminal state is preserved.
   terminal line appended after it.
 - A `--once` phase-boundary turn emits the terminal line and withholds
   all other narration.
+- A turn that resolves a non-packet unlisted-gate fallback (the review
+  phase diff-size gate or the per-command approval fallback, per
+  `## Non-packet gates`) emits that resolution line unsuppressed.
 
 **Audit-item source map.** Every audit item `## Reporting` requires
 resolves to a persisted source:
@@ -181,5 +184,5 @@ resolves to a persisted source:
 | Every assumption recorded during create-spec/planning | `feature-docs/{feature}/phase-state/*.yaml` `answers` / resolution notes |
 | Auto-rework rounds consumed (review / verify) | `workflow.yaml`'s `batch` block |
 | Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id` |
-| Every unlisted-gate fallback resolution | `feature-docs/{feature}/phase-state/*.yaml` `answers` / resolution notes |
+| Every unlisted-gate fallback resolution | The unsuppressed resolution line emitted per `## Batch quiet output`'s Exceptions (Codex consulted or not, options, choice) |
 | The kept integration branch name | `workflow.yaml` `parent_branch` plus the feature name |
