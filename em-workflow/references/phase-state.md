@@ -407,7 +407,8 @@ Non-packet gates table, with `source` `batch-safe-default` or
 the only writer here whose `source` is `batch-decision-table` —
 `question_id` is `create-spec.command-approval`, that gate's own
 `gate_id`, per `references/question-resolution.md` step 7's rule for an
-orchestrator-opened gate with no worker packet and no `gate_id`, resolved
+orchestrator-opened gate with no worker packet and no worker-minted
+`question_id`, resolved
 through `references/question-resolution.md`'s batch resolution sequence
 against `references/batch-policies.yaml`'s decision table. `question_id`
 is `implement.wake-decline` for the implement wake decline record, which

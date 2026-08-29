@@ -535,8 +535,12 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
      `gh pr create` で `{base_branch}` への PR を作成する（title: feature
      名 / body: 実行サマリ）。ブランチ削除は PR が land した後のユーザー
      操作に委ねる
-2. **worktree / ブランチ掃除**: いずれの分岐でも `git worktree remove` で
-   integration worktree を削除する（`--force` は使わない。ドキュメントは
+2. **worktree / ブランチ掃除**: batch: 下記 3. の報告を組み立てる監査項目の
+   ソース（`references/batch-mode.md` の出力抑制規律が定めるソースマップが
+   指すファイル群）は integration worktree の中にしか実体が無いため、
+   `git worktree remove` の前に読み終えておく。いずれの分岐でも
+   `git worktree remove` で integration worktree を削除する（`--force` は
+   使わない。ドキュメントは
    Step B の規律で全てコミット済みのため worktree はクリーンなはず —
    remove が失敗したら未コミットの変更が残っている合図なので、worktree と
    ブランチを残したまま報告して中断する）。「`{base_branch}` にマージ」を
