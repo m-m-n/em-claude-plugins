@@ -389,21 +389,29 @@ this document's `## Schema` `answers` row above (which defines only
 every element here. This subsection's records cover every batch audit record that no
 per-phase phase-state file owns, regardless of whether the record's gate
 carries a `gate_id`; `gate_id` presence still decides which resolution
-path a gate takes, per `references/question-resolution.md`. For a gate
-with no `gate_id` — the review phase diff-size gate and the per-command
-approval fallback — `question_id` is present, and equal to the gate's own
-identifying name (e.g. `review.diff-size-gate` above, or a
-per-literal-command identifier for the per-command approval fallback),
-per `references/question-resolution.md` step 7's rule for an
-orchestrator-opened gate with no worker packet and no `gate_id`; each
-resolves through `references/batch-mode.md`'s Non-packet gates table,
-with `source` `batch-safe-default` or `batch-codex-consultation`. For a
-gate with a `gate_id` — `skills/develop/SKILL.md` Step A.5's
-`create-spec.command-approval` gate — `question_id` is that `gate_id`,
-resolved through `references/question-resolution.md`'s batch resolution
-sequence against `references/batch-policies.yaml`'s decision table, with
-`source` `batch-decision-table`. `question_id` is `null` for the
-implement wake decline record, which is not a gate. `packet_id` is always
+path a gate takes, per `references/question-resolution.md`. This section
+states the `question_id` rule for each writer on its own authority; every
+value it prescribes conforms to the `question_id` pattern
+`references/question-packet-schema.md` owns (cited here, not restated).
+For a gate with no `gate_id` — the review phase diff-size gate and the
+per-command approval fallback — `question_id` is an identifying name of
+the gate itself: `question_id` is `review.diff-size-gate` for the
+diff-size gate, and `question_id` is
+`command-execution.per-command-approval-fallback` for the per-command
+approval fallback (the auto-approved command string itself is carried by
+`resolution_note`, which `## Reporting` in `references/batch-mode.md`
+already reads it from). Each resolves through `references/batch-mode.md`'s
+Non-packet gates table, with `source` `batch-safe-default` or
+`batch-codex-consultation`. For the one writer with a `gate_id` —
+`skills/develop/SKILL.md` Step A.5's `create-spec.command-approval` gate,
+the only writer here whose `source` is `batch-decision-table` —
+`question_id` is `create-spec.command-approval`, that gate's own
+`gate_id`, per `references/question-resolution.md` step 7's rule for an
+orchestrator-opened gate with no worker packet and no `gate_id`, resolved
+through `references/question-resolution.md`'s batch resolution sequence
+against `references/batch-policies.yaml`'s decision table. `question_id`
+is `implement.wake-decline` for the implement wake decline record, which
+is not a gate. `packet_id` is always
 `null`, because the orchestrator raises these records rather than a worker
 packet. `source` is drawn from `references/question-packet-schema.md`'s
 closed `source` vocabulary: `batch-safe-default` when no Codex suggestion
@@ -418,9 +426,18 @@ Three writers append to this file, each at resolution time:
 - `references/batch-mode.md`'s Non-packet gates table: the review phase
   diff-size gate and the per-command approval fallback each append one
   entry, with `resolution_note` naming the gate site, the options
-  considered, the choice, and whether Codex was consulted. Each entry is
-  committed by the next `commit-docs.sh` call the same phase step already
-  makes for its own reasons.
+  considered, the choice, and whether Codex was consulted. Inside a phase
+  step, the entry is committed by the step's next existing
+  `commit-docs.sh` call, the same reach-point every other in-step writer
+  below uses. The per-command approval fallback can also fire outside any
+  phase step (Step 0 / Step A / Step A.5, before that run has made any
+  `commit-docs.sh` call yet); there, the writer commits its own entry
+  itself, immediately, via the same `commit-docs.sh` path Step A.5's
+  batch branch below already uses for the same reason — an uncommitted
+  record at that point would otherwise be destroyed by
+  `references/implement-phase.md` I.2.b step 2's
+  `git -C {integration_worktree} reset --hard`, which is exactly the loss
+  this file exists to prevent.
 - `references/implement-phase.md` Step I.2.b step 3: the wake phase appends
   one entry per declined `files` deviation, with `resolution_note` naming
   the `task_id` and which of the three evidence parts was missing or
@@ -438,7 +455,9 @@ never rewritten or removed. Every writer above states its own commit
 reach-point, so an appended record
 never stays uncommitted; a writer's own commit is never itself the reason
 to create a commit that would not otherwise happen, except for Step A.5's
-immediate commit stated above. `references/batch-mode.md`'s audit-item
+immediate commit stated above and the per-command approval fallback's
+immediate commit when it fires outside any phase step, stated above.
+`references/batch-mode.md`'s audit-item
 source map and `references/implement-phase.md`'s wake "Batch mode"
 paragraph both read this file; it introduces no change to any per-phase
 phase-state file's schema.
