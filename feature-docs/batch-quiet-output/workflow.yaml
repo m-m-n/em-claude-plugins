@@ -126,9 +126,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR2, FR4, FR5, FR9, FR10, FR11, FR12, FR13, NFR1, NFR3, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/batch-quiet-output/task0005
     provenance:
       source: review
       source_ids: [1cd0e6ab9dba1fef, 48ac1e2b5f7d90c3, b0f4c7d2e819a635, 2a6b8f0c3d5e7192, 9d1f4e6a2c8b0537, 7e3a95c14b0d82ff]
