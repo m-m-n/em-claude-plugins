@@ -41,5 +41,13 @@
   ["allow", "transcript グロブ検索 + stderr 破棄", "grep -l foo ~/.claude/projects/*/*.jsonl 2>/dev/null"],
   ["ask", "本物: skills ディレクトリ再帰削除", "rm -rf ~/.claude/skills/foo"],
   ["ask", "本物: 設定への追記", "echo x >> ~/.claude/settings.json"],
-  ["allow", "mv 複数ソース + 宛先のみ判定", "mv ~/.claude/hooks/x.py extra.txt /tmp/y"]
+  ["allow", "mv 複数ソース + 宛先のみ判定", "mv ~/.claude/hooks/x.py extra.txt /tmp/y"],
+  ["deny", "本物: transcript を mv で退避", "mv ~/.claude/projects/x/y.jsonl /tmp/y.jsonl"],
+  ["ask", "本物: hooks ファイルを mv", "mv ~/.claude/hooks/foo.py /tmp/foo.py"],
+  ["ask", "本物: settings を mv", "mv ~/.claude/settings.json /tmp/settings.json"],
+  ["ask", "本物: skills ディレクトリを mv", "mv ~/.claude/skills/foo /tmp/foo"],
+  ["ask", "本物: cp -t で hooks へ", "cp -t ~/.claude/hooks/ file.py"],
+  ["ask", "本物: mv -t で hooks へ", "mv -t ~/.claude/hooks/ file.py"],
+  ["ask", "本物: cp --target-directory= で hooks へ", "cp --target-directory=~/.claude/hooks/ file.py"],
+  ["ask", "本物: クォート内の疑似リダイレクトの後で settings へ書き込み", "echo \"2>&1\" > ~/.claude/settings.json"]
 ]
