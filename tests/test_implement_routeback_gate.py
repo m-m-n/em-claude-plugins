@@ -2109,10 +2109,7 @@ class TestPreChangeSampleGuards(unittest.TestCase):
         self,
     ):
         sample = _normalize_ws(TASK0002_PRE_CHANGE_AGENT_INDEX_BULLET_SAMPLE)
-        anchor = (
-            "solely so the stop-tool recorder below can resolve a stop "
-            "back to a task"
-        )
+        anchor = "The index is diagnostic plumbing, not a second journal"
         self.assertIn(anchor, sample)
         self.assertIn(anchor, _normalize_ws(_supporting_cast_section(_read())))
 

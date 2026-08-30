@@ -225,10 +225,10 @@ only ever carry its OWN journal's terminal event — so workflow.yaml
 arise. Because Step I.2.c's route-back gate below blocks route-back
 whenever any task's journal last event is `merged` — read from the
 journal directly, independent of the ancestor check — that gate never
-admits route-back while such an event stands — no retired task id can
-leave a `merged` last event behind for a renumbered task to inherit, so
-the recycled-task-id carve-out above stays correctly scoped to `failed`
-only. The
+admits route-back while such an event stands. No retired task id is ever
+re-issued, so a task whose workflow.yaml `status` is `pending` can never
+carry an inherited `merged` journal last event; the recycled-task-id
+carve-out above stays correctly scoped to `failed` only. The
 recycled-task-id carve-out above is applied by two parties: the
 orchestrator's own interpretation of the journal (this rule), and the Stop
 hook, `queue_stop_guard.py`, which reads `tasks.{T}.status` and applies the
@@ -259,7 +259,12 @@ Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
 its kept worktree via the resume guard below); the launch guard then admits
-it because a post-`failed` launch is the legitimate retry path.
+it because a post-`failed` launch is the legitimate retry path. This holds
+only when the task's journal last event is actually `failed`: for the
+ancestor-check-failed case in I.2.b step 1, where the reconciled state is
+`failed` but the raw journal last event is still `merged`, the launch guard
+denies the retry instead — I.2.c owns that narrower outcome, not restated
+here.
 
 For each selected task T, create its worktree:
 
@@ -361,7 +366,10 @@ Triggered whenever a launched implementer's `Task()` call returns.
    - Worktree/branch existence, PLUS live-agent absence, for tasks the
      journal claims are in-flight — the check FAILS when a task's journal
      last event is `launched` while the task worktree and the task branch
-     both exist. This is the allowed-but-never-started state, since I.2.a
+     both exist. That two-conjunct condition is necessary but not
+     sufficient by itself: it only identifies the candidate set to run the
+     live check against, and the check FAILS only if, in addition, the
+     task's recorded agent is not live. This is the allowed-but-never-started state, since I.2.a
      creates both artifacts before the launch call that records
      `launched`, but a live agent is what distinguishes that stale state
      from a normally in-flight implementer that also has both artifacts.
@@ -374,9 +382,16 @@ Triggered whenever a launched implementer's `Task()` call returns.
      the Agent index writer's orchestrator-read rule (cited below) can
      resolve that task's recorded agent to a candidate the harness stop
      tool actually stops; absent that resolution the agent counts as not
-     live, which is the same unresolvable-or-ambiguous state the recovery's
-     own Residual case below already names — this check never requires a
-     separate liveness probe. A failed check does not reclassify
+     live — this check never requires a separate liveness probe. Two
+     distinct not-live cases exist, and Recovery below is attempted first
+     for both: the lookup resolves to a candidate but the harness stop tool
+     finds it already gone (Recovery's stop-tool recorder still records the
+     terminal `failed` event in this case, since the recorder fires on
+     whatever the stop tool call itself reports, not on the candidate having
+     been running); only when the lookup itself is unresolvable or
+     ambiguous does no stop-tool call occur at all, and that case alone
+     falls through to the Residual case below. A failed check does not
+     reclassify
      the task by itself: the last-event rule owned by I.2.a above stays
      authoritative, cited here rather than restated. Effect of the
      failure: it triggers the recovery below and names the task in the
@@ -396,7 +411,12 @@ Triggered whenever a launched implementer's `Task()` call returns.
      is `launched` AND the task worktree does not exist AND the task
      branch does not exist — neither artifact remains to correlate a
      live agent against, so this condition is checked on its own, never
-     gated on the Agent index resolving "no live agent". This recovery
+     gated on the Agent index resolving "no live agent". Since there is no
+     candidate to pass to the harness stop tool here, the wake phase itself
+     writes the task's terminal `failed` event directly (the same event the
+     stop-tool recorder writes in the lookup-resolves case above), so this
+     condition reaches the same next-replay reconciliation and normal
+     failed handling without ever calling the stop tool. This recovery
      runs during this wake-phase reconcile step, hence before I.2.c's
      user-facing menu is offered.
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
@@ -406,7 +426,11 @@ Triggered whenever a launched implementer's `Task()` call returns.
      reconciled state instead becomes `failed` — the same treatment as
      any other implementer failure — so it reaches the normal failed
      handling in I.2.c (retry, route back to planning subject to that
-     section's own gate, or abort).
+     section's own gate, or abort). Which of those three is actually
+     admissible for this specific state is owned entirely by I.2.c's own
+     gates, not by this bullet: I.2.c narrows this case further, because
+     the task's raw journal last event is still `merged` here even though
+     the reconciled state is `failed`.
 2. **Refresh the integration worktree FIRST** (Branch & Worktree Model):
    `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`,
    then capture `RECONCILE_TIP=$(git -C {integration_worktree} rev-parse HEAD)`.
