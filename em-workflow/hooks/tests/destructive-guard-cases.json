@@ -38,5 +38,8 @@
   ["allow", "skills ls + stderr 破棄 + pager", "ls -la ~/.claude/skills/ 2>/dev/null | less"],
   ["allow", "settings リダイレクトコピー", "cat ~/.claude/settings.json > /tmp/settings-backup.json"],
   ["allow", "transcript 読み取り + stderr 破棄", "cat ~/.claude/projects/x/y.jsonl 2>/dev/null"],
-  ["allow", "transcript グロブ検索 + stderr 破棄", "grep -l foo ~/.claude/projects/*/*.jsonl 2>/dev/null"]
+  ["allow", "transcript グロブ検索 + stderr 破棄", "grep -l foo ~/.claude/projects/*/*.jsonl 2>/dev/null"],
+  ["ask", "本物: skills ディレクトリ再帰削除", "rm -rf ~/.claude/skills/foo"],
+  ["ask", "本物: 設定への追記", "echo x >> ~/.claude/settings.json"],
+  ["allow", "mv 複数ソース + 宛先のみ判定", "mv ~/.claude/hooks/x.py extra.txt /tmp/y"]
 ]

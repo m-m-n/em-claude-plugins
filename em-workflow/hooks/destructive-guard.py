@@ -516,34 +516,97 @@ def check_file_destruction(word, args, segment):
         )
 
 
-def check_self_modification(segment, word, args, redirects):
-    # An output redirect is only a write when it is a real operator token.
-    # Testing `">" in segment` also caught a `>` sitting inside a quoted
-    # string, so writing the text of a command into a file was mistaken for
-    # running it. `<` and `<<` read rather than write, so they do not count.
-    writes = (
-        any(REDIRECT.fullmatch(t) and not t.startswith("<") for t in redirects)
-        or word in INPLACE_WRITERS
-        or (word == "sed" and any(a.startswith("-i") for a in args))
-        or word in ("rm", "mv", "cp", "ln", "chmod", "chown")
-    )
-    if not writes:
+def redirect_write_targets(redirects):
+    """Return the target-side token of each write-shaped redirect in REDIRECTS.
+
+    REDIRECTS is split_redirects()'s flat token list: an optional leading fd
+    digit, then an operator token, then its target, repeated in order. An
+    operator starting with `<` is an input form (plain redirect, here-doc,
+    here-string, fd-dup-input) and contributes nothing — that data is read,
+    not written, and must stay out of the write-target set. Every other
+    operator's target enters the result, including the bare descriptor
+    number that is the "target" of a descriptor-duplicating redirect
+    (`2>&1`); it is not a path, but neither detection pattern below will
+    match it.
+    """
+    out = []
+    i = 0
+    while i < len(redirects):
+        t = redirects[i]
+        if REDIRECT.fullmatch(t):
+            if not t.startswith("<") and i + 1 < len(redirects):
+                out.append(redirects[i + 1])
+            i += 2
+        else:
+            i += 1  # a leading fd digit belonging to the next operator
+    return out
+
+
+def write_targets(word, args, redirects):
+    """Assemble the set of paths this segment writes to.
+
+    Three sources, unioned (task plan Step 2):
+
+    - the target side of every write-shaped redirect (append and plain
+      output alike; input forms are already excluded upstream)
+    - every non-flag argument of an in-place writer (`tee`, `truncate`,
+      `shred`, `install`, `patch`), or of `sed` invoked with an in-place
+      flag — the flag itself, including its attached-value and
+      empty-suffix forms (`-i.bak`, `-i''`), always starts with `-` and is
+      excluded by the same non-flag filter
+    - the destination of a file-manipulating command: the LAST non-flag
+      argument only for `cp`/`mv`/`ln` (their destination is positional),
+      every non-flag argument for `rm`/`chmod`/`chown` (no single
+      destination position)
+
+    A member need not be a path — a bare descriptor number or `/dev/null`
+    passes through untouched; only the two detection patterns decide
+    whether a member matters.
+    """
+    targets = redirect_write_targets(redirects)
+    non_flags = [a for a in args if not a.startswith("-")]
+
+    if word in INPLACE_WRITERS or (word == "sed" and any(a.startswith("-i") for a in args)):
+        targets = targets + non_flags
+    elif word in ("cp", "mv", "ln"):
+        if non_flags:
+            targets = targets + [non_flags[-1]]
+    elif word in ("rm", "chmod", "chown"):
+        targets = targets + non_flags
+
+    return targets
+
+
+def check_self_modification(word, args, redirects):
+    """Ask/deny only when an assembled write TARGET matches a protected path.
+
+    Matching used to run over the whole segment text, so a command that
+    merely READ a protected path — `grep -rn foo ~/.claude/skills/
+    2>/dev/null`, say — was asked about as though it wrote there: the
+    `2>/dev/null` made the old `writes` boolean true, and the segment text
+    still contained `~/.claude/skills/` for SELF_CONFIG to match against.
+    Testing the write-target set instead of the whole segment fixes that
+    without touching either pattern's own definition.
+    """
+    targets = write_targets(word, args, redirects)
+    if not targets:
         return
-    if SELF_CONFIG.search(segment):
-        decide(
-            "ask",
-            "self-modification",
-            "Claude Code 自身の設定（settings / hooks / rules / agents / skills）への書き込み。"
-            "権限やガードの挙動が変わるので、ユーザーの意図を確認する。",
-        )
-    if TRANSCRIPT.search(segment):
-        decide(
-            "deny",
-            "transcript-write",
-            "セッション transcript（~/.claude/projects/**/*.jsonl）への書き込み。"
-            "これはハーネスが管理する状態で、書き換えると以降の判定すべてに影響する。"
-            "読み取りは通常運用なので制限しない。",
-        )
+    for target in targets:
+        if SELF_CONFIG.search(target):
+            decide(
+                "ask",
+                "self-modification",
+                "Claude Code 自身の設定（settings / hooks / rules / agents / skills）への書き込み。"
+                "権限やガードの挙動が変わるので、ユーザーの意図を確認する。",
+            )
+        if TRANSCRIPT.search(target):
+            decide(
+                "deny",
+                "transcript-write",
+                "セッション transcript（~/.claude/projects/**/*.jsonl）への書き込み。"
+                "これはハーネスが管理する状態で、書き換えると以降の判定すべてに影響する。"
+                "読み取りは通常運用なので制限しない。",
+            )
 
 
 def check_external(word, args, segment):
@@ -673,7 +736,7 @@ def main():
         if word is None:
             continue
 
-        check_self_modification(segment, word, args, redirects)
+        check_self_modification(word, args, redirects)
 
         if word == "git":
             check_git(args, segment)
