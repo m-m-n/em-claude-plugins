@@ -316,10 +316,21 @@ THIRD_CONJUNCT_NARROWING_PHRASE = (
 I2B_STEP1_RECOVERY_CITATION_PHRASE = "Step I.2.b step 1's recovery"
 
 # Site C / AC-3 (FR3, FR4): I.2.b step 1's in-flight existence check effect
-# and stale-`launched` recovery.
+# and stale-`launched` recovery. Values updated by task0002
+# (routeback-admissibility-exits, rework round 1) Site A/B: the failure
+# condition is flipped from "neither artifact exists" (unsatisfiable in the
+# state the recovery exists for) to "both artifacts exist" (the
+# allowed-but-never-started state), and the recovery's lookup is now a
+# defined Agent-index read (Site B branch 1) instead of an undefined
+# "recorded agent" reference. Constant NAMES are unchanged (still named
+# after the property each asserts) per Conventions' naming rule.
 EXISTENCE_CHECK_FAILURE_CONDITION_PHRASE = (
     "the check FAILS when a task's journal last event is `launched` "
-    "while neither the task worktree nor the task branch exists"
+    "while the task worktree and the task branch both exist"
+)
+ALLOWED_BUT_NEVER_STARTED_PHRASE = (
+    "the allowed-but-never-started state, since I.2.a creates both "
+    "artifacts before the launch call that records `launched`"
 )
 NO_RECLASSIFICATION_PHRASE = (
     "A failed check does not reclassify the task by itself: the "
@@ -329,8 +340,11 @@ NO_RECLASSIFICATION_PHRASE = (
 TRIGGERS_RECOVERY_PHRASE = "it triggers the recovery below"
 NAMES_TASK_IN_REPORT_PHRASE = "names the task in the phase report"
 STOPS_RECORDED_AGENT_PHRASE = (
-    "the wake phase stops that task's recorded agent through the "
-    "harness stop tool"
+    "the wake phase resolves that task's recorded agent through the "
+    "Agent index writer's orchestrator-read rule"
+)
+STOPS_THROUGH_HARNESS_STOP_TOOL_PHRASE = (
+    "and stops it through the harness stop tool"
 )
 STOP_TOOL_RECORDER_CITATION_PHRASE = (
     "the stop-tool recorder — cited from its own bullet under "
@@ -343,7 +357,7 @@ REACHES_NORMAL_FAILED_HANDLING_PHRASE = (
     "route-back are both available"
 )
 RESIDUAL_UNRESOLVABLE_PHRASE = (
-    "when the stopped agent cannot be resolved to that task, the "
+    "when the Agent index lookup is unresolvable or ambiguous, the "
     "journal is unchanged, the task stays in-flight, the route-back "
     "gate blocks, and the phase takes the existing gate-rejected "
     "terminal"
@@ -351,6 +365,82 @@ RESIDUAL_UNRESOLVABLE_PHRASE = (
 RECOVERY_BEFORE_MENU_PHRASE = (
     "This recovery runs during this wake-phase reconcile step, hence "
     "before I.2.c's user-facing menu is offered"
+)
+
+# task0002 (routeback-admissibility-exits, rework round 1): this task's own
+# removed wording -- the pre-change literals task0001 delivered for the
+# same I.2.b step 1 bullet, captured verbatim from THIS task's own branch
+# point (base commit f2fb87f, distinct from task0001's base commit 9f5d7ae
+# used by PRE_CHANGE_I2B_STEP1_EXISTENCE_CHECK_SAMPLE below) -- needed for
+# this task's own absence assertions' paired regression proofs (AC-1, AC-2,
+# AC-3).
+OLD_EXISTENCE_CHECK_FAILURE_CONDITION_PHRASE = (
+    "the check FAILS when a task's journal last event is `launched` "
+    "while neither the task worktree nor the task branch exists"
+)
+OLD_STOPS_RECORDED_AGENT_PHRASE = (
+    "the wake phase stops that task's recorded agent through the "
+    "harness stop tool"
+)
+OLD_RESIDUAL_UNRESOLVABLE_PHRASE = (
+    "when the stopped agent cannot be resolved to that task"
+)
+
+# task0002: module-level constants for the Agent index writer's new
+# orchestrator-side read rule (Site B branch 1) and the Resume bullet's
+# widened state-source enumeration.
+AGENT_INDEX_ENTRY_SELECTION_PHRASE = (
+    "the orchestrator selects that task's most recently appended entry"
+)
+AGENT_INDEX_CANDIDATE_SELECTION_PHRASE = (
+    "the orchestrator passes the first-recorded candidate to the "
+    "harness stop tool"
+)
+AGENT_INDEX_UNRESOLVABLE_AMBIGUOUS_PHRASE = (
+    "an unresolvable lookup (no entry for the task) or an ambiguous "
+    "one (the selected entry names no usable candidate) stops nothing"
+)
+RESUME_FOUR_SOURCES_PHRASE = "rebuilds state from four sources, never from memory"
+RESUME_AGENT_INDEX_SOURCE_PHRASE = (
+    "the agent index (`agents.jsonl`, cited from the Agent index "
+    "writer bullet above, not restated here)"
+)
+
+# task0002: module-level constants for Site C's stated exit for the
+# trust-but-verify state (journal `merged`, ancestor check fails) -- the
+# third conjunct stays unchanged/never narrowed, and the exit is an
+# upstream reconciled-state rule (I.2.b step 1) plus a citation of the
+# already-existing harness-level-failure diagnostic path.
+THIRD_CONJUNCT_NEVER_NARROWED_PHRASE = (
+    "This conjunct is never narrowed to admit route-back for that state"
+)
+NO_RECYCLED_ID_INHERITS_MERGED_VIA_WRITE_SET_PHRASE = (
+    "no recycled id can ever inherit a journal `merged` the launch "
+    "guard denies through this phase's own write set"
+)
+ANCESTOR_FAILURE_EXIT_CITES_RECONCILED_STATE_PHRASE = (
+    "Step I.2.b step 1's reconciled state for that task is `failed`"
+)
+RETRY_REACHES_PERMISSION_DENIAL_PHRASE = (
+    "choosing retry there reaches the launch guard's permission "
+    "denial, which the harness-level-failure path under 'Failure "
+    "containment' below diagnoses"
+)
+EXIT_REACHED_WITHOUT_ABORT_PHRASE = "an outcome reached without selecting abort"
+THIRD_CONJUNCT_CAUSE_IN_ENUMERATION_PHRASE = (
+    "or because the last-event-per-task replay alone reports a "
+    "task's journal last event as `merged` though Step I.2.b step "
+    "1's reconciled state does not verify it"
+)
+
+# task0002: module-level constants for I.2.b step 1's own ancestor-check
+# reconciled-state rule (the upstream half of Site C's exit).
+ANCESTOR_CHECK_FAILURE_RECONCILED_FAILED_PHRASE = (
+    "That task's reconciled state instead becomes `failed`"
+)
+ANCESTOR_CHECK_FAILURE_REACHES_NORMAL_HANDLING_PHRASE = (
+    "so it reaches the normal failed handling in I.2.c (retry, route "
+    "back to planning subject to that section's own gate, or abort)"
 )
 
 # Site D / AC-3 (FR4, NFR3): the Supporting cast stale-`launched` caveat.
@@ -420,6 +510,94 @@ PRE_CHANGE_STALE_LAUNCHED_CAVEAT_SAMPLE = (
     "for the deliberate-stop case — the stop-tool recorder appends `failed` as\n"
     "soon as the `TaskStop` call completes, closing the gap before a reconcile\n"
     "pass is even needed.\n"
+)
+
+# --- task0002 (routeback-admissibility-exits, rework round 1): pre-change
+# wording samples, each a verbatim excerpt of
+# em-workflow/references/implement-phase.md at THIS task's own branch point
+# (base commit f2fb87f) -- i.e. task0001's delivered text, before this
+# task's own edit -- never task0001's own (older) pre-change samples above,
+# which predate task0001's edit entirely and prove a different thing.
+
+# Site A/B (AC-1, AC-2, AC-3): I.2.b step 1's existence-check bullet and its
+# recovery, exactly as task0001 delivered them.
+TASK0002_PRE_CHANGE_I2B_STEP1_SAMPLE = (
+    "   - Worktree/branch existence for tasks the journal claims are\n"
+    "     in-flight — the check FAILS when a task's journal last event is\n"
+    "     `launched` while neither the task worktree nor the task branch\n"
+    "     exists. A failed check does not reclassify the task by itself: the\n"
+    "     last-event rule owned by I.2.a above stays authoritative, cited here\n"
+    "     rather than restated. Effect of the failure: it triggers the\n"
+    "     recovery below and names the task in the phase report. Recovery: the\n"
+    "     wake phase stops that task's recorded agent through the harness stop\n"
+    "     tool; the stop-tool recorder — cited from its own bullet under\n"
+    "     'Supporting cast: journal, hooks, resume' below, not restated here —\n"
+    "     records the task's terminal `failed` event, so the next replay\n"
+    "     reconciles the task as `failed` and it reaches the normal failed\n"
+    "     handling in I.2.c, where retry and route-back are both available.\n"
+    "     Residual: when the stopped agent cannot be resolved to that task,\n"
+    "     the journal is unchanged, the task stays in-flight, the route-back\n"
+    "     gate blocks, and the phase takes the existing gate-rejected terminal\n"
+    "     (I.2.c) with the task named in the report. This recovery runs during\n"
+    "     this wake-phase reconcile step, hence before I.2.c's user-facing\n"
+    "     menu is offered.\n"
+    "   - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`\n"
+    "     for tasks the journal (or the implementer's own report) claims are\n"
+    "     `merged` — a claim that fails this check is NOT merged; never mark a\n"
+    "     task merged on self-report or journal entry alone.\n"
+)
+
+# Site B (AC-2): the Agent index writer bullet, exactly as task0001
+# delivered it -- no orchestrator-side read rule yet.
+TASK0002_PRE_CHANGE_AGENT_INDEX_BULLET_SAMPLE = (
+    "- **Agent index writer** (`queue_agent_index.py`) — fires on the same\n"
+    "  subagent-launch call as the launch guard above, after the tool completes.\n"
+    "  For em-workflow implementer launches it appends one entry to that\n"
+    "  feature's agent index (`agents.jsonl`, a sibling of `journal.jsonl`),\n"
+    "  mapping every harness agent-identifier candidate it can recover from the\n"
+    "  launch response (the exact identifier field the response carries is\n"
+    "  unverified, so more than one candidate may be recorded per entry) to the\n"
+    "  launched task id and worktree path. It writes ONLY the agent index — it\n"
+    "  never touches `journal.jsonl` — and is fail-open exactly like every hook\n"
+    "  here: an unrecognized launch, an unparsable input, or a missing feature\n"
+    "  directory is a silent no-op. The index is diagnostic plumbing, not a\n"
+    "  second journal (workflow-schema.md states this explicitly); it exists\n"
+    "  solely so the stop-tool recorder below can resolve a stop back to a task\n"
+    "  (full matching/staleness rule: IMPLEMENTATION.md's Agent index contract).\n"
+)
+
+# Site B (AC-2): the Resume bullet, exactly as task0001 delivered it --
+# three sources, no agent index.
+TASK0002_PRE_CHANGE_RESUME_BULLET_SAMPLE = (
+    "**Resume**: a `/em-workflow:develop` re-entry mid-implement rebuilds state\n"
+    "from three sources, never from memory: workflow.yaml (`tasks.*.status`), the\n"
+    "journal (last-event-per-task replay), and git actual state (worktree\n"
+    "existence, `merge-base --is-ancestor`). The I.2.a resume guard governs\n"
+    "worktree re-creation exactly as before; the wake-phase reconcile (I.2.b) is\n"
+    "what re-derives in-flight/failed/merged classification on that first\n"
+    "post-resume wake.\n"
+    "\n"
+)
+
+# Site C (AC-4): the third conjunct's tail, exactly as task0001 delivered
+# it -- no stated exit for the trust-but-verify state.
+TASK0002_PRE_CHANGE_I2C_THIRD_CONJUNCT_TAIL_SAMPLE = (
+    "only the failed one leaves a recycled id launchable. A task the journal\n"
+    "  reports in-flight whose worktree and branch are both gone is decided\n"
+    "  elsewhere — Step I.2.b step 1's recovery, cited there, not here. "
+)
+
+# Site C (AC-5): the gate-rejected cause enumeration, exactly as task0001
+# delivered it -- the third conjunct's own condition is not among the
+# named causes.
+TASK0002_PRE_CHANGE_GATE_REJECTED_ENUM_SAMPLE = (
+    "the normal SPEC.md update path first. When the gate does not hold —\n"
+    "  because a task has status `merged`, because Step I.2.b step 1's\n"
+    "  reconciled state reports a task `merged` though workflow.yaml does\n"
+    "  not, because a task has status `in_progress`, or because Step I.2.b's\n"
+    "  last-event-per-task rule reports a task in-flight — this automatic\n"
+    "  re-entry does not apply:\n"
+    "  "
 )
 
 # Relocated from tests/test_abort_phase_terminal_batch_mode.py (task0003,
@@ -1265,12 +1443,15 @@ class TestI2cCitesI2bRecoveryBeforeRejectedMarker(unittest.TestCase):
 
 
 class TestI2bStep1InFlightExistenceCheckHasStatedEffect(unittest.TestCase):
-    """AC-3 (FR3, FR4; TS-2, task0001 routeback-admissibility-exits): I.2.b
-    step 1 states the failure condition of the in-flight existence check,
+    """AC-1, AC-2, AC-3 (FR3, FR4, NFR3; TS-2, TS-11, TS-12; task0001
+    routeback-admissibility-exits + task0002 rework round 1): I.2.b step 1
+    states a failure condition for the in-flight existence check that is
+    satisfiable by the allowed-but-never-started state (task0002 Site A),
     its effect (no reclassification by itself; triggers the recovery; the
     task is named in the report), the recovery ending in a terminal journal
-    event recorded by the cited stop-tool recorder, and the residual
-    unresolvable case."""
+    event via a defined Agent-index lookup (task0002 Site B) and the cited
+    stop-tool recorder, and the residual case now scoped to an
+    unresolvable-or-ambiguous lookup rather than the never-started state."""
 
     @classmethod
     def setUpClass(cls):
@@ -1278,6 +1459,16 @@ class TestI2bStep1InFlightExistenceCheckHasStatedEffect(unittest.TestCase):
 
     def test_failure_condition_stated(self):
         self.assertIn(EXISTENCE_CHECK_FAILURE_CONDITION_PHRASE, self.section)
+
+    def test_failure_condition_is_the_allowed_but_never_started_state(self):
+        # task0002 AC-1 (Site A): the condition is satisfiable in the state
+        # the recovery exists for, not only when both artifacts are absent.
+        self.assertIn(ALLOWED_BUT_NEVER_STARTED_PHRASE, self.section)
+
+    def test_pre_change_conjunctive_condition_absent(self):
+        # task0002 AC-1: the pre-change ("neither...exists") condition no
+        # longer appears anywhere in the document.
+        self.assertNotIn(OLD_EXISTENCE_CHECK_FAILURE_CONDITION_PHRASE, _read())
 
     def test_no_reclassification_by_itself_and_cites_i2a(self):
         self.assertIn(NO_RECLASSIFICATION_PHRASE, self.section)
@@ -1290,6 +1481,7 @@ class TestI2bStep1InFlightExistenceCheckHasStatedEffect(unittest.TestCase):
         self,
     ):
         self.assertIn(STOPS_RECORDED_AGENT_PHRASE, self.section)
+        self.assertIn(STOPS_THROUGH_HARNESS_STOP_TOOL_PHRASE, self.section)
         self.assertIn(STOP_TOOL_RECORDER_CITATION_PHRASE, self.section)
         self.assertIn(TERMINAL_FAILED_EVENT_PHRASE, self.section)
 
@@ -1299,8 +1491,170 @@ class TestI2bStep1InFlightExistenceCheckHasStatedEffect(unittest.TestCase):
     def test_residual_unresolvable_agent_case_stated(self):
         self.assertIn(RESIDUAL_UNRESOLVABLE_PHRASE, self.section)
 
+    def test_residual_no_longer_the_stopped_agent_wording(self):
+        # task0002 AC-2, AC-3: the residual is now keyed off the Agent
+        # index lookup, not an undefined "stopped agent" reference.
+        self.assertNotIn(OLD_RESIDUAL_UNRESOLVABLE_PHRASE, self.section)
+
     def test_recovery_runs_before_i2c_menu(self):
         self.assertIn(RECOVERY_BEFORE_MENU_PHRASE, self.section)
+
+
+class TestAncestorCheckFailureReconciledStateIsFailed(unittest.TestCase):
+    """AC-4 (FR1, FR2; TS-10, task0002 Site C upstream half): I.2.b step
+    1's ancestor-check bullet states that a task whose merge claim fails
+    verification reconciles as `failed` -- the same treatment as any other
+    implementer failure -- and reaches the normal failed handling in
+    I.2.c, even though the journal's own raw last event keeps reading
+    `merged` until an actual writer changes it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2b_section(_read()))
+
+    def test_ancestor_check_failure_reconciles_as_failed(self):
+        self.assertIn(ANCESTOR_CHECK_FAILURE_RECONCILED_FAILED_PHRASE, self.section)
+
+    def test_reaches_normal_failed_handling_naming_all_three_choices(self):
+        self.assertIn(
+            ANCESTOR_CHECK_FAILURE_REACHES_NORMAL_HANDLING_PHRASE, self.section
+        )
+
+    def test_ancestor_check_clause_survives(self):
+        # RETENTION: the ancestor-check bullet's own pre-existing sentence
+        # (never mark a task merged on self-report or journal entry alone)
+        # is unaffected by this task's addition.
+        self.assertIn(
+            "never mark a task merged on self-report or journal entry alone",
+            self.section,
+        )
+
+
+class TestAgentIndexOrchestratorReadRuleDefinesLookup(unittest.TestCase):
+    """AC-2 (FR3, NFR3; TS-12, task0002 Site B branch 1): the Agent index
+    writer bullet's owning-site rule states which entry is selected for a
+    task, which candidate is passed to the stop tool when an entry carries
+    more than one, and that an unresolvable or ambiguous lookup stops
+    nothing; the wake/resume state-source enumeration names the agent
+    index alongside the three sources it already listed; I.2.b step 1
+    cites the owning site instead of restating the rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.supporting_cast = _normalize_ws(_supporting_cast_section(_read()))
+        cls.i2b = _normalize_ws(_i2b_section(_read()))
+
+    def test_owning_site_states_entry_selection(self):
+        self.assertIn(AGENT_INDEX_ENTRY_SELECTION_PHRASE, self.supporting_cast)
+
+    def test_owning_site_states_candidate_selection_rule(self):
+        self.assertIn(AGENT_INDEX_CANDIDATE_SELECTION_PHRASE, self.supporting_cast)
+
+    def test_owning_site_states_unresolvable_or_ambiguous_stops_nothing(self):
+        self.assertIn(
+            AGENT_INDEX_UNRESOLVABLE_AMBIGUOUS_PHRASE, self.supporting_cast
+        )
+
+    def test_resume_state_source_enumeration_names_agent_index(self):
+        self.assertIn(RESUME_FOUR_SOURCES_PHRASE, self.supporting_cast)
+        self.assertIn(RESUME_AGENT_INDEX_SOURCE_PHRASE, self.supporting_cast)
+
+    def test_i2b_step1_cites_owning_site_without_restating(self):
+        self.assertIn(
+            "the Agent index writer's orchestrator-read rule", self.i2b
+        )
+        self.assertNotIn(AGENT_INDEX_ENTRY_SELECTION_PHRASE, self.i2b)
+        self.assertNotIn(AGENT_INDEX_CANDIDATE_SELECTION_PHRASE, self.i2b)
+        self.assertNotIn(AGENT_INDEX_UNRESOLVABLE_AMBIGUOUS_PHRASE, self.i2b)
+
+
+class TestThirdConjunctNeverNarrowedHasStatedExit(unittest.TestCase):
+    """AC-4 (FR1, FR2; TS-10, task0002 Site C): for a task whose journal
+    last event is `merged` while `git merge-base --is-ancestor` fails, the
+    document states an outcome other than the gate-rejected/abort terminal
+    that is reached without the user selecting abort; and states that no
+    path admits route-back while a recycled id could inherit a journal
+    `merged` the launch guard denies (the third conjunct is never
+    narrowed)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2c_section(_read()))
+
+    def test_third_conjunct_never_narrowed(self):
+        self.assertIn(THIRD_CONJUNCT_NEVER_NARROWED_PHRASE, self.section)
+
+    def test_no_recycled_id_can_inherit_merged_via_write_set(self):
+        self.assertIn(
+            NO_RECYCLED_ID_INHERITS_MERGED_VIA_WRITE_SET_PHRASE, self.section
+        )
+
+    def test_exit_cites_i2b_step1_reconciled_state(self):
+        self.assertIn(
+            ANCESTOR_FAILURE_EXIT_CITES_RECONCILED_STATE_PHRASE, self.section
+        )
+
+    def test_retry_reaches_harness_level_failure_diagnostic_path(self):
+        self.assertIn(RETRY_REACHES_PERMISSION_DENIAL_PHRASE, self.section)
+
+    def test_outcome_reached_without_selecting_abort(self):
+        self.assertIn(EXIT_REACHED_WITHOUT_ABORT_PHRASE, self.section)
+
+
+class TestGateRejectedEnumerationIncludesThirdConjunct(unittest.TestCase):
+    """AC-5 (FR1; TS-10, task0002 Site C): the gate-rejected branch's cause
+    enumeration names every condition that sends a task to that terminal,
+    including the third conjunct's own condition (a task's raw journal
+    last event is `merged` though I.2.b step 1's reconciled state does not
+    verify it), so the branch a state lands on is readable from the text."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2c_section(_read()))
+
+    def test_enumeration_includes_third_conjunct_condition(self):
+        self.assertIn(THIRD_CONJUNCT_CAUSE_IN_ENUMERATION_PHRASE, self.section)
+
+    def test_pre_existing_causes_survive(self):
+        self.assertIn("because a task has status `merged`", self.section)
+        self.assertIn("because a task has status `in_progress`", self.section)
+        self.assertIn(
+            "Step I.2.b's last-event-per-task rule reports a task in-flight",
+            self.section,
+        )
+
+
+class TestStaleLaunchedCaveatNamesOnlyFirableMechanisms(unittest.TestCase):
+    """AC-7 (FR4, NFR2, NFR3; TS-2, task0002): the Supporting cast
+    Stale-`launched` caveat's boundedness claim names only mechanisms that
+    can fire in the allowed-but-never-started state -- it never claims the
+    SubagentStop failure net (which requires a subagent that actually ran)
+    fires for it, scopes the stop-tool recorder mention to the
+    deliberate-stop case, and cites I.2.b step 1 as the owning site for
+    the reconcile's own outcome rather than asserting one. Unaffected by
+    this task's Site A/B rewrite of I.2.b step 1's own recovery text --
+    the caveat only cites that site, never restates it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.supporting_cast = _normalize_ws(_supporting_cast_section(_read()))
+        start = cls.supporting_cast.index("Stale-`launched` caveat")
+        end = cls.supporting_cast.index("**Resume**", start)
+        cls.caveat = cls.supporting_cast[start:end]
+
+    def test_caveat_does_not_claim_subagent_stop_failure_net_fires(self):
+        self.assertNotIn("queue_failure_net", self.caveat)
+        self.assertNotIn("SubagentStop failure net", self.caveat)
+
+    def test_caveat_scopes_stop_tool_recorder_to_deliberate_stop_case(self):
+        self.assertIn("specifically for the deliberate-stop case", self.caveat)
+
+    def test_caveat_cites_i2b_step1_outcome_without_restating(self):
+        self.assertIn(
+            "the outcome that check produces is defined there, not "
+            "restated here",
+            self.caveat,
+        )
 
 
 class TestStaleLaunchedCaveatCitesI2bStep1Recovery(unittest.TestCase):
@@ -1373,11 +1727,12 @@ class TestContainmentAndInvariants(unittest.TestCase):
 
 class TestPluginVersionBumpedInLockstep(unittest.TestCase):
     """AC-6 (task0001, exit4-recovery-scope); baseline raised to 47 by
-    task0001 (routeback-admissibility-exits) AC-7 / Site F: the plugin
-    manifest and the marketplace entry for em-workflow agree on the same
-    version, bumped to 0.1.48 in this task. Test Notes: assert the two
-    manifests agree on the same value rather than checking each file in
-    isolation."""
+    task0001 (routeback-admissibility-exits) AC-7 / Site F, then to 48 by
+    task0002 (routeback-admissibility-exits, rework round 1) AC-10 / Site
+    F: the plugin manifest and the marketplace entry for em-workflow agree
+    on the same version, bumped to 0.1.49 in this task. Test Notes: assert
+    the two manifests agree on the same value rather than checking each
+    file in isolation."""
 
     @classmethod
     def setUpClass(cls):
@@ -1400,15 +1755,17 @@ class TestPluginVersionBumpedInLockstep(unittest.TestCase):
         # Durable form (repo convention, see
         # tests/test_recycled_task_id_version_bump.py): major/minor fixed,
         # patch strictly greater than the pre-task baseline, raised from 42
-        # to 47 by task0001 (routeback-admissibility-exits) Site F. Pinning
-        # a literal version would go red on the next unrelated bump.
+        # to 47 by task0001 (routeback-admissibility-exits) Site F and from
+        # 47 to 48 by task0002 (routeback-admissibility-exits, rework round
+        # 1) Site F. Pinning a literal version would go red on the next
+        # unrelated bump.
         for version in (
             self.plugin_manifest["version"],
             self.marketplace_entry["version"],
         ):
             major, minor, patch = (int(part) for part in version.split("."))
             self.assertEqual((major, minor), (0, 1))
-            self.assertGreater(patch, 47)
+            self.assertGreater(patch, 48)
 
 
 class TestExit4CarveOutStatedInAllThreeSSOTs(unittest.TestCase):
@@ -1641,6 +1998,65 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         lines = _bare_git_commit_or_add_lines(sample)
         self.assertEqual(lines, [])
 
+    # --- task0002 (routeback-admissibility-exits, rework round 1):
+    # negative proofs for this task's own new-wording matchers, run against
+    # this task's own pre-change samples (base commit f2fb87f -- task0001's
+    # delivered text, before this task's edit).
+
+    def test_i2b_step1_site_a_b_matchers_flag_absence_in_task0001_delivered_wording(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_I2B_STEP1_SAMPLE)
+        self.assertNotIn(ALLOWED_BUT_NEVER_STARTED_PHRASE, sample)
+        self.assertNotIn(STOPS_THROUGH_HARNESS_STOP_TOOL_PHRASE, sample)
+        self.assertNotIn(RESIDUAL_UNRESOLVABLE_PHRASE, sample)
+        self.assertNotIn(ANCESTOR_CHECK_FAILURE_RECONCILED_FAILED_PHRASE, sample)
+        self.assertNotIn(
+            ANCESTOR_CHECK_FAILURE_REACHES_NORMAL_HANDLING_PHRASE, sample
+        )
+        # the old wording this task removed is present in the sample,
+        # proving the sample is genuinely pre-change and not accidentally
+        # already updated.
+        self.assertIn(OLD_EXISTENCE_CHECK_FAILURE_CONDITION_PHRASE, sample)
+        self.assertIn(OLD_STOPS_RECORDED_AGENT_PHRASE, sample)
+        self.assertIn(OLD_RESIDUAL_UNRESOLVABLE_PHRASE, sample)
+
+    def test_agent_index_lookup_rule_matcher_flags_absence_in_task0001_delivered_wording(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_AGENT_INDEX_BULLET_SAMPLE)
+        self.assertNotIn(AGENT_INDEX_ENTRY_SELECTION_PHRASE, sample)
+        self.assertNotIn(AGENT_INDEX_CANDIDATE_SELECTION_PHRASE, sample)
+        self.assertNotIn(AGENT_INDEX_UNRESOLVABLE_AMBIGUOUS_PHRASE, sample)
+
+    def test_resume_four_sources_matcher_flags_absence_in_task0001_delivered_wording(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_RESUME_BULLET_SAMPLE)
+        self.assertNotIn(RESUME_FOUR_SOURCES_PHRASE, sample)
+        self.assertNotIn(RESUME_AGENT_INDEX_SOURCE_PHRASE, sample)
+        self.assertIn("rebuilds state from three sources", sample)
+
+    def test_third_conjunct_exit_matchers_flag_absence_in_task0001_delivered_wording(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_I2C_THIRD_CONJUNCT_TAIL_SAMPLE)
+        self.assertNotIn(THIRD_CONJUNCT_NEVER_NARROWED_PHRASE, sample)
+        self.assertNotIn(
+            NO_RECYCLED_ID_INHERITS_MERGED_VIA_WRITE_SET_PHRASE, sample
+        )
+        self.assertNotIn(
+            ANCESTOR_FAILURE_EXIT_CITES_RECONCILED_STATE_PHRASE, sample
+        )
+        self.assertNotIn(RETRY_REACHES_PERMISSION_DENIAL_PHRASE, sample)
+        self.assertNotIn(EXIT_REACHED_WITHOUT_ABORT_PHRASE, sample)
+
+    def test_gate_rejected_enumeration_matcher_flags_absence_in_task0001_delivered_wording(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_GATE_REJECTED_ENUM_SAMPLE)
+        self.assertNotIn(THIRD_CONJUNCT_CAUSE_IN_ENUMERATION_PHRASE, sample)
+
 
 class TestPreChangeSampleGuards(unittest.TestCase):
     """AC-5 (task0001, routeback-admissibility-exits) / Contract 4: each of
@@ -1675,6 +2091,54 @@ class TestPreChangeSampleGuards(unittest.TestCase):
         self.assertIn(
             anchor, _normalize_ws(_supporting_cast_section(_read()))
         )
+
+    # --- task0002 (routeback-admissibility-exits, rework round 1):
+    # retained-anchor guards for this task's own pre-change samples.
+
+    def test_task0002_i2b_step1_sample_retains_reaches_normal_failed_handling_anchor(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_I2B_STEP1_SAMPLE)
+        self.assertIn(REACHES_NORMAL_FAILED_HANDLING_PHRASE, sample)
+        self.assertIn(
+            REACHES_NORMAL_FAILED_HANDLING_PHRASE,
+            _normalize_ws(_i2b_section(_read())),
+        )
+
+    def test_task0002_agent_index_bullet_sample_retains_diagnostic_plumbing_anchor(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_AGENT_INDEX_BULLET_SAMPLE)
+        anchor = (
+            "solely so the stop-tool recorder below can resolve a stop "
+            "back to a task"
+        )
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_supporting_cast_section(_read())))
+
+    def test_task0002_resume_bullet_sample_retains_wake_phase_reconcile_anchor(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_RESUME_BULLET_SAMPLE)
+        anchor = "the wake-phase reconcile (I.2.b) is what re-derives"
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_supporting_cast_section(_read())))
+
+    def test_task0002_third_conjunct_tail_sample_retains_recycled_id_launchable_anchor(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_I2C_THIRD_CONJUNCT_TAIL_SAMPLE)
+        anchor = "only the failed one leaves a recycled id launchable"
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_i2c_section(_read())))
+
+    def test_task0002_gate_rejected_enum_sample_retains_merged_status_cause_anchor(
+        self,
+    ):
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_GATE_REJECTED_ENUM_SAMPLE)
+        anchor = "because a task has status `merged`"
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_i2c_section(_read())))
 
 
 class TestImplementFailedTaskRowStatesWriteAndCommitTerminal(unittest.TestCase):
