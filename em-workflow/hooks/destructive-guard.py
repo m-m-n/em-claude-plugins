@@ -111,11 +111,11 @@ WRAPPERS = {"sudo", "env", "nohup", "time", "command", "nice", "ionice", "doas"}
 # `--flag=value` spellings are attached and need no extra consumption.
 WRAPPER_VALUE_FLAGS = {
     "sudo": {
-        "-u", "-g", "-p", "-C", "-h", "-R", "-T", "-U",
+        "-u", "-g", "-p", "-C", "-h", "-R", "-T", "-U", "-D", "-r", "-t",
         "--user", "--group", "--prompt", "--close-from", "--host",
-        "--chroot", "--type", "--other-user", "--role",
+        "--chroot", "--type", "--other-user", "--role", "--chdir",
     },
-    "env": {"-u", "-C", "--unset", "--chdir", "--split-string"},
+    "env": {"-u", "-C", "-S", "--unset", "--chdir", "--split-string"},
     "nice": {"-n", "--adjustment"},
     "ionice": {"-c", "-n", "-p", "--class", "--classdata", "--pid"},
     "time": {"-o", "--output"},
@@ -317,11 +317,33 @@ def lex_segments(chunk):
 
     out, current = [], []
     for t in toks:
-        if t and all(c in SEGMENT_CHARS for c in t):
-            out.append((current, True))
-            current = []
+        # punctuation_chars makes shlex fuse adjacent punctuation into one
+        # token, so a separator with no space before the next operator
+        # (';>', '\n(') arrives as a single token that is neither a clean
+        # separator nor a clean operator. Split such fused tokens back into
+        # their runs — each all-SEGMENT_CHARS or all-non-SEGMENT_CHARS —
+        # before the separator test below, carrying is_operator forward onto
+        # every piece so split_redirects() still recognizes the operator half.
+        if t and all(c in PUNCTUATION for c in t) and not all(
+            c in SEGMENT_CHARS for c in t
+        ):
+            pieces, run = [], t[0]
+            for c in t[1:]:
+                if (c in SEGMENT_CHARS) == (run[-1] in SEGMENT_CHARS):
+                    run += c
+                else:
+                    pieces.append(run)
+                    run = c
+            pieces.append(run)
+            segs = [Tok(p, t.is_operator) for p in pieces]
         else:
-            current.append(t)
+            segs = [t]
+        for seg in segs:
+            if seg and all(c in SEGMENT_CHARS for c in seg):
+                out.append((current, True))
+                current = []
+            else:
+                current.append(seg)
     out.append((current, True))
     return out
 
@@ -896,8 +918,13 @@ def write_targets(word, args, redirects):
       `mv`/`rm`/`chmod`/`chown` — a move unlinks each source it names, so a
       source is written to exactly as much as the destination is
     - for `cp`/`mv`/`ln`/`install`, the value of a target-directory flag
-      (`-t DIR` / `--target-directory=DIR`), additive to the positional
-      destination above, never a replacement for it
+      (`-t DIR` / `--target-directory=DIR`). For `cp`/`ln`/`install`, this
+      flag and the positional-last destination are mutually exclusive per
+      GNU's own grammar: once `-t`/`--target-directory` is given, every
+      non-flag argument is a source, not a destination, so the
+      positional-last rule is skipped entirely in that case. `mv` still
+      unlinks every source it names regardless of `-t`, so its non-flag
+      arguments remain targets either way.
     - the last non-flag argument for `rsync`, and for `git` only the last
       positional argument of `git clone` (covers `git clone URL DEST`;
       other git subcommands are not treated as write-target-bearing here)
@@ -919,15 +946,32 @@ def write_targets(word, args, redirects):
     targets = redirect_write_targets(redirects)
     non_flags = [a for a in args if not a.startswith("-")]
 
-    if word in INPLACE_WRITERS or (
+    flag_dests = (
+        flag_destinations(args) if word in ("cp", "mv", "ln", "install") else []
+    )
+
+    if word == "install":
+        # install は INPLACE_WRITERS の一員だが、cp/ln 同様 -t/--target-directory
+        # が与えられた時点で宛先は既に決まっており、非フラグ引数は全てソース。
+        # フラグが無ければ従来どおり最後の非フラグ引数だけが宛先で、先行する
+        # 引数（コピー元）は読むだけ。
+        if not flag_dests and non_flags:
+            targets = targets + [non_flags[-1]]
+    elif word in INPLACE_WRITERS or (
         word == "sed"
         and any(a.startswith("-i") or a.startswith("--in-place") for a in args)
     ):
         targets = targets + non_flags
     elif word in ("cp", "ln"):
-        positional = strip_value_tokens(word, args)
-        if positional:
-            targets = targets + [positional[-1]]
+        if flag_dests:
+            # -t DIR / --target-directory=DIR は「宛先は既に決まっている」
+            # という文法を表す。この場合すべての非フラグ引数はソースであり、
+            # positional-last 規則を重ねて宛先扱いしてはいけない。
+            pass
+        else:
+            positional = strip_value_tokens(word, args)
+            if positional:
+                targets = targets + [positional[-1]]
     elif word in ("mv", "rm", "chmod", "chown"):
         targets = targets + non_flags
     elif word == "rsync":
@@ -946,7 +990,7 @@ def write_targets(word, args, redirects):
                 targets = targets + [positional[-1]]
 
     if word in ("cp", "mv", "ln", "install"):
-        targets = targets + flag_destinations(args)
+        targets = targets + flag_dests
 
     targets = targets + flag_value_destinations(word, args)
 
