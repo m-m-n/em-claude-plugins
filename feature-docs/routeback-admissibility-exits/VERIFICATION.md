@@ -8,8 +8,9 @@
 
 This document covers the INTEGRATED verification of the feature, run after
 every task is merged into the integration branch. Task-level criteria live in
-`feature-docs/routeback-admissibility-exits/tasks/task0001.md` and
-`feature-docs/routeback-admissibility-exits/tasks/task0002.md`.
+`feature-docs/routeback-admissibility-exits/tasks/task0001.md`,
+`feature-docs/routeback-admissibility-exits/tasks/task0002.md` and
+`feature-docs/routeback-admissibility-exits/tasks/task0003.md`.
 
 ## Build Verification
 
@@ -34,7 +35,11 @@ carries no numbered scenario (FR5 / NFR1's solution-shape constraint, and
 NFR4's aggregate run). TS-10 through TS-13 are review-round-1 rework additions
 (task0002): TS-1 and TS-2 assert that the two exits are STATED, which the
 delivered text satisfies while both exits remain unreachable in the states they
-exist for — reachability is what the four scenarios below add.
+exist for — reachability is what the four scenarios below add. TS-14 is a
+verify-round rework addition (task0003): TS-3 and TS-4 assert that each I.2.a
+absence proof carries a retained anchor, which a pair of matchers can satisfy
+while the anchor itself is a literal a test module outside the declared change
+set requires to be absent — cross-module agreement is what TS-14 adds.
 
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
@@ -51,6 +56,7 @@ exist for — reachability is what the four scenarios below add.
 | TS-11 | Trigger reachability for the stale-launched recovery: the in-flight verification's failure condition is satisfied by a task whose journal last event is launched while its worktree and its branch both exist, and that state reaches the recovery's primary outcome rather than the residual | The failure condition holds in the allowed-but-never-started state; the pre-change conjunctive condition is absent with its paired negative proof; the residual enumeration does not include a launch that never started | Unit |
 | TS-12 | Defined inputs for the recovery: either the identifier lookup (entry selection, multiple-candidate rule, unresolvable/ambiguous → no stop) is owned by one site and named in the wake/resume state-source enumeration with I.2.b step 1 citing it, or the recovery consumes no such lookup | The adopted branch's assertions hold; no step of the recovery depends on an input the document leaves undefined | Unit |
 | TS-13 | I.2.a's premise citation of the gate conjunct: it names the owning section, states its position relative to I.2.a correctly, and carries a single causal construction | The corrected premise is present, the pre-change premise absent with its paired negative proof, and the pinned conclusion, carve-out, always-in-flight sentence and slice anchors all survive | Unit |
+| TS-14 | Cross-module agreement on the I.2.a pin set: no literal the two named modules assert PRESENT in I.2.a is asserted ABSENT there by a test module outside the declared change set, and the reverse; each I.2.a retained anchor occurs in both its pre-change sample and the live section while being forbidden by no outside module | No literal is required present by one module and absent by another; every I.2.a retained anchor satisfies all three conditions; the full suite runs green from the repository root | Unit |
 
 ## Code Quality Verification
 
@@ -68,11 +74,11 @@ exist for — reachability is what the four scenarios below add.
 |----|-----------|---------------|
 | AC-1 | An automatically-recoverable exit, or a stated unreachability covering the ancestor-check failure, exists for a renumbered task that inherited a merged journal event | TS-1 and TS-10, plus a read of the I.2.c gate text and its gate-rejected branch |
 | AC-2 | A recovery path other than abort exists for a plan carrying a stale launched state, and I.2.b step 1's existence check has a stated outcome | TS-2, TS-11 and TS-12, plus a read of I.2.b step 1 |
-| AC-3 | I.2.a no longer asserts the falsified justification; the failed-only carve-out is re-justified consistently with AC-1's mechanism | TS-3 and TS-13, plus a read of the I.2.a paragraph |
+| AC-3 | I.2.a no longer asserts the falsified justification; the failed-only carve-out is re-justified consistently with AC-1's mechanism | TS-3, TS-13 and TS-14, plus a read of the I.2.a paragraph |
 | AC-4 | Requirements, acceptance criteria and test scenarios match AC-1..AC-3, and the two named modules assert them with the paired regression proofs | TS-4 plus this document's traceability table |
 | AC-5 | The suite passes | TS-9 |
 | AC-6 | Both manifests agree on one version strictly greater than 0.1.47 | TS-7 |
-| AC-7 | Every surviving pinned literal is byte-identical; every rewritten literal has its matcher updated with a negative proof | TS-4, TS-5, TS-6 |
+| AC-7 | Every surviving pinned literal is byte-identical; every rewritten literal has its matcher updated with a negative proof | TS-4, TS-5, TS-6, TS-14 |
 | SC-SEC | No new attack surface; hook defenses preserved | TS-8 plus the manual hook-diff check below |
 
 ### Functional Requirements Coverage
@@ -80,16 +86,16 @@ exist for — reachability is what the four scenarios below add.
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
 | FR1 | task0001, task0002 | TS-1, TS-10 |
-| FR2 | task0001, task0002 | TS-1, TS-3, TS-10, TS-13 |
+| FR2 | task0001, task0002, task0003 | TS-1, TS-3, TS-10, TS-13, TS-14 |
 | FR3 | task0001, task0002 | TS-2, TS-11, TS-12 |
 | FR4 | task0001, task0002 | TS-2, TS-11 |
 | FR5 | task0001, task0002 | TS-8 |
-| FR6 | task0001, task0002 | TS-4 |
+| FR6 | task0001, task0002, task0003 | TS-4 |
 | FR7 | task0001, task0002 | TS-7 |
 | NFR1 | task0001, task0002 | TS-8 |
-| NFR2 | task0001, task0002 | TS-4, TS-5, TS-6 |
-| NFR3 | task0001, task0002 | TS-4, TS-5, TS-6, TS-12, TS-13 |
-| NFR4 | task0001, task0002 | TS-9 |
+| NFR2 | task0001, task0002, task0003 | TS-4, TS-5, TS-6, TS-14 |
+| NFR3 | task0001, task0002, task0003 | TS-4, TS-5, TS-6, TS-12, TS-13, TS-14 |
+| NFR4 | task0001, task0002, task0003 | TS-9, TS-14 |
 | NFR5 | task0001, task0002 | TS-4, TS-5, TS-6 |
 
 ## E2E Testing
@@ -129,7 +135,7 @@ No E2E framework exists in this project and SPEC.md records none. Omitted.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 13 | 13 | 0 | 0 |
+| Test scenarios | 14 | 14 | 0 | 0 |
 | Success criteria | 8 | 7 | 0 | 1 |
 | Manual checks | 6 | 0 | 0 | 6 |
 | Build / format | 0 | 0 | 0 | 0 |
