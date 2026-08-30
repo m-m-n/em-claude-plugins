@@ -184,6 +184,10 @@ FLAG_DEST_FLAGS = {
 VALUE_TAKING_FLAGS = {
     "cp": ("-S", "--suffix", "-t", "--target-directory"),
     "ln": ("-S", "--suffix"),
+    "install": (
+        "-m", "--mode", "-o", "--owner", "-g", "--group",
+        "-S", "--suffix", "-t", "--target-directory",
+    ),
     "rsync": ("--exclude", "--include", "--filter", "-e", "--rsh"),
 }
 
@@ -327,14 +331,21 @@ def lex_segments(chunk):
         if t and all(c in PUNCTUATION for c in t) and not all(
             c in SEGMENT_CHARS for c in t
         ):
-            pieces, run = [], t[0]
-            for c in t[1:]:
-                if (c in SEGMENT_CHARS) == (run[-1] in SEGMENT_CHARS):
-                    run += c
-                else:
-                    pieces.append(run)
-                    run = c
-            pieces.append(run)
+            pieces, i = [], 0
+            while i < len(t):
+                # `>|` `>&` `&>>` は 1 個のリダイレクト演算子。`|` / `&` が
+                # SEGMENT_CHARS でも、演算子全体は割らずに 1 片として残す。
+                # 割ると区切りと解釈され、リダイレクト先が次の文へ流出する。
+                if REDIRECT.fullmatch(t[i:]):
+                    pieces.append(t[i:])
+                    break
+                j = i + 1
+                while j < len(t) and (t[j] in SEGMENT_CHARS) == (
+                    t[i] in SEGMENT_CHARS
+                ):
+                    j += 1
+                pieces.append(t[i:j])
+                i = j
             segs = [Tok(p, t.is_operator) for p in pieces]
         else:
             segs = [t]
@@ -955,8 +966,11 @@ def write_targets(word, args, redirects):
         # が与えられた時点で宛先は既に決まっており、非フラグ引数は全てソース。
         # フラグが無ければ従来どおり最後の非フラグ引数だけが宛先で、先行する
         # 引数（コピー元）は読むだけ。
-        if not flag_dests and non_flags:
-            targets = targets + [non_flags[-1]]
+        # 値取りフラグ（-m 644 等）の値は位置引数ではない。除いてから
+        # 末尾を取らないと、フラグ後置形で宛先を取り違える。
+        positional = strip_value_tokens(word, args)
+        if not flag_dests and positional:
+            targets = targets + [positional[-1]]
     elif word in INPLACE_WRITERS or (
         word == "sed"
         and any(a.startswith("-i") or a.startswith("--in-place") for a in args)
