@@ -470,11 +470,11 @@ workflow:
     status: completed
     completed_at_commit: 5a3da51685d2def3adba2bea53ec062f4e10a89b
   - id: implement
-    status: completed
+    status: pending
     base_commit: ca414bc26fa2e0aab433190409b5a83aab9cc6b6
     completed_at_commit: 12f1598b4610b8ce3c9de233b8b473e056bcc2b1
   - id: review
-    status: in_progress
+    status: pending
   - id: verify
     status: pending
     result: null
@@ -511,6 +511,38 @@ tasks:
     branch: em-workflow/destructive-guard-write-target-scoping/task0002
     notes: null
 
+  task0003:
+    title: "write-target set completeness (move sources, flag-borne destinations, redirect provenance)"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      - em-workflow/hooks/tests/run-destructive-guard.py
+    skills:
+      - backend-impl
+    domains:
+      - input-handling
+      - config-infra
+    complexity: high
+    requirements:
+      - FR2
+      - FR3
+      - FR5
+      - NFR3
+      - NFR4
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+        - f11305d4611accd7
+        - 4eb3d5ac5355b1e5
+        - 2a1195baa7a2e0d1
+        - 3e3993733fd77a92
+        - 66fb7959516d7243
+      review_round: 1
+
 review:
   status: pending
   rounds_completed: 1
@@ -519,10 +551,10 @@ review:
     discretionary: []
     cross_validation: true
   perspectives:
-    comprehensive: {claude: completed}
-    security: {claude: completed, codex: completed}
-    architecture: {claude: completed, litellm: completed}
-    spec: {claude: completed, litellm: completed}
+    comprehensive: completed
+    security: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 5
   needs_rework: true
 
@@ -539,14 +571,14 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1, TS-2]
   FR3:
     title: "書き込み先が存在しない場合は判定しない"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1]
   FR4:
     title: "読み取り元が ~/.claude にあるだけのコマンドは allow にする"
@@ -560,7 +592,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1]
   FR6:
     title: "rm 系の判定には手を入れない"
@@ -595,16 +627,16 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1]
   NFR4:
     title: "誤爆コストの非対称性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 0
