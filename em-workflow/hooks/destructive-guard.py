@@ -74,7 +74,11 @@ PUNCTUATION = "();<>|&\n"
 # Redirection operators, matched against a whole token. A redirect and its
 # target are not arguments to the command and must be lifted out before the
 # checks run, or `>` and `/dev/null` read as two more paths to delete.
-REDIRECT = re.compile(r"\d*(?:>>?\|?|<<?<?|>&|<&|&>>?)\d*")
+REDIRECT = re.compile(r"\d*(?:>>?\|?|<<?<?|<>|>&|<&|&>>?)\d*")
+
+# `<>` opens its target for both reading and writing (unlike `<`, `<<`,
+# `<<<`, which are read-only) and must join the write-target set.
+READWRITE_REDIRECT = re.compile(r"\d*<>\d*")
 
 # A here-document and its body, up to the line bearing the delimiter.
 HEREDOC = re.compile(
@@ -130,6 +134,26 @@ INPLACE_WRITERS = {"tee", "truncate", "shred", "install", "patch"}
 # (`--target-directory=DIR`). Its value is a destination even though it is
 # not the last positional argument.
 TARGET_DIR_FLAGS = ("-t", "--target-directory")
+
+# Flags through which a command receives its write destination instead of a
+# bare positional argument. Keys are command words; values are the flag
+# spellings (separate token or, where the command supports it, `=`-attached)
+# whose value is the destination.
+FLAG_DEST_FLAGS = {
+    "tar": ("-C", "--directory"),
+    "unzip": ("-d",),
+    "curl": ("-o", "--output"),
+    "wget": ("-O", "--output-document"),
+}
+
+# Short options of cp/ln that take a value token of their own. Their value
+# must not be mistaken for the trailing positional destination when scanning
+# non-flag arguments (`cp /tmp/foo ~/.claude/settings.json -S .bak` — `.bak`
+# is `-S`'s value, not the destination).
+VALUE_TAKING_FLAGS = {
+    "cp": ("-S", "--suffix", "-t", "--target-directory"),
+    "ln": ("-S", "--suffix"),
+}
 
 # Process-termination command words. These belong to kill-guard.py, which
 # runs as its own PreToolUse hook and reaches a deny/ask/allow decision from
@@ -534,12 +558,15 @@ def deletion_alternative(target):
     """
     path = os.path.abspath(os.path.expanduser(target))
     home = os.path.expanduser("~")
+    if any(ord(c) < 0x20 or ord(c) == 0x7F for c in path):
+        return "パスに制御文字が含まれているため、安全な代替コマンドを提示できない。手動で確認する。"
+    quoted = shlex.quote(path)
     if not gio_available():
-        return f"`mv {path} /tmp/` で退避する（gio が無いのでゴミ箱は使えない）。"
+        return f"`mv -- {quoted} /tmp/` で退避する（gio が無いのでゴミ箱は使えない）。"
     if path == home or path.startswith(home + os.sep):
-        return f"`gio trash {path}` に書き換える（復元情報が残り、ゴミ箱から戻せる）。"
+        return f"`gio trash -- {quoted}` に書き換える（復元情報が残り、ゴミ箱から戻せる）。"
     return (
-        f"`mv {path} /tmp/` で退避する"
+        f"`mv -- {quoted} /tmp/` で退避する"
         f"（$HOME の外はゴミ箱がファイルシステムをまたげないので `gio trash` は失敗する）。"
     )
 
@@ -602,20 +629,22 @@ def redirect_write_targets(redirects):
 
     REDIRECTS is split_redirects()'s flat token list: an optional leading fd
     digit, then an operator token, then its target, repeated in order. An
-    operator starting with `<` is an input form (plain redirect, here-doc,
-    here-string, fd-dup-input) and contributes nothing — that data is read,
-    not written, and must stay out of the write-target set. Every other
-    operator's target enters the result, including the bare descriptor
-    number that is the "target" of a descriptor-duplicating redirect
-    (`2>&1`); it is not a path, but neither detection pattern below will
-    match it.
+    operator starting with `<` is normally an input form (plain redirect,
+    here-doc, here-string, fd-dup-input) and contributes nothing — that data
+    is read, not written, and must stay out of the write-target set. The one
+    exception is `<>`, which opens its target for both reading and writing;
+    its target does enter the result. Every other operator's target enters
+    the result too, including the bare descriptor number that is the
+    "target" of a descriptor-duplicating redirect (`2>&1`); it is not a
+    path, but neither detection pattern below will match it.
     """
     out = []
     i = 0
     while i < len(redirects):
         t = redirects[i]
         if REDIRECT.fullmatch(t):
-            if not t.startswith("<") and i + 1 < len(redirects):
+            is_readwrite = READWRITE_REDIRECT.fullmatch(t) is not None
+            if (not t.startswith("<") or is_readwrite) and i + 1 < len(redirects):
                 out.append(redirects[i + 1])
             i += 2
         else:
@@ -625,23 +654,95 @@ def redirect_write_targets(redirects):
 
 def flag_destinations(args):
     """Return the values of target-directory flags (TARGET_DIR_FLAGS) among
-    ARGS, in either spelling: a separate token (`-t DIR`) or the attached
-    `=` form (`--target-directory=DIR`). The flag's own token never enters
-    the result — only its value does.
+    ARGS, covering every GNU getopt spelling: a separate token (`-t DIR`),
+    the value-attached short form (`-tDIR`), a short-option cluster
+    (`-rt DIR` / `-rtDIR`), the attached `=` form
+    (`--target-directory=DIR`), and unambiguous long-option abbreviations
+    (`--target-dir DIR`). The flag's own token never enters the result —
+    only its value does.
     """
     out = []
     i = 0
     while i < len(args):
         a = args[i]
-        if a in TARGET_DIR_FLAGS:
+        if a.startswith("--"):
+            name, sep, val = a.partition("=")
+            if len(name) > 2 and "--target-directory".startswith(name):
+                if sep:
+                    out.append(val)
+                    i += 1
+                    continue
+                if i + 1 < len(args):
+                    out.append(args[i + 1])
+                i += 2
+                continue
+            i += 1
+            continue
+        if a.startswith("-") and len(a) > 1 and "t" in a[1:]:
+            idx = a.index("t", 1)
+            rest = a[idx + 1 :]
+            if rest:
+                out.append(rest)
+                i += 1
+                continue
             if i + 1 < len(args):
                 out.append(args[i + 1])
             i += 2
             continue
-        if a.startswith("--target-directory="):
-            out.append(a.split("=", 1)[1])
         i += 1
     return out
+
+
+def flag_value_destinations(word, args):
+    """Return the values of WORD's flag-carried destination flags (per
+    FLAG_DEST_FLAGS) among ARGS, in either spelling: a separate token
+    (`-C DIR`) or the attached `=` form (`--directory=DIR`).
+    """
+    flags = FLAG_DEST_FLAGS.get(word)
+    if not flags:
+        return []
+    out = []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a in flags:
+            if i + 1 < len(args):
+                out.append(args[i + 1])
+            i += 2
+            continue
+        matched = False
+        for f in flags:
+            if f.startswith("--") and a.startswith(f + "="):
+                out.append(a.split("=", 1)[1])
+                matched = True
+                break
+        i += 1
+    return out
+
+
+def strip_value_tokens(word, args, non_flags):
+    """Remove, from NON_FLAGS, any token that is actually the value of one
+    of WORD's VALUE_TAKING_FLAGS rather than a positional argument — so the
+    last remaining entry is the real destination for `cp`/`ln`.
+    """
+    value_flags = VALUE_TAKING_FLAGS.get(word)
+    if not value_flags:
+        return non_flags
+    # Walk ARGS in order (not non_flags) so the token immediately following
+    # a value-taking flag is dropped by position, even if its text does not
+    # start with `-`.
+    result = []
+    consumed_next = False
+    for a in args:
+        if consumed_next:
+            consumed_next = False
+            continue
+        if a in value_flags:
+            consumed_next = True
+            continue
+        if not a.startswith("-"):
+            result.append(a)
+    return result
 
 
 def write_targets(word, args, redirects):
@@ -664,6 +765,15 @@ def write_targets(word, args, redirects):
     - for `cp`/`mv`/`ln`/`install`, the value of a target-directory flag
       (`-t DIR` / `--target-directory=DIR`), additive to the positional
       destination above, never a replacement for it
+    - the last non-flag argument for `rsync` and `git` (covers `git clone
+      URL DEST`)
+    - the value of a command-specific destination flag (`tar -C`/`--directory`,
+      `unzip -d`, `curl -o`/`--output`, `wget -O`/`--output-document`)
+
+    Before taking the last non-flag argument as the destination for `cp`/
+    `ln`, value-taking short options of theirs (`-S`/`--suffix`, `-t`/
+    `--target-directory`) have their value token removed from the
+    candidate list, so that value is never mistaken for the destination.
 
     A member need not be a path — a bare descriptor number or `/dev/null`
     passes through untouched; only the two detection patterns decide
@@ -672,18 +782,54 @@ def write_targets(word, args, redirects):
     targets = redirect_write_targets(redirects)
     non_flags = [a for a in args if not a.startswith("-")]
 
-    if word in INPLACE_WRITERS or (word == "sed" and any(a.startswith("-i") for a in args)):
+    if word in INPLACE_WRITERS or (
+        word == "sed"
+        and any(a.startswith("-i") or a.startswith("--in-place") for a in args)
+    ):
         targets = targets + non_flags
     elif word in ("cp", "ln"):
-        if non_flags:
-            targets = targets + [non_flags[-1]]
+        positional = strip_value_tokens(word, args, non_flags)
+        if positional:
+            targets = targets + [positional[-1]]
     elif word in ("mv", "rm", "chmod", "chown"):
         targets = targets + non_flags
+    elif word in ("rsync", "git"):
+        if non_flags:
+            targets = targets + [non_flags[-1]]
 
     if word in ("cp", "mv", "ln", "install"):
         targets = targets + flag_destinations(args)
 
+    targets = targets + flag_value_destinations(word, args)
+
     return targets
+
+
+HOME_VAR = re.compile(r"^(?:\$\{HOME\}|\$HOME)")
+DYNAMIC_CHARS = re.compile(r"[$`]")
+
+
+def normalize_candidate(target):
+    """Expand deterministic home forms and lexically normalize TARGET.
+
+    Only static, filesystem-free transformations: `~`, `$HOME`, and
+    `${HOME}` are replaced with the real HOME (known at hook-start, not
+    resolved via the filesystem), then the result is run through
+    os.path.normpath to collapse `..`/`.`/duplicate slashes lexically —
+    no os.path.realpath, no stat, no subprocess.
+
+    If TARGET still contains an unresolved `$` or a backtick after this
+    expansion (an unrecognized variable or a live command substitution),
+    the caller must not treat a non-match as safe: such a target's real
+    destination cannot be determined statically.
+    """
+    home = os.path.expanduser("~")
+    expanded = target
+    if expanded == "~" or expanded.startswith("~/"):
+        expanded = home + expanded[1:]
+    elif HOME_VAR.match(expanded):
+        expanded = HOME_VAR.sub(home, expanded, count=1)
+    return os.path.normpath(expanded)
 
 
 def check_self_modification(word, args, redirects, segment, lexed):
@@ -701,23 +847,38 @@ def check_self_modification(word, args, redirects, segment, lexed):
     unavailable, so the assembled target set cannot be trusted — falls back
     to matching the two patterns against the whole segment text instead,
     the behaviour this judgment had before the write-target set existed.
+
+    Each candidate is also checked in its normalized form (`~`/`$HOME`/
+    `${HOME}` expanded, `..` segments collapsed lexically) so equivalent
+    spellings of a protected path are not missed. A candidate that still
+    carries an unresolved `$`/backtick after that expansion is a dynamic
+    write target whose real destination cannot be determined statically;
+    such a candidate is asked about rather than silently allowed.
     """
     candidates = write_targets(word, args, redirects) if lexed else [segment]
     for target in candidates:
-        if SELF_CONFIG.search(target):
+        normalized = normalize_candidate(target)
+        if SELF_CONFIG.search(target) or SELF_CONFIG.search(normalized):
             decide(
                 "ask",
                 "self-modification",
                 "Claude Code 自身の設定（settings / hooks / rules / agents / skills）への書き込み。"
                 "権限やガードの挙動が変わるので、ユーザーの意図を確認する。",
             )
-        if TRANSCRIPT.search(target):
+        if TRANSCRIPT.search(target) or TRANSCRIPT.search(normalized):
             decide(
                 "deny",
                 "transcript-write",
                 "セッション transcript（~/.claude/projects/**/*.jsonl）への書き込み。"
                 "これはハーネスが管理する状態で、書き換えると以降の判定すべてに影響する。"
                 "読み取りは通常運用なので制限しない。",
+            )
+        if DYNAMIC_CHARS.search(normalized) and lexed:
+            decide(
+                "ask",
+                "dynamic-write-target",
+                "書き込み先に未解決の変数展開/コマンド置換が残っている。"
+                "静的解析では実際の書き込み先を確定できない。",
             )
 
 
