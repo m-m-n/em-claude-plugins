@@ -14,8 +14,10 @@ Covers task0002 Acceptance Criteria
   `## 15. 参考資料` is present with its number and title unchanged and in
   unchanged relative order.
 - AC-3 (FR3, FR4): the new subsection contains both root literals, names
-  every feature-docs member and the test-docs member, and includes a
-  placeholder slot for the author's own paths.
+  every feature-docs member and the test-docs member, and (as of task0009,
+  goal-vs-spec-divergence) states the create-plan derivation for the
+  feature-specific paths instead of a placeholder slot for the author to
+  hand-enumerate them.
 - AC-4 (FR4, FR5, NFR2): the new subsection cites `implement-phase.md` and
   the phase documents / `references/phase-state.md` without restating their
   rules, and states the default-unless-removed rule, the superset /
@@ -45,8 +47,10 @@ Matcher -> negative-proof inventory (every NEW matcher this module adds):
   TestValidationDetectsRegressions.test_feature_docs_members_matcher_flags_absence_in_pre_change_section
 - TestEnumerationAndCitation.test_test_docs_member_named_with_path_form ->
   TestValidationDetectsRegressions.test_test_docs_member_matcher_flags_absence_in_pre_change_section
-- TestEnumerationAndCitation.test_placeholder_slot_present ->
-  TestValidationDetectsRegressions.test_placeholder_matcher_flags_absence_in_pre_change_section
+- TestDerivationStatementPresent.test_derivation_statement_present
+  (task0009, goal-vs-spec-divergence; replaces the removed
+  test_placeholder_slot_present) ->
+  TestValidationDetectsRegressions.test_derivation_statement_matcher_flags_absence_in_pre_change_section
 - TestEnumerationAndCitation.test_cites_implement_phase_and_phase_state ->
   TestValidationDetectsRegressions.test_citation_matcher_flags_absence_in_pre_change_section
 - TestSemantics.* (DM-5, DM-6, DM-7) ->
@@ -120,9 +124,17 @@ CITATION_IMPLEMENT_PHASE = "implement-phase.md"
 CITATION_PHASE_STATE = "references/phase-state.md"
 CITATION_PHASE_DOCUMENTS_PHRASE = "各フェーズドキュメント"
 
-# DM-8: placeholder slot for the author's own paths, in the template's
-# existing `{...}` placeholder convention.
-PLACEHOLDER_PATTERN = re.compile(r"\{変更対象パス\d*\}")
+# DM-8 (task0009, goal-vs-spec-divergence): the create-plan derivation
+# statement that replaces the removed author-enumeration placeholder.
+DERIVATION_STATEMENT_PHRASE = (
+    "このフィーチャー固有のパスは手動で列挙せず、create-plan で "
+    "`workflow.yaml` の各タスクの `files` から導出する"
+)
+CREATE_PLAN_PHASE_CITATION = "`references/phases/create-plan-phase.md`"
+
+# Regression guard (AC-3): the removed placeholder pattern must not
+# reappear.
+REMOVED_PLACEHOLDER_PATTERN = re.compile(r"\{変更対象パス\d*\}")
 
 # DM-5: default-unless-removed.
 DEFAULT_UNLESS_REMOVED_PHRASE = "明示的に除外しない限り"
@@ -272,9 +284,8 @@ class TestRootLiterals(unittest.TestCase):
 
 class TestEnumerationAndCitation(unittest.TestCase):
     """TS-6 (requirements half) / AC-3, AC-4: the sliced subsection names
-    every DM-2 member and the DM-3 member, includes a DM-8 placeholder
-    slot, and cites `implement-phase.md` and the phase documents /
-    `references/phase-state.md` (DM-4)."""
+    every DM-2 member and the DM-3 member, and cites `implement-phase.md`
+    and the phase documents / `references/phase-state.md` (DM-4)."""
 
     @classmethod
     def setUpClass(cls):
@@ -288,13 +299,31 @@ class TestEnumerationAndCitation(unittest.TestCase):
         self.assertIn(TEST_DOCS_MEMBER, self.slice)
         self.assertIn(TEST_DOCS_PATH_FORM, self.slice)
 
-    def test_placeholder_slot_present(self):
-        self.assertIsNotNone(PLACEHOLDER_PATTERN.search(self.slice))
-
     def test_cites_implement_phase_and_phase_state(self):
         self.assertIn(CITATION_IMPLEMENT_PHASE, self.slice)
         self.assertIn(CITATION_PHASE_STATE, self.slice)
         self.assertIn(CITATION_PHASE_DOCUMENTS_PHRASE, self.slice)
+
+
+class TestDerivationStatementPresent(unittest.TestCase):
+    """DM-8 (task0009, goal-vs-spec-divergence) / AC-3: the subsection
+    states the create-plan derivation for the feature-specific paths,
+    citing `references/phases/create-plan-phase.md`, instead of asking the
+    author to hand-enumerate them via the removed `{変更対象パスN}`
+    placeholder."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.slice = _normalize_ws(_subsection_94_slice(_read()))
+
+    def test_derivation_statement_present(self):
+        self.assertIn(DERIVATION_STATEMENT_PHRASE, self.slice)
+
+    def test_create_plan_phase_cited(self):
+        self.assertIn(CREATE_PLAN_PHASE_CITATION, self.slice)
+
+    def test_author_enumeration_placeholder_removed(self):
+        self.assertIsNone(REMOVED_PLACEHOLDER_PATTERN.search(self.slice))
 
 
 class TestSemantics(unittest.TestCase):
@@ -370,9 +399,12 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         self.assertNotIn(TEST_DOCS_MEMBER, sample)
         self.assertNotIn(TEST_DOCS_PATH_FORM, sample)
 
-    def test_placeholder_matcher_flags_absence_in_pre_change_section(self):
+    def test_derivation_statement_matcher_flags_absence_in_pre_change_section(
+        self,
+    ):
         sample = _normalize_ws(PRE_CHANGE_SECTION_9_SAMPLE)
-        self.assertIsNone(PLACEHOLDER_PATTERN.search(sample))
+        self.assertNotIn(DERIVATION_STATEMENT_PHRASE, sample)
+        self.assertNotIn(CREATE_PLAN_PHASE_CITATION, sample)
 
     def test_citation_matcher_flags_absence_in_pre_change_section(self):
         sample = _normalize_ws(PRE_CHANGE_SECTION_9_SAMPLE)

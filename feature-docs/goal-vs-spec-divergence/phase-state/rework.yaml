@@ -1,0 +1,139 @@
+schema_version: 1
+feature: goal-vs-spec-divergence
+phase: rework
+status: completed
+generation: 4
+base_revision: 08a86cbb21e94dd842d8073ab440b575f698cff7
+last_input_digest: sha256:03bc82fa41594191ca908593d70913a9e391acc9205e02b1e571f6b123d81d7d
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: rework-run-0001
+  status: completed
+  input_digest: sha256:677ed80b98c8a4c48a26745587180bcedcc05e37c9ed0970e9dfa37f4b4e14d7
+  output_digest: null
+- request_id: rework-run-0002
+  status: completed
+  input_digest: null
+  output_digest: null
+- request_id: rework-run-0004
+  status: completed
+  input_digest: sha256:03bc82fa41594191ca908593d70913a9e391acc9205e02b1e571f6b123d81d7d
+  output_digest: sha256:f65fd9d0454c3cb634d4fba9bb3492a53fba1d76ff71c634e67a68a3d7901ff9
+- request_id: rework-run-0003
+  status: completed
+  input_digest: sha256:c25861f787e0c79c4944eb428ef1998a25607ec2e88cc32583aa37e589af3656
+  output_digest: sha256:b3714c494e8ca58c9dcdbdefcdf68c647d9727e3522d805a950ff105ffe57cb1
+artifacts:
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0022.md
+  sha256: sha256:c562543c4fc95db1311930e8324e701facba1648eb28e389c2c127d2bab71066
+  produced_by: rework-run-0003
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0023.md
+  sha256: sha256:ab7ec14d63d1d5a66c1f5c23a055cb51e366760e794c7e128fd37b10df087dd4
+  produced_by: rework-run-0003
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0024.md
+  sha256: sha256:ae8ef02598c2a00faae36b6a2e27723b2c29bb28633ae26634d157523378fa61
+  produced_by: rework-run-0003
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0025.md
+  sha256: sha256:f67f818e22e5c098870c50fcde45986ae3ae4a74b05e76e90dc0bea134a63574
+  produced_by: rework-run-0003
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0026.md
+  sha256: sha256:a995159c85df9e9c5aa21f1c7485813ab4ced904eb4d1c56e5e08ec8aa34664e
+  produced_by: rework-run-0003
+- path: feature-docs/goal-vs-spec-divergence/VERIFICATION.md
+  sha256: sha256:ad80c620979b544815a67c64f3403e4c132ee4064a518c46fc4a6d05fdbf1fa7
+  produced_by: rework-run-0003
+- path: feature-docs/goal-vs-spec-divergence/IMPLEMENTATION.md
+  sha256: sha256:5558e5644b11307e818a82ef84eb3c606d86e6a8e1c50716db013b22bffb19d9
+  produced_by: rework-run-0003
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0027.md
+  sha256: sha256:c4cc4369340e2931bd3b9fd0f3049dbafdd510f2b5e1d53b3011f620ce426ef6
+  produced_by: rework-run-0004
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0028.md
+  sha256: sha256:97274b6889cefe29985a19f43642cf96e473824dbeda4fb539362bac41831628
+  produced_by: rework-run-0004
+- path: feature-docs/goal-vs-spec-divergence/tasks/task0029.md
+  sha256: sha256:cce0dd74acc0d88922f077ca377d49890004ab3951bcfcbd220ffacd420edd99
+  produced_by: rework-run-0004
+- path: feature-docs/goal-vs-spec-divergence/VERIFICATION.md
+  sha256: sha256:b5bfb477051755ab37c97cb90818eb67bfac1535adaf23482a293aaaeb9180d4
+  produced_by: rework-run-0004
+- path: feature-docs/goal-vs-spec-divergence/IMPLEMENTATION.md
+  sha256: sha256:5e1db06c796aebdb73500d892d624a9af1e566a09def711078668e6bb8327ea7
+  produced_by: rework-run-0004
+patches:
+- patch_id: rework-run-0004-p0001
+  status: applied
+  base_input_digest: sha256:03bc82fa41594191ca908593d70913a9e391acc9205e02b1e571f6b123d81d7d
+  base_workflow_blob: 7f95c14e2588ba489866b48d94a4c624b260a996
+- patch_id: rework-run-0003-p0001
+  status: applied
+  base_input_digest: sha256:c25861f787e0c79c4944eb428ef1998a25607ec2e88cc32583aa37e589af3656
+  base_workflow_blob: 2b4ec3bf6e25a4f8b9146274c68595e5363b9aab
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+deviation_from_transition:
+  reason: レビュー round 1 の後、SPEC.md / REQUIREMENTS.md の宣言された変更集合に `em-workflow/scripts/**` を追加した。FR4 が replace_all
+    許可条件の緩和を、 FR6 が SPEC 変更遷移の成立を要求する一方、validate-worker-output.py は create-plan の status に関係なく replace_all
+    を拒否するため、これに触れずに FR4・FR6 を満たす実装は存在しない。既存要件からの論理的帰結であり要件変更ではない。
+  decided_by: user
+  decided_at: '2026-08-23T23:35:00+09:00'
+  documents_edited:
+  - feature-docs/goal-vs-spec-divergence/SPEC.md
+  - feature-docs/goal-vs-spec-divergence/REQUIREMENTS.md
+  edit_scope: 宣言された変更集合のパス一覧に 1 エントリ追加し、追加理由を各 1 段落添えたのみ。 要件・受け入れ条件・assumption のメタデータは未変更。
+  note: 正規の経路である rework の spec-change 遷移は、この feature が直そうとしている 欠陥 1（実装完了後は create-plan 再入場が protocol error
+    で必ず弾かれる）に 自分で当たるため使えなかった。オーケストレーターが直接編集した。
+pending_decisions:
+- id: ac11-stale-guard
+  decided_by: user
+  decided_at: '2026-08-24T00:35:00+09:00'
+  decision: tests/test_guardrail_hooks_migration.py の 3 件の失敗は、ルート CLAUDE.md が .claude/rules/ を参照しルール名を列挙することを期待する古いピン。現行の
+    CLAUDE.md はプロダクト価値のみを記載する方針に沿っており、古いのはテストの側。 期待値を現行のルール名（core- 接頭辞付き）と現行方針に合わせて書き直す。 ガードは削除しない。
+  scope: tests/test_guardrail_hooks_migration.py
+  reason: AC-11（python3 -m unittest discover -s tests のフルスイート合格）が未達のため
+  carried_into: review round 2 の rework バッチ
+- id: consumed-flag-split
+  decided_by: user
+  decided_at: '2026-08-24T05:10:00+09:00'
+  decision: 再計画許可の再入シグナルは、案 (b)「spec_change のフラグを 2 つに分離する」で直す。consumed は停止条件抑止用として残し、再計画 replace_all
+    の許可は別の未消費フラグで判定する。そのフラグは spec-change 遷移が記録時に立て、再計画 replace_all の適用完了時に消費する。
+  rejected:
+  - '(a) 消費点の後ろ倒し: 1 フラグ 2 役の構造を残す対症療法'
+  - '(c) 遷移で create-plan を needs_update: SPEC FR6 の変更を伴う'
+  scope:
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/skills/develop/SKILL.md
+  carried_into: review round 4 の rework バッチ
+  consumed_by: task0022
+protocol_slips:
+- id: write-policy-targets-shape
+  at: '2026-08-24T08:50:00+09:00'
+  what: rework-run-0003 の dispatch envelope で write_policy.targets をマップ形式で組み立てたが、validate-worker-output.py
+    は path キーを持つオブジェクトの配列を期待する。worker-result の検証が例外で落ち、検証用に list 形式へ整形し直したコピーで通した
+  rule_violated: worker-envelope.md / spec-writer-contract.md の write_policy 構造（targets は配列）
+  impact: なし。input_digest は dispatch 時と echo 時で同一のマップ形式に対して計算されており staleness 検出は成立している。write_policy
+    の検査項目（written_artifacts が targets と allowed_write_roots に収まること）は整形済みコピーで実施し合格した
+  lesson: envelope 構築時に validate-worker-output.py の期待する構造を先に確認する。orchestrator 側にも dispatch
+    前の envelope 検証が要る
+- id: orchestrator-commit-during-dispatch
+  at: '2026-08-24T02:40:00+09:00'
+  what: rework-run-0002 の dispatch 中に、オーケストレーターが glm-5 再実行の反映コミット (24721f1) を integration worktree に打った。まだ書き込み途中だった
+    tasks/task0017.md と tasks/task0018.md がそのコミットに巻き込まれた
+  rule_violated: worker-envelope.md / create-spec-phase.md の exclusivity assumption（worker の dispatch
+    中は orchestrator も worktree のファイルに触れない）
+  impact: なし。巻き込まれた 2 ファイルは planner 自身が written_artifacts に宣言した成果物で、5 本すべて正しく存在しコミット済み。scope verification
+    が 3 ファイルしか観測できなかったため、検査としては空振りした
+  lesson: レビュー結果の記録更新など orchestrator 側の書き込みも、worker の dispatch 窓の外で行う必要がある
+next_action:
+  phase: implement
+  what: task0027〜task0029 の 3 本を実装する。verify 由来の rework バッチ（V-1〜V-6）
+  next_task_id: task0030
+  note: 'batch.review_rework_count と batch.verify_rework_count がどちらも 1（上限）に達している。implement
+    完了後は verify に進み、そこで再度 fail した場合は failed のまま停止して報告する（自動 rework は残っていない）。review
+    は completed のままで、再レビューは行わない。'

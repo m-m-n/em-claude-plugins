@@ -1,0 +1,12 @@
+{
+  "phase": "rework",
+  "feature": "example",
+  "spec_change": {
+    "consumed": false,
+    "reason": "SPEC changed after implementation to add a missed requirement",
+    "origin_kind": "review",
+    "origin_id": "abc123",
+    "recorded_at_commit": "deadbeef",
+    "replan_authorized": true
+  }
+}

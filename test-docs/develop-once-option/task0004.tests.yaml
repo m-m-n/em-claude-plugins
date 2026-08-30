@@ -1,0 +1,54 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_plugin_version_parity.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: >-
+      Before the manifest edits, both version fields still read 0.1.50 (the
+      baseline). test_version_is_past_baseline and
+      test_em_workflow_entry_version_is_past_baseline failed with
+      "AssertionError: (0, 1, 50) not greater than (0, 1, 50)"; the
+      cross-registry equality test passed both before and after (both
+      registries always agreed at 0.1.50), so it does not independently
+      prove AC-1 in isolation -- the past-baseline assertions do.
+  AC-2:
+    tests:
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_plugin_version_parity.TestVersionComparisonIsDotSeparatedNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
+      - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_fails_when_versions_differ
+      - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
+      - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_fails_when_version_below_baseline
+      - tests.test_plugin_version_parity.TestValidationDetectsRegressions.test_entry_lookup_fails_on_a_missing_entry_name
+      - tests.test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+    red_confirmed: true
+    red_reason: >-
+      The module did not exist before this task; running it against the
+      pre-edit worktree failed collection-independent assertions
+      immediately (import succeeded, but the two past-baseline checks under
+      AC-1 failed as noted above, proving the module actually exercises the
+      real files rather than vacuously passing). The
+      TestValidationDetectsRegressions and non-vacuity cases assert the
+      helper functions' failure modes directly (assertRaises), which is
+      true regardless of manifest state and was confirmed passing on first
+      write; they exist to prove the AC-1 assertions would have caught a
+      version mismatch or an at-or-below-baseline value, not to be red
+      themselves.
+  AC-3:
+    tests: []
+    red_reason: >-
+      Verified by direct execution, not a test within this module (a suite
+      cannot assert its own full-suite outcome without recursion, and the
+      invariants checker has no version-parity check to add regression
+      coverage for -- confirmed absent by grep before writing this task's
+      test). `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      exits 0 (all 7 checks PASS). `python3 -m unittest discover -s tests`
+      exits 0: 2425 tests (2410 baseline + 15 new in
+      test_plugin_version_parity.py), no failures. The new module's only
+      non-stdlib-import concern is enforced by
+      TestOwnModuleStdlibOnly.test_only_standard_library_imports, which was
+      green from first write (an import-shape check, not a behavior red).

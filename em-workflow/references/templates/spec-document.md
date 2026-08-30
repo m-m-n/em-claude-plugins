@@ -172,7 +172,10 @@ internal/
 
 ## Declared Change Set
 
-{Enumerate every file and directory this feature creates or modifies.}
+This section states the create-plan derivation instead of a hand-authored
+list: the feature-specific paths above are derived at create-plan from
+every task's `files` entries in `workflow.yaml`
+(`references/phases/create-plan-phase.md`).
 
 Every SPEC declares, by default, the following two workflow-generated
 entries in addition to the feature-specific paths above:

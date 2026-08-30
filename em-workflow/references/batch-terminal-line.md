@@ -27,10 +27,11 @@ wrapped.
 
 The same prefix and the same four fields are used whether the run
 completed normally or stopped (`state=completed` or `state=stopped`);
-there is no second shape to account for. Emitting the line requires no
-external tool: it is a single line of text appended to the final assistant
-message. The line is emitted only in a batch-mode run — an interactive run
-emits nothing.
+there is no second shape to account for. A `--once` phase-boundary line
+(`state=phase_done`) uses that same prefix, the same four fields and the
+same field order. Emitting the line requires no external tool: it is a
+single line of text appended to the final assistant message. The line is
+emitted only in a batch-mode run — an interactive run emits nothing.
 
 `detail`'s value is normalized before it is written into the line: every
 CR, LF and TAB character in it is replaced with a single space, runs of
@@ -55,18 +56,37 @@ EM_WORKFLOW_TERMINAL: state=completed step=retrospect reason=none detail=feature
 
 ## Field values
 
-- `state` — closed set of two values: `completed`, `stopped`.
-- `step` — a `workflow.yaml` step id (`create-spec`, `design`,
-  `create-plan`, `implement`, `review`, `verify`, `retrospect`), or the
-  single sentinel `no-step`. `no-step` applies whenever no `workflow.yaml`
-  step is in effect at the stop point: `stop-condition-6` (Step 0's
-  git-setup abort), `step-a-abort` (Step A's feature-resolution failure),
-  and `step-c-abort` (Step C's abort — every workflow step has already
+- `state` — the run's terminal outcome: `completed`, `stopped`, or
+  `phase_done`. `phase_done` marks a `--once`-flagged launch that ended
+  its turn at a single phase boundary; the line carries `reason=none` and
+  a non-empty, single-line `detail`, using the same prefix, the same four
+  fields and the same field order as every other terminal line. A
+  consumer that sees `state=phase_done` re-launches the same feature to
+  continue it.
+- `step` — a closed value domain: one of the seven `workflow.yaml`
+  step ids (`create-spec`, `design`, `create-plan`, `implement`,
+  `review`, `verify`, `retrospect`), or the single sentinel `no-step`.
+  The general rule: `step` names the step EXECUTED in that turn,
+  never the step the next launch resumes at; at the verify-fail
+  rework boundary the value is `verify`, even though the next launch
+  resumes at `implement`. Two rules take precedence over the general
+  rule: the single sentinel `no-step`, and the `state=completed` rule.
+  `no-step` applies whenever no `workflow.yaml` step is in effect at
+  the stop point: `stop-condition-6` (Step 0's git-setup abort),
+  `step-a-abort` (Step A's feature-resolution failure), and
+  `step-c-abort` (Step C's abort — every workflow step has already
   completed by then, and the stop happens outside any of them). On
-  `state=completed` the value is always `retrospect` — the final workflow
-  step, which a completed run has always reached.
+  `state=completed` the value is always `retrospect` — the final
+  workflow step, which a completed run has always reached. Because
+  Step C is not a `workflow.yaml` step, a turn that executes Step C
+  takes its value from whichever precedence rule applies rather than
+  from the general rule: normal completion is `retrospect` (the
+  `state=completed` rule), while `step-c-abort` is `no-step` (the
+  sentinel rule) — this asymmetry is intentional, not an omission.
 - `reason` — one of the eleven stop reason codes listed below, or the
-  reserved value `none` (used only when `state=completed`).
+  reserved value `none`. `none` is reserved for the non-stop terminal
+  states, currently `state=completed` and `state=phase_done`; it is never
+  used with `state=stopped`.
 - `detail` — a single line, human-facing, non-empty description. It
   carries no confidential information beyond paths.
 
@@ -88,10 +108,11 @@ Closed set of eleven stop reason codes:
 | `feature_resolution_aborted` | Step A's feature-resolution failed and the batch run aborted | `stopped` |
 | `docs_commit_conflict_aborted` | A phase aborted after a second consecutive `commit-docs.sh` exit 4 | `stopped` |
 
-The value `none` is reserved for `state=completed`; it is not itself a
-stop reason code and is never used together with `state=stopped`. Every
-stop line also carries a `step` field alongside `reason`, and always
-carries a `detail` field.
+The value `none` is reserved for the non-stop terminal states, currently
+`state=completed` and `state=phase_done`; it is not itself a stop reason
+code and is never used together with `state=stopped`. Every stop line
+also carries a `step` field alongside `reason`, and always carries a
+`detail` field.
 
 ## Stop point coverage
 
@@ -125,15 +146,16 @@ states that no phase-specific row covers.
 
 ## No line on a wait turn
 
-A turn that has not reached either of the contract's two terminal states
-(`state=completed` or `state=stopped`) emits no terminal line. Develop's
-stop condition 5 (waiting for an implementer notification) is one instance:
+A turn that has not reached any of the contract's terminal states emits no
+terminal line. Develop's stop condition 5 (waiting for an implementer
+notification) is one instance:
 that wait is in-flight, not a stop, and the run resumes when the
 notification arrives — a terminal line at that point would be misread as a
 stop by a consumer parsing the output. Implement's launch turn and wake
 turn (`references/implement-phase.md`) are further instances: both end the
 turn mid-run, without the batch run itself having reached a terminal
-state.
+state. What such a turn emits instead is owned by
+`references/batch-mode.md`, not by this document.
 
 ## Responsibility boundary
 

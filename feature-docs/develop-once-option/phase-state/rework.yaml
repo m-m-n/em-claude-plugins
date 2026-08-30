@@ -1,0 +1,56 @@
+schema_version: 1
+feature: develop-once-option
+phase: rework
+status: completed
+generation: 2
+base_revision: 804482df354afd620e1f0ee13d054fdc671957c9
+last_input_digest: sha256:26101a0d65a424bab0c605c24dfd68b5b7ba713a20f9e76dc65cee292283974b
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: rework-run-0001
+    status: completed
+    note: review-sourced (round 1)
+  - request_id: rework-run-0002
+    status: completed
+    input_digest: sha256:26101a0d65a424bab0c605c24dfd68b5b7ba713a20f9e76dc65cee292283974b
+    output_digest: null
+    input_digest: sha256:894419cb13fcdf5f5e7b3848381e97c1fd543c71fdc875cb46dd4ed4cb8bf1db
+    output_digest: null
+artifacts:
+  - path: feature-docs/develop-once-option/tasks/task0005.md
+    sha256: sha256:a65a38ad21bd4d6f220b6fa0294b56e6048e1e04ee7b8c6ac51999a37b73e881
+    produced_by: rework-run-0001
+  - path: feature-docs/develop-once-option/tasks/task0006.md
+    sha256: sha256:fc01d6ce47b7c9a142d26b67f6a7c0dc32f144595c2463f44e19f6550664557d
+    produced_by: rework-run-0001
+  - path: feature-docs/develop-once-option/VERIFICATION.md
+    sha256: sha256:e36c9046a507406976622c529d4ee89f9fe9371e9879f5167d79514583512590
+    produced_by: rework-run-0001
+  - path: feature-docs/develop-once-option/IMPLEMENTATION.md
+    sha256: sha256:e649fa3864220ad496c086cd05f55e63673d19299a740cbec7886b6334e1a99f
+    produced_by: rework-run-0001
+patches:
+  - patch_id: develop-once-option-rework2-p0002
+    status: applied
+    base_input_digest: sha256:26101a0d65a424bab0c605c24dfd68b5b7ba713a20f9e76dc65cee292283974b
+    base_workflow_blob: e87834f1da0554cfba3701754f3c7b416b334ab6
+    note: >-
+      verify-sourced rework (failed item SC4). 適用と同じ write で、
+      orchestrator が過去に持ち込んだ workflow.yaml の implement step の
+      completed_at_commit 重複キーも修復した（正しい値 7037cfc… を残し、
+      初回 implement 完了時の古い値を削除）。
+  - patch_id: develop-once-option-rw0001
+    status: applied
+    base_input_digest: sha256:894419cb13fcdf5f5e7b3848381e97c1fd543c71fdc875cb46dd4ed4cb8bf1db
+    base_workflow_blob: f01b4f12094be5600bb92ff043b0b3e89ebe18f4
+    note: >-
+      rework-planner emitted patch_id `develop-once-option-p0001`, which the
+      create-plan phase-state already uses. Recorded here under a
+      feature-unique id to keep the ID uniqueness invariant
+      (references/phase-state.md). Patch content unchanged.
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

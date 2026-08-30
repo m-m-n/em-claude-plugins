@@ -1,0 +1,55 @@
+task_id: task0027
+baseline_failures: []          # python3 -m unittest discover -s tests: 2125 tests, 0 failures (step 4a, pre-implementation)
+final_failures: []             # same command after implementation: 2152 tests (2125 + 27 new), 0 failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_replanning_producer_alignment.TestNoRestatedApplicationRuleCount.test_create_plan_phase_states_no_rule_count
+      - tests.test_replanning_producer_alignment.TestNoRestatedApplicationRuleCount.test_planner_contract_states_no_rule_count
+      - tests.test_replanning_producer_alignment.TestNoRestatedApplicationRuleCount.test_planner_contract_completed_payload_found_non_vacuous
+      - tests.test_replanning_producer_alignment.TestNoRestatedApplicationRuleCount.test_matcher_fires_on_synthetic_spelled_out_count
+      - tests.test_replanning_producer_alignment.TestNoRestatedApplicationRuleCount.test_matcher_fires_on_synthetic_numeral_count
+      - tests.test_replanning_producer_alignment.TestNoRestatedApplicationRuleCount.test_matcher_does_not_fire_on_an_unrelated_numbered_rule_reference
+    red_confirmed: true
+    red_reason: "Against the pre-implementation doc text, test_create_plan_phase_states_no_rule_count and test_planner_contract_states_no_rule_count both failed with 'Regex matched: sixteen application rules' (RULE_COUNT_RE fired on the restated count in both consumer docs). test_planner_contract_completed_payload_found_non_vacuous failed with AssertionError: 'application rules are owned by' not found (pre-edit text reads 'sixteen application rules are owned\\nby', with the count word still inline and a line-wrap the post-edit citation-only sentence removes). The two synthetic-sample tests are self-contained negative proofs of the matcher and do not depend on the docs' state."
+  AC-2:
+    tests:
+      - tests.test_replanning_producer_alignment.TestPlannerContractCarryOverField.test_states_carried_task_ids_alongside_entries
+      - tests.test_replanning_producer_alignment.TestPlannerContractCarryOverField.test_defers_to_workflow_patch_for_field_meaning
+      - tests.test_replanning_producer_alignment.TestPlannerContractCarryOverField.test_states_no_eligibility_disjointness_or_copying_rule_of_its_own
+      - tests.test_replanning_producer_alignment.TestPlannerContractCarryOverField.test_matcher_detects_a_synthetic_doc_omitting_carried_task_ids
+    red_confirmed: true
+    red_reason: "Against the pre-implementation planner-contract.md text, test_states_carried_task_ids_alongside_entries failed with AssertionError: 'carried_task_ids' not found in the `completed` payload section, and test_defers_to_workflow_patch_for_field_meaning failed the same way (no carried_task_ids sentence existed yet, so no citation to Re-planning task-id allocation existed either). test_states_no_eligibility_disjointness_or_copying_rule_of_its_own already passed pre-implementation (the doc restated nothing before this task touched it either) -- it is retained as a guard against a future restatement, not as evidence of this AC's red state; the two tests above carry that evidence. test_matcher_detects_a_synthetic_doc_omitting_carried_task_ids is a self-contained negative proof."
+  AC-3:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_two_branches_present_keyed_on_create_plan_status
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_initial_planning_branch_numbers_from_task0001
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_requires_carried_task_ids_for_registered_ids
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_requires_entries_only_unregistered_above_high_water_mark
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_states_no_body_for_carried_id
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_branches_stated_in_imperative_form
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_reachable_from_dispatch_description
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_matcher_detects_a_synthetic_single_branch_doc
+    red_confirmed: true
+    red_reason: "Against the pre-implementation implementation-planner.md text (single-branch 'For each task, in order taskNNNN (task0001, task0002, ...):'), test_two_branches_present_keyed_on_create_plan_status failed with AssertionError: '**Initial planning**' not found. test_initial_planning_branch_numbers_from_task0001, test_re_planning_branch_requires_carried_task_ids_for_registered_ids, test_re_planning_branch_requires_entries_only_unregistered_above_high_water_mark and test_re_planning_branch_states_no_body_for_carried_id all ERRORed with ValueError: substring not found ('**Re-planning**' absent), since the branch they extract from did not exist yet. test_branches_stated_in_imperative_form and test_re_planning_branch_reachable_from_dispatch_description passed pre-implementation only incidentally (the surrounding prompt text they check was already imperative / already unrestricted) and are retained as guards; the ERROR/FAIL results above are this AC's red evidence. test_matcher_detects_a_synthetic_single_branch_doc is a self-contained negative proof."
+  AC-4:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerOutputNamesCarriedTaskIds.test_output_names_carried_task_ids_emitted_on_re_planning_pass
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerOutputNamesCarriedTaskIds.test_no_surviving_instruction_to_place_every_task_in_entries
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerOutputNamesCarriedTaskIds.test_matcher_detects_a_synthetic_every_task_in_entries_instruction
+    red_confirmed: true
+    red_reason: "Against the pre-implementation implementation-planner.md text, test_output_names_carried_task_ids_emitted_on_re_planning_pass failed with AssertionError: 'carried_task_ids' not found in the ## Output section (the pre-edit sentence read 'Every `tasks_patch` entry it proposes carries only `initial_status: pending`.' with no carried_task_ids mention). test_no_surviving_instruction_to_place_every_task_in_entries already passed pre-implementation (the doc never used the literal 'every task ... entries' phrasing this AC forbids, even before the fix) and is retained as a guard against a future regression to that phrasing; test_output_names_carried_task_ids_emitted_on_re_planning_pass above is this AC's red evidence. test_matcher_detects_a_synthetic_every_task_in_entries_instruction is a self-contained negative proof of that regex."
+  AC-5:
+    tests:
+      - tests.test_replanning_producer_alignment.TestNoRestatedApplicationRuleCount.test_create_plan_phase_reading_list_entry_found_non_vacuous
+      - tests.test_replanning_producer_alignment.TestNoRestatedApplicationRuleCount.test_create_plan_phase_reading_list_cites_workflow_patch_by_path
+      - tests.test_replanning_producer_alignment.TestNoRestatedApplicationRuleCount.test_planner_contract_completed_payload_cites_workflow_patch_by_path
+      - tests.test_replanning_producer_alignment.TestPlannerContractCarryOverField.test_section_found_non_vacuous
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_section_found_non_vacuous
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerOutputNamesCarriedTaskIds.test_output_section_found_non_vacuous
+    red_confirmed: true
+    red_reason: "AC-5 is the requirement that AC-1 through AC-4 are pinned with a negative proof and a non-vacuity guard, satisfied by construction across the module (every synthetic-sample test above, plus these explicit non-vacuity guards, which all passed against both the pre- and post-implementation doc text since they assert only that a section was actually found, not on the fix itself). AC-1's own absence assertions (test_create_plan_phase_states_no_rule_count, test_planner_contract_states_no_rule_count) are the ones carrying the non-vacuity risk the Test Notes flag; their guards listed here confirm the scanned bullet/section was non-empty and correctly located in both states."
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: "Verified by the full-suite run recorded in baseline_failures/final_failures above (python3 -m unittest discover -s tests), not by a single test. No pre-existing pin over the three owned documents was deleted or relaxed: the full suite was re-run clean at both the pre-implementation baseline (2125/2125) and post-implementation state (2152/2152). One pre-existing pin in a sibling-owned module, tests.test_refitted_worker_agents.TestPlannerAC5QuestionPacketAndWorkflowPatch.test_states_workflow_patch_replaces_direct_workflow_yaml_write, pins the exact line-wrap of 'This agent never\\n   writes `workflow.yaml` itself' in implementation-planner.md; the AC-3/AC-4 edit was written to preserve that exact wrap rather than reword the pinned test, and the full-suite run confirms it still passes unchanged."

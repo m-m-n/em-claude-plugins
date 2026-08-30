@@ -74,6 +74,7 @@ by the packet's absence or by an empty `questions` array.
 | `questions[].evidence[]`.`path` | Evidence file path |
 | `questions[].evidence[]`.`line` | Evidence line number |
 | `questions[].evidence[]`.`detail` | Evidence detail text |
+| `questions[].evidence[]`.`origin_id` | The `origin_id` half of the `origin_kind` / `origin_id` pair `references/rework-task-synthesis.md`'s Invariant 6 defines (cited, not restated); `references/question-resolution.md`'s Classification gate step 3 requires at least one `evidence[]` entry carrying it for a `rework.spec-change` question |
 | `questions[]`.`depends_on` | `question_id` values this question depends on |
 | `questions[]`.`supersedes` | `question_id` values this question supersedes |
 | `questions[]`.`on_unanswered` | `block` \| `record_tbd` \| `use_batch_policy` |
@@ -137,7 +138,7 @@ resolution_note: null
 ### `source` vocabulary
 
 `user`, `batch-decision-table`, `batch-codex-consultation`,
-`batch-safe-default`.
+`batch-safe-default`, `batch-classification-gate`.
 
 ### Consistency rules
 

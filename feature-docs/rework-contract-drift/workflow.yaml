@@ -1,0 +1,511 @@
+schema_version: 1
+feature: rework-contract-drift
+created: 2026-08-24
+base_branch: em-workflow/goal-vs-spec-divergence/integration
+parent_branch: em-workflow/rework-contract-drift/integration
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python 3.14 (stdlib unittest) + Markdown SSOT documents
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 3aee0e4499daedf3e657c7ec52eb57ed9a8d26e7
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: There is no UI surface. The change surface is Markdown SSOT documents, one agent prompt,
+    one Python validator script, and stdlib unittest tests. No screen, component, style, or design token
+    is created or altered.
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 1261dbc0bdd7139fca6af9fee6ece3c3e4e8a1b5
+- id: implement
+  status: completed
+  base_commit: 718a35ae3e93946fc94c77fb717a85b04a278b5b
+  completed_at_commit: 94c1f5923108b61ee44650e2062d11d5c419e97a
+- id: review
+  status: completed
+  completed_at_commit: b12feb4d54694dde69c34f9465010d02e64e37b4
+- id: verify
+  status: completed
+  completed_at_commit: 5deac6f96beedac8e8800ce537c128d6a295cca6
+  result: pass
+  failed_items: []
+  evidence:
+    test_command: python3 -m unittest discover -s tests
+    test_result: exit 0, 2410 tests, no third-party import (stdlib unittest only)
+    build_command: none declared (no compiled deliverable)
+    format_command: none declared
+    e2e: not applicable (no E2E infrastructure, no user flow)
+    test_scenarios: TS1-TS18 all automated and green
+    success_criteria: AC1-AC10 all satisfied via their declared TS mappings
+    integration_only_checks: 5/5 - four are covered by green suite modules; the repository-wide
+      retired-identifier scan was run directly and returns nothing outside the D3 exclusion set
+      (remaining occurrences are only in this feature's own SPEC.md / REQUIREMENTS.md / workflow.yaml
+      / phase-state / round1 record and the previous feature's delivered records)
+    manual_confirmations: 3 pending human judgement - batch mode cannot perform them; listed in the run report
+    excluded_requirements: none (all 18 requirements are status ok)
+    caveat: this result covers VERIFICATION.md's declared scenarios and criteria only. Review round 2
+      left 7 high findings deferred (batch rework cap reached); they assert design-level inconsistencies
+      that the declared scenarios do not test. See reviews/round2.yaml.
+- id: retrospect
+  status: completed
+  completed_at_commit: 395e310fa38532fe7426a4c3ccea74ebbba24964
+tasks:
+  task0001:
+    title: Planner re-planning branch key and high-water mark cite their owner
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/references/contracts/planner-contract.md
+    - tests/test_replanning_producer_alignment.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR10
+    - NFR2
+    - NFR4
+    - NFR5
+    status: merged
+    notes: null
+    branch: em-workflow/rework-contract-drift/task0001
+  task0002:
+    title: 'Patch contract: authorization field pair, rule-18 recovery, ownership crossing'
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_workflow_patch_doc.py
+    - tests/test_gate_option_vocabulary.py
+    - tests/test_develop_skill_rewiring.py
+    - tests/test_spec_change_replan_authorization.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR2
+    - FR5
+    - FR11
+    - NFR2
+    - NFR4
+    - NFR5
+    status: merged
+    notes: 'deviation: tests/test_spec_change_replan_authorization.py (task0004-owned per D3) pins the
+      application-rule count sentence in workflow-patch.md; adding rule 19 required refreshing that literal
+      in the same edit (D12 precedent). Incident: git stash is shared across worktrees in this repo layout;
+      a cross-worktree stash collision was detected and fully resolved before commit (merged result verified
+      clean).'
+    branch: em-workflow/rework-contract-drift/task0002
+  task0003:
+    title: 'Required failure category: definition and verify-phase assignment'
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_failed_items_category.py
+    skills: []
+    domains:
+    - input-handling
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR3
+    - NFR1
+    - NFR2
+    - NFR5
+    status: merged
+    notes: null
+    branch: em-workflow/rework-contract-drift/task0003
+  task0004:
+    title: Origin identity rename, closed vocabularies, and the gate's category check
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/question-packet-schema.md
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/fixtures/question-packet/origin-verification/valid-verify-origin/input.json
+    - em-workflow/references/fixtures/question-packet/origin-verification/invalid-missing-origin-id/input.json
+    - tests/test_classification_gate.py
+    - tests/test_worker_contract_docs.py
+    - tests/test_rework_synthesis_contract.py
+    - tests/test_question_resolution_doc.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    - tests/test_spec_change_origin_binding.py
+    - tests/test_spec_change_replan_authorization.py
+    - tests/test_replanning_carry_over.py
+    - tests/test_worker_contracts_planning.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR6
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR7
+    status: merged
+    notes: 'deviation: tests/test_worker_contracts_planning.py (outside expected_files) used the substring
+      ''stable_id'' as a proxy check inside the Specification-change transition section; the FR4 rename
+      made it a genuine regression, fixed by swapping the check to ''origin_id''. Judgment call for review:
+      validate_question() gained one schema-level check not named in AC-6 - a gate_id ''rework.spec-change''
+      question is rejected unless some evidence[] entry carries a non-empty origin_id - needed so the
+      invalid-missing-origin-id fixture yields exit 1 under the generic fixture-corpus sweep.'
+    branch: em-workflow/rework-contract-drift/task0004
+  task0005:
+    title: 'Phase-state: format-version compatibility rule and classification replay rule'
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/references/phase-state.md
+    - tests/test_phase_state_doc.py
+    - tests/test_phase_state_schema_compatibility.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR5
+    status: merged
+    notes: 'incident: shared refs/stash collided with task0002 across worktrees; self-detected, backed
+      up via cp/git diff, restored with git checkout -- <path>, edits re-applied. No cross-worktree write
+      occurred (read-only diagnosis only). Merged result verified clean.'
+    branch: em-workflow/rework-contract-drift/task0005
+  task0006:
+    title: Plugin version bump
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_rework_contract_drift_version_bump.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - NFR5
+    - NFR6
+    status: merged
+    notes: null
+    branch: em-workflow/rework-contract-drift/task0006
+  task0007:
+    title: Initial-planning branch key cites its owner
+    plan: tasks/task0007.md
+    files:
+    - em-workflow/agents/implementation-planner.md
+    - tests/test_replanning_producer_alignment.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - NFR2
+    - NFR4
+    - NFR5
+    status: merged
+    notes: 'unconfirmed reds: AC-3''s two absence assertions already passed pre-change (the old Initial-planning
+      branch under-cited rather than over-restated), compensated with negative-proof tests that fire
+      against synthetic violating samples; AC-6 is a suite-health criterion, verified by running the
+      suite rather than by a red test.'
+    branch: em-workflow/rework-contract-drift/task0007
+  task0008:
+    title: 'Patch-apply state checks: evidence-based recovery, scoped category enforcement'
+    plan: tasks/task0008.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/fixtures/workflow-patch/append_rework/valid-append-legacy-failed-items-without-category/input.json
+    - em-workflow/references/fixtures/workflow-patch/append_rework/valid-append-legacy-failed-items-without-category/workflow.json
+    - tests/test_workflow_patch_doc.py
+    - tests/test_spec_change_replan_authorization.py
+    - tests/test_failed_items_category.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR3
+    - FR5
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR4
+    - NFR5
+    status: merged
+    notes: null
+    branch: em-workflow/rework-contract-drift/task0008
+review:
+  status: completed
+  rounds_completed: 2
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 7
+  needs_rework: false
+requirements:
+  FR1:
+    title: Re-planning branch key cites workflow-patch.md instead of restating it
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0007
+    tests:
+    - TS1
+    - TS2
+  FR2:
+    title: Re-planning authorization condition uses the origin_kind/origin_id pair
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS3
+    - TS4
+  FR3:
+    title: verify-origin failed_items carry a required category; fail-closed lives at the gate
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0004
+    - task0008
+    tests:
+    - TS5
+    - TS6
+    - TS18
+  FR4:
+    title: Rename finding_stable_id to origin_id across schema and every consumer
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS3
+    - TS7
+  FR5:
+    title: Rule 18 authorization consumption is recoverable and idempotent
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0008
+    tests:
+    - TS12
+    - TS17
+  FR6:
+    title: origin_kind's closed vocabulary is enforced by the validator
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS8
+  FR7:
+    title: phase-state schema_version is resolved explicitly for the destructive shape change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0005
+    tests:
+    - TS9
+  FR8:
+    title: classification's replay rule under the idempotency section
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0005
+    tests:
+    - TS13
+  FR9:
+    title: Direction 2's independence claim is reconciled with the reversible arm
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS16
+  FR10:
+    title: High-water mark restatement is replaced by a citation of its SSOT
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS15
+  FR11:
+    title: Rule 18's phase-state crossing is covered by the Ownership boundary section
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0008
+    tests:
+    - TS12
+    - TS17
+  NFR1:
+    title: No fail-closed regression
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0004
+    - task0008
+    tests:
+    - TS6
+    - TS18
+  NFR2:
+    title: Single ownership, citation over restatement
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0007
+    - task0008
+    tests:
+    - TS11
+    - TS17
+  NFR3:
+    title: Coordinated rename atomicity
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS3
+    - TS7
+  NFR4:
+    title: Detection, not just correction
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0004
+    - task0007
+    - task0008
+    tests:
+    - TS3
+    - TS4
+    - TS1
+    - TS5
+    - TS7
+    - TS17
+    - TS18
+  NFR5:
+    title: Suite stays green under the project's own runner
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    tests:
+    - TS10
+  NFR6:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0006
+    tests:
+    - TS10
+  NFR7:
+    title: Rejected findings stay out
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS14
+batch:
+  review_rework_count: 1
+  verify_rework_count: 0

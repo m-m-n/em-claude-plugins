@@ -1,0 +1,135 @@
+schema_version: 1
+feature: goal-vs-spec-divergence
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 916fec6
+last_input_digest: sha256:93e99410f750a98138acd3d8148cf9e68a0a1fd8d6cdceeb2757214b6ef0260d
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-23T19:52:00+09:00"
+    questions:
+      - question_id: goal.persistence-form
+        status: answered
+      - question_id: defect1.transition-repair
+        status: answered
+      - question_id: unresolved.gate-mode
+        status: answered
+      - question_id: unresolved.gate-scope
+        status: answered
+      - question_id: unresolved.work-order
+        status: answered
+      - question_id: scope.optional-items
+        status: answered
+      - question_id: unresolved.defect2-route
+        status: answered
+      - question_id: edge.codex-unavailable
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  goal.persistence-form:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:52:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [workflow_yaml_field]
+    freeform: null
+    normalized_answer: "goal は workflow.yaml に goal ブロックとして逐語保存する"
+  defect1.transition-repair:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:52:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [relax_replace_all]
+    freeform: null
+    normalized_answer: "workflow-patch.md の replace_all 許可条件を改訂し、create-plan が needs_update のときは merged タスクがあっても再計画を許す"
+  unresolved.gate-mode:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:52:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [batch_only]
+    freeform: null
+    normalized_answer: "Codex 分類ゲートは batch 専用。interactive では従来どおりユーザーに直接聞く"
+  unresolved.gate-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:56:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [all_spec_change]
+    freeform: null
+    normalized_answer: "rework.spec-change で止まるケース全体を分類ゲートに通す。fail-closed 規則自体の改訂を伴う"
+  unresolved.work-order:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:56:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [single_batch]
+    freeform: null
+    normalized_answer: "順序を決めず、全項目を 1 フィーチャーとしてまとめて仕様化・実装する"
+  scope.optional-items:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T19:56:00+09:00"
+    source: user
+    answer_mode: multi_select
+    selected_option_ids: [upstream_detection, declared_set_derivation]
+    freeform: null
+    normalized_answer: "上流での波及テスト検出と Declared Change Set の導出化を、どちらもこの feature のスコープに含める"
+  unresolved.defect2-route:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T20:00:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [independent_route]
+    freeform: null
+    normalized_answer: "create-plan 所有ドキュメントの文言訂正専用の独立経路を定義する（planner 再入場を伴わない、計画・タスク・要件メタデータ不変が条件）"
+  edge.codex-unavailable:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T20:00:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [claude_self_classification]
+    freeform: null
+    normalized_answer: "Codex 不在時は Claude 自身が分類し、根拠となる要件・受け入れ条件の名指しを監査記録として残したうえで進む"
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-23T20:00:00+09:00"
+    source: user
+    answer_mode: single_select
+    selected_option_ids: [ask_user]
+    freeform: null
+    normalized_answer: "ユーザーに確認したうえで design ステップを skipped とする"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: sha256:f3b558bc8a172c62d59cc3eef566c0adb24260b52b9c726d436a5a75ee6a0779
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:17c1ca187a8372da8f432ac49ab26029168197ebbbd7426a94080c56c17adfe9
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:93e99410f750a98138acd3d8148cf9e68a0a1fd8d6cdceeb2757214b6ef0260d
+    output_digest: null
+artifacts:
+  - path: feature-docs/goal-vs-spec-divergence/REQUIREMENTS.md
+    sha256: sha256:32eeb9a39c24d01b886707499b8fd7f575e79216685bc3c8306eb48014b54fb6
+    produced_by: create-spec-run-0003
+  - path: feature-docs/goal-vs-spec-divergence/SPEC.md
+    sha256: sha256:d0753d842f84addfebce308a2327462b541bad2e3f9ba705bfdcf627386d48ec
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null

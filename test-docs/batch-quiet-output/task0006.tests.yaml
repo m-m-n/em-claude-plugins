@@ -1,0 +1,134 @@
+task_id: task0006
+baseline_failures: []          # python3 -m unittest discover -s tests: 2729/2729
+                                # passed; python3 em-workflow/hooks/tests/run-
+                                # destructive-guard.py: 36/36 passed. Fully green
+                                # before any edit.
+final_failures: []             # python3 -m unittest discover -s tests: 2758/2758
+                                # passed (2729 baseline + 29 new in this task's
+                                # module); guard suite still 36/36. No regression.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC1SourceMapRowsNameRecordsContainer.test_auto_approved_command_string_row_names_records_container
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC1SourceMapRowsNameRecordsContainer.test_unlisted_gate_fallback_row_names_records_container
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: False is not true (_row_names_records_container
+      returned False against the pre-edit cells, which named `answers` /
+      `resolution_note` instead of `records[]` / `records[].resolution_note`).
+  AC-2:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC2SourceMapRegressionGuards.test_source_map_still_has_six_rows
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC2SourceMapRegressionGuards.test_assumption_row_unchanged_character_for_character
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard over retained wording (the assumption row and
+      the six-row count are untouched by this task's edits) -- already true
+      before any edit, per the module's Matcher -> negative-proof inventory
+      note that such guards carry no negative proof.
+  AC-3:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC3NonPacketGatesRegressionGuards.test_table_still_has_ten_data_rows
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC3NonPacketGatesRegressionGuards.test_diff_size_gate_row_unchanged
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC3NonPacketGatesRegressionGuards.test_per_command_approval_row_unchanged
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC3NonPacketGatesRegressionGuards.test_gate_id_count_still_eight
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard: the `## Non-packet gates` table and the
+      document's `gate_id` count are out of this task's scope and were never
+      touched, so these assertions were already true before any edit.
+  AC-4:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC4QuestionIdRuleCitationScope.test_step7_citation_scoped_to_create_spec_command_approval
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC4QuestionIdRuleCitationScope.test_rule_stated_on_the_sections_own_authority
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: False is not true (_step7_citation_scope_ok found the
+      pre-edit text's single step-7 citation attached to the sentence naming
+      both gate-id-less writers, not create-spec.command-approval); "on its
+      own authority" phrase was absent from the pre-edit subsection.
+  AC-5:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC5QuestionIdValuesPatternConforming.test_all_prescribed_question_id_values_conform_and_no_null
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC5QuestionIdValuesPatternConforming.test_at_least_the_three_task_literals_are_present_and_conforming
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC5QuestionIdValuesPatternConforming.test_question_packet_schema_cited_as_pattern_owner
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC5QuestionIdValuesPatternConforming.test_pattern_ownership_not_restated_for_resolution_note
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: False is not true (_question_id_values_pattern_conforming_no_null
+      rejected the pre-edit subsection because `question_id` was `null` for
+      the implement wake decline record); AssertionError: 'command-execution.
+      per-command-approval-fallback' / 'implement.wake-decline' not found in
+      the pre-edit subsection (2 of 3 literal subTests failed --
+      review.diff-size-gate already existed verbatim in the YAML example, so
+      that one subTest was not itself red); AssertionError: pattern-owner
+      citation phrase not found pre-edit.
+      test_pattern_ownership_not_restated_for_resolution_note was already
+      true pre-edit (regression guard, no `resolution_note` pattern
+      restatement existed before or after).
+  AC-6:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_first_writer_bullet_states_out_of_step_reach_point
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_first_writer_bullet_names_the_loss_prevented
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_exception_list_names_both_step_a5_and_per_command_fallback
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_three_writers_sentence_occurs_exactly_once
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_append_only_sentence_retains_core_phrase
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_append_only_rule_retained
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: False is not true (the pre-edit first writer bullet
+      stated only the in-step `commit-docs.sh` reach-point, with no
+      "outside any phase step" clause and no `reset --hard` mention);
+      AssertionError: 'references/implement-phase.md' not found in the
+      pre-edit bullet; AssertionError: 'per-command approval fallback' not
+      found in the pre-edit exception clause window. The remaining three
+      tests in this group (three-writers count, append-only phrase, and
+      append-only rule wording) were already true pre-edit -- pure
+      regression guards over text this task does not touch structurally,
+      only extends.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not encoded as a persistent unit test: a full-file byte-identity pin
+      over the five named files (implement-phase.md, SKILL.md,
+      question-resolution.md, question-packet-schema.md,
+      command-execution-protocol.md) would keep passing/failing based on
+      ANY future task's unrelated edits to these shared, actively-evolving
+      protocol documents -- a landmine outside this task's scope, not a
+      meaningful regression guard for batch-quiet-output. Verified instead
+      by inspection: `git diff --stat` against the pre-task tree shows only
+      `.claude-plugin/marketplace.json`, `em-workflow/.claude-plugin/plugin.json`,
+      `em-workflow/references/batch-mode.md`,
+      `em-workflow/references/phase-state.md` modified, plus the new test
+      file -- none of the five named files appear.
+  AC-8:
+    tests:
+      - tests.test_batch_quiet_output_version_bump (pre-existing, unmodified)
+      - tests.test_plugin_version_parity (pre-existing, unmodified)
+    red_confirmed: false
+    red_reason: >-
+      The pre-existing version-bump test only pins the relation
+      (patch > 51, both registries equal as strings), which was already
+      true at the pre-task version 0.1.53 -- it cannot go red on this
+      task's specific 0.1.53 -> 0.1.54 increment. Verified directly: both
+      `em-workflow/.claude-plugin/plugin.json` and the em-workflow entry of
+      `.claude-plugin/marketplace.json` read `0.1.53` before this task's
+      edit and `0.1.54` after, changed together, per project rule
+      core-plugin-version-bump; both pre-existing tests re-run and pass
+      unmodified post-bump.
+  AC-9:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified via the full-suite baseline/final delta rather than a single
+      red-to-green test: baseline (step 4a, before any edit) was
+      `python3 -m unittest discover -s tests` 2729/2729 passing and
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` 36/36
+      passing; final (after all edits) is 2758/2758 (2729 + this task's 29
+      new tests) and 36/36, with no pre-existing module edited, deleted or
+      weakened -- the specific pre-existing modules the task plan names
+      (test_batch_quiet_output_discipline.py's TestAuditItemSourceMap,
+      test_batch_quiet_output_audit_persistence.py,
+      test_phase_state_doc.py, test_batch_quiet_output_version_bump.py) all
+      pass unmodified.

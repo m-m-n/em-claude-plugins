@@ -495,6 +495,12 @@ already ≥ 1: mark each residual finding `resolution: deferred` with
 `resolution_reason: "batch mode: rework cap reached"` and complete the step
 — the round record keeps them visible for the human evaluator.
 
+This batch auto-rework / defer-at-cap behaviour above, its counter and its
+round-record writes are unchanged by `references/batch-mode.md`'s
+output-suppression discipline; any abort reached during this phase is a
+stop under that document's stop/abort exception and keeps its full
+output.
+
 ## Phase R6: Report (Japanese)
 
 Rendering rules: skip-aware perspective sections, summary
@@ -502,3 +508,10 @@ table (severity × counts × cross-model agreement × auto-fixed × residual),
 confidence-scored integrated findings, per-loop auto-fix stats, and 推奨事項.
 タメ語・女性・体言止めなし。develop-駆動では末尾に round 記録のパスと
 workflow.yaml の review サマリ更新結果を1行ずつ添える。
+
+In a `--batch` run, this report's body above is not emitted into the main
+context (`references/batch-mode.md` defines the withholding), while the
+round record `reviews/round{N}.yaml` Phase R5 writes above — its content,
+fields and write timing — are unchanged; this is what keeps this phase's
+findings, including any deferred at Phase R5's cap, auditable from the run
+report.

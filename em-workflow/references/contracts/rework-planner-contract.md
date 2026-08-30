@@ -151,14 +151,47 @@ orchestrator's follow-up sequence is fixed to these five steps:
 1. Set the `create-spec` step to `needs_update`.
 2. Set the `create-plan` / `implement` / `review` steps to `pending`.
 3. Preserve `workflow.implement.base_commit`.
-4. Record the interruption reason and the finding's `stable_id` in the
-   `rework.yaml` phase-state.
+4. Record the `spec_change` record in the `rework.yaml` phase-state —
+   `reason`, `origin_kind`, `origin_id`, `recorded_at_commit` and
+   `replan_authorized: true`; field definitions are owned by
+   `references/phase-state.md` and are not restated here.
 5. The `develop` state machine re-enters at `create-spec`.
 
-In batch mode, `rework.spec-change` has no defined policy in
-`batch-policies.yaml`, so it falls to the unlisted-gate fallback (5.9),
-which — because a specification change is one of the fail-closed
-categories — aborts rather than proceeding.
+In batch mode, `rework.spec-change` is resolved through the classification
+gate defined in `references/question-resolution.md`, which this document
+does not restate. Interactive mode is unchanged: the user is asked
+directly.
+
+The question packet returned for `gate_id: rework.spec-change` names its
+origin(s) — the `origin_kind` / `origin_id` pair
+`references/rework-task-synthesis.md`'s Invariant 6 defines (cited, not
+restated) — via `evidence[].origin_id`, and does not name the
+review round record path or the `workflow.yaml` path either kind's bound
+set lives in: the gate's origin verification
+(`references/question-resolution.md`) locates its own bound set itself.
+
+These declared origins are traceability only — untrusted, exactly like the
+rest of the rework-planner's output. They never select what the
+classification gate's security / license / irreversible check runs over:
+that check target is the orchestrator's own bound set for this dispatch,
+never `evidence[]` or any other worker-supplied field. This document
+restates neither that check's abort arms nor its verification procedure;
+both belong to `references/question-resolution.md`, cited here and not
+restated.
+
+## Gate identifiers
+
+The rework-planner raises exactly one `gate_id`: `rework.spec-change`, via
+the Specification-change transition above. Unlike the gate identifiers
+named in other contracts' equivalent sections, this one carries no entry in
+`references/batch-policies.yaml` — it is an orchestrator-side resolution
+step, not a new user-facing policy gate, so batch resolution goes entirely
+through the classification gate defined in
+`references/question-resolution.md` (cited, not restated), never through a
+batch-policy lookup. This section is what attributes `rework.spec-change`
+to `rework-planner`, which is what puts it into the validator's gate
+registry (`em-workflow/scripts/validate-worker-output.py`), binding it to
+the `spec-change` category and to this worker.
 
 ## Other conditions under which a question packet may be returned
 

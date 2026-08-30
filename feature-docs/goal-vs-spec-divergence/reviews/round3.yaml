@@ -1,0 +1,298 @@
+round: 3
+executed_at: '2026-08-24T04:30:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
+  head_commit: 1ba75101c82e8ba8993c670c1aa8da5e4a0b8c89
+  changed_files_count: 88
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- perspective: comprehensive
+  source: claude
+  status: completed
+- perspective: security
+  source: claude
+  status: completed
+- perspective: security
+  source: codex
+  status: completed
+- perspective: performance
+  source: claude
+  status: completed
+- perspective: performance
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+- perspective: architecture
+  source: claude
+  status: completed
+- perspective: architecture
+  source: litellm
+  model: vertex-glm-5
+  status: completed
+- perspective: spec
+  source: claude
+  status: completed
+- perspective: spec
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+dropped_findings:
+- source: litellm:vertex-deepseek-v3.2:spec
+  reason: 'false positive: 該当文（175-178 行）は verdict (a) 到達後に通る道が無いことを述べており、時間的抜け穴ではない。クロス検証エージェント自身も誤検知と判定'
+  title: FR9 asymmetry weakened by temporal loophole
+- source: litellm:vertex-deepseek-v3.2:spec
+  reason: 'false positive: reference_impact は analyst-contract.md:126-127 の completed payload MUST 一覧に実在する。モデルが数行下を読んでいない'
+  title: FR17 reference-impact reporting not guaranteed
+- source: litellm:vertex-deepseek-v3.2:spec
+  reason: モデル自身が「仕様違反ではなく設計判断」と結論。spec 観点で挙げる対象ではない
+  title: Wording-correction route ordering not required by spec
+findings:
+- stable_id: bb37fb1bf4bfe236
+  severity: critical
+  category: spec
+  file: em-workflow/references/workflow-patch.md
+  line: 83
+  title: 再入シグナルが create-plan 到達時には必ず consumed 済みで、FR6 が実運用で成立しない
+  description: '第 2 ケースの成立条件は「未消費の spec_change レコード」だが、consumed を立てるのは develop SKILL.md Step B が定める「その記録を根拠に create-spec
+    を 1 度 dispatch した時点」。実際の遷移順は rework 記録 → create-spec 再入場（consumed: true）→ create-plan 再入場 → replace_all なので、create-plan
+    が patch を出す時点で必ず消費済み。is_replanning は常に False になり、merged タスクありの replace_all は従来どおり拒否される。フィクスチャは consumed: false
+    を直接与えているためこの順序衝突を一度も踏んでいない。'
+  suggestion: '【ユーザー決定済み・案 (b) を採る】`spec_change` のフラグを 2 つに分離する。現在の `consumed` は「create-spec を 1 度 dispatch した」ことを表す停止条件抑止用のフラグとして残し、再計画
+    replace_all の許可判定はそれとは別の未消費フラグ（例: `replan_authorized`）で行う。再計画許可用フラグは spec-change 遷移が記録時に立て、再計画 replace_all の適用完了時に消費する。根拠:
+    現在の不具合の原因は 1 つのフラグが用途の異なる 2 つの判定に使われていること。案 (a)（消費点の後ろ倒し）はその構造を残したまま到達順をずらす対症療法で、停止条件の抑止期間が延びる副作用がある。案 (c)（遷移で
+    create-plan を needs_update にする）は SPEC の FR6 が遷移を pending と定めているため要件変更を伴う。変更対象: `em-workflow/references/phase-state.md`（spec_change
+    スキーマ）、`em-workflow/references/workflow-patch.md`（再計画パス第 2 ケースの条件）、`em-workflow/scripts/validate-worker-output.py`（workflow_replace_all_spec_change_reentry）、`em-workflow/skills/develop/SKILL.md`
+    Step B（消費点の記述）。create-spec dispatch → create-spec 完了 → create-plan 再入場という正規の順序を再現する統合テストで固定すること。'
+  sources:
+  - claude:spec
+  - claude:comprehensive
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'round 3: routed to round 4 rework, approach (b) decided by user'
+- stable_id: ec89a950d5247129
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/workflow-patch.md
+  line: 127
+  title: merged タスクの status / branch / files を保つ機構が無く、正例フィクスチャがその反例になっている
+  description: 'rule 17 は「登録済み id を再宣言し merged タスクは status・branch・files を保つ」と宣言するが、(1) rule 12 が全エントリに initial_status:
+    pending を無条件強制、(2) entries に branch を書く場所が無い、(3) apply_patch が status = initial_status / branch = None で上書き、(4)
+    preserve に載せても rule 14 の不変検査が before=merged / after=pending で弾く。文書の要求を満たす有効なパッチが存在しない。valid-replace-all-replanning-merged-tasks
+    フィクスチャ自身が反例を valid として固定している。validator の検査も id の欠落と高水位だけで、フィールド単位の保全を見ていない。'
+  suggestion: 既登録 id の再宣言を別形式（carry_over エントリ、または tasks_patch.carried_task_ids）として切り出し、rule 12 の適用範囲を新規 id のみに限定する。apply_patch
+    と validator を同じ形に合わせ、フィクスチャを merged が merged のまま残る形に直す。files については包含条件を dry-run-apply で検査する。
+  sources:
+  - claude:comprehensive
+  - claude:spec
+  - claude:security
+  - claude:architecture
+  - codex:security
+  - litellm:vertex-glm-5:architecture
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: c993557bd9ac2670
+  severity: high
+  category: security
+  file: em-workflow/references/question-resolution.md
+  line: 78
+  title: 'fail-closed 一覧から category: spec-change を外した結果、gate_id が rework.spec-change 以外の仕様変更質問がどこにも捕まらない'
+  description: 'category: spec-change のまま gate_id を別値にした質問は、(a) 即時 abort 条件に該当せず、(b) routed arm の入口条件（gate_id 一致）を満たさず、(c)
+    malformed-pairing の条件（gate_id 一致）も満たさない。Batch resolution sequence の step 3 → policy lookup → Unlisted-gate fallback
+    へ落ち、on_unanswered: block により「最も副作用の小さい選択肢」で自動回答される。改訂前は category だけで abort していたため、これは今回の改訂が新規に開けた迂回路。validator
+    も rework.spec-change をゲートレジストリに持たないため gate_id→category 束縛検査が発火しない。'
+  suggestion: '即時 abort の第 1 条件に category: spec-change を戻し、routed arm を「gate_id が rework.spec-change のときだけ分類ゲートへ振り替える例外」として書く。または
+    malformed-pairing を双方向にする。validator にも category==''spec-change'' and gate_id!=''rework.spec-change'' を弾く検査を入れ、rework.spec-change
+    をレジストリに登録する。'
+  sources:
+  - claude:security
+  - claude:comprehensive
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: 345e41285f0ec931
+  severity: high
+  category: security
+  file: em-workflow/references/question-resolution.md
+  line: 87
+  title: 「オーケストレーター保有の不可逆操作リスト」が実体を持たない参照で、不可逆性の判定は依然ワーカー申告のみ
+  description: '87-96 行は不可逆性をオーケストレーター保有のメタデータから決めると宣言するが、その list もメタデータの所在もリポジトリ内に定義が無い。検索でヒットするのは当該文自身と、その文字列の存在だけを検査するテストのみ。実際に発火し得る不可逆トリガーはパケット由来の
+    assumptions[].reversible: false 一本のままで、これはワーカーが書く述語。しかも文書は「省略しても abort は消せない」と断言しているため、後続の実装者・レビュアーは防御が既に存在すると読む。'
+  suggestion: (a) references/ 配下に不可逆操作の registry を新設して名指しで引用し、ゲート提示側が識別子を持つことも定める。(b) 実体を作らないなら宣言を撤回し、判定根拠がパケット由来のみであることとその限界を明記する。存在しない防御を宣言したままにするのが最も悪い。
+  sources:
+  - claude:security
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: caf7dad63a808494
+  severity: high
+  category: architecture
+  file: em-workflow/references/question-resolution.md
+  line: 205
+  title: classification gate の proceed 側に packet/answer への書き込みも develop 状態機械の分岐も無い
+  description: 'routed arm は質問を Batch resolution sequence から完全に外し「gate の proceed/stop がその質問の解決」と宣言するが、他の全解決経路が書く
+    packets[].status と answers[] に何を書くかの定義が無い。gate が生む記録は classification ブロックだけで packet ライフサイクルとは無関係。さらに spec-change
+    遷移を駆動する develop SKILL.md Step B には gate を呼ぶ地点も decision: stop で停止する分岐も存在せず、skills/ 配下は今回一切変更されていない。結果 packet
+    は issued のまま残り、Resume decision table が再開のたびに誰も答えられない質問を再提示する。'
+  suggestion: gate の出力を packet/answer モデルへ接続する経路を 1 箇所で定義し、develop SKILL.md Step B の spec-change 遷移分岐に gate の呼び出し点と
+    stop 分岐を明記する。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: b5f85c29102b8c97
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/phases/create-spec-phase.md
+  line: 201
+  title: create-spec 再入場が requirements を凍結するため、SPEC 変更で増えた要件をタスクに割り当てられない
+  description: 新設の Partial update on re-entry は requirements を「触れないもの」に挙げるが、SPEC 変更遷移が起きる理由はまさに要件が増える／変わること。要件マップを凍結すると新しい
+    FR は SPEC.md にあるのに workflow.yaml に無い状態になり、続く再計画のタスクエントリがその FR を参照した瞬間 validate_task_entry が弾く。requirements_patch
+    は逃げ道にならない（set に許されるキーに title が無く新規エントリを作れない）。
+  suggestion: requirements を無条件の untouched 一覧から外し、「spec_index から再構築するが既存エントリの tasks / tests は保持し、削除された FR の扱いを明示する」upsert
+    規則に置き換える。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: 194cda40ee386bd6
+  severity: high
+  category: architecture
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 274
+  title: §12 の唯一の保持先 tasks.{T}.files に再計画越しの生存強制が無い
+  description: §12 は「再計画は登録済みタスクエントリを落とせないのでパスは残る」と workflow-patch.md の保証を引用するが、その保証は task id の再宣言だけで、validator
+    も id の欠落しか検査しない。エントリの中身は planner が丸ごと書き直すため、id を再宣言しつつ files から implement wake が追加したパスを落としたパッチは全検査を通過する。PRESERVE_PATTERNS
+    も status と branch しか許可しておらず、files は preserve 語彙に存在しないため「保持せよ」と表明する手段すら無い。
+  suggestion: 既登録 id の再宣言エントリの files が現行 files を包含することを dry-run-apply で検査する。または files を PRESERVE_PATTERNS に追加し再計画パスの
+    mandatory preserve に含める。
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: 363980824ff7bfa7
+  severity: high
+  category: architecture
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 1310
+  title: task-id 再宣言規則が presence/no-drop レベルでしか強制されていない
+  description: rule 17 は「再宣言」と書いて保全を含意するが、実装は dropped_ids の有無と高水位しか見ない。再宣言されたエントリの status / branch / files / title
+    / plan / domains / complexity / requirements が元と一致するかを一切検証しない。merged タスクの監査アイデンティティの消去、宣言スコープの縮小、domains / complexity
+    改変による security レビュー選択の抑止、マージ済み id の再ディスパッチが可能。
+  suggestion: 既存レコードをオーケストレーター側で持ち越す形にするか、最低限 merged タスクのエントリが全フィールド一致であることを適用前に要求する。新規 id だけがワーカー提供の本体を受け付ける。
+  sources:
+  - litellm:vertex-glm-5:architecture
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: 0266f36b2fa3714d
+  severity: medium
+  category: security
+  file: em-workflow/references/question-resolution.md
+  line: 151
+  title: Origin verification に照合先ラウンドの特定規則と鮮度条件が無く、ワーカーが origin を選べる
+  description: 'パスをワーカー入力から取るのをやめた点は round 2 の指摘を塞いだが、どのラウンドの記録を見るかの規則が無い。全ラウンドを探す実装なら resolution: fixed / declined
+    で決着済みの過去 stable_id を引くだけで通過できる。さらに Codex 指摘: dispatch された finding 集合と束縛されていないため、security finding と benign finding
+    を両方受け取ったワーカーが benign な ID だけを挙げれば必須 abort を回避できる（ハッシュ衝突不要、単純な差し替え）。'
+  suggestion: 照合対象を「今回の rework を起こしたラウンドの記録ちょうど 1 件」に固定するか、spec_change.finding_stable_id と突き合わせる。fail-closed 条件に鮮度（当該記録内で未解決であること）を加え、origin
+    集合が dispatch 集合と一致することを要求する。
+  sources:
+  - claude:security
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: 050e6fd980238bc9
+  severity: medium
+  category: spec
+  file: tests/test_guardrail_hooks_migration.py
+  line: 79
+  title: NFR8 に反して既存ガードが弱められた（ルールファイル存在検査が glob 由来で恒真化）
+  description: REPO_RULE_FILES が .claude/rules/*.md の glob 由来になり、test_every_repository_rule_exists は実在するファイル名を実在確認するだけの恒真式になった。変更前に固定タプルで守られていた
+    slash-commands-as-skills.md は誰も pin していない状態（削除しても全スイートが緑）。ユーザー決定 ac11-stale-guard は「ガードは削除しない」であり、glob 化はこれと食い違う。なお
+    core- 系 2 件の明示ガード（CORE_REPO_RULE_FILES）は新設されており、テスト数は 23 → 29 で全体としては増えている。
+  suggestion: REPO_RULE_FILES を明示列挙に戻し、glob は「列挙漏れが無いこと」の追加検査側に使う。存在検査そのものは固定リストで行う。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: 24c838b0ee2c6ba8
+  severity: medium
+  category: performance
+  file: em-workflow/references/phases/create-spec-phase.md
+  line: 95
+  title: reference_scan_targets が列挙上限も除外リストも継承しないまま digest 入力に昇格した
+  description: round 1 から未着手（task0014 の Out of Scope 宣言どおり）だが、今ラウンドで analyst-contract.md の full モード digest_inputs
+    に「解決済み参照スキャンパス」が加わり影響が拡大した。除外リストも上限もかからない集合が、毎ディスパッチの input_digest と再解決ごとの generation_digest の両方で全件ハッシュされる。参照影響スキャンの対象はソースツリー全体なので
+    .claude/worktrees/ 配下（各 worktree がリポジトリ全体のコピー）まで対象になり、上限が無いため truncated にもならず batch 中断という逃げ道も発火しない。
+  suggestion: phase-state.md の除外・拡張子 allowlist・500 ファイル / 5 MB 上限・truncated 時の batch 中断を全 glob 由来カテゴリ共通の表現に書き換えるか、reference_scan_targets
+    専用の規則を書き下ろす。digest_inputs に入った以上、上限到達時に digest をどう確定させるかまで決める必要がある。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: 31440cf27af25723
+  severity: medium
+  category: architecture
+  file: em-workflow/references/phases/create-spec-phase.md
+  line: 188
+  title: goal ブロック規則の create-spec-phase.md への再掲が解消せず、記述が増えている
+  description: round 2 の同指摘に対して未着手。「cited here, not restated」と書きながら verbatim-storage / orchestrator-sole-writer
+    / re-entry no-touch を restate しており、今ラウンドで記述量が増えた。なお phase-state.md:116 の verdict 規則再掲は clean な引用に解消済みと確認された。
+  suggestion: restate を 1 行の相互参照に畳む。
+  sources:
+  - litellm:vertex-glm-5:architecture
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: b6d9ffc9de43ccf5
+  severity: medium
+  category: architecture
+  file: em-workflow/references/workflow-patch.md
+  line: 200
+  title: mandatory preserve の条件が計算述語 is_replanning に依存しているが文書化されていない
+  description: 文書は「Re-planning path では mandatory」と書くが、実装は is_replanning（needs_update または未消費 spec_change）で判定する。create-plan
+    が pending かつ SPEC 変更再入以外で古い base_commit が残っている場合、preserve は強制されない。文書はこの端点を扱っていない。
+  suggestion: preserve 条件を計算述語の形で規範的に書き、initial-planning パスで base_commit が既に存在する場合の扱いを定めるか検査を追加する。
+  sources:
+  - litellm:vertex-glm-5:architecture
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+- stable_id: 00e3d506a2ba9fa2
+  severity: medium
+  category: architecture
+  file: em-workflow/references/workflow-patch.md
+  line: 84
+  title: 「retired」タスクの表現が id 採番コードの前提になっているが未定義
+  description: 採番規則は「retired を含め一度使った id は再発行しない」と述べるが、実装は現行 workflow.yaml の existing_ids から高水位を取る。これは retired タスクがエントリとして残っている前提でしか成立しない。retired
+    タスクの on-disk 表現（残すのか、id だけ別の場所に保つのか）はどの SSOT にも定義が無い。
+  suggestion: retired タスクの表現を workflow-schema.md か phase-state.md に規範的に定義する。
+  sources:
+  - litellm:vertex-glm-5:architecture
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'round 3: awaiting user decision'
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: pending-user-decision
+residual_critical_high: 8
+rework_required: true

@@ -1,0 +1,47 @@
+task_id: task0005
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_phase_state_doc.TestClassificationAuditRecord.test_record_present_as_sibling_of_spec_change_in_schema_block
+    red_confirmed: true
+    red_reason: "ValueError: substring not found (setUpClass: cls.schema_block.index(\"classification:\") -- the record did not exist in the schema block yet)"
+  AC-2:
+    tests:
+      - test_phase_state_doc.TestClassificationAuditRecord.test_all_five_fields_defined_with_value_vocabularies
+      - test_phase_state_doc.TestClassificationAuditRecord.test_record_appears_in_every_top_level_field_table
+    red_confirmed: true
+    red_reason: "Same setUpClass ValueError as AC-1 (the classification block these tests read from did not exist)"
+  AC-3:
+    tests:
+      - test_phase_state_doc.TestClassificationAuditRecord.test_evidence_ids_non_empty_requirement_for_spec_gap_is_stated
+      - test_phase_state_doc.TestClassificationAuditRecord.test_reason_mandatory_when_decision_is_stop_is_stated
+    red_confirmed: true
+    red_reason: "Same setUpClass ValueError as AC-1 (table_idx = cls.text.index(\"| `classification` |\") could not resolve either)"
+  AC-4:
+    tests:
+      - test_phase_state_doc.TestClassificationAuditRecord.test_one_record_per_gate_pass_including_stop_and_inapplicable
+    red_confirmed: true
+    red_reason: "Same setUpClass ValueError as AC-1"
+  AC-5:
+    tests:
+      - test_phase_state_doc.TestClassificationAuditRecord.test_record_appears_in_every_top_level_field_table
+    red_confirmed: true
+    red_reason: "Same setUpClass ValueError as AC-1 (the field-table row did not exist yet)"
+  AC-6:
+    tests:
+      - test_phase_state_doc.TestClassificationAuditRecord.test_cites_question_resolution_doc_instead_of_restating_the_rule
+      - test_phase_state_doc.TestClassificationAuditRecord.test_idempotency_uses_the_spec_change_replace_wholesale_exemption
+    red_confirmed: true
+    red_reason: "Same setUpClass ValueError as AC-1 (idempotency bullet and citation did not exist yet)"
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "Regression guard, not a new behavior to red/green -- verified by re-running the full suite (python3 -m unittest discover -s tests) after the change and confirming final_failures is a subset of baseline_failures (both equal the 3 pre-existing test_guardrail_hooks_migration failures, unrelated to phase-state.md)."

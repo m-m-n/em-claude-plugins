@@ -1,0 +1,185 @@
+schema_version: 1
+feature: rework-contract-drift
+phase: create-spec
+status: completed
+generation: 1
+base_revision: b1333f06a3aa2dfe09be04f55558bd9d47174f30
+last_input_digest: sha256:b21f68f973f44acf0c3acf312a175ba2e87050ea118a8ba48b139e4979336a5e
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-24T21:52:00+09:00"
+    questions:
+      - question_id: requirement.fr1.replanning-branch-key
+        status: answered
+      - question_id: requirement.fr3.verify-origin-category-failclosed
+        status: answered
+      - question_id: requirement.fr4.packet-schema-origin-field
+        status: answered
+      - question_id: requirement.medium-item-scope
+        status: answered
+      - question_id: design.step-recommendation
+        status: answered
+answers:
+  requirement.fr1.replanning-branch-key:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:22:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [align_to_workflow_patch]
+    freeform: null
+    normalized_answer: >-
+      Direction (a). The implementation-planner prompt stops restating the
+      re-planning condition and instead cites `references/workflow-patch.md`'s
+      Re-planning path, which already covers both cases including the `pending`
+      state the SPEC-change transition actually produces. `planner-contract.md:102`
+      and the literal string pinned by
+      tests/test_replanning_producer_alignment.py::TestImplementationPlannerTwoBranchAllocation::test_two_branches_present_keyed_on_create_plan_status
+      are aligned in the same change; the updated test asserts both owner-defined
+      paths rather than pinning the erroneous `needs_update` literal.
+    resolution_note: >-
+      Batch policy create-spec.requirement-clarification -> codex_consultation.
+      Codex mapped onto the existing option_id `align_to_workflow_patch`; the
+      orchestrator judged the mapping. Rationale adopted: citing the owning document
+      removes the restatement that drifted, which is the bug class this feature
+      exists to close. Recorded as an assumption per the policy's
+      record_as_assumption.
+  requirement.fr4.packet-schema-origin-field:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:22:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [rename_to_origin_id]
+    freeform: null
+    normalized_answer: >-
+      Rename `questions[].evidence[].finding_stable_id` to `origin_id` in
+      `references/question-packet-schema.md`, and align every consumer in the same
+      change: `question-resolution.md`, `contracts/rework-planner-contract.md`,
+      `scripts/validate-worker-output.py`, the fixtures under `references/fixtures/`
+      and every existing test reference. The pair definition (`origin_kind` ->
+      `origin_id`) stays owned by `rework-task-synthesis.md` Invariant 6 and is
+      cited, not restated. All-or-nothing within one change.
+    resolution_note: >-
+      Batch policy create-spec.requirement-clarification -> codex_consultation.
+      Codex mapped onto the existing option_id `rename_to_origin_id`; the
+      orchestrator judged the mapping. Rationale adopted: a field literally named
+      `finding_stable_id` that legitimately holds a non-finding id is exactly the
+      name/meaning drift this feature exists to close, so the larger coordinated
+      rename is preferred over broadening the description in place. This is the
+      widest-blast-radius decision in the feature and is flagged as such.
+      Recorded as an assumption per the policy's record_as_assumption.
+  requirement.medium-item-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:22:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [all_seven]
+    freeform: null
+    normalized_answer: >-
+      Include medium items 5-11 as lower-priority functional requirements of this
+      feature. Item 7 (phase-state `schema_version` left at 1 across a destructive
+      shape change) must be resolved EXPLICITLY in the SPEC with a migration rule, a
+      compatibility rule, or a justified version transition — not by silently
+      leaving in-flight features' on-disk rework.yaml non-reenterable. Item 10 is
+      the same restatement-drift class as FR1 and sits in the same file.
+    resolution_note: >-
+      Batch policy create-spec.requirement-clarification -> codex_consultation.
+      Codex mapped onto the existing option_id `all_seven`; the orchestrator judged
+      the mapping. Codex explicitly acknowledged item 7 raises acceptance risk and
+      required the SPEC to resolve that risk rather than defer it. Recorded as an
+      assumption per the policy's record_as_assumption.
+  design.step-recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:22:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: >-
+      Accept requirements-analyst's recommendation to SKIP the design step. The
+      change surface is Markdown SSOT documents, one agent prompt, the validator
+      script and unittest tests; there is no UI surface.
+    resolution_note: >-
+      Batch policy create-spec.design-step -> action: select, option_id:
+      decide_autonomously. No Codex consultation needed; the gate has a listed
+      policy entry.
+  requirement.fr3.verify-origin-category-failclosed:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-24T22:20:00+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: [structure_failed_items]
+    freeform: null
+    normalized_answer: >-
+      Direction (b): structure `workflow.yaml`'s verify-step `failed_items` so each
+      entry carries a required `category`, and have question-resolution.md's
+      direction 2 cite that definition instead of reading a field that cannot exist.
+      Vocabulary reuses the review-perspective set plus an `unknown` fail-closed
+      sentinel: comprehensive | spec | security | performance | architecture |
+      license | unknown. The verify-phase orchestrator assigns it when recording
+      `failed_items` (evidence: the failing VERIFICATION.md scenario and the
+      requirement IDs it maps to via verification_index); it assigns `unknown`
+      whenever the evidence is insufficient, unmapped, contradictory, or cannot
+      exclude security/license. The fail-closed abort lives at the classification
+      gate, NOT in the verify phase: the gate aborts on `security`, `license`,
+      `unknown`, missing, unreadable, or out-of-vocabulary. Verify still records
+      `unknown` and lets the case reach the gate, because aborting during verify
+      would recreate the FR7 violation. Documents to change: workflow-schema.md,
+      skills/develop/SKILL.md verify step 4, question-resolution.md, and the
+      validator; SPEC, VERIFICATION.md format, verification_index, retrospect and
+      rework-planner do NOT change.
+    resolution_note: >-
+      Decided by the user across two turns with a two-turn Codex consultation
+      (references/question-resolution.md "Codex consultation procedure"; wrapper
+      run readonly). Codex's first-turn recommendation — a third option making
+      origin_kind=verify structurally ineligible for rework.spec-change — was
+      rejected on evidence: the task0028 plan that introduced origin_kind=verify
+      had already considered and rejected that exact alternative because it
+      contradicts FR7 ("every case that reaches gate_id: rework.spec-change passes
+      through the gate") and would require a SPEC change. Option (a) was rejected
+      as functionally identical to that third option: with no `category` on
+      `failed_items`, "unreadable category -> abort" makes every verify-origin
+      spec-change question abort, the same FR7 violation by another mechanism.
+      Option (b) is the only direction satisfying FR7 and NFR2 simultaneously.
+      Codex agreed on turn 2 once given the FR7 evidence and contributed the
+      `unknown` sentinel and the gate-side placement of the fail-closed rule.
+worker_runs:
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:b21f68f973f44acf0c3acf312a175ba2e87050ea118a8ba48b139e4979336a5e
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:8e1e2981f0b2440aeaa6c0eadd3bb0089c62bd2aa0f83b5a1d60def8a3165de9
+    output_digest: null
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: sha256:9c146ac1c3bf84a9fa410fe78307d24bd235025f72f55ea82a8846ae162c929c
+    output_digest: null
+artifacts:
+  - path: feature-docs/rework-contract-drift/REQUIREMENTS.md
+    sha256: sha256:ff448b217394d1c59dfcfdc284dedb4e11c2170de2b5bd04b0eb1b2fde317093
+    produced_by: create-spec-run-0003
+  - path: feature-docs/rework-contract-drift/SPEC.md
+    sha256: sha256:86efdf3c10b8b38a4ef06bf95d606f45310c24231be2e057248e1f0d6c172b21
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:bd0ee5db26f101a44cca0f4978ae5c1824bc97f224b767be2331e49b4849b3fb
+    resolved_at_generation: 1
+    paths:
+      - em-workflow/references/templates/design-tokens.yaml
+    digests:
+      em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    truncated: false
+  e2e:
+    generation_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null

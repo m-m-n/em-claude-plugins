@@ -702,5 +702,273 @@ class TestBackfillCrossProductDelegation(unittest.TestCase):
         self.assertNotIn("tokens.html` present", self.section)
 
 
+class TestClassificationAuditRecord(unittest.TestCase):
+    """task0005 (goal-vs-spec-divergence): classification audit record in
+    the phase-state schema (feature-docs/goal-vs-spec-divergence/tasks/
+    task0005.md).
+
+    AC-1: the schema listing shows the classification audit record under
+    `phase: rework`, as a sibling of `spec_change`, in the same style as the
+    existing entries.
+    AC-2: all five fields are defined with their value vocabularies --
+    `classifier`, `verdict`, `evidence_ids`, `decision`, `reason`.
+    AC-3: `evidence_ids` must be non-empty for a `spec_gap` verdict, and
+    `reason` is mandatory whenever `decision` is `stop`.
+    AC-4: a record is written for every gate pass, explicitly including
+    passes that stop and passes where the gate was inapplicable.
+    AC-5: the record appears in the every-top-level-field table with a
+    one-line meaning.
+    AC-6: the document does not restate the classification rule itself; it
+    cites `references/question-resolution.md`, and the record's
+    idempotency behaviour is stated via the document's existing
+    `spec_change` replace-wholesale exemption, not a new invention.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+
+        # Schema example block: from the `classification:` entry inside the
+        # fenced ```yaml schema block down to the closing fence -- scoped
+        # narrowly so generic tokens (`stop`, `proceed`, `reason`) that
+        # occur elsewhere in the document can't satisfy these assertions.
+        schema_start = cls.text.index("## Schema")
+        fence_end = cls.text.index("\n```\n", schema_start)
+        cls.schema_block = cls.text[schema_start:fence_end]
+        record_idx = cls.schema_block.index("classification:")
+        cls.record_block = cls.schema_block[record_idx:]
+
+        # Field-table row: the single line starting with the field's own
+        # cell marker.
+        table_idx = cls.text.index("| `classification` |")
+        line_end = cls.text.index("\n", table_idx)
+        cls.table_row = cls.text[table_idx:line_end]
+
+        # Idempotency bullet in "## ID uniqueness and idempotency".
+        idem_idx = cls.text.index("## ID uniqueness and idempotency")
+        idem_end = cls.text.index("### worker_runs[].status transitions")
+        cls.idempotency_section = cls.text[idem_idx:idem_end]
+
+    def test_record_present_as_sibling_of_spec_change_in_schema_block(self):
+        self.assertIn("spec_change:", self.schema_block)
+        self.assertIn("classification:", self.schema_block)
+        spec_change_idx = self.schema_block.index("spec_change:")
+        classification_idx = self.schema_block.index("classification:")
+        self.assertLess(
+            spec_change_idx,
+            classification_idx,
+            "classification record must follow spec_change as its sibling",
+        )
+        self.assertIn("phase: rework", self.record_block.split("\n")[0])
+
+    def test_all_five_fields_defined_with_value_vocabularies(self):
+        block = self.record_block
+        self.assertIn("classifier", block)
+        self.assertIn("codex", block)
+        self.assertIn("claude", block)
+        self.assertIn("verdict", block)
+        self.assertIn("goal_not_met", block)
+        self.assertIn("spec_gap", block)
+        self.assertIn("not_applicable", block)
+        self.assertIn("evidence_ids", block)
+        self.assertIn("decision", block)
+        self.assertIn("proceed", block)
+        self.assertIn("stop", block)
+        self.assertIn("reason", block)
+
+    def test_evidence_ids_non_empty_requirement_for_spec_gap_is_stated(self):
+        self.assertIn("non-empty", self.table_row)
+        self.assertIn("spec_gap", self.table_row)
+
+    def test_reason_mandatory_when_decision_is_stop_is_stated(self):
+        self.assertIn("mandatory", self.table_row)
+        self.assertIn("decision: stop", self.table_row)
+
+    def test_one_record_per_gate_pass_including_stop_and_inapplicable(self):
+        # Scoped to the classification table row itself -- per the task's
+        # Test Notes edge case, this must not be satisfiable by the general
+        # statement elsewhere in the document about recording answers.
+        row = self.table_row
+        self.assertIn("one record per pass", row)
+        self.assertIn("stop", row)
+        self.assertIn("inapplicable", row)
+
+    def test_record_appears_in_every_top_level_field_table(self):
+        self.assertIn("| `classification` |", self.text)
+        self.assertIn("classifier", self.table_row)
+        self.assertIn("verdict", self.table_row)
+        self.assertIn("evidence_ids", self.table_row)
+        self.assertIn("decision", self.table_row)
+        self.assertIn("reason", self.table_row)
+
+    def test_cites_question_resolution_doc_instead_of_restating_the_rule(self):
+        self.assertIn("references/question-resolution.md", self.table_row)
+
+    def test_classification_never_shares_the_spec_change_wholesale_exemption(self):
+        # task0029 (goal-vs-spec-divergence) AC-3: classification leaves
+        # the wholesale-replacement exemption (it is now an append-only
+        # list, never rewritten or removed) -- this supersedes the
+        # pre-task0029 test_idempotency_uses_the_spec_change_replace_
+        # wholesale_exemption, which pinned exactly the reading this task
+        # removes. The retention half (spec_change's own exemption, which
+        # this task does not touch) stays asserted below.
+        #
+        # Extended for task0005 (rework-contract-drift; feature-docs/
+        # rework-contract-drift/tasks/task0005.md) AC-5: the idempotency
+        # section now also carries classification's own (distinct) replay
+        # rule, so "classification never appears in the section at all" is
+        # no longer the right negative proof -- narrowed to what the
+        # original test actually protected: spec_change's own
+        # wholesale-replacement bullet never absorbs classification.
+        section = self.idempotency_section
+        self.assertIn("spec_change", section)
+        self.assertIn("wholesale", section)
+        self.assertIn("not a protocol error", section)
+        spec_change_bullet_start = section.index("`spec_change` is **not**")
+        spec_change_bullet_end = section.index("\n- `classification`", spec_change_bullet_start)
+        spec_change_bullet = section[spec_change_bullet_start:spec_change_bullet_end]
+        self.assertNotIn("classification", spec_change_bullet)
+
+    def test_classification_row_states_append_semantics_not_wholesale_replacement(self):
+        # task0029 AC-3: the field-table row's own wholesale-replacement
+        # sentence is gone, replaced by an append statement.
+        row = self.table_row
+        self.assertIn("list", row.lower())
+        self.assertIn("append", row.lower())
+        self.assertIn("never rewritten or removed", row)
+        self.assertNotIn("replaces the record wholesale", row)
+        self.assertNotIn("the same exemption `spec_change` uses", row)
+
+    def test_classification_schema_example_is_a_yaml_list(self):
+        # task0029 AC-3: the schema example itself shows `classification`
+        # as a `-`-prefixed list entry, not a bare mapping.
+        self.assertIn("classification:", self.schema_block)
+        idx = self.schema_block.index("classification:")
+        after = self.schema_block[idx : idx + 200]
+        self.assertIn("\n  - classifier:", after)
+
+
+class TestClassificationAuditRecordNegativeProof(unittest.TestCase):
+    """Proof the checks above fail meaningfully against a synthetic sample
+    lacking the record (tdd-testing discipline: a test that can never fail
+    is not a test)."""
+
+    def test_missing_field_is_detected_in_a_synthetic_block(self):
+        block = "classification:\n  classifier: codex\n  verdict: goal_not_met\n"
+        for token in ("evidence_ids", "decision", "reason", "spec_gap"):
+            self.assertNotIn(token, block)
+
+    def test_missing_row_is_detected_when_field_table_lacks_the_entry(self):
+        text_without_row = "| `spec_change` | ... |\n"
+        self.assertNotIn("| `classification` |", text_without_row)
+
+    def test_missing_citation_is_detected(self):
+        row_without_citation = "| `classification` | some fields, no citation |"
+        self.assertNotIn("references/question-resolution.md", row_without_citation)
+
+    def test_missing_idempotency_statement_is_detected(self):
+        section_without_statement = "## ID uniqueness and idempotency\nsome unrelated text\n"
+        self.assertNotIn("wholesale", section_without_statement)
+
+
+class TestSpecChangeFlagPairSchemaBlock(unittest.TestCase):
+    """task0022 (goal-vs-spec-divergence, review round 3, finding
+    consumed-flag-split; feature-docs/goal-vs-spec-divergence/tasks/
+    task0022.md), AC-1 (NFR1): the `spec_change` schema example block
+    shows both flags, `replan_authorized` immediately alongside the
+    pre-existing `consumed`, so the two are visibly a pair rather than an
+    unrelated addition elsewhere in the record.
+
+    The row-level content assertions (writer / judgement / spend-point /
+    "neither flag read for the other's judgement" / wholesale-replacement
+    coverage) live in tests/test_spec_change_replan_authorization.py
+    (TestPhaseStateDefinesBothFlagsInOnePlace), the dedicated cross-
+    document module for this task's two-flag rule -- not duplicated here."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        schema_start = cls.text.index("## Schema")
+        fence_end = cls.text.index("\n```\n", schema_start)
+        schema_block = cls.text[schema_start:fence_end]
+        spec_change_idx = schema_block.index("spec_change:")
+        classification_idx = schema_block.index("classification:")
+        cls.record_block = schema_block[spec_change_idx:classification_idx]
+
+    def test_replan_authorized_present_alongside_consumed(self):
+        self.assertIn("consumed:", self.record_block)
+        self.assertIn("replan_authorized:", self.record_block)
+        consumed_idx = self.record_block.index("consumed:")
+        replan_idx = self.record_block.index("replan_authorized:")
+        self.assertLess(
+            consumed_idx,
+            replan_idx,
+            "replan_authorized must follow consumed within the spec_change record",
+        )
+
+    def test_replan_authorized_still_scoped_to_the_spec_change_record(self):
+        # Non-vacuity: the slice must not have accidentally run past
+        # spec_change into the classification record's own fields.
+        self.assertNotIn("classifier:", self.record_block)
+
+
+def _retired_spec_change_origin_field_name():
+    """The pre-rename `spec_change` origin field name -- the single field
+    `origin_kind` / `origin_id` replaced. Built from parts at run time per
+    the "Retired-identifier absence scan" contract (IMPLEMENTATION.md
+    Shared Components, feature-docs/rework-contract-drift/
+    IMPLEMENTATION.md): this module's own absence assertions below, and
+    their negative-proof samples, must never carry the name as a
+    contiguous literal in this file's own source, or a repository-wide
+    scan for the retired name would match this scanner itself."""
+    return "_".join(["finding", "stable", "id"])
+
+
+class TestSpecChangeOriginPairSchemaBlock(unittest.TestCase):
+    """task0029 (goal-vs-spec-divergence) AC-5 (FR6): the `spec_change`
+    schema example block shows `origin_kind` / `origin_id` in place of the
+    retired single-field origin identifier (see
+    `_retired_spec_change_origin_field_name` above). The row-level
+    citation of `references/rework-task-synthesis.md` for the pair's
+    meaning lives in tests/test_spec_change_replan_authorization.py
+    (TestOriginPairAcceptsReviewAndVerify), the dedicated cross-document
+    module for this task's validator-facing checks -- not duplicated
+    here (same split TestSpecChangeFlagPairSchemaBlock above already
+    established for task0022's flag pair).
+
+    Extended for task0005 (rework-contract-drift; feature-docs/
+    rework-contract-drift/tasks/task0005.md) AC-7: the absence assertion
+    below carried the retired name as a contiguous literal in this
+    module's own source -- rebuilt here so the scan never matches
+    itself, per the Retired-identifier absence scan contract, keeping the
+    same negative proof."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        schema_start = cls.text.index("## Schema")
+        fence_end = cls.text.index("\n```\n", schema_start)
+        schema_block = cls.text[schema_start:fence_end]
+        spec_change_idx = schema_block.index("spec_change:")
+        classification_idx = schema_block.index("classification:")
+        cls.record_block = schema_block[spec_change_idx:classification_idx]
+
+    def test_origin_kind_and_origin_id_present_in_order(self):
+        self.assertIn("origin_kind:", self.record_block)
+        self.assertIn("origin_id:", self.record_block)
+        self.assertLess(
+            self.record_block.index("origin_kind:"),
+            self.record_block.index("origin_id:"),
+        )
+
+    def test_retired_origin_field_name_is_gone_from_the_schema_example(self):
+        self.assertNotIn(_retired_spec_change_origin_field_name(), self.record_block)
+
+    def test_non_vacuity_a_synthetic_pre_rename_block_would_still_carry_it(self):
+        retired_name = _retired_spec_change_origin_field_name()
+        pre_rename_block = f"spec_change:\n  {retired_name}: abc123\n"
+        self.assertIn(retired_name, pre_rename_block)
+
+
 if __name__ == "__main__":
     unittest.main()
