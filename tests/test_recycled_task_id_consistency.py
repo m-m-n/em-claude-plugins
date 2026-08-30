@@ -435,20 +435,31 @@ PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE = (
 # positive test and its negative-proof test below -- the literal is never
 # spelled twice (same Contract 1 pattern as the blocks above).
 
-# AC-2 group: the falsified premise this task removes.
+# AC-2 group: the falsified premise this task removes (task0001's own
+# pre-change wording, historical -- superseded again by task0002 below).
 OLD_MERGED_UNDER_EITHER_SOURCE_PREMISE = (
     "Because route-back proceeds only when no task is `merged` under "
     "either source"
 )
-# AC-2 group: the replacement premise, resting on Step I.2.c's new third
-# gate conjunct (journal last event alone, independent of the ancestor
-# verification).
+# AC-2 group / task0002 AC-6 (FR2, NFR3; TS-13): the current premise,
+# rewritten again by task0002 (routeback-admissibility-exits, rework round
+# 1) Site D to name its owning section explicitly (I.2.a is ABOVE I.2.c in
+# the document, so the conjunct is "below", never "above") and to read as
+# one premise with a single causal construction. Value updated by task0002
+# -- constant NAME unchanged since it still describes the same property
+# (the premise names the journal-last-event conjunct), per Conventions'
+# naming rule.
 NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE = (
-    "route-back proceeds only when no task's journal last event is "
-    "`merged`, read from the journal directly"
+    "Because Step I.2.c's route-back gate below blocks route-back "
+    "whenever any task's journal last event is `merged`"
 )
-NEW_PREMISE_SURVIVES_ANCESTOR_CHECK_PHRASE = (
-    "the justification survives a failing ancestor check"
+PREMISE_INDEPENDENT_OF_ANCESTOR_CHECK_PHRASE = "independent of the ancestor check"
+
+# task0002 (routeback-admissibility-exits, rework round 1): the mis-citation
+# task0001's OWN premise carried -- I.2.c is BELOW I.2.a, never "above" --
+# and which task0002's Site D removes.
+OLD_GATE_CONJUNCT_ABOVE_MISCITATION_PHRASE = (
+    "the third route-back gate conjunct above"
 )
 
 # The Supporting cast Stop-hook bullet before this task's edit -- used for
@@ -495,6 +506,22 @@ PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE = (
     "leave a `merged` last event behind for a renumbered task to inherit, so\n"
     "the recycled-task-id carve-out above stays correctly scoped to `failed`\n"
     "only."
+)
+
+# task0002 (routeback-admissibility-exits, rework round 1) Site D: this
+# task's own pre-change wording sample, a verbatim excerpt of
+# em-workflow/references/implement-phase.md at THIS task's own branch
+# point (base commit f2fb87f) -- i.e. task0001's delivered premise, before
+# this task's edit -- distinct from PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE
+# above, which predates task0001's edit entirely and proves a different
+# thing.
+TASK0002_PRE_CHANGE_I2A_PREMISE_SAMPLE = (
+    "arise. Because route-back proceeds only when no task's journal last event\n"
+    "is `merged`, read from the journal directly, so the justification\n"
+    "survives a failing ancestor check (the third route-back gate conjunct\n"
+    "above), no retired task id can leave a `merged` last event behind for a\n"
+    "renumbered task to inherit, so the recycled-task-id carve-out above stays\n"
+    "correctly scoped to `failed` only."
 )
 
 
@@ -745,25 +772,43 @@ class TestI2aScopeStatementIsSelfConsistent(unittest.TestCase):
 class TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct(
     unittest.TestCase
 ):
-    """AC-2 (FR2; TS-3, task0001 routeback-admissibility-exits): the I.2.a
-    premise that the trust-but-verify path falsifies is replaced by one
-    resting on Step I.2.c's new third gate conjunct -- route-back proceeds
-    only when no task's journal last event is `merged`, read from the
-    journal directly, so the justification survives a failing ancestor
-    check. The paragraph's conclusion (the inheritance invariant and the
-    failed-only carve-out scoping), the in-flight sentence and the
-    unreachability slice anchors all survive."""
+    """AC-2 (FR2; TS-3, task0001 routeback-admissibility-exits), rewritten
+    again by task0002 (routeback-admissibility-exits, rework round 1) Site
+    D / AC-6 (FR2, NFR3; TS-13): the I.2.a premise names Step I.2.c (the
+    owning section of the gate conjunct) explicitly, states its position
+    correctly (I.2.c is below I.2.a, never "above"), and reads as one
+    premise with a single causal construction. The paragraph's conclusion
+    (the inheritance invariant and the failed-only carve-out scoping), the
+    in-flight sentence and the unreachability slice anchors all survive."""
 
     @classmethod
     def setUpClass(cls):
         cls.i2a = _normalize_ws(_i2a_section(_read()))
 
     def test_old_falsified_premise_absent(self):
+        # Historical regression guard (task0001's own removed premise).
         self.assertNotIn(OLD_MERGED_UNDER_EITHER_SOURCE_PREMISE, self.i2a)
 
     def test_new_premise_names_journal_last_event_conjunct(self):
         self.assertIn(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE, self.i2a)
-        self.assertIn(NEW_PREMISE_SURVIVES_ANCESTOR_CHECK_PHRASE, self.i2a)
+        self.assertIn(PREMISE_INDEPENDENT_OF_ANCESTOR_CHECK_PHRASE, self.i2a)
+
+    def test_old_gate_conjunct_above_miscitation_absent(self):
+        # task0002 AC-6: the pre-change premise sentence (which cited the
+        # gate conjunct as "above", though I.2.c is below I.2.a) is absent.
+        self.assertNotIn(OLD_GATE_CONJUNCT_ABOVE_MISCITATION_PHRASE, self.i2a)
+
+    def test_premise_has_single_causal_construction(self):
+        # task0002 AC-6: one "Because" paired with exactly one "so" -- the
+        # doubled causal construction ("Because ..., so ..., ... so ...")
+        # task0001 left behind is gone.
+        start = self.i2a.index(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE)
+        end = self.i2a.index(
+            "correctly scoped to `failed` only.", start
+        ) + len("correctly scoped to `failed` only.")
+        sentence = self.i2a[start:end]
+        self.assertEqual(sentence.count("Because "), 1)
+        self.assertEqual(sentence.count(" so "), 1)
 
     def test_inheritance_invariant_conclusion_survives(self):
         self.assertIn(
@@ -1185,6 +1230,20 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         self.assertNotIn(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE, sample)
         self.assertIn(OLD_MERGED_UNDER_EITHER_SOURCE_PREMISE, sample)
 
+    def test_new_premise_matcher_flags_absence_in_task0001_delivered_wording(
+        self,
+    ):
+        # task0002 (routeback-admissibility-exits, rework round 1) Site D:
+        # proof this task's own new-wording matchers would have failed
+        # against task0001's DELIVERED premise (this task's own pre-change
+        # branch point, base commit f2fb87f) -- distinct from
+        # PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE above, which predates
+        # task0001's edit entirely and proves a different thing.
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_I2A_PREMISE_SAMPLE)
+        self.assertNotIn(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE, sample)
+        self.assertNotIn(PREMISE_INDEPENDENT_OF_ANCESTOR_CHECK_PHRASE, sample)
+        self.assertIn(OLD_GATE_CONJUNCT_ABOVE_MISCITATION_PHRASE, sample)
+
     def test_group_anchors_absent_in_pre_change_wording(self):
         # The split assertions' own opening anchors did not exist in the
         # pre-change wording (the old sentence used a different
@@ -1252,6 +1311,22 @@ class TestPreChangeSampleGuards(unittest.TestCase):
         # present in both the pre-change sample and the live post-change
         # document.
         sample = _normalize_ws(PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE)
+        anchor = (
+            "no retired task id can leave a `merged` last event behind "
+            "for a renumbered task to inherit"
+        )
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_i2a_section(_read())))
+
+    def test_task0002_i2a_premise_sample_retains_inheritance_invariant_anchor(
+        self,
+    ):
+        # task0002 (routeback-admissibility-exits, rework round 1) Site D:
+        # "no retired task id can leave a `merged` last event behind for a
+        # renumbered task to inherit" survives verbatim across this task's
+        # own edit too -- a RETAINED anchor present in both this task's own
+        # pre-change sample and the live post-change document.
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_I2A_PREMISE_SAMPLE)
         anchor = (
             "no retired task id can leave a `merged` last event behind "
             "for a renumbered task to inherit"

@@ -1,0 +1,187 @@
+task_id: task0002
+baseline_failures: []          # full suite (1584 tests) was green at branch point f2fb87f
+final_failures: []             # full suite is green after this task's edit (1619 tests)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_failure_condition_stated
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_failure_condition_is_the_allowed_but_never_started_state
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_pre_change_conjunctive_condition_absent
+    red_confirmed: true
+    red_reason: >-
+      Verified by temporarily restoring the pristine pre-edit document (git
+      show f2fb87f) and re-running the suite: test_failure_condition_stated
+      failed (AssertionError: the new "...while the task worktree and the
+      task branch both exist" phrase was not found -- the pristine text
+      still read "...while neither the task worktree nor the task branch
+      exists") and test_failure_condition_is_the_allowed_but_never_started_state
+      failed the same way.
+  AC-2:
+    tests:
+      - tests.test_implement_routeback_gate.TestAgentIndexOrchestratorReadRuleDefinesLookup.test_owning_site_states_entry_selection
+      - tests.test_implement_routeback_gate.TestAgentIndexOrchestratorReadRuleDefinesLookup.test_owning_site_states_candidate_selection_rule
+      - tests.test_implement_routeback_gate.TestAgentIndexOrchestratorReadRuleDefinesLookup.test_owning_site_states_unresolvable_or_ambiguous_stops_nothing
+      - tests.test_implement_routeback_gate.TestAgentIndexOrchestratorReadRuleDefinesLookup.test_resume_state_source_enumeration_names_agent_index
+      - tests.test_implement_routeback_gate.TestAgentIndexOrchestratorReadRuleDefinesLookup.test_i2b_step1_cites_owning_site_without_restating
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_recovery_stops_agent_and_stop_tool_recorder_records_terminal_failed
+    red_confirmed: true
+    red_reason: >-
+      Branch 1 (defined lookup) adopted. Verified by restoring the pristine
+      document: all five TestAgentIndexOrchestratorReadRuleDefinesLookup
+      tests failed (the orchestrator-read rule sentences and the
+      four-source Resume enumeration did not exist yet), and
+      test_recovery_stops_agent_and_stop_tool_recorder_records_terminal_failed
+      failed because "and stops it through the harness stop tool" was not
+      present in the old recovery wording.
+  AC-3:
+    tests:
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_residual_unresolvable_agent_case_stated
+      - tests.test_implement_routeback_gate.TestI2bStep1InFlightExistenceCheckHasStatedEffect.test_residual_no_longer_the_stopped_agent_wording
+      - tests.test_implement_routeback_gate.TestAncestorCheckFailureReconciledStateIsFailed.test_ancestor_check_failure_reconciles_as_failed
+      - tests.test_implement_routeback_gate.TestAncestorCheckFailureReconciledStateIsFailed.test_reaches_normal_failed_handling_naming_all_three_choices
+    red_confirmed: true
+    red_reason: >-
+      Verified by restoring the pristine document: test_residual_unresolvable_agent_case_stated
+      failed (new residual phrase, keyed off the Agent-index lookup, was
+      absent), and both TestAncestorCheckFailureReconciledStateIsFailed
+      tests failed (the "reconciled state instead becomes failed" sentence
+      did not exist in I.2.b step 1's ancestor-check bullet yet).
+  AC-4:
+    tests:
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_third_conjunct_never_narrowed
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_no_recycled_id_can_inherit_merged_via_write_set
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_exit_cites_i2b_step1_reconciled_state
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_retry_reaches_harness_level_failure_diagnostic_path
+      - tests.test_implement_routeback_gate.TestThirdConjunctNeverNarrowedHasStatedExit.test_outcome_reached_without_selecting_abort
+    red_confirmed: true
+    red_reason: >-
+      Verified by restoring the pristine document: all five tests failed
+      (none of the "never narrowed" / "way out" / "retry ... reaches the
+      launch guard's permission denial" sentences existed in I.2.c yet).
+      Design choice: kept the third conjunct unchanged (never narrowed) so
+      route-back never admits the trust-but-verify state at all -- the
+      exit is an upstream reconciled-state rule (AC-3) plus a citation of
+      the pre-existing "Failure containment" harness-level-failure
+      diagnostic path, reached via the user selecting retry (not abort).
+  AC-5:
+    tests:
+      - tests.test_implement_routeback_gate.TestGateRejectedEnumerationIncludesThirdConjunct.test_enumeration_includes_third_conjunct_condition
+      - tests.test_implement_routeback_gate.TestGateRejectedEnumerationIncludesThirdConjunct.test_pre_existing_causes_survive
+    red_confirmed: true
+    red_reason: >-
+      Verified by restoring the pristine document: test_enumeration_includes_third_conjunct_condition
+      failed (the "or because the last-event-per-task replay alone
+      reports..." clause was not yet part of the gate-rejected cause
+      enumeration). test_pre_existing_causes_survive is a retention check
+      (not expected to fail) paired with the above.
+  AC-6:
+    tests:
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_new_premise_names_journal_last_event_conjunct
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_old_gate_conjunct_above_miscitation_absent
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_premise_has_single_causal_construction
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
+      - tests.test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_failed_only_carve_out_sentence_survives
+    red_confirmed: true
+    red_reason: >-
+      Verified by restoring the pristine document: test_new_premise_names_journal_last_event_conjunct
+      failed (the "Because Step I.2.c's route-back gate below..." phrase
+      did not exist yet), test_old_gate_conjunct_above_miscitation_absent
+      failed (the old "...conjunct above" mis-citation was still present),
+      and test_premise_has_single_causal_construction ERRORed (ValueError:
+      substring not found, since the new premise's opening phrase --  the
+      slice anchor -- did not exist in the pristine text). The two
+      RETENTION tests were already green (unaffected).
+  AC-7:
+    tests:
+      - tests.test_implement_routeback_gate.TestStaleLaunchedCaveatNamesOnlyFirableMechanisms.test_caveat_does_not_claim_subagent_stop_failure_net_fires
+      - tests.test_implement_routeback_gate.TestStaleLaunchedCaveatNamesOnlyFirableMechanisms.test_caveat_scopes_stop_tool_recorder_to_deliberate_stop_case
+      - tests.test_implement_routeback_gate.TestStaleLaunchedCaveatNamesOnlyFirableMechanisms.test_caveat_cites_i2b_step1_outcome_without_restating
+    red_confirmed: false
+    red_reason: >-
+      The Supporting cast Stale-`launched` caveat paragraph itself is NOT
+      rewritten by this task (task0001 already fixed its citation in an
+      earlier round): it already named only mechanisms consistent with the
+      allowed-but-never-started state and already cited I.2.b step 1
+      without restating it. These three tests passed against both the
+      pristine and the edited document -- confirmed by the same
+      pristine-document re-run used for the other criteria. AC-7's
+      requirement is genuinely satisfied by content this task leaves
+      untouched (its Site A fix to I.2.b step 1 is what makes the
+      caveat's existing citation actually true for the target state, per
+      IMPLEMENTATION.md's D3); the tests above are regression guards, not
+      an observed red-to-green transition.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      TDD-awkward per the task plan's Test Notes: "no hook file modified"
+      is a property of the diff, not of the document, so it is verified by
+      inspection rather than a committed checker. Verified: `git diff
+      --stat` for this task's full change set touches only
+      .claude-plugin/marketplace.json, em-workflow/.claude-plugin/plugin.json,
+      em-workflow/references/implement-phase.md,
+      tests/test_implement_routeback_gate.py and
+      tests/test_recycled_task_id_consistency.py -- no path under
+      em-workflow/hooks/ appears. The hook classification table inside
+      implement-phase.md was diffed byte-for-byte against the base-commit
+      (f2fb87f) copy and is identical. Every pre-existing hook-contract
+      test module (e.g. tests/test_hook_classification_pin.py and the
+      hook-adjacent assertions inside the two edited modules) passes
+      unmodified as part of the full 1619-test green suite.
+  AC-9:
+    tests:
+      - tests.test_implement_routeback_gate.TestContainmentAndInvariants.test_no_bare_git_commit_or_add_lines
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_i2b_step1_site_a_b_matchers_flag_absence_in_task0001_delivered_wording
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_agent_index_lookup_rule_matcher_flags_absence_in_task0001_delivered_wording
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_resume_four_sources_matcher_flags_absence_in_task0001_delivered_wording
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_third_conjunct_exit_matchers_flag_absence_in_task0001_delivered_wording
+      - tests.test_implement_routeback_gate.TestValidationDetectsRegressions.test_gate_rejected_enumeration_matcher_flags_absence_in_task0001_delivered_wording
+      - tests.test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_new_premise_matcher_flags_absence_in_task0001_delivered_wording
+      - tests.test_implement_routeback_gate.TestPreChangeSampleGuards.test_task0002_i2b_step1_sample_retains_reaches_normal_failed_handling_anchor
+      - tests.test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_inheritance_invariant_anchor
+    red_confirmed: false
+    red_reason: >-
+      These are meta-level convention checks (paired negative proofs and
+      retained-anchor guards) that assert properties of static string
+      samples/constants, not of the live document -- they have no natural
+      red state of their own to observe (they were green from the moment
+      they were written, by construction, since they test the captured
+      pre-change samples directly). The underlying invariants they protect
+      (no test removed/skipped, neither module's method count decreased,
+      no bare git commit/add line introduced, both banned tokens absent
+      from I.2.c) were verified by full-suite comparison: 1584 tests before
+      this task's edit, 1619 after (35 net new, 0 removed), and
+      test_no_bare_git_commit_or_add_lines passed both before and after
+      (this task introduces no such line).
+  AC-10:
+    tests:
+      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_plugin_manifest_and_marketplace_agree_on_version
+      - tests.test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_shared_version_is_past_the_pre_task_baseline
+    red_confirmed: true
+    red_reason: >-
+      Verified directly: with the version reverted to 0.1.48 (its pre-task
+      value) and the updated test threshold (assertGreater(patch, 48)) in
+      place, test_shared_version_is_past_the_pre_task_baseline failed with
+      "AssertionError: 48 not greater than 48". Restoring the bump to
+      0.1.49 turned it green. `python3 -m unittest discover -s tests`
+      passes from the repository root (1619 tests, 0 failures).
+notes: >-
+  Site B: adopted branch 1 (defined Agent-index lookup) rather than branch
+  2 (no lookup) -- it reuses the document's existing Agent-index /
+  stop-tool-recorder machinery with only a citation-level addition, and
+  avoids the alternative's awkward "no live agent to stop, yet a stop
+  mechanism still fires" framing that does not hold once the caveat's own
+  premise ("no corresponding implementer in flight") is taken seriously.
+  Site C: kept the I.2.c third conjunct unchanged (never narrowed) rather
+  than narrowing it -- narrowing it would have reopened exactly the
+  recycled-id-inherits-`merged` trap D1 was designed to close, since
+  `queue_launch_guard.py` denies a `merged`-last-event launch
+  unconditionally regardless of any orchestrator-side reclassification
+  (verified against the document's own hook-classification prose; no hook
+  source was read or modified). Instead, I.2.b step 1 now reconciles an
+  ancestor-check failure as `failed` (folding it into the ordinary
+  retry/route-back/abort menu), and choosing retry for that task reaches
+  the pre-existing "Failure containment" harness-level-failure diagnostic
+  path (a permission denial from the launch guard) -- an outcome distinct
+  from both gate-rejected and abort, reached without selecting abort, as
+  AC-4 requires.
