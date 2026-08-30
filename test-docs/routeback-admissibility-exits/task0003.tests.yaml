@@ -1,0 +1,102 @@
+task_id: task0003
+baseline_failures:
+  - test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
+  - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_inheritance_invariant_anchor
+  - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_inheritance_invariant_anchor
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
+      - test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_inheritance_invariant_conclusion_matcher_flags_absence_in_pre_change_wording
+    red_confirmed: true
+    red_reason: >-
+      Baseline run: AssertionError: 'no retired task id can leave a
+      `merged` last event behind for a renumbered task to inherit' not
+      found in the whitespace-normalized I.2.a section (the outside
+      module test_routeback_reset_scope_consistency.py had already
+      superseded that literal with its own recursion invariant and
+      asserts its absence). Re-grounded on
+      INHERITANCE_INVARIANT_CONCLUSION_PHRASE, which is a literal the
+      live I.2.a section actually carries; new negative-proof test added
+      alongside it.
+  AC-2:
+    tests:
+      - test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
+      - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor
+      - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor
+    red_confirmed: true
+    red_reason: >-
+      The baseline failures ARE this criterion's violation: this module
+      positively asserted a literal that
+      tests/test_routeback_reset_scope_consistency.py (outside the
+      declared change set) asserts absent. No single dedicated test
+      checks the cross-module non-conflict property directly; it is
+      verified by (a) grep across
+      tests/test_routeback_reset_scope_consistency.py and
+      tests/test_implement_routeback_gate.py confirming neither
+      INHERITANCE_INVARIANT_CONCLUSION_PHRASE nor
+      CARVE_OUT_CORRECTLY_SCOPED_PHRASE is ever asserted absent from
+      I.2.a, and confirming the superseded fragment is asserted PRESENT
+      by neither of the two named modules any more, and (b) the full
+      suite (AC-5) passing with both this module's presence assertions
+      and the outside module's absence assertion for the old literal
+      green simultaneously.
+  AC-3:
+    tests:
+      - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor
+      - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor
+    red_confirmed: true
+    red_reason: >-
+      Baseline run for both: AssertionError: 'no retired task id can
+      leave a `merged` last event behind for a renumbered task to
+      inherit' not found in the sample's normalized text intersected
+      with the live I.2.a section (the old anchor no longer occurs in
+      the live document). Both guards re-grounded on
+      CARVE_OUT_CORRECTLY_SCOPED_PHRASE, confirmed present in
+      PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE,
+      TASK0002_PRE_CHANGE_I2A_PREMISE_SAMPLE and the live I.2.a section
+      alike; the two pre-change sample constants themselves are
+      untouched (git diff shows no change inside either constant's
+      definition).
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Structural property of the diff (constant discipline, no
+      removed/skipped test, non-decreasing test-method count), not
+      independently red/green testable as a suite assertion -- no prior
+      state of this criterion was "red" to observe (the criterion is
+      about how the fix is shaped, not about document content). Verified
+      by diff inspection: the old inline literal
+      ("no retired task id can leave a `merged` last event behind for a
+      renumbered task to inherit") is fully removed from every
+      assertion in the module (git grep confirms it survives only inside
+      the two untouched pre-change sample constants, which are data, not
+      assertions); INHERITANCE_INVARIANT_CONCLUSION_PHRASE and
+      CARVE_OUT_CORRECTLY_SCOPED_PHRASE are each defined exactly once and
+      read by every assertion that uses them; no test was removed (two
+      were renamed, one was added); the module's test-method count rose
+      from 85 (pre-change, confirmed via git stash) to 86 (post-change).
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      `python3 -m unittest discover -s tests` run from the worktree root
+      before any edit: "Ran 2829 tests ... FAILED (failures=3)" -- the
+      three named tests. After the fix: "Ran 2830 tests ... OK" (0
+      failures, 0 errors, 0 skips).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Property of the diff, not a test outcome (per Test Notes: verified
+      by inspecting the change set). `git diff --name-only` against this
+      task's base shows exactly one file changed:
+      tests/test_recycled_task_id_consistency.py; this task's own test
+      record (test-docs/routeback-admissibility-exits/task0003.tests.yaml)
+      is the only other file added. No edit to
+      em-workflow/references/implement-phase.md, no other test module,
+      nothing under em-workflow/hooks/, and no version-manifest file
+      (em-workflow/.claude-plugin/plugin.json,
+      .claude-plugin/marketplace.json) changed.

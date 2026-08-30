@@ -164,13 +164,31 @@ own base commit 9f5d7ae):
 - test_old_falsified_premise_absent -> regression guard (absence of the
   removed premise) -> same proof above (asserts the OLD phrase is present
   in the pre-change sample)
-- test_inheritance_invariant_conclusion_survives -> RETENTION matcher, no
-  proof needed
+- test_inheritance_invariant_conclusion_survives -> re-grounded by task0003
+  below -> test_inheritance_invariant_conclusion_matcher_flags_absence_in_pre_change_wording
 - test_failed_only_carve_out_sentence_survives -> RETENTION matcher, no
   proof needed
 - test_in_flight_sentence_survives -> RETENTION matcher, no proof needed
 - test_unreachability_slice_anchors_survive -> RETENTION matcher, no proof
   needed
+
+task0003 (routeback-admissibility-exits, verify round 2 / VF-1..VF-3)
+re-grounds three matchers whose shared anchor -- "no retired task id can
+leave a `merged` last event behind for a renumbered task to inherit" --
+`tests/test_routeback_reset_scope_consistency.py` (outside the declared
+change set) now asserts is ABSENT from I.2.a, having superseded it with a
+recursion invariant of its own. `test_inheritance_invariant_conclusion_survives`
+is re-grounded on INHERITANCE_INVARIANT_CONCLUSION_PHRASE, paired with a new
+negative proof (same pre-change sample as task0001's premise proofs above).
+The two retained-anchor guards in `TestPreChangeSampleGuards` move from that
+superseded literal to CARVE_OUT_CORRECTLY_SCOPED_PHRASE -- present in both
+pre-change samples, in the live I.2.a section, and never asserted absent by
+any module outside the declared change set -- renamed
+test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor and
+test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor
+respectively (names kept describing what each now proves). Covers this
+task's own AC-1..AC-6
+(feature-docs/routeback-admissibility-exits/tasks/task0003.md).
 
 task0017 (feature-docs/goal-vs-spec-divergence review round2 rework)
 strengthens the premise `TestUnreachablePendingLaunchedCombination` cites:
@@ -541,6 +559,37 @@ TASK0002_PRE_CHANGE_I2A_PREMISE_SAMPLE = (
     "correctly scoped to `failed` only."
 )
 
+# --- task0003 (routeback-admissibility-exits, verify round 2 / VF-1..VF-3):
+# `tests/test_routeback_reset_scope_consistency.py` -- outside this
+# feature's declared change set -- superseded the paragraph's old
+# conclusion literal ("no retired task id can leave a `merged` last event
+# behind for a renumbered task to inherit") with a recursion invariant of
+# its own (that module's RECURSION_INVARIANT_PHRASE) and now asserts the
+# old literal's ABSENCE from I.2.a (Pinned-literal registry, direction of a
+# pin). The three matchers below that required the old literal are
+# re-grounded on wording the live document actually carries.
+
+# Site A (VF-1): the paragraph's conclusion, re-grounded on its own "can
+# never carry an inherited merged journal last event" clause -- a
+# deliberately narrower slice than the outside module's full
+# RECURSION_INVARIANT_PHRASE (which additionally states the "no retired
+# task id is ever re-issued" premise), so the two modules do not pin one
+# identical byte string (Test Notes).
+INHERITANCE_INVARIANT_CONCLUSION_PHRASE = (
+    "a task whose workflow.yaml `status` is `pending` can never carry an "
+    "inherited `merged` journal last event"
+)
+
+# Site B (VF-2, VF-3): both retained-anchor guards move to this anchor --
+# present in both pre-change samples and in the live I.2.a section, and
+# never asserted absent from I.2.a by any module outside the declared
+# change set (unlike the old anchor, which that module now asserts
+# absent).
+CARVE_OUT_CORRECTLY_SCOPED_PHRASE = (
+    "the recycled-task-id carve-out above stays correctly scoped to "
+    "`failed` only"
+)
+
 
 def _read():
     return IMPLEMENT_PHASE_PATH.read_text(encoding="utf-8")
@@ -819,7 +868,17 @@ class TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct(
     correctly (I.2.c is below I.2.a, never "above"), and reads as one
     premise with a single causal construction. The paragraph's conclusion
     (the inheritance invariant and the failed-only carve-out scoping), the
-    in-flight sentence and the unreachability slice anchors all survive."""
+    in-flight sentence and the unreachability slice anchors all survive.
+
+    task0003 (routeback-admissibility-exits, verify round 2 / VF-1):
+    `test_inheritance_invariant_conclusion_survives` is re-grounded --
+    `tests/test_routeback_reset_scope_consistency.py` (outside this
+    feature's declared change set) superseded the old conclusion literal
+    with a recursion invariant of its own and now asserts the old
+    literal's ABSENCE from I.2.a, so this test asserts the live document's
+    own "can never carry an inherited merged journal last event" clause
+    instead (INHERITANCE_INVARIANT_CONCLUSION_PHRASE), never the outside
+    module's full RECURSION_INVARIANT_PHRASE literal verbatim."""
 
     @classmethod
     def setUpClass(cls):
@@ -851,18 +910,10 @@ class TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct(
         self.assertEqual(sentence.count(" so "), 1)
 
     def test_inheritance_invariant_conclusion_survives(self):
-        self.assertIn(
-            "no retired task id can leave a `merged` last event behind "
-            "for a renumbered task to inherit",
-            self.i2a,
-        )
+        self.assertIn(INHERITANCE_INVARIANT_CONCLUSION_PHRASE, self.i2a)
 
     def test_failed_only_carve_out_sentence_survives(self):
-        self.assertIn(
-            "the recycled-task-id carve-out above stays correctly scoped "
-            "to `failed` only",
-            self.i2a,
-        )
+        self.assertIn(CARVE_OUT_CORRECTLY_SCOPED_PHRASE, self.i2a)
         self.assertIn(
             "This carve-out is deliberately scoped to `failed` only",
             self.i2a,
@@ -1308,6 +1359,18 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         self.assertNotIn(PREMISE_INDEPENDENT_OF_ANCESTOR_CHECK_PHRASE, sample)
         self.assertIn(OLD_GATE_CONJUNCT_ABOVE_MISCITATION_PHRASE, sample)
 
+    # --- task0003 (routeback-admissibility-exits, verify round 2 / VF-1):
+    # negative proof for the re-grounded inheritance-invariant conclusion,
+    # run against the same pre-change sample used for the premise proofs
+    # above (the conclusion clause is absent from it just as the old
+    # premise it replaces was).
+
+    def test_inheritance_invariant_conclusion_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE)
+        self.assertNotIn(INHERITANCE_INVARIANT_CONCLUSION_PHRASE, sample)
+
     def test_group_anchors_absent_in_pre_change_wording(self):
         # The split assertions' own opening anchors did not exist in the
         # pre-change wording (the old sentence used a different
@@ -1366,37 +1429,40 @@ class TestPreChangeSampleGuards(unittest.TestCase):
         self.assertIn(anchor, sample)
         self.assertIn(anchor, _normalize_ws(_i2a_section(_read())))
 
-    def test_i2a_unreachability_tail_sample_retains_inheritance_invariant_anchor(
+    def test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor(
         self,
     ):
-        # "no retired task id can leave a `merged` last event behind for a
-        # renumbered task to inherit" survives verbatim across this task's
-        # edit (only the premise before it changes) -- a RETAINED anchor
-        # present in both the pre-change sample and the live post-change
-        # document.
+        # task0003 (verify round 2 / VF-2): re-grounded from the superseded
+        # "no retired task id can leave ... to inherit" literal --
+        # `tests/test_routeback_reset_scope_consistency.py` (outside the
+        # declared change set) now asserts that literal's ABSENCE from
+        # I.2.a, which disqualifies it as an anchor (Conventions 3's
+        # non-forbidden condition). CARVE_OUT_CORRECTLY_SCOPED_PHRASE
+        # survives verbatim across this task's edit instead -- a RETAINED
+        # anchor present in both the pre-change sample and the live
+        # post-change document, and not forbidden by any outside module.
         sample = _normalize_ws(PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE)
-        anchor = (
-            "no retired task id can leave a `merged` last event behind "
-            "for a renumbered task to inherit"
+        self.assertIn(CARVE_OUT_CORRECTLY_SCOPED_PHRASE, sample)
+        self.assertIn(
+            CARVE_OUT_CORRECTLY_SCOPED_PHRASE,
+            _normalize_ws(_i2a_section(_read())),
         )
-        self.assertIn(anchor, sample)
-        self.assertIn(anchor, _normalize_ws(_i2a_section(_read())))
 
-    def test_task0002_i2a_premise_sample_retains_inheritance_invariant_anchor(
+    def test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor(
         self,
     ):
-        # task0002 (routeback-admissibility-exits, rework round 1) Site D:
-        # "no retired task id can leave a `merged` last event behind for a
-        # renumbered task to inherit" survives verbatim across this task's
-        # own edit too -- a RETAINED anchor present in both this task's own
-        # pre-change sample and the live post-change document.
+        # task0002 (routeback-admissibility-exits, rework round 1) Site D /
+        # task0003 (verify round 2 / VF-3): re-grounded for the same reason
+        # as the guard above -- CARVE_OUT_CORRECTLY_SCOPED_PHRASE survives
+        # verbatim across this task's own edit too, a RETAINED anchor
+        # present in both this task's own pre-change sample and the live
+        # post-change document.
         sample = _normalize_ws(TASK0002_PRE_CHANGE_I2A_PREMISE_SAMPLE)
-        anchor = (
-            "no retired task id can leave a `merged` last event behind "
-            "for a renumbered task to inherit"
+        self.assertIn(CARVE_OUT_CORRECTLY_SCOPED_PHRASE, sample)
+        self.assertIn(
+            CARVE_OUT_CORRECTLY_SCOPED_PHRASE,
+            _normalize_ws(_i2a_section(_read())),
         )
-        self.assertIn(anchor, sample)
-        self.assertIn(anchor, _normalize_ws(_i2a_section(_read())))
 
     def test_stop_hook_bullet_sample_retains_forgotten_refill_anchor(self):
         # "catching a forgotten refill after a wake phase" survives
