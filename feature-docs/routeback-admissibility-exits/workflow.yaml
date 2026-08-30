@@ -35,8 +35,8 @@ workflow:
     base_commit: 4097a72288dcdf4a2e3368131a29c8893d1a7a1e
     completed_at_commit: ce5ba003155bb57bc2d80cd634d08a4bd3cf6b73
   - id: review
-    status: in_progress
-    completed_at_commit: 1af441abcd7e897bf321bd5153e4167bfc156e8a
+    status: completed
+    completed_at_commit: d240a0c897ebe50e5da5a4d0d8cfd94c64c61a66
   - id: verify
     status: pending
     result: fail
@@ -142,23 +142,29 @@ tasks:
         - VF-3
 
 review:
-  status: in_progress
-  rounds_completed: 2
+  status: completed
+  rounds_completed: 3
   plan:
     floor: [comprehensive, performance, architecture, spec]
     discretionary: []
     cross_validation: true
   perspectives:
-    comprehensive: pending
-    performance: pending
-    architecture: pending
-    spec: pending
-  residual_critical_high: 2
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 4
   needs_rework: false
   deferred_note: >-
-    round 2 の residual critical/high 2 件は batch の rework cap
+    round 3 の residual critical/high 4 件は batch の rework cap
     (batch.review_rework_count = 1) に達していたため deferred として完了させた。
-    詳細は reviews/round2.yaml の bffdcec69dbce324 / 17dc88bb8781a1a1。
+    詳細は reviews/round3.yaml の 12839a507a7df994 (critical/spec) /
+    2da3c75adac32650 (high/spec) / bc57aa350bb027c7 (high/spec) /
+    59e58726b1b22211 (high/architecture)。うち 3 件は SPEC の Objectives と
+    FR3 に対する未達の指摘で、残り 1 件は workflow-schema.md 側の SSOT 更新を
+    要するため review-editor の single-file スコープでは修正できなかった。
+    round 2 の deferred 2 件 (bffdcec69dbce324 / 17dc88bb8781a1a1) は
+    reviews/round2.yaml に記録が残る。
 
 requirements:
   FR1:
