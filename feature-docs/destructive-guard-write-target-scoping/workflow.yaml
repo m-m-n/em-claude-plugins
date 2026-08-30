@@ -480,7 +480,34 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "write-target scoping of the self-modification judgment"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      - em-workflow/hooks/tests/run-destructive-guard.py
+    skills: [backend-impl]
+    domains: [input-handling, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, NFR1, NFR2, NFR3, NFR4]
+    status: pending
+    branch: null
+    notes: null
+  task0002:
+    title: "plugin version bump to the next patch level"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR7]
+    status: pending
+    branch: null
+    notes: null
 
 review:
   status: pending
@@ -496,78 +523,78 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR2:
     title: "書き込み先パス集合を組み立て、その要素にだけ SELF_CONFIG / TRANSCRIPT を当てる"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1, TS-2]
   FR3:
     title: "書き込み先が存在しない場合は判定しない"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR4:
     title: "読み取り元が ~/.claude にあるだけのコマンドは allow にする"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR5:
     title: "既存の検知力を維持する"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR6:
     title: "rm 系の判定には手を入れない"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR7:
     title: "プラグイン version を 2 箇所同値で patch 上げする"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-2, TS-3]
   NFR1:
     title: "静的解析のみ・決定的判定"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1]
   NFR2:
     title: "標準ライブラリのみ"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-2]
   NFR3:
     title: "テスト先行と既存ケース保持"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1]
   NFR4:
     title: "誤爆コストの非対称性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1]
 
 batch:
   review_rework_count: 0
