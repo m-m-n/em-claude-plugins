@@ -1,0 +1,24 @@
+schema_version: 1
+feature: routeback-admissibility-exits
+records:
+  - question_id: review.diff-size-gate
+    packet_id: null
+    answered_at: "2026-08-30T11:20:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "narrow the review diff base to main's tip 5b7e6a4c83a931b8d5e876272b73ed3a2aa16ce4"
+    normalized_answer: "narrow the review diff base to main's tip 5b7e6a4c83a931b8d5e876272b73ed3a2aa16ce4"
+    resolution_note: >-
+      gate: review phase diff-size gate; codex_consulted: true;
+      options: [review full 271-file diff from implement base_commit 4097a72 |
+      narrow base to main tip 5b7e6a4 | abort and ask a human];
+      choice: narrow base to main tip. After merge commit b521d4e brought 316
+      upstream main commits onto the integration branch, `git diff
+      {implement.base_commit} HEAD` yields 271 files / 50885 insertions, over
+      the 200-file / 20k-line review size gate and almost entirely
+      already-reviewed upstream code. merge-base(main, HEAD) == main tip, so
+      diffing from 5b7e6a4 isolates exactly this feature's authored change
+      (17 files / 3970 insertions, 7 of them outside feature-docs/). Codex
+      (readonly) independently returned this option. Smallest / most
+      reversible side effect: it narrows scope only and writes nothing.
