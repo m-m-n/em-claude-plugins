@@ -378,20 +378,24 @@ Triggered whenever a launched implementer's `Task()` call returns.
      not. A task whose `Task()` call has not yet returned is live by that
      fact alone and is never touched by this check, regardless of how
      long it has been running — the orchestrator is single-threaded and
-     never observes such a task except through its own eventual return.
-     This "not yet returned" fact lives only in the orchestrator's
-     in-session memory and cannot be observed after a Resume, since none
-     of Resume's four sources (workflow.yaml, journal, git actual state,
-     Agent index) records whether a given `Task()` call ever returned.
-     Consequently, on the first wake after a Resume, a task whose journal
-     last event is `launched` is always treated as not-live for purposes
-     of this check — the orchestrator cannot have an in-flight `Task()`
-     call surviving a Resume, so there is no live case to preserve here,
+     never observes such a task except through its own eventual return,
      which is what keeps this check from conflicting with I.2.c's drain
      guarantee that a failure never rolls back or cancels siblings
-     already running. This check never calls the harness stop tool to
-     probe liveness: the Agent index lookup and the stop tool are
-     consulted only in Recovery below, after a task is already in the
+     already running. This "not yet returned" fact lives only in the
+     orchestrator's in-session memory and cannot be observed after a
+     Resume, since none of Resume's four sources (workflow.yaml, journal,
+     git actual state, Agent index) records whether a given `Task()` call
+     ever returned. Consequently, this check's candidate set excludes any
+     task that the current session's own I.2.a launched: such a task's
+     `Task()` call may still be running in this same session and this
+     check has no way to observe that, so it is never eligible for the
+     liveness probe below regardless of its journal last event. Only a
+     task whose `launched` event was recorded before the current session
+     began (i.e. surviving a Resume, so it cannot be this session's own
+     in-flight call) is eligible to enter the candidate set and be
+     evaluated by the liveness probe. This check never calls the
+     harness stop tool to probe liveness: the Agent index lookup and
+     the stop tool are consulted only in Recovery below, after a task is already in the
      not-live set the previous two sentences define. Two distinct
      not-live cases exist: the lookup resolves to a candidate for
      Recovery to hand to the harness stop tool, or the lookup itself is
@@ -408,7 +412,14 @@ Triggered whenever a launched implementer's `Task()` call returns.
      resume' below, not restated here — records the task's terminal
      `failed` event, so the next replay reconciles the task as `failed`
      and it reaches the normal failed handling in I.2.c, where retry and
-     route-back are both available. Residual: when the Agent index
+     route-back are both available. A third case exists alongside the
+     two the previous paragraph defines: the Agent index lookup
+     resolves to a candidate, but the harness stop tool stops nothing,
+     or the stop-tool recorder does not append a terminal event for
+     it. In that case the journal is unchanged exactly as it is in the
+     unresolvable/ambiguous case, so this third case receives the same
+     Residual treatment described next, not the failed handling above.
+     Residual: when the Agent index
      lookup is unresolvable or ambiguous, the journal is unchanged, the
      task stays in-flight, the route-back gate blocks, and the phase
      takes the existing gate-rejected terminal, with the task named in
