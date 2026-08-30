@@ -1,0 +1,574 @@
+schema_version: 1
+feature: destructive-guard-write-target-scoping
+created: 2026-08-30
+base_branch: main
+goal: |
+  # destructive-guard: self-modification の誤爆
+
+  対象: `em-workflow/hooks/destructive-guard.py`
+  確認バージョン: em-workflow 0.1.51
+  日付: 2026-08-29
+
+  ## 事象
+
+  読み取り専用のコマンドが `self-modification` で確認プロンプトを出す。
+
+  ```
+  ls -la ~/.claude/hooks/ 2>/dev/null; echo "--- settings.json ---"; cat ~/.claude/settings.json 2>/dev/null | head -100
+  ```
+
+  ```
+  Hook PreToolUse:Bash requires confirmation for this command:
+  [destructive-guard/self-modification] Claude Code 自身の設定（settings / hooks / rules /
+  agents / skills）への書き込み。権限やガードの挙動が変わるので、ユーザーの意図を確認する。
+  [plugin:em-workflow]
+  ```
+
+  このコマンドは `ls` と `cat` だけで、書き込みは一切ない。
+
+  ## 原因
+
+  `check_self_modification()`（destructive-guard.py:519-536）の 2 段階の判定が両方とも
+  成立してしまう。
+
+  ### 1. `2>/dev/null` が「書き込み」と判定される
+
+  `shlex` は `punctuation_chars` 付きで動くため `2>/dev/null` は `2` / `>` / `/dev/null`
+  の 3 トークンに分割される。`split_redirects()` はこれを
+
+  ```
+  redirects = ["2", ">", "/dev/null"]
+  ```
+
+  として返す。`check_self_modification()` の `writes` 判定は
+
+  ```python
+  writes = (
+      any(REDIRECT.fullmatch(t) and not t.startswith("<") for t in redirects)
+      or word in INPLACE_WRITERS
+      or (word == "sed" and any(a.startswith("-i") for a in args))
+      or word in ("rm", "mv", "cp", "ln", "chmod", "chown")
+  )
+  ```
+
+  で、`>` が `REDIRECT.fullmatch` に一致するため `writes = True` になる。
+  リダイレクト先が `/dev/null` であることは見ていない。
+
+  ### 2. 判定対象がリダイレクト先ではなくセグメント全体
+
+  `writes` が立った後の判定は
+
+  ```python
+  if SELF_CONFIG.search(segment):
+  ```
+
+  で、`segment` はコマンド文字列全体。`ls -la ~/.claude/hooks/ 2>/dev/null` は
+  `~/.claude/hooks/` を含むため `SELF_CONFIG` にマッチする。
+
+  書き込み先は `/dev/null`、`~/.claude/hooks/` は `ls` の引数（読み取り対象）だが、
+  両者を区別していない。
+
+  ## 影響範囲
+
+  次の 2 条件を同時に満たすコマンドすべてが `ask` になる。
+
+  - リダイレクト演算子を含む（`2>/dev/null`、`>/dev/null`、`2>&1` など）
+  - セグメント内のどこかに `SELF_CONFIG` にマッチする文字列がある
+    - `~/.claude/settings*.json`、`~/.claude/hooks/`、`rules/`、`agents/`、
+      `skills/`、`commands/`、`output-styles/`、`workflows/`、`routines/`、
+      `scheduled_tasks.json`
+
+  `ls` / `cat` / `grep` / `find` などの読み取り専用コマンドでも、`2>/dev/null` を
+  付けた時点で発火する。設定・フック・スキルの調査は定型作業なので、頻度が高い。
+
+  ## 修正案
+
+  `writes` の理由によって `SELF_CONFIG` の検索対象を切り替える。
+
+  1. リダイレクト先が `/dev/null` の場合は `writes` に数えない。
+  2. リダイレクト由来で `writes` が立った場合は、`segment` 全体ではなく
+     **リダイレクト先のトークン**に対して `SELF_CONFIG` を判定する。
+  3. `rm` / `mv` / `cp` / `ln` / `chmod` / `chown` / `INPLACE_WRITERS` /
+     `sed -i` 由来の場合は、書き込み先が引数側にあるため現状どおり
+     `segment` 全体の検索を維持する。
+
+  これにより次のように分かれる。
+
+  | コマンド | 現状 | 修正後 |
+  | --- | --- | --- |
+  | `ls ~/.claude/hooks/ 2>/dev/null` | ask | allow |
+  | `cat foo > ~/.claude/settings.json` | ask | ask |
+  | `rm ~/.claude/hooks/x.py` | ask | ask |
+
+  ## 修正先
+
+  ```
+  /home/sakura/src/my_projects/em-claude-plugins/em-workflow/hooks/destructive-guard.py
+  ```
+
+  プラグインキャッシュ側
+  （`~/.claude/plugins/cache/em-claude-plugins/em-workflow/0.1.51/hooks/`）を直接
+  編集しても、プラグイン更新で失われる。
+
+  ---
+
+  # 追記（2026-08-30）
+
+  未修正のまま再発したため、判定を実測して範囲を確定した。原因は上記のとおりで
+  変わらない。追加で判明した点は 3 つ。
+
+  ## 1. `transcript-write` も同じ原因で誤爆する。判定は deny
+
+  `check_self_modification` は `SELF_CONFIG` の直後に `TRANSCRIPT` も見る。
+  `writes` は共通なので、同じ条件で transcript 側も発火する。
+
+  | コマンド | 判定 | 期待 |
+  | --- | --- | --- |
+  | `cat ~/.claude/projects/foo/bar.jsonl` | allow | allow |
+  | `cat ~/.claude/projects/foo/bar.jsonl 2>/dev/null` | **deny** | allow |
+  | `grep -l needle ~/.claude/projects/foo/*.jsonl 2>/dev/null` | **deny** | allow |
+
+  コード内のコメントは「読み取りは通常運用なので制限しない」と明記しているが、
+  実装は逆になっている。`deny` は auto モードの分類器を経由せず常に拒否されるため、
+  transcript 検索（`session-log-recall` スキルの手順そのもの）が `2>/dev/null` 付きで
+  打たれた時点で止まる。無人実行ではそこで走行が終わる。
+
+  self-modification は `ask` で人が通せるが、transcript-write は通せない。
+  優先度はこちらが高い。
+
+  ## 2. rm 関連に誤爆はない
+
+  | コマンド | 判定 |
+  | --- | --- |
+  | `rm /tmp/foo` | allow |
+  | `rm -rf node_modules` | allow |
+  | `rm -rf /tmp/x 2>/dev/null` | allow |
+  | `grep -rn "rm -rf /" ~/.claude/hooks/` | allow |
+  | `rm -rf ~/.claude/skills/foo` | ask（正しい） |
+
+  `SAFE_DELETE` と既存の誤爆修正が効いている。今回の修正対象ではない。
+
+  ## 3. 修正案 3 では引数由来の誤爆が残る
+
+  上記「修正案」の 3 は、`rm` / `mv` / `cp` / `ln` / `chmod` / `chown` /
+  `INPLACE_WRITERS` / `sed -i` 由来のとき `segment` 全体の検索を維持する、としている。
+  これだと読み取り元が `~/.claude` にあるだけのコマンドが ask のまま残る。
+
+  ```
+  cat ~/.claude/settings.json > /tmp/copy.json   -> ask（書き込み先は /tmp）
+  ```
+
+  `cp ~/.claude/settings.json /tmp/` も同型。`cp` / `mv` / `ln` は宛先が最後の引数
+  なので、引数由来の場合も**対象パスだけを見る**形に揃えるほうが素直。
+
+  つまり修正の形は「`writes` の理由で検索対象を切り替える」ではなく、
+  **書き込み先パスの集合を組み立てて、`SELF_CONFIG` / `TRANSCRIPT` をその要素にだけ当てる**。
+  集合の抽出元は次の 3 つ。
+
+  - 出力リダイレクトのターゲット — `split_redirects()` は演算子とターゲットを
+    両方 `redirects` に入れているので、演算子でない側を取る
+  - `INPLACE_WRITERS` と `sed -i` の対象引数
+  - `rm` / `mv` / `cp` / `ln` / `chmod` / `chown` の対象引数
+    （`cp` / `mv` / `ln` は宛先が最後の引数）
+
+  ## タスク
+
+  `.claude/rules/hook-tests.md` の規則により、**ケース追加を修正より先に行う**。
+
+  ### task 1: 誤爆ケースをテストスイートに追加
+
+  `em-workflow/hooks/tests/destructive-guard-cases.json` に allow 期待で追加する。
+
+  - `grep -rn "x" ~/.claude/skills/ 2>/dev/null`
+  - `ls ~/.claude/skills/ 2>/dev/null | head -40`
+  - `cat ~/.claude/settings.json > /tmp/copy.json`
+  - `cat ~/.claude/projects/foo/bar.jsonl 2>/dev/null`
+  - `grep -l needle ~/.claude/projects/foo/*.jsonl 2>/dev/null`
+
+  既存の deny / ask ケースは消さない。この時点でスイートは red になる。
+
+  ### task 2: 書き込み先パスの集合に対する照合へ変える
+
+  上記「3.」の形で `check_self_modification` を書き換える。
+
+  検知力の維持を確認する既存ケース:
+
+  - `rm -rf ~/.claude/skills/foo` → ask
+  - `cat foo > ~/.claude/settings.json` → ask
+  - transcript への書き込み → deny
+
+  ### task 3: version bump
+
+  `.claude/rules/core-plugin-version-bump.md` に従い 2 箇所を同値で上げる。
+  挙動の修正なので patch。
+
+  - `em-workflow/.claude-plugin/plugin.json`
+  - `.claude-plugin/marketplace.json`
+
+  ### task 4: 検証
+
+  - `python3 em-workflow/hooks/tests/run-destructive-guard.py`
+  - `python3 -m unittest discover -s tests`
+  - インストール済みキャッシュを引数に渡して鮮度も確認する
+
+  ## 再確認した環境
+
+  - リポジトリ側 `em-workflow/hooks/destructive-guard.py`（main 0.1.55 時点、および
+    `em-workflow/exit4-tip-argument/integration` の 0.1.56）で再現
+  - `~/.claude/hooks/destructive-guard.py`（2026-08-23 付の実体）も同じ欠陥を持つ。
+    プラグインキャッシュとは別に存在するため、修正時にどちらを直すか確認する
+
+  ---
+
+  # 追記 2（2026-08-30）: 削除手段の矯正
+
+  誤爆の修正とは別に、`rm` を hook で止めてゴミ箱経由の削除へ矯正する方針が決まった。
+  ルール改訂・hook 構成・systemd 設定例の 3 つを扱う。
+
+  ## 経緯: 現状の実測
+
+  | コマンド | 現状 |
+  | --- | --- |
+  | `gio trash <path>` | allow |
+  | `rm <$HOME 配下のファイル>` | **allow（素通り）** |
+  | `rm ~/.config/foo.conf` | **allow** |
+  | `rm -rf <$HOME 配下のディレクトリ>` | deny（rm-recursive。gio trash 誘導ではない） |
+  | `rm /tmp/foo` | allow |
+
+  単発の `rm` は $HOME 配下でも素通りしている。矯正は効いていない。
+
+  ## ゴミ箱の実態
+
+  `~/.local/share/Trash/` 直下に、`files/` にも `info/` にも属さない孤児が 19 件ある
+  （5/12〜7/18、最大 10MB）。過去に手で `mv ~/.local/share/Trash/` した跡で、
+  `.trashinfo` が無いため元のパスが追えず、`gio trash --list` にも GUI にも出ない。
+
+  自動削除は systemd タイマーではなく GNOME 側にある。
+
+  ```
+  org.gnome.desktop.privacy remove-old-trash-files -> true
+  org.gnome.desktop.privacy old-files-age          -> 7
+  ```
+
+  `gsd-housekeeping` が 7 日で消すが、対象は正規の `files/` のみ。だから直下の孤児は
+  3 ヶ月半残り続けている。`files/` に `mv` で直接入れたものも `.trashinfo` を持たない
+  ため、GNOME の期限判定から漏れる可能性がある。後述の systemd 掃除はこれを引き取る。
+
+  ## 1. ルール改訂（`~/.claude/rules/temp-file-placement.md`）
+
+  改訂後の削除手段:
+
+  - 削除は `gio trash <path>` をベースとする
+  - `gio trash` が使えない場合は `mv` で `~/.local/share/Trash/files/` 配下へ移動する
+    - 使えない代表例は tmpfs 上の `/tmp`。ゴミ箱はファイルシステムをまたげないため
+      「システム内部のマウントでは、ゴミ箱への移動はサポートされていません」で失敗する
+  - `mv` するときは同名ファイルの上書きを避け、suffix を付ける
+
+  ```
+  mv --backup=numbered <path> ~/.local/share/Trash/files/
+  ```
+
+  GNU coreutils の `--backup=numbered` は衝突時に `file.~1~` / `file.~2~` を付ける。
+  `-n`（上書きしない）だと移動自体が起きず削除にならないので使わない。
+
+  ゴミ箱ディレクトリが無い環境（コンテナ、リモートサーバ）では、`mkdir -p` してから
+  `mv` する。溜まった分は後述の systemd 掃除が引き取る。
+
+  ```
+  mkdir -p ~/.local/share/Trash/files
+  mv --backup=numbered <path> ~/.local/share/Trash/files/
+  ```
+
+  現行ルールからの変更点:
+
+  - **`/tmp` の扱いを反転する**。現行は「再起動で消えるので放置してよい」。
+    改訂後は「`/tmp` は tmpfs でメモリを消費するので、不要になったら消す」。
+    手段は `rm`（`gio trash` はファイルシステムをまたげず失敗する。`mv` で
+    ゴミ箱へ移すとメモリは解放されるが、代わりにホームの実ディスクを最長 1 ヶ月
+    占有する。一時ファイルにその価値はない）
+  - 現行は `mv` を**禁止**する文脈でしか触れていない（復元情報が残らないため）。
+    改訂後は fallback として許可するので、この記述を「`gio trash` が使えるなら
+    必ずそちらを使う。`mv` は復元情報が残らない」という但し書きに書き換える
+  - ゴミ箱を空にするのは `gio trash --empty`。全消しのみで、中の特定ファイルだけを
+    消すオプションは無い（`-f` / `--empty` / `--list` / `--restore`）
+
+  ## 2. hook の構成
+
+  `em-workflow/hooks/destructive-guard.py` に矯正ルールを足す。
+
+  - `rm` を **deny** し、理由文で手順を返してモデルにコマンドを書き換えさせる。
+    `ask` にしないのは、無人実行で答える人がいないまま止まるため。deny なら理由が
+    モデルに渡って自動的に `gio trash` へ書き換わる
+  - 理由文には次の 2 段を書く。`/tmp` に `gio trash` を使わせないため、両方必要
+    1. `gio trash <path>`
+    2. 失敗する場所（tmpfs 等）では
+       `mv --backup=numbered <path> ~/.local/share/Trash/files/`
+  - `gio trash` と `mv ... ~/.local/share/Trash/files/` は allow のまま
+
+  ### `rm` を許可する 2 つの例外
+
+  1. **`/tmp` / `/var/tmp` 配下** — 無条件で allow。tmpfs のメモリを解放するのが
+     目的で、ゴミ箱へ移す意味がない
+  2. **git 管理下のビルド成果物** — 次の 2 条件の AND
+
+  ```python
+  SAFE_DELETE_NAMES = {"node_modules", "dist", "build", "target",
+                       ".next", "coverage", ".cache"}
+  ```
+
+  - 対象パスの構成要素のいずれかが `SAFE_DELETE_NAMES` に一致する
+  - 対象パスが git 管理下にある —
+    `git -C <対象の親ディレクトリ> rev-parse --is-inside-work-tree`
+
+  git 判定を自前の `.git` 探索でやらないのは、worktree の `.git` がファイルである
+  こと・submodule・`GIT_DIR` 環境変数を全部自分で扱う必要があるため。git に聞くのが
+  正確で、`rm` を検出したときだけ呼べばよいのでコストも問題にならない。
+
+  `build` / `target` は一般名なので、名前一致だけだと `~/target` のような無関係な
+  パスまで通る。git 管理下の条件はそれを防ぐためにある。
+
+  ### 常設のバイパスは設けない
+
+  `rm` が必要になりそうな場面を洗ったが、いずれも別手段で代替できる。
+
+  | 想定ケース | 代替 |
+  | --- | --- |
+  | ゴミ箱のクリア | `gio trash --empty`、および systemd の週次掃除 |
+  | 巨大ファイル | ゴミ箱へ入れる。復旧コストのほうが大きく、取り返しがつかない |
+  | ゴミ箱ディレクトリが無い環境 | `mkdir -p` してから `mv`。削除は systemd |
+  | 機密ファイル | 本来 `shred` の領域。ただし LLM が読んでいる時点で前提が壊れている |
+  | `mktemp` の後始末 | `rm` で消してよい。大半が `/tmp` 配下なので例外 1 でカバーされる |
+
+  バイパスフラグを常設すると、モデルが面倒になった時点で付けて矯正が形骸化する。
+  逃げ道が要る場面は頻度が低く事前に説明できる性質なので、deny の理由文に
+  「該当するならユーザーに確認を取る」と書いて人を介す。
+
+  ### 既存の `SAFE_DELETE` の絶対パス漏れ
+
+  現行の `SAFE_DELETE` は正規表現の**先頭一致**なので、`/home/sakura/proj/node_modules`
+  にマッチしない（`node_modules` や `./node_modules` だけが当たる）。これが
+  `rm -rf $HOME/…/tmp/x` が deny になる理由でもある。上記のパス構成要素による判定に
+  置き換えることで、この漏れも同時に解消する。
+
+  ## 3. systemd 設定例（README 記載用）
+
+  環境固有の設定なので、ルールにもプラグインの実装にも入れない。
+  `em-workflow/README.md` に例として載せる。ユーザーが自分の環境に適用する。
+
+  週次で `~/.local/share/Trash/files/` の 1 ヶ月以上前のファイルを削除する。
+
+  ```ini
+  # ~/.config/systemd/user/trash-cleanup.service
+  [Unit]
+  Description=Remove old files from the trash
+
+  [Service]
+  Type=oneshot
+  ExecStart=-/usr/bin/find %h/.local/share/Trash/files -mindepth 1 -mtime +30 -delete
+  ```
+
+  ```ini
+  # ~/.config/systemd/user/trash-cleanup.timer
+  [Unit]
+  Description=Weekly trash cleanup
+
+  [Timer]
+  OnCalendar=weekly
+  Persistent=true
+
+  [Install]
+  WantedBy=timers.target
+  ```
+
+  ```
+  systemctl --user daemon-reload
+  systemctl --user enable --now trash-cleanup.timer
+  ```
+
+  補足:
+
+  - `-mindepth 1` で `files/` 自体を消さない
+  - `-delete` は深さ優先なので、空になったディレクトリも消える。中身が新しくて
+    残った場合は親の削除が `Directory not empty` で失敗する。`ExecStart` の `-`
+    プレフィックスでその失敗を無視し、サービスを failed にしない
+  - `%h` は systemd がユーザーのホームに展開する。`find` は絶対パスで書く
+  - `Persistent=true` で、電源が入っていなかった週の分を次回起動時に補う
+  - 対象は `files/` のみ。`info/` の `.trashinfo` は残り、孤児になる。GNOME の
+    7 日削除は `info/` も片付けるので、重複して困ることはない。気になるなら
+    `info/` にも同じ `find` を足す
+
+  ## タスク（追記 1 のタスクに続く）
+
+  ### task 5: ルール改訂
+
+  `~/.claude/rules/temp-file-placement.md` の「どうしても消したい場合」節を
+  上記 1 の内容へ書き換える。
+
+  ### task 6: 矯正ルールを hook に追加
+
+  ケース追加が先。`em-workflow/hooks/tests/destructive-guard-cases.json` に足す。
+
+  | コマンド | 期待 |
+  | --- | --- |
+  | `rm ~/src/foo.md` | deny |
+  | `rm -rf ~/src/proj/somedir` | deny |
+  | `rm /tmp/foo` | allow |
+  | `rm -rf /var/tmp/x` | allow |
+  | `rm -rf ~/src/proj/node_modules`（git 管理下） | allow |
+  | `rm -rf ~/target`（git 管理外） | deny |
+  | `gio trash ~/src/foo.md` | allow |
+  | `gio trash --empty` | allow |
+  | `mv --backup=numbered ~/src/foo.md ~/.local/share/Trash/files/` | allow |
+
+  git 管理下かどうかで結果が変わるケースは、テストランナーが実際に git を呼ぶことに
+  なる。判定を差し替え可能にするか、テスト用の一時リポジトリを作るかは実装時に決める。
+
+  そのうえで `destructive-guard.py` に矯正ルールを実装する。`SAFE_DELETE` は
+  先頭一致の正規表現から、パス構成要素の集合判定 + git 管理下チェックへ置き換える。
+
+  ### task 7: README に systemd 設定例を記載
+
+  `em-workflow/README.md` に上記 3 を追記する。
+
+  ### task 8: version bump と検証
+
+  追記 1 の task 3 / task 4 と同じ。誤爆修正と矯正ルールを同じ変更に含めるなら
+  bump は 1 回でよい。
+
+parent_branch: em-workflow/destructive-guard-write-target-scoping/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo:
+      language: Python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+    hooks:
+      language: Python
+      build_command: ""
+      test_command: "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 059841c53d7b9828b77d00f5353019732e033e91
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "UI もアーキテクチャ変更も伴わない。変更範囲は destructive-guard.py の check_self_modification 1 関数と、テストデータ 1 ファイル、version フィールド 2 箇所に閉じる。修正の形はタスク記述が既にパス集合方式として具体化しており、設計判断の余地が残っていない。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "誤爆ケースを先にテストスイートへ追加する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR2:
+    title: "書き込み先パス集合を組み立て、その要素にだけ SELF_CONFIG / TRANSCRIPT を当てる"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-2]
+  FR3:
+    title: "書き込み先が存在しない場合は判定しない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR4:
+    title: "読み取り元が ~/.claude にあるだけのコマンドは allow にする"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR5:
+    title: "既存の検知力を維持する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR6:
+    title: "rm 系の判定には手を入れない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR7:
+    title: "プラグイン version を 2 箇所同値で patch 上げする"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2, TS-3]
+  NFR1:
+    title: "静的解析のみ・決定的判定"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "標準ライブラリのみ"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "テスト先行と既存ケース保持"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "誤爆コストの非対称性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0

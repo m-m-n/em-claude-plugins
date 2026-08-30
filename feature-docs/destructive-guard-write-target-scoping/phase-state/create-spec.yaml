@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-write-target-scoping
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: fef0371579809a3dff8ba4d433158f7e0c39ec36
 last_input_digest: "sha256:40f57a49dd52ef5aa1301a8641cc5123fcf56f01dff0e5531f1c5bc7051f4e35"
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -22,10 +22,16 @@ worker_runs:
     input_digest: "sha256:3635aee3310155c3f400688ba44fdc4f9d64c72af8ac13feb95173f7f23223c3"
     output_digest: null
   - request_id: create-spec-run-0002
-    status: dispatched
+    status: completed
     input_digest: "sha256:40f57a49dd52ef5aa1301a8641cc5123fcf56f01dff0e5531f1c5bc7051f4e35"
     output_digest: null
-artifacts: []
+artifacts:
+  - path: feature-docs/destructive-guard-write-target-scoping/REQUIREMENTS.md
+    sha256: "sha256:5d18a173633d18f1500fa4ffc884ee607cc09b6b69c61c702069c8099c824b84"
+    produced_by: create-spec-run-0002
+  - path: feature-docs/destructive-guard-write-target-scoping/SPEC.md
+    sha256: "sha256:e4eb03bafb2e9e404a4dc4db71c298f93e901c1d9815c323ec0390558b50c7e9"
+    produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
