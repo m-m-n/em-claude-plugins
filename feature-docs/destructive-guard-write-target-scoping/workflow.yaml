@@ -467,7 +467,8 @@ workflow:
     skipped_reason: "UI もアーキテクチャ変更も伴わない。変更範囲は destructive-guard.py の check_self_modification 1 関数と、テストデータ 1 ファイル、version フィールド 2 箇所に閉じる。修正の形はタスク記述が既にパス集合方式として具体化しており、設計判断の余地が残っていない。"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 5a3da51685d2def3adba2bea53ec062f4e10a89b
   - id: implement
     status: pending
     base_commit: null

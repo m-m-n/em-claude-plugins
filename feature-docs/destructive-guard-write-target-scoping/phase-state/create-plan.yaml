@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-write-target-scoping
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
-base_revision: 5b68bd9712a4efa4f571aeffeb56f5ee9ab853f2
+base_revision: 5a3da51685d2def3adba2bea53ec062f4e10a89b
 last_input_digest: sha256:ff298992b445d5d01f5dc316298c5ec94150230adda3778568d8e2f811aaea27
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
