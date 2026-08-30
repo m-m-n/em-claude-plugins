@@ -96,8 +96,16 @@ The `completed` output is this triple: `written_artifacts`, `workflow_patch`
 and `payload.task_index`. The `workflow_patch` the planner returns uses
 `operation: replace_planning` (bound to `tasks_patch.mode: replace_all`,
 targeting the `create-plan` step); the operation's permission conditions,
-the `tasks_patch` entry shape, and the sixteen application rules are owned
-by `references/workflow-patch.md` and are not restated here.
+the `tasks_patch` entry shape, and the application rules are owned by
+`references/workflow-patch.md` and are not restated here.
+
+On a re-planning pass (the Re-planning path —
+`references/workflow-patch.md`'s `replace_all` permission conditions own
+which states satisfy it, and is not restated here as a single `create-plan`
+status literal), `tasks_patch` also carries `carried_task_ids` alongside
+`entries`. What the two fields mean — eligibility, disjointness, and how a
+carried id's record is copied — is owned by `references/workflow-patch.md`'s
+Re-planning task-id allocation section and is not restated here.
 
 ## Prohibited fields
 

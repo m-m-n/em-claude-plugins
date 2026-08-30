@@ -64,6 +64,12 @@ which categories this dispatch inspects:
   `CLAUDE.md`, the resolved package manifest files, and `test/README.md`.
 - `inspect_license` — the root LICENSE file's SPDX identifier.
 - `decide_design_step` — whether this feature needs the design step.
+- `inspect_reference_impact` — investigate the referencing side of the
+  symbols and strings the feature intends to delete or rename (test files
+  included), examining only the paths supplied via
+  `resolved_input_paths.reference_scan_targets` for references to them, and
+  report the affected files as `reference_impact` per
+  `references/contracts/analyst-contract.md`.
 
 Regardless of `analysis_scope` (this category is always inspected in `full`
 mode): classify every path in
@@ -78,7 +84,10 @@ procedure, never to you.
 When the investigation is complete and nothing is unresolved, return
 `status: completed` with `payload.resolved_requirements`,
 `payload.project_detection`, and `payload.design_system_candidates` per the
-contract. **Any point you cannot resolve from the supplied inputs becomes a
+contract, plus `payload.reference_impact` — the contract requires it on every
+`full` completion, so return an empty list when `inspect_reference_impact` was
+not part of `analysis_scope`, never omit the field.
+**Any point you cannot resolve from the supplied inputs becomes a
 question in a `question_packet` — never a silently-adopted assumption.**
 Return `status: needs_user_input` with `payload.analysis_snapshot` holding
 everything already resolved so far.

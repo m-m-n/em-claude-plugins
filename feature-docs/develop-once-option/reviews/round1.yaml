@@ -1,0 +1,298 @@
+round: 1
+executed_at: "2026-08-26T00:16:16+09:00"
+scope:
+  review_mode: diff
+  base_commit: cf2d345c74114de1939c798a1e31f80aea624cbe
+  head_commit: 1c934d8c2f6a9b68fb7741dcaac88e74dfab966f
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/develop-once-option/task0001.tests.yaml
+    - test-docs/develop-once-option/task0002.tests.yaml
+    - test-docs/develop-once-option/task0003.tests.yaml
+    - test-docs/develop-once-option/task0004.tests.yaml
+    - tests/test_batch_stop_contract.py
+    - tests/test_batch_stop_contract_skill_wiring.py
+    - tests/test_develop_once_option.py
+    - tests/test_plugin_version_parity.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: e8b3fe02b7aaeec0
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 78
+    title: "`reason=none` の定義が `phase_done` 追加と矛盾（同一 SSOT 内の契約ドリフト）"
+    description: >-
+      新設の `state` 定義（59-65 行）は「`phase_done` の行は `reason=none` を持つ」と
+      規定した。しかし同じ `## Field values` の `reason` 箇条書き（78-79 行）は `none` を
+      「used only when `state=completed`」と限定したままで、101-103 行も
+      「The value `none` is reserved for `state=completed`」と再宣言している。
+      11 個の stop reason code はすべて `Applies to state` が `stopped` なので、
+      `reason` 箇条書きの定義に従うと `phase_done` 行に入れられる `reason` 値が
+      存在しなくなる。この行を生成するのも解釈するのも LLM なので、再起動判断が壊れる経路になる。
+    suggestion: >-
+      `reason` 箇条書きと `## Stop reason codes` 末尾の 2 文を、`none` が非 stop の
+      全 state（`state=completed` と `state=phase_done`）に予約された値である形に書き換える。
+      あわせて tests/test_batch_stop_contract.py の
+      test_none_documented_as_reserved_for_completed を、旧限定表現の不在を含む形に強化する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "auto-fix conflict group skipped in batch (non-equivalent diffs at the same site); routed to review rework round 1"
+  - stable_id: f9dba34e27373999
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 79
+    title: "`reason=none` の予約範囲が `state=phase_done` と矛盾したまま残っている"
+    description: >-
+      この文書は terminal line の値ドメインの唯一の所有者。今回の変更は `state` 側の
+      2 文だけを更新しており、`reason` 側の 2 文（79 行・101-102 行）が更新対象から漏れている。
+      値ドメイン記述だけを読んで実装した consumer は正当な `state=phase_done reason=none` 行を
+      不正と判定する。tests/test_batch_stop_contract.py の
+      test_no_document_wording_states_a_terminal_state_count は count を述べる文言しか
+      見ていないため検出できていない。
+    suggestion: >-
+      `reason` の定義文と 101-102 行を、`none` が非 stop state 全体に予約された値である形に
+      書き換える。あわせて「`none` の予約範囲が `state` ドメインと整合しているか」を見る
+      回帰テストを足す。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "auto-fix conflict group skipped in batch (non-equivalent diffs at the same site); routed to review rework round 1"
+  - stable_id: 2024821d09d85f38
+    severity: high
+    category: spec
+    file: em-workflow/references/batch-terminal-line.md
+    line: 78
+    title: "`reason` の値域が `none` を `state=completed` 限定と定義しており、`phase_done` の `reason=none` と矛盾する"
+    description: >-
+      SPEC FR7 は「adds a third `state` value for the `--once` phase boundary,
+      emitted with `reason=none`」、AC4 は「defines the third `state` value with
+      `reason=none`」を要求する。`state` 箇条書きは満たしたが、`reason` 箇条書きと
+      `## Stop reason codes` 末尾が旧定義のままで、同一 SSOT 内に二重定義が残っている。
+      この文書は emit 直前に必ず Read される唯一の SSOT なので、FR7 / AC4 は実質未達。
+    suggestion: >-
+      `reason` 箇条書きを「used when `state=completed` or when `state=phase_done`」、
+      101-102 行を「reserved for `state=completed` and `state=phase_done`」に書き換える。
+      既存の test_none_documented_as_reserved_for_completed は 3 語の存在しか見ないため
+      グリーンのまま通る。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "spec category is excluded from auto-fix by the R4 candidate gate; routed to review rework round 1"
+  - stable_id: e821c93438f161a8
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 72
+    title: "`step` の「そのターンで実行した step」規則が、`--once` の Step C 単独起動で自己矛盾する"
+    description: >-
+      追加された「`step` always names the step EXECUTED in that turn」は、同じ箇条書きの
+      既存文「On `state=completed` the value is always `retrospect`」および `no-step` の
+      定義と両立しない。`--once` は retrospect 完了時点でターンを終え Step C を次の起動に
+      持ち越すため、「Step C だけを実行して正常完了するターン」が必ず発生し、そのターンは
+      workflow step を 1 つも実行していない。`step-c-abort` が `no-step` と規定されている
+      のに成功時だけ `retrospect` になる非対称も明文化されていない。
+    suggestion: >-
+      `step` 箇条書きの新文に `state=completed` 規則を優先する旨の除外を明記し、
+      その除外文言を pin するアサートを tests/test_batch_stop_contract.py に 1 本足す。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium severity; routed to review rework round 1 together with the same-document high findings"
+  - stable_id: 133dad87f620ed69
+    severity: medium
+    category: spec
+    file: em-workflow/skills/develop/SKILL.md
+    line: 557
+    title: "「バッチ終端行」の定義文が出力対象を「ランを終わらせるターン」に限定しており、`--once` 境界ターンを排除する"
+    description: >-
+      SPEC FR7 / NFR5 は「A `--once` batch turn still emits the terminal line」を要求し、
+      565 行の対象列挙には「`--once` のフェーズ境界で終わるターン」が追加された。しかし
+      直前の定義文（557-558 行）は未修正で「ランを終わらせるターン（Step C の完了処理、または
+      下記に列挙する終端の停止条件で終わるターン）」と二重に限定しており、`--once` 境界ターンは
+      ランを終わらせないためこの定義文だけを読むと終端行を出さない判断になる。
+    suggestion: >-
+      定義文を「同 SSOT が定める終端状態に達したターン（Step C の完了処理、`--once` の
+      フェーズ境界、または下記に列挙する終端の停止条件で終わるターン）」の形に直す。
+      `state` 値リテラルを増やさないので FR9 と拡張リテラルガードには抵触しない。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity; routed to review rework round 1"
+  - stable_id: d19b6a0240c04f8d
+    severity: medium
+    category: comprehensive
+    file: tests/test_batch_stop_contract_skill_wiring.py
+    line: 752
+    title: "`assertNotIn(\"stopped\", ...)` が実ファイルに無関係な語の不在を固定し、将来の正当な編集で誤検知する"
+    description: >-
+      test_guard_does_not_flag_bare_stopped_if_it_were_present が、実ファイル 2 本に
+      英単語 `stopped` が 1 回も現れないことを assert している。これは契約上の要件ではなく、
+      同クラスの docstring 自身の説明（`stopped` は whitelist されており現れても flag されない）と
+      正反対の制約をリポジトリに課している。batch-mode.md に自然な一文が入っただけで
+      契約違反が無いのにスイートが赤くなる。
+    suggestion: >-
+      実ファイルに対する不在アサートを落とし、matcher の whitelist 挙動だけを合成サンプルで
+      検証する形に絞る。実ファイル側の 0 violations は
+      test_guard_raises_no_violation_over_whole_skill_md / ..._batch_mode_md が既に担保している。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "medium severity; routed to review rework round 1"
+  - stable_id: 5a7d022d8ac79472
+    severity: medium
+    category: spec
+    file: tests/test_batch_stop_contract_skill_wiring.py
+    line: 756
+    title: "ガードの偽陽性証明が `stopped` の「実ファイルに出現しないこと」を固定しており、FR10 の要求と逆になっている"
+    description: >-
+      SPEC FR10 / AC7 は「the extension must not false-positive on
+      `completed` / `stopped` / `skipped`」「passes against the real files —
+      including against their existing step-status prose」を要求する。実装された
+      assertNotIn はその語を「書いてはならない」に格上げしており、AC7 が前提とする
+      『実ファイルの `stopped` 記述に対して通る』状態を将来にわたって成立不能にする。
+    suggestion: >-
+      非空アサーション（assertNotIn）を落として、合成サンプルに対する許容だけを検証する形にする。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium severity; same site as e8b3fe... routed to review rework round 1"
+  - stable_id: c29d7e1d81c92a61
+    severity: medium
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 63
+    title: "consumer 再起動の契約が `--once` の伝播を規定していない"
+    description: >-
+      「A consumer that sees `state=phase_done` re-launches the same feature to
+      continue it」は、`--once` が per-invocation で永続化されないという SKILL.md の定義と
+      合わせると、継続起動が `--once` を再度渡さない限り次のターンが全フェーズを走り切ることを
+      意味する。契約側はフラグの伝播に触れていない。対話モードの終了行が提示するコマンドにも
+      `--once` が含まれていない。
+    suggestion: >-
+      SSOT の一文を「re-launches the same feature with the same launch flags
+      (including `--once`)」の形にする。対話モードの終了行は SPEC FR12 が本文を逐語で
+      固定しているため、変更するなら SPEC 側の判断が要る。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "対話モード終了行の本文は SPEC FR12 が逐語で固定しているため、変更は仕様レイヤの判断。人間の評価者に委ねる"
+  - stable_id: 78512cb6a7a9d0e2
+    severity: medium
+    category: architecture
+    file: tests/test_batch_stop_contract_skill_wiring.py
+    line: 179
+    title: "`state` 値ドメインが 3 モジュールにハードコード複製され、ドメイン拡張時に fail-open する"
+    description: >-
+      terminal line の `state` ドメインが 3 つのテストモジュールに独立して手書き複製されている。
+      将来 SSOT に 4 つ目の値が入ったとき、複製のどれか 1 つを更新し忘れてもテストは緑のまま通り、
+      その値の再掲を静かに見逃す。
+    suggestion: >-
+      各モジュールが SSOT の `## Field values` からバッククォート付きの値を抽出する
+      ローカルヘルパを持ち、抽出結果が空なら失敗させる non-vacuity ガードを付ける。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "既存の cross-module isolation 規約に対する設計改善提案であり、本フィーチャーの SPEC 範囲外。人間の評価者に委ねる"
+  - stable_id: fe441ea6c8ab59f0
+    severity: high
+    category: spec
+    file: em-workflow/references/batch-terminal-line.md
+    line: 58
+    title: "Contract document still states fixed two-value domain"
+    description: >-
+      クロスモデルレビュアー（vertex-deepseek-v3.2）の指摘。「closed set of two values」が
+      残っているとしたが、実ファイルの当該箇所は既に「the run's terminal outcome:
+      `completed`, `stopped`, or `phase_done`」に書き換わっている。
+    suggestion: "（誤検知のため対応不要）"
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "誤検知。orchestrator が実ファイルを確認したところ、指摘された文言は既に削除済みで 3 値の列挙に置き換わっている（batch-terminal-line.md の `state` 箇条書き）"
+  - stable_id: 8e069ae30e3cdea0
+    severity: high
+    category: spec
+    file: em-workflow/references/batch-terminal-line.md
+    line: 128
+    title: "\"No line on a wait turn\" sentence still pins domain at two"
+    description: >-
+      クロスモデルレビュアーの指摘。「has not reached either of the contract's two
+      terminal states」が残っているとしたが、実ファイルは
+      「has not reached any of the contract's terminal states」に書き換わっている。
+    suggestion: "（誤検知のため対応不要）"
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "誤検知。orchestrator が実ファイル 138 行を確認し、カウント非依存の表現に書き換わっていることを確認した"
+  - stable_id: 4ba6040c4e439e8b
+    severity: critical
+    category: spec
+    file: tests/test_batch_stop_contract_skill_wiring.py
+    line: 247
+    title: "Literal guard may not fully cover state value domain"
+    description: >-
+      クロスモデルレビュアーの指摘。matcher が `state=` の形だけを見て `phase_done` の
+      値そのものを見ていないとしたが、STATE_DOMAIN に `phase_done` が含まれており、
+      さらに bare literal 用の独立ルールもある。
+    suggestion: "（誤検知のため対応不要）"
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "誤検知。STATE_DOMAIN = (\"completed\", \"stopped\", \"phase_done\") が 179 行にあり、`state=phase_done` を弾くアサートも 654 / 669 行に存在することを orchestrator が確認した"
+  - stable_id: 7da2bb6ee50a3483
+    severity: medium
+    category: spec
+    file: em-workflow/skills/develop/SKILL.md
+    line: 84
+    title: "Missing explicit per-invocation, never-persisted wording in SKILL.md"
+    description: >-
+      クロスモデルレビュアーの指摘。per-invocation かつ非永続の明記が無いとしたが、
+      84-86 行に「起動ごとの設定であり、`workflow.yaml` にも `phase-state/` にも
+      一切記録しない」と明記されている。
+    suggestion: "（誤検知のため対応不要）"
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "誤検知。orchestrator が SKILL.md 84-86 行の当該文を確認した"
+  - stable_id: 7d3f5705243a71ca
+    severity: medium
+    category: spec
+    file: em-workflow/skills/develop/SKILL.md
+    line: 548
+    title: "Interactive closing line exact wording verification missing"
+    description: >-
+      クロスモデルレビュアーの指摘。終了行の厳密一致検証が無いとしたが、
+      tests/test_develop_once_option.py が CLOSING_LINE 定数を持ち、349 行で
+      空白除去後の完全一致をアサートしている。
+    suggestion: "（誤検知のため対応不要）"
+    sources: ["litellm:vertex-deepseek-v3.2:spec"]
+    confidence: 50
+    resolution: declined
+    resolution_reason: "誤検知。orchestrator が tests/test_develop_once_option.py:72 の CLOSING_LINE 定義と 349 行のアサートを確認した"
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  notes: >-
+    R4 ループ 1 の候補は e8b3fe02b7aaeec0（comprehensive）と f9dba34e27373999（architecture）の
+    2 件。両者は same_site（batch-terminal-line.md, line_bucket 15）で、どちらも diff 形状だが
+    バイト等価ではないため conflict グループに分類された。batch モードのゲート
+    review.auto-fix-conflict に従いサイトごとスキップし、両 stable_id を abort。
+    productive loop が 0 のためレビュアー再実行はせず no-progress で終了した。
+residual_critical_high: 3
+rework_required: true

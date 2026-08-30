@@ -1,0 +1,102 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_phase_state_schema_compatibility.TestFormatVersionCompatibilitySectionPresent
+      - tests.test_phase_state_schema_compatibility.TestPreChangeRecordReadAsCurrentVersion
+    red_confirmed: true
+    red_reason: >-
+      TestFormatVersionCompatibilitySectionPresent.test_section_heading_present
+      failed with AssertionError ("### Format-version compatibility" not
+      found); TestPreChangeRecordReadAsCurrentVersion errored in setUpClass
+      with ValueError: substring not found (### Format-version
+      compatibility), against the pre-change document (git checkout -- of
+      phase-state.md, no stash used).
+  AC-2:
+    tests:
+      - tests.test_phase_state_schema_compatibility.TestPreChangeShapeRefusedWithNamedDiagnostic
+    red_confirmed: true
+    red_reason: >-
+      setUpClass errored with ValueError: substring not found (###
+      Format-version compatibility), against the pre-change document.
+  AC-3:
+    tests:
+      - tests.test_phase_state_schema_compatibility.TestRemedyNamedForBothRecords
+    red_confirmed: true
+    red_reason: >-
+      setUpClass errored with ValueError: substring not found (###
+      Format-version compatibility), against the pre-change document.
+  AC-4:
+    tests:
+      - tests.test_phase_state_schema_compatibility.TestDeclaredFormatVersionUnchanged
+    red_confirmed: false
+    red_reason: >-
+      This AC asserts an invariant (schema_version stays declared as `1`)
+      that already held before this task's implementation and is unchanged
+      by it -- both tests pass identically against the pre-change and
+      post-change document, since nothing about schema_version's own
+      declaration was touched. The other half of AC-4 (no validator, no
+      fixture, no other document changed) is a file-scope fact about this
+      task's diff, verified by `git status` / `git diff --stat` showing
+      only em-workflow/references/phase-state.md,
+      tests/test_phase_state_doc.py and
+      tests/test_phase_state_schema_compatibility.py touched -- not a
+      property expressible as a live-read assertion over phase-state.md.
+  AC-5:
+    tests:
+      - tests.test_phase_state_schema_compatibility.TestClassificationReplayRule
+      - tests.test_phase_state_doc.TestClassificationAuditRecord.test_classification_never_shares_the_spec_change_wholesale_exemption
+    red_confirmed: true
+    red_reason: >-
+      TestClassificationReplayRule errored in setUpClass with ValueError:
+      substring not found ("- `classification` has no per-entry ID"),
+      against the pre-change document.
+      test_classification_never_shares_the_spec_change_wholesale_exemption
+      errored with ValueError: substring not found ("\n- `classification`"),
+      against the same pre-change document -- this test supersedes the
+      pre-task0005 test_classification_no_longer_appears_in_the_id_
+      uniqueness_exemption, whose blanket assertNotIn("classification",
+      section) is factually superseded once this task's classification
+      replay bullet is added to the same section (tdd-testing: explicit,
+      task-plan-driven behavior change, narrowed rather than deleted to
+      keep the original negative proof intact).
+  AC-6:
+    tests:
+      - tests.test_phase_state_schema_compatibility.TestCompatibilityRuleCitesOwnersWithoutRestating
+    red_confirmed: true
+    red_reason: >-
+      setUpClass errored with ValueError: substring not found (###
+      Format-version compatibility), against the pre-change document.
+  AC-7:
+    tests:
+      - tests.test_phase_state_schema_compatibility.TestRetiredOriginFieldNameAbsenceScan
+      - tests.test_phase_state_doc.TestSpecChangeOriginPairSchemaBlock.test_retired_origin_field_name_is_gone_from_the_schema_example
+      - tests.test_phase_state_doc.TestSpecChangeOriginPairSchemaBlock.test_non_vacuity_a_synthetic_pre_rename_block_would_still_carry_it
+    red_confirmed: true
+    red_reason: >-
+      tests/test_phase_state_doc.py was reverted to its pre-rebuild source
+      (cp backup + git checkout --, not stash; confirmed via grep: 5
+      contiguous literal occurrences of the retired term). Against that
+      reverted file, TestRetiredOriginFieldNameAbsenceScan.
+      test_retired_term_absent_from_every_owned_path FAILED with the exact
+      offending path listed; restored via cp from the backup afterward
+      (confirmed 0 occurrences remain, diff stat unchanged). The other two
+      listed tests are a runtime-term-building REFACTOR of two
+      pre-existing assertions whose truth value never changes under this
+      task (origin_kind/origin_id were already present in phase-state.md's
+      schema block, finding_stable_id already absent, from the prior
+      goal-vs-spec-divergence feature) -- they pass identically before and
+      after the rebuild; only this test file's own source stopped carrying
+      the literal. They are listed for AC-7 completeness (they are the
+      rebuilt absence assertions the task plan names) but the AC's
+      red-confirmable claim rests on TestRetiredOriginFieldNameAbsenceScan
+      above.
+notes: >-
+  During implementation, a `git stash` (no pathspec) collided with a
+  different task's worktree via the repository-wide `refs/stash` git
+  worktrees share -- see the implementer's final report for the incident
+  and its resolution. All git-stash usage was subsequently replaced with
+  file-backup-based (`cp`) red/green verification for the remainder of
+  this task.

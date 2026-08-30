@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "packet_id": "rework-q0002",
+  "phase": "rework",
+  "worker": "rework-planner",
+  "iteration": 1,
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "questions": [
+    {
+      "question_id": "rework.spec-change.missing-origin-id",
+      "gate_id": "rework.spec-change",
+      "category": "spec-change",
+      "priority": "high",
+      "blocking": true,
+      "prompt": "The verify phase found a specification gap. Should SPEC.md change to cover it?",
+      "header": "Spec Gap",
+      "answer_mode": "freeform",
+      "options": [],
+      "why_needed": "The verify-origin failure cannot be resolved without a specification decision.",
+      "evidence": [
+        {
+          "path": "VERIFICATION.md",
+          "line": 12,
+          "detail": "TS-9 failed: the retry-count edge case is unspecified."
+        }
+      ],
+      "depends_on": [],
+      "supersedes": [],
+      "on_unanswered": "block"
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+task_id: task0014
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_goal_block_schema.TestSerializationDistinctionAndIndentation.test_states_verbatimness_constrains_value_not_serialization
+      - tests.test_goal_block_schema.TestSerializationDistinctionAndIndentation.test_requires_every_line_inside_the_indentation
+      - tests.test_goal_block_schema.TestSerializationDistinctionAndIndentation.test_states_indentation_is_not_normalization_of_the_value
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'constrains the value, not the serialization' /
+      'blank line' / 'not normalization of the value' not found in the
+      `## \`goal\` block` section before the new paragraph was added to
+      em-workflow/references/workflow-schema.md.
+  AC-2:
+    tests:
+      - tests.test_goal_block_schema.TestPostWriteVerification.test_requires_reparse_after_write
+      - tests.test_goal_block_schema.TestPostWriteVerification.test_requires_file_parses
+      - tests.test_goal_block_schema.TestPostWriteVerification.test_requires_goal_reads_back_as_single_scalar_equal_to_description
+      - tests.test_goal_block_schema.TestPostWriteVerification.test_requires_every_other_key_and_value_unchanged
+      - tests.test_goal_block_schema.TestPostWriteVerification.test_states_required_not_advisory
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 're-parsed' / 'the file parses' / 'reads back as a
+      single scalar equal to the launch-time description' / 'every other
+      top-level key and value in the file matches the content that was
+      intended to be written' / 'required, not advisory' not found before
+      the post-write-verification paragraph was added to
+      workflow-schema.md.
+  AC-3:
+    tests:
+      - tests.test_goal_block_schema.TestFailureOutcome.test_failed_verification_means_block_not_written
+      - tests.test_goal_block_schema.TestFailureOutcome.test_failure_outcome_is_the_existing_optional_absence_state
+      - tests.test_goal_block_schema.TestFailureOutcome.test_failure_is_reported
+      - tests.test_goal_block_schema.TestFailureOutcome.test_never_a_partially_written_or_unverified_block
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'block is NOT written' / 'optional-absence state' /
+      'the failure is reported' / 'partially written or unverified' not
+      found before the Failure-outcome paragraph was added to
+      workflow-schema.md.
+  AC-4:
+    tests:
+      - tests.test_goal_block_schema.TestVerbatimStorageWording.test_states_verbatim_storage
+      - tests.test_goal_block_schema.TestVerbatimStorageWording.test_states_no_summarizing_normalizing_or_truncation
+      - tests.test_goal_block_schema.TestImmutability.test_states_value_never_changes_once_written
+      - tests.test_goal_block_schema.TestImmutability.test_needs_update_reentry_leaves_it_unchanged
+      - tests.test_goal_block_schema.TestOptionalityAndAbsenceSemantics.test_states_the_key_is_optional
+      - tests.test_goal_block_schema.TestOptionalityAndAbsenceSemantics.test_states_the_absence_meaning
+    red_confirmed: false
+    red_reason: >-
+      Retention pin (AC-4): these pre-existing tests assert wording this
+      task must NOT change. They were already green before this task's
+      edits (the verbatim/immutability/optionality/re-entry statements are
+      untouched) and remained green after -- there is no red state to
+      observe for a criterion whose point is "nothing changed here".
+  AC-5:
+    tests:
+      - tests.test_create_spec_goal_persistence.TestWriteTimeProcedureAndFailureOutcome.test_states_indentation_and_reparse_are_performed_at_construction
+      - tests.test_create_spec_goal_persistence.TestWriteTimeProcedureAndFailureOutcome.test_cites_workflow_schema_for_the_indentation_and_reparse_rule
+      - tests.test_create_spec_goal_persistence.TestWriteTimeProcedureAndFailureOutcome.test_states_failure_outcome_without_restating_it
+      - tests.test_create_spec_goal_persistence.TestWriteTimeProcedureAndFailureOutcome.test_does_not_add_a_second_verbatim_immutability_untrusted_statement
+      - tests.test_create_spec_goal_persistence.TestGoalNoSourceCase.test_no_source_outcome_is_not_an_empty_scalar
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'indent' / 're-parsing' / 'failure is reported' /
+      'no-source outcome' / 'never as an empty scalar' not found in the
+      "## 11. workflow.yaml construction" section of
+      create-spec-phase.md before the Write-time-procedure and
+      On-verification-failure bullets were added.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by running the whole suite
+      (python3 -m unittest discover -s tests) rather than by a dedicated
+      test: full suite passes with final_failures a subset of
+      baseline_failures (both equal the 3 pre-existing
+      test_guardrail_hooks_migration failures, unrelated to this task).
+      No existing pin was deleted; the one intentionally extended pinned
+      sentence (EC-7's "no `goal` block is written") has its extension
+      ("never as an empty scalar") pinned in the same edit via
+      test_no_source_outcome_is_not_an_empty_scalar.

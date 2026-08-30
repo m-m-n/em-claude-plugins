@@ -1,0 +1,43 @@
+schema_version: 1
+feature: routeback-admissibility-exits
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 9f5d7aeac8e524edbff44d8b54ea269a17d69472
+last_input_digest: sha256:126e799fcdd901345e1016a21af4513d2dc1530bd438cc5453c1bf8fcf221025
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: completed
+    input_digest: sha256:4671043db9931ebf0d7ff3c1419be19606bbf7fa867db84f2a18d7ea2732cf32
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:126e799fcdd901345e1016a21af4513d2dc1530bd438cc5453c1bf8fcf221025
+    output_digest: null
+artifacts:
+  - path: feature-docs/routeback-admissibility-exits/REQUIREMENTS.md
+    sha256: null
+    produced_by: create-spec-run-0002
+  - path: feature-docs/routeback-admissibility-exits/SPEC.md
+    sha256: null
+    produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: null
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  e2e:
+    generation_digest: null
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null

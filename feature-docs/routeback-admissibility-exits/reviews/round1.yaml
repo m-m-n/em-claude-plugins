@@ -1,0 +1,261 @@
+round: 1
+executed_at: "2026-08-30T09:30:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 4097a72288dcdf4a2e3368131a29c8893d1a7a1e
+  head_commit: 41673deeaabaab80bc90348dde788b1cdcb92425
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/routeback-admissibility-exits/task0001.tests.yaml
+    - tests/test_implement_routeback_gate.py
+    - tests/test_recycled_task_id_consistency.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: 6e9da908226dcef5
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 360
+    title: "新設リカバリが対象シナリオでは必ず Residual に落ち、abort 以外の出口にならない"
+    description: |
+      I.2.b step 1 に新設された recovery は「wake phase が recorded agent を harness
+      stop tool で止める → stop-tool recorder が terminal `failed` を記録する」という
+      連鎖に依存している。しかし FR3 が定義する対象状態は「no task worktree, no task
+      branch, no live agent」（SPEC.md 95-101 行）であり、Defect 2 では subagent が
+      そもそも起動していない。止める agent が存在しなければ TaskStop は何も止めず、
+      PostToolUse の queue_taskstop_net.py は agent index から task を解決できず
+      fail-open の no-op になる。agent index の entry は launch の tool_response から
+      書かれるため、起動しなかった launch には entry 自体が無い可能性が高い。
+      したがって常に Residual 分岐（journal 不変・task は in-flight のまま・route-back
+      gate は block・gate-rejected terminal）に落ち、これは変更前と同じ abort 相当の
+      終端で、FR3 が要求する「abort 以外の protocol-defined recovery path」が実質的に
+      提供されていない。
+
+      同一サイトに統合した 2 件（same_site dedupe）:
+      (a) line 355-358 / high: 存在チェックの FAIL 条件が「journal last event が
+      `launched` かつ worktree と branch の *どちらも* 存在しない」という AND のため、
+      SPEC の Defect 2（launch は許可されたが起動しなかった = worktree も branch も
+      残っている）では決して真にならず、recovery が 1 件も発火しない。片方だけ消えた
+      状態も AND のため素通りする。Supporting cast の stale-`launched` caveat が
+      「triggers I.2.b step 1's recovery on the next reconcile pass」と主張する根拠も
+      同じ理由で成立しない。
+      (b) line 362-364 / medium: 「that task's recorded agent」の取得元が未定義。
+      task id から harness agent identifier を引く方法をどこも規定していない。唯一
+      その対応を持つ agents.jsonl は「it exists solely so the stop-tool recorder can
+      resolve a stop back to a task」と agent→task の一方向に限定されており、逆引きは
+      定義されていない。1 entry が複数候補を持ち得るためどれを TaskStop に渡すかも未定義。
+    suggestion: |
+      live agent の存在に依存しない terminalize 経路を定義する。
+      (a) 存在チェックが FAIL した task について、wake phase 自身が I.2.a の last-event
+      規則の明示的な例外として reconciled state を `failed` として扱うと規定する
+      （journal は append-only のまま、解釈側だけを変える）。
+      (b) stop-tool 経路は live agent があるときの最適化として位置づけ、agent を解決
+      できない場合の既定経路を主経路として書く。
+      あわせて FAIL 条件の AND を実際に起こり得る状態に合わせ（OR 化、または agent の
+      生存確認ベースへ）、recovery が使う agent 逆引きの出典を citation として足す。
+      Residual は例外ケースに限定し、Defect 2 の既定経路にしないこと。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 1: conflict group skipped (batch: review.auto-fix-conflict); routed to rework round 1"
+  - stable_id: 1154484d3ee2441e
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 361
+    title: "I.2.b step 1 の新 recovery が、プロトコルが禁じる第4の状態ソース（agents.jsonl / 記憶）を前提にしている"
+    description: |
+      新設された recovery は「the wake phase stops that task's recorded agent through
+      the harness stop tool」と指示するが、オーケストレーターが task → harness agent
+      識別子を引く手段がこのプロトコル内に存在しない。
+      (1) I.2.a は「never carry in-flight state across turns from memory」を明示し、
+      Resume 節は状態の復元ソースを workflow.yaml / journal / git actual state の 3 つに
+      限定していて agents.jsonl を含めていない。
+      (2) 唯一の対応表である agents.jsonl は「diagnostic plumbing, not a second journal
+      ... exists solely so the stop-tool recorder below can resolve a stop back to a
+      task」と hook 専用の agent→task 逆引き用と明記されており、オーケストレーター側の
+      読み取り契約はどこにも定義されていない。
+      (3) 同 bullet は「the exact identifier field the response carries is unverified,
+      so more than one candidate may be recorded per entry」とも述べており、仮に読んでも
+      TaskStop に渡すべき候補が一意に決まらない。
+      結果としてこの recovery は正常系が実行不能で常に Residual 分岐に落ちるか、
+      オーケストレーターが SSOT に定義のない読み取り／journal 書き込みを即興で行うかの
+      どちらかになる。さらに識別子が無制約なため、I.2.c が明示的に drain させている
+      稼働中の別 implementer を誤って停止させる余地も残る。
+    suggestion: |
+      (a) agents.jsonl の契約を拡張し、オーケストレーター側の task → 識別子ルックアップ
+      （どのエントリを採用するか、複数候補のうちどれを TaskStop に渡すか、複数/曖昧時は
+      停止しない）を Supporting cast の Agent index bullet と Resume の状態ソース一覧の
+      両方に明記する。
+      (b) agents.jsonl を hook 専用のまま保つなら、recovery の起点を「harness が提示する
+      停止対象の識別子が当該タスクのものと確定できる場合に限る」と条件付けし、確定できない
+      場合を正常系ではなく既定路として先に書く（現在の Residual を主分岐に格上げする）。
+      いずれの場合も「recorded agent が存在しない/解決できない」ケースを Residual に含む
+      ことを文言で明示する。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 1: conflict group skipped (batch: review.auto-fix-conflict); routed to rework round 1"
+  - stable_id: 4dce81ff0f6b4fc6
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 448
+    title: "第3 conjunct が trust-but-verify ケースを abort 専用の終端に閉じ込める"
+    description: |
+      SPEC Objectives 第1項:「Every failure path in the implement phase's I.2.c
+      route-back protocol ends in a state the workflow can leave: no task may become
+      permanently unlaunchable, and no plan may be left with abort as its only option.」
+
+      新設の第3 conjunct は「last-event-per-task replay 単独で journal last event が
+      `merged` なら、ancestor 検証の成否に関わらず route-back を不可」とする。SPEC の
+      Data Flow が Defect 1 として挙げる trust-but-verify 状態（merge-task.sh が journal
+      に `merged` を append したが git merge-base --is-ancestor が失敗）で、その task に
+      残る出口を数えると:
+      - retry → queue_launch_guard.py は journal last event のみを読むので
+        deny_already_merged で恒久拒否。journal は append-only でこの状態を退避できない。
+      - route back → 今回追加した第3 conjunct が阻止。
+      - 結果、gate-rejected terminal（「the same terminal as the "abort phase" option
+        below. No retry loop, no alternative recovery route, and no degraded route back
+        is offered for this path.」）だけが残る。
+
+      本変更は FR1 の unreachability 側の要求は満たす一方、変更前は route-back が通って
+      いたこのケースを新たに abort 専用パスへ変えており、Objective 第1項の後半に正面から
+      反する。加えて gate-rejected 分岐の原因列挙は第1・第2 conjunct 由来の 4 条件のみで、
+      第3 conjunct の条件を含んでいないため、この状態がその分岐に落ちること自体も文面上は
+      明示されていない。
+    suggestion: |
+      (a) FR1 のもう一方の選択肢（widen the carve-out）と組み合わせ、journal last event
+      `merged` かつ ancestor 検証失敗の task に対する自動回復可能な出口を I.2.b step 1 側で
+      定義する（FR5/NFR1 に従い 4 つの hook をまとめて検討する）。
+      (b) gate-rejected 分岐にこの条件専用の回復手順を明記する。ただし当該 slice には
+      「No retry loop, no alternative recovery route, and no degraded route back is
+      offered」というピンがあるため、SPEC の Wording and pinning constraints に従い AC-7 の
+      マッチャ更新 + pre-change バイトに対する negative proof をセットで入れる必要がある。
+      いずれの場合も gate-rejected 分岐の原因列挙に第3 conjunct の条件を追加し、その状態が
+      どの終端に落ちるかを文面で確定させること。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "auto-fix excluded (category: spec); routed to rework round 1"
+  - stable_id: 06b3f1b36ff2161d
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 368
+    title: "stale `launched` の recovery が residual で abort 相当に落ち、FR3 の MUST を満たしきっていない"
+    description: |
+      SPEC FR3 は「A plan in which some task's journal last event is `launched` while no
+      implementer is actually in flight MUST have a protocol-defined recovery path other
+      than abort」と定める。追加された recovery は stop tool 経由の terminal `failed`
+      記録に全面的に依存し、その直後の Residual は「the journal is unchanged, the task
+      stays in-flight, the route-back gate blocks, and the phase takes the existing
+      gate-rejected terminal (I.2.c)」と明記する。この終端は abort と同一で
+      「no alternative recovery route」である。recorded agent の解決は agents.jsonl に
+      依存し、その writer は launch response から識別子を復元できたときだけ entry を書く。
+      FR3 の想定する「Task() は許可されたが実際には走らなかった」ケースは、まさに entry が
+      書かれない／解決できない側に落ちうる。結果 FR3 の MUST は「agent が解決できる場合に
+      限り」成立している状態にとどまる。
+    suggestion: |
+      (a) residual ケースにも abort 以外の出口を与える（FR3 が例示する「evaluating the
+      route-back precondition against I.2.b step 1's reconciled state so a stale
+      `launched` counts as terminal」を採り、I.2.a の in-flight 断定文および 4 hook との
+      整合を FR5/NFR1 に従って同じ変更で検討する）。
+      (b) FR3 のスコープを「recorded agent が解決できる場合」に明示的に狭める形で
+      SPEC/REQUIREMENTS を先に改訂し、protocol 文面の residual と一致させる。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity; not an auto-fix candidate. Carried into rework round 1 as related context"
+  - stable_id: 3ecccbac53f86bb8
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 651
+    title: "Stale-`launched` caveat が、その事象では発火し得ない recovery を bounded の根拠として引用している"
+    description: |
+      caveat が扱う事象は「the Task() call is then allowed but never actually runs」に
+      よる stale `launched` 行。しかし I.2.a は launch の前に git worktree add -b で
+      worktree とブランチを作成するため、この事象では worktree もブランチも存在する。
+      一方 I.2.b step 1 の存在チェックは「the check FAILS when a task's journal last
+      event is `launched` while neither the task worktree nor the task branch exists」と
+      両方欠落したときにのみ FAIL すると新たに定義された。したがって caveat の新文
+      「triggers I.2.b step 1's recovery on the next reconcile pass」は caveat 自身が
+      対象とするケースでは成立しない。旧文は曖昧だったが、今回の変更で検証可能な形の
+      誤った引用に固定され、bounded の論拠がその上に乗っている。
+    suggestion: |
+      caveat 側で、存在チェックが FAIL するのは worktree とブランチが両方欠落した場合のみで
+      あり、launch されなかった stale `launched`（worktree は存在する）はその条件を満たさない
+      ことを明示したうえで、その系統に対する実際の封じ込め（Stop hook の cap と stop-tool
+      recorder）だけを bounded の根拠として残す。存在チェックだけでは残る系統を封じたいので
+      あれば、I.2.b step 1 側の FAIL 条件を「worktree は存在するが対応する implementer が
+      存在しない」を含む形へ広げるか、その残余を明示的に未カバーとして記録する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity; not an auto-fix candidate. Carried into rework round 1 as related context"
+  - stable_id: cbd00cfb5b3ce5d7
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 224
+    title: "I.2.a の新前提の引用が所有セクション名を失い、参照方向も誤っている"
+    description: |
+      書き換えられた前提が引く先は「(the third route-back gate conjunct above)」だが、
+      当該 conjunct は I.2.a より後の I.2.c にある。同じ段落の数行上では同じ規則を
+      「Given I.2.c's route-back precondition below」と正しく below かつセクション名付きで
+      参照しており、書き換え後の文だけが方向を誤り、かつ旧文にはあった I.2.c という
+      セクション名も落としている（旧: the widened I.2.c gate above）。このドキュメントは
+      「cited here as the owning rule, not restated」という引用規律で全体が組まれており、
+      所有セクション名を持たない参照は規則を辿るオーケストレーターにとって解決不能になる。
+    suggestion: |
+      `(the third route-back gate conjunct in I.2.c below)` のように、所有セクション名と
+      正しい方向を両方含む形へ直す。同一段落内の
+      `Given I.2.c's route-back precondition below` と表記を揃えると、この段落が I.2.c を
+      参照する 2 箇所で方向が一致する。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium severity; not an auto-fix candidate. Carried into rework round 1 as related context"
+  - stable_id: 3bb53902965e3224
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 224
+    title: "I.2.a の新しい前提が I.2.c を「above」と誤って参照している（同段落内で below とも書いている）"
+    description: |
+      書き換えられた節は third route-back gate conjunct を「(the third route-back gate
+      conjunct above)」と参照するが、その conjunct は I.2.c（415 行以降）にあり I.2.a
+      （195 行）より下にある。同じ段落の 216-217 行は同じ規則を「Given I.2.c's route-back
+      precondition below」と正しく参照しており、1 段落内で方向が矛盾している。
+      あわせて「Because X, ... , so Y, Z」の構文になっており、前提と結論の係り受けが
+      壊れている。
+    suggestion: |
+      参照を `(the third route-back gate conjunct in I.2.c below)` に直し、ダッシュで
+      挿入句を括って係り受けを整える。テストが pin しているのは
+      `route-back proceeds only when no task's journal last event is `merged`, read from
+      the journal directly` と `the justification survives a failing ancestor check` の
+      2 つのみで、どちらも保持されるため suite は green のまま。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "medium severity; not an auto-fix candidate. Carried into rework round 1 as related context"
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 3
+rework_required: true

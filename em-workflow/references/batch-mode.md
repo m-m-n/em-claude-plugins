@@ -55,8 +55,8 @@ three phases.
 |---|---|
 | Step 0 git-setup (gitleaks missing → abort) | UNCHANGED — abort with report. Unattended environments must be provisioned up front |
 | Step A feature resolution (interactive path takes the task description from the conversation) | Explicit feature-name/path argument wins — resolved to its `em-workflow/{feature}/integration` branch (re-materializing the worktree via `git worktree add` if it was removed). No path argument → always a new feature: batch create-spec from the task-description argument; no task description either → abort with report. Existing branches are never enumerated, and a feature is never guessed from them — resuming requires the explicit feature name |
-| Review phase diff-size gate (`references/review-phase.md`) | Codex consultation per `references/question-resolution.md`'s unlisted-gate fallback procedure; no decision reached → take the option with the smallest / most reversible side effect and continue. Record the resolution in the run report |
-| Per-command approval fallback used when the PreToolUse hook is inactive (`references/command-execution-protocol.md`, python3 missing) | Same as the diff-size gate above: Codex consultation, falling back to the minimum-side-effect option, recorded in the run report. Caches the resolution per literal command string within the run — matching the interactive fallback's per-literal-string cache in `references/command-execution-protocol.md` — so an identical command string is decided once, not re-consulted on every occurrence |
+| Review phase diff-size gate (`references/review-phase.md`) | Codex consultation per `references/question-resolution.md`'s unlisted-gate fallback procedure; no decision reached → take the option with the smallest / most reversible side effect and continue. The resolution is recorded in `feature-docs/{feature}/phase-state/batch-audit.yaml` (`references/phase-state.md`'s batch audit record file), from which the run report is assembled |
+| Per-command approval fallback used when the PreToolUse hook is inactive (`references/command-execution-protocol.md`, python3 missing) | Same as the diff-size gate above: Codex consultation, falling back to the minimum-side-effect option, recorded in `feature-docs/{feature}/phase-state/batch-audit.yaml` (`references/phase-state.md`'s batch audit record file), from which the run report is assembled. Caches the resolution per literal command string within the run — matching the interactive fallback's per-literal-string cache in `references/command-execution-protocol.md` — so an identical command string is decided once, not re-consulted on every occurrence |
 | `implement.failed-task` — Step I.2.c task failure after the parent-side-adoption protocol is exhausted (`references/implement-phase.md` Step I.2.c: retry / route-back-to-planning / abort via AskUserQuestion) | Auto-select **retry** once per task (kept worktree, I.2.a resume guard). A second failure on the SAME task → **abort phase**: the `implement` step's `status` is written to `failed`, and exactly that write is committed. Route-back-to-planning is never taken automatically. Full detail: `references/implement-phase.md` Step I.2.c |
 | `review.auto-fix-conflict` — Phase R4 conflict group (`references/review-phase.md`: one option per sibling + `Apply all` + `Skip this site`, via AskUserQuestion) | Skip the site — abort all group members; conflicting prescriptions are not mechanically resolvable. Full detail: `references/review-phase.md` Phase R4 |
 | `review.auto-fix-judgment` — Phase R4 needs-judgment finding (`references/review-phase.md`: parsed alternatives or `Apply as-is` / `Skip`, via AskUserQuestion) | Auto-select **Apply as-is (editor interprets)**. Full detail: `references/review-phase.md` Phase R4 |
@@ -93,13 +93,15 @@ the `--batch` flag's job, per-invocation).
 
 ## Terminal line
 
-At the end of every batch run — both on normal completion and on every
-terminating stop — the final assistant message carries a machine-readable
-terminal line as its last line. `references/batch-terminal-line.md` is the
-sole owner of that line's format and is referenced here rather than
-restated. Immediately before emitting that line, Read
-`references/batch-terminal-line.md` and use the prefix, field grammar and
-value sets it defines as-is.
+A batch turn carries a machine-readable terminal line as the last line of
+the final assistant message whenever it reaches one of the terminal states
+`references/batch-terminal-line.md` defines. Normal completion, every
+terminating stop, and a turn that ends at a `--once` phase boundary are
+occasions on which that condition holds, not additional limits on it.
+`references/batch-terminal-line.md` is the sole owner of that line's
+format and is referenced here rather than restated. Immediately before
+emitting that line, Read `references/batch-terminal-line.md` and use the
+prefix, field grammar and value sets it defines as-is.
 
 ## Reporting
 
@@ -112,4 +114,72 @@ integration branch name
 with the take-over guidance (batch never merges — the human switches to the
 branch in the main working tree and merges locally or pushes + opens a PR).
 The external service relays this to the human evaluator — it is the only
-confirmation surface batch mode has.
+confirmation surface batch mode has. See `## Batch quiet output`'s
+audit-item source map for where each of these items is persisted.
+
+## Batch quiet output
+
+**Activation.** Active exactly when the current invocation's arguments
+contain `--batch`, per `## Purpose & activation`'s activation rule. The
+`batch` block in workflow.yaml never activates it. An interactive launch's
+output is unaffected.
+
+**What is suppressed.** Main-context assistant text loses these eight
+kinds of output:
+
+- phase start/completion narration
+- forwarding of sub-agent reports (implementer / reviewer / each worker)
+- per-step interim summaries
+- the review phase's Phase R6 report body
+- the reconcile results the implement wake turn enumerates
+- the verify result-summary body
+- design-step progress
+- the running presentation of Step A.5's command-approval results
+
+**What suppression does NOT touch.** Suppression targets main-context
+assistant text only — file writes and commits, gate resolution, the
+auto-rework caps, the counters and workflow.yaml status transitions all
+follow the same path as before.
+
+**Non-terminal turns.** A turn that ends without the run reaching any
+terminal state `references/batch-terminal-line.md` defines emits ONLY the
+marker line below, and nothing else. The turns in scope: stop condition
+5's wait turn, the implement phase's launch turn, and its wake turn.
+
+**The marker line.** Prefix literal `EM_WORKFLOW_PROGRESS:` followed by
+one ASCII space, then exactly two `key=value` fields in fixed order:
+`phase`, then `point`. No space appears around `=`; a single ASCII space
+separates the two fields; the line is always exactly one physical line
+and the message consists of this line and nothing else.
+
+- `phase` — the `workflow.yaml` step id in effect for that turn (domain
+  owned by `references/workflow-schema.md`).
+- `point` — one of the closed set `wait`, `launch`, `wake`.
+
+Neither this marker's prefix nor the prefix
+references/batch-terminal-line.md defines is a prefix of the other, so a
+consumer matching that document's prefix never matches this marker line —
+the terminal-line contract's "no line = abnormal outcome" signal for a
+genuine terminal state is preserved.
+
+**Exceptions.**
+
+- A turn that reaches any stop point in the terminal-line contract's
+  stop-point coverage table keeps its full output — cause, affected
+  paths, recovery hints — unsuppressed.
+- Step C's completion processing emits its final report in full, with the
+  terminal line appended after it.
+- A `--once` phase-boundary turn emits the terminal line and withholds
+  all other narration.
+
+**Audit-item source map.** Every audit item `## Reporting` requires
+resolves to a persisted source:
+
+| Audit item | Persisted source |
+|---|---|
+| Every auto-approved command string | `create-spec.command-approval` gate resolution recorded to `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note`, written by Step A.5's batch branch when it auto-records (`references/phase-state.md`'s batch audit record file) |
+| Every assumption recorded during create-spec/planning | `feature-docs/{feature}/phase-state/*.yaml` `answers` / resolution notes |
+| Auto-rework rounds consumed (review / verify) | `workflow.yaml`'s `batch` block |
+| Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id` |
+| Every unlisted-gate fallback resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
+| The kept integration branch name | `workflow.yaml` `parent_branch` plus the feature name |

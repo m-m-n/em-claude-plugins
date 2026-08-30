@@ -1,0 +1,172 @@
+feature: rework-contract-drift
+collected_at: '2026-08-25T08:52:00+09:00'
+session_ids:
+- 0ecf19da-6867-4c6a-83a9-9354dd6b3320
+- d0989aeb-134c-449c-a659-e39a9bb62dbb
+signals:
+  review_critical_high:
+  - round: 1
+    stable_id: 88f327b55454c09c
+    category: security
+    file: em-workflow/references/workflow-patch.md
+    title: Application rule 19 が rule 2 の整合性チェック失敗を「成功 + 一回限りの再計画権限の消費」に変える
+    resolution: deferred
+  - round: 1
+    stable_id: 9987c33a95395fdb
+    category: comprehensive
+    file: em-workflow/references/workflow-patch.md
+    title: Application rule 19 の「適用済み」判定が stale patch を誤認し、未適用のまま authorization を消費する
+    resolution: deferred
+  - round: 1
+    stable_id: feaf5369e6f9a227
+    category: architecture
+    file: em-workflow/references/workflow-patch.md
+    title: Application rule 19 が「パッチ適用済みか」の判定を phase-state.md から二重所有し、より弱い代理条件で置き換えている
+    resolution: deferred
+  - round: 1
+    stable_id: b897fc41663841de
+    category: spec
+    file: em-workflow/agents/implementation-planner.md
+    title: 'FR1: Initial planning 分岐が `create-plan` is `pending` を restate したままで Re-planning path と条件が重複する'
+    resolution: deferred
+  - round: 1
+    stable_id: f5f1343dc0b8d389
+    category: architecture
+    file: em-workflow/agents/implementation-planner.md
+    title: Initial-planning 分岐が状態リテラルの再記述のまま残り、Re-planning path と条件が重複する
+    resolution: deferred
+  - round: 1
+    stable_id: 47f535a25cbb9be9
+    category: comprehensive
+    file: em-workflow/scripts/validate-worker-output.py
+    title: 既存 workflow.yaml の failed_items に category が無いと、無関係な worker patch が全て reject される
+    resolution: deferred
+  - round: 2
+    stable_id: 03c86d57bda0cd0d
+    category: security
+    file: em-workflow/references/workflow-patch.md
+    title: '認可の再利用: 中断窓で recognition が成立せず replan_authorized が消費されないまま残る'
+    resolution: deferred
+  - round: 2
+    stable_id: 3e33ee58a8e170ce
+    category: security
+    file: em-workflow/references/workflow-patch.md
+    title: Applied patch identity is not bound to the current authorization
+    resolution: deferred
+  - round: 2
+    stable_id: 8563c3b18cd5b045
+    category: architecture
+    file: em-workflow/references/workflow-patch.md
+    title: Interrupted authorization-spend recovery の認識条件が、復旧対象の書き込み自身に依存している
+    resolution: deferred
+  - round: 2
+    stable_id: dffa866cba0c71b7
+    category: spec
+    file: em-workflow/references/workflow-patch.md
+    title: 'FR5: 新設の復旧節の Recognition が rule 18 の同一 phase-state write 宣言と両立せず、FR5 が名指す中断窓では発火しない'
+    resolution: deferred
+  - round: 2
+    stable_id: 32ff5536ef1c0157
+    category: comprehensive
+    file: em-workflow/scripts/validate-worker-output.py
+    title: failed_items[].category チェックのスコープが修復不能な却下を塞ぎきれていない
+    resolution: deferred
+  - round: 2
+    stable_id: 003550ffc4e04b89
+    category: spec
+    file: em-workflow/references/workflow-schema.md
+    title: 'FR3/AC8: 新設の pre-change 互換ルールが SPEC の validator は reject とも実装とも食い違う'
+    resolution: deferred
+  - round: 2
+    stable_id: 69d81e01bc4969de
+    category: spec
+    file: em-workflow/references/phase-state.md
+    title: 'FR7: Neither refusal is silent を満たす実装が無く、pre-change の rework.yaml は無関係なエラーで拒否される'
+    resolution: deferred
+  - round: 2
+    stable_id: a069ec2d4343a636
+    category: security
+    file: em-workflow/skills/develop/SKILL.md
+    title: Untrusted verification text can influence the trusted security category
+    resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0002
+    files:
+    - tests/test_spec_change_replan_authorization.py
+    note: task0004-owned per D3, but it pins the application-rule count sentence in workflow-patch.md;
+      adding a rule forced refreshing that literal in the same edit
+  - task: task0004
+    files:
+    - tests/test_worker_contracts_planning.py
+    note: outside expected_files; used the retired field name as a proxy substring, so the rename made
+      it a genuine regression
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+lessons_candidates:
+- topic: git stash is shared across worktrees
+  raw: 'task0002 and task0005 implementers hit this simultaneously in round 1: refs/stash is shared across
+    all worktrees of this repository, so stashing for red-confirmation swapped their diffs. Both self-detected
+    via git status, backed up with cp and a redirected diff, restored with a checkout of the path from
+    HEAD, and redid their edits; no cross-worktree write occurred and the merged result was clean. Both
+    independently proposed the same remedy: drop stash usage from the worktree-task-workflow skill in
+    favour of a cp backup plus a checkout from HEAD. In round 2 both implementers were warned in their
+    dispatch prompt and neither hit it.'
+- topic: destructive-guard blocks the branch force-delete the protocol prescribes
+  raw: implement-phase.md I.2.b step 4 prescribes the force-delete flag (-D) for a merged task branch,
+    reasoning that the orchestrator's HEAD is base_branch so the safe flag would refuse. destructive-guard
+    denies it as [destructive-guard/git-branch-force-delete]. Running the safe delete flag inside the
+    integration worktree instead succeeds, because that worktree's HEAD is the merge target - and it
+    is safer, since it leaves no unreachable commits. That form was used for both task0007 and task0008
+    cleanup. The protocol text should switch to the safe flag scoped to the integration worktree.
+- topic: review-editor's single-file contract structurally conflicts with byte-identity pins
+  raw: 'tests/test_gate_option_vocabulary.py pins the sha256 of workflow-patch.md, validate-worker-output.py,
+    tests/test_validate_worker_output.py and one fixture. Any R4 auto-fix targeting a pinned file cannot
+    leave the suite green, because refreshing the pin needs a second file and review-editor may write
+    only the finding''s own file. This aborted candidates in round 1 (f5f1343dc0b8d389, 47f535a25cbb9be9)
+    and again in round 2 (two highs) - i.e. the strongest findings are exactly the ones R4 can never
+    fix. Candidate remedies: give R4 a pre-dispatch pin-awareness check so such candidates are classified
+    as needs-rework rather than dispatched-and-reverted, or allow review-editor a narrowly scoped second
+    file when that file is a digest-pin module.'
+- topic: content pins also break additive prose edits
+  raw: Round 2 loop 1's editor reworded a sentence that tests/test_failed_items_category.py pins verbatim,
+    turning the suite red; loop 2 succeeded only because the dispatch prompt named all seven pinned substrings
+    and required a purely additive edit. R4 could extract such pins mechanically (a test module asserting
+    substrings of the target file) and hand them to the editor as constraints, instead of discovering
+    them via a red suite.
+- topic: validator's TS-id regex does not match this project's own scenario ids
+  raw: 'scripts/validate-worker-output.py''s _TS_ID_RE is TS-<digits> with a hyphen, but every VERIFICATION.md
+    in this repository writes TS1..TS18 without one. Consequence: the rework-planner contract''s check
+    3 (new_scenarios really added, verified by diffing against a baseline) can never pass - the extractor
+    returns an empty set for both sides. The orchestrator had to verify checks 3 and 4 by hand. Either
+    the regex should accept both forms or the template should emit hyphenated ids.'
+- topic: develop's argument handling for a handover file
+  raw: 'This run was launched as `/em-workflow:develop --batch tmp/handover-rework-contract-drift.md`.
+    Per the argument rules an existing file is a task description, which would have started a NEW feature
+    via create-spec; the file''s actual content was a resume instruction naming an existing feature with
+    a live branch and worktree. The orchestrator resolved it as a resume and said so. Worth deciding
+    deliberately: either document that a file argument is always a task description (and that resuming
+    requires the bare feature name), or let develop recognise a handover document.'
+- topic: rework-planner envelope shape is easy to misread
+  raw: references/contracts/rework-planner-contract.md shows existing_tasks / next_task_id / verification_index
+    / the three document paths as siblings of rework_source, but the YAML block's indentation makes it
+    easy to read them as nested inside it. The orchestrator nested them on the first attempt and validate-worker-output.py
+    rejected every covered_by_existing id, because it reads verification_index from the envelope's top
+    level. A worked example of the full envelope, or a stated value_inputs boundary, would remove the
+    ambiguity.
+- topic: R4's post-productive-loop reviewer re-run has no cheap variant
+  raw: The protocol requires re-running all selected reviewers after any productive loop. In round 2
+    that meant nine reviewers to re-confirm eight findings whose disposition was already fixed by the
+    consumed rework cap, for a one-file additive documentation fix whose safety the suite verifies mechanically.
+    The re-run was skipped and recorded as a deviation in reviews/round2.yaml. A scoped variant - re-run
+    only the perspectives whose findings the loop touched, or skip when a clean termination is provably
+    unreachable - would make the rule affordable.
+- topic: the same site survived a full rework round
+  raw: workflow-patch.md's interrupted authorization-spend recovery was the round-1 conflict site (three
+    divergent prescriptions, skipped) and is again the round-2 top finding (four reviewers, two perspectives,
+    high). The rework closed the specific hole round 1 named and introduced an adjacent one in the same
+    paragraph. Signal that a conflict-skipped site handed to rework without resolving the conflict first
+    tends to produce a new variant rather than a fix - the batch conflict policy (skip the site) and
+    the rework path may need to be connected, e.g. by having rework-planner resolve the conflict explicitly
+    and record which prescription it adopted.

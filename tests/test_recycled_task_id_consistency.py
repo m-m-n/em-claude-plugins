@@ -93,11 +93,141 @@ Matcher -> negative-proof inventory (AC-5; every matcher in this module):
   (TS-8), TestI2cHeadingAndBatchModeParagraphByteIdentical.* (TS-9),
   TestI2cOrderings.* (TS-10) -> regression guards over pre-existing literals
   and orderings, no proof needed
+
+task0001 (recycled-task-id-contract) removes the "governs only ... with one
+explicit exception" contradiction from I.2.a's recycled-task-id scope
+sentence, aligns the Supporting cast Stop-hook bullet with it, records the
+hooks' narrower unlaunched-detection rule (no `status != merged` condition),
+and adds the machine-readable hook classification table both sites cite.
+Covers this task's own Acceptance Criteria
+(feature-docs/recycled-task-id-contract/tasks/task0001.md):
+
+- AC-1 (FR1): the scope sentence is single and self-consistent -- it names
+  who applies the carve-out and who does not, with no "only X ... with an
+  exception" construction -> TestI2aScopeStatementIsSelfConsistent.
+- AC-2 (FR2): the Stop-hook bullet states the same classification as I.2.a
+  and cites the classification table ->
+  TestStopHookBulletCitesClassificationTable.
+- AC-3 (FR4): I.2.a records, with its reason, that the hooks detect
+  unlaunched solely from journal-event absence, never promising the
+  `status != merged` protection only the orchestrator's own rule applies ->
+  TestUnlaunchedDetectionDivergenceRecorded.
+- AC-5 (FR3): `TestRecycledTaskIdRuleScopedToOrchestrator` is rewritten (name
+  kept) into two independent group assertions derived from
+  `tests/test_hook_classification_pin.py`'s parsed table -- the
+  does-not-read group (floor 3) and the reads group (floor 1) -- each with
+  its own non-vacuity guard, so a break on one side cannot mask on the
+  other. Its hook names are never hardcoded here (NFR4): they come from the
+  parsed table, imported, not restated.
+
+Matcher -> negative-proof inventory added by task0001 (recycled-task-id-
+contract; every matcher's negative proof runs against
+PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE or PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE,
+verbatim excerpts of this task's own base commit
+b28a7166e8dce876075fc550ada7fdd7027211fa):
+
+- test_two_parties_phrase_present -> new wording ->
+  test_two_parties_phrase_matcher_flags_absence_in_pre_change_wording
+- test_contradictory_only_with_exception_construction_absent -> regression
+  guard (absence of the removed construction) ->
+  test_contradictory_construction_matcher_flags_the_pre_change_wording
+- test_stop_hook_bullet_cites_classification_table -> new wording ->
+  test_stop_hook_citation_matcher_flags_absence_in_pre_change_wording
+- test_stop_hook_bullet_matches_i2a_classification -> new wording -> same
+  proof above
+- test_unlaunched_solely_from_absence_phrase_present -> new wording ->
+  test_unlaunched_divergence_matchers_flag_absence_in_pre_change_wording
+- test_narrower_than_orchestrator_rule_stated -> new wording -> same proof
+  above
+- test_reason_states_fail_open_nets_not_authorities -> new wording -> same
+  proof above
+- TestRecycledTaskIdRuleScopedToOrchestrator's group-placement tests -> new
+  wording (group anchors) ->
+  test_group_anchors_absent_in_pre_change_wording
+
+task0001 (routeback-admissibility-exits) replaces I.2.a's unreachability
+premise -- the one the trust-but-verify path falsifies -- with a premise
+resting on Step I.2.c's new third gate conjunct (journal last event `merged`,
+read from the journal alone, independent of the ancestor verification). The
+paragraph's conclusion (the inheritance invariant and the failed-only
+carve-out scoping) is retained verbatim, as are the in-flight sentence and
+the unreachability slice anchors. Covers this task's own AC-2
+(feature-docs/routeback-admissibility-exits/tasks/task0001.md):
+
+Matcher -> negative-proof inventory added by task0001
+(routeback-admissibility-exits; negative proofs run against
+PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE, a verbatim excerpt of this task's
+own base commit 9f5d7ae):
+
+- test_new_premise_names_journal_last_event_conjunct -> new wording ->
+  test_new_premise_matcher_flags_absence_in_pre_change_wording
+- test_old_falsified_premise_absent -> regression guard (absence of the
+  removed premise) -> same proof above (asserts the OLD phrase is present
+  in the pre-change sample)
+- test_inheritance_invariant_conclusion_survives -> re-grounded by task0003
+  below -> test_inheritance_invariant_conclusion_matcher_flags_absence_in_pre_change_wording
+- test_failed_only_carve_out_sentence_survives -> RETENTION matcher, no
+  proof needed
+- test_in_flight_sentence_survives -> RETENTION matcher, no proof needed
+- test_unreachability_slice_anchors_survive -> RETENTION matcher, no proof
+  needed
+
+task0003 (routeback-admissibility-exits, verify round 2 / VF-1..VF-3)
+re-grounds three matchers whose shared anchor -- "no retired task id can
+leave a `merged` last event behind for a renumbered task to inherit" --
+`tests/test_routeback_reset_scope_consistency.py` (outside the declared
+change set) now asserts is ABSENT from I.2.a, having superseded it with a
+recursion invariant of its own. `test_inheritance_invariant_conclusion_survives`
+is re-grounded on INHERITANCE_INVARIANT_CONCLUSION_PHRASE, paired with a new
+negative proof (same pre-change sample as task0001's premise proofs above).
+The two retained-anchor guards in `TestPreChangeSampleGuards` move from that
+superseded literal to CARVE_OUT_CORRECTLY_SCOPED_PHRASE -- present in both
+pre-change samples, in the live I.2.a section, and never asserted absent by
+any module outside the declared change set -- renamed
+test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor and
+test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor
+respectively (names kept describing what each now proves). Covers this
+task's own AC-1..AC-6
+(feature-docs/routeback-admissibility-exits/tasks/task0003.md).
+
+task0017 (feature-docs/goal-vs-spec-divergence review round2 rework)
+strengthens the premise `TestUnreachablePendingLaunchedCombination` cites:
+`references/workflow-patch.md`'s re-planning task-id allocation rule now
+also requires a re-planning `replace_all`'s `entries` to re-declare every
+task id already registered in `workflow.yaml` (never drop one), on top of
+the existing "never re-issue a retired id, allocate new ones above the
+highest registered id" guarantee this class's tests already pin. This
+module's own assertions are unaffected: they check only that
+`implement-phase.md`'s citation contains the substring "allocation rule"
+and omits "task0001"/"renumber" (`test_unreachability_sentence_cites_
+allocation_rule`) -- a citation, not a restatement, so a stronger cited
+rule does not change what is asserted here. `implement-phase.md` itself
+belongs to task0020 this round and is not read as changed content by any
+module this task owns (Test Notes: "Do not assert over ... implement-
+phase.md from any module this task owns ... Document agreement across
+the two tasks is a verify-phase item").
 """
 
+import importlib.util
 import re
 import unittest
 from pathlib import Path
+
+# Sibling module owns the classification table's parser, per NFR4 -- one
+# parser, one source of truth, never duplicated here. Loaded via an
+# absolute path (matching tests/test_check_plugin_invariants.py's
+# convention) rather than a bare import, so this module collects
+# correctly regardless of invocation form (`python3 -m unittest
+# tests.test_recycled_task_id_consistency` from the repo root, or
+# `unittest discover -s tests`) instead of depending on tests/ being on
+# sys.path. The registered module name is kept distinct from the real
+# module name so it cannot collide with a discover-loaded copy.
+_PIN_PATH = Path(__file__).resolve().parent / "test_hook_classification_pin.py"
+_pin_spec = importlib.util.spec_from_file_location(
+    "_hook_classification_pin", _PIN_PATH
+)
+hook_classification_pin = importlib.util.module_from_spec(_pin_spec)
+_pin_spec.loader.exec_module(hook_classification_pin)
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "em-workflow"
 IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
@@ -106,6 +236,7 @@ I2A_HEADING = "### I.2.a: Launch phase"
 I2B_HEADING = "### I.2.b: Wake phase"
 I2C_HEADING = "### I.2.c: Failed handling"
 NEXT_SECTION_HEADING = "### Supporting cast"
+STEP_I3_HEADING = "## Step I.3: Phase completion"
 
 # The removed, journal-only write-back phrasing (TS-1 / AC-1).
 OLD_JOURNAL_ONLY_PHRASE = "for every task whose last journal event is `failed`"
@@ -249,6 +380,216 @@ OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL = (
     "\n"
 )
 
+# --- task0001 (recycled-task-id-contract): module-level constants for the
+# new-wording matchers this task adds. Each is read by both its positive
+# test above and its negative-proof test below -- the literal is never
+# spelled twice (same Contract 1 pattern as task0003's block above).
+
+# AC-1 (FR1) group: the recycled-task-id scope statement is now a single,
+# self-consistent statement -- who applies the carve-out (two parties) and
+# who does not (the other three), no "only X ... with an exception"
+# construction.
+TWO_PARTIES_PHRASE = (
+    "is applied by two parties: the orchestrator's own interpretation of "
+    "the journal (this rule), and the Stop hook, `queue_stop_guard.py`, "
+    "which reads `tasks.{T}.status` and applies the identical carve-out "
+    "itself"
+)
+CONTRADICTORY_CONSTRUCTION_PHRASE = (
+    "governs only the orchestrator's interpretation of the journal, with "
+    "one explicit exception"
+)
+
+# AC-5 (FR3) group: the two group-placement anchors the split assertions
+# slice on. Hook NAMES are never hardcoded alongside these -- they come
+# from the parsed classification table (NFR4).
+DOES_NOT_READ_OPENING_ANCHOR = "The other three queue hooks —"
+DOES_NOT_READ_CLOSING_PHRASE = "never consult `tasks.{T}.status`"
+READS_OPENING_ANCHOR = "and the Stop hook,"
+READS_CLOSING_PHRASE = "applies the identical carve-out itself"
+
+# AC-2 (FR2) group: the Supporting cast Stop-hook bullet cites the
+# classification table and states the same classification as I.2.a.
+STOP_HOOK_TABLE_CITATION_PHRASE = (
+    "Classification (hook classification table above): **reads** "
+    "`tasks.{T}.status`"
+)
+STOP_HOOK_MATCHES_I2A_PHRASE = "matching I.2.a's classification exactly"
+
+# AC-3 (FR4) group: the hooks' narrower unlaunched-detection rule, recorded
+# with its reason.
+UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE = (
+    "detect a task as **unlaunched** solely from the absence of any "
+    "journal event for that task id — never from `tasks.{T}.status`"
+)
+NARROWER_THAN_ORCHESTRATOR_PHRASE = (
+    "narrower than the orchestrator's own selection rule above, which "
+    "additionally excludes any task whose `status` reads `merged`"
+)
+NO_EQUIVALENT_EXCLUSION_PHRASE = "the hooks carry no equivalent exclusion"
+DIVERGENCE_REASON_PHRASE = "the hooks are fail-open nets, not authorities"
+AUTHORITATIVE_SOURCE_PHRASE = (
+    "the orchestrator protocol above together with the I.2.a resume guard "
+    "remain the authoritative source of task state"
+)
+
+# --- task0001 (recycled-task-id-contract): pre-change wording samples, each
+# a verbatim excerpt of em-workflow/references/implement-phase.md at this
+# task's own base commit b28a7166e8dce876075fc550ada7fdd7027211fa (Contract
+# 2) -- not paraphrased, not reconstructed, copied the same way the other
+# pre-change samples in this module were captured.
+
+# The I.2.a scope-sentence tail this task replaced in full -- from the old
+# "governs only ... with one explicit exception" sentence through the old
+# "journal itself stays append-only" sentence. Used for both the AC-1 and
+# the AC-3 negative proofs (AC-3's divergence wording is entirely new, so
+# it is provably absent from this same pre-change tail).
+PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE = (
+    "This recycled-task-id rule governs only the orchestrator's\n"
+    "interpretation of the journal, with one explicit exception:\n"
+    "`queue_stop_guard.py` applies this same recycled-task-id carve-out "
+    "itself\n"
+    "(see the Stop-hook bullet under 'Supporting cast: journal, hooks, "
+    "resume'\n"
+    "below, which states the same classification). The other three "
+    "hooks —\n"
+    "`queue_launch_guard.py`,\n"
+    "`queue_failure_net.py` and `queue_taskstop_net.py` — derive a task's "
+    "state\n"
+    "from the journal's last event alone and never consult "
+    "`tasks.{T}.status`\n"
+    "(see 'Supporting cast: journal, hooks, resume' below). The journal "
+    "itself\n"
+    "stays append-only (see Supporting cast below) — only the "
+    "interpretation of\n"
+    "its events is scoped by this rule."
+)
+
+# --- task0001 (routeback-admissibility-exits): module-level constants for
+# the I.2.a unreachability premise replacement. Each is read by both its
+# positive test and its negative-proof test below -- the literal is never
+# spelled twice (same Contract 1 pattern as the blocks above).
+
+# AC-2 group: the falsified premise this task removes (task0001's own
+# pre-change wording, historical -- superseded again by task0002 below).
+OLD_MERGED_UNDER_EITHER_SOURCE_PREMISE = (
+    "Because route-back proceeds only when no task is `merged` under "
+    "either source"
+)
+# AC-2 group / task0002 AC-6 (FR2, NFR3; TS-13): the current premise,
+# rewritten again by task0002 (routeback-admissibility-exits, rework round
+# 1) Site D to name its owning section explicitly (I.2.a is ABOVE I.2.c in
+# the document, so the conjunct is "below", never "above") and to read as
+# one premise with a single causal construction. Value updated by task0002
+# -- constant NAME unchanged since it still describes the same property
+# (the premise names the journal-last-event conjunct), per Conventions'
+# naming rule.
+NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE = (
+    "Because Step I.2.c's route-back gate below blocks route-back "
+    "whenever any task's journal last event is `merged`"
+)
+PREMISE_INDEPENDENT_OF_ANCESTOR_CHECK_PHRASE = "independent of the ancestor check"
+
+# task0002 (routeback-admissibility-exits, rework round 1): the mis-citation
+# task0001's OWN premise carried -- I.2.c is BELOW I.2.a, never "above" --
+# and which task0002's Site D removes.
+OLD_GATE_CONJUNCT_ABOVE_MISCITATION_PHRASE = (
+    "the third route-back gate conjunct above"
+)
+
+# The Supporting cast Stop-hook bullet before this task's edit -- used for
+# the AC-2 negative proof.
+PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE = (
+    "- **Stop hook** (`queue_stop_guard.py`) — fires when the "
+    "orchestrator's turn\n"
+    "  ends. Replays the journal and workflow.yaml, applying the same\n"
+    "  recycled-task-id carve-out as I.2.a above — a task whose journal "
+    "last\n"
+    "  event is `failed` and whose workflow.yaml `status` reads "
+    "`pending`\n"
+    "  reclassifies as unlaunched, not failed; if refillable slots and\n"
+    "  unlaunched tasks exist and no task's reconciled state is "
+    "`failed`, it\n"
+    "  BLOCKS (exit 2) naming the tasks to launch — catching a forgotten "
+    "refill\n"
+    "  after a wake phase. A consecutive-block cap (3, tracked in a "
+    "sidecar\n"
+    "  next to the journal)\n"
+    "  prevents it from wedging the session on unexpected state; "
+    "exceeding the\n"
+    "  cap yields a warning and lets the turn end. Does not write the "
+    "journal."
+)
+
+
+# --- task0001 (routeback-admissibility-exits): pre-change wording sample,
+# a verbatim excerpt of em-workflow/references/implement-phase.md at this
+# task's own base commit 9f5d7ae (Contract 2) -- not paraphrased, not
+# reconstructed, copied the same way the other pre-change samples in this
+# module were captured. Spans from the unreachability slice's opening
+# anchor through the falsified premise's conclusion, i.e. the whole
+# sentence whose premise this task replaces.
+PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE = (
+    "Given I.2.c's\n"
+    "route-back precondition below, which admits only tasks with a terminal\n"
+    "journal last event, and the planner's `replace_all` renumbering from\n"
+    "`task0001` that is the sole source of any recycled id, a re-numbered task\n"
+    "can only ever inherit a retired id's terminal events — so workflow.yaml\n"
+    "`status: pending` combined with journal last event `launched` can never\n"
+    "arise. Because route-back proceeds only when no task is `merged` under\n"
+    "either source (the widened I.2.c gate above), no retired task id can\n"
+    "leave a `merged` last event behind for a renumbered task to inherit, so\n"
+    "the recycled-task-id carve-out above stays correctly scoped to `failed`\n"
+    "only."
+)
+
+# task0002 (routeback-admissibility-exits, rework round 1) Site D: this
+# task's own pre-change wording sample, a verbatim excerpt of
+# em-workflow/references/implement-phase.md at THIS task's own branch
+# point (base commit f2fb87f) -- i.e. task0001's delivered premise, before
+# this task's edit -- distinct from PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE
+# above, which predates task0001's edit entirely and proves a different
+# thing.
+TASK0002_PRE_CHANGE_I2A_PREMISE_SAMPLE = (
+    "arise. Because route-back proceeds only when no task's journal last event\n"
+    "is `merged`, read from the journal directly, so the justification\n"
+    "survives a failing ancestor check (the third route-back gate conjunct\n"
+    "above), no retired task id can leave a `merged` last event behind for a\n"
+    "renumbered task to inherit, so the recycled-task-id carve-out above stays\n"
+    "correctly scoped to `failed` only."
+)
+
+# --- task0003 (routeback-admissibility-exits, verify round 2 / VF-1..VF-3):
+# `tests/test_routeback_reset_scope_consistency.py` -- outside this
+# feature's declared change set -- superseded the paragraph's old
+# conclusion literal ("no retired task id can leave a `merged` last event
+# behind for a renumbered task to inherit") with a recursion invariant of
+# its own (that module's RECURSION_INVARIANT_PHRASE) and now asserts the
+# old literal's ABSENCE from I.2.a (Pinned-literal registry, direction of a
+# pin). The three matchers below that required the old literal are
+# re-grounded on wording the live document actually carries.
+
+# Site A (VF-1): the paragraph's conclusion, re-grounded on its own "can
+# never carry an inherited merged journal last event" clause -- a
+# deliberately narrower slice than the outside module's full
+# RECURSION_INVARIANT_PHRASE (which additionally states the "no retired
+# task id is ever re-issued" premise), so the two modules do not pin one
+# identical byte string (Test Notes).
+INHERITANCE_INVARIANT_CONCLUSION_PHRASE = (
+    "a task whose workflow.yaml `status` is `pending` can never carry an "
+    "inherited `merged` journal last event"
+)
+
+# Site B (VF-2, VF-3): both retained-anchor guards move to this anchor --
+# present in both pre-change samples and in the live I.2.a section, and
+# never asserted absent from I.2.a by any module outside the declared
+# change set (unlike the old anchor, which that module now asserts
+# absent).
+CARVE_OUT_CORRECTLY_SCOPED_PHRASE = (
+    "the recycled-task-id carve-out above stays correctly scoped to "
+    "`failed` only"
+)
+
 
 def _read():
     return IMPLEMENT_PHASE_PATH.read_text(encoding="utf-8")
@@ -276,6 +617,12 @@ def _i2b_section(text):
 def _i2c_section(text):
     start = text.index(I2C_HEADING)
     end = text.index(NEXT_SECTION_HEADING, start)
+    return text[start:end]
+
+
+def _supporting_cast_section(text):
+    start = text.index(NEXT_SECTION_HEADING)
+    end = text.index(STEP_I3_HEADING, start)
     return text[start:end]
 
 
@@ -387,8 +734,17 @@ class TestNonTerminalEventMakesRouteBackInapplicable(unittest.TestCase):
 
 class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
     """TS-5 / AC-5 (FR5): the unreachability sentence mentions the
-    planner's `replace_all` renumbering together with `launched` and
-    `pending`; the retained in-flight sentence survives."""
+    re-planning `replace_all`'s allocation-rule guarantee together with
+    `launched` and `pending`; the retained in-flight sentence survives.
+
+    task0013 (goal-vs-spec-divergence, review round 1 rework) replaces the
+    sentence's premise: it no longer bases the reasoning on the planner's
+    `replace_all` "renumbering tasks from `task0001`" (false once the
+    SPEC-change transition can reach re-planning with `merged` tasks
+    present, without going through I.2.c's own gate at all). The premise is
+    now `references/workflow-patch.md`'s re-planning task-id allocation
+    rule -- cited, never restated -- so the old renumbering wording must
+    not resurface."""
 
     @classmethod
     def setUpClass(cls):
@@ -402,6 +758,20 @@ class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
         self.assertIn("launched", sentence)
         self.assertIn("pending", sentence)
 
+    def test_unreachability_sentence_cites_allocation_rule(self):
+        idx = self.section.index(UNREACHABILITY_OPENING_ANCHOR)
+        end = self.section.index("can never arise.", idx) + len("can never arise.")
+        sentence = self.section[idx:end]
+        self.assertIn("allocation rule", sentence)
+        self.assertNotIn("task0001", sentence)
+        self.assertNotIn("renumber", sentence)
+
+    def test_old_renumbering_premise_absent_from_i2a(self):
+        self.assertNotIn(
+            "the planner's `replace_all` re-numbers tasks from", self.section
+        )
+        self.assertNotIn("task0001", self.section)
+
     def test_retained_in_flight_sentence_survives(self):
         self.assertIn(
             "A task whose journal last event is `launched` is always "
@@ -411,28 +781,201 @@ class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
 
 
 class TestRecycledTaskIdRuleScopedToOrchestrator(unittest.TestCase):
-    """TS-6 / AC-6 (FR6): the scope sentence names all four hook
-    filenames and states `tasks.{T}.status` is never consulted; the
-    document nowhere contains "never read workflow.yaml"."""
+    """TS-6 / AC-5 (FR3, recycled-task-id-contract task0001): the two hook
+    groups -- does-not-read and reads -- are each derived from
+    `test_hook_classification_pin.py`'s parsed classification table and
+    asserted in their OWN independent group assertion, so a break in
+    either group's I.2.a wording fails only that group's assertion, never
+    the other's. Each group asserts its own non-emptiness FIRST (floor of
+    three for does-not-read, one for reads -- FR3's own wording) so an
+    emptied group cannot make the loop vacuously pass. Hook names are never
+    hardcoded here (NFR4): they come from the parsed table.
+
+    Retains the pre-existing "never read workflow.yaml" absence guard
+    (unrelated to the split, still a valid regression guard)."""
 
     @classmethod
     def setUpClass(cls):
         cls.text = _read()
         cls.i2a = _normalize_ws(_i2a_section(cls.text))
+        rows = hook_classification_pin.parse_classification_table()
+        cls.does_not_read_group = sorted(
+            Path(path).name
+            for path, classification in rows
+            if classification == hook_classification_pin.DOES_NOT_READ_STATUS
+        )
+        cls.reads_group = sorted(
+            Path(path).name
+            for path, classification in rows
+            if classification == hook_classification_pin.READS_STATUS
+        )
 
-    def test_scope_sentence_names_all_four_hooks(self):
-        for hook in HOOK_FILENAMES:
-            self.assertIn(f"`{hook}`", self.i2a)
+    def test_does_not_read_group_is_non_empty(self):
+        self.assertGreaterEqual(len(self.does_not_read_group), 3)
 
-    def test_scope_sentence_states_status_never_consulted(self):
-        self.assertIn(STATUS_NEVER_CONSULTED_PHRASE, self.i2a)
+    def test_does_not_read_group_placed_correctly_in_i2a(self):
+        start = self.i2a.index(DOES_NOT_READ_OPENING_ANCHOR)
+        end = self.i2a.index(DOES_NOT_READ_CLOSING_PHRASE, start) + len(
+            DOES_NOT_READ_CLOSING_PHRASE
+        )
+        slice_ = self.i2a[start:end]
+        for hook in self.does_not_read_group:
+            self.assertIn(f"`{hook}`", slice_)
 
-    def test_scope_sentence_governs_only_orchestrator_interpretation(self):
-        self.assertIn(ORCHESTRATOR_ONLY_SCOPE_PHRASE, self.i2a)
+    def test_reads_group_is_non_empty(self):
+        self.assertGreaterEqual(len(self.reads_group), 1)
+
+    def test_reads_group_placed_correctly_in_i2a(self):
+        start = self.i2a.index(READS_OPENING_ANCHOR)
+        end = self.i2a.index(READS_CLOSING_PHRASE, start) + len(
+            READS_CLOSING_PHRASE
+        )
+        slice_ = self.i2a[start:end]
+        for hook in self.reads_group:
+            self.assertIn(f"`{hook}`", slice_)
 
     def test_no_never_reads_workflow_yaml_claim_anywhere(self):
         self.assertNotIn("never read workflow.yaml", self.text)
         self.assertNotIn("never reads workflow.yaml", self.text)
+
+
+class TestI2aScopeStatementIsSelfConsistent(unittest.TestCase):
+    """AC-1 (FR1, recycled-task-id-contract task0001): the recycled-task-id
+    scope statement in I.2.a is a single, self-consistent statement -- it
+    names who applies the carve-out (the orchestrator and the Stop hook)
+    and who does not (the other three queue hooks), and contains no
+    "only X ... with an exception that contradicts X" construction."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2a = _normalize_ws(_i2a_section(_read()))
+
+    def test_two_parties_phrase_present(self):
+        self.assertIn(TWO_PARTIES_PHRASE, self.i2a)
+
+    def test_contradictory_only_with_exception_construction_absent(self):
+        self.assertNotIn(CONTRADICTORY_CONSTRUCTION_PHRASE, self.i2a)
+        self.assertNotIn("governs only", self.i2a)
+
+
+class TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct(
+    unittest.TestCase
+):
+    """AC-2 (FR2; TS-3, task0001 routeback-admissibility-exits), rewritten
+    again by task0002 (routeback-admissibility-exits, rework round 1) Site
+    D / AC-6 (FR2, NFR3; TS-13): the I.2.a premise names Step I.2.c (the
+    owning section of the gate conjunct) explicitly, states its position
+    correctly (I.2.c is below I.2.a, never "above"), and reads as one
+    premise with a single causal construction. The paragraph's conclusion
+    (the inheritance invariant and the failed-only carve-out scoping), the
+    in-flight sentence and the unreachability slice anchors all survive.
+
+    task0003 (routeback-admissibility-exits, verify round 2 / VF-1):
+    `test_inheritance_invariant_conclusion_survives` is re-grounded --
+    `tests/test_routeback_reset_scope_consistency.py` (outside this
+    feature's declared change set) superseded the old conclusion literal
+    with a recursion invariant of its own and now asserts the old
+    literal's ABSENCE from I.2.a, so this test asserts the live document's
+    own "can never carry an inherited merged journal last event" clause
+    instead (INHERITANCE_INVARIANT_CONCLUSION_PHRASE), never the outside
+    module's full RECURSION_INVARIANT_PHRASE literal verbatim."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2a = _normalize_ws(_i2a_section(_read()))
+
+    def test_old_falsified_premise_absent(self):
+        # Historical regression guard (task0001's own removed premise).
+        self.assertNotIn(OLD_MERGED_UNDER_EITHER_SOURCE_PREMISE, self.i2a)
+
+    def test_new_premise_names_journal_last_event_conjunct(self):
+        self.assertIn(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE, self.i2a)
+        self.assertIn(PREMISE_INDEPENDENT_OF_ANCESTOR_CHECK_PHRASE, self.i2a)
+
+    def test_old_gate_conjunct_above_miscitation_absent(self):
+        # task0002 AC-6: the pre-change premise sentence (which cited the
+        # gate conjunct as "above", though I.2.c is below I.2.a) is absent.
+        self.assertNotIn(OLD_GATE_CONJUNCT_ABOVE_MISCITATION_PHRASE, self.i2a)
+
+    def test_premise_has_single_causal_construction(self):
+        # task0002 AC-6: one "Because" paired with exactly one "so" -- the
+        # doubled causal construction ("Because ..., so ..., ... so ...")
+        # task0001 left behind is gone.
+        start = self.i2a.index(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE)
+        end = self.i2a.index(
+            "correctly scoped to `failed` only.", start
+        ) + len("correctly scoped to `failed` only.")
+        sentence = self.i2a[start:end]
+        self.assertEqual(sentence.count("Because "), 1)
+        self.assertEqual(sentence.count(" so "), 1)
+
+    def test_inheritance_invariant_conclusion_survives(self):
+        self.assertIn(INHERITANCE_INVARIANT_CONCLUSION_PHRASE, self.i2a)
+
+    def test_failed_only_carve_out_sentence_survives(self):
+        self.assertIn(CARVE_OUT_CORRECTLY_SCOPED_PHRASE, self.i2a)
+        self.assertIn(
+            "This carve-out is deliberately scoped to `failed` only",
+            self.i2a,
+        )
+
+    def test_in_flight_sentence_survives(self):
+        self.assertIn(
+            "A task whose journal last event is `launched` is always "
+            "in-flight, regardless of workflow.yaml `status`",
+            self.i2a,
+        )
+
+    def test_unreachability_slice_anchors_survive(self):
+        self.assertIn(UNREACHABILITY_OPENING_ANCHOR, self.i2a)
+        self.assertIn("can never arise.", self.i2a)
+
+
+class TestStopHookBulletCitesClassificationTable(unittest.TestCase):
+    """AC-2 (FR2, recycled-task-id-contract task0001): the Stop-hook bullet
+    under 'Supporting cast: journal, hooks, resume' states the same
+    classification as I.2.a and cites the classification table."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = _read()
+        cls.supporting_cast = _normalize_ws(_supporting_cast_section(text))
+        cls.i2a = _normalize_ws(_i2a_section(text))
+
+    def test_stop_hook_bullet_cites_classification_table(self):
+        self.assertIn(STOP_HOOK_TABLE_CITATION_PHRASE, self.supporting_cast)
+
+    def test_stop_hook_bullet_matches_i2a_classification(self):
+        self.assertIn(STOP_HOOK_MATCHES_I2A_PHRASE, self.supporting_cast)
+        # Both sites assert the identical classification value for this
+        # hook -- read from the fixed vocabulary, never restated (NFR4).
+        self.assertIn(
+            hook_classification_pin.READS_STATUS, self.supporting_cast
+        )
+        self.assertIn(hook_classification_pin.READS_STATUS, self.i2a)
+
+
+class TestUnlaunchedDetectionDivergenceRecorded(unittest.TestCase):
+    """AC-3 (FR4, recycled-task-id-contract task0001): I.2.a states, with
+    its reason, that the hooks treat a task as unlaunched solely from the
+    absence of a journal event for that id, and nowhere promises the
+    `status != merged` protection that only the orchestrator's own
+    selection rule applies."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.i2a = _normalize_ws(_i2a_section(_read()))
+
+    def test_unlaunched_solely_from_absence_phrase_present(self):
+        self.assertIn(UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE, self.i2a)
+
+    def test_narrower_than_orchestrator_rule_stated(self):
+        self.assertIn(NARROWER_THAN_ORCHESTRATOR_PHRASE, self.i2a)
+        self.assertIn(NO_EQUIVALENT_EXCLUSION_PHRASE, self.i2a)
+
+    def test_reason_states_fail_open_nets_not_authorities(self):
+        self.assertIn(DIVERGENCE_REASON_PHRASE, self.i2a)
+        self.assertIn(AUTHORITATIVE_SOURCE_PHRASE, self.i2a)
 
 
 class TestProtectedRawLiteralsSurvive(unittest.TestCase):
@@ -653,6 +1196,30 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         other_sample = "the failure reason is appended to the report"
         self.assertIn("append", other_sample)
 
+    def test_allocation_rule_citation_matcher_flags_the_pre_change_wording(
+        self,
+    ):
+        # task0013 (goal-vs-spec-divergence): the pre-change "Reason:"
+        # sentence, verbatim, before this task's edit landed -- no
+        # allocation-rule citation, only the renumbering premise this task
+        # replaces.
+        sample = _normalize_ws(
+            "Reason: I.2.c's route back to planning is the only writer "
+            "that resets a task's status to `pending`, and the planner's "
+            "`replace_all` re-numbers tasks from `task0001`, so the "
+            "`pending` + `failed` combination only ever arises when a "
+            "re-planned task inherited a retired id's journal events. "
+            "Given I.2.c's route-back precondition below, which admits "
+            "only tasks with a terminal journal last event, and the "
+            "planner's `replace_all` renumbering from `task0001` that is "
+            "the sole source of any recycled id, a re-numbered task can "
+            "only ever inherit a retired id's terminal events — so "
+            "workflow.yaml `status: pending` combined with journal last "
+            "event `launched` can never arise."
+        )
+        self.assertIn("task0001", sample)
+        self.assertNotIn("allocation rule", sample)
+
     # --- task0003 (D8 / TS-14 / SC-6): negative proofs for the eight
     # matchers that assert NEW post-change wording and previously had no
     # proof they would flag the pre-change document.
@@ -730,6 +1297,92 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         sample = _normalize_ws(OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL)
         self.assertIn(OLD_BATCH_MODE_STAYS_FAILED_REPORT_STOP_PHRASE, sample)
 
+    # --- task0001 (recycled-task-id-contract): negative proofs for this
+    # task's own new-wording matchers, run against this task's own
+    # pre-change samples (base commit
+    # b28a7166e8dce876075fc550ada7fdd7027211fa).
+
+    def test_two_parties_phrase_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        self.assertNotIn(TWO_PARTIES_PHRASE, sample)
+
+    def test_contradictory_construction_matcher_flags_the_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        self.assertIn(CONTRADICTORY_CONSTRUCTION_PHRASE, sample)
+        self.assertIn("governs only", sample)
+
+    def test_stop_hook_citation_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE)
+        self.assertNotIn(STOP_HOOK_TABLE_CITATION_PHRASE, sample)
+        self.assertNotIn(STOP_HOOK_MATCHES_I2A_PHRASE, sample)
+
+    def test_unlaunched_divergence_matchers_flag_absence_in_pre_change_wording(
+        self,
+    ):
+        # AC-3's whole paragraph is brand new (no prior sentence stated
+        # anything about the hooks' unlaunched-detection rule at all), so
+        # every one of its phrases must be provably absent from the
+        # pre-change tail sample.
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        self.assertNotIn(UNLAUNCHED_SOLELY_FROM_ABSENCE_PHRASE, sample)
+        self.assertNotIn(NARROWER_THAN_ORCHESTRATOR_PHRASE, sample)
+        self.assertNotIn(NO_EQUIVALENT_EXCLUSION_PHRASE, sample)
+        self.assertNotIn(DIVERGENCE_REASON_PHRASE, sample)
+        self.assertNotIn(AUTHORITATIVE_SOURCE_PHRASE, sample)
+
+    # --- task0001 (routeback-admissibility-exits): negative proof for the
+    # I.2.a unreachability premise replacement, run against this task's own
+    # pre-change sample (base commit 9f5d7ae).
+
+    def test_new_premise_matcher_flags_absence_in_pre_change_wording(self):
+        sample = _normalize_ws(PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE)
+        self.assertNotIn(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE, sample)
+        self.assertIn(OLD_MERGED_UNDER_EITHER_SOURCE_PREMISE, sample)
+
+    def test_new_premise_matcher_flags_absence_in_task0001_delivered_wording(
+        self,
+    ):
+        # task0002 (routeback-admissibility-exits, rework round 1) Site D:
+        # proof this task's own new-wording matchers would have failed
+        # against task0001's DELIVERED premise (this task's own pre-change
+        # branch point, base commit f2fb87f) -- distinct from
+        # PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE above, which predates
+        # task0001's edit entirely and proves a different thing.
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_I2A_PREMISE_SAMPLE)
+        self.assertNotIn(NEW_JOURNAL_LAST_EVENT_PREMISE_PHRASE, sample)
+        self.assertNotIn(PREMISE_INDEPENDENT_OF_ANCESTOR_CHECK_PHRASE, sample)
+        self.assertIn(OLD_GATE_CONJUNCT_ABOVE_MISCITATION_PHRASE, sample)
+
+    # --- task0003 (routeback-admissibility-exits, verify round 2 / VF-1):
+    # negative proof for the re-grounded inheritance-invariant conclusion,
+    # run against the same pre-change sample used for the premise proofs
+    # above (the conclusion clause is absent from it just as the old
+    # premise it replaces was).
+
+    def test_inheritance_invariant_conclusion_matcher_flags_absence_in_pre_change_wording(
+        self,
+    ):
+        sample = _normalize_ws(PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE)
+        self.assertNotIn(INHERITANCE_INVARIANT_CONCLUSION_PHRASE, sample)
+
+    def test_group_anchors_absent_in_pre_change_wording(self):
+        # The split assertions' own opening anchors did not exist in the
+        # pre-change wording (the old sentence used a different
+        # conjunction, "The other three hooks —", without the word
+        # "queue"), so the anchored slice used by the new group-placement
+        # matchers cannot even be formed against the old text.
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        with self.assertRaises(ValueError):
+            sample.index(DOES_NOT_READ_OPENING_ANCHOR)
+        with self.assertRaises(ValueError):
+            sample.index(READS_OPENING_ANCHOR)
+
 
 class TestPreChangeSampleGuards(unittest.TestCase):
     """AC-2 / Contract 4: each pre-change wording sample carries a RETAINED
@@ -765,6 +1418,62 @@ class TestPreChangeSampleGuards(unittest.TestCase):
     def test_old_batch_mode_paragraph_sample_retains_gate_id_anchor(self):
         sample = _normalize_ws(OLD_BATCH_MODE_PARAGRAPH_BEFORE_ABORT_TERMINAL)
         self.assertIn("`implement.failed-task`", sample)
+
+    def test_i2a_scope_tail_sample_retains_same_classification_anchor(self):
+        # "which states the same classification" survives verbatim across
+        # this task's edit (the new text only appends "and cites the
+        # classification table" after it) -- a RETAINED anchor present in
+        # both the pre-change sample and the live post-change document.
+        sample = _normalize_ws(PRE_CHANGE_I2A_SCOPE_TAIL_SAMPLE)
+        anchor = "which states the same classification"
+        self.assertIn(anchor, sample)
+        self.assertIn(anchor, _normalize_ws(_i2a_section(_read())))
+
+    def test_i2a_unreachability_tail_sample_retains_carve_out_scoped_anchor(
+        self,
+    ):
+        # task0003 (verify round 2 / VF-2): re-grounded from the superseded
+        # "no retired task id can leave ... to inherit" literal --
+        # `tests/test_routeback_reset_scope_consistency.py` (outside the
+        # declared change set) now asserts that literal's ABSENCE from
+        # I.2.a, which disqualifies it as an anchor (Conventions 3's
+        # non-forbidden condition). CARVE_OUT_CORRECTLY_SCOPED_PHRASE
+        # survives verbatim across this task's edit instead -- a RETAINED
+        # anchor present in both the pre-change sample and the live
+        # post-change document, and not forbidden by any outside module.
+        sample = _normalize_ws(PRE_CHANGE_I2A_UNREACHABILITY_TAIL_SAMPLE)
+        self.assertIn(CARVE_OUT_CORRECTLY_SCOPED_PHRASE, sample)
+        self.assertIn(
+            CARVE_OUT_CORRECTLY_SCOPED_PHRASE,
+            _normalize_ws(_i2a_section(_read())),
+        )
+
+    def test_task0002_i2a_premise_sample_retains_carve_out_scoped_anchor(
+        self,
+    ):
+        # task0002 (routeback-admissibility-exits, rework round 1) Site D /
+        # task0003 (verify round 2 / VF-3): re-grounded for the same reason
+        # as the guard above -- CARVE_OUT_CORRECTLY_SCOPED_PHRASE survives
+        # verbatim across this task's own edit too, a RETAINED anchor
+        # present in both this task's own pre-change sample and the live
+        # post-change document.
+        sample = _normalize_ws(TASK0002_PRE_CHANGE_I2A_PREMISE_SAMPLE)
+        self.assertIn(CARVE_OUT_CORRECTLY_SCOPED_PHRASE, sample)
+        self.assertIn(
+            CARVE_OUT_CORRECTLY_SCOPED_PHRASE,
+            _normalize_ws(_i2a_section(_read())),
+        )
+
+    def test_stop_hook_bullet_sample_retains_forgotten_refill_anchor(self):
+        # "catching a forgotten refill after a wake phase" survives
+        # verbatim across this task's edit -- a RETAINED anchor present in
+        # both the pre-change sample and the live post-change document.
+        sample = _normalize_ws(PRE_CHANGE_STOP_HOOK_BULLET_SAMPLE)
+        anchor = "catching a forgotten refill after a wake phase"
+        self.assertIn(anchor, sample)
+        self.assertIn(
+            anchor, _normalize_ws(_supporting_cast_section(_read()))
+        )
 
 
 if __name__ == "__main__":

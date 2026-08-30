@@ -1,0 +1,115 @@
+task_id: task0016
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_replanning_reentry_with_merged_task_passes
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_spec_change_record_with_base_commit_is_a_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_spec_change_record_without_base_commit_is_not_a_reentry
+    red_confirmed: true
+    red_reason: >-
+      Ran the CLI against the new valid-replace-all-replanning-merged-tasks
+      fixture with the pre-task0016 validator (git show HEAD of
+      em-workflow/scripts/validate-worker-output.py): exit 1, code
+      replace-all-not-permitted, "replace_all requires tasks to be empty or
+      all pending (implementation has started)" -- a merged task on the
+      create-plan:pending re-entry path was rejected. The direct helper
+      tests failed with AttributeError (workflow_replace_all_spec_change_
+      reentry did not exist) before the implementation.
+  AC-2:
+    tests:
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_initial_planning_with_merged_task_still_rejected
+    red_confirmed: false
+    red_reason: >-
+      Retention/negative proof, not new behaviour: the old code's task-status
+      test ran independently of create-plan's status, so a merged task was
+      already rejected regardless of path before this task. Verified by
+      running the pre-task0016 validator (git show HEAD) against this exact
+      fixture: identical exit 1 / replace-all-not-permitted output as after
+      the change. AC-2's contribution is proving the NEW path-aware
+      implementation still rejects this shape, not that it newly starts to.
+  AC-3:
+    tests:
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_after_implementation_started_rejected_on_replanning_path_too
+    red_confirmed: true
+    red_reason: >-
+      The error code (replace-all-not-permitted) was already produced by the
+      pre-task0016 code for this fixture, but its message text was "replace_all
+      requires tasks to be empty or all pending (implementation has started)"
+      -- it does not contain the substring "in_progress". This test's
+      assertIn("in_progress", messages) failed against the pre-implementation
+      code (verified via git show HEAD) and passes against the new message
+      "replace_all requires no task to be in_progress or failed
+      (implementation has started)".
+  AC-4:
+    tests:
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_needs_update_passes
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_pending_passes
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_in_progress_rejected_with_replace_all_not_permitted
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_create_plan_in_progress_rejected_for_exactly_one_reason
+    red_confirmed: false
+    red_reason: >-
+      Pure retention criterion: these four pins pre-date task0016 (task0003)
+      and were already green before this task started. Not rewritten here;
+      re-run after the implementation change and confirmed still green
+      (python3 -m unittest discover -s tests), proving no guard was deleted
+      or relaxed to make AC-1 pass.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Design-conformance criterion, not independently testable beyond what
+      AC-1/AC-2/AC-3/AC-6 collectively prove: the implementation encodes
+      exactly the three conditions under this task plan's "The contract this
+      task implements" (initial-planning: empty-or-all-pending;
+      re-planning: needs_update OR pending-with-recognized-SPEC-change-
+      reentry; common: no in_progress/failed task). No read of
+      em-workflow/references/workflow-patch.md was performed from this
+      task's test module (Test Notes instruction); any wording disagreement
+      found there belongs to task0013 and is reported in this report's
+      notes, not resolved here.
+  AC-6:
+    tests:
+      - tests.test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_missing_reentry_signal_defaults_to_initial_planning
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_no_phase_state_is_not_a_reentry
+      - tests.test_validate_worker_output.TestReplanningReentrySignalHelper.test_phase_state_without_spec_change_record_is_not_a_reentry
+    red_confirmed: false
+    red_reason: >-
+      The CLI-level fixture assertion (test_missing_reentry_signal_defaults_to_initial_planning)
+      was already true under the pre-task0016 code for the same reason as
+      AC-2 (verified identically). The two direct helper tests ARE
+      red-confirmed in the AttributeError sense (the function did not exist
+      before this task), but that red is recorded once under AC-1 rather
+      than double-counted here since it is the same observation.
+  AC-7:
+    tests:
+      - tests.test_check_plugin_invariants.TestGateIdCoverage.test_documented_intentional_exception_excluded_both_directions
+    red_confirmed: false
+    red_reason: >-
+      Comment-only change per the task plan ("this is a comment correction
+      with no behavioural change"): INTENTIONALLY_UNLISTED_GATE_IDS keeps
+      rework.spec-change excluded from both directions, so the existing
+      test's assertion was true before this edit and remains true after.
+      Verified the test still passes untouched (tests/test_check_plugin_
+      invariants.py was not modified).
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      NFR5/NFR8 compliance check, not a single behavioural test: (1) no new
+      import was added to tests/test_validate_worker_output.py (stdlib-only:
+      importlib.util, json, os, re, subprocess, sys, tempfile, unittest,
+      pathlib -- unchanged import list); (2) the module docstring paragraph
+      that recorded the check as frozen (feature-docs/create-plan-status-
+      conflict D1) was rewritten to say the check is "no longer frozen ...
+      superseded"; (3) `python3 -m unittest discover -s tests` passes in
+      full modulo the 3 pre-existing baseline failures (unrelated
+      test_guardrail_hooks_migration cases), confirmed by the final full-suite
+      run below.

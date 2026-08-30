@@ -1,0 +1,49 @@
+round: 1
+executed_at: '2026-08-18T19:11:52+09:00'
+scope:
+  review_mode: diff
+  base_commit: 996b270c9e58319e99c9e2c32138c8334189a0f2
+  head_commit: 07761b0c284e434ebc368c70cc1a32e24567534f
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/templates/requirements-document.md
+  - em-workflow/references/templates/spec-document.md
+  - test-docs/declared-change-set-implementation/task0001.tests.yaml
+  - test-docs/declared-change-set-implementation/task0002.tests.yaml
+  - tests/test_requirements_template_declared_change_set.py
+  - tests/test_spec_template_declared_change_set.py
+plan:
+  floor:
+  - comprehensive
+  - spec
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- perspective: comprehensive
+  source: claude
+  status: completed
+- perspective: spec
+  source: claude
+  status: completed
+findings:
+- stable_id: 6bdb784aa896a7d7
+  severity: medium
+  category: comprehensive
+  file: test-docs/declared-change-set-implementation/task0002.tests.yaml
+  line: 8
+  title: task0002 のテスト記録が「マニフェストを読むテストは存在しない」と誤記している
+  description: AC-1 / AC-2 / AC-3 の red_reason は「No automated assertion reads either manifest」、AC-5 は「the suite does not read either manifest」と述べているが、既存の tests/test_spec_file_set_completeness_version_bump.py
+    が両マニフェストを実際に読み、version 形式・patch 前進・2 レジストリ間の一致・トップレベルキー集合を assert している。記録の断定は事実と異なる。実装（両レジストリ 0.1.44→0.1.45 の同時 bump）自体は正しく、フルスイートは green。
+  suggestion: 'AC-1 / AC-2 / AC-3 / AC-5 の tests: に既存の *_version_bump.py の該当クラスを列挙し、red_reason を「専用の新規モジュール追加は NFR4 によりスコープ外だが、既存モジュールがレジストリ不一致・patch 未前進・キー変更を検出する」という趣旨へ書き換える。'
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: severity medium — R4 の auto-fix 候補ゲート（critical/high のみ）に該当しないため本ラウンドでは未修正。フォローアップタスクとして起票する。
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false

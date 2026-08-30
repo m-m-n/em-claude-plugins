@@ -1,0 +1,101 @@
+task_id: task0020
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_deviation_auto_addition.TestTask0020AC1FilesAppendSameCommitNeverRewritten.test_step_3_names_files_append_in_same_commit_by_the_orchestrator
+      - tests.test_deviation_auto_addition.TestTask0020AC1FilesAppendSameCommitNeverRewritten.test_existing_entry_never_removed_or_rewritten
+      - tests.test_deviation_auto_addition.TestTask0020AC1FilesAppendSameCommitNeverRewritten.test_readmission_of_an_already_listed_path_is_a_no_op
+      - tests.test_deviation_auto_addition.TestTask0020AC1FilesAppendSameCommitNeverRewritten.test_files_append_statement_is_inside_step_3_not_free_floating
+    red_confirmed: true
+    red_reason: >-
+      Before the doc edit, all four failed with AssertionError (phrase not
+      found / assertTrue(False)) since step 3 named only tasks.{T}.status
+      and had no files-append, no-op, or never-rewritten language.
+  AC-2:
+    tests:
+      - tests.test_deviation_auto_addition.TestTask0020AC2EvidenceFormThreeParts.test_evidence_form_states_three_parts_and_resolution_requirement
+    red_confirmed: true
+    red_reason: >-
+      Before the doc edit: AssertionError, assertTrue(False) -- the rule
+      said only "a named, checkable condition" with no three-part form and
+      no resolve-to-something-that-exists clause.
+  AC-3:
+    tests:
+      - tests.test_deviation_auto_addition.TestAC2ConvenienceDoesNotQualify.test_states_convenience_is_not_auto_added
+      - tests.test_deviation_auto_addition.TestAC3ContainmentCheckRetained.test_states_containment_check_retained
+    red_confirmed: false
+    red_reason: >-
+      AC-3 restates task0010/task0015's unchanged behavior (containment
+      check retained, convenience named as non-qualifying); these pins
+      already passed before this task's edit and continue to pass after
+      it -- no new text was introduced for this criterion in this task's
+      diff, so no new red was observed. Carried into notes.
+  AC-4:
+    tests:
+      - tests.test_deviation_auto_addition.TestTask0020AC4RestingPlacesNamedNotCompletionReport.test_resting_places_named_and_completion_report_disclaimed
+      - tests.test_deviation_auto_addition.TestTask0020AC4RestingPlacesNamedNotCompletionReport.test_old_completion_report_resting_place_framing_is_gone
+    red_confirmed: true
+    red_reason: >-
+      Before the doc edit: AssertionError -- the rule said every
+      auto-addition/decline "leaves its audit record through this same
+      completion-report `deviations` channel", the exact framing AC-4
+      forbids, and named neither a `files`-entry+commit resting place for
+      an admission nor a wake-report resting place for a decline.
+  AC-5:
+    tests:
+      - tests.test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_retention_states_the_no_drop_reason
+      - tests.test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_retention_cites_workflow_patch_by_path
+      - tests.test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_existing_retention_pins_still_hold
+      - tests.test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_does_not_restate_workflow_patchs_own_rule_text
+    red_confirmed: true
+    red_reason: >-
+      Before the doc edit: AssertionError on the first two (no-drop reason
+      / workflow-patch.md citation absent from the Retention bullet); the
+      other two already held and continue to hold (retention pins task0015
+      wrote, and the never-restate guard).
+  AC-6:
+    tests:
+      - tests.test_deviation_auto_addition.TestAC3ContainmentCheckRetained.test_states_containment_check_retained
+      - tests.test_deviation_auto_addition.TestNoExclusionRuleStated.test_no_verify_side_exclusion_rule_found
+    red_confirmed: false
+    red_reason: >-
+      AC-6 is the retention half (C5): containment-check-unchanged and
+      no-exclusion-language already held before this task's edit (task0010
+      pins) and continue to hold after it -- this task adds no exclusion
+      wording. tests/test_declared_change_set_invariants.py (the
+      repository-wide C6d guard, not owned by this task) was re-run,
+      unedited, and still passes.
+  AC-7:
+    tests:
+      - tests.test_change_set_derivation.TestTask0020AC7NoRestatementInSection12.test_section_does_not_restate_the_write_procedure
+      - tests.test_change_set_derivation.TestTask0020AC7NoRestatementInSection12.test_section_does_not_restate_the_evidence_form
+    red_confirmed: false
+    red_reason: >-
+      These absence assertions were already true before this task touched
+      section 12 (the write procedure/evidence-form literals never
+      appeared there) and remain true after adding the Retention clause --
+      no new red was observable for this half. AC-7's positive half (the
+      rule stated in exactly one place, implement-phase.md) is the
+      substance red-confirmed under AC-1/AC-2 above.
+  AC-8:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Verifiable outcome, not a single test: (1) full `python3 -m
+      unittest discover -s tests` run recorded exactly the 3 baseline
+      failures (test_guardrail_hooks_migration, unrelated/pre-existing)
+      and no new ones -- 1903 tests total, up from the 1885-test baseline;
+      (2) every new matcher added in test_deviation_auto_addition.py and
+      test_change_set_derivation.py has a paired negative-proof test
+      (TestTask0020MatchersFlagSyntheticSamples' three tests, and
+      TestValidationDetectsRegressions' two new no_drop_matcher tests),
+      confirmed by running the negative-proof tests themselves alongside
+      the rest of the 75-test combined module run, all green.

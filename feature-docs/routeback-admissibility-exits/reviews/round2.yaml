@@ -1,0 +1,468 @@
+round: 2
+executed_at: "2026-08-30T12:05:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 5b7e6a4c83a931b8d5e876272b73ed3a2aa16ce4
+  head_commit: 1af441abcd7e897bf321bd5153e4167bfc156e8a
+  base_commit_note: >-
+    implement の base_commit (4097a72) ではなく main の tip を diff base に採用した。
+    merge commit b521d4e が main の 316 コミットをこのブランチに取り込んだ結果、
+    4097a72..HEAD は 271 files / 50885 insertions となりレビューのサイズゲート
+    (200 files / 20k lines) を超え、その大半が既にレビュー済みの上流コードだった。
+    merge-base(main, HEAD) == main tip なので 5b7e6a4 からの diff がこの feature の
+    著作分ちょうど (17 files, うち feature-docs 外が 7 files) になる。
+    ゲート解決は phase-state/batch-audit.yaml の review.diff-size-gate に記録。
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/routeback-admissibility-exits/task0001.tests.yaml
+    - test-docs/routeback-admissibility-exits/task0002.tests.yaml
+    - tests/test_implement_routeback_gate.py
+    - tests/test_recycled_task_id_consistency.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  # --- 初回集約（loop 1 の対象） ---
+  - stable_id: 88ecf8bc49d3b7f5
+    severity: critical
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 361
+    title: "round 2 の文言変更に対しピン止めテストが未更新でスイートが 11 件赤"
+    description: >-
+      implement-phase.md の I.2.b step 1 / Agent index writer / Resume の文面が
+      書き換えられた一方、それを byte-exact に pin する
+      tests/test_implement_routeback_gate.py の定数群が更新されず、
+      `python3 -m unittest discover -s tests` が 11 failures だった。
+    suggestion: "pin 済みリテラルを本文に復元する（テスト側は単一ファイル editor の範囲外）"
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1 — pin 済みリテラルを本文へ復元し 11 → 4 failures"
+  - stable_id: 2f664453723d44fe
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 225
+    title: "I.2.a の継承不変条件のピン文が消え retention ガード 3 件が失敗"
+    description: >-
+      main 取り込みマージ b521d4e の解決で I.2.a の結論節が main 側の文言に差し替わり、
+      この feature が置いた結論文が消えた。
+    suggestion: "pin されたリテラルを含む形へ書き戻す"
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: >-
+      auto-applied loop 1。ただし loop 2 で撤回した — main 側の
+      tests/test_routeback_reset_scope_consistency.py が同じ文字列の不在を
+      要求しており、この復元は main のテスト 3 件を赤にしたため
+      (stable_id 568d9649f3b0c093 参照)
+  - stable_id: c7d237e1db915afc
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 405
+    title: "祖先チェック失敗タスクの retry 可否が I.2.b と I.2.c で真逆"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1 — I.2.c 側に route-back 不可の明示を追加"
+  - stable_id: 1331a83d3e40748a
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 411
+    title: "ancestor 検証失敗タスクの retry 可否が I.2.b step 1 と I.2.c で矛盾"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "loop 1 の先行 editor が同一矛盾を解消済みのため editor skip"
+  - stable_id: 206b8c923a323bbd
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 774
+    title: "Agent index の unresolvable lookup を live agent なしと扱い recovery の事後条件が成立しない"
+    sources: [claude:comprehensive, claude:spec]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1 — live 判定規則を I.2.b step 1 に明記"
+  - stable_id: e0a6cf7dbd68b38c
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 361
+    title: "SSOT 文面と消費側 pin テストのドリフト（11 件赤）"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "88ecf8bc49d3b7f5 と同一サイト。auto-applied loop 1"
+  - stable_id: 8582630670541bd3
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 228
+    title: "main 取り込みマージが I.2.a の結論文を上書きし推論鎖が切れている"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: declined
+    resolution_reason: >-
+      main 側の tests/test_routeback_reset_scope_consistency.py が main の文言を
+      要求し、この feature 側の文言の不在を要求している。main のモジュールは
+      SPEC.md の Declared Change Set 外のため、そちらを壊す解決は採れない
+  - stable_id: cca1231fed96bcf2
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 391
+    title: "worktree と branch の片方だけが残る状態が recovery のどちらの条件にも当たらない"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 4c1dd1577f38f767
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 391
+    title: "worktree/branch 双方不在の第 2 条件が起動する recovery に手段が無い"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "loop 2 / loop 3 で第 2 条件の終端を Residual に確定させた"
+  - stable_id: 05483eb67c6ee85e
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 767
+    title: "Agent index を state source でないと宣言しつつ reconcile の判定を index に依存させている"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "loop 3 で live 判定をオーケストレーター観測可能な事実に置き換え"
+  - stable_id: e4beccea6373825b
+    severity: critical
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 774
+    title: "AC-5 / NFR4 違反: テストスイートが 11 件失敗"
+    sources: [claude:spec]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "loop 1-3 で 11 → 3 failures。残る 3 件は bffdcec69dbce324 で追跡"
+  - stable_id: 6654c1adc4176454
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 595
+    title: "trust-but-verify `merged` の task が依然 abort 専用終端"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "loop 3 で終端が gate-rejected（abort と同一）であることを明記（3c595fd012898c2f）"
+  - stable_id: 1bbe1266bdae5c31
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 380
+    title: "stale `launched` の recovery が発火条件と自己矛盾し FR3 の MUST を満たさない"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "loop 2 / loop 3 で live 判定と stop 対象解決を分離"
+
+  # --- loop 1 後の再レビューで新出（loop 2 の対象） ---
+  - stable_id: 568d9649f3b0c093
+    severity: critical
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 228
+    title: "I.2.a の同一文に 2 つのテストモジュールが両立不能な要求をしておりスイートが赤"
+    description: >-
+      tests/test_routeback_reset_scope_consistency.py（変更集合外の既存モジュール）が
+      main 側の文言の存在と、この feature 側の文言の不在を要求する。
+      tests/test_recycled_task_id_consistency.py（変更集合内）はその逆を要求する。
+      同一文字列に対する存在／不在の衝突なので、文書側のどの書き方でも同時に満たせない。
+    suggestion: "変更集合内である tests/test_recycled_task_id_consistency.py のマッチャを更新する"
+    sources: [claude:comprehensive, claude:spec, claude:architecture]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: >-
+      auto-applied loop 2 — 文書側を main の文言に戻した（変更集合外モジュールを
+      壊さない側を選択）。結果 4 → 3 failures。残る 3 件は変更集合内の
+      tests/test_recycled_task_id_consistency.py 側の更新でしか解けない
+  - stable_id: 2e44d89b02faf094
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 373
+    title: "stale-`launched` Recovery が到達不能（not live を Residual と同一視）"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2 — not live を 2 ケースに分割"
+  - stable_id: f4af1c4ffe592ab1
+    severity: high
+    category: comprehensive
+    file: tests/test_implement_routeback_gate.py
+    line: 2108
+    title: "retained-anchor ガードが同 task 自身の編集で消した文言を live 文書に要求していて必ず失敗"
+    sources: [claude:comprehensive, claude:spec]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2 — anchor を編集をまたいで実在する文字列へ差し替え"
+  - stable_id: 5b7a08aa6e1f0e57
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 362
+    title: "I.2.b step 1 の FAILS 条件が liveness 連言を落としており稼働中の実装者を停止対象にする"
+    sources: [claude:architecture, claude:spec]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2 — pin 済み文に隣接して必要条件である旨を追記"
+  - stable_id: 9770568bd1352b4d
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 406
+    title: "ancestor check 失敗タスクの選択肢が I.2.a / I.2.b / I.2.c で食い違う"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2 — admissibility の所有を I.2.c に寄せる 1 文を追記"
+  - stable_id: dd130cdd2fc83a12
+    severity: medium
+    category: comprehensive
+    file: tests/test_implement_routeback_gate.py
+    line: 1768
+    title: "version lockstep ガードの baseline が実際のベースより古く bump 忘れを検知できない"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: aba449c8ae0a91d2
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 394
+    title: "第 2 の発火条件が lookup 無しで同じ Recovery を起動するが手順が未定義"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "loop 3 で第 2 条件の終端を Residual に確定させた"
+  - stable_id: fc8f24d8414869f1
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 405
+    title: "ancestor check 失敗タスクの出口について I.2.b step 1 と I.2.c が食い違う"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "9770568bd1352b4d と同じ修正で解消"
+  - stable_id: 34f55074e0a17096
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 590
+    title: "I.2.c が主張する way out が harness-level-failure 診断路の入力契約を満たさない"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "loop 3（3c595fd012898c2f）で way out が回復経路でなく診断である旨を明記"
+  - stable_id: ce162cc7ddd96f3e
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 366
+    title: "live か否かの判定規則が所有サイトに無く Residual 節が到達不能"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "loop 2 / loop 3 で live 判定規則を所有サイトに明記"
+
+  # --- loop 2 後の再レビューで新出（loop 3 の対象・および残存） ---
+  - stable_id: 52efc20016959653
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 415
+    title: "wake phase による journal 直接書き込みが journal writer-set 契約に違反"
+    description: >-
+      loop 2 が追加した『the wake phase itself writes the task's terminal
+      `failed` event directly』が、同ファイルの Journal 節および
+      workflow-schema.md の writer set（オーケストレーターは決して書かない）と衝突。
+    sources: [claude:architecture, claude:comprehensive, claude:spec]
+    confidence: 90
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3 — 直接書き込みの主張を撤回し Residual 扱いに統一"
+  - stable_id: 7754639d401283c9
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 381
+    title: "liveness を stop tool が止める状態と定義したため稼働中の兄弟実装者を停止しうる"
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 90
+    resolution: fixed
+    resolution_reason: >-
+      auto-applied loop 3 — live をオーケストレーター観測可能な事実
+      （その task の Task() 呼び出しがまだ返っていないこと）に再定義し、
+      stop tool と Agent index lookup は Recovery 内でのみ参照する形にした
+  - stable_id: 3c595fd012898c2f
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 611
+    title: "ancestor-check 失敗タスクは retry も route-back も塞がれ解決手段が abort だけになる"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: >-
+      auto-applied loop 3 — この 1 ケースが workflow-schema.md の
+      failed 解決セマンティクスを自動経路で満たさない唯一の例外であることを明記
+  - stable_id: 17dc88bb8781a1a1
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 228
+    title: "I.2.a の retained anchor が消え tests/test_recycled_task_id_consistency.py の 3 件が赤"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: >-
+      batch mode: rework cap reached。loop 3 の editor が両モジュールの要求が
+      同時充足不能であることを確認し、文書側の編集では解けないと判定して skip。
+      解決は tests/test_recycled_task_id_consistency.py のマッチャ更新
+      （bffdcec69dbce324）が必要
+  - stable_id: bffdcec69dbce324
+    severity: critical
+    category: spec
+    file: tests/test_recycled_task_id_consistency.py
+    line: 853
+    title: "テストスイートが 3 件 FAIL（AC-5 / NFR4 違反）— 新規マッチャが既存モジュールの禁止アサーションと矛盾"
+    description: >-
+      test_inheritance_invariant_conclusion_survives /
+      test_i2a_unreachability_tail_sample_retains_inheritance_invariant_anchor /
+      test_task0002_i2a_premise_sample_retains_inheritance_invariant_anchor の 3 件が、
+      I.2.a に 'no retired task id can leave a `merged` last event behind for a
+      renumbered task to inherit' が存在することを要求する。同じ文字列を
+      変更集合外の tests/test_routeback_reset_scope_consistency.py が
+      assertNotIn で禁止しているため、文書側をどちらに寄せてもどちらかが赤になる。
+    suggestion: >-
+      本変更が所有する tests/test_recycled_task_id_consistency.py 側を更新する。
+      (a) test_inheritance_invariant_conclusion_survives のアサーションを現行文言
+      'No retired task id is ever re-issued, so a task whose workflow.yaml
+      `status` is `pending` can never carry an inherited `merged` journal last
+      event' に更新し、AC-7 が要求する pre-change バイト列への negative proof を
+      対で追加する。(b) 2 つの retained-anchor guard のアンカーを、pre-change
+      サンプルと現行文書の双方に実在する語句（例: 'the recycled-task-id carve-out
+      above stays correctly scoped to `failed` only'）へ差し替える。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: >-
+      batch mode: rework cap reached。category が spec のため auto-fix の
+      candidate gate（category != spec）に掛からず、この round では修正できない
+  - stable_id: 49fac346224aebf5
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 414
+    title: "I.2.b step 1 の第 2 条件が wake phase の journal 直接書き込みを規定し Journal 所有規則と衝突"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "52efc20016959653 と同一問題。auto-applied loop 3"
+  - stable_id: 071508a7676754ca
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 398
+    title: "復旧経路が stop-tool recorder の書き込みを無条件に前提し fail-open な no-op が Residual に含まれていない"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 997c11bc7c5f6a3d
+    severity: medium
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 366
+    title: "worktree と branch の片方だけが存在する状態に存在チェックの結果が規定されていない（FR4 の穴）"
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached。cca1231fed96bcf2 と同一の穴"
+  - stable_id: 6359ce983afc7d8c
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 789
+    title: "agent index の読み手集合を広げたが workflow-schema.md 側が未追随（SSOT ドリフト）"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 58d72b5e89366b82
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 796
+    title: "agents.jsonl の読み取り契約が 2 文書に分裂し ambiguous の意味も 2 通りになっている"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 3588eb5e16e3bef5
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 682
+    title: "新しい orchestrator-read rule が文書レベルでしか検証されていない"
+    sources: [litellm:vertex-glm-5:architecture]
+    confidence: 50
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: e833ffe88efbab5b
+    severity: medium
+    category: architecture
+    file: tests/test_implement_routeback_gate.py
+    line: 1374
+    title: "フレーズ検証テストの結合面が肥大し保守コストが高い"
+    sources: [litellm:vertex-glm-5:architecture]
+    confidence: 50
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+auto_fix:
+  loops_run: 3
+  applied_total: 12
+  termination: loop-cap
+  notes: >-
+    loop 1: 4 applied / 1 skipped、テスト 11 → 4 failures。
+    loop 2: 5 applied、4 → 3 failures。
+    loop 3: 3 applied / 1 skipped、3 failures のまま。
+    loop 3 は auto-fix の上限（3）に達したため、loop 3 後の再レビューは実施していない。
+    findings の resolution は loop 2 後の再レビュー結果に loop 3 の適用結果を
+    反映したもの。
+residual_critical_high: 2
+rework_required: true
+suite_state:
+  command: "python3 -m unittest discover -s tests"
+  result: "Ran 2829 tests, FAILED (failures=3)"
+  failing:
+    - test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives
+    - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_inheritance_invariant_anchor
+    - test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_inheritance_invariant_anchor

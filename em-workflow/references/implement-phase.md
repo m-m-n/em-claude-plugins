@@ -212,34 +212,60 @@ legitimate retry path. A task whose journal last event is `launched` is
 always in-flight, regardless of workflow.yaml `status` — never reinterpret
 it as unlaunched, since the launch guard would deny that launch. Reason:
 I.2.c's route back to planning is the only writer that resets a task's
-status to `pending`, and the planner's `replace_all` re-numbers tasks from
-`task0001`, so the `pending` + `failed` combination only ever arises when a
-re-planned task inherited a retired id's journal events. Given I.2.c's
-route-back precondition below, which admits only tasks with a terminal
-journal last event, and the planner's `replace_all` renumbering from
-`task0001` that is the sole source of any recycled id, a re-numbered task
-can only ever inherit a retired id's terminal events — so workflow.yaml
+status to `pending`, and no re-planning pass ever re-issues a retired task
+id to a different task — `references/workflow-patch.md`'s re-planning
+task-id allocation rule (cited here, never restated) allocates every new
+id above the highest the feature has ever registered, so the `pending` +
+`failed` combination arises only from I.2.c's own reset of a task's own
+prior `failed` status, never from a task inheriting a different task's
+retired id. Given I.2.c's route-back precondition below, which admits only
+tasks with a terminal journal last event, and the allocation rule's
+guarantee that a `replace_all` never re-issues a retired id, a task can
+only ever carry its OWN journal's terminal event — so workflow.yaml
 `status: pending` combined with journal last event `launched` can never
-arise. Because route-back proceeds only when no task is `merged` under
-either source (the widened I.2.c gate above), no retired task id can
-leave a `merged` last event behind for a renumbered task to inherit, so
-the recycled-task-id carve-out above stays correctly scoped to `failed`
-only. This recycled-task-id rule governs only the orchestrator's
-interpretation of the journal, with one explicit exception:
-`queue_stop_guard.py` applies this same recycled-task-id carve-out itself
+arise. Because Step I.2.c's route-back gate below blocks route-back
+whenever any task's journal last event is `merged` — read from the
+journal directly, independent of the ancestor check — that gate never
+admits route-back while such an event stands. No retired task id is ever
+re-issued, so a task whose workflow.yaml `status` is `pending` can never
+carry an inherited `merged` journal last event; the recycled-task-id
+carve-out above stays correctly scoped to `failed` only. The
+recycled-task-id carve-out above is applied by two parties: the
+orchestrator's own interpretation of the journal (this rule), and the Stop
+hook, `queue_stop_guard.py`, which reads `tasks.{T}.status` and applies the
+identical carve-out itself
 (see the Stop-hook bullet under 'Supporting cast: journal, hooks, resume'
-below, which states the same classification). The other three hooks —
-`queue_launch_guard.py`,
+below, which states the same classification and cites the classification
+table). The other three queue hooks — `queue_launch_guard.py`,
 `queue_failure_net.py` and `queue_taskstop_net.py` — derive a task's state
-from the journal's last event alone and never consult `tasks.{T}.status`
-(see 'Supporting cast: journal, hooks, resume' below). The journal itself
-stays append-only (see Supporting cast below) — only the interpretation of
-its events is scoped by this rule.
+from the journal's last event alone and never consult `tasks.{T}.status`.
+The full per-hook classification is the hook classification table under
+'Supporting cast: journal, hooks, resume' below, which this paragraph and
+the Stop-hook bullet both cite as its source. The journal itself stays
+append-only (see Supporting cast below) — only the interpretation of its
+events is scoped by this rule.
+
+The other three queue hooks detect a task as **unlaunched** solely from the absence of
+any journal event for that task id — never from `tasks.{T}.status`.
+`queue_stop_guard.py` is the exception: as described above, it also reads
+`tasks.{T}.status` to apply the recycled-task-id carve-out that reclassifies
+a `failed` + `pending` task as unlaunched. This is
+narrower than the orchestrator's own selection rule above, which
+additionally excludes any task whose `status` reads `merged`; the hooks
+carry no equivalent exclusion. This divergence is recorded, not fixed: the
+hooks are fail-open nets, not authorities (see 'Supporting cast: journal,
+hooks, resume' below), and the orchestrator protocol above together with
+the I.2.a resume guard remain the authoritative source of task state.
 Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
 its kept worktree via the resume guard below); the launch guard then admits
-it because a post-`failed` launch is the legitimate retry path.
+it because a post-`failed` launch is the legitimate retry path. This holds
+only when the task's journal last event is actually `failed`: for the
+ancestor-check-failed case in I.2.b step 1, where the reconciled state is
+`failed` but the raw journal last event is still `merged`, the launch guard
+denies the retry instead — I.2.c owns that narrower outcome, not restated
+here.
 
 For each selected task T (every task selected in this single entry into
 Step I.2.a), create its worktree:
@@ -364,7 +390,9 @@ the path yourself and pass it — the implementer does not know `{feature}`
 and must not derive it from other paths.
 
 **End the turn** immediately after launching — no polling, no synchronous
-wait. The PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
+wait. In a `--batch` run, this turn's final assistant message is the
+marker line `references/batch-mode.md` defines and nothing else. The
+PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
 each allowed launch as a `launched` journal event as the call goes through
 (the only writer of `launched`); it also denies double-launching a task
 that is already in flight or already merged, as a net under the
@@ -381,11 +409,116 @@ Triggered whenever a launched implementer's `Task()` call returns.
    recycled-task-id rule in I.2.a above; a `launched` last event is always
    in-flight regardless of workflow.yaml `status`) and cross-check against
    git actual state, trust-but-verify:
-   - Worktree/branch existence for tasks the journal claims are in-flight.
+   - Worktree/branch existence, PLUS live-agent absence, for tasks the
+     journal claims are in-flight — the check FAILS when a task's journal
+     last event is `launched` while the task worktree and the task branch
+     both exist. That two-conjunct condition is necessary but not
+     sufficient by itself: it only identifies the candidate set to run the
+     live check against, and the check FAILS only if, in addition, the
+     task's recorded agent is not live. This is the allowed-but-never-started state, since I.2.a
+     creates both artifacts before the launch call that records
+     `launched`, and what distinguishes that stale state from a normally
+     in-flight implementer that also has both artifacts is that the
+     stale one's `Task()` call has already returned without a
+     corresponding journal terminal event, while the in-flight one's has
+     not. A task whose `Task()` call has not yet returned is live by that
+     fact alone and is never touched by this check, regardless of how
+     long it has been running — the orchestrator is single-threaded and
+     never observes such a task except through its own eventual return,
+     which is what keeps this check from conflicting with I.2.c's drain
+     guarantee that a failure never rolls back or cancels siblings
+     already running. Excluding such a task from the candidate set is
+     not the cross-turn memory I.2.a's state-derivation rule bans: that
+     rule bans re-deriving in-flight status from a memory of a prior
+     turn, but a `Task()` call this same reconcile step is still waiting
+     on has not reached a prior turn at all — it is an outstanding call
+     in the current turn, the same same-turn bookkeeping the drain step
+     above already relies on to know how many launches are outstanding.
+     That bookkeeping never survives past this turn: once control
+     returns to the user, or a session ends, no orchestrator process
+     remains holding it, so after any Resume every candidate is
+     evaluated purely by the observable procedure below, with no
+     exemption — this is what Resume's four sources need to record
+     nothing about whether a given `Task()` call ever returned.
+     Consequently, the candidate set is exactly: a task whose journal
+     last event is `launched`, whose worktree and branch both exist, and
+     whose `Task()` call is not among this reconcile step's own
+     currently-outstanding calls. The not-live set is defined
+     independently of the candidate set, not by it: a candidate enters
+     the not-live set only when this check itself performs the Agent
+     index lookup for its recorded agent and that lookup either finds
+     no live match or cannot resolve it at all. The check therefore
+     does consult the Agent index directly, as its own step, not as
+     something deferred to Recovery — Recovery could not otherwise
+     determine which tasks belong in the not-live set to begin with.
+     What the check never does is call the
+     harness stop tool to probe liveness: the stop tool is invoked only
+     in Recovery below, after this check has already placed a task in the
+     not-live set. Two distinct
+     not-live cases exist: the lookup resolves to a candidate for
+     Recovery to hand to the harness stop tool, or the lookup itself is
+     unresolvable or ambiguous, in which case no stop-tool call occurs at
+     all and that case alone falls through to the Residual case below.
+     A failed check does not reclassify
+     the task by itself: the last-event rule owned by I.2.a above stays
+     authoritative, cited here rather than restated. Effect of the
+     failure: it triggers the recovery below and names the task in the
+     phase report. Recovery: the wake phase resolves that task's recorded
+     agent through the Agent index writer's orchestrator-read rule and
+     stops it through the harness stop tool; the stop-tool recorder —
+     cited from its own bullet under 'Supporting cast: journal, hooks,
+     resume' below, not restated here — records the task's terminal
+     `failed` event, so the next replay reconciles the task as `failed`
+     and it reaches the normal failed handling in I.2.c, where retry and
+     route-back are both available. That next replay is this same
+     wake-phase reconcile step re-reading the journal after the
+     stop-tool call above, not a subsequent wake: step 1 re-replays the
+     journal within this reconcile step, so the task's reconciled state
+     already reads `failed` by the time step 3 and step 5 consume it for
+     this wake. A third case exists alongside the
+     two the previous paragraph defines: the Agent index lookup
+     resolves to a candidate, but the harness stop tool stops nothing,
+     or the stop-tool recorder does not append a terminal event for
+     it. In that case the journal is unchanged exactly as it is in the
+     unresolvable/ambiguous case, so this third case receives the same
+     Residual treatment described next, not the failed handling above.
+     Residual: when the Agent index
+     lookup is unresolvable or ambiguous, the journal is unchanged, the
+     task stays in-flight, the route-back gate blocks, and the phase
+     takes the existing gate-rejected terminal, with the task named in
+     the report. A second, independent condition triggers this same
+     recovery without an Agent index lookup: a task's journal last event
+     is `launched` AND the task worktree does not exist AND the task
+     branch does not exist — neither artifact remains to correlate a
+     live agent against, so this condition is checked on its own, never
+     gated on the Agent index resolving "no live agent". A partial-artifact
+     state — the task worktree exists but the task branch does not, or the
+     task branch exists but the task worktree does not — is not this
+     condition, but a task's journal last event being `launched` together
+     with either partial-artifact state also triggers this same recovery,
+     for the same reason: at least one artifact needed to correlate a live
+     agent is already gone. Since there is no
+     candidate to pass to the harness stop tool here, no stop-tool call
+     occurs and this condition falls to the same Residual treatment as an
+     unresolvable Agent index lookup above: the journal is unchanged
+     (writing it is never this phase's role — Supporting cast's Journal
+     bullet below owns that rule, cited not restated), the task stays
+     in-flight, the route-back gate blocks, and the phase takes the
+     existing gate-rejected terminal, with the task named in the report.
+     This recovery runs during this wake-phase reconcile step, hence
+     before I.2.c's user-facing menu is offered.
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
-     task merged on self-report or journal entry alone.
+     task merged on self-report or journal entry alone. That task's
+     reconciled state instead becomes `failed` — the same treatment as
+     any other implementer failure — so it reaches the normal failed
+     handling in I.2.c (retry, route back to planning subject to that
+     section's own gate, or abort). Which of those three is actually
+     admissible for this specific state is owned entirely by I.2.c's own
+     gates, not by this bullet: I.2.c narrows this case further, because
+     the task's raw journal last event is still `merged` here even though
+     the reconciled state is `failed`.
 2. **Refresh the integration worktree FIRST** (Branch & Worktree Model):
    `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`,
    then capture `RECONCILE_TIP=$(git -C {integration_worktree} rev-parse HEAD)`.
@@ -400,12 +533,94 @@ Triggered whenever a launched implementer's `Task()` call returns.
    "deviations": [...], "notes"}` (malformed/missing report → treat as
    `failed`) — set `tasks.{T}.status = merged` for every task verified
    merged, `= failed` for every task whose step 1 reconciled state is
-   `failed` or whose report is `failed`/malformed, on the worktree just
-   refreshed in step 2, then commit:
+   `failed` or whose report is `failed`/malformed, and, for each admitted
+   deviation (the Deviation auto-addition rule below), an append to that
+   same task's `files`. This step's enumeration of what it writes to
+   `workflow.yaml` is exactly these two: the `tasks.{T}.status` update and
+   this `files` append — both performed by the orchestrator, on the
+   worktree just refreshed in step 2, in the same commit as the status
+   update: never a second write, never a second commit, never a new patch
+   operation. The append is stated as an append: an existing entry is
+   never removed or rewritten by this rule, and re-admitting an already
+   listed path is a no-op. Then commit, with a single-line message
+   mode-independently (the `$RECONCILE_TIP` third argument is
+   `commit-docs.sh`'s `expected_base_tip` check value):
    `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
    phase reconcile" "$RECONCILE_TIP"` (exit-4 recovery: Branch & Worktree
    Model above — on a second exit 4, stop the wake phase with a report
    naming the task(s) involved rather than looping).
+
+   **Deviation auto-addition rule**: a reported deviation (the
+   `deviations` entries in that same completion report — the completion
+   report stays the channel the evidence arrives on, the same
+   completion-report `deviations` channel already defined above, and is
+   never itself the record's resting place) is auto-added to the declared
+   change set derivation — defined in
+   `references/phases/create-plan-phase.md`, cited here and never
+   restated — only when it carries, as three named parts, evidence that an
+   existing acceptance criterion would otherwise be dropped: the path
+   being added; the identifier of the acceptance criterion or requirement
+   that would otherwise be dropped — an `AC-n` of the reporting task's own
+   plan, restricted the same way as the requirement id below: existence
+   means the AC-n was already present in that plan document as written by
+   create-plan / rework-planner, never something the reporting
+   implementer's own branch added to the plan document — or a requirement
+   id already registered in `workflow.yaml`; and
+   how it fails without the path, stated as an observable outcome (a named
+   test that cannot be written or cannot pass), never as a preference. The
+   named identifier must resolve to something that exists — for a
+   requirement id, existence means it is already registered in
+   `workflow.yaml` prior to this report, never something the report
+   itself introduces. The path being added must independently pass the
+   same shape check `is_safe_relative_path` applies to every
+   patch-written `tasks.*.files` entry — cited here, not restated;
+   `is_safe_relative_path` does not check for symlink escapes, and no
+   such check is claimed — applied here by
+   the orchestrator itself before the append, not merely asserted by the
+   report; and it must not fall under a workflow control path — matched,
+   like every other `tasks.*.files` entry, as a project-relative path:
+   `.claude/**`, `em-workflow/**` (the whole plugin tree —
+   `references/**`, `.claude-plugin/**`, `hooks/**`, `scripts/**`,
+   `agents/**`, `skills/**`, and so on, not individually enumerated),
+   `CLAUDE.md` (including nested occurrences), `.github/workflows/**`,
+   `feature-docs/*/workflow.yaml`, `feature-docs/*/phase-state/**`, or
+   `feature-docs/*/tasks/**`.
+   When the target repository is this plugin's own repository,
+   `em-workflow/**` matches its project-relative occurrences there
+   exactly as any other path does — this rule is not suspended for that
+   case. Such a path is never
+   auto-added regardless of how the other two parts read. A deviation
+   failing any one of these parts — a missing identifier, an identifier
+   that resolves to nothing or was not already registered, a path that
+   fails the shape check, a path under a workflow control path, or a
+   rationale of implementer convenience, a nicer structure, an unrelated
+   cleanup — is not auto-added; it surfaces as an ordinary deviation and
+   the containment check (observed change set ⊆ declared change set)
+   handles it exactly as before, and unjustified scope expansion is
+   still stopped. The containment check itself is unchanged by this
+   rule. Every admission or rejection of a deviation under this rule —
+   admitted path, or declined path with which check it failed — is
+   listed in this wake phase's own report, and, for a `--batch` run,
+   also in the run report.
+
+   **Where the decision persists**: an admission's audit record is the
+   `files` entry this step just appended plus the wake commit that added
+   it — nothing further is written for it. A decline's audit record is the
+   reason recorded in this wake phase's own report for that task, naming
+   which of the three evidence parts was missing or unresolved. No new
+   phase-state field is introduced for this record (D7 unchanged) — the
+   channel is the one this step already defines.
+
+   **Batch mode**: for a `--batch` run, a decline's audit record instead
+   is written to `feature-docs/{feature}/phase-state/batch-audit.yaml`
+   (`references/phase-state.md`'s batch audit record file) in the same
+   wake commit — one entry per declined task, naming the `task_id` and
+   which of the three evidence parts was missing or unresolved — rather
+   than in this wake phase's own report; the run-report obligation stated
+   above for a `--batch` run is satisfied by reading that persisted
+   record rather than this wake phase's own report.
+   An admission's audit record is unchanged. An interactive run keeps
+   recording a decline in this wake phase's own report exactly as before.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
    git worktree remove "$WT_ROOT/{T}"
@@ -422,6 +637,19 @@ Triggered whenever a launched implementer's `Task()` call returns.
    launch phase (I.2.a) with the freed slot(s) and any still-unlaunched
    tasks, then end the turn again. If every task is now `merged`, proceed to
    Step I.3.
+
+**Batch mode**: in a `--batch` run, this applies only when step 5 re-enters
+the launch phase (I.2.a) and ends the turn again — in that case, this wake
+turn's final assistant message is the marker line `references/batch-mode.md`
+defines and nothing else: step 1's reconcile enumeration, step 4's cleanup
+listing and step 5's refill narration are withheld from the main context,
+while the reconcile itself, the wake commit in step 3, the journal it
+records against, the worktree cleanup in step 4 and step 5's re-entry into
+I.2.a are unchanged. If instead every task is now `merged` and step 5
+proceeds to Step I.3, this turn has not reached a terminal state and does
+not end here, so the marker line is not emitted; execution continues into
+Step I.3 and beyond, with output suppression still applying to this wake
+turn's own steps 1/4/5 narration as above.
 
 ### I.2.c: Failed handling
 
@@ -456,7 +684,46 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   carries any event has a terminal journal last event (`merged` or
   `failed`) — the planner's `replace_all` recycles every id, not only the
   failed ones, so a task with no journal event at all has nothing to
-  inherit and never blocks route-back. Refresh
+  inherit and never blocks route-back. A third conjunct blocks
+  independently of both halves above, closing a gap neither sees: whenever
+  the last-event-per-task replay alone reports any task's journal last
+  event as `merged`, route-back is inadmissible — this holds regardless of
+  the `git merge-base --is-ancestor` verification the `merged` half's
+  second source requires, so it blocks a task whose journal reports
+  `merged` even when that verification fails. The reason is one fact,
+  cited here from its owning bullet under 'Supporting cast: journal,
+  hooks, resume' below rather than restated: the launch guard denies a
+  launch whose journal last event is `merged`, so a renumbered task id
+  inheriting such an event could never be launched. This narrows the
+  terminal journal last event named just above: of `merged` and `failed`,
+  only the failed one leaves a recycled id launchable. This conjunct is
+  never narrowed to admit route-back for that state: no recycled id can
+  ever inherit a journal `merged` the launch guard denies through this
+  phase's own write set. The state it protects still has a way out that
+  is not this section's own gate-rejected or abort terminal — a way into
+  this failed-handling branch, not a way out of it once reached: when the
+  ancestor verification fails for a task the journal (or its own report)
+  claims `merged`, Step I.2.b step 1's reconciled state for that task is
+  `failed` — cited there, not restated here — so the ordinary retry /
+  route back to planning / abort menu opens for it like any other
+  failure, except that route back to planning stays inadmissible here:
+  the task's raw journal last event is still `merged`, so the third
+  conjunct above blocks it regardless of the reconciled `failed` state;
+  choosing retry there reaches the launch guard's permission
+  denial, which the harness-level-failure path under 'Failure
+  containment' below diagnoses, an outcome reached without selecting
+  abort — in effect the same dead end as this section's own
+  gate-rejected terminal, since neither retry nor route back to
+  planning actually resolves the task from here; the only way out is a
+  human (or a follow-up task) correcting the branch ancestry so a
+  later reconcile pass verifies the merge, or otherwise resolving the
+  task's state by hand outside this protocol. This is the one state
+  where workflow-schema.md's status semantics ("a `failed` task
+  resolves ONLY by retry or by routing back to planning") are not met
+  by an automated path; the gap is confined to this single case and is
+  not a precedent for any other `failed` task. A task the journal
+  reports in-flight whose worktree and branch are both gone is decided
+  elsewhere — Step I.2.b step 1's recovery, cited there, not here. Refresh
   the integration worktree first (`git -C "$WT_ROOT/integration"
   reset --hard em-workflow/{feature}/integration`), then capture
   `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
@@ -498,8 +765,11 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   the normal SPEC.md update path first. When the gate does not hold —
   because a task has status `merged`, because Step I.2.b step 1's
   reconciled state reports a task `merged` though workflow.yaml does
-  not, because a task has status `in_progress`, or because Step I.2.b's
-  last-event-per-task rule reports a task in-flight — this automatic
+  not, because a task has status `in_progress`, because Step I.2.b's
+  last-event-per-task rule reports a task in-flight, or because the
+  last-event-per-task replay alone reports a task's journal last event
+  as `merged` though Step I.2.b step 1's reconciled state does not
+  verify it — this automatic
   re-entry does not apply:
   `create-plan` is NOT set to `needs_update`. The phase instead refreshes
   the integration worktree first (the same `reset --hard` as above),
@@ -533,6 +803,13 @@ never dropped mid-phase. "実装完了 = 親ブランチへのマージ完了" a
 carve-out; scope changes belong to the planning/spec layer, not to the
 implement phase.
 
+The drain narration below and the retry narration below are withheld
+from the main context in `--batch` (`references/batch-mode.md`); the
+task status, the `implement` step's `failed` write and their commits are
+unchanged. The **abort phase** branch below is a stop under
+`references/batch-mode.md`'s stop/abort exception, so its report keeps
+its full output.
+
 Batch mode (`references/batch-mode.md`'s Non-packet gates table,
 `implement.failed-task`): no AskUserQuestion —
 after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a
@@ -560,6 +837,23 @@ summary (full schema: IMPLEMENTATION.md's Journal contract).
 
 **The hooks** (`em-workflow/hooks/`, wired in `hooks.json`):
 
+Scope note: this section covers the queue loop's own hooks only. The same
+directory also ships guardrail hooks unrelated to the queue (the gitleaks
+scanners, `kill-guard.py`, `destructive-guard.py`) — those are documented in
+`em-workflow/README.md`, are never consulted by this phase, and are outside
+every classification below.
+
+**Hook classification table** — source of truth for which of the four
+queue hooks below read `tasks.{T}.status`; both I.2.a above and the
+Stop-hook bullet below cite it as this classification's source.
+
+| Hook | Classification |
+|---|---|
+| `em-workflow/hooks/queue_launch_guard.py` | does not read `tasks.{T}.status` |
+| `em-workflow/hooks/queue_stop_guard.py` | reads `tasks.{T}.status` |
+| `em-workflow/hooks/queue_failure_net.py` | does not read `tasks.{T}.status` |
+| `em-workflow/hooks/queue_taskstop_net.py` | does not read `tasks.{T}.status` |
+
 - **Stop hook** (`queue_stop_guard.py`) — fires when the orchestrator's turn
   ends. Replays the journal and workflow.yaml, applying the same
   recycled-task-id carve-out as I.2.a above — a task whose journal last
@@ -567,8 +861,10 @@ summary (full schema: IMPLEMENTATION.md's Journal contract).
   reclassifies as unlaunched, not failed; if refillable slots and
   unlaunched tasks exist and no task's reconciled state is `failed`, it
   BLOCKS (exit 2) naming the tasks to launch — catching a forgotten refill
-  after a wake phase. A consecutive-block cap (3, tracked in a sidecar
-  next to the journal)
+  after a wake phase. Classification (hook classification table above):
+  **reads** `tasks.{T}.status`, the sole exception among the four queue
+  hooks named in I.2.a — matching I.2.a's classification exactly. A
+  consecutive-block cap (3, tracked in a sidecar next to the journal)
   prevents it from wedging the session on unexpected state; exceeding the
   cap yields a warning and lets the turn end. Does not write the journal.
 - **PreToolUse(Task|Agent) launch guard** (`queue_launch_guard.py`) — fires on
@@ -588,9 +884,22 @@ summary (full schema: IMPLEMENTATION.md's Journal contract).
   never touches `journal.jsonl` — and is fail-open exactly like every hook
   here: an unrecognized launch, an unparsable input, or a missing feature
   directory is a silent no-op. The index is diagnostic plumbing, not a
-  second journal (workflow-schema.md states this explicitly); it exists
-  solely so the stop-tool recorder below can resolve a stop back to a task
-  (full matching/staleness rule: IMPLEMENTATION.md's Agent index contract).
+  second journal (workflow-schema.md states this explicitly): it carries no
+  status semantics of its own, may be absent or stale, and is never a source
+  of task status — only of the task/worktree a stop or a recovery check
+  resolves to. It exists so the stop-tool recorder below and, per the
+  Orchestrator-side read below, the orchestrator itself can each resolve a
+  stop or a recovery check back to a task (full matching/staleness rule:
+  IMPLEMENTATION.md's Agent index contract).
+  **Orchestrator-side read** (I.2.b step 1's stale-`launched` recovery
+  cites this rule, not restated there): for a task, the orchestrator
+  selects that task's most recently appended entry; when the selected
+  entry carries more than one identifier candidate, the orchestrator
+  passes the first-recorded candidate to the harness stop tool; an
+  unresolvable lookup (no entry for the task) or an ambiguous one (the
+  selected entry names no usable candidate) stops nothing — this lookup
+  resolves a stop target, it never supplies or overrides
+  `tasks.{T}.status`.
 - **SubagentStop failure net** (`queue_failure_net.py`) — fires when any
   subagent stops; for em-workflow implementers whose task has no `merged`
   event yet, appends `failed` — turning a swallowed or crashed implementer
@@ -626,15 +935,21 @@ allowed but never actually runs, a stale `launched` line can persist with no
 corresponding implementer in flight. This is bounded, never silently masked:
 the Stop hook's consecutive-block cap prevents an infinite blocking loop
 over a wedged slot, the wake-phase git-state reconcile (worktree/branch
-existence check) catches it on the next reconcile pass, and — specifically
-for the deliberate-stop case — the stop-tool recorder appends `failed` as
-soon as the `TaskStop` call completes, closing the gap before a reconcile
-pass is even needed.
+existence check) triggers I.2.b step 1's recovery on the next reconcile
+pass — the outcome that check produces is defined there, not restated
+here — and, specifically for the deliberate-stop case, the stop-tool
+recorder appends `failed` as soon as the `TaskStop` call completes,
+closing the gap before a reconcile pass is even needed.
 
 **Resume**: a `/em-workflow:develop` re-entry mid-implement rebuilds state
-from three sources, never from memory: workflow.yaml (`tasks.*.status`), the
-journal (last-event-per-task replay), and git actual state (worktree
-existence, `merge-base --is-ancestor`). The I.2.a resume guard governs
+from four sources, never from memory: workflow.yaml (`tasks.*.status`), the
+journal (last-event-per-task replay), git actual state (worktree
+existence, `merge-base --is-ancestor`), and the agent index (`agents.jsonl`,
+cited from the Agent index writer bullet above, not restated here) as a
+resolution aid for stops and for I.2.b step
+1's recovery check — it carries no status
+semantics of its own. The
+I.2.a resume guard governs
 worktree re-creation exactly as before; the wake-phase reconcile (I.2.b) is
 what re-derives in-flight/failed/merged classification on that first
 post-resume wake.
@@ -679,3 +994,11 @@ integrated verification is the review/verify phases' job).
 - Never run `git reset` / `git update-ref` on the integration branch from the
   orchestrator side to "undo" a merge; corrective work is a new task or a
   rework loop from the review phase.
+- An implementer that fails at the **harness** level rather than returning a
+  task result — the launch call comes back `is_error`, its output carries a
+  permission denial, or it reports `skipped: true` unexpectedly — is not a
+  planning problem and I.2.c's retry / route-back choice cannot be judged
+  without knowing why it died. Diagnose it first per
+  `references/workflow-failure-recovery.md` (dispatch `workflow-doctor` over
+  the failed agents' JSONL logs), then surface the failure with that
+  diagnosis included.

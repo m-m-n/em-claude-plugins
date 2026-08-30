@@ -1,0 +1,117 @@
+task_id: task0028
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_spec_change_origin_binding.TestAC1OriginIdentityPairDefinedInSynthesisInvariant6.test_invariant_6_names_the_pair
+      - tests.test_spec_change_origin_binding.TestAC1OriginIdentityPairDefinedInSynthesisInvariant6.test_invariant_6_names_which_id_review_carries
+      - tests.test_spec_change_origin_binding.TestAC1OriginIdentityPairDefinedInSynthesisInvariant6.test_invariant_6_names_which_id_verify_carries
+      - tests.test_spec_change_origin_binding.TestAC1OriginIdentityPairDefinedInSynthesisInvariant6.test_no_other_document_defines_the_pair
+      - tests.test_spec_change_origin_binding.TestAC1OriginIdentityPairDefinedInSynthesisInvariant6.test_eleven_invariants_still_present_section_not_renumbered
+      - tests.test_spec_change_origin_binding.TestAC1OriginIdentityPairDefinedInSynthesisInvariant6.test_thirteen_top_level_sections_still_present_in_order
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task0028 document (Invariant 6 draws the review/verify
+      distinction but never names a pair), test_invariant_6_names_the_pair and
+      the two id-naming assertions raised AssertionError: the pair string
+      `origin_kind` (`review` | `verify`) and `origin_id`` was absent from
+      Invariant 6's text. Verified by temporarily reverting the three owned
+      documents to HEAD and re-running the suite.
+  AC-2:
+    tests:
+      - tests.test_spec_change_origin_binding.TestAC2CheckRunsOverOrchestratorHeldBoundSet.test_states_check_runs_over_the_whole_bound_set
+      - tests.test_spec_change_origin_binding.TestAC2CheckRunsOverOrchestratorHeldBoundSet.test_states_bound_set_is_orchestrator_held_for_the_dispatch
+      - tests.test_spec_change_origin_binding.TestAC2CheckRunsOverOrchestratorHeldBoundSet.test_states_not_derived_from_packet_or_worker_supplied_field
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_reads_category_from_bound_set_not_worker_set
+      - tests.test_classification_gate.TestClassificationGate.test_check_target_explicitly_not_derived_from_evidence_or_packet
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task0028 document, the check target was scoped to
+      "each named finding" (the packet-chosen subset), so
+      "this check runs over the whole bound set above" and the explicit
+      not-derived-from-evidence sentence were both absent: AssertionError on
+      each. Verified by the same revert-and-rerun as AC-1.
+  AC-3:
+    tests:
+      - tests.test_spec_change_origin_binding.TestAC3BidirectionalMembershipRuleNonOverridable.test_direction_1_named_origin_outside_bound_set_aborts
+      - tests.test_spec_change_origin_binding.TestAC3BidirectionalMembershipRuleNonOverridable.test_direction_2_bound_set_member_carrying_category_aborts_regardless
+      - tests.test_spec_change_origin_binding.TestAC3BidirectionalMembershipRuleNonOverridable.test_both_directions_marked_non_overridable
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_absent_unresolvable_or_not_bound_set_member
+      - tests.test_classification_gate.TestClassificationGate.test_both_abort_directions_marked_final_and_non_overridable
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task0028 document, direction 2 (a bound-set member
+      carrying the category regardless of what the packet named) did not
+      exist at all -- only a packet/record-mismatch abort did -- and neither
+      direction was marked "final and non-overridable". AssertionError on
+      each. Verified by the same revert-and-rerun.
+  AC-4:
+    tests:
+      - tests.test_spec_change_origin_binding.TestAC4BothOriginKindsAcceptedNeitherExclusivelyRequired.test_review_kind_matched_against_review_round_record
+      - tests.test_spec_change_origin_binding.TestAC4BothOriginKindsAcceptedNeitherExclusivelyRequired.test_verify_kind_matched_against_workflow_yaml_failed_items
+      - tests.test_spec_change_origin_binding.TestAC4BothOriginKindsAcceptedNeitherExclusivelyRequired.test_no_statement_requires_review_stable_id_as_sole_origin
+      - tests.test_spec_change_origin_binding.TestAC4BothOriginKindsAcceptedNeitherExclusivelyRequired.test_non_vacuity_both_rows_present_in_the_table
+      - tests.test_classification_gate.TestClassificationGate.test_verify_bound_set_located_at_workflow_yaml_failed_items
+      - tests.test_classification_gate.TestClassificationGate.test_origin_kind_table_has_exactly_the_two_known_rows
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task0028 document, no verify-kind row/mapping existed
+      at all (the document only ever matched against the review round
+      record) and the naming requirement was worded "review finding(s) by
+      stable_id". AssertionError on the verify-row and no-review-only-wording
+      assertions. Verified by the same revert-and-rerun.
+  AC-5:
+    tests:
+      - tests.test_spec_change_origin_binding.TestAC5WorkerDeclarationIsTraceabilityOnly.test_states_origins_declared_for_traceability_only
+      - tests.test_spec_change_origin_binding.TestAC5WorkerDeclarationIsTraceabilityOnly.test_states_check_target_is_orchestrators_bound_set
+      - tests.test_spec_change_origin_binding.TestAC5WorkerDeclarationIsTraceabilityOnly.test_restates_no_abort_arm_and_no_verification_step
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_names_origins_via_finding_stable_id_field
+      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesStableIdNotRecordPath.test_packet_names_origins_via_finding_stable_id_field
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task0028 document, rework-planner-contract.md said
+      nothing about the declared origins being traceability-only or the
+      check target being the orchestrator's bound set. AssertionError on
+      each. Verified by the same revert-and-rerun.
+  AC-6:
+    tests:
+      - tests.test_spec_change_origin_binding
+    red_confirmed: true
+    red_reason: >-
+      The module tests/test_spec_change_origin_binding.py did not exist
+      before this task (import/collection would fail); every matcher inside
+      it pins AC-1 through AC-5 with a negative proof against a synthetic
+      violating sample (evidence-scoped check target, review-only
+      admission, single-direction membership rule) and a non-vacuity guard,
+      per the file's own test bodies.
+  AC-7:
+    tests:
+      - tests.test_spec_change_origin_binding.TestAC7SpecChangeTransitionFieldListUsesOriginPair.test_step_4_names_origin_pair
+      - tests.test_spec_change_origin_binding.TestAC7SpecChangeTransitionFieldListUsesOriginPair.test_step_4_no_longer_names_finding_stable_id
+      - tests.test_spec_change_origin_binding.TestAC7SpecChangeTransitionFieldListUsesOriginPair.test_still_five_numbered_steps_in_spec_change_transition
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task0028 document, Section 10 step 4 read
+      "`reason`, `finding_stable_id`, `recorded_at_commit`" -- the
+      origin-pair field names were absent. AssertionError. Verified by the
+      same revert-and-rerun; the five-step-count retention test passed
+      unchanged both before and after (confirming C3 compliance), which is
+      the expected outcome for a retention pin, not a red/green signal.
+  AC-8:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Verifiable outcome is the full suite, not a single test: `python3 -m
+      unittest discover -s tests` passed in full after this change (2170
+      tests, 0 failures), against a baseline of 2125 passing tests recorded
+      before any edit in this task (baseline_failures: []). Every
+      pre-existing pin over the three owned documents whose wording this
+      task superseded was rewritten to assert the replacement in the same
+      change (tests/test_classification_gate.py,
+      tests/test_rework_synthesis_contract.py,
+      tests/test_worker_contract_docs.py), each paired with a negative
+      proof, and the retention half of every fail-closed pin (e.g.
+      evidence[].path never opened, the three unrelated abort arms, the
+      malformed-pairing rule, finding_stable_id still required on at least
+      one evidence[] entry) was left untouched and still passes.
