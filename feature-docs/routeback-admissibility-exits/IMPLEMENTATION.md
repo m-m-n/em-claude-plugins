@@ -209,6 +209,28 @@ by an existing test:
 - The literal naming a terminal journal last event of `merged` or `failed`
   keeps its position before the `create-plan` write-set instruction.
 
+## Rework Round 1 — revised shared contracts (task0002)
+
+Additive. Review round 1 found that three of the Shared Components
+postconditions above are satisfiable by text that leaves the corresponding
+state without a reachable exit, so a follow-up task implementing against the
+table as written would reproduce the defect. The rows below are what task0002
+implements against; they supersede the named postconditions in the respects
+stated and nothing else. Every other decision (D2, D5, D6, D7), the
+Conventions, and the pinned-literal registry stand unchanged.
+
+| Component | Revised contract | Supersedes |
+|---|---|---|
+| Wake-phase in-flight verification (I.2.b step 1) | Precondition unchanged. Postcondition: the check FAILS in the state the recovery exists for — the launch was allowed but never started, so the task worktree and the task branch both exist while the journal's last event is `launched`. A condition satisfiable only when both artifacts are absent does not meet this contract. The failure still never reclassifies the task by itself | D3's postcondition wording, and the Shared Components row's "when neither the task worktree nor the task branch exists" |
+| Stale-`launched` recovery (I.2.b step 1) | Postcondition (primary): the allowed-but-never-started state reaches the terminal-journal-event outcome, not the residual. Postcondition (residual): the residual applies only to an enumerated set of conditions that does not include a launch that never started. Input contract: every input the recovery consumes is owned by exactly one site — if that input is a state source, the wake/resume state-source enumeration names it, so the recovery never depends on a source the protocol excludes; a recovery that consumes no such input satisfies this contract vacuously | D4's residual scope, and its unstated task → agent-identifier lookup |
+| Route-back admissibility gate (I.2.c) | Postcondition: a conjunct may block route-back for a state only while that state has a stated outcome other than the gate-rejected/abort terminal, reached without the user selecting abort. Narrowing a conjunct is admissible only together with a stated exit for the state it protected — a recycled id must never inherit a journal `merged` with no way out. The gate-rejected branch enumerates every condition that reaches it | D1's consequence for the trust-but-verify state (journal `merged`, ancestor check failing), which D1 left on the gate-rejected terminal |
+| Plugin version lockstep | Precondition: both manifests read `0.1.48`. Postcondition: both read the same new value with patch strictly greater than 48, and the lockstep assertion's baseline is raised from 47 to 48 | D6's `0.1.47` → `0.1.48` values only |
+
+D5 (no hook source changes) is unaffected: the input contract above is a
+statement about what the orchestrator protocol may read, not about what any
+hook does, so nothing under `em-workflow/hooks/` changes and NFR1's
+all-four-together condition stays untriggered.
+
 ## Pinned-literal registry
 
 The declared change set permits edits to `tests/test_recycled_task_id_consistency.py`

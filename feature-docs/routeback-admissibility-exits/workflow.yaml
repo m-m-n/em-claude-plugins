@@ -31,11 +31,11 @@ workflow:
     status: completed
     completed_at_commit: 3129f14ba447b69500cd2e9647b3d9732b51f4ad
   - id: implement
-    status: completed
+    status: pending
     base_commit: 4097a72288dcdf4a2e3368131a29c8893d1a7a1e
     completed_at_commit: 1257faf8a7e2b82ca91a116422f2cc9e9342f9b8
   - id: review
-    status: in_progress
+    status: pending
   - id: verify
     status: pending
     result: null
@@ -61,6 +61,34 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/routeback-admissibility-exits/task0001
+  task0002:
+    title: "Make the round-1 route-back exits actually reachable"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_implement_routeback_gate.py
+      - tests/test_recycled_task_id_consistency.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - test-docs/routeback-admissibility-exits/task0002.tests.yaml
+    skills: []
+    domains: [api-contract, concurrency, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+        - 6e9da908226dcef5
+        - 1154484d3ee2441e
+        - 4dce81ff0f6b4fc6
+        - 06b3f1b36ff2161d
+        - 3ecccbac53f86bb8
+        - cbd00cfb5b3ce5d7
+        - 3bb53902965e3224
 
 review:
   status: pending
@@ -83,86 +111,86 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1]
+    tasks: [task0001, task0002]
+    tests: [TS-1, TS-10]
   FR2:
     title: "Correct I.2.a's unreachability argument"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-3]
+    tasks: [task0001, task0002]
+    tests: [TS-1, TS-3, TS-10, TS-13]
   FR3:
     title: "Exit for a plan carrying a stale `launched`"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-2]
+    tasks: [task0001, task0002]
+    tests: [TS-2, TS-11, TS-12]
   FR4:
     title: "Give I.2.b step 1's in-flight verification a defined outcome"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-2]
+    tasks: [task0001, task0002]
+    tests: [TS-2, TS-11]
   FR5:
     title: "Keep the hook contract consistent"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-8]
   FR6:
     title: "SPEC-side coverage"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-4]
   FR7:
     title: "Plugin version bump in lockstep"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-7]
   NFR1:
     title: "Hook code untouched by default"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-8]
   NFR2:
     title: "Test-module discipline"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-4, TS-5, TS-6]
   NFR3:
     title: "Single-source discipline in implement-phase.md"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-4, TS-5, TS-6]
+    tasks: [task0001, task0002]
+    tests: [TS-4, TS-5, TS-6, TS-12, TS-13]
   NFR4:
     title: "Suite green"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-9]
   NFR5:
     title: "No bare git commit/add lines"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-4, TS-5, TS-6]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 0
