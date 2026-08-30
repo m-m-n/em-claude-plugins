@@ -477,9 +477,30 @@ workflow:
     status: completed
     completed_at_commit: dd571e8963680ffa41f391d29729ed41b41d2f0f
   - id: verify
-    status: in_progress
-    result: null
+    status: completed
+    completed_at_commit: b946a902ab36112cccc5e89579c4e28a66637425
+    result: pass
     failed_items: []
+    scenarios:
+      TS-1: pass    # run-destructive-guard.py -> 59/59 passed, exit 0
+      TS-2: pass    # python3 -m unittest discover -s tests -> 2830 tests OK, exit 0
+      TS-3: not_applicable  # optional/environment-dependent: cache has no 0.1.56 yet (batch keeps the branch unmerged)
+    success_criteria:
+      AC-1: pass    # TS-1 exit 0, all cases matched
+      AC-2: pass    # five allow cases present and judged allow
+      AC-3: pass    # test-docs/.../task0001.tests.yaml records the red run (36/41, exactly 5 FAIL)
+      AC-4: pass    # case-table diff is additions only (single '-' line is a trailing-comma reflow, content re-added byte-identical)
+      AC-5: pass    # both transcript-read cases allow
+      AC-6: pass    # transcript write deny / settings write ask / skills recursive removal ask all still pass
+      AC-7: pass    # trailing unattended-demotion case passes
+      AC-8: pass    # plugin.json and marketplace.json both 0.1.56; no other plugin version moved
+    manual_checks:
+      red_run_recorded: pass
+      case_table_additions_only: pass
+      deletion_judgment_untouched: pass    # no SAFE_DELETE / rm-judgment lines in the diff
+      manifests_identical: pass
+      installed_cache_rerun: not_applicable
+    excluded_requirements: []
   - id: retrospect
     status: pending
 
