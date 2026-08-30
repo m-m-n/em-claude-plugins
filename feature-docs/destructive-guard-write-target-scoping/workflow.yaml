@@ -474,7 +474,8 @@ workflow:
     base_commit: ca414bc26fa2e0aab433190409b5a83aab9cc6b6
     completed_at_commit: dde502f52ceb7e8765b20ca26690fc289cae0444
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: dd571e8963680ffa41f391d29729ed41b41d2f0f
   - id: verify
     status: pending
     result: null
@@ -544,8 +545,8 @@ tasks:
       review_round: 1
 
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
@@ -555,8 +556,13 @@ review:
     security: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 5
-  needs_rework: true
+  cross_model_runs:
+    security: failed          # codex reviewer produced no completion record (twice)
+    architecture: completed   # litellm:vertex-glm-5
+    spec: completed           # litellm:vertex-deepseek-v3.2
+  residual_critical_high: 4
+  needs_rework: false
+  deferred_reason: "batch mode: rework cap reached (batch.review_rework_count == 1)"
 
 requirements:
   FR1:
