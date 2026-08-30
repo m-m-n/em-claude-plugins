@@ -506,7 +506,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR7]
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-write-target-scoping/task0002
     notes: null
 
