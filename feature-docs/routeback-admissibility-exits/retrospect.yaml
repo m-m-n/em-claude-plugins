@@ -1,0 +1,187 @@
+feature: routeback-admissibility-exits
+collected_at: '2026-08-30T15:14:54+09:00'
+session_ids:
+- 01a0514c-a96e-7279-8cd0-551de3e5f7be
+signals:
+  review_critical_high:
+  - stable_id: 6e9da908226dcef5
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: 新設リカバリが対象シナリオでは必ず Residual に落ち、abort 以外の出口にならない
+    resolution: unresolved
+  - stable_id: 1154484d3ee2441e
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: I.2.b step 1 の新 recovery が、プロトコルが禁じる第4の状態ソース（agents.jsonl / 記憶）を前提にしている
+    resolution: unresolved
+  - stable_id: 4dce81ff0f6b4fc6
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: 第3 conjunct が trust-but-verify ケースを abort 専用の終端に閉じ込める
+    resolution: unresolved
+  - stable_id: 88ecf8bc49d3b7f5
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: round 2 の文言変更に対しピン止めテストが未更新でスイートが 11 件赤
+    resolution: fixed
+  - stable_id: 2f664453723d44fe
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: I.2.a の継承不変条件のピン文が消え retention ガード 3 件が失敗
+    resolution: fixed
+  - stable_id: c7d237e1db915afc
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: 祖先チェック失敗タスクの retry 可否が I.2.b と I.2.c で真逆
+    resolution: fixed
+  - stable_id: 1331a83d3e40748a
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: ancestor 検証失敗タスクの retry 可否が I.2.b step 1 と I.2.c で矛盾
+    resolution: fixed
+  - stable_id: 206b8c923a323bbd
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: Agent index の unresolvable lookup を live agent なしと扱い recovery の事後条件が成立しない
+    resolution: fixed
+  - stable_id: e0a6cf7dbd68b38c
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: SSOT 文面と消費側 pin テストのドリフト（11 件赤）
+    resolution: fixed
+  - stable_id: 8582630670541bd3
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: main 取り込みマージが I.2.a の結論文を上書きし推論鎖が切れている
+    resolution: declined
+  - stable_id: e4beccea6373825b
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: 'AC-5 / NFR4 違反: テストスイートが 11 件失敗'
+    resolution: fixed
+  - stable_id: 6654c1adc4176454
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: trust-but-verify `merged` の task が依然 abort 専用終端
+    resolution: fixed
+  - stable_id: 1bbe1266bdae5c31
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: stale `launched` の recovery が発火条件と自己矛盾し FR3 の MUST を満たさない
+    resolution: fixed
+  - stable_id: 568d9649f3b0c093
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: I.2.a の同一文に 2 つのテストモジュールが両立不能な要求をしておりスイートが赤
+    resolution: fixed
+  - stable_id: 2e44d89b02faf094
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: stale-`launched` Recovery が到達不能（not live を Residual と同一視）
+    resolution: fixed
+  - stable_id: f4af1c4ffe592ab1
+    category: comprehensive
+    file: tests/test_implement_routeback_gate.py
+    title: retained-anchor ガードが同 task 自身の編集で消した文言を live 文書に要求していて必ず失敗
+    resolution: fixed
+  - stable_id: 5b7a08aa6e1f0e57
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: I.2.b step 1 の FAILS 条件が liveness 連言を落としており稼働中の実装者を停止対象にする
+    resolution: fixed
+  - stable_id: 9770568bd1352b4d
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: ancestor check 失敗タスクの選択肢が I.2.a / I.2.b / I.2.c で食い違う
+    resolution: fixed
+  - stable_id: ce162cc7ddd96f3e
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: live か否かの判定規則が所有サイトに無く Residual 節が到達不能
+    resolution: fixed
+  - stable_id: 52efc20016959653
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: wake phase による journal 直接書き込みが journal writer-set 契約に違反
+    resolution: fixed
+  - stable_id: 7754639d401283c9
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: liveness を stop tool が止める状態と定義したため稼働中の兄弟実装者を停止しうる
+    resolution: fixed
+  - stable_id: 3c595fd012898c2f
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: ancestor-check 失敗タスクは retry も route-back も塞がれ解決手段が abort だけになる
+    resolution: fixed
+  - stable_id: 17dc88bb8781a1a1
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: I.2.a の retained anchor が消え tests/test_recycled_task_id_consistency.py の 3 件が赤
+    resolution: deferred
+  - stable_id: bffdcec69dbce324
+    category: spec
+    file: tests/test_recycled_task_id_consistency.py
+    title: テストスイートが 3 件 FAIL（AC-5 / NFR4 違反）— 新規マッチャが既存モジュールの禁止アサーションと矛盾
+    resolution: deferred
+  - stable_id: 49fac346224aebf5
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: I.2.b step 1 の第 2 条件が wake phase の journal 直接書き込みを規定し Journal 所有規則と衝突
+    resolution: fixed
+  - stable_id: 12839a507a7df994
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: FR3/AC-2 が名指しする stale `launched` 状態に abort 以外の復旧路が無い
+    resolution: deferred
+  - stable_id: 2da3c75adac32650
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: ancestor 検証失敗 `merged` タスクが自認の行き止まりになり Objectives 第1項に反する
+    resolution: deferred
+  - stable_id: bc57aa350bb027c7
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: 候補集合を前セッション由来の `launched` に限定したため、同一セッション内 stale `launched` に復旧が届かない
+    resolution: deferred
+  - stable_id: 59e58726b1b22211
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: Failed-task resolution invariant violated for ancestor-check-failure state
+    resolution: deferred
+  - stable_id: 1e5469443fbaecb4
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: I.2.b step 1 の in-flight 検査が worktree/branch の片方だけ存在する状態を取りこぼす
+    resolution: fixed
+  - stable_id: 2b2a38ef1032bb8e
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: liveness probe の候補集合がセッション内メモリ依存で、I.2.a の「メモリを跨いで持ち越すな」規則と衝突する
+    resolution: fixed
+  - stable_id: 432d00e93c697ff7
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: I.2.b step 1 の liveness 判定が、その時点で参照可能な情報源を持たない（候補集合と not-live 集合が循環定義）
+    resolution: fixed
+  - stable_id: 5810054fae2ed4d5
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: Recovery が追記する `failed` を「next replay」に委ねているため、当該 wake で failed handling に到達せず phase が停止しうる
+    resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+  - stable_id: 8582630670541bd3
+    category: architecture
+    resolution_reason: main 側の tests/test_routeback_reset_scope_consistency.py が main の文言を 要求し、この feature
+      側の文言の不在を要求している。main のモジュールは SPEC.md の Declared Change Set 外のため、そちらを壊す解決は採れない
+lessons_candidates:
+- implement フェーズの journal / implementer 報告は run 終了後に残らないため、conflict_reworks と file_prediction_misses を後追いで収集できなかった。中断をまたいで再開した
+  feature ではこの 2 シグナルが常に空になる。
+- review round 1-3 を通じて critical/high が 33 件出た。うち round 3 の 4 件は batch の rework cap により deferred のまま完了しており、SPEC
+  の Objectives / FR3 に対する未達指摘が残っている。
+- auto-fix loop が SSOT 文書（implement-phase.md）の文言を書き換え、byte-exact に pin したテスト定数を同時に更新しなかったことで round 2 でスイートが
+  11 件赤になった。SSOT とピン止めテストの同時更新は繰り返し発生した失敗パターン。
