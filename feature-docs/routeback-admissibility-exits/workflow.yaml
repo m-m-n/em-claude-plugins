@@ -49,7 +49,7 @@ workflow:
       TS-9 は aggregate run で確認。build / format / e2e はいずれも未設定のため
       該当なし。excluded な要件は無し。
   - id: retrospect
-    status: pending
+    status: in_progress
 
 tasks:
   task0001:
