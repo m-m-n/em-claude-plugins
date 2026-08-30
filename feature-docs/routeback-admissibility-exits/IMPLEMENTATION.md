@@ -231,6 +231,26 @@ statement about what the orchestrator protocol may read, not about what any
 hook does, so nothing under `em-workflow/hooks/` changes and NFR1's
 all-four-together condition stays untriggered.
 
+## Rework Round 2 — revised shared contracts (task0003)
+
+Additive. Verify found that one I.2.a literal the registry below lists as
+immutable is no longer immutable in the direction the registry states: the
+module outside the declared change set that formerly pinned its PRESENCE now
+pins its ABSENCE, having replaced it with a superseding invariant. The rows
+below are what task0003 implements against; they supersede the named entries in
+the respects stated and nothing else. Every decision (D1–D7), the Conventions,
+the Rework Round 1 rows and the rest of the registry stand unchanged.
+
+| Component | Revised contract | Supersedes |
+|---|---|---|
+| Pinned-literal registry (I.2.a inheritance-invariant conclusion) | The literal "no retired task id can leave a `merged` last event behind for a renumbered task to inherit" is NOT immutable and MUST NOT be asserted present in I.2.a. `tests/test_routeback_reset_scope_consistency.py` — the same module outside the declared change set that made it immutable — asserts its absence and pins in its place a recursion invariant derived from the re-planning task-id allocation rule: no retired task id is ever re-issued, so a task whose workflow.yaml `status` is `pending` can never carry an inherited `merged` journal last event, stated after the unreachability terminal. Any assertion inside the declared change set that requires the superseded literal is unsatisfiable and is re-grounded on a literal the live document carries | the registry's I.2.a line for that literal, and D2's "retained verbatim" clause for the paragraph's conclusion — D2's substance (the premise rests on the journal-last-event conjunct, not on the two-source `merged` gate) is unaffected |
+| Pinned-literal registry (direction of a pin) | A registry entry fixes a literal's status only for as long as the module that owns it keeps asserting in that direction. Before an entry is relied on, the owning module is read: an entry whose owner has flipped to asserting absence is superseded by the owner, not by this document. A literal simultaneously asserted present by a module inside the declared change set and absent by one outside it is a defect in the inside module, since the outside one cannot be edited | the registry preamble's implicit assumption that every listed literal's owner still pins its presence |
+| Test-module discipline, Conventions 3 (retained anchor) | The retained anchor must additionally not be a literal that any module outside the declared change set asserts is ABSENT from the same slice. An anchor meeting only the present-in-both condition can be one the outside modules forbid, which turns a passing guard into a cross-module contradiction the next document edit exposes | Conventions 3's two-condition form only |
+
+The plugin version lockstep contract is NOT revised and is not re-entered by
+this round: task0003 changes no file under `em-workflow/`, so FR7's precondition
+is not met and both manifests keep the value round 1 left them at.
+
 ## Pinned-literal registry
 
 The declared change set permits edits to `tests/test_recycled_task_id_consistency.py`
