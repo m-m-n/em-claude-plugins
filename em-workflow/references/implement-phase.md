@@ -371,27 +371,25 @@ Triggered whenever a launched implementer's `Task()` call returns.
      live check against, and the check FAILS only if, in addition, the
      task's recorded agent is not live. This is the allowed-but-never-started state, since I.2.a
      creates both artifacts before the launch call that records
-     `launched`, but a live agent is what distinguishes that stale state
-     from a normally in-flight implementer that also has both artifacts.
-     A task whose recorded agent IS live is never touched by this check,
-     regardless of how long it has been running — this recovery only
-     ever acts on tasks the current wake did not just hear back from and
-     that have no live agent, which is what keeps it from conflicting
-     with I.2.c's drain guarantee that a failure never rolls back or
-     cancels siblings already running. Live is exactly the state in which
-     the Agent index writer's orchestrator-read rule (cited below) can
-     resolve that task's recorded agent to a candidate the harness stop
-     tool actually stops; absent that resolution the agent counts as not
-     live — this check never requires a separate liveness probe. Two
-     distinct not-live cases exist, and Recovery below is attempted first
-     for both: the lookup resolves to a candidate but the harness stop tool
-     finds it already gone (Recovery's stop-tool recorder still records the
-     terminal `failed` event in this case, since the recorder fires on
-     whatever the stop tool call itself reports, not on the candidate having
-     been running); only when the lookup itself is unresolvable or
-     ambiguous does no stop-tool call occur at all, and that case alone
-     falls through to the Residual case below. A failed check does not
-     reclassify
+     `launched`, and what distinguishes that stale state from a normally
+     in-flight implementer that also has both artifacts is that the
+     stale one's `Task()` call has already returned without a
+     corresponding journal terminal event, while the in-flight one's has
+     not. A task whose `Task()` call has not yet returned is live by that
+     fact alone and is never touched by this check, regardless of how
+     long it has been running — the orchestrator is single-threaded and
+     never observes such a task except through its own eventual return,
+     which is what keeps this check from conflicting with I.2.c's drain
+     guarantee that a failure never rolls back or cancels siblings
+     already running. This check never calls the harness stop tool to
+     probe liveness: the Agent index lookup and the stop tool are
+     consulted only in Recovery below, after a task is already in the
+     not-live set the previous two sentences define. Two distinct
+     not-live cases exist: the lookup resolves to a candidate for
+     Recovery to hand to the harness stop tool, or the lookup itself is
+     unresolvable or ambiguous, in which case no stop-tool call occurs at
+     all and that case alone falls through to the Residual case below.
+     A failed check does not reclassify
      the task by itself: the last-event rule owned by I.2.a above stays
      authoritative, cited here rather than restated. Effect of the
      failure: it triggers the recovery below and names the task in the
@@ -412,13 +410,15 @@ Triggered whenever a launched implementer's `Task()` call returns.
      branch does not exist — neither artifact remains to correlate a
      live agent against, so this condition is checked on its own, never
      gated on the Agent index resolving "no live agent". Since there is no
-     candidate to pass to the harness stop tool here, the wake phase itself
-     writes the task's terminal `failed` event directly (the same event the
-     stop-tool recorder writes in the lookup-resolves case above), so this
-     condition reaches the same next-replay reconciliation and normal
-     failed handling without ever calling the stop tool. This recovery
-     runs during this wake-phase reconcile step, hence before I.2.c's
-     user-facing menu is offered.
+     candidate to pass to the harness stop tool here, no stop-tool call
+     occurs and this condition falls to the same Residual treatment as an
+     unresolvable Agent index lookup above: the journal is unchanged
+     (writing it is never this phase's role — Supporting cast's Journal
+     bullet below owns that rule, cited not restated), the task stays
+     in-flight, the route-back gate blocks, and the phase takes the
+     existing gate-rejected terminal, with the task named in the report.
+     This recovery runs during this wake-phase reconcile step, hence
+     before I.2.c's user-facing menu is offered.
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
@@ -623,7 +623,16 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   choosing retry there reaches the launch guard's permission
   denial, which the harness-level-failure path under 'Failure
   containment' below diagnoses, an outcome reached without selecting
-  abort. A task the journal
+  abort — in effect the same dead end as this section's own
+  gate-rejected terminal, since neither retry nor route back to
+  planning actually resolves the task from here; the only way out is a
+  human (or a follow-up task) correcting the branch ancestry so a
+  later reconcile pass verifies the merge, or otherwise resolving the
+  task's state by hand outside this protocol. This is the one state
+  where workflow-schema.md's status semantics ("a `failed` task
+  resolves ONLY by retry or by routing back to planning") are not met
+  by an automated path; the gap is confined to this single case and is
+  not a precedent for any other `failed` task. A task the journal
   reports in-flight whose worktree and branch are both gone is decided
   elsewhere — Step I.2.b step 1's recovery, cited there, not here. Refresh
   the integration worktree first (`git -C "$WT_ROOT/integration"
