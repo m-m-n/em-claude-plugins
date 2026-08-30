@@ -130,9 +130,9 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR2, FR6, NFR2, NFR3, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/routeback-admissibility-exits/task0003
     provenance:
       source: verify
       review_round: null
