@@ -352,40 +352,60 @@ Triggered whenever a launched implementer's `Task()` call returns.
    recycled-task-id rule in I.2.a above; a `launched` last event is always
    in-flight regardless of workflow.yaml `status`) and cross-check against
    git actual state, trust-but-verify:
-   - Worktree/branch existence for tasks the journal claims are
-     in-flight — the check FAILS when a task's journal last event is
-     `launched` while the task worktree and the task branch both
-     exist — the allowed-but-never-started state, since I.2.a creates
-     both artifacts before the launch call that records `launched`. A
+   - Worktree/branch existence, PLUS live-agent absence, for tasks the
+     journal claims are in-flight — the check FAILS only when a task's
+     journal last event is `launched`, the task worktree and the task
+     branch both exist, AND the Agent index writer's orchestrator-read
+     rule — cited from its own bullet under 'Supporting cast: journal,
+     hooks, resume' below, not restated here — resolves no live agent for
+     that task's recorded agent. This is the allowed-but-never-started
+     (or since-died) state: I.2.a creates both artifacts before the
+     launch call that records `launched`, but a live agent is what
+     distinguishes that stale state from a normally in-flight implementer
+     that also has both artifacts. A task whose recorded agent IS live is
+     never touched by this check, regardless of how long it has been
+     running — this recovery only ever acts on tasks the current wake
+     did not just hear back from and that have no live agent, which is
+     what keeps it from conflicting with I.2.c's drain guarantee that a
+     failure never rolls back or cancels siblings already running. A
      failed check does not reclassify the task by itself: the last-event
      rule owned by I.2.a above stays authoritative, cited here rather
      than restated. Effect of the failure: it triggers the
      recovery below and names the task in the phase report. Recovery: the
-     wake phase resolves that task's recorded agent through the Agent
-     index writer's orchestrator-read rule — cited from its own bullet
-     under 'Supporting cast: journal, hooks, resume' below, not restated
-     here — and stops it through the harness stop tool; the stop-tool
-     recorder — cited from its own bullet under 'Supporting cast: journal,
-     hooks, resume' below, not restated here — records the task's terminal
-     `failed` event, so the next replay reconciles the task as `failed`
-     and it reaches the normal failed handling in I.2.c, where retry and
-     route-back are both available. Residual: when the Agent index lookup
-     is unresolvable or ambiguous, the journal is unchanged, the task
-     stays in-flight, the route-back gate blocks, and the phase takes the
-     existing gate-rejected terminal (I.2.c) with the task named in the
-     report. This recovery runs during
-     this wake-phase reconcile step, hence before I.2.c's user-facing
-     menu is offered.
+     wake phase stops the (already-known-dead) recorded agent through the
+     harness stop tool; the stop-tool recorder — cited from its own
+     bullet under 'Supporting cast: journal, hooks, resume' below, not
+     restated here — records the task's terminal `failed` event, so the
+     next replay reconciles the task as `failed` and it reaches the
+     normal failed handling in I.2.c, where retry and route-back are both
+     available. Residual: when the Agent index lookup is ambiguous rather
+     than cleanly resolving to "no live agent", the journal is unchanged,
+     the task stays in-flight, the route-back gate blocks, and the phase
+     takes the existing gate-rejected terminal (I.2.c) with the task
+     named in the report. A second, independent condition triggers this
+     same recovery without an Agent index lookup: a task's journal last
+     event is `launched` AND the task worktree does not exist AND the
+     task branch does not exist — neither artifact remains to correlate
+     a live agent against, so this condition is checked on its own,
+     never gated on the Agent index resolving "no live agent". This
+     recovery runs during this wake-phase reconcile step, hence before
+     I.2.c's user-facing menu is offered.
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
      task merged on self-report or journal entry alone. That task's
      reconciled state instead becomes `failed` — the same treatment as
-     any other implementer failure — so it reaches the normal failed
-     handling in I.2.c (retry, route back to planning subject to that
-     section's own gate, or abort) even though the journal's own last
-     event for that task keeps reading `merged` until an actual writer
-     changes it.
+     any other implementer failure — for the purpose of I.2.c's surfaced
+     report and the route-back gate's admissibility check, but no writer
+     in this design records that `failed` state to the journal: the
+     journal's own last event for that task keeps reading `merged`
+     permanently. Because the launch guard (its own bullet under
+     'Supporting cast: journal, hooks, resume', not restated here) reads
+     only the journal's last event, it denies any retry of this task
+     forever. **Retry is therefore not an available option** for a task
+     reconciled this way, even though it is offered for every other
+     failed task in I.2.c; the only ways out are abort, or a user/operator
+     correcting the journal or branch state by hand before retrying.
 2. **Refresh the integration worktree FIRST** (Branch & Worktree Model):
    `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`,
    then capture `RECONCILE_TIP=$(git -C {integration_worktree} rev-parse HEAD)`.
@@ -636,16 +656,22 @@ Stop-hook bullet below cite it as this classification's source.
   never touches `journal.jsonl` — and is fail-open exactly like every hook
   here: an unrecognized launch, an unparsable input, or a missing feature
   directory is a silent no-op. The index is diagnostic plumbing, not a
-  second journal (workflow-schema.md states this explicitly); it exists
-  solely so the stop-tool recorder below can resolve a stop back to a task
-  (full matching/staleness rule: IMPLEMENTATION.md's Agent index contract).
+  second journal (workflow-schema.md states this explicitly): it carries no
+  status semantics of its own, may be absent or stale, and is never a source
+  of task status — only of the task/worktree a stop or a recovery check
+  resolves to. It exists so the stop-tool recorder below and, per the
+  Orchestrator-side read below, the orchestrator itself can each resolve a
+  stop or a recovery check back to a task (full matching/staleness rule:
+  IMPLEMENTATION.md's Agent index contract).
   **Orchestrator-side read** (I.2.b step 1's stale-`launched` recovery
   cites this rule, not restated there): for a task, the orchestrator
   selects that task's most recently appended entry; when the selected
   entry carries more than one identifier candidate, the orchestrator
   passes the first-recorded candidate to the harness stop tool; an
   unresolvable lookup (no entry for the task) or an ambiguous one (the
-  selected entry names no usable candidate) stops nothing.
+  selected entry names no usable candidate) resolves to NO LIVE AGENT for
+  that task and stops nothing — this lookup resolves a stop target, it
+  never supplies or overrides `tasks.{T}.status`.
 - **SubagentStop failure net** (`queue_failure_net.py`) — fires when any
   subagent stops; for em-workflow implementers whose task has no `merged`
   event yet, appends `failed` — turning a swallowed or crashed implementer
@@ -688,10 +714,13 @@ recorder appends `failed` as soon as the `TaskStop` call completes,
 closing the gap before a reconcile pass is even needed.
 
 **Resume**: a `/em-workflow:develop` re-entry mid-implement rebuilds state
-from four sources, never from memory: workflow.yaml (`tasks.*.status`), the
-journal (last-event-per-task replay), the agent index (`agents.jsonl`,
-cited from the Agent index writer bullet above, not restated here), and
-git actual state (worktree existence, `merge-base --is-ancestor`). The
+from three sources, never from memory: workflow.yaml (`tasks.*.status`), the
+journal (last-event-per-task replay), and git actual state (worktree
+existence, `merge-base --is-ancestor`). The agent index (`agents.jsonl`,
+cited from the Agent index writer bullet above, not restated here) is
+consulted alongside these as a resolution aid for stops and for I.2.b step
+1's recovery check, not as a fourth state source — it carries no status
+semantics of its own. The
 I.2.a resume guard governs
 worktree re-creation exactly as before; the wake-phase reconcile (I.2.b) is
 what re-derives in-flight/failed/merged classification on that first
