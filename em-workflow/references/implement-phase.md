@@ -381,22 +381,34 @@ Triggered whenever a launched implementer's `Task()` call returns.
      never observes such a task except through its own eventual return,
      which is what keeps this check from conflicting with I.2.c's drain
      guarantee that a failure never rolls back or cancels siblings
-     already running. This "not yet returned" fact lives only in the
-     orchestrator's in-session memory and cannot be observed after a
-     Resume, since none of Resume's four sources (workflow.yaml, journal,
-     git actual state, Agent index) records whether a given `Task()` call
-     ever returned. Consequently, this check's candidate set excludes any
-     task that the current session's own I.2.a launched: such a task's
-     `Task()` call may still be running in this same session and this
-     check has no way to observe that, so it is never eligible for the
-     liveness probe below regardless of its journal last event. Only a
-     task whose `launched` event was recorded before the current session
-     began (i.e. surviving a Resume, so it cannot be this session's own
-     in-flight call) is eligible to enter the candidate set and be
-     evaluated by the liveness probe. This check never calls the
-     harness stop tool to probe liveness: the Agent index lookup and
-     the stop tool are consulted only in Recovery below, after a task is already in the
-     not-live set the previous two sentences define. Two distinct
+     already running. Excluding such a task from the candidate set is
+     not the cross-turn memory I.2.a's state-derivation rule bans: that
+     rule bans re-deriving in-flight status from a memory of a prior
+     turn, but a `Task()` call this same reconcile step is still waiting
+     on has not reached a prior turn at all — it is an outstanding call
+     in the current turn, the same same-turn bookkeeping the drain step
+     above already relies on to know how many launches are outstanding.
+     That bookkeeping never survives past this turn: once control
+     returns to the user, or a session ends, no orchestrator process
+     remains holding it, so after any Resume every candidate is
+     evaluated purely by the observable procedure below, with no
+     exemption — this is what Resume's four sources need to record
+     nothing about whether a given `Task()` call ever returned.
+     Consequently, the candidate set is exactly: a task whose journal
+     last event is `launched`, whose worktree and branch both exist, and
+     whose `Task()` call is not among this reconcile step's own
+     currently-outstanding calls. The not-live set is defined
+     independently of the candidate set, not by it: a candidate enters
+     the not-live set only when this check itself performs the Agent
+     index lookup for its recorded agent and that lookup either finds
+     no live match or cannot resolve it at all. The check therefore
+     does consult the Agent index directly, as its own step, not as
+     something deferred to Recovery — Recovery could not otherwise
+     determine which tasks belong in the not-live set to begin with.
+     What the check never does is call the
+     harness stop tool to probe liveness: the stop tool is invoked only
+     in Recovery below, after this check has already placed a task in the
+     not-live set. Two distinct
      not-live cases exist: the lookup resolves to a candidate for
      Recovery to hand to the harness stop tool, or the lookup itself is
      unresolvable or ambiguous, in which case no stop-tool call occurs at
@@ -412,7 +424,12 @@ Triggered whenever a launched implementer's `Task()` call returns.
      resume' below, not restated here — records the task's terminal
      `failed` event, so the next replay reconciles the task as `failed`
      and it reaches the normal failed handling in I.2.c, where retry and
-     route-back are both available. A third case exists alongside the
+     route-back are both available. That next replay is this same
+     wake-phase reconcile step re-reading the journal after the
+     stop-tool call above, not a subsequent wake: step 1 re-replays the
+     journal within this reconcile step, so the task's reconciled state
+     already reads `failed` by the time step 3 and step 5 consume it for
+     this wake. A third case exists alongside the
      two the previous paragraph defines: the Agent index lookup
      resolves to a candidate, but the harness stop tool stops nothing,
      or the stop-tool recorder does not append a terminal event for
@@ -428,7 +445,13 @@ Triggered whenever a launched implementer's `Task()` call returns.
      is `launched` AND the task worktree does not exist AND the task
      branch does not exist — neither artifact remains to correlate a
      live agent against, so this condition is checked on its own, never
-     gated on the Agent index resolving "no live agent". Since there is no
+     gated on the Agent index resolving "no live agent". A partial-artifact
+     state — the task worktree exists but the task branch does not, or the
+     task branch exists but the task worktree does not — is not this
+     condition, but a task's journal last event being `launched` together
+     with either partial-artifact state also triggers this same recovery,
+     for the same reason: at least one artifact needed to correlate a live
+     agent is already gone. Since there is no
      candidate to pass to the harness stop tool here, no stop-tool call
      occurs and this condition falls to the same Residual treatment as an
      unresolvable Agent index lookup above: the journal is unchanged
@@ -631,7 +654,8 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   never narrowed to admit route-back for that state: no recycled id can
   ever inherit a journal `merged` the launch guard denies through this
   phase's own write set. The state it protects still has a way out that
-  is not this section's own gate-rejected or abort terminal: when the
+  is not this section's own gate-rejected or abort terminal — a way into
+  this failed-handling branch, not a way out of it once reached: when the
   ancestor verification fails for a task the journal (or its own report)
   claims `merged`, Step I.2.b step 1's reconciled state for that task is
   `failed` — cited there, not restated here — so the ordinary retry /
