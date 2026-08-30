@@ -1,0 +1,68 @@
+feature: destructive-guard-write-target-scoping
+collected_at: "2026-08-30T22:52:00+09:00"
+session_ids: [ec8b386e-e7e7-4542-beb9-b43ddd8d5a4e.jsonl]
+signals:
+  review_critical_high:
+    - stable_id: f11305d4611accd7
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "mv の source 側が write-target から漏れ、保護パスの持ち出し・削除が allow になる"
+      resolution: unresolved
+    - stable_id: 4eb3d5ac5355b1e5
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "Quoted redirection operators can hide the real write target"
+      resolution: unresolved
+    - stable_id: 2a1195baa7a2e0d1
+      category: architecture
+      file: em-workflow/hooks/destructive-guard.py
+      title: "write_targets の宛先専用モデルが mv の破壊性を取りこぼし、保護契約が縮んでいる"
+      resolution: unresolved
+    - stable_id: 3e3993733fd77a92
+      category: spec
+      file: em-workflow/hooks/destructive-guard.py
+      title: "mv のソース側が write-target から外れ、~/.claude 配下のフック持ち出しが ask から allow に後退した"
+      resolution: unresolved
+    - stable_id: 66fb7959516d7243
+      category: comprehensive
+      file: em-workflow/hooks/destructive-guard.py
+      title: "mv のソース側が write-target から外れ、~/.claude 配下の移動が検知されなくなった"
+      resolution: unresolved
+    - stable_id: d60553d13cb54e0c
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "( ... ) / { ...; } によるグルーピングでガード全体を迂回できる"
+      resolution: deferred
+    - stable_id: bb74a3458679e1b4
+      category: spec
+      file: em-workflow/hooks/destructive-guard.py
+      title: "mv の全非フラグ引数を write target 扱いする実装が FR2 と Edge Case に正面から矛盾"
+      resolution: deferred
+    - stable_id: bafd6e8260de4337
+      category: spec
+      file: em-workflow/hooks/destructive-guard.py
+      title: "FR2 が列挙する 3 ソースを超えて rsync / git clone / tar / unzip / curl / wget が write target 扱いされている"
+      resolution: deferred
+    - stable_id: 7f7144aea35f534f
+      category: spec
+      file: em-workflow/hooks/destructive-guard.py
+      title: "FR6「rm 判定は不変」に反し、head() の wrapper フラグ処理と statements() の -c/eval ペイロード再スキャンが rm 経路に影響する"
+      resolution: deferred
+    - stable_id: e3cc4d7f18b6e667
+      category: comprehensive
+      file: em-workflow/hooks/destructive-guard.py
+      title: "REGRESSION: 融合トークン分割が >& / >| を切り離し、transcript-write の deny を allow に落とす"
+      resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - stable_id: 4e61e59bf757717b
+      category: security
+      resolution_reason: "R4 loop 3: diff と prose の混在グループとして site ごと skip（batch: review.auto-fix-conflict）。修正自体は必要"
+lessons_candidates:
+  - "review round 2 で 22 件中 17 件が rework cap により deferred。cap 1 では 1 タスクあたりの findings 量に対して不足する場面がある"
+  - "spec 観点の high が 3 件とも「実装が FR2/FR6 のスコープを超えた」形。auto-fix ループが SPEC の範囲外まで機能追加してしまう傾向"
+  - "R4 の conflict グループ判定で site ごと skip した結果、mv の source 側漏れ（同一欠陥を 4 観点が独立検出）が round 1 で 1 件も修正されず round 3 のタスク合成に回った"
+  - "レトロスペクト収集時、この feature が修正対象としているまさにその誤爆（`ls -t ... 2>/dev/null` が transcript-write で deny）を踏んだ。修正は integration ブランチにあるが main / プラグインキャッシュには未反映"
