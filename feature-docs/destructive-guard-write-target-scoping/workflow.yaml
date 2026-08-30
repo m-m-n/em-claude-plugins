@@ -530,8 +530,8 @@ tasks:
       - FR5
       - NFR3
       - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-write-target-scoping/task0003
     notes: null
     provenance:
       source: review
