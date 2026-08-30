@@ -125,6 +125,12 @@ TRANSCRIPT = re.compile(r"\.claude/projects/[^\s\"']*\.jsonl")
 # Commands that write to a path given as an argument rather than via `>`.
 INPLACE_WRITERS = {"tee", "truncate", "shred", "install", "patch"}
 
+# The target-directory flag `cp`/`mv`/`ln`/`install` accept, in both spellings
+# GNU coreutils allows: a separate token (`-t DIR`) and the attached-`=` form
+# (`--target-directory=DIR`). Its value is a destination even though it is
+# not the last positional argument.
+TARGET_DIR_FLAGS = ("-t", "--target-directory")
+
 # Process-termination command words. These belong to kill-guard.py, which
 # runs as its own PreToolUse hook and reaches a deny/ask/allow decision from
 # the live process tree. This hook must not answer for them at all: its
@@ -170,8 +176,55 @@ def decide(decision, rule, reason):
     sys.exit(0)
 
 
+class Tok(str):
+    """A token string that also remembers whether shlex read it from bare,
+    unquoted operator syntax (`>`, `2>&1`, …) rather than from a word or
+    quoted span. Every consumer besides split_redirects() treats it as an
+    ordinary str; the attribute defaults to False so a plain str used where
+    a Tok is expected (there is no such caller today) fails closed.
+    """
+
+    is_operator = False
+
+    def __new__(cls, value, is_operator=False):
+        obj = str.__new__(cls, value)
+        obj.is_operator = is_operator
+        return obj
+
+
+class _TrackingLexer(shlex.shlex):
+    """shlex.shlex that also records whether the token `get_token()` just
+    returned began in the base class's punctuation state ('c') — i.e. bare,
+    unquoted operator syntax — as opposed to a word or quoted span.
+
+    shlex resolves quoting before the token text ever reaches a caller, so a
+    quoted `"2>&1"` and a real, unquoted `2>&1` come out as the identical
+    string. `state` is overridden as a property purely to observe every
+    assignment the base class's `read_token()` already makes; no parsing
+    behaviour changes.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.last_was_operator = False
+        super().__init__(*args, **kwargs)
+
+    @property
+    def state(self):
+        return self.__dict__.get("_state", " ")
+
+    @state.setter
+    def state(self, value):
+        self.__dict__["_state"] = value
+        if value == "c":
+            self.last_was_operator = True
+
+    def read_token(self):
+        self.last_was_operator = False
+        return super().read_token()
+
+
 def lex_segments(chunk):
-    """Split a chunk into statements, each returned as its token list.
+    """Split a chunk into statements, each returned as (tokens, lexed).
 
     Separators only count when they sit OUTSIDE quotes, and telling those
     apart is the whole reason shlex does the splitting rather than a regex.
@@ -180,42 +233,67 @@ def lex_segments(chunk):
     denied a command that deletes nothing. Literal command text like that
     shows up constantly in generated docs, tests, and commit messages.
 
+    LEXED is True on this path: each returned token is a Tok, carrying (as
+    `.is_operator`) whether shlex read it from bare operator syntax or from
+    a word/quoted span — the signal split_redirects() needs to tell a real
+    `>` apart from a quoted string that merely looks like one.
+
     Falls back to the regex split when the chunk will not parse — an
-    unbalanced quote, usually. That path keeps the old false positives, but a
-    parse failure is rare, and waving the chunk through unexamined would be a
-    hole rather than a nuisance.
+    unbalanced quote, usually. That path keeps the old false positives and
+    returns LEXED False, since per-token provenance is unavailable there; a
+    parse failure is rare, and waving the chunk through unexamined would be
+    a hole rather than a nuisance.
     """
     try:
-        lex = shlex.shlex(chunk, posix=True, punctuation_chars=PUNCTUATION)
+        lex = _TrackingLexer(chunk, posix=True, punctuation_chars=PUNCTUATION)
         lex.whitespace = " \t\r"
         lex.whitespace_split = True
-        toks = list(lex)
+        toks = []
+        while True:
+            raw = lex.get_token()
+            if raw is None or raw == lex.eof:
+                break
+            toks.append(Tok(raw, lex.last_was_operator))
     except ValueError:
-        return [tokens(seg) for seg in SEGMENT_SPLIT.split(chunk) if seg.strip()]
+        return [
+            (tokens(seg), False) for seg in SEGMENT_SPLIT.split(chunk) if seg.strip()
+        ]
 
     out, current = [], []
     for t in toks:
         if t and all(c in SEGMENT_CHARS for c in t):
-            out.append(current)
+            out.append((current, True))
             current = []
         else:
             current.append(t)
-    out.append(current)
+    out.append((current, True))
     return out
 
 
-def split_redirects(toks):
+def split_redirects(toks, lexed=True):
     """Return (the statement's own words, its redirection tokens).
 
     `rm -rf /tmp/x > /dev/null` has to be judged on `rm -rf /tmp/x`. With the
     redirect left in, `>` and `/dev/null` looked like two more delete targets
     and the command was denied for writing to the bit bucket. A leading file
     descriptor (`2` in `2>&1`) is part of the redirect too.
+
+    A token counts as a redirect operator only when its text matches the
+    operator shape AND — when LEXED, i.e. token provenance is available —
+    its own `.is_operator` marking confirms it came from real, unquoted
+    operator syntax rather than a word or quoted span. Without that second
+    test, a quoted data word whose text happens to look like an operator
+    (`echo "2>&1" > ~/.claude/settings.json`) paired with the token after it
+    as if it were the operator, and the real `>` that followed lost its
+    target. When LEXED is False (the parse-failure fallback, where tokens
+    carry no provenance), the text-shape test alone applies, unchanged from
+    before this marking existed.
     """
     words, redirects = [], []
     i = 0
     while i < len(toks):
-        if REDIRECT.fullmatch(toks[i]):
+        t = toks[i]
+        if REDIRECT.fullmatch(t) and (not lexed or getattr(t, "is_operator", False)):
             if words and words[-1].isdigit():
                 redirects.append(words.pop())
             redirects.extend(toks[i : i + 2])
@@ -244,10 +322,13 @@ def strip_heredocs(chunk):
 
 
 def statements(command):
-    """Yield (text, tokens) per command segment, substitution bodies included.
+    """Yield (text, tokens, lexed) per command segment, substitution bodies
+    included.
 
     The text is the tokens rejoined, so quoting is already resolved by the
-    time the regex-based checks see it.
+    time the regex-based checks see it. LEXED is lex_segments()'s per-segment
+    parse-success flag — False only on the parse-failure fallback, where
+    token provenance is unavailable.
     """
     pending = [command]
     while pending:
@@ -260,9 +341,9 @@ def statements(command):
             body = m.group(1) or m.group(2) or ""
             if body.strip():
                 pending.append(body)
-        for toks in lex_segments(SUBSTITUTION.sub(" ", chunk)):
+        for toks, lexed in lex_segments(SUBSTITUTION.sub(" ", chunk)):
             if toks:
-                yield " ".join(toks), toks
+                yield " ".join(toks), toks, lexed
 
 
 def tokens(segment):
@@ -542,10 +623,31 @@ def redirect_write_targets(redirects):
     return out
 
 
+def flag_destinations(args):
+    """Return the values of target-directory flags (TARGET_DIR_FLAGS) among
+    ARGS, in either spelling: a separate token (`-t DIR`) or the attached
+    `=` form (`--target-directory=DIR`). The flag's own token never enters
+    the result — only its value does.
+    """
+    out = []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a in TARGET_DIR_FLAGS:
+            if i + 1 < len(args):
+                out.append(args[i + 1])
+            i += 2
+            continue
+        if a.startswith("--target-directory="):
+            out.append(a.split("=", 1)[1])
+        i += 1
+    return out
+
+
 def write_targets(word, args, redirects):
     """Assemble the set of paths this segment writes to.
 
-    Three sources, unioned (task plan Step 2):
+    Sources, unioned (task plan Part 1 and Part 2):
 
     - the target side of every write-shaped redirect (append and plain
       output alike; input forms are already excluded upstream)
@@ -555,9 +657,13 @@ def write_targets(word, args, redirects):
       empty-suffix forms (`-i.bak`, `-i''`), always starts with `-` and is
       excluded by the same non-flag filter
     - the destination of a file-manipulating command: the LAST non-flag
-      argument only for `cp`/`mv`/`ln` (their destination is positional),
-      every non-flag argument for `rm`/`chmod`/`chown` (no single
-      destination position)
+      argument only for `cp`/`ln` (their destination is positional and
+      their source is genuinely only read), every non-flag argument for
+      `mv`/`rm`/`chmod`/`chown` — a move unlinks each source it names, so a
+      source is written to exactly as much as the destination is
+    - for `cp`/`mv`/`ln`/`install`, the value of a target-directory flag
+      (`-t DIR` / `--target-directory=DIR`), additive to the positional
+      destination above, never a replacement for it
 
     A member need not be a path — a bare descriptor number or `/dev/null`
     passes through untouched; only the two detection patterns decide
@@ -568,16 +674,19 @@ def write_targets(word, args, redirects):
 
     if word in INPLACE_WRITERS or (word == "sed" and any(a.startswith("-i") for a in args)):
         targets = targets + non_flags
-    elif word in ("cp", "mv", "ln"):
+    elif word in ("cp", "ln"):
         if non_flags:
             targets = targets + [non_flags[-1]]
-    elif word in ("rm", "chmod", "chown"):
+    elif word in ("mv", "rm", "chmod", "chown"):
         targets = targets + non_flags
+
+    if word in ("cp", "mv", "ln", "install"):
+        targets = targets + flag_destinations(args)
 
     return targets
 
 
-def check_self_modification(word, args, redirects):
+def check_self_modification(word, args, redirects, segment, lexed):
     """Ask/deny only when an assembled write TARGET matches a protected path.
 
     Matching used to run over the whole segment text, so a command that
@@ -587,11 +696,14 @@ def check_self_modification(word, args, redirects):
     still contained `~/.claude/skills/` for SELF_CONFIG to match against.
     Testing the write-target set instead of the whole segment fixes that
     without touching either pattern's own definition.
+
+    When LEXED is False (the parse-failure fallback), token provenance is
+    unavailable, so the assembled target set cannot be trusted — falls back
+    to matching the two patterns against the whole segment text instead,
+    the behaviour this judgment had before the write-target set existed.
     """
-    targets = write_targets(word, args, redirects)
-    if not targets:
-        return
-    for target in targets:
+    candidates = write_targets(word, args, redirects) if lexed else [segment]
+    for target in candidates:
         if SELF_CONFIG.search(target):
             decide(
                 "ask",
@@ -728,15 +840,15 @@ def main():
     # loop below and the check would never fire.
     check_pipe_to_shell(command)
 
-    for segment, toks in statements(command):
+    for segment, toks, lexed in statements(command):
         check_bypass(segment, toks)
 
-        words, redirects = split_redirects(toks)
+        words, redirects = split_redirects(toks, lexed)
         word, args = head(words)
         if word is None:
             continue
 
-        check_self_modification(word, args, redirects)
+        check_self_modification(word, args, redirects, segment, lexed)
 
         if word == "git":
             check_git(args, segment)
