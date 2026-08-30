@@ -512,15 +512,19 @@ tasks:
     notes: null
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
     cross_validation: true
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+    comprehensive: {claude: completed}
+    security: {claude: completed, codex: completed}
+    architecture: {claude: completed, litellm: completed}
+    spec: {claude: completed, litellm: completed}
+  residual_critical_high: 5
+  needs_rework: true
 
 requirements:
   FR1:
