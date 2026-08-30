@@ -378,7 +378,15 @@ Triggered whenever a launched implementer's `Task()` call returns.
      not. A task whose `Task()` call has not yet returned is live by that
      fact alone and is never touched by this check, regardless of how
      long it has been running — the orchestrator is single-threaded and
-     never observes such a task except through its own eventual return,
+     never observes such a task except through its own eventual return.
+     This "not yet returned" fact lives only in the orchestrator's
+     in-session memory and cannot be observed after a Resume, since none
+     of Resume's four sources (workflow.yaml, journal, git actual state,
+     Agent index) records whether a given `Task()` call ever returned.
+     Consequently, on the first wake after a Resume, a task whose journal
+     last event is `launched` is always treated as not-live for purposes
+     of this check — the orchestrator cannot have an in-flight `Task()`
+     call surviving a Resume, so there is no live case to preserve here,
      which is what keeps this check from conflicting with I.2.c's drain
      guarantee that a failure never rolls back or cancels siblings
      already running. This check never calls the harness stop tool to
