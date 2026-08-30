@@ -1,0 +1,131 @@
+task_id: task0013
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_needs_update_case_still_present
+      - test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_pending_reentry_case_states_recognizable_signal
+      - test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_states_transition_produces_pending_not_needs_update
+      - test_workflow_patch_doc.TestReplanningPathWidenedForSpecChangeReentry.test_new_case_matcher_fails_on_needs_update_only_wording
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by direct script check against `git show HEAD:` copy of
+      workflow-patch.md before this task's edit: the new-case signal
+      phrases ("a `spec_change` record present in
+      `phase-state/rework.yaml`", "`workflow.implement.base_commit`
+      already being set", "sets `create-plan` to `pending`, not
+      `needs_update`") were absent from the Re-planning path section
+      pre-edit (only the unwidened `needs_update`-only case existed).
+  AC-2:
+    tests:
+      - test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly.test_unchanged_statement_present
+      - test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly.test_referenced_halves_still_present
+      - test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly.test_unchanged_statement_matcher_fails_on_pre_change_wording
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against the pre-edit doc: the explicit "Neither this
+      protocol-error rule nor the Initial-planning path's floor condition
+      above changes" sentence did not exist pre-edit (assertIn failed).
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Per the task plan's Test Notes, cross-document agreement with the
+      three SPEC-change transition documents (rework-task-synthesis.md
+      Section 10, contracts/rework-planner-contract.md,
+      agents/rework-planner.md) is a verify-phase item (TS-2), not an
+      assertion inside this task's own modules -- those documents are
+      outside this task's file scope and are read-only inputs. Verified
+      instead by: (1) `git status` showing none of the three transition
+      documents in this task's diff, and (2) manual cross-check while
+      drafting -- all three transition documents state identically that
+      the SPEC-change transition sets `create-spec` to `needs_update` and
+      `create-plan`/`implement`/`review` to `pending` (never
+      `create-plan: needs_update`), which is exactly the state
+      workflow-patch.md's widened Re-planning path now names.
+  AC-4:
+    tests:
+      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_allocates_above_highest_registered_id
+      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_retired_id_never_reissued
+      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_allocation_matcher_fails_on_reissuing_wording
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against the pre-edit doc: the "### Re-planning task-id
+      allocation" subsection did not exist at all pre-edit (a direct
+      `.index()` lookup for the heading raises ValueError against the
+      captured pre-edit text).
+  AC-5:
+    tests:
+      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_unreachability_sentence_cites_allocation_rule
+      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_old_renumbering_premise_absent_from_i2a
+      - test_recycled_task_id_consistency.TestValidationDetectsRegressions.test_allocation_rule_citation_matcher_flags_the_pre_change_wording
+      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_phrase_present
+      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_recursion_invariant_placed_after_unreachability_terminal
+      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_old_renumbering_premise_absent
+      - test_routeback_reset_scope_consistency.TestValidationDetectsRegressions.test_old_renumbering_premise_matcher_flags_pre_change_wording
+    red_confirmed: true
+    red_reason: >-
+      Observed directly: ran
+      `python3 -m unittest tests.test_routeback_reset_scope_consistency`
+      against the doc immediately after editing implement-phase.md's I.2.a
+      paragraph but before updating this test file's RECURSION_INVARIANT_PHRASE
+      constant -- got "FAIL: test_recursion_invariant_phrase_present"
+      (AssertionError: old literal 'no retired task id can leave a `merged`
+      last event behind for a renumbered task to inherit' not found) and
+      "ERROR: test_recursion_invariant_placed_after_unreachability_terminal"
+      (ValueError: substring not found). The remaining new assertions in
+      this AC's list were added after the doc edit landed, so confirmed
+      instead by scripted comparison against a `git show HEAD:` copy of
+      the pre-edit implement-phase.md: each would have failed (allocation
+      rule citation absent from the unreachability sentence; "task0001"
+      and the old renumbering phrase present in I.2.a; the new
+      RECURSION_INVARIANT_PHRASE absent).
+  AC-6:
+    tests:
+      - test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_row_no_longer_reads_none
+      - test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_row_requires_base_commit_on_replanning_path
+      - test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_initial_planning_case_stated
+      - test_workflow_patch_doc.TestMandatoryPreserveReplanningRowRequiresBaseCommit.test_row_matcher_fails_on_none_wording
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against the pre-edit doc: the `replace_planning` row of
+      the Mandatory `preserve` table read literally "(none)"
+      pre-edit -- `test_row_no_longer_reads_none`'s regex would have
+      matched (failing the assertNotRegex), and
+      `test_row_requires_base_commit_on_replanning_path`'s search for
+      `workflow.implement.base_commit` within that row would have found
+      nothing.
+  AC-7:
+    tests:
+      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_carve_out_still_scoped_to_failed_only
+      - test_routeback_reset_scope_consistency.TestI2aRecursionInvariantPresent.test_retained_in_flight_sentence_survives
+      - test_recycled_task_id_consistency.TestUnreachablePendingLaunchedCombination.test_retained_in_flight_sentence_survives
+      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_does_not_read_group_is_non_empty
+      - test_recycled_task_id_consistency.TestRecycledTaskIdRuleScopedToOrchestrator.test_reads_group_is_non_empty
+    red_confirmed: false
+    red_reason: >-
+      Retention criterion: these guards were already green before this
+      task (nothing in this task's diff touches the hook classification
+      table, the failed-only carve-out, or any hook-reads-what statement --
+      no file under em-workflow/hooks/** is in this task's diff), so there
+      is no red state to observe for "stays intact". The full-suite half of
+      this AC is verified by running `python3 -m unittest discover -s
+      tests` after every edit: 1811 tests total, only the same 3
+      pre-existing baseline failures (test_guardrail_hooks_migration.py,
+      unrelated to this task) remain, zero regressions introduced.
+notes: >-
+  Deviation: tests/test_gate_option_vocabulary.py (outside expected_files)
+  required a one-line SHA-256 refresh in
+  TestFrozenMachineReadSurface.WORKFLOW_PATCH_SHA256. That constant pins
+  workflow-patch.md's exact bytes and was last refreshed by this same
+  feature's task0002 (its own comment documents the refresh-not-remove
+  convention for whoever next intentionally edits workflow-patch.md); this
+  task is the next such edit, so the constant and its comment were updated
+  to the new byte-identity hash and to name task0013 alongside task0002.

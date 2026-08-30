@@ -41,6 +41,9 @@ ENVELOPE_DOC_PATH = (
     REPO_ROOT / "em-workflow" / "references" / "contracts" / "worker-envelope.md"
 )
 PACKET_DOC_PATH = REPO_ROOT / "em-workflow" / "references" / "question-packet-schema.md"
+REWORK_PLANNER_CONTRACT_PATH = (
+    REPO_ROOT / "em-workflow" / "references" / "contracts" / "rework-planner-contract.md"
+)
 
 
 def _read(path):
@@ -952,6 +955,55 @@ class TestQuestionPacketFields(unittest.TestCase):
         self.assertIn("does not", lowered)
 
 
+class TestQuestionPacketEvidenceOriginIdField(unittest.TestCase):
+    """task0019 AC-7 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45,
+    cbb5659c4025c46e), renamed by rework-contract-drift/task0004 (FR4):
+    `questions[].evidence[]` carries `origin_id` in the packet schema's
+    field table -- the structured field the Classification gate's origin
+    verification requires (tests/test_classification_gate.py), naming the
+    `origin_kind` / `origin_id` pair `references/rework-task-synthesis.md`'s
+    Invariant 6 defines, cited rather than restated here. The retired
+    single-field name is gone."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PACKET_DOC_PATH)
+
+    def _evidence_row(self, field):
+        marker = f"`questions[].evidence[]`.`{field}`"
+        self.assertIn(marker, self.text, f"expected the {field!r} field row")
+        idx = self.text.index(marker)
+        row_end = self.text.index("\n", idx)
+        return self.text[idx:row_end]
+
+    def test_field_table_has_existing_evidence_rows(self):
+        # Non-vacuity guard (Test Notes): the table itself must be found
+        # before the new row's presence means anything.
+        self._evidence_row("path")
+        self._evidence_row("line")
+        self._evidence_row("detail")
+
+    def test_origin_id_field_present(self):
+        row = self._evidence_row("origin_id")
+        self.assertIn("origin_kind", row)
+        self.assertIn("rework-task-synthesis.md", row)
+
+    def test_origin_id_cites_invariant_6_rather_than_restating(self):
+        row = self._evidence_row("origin_id")
+        self.assertIn("invariant 6", row.lower())
+        self.assertIn("cited, not restated", row)
+
+    def test_retired_field_negative_proof_missing_field_is_detected(self):
+        fake_text = (
+            "| `questions[].evidence[]`.`path` | Evidence file path |\n"
+            "| `questions[].evidence[]`.`line` | Evidence line number |\n"
+            "| `questions[].evidence[]`.`detail` | Evidence detail text |\n"
+        )
+        self.assertNotIn(
+            "`questions[].evidence[]`.`origin_id`", fake_text
+        )
+
+
 class TestQuestionPacketGateIdOwnership(unittest.TestCase):
     """task0019 AC-5: the `gate_id` ownership statement names files that
     actually hold gate identifiers. `references/question-resolution.md`
@@ -1101,6 +1153,227 @@ class TestNoRestatedSiblingSsotContent(unittest.TestCase):
             self.assertFalse(
                 any("application rule" in heading for heading in headings),
                 "must not duplicate workflow-patch.md's application-rule heading",
+            )
+
+
+class TestReworkPlannerContractSpecChangeCitation(unittest.TestCase):
+    """task0012 AC-5 (NFR1): rework-planner-contract.md states batch
+    resolution of `rework.spec-change` only by citing question-resolution.md's
+    classification gate -- the superseded fail-closed-abort claim is absent
+    -- and states the packet's origin-naming obligation that the gate's
+    origin verification (tests/test_classification_gate.py) depends on."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(REWORK_PLANNER_CONTRACT_PATH)
+
+    def _transition_section(self):
+        return _section(
+            self.text,
+            "## Specification-change transition",
+            "## Other conditions under which a question packet may be returned",
+        )
+
+    def test_batch_mode_cites_classification_gate_not_unlisted_fallback(self):
+        section = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "In batch mode, `rework.spec-change` is resolved through the "
+            "classification gate defined in "
+            "`references/question-resolution.md`",
+            section,
+        )
+        self.assertIn("this document does not restate", section)
+
+    def test_interactive_mode_stated_unchanged(self):
+        section = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "Interactive mode is unchanged: the user is asked directly",
+            section,
+        )
+
+    def test_superseded_fail_closed_abort_claim_is_absent(self):
+        # C5: the absence half. Non-vacuity: `_transition_section` above
+        # already proved the section exists (it would have raised
+        # otherwise); this checks it is also non-empty.
+        section = self._transition_section()
+        self.assertTrue(section.strip())
+        self.assertNotIn("falls to the unlisted-gate fallback", section)
+        self.assertNotIn("aborts rather than proceeding", section)
+
+    def test_superseded_claim_negative_proof_would_be_caught(self):
+        # Non-vacuity guard (Test Notes): the matcher above must actually
+        # flag the pre-task0012 wording it supersedes, not merely pass by
+        # vacuity against text that never contained it.
+        fake_section = (
+            "In batch mode, `rework.spec-change` has no defined policy in "
+            "`batch-policies.yaml`, so it falls to the unlisted-gate "
+            "fallback (5.9), which — because a specification change is "
+            "one of the fail-closed categories — aborts rather than "
+            "proceeding."
+        )
+        self.assertIn("falls to the unlisted-gate fallback", fake_section)
+        self.assertIn("aborts rather than proceeding", fake_section)
+
+    def test_states_packet_names_origins_via_origin_id_field(self):
+        # task0019 AC-8 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45),
+        # generalized by task0028, renamed by rework-contract-drift/task0004
+        # (FR4): the packet names its origin(s) through the structured
+        # `evidence[].origin_id` field -- the origin_kind/origin_id pair,
+        # covering both review- and verify-sourced origins -- never the
+        # record path.
+        section = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "The question packet returned for `gate_id: rework.spec-change` "
+            "names its origin(s) — the `origin_kind` / `origin_id` pair "
+            "`references/rework-task-synthesis.md`'s Invariant 6 defines "
+            "(cited, not restated) — via `evidence[].origin_id`",
+            section,
+        )
+        self.assertIn(
+            "the gate's origin verification "
+            "(`references/question-resolution.md`) locates its own bound "
+            "set itself",
+            section,
+        )
+
+    def test_old_review_only_packet_naming_wording_is_gone(self):
+        # Negative proof (task0028 AC-8): the pre-task0028 wording, which
+        # named review findings alone as the packet's origin vocabulary via
+        # the now-retired single-field name, must not survive anywhere in
+        # the document. Built at run time (never a contiguous literal) so
+        # this sample never trips the retired-identifier absence scan
+        # (IMPLEMENTATION.md Shared Components).
+        retired_field = "finding" + "_stable_id"
+        self.assertNotIn(
+            "names each originating review finding's `stable_id` in the "
+            f"question's `evidence[].{retired_field}` entries",
+            self.text,
+        )
+
+    def test_states_packet_does_not_name_the_record_path(self):
+        section = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "does not name the review round record path", section
+        )
+
+    def test_old_packet_names_record_path_wording_is_gone(self):
+        # Negative proof: the pre-task0019 wording let the packet name the
+        # record path -- the worker-controlled channel the origin-
+        # verification bypass used. It must not survive.
+        section = self._transition_section()
+        self.assertNotIn(
+            "names each originating review finding's `stable_id` and the "
+            "review round record path",
+            section,
+        )
+
+    def test_old_wording_negative_proof_would_be_caught(self):
+        fake_section = (
+            "The question packet returned for `gate_id: rework.spec-change` "
+            "names each originating review finding's `stable_id` and the "
+            "review round record path in the question's `evidence[]` "
+            "entries -- the gate's origin verification "
+            "(`references/question-resolution.md`) reads them from there."
+        )
+        self.assertIn(
+            "names each originating review finding's `stable_id` and the "
+            "review round record path",
+            fake_section,
+        )
+
+    def test_does_not_restate_the_r5_position_or_path_formula(self):
+        # NFR1: the round-record location formula is owned by
+        # references/review-phase.md's R5 section and cited from
+        # question-resolution.md; this contract must not restate it.
+        self.assertNotIn("Phase R5", self.text)
+        self.assertNotIn("reviews/round", self.text)
+
+    def test_packet_obligation_negative_proof_missing_obligation_fails_matcher(self):
+        fake_section = (
+            "In batch mode, `rework.spec-change` is resolved through the "
+            "classification gate defined in "
+            "`references/question-resolution.md`, which this document does "
+            "not restate."
+        )
+        self.assertNotIn(
+            "names its origin(s)",
+            fake_section,
+        )
+
+    def test_five_step_sequence_unaffected_by_the_citation_rewrite(self):
+        # Retention: the five numbered orchestrator-follow-up steps this
+        # task did not touch must still be exactly five, in order -- the
+        # citation rewrite only replaces the trailing prose paragraph.
+        section = self._transition_section()
+        numbered = re.findall(r"^(\d+)\. ", section, re.MULTILINE)
+        self.assertEqual(numbered, ["1", "2", "3", "4", "5"])
+
+
+class TestReworkPlannerContractGateIdentifiers(unittest.TestCase):
+    """task0024 AC-4 (FR11): rework-planner-contract.md carries a
+    "## Gate identifiers" section naming `rework.spec-change` -- this is
+    what attributes the gate to the `rework-planner` worker and puts it
+    into the validator's gate registry (see
+    tests/test_validate_worker_output.py's TestGateRegistryDerivation and
+    tests/test_spec_change_gate_binding.py, which assert the registry
+    entry the section produces, rather than asserting this sentence)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(REWORK_PLANNER_CONTRACT_PATH)
+
+    def _gate_identifiers_section(self):
+        return _section(
+            self.text,
+            "## Gate identifiers",
+            "## Other conditions under which a question packet may be returned",
+        )
+
+    def test_section_exists_and_names_the_gate_id(self):
+        section = self._gate_identifiers_section()
+        self.assertIn("`rework.spec-change`", section)
+
+    def test_section_states_no_batch_policies_entry(self):
+        section = re.sub(r"\s+", " ", self._gate_identifiers_section())
+        self.assertIn(
+            "carries no entry in `references/batch-policies.yaml`", section
+        )
+
+    def test_section_cites_classification_gate_not_restated(self):
+        section = re.sub(r"\s+", " ", self._gate_identifiers_section())
+        self.assertIn(
+            "the classification gate defined in "
+            "`references/question-resolution.md`",
+            section,
+        )
+        self.assertIn("cited, not restated", section)
+
+    def test_section_states_the_registry_consequence(self):
+        section = re.sub(r"\s+", " ", self._gate_identifiers_section())
+        self.assertIn(
+            "puts it into the validator's gate registry "
+            "(`em-workflow/scripts/validate-worker-output.py`)",
+            section,
+        )
+        self.assertIn("binding it to the `spec-change` category", section)
+
+    def test_negative_twin_no_gate_identifiers_heading_fails(self):
+        # Non-vacuity guard: text that names the gate_id in prose without
+        # the "## Gate identifiers" heading (the pre-task0024 state -- the
+        # heading and its parser attribution did not exist at all) must not
+        # satisfy the section locator above.
+        fake_text = (
+            "## Specification-change transition\n\n"
+            "The rework-planner raises `rework.spec-change` via the "
+            "transition above.\n\n"
+            "## Other conditions under which a question packet may be "
+            "returned\n"
+        )
+        with self.assertRaises(ValueError):
+            _section(
+                fake_text,
+                "## Gate identifiers",
+                "## Other conditions under which a question packet may be returned",
             )
 
 

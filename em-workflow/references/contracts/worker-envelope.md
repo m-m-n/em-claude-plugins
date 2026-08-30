@@ -69,6 +69,7 @@ outside this envelope's scope.
 | `resolved_input_paths`.`package_files` | Resolved package-manifest paths | Yes (may be empty) |
 | `resolved_input_paths`.`other_features_design` | Resolved sibling-feature design paths | Yes (may be empty) |
 | `resolved_input_paths`.`visual_inputs` | Resolved visual input paths | Yes (may be empty) |
+| `resolved_input_paths`.`reference_scan_targets` | Resolved paths the referenced-side reference-impact scan reads | Yes (may be empty) |
 | `allowed_write_roots` | New-file directories the worker may write under | Yes (may be empty) |
 | `output_contract_path` | Path to the worker's own `references/contracts/*-contract.md` | Yes |
 

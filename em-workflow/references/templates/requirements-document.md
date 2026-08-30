@@ -210,9 +210,7 @@ erDiagram
 
 ### 9.4 宣言された変更集合
 
-**このフィーチャー固有のパス**:
-- {変更対象パス1}
-- {変更対象パス2}
+このフィーチャー固有のパスは手動で列挙せず、create-plan で `workflow.yaml` の各タスクの `files` から導出する（`references/phases/create-plan-phase.md`）。
 
 **デフォルトメンバー**（SPEC作成者が明示的に除外しない限り、常に宣言に含まれる）:
 - `feature-docs/{feature}/**`

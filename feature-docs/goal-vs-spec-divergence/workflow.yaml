@@ -1,0 +1,1238 @@
+schema_version: 1
+feature: goal-vs-spec-divergence
+created: 2026-08-23
+base_branch: main
+parent_branch: em-workflow/goal-vs-spec-divergence/integration
+batch:
+  review_rework_count: 1
+  verify_rework_count: 1
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: a49819ffb60ac1f16f05a6265868da5597c05c46
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 成果物が em-workflow のプロトコル文書・エージェントプロンプト・tests/ 配下の Python テストのみで、UI 面・データモデル・デザインシステム入力を持たない。design_system_candidates
+    は 0 件。create-spec.design-step ゲートでユーザーが skip を確認済み
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 69fb724d8bda30fd5ba474c4476f14442c5a9766
+- id: implement
+  status: completed
+  base_commit: fc51b27dcaeeb4646b569fe5b7be2ba800b021c2
+  completed_at_commit: 533955625c7b902a70fd565d0f144b3d494730f2
+- id: review
+  status: completed
+  completed_at_commit: dfc015a0e2249947ae9f44375d1ccb961e1f5932
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: 9246edb9c3b2daf0c50d4fb99c316d0725bff23b
+  notes: 'pass 2。verify 由来 rework（task0027-task0029）で V-1〜V-6 をすべて解消した。V-1: 適用規則の本数は workflow-patch.md
+    の 1 箇所のみ（18 本）、consumer 2 文書の再掲を撤去。V-2/V-3: origin_kind/origin_id を導入し、origin_kind はオーケストレーター保有・照合は束縛集合全体に対して実施。V-4:
+    carried_task_ids と高位番号採番を implementation-planner.md と planner-contract.md に伝播。V-5: 適用規則 18 が replan_authorized
+    を false にする実行者とタイミングを規定。V-6: classification を追記型リスト化。テスト 2234 件 green、MV-1 / MV-4 / SC-6 も再確認済み。留意:
+    task0027-task0029 の変更は review フェーズを通っていない（review は round 4 で completed、batch.review_rework_count が上限のため再レビューは行っていない）。'
+- id: retrospect
+  status: completed
+  completed_at_commit: 71647aa4a5a1e0a0b2b3b62858ea3c5568cebb24
+tasks:
+  task0001:
+    title: goal block definition in the workflow schema
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/workflow-schema.md
+    - tests/test_goal_block_schema.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR20
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0001
+  task0002:
+    title: replace_all permission relaxation for re-planning
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - tests/test_workflow_patch_doc.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0002
+  task0003:
+    title: SPEC-change transition consistency and the wording-correction route
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/agents/rework-planner.md
+    - tests/test_rework_synthesis_contract.py
+    - tests/test_wording_correction_route.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: high
+    requirements:
+    - FR6
+    - FR15
+    - FR16
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0003
+  task0004:
+    title: batch classification gate in question resolution
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR3
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - FR12
+    - FR13
+    - FR14
+    - FR20
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0004
+  task0005:
+    title: classification audit record in the phase-state schema
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/references/phase-state.md
+    - tests/test_phase_state_doc.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR14
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0005
+  task0006:
+    title: batch policy header aligned with the revised fail-closed rule
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/references/batch-policies.yaml
+    - tests/test_batch_policies.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0006
+  task0007:
+    title: create-spec writes the goal and resolves reference-scan targets
+    plan: tasks/task0007.md
+    files:
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_create_spec_goal_persistence.py
+    skills: []
+    domains:
+    - input-handling
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR17
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0007
+  task0008:
+    title: referenced-side impact scan in the analyst contract and prompt
+    plan: tasks/task0008.md
+    files:
+    - em-workflow/references/contracts/analyst-contract.md
+    - em-workflow/references/contracts/worker-envelope.md
+    - em-workflow/agents/requirements-analyst.md
+    - tests/test_reference_impact_scan.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR17
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0008
+  task0009:
+    title: declared change set becomes a create-plan derivation
+    plan: tasks/task0009.md
+    files:
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/templates/spec-document.md
+    - em-workflow/references/templates/requirements-document.md
+    - tests/test_spec_template_declared_change_set.py
+    - tests/test_requirements_template_declared_change_set.py
+    - tests/test_declared_change_set_invariants.py
+    - tests/test_change_set_derivation.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR18
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0009
+  task0010:
+    title: conditional auto-addition of implement deviations
+    plan: tasks/task0010.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_deviation_auto_addition.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR19
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0010
+  task0011:
+    title: plugin version bump
+    plan: tasks/task0011.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_goal_vs_spec_divergence_version_bump.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - NFR6
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0011
+  task0012:
+    title: routed-arm exit and origin verification in batch question resolution
+    plan: tasks/task0012.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_rework_synthesis_contract.py
+    - tests/test_worker_contract_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR9
+    - FR10
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0012
+  task0013:
+    title: re-planning permission premise, task-id allocation, and the mandatory preserve set
+    plan: tasks/task0013.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/references/implement-phase.md
+    - tests/test_workflow_patch_doc.py
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_implement_routeback_gate.py
+    - tests/test_routeback_reset_scope_consistency.py
+    - tests/test_hook_classification_pin.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: 'deviation: refreshed WORKFLOW_PATCH_SHA256 byte-identity pin in tests/test_gate_option_vocabulary.py
+      (outside expected_files)'
+    branch: em-workflow/goal-vs-spec-divergence/task0013
+  task0014:
+    title: structure-preserving write of the goal block
+    plan: tasks/task0014.md
+    files:
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_goal_block_schema.py
+    - tests/test_create_spec_goal_persistence.py
+    - tests/test_phase_protocols.py
+    skills: []
+    domains:
+    - input-handling
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - NFR1
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0014
+  task0015:
+    title: implement-derived members in the declared change set derivation
+    plan: tasks/task0015.md
+    files:
+    - em-workflow/references/phases/create-plan-phase.md
+    - tests/test_change_set_derivation.py
+    - tests/test_deviation_auto_addition.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR18
+    - FR19
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR7
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0015
+  task0016:
+    title: validator agreement with the two replace_all permission paths
+    plan: tasks/task0016.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/scripts/check-plugin-invariants.py
+    - tests/test_validate_worker_output.py
+    - tests/test_check_plugin_invariants.py
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/workflow.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/phase-state.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-initial-planning-merged-tasks/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-initial-planning-merged-tasks/workflow.json
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: medium
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR5
+    - NFR8
+    status: merged
+    notes: 'deviation: refreshed byte-identity SHA256 pins in tests/test_gate_option_vocabulary.py (outside
+      expected_files); reported disagreement with workflow-patch.md''s documented re-entry form (task0013
+      owns that document)'
+    branch: em-workflow/goal-vs-spec-divergence/task0016
+  task0017:
+    title: the re-planning permission contract, end to end
+    plan: tasks/task0017.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_workflow_patch_doc.py
+    - tests/test_validate_worker_output.py
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0017
+  task0018:
+    title: create-spec re-entry is a partial update
+    plan: tasks/task0018.md
+    files:
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_create_spec_reentry_preservation.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: low
+    requirements:
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0018
+  task0019:
+    title: the classification gate's trust boundary
+    plan: tasks/task0019.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/question-packet-schema.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_worker_contract_docs.py
+    - tests/test_rework_synthesis_contract.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR7
+    - FR9
+    - FR10
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR5
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0019
+  task0020:
+    title: a writer, an operation and an evidence form for deviation auto-addition
+    plan: tasks/task0020.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - tests/test_deviation_auto_addition.py
+    - tests/test_change_set_derivation.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR18
+    - FR19
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR8
+    status: merged
+    notes: task0017 マージ後に引用先の規則が workflow-patch.md に実在することを確認済み（統合状態で整合）
+    branch: em-workflow/goal-vs-spec-divergence/task0020
+  task0021:
+    title: realign the guardrail migration pins with the current repository
+    plan: tasks/task0021.md
+    files:
+    - tests/test_guardrail_hooks_migration.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - NFR5
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0021
+  task0022:
+    title: one flag per judgement in the spec_change record
+    plan: tasks/task0022.md
+    files:
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/phase-state.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replanning-consumed-spec-change/phase-state.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-after-create-spec-dispatch/
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replan-authorization-spent/
+    - tests/test_spec_change_replan_authorization.py
+    - tests/test_phase_state_doc.py
+    - tests/test_workflow_patch_doc.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: merged
+    notes: 'deviation: expected_files 外の fixture 2 件 (invalid-replace-all-replanning-missing-base-commit-preserve/phase-state.json,
+      invalid-replace-all-replanning-drops-existing-task/phase-state.json) に replan_authorized: true を追加。conflict_retries=1
+      (tests/test_gate_option_vocabulary.py, task0024 と親側採用で解決)'
+    branch: em-workflow/goal-vs-spec-divergence/task0022
+  task0023:
+    title: carried task ids on a re-planning replace_all
+    plan: tasks/task0023.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-merged-tasks/workflow.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replanning-drops-existing-task/input.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replanning-entry-for-registered-id/
+    - tests/test_replanning_carry_over.py
+    - tests/test_workflow_patch_doc.py
+    - tests/test_validate_worker_output.py
+    - tests/test_change_set_derivation.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR18
+    - FR19
+    - NFR1
+    - NFR5
+    - NFR8
+    status: merged
+    notes: 'deviation: sibling 所有の tests/test_spec_change_replan_authorization.py と fixture valid-replace-all-replanning-after-create-spec-dispatch/input.json
+      を carried_task_ids 形式へ追随修正。conflict_retries=2 (task0022 / task0025 と親側採用で解決)'
+    branch: em-workflow/goal-vs-spec-divergence/task0023
+  task0024:
+    title: close the fail-closed carve-out around the spec-change category
+    plan: tasks/task0024.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_spec_change_gate_binding.py
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_worker_contract_docs.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR5
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0024
+  task0025:
+    title: the classification gate's outcome closes its question
+    plan: tasks/task0025.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/question-packet-schema.md
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_gate_outcome_packet_lifecycle.py
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    - input-handling
+    complexity: high
+    requirements:
+    - FR7
+    - FR8
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR8
+    status: merged
+    notes: conflict_retries=2 (tests/test_gate_option_vocabulary.py, tests/test_validate_worker_output.py;
+      task0024 / task0022 と親側採用で解決)
+    branch: em-workflow/goal-vs-spec-divergence/task0025
+  task0026:
+    title: create-spec re-entry upserts the requirement map
+    plan: tasks/task0026.md
+    files:
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_create_spec_reentry_preservation.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0026
+  task0027:
+    title: the carry-over rule reaches its producer and its consumers
+    plan: tasks/task0027.md
+    files:
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/references/contracts/planner-contract.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - tests/test_replanning_producer_alignment.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: medium
+    requirements:
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR5
+    - NFR8
+    status: merged
+    notes: null
+    branch: em-workflow/goal-vs-spec-divergence/task0027
+  task0028:
+    title: origin identity, and who chooses what gets checked
+    plan: tasks/task0028.md
+    files:
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/references/question-resolution.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - tests/test_spec_change_origin_binding.py
+    - tests/test_question_resolution_doc.py
+    - tests/test_classification_gate.py
+    - tests/test_rework_synthesis_contract.py
+    - tests/test_worker_contract_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR7
+    - FR11
+    - NFR1
+    - NFR2
+    - NFR5
+    - NFR8
+    status: merged
+    notes: tests/test_question_resolution_doc.py は計画に含まれていたが、Origin verification 節に触れる assertion が無く変更不要だった
+    branch: em-workflow/goal-vs-spec-divergence/task0028
+  task0029:
+    title: the phase-state records' writer, origin and lifetime
+    plan: tasks/task0029.md
+    files:
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/
+    - tests/test_classification_audit_retention.py
+    - tests/test_phase_state_doc.py
+    - tests/test_spec_change_replan_authorization.py
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR6
+    - FR14
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR8
+    status: merged
+    notes: 'deviation: sibling 所有の tests/test_replanning_carry_over.py（spec_change fixture の origin_kind/origin_id
+      化）と tests/test_workflow_patch_doc.py（適用規則の本数 pin を 18 に更新 + 規則 18 の内容テスト追加）へ追随修正'
+    branch: em-workflow/goal-vs-spec-divergence/task0029
+review:
+  status: completed
+  rounds_completed: 4
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 8
+  needs_rework: false
+requirements:
+  FR1:
+    title: Verbatim goal persistence
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0007
+    - task0014
+    tests:
+    - TS-1
+  FR2:
+    title: Goal immutability
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0007
+    - task0014
+    tests:
+    - TS-1
+  FR3:
+    title: Goal treated as untrusted
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0004
+    - task0014
+    tests:
+    - TS-1
+  FR4:
+    title: Relaxed replace_all permission condition
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0013
+    - task0016
+    - task0017
+    - task0022
+    - task0023
+    - task0027
+    - task0029
+    tests:
+    - TS-2
+    - TS-18
+    - TS-19
+    - TS-23
+  FR5:
+    title: base_commit preservation on replanning
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0013
+    - task0016
+    - task0017
+    - task0018
+    - task0022
+    - task0023
+    - task0026
+    - task0027
+    tests:
+    - TS-2
+  FR6:
+    title: SPEC-change transition holds
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0013
+    - task0016
+    - task0017
+    - task0018
+    - task0022
+    - task0026
+    - task0027
+    - task0029
+    tests:
+    - TS-2
+    - TS-18
+    - TS-22
+  FR7:
+    title: Classification gate (batch-only)
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0019
+    - task0025
+    - task0028
+    tests:
+    - TS-3
+    - TS-21
+    - TS-24
+  FR8:
+    title: Interactive behaviour unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0025
+    tests:
+    - TS-3
+  FR9:
+    title: Asymmetry of classification outcomes
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0012
+    - task0019
+    tests:
+    - TS-3
+  FR10:
+    title: Adoption criterion (naming the evidence)
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0012
+    - task0019
+    tests:
+    - TS-3
+  FR11:
+    title: Revised fail-closed classification
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0006
+    - task0012
+    - task0019
+    - task0024
+    - task0028
+    tests:
+    - TS-4
+    - TS-20
+  FR12:
+    title: Handling of Codex output
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-11
+  FR13:
+    title: Route when Codex is absent
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-5
+  FR14:
+    title: Classification audit record
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0005
+    - task0029
+    tests:
+    - TS-5
+    - TS-25
+  FR15:
+    title: Independent wording-correction route
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-6
+  FR16:
+    title: Wording-correction route guard
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-6
+  FR17:
+    title: Impact-on-tests detection at create-spec
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0007
+    - task0008
+    tests:
+    - TS-7
+  FR18:
+    title: Declared Change Set becomes derived
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0009
+    - task0015
+    - task0020
+    - task0023
+    tests:
+    - TS-8
+    - TS-19
+  FR19:
+    title: Conditional auto-addition of deviations, containment check retained
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0010
+    - task0015
+    - task0020
+    - task0023
+    tests:
+    - TS-8
+  FR20:
+    title: Handling of pre-existing features without a goal block
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0004
+    - task0007
+    tests:
+    - TS-17
+  NFR1:
+    title: SSOT discipline
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    - task0009
+    - task0010
+    - task0012
+    - task0013
+    - task0014
+    - task0015
+    - task0017
+    - task0018
+    - task0019
+    - task0020
+    - task0022
+    - task0023
+    - task0024
+    - task0025
+    - task0026
+    - task0027
+    - task0028
+    - task0029
+    tests:
+    - TS-12
+    - TS-23
+  NFR2:
+    title: Fail-closed strength not regressed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0006
+    - task0012
+    - task0019
+    - task0024
+    - task0028
+    tests:
+    - TS-4
+    - TS-20
+    - TS-24
+  NFR3:
+    title: Unattended-run continuity
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0005
+    - task0010
+    - task0012
+    - task0015
+    - task0019
+    - task0020
+    - task0025
+    - task0029
+    tests:
+    - TS-13
+    - TS-21
+    - TS-25
+  NFR4:
+    title: Codex independence
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-14
+  NFR5:
+    title: Test conventions
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    - task0009
+    - task0010
+    - task0011
+    - task0012
+    - task0013
+    - task0014
+    - task0015
+    - task0016
+    - task0017
+    - task0018
+    - task0019
+    - task0020
+    - task0021
+    - task0022
+    - task0023
+    - task0024
+    - task0025
+    - task0026
+    - task0027
+    - task0028
+    - task0029
+    tests:
+    - TS-16
+  NFR6:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0011
+    tests:
+    - TS-9
+  NFR7:
+    title: Single scope
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    - task0009
+    - task0010
+    - task0011
+    - task0012
+    - task0013
+    - task0014
+    - task0015
+    tests:
+    - TS-15
+  NFR8:
+    title: Existing tests not broken
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    - task0009
+    - task0010
+    - task0011
+    - task0012
+    - task0013
+    - task0014
+    - task0015
+    - task0016
+    - task0017
+    - task0018
+    - task0019
+    - task0020
+    - task0021
+    - task0022
+    - task0023
+    - task0024
+    - task0025
+    - task0026
+    - task0027
+    - task0028
+    - task0029
+    tests:
+    - TS-10

@@ -1,0 +1,186 @@
+round: 3
+executed_at: "2026-08-30T01:54:04+09:00"
+scope:
+  review_mode: diff
+  base_commit: 4dc8c598399daad7e89ba07d98f32e31a2e20cf9
+  head_commit: db880c4644223eee2c8a1daaa3f43613214b8d8a
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - em-workflow/references/review-phase.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/batch-quiet-output/task0001.tests.yaml
+    - test-docs/batch-quiet-output/task0002.tests.yaml
+    - test-docs/batch-quiet-output/task0003.tests.yaml
+    - test-docs/batch-quiet-output/task0004.tests.yaml
+    - test-docs/batch-quiet-output/task0005.tests.yaml
+    - test-docs/batch-quiet-output/task0006.tests.yaml
+    - tests/test_batch_quiet_output_audit_record_contract.py
+    - tests/test_batch_quiet_output_audit_persistence.py
+    - tests/test_batch_quiet_output_discipline.py
+    - tests/test_batch_quiet_output_phase_wiring.py
+    - tests/test_batch_quiet_output_skill_wiring.py
+    - tests/test_batch_quiet_output_version_bump.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: 9b8e958a32336f59
+    severity: medium
+    category: architecture
+    file: em-workflow/references/phase-state.md
+    line: 414
+    title: "wake-decline レコードに書ける `source` 値が定義されていない"
+    description: >-
+      `## Batch audit record file` は `records[]` の各要素に `source` を必須として課し、
+      その値を `references/question-packet-schema.md` の閉じた語彙のうち 3 値
+      （`batch-safe-default` / `batch-codex-consultation` / `batch-decision-table`）に
+      絞っている。3 つともゲート解決の結果を条件にしているが、3 番目の writer である
+      implement wake の decline レコードは同じ節が明示的に「which is not a gate」と述べており、
+      どの条件にも当てはまらない。語彙の残り 2 値（`user` / `batch-classification-gate`）も
+      該当しない。writer が必須フィールドに書ける値を持たない状態。実害は不正な record が
+      生成されうることで、audit-item source map は `records[]` / `resolution_note` しか
+      読まないため run report 自体は壊れない。
+    suggestion: >-
+      (a) 非ゲート record を `source` の要求から明示的に外す、または (b) decline record に
+      割り当てる値をこの節で明示する（`batch-safe-default` を流用するならその拡張解釈も明記）。
+      あわせて `answer_mode` / `selected_option_ids` / `freeform` / `normalized_answer` の
+      埋め方も定める。
+    sources: [claude:architecture, litellm:vertex-glm-5:architecture]
+    confidence: 100
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（review / verify とも rework 予算を消費済み。medium のため R4 の auto-fix 候補外）"
+  - stable_id: aa54b5785792409f
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/phase-state.md
+    line: 417
+    title: "implement wake decline レコードに割り当てるべき `source` 値が規定されていない"
+    description: >-
+      9b8e958a32336f59 と同一サイトの comprehensive 観点からの指摘。writer ごとに値が
+      ばらつくか語彙外の値が書かれ、同節が宣言した「closed vocabulary から drawn」契約に反する。
+    suggestion: >-
+      列挙の末尾に decline record 用の値を足す。あわせて `answer_mode` /
+      `selected_option_ids` / `freeform` / `normalized_answer` の埋め方も 1 文で確定させると
+      question-packet-schema.md の Consistency rules 1-5 とも整合する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（medium のため R4 の auto-fix 候補外）"
+  - stable_id: 892c937b1b8291a9
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/phase-state.md
+    line: 433
+    title: "per-command approval fallback の即時コミット reach-point が Step 0 / Step A では実行不能"
+    description: >-
+      第 1 writer の bullet は per-command approval fallback が Step 0 / Step A / Step A.5 で
+      fire しうるとし、その場で `commit-docs.sh` によるコミットを求める。しかし Step 0 と
+      Step A の worktree 確保前は feature 名も integration worktree も未確定で、書き込み先
+      `feature-docs/{feature}/phase-state/batch-audit.yaml` のパスも `commit-docs.sh` の
+      第 1 引数も解決できない（commit-docs.sh は非 worktree パスに exit 1）。さらに
+      `references/command-execution-protocol.md` の 'Fallback: hook inactive' は fallback を
+      「workflow.yaml 由来コマンドの実行直前」に限定しており、Step 0 / Step A ではそもそも
+      発火しない。firing point の列挙が上流契約と食い違っている。
+    suggestion: >-
+      out-of-step の節を integration worktree が実在するサイト（Step A.5 のみ）に限定する。
+      Step 0 / Step A を残すなら、worktree 確保後の最初の `commit-docs.sh` reach-point まで
+      記録を繰り延べる規則を明記する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（medium のため R4 の auto-fix 候補外）"
+  - stable_id: b95674bf6b3cebfd
+    severity: medium
+    category: architecture
+    file: em-workflow/references/phase-state.md
+    line: 433
+    title: "per-command approval fallback の即時コミット規定が Step 0 / Step A では実行不能"
+    description: "892c937b1b8291a9 と同一サイトの architecture 観点からの指摘。"
+    suggestion: "firing point の列挙を実際の適用範囲に合わせ、`commit-docs.sh` に渡す worktree パスがいつ利用可能になるかを 1 文で述べる。"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（medium のため R4 の auto-fix 候補外）"
+  - stable_id: 6fa1f753c5457015
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 454
+    title: "batch で admitted deviation が run report から落ちる（run-report obligation が decline 専用ソースを指す）"
+    description: >-
+      既存規定は「admission も rejection も、`--batch` では run report に載る」と定めるが、
+      新設の Batch mode 段落は run-report obligation を batch-audit.yaml の読み取りで満たすとし、
+      同段落自身がそのファイルを「one entry per declined task」と定義している。admission の
+      エントリは存在しない。wake ターンの本文出力は抑制されるため、admission を拾う経路が
+      残らない。データ自体は `files` エントリ + wake commit として git に残るので損失は可視性のみ。
+    suggestion: >-
+      Batch mode 段落で admission 側のソースを明示する（`files` エントリと wake commit が
+      admission の監査記録である旨を 1 文に統合する）。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（medium のため R4 の auto-fix 候補外）"
+  - stable_id: 88e48e17a015829f
+    severity: medium
+    category: comprehensive
+    file: tests/test_batch_quiet_output_audit_record_contract.py
+    line: 389
+    title: "AC-5 の question_id マッチャが改行に弱く、規定 4 値のうち 2 値しか検査していない"
+    description: >-
+      `QUESTION_ID_ASSIGNMENT_RE` はリテラル空白 1 個を要求し、raw な subsection に適用される。
+      phase-state.md は markdown の行折り返しがあるため、実際に抽出されるのは 2 値だけで、
+      `command-execution.per-command-approval-fallback` と `implement.wake-decline` は
+      素通りする。null ガードも同じ理由で行折り返しに弱い。負の証明が通るのは forged サンプルが
+      1 行に収まっているため。
+    suggestion: >-
+      モジュール内の `_normalize_ws` をマッチャ側で適用して行折り返しに依存しない形にする。
+      あわせて `FORGED_SECTION_WITH_NULL` に改行入りの版を 1 本足す。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（medium のため R4 の auto-fix 候補外）"
+  - stable_id: 1fae8510596600cd
+    severity: medium
+    category: architecture
+    file: em-workflow/references/phase-state.md
+    line: 378
+    title: "非ゲートレコードに answer-record 形状を流用しており、意味の無い必須フィールドを強いる"
+    description: >-
+      クロスモデルレビュアーが 3 箇所（377-378 のスコープ文、383-387 の `resolution_note` 必須化、
+      378-410 のフィールド形状）から同一の指摘をした。wake-decline は question でも gate でも
+      ないのに `question_id` / `answer_mode` / `freeform` / `normalized_answer` を持つ
+      answer-object 形状を共有しており、意味の定まらないフィールドが残る。
+    suggestion: >-
+      非 question writer 用の最小イベントレコード形状を別に定義するか、`resolution_note` の
+      非 question レコードにおける意味を明記する。スコープ文の「regardless of whether the
+      record's gate carries a `gate_id`」も、非ゲートレコードが存在する前提に書き直す。
+    sources: [litellm:vertex-glm-5:architecture]
+    confidence: 50
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached（medium のため R4 の auto-fix 候補外）"
+auto_fix:
+  loops_run: 1
+  applied_total: 2
+  termination: clean
+  notes: >-
+    loop 1 で high 2 件を適用した: skills/develop/SKILL.md Step C step 2 に「batch の監査項目
+    ソースを `git worktree remove` より前に読む」規律を追加し、references/phase-state.md の
+    question-resolution.md step 7 引用を実文（「no worker packet and no worker-minted
+    `question_id`」）に合わせた。再レビューで両方の解消を 5 観点すべてで確認し、残存する
+    critical/high はゼロ。全 2758 テストと destructive-guard 36/36 が green。
+residual_critical_high: 0
+rework_required: false

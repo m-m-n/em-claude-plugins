@@ -85,6 +85,16 @@ PHASE_STATE_STATUS_VALUES = {
 
 PHASE_VALUES = {"create-spec", "create-plan", "review", "verify", "rework"}
 
+# goal-vs-spec-divergence/task0029: the classification audit record's field
+# vocabularies (references/phase-state.md's `classification` list entry;
+# field set unchanged from task0005 -- only the record's shape and
+# lifetime changed this round).
+CLASSIFIER_VALUES = {"codex", "claude"}
+
+CLASSIFICATION_VERDICT_VALUES = {"goal_not_met", "spec_gap", "not_applicable"}
+
+CLASSIFICATION_DECISION_VALUES = {"proceed", "stop"}
+
 CATEGORY_VALUES = {
     "feature-identity",
     "business-objective",
@@ -118,11 +128,40 @@ ON_UNANSWERED_VALUES = {"block", "record_tbd", "use_batch_policy"}
 # choosing record_tbd / use_batch_policy for one of these categories.
 BLOCKING_REQUIRED_CATEGORIES = {"spec-change", "security", "license"}
 
+# rework-contract-drift/task0004 (FR6): the origin-identity pair's
+# `origin_kind` half (references/rework-task-synthesis.md Invariant 6) is
+# closed to these two values. Enforced wherever a `spec_change` record's
+# `origin_kind` is read, mirroring the vocabulary enforcement `classifier`/
+# `verdict`/`decision` already have below.
+ORIGIN_KIND_VALUES = {"review", "verify"}
+
+# rework-contract-drift/task0004 (FR3 validator half): the single closed
+# value set for a verify-step failed_items[] entry's `category`
+# (IMPLEMENTATION.md Shared Components "failed_items[].category
+# vocabulary"; the field itself is defined once by references/
+# workflow-schema.md, cited here, never restated in prose). Required and
+# non-empty on every entry; a missing, empty or out-of-vocabulary value is
+# rejected.
+FAILED_ITEM_CATEGORY_VALUES = {
+    "comprehensive",
+    "spec",
+    "security",
+    "performance",
+    "architecture",
+    "license",
+    "unknown",
+}
+
 ANSWER_SOURCE_VALUES = {
     "user",
     "batch-decision-table",
     "batch-codex-consultation",
     "batch-safe-default",
+    # goal-vs-spec-divergence/task0025: the batch-only classification
+    # gate's proceed outcome (references/question-resolution.md's
+    # Classification gate, Outcome step; vocabulary SSOT is
+    # references/question-packet-schema.md's `source` vocabulary).
+    "batch-classification-gate",
 }
 
 IMPACT_VALUES = {"low", "medium", "high"}
@@ -562,6 +601,29 @@ def build_gate_registry(references_dir):
     return registry
 
 
+def _gate_ids_for_category(gate_registry, category):
+    """goal-vs-spec-divergence/task0024 (AC-4/AC-5): the reverse of
+    `_category_for_gate_id` -- every gate_id in `gate_registry` a contract's
+    own "## Gate identifiers" section attributes to a worker (never an
+    orchestrator-opened, worker-unattributed gate_id -- see
+    `_worker_gate_ids_from_contracts`'s docstring for why that distinction
+    matters) AND whose suffix derives exactly `category`. `rework.spec-change`
+    lands here once `rework-planner-contract.md`'s own section attributes it
+    (this is what AC-4 requires: the registry entry, not a restated
+    sentence). Returns an empty set for a `category` with no such
+    worker-attributed gate_id -- callers must treat that as "no
+    category -> gate_id constraint today", never as "reject every gate_id",
+    so an as-yet-unattributed category stays unconstrained rather than
+    universally rejected."""
+    if not category:
+        return set()
+    return {
+        gate_id
+        for gate_id, entry in (gate_registry or {}).items()
+        if entry.get("worker") is not None and entry.get("category") == category
+    }
+
+
 # ---------------------------------------------------------------------------
 # extend_only comparability (design-input.md 5.4.2)
 #
@@ -683,6 +745,122 @@ def workflow_find_step(workflow, step_id):
     return None
 
 
+# AC-1/AC-2 (task0017, review round 2 rework); wording updated task0022
+# (review round 3, consumed-flag-split): the mandatory fields references/
+# phase-state.md defines for a `spec_change` record eligible for
+# re-planning. `replan_authorized` is checked separately below (its own
+# boolean-type + True check) -- it is the flag that carries the
+# re-planning authorization judgement. `consumed` is never consulted here
+# (references/phase-state.md's `spec_change` flag pair).
+#
+# goal-vs-spec-divergence/task0029: `origin_kind` / `origin_id` replace
+# the retired single-field origin identifier -- the origin pair defined in
+# references/rework-task-synthesis.md (Spec-change origin identity). Presence/
+# non-emptiness is all this check requires; a `verify`-sourced record
+# (`origin_kind: verify`) satisfies it on the same terms as a
+# `review`-sourced one (D13) -- neither value is special-cased here.
+SPEC_CHANGE_MANDATORY_FIELDS = ("reason", "origin_kind", "origin_id", "recorded_at_commit")
+
+
+def _load_rework_phase_state_from_dir(feature_dir):
+    """Loads `{feature_dir}/phase-state/rework.yaml` -- one of the two
+    equally valid sources for the re-planning path's re-entry signal
+    (workflow-patch.md's `replace_all` permission conditions, second case).
+    This is the form create-plan-phase.md's canonical invocation actually
+    produces: `--phase-state` there points at `phase-state/create-plan.yaml`
+    (the create-plan phase's own state), never at rework.yaml directly, so
+    the signal has to be read from this path instead. Tolerates a missing
+    `feature_dir`, a missing file, an unreadable file, or a parse failure by
+    returning None (fail-closed -- never a widening; this auxiliary read has
+    no channel to report a syntax error through, so it degrades exactly
+    like "signal absent")."""
+    if feature_dir is None:
+        return None
+    path = Path(feature_dir) / "phase-state" / "rework.yaml"
+    if not path.is_file():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    data, parse_err = parse_yaml_text(text)
+    if parse_err or not isinstance(data, dict):
+        return None
+    return data
+
+
+def resolve_rework_phase_state(phase_state, feature_dir):
+    """Resolves the rework-phase state mapping the re-planning path's second
+    case reads its re-entry signal from -- one of two equally valid sources:
+
+    1. `--phase-state`, when its own `phase` is `rework` (a caller that
+       already has that file open is not forced to re-supply it).
+    2. `{feature_dir}/phase-state/rework.yaml` -- the form the canonical
+       invocation actually produces (see _load_rework_phase_state_from_dir).
+
+    Returns None when neither source is available or qualifies -- fail
+    closed: the caller must then treat the patch as the initial-planning
+    path."""
+    if isinstance(phase_state, dict) and phase_state.get("phase") == "rework":
+        return phase_state
+    return _load_rework_phase_state_from_dir(feature_dir)
+
+
+def workflow_replace_all_spec_change_reentry(workflow, phase_state, feature_dir=None):
+    """workflow-patch.md's re-planning path has a second entry form: `create-
+    plan` reads `pending` not because this is the first planning pass but
+    because the SPEC-change transition re-entered it. That form is
+    recognizable only from a rework-phase phase-state mapping (resolved by
+    resolve_rework_phase_state -- never from workflow.yaml alone), and ALL
+    of the following must hold:
+
+    1. A rework-phase state mapping is available (see
+       resolve_rework_phase_state above).
+    2. Its `feature` matches `workflow`'s own `feature`.
+    3. It carries a `spec_change` record shaped as `references/
+       phase-state.md` defines: `reason`, `origin_kind`, `origin_id` and
+       `recorded_at_commit` present and non-empty, and `replan_authorized`
+       present as a boolean.
+    4. `replan_authorized` is `True` -- an authorization already spent
+       (`False`) is not a standing permission. `consumed` is never
+       consulted for this judgement: `references/phase-state.md`'s
+       `spec_change` flag pair keeps the two flags independent, and this
+       helper's re-planning-authorization check does not read `consumed`
+       (task0022, review round 3, consumed-flag-split).
+    5. `workflow.implement.base_commit` is already set (implementation has
+       actually started at least once before).
+
+    Fails closed on every one of these: a missing signal, a phase or feature
+    mismatch, a malformed record, or a `replan_authorized` that is absent,
+    non-boolean or spent is NOT this form -- the caller must fall back to
+    treating the patch as the initial-planning path. A narrower invocation
+    must never widen what replace_all permits."""
+    rework_state = resolve_rework_phase_state(phase_state, feature_dir)
+    if rework_state is None:
+        return False
+    if rework_state.get("feature") != (workflow or {}).get("feature"):
+        return False
+    spec_change = rework_state.get("spec_change")
+    if not isinstance(spec_change, dict) or not spec_change:
+        return False
+    if not all(spec_change.get(f) for f in SPEC_CHANGE_MANDATORY_FIELDS):
+        return False
+    # rework-contract-drift/task0004 (FR6): `origin_kind`'s closed
+    # vocabulary is enforced here, removing the asymmetry with
+    # `classification`'s classifier/verdict/decision vocabularies below --
+    # presence alone (the mandatory-fields check above) is not enough.
+    if spec_change.get("origin_kind") not in ORIGIN_KIND_VALUES:
+        return False
+    replan_authorized = spec_change.get("replan_authorized")
+    if not isinstance(replan_authorized, bool):
+        return False
+    if replan_authorized is not True:
+        return False
+    implement_step = workflow_find_step(workflow, "implement")
+    base_commit = implement_step.get("base_commit") if implement_step else None
+    return bool(base_commit)
+
+
 def workflow_requirement_ids(workflow):
     return set((workflow or {}).get("requirements", {}) or {})
 
@@ -769,6 +947,40 @@ def validate_question(q, index, *, gate_registry=None, packet_phase=None, packet
                             f"{entry['required_option_id']!r} to be offered among options",
                         )
                     )
+        # goal-vs-spec-divergence/task0024 (AC-5): the check above only
+        # constrains gate_id -> category, and only when gate_id is itself
+        # a registered entry -- a category: spec-change question paired
+        # with an unregistered, or worker-attributed-but-uncategorized,
+        # gate_id passed through with no error. Close the missing
+        # direction: category -> gate_id, derived the same way (never a
+        # hardcoded gate_id literal here) from the same registry, via
+        # whichever worker-attributed gate_id(s) that category's suffix
+        # binds to.
+        required_gate_ids = _gate_ids_for_category(gate_registry, q.get("category"))
+        if required_gate_ids and gate_id not in required_gate_ids:
+            errors.append(
+                err(
+                    "category",
+                    f"{p}.category {q.get('category')!r} requires gate_id to be one of "
+                    f"{sorted(required_gate_ids)}, got {gate_id!r}",
+                )
+            )
+    # rework-contract-drift/task0004 (FR4): the packet's own origin-naming
+    # obligation (references/question-packet-schema.md's evidence[].
+    # origin_id row; references/question-resolution.md's Classification
+    # gate, Origin verification) -- a `rework.spec-change` question with no
+    # `evidence[]` entry carrying a non-empty `origin_id` can never pass
+    # origin verification, so it is rejected here too.
+    if gate_id == "rework.spec-change":
+        evidence_entries = q.get("evidence") or []
+        if not any(isinstance(e, dict) and e.get("origin_id") for e in evidence_entries):
+            errors.append(
+                err(
+                    "evidence",
+                    f"{p}.evidence must carry at least one entry with a non-empty "
+                    "origin_id when gate_id is 'rework.spec-change'",
+                )
+            )
     if q.get("category") not in CATEGORY_VALUES:
         errors.append(err("category", f"{p}.category must be one of the fixed vocabulary"))
     if q.get("priority") not in PRIORITY_VALUES:
@@ -957,6 +1169,67 @@ def validate_answers_list(data, packet=None):
 # --kind workflow-patch (5.5)
 # ---------------------------------------------------------------------------
 
+def _verify_step_targeted_by_patch(patch):
+    """rework-contract-drift/task0008 (FR3, NFR1, NFR2, D11): True when
+    `patch`'s `step_patches` names `step_id` `verify` -- the only channel a
+    worker patch has for reaching the verify step at all (a `step_patches`
+    entry's `set` may touch only `status`; workflow-patch.md's
+    `step_patches` contract, cited not restated). None/absent
+    `step_patches`, a non-list, or `step_patches` naming other steps only,
+    is not targeting."""
+    if not isinstance(patch, dict):
+        return False
+    step_patches = patch.get("step_patches")
+    if not isinstance(step_patches, list):
+        return False
+    return any(
+        isinstance(sp, dict) and sp.get("step_id") == "verify"
+        for sp in step_patches
+    )
+
+
+def _validate_verify_failed_items_categories(workflow, patch):
+    """rework-contract-drift/task0004 (FR3 validator half, FR6), scoped by
+    rework-contract-drift/task0008 (FR3 rework, NFR1, NFR2, D11): every
+    entry of `workflow.yaml`'s `verify` step `failed_items[]` that `patch`
+    REACHES carries a REQUIRED, non-empty `category` drawn from
+    FAILED_ITEM_CATEGORY_VALUES (references/workflow-schema.md owns the
+    field's definition, vocabulary and the pre-change compatibility rule
+    this scoping implements; this function enforces it, never restates the
+    vocabulary in prose elsewhere). `patch` reaches the verify step's
+    entries only when it targets that step via `step_patches` (see
+    `_verify_step_targeted_by_patch`) -- a pre-existing entry a patch
+    neither supplies nor targets contributes no error here, because the
+    party that would receive the rejection (a worker's step patch) has no
+    way to repair it. Runs on the invocation path that already reads
+    `--workflow` (validate_workflow_patch), unconditional on
+    --dry-run-apply. Tolerates a missing/absent verify step or
+    failed_items list (nothing to check yet) and a non-mapping entry
+    (reported elsewhere, not this function's job) rather than crashing."""
+    errors = []
+    if not _verify_step_targeted_by_patch(patch):
+        return errors
+    verify_step = workflow_find_step(workflow, "verify")
+    if not isinstance(verify_step, dict):
+        return errors
+    failed_items = verify_step.get("failed_items")
+    if not isinstance(failed_items, list):
+        return errors
+    for i, item in enumerate(failed_items):
+        if not isinstance(item, dict):
+            continue
+        if item.get("category") not in FAILED_ITEM_CATEGORY_VALUES:
+            errors.append(
+                err(
+                    "category",
+                    f"workflow.yaml verify.failed_items[{i}].category must "
+                    f"be one of {sorted(FAILED_ITEM_CATEGORY_VALUES)} "
+                    "(missing, empty, or out of vocabulary)",
+                )
+            )
+    return errors
+
+
 def _as_checked_list(container, key, p, field_label, errors):
     """bs9 (round 2): returns `container.get(key)` coerced to a list for
     iteration, appending a machine-readable error (instead of raising) when
@@ -1025,10 +1298,19 @@ def validate_workflow_patch(
     digest_source=None,
     phase_state=None,
     dry_run=False,
+    feature_dir=None,
 ):
     if not isinstance(data, dict):
         return [err("structure", "workflow patch must be a mapping")]
     errors = []
+    if workflow is not None:
+        # FR3 validator half / FR6, scoped by task0008 (FR3 rework, D11):
+        # this is the invocation path that already reads --workflow
+        # (workflow_requirement_ids below); the verify-step
+        # failed_items[].category vocabulary is enforced here too,
+        # unconditional on --dry-run-apply, scoped to what `data` (this
+        # patch) reaches -- see _validate_verify_failed_items_categories.
+        errors.extend(_validate_verify_failed_items_categories(workflow, data))
     if data.get("schema_version") != 1:
         errors.append(err("schema_version", "schema_version must be 1"))
     patch_id = data.get("patch_id")
@@ -1057,6 +1339,28 @@ def validate_workflow_patch(
         entries = {}
     for task_id, entry in entries.items():
         errors.extend(validate_task_entry(task_id, entry, mode, registries, workflow))
+
+    # Re-planning carry-over declaration (workflow-patch.md "Re-planning
+    # task-id allocation"): tasks_patch.carried_task_ids -- structural shape
+    # only (each entry is a taskNNNN-shaped string). The semantic checks
+    # (every registered id carried, no unregistered id carried, no
+    # registered id re-entered under entries) need workflow.yaml and the
+    # re-planning/initial-planning distinction, so they live in
+    # _validate_dry_run_apply instead, alongside the other replace_all
+    # permission checks that already depend on the same distinction.
+    carried_task_ids = tasks_patch.get("carried_task_ids")
+    if carried_task_ids is not None:
+        if not isinstance(carried_task_ids, list):
+            errors.append(err("tasks_patch.carried_task_ids", "tasks_patch.carried_task_ids must be a list"))
+        else:
+            for cid in carried_task_ids:
+                if not isinstance(cid, str) or not TASK_ID_RE.match(cid):
+                    errors.append(
+                        err(
+                            "tasks_patch.carried_task_ids",
+                            f"tasks_patch.carried_task_ids entry {cid!r} must match {TASK_ID_RE.pattern}",
+                        )
+                    )
 
     requirements_patch = data.get("requirements_patch")
     if requirements_patch is not None:
@@ -1122,14 +1426,18 @@ def validate_workflow_patch(
     if dry_run:
         errors.extend(
             _validate_dry_run_apply(
-                data, workflow=workflow, digest_source=digest_source, phase_state=phase_state
+                data,
+                workflow=workflow,
+                digest_source=digest_source,
+                phase_state=phase_state,
+                feature_dir=feature_dir,
             )
         )
 
     return errors
 
 
-def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state):
+def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, feature_dir=None):
     errors = []
     operation = data.get("operation")
     tasks_patch = data.get("tasks_patch") or {}
@@ -1165,15 +1473,112 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state):
             if not set(tasks_contains).issubset(current_tasks):
                 errors.append(err("expected-mismatch", f"requirements_patch.entries[{fr_id}].expected.tasks_contains not satisfied by current workflow.yaml"))
 
-    # Rule 5 / 5.5.1: replace_all permission conditions.
+    # Rule 5 / 5.5.1: replace_all permission conditions. Two permitted
+    # paths (workflow-patch.md "replace_all permission conditions"):
+    # initial-planning (create-plan: pending, no re-entry signal) and
+    # re-planning (create-plan: needs_update, OR create-plan: pending on a
+    # SPEC-change re-entry -- workflow_replace_all_spec_change_reentry).
+    # Rule 3, common to both: any in_progress/failed task is a protocol
+    # error regardless of path.
+    #
+    # task0017 (review round 2 rework): the re-planning path carries two
+    # further, path-dependent obligations that can only be checked here --
+    # neither is knowable without the workflow.yaml this dry-run-apply
+    # already has in hand:
+    #
+    # - Mandatory `preserve` per operation (workflow-patch.md's table row):
+    #   `workflow.implement.base_commit` is mandatory on the re-planning
+    #   path, not mandatory at all on the initial-planning path.
+    # - Re-planning task-id allocation: `entries` must re-declare every
+    #   task id already registered in `workflow.yaml` (never drop one), and
+    #   any genuinely new id must be allocated above the highest registered
+    #   id -- the high-water mark is `max(registered ids)`, read directly
+    #   from `workflow`, never a number the validator has to store itself.
     if mode == "replace_all":
         tasks = workflow.get("tasks", {}) or {}
-        if tasks and any((t or {}).get("status") != "pending" for t in tasks.values()):
-            errors.append(err("replace-all-not-permitted", "replace_all requires tasks to be empty or all pending (implementation has started)"))
         create_plan_step = workflow_find_step(workflow, "create-plan")
         current_status = create_plan_step.get("status") if create_plan_step else None
         if current_status not in ("pending", "needs_update"):
             errors.append(err("replace-all-not-permitted", f"replace_all requires create-plan step to be pending or needs_update, got {current_status!r}"))
+        else:
+            if tasks and any((t or {}).get("status") in ("in_progress", "failed") for t in tasks.values()):
+                errors.append(err("replace-all-not-permitted", "replace_all requires no task to be in_progress or failed (implementation has started)"))
+            else:
+                is_replanning = current_status == "needs_update" or workflow_replace_all_spec_change_reentry(
+                    workflow, phase_state, feature_dir
+                )
+                if not is_replanning and tasks and any((t or {}).get("status") != "pending" for t in tasks.values()):
+                    errors.append(err("replace-all-not-permitted", "replace_all requires tasks to be empty or all pending (implementation has started)"))
+                elif is_replanning:
+                    preserve_strs = [p for p in (data.get("preserve") or []) if isinstance(p, str)]
+                    if "workflow.implement.base_commit" not in preserve_strs:
+                        errors.append(
+                            err(
+                                "preserve",
+                                "replace_all on the re-planning path requires preserve to "
+                                "include 'workflow.implement.base_commit'",
+                            )
+                        )
+                    # Re-planning carry-over declaration
+                    # (workflow-patch.md "Re-planning task-id allocation"):
+                    # `entries` may name only ids not yet registered; every
+                    # already-registered id must instead appear in
+                    # `carried_task_ids`, whose record is copied from
+                    # `workflow.yaml` verbatim (apply_patch's
+                    # `replace_planning` arm) -- three independently
+                    # reported rejections so a fixture proving one never
+                    # rides along with the other two.
+                    replanning_entries = (data.get("tasks_patch") or {}).get("entries") or {}
+                    entry_ids = set(replanning_entries) if isinstance(replanning_entries, dict) else set()
+                    carried_raw = (data.get("tasks_patch") or {}).get("carried_task_ids")
+                    carried_ids = {c for c in carried_raw if isinstance(c, str)} if isinstance(carried_raw, list) else set()
+                    existing_ids = set(tasks)
+
+                    registered_in_entries = sorted(entry_ids & existing_ids)
+                    if registered_in_entries:
+                        errors.append(
+                            err(
+                                "replace-all-entry-for-registered-id",
+                                "a re-planning replace_all's tasks_patch.entries must name "
+                                f"only ids not yet registered; {registered_in_entries} are "
+                                "already registered in workflow.yaml (carry them in "
+                                "tasks_patch.carried_task_ids instead)",
+                            )
+                        )
+                    dropped_ids = existing_ids - carried_ids
+                    if dropped_ids:
+                        errors.append(
+                            err(
+                                "replace-all-drops-task",
+                                "a re-planning replace_all must carry every task id already "
+                                "registered in workflow.yaml in tasks_patch.carried_task_ids; "
+                                f"missing {sorted(dropped_ids)}",
+                            )
+                        )
+                    unregistered_carried = sorted(carried_ids - existing_ids)
+                    if unregistered_carried:
+                        errors.append(
+                            err(
+                                "replace-all-carried-id-unregistered",
+                                "tasks_patch.carried_task_ids names ids not registered in "
+                                f"workflow.yaml: {unregistered_carried}",
+                            )
+                        )
+                    max_existing_id = 0
+                    for tid in existing_ids:
+                        m = TASK_ID_RE.match(tid)
+                        if m:
+                            max_existing_id = max(max_existing_id, int(tid[len("task"):]))
+                    for tid in sorted(entry_ids - existing_ids):
+                        m = TASK_ID_RE.match(tid)
+                        if m and int(tid[len("task"):]) <= max_existing_id:
+                            errors.append(
+                                err(
+                                    "replace-all-task-id-reused",
+                                    f"new task id {tid!r} must be allocated above the highest "
+                                    f"registered id (task{max_existing_id:04d})",
+                                )
+                            )
 
     # Rule 4: append must not overwrite existing task IDs, and
     # expected_next_task_id must match the actual next id.
@@ -1235,7 +1640,17 @@ def apply_patch(workflow, patch):
     entries = tasks_patch.get("entries") or {}
 
     if operation == "replace_planning":
+        # Re-planning carry-over declaration (workflow-patch.md
+        # "Re-planning task-id allocation"): a carried id's record is
+        # copied from the ORIGINAL workflow verbatim -- not re-derived from
+        # any patch-supplied body, because the patch supplies none.
+        carried_ids = tasks_patch.get("carried_task_ids")
+        carried_ids = carried_ids if isinstance(carried_ids, list) else []
+        existing_tasks = (workflow or {}).get("tasks", {}) or {}
         new_tasks = {}
+        for task_id in carried_ids:
+            if isinstance(task_id, str) and isinstance(existing_tasks.get(task_id), dict):
+                new_tasks[task_id] = copy.deepcopy(existing_tasks[task_id])
         for task_id, entry in entries.items():
             new_entry = dict(entry)
             new_entry["status"] = new_entry.pop("initial_status", "pending")
@@ -1373,6 +1788,36 @@ def validate_phase_state(data):
     stale_count = data.get("stale_redispatch_count", 0)
     if not isinstance(stale_count, int) or stale_count < 0:
         errors.append(err("stale_redispatch_count", "stale_redispatch_count must be a non-negative integer"))
+
+    # goal-vs-spec-divergence/task0029: `classification` is an append-type
+    # list (references/phase-state.md) -- one entry per gate pass, never
+    # rewritten or removed. A mapping here (what a wholesale-replace would
+    # leave behind, the pre-task0029 shape) is a structural violation, not
+    # a degraded-but-valid document.
+    classification = data.get("classification")
+    if classification is not None:
+        if not isinstance(classification, list):
+            errors.append(err(
+                "classification",
+                "classification must be a list -- one entry appended per "
+                "gate pass, never replaced wholesale (references/"
+                "phase-state.md)",
+            ))
+        else:
+            for i, entry in enumerate(classification):
+                if not isinstance(entry, dict):
+                    errors.append(err("classification", f"classification[{i}] must be a mapping"))
+                    continue
+                if entry.get("classifier") not in CLASSIFIER_VALUES:
+                    errors.append(err("classification", f"classification[{i}].classifier must be one of {sorted(CLASSIFIER_VALUES)}"))
+                if entry.get("verdict") not in CLASSIFICATION_VERDICT_VALUES:
+                    errors.append(err("classification", f"classification[{i}].verdict must be one of {sorted(CLASSIFICATION_VERDICT_VALUES)}"))
+                if entry.get("decision") not in CLASSIFICATION_DECISION_VALUES:
+                    errors.append(err("classification", f"classification[{i}].decision must be one of {sorted(CLASSIFICATION_DECISION_VALUES)}"))
+                if entry.get("verdict") == "spec_gap" and not entry.get("evidence_ids"):
+                    errors.append(err("classification", f"classification[{i}].evidence_ids is required (non-empty) when verdict is spec_gap"))
+                if entry.get("decision") == "stop" and not entry.get("reason"):
+                    errors.append(err("classification", f"classification[{i}].reason is required when decision is stop"))
 
     return errors
 
@@ -1568,6 +2013,7 @@ def validate_worker_result(
                     digest_source=digest_source,
                     phase_state=phase_state,
                     dry_run=dry_run,
+                    feature_dir=feature_dir,
                 ),
                 "workflow_patch",
             )
@@ -1865,6 +2311,7 @@ def main(argv=None):
                 digest_source=digest_source,
                 phase_state=phase_state,
                 dry_run=args.dry_run_apply,
+                feature_dir=feature_dir,
             )
         elif args.kind == "phase-state":
             errors = validate_phase_state(data)

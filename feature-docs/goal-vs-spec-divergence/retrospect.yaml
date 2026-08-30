@@ -1,0 +1,338 @@
+feature: goal-vs-spec-divergence
+collected_at: '2026-08-25T04:20:00+09:00'
+session_ids:
+- f746af2c-23d1-4be7-ba31-5a55f2732a57
+signals:
+  review_critical_high:
+  - round: 1
+    stable_id: 7c7f21d93abf4621
+    category: comprehensive
+    file: em-workflow/references/workflow-patch.md
+    title: 再計画パスの replace_all が implement-phase の recycled-task-id 不変条件を壊す
+    resolution: unresolved
+  - round: 1
+    stable_id: 359db9ee55f8cef4
+    category: comprehensive
+    file: em-workflow/references/contracts/rework-planner-contract.md
+    title: rework-planner 契約が batch での spec-change 中断という旧規則を残している
+    resolution: unresolved
+  - round: 1
+    stable_id: d4e76417c3772647
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: spec-change を abort 集合から外したが、Unlisted-gate fallback の fail-closed 前提が更新されていない
+    resolution: unresolved
+  - round: 1
+    stable_id: 7223862537d2283c
+    category: security
+    file: em-workflow/references/workflow-schema.md
+    title: goal の verbatim 保存に、YAML 構造を保全する要件が無い（workflow.yaml への構造インジェクション）
+    resolution: unresolved
+  - round: 1
+    stable_id: 320e8a23562fb63b
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: routed arm と不可逆アーム・origin provenance の優先順位が未定義
+    resolution: unresolved
+  - round: 1
+    stable_id: 6f7fdbfd2afca958
+    category: spec
+    file: em-workflow/references/question-resolution.md
+    title: Unlisted-gate fallback still claims spec-change was aborted; routed arm never exits the batch
+      sequence
+    resolution: unresolved
+  - round: 1
+    stable_id: e1696ae0eabf4783
+    category: spec
+    file: em-workflow/references/workflow-patch.md
+    title: FR5 の base_commit 保全が散文だけで、mandatory preserve に反映されていない
+    resolution: unresolved
+  - round: 1
+    stable_id: 45cc2053b58d2a24
+    category: spec
+    file: em-workflow/references/phases/create-plan-phase.md
+    title: FR19 の deviation 自動追加が、derivation の入力にも再導出トリガーにも存在しない
+    resolution: unresolved
+  - round: 1
+    stable_id: 00bdbbdc72bd2f3f
+    category: architecture
+    file: em-workflow/references/workflow-patch.md
+    title: replace_all 再計画パスの前提が SPEC 変更遷移の実際の step 状態と矛盾
+    resolution: unresolved
+  - round: 2
+    stable_id: 68d1f5558ed5ae1d
+    category: comprehensive
+    file: em-workflow/references/phases/create-spec-phase.md
+    title: create-spec 再入時に tasks / implement.base_commit の保全規定が無く、新しい再計画パスの前提が成立しない
+    resolution: unresolved
+  - round: 2
+    stable_id: 1da2c0b3e92f1bfe
+    category: comprehensive
+    file: em-workflow/references/workflow-patch.md
+    title: Re-planning task-id allocation 規則に高水位の保存先も検証も無い
+    resolution: unresolved
+  - round: 2
+    stable_id: 8c123828d8681764
+    category: comprehensive
+    file: em-workflow/scripts/validate-worker-output.py
+    title: replace_planning の mandatory preserve を文書だけ更新し、検証器とフィクスチャは空のまま
+    resolution: unresolved
+  - round: 2
+    stable_id: 87ae09bcfe6410c0
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: Origin verification がワーカー指定のパスからレビュー記録を読むため、category 降格の防御が迂回できる
+    resolution: unresolved
+  - round: 2
+    stable_id: 61c73dc71f323f45
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: fail-closed の優先順位が、worker が付ける述語（category / assumptions）に依存したまま
+    resolution: unresolved
+  - round: 2
+    stable_id: 7dd1a478ab63c59f
+    category: spec
+    file: em-workflow/references/phases/create-plan-phase.md
+    title: 再計画パスの再入シグナルが create-plan の正規呼び出しに到達せず、FR6 が実運用で成立しない
+    resolution: unresolved
+  - round: 2
+    stable_id: 0a6777facb990c9a
+    category: spec
+    file: em-workflow/scripts/validate-worker-output.py
+    title: FR5 の base_commit 必須 preserve が検証器で強制されず、新フィクスチャが preserve 空を valid と固定している
+    resolution: unresolved
+  - round: 2
+    stable_id: c64996c1c4a836d2
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: FR19 の自動追加条件に、機械的に検証できる証拠の形式が定義されていない
+    resolution: unresolved
+  - round: 2
+    stable_id: 6d731d9cd6f8b3f9
+    category: architecture
+    file: em-workflow/scripts/validate-worker-output.py
+    title: 再入シグナルの置き場と、それを読む検証器に渡される phase-state が食い違っている
+    resolution: unresolved
+  - round: 2
+    stable_id: c6b1737a7d7e82f1
+    category: architecture
+    file: em-workflow/references/phases/create-plan-phase.md
+    title: §12 の保持先 tasks.{T}.files は、書き込む主体も操作も未定義で、しかも再計画で消える
+    resolution: unresolved
+  - round: 2
+    stable_id: cbb5659c4025c46e
+    category: architecture
+    file: em-workflow/references/contracts/rework-planner-contract.md
+    title: origin verification が要求する stable_id / round record を載せる場所が question-packet スキーマに無い
+    resolution: unresolved
+  - round: 3
+    stable_id: bb37fb1bf4bfe236
+    category: spec
+    file: em-workflow/references/workflow-patch.md
+    title: 再入シグナルが create-plan 到達時には必ず consumed 済みで、FR6 が実運用で成立しない
+    resolution: unresolved
+  - round: 3
+    stable_id: ec89a950d5247129
+    category: comprehensive
+    file: em-workflow/references/workflow-patch.md
+    title: merged タスクの status / branch / files を保つ機構が無く、正例フィクスチャがその反例になっている
+    resolution: unresolved
+  - round: 3
+    stable_id: c993557bd9ac2670
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: 'fail-closed 一覧から category: spec-change を外した結果、gate_id が rework.spec-change 以外の仕様変更質問がどこにも捕まらない'
+    resolution: unresolved
+  - round: 3
+    stable_id: 345e41285f0ec931
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: 「オーケストレーター保有の不可逆操作リスト」が実体を持たない参照で、不可逆性の判定は依然ワーカー申告のみ
+    resolution: unresolved
+  - round: 3
+    stable_id: caf7dad63a808494
+    category: architecture
+    file: em-workflow/references/question-resolution.md
+    title: classification gate の proceed 側に packet/answer への書き込みも develop 状態機械の分岐も無い
+    resolution: unresolved
+  - round: 3
+    stable_id: b5f85c29102b8c97
+    category: comprehensive
+    file: em-workflow/references/phases/create-spec-phase.md
+    title: create-spec 再入場が requirements を凍結するため、SPEC 変更で増えた要件をタスクに割り当てられない
+    resolution: unresolved
+  - round: 3
+    stable_id: 194cda40ee386bd6
+    category: architecture
+    file: em-workflow/references/phases/create-plan-phase.md
+    title: §12 の唯一の保持先 tasks.{T}.files に再計画越しの生存強制が無い
+    resolution: unresolved
+  - round: 3
+    stable_id: 363980824ff7bfa7
+    category: architecture
+    file: em-workflow/scripts/validate-worker-output.py
+    title: task-id 再宣言規則が presence/no-drop レベルでしか強制されていない
+    resolution: unresolved
+  - round: 4
+    stable_id: f87fe3b882fb2e9d
+    category: comprehensive
+    file: em-workflow/references/rework-task-synthesis.md
+    title: SPEC 変更遷移の手順が rework.yaml に書くべき必須フィールドを 2/4 しか指示していない
+    resolution: fixed
+  - round: 4
+    stable_id: 59bbacbace1803da
+    category: security
+    file: em-workflow/references/implement-phase.md
+    title: Deviation auto-addition が implementer 自身に scope guard の拡張を許し、パス検証も経由しない
+    resolution: fixed
+  - round: 4
+    stable_id: b3a02c64fcfd09fe
+    category: architecture
+    file: em-workflow/agents/requirements-analyst.md
+    title: reference_impact が analyst の completed パス出力列挙から欠落し、参照先の「below」も存在しない
+    resolution: fixed
+  - round: 4
+    stable_id: 2a1f4c9e0b7d5638
+    category: architecture
+    file: em-workflow/agents/requirements-analyst.md
+    title: loop 1 の修正が payload.reference_impact を条件付きにし、SSOT の MUST と矛盾した
+    resolution: fixed
+  - round: 4
+    stable_id: 7c0b3e5a91d4f206
+    category: security
+    file: em-workflow/references/implement-phase.md
+    title: control path 拒否リストがオーケストレーター自身の権限状態と実行スクリプトを守っていない
+    resolution: fixed
+  - round: 4
+    stable_id: 5e8d2a740c3b91fa
+    category: security
+    file: em-workflow/references/implement-phase.md
+    title: loop 2 の『plugin root 相対』注記が em-workflow/** の拒否エントリを照合不能にした
+    resolution: fixed
+  - round: 4
+    stable_id: 9b4a1d63f8e2c057
+    category: security
+    file: em-workflow/references/implement-phase.md
+    title: 自動追加の AC-id 側に自己導入禁止規則がなく、実装者が根拠を自作できる
+    resolution: fixed
+  - round: 4
+    stable_id: 3d7f5b28c6a09e14
+    category: comprehensive
+    file: em-workflow/references/question-resolution.md
+    title: Classification gate の Proceed が書く answer record の option_id / answer_mode が未定義
+    resolution: fixed
+  - round: 4
+    stable_id: 8c1e40b95f7a2d36
+    category: comprehensive
+    file: em-workflow/references/contracts/rework-planner-contract.md
+    title: spec-change 遷移の 5 step 再掲が古く、記録すべきフィールドが 2 つ欠けている
+    resolution: fixed
+  - round: 4
+    stable_id: da9f5137cf823e35
+    category: comprehensive
+    file: em-workflow/agents/implementation-planner.md
+    title: 再計画 replace_all の生産者（implementation-planner）が carried_task_ids と高位番号採番を知らない
+    resolution: deferred
+  - round: 4
+    stable_id: 4c4cdbf7dbb5c61f
+    category: architecture
+    file: em-workflow/skills/develop/SKILL.md
+    title: replan_authorized を false に落とす書き手がどのドキュメントにも割り当てられていない
+    resolution: deferred
+  - round: 4
+    stable_id: b179f7bf60102d9a
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: Classification gate の Codex 不在時フォールバックが引用元の fail-closed 挙動を open 側に反転させている
+    resolution: deferred
+  - round: 4
+    stable_id: 112aadaef68d8fd8
+    category: spec
+    file: em-workflow/references/question-resolution.md
+    title: verify 由来の spec-change は origin verification を通過できず FR7 の「every case」が成立しない
+    resolution: deferred
+  - round: 4
+    stable_id: 6b3cf01264fe8136
+    category: spec
+    file: em-workflow/references/phase-state.md
+    title: replan_authorized を false にする主体が定義されておらず、再計画認可が消費されない / 分類監査レコードが毎回全置換され記録が残らない
+    resolution: deferred
+  - round: 4
+    stable_id: c5a93e176d02b8f4
+    category: security
+    file: em-workflow/references/phases/create-plan-phase.md
+    title: Planner-controlled paths now authorize their own scope
+    resolution: deferred
+  - round: 4
+    stable_id: e04b7c2915da683f
+    category: security
+    file: em-workflow/references/question-resolution.md
+    title: Untrusted worker still chooses which origin IDs receive security checks
+    resolution: deferred
+  - round: 4
+    stable_id: a72f0c8b34e15d69
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    title: ルートバック後の再計画が失敗タスクを再スコープできない（carry-over が verbatim コピーのため）
+    resolution: deferred
+  conflict_reworks:
+  - task: task0022
+    retries: 1
+  - task: task0023
+    retries: 2
+  - task: task0025
+    retries: 2
+  file_prediction_misses:
+  - task: task0013
+    files:
+    - tests/test_gate_option_vocabulary.py
+  - task: task0016
+    files:
+    - tests/test_gate_option_vocabulary.py
+  - task: task0022
+    files:
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replanning-missing-base-commit-preserve/phase-state.json
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/invalid-replace-all-replanning-drops-existing-task/phase-state.json
+  - task: task0023
+    files:
+    - tests/test_spec_change_replan_authorization.py
+    - em-workflow/references/fixtures/workflow-patch/replace_planning/valid-replace-all-replanning-after-create-spec-dispatch/input.json
+  - task: task0029
+    files:
+    - tests/test_replanning_carry_over.py
+    - tests/test_workflow_patch_doc.py
+  verification_failures:
+  - pass: 1
+    items:
+    - V-1
+    - V-2
+    - V-3
+    - V-4
+    - V-5
+    - V-6
+    note: review の auto-fix（単一ファイル編集）では解けなかった横断的な設計欠落が、そのまま verify の不合格として現れた。verify 由来 rework で 3 タスクに再合成し
+      pass 2 で全解消。
+  - pass: 2
+    items: []
+    note: 全項目通過。テスト 2234 件 green。
+  discretionary_perspectives: []
+  declined_findings: []
+lessons_candidates:
+- SSOT 文書に対する prose の auto-fix が 2 ラウンド連続で回帰を生んだ。loop 1 は analyst プロンプトに契約と矛盾する条件付き規定を足し、loop 2 は control
+  path 拒否リストに『plugin root 相対』注記を足して照合不能にした。いずれも次のループで修正できたが、review-editor は単一ファイルに閉じるため『引用先を直す』修正ができず、書き写しを増やす方向に倒れやすい。文書中心の
+  feature では needs-judgment の batch 自動適用を見直す価値がある。
+- review-editor が単一ファイル固定であることが、複数文書にまたがる SSOT 修正を構造的に適用不能にしている（round 4 で 1 件が skipped、複数が deferred）。同じ修正が
+  verify 由来 rework でタスク化されたら 1 発で通った。横断修正は auto-fix ではなく rework に回す判定基準があってもよい。
+- LiteLLM ハーネスのクロスモデルレビューが 3 観点とも review_data_too_large で落ちた。diff が 748KB。この skip_reason は R2b の再試行対象に入っていないため
+  fallback も効かない。大きな feature では diff の分割かファイル単位のレビュー指示が要る。
+- implement-phase.md がマージ済みタスクブランチの片付けに強制削除フラグ付きの git branch -D を指定しているが、同梱の destructive-guard が git-branch-force-delete
+  で拒否する（reset --hard にはある em-workflow 用の除外が無い）。統合 worktree 側で git branch -d を打てば git の安全検査も guard も通る。task0001-task0021
+  のブランチが残っているのは、以前のラウンドで同じ拒否に当たった痕跡と思われる。
+- worker-envelope の write_policy.targets を map 形式で組み立てたところ validate-worker-output.py の worker-result 検証が例外で落ちた（期待は
+  path キーを持つ配列）。dispatch 前に envelope 自体を検証する経路が無い。
+- rework-planner が生成する task plan の Files 節で、パス以外に inline code を書くと validator の task-plan-files パーサが『複数のバックティック引用パス』として弾く。2
+  回の dispatch で計 7 箇所発生し、いずれも手で直した。テンプレート側で『Files の各行は code span を 1 つだけにする』と明示すると消える。
+- review round 1-3 の findings の resolution が全て unresolved のまま記録されており、round 4 の round_context に 49 件が『未解決』として渡った。rework
+  でタスク化された findings を fixed に更新する経路が無いため、round_context の抑止機構が実質的に機能していない。
+- heredoc を <<PY（クォート無し）で書くと、Python 文字列内のバックティックを zsh がコマンド置換として実行してしまい、書き出した YAML から該当箇所が消えた。ドキュメント生成では常に
+  <<'PY' を使う。

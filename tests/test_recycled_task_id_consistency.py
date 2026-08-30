@@ -171,6 +171,23 @@ own base commit 9f5d7ae):
 - test_in_flight_sentence_survives -> RETENTION matcher, no proof needed
 - test_unreachability_slice_anchors_survive -> RETENTION matcher, no proof
   needed
+
+task0017 (feature-docs/goal-vs-spec-divergence review round2 rework)
+strengthens the premise `TestUnreachablePendingLaunchedCombination` cites:
+`references/workflow-patch.md`'s re-planning task-id allocation rule now
+also requires a re-planning `replace_all`'s `entries` to re-declare every
+task id already registered in `workflow.yaml` (never drop one), on top of
+the existing "never re-issue a retired id, allocate new ones above the
+highest registered id" guarantee this class's tests already pin. This
+module's own assertions are unaffected: they check only that
+`implement-phase.md`'s citation contains the substring "allocation rule"
+and omits "task0001"/"renumber" (`test_unreachability_sentence_cites_
+allocation_rule`) -- a citation, not a restatement, so a stronger cited
+rule does not change what is asserted here. `implement-phase.md` itself
+belongs to task0020 this round and is not read as changed content by any
+module this task owns (Test Notes: "Do not assert over ... implement-
+phase.md from any module this task owns ... Document agreement across
+the two tasks is a verify-phase item").
 """
 
 import importlib.util
@@ -668,8 +685,17 @@ class TestNonTerminalEventMakesRouteBackInapplicable(unittest.TestCase):
 
 class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
     """TS-5 / AC-5 (FR5): the unreachability sentence mentions the
-    planner's `replace_all` renumbering together with `launched` and
-    `pending`; the retained in-flight sentence survives."""
+    re-planning `replace_all`'s allocation-rule guarantee together with
+    `launched` and `pending`; the retained in-flight sentence survives.
+
+    task0013 (goal-vs-spec-divergence, review round 1 rework) replaces the
+    sentence's premise: it no longer bases the reasoning on the planner's
+    `replace_all` "renumbering tasks from `task0001`" (false once the
+    SPEC-change transition can reach re-planning with `merged` tasks
+    present, without going through I.2.c's own gate at all). The premise is
+    now `references/workflow-patch.md`'s re-planning task-id allocation
+    rule -- cited, never restated -- so the old renumbering wording must
+    not resurface."""
 
     @classmethod
     def setUpClass(cls):
@@ -682,6 +708,20 @@ class TestUnreachablePendingLaunchedCombination(unittest.TestCase):
         self.assertIn("replace_all", sentence)
         self.assertIn("launched", sentence)
         self.assertIn("pending", sentence)
+
+    def test_unreachability_sentence_cites_allocation_rule(self):
+        idx = self.section.index(UNREACHABILITY_OPENING_ANCHOR)
+        end = self.section.index("can never arise.", idx) + len("can never arise.")
+        sentence = self.section[idx:end]
+        self.assertIn("allocation rule", sentence)
+        self.assertNotIn("task0001", sentence)
+        self.assertNotIn("renumber", sentence)
+
+    def test_old_renumbering_premise_absent_from_i2a(self):
+        self.assertNotIn(
+            "the planner's `replace_all` re-numbers tasks from", self.section
+        )
+        self.assertNotIn("task0001", self.section)
 
     def test_retained_in_flight_sentence_survives(self):
         self.assertIn(
@@ -1104,6 +1144,30 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         self.assertIn("rework", sample)
         other_sample = "the failure reason is appended to the report"
         self.assertIn("append", other_sample)
+
+    def test_allocation_rule_citation_matcher_flags_the_pre_change_wording(
+        self,
+    ):
+        # task0013 (goal-vs-spec-divergence): the pre-change "Reason:"
+        # sentence, verbatim, before this task's edit landed -- no
+        # allocation-rule citation, only the renumbering premise this task
+        # replaces.
+        sample = _normalize_ws(
+            "Reason: I.2.c's route back to planning is the only writer "
+            "that resets a task's status to `pending`, and the planner's "
+            "`replace_all` re-numbers tasks from `task0001`, so the "
+            "`pending` + `failed` combination only ever arises when a "
+            "re-planned task inherited a retired id's journal events. "
+            "Given I.2.c's route-back precondition below, which admits "
+            "only tasks with a terminal journal last event, and the "
+            "planner's `replace_all` renumbering from `task0001` that is "
+            "the sole source of any recycled id, a re-numbered task can "
+            "only ever inherit a retired id's terminal events — so "
+            "workflow.yaml `status: pending` combined with journal last "
+            "event `launched` can never arise."
+        )
+        self.assertIn("task0001", sample)
+        self.assertNotIn("allocation rule", sample)
 
     # --- task0003 (D8 / TS-14 / SC-6): negative proofs for the eight
     # matchers that assert NEW post-change wording and previously had no

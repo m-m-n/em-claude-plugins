@@ -1,0 +1,94 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_state_domain_includes_phase_done
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_phase_done_conditions_stated
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document (git show 7877539:...batch-terminal-line.md),
+      the `state` bullet had no `phase_done` literal and none of the
+      `reason=none` / `same prefix` / `same four fields` / `same field order`
+      phase_done wording -- both assertIn checks failed for the right reason.
+      Confirmed with a throwaway script run over the extracted old content
+      before the document was rewritten.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_phase_done_consumer_relaunches_same_feature
+    red_confirmed: true
+    red_reason: >-
+      Old document contained neither `state=phase_done` nor "re-launches the
+      same feature"; assertIn failed on both against the pre-change text.
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_names_the_executed_step
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_at_verify_fail_rework_is_verify
+    red_confirmed: true
+    red_reason: >-
+      Old `step` bullet had none of "names the step EXECUTED in that turn",
+      "verify-fail rework boundary the value is `verify`", or "next launch
+      resumes at `implement`" -- all three assertIn checks failed against the
+      pre-change text.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_no_document_wording_states_a_terminal_state_count
+      - tests.test_batch_stop_contract.TestNoLineOnWaitTurnAndSentinel.test_states_general_no_line_rule
+    red_confirmed: true
+    red_reason: >-
+      Old document still contained "closed set of two values" and "two
+      terminal states" (assertNotIn failed). The pre-existing assertion in
+      test_states_general_no_line_rule checked "has not reached either",
+      which the rewritten sentence ("has not reached any ...") no longer
+      contains; updating that checked phrase in the same change is what AC-4
+      and IMPLEMENTATION.md D4 require. Confirmed both directions with the
+      throwaway red-check script against the extracted pre-change document.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_seven_level_2_headings_in_order
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_eleven_fixed_codes
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_section_stated_count_equals_table_row_count
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_source_paths_resolve_to_existing_files
+      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_occurs_only_inside_fenced_blocks
+    red_confirmed: false
+    red_reason: >-
+      AC-5 is a non-regression invariant (heading count/order, reason-code
+      count, coverage table, state=completed/stopped semantics, prefix
+      scoped to fenced blocks), not new behavior to drive red-green on. These
+      pre-existing tests were already green before this task's edits (the
+      task deliberately touches none of the sections they pin) and remain
+      green after -- their continued pass is the proof this criterion holds.
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract.TestBatchModePointer.test_restates_no_state_value_shape
+      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_state_value_shape_is_rejected
+      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_bare_boundary_literal_is_rejected
+      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_step_status_vocabulary_does_not_false_positive
+      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_step_status_vocabulary_occurs_in_a_real_pointer_document
+      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_forged_state_value_excerpt_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_forged_bare_boundary_excerpt_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestStateValueGuardMatcher.test_step_status_vocabulary_excerpt_is_otherwise_well_formed
+    red_confirmed: true
+    red_reason: >-
+      The matcher function `_assert_no_state_value_literal` did not exist
+      before this change (calling it would raise NameError). Its two
+      negative-proof tests (test_state_value_shape_is_rejected,
+      test_bare_boundary_literal_is_rejected) directly demonstrate, via
+      assertRaises(AssertionError), that the matcher correctly rejects
+      forged `state=phase_done` / bare `phase_done` content -- the
+      discriminating behavior AC-6 requires -- while the false-positive
+      proof shows it tolerates ordinary completed/skipped/stopped
+      step-status vocabulary, grounded in a real document
+      (implement-phase.md) rather than only a synthetic sample.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/suite-level criterion, not a single test. Verified by running
+      `python3 -m unittest discover -s tests` (exit 0, 2424 tests, 0
+      failures -- baseline was 2410/0) and by inspecting
+      tests/test_batch_stop_contract.py's imports, unchanged at `os`, `re`,
+      `unittest`, `pathlib` (stdlib only).

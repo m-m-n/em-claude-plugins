@@ -12,6 +12,9 @@ feature-docs/{feature}/phase-state/
 ├── create-spec.yaml
 ├── create-plan.yaml
 ├── rework.yaml
+├── batch-audit.yaml         # present only in a `--batch` run that
+│                             # recorded one of these (see "Batch audit
+│                             # record file" below)
 └── backfill.yaml            # present only while a project.design_system
                               # backfill's discovery result is unresolved
                               # into workflow.yaml (see "Backfill discovery
@@ -79,10 +82,22 @@ resolved_input_cache:          # derived cache of dynamic-input resolution (see 
 last_error: null
 spec_change:                   # `phase: rework` only.
   reason: "…"                  #   rework's spec-change gate records this
-  finding_stable_id: abc123    #   when the user chooses to change SPEC
+  origin_kind: review          #   review | verify -- the origin pair
+  origin_id: abc123            #   (references/rework-task-synthesis.md)
   recorded_at_commit: a3c91f2…
   consumed: false              #   orchestrator sets true once this record
                                #   has grounded one create-spec dispatch
+  replan_authorized: true      #   spec-change transition sets true when it
+                               #   writes the record; set false once a
+                               #   re-planning replace_all has been applied
+                               #   -- never read for stop-condition-3
+classification:                # `phase: rework` only, sibling of spec_change;
+                               #   a list -- one entry appended per gate pass.
+  - classifier: codex           #   codex | claude
+    verdict: goal_not_met       #   goal_not_met | spec_gap | not_applicable
+    evidence_ids: [FR14]        #   non-empty required when verdict: spec_gap
+    decision: stop               #   proceed | stop
+    reason: "…"                  #   mandatory whenever decision: stop
 ```
 
 Every top-level field:
@@ -106,7 +121,8 @@ Every top-level field:
 | `stale_redispatch_count` | See "Consecutive retry limit". |
 | `resolved_input_cache` | See "resolved_input_cache" below. |
 | `last_error` | `null`, or the last recorded phase-state/artifact-commit failure. |
-| `spec_change` | `reason`, `finding_stable_id`, `recorded_at_commit`, `consumed` — the interruption reason and finding's `stable_id` that rework's spec-change transition records, and the flag the orchestrator sets `true` once that record has grounded one `create-spec` dispatch (regardless of that dispatch's outcome). Present only when `phase: rework`. Written by rework's spec-change transition; `consumed` is written by the orchestrator. Every occurrence of rework's spec-change transition writes this record afresh, **replacing** any previous record including its `consumed` value — a newly written record is always unconsumed. Which `needs_update` this grounds, and when it triggers a stop, is `skills/develop/SKILL.md` Step B's rule, not restated here. |
+| `spec_change` | `reason`, `origin_kind`, `origin_id`, `recorded_at_commit`, `consumed`, `replan_authorized` — the interruption reason and the record's origin (the pair `origin_kind` / `origin_id` — `review` \| `verify` — defined in `references/rework-task-synthesis.md`, cited here, not restated) that rework's spec-change transition records, plus **two independent flags** the record carries (the `spec_change` flag pair): `consumed` — written `true` by the orchestrator once the record has grounded one `create-spec` dispatch (regardless of that dispatch's outcome); never read as a re-planning permission — and `replan_authorized` — written `true` by rework's spec-change transition when it writes the record, set `false` once a re-planning `replace_all` has been applied by the orchestrator's re-planning-application procedure (`references/workflow-patch.md`'s Application rules — cited here, not restated); never read as a stop-condition-3 suppressor. **Neither flag is ever read for the other's judgement.** Present only when `phase: rework`. `reason` / `origin_kind` / `origin_id` / `recorded_at_commit` are written by rework's spec-change transition; `consumed` is written by the orchestrator; `replan_authorized` has two writers — set `true` by rework's spec-change transition when it writes the record, and set `false` by the orchestrator's re-planning-application procedure (`references/workflow-patch.md`) once a re-planning `replace_all` has been applied. Every occurrence of rework's spec-change transition writes this record afresh, **replacing** any previous record including both flags' prior values — a newly written record is always unconsumed AND authorized. Which `needs_update` `consumed`'s suppression grounds, and when it triggers a stop, is `skills/develop/SKILL.md` Step B's rule, not restated here. |
+| `classification` | `classifier` (`codex` \| `claude`), `verdict` (`goal_not_met` \| `spec_gap` \| `not_applicable`), `evidence_ids` (list of requirement / acceptance-criterion IDs; non-empty required when `verdict: spec_gap`), `decision` (`proceed` \| `stop`), `reason` (short text; mandatory whenever `decision: stop`) — a **list**: one record per pass through the classification gate, including passes that end in a stop and passes where the gate was inapplicable. Present only when `phase: rework`, as a sibling of `spec_change`. The verdict rule that produces this record is `references/question-resolution.md`'s classification gate — cited here, not restated. Each pass **appends** one entry; an earlier entry is never rewritten or removed, so a run that passes the gate n times holds n entries in order. |
 
 ## ID uniqueness and idempotency
 
@@ -126,6 +142,16 @@ content matches, it is a no-op; if it diverges, it is a **protocol error**.
   occurrence of rework's spec-change transition replaces the record wholesale
   (see the `spec_change` row above), which is expected overwrite behavior,
   not a protocol error.
+- `classification` has no per-entry ID; each entry's identity is its
+  **position** in the list — the Nth classification-gate pass writes the
+  Nth entry. A repeated write of the same pass (e.g. a retried phase-state
+  commit after the Phase-state exit-4 recovery below) is a **re-statement
+  of the same entity**, on the same terms as an ID-keyed record above:
+  writing the Nth entry again with matching content is a no-op; writing it
+  with diverging content is a **protocol error**. Because a resumed run
+  never re-runs a gate pass whose entry is already recorded, it appends no
+  further entry for that pass — a resumed run's `classification` list ends
+  identical, in length and content, to an uninterrupted run's.
 
 ### worker_runs[].status transitions
 
@@ -328,6 +354,115 @@ phase's loop-termination condition.
 `worker_runs[].output_digest` retains **only a digest**; the full worker
 output body is never stored in phase-state.
 
+## Batch audit record file
+
+`feature-docs/{feature}/phase-state/batch-audit.yaml` holds the batch audit
+records that no per-phase phase-state file owns, following the same
+not-owned-by-one-phase exemption this document already grants
+`backfill.yaml` above. One file per feature.
+
+```yaml
+schema_version: 1
+feature: example-feature
+records:
+  - question_id: review.diff-size-gate
+    packet_id: null
+    answered_at: "2026-01-30T12:00:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "smallest / most reversible side effect option"
+    normalized_answer: "smallest / most reversible side effect option"
+    resolution_note: "gate: review phase diff-size gate; codex_consulted: true; no Codex suggestion mapped, fell through to the minimum-side-effect default"
+```
+
+`records` is a **list**, not a map: each writer appends one new element per
+record, so there is no key to collide and no possibility of one record
+silently overwriting another. Each element keeps the same per-field shape
+as an answer record — `question_id`, `packet_id`, `answered_at`, `source`,
+`answer_mode`, `selected_option_ids`, `freeform`, `normalized_answer`,
+`resolution_note`. Of these, `question_id` and `resolution_note` are
+defined by `references/question-packet-schema.md`'s answer object, not by
+this document's `## Schema` `answers` row above (which defines only
+`packet_id`, `answered_at`, `source`, `answer_mode`, `selected_option_ids`,
+`freeform`, and `normalized_answer`); `resolution_note` is required on
+every element here. This subsection's records cover every batch audit record that no
+per-phase phase-state file owns, regardless of whether the record's gate
+carries a `gate_id`; `gate_id` presence still decides which resolution
+path a gate takes, per `references/question-resolution.md`. This section
+states the `question_id` rule for each writer on its own authority; every
+value it prescribes conforms to the `question_id` pattern
+`references/question-packet-schema.md` owns (cited here, not restated).
+For a gate with no `gate_id` — the review phase diff-size gate and the
+per-command approval fallback — `question_id` is an identifying name of
+the gate itself: `question_id` is `review.diff-size-gate` for the
+diff-size gate, and `question_id` is
+`command-execution.per-command-approval-fallback` for the per-command
+approval fallback (the auto-approved command string itself is carried by
+`resolution_note`, which `## Reporting` in `references/batch-mode.md`
+already reads it from). Each resolves through `references/batch-mode.md`'s
+Non-packet gates table, with `source` `batch-safe-default` or
+`batch-codex-consultation`. For the one writer with a `gate_id` —
+`skills/develop/SKILL.md` Step A.5's `create-spec.command-approval` gate,
+the only writer here whose `source` is `batch-decision-table` —
+`question_id` is `create-spec.command-approval`, that gate's own
+`gate_id`, per `references/question-resolution.md` step 7's rule for an
+orchestrator-opened gate with no worker packet and no worker-minted
+`question_id`, resolved
+through `references/question-resolution.md`'s batch resolution sequence
+against `references/batch-policies.yaml`'s decision table. `question_id`
+is `implement.wake-decline` for the implement wake decline record, which
+is not a gate. `packet_id` is always
+`null`, because the orchestrator raises these records rather than a worker
+packet. `source` is drawn from `references/question-packet-schema.md`'s
+closed `source` vocabulary: `batch-safe-default` when no Codex suggestion
+mapped onto an option and the minimum-side-effect default was taken,
+`batch-codex-consultation` when Codex's suggestion did map onto one, or
+`batch-decision-table` for a record whose gate resolves through
+`references/batch-policies.yaml`. No field of the per-phase `answers`
+shape changes.
+
+Three writers append to this file, each at resolution time:
+
+- `references/batch-mode.md`'s Non-packet gates table: the review phase
+  diff-size gate and the per-command approval fallback each append one
+  entry, with `resolution_note` naming the gate site, the options
+  considered, the choice, and whether Codex was consulted. Inside a phase
+  step, the entry is committed by the step's next existing
+  `commit-docs.sh` call, the same reach-point every other in-step writer
+  below uses. The per-command approval fallback can also fire outside any
+  phase step (Step 0 / Step A / Step A.5, before that run has made any
+  `commit-docs.sh` call yet); there, the writer commits its own entry
+  itself, immediately, via the same `commit-docs.sh` path Step A.5's
+  batch branch below already uses for the same reason — an uncommitted
+  record at that point would otherwise be destroyed by
+  `references/implement-phase.md` I.2.b step 2's
+  `git -C {integration_worktree} reset --hard`, which is exactly the loss
+  this file exists to prevent.
+- `references/implement-phase.md` Step I.2.b step 3: the wake phase appends
+  one entry per declined `files` deviation, with `resolution_note` naming
+  the `task_id` and which of the three evidence parts was missing or
+  unresolved. Committed by Step I.2.b step 3's own wake commit.
+- `skills/develop/SKILL.md` Step A.5's batch branch: when it auto-approves
+  a command string without a human confirmation, it appends one entry
+  recording the command string, with `resolution_note` naming the command
+  and the basis for the auto-approval. Since this can happen before any
+  step has made its own commit, Step A.5's batch branch commits the entry
+  itself immediately, via the same `commit-docs.sh` path every other writer
+  here uses.
+
+Records are append-only: an existing element of the `records` list is
+never rewritten or removed. Every writer above states its own commit
+reach-point, so an appended record
+never stays uncommitted; a writer's own commit is never itself the reason
+to create a commit that would not otherwise happen, except for Step A.5's
+immediate commit stated above and the per-command approval fallback's
+immediate commit when it fires outside any phase step, stated above.
+`references/batch-mode.md`'s audit-item
+source map and `references/implement-phase.md`'s wake "Batch mode"
+paragraph both read this file; it introduces no change to any per-phase
+phase-state file's schema.
+
 ## Legacy feature compatibility
 
 An existing `workflow.yaml` created before this phase-state model has no
@@ -442,7 +577,44 @@ backfill's own once-only guard (see below); step 4 MAY delete
 Backfill runs **at most once** per feature; afterward the ordinary
 resolution rule applies.
 
+### Format-version compatibility
+
 **Unknown `schema_version`**: if a phase-state file's `schema_version` is
 not the value this document defines (currently `1`; anything greater is
 unknown), abort and report a plugin version mismatch. Do not attempt to
 interpret an unknown schema.
+
+**Pre-change record compatibility**: `origin_kind` / `origin_id` becoming
+mandatory on `spec_change`, and `classification` becoming the append-type
+list defined above, were both destructive shape changes to a record this
+document already owned; neither one moved `schema_version`.
+
+1. A record written before either change is not an unknown version: it is
+   still read as `schema_version: 1`, the same as any other record, and
+   never triggers the abort above.
+2. Being read as the current version does not make a pre-change record's
+   own shape usable. Its `spec_change` — missing the origin pair
+   (`references/rework-task-synthesis.md` Invariant 6, cited here, not
+   restated) — is refused at the point of use: the requirement that
+   `origin_kind` / `origin_id` be present and non-empty already fails
+   closed on an absent or empty pair wherever it is checked. That failure
+   is diagnosed here as **pre-change spec-change shape**, distinguishing a
+   record that predates the pair from one that is simply missing an
+   unrelated field. A pre-change `classification` entry — not the
+   append-type list defined above — is refused on the same terms,
+   diagnosed as **pre-change classification shape**.
+3. The remedy for `spec_change` is the guarantee this document already
+   states above (see "ID uniqueness and idempotency"): rework's
+   spec-change transition replaces the record wholesale on its next
+   occurrence, so a well-shaped record supersedes the pre-change one and
+   re-entry is restored. `classification`'s own append semantics (see the
+   field table above) are its remedy: a pre-change entry is never
+   rewritten, but every subsequent gate pass still appends a new,
+   well-shaped entry, so no later read ever depends on an earlier entry's
+   shape.
+4. Neither refusal is silent: each states its reason — the named
+   diagnostic above — and its remedy, so an in-flight rework record is
+   never left silently non-re-enterable.
+
+This is a compatibility rule, not a migration: `schema_version` stays
+unchanged, and no value for a missing pair is ever synthesized.

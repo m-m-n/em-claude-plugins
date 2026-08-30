@@ -1,0 +1,386 @@
+round: 2
+executed_at: '2026-08-25T08:45:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 718a35ae3e93946fc94c77fb717a85b04a278b5b
+  head_commit: a318ca6fba6754526a755aee479f9a2e3d9df7ac
+  changed_files_count: 41
+  changed_files_note: 41 files, +4100 / -166. feature-docs/rework-contract-drift/** excluded from review
+    targets per review-phase.md R0 step 2. head_commit is the tree the reviewers read; the loop-2 auto-fix
+    commit 65517ef landed after they returned.
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+  license_layer2_note: 'license NOT added: the diff touches only Claude Code plugin manifests (.claude-plugin/marketplace.json,
+    em-workflow/.claude-plugin/plugin.json), which are not dependency manifests, and adds no vendored
+    third-party source.'
+perspective_runs:
+- perspective: comprehensive
+  source: claude
+  status: completed
+- perspective: security
+  source: claude
+  status: completed
+- perspective: security
+  source: codex
+  status: completed
+- perspective: performance
+  source: claude
+  status: completed
+- perspective: performance
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+- perspective: architecture
+  source: claude
+  status: completed
+- perspective: architecture
+  source: litellm
+  model: vertex-glm-5
+  status: completed
+- perspective: spec
+  source: claude
+  status: completed
+- perspective: spec
+  source: litellm
+  model: vertex-deepseek-v3.2
+  status: completed
+findings:
+- stable_id: 03c86d57bda0cd0d
+  severity: high
+  category: security
+  file: em-workflow/references/workflow-patch.md
+  line: 290
+  title: '認可の再利用: 中断窓で recognition が成立せず replan_authorized が消費されないまま残る'
+  description: 'round 1 の 88f327b55454c09c（bare blob mismatch を already-applied と誤認して認可を焼く穴）は閉じている —
+    「determination が確認しない blob mismatch は rule 2 の通常拒否であり、拒否されたパッチで認可が消費されることはない」と明示された。ただし新しい recognition
+    条件は、この節自身が対象と宣言する中断窓（rule 15 のパッチ書き込みと rule 18 自身の書き込みの間）では決して成立しない。rule 18 は spend を「アプリケーションを記録するのと同じ
+    phase-state write」で行うと定めるため、この窓の内側では patches[] にまだ status: applied のエントリが無く、recognition 条件 1 は false
+    になる。resumed run は rule 2 の通常拒否に落ち、worker が再 dispatch される。このとき workflow.yaml には再計画 replace_all が既に適用済みである一方
+    spec_change.replan_authorized は true のまま残り、Re-planning path の第 2 ケースの成立条件がそのまま揃う。同一の認可で 2 回目の replace_all
+    が許可され、rule 18 が明言する「an authorization grounds exactly one re-planning pass」が破れる。'
+  suggestion: 'Either (a) recognition が中断窓を実際に覆えるようにする（patches[] エントリに適用後の workflow.yaml blob を記録させ、resumed
+    run が「ディスク上の workflow.yaml はこのパッチの適用結果である」と積極的に同定できるようにする、または rule 15 の書き込み前に status: applying の意図マーカーを
+    phase-state に記録し、already-applied determination がそれを applied 側として扱えるよう phase-state.md 側に定義を足す）。Or
+    (b) recognition は据え置き、rule 2 が拒否したパッチについて replan_authorized が true かつ create-plan が pending かつ workflow.yaml
+    のタスク集合が既に再計画適用後の形になっている場合は worker を再 dispatch せず run を停止して報告する。いずれの場合も、節冒頭の「この中断窓で recoverable」という主張と実際に成立しうる条件を一致させること。'
+  sources:
+  - claude:security
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 3e33ee58a8e170ce
+  severity: high
+  category: security
+  file: em-workflow/references/workflow-patch.md
+  line: 301
+  title: Applied patch identity is not bound to the current authorization
+  description: Recovery matches an applied patches[] entry using only the worker-controlled patch_id,
+    then separately asserts that the current spec_change record still stands. The persisted patch entry
+    has no authorization generation or spec_change identity binding. A malicious planner can replay a
+    patch_id from an earlier applied pass during a later spec-change authorization; recovery then performs
+    only rule 18 and spends the fresh one-shot authorization without applying the current re-plan, recreating
+    the permanent authorization wedge.
+  suggestion: Persist an immutable authorization identifier with both the spec_change record and each
+    proposed/applied patch. Require an exact match during recovery, together with the current request/patch
+    association, and reject patch IDs previously associated with another authorization.
+  sources:
+  - codex:security
+  confidence: 65
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 8563c3b18cd5b045
+  severity: high
+  category: architecture
+  file: em-workflow/references/workflow-patch.md
+  line: 301
+  title: Interrupted authorization-spend recovery の認識条件が、復旧対象の書き込み自身に依存している
+  description: '新設された Interrupted authorization-spend recovery は、対象を「rule 15 のパッチ書き込みと rule 18 自身の書き込みの間の中断」と明示しているが、認識条件を
+    phase-state.md の already-applied 判定（patches[] の当該 patch_id エントリの status が applied）に置いた。rule 18 自身と
+    FR11 で新設された Ownership boundary 段落は、その spend を patches[].status: applied を書くのと同一の phase-state write
+    だと定めている。したがって本節が対象と宣言した窓では認識条件が常に偽になり、Idempotency 節だけが到達可能な挙動になる。実際の中断時は resume が applying_patch（not
+    yet applied）行に落ち、workflow.yaml は既に書き換わっているので rule 2 の blob 不一致で通常の reject となる。worker が再 dispatch
+    されると replan_authorized は true のままなので、同一の authorization で 2 回目の re-planning が許可される。round 1 の feaf5369e6f9a227
+    が求めた「番号付きリストからの分離」と「phase-state への再ポイント」自体は満たされているが、再ポイント先の選び方が rule 18 の atomic 書き込み前提と噛み合っていない。'
+  suggestion: '認識条件を、中断窓で観測可能な状態から導けるものに変える。(a) rule 18 を分割し、patches[].status: applied の記録を workflow.yaml
+    書き込み直後の独立した phase-state write にして replan_authorized: false をその後段に置く。(b) 原子性を維持するなら、認識条件を already-applied
+    判定だけに委ねず「適用済み workflow.yaml の内容が当該 patch_id の適用結果と一致すること」を phase-state 側で定義し、その判定を owner として引用する。いずれの場合も
+    rule 2 側にこの復旧手順への前方参照を置くこと。'
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: dffa866cba0c71b7
+  severity: high
+  category: spec
+  file: em-workflow/references/workflow-patch.md
+  line: 290
+  title: 'FR5: 新設の復旧節の Recognition が rule 18 の同一 phase-state write 宣言と両立せず、FR5 が名指す中断窓では発火しない'
+  description: 'SPEC FR5 は「rule 18 の authorization consumption が rules 15/16 の後に置かれるため、その間の中断で consumed
+    exactly once 不変条件が壊れる。文書はその中断からの recovery と idempotency のルールを定義しなければならない」と要求する。rule 19 を廃した差し替え先である
+    Interrupted authorization-spend recovery は、適用範囲を「rule 15 の patch write と rule 18 の own write の間の中断」と宣言しながら、Recognition
+    の第 1 条件を phase-state の patches[] エントリが status: applied であることに固定した。rule 18 自身と Ownership boundary
+    段落はその spend を patches[].status: applied を書くのと同一の phase-state write だと定めるため、FR5 が名指す窓では patches[]
+    は validated のままで Recognition は必ず false になる。結果として、この節は FR5 が救えと言っている中断を一件も救わない。'
+  suggestion: 適用範囲宣言と Recognition が同じ窓を指すよう、どちらか一方に揃える。(a) rule 18 と Ownership boundary 段落から same phase-state
+    write の原子性宣言を外し、application 記録と authorization spend を明示的に別 write・その順序と定義し直す。(b) 原子性を維持するなら、Recognition
+    の入力を patches[] の記録ではなく rule 15 の着地を直接示す証拠に置き換え、節冒頭の宣言と一致させる。いずれの場合も bare blob mismatch を認識ケースにしない現在の但し書きは維持すること。
+  sources:
+  - claude:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 32ff5536ef1c0157
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 1172
+  title: failed_items[].category チェックのスコープが修復不能な却下を塞ぎきれていない
+  description: round1 の deferred 指摘（47f535a25cbb9be9）に対する task0008 の修正は、チェック対象を「patch が step_patches
+    で verify を名指ししている場合」に絞っただけで、根本原因を閉じていない。workflow-patch.md の operation/target マトリクスは append_rework
+    が step_patches で verify を対象にすることを明示的に許可し、set が触れてよいのは status だけと定める。つまり verify を名指しする patch であっても
+    failed_items[] を供給・修復する手段は存在しない。結果として、category を持たない旧形式の failed_items エントリを持つ workflow.yaml に対し、rework-planner
+    が verify step の status を戻すだけの正当な append_rework を出すと category エラーで patch が却下され、worker 側には直す方法がない。これは
+    workflow-schema.md の新しい Pre-change compatibility 段落が「patch validation の却下対象にしてはならない」と述べる理由そのものに矛盾する。_verify_step_targeted_by_patch
+    は修復可能性と相関しない代理条件になっている。
+  suggestion: (a) worker patch の検証から category チェックを外し、workflow-schema.md 自身が述べるとおり verify フェーズが failed_items
+    を書き込む時点と classification gate（point of use）だけで強制する。(b) スコープ条件を「patch がそのエントリ自体を供給する場合」に変更する（現契約では該当ケースが存在しないため実質
+    (a) と同じ）。いずれの場合も workflow-schema.md の文言と validator の実装が同じ境界を指すようにする。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 003550ffc4e04b89
+  severity: high
+  category: spec
+  file: em-workflow/references/workflow-schema.md
+  line: 213
+  title: 'FR3/AC8: 新設の pre-change 互換ルールが SPEC の validator は reject とも実装とも食い違う'
+  description: SPEC AC8 は「validate-worker-output.py rejects an out-of-vocabulary origin_kind and an out-of-vocabulary
+    or missing failed_items[].category」と定め、Error Handling 表も TS5 も同じ。ところが workflow-schema.md に追加された Pre-change
+    compatibility は逆に「it is not patch validation's to reject, because the party receiving that rejection
+    can set only a step's status and has no way to repair the entry」と述べ、SPEC が validator に置いた reject
+    を否定している。さらに実装は両者の中間を取り、patch が step_patches で verify step を名指したときだけ reject する。しかし develop/SKILL.md
+    verify step 6 は verify 由来 rework について「patch の step_patches の中で implement / verify を pending に戻す」と定めており、この経路の
+    patch は常に verify を名指す。よって category を持たない既存 failed_items を抱えた in-flight feature では従来どおり reject され、worker
+    は構造的に修復できない。SPEC・所有ドキュメント・実装の三者が別々のことを述べている。
+  suggestion: 三者を 1 つに揃える。(a) SPEC どおり validator の reject を維持し、workflow-schema.md から「it is not patch
+    validation's to reject」を削って、pre-change エントリは verify フェーズが failed_items を書き直すまで patch が通らないこと、およびその書き直しを
+    orchestrator の手順として明記する。(b) 互換ルールの文言を実装に守らせ、_validate_verify_failed_items_categories のスコープを「その patch
+    自身が持ち込んだエントリ」に変える。そのうえで AC8/TS5 が言う reject の適用範囲を SPEC 側の表現と一致させる。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 69d81e01bc4969de
+  severity: high
+  category: spec
+  file: em-workflow/references/phase-state.md
+  line: 483
+  title: 'FR7: Neither refusal is silent を満たす実装が無く、pre-change の rework.yaml は無関係なエラーで拒否される'
+  description: 'SPEC FR7 は「Silently leaving in-flight rework.yaml non-reenterable is NOT an acceptable
+    outcome」、TS9 は「migrated / accepted for compatibility / rejected with the stated version-transition
+    diagnostic のいずれかで扱われ、never silently non-reenterable」を要求する。採用された互換ルールは「refused at the point of use」「diagnosed
+    as pre-change spec-change shape」「Neither refusal is silent: each states its reason — the named diagnostic
+    above — and its remedy」と宣言している。しかし origin pair の有無を実際に検査する唯一の実装点である workflow_replace_all_spec_change_reentry
+    は bare False を返すだけで、呼び出し側は is_replanning=False として Initial-planning path に落ち、merged タスクがあるため replace_all
+    requires tasks to be empty or all pending という原因と無関係なエラーだけを返す。診断名も remedy もどのコンポーネントも出力しない。リポジトリには実際に
+    pre-change 形状の記録（feature-docs/recycled-task-id-consistency/phase-state/rework.yaml）が残っており、机上の経路ではない。'
+  suggestion: phase-state.md の宣言に実装を合わせる。workflow_replace_all_spec_change_reentry が「spec_change は存在するが
+    origin pair が欠落／空」で False を返したケースを呼び出し側が識別できるようにし、その場合は replace-all-not-permitted ではなく専用エラーとして phase-state.md
+    が定める診断名 pre-change spec-change shape と remedy を含むメッセージを積む。phase-state.md 側を弱める選択肢は FR7 の never silently
+    non-reenterable を満たさないので採らないこと。
+  sources:
+  - claude:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: a069ec2d4343a636
+  severity: high
+  category: security
+  file: em-workflow/skills/develop/SKILL.md
+  line: 390
+  title: Untrusted verification text can influence the trusted security category
+  description: The orchestrator reads VERIFICATION.md and derives failed_items[].category from its natural-language
+    scenarios and mapped requirements, but this security-sensitive procedure never declared those inputs
+    untrusted or forbade following embedded instructions. A malicious repository contribution can prompt-inject
+    the orchestrator into assigning comprehensive/spec instead of security, license, or the sentinel
+    value. The classification gate subsequently trusts this orchestrator-written category, allowing its
+    final security/license/unknown abort to be bypassed.
+  suggestion: Explicitly treat VERIFICATION.md, verification_index, and mapped requirement text as untrusted
+    data whose embedded instructions must never be followed. Assign the sentinel value on detected injection
+    or ambiguity.
+  sources:
+  - codex:security
+  confidence: 50
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (commit 65517ef). Loop 1's edit reworded a sentence pinned verbatim
+    by tests/test_failed_items_category.py and was reverted from backup; loop 2 re-dispatched with the
+    seven pinned substrings named and applied purely additively. Suite green at 2410 tests.
+- stable_id: 0ec3e3e5c79fda16
+  severity: medium
+  category: security
+  file: em-workflow/references/workflow-patch.md
+  line: 308
+  title: recognition 条件 2 認可レコードがまだ立っている に検査可能な根拠が無く、新しい認可を誤って焼きうる
+  description: recognition の第 2 条件は「このパッチの再計画パスが認可された spec_change レコードが、その後 rework の spec-change 遷移によって丸ごと差し替えられていないこと」を要求する。しかしパッチ側にも
+    patches[] エントリ側にも、どの spec_change レコードの下で認可されたかを指す識別子が無い。spec_change が持つのは recorded_at_commit だけで、パッチが持つのは
+    base_input_digest / base_workflow_blob / patch_id だけであり、両者を結ぶ束縛が存在しない。しかも spec_change は content-invariance
+    rule の対象外で遷移のたびに丸ごと置き換わるため、置き換わったこと自体を後から判定する手掛かりも残らない。ある patch_id が applied かつ spend 済みになった後に spec-change
+    遷移が新しいレコードを書き、その後に古い resume 経路が同じ patch_id を再処理すると、条件 1 は applied を返し条件 2 は確認できないまま rule 18 の write
+    が走って、消費されていない新しい認可を false に落とす。
+  suggestion: パッチと認可レコードを明示的に束縛する。rule 18 のアプリケーション記録時にその適用が根拠とした spec_change.recorded_at_commit（あるいは同等の不変な認可識別子）を
+    patches[] エントリに保存し、recovery 側は spend を行う前に一致を比較して、一致しないときは spend せず拒否して理由を記録する。束縛を追加できない場合は条件 2 を「確認できないときは
+    spend しない」というフェイルクローズの形に書き換える。
+  sources:
+  - claude:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 1b8ad68a810ba955
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/workflow-patch.md
+  line: 308
+  title: Interrupted authorization-spend recovery の第2認識条件が判定不能
+  description: Recognition の 2 つ目の条件は「この patch の re-planning pass が authorize された spec_change レコードが今も残っていること」を要求する。しかし
+    spec_change レコードには識別子が無く、occurrence ごとに wholesale で置き換えられる。patch 側にも認可元レコードを指す参照は無い。したがって再開した run
+    は「同じレコードか、置き換わった別のレコードか」をこの節が挙げる入力からは判定できない。fail-closed に倒せば recovery は決して発火せず、この節が存在意義とする中断ケースは未処理のまま
+    planner の再 dispatch に落ちる。判定を推測で埋めれば、置き換わった新しい authorization を古い patch の spend で消費する誤りが起こり得る。
+  suggestion: レコードと patch を結び付ける判定可能な基準を明示する。(a) recorded_at_commit を使った比較基準を条件として書く。(b) rule 18 の spend
+    時に spec_change へ消費した patch_id を記録し、recovery はそれと突き合わせる。いずれも phase-state.md 側の所有物なので、そちらに定義を置いてこの節は
+    cite するだけにするのが現在の SSOT 方針と整合する。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 886264fc9324c8e8
+  severity: medium
+  category: comprehensive
+  file: em-workflow/agents/implementation-planner.md
+  line: 121
+  title: planner は自分がどちらの replace_all path に該当するか判定できない（入力に判別材料が無い）
+  description: 'task0001/task0007 の rework で、両ブランチのキーが status リテラルから「workflow-patch.md の replace_all
+    permission conditions が定めるどちらの path に該当するか」という間接参照に変わった。しかし Re-planning path の第2ケースを識別する信号は phase-state/rework.yaml
+    の spec_change レコードであり、planner の入力にはそれが無い。planner-contract.md の planning_inputs は requirements/spec/design/lessons/registry
+    系のみ、digest_inputs にも phase-state は含まれず、agent prompt 自身が「This agent performs no discovery of its own」と明言している。workflow.yaml
+    だけで判別できるのは pending 以外のタスクが存在するケースだけで、create-plan: pending かつ登録済みタスクが全て pending の再計画では両 path の条件が同時に満たされ、planner
+    は Initial-planning ブランチを選ぶ。その結果 carried_task_ids を出さず登録済み id を entries に再宣言し、replace-all-entry-for-registered-id
+    と replace-all-drops-task で却下される。'
+  suggestion: 'planner が判定できる入力で分岐させる。(a) dispatch envelope に明示的な planning_mode: initial | replanning
+    を持たせ prompt はそれで分岐する。(b) planning_inputs に phase-state（rework.yaml）へのパスを追加し prompt がその読み取りを許可する。どちらも「条件の定義は
+    workflow-patch.md が所有する」という現在の SSOT 方針と両立する。'
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 5107ba0895c2d82d
+  severity: medium
+  category: architecture
+  file: em-workflow/agents/implementation-planner.md
+  line: 125
+  title: 二分岐の判別を、互いに排他でない permission conditions に委譲している
+  description: prompt は status リテラル直書きをやめ、両分岐とも workflow-patch.md の replace_all permission conditions
+    を根拠にした。しかし引用先の 2 パスは permit されるかを答える条件であって、互いに排他とは宣言されていない。Initial-planning path は create-plan が
+    pending かつ tasks が空 or 全て pending、Re-planning path の第 2 ケースは create-plan が pending かつ unspent な spec_change
+    記録 + base_commit 設定済みで、両方が同時に成立する状態が存在する。この状態で prompt の which path this dispatch matches は一意に決まらないのに、2
+    分岐の出力は非互換。実装側 validate-worker-output.py は is_replanning = needs_update or spec_change_reentry(...)
+    と Re-planning 優先のタイブレークを持っているが、その優先順位は SSOT 文書のどこにも書かれていない。round 1 の f5f1343dc0b8d389 と同じ失敗経路が狭まっただけで残っている。
+  suggestion: workflow-patch.md の replace_all permission conditions に、2 パスの優先順位（Re-entry signal が成立する限り
+    Re-planning path が優先する、すなわち validator の needs_update or reentry と同じ判定順）を 1 文で明記し、permit 判定とどちらのパスとして扱うかを同じ場所で単一値に確定させる。そのうえで
+    implementation-planner.md は現状どおりその節を引用するだけにする。
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: b69c69ed3e48bb5a
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/phase-state.md
+  line: 486
+  title: pre-change spec-change shape 診断を出す実装が存在せず、実際には誤解を招くメッセージが出る
+  description: 新設の Pre-change record compatibility は、origin pair を欠くレコードが point of use で拒否される際に pre-change
+    spec-change shape という名前付き診断で区別されること、そして Neither refusal is silent を保証している。しかし実装側にその診断は無い。workflow_replace_all_spec_change_reentry
+    は不足や語彙外で単に False を返すだけで、呼び出し側は replace-all-not-permitted という原因と無関係なメッセージを出す。実リポジトリに該当レコードが現存する（feature-docs/recycled-task-id-consistency/phase-state/rework.yaml
+    が旧形状）ため、その feature を再開したユーザーは誤ったメッセージを受け取り、文書が約束した remedy に辿り着けない。
+  suggestion: 文書と実装のどちらかを合わせる。実装を合わせるなら workflow_replace_all_spec_change_reentry を理由付きの結果に変え、呼び出し側が専用コードと
+    remedy を含むメッセージを出すようにする。文書を合わせるなら名前付き診断と never left silently non-re-enterable の保証を実挙動の範囲まで弱めるか、診断を出す担当を明示的に指名する。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 2be48ff00f4c5642
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 1210
+  title: failed_items[].category の強制がレイヤー違いの場所にあり、SSOT の記述とも矛盾する
+  description: 'failed_items[].category を書くのは verify フェーズの orchestrator であって worker patch ではない。にもかかわらず強制点は
+    worker patch の検証に置かれ、task0008 のスコープ条件は patch の step_patches が verify を名指ししているかになった。(1) リポジトリ内のどの文書・contract・fixture
+    にも step_id: verify を持つ worker patch は存在しないので実運用では本チェックが発火せず、FR3 の validator 側強制は事実上の死にコードになる。(2)
+    逆に発火する場合、拒否を受け取るのは status しか設定できない worker patch で修復不能なままであり、workflow-schema.md が単一 owner として宣言した記述と正面から矛盾する。'
+  suggestion: 強制点を書き手・使用者のレイヤーに合わせる。(a) patch 検証からこのチェックを外し、語彙の fail-closed 判定を classification gate（point
+    of use）と verify フェーズが failed_items を書く時点の検証だけに置く。(b) patch 検証に残すなら対象をその patch 自身が供給した failed_items
+    エントリに限定できる形に定義し直し、workflow-schema.md の段落をコードと単一の記述に揃える。どちらを選ぶ場合も _verify_step_targeted_by_patch という到達不能な条件で強制の有無が決まる状態は解消する。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 8d576f9e423a8203
+  severity: medium
+  category: spec
+  file: em-workflow/agents/implementation-planner.md
+  line: 140
+  title: 'FR10: high-water mark の引用先が SPEC が SSOT と食い違うと名指した式そのものを定義文として持っている'
+  description: SPEC FR10 は「implementation-planner.md:132 restates the high-water mark as max(carried_task_ids
+    union entries), which disagrees with the SSOT definition (the maximum INCLUDING retired ids) ...
+    it MUST be fixed by citing the owning definition」と要求する。実装は planner 側の式を削り、直前で引用した workflow-patch.md
+    の Re-planning task-id allocation 節への引用に置き換えた。しかしその節の high-water mark の定義文は workflow-patch.md の The
+    high-water mark is max(carried_task_ids ∪ entries) であり、SPEC が SSOT と食い違うと名指した式そのもの。同じ節の別段落は continuing
+    ABOVE the highest taskNNNN id the feature has ever registered と述べており、所有者の内部に 2 つの定義が併存している。したがって引用形に直しても
+    planner が解決する値は変わらず、FR10 が閉じようとしたドリフトはそのまま残る。
+  suggestion: 'planner 側の引用文はそのままでよい。workflow-patch.md の定義を一本化する。例: The high-water mark is the highest
+    taskNNNN id the feature has ever registered — retired ids included — not merely max(carried_task_ids
+    ∪ entries) とし、retired 規定と矛盾しない 1 文にする。validate-worker-output.py のコメントも同じ式を持っているため同時に見直すとドリフト源が残らない。'
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+auto_fix:
+  loops_run: 2
+  applied_total: 1
+  termination: no-progress
+  detail: 'Loop 1: five high candidates entered R4 (category == spec excludes three of the eight highs).
+    The pair at workflow-patch.md:301 (codex:security + claude:architecture) is a divergent-prose conflict
+    group -> site skipped per batch policy review.auto-fix-conflict. claude:security@workflow-patch.md:290
+    and claude:comprehensive@validate-worker-output.py:1172 were aborted before dispatch: tests/test_gate_option_vocabulary.py
+    pins the sha256 of both files, and review-editor may write only the finding''s own file, so no single-file
+    edit can leave the suite green (same mechanical ground round 1 recorded for f5f1343dc0b8d389). codex:security@develop/SKILL.md:390
+    was dispatched, applied, then REVERTED from backup: the editor reworded a sentence pinned verbatim
+    by tests/test_failed_items_category.py (SENTINEL_CONDITION_MARKER) and the suite went red on 1 test.
+    Loop 2: the same candidate was re-dispatched with all seven pinned substrings named and an additive-only
+    constraint; applied cleanly, scope verified (only the target file, no new untracked), suite green
+    at 2410 tests, committed as 65517ef. Loop 3 was not entered: every remaining candidate is in aborted_stable_ids,
+    so no user-resolvable candidate remains -> no-progress. DEVIATION (recorded, not silent): the protocol''s
+    post-productive-loop re-run of all nine reviewers was NOT performed. Termination ''clean'' was unreachable
+    regardless (seven highs are untouched by the loop-2 fix), the batch rework cap is already consumed
+    so R5 defers them either way, and the loop-2 edit''s safety is verified mechanically by the full
+    suite plus the seven content pins that tests/test_failed_items_category.py and tests/test_develop_skill_rewiring.py
+    hold over exactly the edited section.'
+residual_critical_high: 7
+rework_required: false

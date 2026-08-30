@@ -211,21 +211,25 @@ legitimate retry path. A task whose journal last event is `launched` is
 always in-flight, regardless of workflow.yaml `status` — never reinterpret
 it as unlaunched, since the launch guard would deny that launch. Reason:
 I.2.c's route back to planning is the only writer that resets a task's
-status to `pending`, and the planner's `replace_all` re-numbers tasks from
-`task0001`, so the `pending` + `failed` combination only ever arises when a
-re-planned task inherited a retired id's journal events. Given I.2.c's
-route-back precondition below, which admits only tasks with a terminal
-journal last event, and the planner's `replace_all` renumbering from
-`task0001` that is the sole source of any recycled id, a re-numbered task
-can only ever inherit a retired id's terminal events — so workflow.yaml
+status to `pending`, and no re-planning pass ever re-issues a retired task
+id to a different task — `references/workflow-patch.md`'s re-planning
+task-id allocation rule (cited here, never restated) allocates every new
+id above the highest the feature has ever registered, so the `pending` +
+`failed` combination arises only from I.2.c's own reset of a task's own
+prior `failed` status, never from a task inheriting a different task's
+retired id. Given I.2.c's route-back precondition below, which admits only
+tasks with a terminal journal last event, and the allocation rule's
+guarantee that a `replace_all` never re-issues a retired id, a task can
+only ever carry its OWN journal's terminal event — so workflow.yaml
 `status: pending` combined with journal last event `launched` can never
 arise. Because Step I.2.c's route-back gate below blocks route-back
 whenever any task's journal last event is `merged` — read from the
-journal directly, independent of the ancestor check — no retired task id
-can leave a `merged` last event behind for a renumbered task to inherit,
-so the recycled-task-id carve-out above stays correctly scoped to
-`failed` only. The recycled-task-id carve-out above is
-applied by two parties: the
+journal directly, independent of the ancestor check — that gate never
+admits route-back while such an event stands. No retired task id is ever
+re-issued, so a task whose workflow.yaml `status` is `pending` can never
+carry an inherited `merged` journal last event; the recycled-task-id
+carve-out above stays correctly scoped to `failed` only. The
+recycled-task-id carve-out above is applied by two parties: the
 orchestrator's own interpretation of the journal (this rule), and the Stop
 hook, `queue_stop_guard.py`, which reads `tasks.{T}.status` and applies the
 identical carve-out itself
@@ -335,7 +339,9 @@ the path yourself and pass it — the implementer does not know `{feature}`
 and must not derive it from other paths.
 
 **End the turn** immediately after launching — no polling, no synchronous
-wait. The PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
+wait. In a `--batch` run, this turn's final assistant message is the
+marker line `references/batch-mode.md` defines and nothing else. The
+PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
 each allowed launch as a `launched` journal event as the call goes through
 (the only writer of `launched`); it also denies double-launching a task
 that is already in flight or already merged, as a net under the
@@ -420,12 +426,94 @@ Triggered whenever a launched implementer's `Task()` call returns.
    "deviations": [...], "notes"}` (malformed/missing report → treat as
    `failed`) — set `tasks.{T}.status = merged` for every task verified
    merged, `= failed` for every task whose step 1 reconciled state is
-   `failed` or whose report is `failed`/malformed, on the worktree just
-   refreshed in step 2, then commit:
+   `failed` or whose report is `failed`/malformed, and, for each admitted
+   deviation (the Deviation auto-addition rule below), an append to that
+   same task's `files`. This step's enumeration of what it writes to
+   `workflow.yaml` is exactly these two: the `tasks.{T}.status` update and
+   this `files` append — both performed by the orchestrator, on the
+   worktree just refreshed in step 2, in the same commit as the status
+   update: never a second write, never a second commit, never a new patch
+   operation. The append is stated as an append: an existing entry is
+   never removed or rewritten by this rule, and re-admitting an already
+   listed path is a no-op. Then commit, with a single-line message
+   mode-independently (the `$RECONCILE_TIP` third argument is
+   `commit-docs.sh`'s `expected_base_tip` check value):
    `commit-docs.sh {integration_worktree} "docs({feature}): implement wake
    phase reconcile" "$RECONCILE_TIP"` (exit-4 recovery: Branch & Worktree
    Model above — on a second exit 4, stop the wake phase with a report
    naming the task(s) involved rather than looping).
+
+   **Deviation auto-addition rule**: a reported deviation (the
+   `deviations` entries in that same completion report — the completion
+   report stays the channel the evidence arrives on, the same
+   completion-report `deviations` channel already defined above, and is
+   never itself the record's resting place) is auto-added to the declared
+   change set derivation — defined in
+   `references/phases/create-plan-phase.md`, cited here and never
+   restated — only when it carries, as three named parts, evidence that an
+   existing acceptance criterion would otherwise be dropped: the path
+   being added; the identifier of the acceptance criterion or requirement
+   that would otherwise be dropped — an `AC-n` of the reporting task's own
+   plan, restricted the same way as the requirement id below: existence
+   means the AC-n was already present in that plan document as written by
+   create-plan / rework-planner, never something the reporting
+   implementer's own branch added to the plan document — or a requirement
+   id already registered in `workflow.yaml`; and
+   how it fails without the path, stated as an observable outcome (a named
+   test that cannot be written or cannot pass), never as a preference. The
+   named identifier must resolve to something that exists — for a
+   requirement id, existence means it is already registered in
+   `workflow.yaml` prior to this report, never something the report
+   itself introduces. The path being added must independently pass the
+   same shape check `is_safe_relative_path` applies to every
+   patch-written `tasks.*.files` entry — cited here, not restated;
+   `is_safe_relative_path` does not check for symlink escapes, and no
+   such check is claimed — applied here by
+   the orchestrator itself before the append, not merely asserted by the
+   report; and it must not fall under a workflow control path — matched,
+   like every other `tasks.*.files` entry, as a project-relative path:
+   `.claude/**`, `em-workflow/**` (the whole plugin tree —
+   `references/**`, `.claude-plugin/**`, `hooks/**`, `scripts/**`,
+   `agents/**`, `skills/**`, and so on, not individually enumerated),
+   `CLAUDE.md` (including nested occurrences), `.github/workflows/**`,
+   `feature-docs/*/workflow.yaml`, `feature-docs/*/phase-state/**`, or
+   `feature-docs/*/tasks/**`.
+   When the target repository is this plugin's own repository,
+   `em-workflow/**` matches its project-relative occurrences there
+   exactly as any other path does — this rule is not suspended for that
+   case. Such a path is never
+   auto-added regardless of how the other two parts read. A deviation
+   failing any one of these parts — a missing identifier, an identifier
+   that resolves to nothing or was not already registered, a path that
+   fails the shape check, a path under a workflow control path, or a
+   rationale of implementer convenience, a nicer structure, an unrelated
+   cleanup — is not auto-added; it surfaces as an ordinary deviation and
+   the containment check (observed change set ⊆ declared change set)
+   handles it exactly as before, and unjustified scope expansion is
+   still stopped. The containment check itself is unchanged by this
+   rule. Every admission or rejection of a deviation under this rule —
+   admitted path, or declined path with which check it failed — is
+   listed in this wake phase's own report, and, for a `--batch` run,
+   also in the run report.
+
+   **Where the decision persists**: an admission's audit record is the
+   `files` entry this step just appended plus the wake commit that added
+   it — nothing further is written for it. A decline's audit record is the
+   reason recorded in this wake phase's own report for that task, naming
+   which of the three evidence parts was missing or unresolved. No new
+   phase-state field is introduced for this record (D7 unchanged) — the
+   channel is the one this step already defines.
+
+   **Batch mode**: for a `--batch` run, a decline's audit record instead
+   is written to `feature-docs/{feature}/phase-state/batch-audit.yaml`
+   (`references/phase-state.md`'s batch audit record file) in the same
+   wake commit — one entry per declined task, naming the `task_id` and
+   which of the three evidence parts was missing or unresolved — rather
+   than in this wake phase's own report; the run-report obligation stated
+   above for a `--batch` run is satisfied by reading that persisted
+   record rather than this wake phase's own report.
+   An admission's audit record is unchanged. An interactive run keeps
+   recording a decline in this wake phase's own report exactly as before.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
    git worktree remove "$WT_ROOT/{T}"
@@ -442,6 +530,19 @@ Triggered whenever a launched implementer's `Task()` call returns.
    launch phase (I.2.a) with the freed slot(s) and any still-unlaunched
    tasks, then end the turn again. If every task is now `merged`, proceed to
    Step I.3.
+
+**Batch mode**: in a `--batch` run, this applies only when step 5 re-enters
+the launch phase (I.2.a) and ends the turn again — in that case, this wake
+turn's final assistant message is the marker line `references/batch-mode.md`
+defines and nothing else: step 1's reconcile enumeration, step 4's cleanup
+listing and step 5's refill narration are withheld from the main context,
+while the reconcile itself, the wake commit in step 3, the journal it
+records against, the worktree cleanup in step 4 and step 5's re-entry into
+I.2.a are unchanged. If instead every task is now `merged` and step 5
+proceeds to Step I.3, this turn has not reached a terminal state and does
+not end here, so the marker line is not emitted; execution continues into
+Step I.3 and beyond, with output suppression still applying to this wake
+turn's own steps 1/4/5 narration as above.
 
 ### I.2.c: Failed handling
 
@@ -581,6 +682,13 @@ There is NO skip option: a task is either merged, retried, or re-planned —
 never dropped mid-phase. "実装完了 = 親ブランチへのマージ完了" admits no
 carve-out; scope changes belong to the planning/spec layer, not to the
 implement phase.
+
+The drain narration below and the retry narration below are withheld
+from the main context in `--batch` (`references/batch-mode.md`); the
+task status, the `implement` step's `failed` write and their commits are
+unchanged. The **abort phase** branch below is a stop under
+`references/batch-mode.md`'s stop/abort exception, so its report keeps
+its full output.
 
 Batch mode (`references/batch-mode.md`'s Non-packet gates table,
 `implement.failed-task`): no AskUserQuestion —
