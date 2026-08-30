@@ -502,7 +502,8 @@ workflow:
       installed_cache_rerun: not_applicable
     excluded_requirements: []
   - id: retrospect
-    status: pending
+    status: completed
+    completed_at_commit: 5eb7836596804b75a33cb339e5351829289f3852
 
 tasks:
   task0001:
