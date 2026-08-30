@@ -1,0 +1,50 @@
+schema_version: 1
+feature: destructive-guard-write-target-scoping
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: fef0371579809a3dff8ba4d433158f7e0c39ec36
+last_input_digest: "sha256:3635aee3310155c3f400688ba44fdc4f9d64c72af8ac13feb95173f7f23223c3"
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: "2026-08-30T16:43:28+09:00"
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids: [derive_from_task_description]
+    freeform: null
+    normalized_answer: "destructive-guard-write-target-scoping"
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  e2e:
+    generation_digest: null
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  design_system_candidates:
+    generation_digest: null
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  package_files:
+    generation_digest: null
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  reference_scan_targets:
+    generation_digest: null
+    resolved_at_generation: 1
+    paths:
+      - em-workflow/hooks/destructive-guard.py
+    digests: {}
+    truncated: false
+last_error: null
