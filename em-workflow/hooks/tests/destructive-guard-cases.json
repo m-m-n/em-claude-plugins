@@ -41,7 +41,7 @@
   ["allow", "transcript グロブ検索 + stderr 破棄", "grep -l foo ~/.claude/projects/*/*.jsonl 2>/dev/null"],
   ["ask", "本物: skills ディレクトリ再帰削除", "rm -rf ~/.claude/skills/foo"],
   ["ask", "本物: 設定への追記", "echo x >> ~/.claude/settings.json"],
-  ["allow", "mv 複数ソース + 宛先のみ判定", "mv ~/.claude/hooks/x.py extra.txt /tmp/y"],
+  ["ask", "mv 複数ソース + 宛先のみ判定", "mv ~/.claude/hooks/x.py extra.txt /tmp/y"],
   ["deny", "本物: transcript を mv で退避", "mv ~/.claude/projects/x/y.jsonl /tmp/y.jsonl"],
   ["ask", "本物: hooks ファイルを mv", "mv ~/.claude/hooks/foo.py /tmp/foo.py"],
   ["ask", "本物: settings を mv", "mv ~/.claude/settings.json /tmp/settings.json"],
@@ -49,5 +49,12 @@
   ["ask", "本物: cp -t で hooks へ", "cp -t ~/.claude/hooks/ file.py"],
   ["ask", "本物: mv -t で hooks へ", "mv -t ~/.claude/hooks/ file.py"],
   ["ask", "本物: cp --target-directory= で hooks へ", "cp --target-directory=~/.claude/hooks/ file.py"],
-  ["ask", "本物: クォート内の疑似リダイレクトの後で settings へ書き込み", "echo \"2>&1\" > ~/.claude/settings.json"]
+  ["ask", "本物: クォート内の疑似リダイレクトの後で settings へ書き込み", "echo \"2>&1\" > ~/.claude/settings.json"],
+  ["allow", "cp ソースのみ protected", "cp ~/.claude/hooks/foo.py /tmp/foo.py"],
+  ["ask", "cp 宛先が settings", "cp /tmp/foo.py ~/.claude/settings.json"],
+  ["ask", "mv 複数ソースの先頭が protected", "mv ~/.claude/hooks/foo.py /tmp/a /tmp/b"],
+  ["allow", "ln ソースのみ protected", "ln -s ~/.claude/hooks/foo.py /tmp/newlink"],
+  ["ask", "ln 宛先が protected", "ln -s /tmp/target ~/.claude/hooks/newlink"],
+  ["ask", "install --target-directory= で hooks へ", "install --target-directory=~/.claude/hooks/ file.py"],
+  ["ask", "target-directory フラグと redirect の組み合わせ", "cp -t ~/.claude/hooks/ file.py > /tmp/log"]
 ]
