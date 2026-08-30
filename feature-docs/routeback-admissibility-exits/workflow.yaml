@@ -35,7 +35,8 @@ workflow:
     base_commit: 4097a72288dcdf4a2e3368131a29c8893d1a7a1e
     completed_at_commit: e2cae3c86837c5d6a9ae4bf6c246805a462c320a
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: 1af441abcd7e897bf321bd5153e4167bfc156e8a
   - id: verify
     status: pending
     result: null
@@ -91,8 +92,8 @@ tasks:
         - 3bb53902965e3224
 
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor: [comprehensive, performance, architecture, spec]
     discretionary: []
@@ -102,8 +103,12 @@ review:
     performance: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 3
-  needs_rework: true
+  residual_critical_high: 2
+  needs_rework: false
+  deferred_note: >-
+    round 2 の residual critical/high 2 件は batch の rework cap
+    (batch.review_rework_count = 1) に達していたため deferred として完了させた。
+    詳細は reviews/round2.yaml の bffdcec69dbce324 / 17dc88bb8781a1a1。
 
 requirements:
   FR1:
