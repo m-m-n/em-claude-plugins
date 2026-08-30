@@ -38,9 +38,38 @@ workflow:
     status: completed
     completed_at_commit: 1af441abcd7e897bf321bd5153e4167bfc156e8a
   - id: verify
-    status: in_progress
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: VF-1
+        category: spec
+        scenario: TS-3
+        requirements: [FR2, NFR3, NFR4]
+        test: "test_recycled_task_id_consistency.TestI2aUnreachabilityPremiseRestsOnJournalLastEventConjunct.test_inheritance_invariant_conclusion_survives"
+        detail: >-
+          I.2.a に対する pin literal
+          'no retired task id can leave a `merged` last event behind for a
+          renumbered task to inherit' が implement-phase.md の I.2.a 節に
+          存在しない。
+      - id: VF-2
+        category: spec
+        scenario: TS-3
+        requirements: [FR2, NFR3, NFR4]
+        test: "test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_i2a_unreachability_tail_sample_retains_inheritance_invariant_anchor"
+        detail: >-
+          同じ inheritance-invariant アンカーを pre-change sample 側で保持
+          することを求める retained-anchor guard が失敗している。
+      - id: VF-3
+        category: spec
+        scenario: TS-3
+        requirements: [FR2, NFR3, NFR4]
+        test: "test_recycled_task_id_consistency.TestPreChangeSampleGuards.test_task0002_i2a_premise_sample_retains_inheritance_invariant_anchor"
+        detail: >-
+          task0002 の premise sample に対する同アンカーの retained-anchor
+          guard が失敗している。
+    summary: >-
+      python3 -m unittest discover -s tests: Ran 2829 tests, FAILED
+      (failures=3)。TS-9 / NFR4 の suite green 条件を満たさない。
   - id: retrospect
     status: pending
 
