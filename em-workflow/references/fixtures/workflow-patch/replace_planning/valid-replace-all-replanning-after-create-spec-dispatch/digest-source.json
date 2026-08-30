@@ -1,0 +1,13 @@
+{
+  "answers_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "digest_inputs": {
+    "feature-docs/example/SPEC.md": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "mode": "interactive",
+  "value_inputs": {
+    "task_description": null
+  },
+  "worker": "implementation-planner",
+  "workflow_blob": "8f17c04",
+  "write_policy_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+}

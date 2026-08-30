@@ -6,8 +6,37 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/gitleaks-precommit.sh",
+            "timeout": 30,
+            "statusMessage": "gitleaksでシークレットをスキャン中..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/kill-guard.py",
+            "timeout": 10,
+            "statusMessage": "kill対象のプロセス木を検証中..."
+          },
+          {
+            "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/bash_guard.py",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/destructive-guard.py",
+            "timeout": 10,
+            "statusMessage": "破壊的コマンドを検証中..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}\"/hooks/gitleaks-write-guard.sh",
+            "timeout": 30,
+            "statusMessage": "gitleaksで書き込み内容をスキャン中..."
           }
         ]
       },

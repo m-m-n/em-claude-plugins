@@ -1,0 +1,102 @@
+task_id: task0021
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Whole-suite outcome, not a single test. Baseline run of
+      `python3 -m unittest discover -s tests` reported 1885 tests with 3
+      failures, all in TestRepositoryRulesAreInPlace (stale rule name
+      'plugin-version-bump.md'; two CLAUDE.md string-match assertions).
+      After implementation the full suite reports 1891 tests, 0 failures,
+      0 errors.
+  AC-2:
+    tests:
+      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_existence_check_fails_for_a_rule_that_does_not_exist
+    red_confirmed: true
+    red_reason: >-
+      test_every_repository_rule_exists failed in the baseline with
+      "AssertionError: Lists differ: ['plugin-version-bump.md'] != []".
+      The negative-proof test failed with "NameError: name
+      '_missing_rule_files' is not defined" before the helper function was
+      written; after implementing it, the test asserts that a synthetic
+      name 'does-not-exist.md' is reported missing.
+  AC-3:
+    tests:
+      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_existence_check_fails_against_an_empty_rules_directory
+      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_repository_rule_list_is_not_empty
+    red_confirmed: true
+    red_reason: >-
+      test_existence_check_fails_against_an_empty_rules_directory failed
+      with "NameError: name '_missing_rule_files' is not defined" before
+      the helper existed; after implementing it, a synthetic empty temp
+      directory is asserted to report every named rule missing.
+      test_repository_rule_list_is_not_empty itself passed immediately
+      (the pre-existing REPO_RULE_FILES tuple was already non-empty), so
+      it did not independently go red -- the non-vacuity property is what
+      the empty-directory case demonstrates.
+  AC-4:
+    tests:
+      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_file_is_non_empty
+      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_non_empty_check_fails_for_an_empty_file
+      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_file_names_what_it_governs
+      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_heading_check_fails_for_a_file_without_a_level_1_heading
+    red_confirmed: true
+    red_reason: >-
+      All four failed with NameError (`_empty_rule_files` /
+      `_rule_files_without_a_level1_heading` not yet defined) before the
+      helpers were written. After implementing them: the two production
+      tests assert every real rule file is non-empty and opens on a
+      level-1 heading; the two negative-proof tests assert a synthetic
+      empty file and a synthetic headless file are each flagged. The
+      class's test count grew from 3 (pre-task) to 9, so it did not
+      shrink, and no other class in the module lost a case.
+  AC-5:
+    tests:
+      - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_core_prefixed_rules_are_present
+    red_confirmed: true
+    red_reason: >-
+      Failed with "NameError: name '_missing_rule_files' is not defined"
+      before the helper existed. After implementing it, the test asserts
+      core-plugin-structure.md and core-plugin-version-bump.md are both
+      present under .claude/rules/, with any missing one named in the
+      assertion message via the shared _missing_rule_files helper (same
+      helper whose negative-proof under AC-2 shows it names what is
+      missing).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Documentation criterion (a comment above the class), not a test
+      outcome -- no red/green cycle applies to a comment. Verified by
+      direct inspection: the comment immediately above `class
+      TestRepositoryRulesAreInPlace` in
+      tests/test_guardrail_hooks_migration.py states that the
+      CLAUDE.md-as-index convention was retired, names the current policy
+      (CLAUDE.md carries only product value and its users; rules live
+      under .claude/rules/), and cites decision id `ac11-stale-guard`
+      (phase-state/rework.yaml pending_decisions[0]).
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/discovery criterion. Verified by the full-suite run completing
+      via `python3 -m unittest discover -s tests` with no import errors;
+      the module's imports are unchanged (json, os, shutil, stat,
+      subprocess, tempfile, unittest, pathlib.Path -- all standard library,
+      all already present before this task). No synthetic failure was
+      induced since this is a structural invariant rather than new
+      behaviour.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Scope-containment criterion, not expressible as a unit test run
+      inside this worktree. Verified via `git status --porcelain` showing
+      only tests/test_guardrail_hooks_migration.py as modified.

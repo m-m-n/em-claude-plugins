@@ -1,0 +1,112 @@
+schema_version: 1
+feature: develop-once-option
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 4323beb
+last_input_digest: sha256:896a133820cd6cab0884740805280a48f34724030cb8411fe301b87d9070e900
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-08-25T23:17:04+09:00"
+    questions:
+      - question_id: requirement.phase-boundary.non-completed-transitions
+        status: answered
+      - question_id: requirement.phase-done.step-field-value
+        status: answered
+      - question_id: requirement.ssot.phase-done-literal-in-skill-md
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  requirement.phase-boundary.non-completed-transitions:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-25T23:17:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [treat_as_phase_done]
+    freeform: null
+    normalized_answer: >-
+      implement I.2.c の route back to planning と rework の spec-change 遷移も
+      1 フェーズ完了として扱い、patch 適用とコミットが済んだ時点でターンを終える。
+    resolution_note: >-
+      gate create-spec.requirement-clarification / policy action
+      codex_consultation。Codex は「--once は completed 状態遷移ではなく
+      1 フェーズを約束するもので、両遷移は routing 変更のコミット後に
+      当該フェーズを明示的に終える」と判断。orchestrator が option_id
+      treat_as_phase_done への写像を確認して採用。record_as_assumption: true。
+  requirement.phase-done.step-field-value:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-25T23:17:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [executed_step]
+    freeform: null
+    normalized_answer: >-
+      終端行の step には、そのターンで実行されたフェーズの step 名を書く
+      （verify fail rework の境界では verify）。
+    resolution_note: >-
+      gate create-spec.requirement-clarification / policy action
+      codex_consultation。Codex は「終端行は当該起動を終わらせたフェーズを
+      表すものであり、再開カーソルではない」と判断。orchestrator が option_id
+      executed_step への写像を確認して採用。record_as_assumption: true。
+  requirement.ssot.phase-done-literal-in-skill-md:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-25T23:17:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [no_literal_extend_guard]
+    freeform: null
+    normalized_answer: >-
+      SKILL.md には state の値リテラルを書かず「いつ出すか」だけを定める。
+      既存の literal guard を state 値まで拡張して機械的に強制する。
+    resolution_note: >-
+      gate create-spec.requirement-clarification / policy action
+      codex_consultation。Codex は「値集合の所有権は終端行ドキュメントにあり、
+      guard の現状の抜けは permission ではなく enforcement gap」と判断。
+      orchestrator が option_id no_literal_extend_guard への写像を確認して採用。
+      record_as_assumption: true。
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-08-25T23:17:04+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: >-
+      requirements-analyst の推奨（design を skipped）をそのまま採用する。
+    resolution_note: >-
+      gate create-spec.design-step / batch-policies.yaml action select,
+      option_id decide_autonomously。
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: sha256:95d050750eaaa886fbf95a6d2da1bd9ced553f2a1214c479505a3b1d141e9f9b
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:ac24381c5279cd41978bcdc8da5072c8f15826534ba2cc8625878ad973c778df
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:896a133820cd6cab0884740805280a48f34724030cb8411fe301b87d9070e900
+    output_digest: null
+artifacts:
+  - path: feature-docs/develop-once-option/REQUIREMENTS.md
+    sha256: sha256:5ebfef307e580de3eca063b8bb30d3f62889ff5556bae8c08d75eeb3c497e766
+    produced_by: create-spec-run-0003
+  - path: feature-docs/develop-once-option/SPEC.md
+    sha256: sha256:9d1e7bb4b53b55db3bda01f53e0d244591c3ceef095f111ca9d133f525789316
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: sha256:9d2f41d1041c9aa97ab3ce63d0aa1ead035e8aa348785eb36002424e807601eb
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null

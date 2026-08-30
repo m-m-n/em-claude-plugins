@@ -679,14 +679,232 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
         / "input.json"
     )
 
+    # Updated by goal-vs-spec-divergence/task0002, which owned
+    # em-workflow/references/workflow-patch.md and intentionally edited it
+    # (the freeze this pin enforces was scoped to the
+    # batch-policy-option-id-consistency implementation window, which had
+    # completed; the pin was refreshed there, not removed, to keep guarding
+    # against future incidental edits).
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0013 (review round 1
+    # rework), which also intentionally edits workflow-patch.md (the
+    # re-planning permission conditions and task-id allocation rule) --
+    # same rationale: refresh, don't remove, so the guard keeps catching
+    # future incidental edits.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
+    # rework), which settles the re-planning permission contract in one
+    # place: the second Re-planning path case now reads an UNCONSUMED
+    # `spec_change` record (with its reading position named), the
+    # Re-planning task-id allocation section gains the "must re-declare
+    # every registered id" rule, and the Application rules list gains rule
+    # 17 for it. Same rationale as the two refreshes above: refresh, don't
+    # remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0022 (review round 3
+    # rework, finding consumed-flag-split): the Re-planning path's second
+    # case now reads a `spec_change` record carrying an UNSPENT
+    # RE-PLANNING AUTHORIZATION (`replan_authorized`) instead of an
+    # unconsumed record -- `consumed`'s value is explicitly excluded from
+    # the decision (references/phase-state.md's `spec_change` flag pair).
+    # Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0023 (review round 3,
+    # D10, merged after task0022): the `tasks_patch` block gains
+    # `carried_task_ids`, the Re-planning task-id allocation section is
+    # rewritten around the carried_task_ids/entries disjoint-set split,
+    # application rule 12 narrows to `entries` only, rule 17 is restated in
+    # terms of `carried_task_ids`, and the `preserve` section gains the
+    # carried-id remark. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0029: the document
+    # gains a new Application rule 18 -- once a re-planning `replace_all`
+    # has been applied, the orchestrator sets that record's
+    # `spec_change.replan_authorized` to `false`, in the same phase-state
+    # write that records the application (the one consumption procedure
+    # AC-1 requires) -- and the "All seventeen rules" count statement
+    # becomes "All eighteen rules" in the same edit (D12). Same rationale:
+    # refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0002 (D2: task0002 is
+    # this file's sole owner for this specific pin): the unspent
+    # re-planning authorization condition now names the origin pair
+    # (`origin_kind` / `origin_id`) instead of the retired single-field
+    # name it used to require, the document gains a new Application rule
+    # 19 (recovery and idempotency for an interruption between rule 15's
+    # patch write and rule 18's authorization-spending write) -- the "All
+    # eighteen rules" count statement becomes "All nineteen rules" in the
+    # same edit -- and the Ownership boundary section gains a paragraph
+    # naming rule 18's crossing into phase-state. Same rationale: refresh,
+    # don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0008 (review round1
+    # rework, D9: task0008 is the sole owner of this pin for the round):
+    # rule 19 relocates entirely OUT of the numbered Application rules
+    # list into its own titled section ("## Interrupted authorization-
+    # spend recovery"), whose recognition condition now defers to
+    # `references/phase-state.md`'s own already-applied determination
+    # (keyed by the patch's own `patch_id`) instead of a bare
+    # `base_workflow_blob` mismatch -- the "All nineteen rules" count
+    # statement reverts to "All eighteen rules" in the same edit. Same
+    # rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "2fb181ad1a128f526d4b549013538d59804ace3a544af5811bc801801f509d0e"
+        "ea6366ea7aa6296f21baec084c1d8c8205e043852f147bf0ea47142ffd882f67"
     )
+    # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
+    # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
+    # brought em-workflow/scripts/** into (phase-state/rework.yaml
+    # deviation_from_transition) so the replace_all permission check could
+    # be made to agree with workflow-patch.md's two permitted paths. As with
+    # WORKFLOW_PATCH_SHA256 above, the pin is refreshed, not removed, to
+    # keep guarding against future incidental edits of these two files.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
+    # rework): the re-entry recognition helper now resolves its signal from
+    # `{feature-dir}/phase-state/rework.yaml` or a `--phase-state` mapping
+    # whose own `phase` is `rework` (never any mapping carrying a
+    # `spec_change` record, which is what task0016 had left in place and
+    # which task0013's canonical invocation could never actually satisfy),
+    # `REQUIRED_PRESERVE_BY_OPERATION` stays operation-flat while the
+    # path-dependent mandatory-preserve and task-id-allocation checks move
+    # into `_validate_dry_run_apply`'s `replace_all` branch. Same rationale:
+    # refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0024 (review round 3,
+    # AC-4/AC-5): the gate registry's category binding gains the reverse
+    # direction -- `_gate_ids_for_category` plus the category -> gate_id
+    # check inside `validate_question`, closing the direction where
+    # `category: spec-change` paired with an unregistered or
+    # worker-unattributed `gate_id` previously passed with no error. Same
+    # rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0022 (review round 3
+    # rework, finding consumed-flag-split):
+    # `workflow_replace_all_spec_change_reentry` now checks
+    # `spec_change.replan_authorized` (present, boolean, `True`) for the
+    # re-planning-authorization judgement and no longer consults
+    # `consumed` at all. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
+    # rework): `ANSWER_SOURCE_VALUES` gains `batch-classification-gate` (the
+    # batch-only classification gate's proceed-outcome answer source,
+    # references/question-resolution.md's Classification gate Outcome
+    # step). Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0023 (review round 3,
+    # D10, merged after task0022 and task0025): `validate_workflow_patch`
+    # gains a structural `tasks_patch.carried_task_ids` shape check, the
+    # `elif is_replanning:` branch of `_validate_dry_run_apply` is rewritten
+    # around `carried_task_ids` (three independently reported rejection
+    # codes instead of the old drop/reuse pair), and `apply_patch`'s
+    # `replace_planning` arm now copies a carried id's record from the
+    # pre-apply workflow verbatim. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0029: `classifier`
+    # verdict / decision value constants are added, `validate_phase_state`
+    # gains the `classification` list-shape and field checks (an
+    # append-type list, never a wholesale-replaced mapping), and
+    # `SPEC_CHANGE_MANDATORY_FIELDS` moves from the retired single-field
+    # origin identifier to the `origin_kind` / `origin_id` pair
+    # (references/rework-task-synthesis.md -- a `verify`-sourced record is
+    # accepted on the same terms as a `review`-sourced one, D13). Same
+    # rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0004 (FR3, FR4, FR6):
+    # `ORIGIN_KIND_VALUES` and `FAILED_ITEM_CATEGORY_VALUES` are added;
+    # `workflow_replace_all_spec_change_reentry` enforces `origin_kind`'s
+    # closed vocabulary; `validate_workflow_patch` enforces
+    # `workflow.yaml`'s verify-step `failed_items[].category` closed
+    # vocabulary via the new `_validate_verify_failed_items_categories`;
+    # `validate_question` rejects a `rework.spec-change` question with no
+    # `evidence[]` entry carrying a non-empty `origin_id`; the packet
+    # schema's evidence field's retired single-field name is renamed to
+    # `origin_id` in `SPEC_CHANGE_MANDATORY_FIELDS`'s neighboring comment,
+    # and the retired name is removed from every comment in this script.
+    # Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0008 (review round1
+    # rework, D9: task0008 is the sole owner of this pin for the round):
+    # `_validate_verify_failed_items_categories` gains a mandatory `patch`
+    # parameter and a new `_verify_step_targeted_by_patch` helper -- the
+    # category check now errors only for the entries of a verify step the
+    # patch targets via `step_patches`, never for a pre-existing entry a
+    # patch neither supplies nor targets (a defect no worker can repair).
+    # The call site inside `validate_workflow_patch` passes `data` (the
+    # patch) through. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "1b86e4d4ccc9536aa170da0be3d1309d25b6c211cc388e9d2d02e6860b3eb4a7"
+        "6736354620f2c70beef43295ddc0461f7ada11538b0eaf225768f4088205e26d"
     )
+    # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
+    # rework): TestReplanningReentrySignalHelper gains the tightened-
+    # contract cases (phase/feature match, unconsumed record, the
+    # feature-dir equivalent source) and TestCanonicalReentryInvocation /
+    # TestReplanningMandatoryPreserveAndTaskIdAllocation are new. Same
+    # rationale as the two refreshes above: refresh, don't remove --
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0024 (review round 3,
+    # AC-4/AC-5): TestGateRegistryDerivation gains the rework.spec-change
+    # registration pins, and TestSpecChangeCategoryGateBidirectionalBinding
+    # is new, proving the category -> gate_id direction the validator gains
+    # above. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0022 (review round 3
+    # rework, finding consumed-flag-split): TestReplanningReentrySignal
+    # Helper's `consumed`-keyed cases are renamed/re-pointed at
+    # `replan_authorized` (`consumed: true` no longer blocks re-entry), new
+    # `replan_authorized` direction cases are added, and
+    # `test_consumed_spec_change_record_is_rejected` is renamed/re-pointed
+    # at the new `invalid-replace-all-replan-authorization-spent` fixture.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0025 (review round 3
+    # rework): adds TestGateResolvedAnswerSource, pinning
+    # `batch-classification-gate` in `ANSWER_SOURCE_VALUES` and that a real
+    # answer object using it validates. Same rationale: refresh, don't
+    # remove -- PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0023 (review round 3,
+    # D10, merged after task0022 and task0025): `TestCanonicalReentryInvocation.
+    # _patch_obj` and `TestReplanningMandatoryPreserveAndTaskIdAllocation`
+    # move to the carried_task_ids/entries carry-over form, and
+    # `TestReplanningCarryOverEnforcement` is new (the
+    # `replace-all-entry-for-registered-id` rejection). PINNED_VALIDATOR_
+    # TEST_LINE below is unaffected and still asserted. Same rationale:
+    # refresh, don't remove.
+    #
+    # Refreshed again by goal-vs-spec-divergence/task0029: every
+    # retired-single-field-keyed fixture literal moves to the `origin_kind`
+    # / `origin_id` pair (`_rework_phase_state`, the `--dry-run-apply`
+    # canonical-invocation YAML builders), matching the validator's renamed
+    # `SPEC_CHANGE_MANDATORY_FIELDS`. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0004: origin_kind's
+    # closed vocabulary is enforced in
+    # workflow_replace_all_spec_change_reentry (FR6); a
+    # rework.spec-change question's evidence[] origin-naming obligation is
+    # enforced in validate_question (FR4); the packet schema's evidence
+    # field's retired single-field name is renamed to origin_id, and the
+    # retired name is removed from every comment. New
+    # TestOriginIdEvidenceRequirement /
+    # TestFailedItemCategoryVocabulary / TestOriginKindVocabulary classes
+    # cover the new enforcement. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-contract-drift/task0008 (review round1
+    # rework, D9: task0008 is the sole owner of this pin for the round):
+    # `TestFailedItemCategoryVocabulary` is updated in place -- every
+    # direct call to `_validate_verify_failed_items_categories` now
+    # supplies a patch, and the class gains the untargeted/targeted
+    # scoping cases (including under `--dry-run-apply`) -- and the wiring
+    # test's patch now targets the verify step via `step_patches`.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    # Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "2bac45b2a18680d696334fb2f4df16bfd11f72b95e81913de630ab1956a6aea8"
+        "c161714b88d0fa6d6b1885a2b52fa5510e4e1db18aed95bab876d6ef73aad730"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

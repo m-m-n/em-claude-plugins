@@ -1,0 +1,167 @@
+# Verification Document: goal-vs-spec-divergence
+
+## Overview
+
+**Feature**: goal-vs-spec-divergence
+**SPEC.md**: `feature-docs/goal-vs-spec-divergence/SPEC.md`
+**IMPLEMENTATION.md**: `feature-docs/goal-vs-spec-divergence/IMPLEMENTATION.md`
+
+This document defines the INTEGRATED verification run after every task has
+merged. Per-task acceptance criteria live in `tasks/taskNNNN.md` and are not
+repeated here.
+
+## Build Verification
+
+- Command: none — `project.components.main.build_command` is empty. The
+  deliverables are Markdown, YAML and JSON documents plus Python test
+  modules; there is no build step.
+- Expected: not applicable. The manifests' JSON validity is covered by TS-9.
+
+## Test Verification
+
+- Command: `python3 -m unittest discover -s tests`
+- Expected: exit code 0, zero failures, zero errors.
+- Coverage target: line coverage is not measured (no coverage tooling, and
+  the units under test are documents). The equivalent target is
+  **scenario coverage**: every scenario below is pinned by at least one
+  module under `tests/`, and every requirement maps to at least one scenario.
+
+### Test Scenarios from SPEC.md
+
+| ID | Scenario | Expected Result | Test Type |
+|----|----------|-----------------|-----------|
+| TS-1 | Scan `workflow-schema.md` and `create-spec-phase.md` for the `goal` block's definition, verbatim-storage, single-writer, immutability and untrusted-handling statements | All statements present; the schema states the block is optional and never backfilled | Unit |
+| TS-2 | Scan `workflow-patch.md`'s `replace_all` permission conditions and `rework-task-synthesis.md`'s SPEC-change transition together | The `needs_update` path permits merged tasks, `in_progress`/`failed` are still protocol errors, `base_commit` preservation is stated, and the superseded wording is absent from both documents | Unit |
+| TS-3 | Scan for the classification gate's batch-only restriction, two-directional question, asymmetry and evidence criterion | All four present in `question-resolution.md`; interactive stated as unchanged | Unit |
+| TS-4 | Retention pin: `question-resolution.md` still aborts immediately for `category: security`, `category: license` and `reversible: false`, and the spec-change arm is routed instead | Three abort arms intact with their non-overridable clauses; spec-change arm routed; `batch-policies.yaml`'s header consistent | Unit |
+| TS-5 | Scan for the Codex-absent self-classification route and the audit record's fields | Route defined with the same asymmetry and evidence criterion; `classifier` / `verdict` / `evidence_ids` / `decision` / `reason` defined in `phase-state.md` | Unit |
+| TS-6 | Scan for all three eligibility conditions of the wording-correction route | No planner re-entry, plan/task metadata unchanged, requirement metadata unchanged — stated conjunctively, with the fallback to the normal route | Unit |
+| TS-7 | Scan the analyst-side investigation procedure for referenced-side scanning | The request flag, the result field (test files included) and the orchestrator-resolves-paths discipline are all stated; no self-discovery is implied | Unit |
+| TS-8 | Scan the declared-change-set derivation, the retained containment check, and — by the same method as the existing invariant module — the absence of any verify-side exclusion rule | Derivation defined as tasks' `files` ∪ default entries, guard status stated, containment retained, zero exclusion-rule offenders | Unit |
+| TS-9 | Compare the em-workflow version in `plugin.json` and `marketplace.json` | Both parse, are equal, and are strictly greater than the pre-change baseline | Unit |
+| TS-10 | Run the entire suite, including every pre-existing document-pin module | Full suite green; no guard deleted | Unit (full suite) |
+| TS-11 | Retention pin for Codex-output handling: read-only, never executed, never adopted verbatim; the consultation procedure's probe / wrapper / turn ceiling / decision-stays-with-Claude mechanics unchanged | All present; the gate introduces no second, laxer statement | Unit |
+| TS-12 | SSOT discipline: the `goal` block is defined in exactly one document; the default-entry enumeration's carrier set is unchanged (or updated in the same edit); no rule gains a second home | No duplicate definition; carrier scan reports no unexpected carrier | Unit |
+| TS-13 | Every new stop path states that its reason and evidence are recorded, and no new batch statement raises a confirmation nobody can answer | Present for the gate's stops, the inapplicable case, and the rejected deviation | Unit |
+| TS-14 | Codex independence: every capability of the gate is stated to hold without Codex | The Codex-absent route carries the same verdicts, asymmetry and evidence criterion; no capability is conditioned on Codex being installed | Unit |
+| TS-15 | Traceability: every FR1–FR19 has at least one task and at least one test in `workflow.yaml`'s requirements mapping, and every listed ID exists | No requirement with an empty `tasks` or `tests` array except FR20's own entry, which carries both | Manual / integrated |
+| TS-16 | Every test module added by this feature is discovered by the run command and imports only the standard library | Discovery finds each new module; no third-party import | Unit |
+| TS-17 | Scan for the goal-absent inapplicability rule (FR20 / assumption A-6) | `question-resolution.md` states the gate is inapplicable without a `goal` block, the run stops as before, no backfill occurs, and the stop reason records the inapplicability; `workflow-schema.md` states the block is optional | Unit |
+| TS-18 | Drive the SPEC-change transition's real ordering — record written, `create-spec` dispatched and the record marked consumed, `create-spec` completed, `create-plan` re-entered as `pending` with `merged` tasks present — and validate the re-planning `replace_all` produced there, through the canonical validator invocation | The patch is permitted: the re-planning authorization flag is independent of `consumed`, and a spent or absent authorization is still rejected | Unit |
+| TS-19 | Apply a re-planning `replace_all` that carries its registered task ids and compare each carried record field by field before and after, including a `files` path admitted by an implement deviation | Every carried record is identical after the patch — `status`, `branch`, `files`, and the rest — and a patch that drops a registered id, re-supplies a body for one, or re-issues an id below the high-water mark is rejected | Unit |
+| TS-20 | Scan the fail-closed classification for the spec-change category's abort arm and its single gate-keyed exception, and drive the validator with both mismatched category / `gate_id` pairings | The category is an abort condition again, the routed arm is admitted only for `rework.spec-change`, both mismatch directions abort, the gate is present in the validator's gate registry, and no statement asserts an irreversible-operations source that has no definition | Unit |
+| TS-21 | Scan the classification gate's outcome wiring and develop Step B, and validate an answer object produced by a gate outcome | The proceed and stop outcomes each name what they write to the packet and answer model in exactly one place, no gate-resolved packet stays `issued`, `batch-classification-gate` is a valid answer `source` in both the schema and the validator, and Step B carries the gate's call point and stop branch with interactive unchanged | Unit |
+| TS-22 | Scan `create-spec-phase.md`'s re-entry rule for the requirement upsert | `requirements` is no longer listed as untouched; new ids are created from `spec_index`, surviving ids keep their `tasks` and `tests`, the disappearing-id case has exactly one stated outcome, and the rest of the partial-update list is intact | Unit |
+| TS-23 | Scan the three consumers of the re-planning carry-over rule — `create-plan-phase.md`, `planner-contract.md` and the implementation-planner prompt — for a restated count of `workflow-patch.md`'s application rules and for the producer-side allocation instruction | No count of the rule set survives outside `workflow-patch.md`, each site cites the SSOT by path instead, and the prompt's allocation instruction branches on the planning pass, requiring `carried_task_ids` for every registered id and bodies only for unregistered ones | Unit |
+| TS-24 | Drive the spec-change route's origin verification with a dispatch whose bound origin set holds both a benign and a `category: security` origin, and with a verify-sourced origin | The security / license / irreversible check runs over the orchestrator's bound set, so naming only the benign origin does not admit the routed arm; an origin outside the bound set aborts; and an `origin_kind: verify` origin is verified against the verify failed items and reaches the gate | Unit |
+| TS-25 | Scan `phase-state.md`, `workflow-patch.md` and develop's SKILL for the authorization's consumption procedure, and drive the validator with a two-pass classification record and with a `spec_change` record of each `origin_kind` | Exactly one document states the consumption procedure with a named actor and moment while the others cite it; the writer list names both writers; both classification entries survive a second pass; and the validator accepts either origin kind while still rejecting a spent or absent authorization | Unit |
+
+## Code Quality Verification
+
+- Format: none — `project.components.main.format_command` is empty. Markdown
+  and YAML are hand-formatted; the wrap width and heading style of each
+  edited document follow that document's existing conventions.
+- Static analysis: none configured. The document-pin modules under `tests/`
+  serve this role for the protocol documents.
+
+## SPEC.md Compliance
+
+### Success Criteria
+
+| ID | Criterion | How to Verify |
+|----|-----------|---------------|
+| SC-1 | FR1–FR19 implemented and covered by the scenarios above (FR20 resolved as an assumption) | TS-1 … TS-8, TS-11 … TS-14, TS-17, TS-23 … TS-25; requirements mapping check TS-15 |
+| SC-2 | AC-1 … AC-11 of the user stories satisfied | Read each user story's acceptance criterion against the merged documents; each maps to the scenarios above |
+| SC-3 | `python3 -m unittest discover -s tests` passes in full | TS-10 |
+| SC-4 | Fail-closed strength for security / license / `reversible: false` unchanged | TS-4 (retention pin), TS-24 (the checked origin set is orchestrator-bound), reviewed as a security item |
+| SC-5 | Existing `tests/` modules green or updated consistently, no guard deleted | TS-10 plus a diff review of every pre-existing module touched: each change must be traceable to an intended document change |
+| SC-6 | Both manifests carry the same raised version | TS-9 |
+| SC-7 | Documents cite existing SSOTs rather than restating rules | TS-12, TS-23 (no restated application-rule count), reviewed as an architecture item |
+| SC-8 | FR1–FR19 delivered as one feature without splitting | TS-15 |
+
+### Functional Requirements Coverage
+
+| Requirement | Tasks | Verification |
+|-------------|-------|--------------|
+| FR1 | task0001, task0007 | TS-1 |
+| FR2 | task0001, task0007 | TS-1 |
+| FR3 | task0001, task0004 | TS-1 |
+| FR4 | task0002, task0022, task0023, task0027, task0029 | TS-2, TS-18, TS-19, TS-23 |
+| FR5 | task0002, task0022, task0023, task0026, task0027 | TS-2 |
+| FR6 | task0003, task0022, task0026, task0027, task0029 | TS-2, TS-18, TS-22 |
+| FR7 | task0004, task0025, task0028 | TS-3, TS-21, TS-24 |
+| FR8 | task0004, task0025 | TS-3 |
+| FR9 | task0004 | TS-3 |
+| FR10 | task0004 | TS-3 |
+| FR11 | task0004, task0006, task0024, task0028 | TS-4, TS-20 |
+| FR12 | task0004 | TS-11 |
+| FR13 | task0004 | TS-5 |
+| FR14 | task0004, task0005, task0029 | TS-5, TS-25 |
+| FR15 | task0003 | TS-6 |
+| FR16 | task0003 | TS-6 |
+| FR17 | task0007, task0008 | TS-7 |
+| FR18 | task0009, task0023 | TS-8, TS-19 |
+| FR19 | task0010, task0023 | TS-8 |
+| FR20 | task0001, task0004, task0007 | TS-17 |
+| NFR1 | task0001 … task0010, task0022 … task0029 | TS-12, TS-23 |
+| NFR2 | task0004, task0006, task0024, task0028 | TS-4, TS-20, TS-24 |
+| NFR3 | task0004, task0005, task0010, task0025, task0029 | TS-13, TS-21, TS-25 |
+| NFR4 | task0004 | TS-14 |
+| NFR5 | task0001 … task0011, task0022 … task0029 | TS-16 |
+| NFR6 | task0011 | TS-9 |
+| NFR7 | task0001 … task0011 | TS-15 |
+| NFR8 | task0001 … task0011, task0022 … task0029 | TS-10 |
+
+## E2E Testing
+
+No E2E framework exists in this repository
+(`project.components.main.e2e_test_command` is empty), and this feature
+introduces no runtime surface to drive. Omitted deliberately.
+
+## Manual Testing (E2E Not Possible)
+
+- [ ] MV-1 (TS-15): read `workflow.yaml`'s requirements mapping after the
+      integrated merge and confirm every FR1–FR19 entry has a non-empty
+      `tasks` and `tests` array, and that every referenced task ID and
+      scenario ID exists.
+- [ ] MV-2 (SC-5): review the diff of every pre-existing module under
+      `tests/` that a task modified, confirming each change tracks an
+      intended document change rather than relaxing a guard.
+- [ ] MV-3 (SC-7): read the merged documents for duplicated rules — the
+      `goal` block, the classification gate's verdicts, the declared-change-set
+      default entries and the containment semantics must each have exactly one
+      home, with every other mention a citation.
+- [ ] MV-4: confirm no file outside SPEC.md's Declared Change Set was
+      modified — in particular nothing under `em-workflow/scripts/**`,
+      `em-workflow/hooks/**`, or another feature's `feature-docs/**`.
+- [ ] MV-5 (SC-4): read the merged `question-resolution.md` end to end and
+      confirm the classification gate cannot be reached from the security,
+      license or irreversible-operation arms by any path.
+
+Mockup visual comparison is not applicable: the design step is `skipped` for
+this feature and no design artifact exists.
+
+## Performance / Security Verification
+
+- **Performance**: no performance requirement is stated; no threshold to
+  check.
+- **Security — fail-closed retention (NFR2)**: TS-4, TS-20 plus MV-5. The
+  three immediate-abort arms must be individually present with their
+  non-overridable clauses intact, no fourth arm may be reachable by a
+  category / `gate_id` pairing the routed arm does not admit, and no arm may
+  claim a decision source that has no definition in the repository.
+- **Security — untrusted data (FR3, FR12)**: TS-1 and TS-11. The goal text
+  and Codex output must be stated as data to read, never as instructions to
+  follow, at every site that consumes them.
+- **Security — scope containment (FR19)**: TS-8. The containment check must
+  still stop unjustified scope expansion, and no exclusion rule may subtract
+  workflow-generated artefacts from the observed change set.
+
+## Verification Summary
+
+| Category | Items | Automated | E2E | Manual |
+|----------|-------|-----------|-----|--------|
+| Test scenarios | 25 | 24 | 0 | 1 (TS-15) |
+| Success criteria | 8 | 5 | 0 | 3 (SC-2, SC-5, SC-7) |
+| Manual verification | 5 | 0 | 0 | 5 |
+| Security items | 3 | 3 | 0 | 1 overlap (MV-5) |

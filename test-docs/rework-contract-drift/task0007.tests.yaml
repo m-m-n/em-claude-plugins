@@ -1,0 +1,99 @@
+task_id: task0007
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_initial_planning_branch_cites_owning_document_and_initial_planning_path
+    red_confirmed: true
+    red_reason: >-
+      assertIn('references/workflow-patch.md', branch) raised AssertionError:
+      'references/workflow-patch.md' not found in the pre-change
+      Initial-planning branch text ('**Initial planning**
+      (`create-plan` is `pending`): number every task ...').
+  AC-2:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_neither_branch_keyed_on_a_single_step_status_literal
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_initial_planning_branch_states_condition_not_restated
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_matcher_detects_a_synthetic_branch_keyed_on_pending_literal
+    red_confirmed: true
+    red_reason: >-
+      test_neither_branch_keyed_on_a_single_step_status_literal:
+      assertNotIn('`create-plan` is `pending`', self.section) raised
+      AssertionError: '`create-plan` is `pending`' unexpectedly found in the
+      pre-change section text.
+      test_initial_planning_branch_states_condition_not_restated:
+      assertIn('not restated here', branch) raised AssertionError: 'not
+      restated here' not found in the pre-change Initial-planning branch
+      text. The negative-proof test
+      (test_matcher_detects_a_synthetic_branch_keyed_on_pending_literal) is
+      a pure self-contained proof of the matcher and passes by construction;
+      it is not itself a red/green case.
+  AC-3:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_prompt_does_not_restate_the_floor_condition_wording
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_matcher_detects_a_synthetic_floor_condition_restatement
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_prompt_does_not_restate_the_re_entry_signal_field_names
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_matcher_detects_a_synthetic_re_entry_signal_restatement
+    red_confirmed: false
+    red_reason: >-
+      The pre-change Initial-planning branch was a bare status literal
+      ('`create-plan` is `pending`') with no restated floor-condition
+      wording or re-entry-signal field names at all -- it under-cited
+      rather than over-restated, so these two absence assertions already
+      passed before the prompt was edited (confirmed: grep for
+      "every existing task's", "origin_kind", "replan_authorized",
+      "recorded_at_commit" over the pre-change prompt returned zero
+      matches). Per the task plan's AC-5 and NFR4's demonstration
+      allowance, each absence check is paired with a
+      test_matcher_detects_a_synthetic_..._restatement negative proof
+      (test_matcher_detects_a_synthetic_floor_condition_restatement,
+      test_matcher_detects_a_synthetic_re_entry_signal_restatement) that
+      proves the same matcher fires against a violating sample standing in
+      for what a drifted pre-change text would have looked like.
+  AC-4:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_two_branch_headers_present
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_neither_branch_keyed_on_a_single_step_status_literal
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_matcher_detects_a_synthetic_branch_keyed_on_pending_literal
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_matcher_detects_a_synthetic_floor_condition_restatement
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_matcher_detects_a_synthetic_re_entry_signal_restatement
+    red_confirmed: true
+    red_reason: >-
+      test_two_branch_headers_present replaces
+      test_two_branches_present_initial_planning_keyed_on_pending_status,
+      which pinned the now-removed literal's presence; its own
+      header-presence assertions were already true and remain true
+      (not itself a red case -- the replacement is the structural change),
+      while every new absence assertion introduced for AC-1/AC-2/AC-3 is
+      paired with its own test_matcher_detects_a_synthetic_...
+      negative-proof test in the same class, satisfying the pairing
+      requirement.
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Verified directly: running
+      `python3 -m unittest tests.test_replanning_producer_alignment -v`
+      against the pre-change prompt failed 3 tests
+      (test_initial_planning_branch_cites_owning_document_and_initial_planning_path,
+      test_initial_planning_branch_states_condition_not_restated,
+      test_neither_branch_keyed_on_a_single_step_status_literal) for the
+      reasons recorded under AC-1/AC-2 above. The AC-3 absence checks
+      already held pre-change (see AC-3's red_reason); their
+      negative-proof samples stand in for a violating pre-change text per
+      NFR4's demonstration allowance, exactly as the task plan anticipates.
+      No existing assertion was weakened, skipped or deleted:
+      test_two_branches_present_initial_planning_keyed_on_pending_status
+      was replaced by test_two_branch_headers_present (AC-4) rather than
+      dropped without replacement.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/suite-health criterion, not a single failing test: verified by
+      running `python3 -m unittest discover -s tests` after implementation
+      (2388 tests, all pass) and by inspection that no new import statement
+      was added to tests/test_replanning_producer_alignment.py (only
+      `re`, `unittest`, `importlib.util`, `pathlib.Path`, all already
+      present and all standard library).

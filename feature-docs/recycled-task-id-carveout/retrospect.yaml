@@ -1,0 +1,43 @@
+feature: recycled-task-id-carveout
+collected_at: "2026-08-18T09:43:23+09:00"
+session_ids: [01a011fa-f14d-7000-b93b-b902f656fc5a.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - round: 1
+      id: TS-2
+      note: "三フック節 matcher の negative proof が未実装。rework task0004 で解消"
+    - round: 1
+      id: SC-1
+      note: "SPEC AC-6 の single-reader 定数条件が未達（HOOK_FILENAMES / JOURNAL_ONLY_HOOK_FILENAMES）。rework task0004 で解消"
+  discretionary_perspectives: []
+  declined_findings: []
+lessons_candidates:
+  - note: >-
+      implementation-planner と rework-planner がどちらも task plan の
+      「### Files to Create / ### Files to Modify」bullet に、パス以外のバックティック語を含めて
+      validate-worker-output.py の task-plan-files チェックに落ちた（2 回とも同一原因）。
+      plan-writing スキルか task-plan テンプレートに「bullet 内のバックティックはパス 1 個だけ」を
+      明記すると 1 往復ぶんの手戻りが消える。
+  - note: >-
+      spec-writer / implementation-planner / rework-planner の 3 worker が、実行ツールを持たない
+      ため written_artifacts の sha256 を null で返した。契約は digest 付きを必須としているが、
+      これらの agent の tools には Bash が無い。契約側で「digest は orchestrator が layer 5 で計算する」と
+      明記するか、agent 側に読み取り専用のハッシュ手段を与えるかを決める必要がある。
+  - note: >-
+      rework-planner は envelope の宣言入力に含まれないという理由で対象モジュール
+      （tests/test_recycled_task_id_consistency.py）を読まずに計画した結果、実在しないサンプルの存在を
+      前提にした Design 節と、出典の SPEC AC-6 より広い全称文の検証シナリオ（TS-13）を書いた。
+      失敗項目が特定ファイルを名指ししている場合、そのファイルを resolved_input_paths に載せて
+      dispatch する運用にすると精度が上がる。
+  - note: >-
+      verify round 1 の失敗 2 件はどちらも review round 1 で medium として検出済みだったが、
+      R4 の auto-fix ゲートが critical/high 限定のため素通りし、verify で初めて差し戻しになった。
+      medium でも「SPEC の受け入れ条件そのものに反する」種類の指摘は review 段階で扱う価値がある。
+  - note: >-
+      TS-13 の文言が出典の SPEC AC-6 より広い全称文になっており、モジュール docstring の
+      「leaving no module-level constant in this module with fewer than two reader sites」も
+      実測（reader 1 の定数が 6 個）と一致しない。どちらも本 feature が直そうとした
+      「ドキュメントの主張と実態のズレ」と同型で、残件として起票済み。

@@ -1,0 +1,236 @@
+schema_version: 1
+feature: routeback-admissibility-exits
+created: 2026-08-23
+base_branch: main
+parent_branch: em-workflow/routeback-admissibility-exits/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 0c892cc5f8e90beb1b9ebe0955bc792bb147fc1b
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "Protocol-document and test-only change with no user-facing UI, no rendered output and no design-system inputs."
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: completed
+    completed_at_commit: 3129f14ba447b69500cd2e9647b3d9732b51f4ad
+  - id: implement
+    status: completed
+    base_commit: 4097a72288dcdf4a2e3368131a29c8893d1a7a1e
+    completed_at_commit: ce5ba003155bb57bc2d80cd634d08a4bd3cf6b73
+  - id: review
+    status: completed
+    completed_at_commit: d240a0c897ebe50e5da5a4d0d8cfd94c64c61a66
+  - id: verify
+    status: completed
+    completed_at_commit: f070e5672e72d3f890574a159e8499fc822e016a
+    result: pass
+    failed_items: []
+    summary: >-
+      python3 -m unittest discover -s tests: Ran 2830 tests, OK
+      (failures=0, errors=0, skips=0)。TS-1..TS-7 / TS-10..TS-14 は同 suite の
+      unit として green、TS-8 は変更集合に hooks 配下のパスが 1 件も無いこと、
+      TS-9 は aggregate run で確認。build / format / e2e はいずれも未設定のため
+      該当なし。excluded な要件は無し。
+  - id: retrospect
+    status: completed
+    completed_at_commit: a3b5c5cc931624790211327a77fc6f504e286d1d
+
+tasks:
+  task0001:
+    title: "Route-back admissibility exits in the implement-phase protocol"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_implement_routeback_gate.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - test-docs/routeback-admissibility-exits/task0001.tests.yaml
+    skills: []
+    domains: [api-contract, concurrency, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/routeback-admissibility-exits/task0001
+  task0002:
+    title: "Make the round-1 route-back exits actually reachable"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_implement_routeback_gate.py
+      - tests/test_recycled_task_id_consistency.py
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - test-docs/routeback-admissibility-exits/task0002.tests.yaml
+    skills: []
+    domains: [api-contract, concurrency, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/routeback-admissibility-exits/task0002
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+        - 6e9da908226dcef5
+        - 1154484d3ee2441e
+        - 4dce81ff0f6b4fc6
+        - 06b3f1b36ff2161d
+        - 3ecccbac53f86bb8
+        - cbd00cfb5b3ce5d7
+        - 3bb53902965e3224
+
+  task0003:
+    title: "Re-ground I.2.a's inheritance-invariant matchers on the surviving wording"
+    plan: tasks/task0003.md
+    files:
+      - tests/test_recycled_task_id_consistency.py
+      - test-docs/routeback-admissibility-exits/task0003.tests.yaml
+    skills: []
+    domains: [api-contract]
+    complexity: medium
+    requirements: [FR2, FR6, NFR2, NFR3, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/routeback-admissibility-exits/task0003
+    provenance:
+      source: verify
+      review_round: null
+      source_ids:
+        - VF-1
+        - VF-2
+        - VF-3
+
+review:
+  status: completed
+  rounds_completed: 3
+  plan:
+    floor: [comprehensive, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 4
+  needs_rework: false
+  deferred_note: >-
+    round 3 の residual critical/high 4 件は batch の rework cap
+    (batch.review_rework_count = 1) に達していたため deferred として完了させた。
+    詳細は reviews/round3.yaml の 12839a507a7df994 (critical/spec) /
+    2da3c75adac32650 (high/spec) / bc57aa350bb027c7 (high/spec) /
+    59e58726b1b22211 (high/architecture)。うち 3 件は SPEC の Objectives と
+    FR3 に対する未達の指摘で、残り 1 件は workflow-schema.md 側の SSOT 更新を
+    要するため review-editor の single-file スコープでは修正できなかった。
+    round 2 の deferred 2 件 (bffdcec69dbce324 / 17dc88bb8781a1a1) は
+    reviews/round2.yaml に記録が残る。
+
+requirements:
+  FR1:
+    title: "Exit for a recycled task id that inherited a `merged` journal event"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-1, TS-10]
+  FR2:
+    title: "Correct I.2.a's unreachability argument"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-1, TS-3, TS-10, TS-13, TS-14]
+  FR3:
+    title: "Exit for a plan carrying a stale `launched`"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-2, TS-11, TS-12]
+  FR4:
+    title: "Give I.2.b step 1's in-flight verification a defined outcome"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-2, TS-11]
+  FR5:
+    title: "Keep the hook contract consistent"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-8]
+  FR6:
+    title: "SPEC-side coverage"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-4]
+  FR7:
+    title: "Plugin version bump in lockstep"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-7]
+  NFR1:
+    title: "Hook code untouched by default"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-8]
+  NFR2:
+    title: "Test-module discipline"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-4, TS-5, TS-6, TS-14]
+  NFR3:
+    title: "Single-source discipline in implement-phase.md"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-4, TS-5, TS-6, TS-12, TS-13, TS-14]
+  NFR4:
+    title: "Suite green"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-9, TS-14]
+  NFR5:
+    title: "No bare git commit/add lines"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-4, TS-5, TS-6]
+
+batch:
+  review_rework_count: 1
+  verify_rework_count: 1

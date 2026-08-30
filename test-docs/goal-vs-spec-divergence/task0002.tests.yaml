@@ -1,0 +1,50 @@
+task_id: task0002
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_floor_condition_is_scoped_to_the_initial_planning_path
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_tasks_empty_or_all_pending_condition_still_required
+    red_confirmed: true
+    red_reason: "ValueError: substring 'Initial-planning path' not found in section (heading did not exist yet)"
+  AC-2:
+    tests:
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_needs_update_path_explicitly_permits_merged_tasks
+    red_confirmed: true
+    red_reason: "ValueError: substring 'Re-planning path' not found in section (heading did not exist yet)"
+  AC-3:
+    tests:
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_protocol_error_sentence_no_longer_lists_merged
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_exactly_two_create_plan_entry_statuses_are_permitted
+    red_confirmed: true
+    red_reason: "AssertionError: 'merged' unexpectedly found in the protocol-error sentence (old wording still listed merged as blocked on both paths)"
+  AC-4:
+    tests:
+      - tests.test_workflow_patch_doc.TestSupersededBlanketConditionRemoved.test_superseded_blanket_condition_absent_from_document
+      - tests.test_workflow_patch_doc.TestSupersededBlanketConditionRemoved.test_pattern_trips_on_a_synthetic_sample_of_the_old_wording
+    red_confirmed: true
+    red_reason: "AssertionError: Regex matched -- the superseded 'ALL of the following hold ... AND, additionally, one of:' conjunction was still present in the document before the edit"
+  AC-5:
+    tests:
+      - tests.test_workflow_patch_doc.TestBaseCommitPreservedOnReplanningPath.test_base_commit_mentioned_within_permission_conditions_section
+      - tests.test_workflow_patch_doc.TestBaseCommitPreservedOnReplanningPath.test_consistency_with_rework_invariant_is_stated
+    red_confirmed: true
+    red_reason: "AssertionError: 'workflow.implement.base_commit' / 'does not contradict' not found within the permission-conditions section before the edit"
+  AC-6:
+    tests:
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rule_count_matches_design_input
+      - tests.test_workflow_patch_doc.TestApplicationRules.test_rules_are_ordered_one_through_sixteen
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned.test_application_rule_5_still_refers_to_the_permission_conditions
+      - tests.test_workflow_patch_doc.TestPreserveVocabulary.test_complete_preserve_vocabulary_present
+    red_confirmed: false
+    red_reason: "Pre-existing pins (rule count/order, rule 5 wording, preserve vocabulary) were never touched by this task's edit, so they were already green before and after -- the task plan requires them to keep passing untouched, not to go red first."
+  AC-7:
+    tests: []
+    red_reason: "Verified by running the full suite (python3 -m unittest discover -s tests): 1555 tests, only the 3 pre-existing baseline failures in test_guardrail_hooks_migration remain, no regressions. Also required updating an out-of-scope byte-identity guard (tests/test_gate_option_vocabulary.py TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical), recorded as a deviation."

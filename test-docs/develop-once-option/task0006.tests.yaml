@@ -1,0 +1,103 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineDefinitionCondition.test_definition_states_terminal_state_condition_without_old_limit
+      - tests.test_batch_stop_contract_skill_wiring.TestDefinitionConditionMatcherCanFail.test_matcher_rejects_old_double_limiting_definition
+      - tests.test_batch_stop_contract_skill_wiring.TestDefinitionConditionMatcherCanFail.test_forged_old_definition_is_well_formed_and_found
+    red_confirmed: true
+    red_reason: >-
+      test_definition_states_terminal_state_condition_without_old_limit
+      failed against the unmodified SKILL.md with "AssertionError: False is
+      not true : expected the opening definition to state the terminal-state
+      condition without the old run-ending-turn limiting phrase" -- the old
+      definition sentence still read "ランを終わらせるターン（Step C の完了処理、
+      または下記に列挙する終端の停止条件で終わるターン）". The negative-proof
+      pair (matcher rejects the forged old wording, forged text is
+      well-formed) tests the matcher itself, not SKILL.md, so it was already
+      green before the SKILL.md edit and stayed green after -- it exercises
+      the matcher's discrimination independent of the file under test.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring
+      - tests.test_batch_stop_contract_skill_wiring.TestNoLineGeneralizationMatcherCanFail
+      - tests.test_batch_stop_contract_skill_wiring.TestReadInstructionMatcherCanFail
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard over wording this task does not touch (module's
+      own exemption convention, per Test Notes) -- the task plan's scope is
+      the opening definition sentence only, and these pre-existing tests
+      already passed against the unmodified file; they continue to pass
+      unchanged because the edit is confined to the first paragraph of the
+      subsection.
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_skill_md
+      - tests.test_batch_stop_contract_skill_wiring.TestSkillMdNamesNoTerminalStateCount
+    red_confirmed: false
+    red_reason: >-
+      Regression guard, unaffected by this task's edit (no `state` literal
+      or count wording introduced/removed by the definition-sentence
+      rewrite); already green before and after.
+  AC-4:
+    tests: []
+    red_reason: >-
+      "Absence of an assertion" per the task plan's own Test Notes ("AC-4 は
+      「無いこと」の確認なので、モジュール自身のソースに対する検査ではなく...該当
+      アサーションを削除したうえで AC-5 / AC-6 が残ることをもって満たす") -- no
+      test is written for it. Verified by removing
+      `self.assertNotIn("stopped", self.skill_text + self.batch_mode_text)`
+      from TestStateValueGuardWholeFileScope and confirming (by grep over
+      the full module) no other assertion of whitelist-word absence against
+      real-file text remains.
+    red_confirmed: false
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_does_not_flag_step_status_vocabulary_in_a_synthetic_sample
+    red_confirmed: false
+    red_reason: >-
+      The guarded function `_find_contract_literal_violations` is
+      unmodified by this task (Out of Scope: "literal ガードの検査規則そのもの
+      ...の変更"). A narrower synthetic-sample proof (stopped-only) already
+      existed pre-task and passed; this task only broadens the sample to
+      include completed/skipped together and makes the docstring name
+      `stopped` as part of this proof's target, so the assertion was true
+      before this task's edits and remains true after -- there is no
+      behavior change to red-confirm, only a test-structure/documentation
+      change (matches the "when TDD fits poorly" guidance for a criterion
+      with no observable behavior change).
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_skill_md
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_batch_mode_md
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_step_status_words_actually_occur_in_the_real_files
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing regression guards this task must not weaken; unaffected
+      by this task's edits (retained verbatim), already green before and
+      after.
+  AC-7:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_is_placed_immediately_after_stop_report_section
+    red_confirmed: false
+    red_reason: >-
+      Non-regression criterion. The "no level-2 heading between the two
+      sections" half is covered by the pre-existing (unaffected) test
+      listed above. "Nothing appended after the subsection" and "batch-
+      mode.md unchanged" have no dedicated test -- verified by inspection
+      (the edit only rewrites text between the existing heading and the
+      first existing paragraph break, no content added after the
+      subsection; `git diff --stat` shows batch-mode.md untouched). "Full
+      suite exits 0" is verified directly: `python3 -m unittest discover -s
+      tests` ran 2485 tests, 0 failures, after this task's changes.
+notes: >-
+  Full suite: baseline 2482 tests / 0 failures (python3 -m unittest discover
+  -s tests, before any edit). After implementation: 2485 tests / 0 failures
+  (3 new tests added: TestBatchTerminalLineDefinitionCondition x1,
+  TestDefinitionConditionMatcherCanFail x2; net test count also reflects
+  removing 1 test method (test_guard_does_not_flag_bare_stopped_if_it_were_present)
+  and adding 1 replacement
+  (test_guard_does_not_flag_step_status_vocabulary_in_a_synthetic_sample) in
+  TestStateValueGuardWholeFileScope, a straight swap).

@@ -1,0 +1,138 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_quiet_output_skill_wiring.TestBatchArgBulletNamesDiscipline.test_bullet_states_document_also_covers_output_suppression
+      - tests.test_batch_quiet_output_skill_wiring.TestStepA5RecordingWiring.test_section_names_the_discipline_document
+      - tests.test_batch_quiet_output_skill_wiring.TestDesignVerifyRetrospectBatchClauses.test_design_branch_clause
+      - tests.test_batch_quiet_output_skill_wiring.TestDesignVerifyRetrospectBatchClauses.test_verify_clause
+      - tests.test_batch_quiet_output_skill_wiring.TestDesignVerifyRetrospectBatchClauses.test_retrospect_clause
+      - tests.test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce.test_section_names_the_discipline_document
+      - tests.test_batch_quiet_output_skill_wiring.TestStepCSourcingWiring.test_section_names_the_discipline_document
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_gains_distinguishing_sentence_naming_the_discipline
+      - tests.test_batch_quiet_output_skill_wiring.TestWholeFileForbiddenLiteralAbsence.test_no_violation_over_whole_file
+    red_confirmed: true
+    red_reason: >-
+      The `--batch` bullet already named batch-mode.md before this task (for
+      unrelated gate-jurisdiction reasons), so a bare presence check was not
+      red-confirmable; the dedicated new-clause assertion
+      (test_bullet_states_document_also_covers_output_suppression) is the
+      genuine red for that site: AssertionError, '出力抑制の規律も定める' not
+      found. Every other listed site test failed for the right reason too --
+      the design/verify/retrospect clause tests errored in setUpClass with
+      ValueError ("batch:\n" not found), and the Step A.5 / Step C / stop-
+      abort / terminal-line site tests failed AssertionError: False is not
+      true (the discipline reference or matcher condition was absent).
+  AC-2:
+    tests:
+      - tests.test_batch_quiet_output_skill_wiring.TestStopCondition5MarkerOnly.test_section_states_marker_line_only
+      - tests.test_batch_quiet_output_skill_wiring.TestStopCondition5MarkerOnly.test_section_covers_both_wait_forms
+      - tests.test_batch_quiet_output_skill_wiring.TestOnceBoundaryBatchWiring.test_non_boundary_note_states_marker_line_only
+      - tests.test_batch_quiet_output_skill_wiring.TestOnceBoundaryBatchWiring.test_batch_once_boundary_states_terminal_line_only
+      - tests.test_batch_quiet_output_skill_wiring.TestWholeFileForbiddenLiteralAbsence.test_marker_prefix_literal_absent
+      - tests.test_batch_quiet_output_skill_wiring.TestWholeFileForbiddenLiteralAbsence.test_terminal_prefix_literal_absent
+      - tests.test_batch_quiet_output_skill_wiring.TestForbiddenLiteralMatcherCanFail.test_matcher_rejects_forged_marker_and_terminal_prefixes
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: False is not true -- neither the 停止条件 5 site nor
+      the `--once` 非境界 note stated the marker-line-only rule, and the
+      batch `--once` phase-boundary case stated no terminal-line-only
+      exclusivity clause, before this task's edits. The whole-file literal
+      guards and the matcher's own negative proof were green from the start
+      (they assert ABSENCE, which already held / is self-contained), so
+      they are not red-confirmable in the usual sense but are included here
+      because they cover the same AC's literal-absence requirement.
+  AC-3:
+    tests:
+      - tests.test_batch_quiet_output_skill_wiring.TestDesignVerifyRetrospectBatchClauses.test_design_branch_clause
+      - tests.test_batch_quiet_output_skill_wiring.TestDesignVerifyRetrospectBatchClauses.test_verify_clause
+      - tests.test_batch_quiet_output_skill_wiring.TestDesignVerifyRetrospectBatchClauses.test_retrospect_clause
+      - tests.test_batch_quiet_output_skill_wiring.TestStepA5RecordingWiring.test_no_gate_id_mention_added
+      - tests.test_batch_quiet_output_skill_wiring.TestDesignVerifyRetrospectBatchClauses.test_verify_rework_cap_wording_unaltered
+    red_confirmed: true
+    red_reason: >-
+      The three clause tests errored in setUpClass (ValueError: substring
+      "batch:\n" not found in the pre-implementation design/verify/
+      retrospect sections) -- confirming the withholding clause was
+      genuinely absent. test_no_gate_id_mention_added and
+      test_verify_rework_cap_wording_unaltered are pure regression guards
+      over pre-existing wording (Test Notes exemption) and were already
+      green pre-implementation; they stayed green after, proving no
+      alteration occurred.
+  AC-4:
+    tests:
+      - tests.test_batch_quiet_output_skill_wiring.TestStepCSourcingWiring.test_section_states_the_source_map_sentence
+      - tests.test_batch_quiet_output_skill_wiring.TestStepCCompletionReportNonRegression.test_completion_headline_present
+      - tests.test_batch_quiet_output_skill_wiring.TestStepCCompletionReportNonRegression.test_kept_branch_guidance_present
+      - tests.test_batch_quiet_output_skill_wiring.TestStepCCompletionReportNonRegression.test_pr_url_line_present
+      - tests.test_batch_quiet_output_skill_wiring.TestStepCCompletionReportNonRegression.test_gen_license_line_present
+      - tests.test_batch_quiet_output_skill_wiring.TestStepCCompletionReportNonRegression.test_four_batch_audit_items_present
+      - tests.test_batch_stop_contract_skill_wiring.TestStepCCompletionReportNonRegression
+    red_confirmed: true
+    red_reason: >-
+      test_section_states_the_source_map_sentence: AssertionError, expected
+      Step C to state the persisted-source-map sentence -- false before this
+      task's edit. The five TestStepCCompletionReportNonRegression checks
+      (this module) and the whole pre-existing
+      tests/test_batch_stop_contract_skill_wiring.py module are pure
+      regression guards (Test Notes exemption) that were already green and
+      stayed green -- their purpose is proving non-regression, not red->green.
+  AC-5:
+    tests:
+      - tests.test_batch_quiet_output_skill_wiring.TestStepA5RecordingWiring.test_section_states_the_gate_resolution_recording
+      - tests.test_batch_quiet_output_skill_wiring.TestStepA5RecordingWiring.test_section_states_running_output_is_withheld
+      - tests.test_batch_quiet_output_skill_wiring.TestStepA5RecordingWiring.test_interactive_approval_wording_unchanged
+    red_confirmed: true
+    red_reason: >-
+      test_section_states_the_gate_resolution_recording and
+      test_section_states_running_output_is_withheld both failed
+      AssertionError before this task's edit (the phase-state /
+      `answers`-shape recording statement and the running-output
+      withholding statement were both absent from Step A.5's batch branch).
+      test_interactive_approval_wording_unchanged is a pure regression
+      guard (Test Notes exemption) confirming the interactive path's
+      wording is untouched; it was green before and after.
+  AC-6:
+    tests:
+      - tests.test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce.test_exception_names_every_design_item_5_site
+      - tests.test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce.test_exception_stated_exactly_once
+      - tests.test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce.test_section_names_the_discipline_document
+      - tests.test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce.test_three_existing_bullets_unchanged
+    red_confirmed: true
+    red_reason: >-
+      test_exception_names_every_design_item_5_site: AssertionError, missing
+      stop/abort site '停止条件 6' (none of the design-item-5 sites were
+      named anywhere near 停止時の報告 before this task).
+      test_exception_stated_exactly_once: AssertionError, 0 != 1 (the
+      discipline reference did not exist there at all pre-implementation).
+      test_section_names_the_discipline_document: AssertionError, False is
+      not true. test_three_existing_bullets_unchanged is a pure regression
+      guard (Test Notes exemption) proving the three existing bullets were
+      never touched; it was green before and after.
+  AC-7:
+    tests:
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_gains_distinguishing_sentence_naming_the_discipline
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_heading_present
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_placed_immediately_after_stop_report_section
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_read_before_emit_instruction_present
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_last_line_rule_present
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_generalized_no_line_rule_present
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_stop_point_enumeration_present
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_once_occasion_present
+      - tests.test_batch_stop_contract_skill_wiring
+    red_confirmed: true
+    red_reason: >-
+      test_gains_distinguishing_sentence_naming_the_discipline:
+      AssertionError, False is not true -- the one distinguishing sentence
+      (pointing at batch-mode.md's non-terminal marker line) did not exist
+      before this task. All other tests in this class, and the whole
+      pre-existing tests/test_batch_stop_contract_skill_wiring.py module
+      (62 tests), are pure regression guards over the バッチ終端行 section's
+      pre-existing guarantees (Test Notes / AC-7 exemption) -- they were
+      green both before and after this task's edits, which is exactly what
+      "existing guarantees are intact" requires; the whole pre-existing
+      suite (2506 tests, all passing) was re-run as the final acceptance
+      step (`python3 -m unittest discover -s tests`) and stayed green with
+      no pre-existing module modified.

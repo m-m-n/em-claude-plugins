@@ -288,7 +288,7 @@ class TestReworkPlannerContract(unittest.TestCase):
         self.assertIn("pending", section)
         self.assertIn("base_commit", section)
         self.assertIn("rework.yaml", section)
-        self.assertIn("stable_id", section)
+        self.assertIn("origin_id", section)
         self.assertIn("create-spec", section)
 
     def test_other_question_conditions_documented(self):

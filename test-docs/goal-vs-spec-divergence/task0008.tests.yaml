@@ -1,0 +1,57 @@
+task_id: task0008
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_reference_impact_scan.TestReferenceScanTargetsCategory.test_row_present
+      - test_reference_impact_scan.TestReferenceScanTargetsCategory.test_matches_sibling_requiredness_and_may_be_empty_semantics
+    red_confirmed: true
+    red_reason: "AssertionError: 'reference_scan_targets' not found in {'e2e': ..., 'design_system_candidates': ..., ...} — the category row was absent from worker-envelope.md's resolved_input_paths table before the edit."
+  AC-2:
+    tests:
+      - test_reference_impact_scan.TestInspectReferenceImpactFlag.test_flag_listed_alongside_existing_inspection_categories
+      - test_reference_impact_scan.TestInspectReferenceImpactFlag.test_flag_documented_as_exact_token
+      - test_reference_impact_scan.TestInspectReferenceImpactFlag.test_states_meaningful_only_in_full_mode
+    red_confirmed: true
+    red_reason: "AssertionError: 'inspect_reference_impact' not found in the analysis_scope yaml block's keys, and 'analysis_scope.inspect_reference_impact' not found in analyst-contract.md, before the flag and its bullet were added."
+  AC-3:
+    tests:
+      - test_reference_impact_scan.TestReferenceImpactResultField.test_present_in_analysis_snapshot_section
+      - test_reference_impact_scan.TestReferenceImpactResultField.test_present_in_completed_payload_section
+      - test_reference_impact_scan.TestReferenceImpactResultField.test_states_affected_test_files_are_included
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true (reference_impact absent as an exact token from both the analysis_snapshot and completed-payload field lists) before the two bullets were added."
+  AC-4:
+    tests:
+      - test_reference_impact_scan.TestResolutionPointStatement.test_glob_derived_category_list_covers_reference_scan
+      - test_reference_impact_scan.TestResolutionPointStatement.test_retains_no_own_filesystem_discovery_statement
+    red_confirmed: true
+    red_reason: "AssertionError: 'reference' not found in the glob-derived-category sentence's window, before 'reference-scan targets' was added to that parenthetical list. The retention half (no own filesystem discovery) already held pre-existing text and was not itself forced red; it is carried as a regression guard on the same edit."
+  AC-5:
+    tests:
+      - test_reference_impact_scan.TestDigestInputsReferenceScanPaths.test_full_mode_row_includes_reference_scan_paths
+      - test_reference_impact_scan.TestDigestInputsReferenceScanPaths.test_design_system_detection_row_unaffected
+      - test_reference_impact_scan.TestDigestInputsReferenceScanPaths.test_reference_impact_not_a_detection_mode_payload_key
+      - test_reference_impact_scan.TestDigestInputsReferenceScanPaths.test_detection_mode_payload_exclusivity_statement_unchanged
+    red_confirmed: true
+    red_reason: "AssertionError: 'reference-scan paths' not found in the full-mode digest_inputs row before it was added. The three detection-mode-unaffected tests passed even before the edit (reference_impact did not exist anywhere yet) and are carried as exclusivity regression guards on the same criterion rather than independent red proofs."
+  AC-6:
+    tests:
+      - test_reference_impact_scan.TestAgentPromptInvestigationStep.test_step_placed_alongside_other_inspection_categories
+      - test_reference_impact_scan.TestAgentPromptInvestigationStep.test_mentions_deletion_or_renaming
+      - test_reference_impact_scan.TestAgentPromptInvestigationStep.test_reports_using_the_contract_field_name
+      - test_reference_impact_scan.TestAgentPromptInvestigationStep.test_reinforces_reading_only_envelope_supplied_paths
+    red_confirmed: true
+    red_reason: "AssertionError ('delet' not found) and ValueError from text.index('inspect_reference_impact') (substring absent) before the new bullet was added to requirements-analyst.md's analysis_mode: full list."
+  AC-7:
+    tests:
+      - test_reference_impact_scan.TestNoEnvelopeOnlyFieldRestatement.test_analyst_contract_does_not_restate_envelope_fields
+    red_confirmed: false
+    red_reason: "This is a non-regression guard: none of the four envelope-only bookkeeping fields (integration_worktree, plugin_root, prior_packets, feature_dir) were present in analyst-contract.md before or after this task's edits, so the assertion cannot be forced red without deliberately introducing the violation first. The criterion's second half ('the full suite passes') is verified by running python3 -m unittest discover -s tests on the full repository suite (1589 tests, 3 pre-existing baseline failures unrelated to this task, 0 regressions), not by a dedicated unit test."

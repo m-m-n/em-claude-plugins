@@ -1,0 +1,79 @@
+task_id: task0001
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_goal_block_schema.TestFullStructureListingCarriesGoalKey.test_goal_key_present_as_a_top_level_sibling
+      - tests.test_goal_block_schema.TestVerbatimStorageWording.test_states_verbatim_storage
+      - tests.test_goal_block_schema.TestVerbatimStorageWording.test_states_no_summarizing_normalizing_or_truncation
+      - tests.test_goal_block_schema.TestVerbatimStorageWording.test_states_no_size_limit
+      - tests.test_goal_block_schema.TestVerbatimStorageWording.test_states_launch_time_task_description
+    red_confirmed: true
+    red_reason: >-
+      test_goal_key_present_as_a_top_level_sibling failed with "Regex didn't
+      match: '(?m)^goal:' not found"; the TestVerbatimStorageWording class
+      failed at setUpClass with "heading '## `goal` block' not found at line
+      start" before the section existed.
+  AC-2:
+    tests:
+      - tests.test_goal_block_schema.TestSingleWriterOwnership.test_states_create_spec_orchestrator_writes_the_goal_block_once
+    red_confirmed: true
+    red_reason: >-
+      "AssertionError: 'goal' not found in" the pre-existing Write ownership
+      section text, before the extension paragraph was added.
+  AC-3:
+    tests:
+      - tests.test_goal_block_schema.TestImmutability.test_states_value_never_changes_once_written
+      - tests.test_goal_block_schema.TestImmutability.test_needs_update_reentry_leaves_it_unchanged
+    red_confirmed: true
+    red_reason: >-
+      TestImmutability failed at setUpClass with "heading '## `goal` block'
+      not found at line start" before the section existed.
+  AC-4:
+    tests:
+      - tests.test_goal_block_schema.TestUntrustedReadCitation.test_cites_worker_envelope_untrusted_input_handling_section
+      - tests.test_goal_block_schema.TestUntrustedReadCitation.test_states_data_to_analyse_never_instructions_to_follow
+    red_confirmed: true
+    red_reason: >-
+      TestUntrustedReadCitation failed at setUpClass with "heading '##
+      `goal` block' not found at line start" before the section existed.
+  AC-5:
+    tests:
+      - tests.test_goal_block_schema.TestOptionalityAndAbsenceSemantics.test_states_the_key_is_optional
+      - tests.test_goal_block_schema.TestOptionalityAndAbsenceSemantics.test_states_the_absence_meaning
+      - tests.test_goal_block_schema.TestOptionalityAndAbsenceSemantics.test_states_no_backfill_from_spec_or_requirements
+    red_confirmed: true
+    red_reason: >-
+      TestOptionalityAndAbsenceSemantics failed at setUpClass with "heading
+      '## `goal` block' not found at line start" before the section existed.
+  AC-6:
+    tests:
+      - tests.test_goal_block_schema.TestClassificationGateNotRestated.test_cites_question_resolution_by_path
+      - tests.test_goal_block_schema.TestClassificationGateNotRestated.test_does_not_restate_the_gates_own_verdict_vocabulary
+    red_confirmed: true
+    red_reason: >-
+      TestClassificationGateNotRestated failed at setUpClass with "heading
+      '## `goal` block' not found at line start" before the section
+      existed (the citation-presence half of this AC could not yet pass;
+      the negative "vocabulary absent" half was vacuously true before the
+      edit, so red-confirmation for this AC rests on the citation test).
+  AC-7:
+    tests:
+      - tests.test_goal_block_schema.TestGoalBlockTestModuleIsStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      The verifiable outcome is the module's existence, discovery, and
+      stdlib-only imports plus an unchanged full-suite pass -- these are
+      true as soon as the file is written, with no separate red state to
+      observe (this task both creates the test file and the document it
+      pins in the same change). Confirmed instead by: the module is
+      discovered and collected by `python3 -m unittest discover -s tests`
+      (1578 tests ran, up from the 1548-test baseline), and the full suite
+      ends with the same 3 pre-existing failures as the baseline.

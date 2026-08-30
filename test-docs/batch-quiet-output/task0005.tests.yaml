@@ -1,0 +1,151 @@
+task_id: task0005
+baseline_failures:
+  - "test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_source_map_has_one_row_per_audit_item (item='unlisted-gate fallback resolution')"
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_source_map_has_one_row_per_audit_item
+      - test_batch_quiet_output_audit_persistence.TestAC1SourceMapRowPointsAtPhaseStateDoc.test_source_map_row_names_batch_audit_path
+      - test_batch_quiet_output_audit_persistence.TestAC1SourceMapRowPointsAtPhaseStateDoc.test_source_map_row_cites_phase_state_doc
+    red_confirmed: true
+    red_reason: >-
+      Primary signal: tests/test_batch_quiet_output_discipline.py (unmodified
+      by this task) already asserted the row's Persisted-source cell contains
+      'phase-state' for item='unlisted-gate fallback resolution', and this
+      was recorded red at Step 4a's baseline run before any edit (the row
+      read "The unsuppressed resolution line emitted per `## Batch quiet
+      output`'s Exceptions ..." -- no phase-state path). It turned green
+      unmodified once batch-mode.md's row was rewritten. Supplementary:
+      re-ran this task's own persisted-source-row matcher against the
+      pre-task0005 blob (git show HEAD:em-workflow/references/batch-mode.md)
+      and confirmed both new assertions returned False/missing there.
+  AC-2:
+    tests:
+      - test_batch_quiet_output_audit_persistence.TestAC2ExceptionsAreExactlyThree.test_exceptions_section_has_exactly_three_bullets
+      - test_batch_quiet_output_audit_persistence.TestAC2ExceptionsAreExactlyThree.test_unlisted_gate_unsuppressed_pairing_absent_from_whole_document
+      - test_batch_quiet_output_audit_persistence.TestAC2ExceptionsAreExactlyThree.test_stop_abort_step_c_once_boundary_exceptions_retained
+    red_confirmed: true
+    red_reason: >-
+      Ran this module's matchers against the pre-task0005 blob (git show
+      HEAD:em-workflow/references/batch-mode.md): the Exceptions section
+      counted 4 bullets (not 3), and
+      _unlisted_gate_unsuppressed_phrase_present returned True (the fourth
+      bullet pairing "unlisted-gate fallback" with "unsuppressed" was
+      present). Both assertions fail against that text and pass against the
+      edited text.
+  AC-3:
+    tests:
+      - test_batch_quiet_output_audit_persistence.TestAC3NonPacketGatesRows.test_diff_size_gate_row_names_persisted_site_and_assembly
+      - test_batch_quiet_output_audit_persistence.TestAC3NonPacketGatesRows.test_per_command_approval_row_names_persisted_site_and_assembly
+      - test_batch_quiet_output_audit_persistence.TestAC3NonPacketGatesRows.test_table_still_has_exactly_ten_data_rows
+      - test_batch_quiet_output_audit_persistence.TestAC3NonPacketGatesRows.test_catch_all_paragraph_retained
+      - test_batch_quiet_output_audit_persistence.TestAC3NonPacketGatesRows.test_unlisted_gate_fallback_wording_retained
+      - test_batch_quiet_output_audit_persistence.TestAC3NonPacketGatesRows.test_question_resolution_doc_cited
+      - test_batch_quiet_output_audit_persistence.TestAC3NonPacketGatesRows.test_per_literal_command_string_wording_retained
+      - test_batch_quiet_output_audit_persistence.TestAC3NonPacketGatesRows.test_codex_consultation_precedes_minimum_side_effect_fallback
+    red_confirmed: true
+    red_reason: >-
+      Ran the persisted-source-row matcher against the pre-task0005 blob:
+      both the diff-size-gate row and the per-command-approval row returned
+      False (their cells said "Record the resolution in the run report" /
+      "recorded in the run report", with no phase-state path and no
+      "assembled" wording). Both return True against the edited text; the
+      ten-row-count and retained-wording assertions are regression guards
+      (exempt from red-first, per Test Notes) that were already true and
+      stayed true.
+  AC-4:
+    tests:
+      - test_batch_quiet_output_audit_persistence.TestAC4ModeIndependentWakeCommit.test_step3_commit_message_construction_is_mode_independent
+      - test_batch_quiet_output_audit_persistence.TestAC4ModeIndependentWakeCommit.test_declined_literal_absent_from_whole_document
+      - test_batch_quiet_output_audit_persistence.TestAC4ModeIndependentWakeCommit.test_message_extension_rule_absent
+      - test_batch_quiet_output_audit_persistence.TestAC4ModeIndependentWakeCommit.test_reconcile_tip_still_stated_as_expected_base_tip
+      - test_batch_quiet_output_audit_persistence.TestAC4ModeIndependentWakeCommit.test_commit_literal_survives_the_edit
+    red_confirmed: true
+    red_reason: >-
+      Ran the mode-independent-commit matcher against the pre-task0005
+      implement-phase.md blob: returned False (the step-3 clause named
+      `--batch` within the checked window, since the message body branched
+      on mode). "DECLINED" was present in the original document (True),
+      so the absence assertion fails there and passes post-edit. Both
+      confirmed via git show HEAD:em-workflow/references/implement-phase.md.
+  AC-5:
+    tests:
+      - test_batch_quiet_output_audit_persistence.TestAC5DeclinePersistedUnderPhaseState.test_decline_persisted_under_phase_state
+      - test_batch_quiet_output_audit_persistence.TestAC5DeclinePersistedUnderPhaseState.test_admission_record_stated_unchanged
+      - test_batch_quiet_output_audit_persistence.TestAC5DeclinePersistedUnderPhaseState.test_interactive_wake_report_behaviour_stated_unchanged
+      - test_batch_quiet_output_audit_persistence.TestAC5DeclinePersistedUnderPhaseState.test_where_the_decision_persists_paragraph_retained
+      - test_batch_quiet_output_audit_persistence.TestAC5DeclinePersistedUnderPhaseState.test_batch_run_report_obligation_sentence_retained
+      - test_batch_quiet_output_phase_wiring.TestAC3DeclineChannel.test_decline_channel_stated
+    red_confirmed: true
+    red_reason: >-
+      Ran the decline-persistence matcher against the pre-task0005
+      implement-phase.md blob's "Batch mode" paragraph: returned False (the
+      paragraph named the wake commit MESSAGE BODY, not
+      feature-docs/{feature}/phase-state/batch-audit.yaml). Returns True
+      against the edited paragraph. test_decline_channel_stated
+      (pre-existing, unmodified per the task plan) stayed green throughout
+      since it asserts the channel-agnostic contract, not the literal
+      channel.
+  AC-6:
+    tests:
+      - test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_file_layout_lists_batch_audit_yaml
+      - test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_subsection_exists_before_legacy_compatibility
+      - test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_subsection_states_purpose
+      - test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_subsection_states_entry_shape_reuses_answers
+      - test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_subsection_states_two_writers
+      - test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_subsection_states_append_only_rule
+      - test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_subsection_states_committed_by_existing_call_never_extra_commit
+      - test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_backfill_discovery_persistence_sibling_untouched
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against git show HEAD:em-workflow/references/phase-state.md
+      that "## Batch audit record file" was absent (False). The whole
+      subsection and its File-layout entry are new content this task adds;
+      every pre-existing test_phase_state_doc.py assertion stayed green
+      unmodified throughout (no pre-existing field/table row/rule touched).
+  AC-7:
+    tests:
+      - test_batch_quiet_output_audit_persistence.TestAC7DocumentsPointAtEachOther.test_batch_mode_source_map_row_cites_phase_state_doc
+      - test_batch_quiet_output_audit_persistence.TestAC7DocumentsPointAtEachOther.test_implement_phase_batch_mode_paragraph_cites_phase_state_doc
+      - test_batch_quiet_output_audit_persistence.TestAC7DocumentsPointAtEachOther.test_no_new_gate_id_mention_in_batch_mode_or_implement_phase
+      - test_check_plugin_invariants
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against the pre-task0005 blobs that neither batch-mode.md's
+      source-map row nor implement-phase.md's "Batch mode" paragraph named
+      "references/phase-state.md" (both False). No new gate_id or
+      batch-policies.yaml entry was introduced by this task's edits
+      (batch-mode.md's gate_id count stays at its pre-existing 8;
+      implement-phase.md stays at 0); tests/test_check_plugin_invariants.py
+      passes unmodified.
+  AC-8:
+    tests:
+      - test_batch_quiet_output_version_bump
+    red_confirmed: false
+    red_reason: >-
+      This pre-existing module (unmodified by this task, owned by task0004)
+      already pinned patch > 51 before task0005 started; task0001-0004
+      already brought both registries to 0.1.52, past that baseline, so the
+      module was already green when task0005 began. This task bumps both
+      registries again, to 0.1.53, satisfying AC-8's "strictly greater than
+      the value both carried before this task" (52) without making this
+      already-passing module go red first -- there is no test in this
+      module whose red state is specific to task0005's own bump versus
+      task0004's. Verified directly: em-workflow/.claude-plugin/plugin.json
+      and .claude-plugin/marketplace.json both read version "0.1.53" and
+      are equal as strings.
+  AC-9:
+    tests: []
+    red_reason: >-
+      Verified outcome (build/lint-shaped criterion, no dedicated test):
+      `python3 -m unittest discover -s tests` exits 0 (2729 tests, up from
+      the 2684-test baseline recorded in Step 4a, where the sole baseline
+      failure -- test_source_map_has_one_row_per_audit_item
+      (item='unlisted-gate fallback resolution') -- is now green and no
+      other module regressed) and `python3
+      em-workflow/hooks/tests/run-destructive-guard.py` exits 0 (36/36).
+      tests/test_batch_quiet_output_phase_wiring.py's only change is its
+      AC-3 docstring plus the section-header comment naming the removed
+      wake-commit-message channel; `_decline_channel_stated` itself and
+      every other assertion in that module are untouched and still pass.

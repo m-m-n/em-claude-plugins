@@ -1,0 +1,153 @@
+feature: develop-once-option
+collected_at: "2026-08-26T01:27:59+09:00"
+session_ids: [4e5b7801-28fd-4a72-8ade-e0e98b80ea4d.jsonl]
+signals:
+  review_critical_high:
+    - stable_id: e8b3fe02b7aaeec0
+      category: comprehensive
+      file: em-workflow/references/batch-terminal-line.md
+      title: "`reason=none` の定義が `phase_done` 追加と矛盾"
+      resolution: fixed (task0005)
+    - stable_id: f9dba34e27373999
+      category: architecture
+      file: em-workflow/references/batch-terminal-line.md
+      title: "`reason=none` の予約範囲が `state=phase_done` と矛盾"
+      resolution: fixed (task0005)
+    - stable_id: 2024821d09d85f38
+      category: spec
+      file: em-workflow/references/batch-terminal-line.md
+      title: "`reason` の値域が `none` を `state=completed` 限定と定義"
+      resolution: fixed (task0005)
+    - stable_id: 56d4b6e1ad7b1cfa
+      category: comprehensive
+      file: em-workflow/references/batch-terminal-line.md
+      title: "task0005 の書き換えが `step` の値ドメイン列挙を巻き込み削除"
+      resolution: deferred at review cap, then fixed via verify rework (task0007)
+    - stable_id: 87473b0f947196c7
+      category: architecture
+      file: em-workflow/references/batch-terminal-line.md
+      title: "終端行 SSOT から `step` の値域列挙が消え所有宣言とドリフト"
+      resolution: deferred at review cap, then fixed via verify rework (task0007)
+    - stable_id: 77ba577919799b8a
+      category: comprehensive
+      file: em-workflow/skills/develop/SKILL.md
+      title: "`--once` の境界表と非境界文が implement の wake ターンで割れる"
+      resolution: deferred（未解決。SPEC FR5 と FR14 の矛盾に由来し仕様レイヤの判断が要る）
+    - stable_id: fe441ea6c8ab59f0
+      category: spec
+      file: em-workflow/references/batch-terminal-line.md
+      title: "Contract document still states fixed two-value domain"
+      resolution: declined（誤検知）
+    - stable_id: 8e069ae30e3cdea0
+      category: spec
+      file: em-workflow/references/batch-terminal-line.md
+      title: "\"No line on a wait turn\" sentence still pins domain at two"
+      resolution: declined（誤検知）
+    - stable_id: 4ba6040c4e439e8b
+      category: spec
+      file: tests/test_batch_stop_contract_skill_wiring.py
+      title: "Literal guard may not fully cover state value domain"
+      resolution: declined（誤検知・severity critical）
+  conflict_reworks: []          # 全 8 タスクとも conflict_retries: 0
+  file_prediction_misses: []    # deviations の報告なし
+  verification_failures:
+    - id: SC4
+      category: architecture
+      note: "値ドメイン（`step` 列挙の消失）と出力機会（batch-mode.md の定義文）の 2 欠落。verify rework（task0007 / task0008）で解消"
+  discretionary_perspectives: []   # Layer-2 の裁量追加なし（floor のみ）
+  declined_findings:
+    - {stable_id: fe441ea6c8ab59f0, category: spec, resolution_reason: "誤検知。指摘文言は既に 3 値の列挙に置き換わっていた"}
+    - {stable_id: 8e069ae30e3cdea0, category: spec, resolution_reason: "誤検知。カウント非依存の表現に書き換わっていた"}
+    - {stable_id: 4ba6040c4e439e8b, category: spec, resolution_reason: "誤検知。STATE_DOMAIN に phase_done が含まれ専用アサートも存在した"}
+    - {stable_id: 7da2bb6ee50a3483, category: spec, resolution_reason: "誤検知。SKILL.md に非永続の明記が存在した"}
+    - {stable_id: 7d3f5705243a71ca, category: spec, resolution_reason: "誤検知。CLOSING_LINE 定数で完全一致がアサートされていた"}
+lessons_candidates:
+  - id: L1
+    severity: high
+    note: >-
+      `git stash` は refs/stash という **リポジトリ単位の単一 ref** で、worktree ごとに
+      分かれていない。並列 implementer が tdd-testing の「baseline を stash して赤を確認する」
+      手順を同時に実行すると、互いの working tree の変更を取り違えて pop したり、
+      相手の stash を消したりする。ラウンド 1 で task0001 と task0003 が実際に衝突し、
+      両者とも自力で差分を再構成して復旧した（マージ結果には影響なし）。
+      対策候補: worktree-task-workflow または tdd-testing スキルに「並列 worktree では
+      bare `git stash` を使わない。`cp` で退避 → `git show HEAD:<path> > <path>` で戻す →
+      検証 → 退避を戻す」を明記する。ラウンド 2 以降は orchestrator が
+      dispatch prompt に注意書きを足して再発しなかった。
+  - id: L2
+    severity: medium
+    note: >-
+      implement-phase.md I.2.b step 4 は merged タスクの後片付けに `git branch -D` を
+      指定しているが、destructive-guard がこれを弾く（deny）。integration worktree の
+      HEAD は integration ブランチなのでタスクブランチは到達可能であり、
+      `git -C {integration worktree} branch -d` で問題なく削除できた。
+      対策候補: I.2.b step 4 を `-d`（integration worktree から実行）に書き換える。
+      現行のコメントは「orchestrator の HEAD は base_branch なので -d は拒否される」と
+      説明しているが、`-C` で integration worktree を指定すればその前提は成り立たない。
+  - id: L3
+    severity: medium
+    note: >-
+      orchestrator が workflow.yaml の step ブロックを素朴な文字列置換で書き換えた結果、
+      implement step に `completed_at_commit` が重複するキーとして残った。
+      PyYAML の safe_load は後勝ちで古い値を採用するため、以降の読み取りがすべて
+      誤った値を見ていた。rework-planner が入力欠陥として報告して発覚。
+      対策候補: develop の Step B に「step の status 更新は YAML をパースして書き戻す
+      （行の文字列置換で済ませない）」を明記するか、commit-docs.sh に重複キー検査を足す。
+  - id: L4
+    severity: high
+    note: >-
+      ラウンド 1 の high 3 件の根本原因は、task0003 の計画書（tasks/task0003.md の
+      「変えてはならないもの」リスト）が「`none` が `state=completed` 専用の予約値で
+      あること」を保持せよと指示していた点にある。同じタスクが `state` の値域を広げる
+      のだから、この 2 つは両立しない。実装者は指示に忠実に従っただけ。
+      対策候補: plan-writing スキルに「値域を広げるタスクでは、その値域に依存する
+      他フィールドの記述を『変えてはならないもの』に入れない。widening と freeze を
+      同一タスクに同居させない」を追加する。
+  - id: L5
+    severity: medium
+    note: >-
+      R4 の conflict 分類は「diff 形状と prose 形状の混在」を機械的に conflict とする。
+      ラウンド 2 では 2 観点が**同一の修正**を提案していたのに、片方が diff、片方が
+      prose だったため conflict になり、batch 規定でサイトごとスキップされた。
+      結果として本物の high が自動修正されず、verify rework まで持ち越された。
+      対策候補: review-phase.md R4 に「同一サイトで diff 1 件 + prose n 件のときは
+      diff を採用して auto-applicable にする」旨の規則を足すか、レビュアー側に
+      suggestion 形状の統一（常に diff）を課す。
+  - id: L6
+    severity: medium
+    note: >-
+      review-editor は単一ファイル限定なので、「文書とそれを pin しているテストモジュール」を
+      同時に直す必要がある finding は R4 では原理的に修正できない。ラウンド 2 の
+      77ba577919799b8a は editor が applied を返しスコープ検証も通ったが、
+      tests/test_develop_once_option.py の 3 アサートを落としたため復元・abort した。
+      対策候補: R4 の候補ゲートに「finding の修正が finding.file 以外の変更を要すると
+      判断できる場合は needs-judgment ではなく rework に回す」判定を足すか、
+      R4 適用後にプロジェクトのテストコマンドを走らせて赤なら自動 revert する手順を
+      明文化する（現在の scope verification はファイル集合しか見ていない）。
+  - id: L7
+    severity: medium
+    note: >-
+      クロスモデル spec レビュアー（vertex-deepseek-v3.2）はラウンド 1 で 5 件すべて
+      誤検知だった（うち 1 件は critical）。いずれも diff の `-` 行（削除済みの旧文言）を
+      現行内容と読み違えたもの。vertex-reviewer エージェント自身が「4 件は誤読に見える」と
+      注記を添えており、その注記が無ければ orchestrator の裏取りコストはさらに高かった。
+      ラウンド 2 では同モデルが 0 件（正しく解消を確認）。
+      対策候補: cross-model reviewer のプロンプトに「diff の `-` 行は削除済みであり
+      現行内容ではない。指摘する前に現行ファイルの当該行を引用すること」を明記する。
+      ラウンド 2 ではこの旨を prompt に足したところ誤検知が消えた。
+  - id: L8
+    severity: low
+    note: >-
+      rework-planner が返した patch_id `develop-once-option-p0001` が、create-plan
+      フェーズの patch_id と衝突した（phase-state のファイルは別だが、
+      references/phase-state.md の ID 一意性は feature 単位）。orchestrator 側で
+      `develop-once-option-rw0001` に振り直して記録した。
+      対策候補: rework-planner の contract に patch_id の命名規則（フェーズ接頭辞）を足す。
+  - id: L9
+    severity: low
+    note: >-
+      spec-writer / implementation-planner / rework-planner は Bash ツールを持たないため
+      `written_artifacts` の sha256 を常に null で返す。契約は digest を必須にしているが
+      構造上満たせない。毎回 orchestrator が実ファイルから計算して補完した。
+      対策候補: 各 contract の `written_artifacts` に「digest は orchestrator が
+      補完する。worker が計算手段を持たない場合は null でよい」と明記する。

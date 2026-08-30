@@ -116,11 +116,40 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 
 これにより develop 実行中の確認プロンプトは、開発するプロダクトに関する質問だけになる。
 
+## ガードレール hook（同梱・インストールしただけで全セッションに効く）
+
+このプラグインは上記のコマンド実行ガードとは別に、PreToolUse ガード hook を 4 本同梱している。em-workflow の外側でも、プラグインが有効な全セッションの Bash / Write / Edit / MultiEdit に対して動く。
+
+| hook | イベント | 役割 |
+|------|---------|------|
+| `hooks/gitleaks-precommit.sh` | PreToolUse(Bash) | `git commit` を含むコマンドの前に staged / unstaged の diff と、git の追跡対象外の新規ファイル（新規 `.env` 等）を gitleaks でスキャンし、検出したらコミットをブロックする |
+| `hooks/kill-guard.py` | PreToolUse(Bash) | `kill` / `pkill` / `killall` の対象プロセスを解決し、claude プロセスの祖先なら常に拒否、子孫なら許可、それ以外は確認に回す（無人実行では拒否に降格） |
+| `hooks/bash_guard.py` | PreToolUse(Bash) | 前節のコマンド実行ガード（workflow.yaml 由来のシェル文字列のみ判断） |
+| `hooks/destructive-guard.py` | PreToolUse(Bash) | 破壊的コマンドの静的ブロックリスト。**マッチしないコマンドは `allow` で返す** |
+| `hooks/gitleaks-write-guard.sh` | PreToolUse(Write\|Edit\|MultiEdit) | 書き込む内容を gitleaks でスキャンし、シークレットを含むなら書き込みをブロックする |
+
+PreToolUse(Bash) の 4 本は `hooks.json` の配列順（gitleaks → kill-guard → bash_guard → destructive-guard）で実行される。`destructive-guard.py` は広域 `allow` を返すため必ず最後に置く — 先に allow が確定すると `bash_guard.py` の承認ゲートが働くべき経路を潰しかねない。
+
+gitleaks 系 2 本はバイナリを `command -v gitleaks` → `$HOME/.local/share/mise/shims/gitleaks` の順で解決し、どちらにも無ければスキャンせず通す（fail-open）。gitleaks 未インストール環境で全コミット・全書き込みがブロックされるのを避けるため。develop の Step 0（git-setup ゲート）が gitleaks 不在で workflow ごと中断するのとは判断が異なる — この hook は develop の外でも動くため。
+
+### 副作用: Bash の auto mode 分類器が無効になる
+
+`destructive-guard.py` はブロックリストにマッチしなかったコマンドを `permissionDecision: "allow"` で返す。Claude Code はこの経路で **auto mode の分類器（classifier）を丸ごとスキップする**。つまりこのプラグインを入れると、Bash に対する適応的な判定が静的ブロックリストに置き換わる。
+
+- **代償**: ブロックリストが唯一の防波堤になる。リストが知らない破壊的パターンは素通りする。
+- **実例**: `gcloud projects add-iam-policy-binding` は classifier が止めたが、当時のリストは知らなかった。hook 内のクラウド / IaC セクションはこの隙間を狭めるために書かれたもので、塞ぎ切ってはいない。
+- **hook の判定は `permissions.deny` より優先される**。後から deny ルールを足しても、この hook が allow したコマンドには効かない。
+
+**なぜこの設計なのか**: 無人実行（`--batch`）で classifier の誤検知が run を止めるため。classifier は毎回新規に判定する LLM で、実測の誤検知率は 0.2〜0.8% ある。同一リポジトリで `commit-docs.sh` が 251 回 allow・2 回 deny され、その deny のペアが claude-batch を 11 時間凍らせた実例がある。
+
+**無効化を止めたい場合**: `hooks/destructive-guard.py` の `ALLOW_NON_DESTRUCTIVE` を `False` にする。ブロック機能だけが残り、未判定のコマンドは classifier に戻る。
+
 ## 要件
 
 - git ≥ 2.40（`git merge-tree --write-tree --name-only`；2.38/2.39 は事前チェックで弾かれる）
 - flock（util-linux）— stock macOS には無いため別途インストールが必要
-- gitleaks — develop 開始時の git-setup ゲートが存在チェックし、無ければワークフローを中断する（pre-commit hook でのシークレットスキャンに使用）
+- gitleaks — develop 開始時の git-setup ゲートが存在チェックし、無ければワークフローを中断する（pre-commit hook でのシークレットスキャンに使用）。同梱の gitleaks ガード hook も同じバイナリを使うが、そちらは不在なら fail-open で素通りする
+- jq — 同梱の gitleaks ガード hook 2 本が hook 入力の JSON を読むのに使う。無い環境ではスキャンされずに素通りする（fail-open）
 - python3 — コマンド実行ガードの hook。無い環境では hook が非ブロッキングで抜け、コマンドごとの AskUserQuestion フォールバックゲートに切り替わる
 - python3 + PyYAML — 同梱の検証スクリプト（`scripts/validate-worker-output.py` / `scripts/check-plugin-invariants.py`）が使う実行時依存。テストコードはこの依存を使わず標準ライブラリのみで動く（`test/README.md`）。環境によっては `python3` の非対話実行に `Bash(python3:*)` 権限エントリの追加が必要
 - Codex CLI（任意 — ただし litellm ハーネスも `codex exec` を使うため、無ければクロスバリデーションは全滅してクリーンにスキップされる）

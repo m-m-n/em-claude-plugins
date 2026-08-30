@@ -1,0 +1,116 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Not a single test; a property of the module verified by inspection and
+      grep. Before this task, four methods in TestObserveHookSource each
+      paired a table hook path with an expected classification (True/False
+      on reads_per_task_status), so the criterion was unmet ("red" by
+      inspection). After deleting them, a repo-wide grep for
+      reads_per_task_status( outside this module returns nothing, and the
+      only remaining hook-name literals in this module (EXPECTED_HOOK_
+      FILENAMES) name files with no paired classification, matching the
+      criterion's explicit carve-out for structural guards.
+  AC-2:
+    tests: [TestHookClassificationPin::test_documented_classification_matches_observed_classification_for_every_row]
+    red_confirmed: false
+    red_reason: >-
+      Already true before this task started: TestHookClassificationPin held
+      exactly one test method (the pin) both before and after this change --
+      the four deleted methods lived in TestObserveHookSource, not this
+      class. No red->green transition for this criterion is caused by this
+      task; it is an invariant this task must not break, and it did not.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Invariant, not new behavior: the module's public names
+      (parse_classification_table, reads_per_task_status,
+      compare_table_to_sources, ClassificationTableError, READS_STATUS,
+      DOES_NOT_READ_STATUS, REPO_ROOT) were untouched by this edit -- only
+      test methods and comments changed. Proven by
+      tests/test_recycled_task_id_consistency.py (which imports these names
+      by path) continuing to pass in the full-suite run.
+  AC-4:
+    tests:
+      - TestObserveHookSource::test_raw_text_search_would_have_misclassified_queue_taskstop_net
+      - TestObserveHookSource::test_unresolvable_path_raises
+      - TestObserveHookSource::test_bash_guard_reads_workflow_yaml_but_not_task_status
+      - TestObserveHookSource::test_bare_workflow_yaml_mention_without_status_accessor_is_false
+      - TestObserveHookSource::test_removing_the_status_carveout_flips_observation_to_false
+    red_confirmed: false
+    red_reason: >-
+      These five methods pre-existed this task and were already green
+      (confirmed by the 4a baseline run); this task's job was to leave them
+      untouched and passing, which the full-suite run after the edit
+      confirms. No red->green transition applies to a "keep this passing"
+      criterion.
+  AC-5:
+    tests: [TestObserveHookSource::test_workflow_yaml_mention_moved_from_docstring_to_code_flips_observation]
+    red_confirmed: false
+    red_reason: >-
+      Task plan's own Test Notes direct this test to be written and run
+      first "against the current observation rule" and to watch it PASS
+      (not fail): this task changes no production code (hooks are NFR3
+      out-of-scope), so there is no red->green transition to observe --
+      reads_per_task_status already implements the docstring-stripping
+      behavior the test proves. Non-vacuity was instead confirmed by
+      independently evaluating both synthetic sources against the unchanged
+      reads_per_task_status: docstring-only mention observed False,
+      executable-code mention observed True -- the pair discriminates, so
+      the test is not tautological. Ran first standalone and confirmed
+      passing before the four-method deletion, per the task plan's stated
+      TDD order.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Build/inspection check, not a test: `head` of the import block shows
+      only ast, re, tempfile, unittest, pathlib.Path (stdlib only,
+      unchanged by this edit); the module's path
+      (tests/test_hook_classification_pin.py) is unchanged; the one added
+      method follows test_<condition>_<expected_result>
+      (test_workflow_yaml_mention_moved_from_docstring_to_code_flips_
+      observation). Before verifying, this was an unconfirmed assumption
+      about the diff ("red" in the sense of unverified); confirmed true
+      after inspection.
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Build/inspection check: `git status --porcelain` and `git diff
+      --stat -- em-workflow/hooks/` show zero changes under the hooks
+      directory and exactly one file modified overall
+      (tests/test_hook_classification_pin.py). Before verifying this was an
+      unconfirmed assumption about the diff; confirmed true after
+      inspection.
+  AC-8:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Whole-suite run, not a single test. Pre-change baseline (4a): 1506
+      tests, 0 failures. Post-change: `python3 -m unittest discover -s
+      tests` reports "Ran 1503 tests ... OK" -- lower by exactly 3 (4
+      methods removed, 1 synthetic method added by AC-5), matching the
+      criterion's formula, with zero failures and zero errors.
+  AC-9:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Inspection check: grepped the module for the four deleted method
+      names (test_queue_stop_guard_reads_status,
+      test_queue_launch_guard_does_not_read_status,
+      test_queue_failure_net_does_not_read_status,
+      test_queue_taskstop_net_does_not_read_status) after the edit -- zero
+      matches. The one comment that referenced the load-bearing claim
+      formerly split across the deleted method and its sibling
+      (test_raw_text_search_would_have_misclassified_queue_taskstop_net) was
+      rewritten to describe its narrower current scope (real-hook evidence
+      only) and to point at the synthetic pair now carrying the load-bearing
+      proof. Before the edit this comment overclaimed load-bearing proof it
+      no longer solely carried (a defect this task fixes); after, it does
+      not.

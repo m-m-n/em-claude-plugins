@@ -32,6 +32,45 @@ future relaxation of `workflow-patch.md` -- which this feature's D1 requires
 to stay byte-identical -- fails loudly. Scoped to the permission-conditions
 section and the application-rule list so an occurrence of the same words
 elsewhere in the document cannot satisfy them.
+
+task0022 (goal-vs-spec-divergence, review round 3, finding
+consumed-flag-split) updates the Re-planning path's second-case wording:
+the re-entry signal is a `spec_change` record carrying an unspent
+re-planning authorization, and `consumed`'s value is explicitly no longer
+part of the condition (AC-2). The pre-existing
+`test_pending_reentry_case_states_recognizable_signal` and
+`TestReplanningReentrySignalStrengthenedRound2.test_unspent_authorization_
+definition_stated` (formerly `test_unconsumed_definition_stated`) are
+updated in place to pin the new wording; their retained halves -- reading
+position, feature-match requirement, fail-closed fallback -- are unchanged
+by this task. tests/test_spec_change_replan_authorization.py is the
+dedicated cross-document module for this task's two-flag rule (phase-
+state.md, workflow-patch.md, skills/develop/SKILL.md and the validator
+together).
+
+task0002 (rework-contract-drift/tasks/task0002.md) closes a producer/
+consumer contract break: the unspent re-planning authorization condition
+named a retired single-field identifier no producer writes any more (its
+name is never spelled out as a contiguous literal in this module -- see
+`TestRetiredOriginFieldNameAbsenceScan` below). This task:
+
+- AC-1/AC-5: rewrites the condition to name the origin pair (`origin_kind`,
+  `origin_id` -- IMPLEMENTATION.md Shared Components) in place of the
+  retired name, updating `test_unspent_authorization_definition_stated` in
+  place (not adding a second assertion beside it) so the pin actually
+  guards the new wording.
+- AC-3: adds Application rule 19, a recovery and idempotency rule for an
+  interruption between rule 15's patch write and rule 18's authorization
+  spend (`TestApplicationRuleNineteenRecoveryAndIdempotency`).
+- AC-4: extends `TestOwnershipBoundaryAndDomainsSSOT` to cover the
+  ownership-boundary section's new paragraph naming rule 18's crossing
+  into phase-state.
+- AC-6: `TestRetiredOriginFieldNameAbsenceScan` is the owner-scoped
+  absence scan over this task's two D3 sites (workflow-patch.md and this
+  module itself), built at run time so it cannot match itself.
+- AC-7: the byte-identity pin in tests/test_gate_option_vocabulary.py is
+  refreshed in the same change (that module's own docstring/comments carry
+  the detail).
 """
 
 import re
@@ -232,35 +271,146 @@ class TestPreserveVocabulary(unittest.TestCase):
             )
 
 
+class TestPreserveSectionCarriedIdRemark(unittest.TestCase):
+    """task0023 (goal-vs-spec-divergence, review round 3), AC-2/AC-4: the
+    `preserve` section states that a re-planning `replace_all`'s carried
+    task ids need no `tasks.<task_id>.status` / `tasks.<task_id>.branch`
+    entry in `preserve` to survive the patch -- the carry-over declaration
+    guarantees it structurally -- while a patch that lists them anyway still
+    passes the invariance check."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text, "## `preserve`", "## Application rules"
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_carried_ids_need_no_preserve_entry(self):
+        self.assertIn("Re-planning task-id allocation", self.normalized)
+        self.assertIn("`tasks.<task_id>.status`", self.normalized)
+        self.assertIn("`tasks.<task_id>.branch`", self.normalized)
+        self.assertIn("need no", self.normalized)
+
+    def test_listing_them_anyway_still_holds(self):
+        self.assertIn("MAY still list them", self.normalized)
+        self.assertIn("invariance check", self.normalized)
+
+
 class TestApplicationRules(unittest.TestCase):
-    """AC-5: all sixteen application rules, ordered, single-write + R2."""
+    """AC-5: all sixteen application rules from design-input.md, ordered,
+    single-write + R2.
+
+    task0017 (goal-vs-spec-divergence, review round 2 rework): the document
+    now carries a SEVENTEENTH rule (re-planning task-id allocation), added
+    after design-input.md's original sixteen (Convention C3: extend, never
+    renumber -- rules 1-16 keep their numbers and text unchanged). The doc's
+    own rule count is therefore no longer EQUAL to design-input.md's count;
+    it is one more than it. The sanity check that design-input.md itself
+    still states sixteen rules is retained (design-input.md is untouched by
+    this feature), split from the doc-side count so a future change to
+    either fails at the specific assertion that actually moved.
+
+    goal-vs-spec-divergence/task0029 (deviation -- this module is outside
+    task0029's declared file set, but the count and ordering checks below
+    pin a document task0029 legitimately extends; IMPLEMENTATION.md D12:
+    workflow-patch.md is the only document allowed to state its own
+    application-rule count, and a task that adds a rule there updates that
+    count "in the same edit"): the document now carries an EIGHTEENTH rule
+    (the orchestrator's re-planning-application procedure that spends
+    `spec_change.replan_authorized`), added after the seventeenth. The
+    count below moves from "+1" to "+2" accordingly; rules 1-17 keep their
+    numbers and text unchanged (C3).
+
+    task0002 (rework-contract-drift): the document briefly carried a
+    NINETEENTH rule (rule 18's recovery and idempotency rule for an
+    interruption between the patch write and the authorization spend).
+
+    task0008 (rework-contract-drift, review round1 rework, FR5, FR11,
+    NFR2): rule 19 is relocated OUT of the numbered list entirely, into its
+    own titled section ("## Interrupted authorization-spend recovery",
+    covered by TestInterruptedSpendRecoverySection below) -- its whole
+    effect was to overturn rule 2 once recognized, which contradicted the
+    list's own "in order" declaration (AC-1). The count below returns to
+    "+2" (rules 1-18, same as after task0029); `doc_rules_section` is
+    re-pointed to end at the new heading instead of "## Ownership
+    boundary" so the numbered-rule extraction never picks up the
+    relocated section's own prose."""
 
     @classmethod
     def setUpClass(cls):
         cls.fixture = DesignInputFixture()
         cls.text = _read(DOC_PATH)
         cls.doc_rules_section = _extract_section(
-            cls.text, "## Application rules", "## Ownership boundary"
+            cls.text,
+            "## Application rules",
+            "## Interrupted authorization-spend recovery",
         )
 
-    def test_rule_count_matches_design_input(self):
+    def test_design_input_still_states_sixteen_rules(self):
         design_rules = self.fixture.application_rules()
         self.assertEqual(
             len(design_rules),
             16,
             "sanity: design-input.md 5.5.5 states sixteen rules",
         )
+
+    def test_doc_rule_count_is_design_input_count_plus_two(self):
+        design_rules = self.fixture.application_rules()
         doc_rule_numbers = re.findall(
             r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE
         )
-        self.assertEqual(len(doc_rule_numbers), len(design_rules))
+        self.assertEqual(
+            len(doc_rule_numbers),
+            len(design_rules) + 2,
+            "workflow-patch.md must carry design-input.md's sixteen rules "
+            "plus this feature's own seventeenth (re-planning task-id "
+            "allocation) and eighteenth (re-planning authorization spend, "
+            "task0029); the interrupted-spend recovery procedure "
+            "(task0002/task0008) is not a numbered rule (AC-1)",
+        )
 
-    def test_rules_are_ordered_one_through_sixteen(self):
+    def test_rules_are_ordered_one_through_eighteen(self):
         doc_rule_numbers = [
             int(n)
             for n in re.findall(r"^(\d+)\. ", self.doc_rules_section, re.MULTILINE)
         ]
-        self.assertEqual(doc_rule_numbers, list(range(1, 17)))
+        self.assertEqual(doc_rule_numbers, list(range(1, 19)))
+
+    def test_rule_eighteen_states_the_authorization_spend_procedure(self):
+        # task0008: rule 18 is once again the last rule in the list (the
+        # relocated recovery section is excluded from doc_rules_section by
+        # construction -- see setUpClass), so rule 18's own text runs to
+        # the end of the extracted section.
+        idx = self.doc_rules_section.index("18. ")
+        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:])
+        self.assertIn("replan_authorized", rule_text)
+        self.assertIn("orchestrator", rule_text)
+
+    def test_no_nineteenth_rule_remains_in_the_numbered_list(self):
+        # task0008 AC-1 (non-vacuity companion to the count/ordering
+        # checks above): the extracted rules section itself contains no
+        # "19. " numbered item.
+        self.assertNotRegex(
+            self.doc_rules_section, re.compile(r"^19\. ", re.MULTILINE)
+        )
+
+    def test_rule_seventeen_states_the_task_id_allocation_rule(self):
+        # task0002: rule 17's own text is bounded by rule 18's number
+        # (rule 17 is no longer the last rule in the list). Whitespace is
+        # normalized so a line-wrap inside the citation never makes this
+        # brittle.
+        #
+        # task0023 (goal-vs-spec-divergence, review round 3): the rule no
+        # longer says "re-declare" -- a re-planning replace_all now carries
+        # already-registered ids via `carried_task_ids` instead of
+        # re-declaring their bodies under `entries` (D10).
+        idx = self.doc_rules_section.index("17. ")
+        end = self.doc_rules_section.index("18. ")
+        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:end])
+        self.assertIn("carried_task_ids", rule_text)
+        self.assertIn("Re-planning task-id allocation", rule_text)
 
     def test_single_write_application_rule_present(self):
         self.assertIn("single-write", self.text.lower())
@@ -270,13 +420,170 @@ class TestApplicationRules(unittest.TestCase):
         self.assertIn("R2", self.doc_rules_section)
         self.assertIn("commit", self.doc_rules_section.lower())
 
+    def test_rule_twelve_applies_to_entries_only(self):
+        # AC-2 (task0023): rule 12 (`initial_status: pending`) is stated to
+        # apply to `tasks_patch.entries` only -- a carried id carries no
+        # entry at all.
+        idx = self.doc_rules_section.index("12. ")
+        end = self.doc_rules_section.index("13. ")
+        rule_text = re.sub(r"\s+", " ", self.doc_rules_section[idx:end])
+        self.assertIn("tasks_patch.entries", rule_text)
+        self.assertIn("applies to `entries` only", rule_text)
 
-class TestOwnershipBoundaryAndDomainsSSOT(unittest.TestCase):
-    """AC-6: project/review summary not worker-patchable; domains SSOT."""
+
+RECOVERY_HEADING = "## Interrupted authorization-spend recovery"
+
+# The exact sentence the pre-task0008 rule 19 used to read "already
+# applied" from a bare blob mismatch plus a standing authorization -- the
+# proxy condition task0008 replaces with the phase-state.md-owned
+# already-applied determination. Used only as a negative-proof sample
+# below (Test Notes: paired with a matcher that fires against a synthetic
+# sentence stating the old proxy condition).
+OLD_PROXY_SENTENCE = "that combination is read as already-applied-not-yet-spent"
+
+BARE_BLOB_MISMATCH_RECOGNIZED_CASE_RE = re.compile(
+    r"blob mismatch[^.]*\bis\b[^.]*\brecognized case\b", re.IGNORECASE
+)
+
+
+class TestInterruptedSpendRecoverySection(unittest.TestCase):
+    """task0002 (rework-contract-drift) AC-3, narrowed/relocated by task0008
+    (rework-contract-drift, review round1 rework, FR5, FR11, NFR2): rule
+    18's authorization-spending write is recoverable and idempotent across
+    an interruption between the patch's own write (rule 15) and rule 18's
+    write -- stated in its own titled section outside the numbered rule
+    list (AC-1), keyed by the phase-state.md-owned already-applied
+    determination rather than a bare `base_workflow_blob` mismatch
+    (AC-2/AC-3). Per the task's Test Notes, the retained pins (recognition,
+    no-op, same-end-state, phase-state citation) are over the rule's
+    substance, not its exact prose, so a later rewording that keeps the
+    substance does not fail them."""
 
     @classmethod
     def setUpClass(cls):
         cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text, RECOVERY_HEADING, "## Ownership boundary"
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    # -- AC-1: outside the numbered list ---------------------------------
+
+    def test_section_is_its_own_titled_heading(self):
+        self.assertIn(RECOVERY_HEADING, self.text)
+
+    def test_section_appears_after_the_application_rules_list(self):
+        rules_idx = self.text.index("## Application rules")
+        section_idx = self.text.index(RECOVERY_HEADING)
+        ownership_idx = self.text.index("## Ownership boundary")
+        self.assertTrue(rules_idx < section_idx < ownership_idx)
+
+    # -- retained substance (task0002) ------------------------------------
+
+    def test_states_recognition_of_an_already_applied_patch(self):
+        self.assertIn("already been applied", self.normalized)
+        self.assertIn("resumed run", self.normalized)
+
+    def test_states_no_op_on_repeated_consumption(self):
+        self.assertIn("no-op", self.normalized)
+        self.assertIn("not an error", self.normalized)
+
+    def test_states_same_state_after_any_number_of_resumptions(self):
+        self.assertIn("any number of resumptions", self.normalized)
+        self.assertIn("uninterrupted run", self.normalized)
+
+    def test_cites_phase_state_for_flag_location_without_restating(self):
+        self.assertIn("references/phase-state.md", self.normalized)
+        self.assertIn("not restated", self.normalized)
+
+    # -- AC-2: recognition condition names phase-state.md's own
+    # already-applied determination, keyed by patch identity -------------
+
+    def test_names_phase_state_as_owner_of_the_already_applied_determination(
+        self,
+    ):
+        self.assertIn("references/phase-state.md", self.normalized)
+        self.assertIn("already-applied determination", self.normalized)
+        self.assertIn(
+            "How the determination itself is computed is "
+            "`references/phase-state.md`'s own",
+            self.normalized,
+        )
+        self.assertIn("not restated", self.normalized)
+
+    def test_requires_the_determination_for_the_patch_in_hand_by_identifier(
+        self,
+    ):
+        self.assertIn("patch in hand", self.normalized)
+        self.assertIn("`patch_id`", self.normalized)
+
+    def test_requires_the_authorization_record_to_still_stand(self):
+        self.assertIn("still stand", self.normalized)
+
+    # -- AC-3: bare blob mismatch is never a recognized case on its own --
+
+    def test_blob_mismatch_not_confirmed_is_an_ordinary_rejection(self):
+        self.assertIn("ordinary rejection", self.normalized)
+        self.assertIn(
+            "no authorization is ever spent on a rejected patch",
+            self.normalized,
+        )
+
+    def test_no_op_arm_is_stated_only_within_the_recognized_case(self):
+        # The no-op sentence is inside the "Idempotency" paragraph, which
+        # opens with "Under the recognized case" -- it is never a
+        # standalone top-level statement.
+        idempotency_idx = self.normalized.index("Idempotency")
+        no_op_idx = self.normalized.index("no-op")
+        self.assertLess(idempotency_idx, no_op_idx)
+        self.assertIn("Under the recognized case", self.normalized)
+
+    def test_no_sentence_makes_a_bare_blob_mismatch_a_recognized_case(self):
+        self.assertNotRegex(self.normalized, BARE_BLOB_MISMATCH_RECOGNIZED_CASE_RE)
+
+    def test_negative_proof_matcher_fires_on_a_synthetic_bare_blob_sentence(
+        self,
+    ):
+        synthetic = (
+            "A base_workflow_blob mismatch is a recognized case on its own "
+            "once the authorization is unspent."
+        )
+        self.assertRegex(synthetic, BARE_BLOB_MISMATCH_RECOGNIZED_CASE_RE)
+
+    def test_old_proxy_condition_wording_absent(self):
+        self.assertNotIn(OLD_PROXY_SENTENCE, self.text)
+
+    def test_negative_proof_old_proxy_wording_would_be_detected(self):
+        # Non-vacuity: the absence check above can fail meaningfully --
+        # this is the exact sentence the pre-task0008 rule 19 stated.
+        synthetic = (
+            "while the spec_change record's replan_authorized is still "
+            "true: " + OLD_PROXY_SENTENCE + ", and the resumed run "
+            "performs only rule 18's write"
+        )
+        self.assertIn(OLD_PROXY_SENTENCE, synthetic)
+
+
+class TestOwnershipBoundaryAndDomainsSSOT(unittest.TestCase):
+    """AC-6: project/review summary not worker-patchable; domains SSOT.
+
+    task0002 (rework-contract-drift) AC-4 adds coverage of the
+    ownership-boundary section's second crossing: application rule 18's
+    write into `references/phase-state.md`, naming the orchestrator as the
+    owning side and the condition under which the crossing is permitted,
+    citing phase-state.md for the record's own definition rather than
+    restating it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text, "## Ownership boundary", "## Domains vocabulary SSOT"
+        )
+        # Normalized (whitespace collapsed to a single space) so a phrase
+        # spanning a hard-wrap line break still matches -- same pattern as
+        # TestReplanningReentrySignalStrengthenedRound2 above.
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
 
     def test_project_and_review_summary_are_orchestrator_updated(self):
         self.assertIn("orchestrator-updated", self.text)
@@ -285,6 +592,38 @@ class TestOwnershipBoundaryAndDomainsSSOT(unittest.TestCase):
 
     def test_domains_ssot_is_review_rules_yaml(self):
         self.assertIn("references/review-rules.yaml", self.text)
+
+    def test_names_the_orchestrator_as_the_owning_side_of_the_crossing(self):
+        self.assertIn("orchestrator", self.normalized)
+        self.assertIn("never a worker", self.normalized)
+
+    def test_names_rule_eighteen_as_the_crossing(self):
+        self.assertIn("Application rule 18", self.normalized)
+        self.assertIn("replan_authorized", self.normalized)
+
+    def test_states_the_permission_condition_for_the_crossing(self):
+        self.assertIn("replace_all", self.normalized)
+        self.assertIn("Re-planning path", self.normalized)
+
+    def test_cites_phase_state_for_the_records_definition_without_restating(
+        self,
+    ):
+        self.assertIn("references/phase-state.md", self.normalized)
+        self.assertIn("not restated", self.normalized)
+
+    def test_negative_proof_pre_change_section_lacks_crossing_coverage(self):
+        # Non-vacuity: the pre-task0002 ownership-boundary section (the
+        # project/review-summary paragraph alone) never mentions
+        # phase-state or the authorization-spending flag.
+        synthetic_old_section = (
+            "`project` and the review summary block (including "
+            "`needs_rework`) are orchestrator-updated only. No operation, "
+            "mode, or field of this contract targets them -- they are "
+            "absent from every worker patch by construction, not by "
+            "convention workers are expected to honor voluntarily."
+        )
+        self.assertNotIn("phase-state", synthetic_old_section)
+        self.assertNotIn("replan_authorized", synthetic_old_section)
 
 
 class TestReplaceAllPermissionConditionsPinned(unittest.TestCase):
@@ -342,6 +681,526 @@ class TestReplaceAllPermissionConditionsPinned(unittest.TestCase):
         rule_text = match.group(1)
         self.assertIn("replace_all", rule_text)
         self.assertIn("permission conditions", rule_text.lower())
+
+    def test_floor_condition_is_scoped_to_the_initial_planning_path(self):
+        # task0002 AC-1: the tasks-empty-or-all-pending floor is stated
+        # inside the initial-planning path's own bullet, not as a
+        # blanket condition covering both paths.
+        start = self.section.index("Initial-planning path")
+        end = self.section.index("Re-planning path", start)
+        initial_bullet = self.section[start:end]
+        self.assertIn("`tasks` is empty", initial_bullet)
+        self.assertRegex(
+            initial_bullet, r"every existing task's `status` is `pending`"
+        )
+
+    def test_needs_update_path_explicitly_permits_merged_tasks(self):
+        # task0002 AC-2: merged tasks no longer block replace_all when
+        # create-plan is needs_update.
+        start = self.section.index("Re-planning path")
+        end = self.section.index("A `replace_all` received", start)
+        replanning_bullet = self.section[start:end]
+        self.assertIn("merged", replanning_bullet)
+
+    def test_protocol_error_sentence_no_longer_lists_merged(self):
+        # task0002 AC-3: in_progress / failed remain a protocol error on
+        # both paths; merged must not be listed there any more (it is
+        # explicitly permitted on the re-planning path instead).
+        match = re.search(
+            r"A `replace_all` received.*?protocol error[^\n]*\.",
+            self.section,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match, "expected the protocol-error sentence")
+        sentence = match.group(0)
+        self.assertIn("in_progress", sentence)
+        self.assertIn("failed", sentence)
+        self.assertNotIn("merged", sentence)
+
+
+# task0002: the wording that ANDed the task-state floor with either
+# create-plan path -- making the floor apply unconditionally to both paths
+# -- is superseded and must not remain anywhere in the document (AC-4).
+OLD_BLANKET_CONDITION_PATTERN = re.compile(
+    r"ALL of the following hold.*?"
+    r"`tasks` is empty, OR every existing task's `status` is `pending`.*?"
+    r"AND, additionally, one of:",
+    re.DOTALL,
+)
+
+
+class TestSupersededBlanketConditionRemoved(unittest.TestCase):
+    """task0002 AC-4: the superseded blanket condition ('every existing
+    task must be `pending`' as an unconditional requirement of both paths)
+    must not remain anywhere in the document."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+
+    def test_pattern_trips_on_a_synthetic_sample_of_the_old_wording(self):
+        # Non-vacuity guard: prove the pattern can match something, so the
+        # absence assertion below is not vacuously true.
+        synthetic = (
+            "`replace_all` is permitted ONLY when ALL of the following "
+            "hold; otherwise the patch is rejected:\n\n"
+            "- `tasks` is empty, OR every existing task's `status` is "
+            "`pending`\n"
+            "- AND, additionally, one of:\n"
+            "  - the `create-plan` step is `pending` (first planning "
+            "pass), OR\n"
+            "  - the `create-plan` step is `needs_update` (an explicit "
+            "re-plan)\n"
+        )
+        self.assertRegex(synthetic, OLD_BLANKET_CONDITION_PATTERN)
+
+    def test_superseded_blanket_condition_absent_from_document(self):
+        self.assertNotRegex(self.text, OLD_BLANKET_CONDITION_PATTERN)
+
+
+class TestBaseCommitPreservedOnReplanningPath(unittest.TestCase):
+    """task0002 AC-5: workflow.implement.base_commit is preserved on the
+    re-planning path, stated consistently with the rework invariant that a
+    rework patch never changes base_commit."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### `replace_all` permission conditions",
+            "### `append` requirements",
+        )
+
+    def test_base_commit_mentioned_within_permission_conditions_section(self):
+        self.assertIn("workflow.implement.base_commit", self.section)
+        self.assertIn("`preserve`", self.section)
+
+    def test_consistency_with_rework_invariant_is_stated(self):
+        lowered = self.section.lower()
+        self.assertIn("does not contradict", lowered)
+        self.assertIn("rework invariant", lowered)
+
+
+class TestReplanningPathWidenedForSpecChangeReentry(unittest.TestCase):
+    """task0013 AC-1 (FR4, FR6): the Re-planning path is satisfied by the
+    state the SPEC-change transition actually produces (`create-plan:
+    pending` after a `create-spec: needs_update` re-entry), names the
+    recognizable signal for that case, and still admits the unchanged
+    `create-plan: needs_update` case. The transition documents themselves
+    (`rework-task-synthesis.md` Section 10, the two documents citing it)
+    are not modified by this task (AC-3) -- verified separately by this
+    task's own file-set discipline, not by an assertion here (Test Notes:
+    cross-document agreement is a verify-phase item)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### `replace_all` permission conditions",
+            "### `append` requirements",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_needs_update_case_still_present(self):
+        self.assertIn(
+            "the `create-plan` step is `needs_update`", self.normalized
+        )
+
+    def test_pending_reentry_case_states_recognizable_signal(self):
+        # task0017 (review round 2 rework) supersedes this wording: the
+        # signal is now a spec_change record carrying an unspent
+        # re-planning authorization, not merely one "present" -- see
+        # TestReplanningReentrySignalStrengthenedRound2 below for the rest
+        # of this task's own pins. task0022 (review round 3,
+        # consumed-flag-split) supersedes the "unconsumed" wording further
+        # -- see TestReplanningPathReadsReplanAuthorizedNotConsumed below.
+        self.assertIn(
+            "carrying an **unspent re-planning authorization**",
+            self.normalized,
+        )
+        self.assertIn(
+            "`workflow.implement.base_commit` already being set",
+            self.normalized,
+        )
+
+    def test_states_transition_produces_pending_not_needs_update(self):
+        self.assertIn(
+            "sets `create-plan` to `pending`, not `needs_update`",
+            self.normalized,
+        )
+        self.assertIn("rework-task-synthesis.md", self.normalized)
+
+    def test_new_case_matcher_fails_on_needs_update_only_wording(self):
+        # Non-vacuity / negative proof (Test Notes): a Re-planning path
+        # stated only as `create-plan: needs_update` -- the pre-task0013
+        # wording -- must not satisfy the widened matcher above.
+        synthetic_old_wording = (
+            "- **Re-planning path** -- the `create-plan` step is "
+            "`needs_update` (an explicit re-plan, e.g. the SPEC-change "
+            "transition): permitted regardless of task status, including "
+            "existing `merged` tasks."
+        )
+        self.assertNotIn(
+            "carrying an **unspent re-planning authorization**",
+            synthetic_old_wording,
+        )
+        self.assertNotIn(
+            "`workflow.implement.base_commit` already being set",
+            synthetic_old_wording,
+        )
+
+
+class TestUnchangedHalvesStatedExplicitly(unittest.TestCase):
+    """task0013 AC-2 (FR4): the Initial-planning path's condition and the
+    `in_progress` / `failed` protocol error are stated as unchanged by the
+    Re-planning path's widening, on both paths."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### `replace_all` permission conditions",
+            "### `append` requirements",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_unchanged_statement_present(self):
+        self.assertIn(
+            "Neither this protocol-error rule nor the Initial-planning "
+            "path's floor condition above changes",
+            self.normalized,
+        )
+
+    def test_referenced_halves_still_present(self):
+        # Retention: both halves the "unchanged" sentence refers to.
+        self.assertIn("`tasks` is empty", self.normalized)
+        self.assertIn("in_progress", self.normalized)
+        self.assertIn("protocol error", self.normalized)
+
+    def test_unchanged_statement_matcher_fails_on_pre_change_wording(self):
+        # Negative proof: the pre-task0013 protocol-error sentence had no
+        # such explicit "unchanged" statement at all.
+        synthetic_old_wording = (
+            "A `replace_all` received while any task is `in_progress` or "
+            "`failed` is a protocol error on BOTH paths above."
+        )
+        self.assertNotIn(
+            "Neither this protocol-error rule nor the Initial-planning "
+            "path's floor condition above changes",
+            synthetic_old_wording,
+        )
+
+
+class TestReplanningTaskIdAllocationRule(unittest.TestCase):
+    """task0013 AC-4: a `replace_all` re-planning pass never re-issues a
+    task id the feature has already used, and allocates above the highest
+    previously registered id."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### Re-planning task-id allocation",
+            "### `append` requirements",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_allocates_above_highest_registered_id(self):
+        self.assertIn(
+            "allocates its new task ids continuing ABOVE the highest",
+            self.normalized,
+        )
+        self.assertIn("the feature has ever registered", self.normalized)
+
+    def test_retired_id_never_reissued(self):
+        self.assertIn(
+            "is never re-issued to a different task", self.normalized
+        )
+
+    def test_replace_all_must_carry_every_registered_id_via_carried_task_ids(self):
+        # task0023 (goal-vs-spec-divergence, review round 3, D10): the
+        # task0017 wording ("MUST re-declare every task id already
+        # registered" / "Dropping a registered id is rejected") is
+        # superseded -- a re-planning replace_all no longer re-declares a
+        # registered id's body under `entries` at all. It carries the id in
+        # `tasks_patch.carried_task_ids` instead, whose record is copied
+        # from `workflow.yaml` verbatim; omitting a registered id from
+        # `carried_task_ids` is rejected exactly like the old "dropping"
+        # rule was.
+        self.assertIn("tasks_patch.carried_task_ids", self.normalized)
+        self.assertIn("tasks_patch.entries", self.normalized)
+        self.assertIn(
+            "Omitting a registered id from `carried_task_ids`",
+            self.normalized,
+        )
+        self.assertIn(
+            "naming a registered id under `entries`, is rejected",
+            self.normalized,
+        )
+
+    def test_carried_record_copied_verbatim_naming_the_fields(self):
+        # AC-2: the document names every field a carried id's record
+        # carries over, so a merged task's status/branch/files survive
+        # without either field entering the `preserve` vocabulary.
+        for field in (
+            "`title`", "`plan`", "`files`", "`skills`", "`domains`",
+            "`complexity`", "`requirements`", "`status`", "`branch`",
+            "`notes`",
+        ):
+            self.assertIn(field, self.normalized)
+        self.assertIn("copied from that `workflow.yaml` **verbatim**", self.normalized)
+        self.assertIn(
+            "a `merged` task keeps its `status`, its `branch` and its "
+            "`files` across the patch without either field entering the "
+            "`preserve` vocabulary",
+            self.normalized,
+        )
+
+    def test_carried_task_ids_and_entries_disjoint(self):
+        # AC-1: the two sets are stated disjoint -- a carried id's body is
+        # never re-supplied under entries.
+        self.assertIn(
+            "a carried id must not also be a key of `tasks_patch.entries`",
+            self.normalized,
+        )
+
+    def test_redeclare_matcher_fails_on_pre_change_wording(self):
+        # Negative proof: the pre-task0017 section said nothing about
+        # dropping a registered id, and the pre-task0023 (task0017) section
+        # said nothing about carried_task_ids.
+        synthetic_old_wording = (
+            "A `replace_all` re-planning pass allocates its new task ids "
+            "continuing ABOVE the highest `taskNNNN` id the feature has "
+            "ever registered. A task id already used by any task -- "
+            "retired or not -- is never re-issued to a different task, on "
+            "either case of the Re-planning path above. Because "
+            "`replace_all` replaces `tasks` wholesale, the high-water mark "
+            "has no storage of its own: a re-planning `replace_all`'s "
+            "`entries` MUST re-declare every task id already registered in "
+            "the `workflow.yaml` it is applied to -- a `merged` task keeps "
+            "its `status`, its `branch` and its `files` -- and any "
+            "genuinely new task is numbered above the highest id present. "
+            "Dropping a registered id is rejected; this is what keeps the "
+            "highest id readable directly from the workflow the patch is "
+            "applied to, instead of a number nothing stores."
+        )
+        self.assertNotIn(
+            "tasks_patch.carried_task_ids", synthetic_old_wording
+        )
+        self.assertNotIn(
+            "Omitting a registered id from `carried_task_ids`",
+            synthetic_old_wording,
+        )
+
+    def test_allocation_matcher_fails_on_reissuing_wording(self):
+        # Negative proof (Test Notes): an allocation sentence that permits
+        # re-issuing an id must fail this matcher.
+        synthetic_permissive_wording = (
+            "A re-planning pass may reuse any task id below "
+            "`next_task_id`, including a retired one, as long as its "
+            "content is replaced."
+        )
+        self.assertNotIn(
+            "is never re-issued to a different task",
+            synthetic_permissive_wording,
+        )
+        self.assertNotIn("ABOVE the highest", synthetic_permissive_wording)
+
+
+class TestReplanningReentrySignalStrengthenedRound2(unittest.TestCase):
+    """task0017 (goal-vs-spec-divergence, review round 2 rework), AC-6
+    (NFR1): the re-entry signal's reading position, the "unconsumed"
+    definition, the feature-match requirement and the fail-closed fallback
+    to the Initial-planning path are each stated exactly once, inside the
+    Re-planning path's own bullet."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### `replace_all` permission conditions",
+            "### `append` requirements",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_reading_position_names_both_sources(self):
+        self.assertIn(
+            "The record is read from `{feature-dir}/phase-state/rework.yaml`",
+            self.normalized,
+        )
+        self.assertIn(
+            "a `--phase-state` mapping whose own `phase` is `rework`",
+            self.normalized,
+        )
+
+    def test_feature_match_required(self):
+        self.assertIn(
+            "must also carry a `feature` matching the workflow's `feature`",
+            self.normalized,
+        )
+
+    def test_unspent_authorization_definition_stated(self):
+        # task0022 (review round 3, consumed-flag-split) supersedes this
+        # test's pre-task0022 name and wording (formerly
+        # test_unconsumed_definition_stated, pinning `consumed`) -- the
+        # signal is now `replan_authorized`, never `consumed`.
+        #
+        # task0002 (rework-contract-drift) supersedes the retired
+        # single-field name's pin with the origin pair `origin_kind` /
+        # `origin_id` (Shared Components: Origin identity pair, defined by
+        # references/rework-task-synthesis.md Invariant 6) -- this test
+        # reads the document live, so it fails against the
+        # pre-task0002 document (AC-5).
+        self.assertIn(
+            "An unspent re-planning authorization means the record "
+            "carries `reason`, the origin pair `origin_kind` and "
+            "`origin_id`, and `recorded_at_commit` (all non-empty)",
+            self.normalized,
+        )
+        self.assertIn(
+            "references/rework-task-synthesis.md` Invariant 6",
+            self.normalized,
+        )
+        self.assertIn(
+            "carries `replan_authorized` as a boolean", self.normalized
+        )
+        self.assertIn("`replan_authorized` is `true`", self.normalized)
+        self.assertIn(
+            "`consumed`'s value plays no part in this decision",
+            self.normalized,
+        )
+
+    def test_fail_closed_fallback_to_initial_planning_stated(self):
+        self.assertIn(
+            "the invocation falls back to the Initial-planning path's rule",
+            self.normalized,
+        )
+        self.assertIn(
+            "a narrower invocation never widens what `replace_all` permits",
+            self.normalized,
+        )
+
+    def test_negative_proof_pre_change_wording_lacks_all_of_the_above(self):
+        # Non-vacuity: the pre-task0017 wording (task0013's own text) states
+        # none of these -- it never named a reading position, never
+        # required a feature match, and never defined an authorization
+        # signal.
+        synthetic_old_wording = (
+            "`create-plan` reads `pending` on a re-entry recognizable as "
+            "having come through a `create-spec: needs_update` cycle -- "
+            "the signal is a `spec_change` record present in "
+            "`phase-state/rework.yaml` (`references/phase-state.md`) "
+            "together with `workflow.implement.base_commit` already being "
+            "set."
+        )
+        self.assertNotIn(
+            "The record is read from `{feature-dir}/phase-state/rework.yaml`",
+            synthetic_old_wording,
+        )
+        self.assertNotIn(
+            "must also carry a `feature` matching the workflow's `feature`",
+            synthetic_old_wording,
+        )
+        self.assertNotIn(
+            "An unspent re-planning authorization means the record carries",
+            synthetic_old_wording,
+        )
+        self.assertNotIn(
+            "the invocation falls back to the Initial-planning path's rule",
+            synthetic_old_wording,
+        )
+
+
+class TestMandatoryPreserveReplanningRowRequiresBaseCommit(unittest.TestCase):
+    """task0013 AC-6 (FR5): the Mandatory `preserve` table's
+    `replace_planning` row requires `workflow.implement.base_commit` on the
+    Re-planning path, states the Initial-planning (first-pass) case
+    explicitly, and no longer reads `(none)`."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(DOC_PATH)
+        cls.section = _extract_section(
+            cls.text,
+            "### Mandatory `preserve` per operation",
+            "## Application rules",
+        )
+        cls.normalized = re.sub(r"\s+", " ", cls.section)
+
+    def test_row_no_longer_reads_none(self):
+        self.assertNotRegex(
+            self.normalized, r"\| `replace_planning` \| \(none\) \|"
+        )
+
+    def test_row_requires_base_commit_on_replanning_path(self):
+        match = re.search(
+            r"\| `replace_planning` \| (.*?) \|", self.normalized
+        )
+        self.assertIsNotNone(match, "expected the replace_planning row")
+        row = match.group(1)
+        self.assertIn("workflow.implement.base_commit", row)
+        self.assertIn("Re-planning path", row)
+
+    def test_initial_planning_case_stated(self):
+        self.assertIn(
+            "Initial-planning path has no `implement` base commit yet",
+            self.normalized,
+        )
+
+    def test_row_matcher_fails_on_none_wording(self):
+        # Negative proof: a preserve row reading `(none)` must fail.
+        synthetic_old_row = "| `replace_planning` | (none) |"
+        self.assertRegex(
+            synthetic_old_row, r"\| `replace_planning` \| \(none\) \|"
+        )
+        self.assertNotIn("workflow.implement.base_commit", synthetic_old_row)
+
+
+class TestRetiredOriginFieldNameAbsenceScan(unittest.TestCase):
+    """task0002 (rework-contract-drift) AC-6: an owner-scoped absence scan
+    proving the retired single-field origin identifier is gone from this
+    task's two owned sites (IMPLEMENTATION.md D3: workflow-patch.md and
+    this test module itself -- every other site is a different task's to
+    scan, per the single-owner partition in D3/D4).
+
+    The search term is assembled at run time from parts, rather than
+    carried as a contiguous literal in this file's own source (Shared
+    Components: Retired-identifier absence scan), so scanning this very
+    module never matches itself."""
+
+    RETIRED_NAME = "_".join(["finding", "stable", "id"])
+
+    SCANNED_PATHS = (DOC_PATH, Path(__file__).resolve())
+
+    def test_retired_name_absent_from_owned_paths(self):
+        for path in self.SCANNED_PATHS:
+            text = _read(path)
+            self.assertNotIn(
+                self.RETIRED_NAME,
+                text,
+                f"{path} must not contain the retired `{self.RETIRED_NAME}` "
+                "field name (D3)",
+            )
+
+    def test_negative_proof_matcher_fires_on_a_synthetic_violating_sample(self):
+        synthetic = (
+            "the record carries `reason`, `" + self.RETIRED_NAME
+            + "` and `recorded_at_commit`"
+        )
+        self.assertIn(self.RETIRED_NAME, synthetic)
+
+    def test_scan_does_not_match_its_own_source(self):
+        # Non-vacuity of the "never carried as a contiguous literal" claim:
+        # this module's own source, read as plain text, never contains the
+        # assembled retired name -- it exists only as three separate
+        # string-literal parts joined at run time above.
+        own_source = _read(Path(__file__).resolve())
+        self.assertNotIn(self.RETIRED_NAME, own_source)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,258 @@
+round: 1
+executed_at: "2026-08-29T23:21:58+09:00"
+scope:
+  review_mode: diff
+  base_commit: 4dc8c598399daad7e89ba07d98f32e31a2e20cf9
+  head_commit: e6174c2f26e3a74ff1d51e5f1c9aa14ca12e08e0
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - em-workflow/references/review-phase.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/batch-quiet-output/task0001.tests.yaml
+    - test-docs/batch-quiet-output/task0002.tests.yaml
+    - test-docs/batch-quiet-output/task0003.tests.yaml
+    - test-docs/batch-quiet-output/task0004.tests.yaml
+    - tests/test_batch_quiet_output_discipline.py
+    - tests/test_batch_quiet_output_phase_wiring.py
+    - tests/test_batch_quiet_output_skill_wiring.py
+    - tests/test_batch_quiet_output_version_bump.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: "1cd0e6ab9dba1fef"
+    severity: critical
+    category: spec
+    file: em-workflow/references/batch-mode.md
+    line: 187
+    title: "監査項目のソースマップが unlisted-gate fallback resolution に永続ソースを与えていない"
+    description: >-
+      SPEC FR11 は監査項目を「committed artifacts and persisted state から組み立てる —
+      前ターンの main-context 出力からではない」と明示し、SPEC の Audit-Item Sourcing 表も
+      この項目を phase-state/*.yaml の answers / resolution_note に割り当てている。
+      batch-mode.md:187 の行は Persisted source として
+      「The unsuppressed resolution line emitted per Batch quiet output's Exceptions」を挙げており、
+      FR11 が名指しで禁じている出典を採用している。唯一の失敗テスト
+      test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_source_map_has_one_row_per_audit_item
+      (item='unlisted-gate fallback resolution') の直接原因。
+    suggestion: >-
+      Persisted source を phase-state/*.yaml の answers / resolution_note に置き換える。
+      gate_id を持たない非パケットゲートには既存エントリが無いため、FR11 の
+      「source is newly defined」に従って記録先と記録タイミングを新規に定義する。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 1 のカテゴリ除外（spec）により候補外"
+  - stable_id: "48ac1e2b5f7d90c3"
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/batch-mode.md
+    line: 187
+    title: "監査ソースマップの unlisted-gate 行が永続化されていない出力行を指しており、唯一残るテスト失敗の原因"
+    description: >-
+      Audit-item source map の導入文は「Every audit item resolves to a persisted source」と
+      宣言しているのに、この行だけが persisted source ではなくそのターンのアシスタント出力を指す。
+      --once 境界やコンテキスト圧縮・再開をまたぐと Step C が必須監査項目を再構成できない。
+      IMPLEMENTATION.md D4 は phase-state を指定しており、ドキュメント側だけが外れている。
+    suggestion: >-
+      行の Persisted source を feature-docs/{feature}/phase-state/*.yaml の
+      answers / resolution notes に戻し、Exceptions の無抑制出力行は
+      「in-run surface であって source ではない」と併記する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 3 で same_site conflict（diff+prose 併存）となりサイトごとスキップ"
+  - stable_id: "b0f4c7d2e819a635"
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-mode.md
+    line: 187
+    title: "Audit-item source map の unlisted-gate fallback resolution 行が永続化先ではなく揮発する出力行を指している"
+    description: >-
+      source map は自ら persisted source を宣言しているのに、この行だけ main context に流れる
+      assistant 出力行を source として指名している。Step C の完了レポート組み立ては別ターンで
+      出力された行を読み戻せないため、抑制下でレポートを再構成可能にするという不変条件が破れている。
+      SPEC.md と IMPLEMENTATION.md D4 は phase-state を明記している。
+    suggestion: >-
+      行を phase-state/*.yaml の answers / resolution notes に書き換え、
+      Non-packet gates の 2 件については同セルの副次記述として無抑制出力行に触れる。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 3 で same_site conflict によりサイトごとスキップ"
+  - stable_id: "7e3a95c14b0d82ff"
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-mode.md
+    line: 167
+    title: "Audit-item source map row inconsistent with test contract and other persistence patterns"
+    description: >-
+      unlisted-gate fallback resolution 行が emitted output line を指しており、
+      テスト（SOURCE_MAP_EXPECTATIONS）が期待する phase-state と食い違う。
+      他の監査項目がすべてファイルベースの永続先を持つのに対し、この行だけ永続化の性質が異なる。
+    suggestion: >-
+      source map 行をファイルベースの永続先（phase-state）に更新し、書き込みサイトを揃える。
+    sources: [litellm:vertex-glm-5:architecture]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 3 でサイト skip、および medium 未満でない candidate と site 不一致"
+  - stable_id: "2a6b8f0c3d5e7192"
+    severity: high
+    category: spec
+    file: em-workflow/references/batch-mode.md
+    line: 174
+    title: "Exceptions に SPEC が定義していない 4 つ目の非抑制例外が追加されている"
+    description: >-
+      SPEC が認める抑制の例外は FR6（stop / abort）・FR5（Step C）・FR8（--once 境界）の 3 つだけ。
+      「A turn that resolves a non-packet unlisted-gate fallback ... emits that resolution line
+      unsuppressed」はこの閉じた例外集合に無い。さらに FR4 は Step A.5 のコマンド承認結果の
+      running presentation を抑制対象に挙げており正面から矛盾し、FR2 の「非終端ターンは
+      マーカー行のみ」も破る。
+    suggestion: >-
+      この bullet を削除し、非パケット unlisted-gate フォールバックの解決は
+      phase-state の resolution_note に記録して Step C の最終報告で列挙する形に変更する。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "auto-fix はカテゴリ spec を候補から除外する"
+  - stable_id: "9d1f4e6a2c8b0537"
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 385
+    title: "batch 限定の wake コミットメッセージ変更が「出力のみを変える」制約を破っている"
+    description: >-
+      SPEC FR9 は workflow.yaml / phase-state / feature-docs 配下へのコミットの内容・頻度・
+      タイミングを「変更しない」と定め、FR10 は「This feature changes output only」とする。
+      implement-phase.md は wake フェーズの commit-docs.sh 呼び出しについて、batch 実行でだけ
+      subject の後に DECLINED 行を足す規則を新設しており、コミットそのものを batch と対話で
+      分岐させている。
+    suggestion: >-
+      wake コミットのメッセージ分岐を撤回して両モード共通に戻し、declined deviation の監査記録は
+      既存の永続チャネル（または FR11 に従って新規定義する永続フィールド）に置く。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "auto-fix はカテゴリ spec を候補から除外する"
+  - stable_id: "c6c19d28305c1f68"
+    severity: medium
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 197
+    title: "Step A.5 の batch 分岐が「記録先は対話時と変わらず」と書きながら同じ文で新しい記録先を導入している"
+    description: >-
+      phase-state に answers エントリ形式で記録すると述べた直後に「ゲート解決の判定・記録先・
+      ステータス遷移は対話時と変わらず」と書いており、同一文中で衝突している。実行エージェントが
+      後半を採ると phase-state 書き込みが省略され、監査項目が静かに消える。
+    suggestion: "「記録先」を不変リストから外し、phase-state レコードが追加であることを明示する。"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補外"
+  - stable_id: "2d34bfa3400a05e1"
+    severity: medium
+    category: architecture
+    file: em-workflow/skills/develop/SKILL.md
+    line: 197
+    title: "Step A.5 の新しい phase-state 書き込みが phase-state.md の answers ID 一意性・ライフサイクル規則と接続されていない"
+    description: >-
+      phase-state.md は「Re-answering the same question is a protocol error」と定めるが、
+      Step A.5 はゲート再実行が明示的に許されており、2 回目の自動記録の question_id 導出と
+      supersedes の扱いが未定義。加えて Step A.5 は create-spec の phase-state 初期化より前に
+      走るため、書き込み先ファイルの生成責務と初期化時の保持も未定義。
+    suggestion: >-
+      question_id の導出規則（ユニーク採番 + supersedes、または run 内 1 エントリ固定の no-op）と、
+      phase-state 未生成時の作成責務・初期化時の保持を 1 箇所で明記する。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補外"
+  - stable_id: "4b8e0a2f6c1d3957"
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 463
+    title: "batch の deviation DECLINE 監査記録を wake コミットのメッセージ本文に載せる設計に、消失経路と消費者手順の欠落がある"
+    description: >-
+      decline は workflow.yaml への差分を生まない場合があり、commit-docs.sh が
+      「nothing to commit」で ref を進めないとメッセージ本文も存在しない。batch では wake ターンの
+      出力も抑制され代替経路も閉じているため、監査記録が痕跡なく失われる。加えて Step C が
+      どのコミット範囲をどの subject で走査するかがどちらの文書にも無い。
+    suggestion: >-
+      (a) decline も phase-state の既存チャネルに記録して source map 経由で辿れるようにする、
+      または (b) コミット生成の保証と Step C の探索手順（ref 範囲と subject 絞り込み）を明記する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補外"
+  - stable_id: "826a9a8d596166f9"
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-mode.md
+    line: 157
+    title: "implement の起動/補充ターンで marker line の point 値が一意に決まらない"
+    description: >-
+      point は wait / launch / wake の閉集合だが、停止条件 5 (a)・I.2.a の launch ターン・
+      I.2.b の wake ターンの 3 規則が同一の物理ターンに同時に当たり、優先順位がどこにも無い。
+      進捗地点を機械判定する目的が満たせない。
+    suggestion: >-
+      point の定義に優先順位規則を 1 文足し、3 箇所からそれを参照させて値を再定義しない。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補外"
+  - stable_id: "f483025b5673e799"
+    severity: medium
+    category: comprehensive
+    file: tests/test_batch_quiet_output_phase_wiring.py
+    line: 107
+    title: "gate_id 出現回数を等値で固定していて、無関係な将来の編集がこの feature のテストを赤にする"
+    description: >-
+      BASELINE_GATE_ID_COUNTS を assertEqual で突き合わせているが、AC-6 が要求するのは
+      「新しい gate_id 言及を増やさないこと」= 上限。等値固定により無関係な変更でも赤くなる。
+    suggestion: "assertLessEqual に変え、定数名も上限であることが分かる形にする。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 候補外"
+auto_fix:
+  loops_run: 3
+  applied_total: 11
+  termination: loop-cap
+  loops:
+    - loop: 1
+      dispatched: 4
+      applied: 4
+      commit: e1c3e64
+      note: "prose 4 件を Apply as-is で適用。結果として既存回帰ガード 3 本と本 feature の AC テスト 2 本が赤化（2684 件中 5 件 FAIL）"
+    - loop: 2
+      dispatched: 5
+      applied: 5
+      commit: 8c123ec
+      note: "5→2 件に減少。batch-mode.md の source map 書き換えと SKILL.md verify 節の carve-out 追加が新たに 2 件を混入"
+    - loop: 3
+      dispatched: 2
+      applied: 2
+      commit: e6174c2
+      note: "batch-mode.md:187 は diff+prose 併存の same_site conflict のため batch 規定でサイトごとスキップ。残り 2 件を適用し 2684 件中 1 件 FAIL まで回復"
+test_state_at_round_end:
+  command: "python3 -m unittest discover -s tests"
+  ran: 2684
+  failures: 1
+  failing:
+    - "test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_source_map_has_one_row_per_audit_item (item='unlisted-gate fallback resolution')"
+residual_critical_high: 6
+rework_required: true

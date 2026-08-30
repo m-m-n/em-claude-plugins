@@ -25,6 +25,15 @@ markdown, not behavioral tests of running code.
 
 Per task0004.md's Test Notes: `skills/develop/SKILL.md`'s verify rework
 branches are owned by task0012 — this file asserts nothing about that file.
+
+task0019 AC-8 (round2 findings 87ae09bcfe6410c0, 61c73dc71f323f45,
+confidence 95), field renamed by rework-contract-drift/task0004 (FR4): what
+the `rework.spec-change` packet must carry is pinned here as well as in
+tests/test_worker_contract_docs.py -- the packet names its origin(s) via
+`evidence[].origin_id` and does not name the review round record path; the
+orchestrator locates that record itself (`references/question-
+resolution.md`, pinned in tests/test_classification_gate.py). Neither
+document restates the other's rule.
 """
 
 import re
@@ -35,6 +44,9 @@ PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "em-workflow"
 SSOT_PATH = PLUGIN_ROOT / "references" / "rework-task-synthesis.md"
 IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
 REVIEW_PHASE_PATH = PLUGIN_ROOT / "references" / "review-phase.md"
+REWORK_PLANNER_CONTRACT_PATH = (
+    PLUGIN_ROOT / "references" / "contracts" / "rework-planner-contract.md"
+)
 
 # The thirteen sections design-input.md 5.10 lists, in order.
 SECTION_HEADINGS = [
@@ -190,6 +202,55 @@ class TestReworkSynthesisSSOTStateTransition(unittest.TestCase):
         )
         self.assertIn("review-specific", section)
 
+    def test_states_create_plan_reentry_holds_with_merged_tasks(self):
+        # task0003 AC-1 (FR6): create-plan re-entry under the SPEC-change
+        # transition is not rejected merely because merged tasks already
+        # exist, and the permission rule itself is cited by path rather
+        # than restated here (C2).
+        section = self._transition_section()
+        self.assertIn(
+            "not rejected merely because merged tasks",
+            section,
+        )
+        self.assertIn("references/workflow-patch.md", section)
+
+    def test_does_not_restate_workflow_patch_permission_conditions(self):
+        # task0003 AC-6 (NFR1): the `replace_all` permission conjunction is
+        # owned by workflow-patch.md and must not be copied here.
+        section = self._transition_section()
+        self.assertNotIn(
+            "every existing task's `status` is `pending`", section
+        )
+        self.assertNotIn("an explicit re-plan", section)
+
+    def test_batch_mode_routes_through_classification_gate(self):
+        # task0003 AC-2 (FR6, D8): batch resolves rework.spec-change through
+        # the classification gate in question-resolution.md.
+        section = self._transition_section()
+        normalized = re.sub(r"\s+", " ", section)
+        self.assertIn("classification gate", normalized)
+        self.assertIn("references/question-resolution.md", section)
+
+    def test_old_unlisted_gate_abort_wording_is_gone(self):
+        # task0003 AC-2: the superseded claim that batch aborts through the
+        # unlisted-gate fallback must not survive.
+        section = self._transition_section()
+        self.assertNotIn("falls to the unlisted-gate fallback", section)
+        self.assertNotIn(
+            "which aborts, because a SPEC change is not a success-path "
+            "outcome",
+            section,
+        )
+
+    def test_interactive_mode_explicitly_stated_unchanged(self):
+        # task0003 AC-2 (D8): interactive mode is stated as unchanged, not
+        # merely left silent.
+        normalized = re.sub(r"\s+", " ", self._transition_section())
+        self.assertIn(
+            "Interactive mode is unchanged: the user is asked directly",
+            normalized,
+        )
+
 
 class TestImplementPhaseReworkPrecondition(unittest.TestCase):
     @classmethod
@@ -289,6 +350,77 @@ class TestReviewPhaseReworkReferences(unittest.TestCase):
         )
 
 
+class TestSpecChangePacketCarriesOriginIdNotRecordPath(unittest.TestCase):
+    """task0019 AC-8 (NFR1), renamed by rework-contract-drift/task0004
+    (FR4): rework-planner-contract.md states the spec-change packet names
+    its origin(s) via `evidence[].origin_id` and does not name the review
+    round record path -- consistent with question-resolution.md's
+    Classification gate step 3, which locates that record itself. Neither
+    document restates the other's rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(REWORK_PLANNER_CONTRACT_PATH)
+        cls.norm = re.sub(r"\s+", " ", cls.text)
+
+    def test_packet_names_origins_via_origin_id_field(self):
+        # task0028 AC-5: the packet names its origin(s) via the
+        # `evidence[].origin_id` field, generalized to the origin_kind/
+        # origin_id pair rework-task-synthesis.md's Invariant 6 defines
+        # (both origin kinds, not review findings alone).
+        self.assertIn(
+            "names its origin(s) — the `origin_kind` / `origin_id` pair "
+            "`references/rework-task-synthesis.md`'s Invariant 6 defines "
+            "(cited, not restated) — via `evidence[].origin_id`",
+            self.norm,
+        )
+
+    def test_packet_does_not_name_the_record_path(self):
+        self.assertIn(
+            "does not name the review round record path", self.norm
+        )
+
+    def test_gate_cited_not_restated(self):
+        self.assertIn(
+            "the gate's origin verification "
+            "(`references/question-resolution.md`) locates its own bound "
+            "set itself",
+            self.norm,
+        )
+
+    def test_does_not_restate_the_r5_position_or_path_formula(self):
+        # NFR1: the round-record location formula is owned by
+        # references/review-phase.md's R5 section and cited from
+        # question-resolution.md; this contract must not restate it.
+        self.assertNotIn("Phase R5", self.text)
+        self.assertNotIn("reviews/round", self.text)
+
+    def test_negative_twin_old_record_path_naming_wording_fails(self):
+        fake_text = (
+            "The question packet returned for `gate_id: rework.spec-change` "
+            "names each originating review finding's `stable_id` and the "
+            "review round record path in the question's `evidence[]` "
+            "entries."
+        )
+        self.assertNotIn(
+            "does not name the review round record path", fake_text
+        )
+
+    def test_old_review_only_packet_naming_wording_is_gone(self):
+        # task0028 AC-8: the pre-task0028 wording, which named review
+        # findings alone as the packet's origin vocabulary via the now-
+        # retired single-field name, must not survive anywhere in the
+        # document. Built at run time (never a contiguous literal) so this
+        # sample never trips the retired-identifier absence scan
+        # (IMPLEMENTATION.md Shared Components).
+        retired_field = "finding" + "_stable_id"
+        self.assertNotIn(
+            "names each originating review finding's `stable_id` in the "
+            f"question's `evidence[].{retired_field}` entries",
+            self.text,
+        )
+
+
 class TestReworkSynthesisAssertionsCanFail(unittest.TestCase):
     """Proof that the structural checks above fail meaningfully, per the
     tdd-testing discipline (a test that can never fail is not a test)."""
@@ -307,6 +439,24 @@ class TestReworkSynthesisAssertionsCanFail(unittest.TestCase):
         fake_section = "1. one\n2. two\n3. three\n"
         items = re.findall(r"^\d+\.", fake_section, re.MULTILINE)
         self.assertNotEqual(len(items), 11)
+
+    def test_superseded_batch_abort_wording_would_be_caught(self):
+        # task0003 AC-2 negative proof: the matcher used by
+        # test_old_unlisted_gate_abort_wording_is_gone must actually flag
+        # the pre-task0003 wording it supersedes, not merely pass by
+        # vacuity against text that never contained it.
+        fake_section = (
+            "Batch mode has no `rework.spec-change` entry in "
+            "`batch-policies.yaml`, so it\nfalls to the unlisted-gate "
+            "fallback (`references/question-resolution.md`)\n— which "
+            "aborts, because a SPEC change is not a success-path outcome."
+        )
+        self.assertIn("falls to the unlisted-gate fallback", fake_section)
+        self.assertIn(
+            "which aborts, because a SPEC change is not a success-path "
+            "outcome",
+            fake_section,
+        )
 
 
 if __name__ == "__main__":

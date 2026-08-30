@@ -1,0 +1,185 @@
+round: 2
+executed_at: "2026-08-26T01:00:38+09:00"
+scope:
+  review_mode: diff
+  base_commit: cf2d345c74114de1939c798a1e31f80aea624cbe
+  head_commit: dd5a0d577e39519f762012f903b8c8cb77b72552
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/develop-once-option/task0001.tests.yaml
+    - test-docs/develop-once-option/task0002.tests.yaml
+    - test-docs/develop-once-option/task0003.tests.yaml
+    - test-docs/develop-once-option/task0004.tests.yaml
+    - test-docs/develop-once-option/task0005.tests.yaml
+    - test-docs/develop-once-option/task0006.tests.yaml
+    - tests/test_batch_stop_contract.py
+    - tests/test_batch_stop_contract_skill_wiring.py
+    - tests/test_develop_once_option.py
+    - tests/test_plugin_version_parity.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+round1_verification: >-
+  ラウンド 1 の unresolved 7 件（e8b3fe02b7aaeec0 / f9dba34e27373999 / 2024821d09d85f38 /
+  e821c93438f161a8 / 133dad87f620ed69 / d19b6a0240c04f8d / 5a7d022d8ac79472）は
+  task0005 / task0006 のマージによりすべて解消済みであることを、Claude 3 観点と
+  クロスモデル 2 本すべてが独立に確認した。declined 5 件も現行ファイル内容に対して
+  依然として誤りであることをクロスモデル spec が再確認した。
+findings:
+  - stable_id: 56d4b6e1ad7b1cfa
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 66
+    title: "ラウンド 1 の修正（task0005）が `step` の値ドメイン列挙を SSOT から巻き込み削除した"
+    description: >-
+      本文書は冒頭で「`state` / `step` / `reason` の値ドメインの唯一の所有者」と宣言している。
+      task0005 が `step` 箇条書きを書き換えた際、旧文の値ドメイン宣言
+      「a `workflow.yaml` step id (`create-spec`, `design`, `create-plan`, `implement`,
+      `review`, `verify`, `retrospect`), or the single sentinel `no-step`」が丸ごと消えた。
+      7 個の step id 列挙は em-workflow 配下のどこにも残っておらず、ポインタ文書は
+      リテラルガードで再掲を禁止されているため、`step` の閉じた値集合が失われた。
+      オーケストレーターが確認したところ、現行ファイルに `create-spec` は 1 度も出現しない。
+      検出漏れの理由も明確で、`state` 側には値域を pin するテストがあるのに `step` 側には無く、
+      7 個の step id は今やテストスイート中では棄却されるべき forged サンプルの中にしか存在しない。
+    suggestion: >-
+      `step` 箇条書きの冒頭に旧文の値ドメイン宣言を復活させ、その後ろに task0005 が足した
+      一般規則・優先規則・Step C 非対称の各文を続ける（削除ではなく前置で両立できる）。
+      あわせて tests/test_batch_stop_contract.py に、`## Field values` の `step` 箇条書きが
+      7 個の step id と sentinel を列挙していることを pin するアサートを 1 本足す。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 87473b0f947196c7
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 66
+    title: "終端行 SSOT から `step` の値域列挙が消え、契約の所有宣言と実体がドリフトしている"
+    description: >-
+      56d4b6e1ad7b1cfa と同一の欠陥を architecture 観点から指摘したもの。出力側
+      （SKILL.md / batch-mode.md は「そこに定義された値の集合をそのまま使う」と指示）と
+      消費側（終端行をパースする外側ドライバ）の双方で、`step` の権威ある閉集合が
+      参照できない状態になっている。
+    suggestion: >-
+      値域列挙を bullet 冒頭に復元する diff を提示。task0005 が加えた優先関係・
+      Step C 非対称性の記述はそのまま残す。既存アサーションはこの追加で壊れない。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 03d0dbb79a3fb550
+    severity: medium
+    category: spec
+    file: em-workflow/references/batch-terminal-line.md
+    line: 66
+    title: "step bullet 書き換えで `step` の値ドメイン列挙が消え、NFR1 の「every value domain の唯一の所有者」が崩れた"
+    description: >-
+      56d4b6e1ad7b1cfa と同一の欠陥を SPEC 準拠観点から指摘したもの。SPEC NFR1 は
+      「`references/batch-terminal-line.md` remains the sole owner of the prefix,
+      the field grammar and every value domain」を要求しており、`step` ドメイン列挙の
+      削除はどの FR / AC も要求していない巻き添えである。
+    suggestion: 同上。あわせて列挙を pin するアサートを追加する。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium severity; 56d4b6e1ad7b1cfa と同一サイト・同一欠陥。rework cap 到達により次サイクル送り"
+  - stable_id: 77ba577919799b8a
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 541
+    title: "`--once` の境界表と非境界文が implement の wake ターンで正反対の判定を出す（対話モード終了行の文面と `{step}` 束縛の欠落を含む）"
+    description: >-
+      境界表は 4 種のうち 2 種を implement の wake ターン内に置いている。implement が
+      `completed` になるのは implement-phase.md I.2.b step 5 経路、つまり wake 通知で
+      起きたターン。I.2.c の route back to planning も wake フェーズ内で起きる。ところが
+      直後の非境界文は「implement の launch / wake ターンは非終端」と無条件に述べており、
+      同じターンに対して逆の答えを返す。implement→review という最頻の境界で挙動が
+      決まらない。さらに終了行「`{step}` が完了したよ」は `completed` 遷移を伴わない
+      2 種の境界では事実と逆になり、`{step}` の束縛規則も定義されていない。
+      この 2 件は same_site（line 541 と 545）かつ同一カテゴリのため 1 件に統合した
+      （統合前の stable_id: 77ba577919799b8a と 33fc0cdbeddf7bb6、severity は max を採用）。
+      根本原因は SPEC 自身にある: FR5 が「implement I.2.c の route-back も `--once` の境界」と
+      定める一方、FR14 が「implement's launch and wake turns, remain non-terminal」と述べており、
+      SKILL.md はその矛盾を忠実に写している。企画書の原文は「フェーズ完了時点でのみ終える」で
+      あり、FR14 の一般化が行き過ぎている。
+    suggestion: >-
+      非境界文の対象を「まだ in-flight の implementer が残っているターン」に限定し、
+      `{step}` の束縛規則（そのターンで実行した step 名）を明記する。ただし SPEC FR14 の
+      文面も同じ限定に直す必要があるため、仕様レイヤの訂正判断を伴う。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached。R4 ループ 1 で自動適用を試みたが、修正が tests/test_develop_once_option.py の 3 アサート（TS14 / FR14 の旧文言を pin）と同時変更を要し、single-file の review-editor では完結しないため中止・復元した"
+  - stable_id: c7b377e3577c61d5
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-mode.md
+    line: 96
+    title: "batch-mode.md の終端行定義文が「ランの終わり」限定のまま `--once` 境界を第 3 項に並べている"
+    description: >-
+      ラウンド 1 の finding 133dad87f620ed69（SKILL.md の定義文の二重限定）は task0006 で
+      SKILL.md 側だけ修正され、batch-mode.md の同型の文は残った。現行文は主語が
+      「ランの終わり」のまま、ランを終わらせないターンを第 3 項として並べており自己矛盾している。
+      SKILL.md 引数処理は `--batch` 指定時に最初に batch-mode.md を Read すると規定しているので、
+      この文を根拠に「`--once` 境界では終端行を出さない」と判断する経路が残る。
+    suggestion: >-
+      主語をターンの到達状態に変える。あわせて
+      tests/test_batch_stop_contract_skill_wiring.py に SKILL.md 側と対称な
+      旧限定表現の不在アサートとその negative proof を足す。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium severity; rework cap 到達により次サイクル送り"
+  - stable_id: 79957bbdf95a9193
+    severity: medium
+    category: comprehensive
+    file: tests/test_plugin_version_parity.py
+    line: 125
+    title: "em-review エントリに `version` が無いことを固定するテストが、プロジェクトルール違反の状態を凍結する"
+    description: >-
+      TestEmReviewEntryHasNoVersionKey は marketplace.json の em-review エントリに
+      `version` キーが存在しないことを assert する。しかし .claude/rules/core-plugin-version-bump.md は
+      「上げる場所は 2 箇所。両方を同じ値にする」と定めており、em-review/.claude-plugin/plugin.json は
+      version を持つのに marketplace.json 側だけ欠落している。このテストはその欠落を契約として
+      固定するので、ルールどおり追記した瞬間にスイートが赤くなる。ラウンド 1 で採用された
+      d19b6a0240c04f8d / 5a7d022d8ac79472 と同型の欠陥が別モジュールに残っている。
+    suggestion: >-
+      実ファイルに対する不在アサートを落とし、`_marketplace_entry` が version キーの有無に
+      依存せず name で引けることを合成データで検証する形に絞る。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "medium severity; 本フィーチャーの変更が持ち込んだものではなく既存モジュール側の欠陥。rework cap 到達により次サイクル送り"
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  notes: >-
+    候補は 3 件（56d4b6e1ad7b1cfa / 87473b0f947196c7 / 77ba577919799b8a）。
+    グループ 1（batch-terminal-line.md, line_bucket 13）は 56d4b6e1ad7b1cfa が prose 形状、
+    87473b0f947196c7 が diff 形状で diff+prose 混在のため conflict に分類され、
+    batch ゲート review.auto-fix-conflict に従いサイトごとスキップした。
+    グループ 2（SKILL.md, line_bucket 108）は all-prose のため needs-judgment に分類され、
+    batch ゲート review.auto-fix-judgment に従い Apply as-is で review-editor に dispatch した。
+    editor は applied を返しスコープ検証（変更集合 = SKILL.md のみ、新規 untracked 無し）も
+    通ったが、その内容が tests/test_develop_once_option.py の 3 アサート
+    （TestNonBoundariesStated、FR14 の旧文言を pin）を落とした。review-editor は単一ファイル
+    限定でテストモジュールを同時に直せないため、BACKUP_DIR から復元して stable_id を abort し、
+    スイートが green（2496 tests）であることを再確認した。productive loop が 0 のため
+    レビュアー再実行はせず no-progress で終了。
+residual_critical_high: 0
+rework_required: false

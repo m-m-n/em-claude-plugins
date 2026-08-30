@@ -1,0 +1,91 @@
+task_id: task0001
+baseline_failures: []          # full suite, 2234 tests, 0 failures before any change
+final_failures: []             # full suite, 2247 tests, 0 failures after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_no_longer_keyed_on_a_single_status_literal
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_cites_owning_document_and_re_planning_path
+      - tests.test_replanning_producer_alignment.TestPlannerContractReplanningNotKeyedOnStatusLiteral.test_no_single_status_literal_condition
+      - tests.test_replanning_producer_alignment.TestPlannerContractReplanningNotKeyedOnStatusLiteral.test_re_planning_sentence_cites_owning_document_and_re_planning_path
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change tree all four failed: the prompt's Re-planning
+      branch still contained the literal "`create-plan` is `needs_update`"
+      and no "Re-planning path" citation; planner-contract.md's `completed`
+      payload section likewise still read "On a re-planning pass (the
+      `create-plan` step is `needs_update`)" with no citation of the
+      Re-planning path.
+  AC-2:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_states_no_high_water_mark_formula
+    red_confirmed: true
+    red_reason: >-
+      assertNotIn("max(carried_task_ids", self.text) failed against the
+      pre-change prompt -- the formula `max(carried_task_ids ∪ entries)` was
+      present verbatim in the Re-planning branch.
+  AC-3:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_two_branches_present_initial_planning_keyed_on_pending_status
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_re_planning_branch_no_longer_keyed_on_a_single_status_literal
+    red_confirmed: true
+    red_reason: >-
+      This is the rewrite of the pre-existing two-branch test
+      (test_two_branches_present_keyed_on_create_plan_status, which used to
+      assert the presence of the erroneous `needs_update` literal). Its
+      replacement, test_re_planning_branch_no_longer_keyed_on_a_single_status_literal,
+      failed against the pre-change prompt (AssertionError: '`create-plan`
+      is `needs_update`' unexpectedly found), confirming the rewritten test
+      does fail on the pre-change tree as the AC requires.
+  AC-4:
+    tests:
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_matcher_detects_a_synthetic_needs_update_literal_branch
+      - tests.test_replanning_producer_alignment.TestImplementationPlannerTwoBranchAllocation.test_matcher_detects_a_synthetic_high_water_mark_formula
+      - tests.test_replanning_producer_alignment.TestPlannerContractReplanningNotKeyedOnStatusLiteral.test_matcher_detects_a_synthetic_needs_update_literal_sentence
+    red_confirmed: false
+    red_reason: >-
+      By design these negative-proof tests assert only against synthetic
+      violating strings constructed inline, never against the live doc
+      files, so they pass identically before and after the doc edits (they
+      were never expected to go red -- their job is to prove the paired
+      absence-matcher in AC-1/AC-2 is not vacuous, i.e. that it WOULD have
+      caught the violating shape). The evidence that the pairing is
+      meaningful is that the paired absence assertions (AC-1's
+      test_re_planning_branch_no_longer_keyed_on_a_single_status_literal,
+      AC-2's test_re_planning_branch_states_no_high_water_mark_formula, and
+      TestPlannerContractReplanningNotKeyedOnStatusLiteral's
+      test_no_single_status_literal_condition) DID fail red against the
+      pre-change tree while these synthetic-sample checks passed throughout.
+  AC-5:
+    tests:
+      - tests.test_replanning_producer_alignment.TestReplanningReentryDryRunAcceptance.test_spec_change_transition_replanning_patch_is_accepted
+      - tests.test_replanning_producer_alignment.TestReplanningReentryDryRunAcceptance.test_neither_registered_identifier_nor_dropped_task_rejection_raised
+      - tests.test_replanning_producer_alignment.TestReplanningReentryDryRunAcceptance.test_create_plan_status_used_is_the_one_the_transition_actually_produces
+      - tests.test_replanning_producer_alignment.TestReplanningReentryDryRunAcceptance.test_without_the_reentry_signal_the_same_patch_is_rejected
+    red_confirmed: false
+    red_reason: >-
+      This task's scope is the prompt and contract documents only
+      (Out of Scope: workflow-patch.md and its validator enforcement are
+      task0002/task0004's); scripts/validate-worker-output.py's
+      workflow_replace_all_spec_change_reentry already implements the
+      correct two-state Re-planning path in this worktree (pre-existing,
+      not touched by this task), so this acceptance-level check was already
+      green before any doc edit. It exists to demonstrate, behaviorally,
+      that the state the specification-change transition actually produces
+      is accepted end-to-end -- corroborating the structural AC-1 fix
+      without depending on a module task0004 owns. The
+      test_without_the_reentry_signal_the_same_patch_is_rejected companion
+      is the non-vacuity proof that this acceptance is not a coincidence of
+      an unrelated fixture detail.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified as a suite-wide + import-hygiene check rather than a single
+      test: `python3 -m unittest discover -s tests` ran 2247 tests (up from
+      a 2234-test, 0-failure baseline) with 0 failures after this task's
+      changes, and this task's only new import is stdlib
+      `importlib.util` (already used the same way by
+      tests/test_spec_change_replan_authorization.py and
+      tests/test_validate_worker_output.py), so no third-party dependency
+      was added.

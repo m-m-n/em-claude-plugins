@@ -1,0 +1,33 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recycled_task_id_contract_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_recycled_task_id_contract_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+    red_confirmed: true
+    red_reason: "AssertionError: 44 not greater than 44 (pre-bump plugin.json version 0.1.44 read against BASELINE_PATCH=44)"
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_recycled_task_id_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: "test_em_workflow_entry_version_is_past_baseline failed pre-bump with AssertionError: 44 not greater than 44 (marketplace.json em-workflow entry version 0.1.44 read against BASELINE_PATCH=44). test_em_workflow_entry_version_matches_plugin_manifest was already green pre-bump (both registries started equal at 0.1.44), so red_confirmed for AC-2 rests on the baseline sub-assertion, which did fail red as observed."
+  AC-3:
+    tests:
+      - tests.test_recycled_task_id_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_name_and_source_unchanged
+      - tests.test_recycled_task_id_contract_version_bump.TestMarketplaceOtherFieldsUnchanged.test_entry_count_unchanged
+      - tests.test_recycled_task_id_contract_version_bump.TestMarketplaceOtherFieldsUnchanged.test_every_entry_name_and_source_matches_baseline
+    red_confirmed: false
+    red_reason: "These are pure regression guards over fields this task never touches (name/source values, entry count) -- they were green before the implementation existed because no code change affects them, and stayed green after. The version-only edit this task makes has no observable effect on them, so there is no red state to confirm; this is the tdd-testing skill's documented exception for a criterion with no observable pre/post difference."
+  AC-4:
+    tests: []
+    red_reason: "Structural/discovery criterion: verified by running 'python3 -m unittest discover -s tests' from the repository root and observing the new module's 10 tests collected and executed (see full-suite run: 1462 tests, up from the 1452-test baseline). Not independently red/green testable from inside the module."
+  AC-5:
+    tests:
+      - tests.test_recycled_task_id_contract_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_recycled_task_id_contract_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_malformed_version_shape
+      - tests.test_recycled_task_id_contract_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+    red_confirmed: false
+    red_reason: "The matcher helpers (_assert_version_past_baseline, _assert_versions_equal) and their negative-proof tests were authored together in the same file, so these specific assertions were green from the first run against forged synthetic values, independent of repository state -- there was no separate before/after step to watch them go red. The matchers' real defect-detection was proven by the red-to-green transition on AC-1/AC-2's tests (test_version_is_past_baseline, test_em_workflow_entry_version_is_past_baseline), which exercise the identical helper functions against the actual pre-bump registry files and were observed to fail with 'AssertionError: 44 not greater than 44' before the version bump."

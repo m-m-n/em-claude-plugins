@@ -1,0 +1,186 @@
+task_id: task0023
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_replace_all_must_carry_every_registered_id_via_carried_task_ids
+      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_carried_task_ids_and_entries_disjoint
+      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_redeclare_matcher_fails_on_pre_change_wording
+      - test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver.test_disjointness_stated
+    red_confirmed: true
+    red_reason: >-
+      Stashed only em-workflow/references/workflow-patch.md back to its
+      pre-task0023 HEAD content (git stash push --keep-index -- <path>) and
+      re-ran: test_replace_all_must_carry_every_registered_id_via_carried_task_ids
+      failed (no "tasks_patch.carried_task_ids" / "Omitting a registered id
+      from `carried_task_ids`" text in the pre-change Re-planning task-id
+      allocation section, which still read the old "MUST re-declare every
+      task id already registered" / "Dropping a registered id is rejected"
+      wording), test_carried_task_ids_and_entries_disjoint and
+      test_disjointness_stated both failed ("a carried id must not also be
+      a key of `tasks_patch.entries`" absent). Popped the stash to restore.
+  AC-2:
+    tests:
+      - test_workflow_patch_doc.TestReplanningTaskIdAllocationRule.test_carried_record_copied_verbatim_naming_the_fields
+      - test_workflow_patch_doc.TestApplicationRules.test_rule_twelve_applies_to_entries_only
+      - test_workflow_patch_doc.TestPreserveSectionCarriedIdRemark.test_carried_ids_need_no_preserve_entry
+      - test_workflow_patch_doc.TestPreserveSectionCarriedIdRemark.test_listing_them_anyway_still_holds
+      - test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver.test_doc_names_exactly_the_fields_apply_patch_copies
+      - test_replanning_carry_over.TestWorkflowPatchDocDeclaresCarryOver.test_rule_twelve_narrowed_to_entries
+    red_confirmed: true
+    red_reason: >-
+      Same stash-and-rerun as AC-1 (workflow-patch.md reverted to
+      pre-task0023 HEAD): test_carried_record_copied_verbatim_naming_the_fields
+      failed (the ten-field verbatim list -- title/plan/files/skills/
+      domains/complexity/requirements/status/branch/notes -- did not exist
+      yet), test_rule_twelve_applies_to_entries_only and
+      test_rule_twelve_narrowed_to_entries both failed (rule 12 still read
+      bare "`initial_status` must be `pending`." with no "entries only"
+      qualifier), test_carried_ids_need_no_preserve_entry and
+      test_listing_them_anyway_still_holds both failed (the preserve
+      section had no carried-id remark at all), and
+      test_doc_names_exactly_the_fields_apply_patch_copies failed
+      (AssertionError: match was None -- the "copied ... verbatim --
+      <fields>" sentence did not exist). Popped the stash to restore.
+  AC-3:
+    tests:
+      - test_validate_worker_output.TestReplanningCarryOverEnforcement.test_entry_for_registered_id_rejected
+      - test_validate_worker_output.TestReplanningCarryOverEnforcement.test_entry_for_registered_id_rejected_for_exactly_one_reason
+      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_drops_existing_registered_task_id_rejected
+      - test_replanning_carry_over.TestCarriedTaskIdsNamingAnUnregisteredIdRejected.test_unregistered_carried_id_rejected_alone
+      - test_replanning_carry_over.TestCarriedTaskIdsNamingAnUnregisteredIdRejected.test_fully_correct_carried_task_ids_reports_no_carry_over_error
+    red_confirmed: true
+    red_reason: >-
+      Two independent reds, both against em-workflow/scripts/validate-
+      worker-output.py stashed back to its pre-task0023 HEAD content (the
+      new fixture directory and the new test module were left in place --
+      they are untracked, unaffected by the stash):
+      (1) ran the CLI directly against the new
+      invalid-replace-all-replanning-entry-for-registered-id fixture with
+      --dry-run-apply: exit code came back 0 (accepted) instead of the
+      fixture's declared 1 -- no code anywhere rejected an `entries` key
+      also present in `tasks_patch.carried_task_ids` (the field did not
+      exist).
+      (2) ran TestCarriedTaskIdsNamingAnUnregisteredIdRejected directly:
+      test_unregistered_carried_id_rejected_alone got
+      {'replace-all-drops-task'} instead of
+      {'replace-all-carried-id-unregistered'} (old code compared `entries`
+      keys against `workflow.yaml`, so task0009 -- present in neither
+      carried_task_ids-shaped input nor re-declared in entries -- looked
+      like a drop, not an unregistered carry), and
+      test_fully_correct_carried_task_ids_reports_no_carry_over_error
+      failed the same way (a correct carried_task_ids of just ["task0009"]
+      still produced replace-all-drops-task, because old code required
+      task0009 to be re-declared under `entries`). Popped the stash to
+      restore. test_drops_existing_registered_task_id_rejected is
+      retained from task0017 unchanged -- its red proof (entries omitting
+      task0009 => drop) lives in task0017.tests.yaml; task0023 re-grounds
+      the SAME assertion on a fixture edit (carried_task_ids now empty
+      instead of entries omitting task0009), verified green post-change
+      above (no separate red needed for an assertion whose code did not
+      change, per tdd-testing: only the fixture's shape moved).
+  AC-4:
+    tests:
+      - test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_carried_record_equals_pre_apply_record_field_by_field
+      - test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_files_survive_including_a_path_only_an_implement_deviation_admitted
+      - test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_status_and_branch_of_a_merged_carried_task_are_unchanged
+      - test_replanning_carry_over.TestApplyPatchCopiesCarriedRecordVerbatim.test_carried_record_is_a_deep_copy_not_a_shared_reference
+    red_confirmed: true
+    red_reason: >-
+      Stashed em-workflow/scripts/validate-worker-output.py back to its
+      pre-task0023 HEAD content and re-ran
+      TestApplyPatchCopiesCarriedRecordVerbatim in isolation:
+      test_carried_record_equals_pre_apply_record_field_by_field errored
+      (KeyError: 'task0009' -- old apply_patch's replace_planning arm
+      builds `tasks` from `entries` only, and this test's patch supplies
+      an empty `entries` with task0009 named only in carried_task_ids, so
+      the applied workflow lost the task entirely),
+      test_files_survive_including_a_path_only_an_implement_deviation_admitted
+      and test_status_and_branch_of_a_merged_carried_task_are_unchanged
+      both errored the same way (KeyError: 'task0009'), and
+      test_carried_record_is_a_deep_copy_not_a_shared_reference errored
+      identically. Popped the stash to restore. (A combined run across the
+      whole class initially looked like only 3 of these failed because the
+      terminal output was tail-truncated; re-running each test in
+      isolation confirmed all four error identically against the
+      pre-change code.)
+  AC-5:
+    tests:
+      - test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_retention_states_the_no_drop_reason
+      - test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_retention_cites_workflow_patch_by_path
+      - test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_existing_retention_pins_still_hold
+      - test_change_set_derivation.TestTask0020AC5RetentionSurvivesReplanning.test_does_not_restate_workflow_patchs_own_rule_text
+    red_confirmed: true
+    red_reason: >-
+      Stashed em-workflow/references/phases/create-plan-phase.md back to
+      its pre-task0023 HEAD content and re-ran
+      TestTask0020AC5RetentionSurvivesReplanning: test_retention_states_the_no_drop_reason
+      failed (the section still read "a re-planning `replace_all` may not
+      drop an already-registered task entry", not "...carries every
+      already-registered task id verbatim rather than re-declaring it").
+      The other three tests in the class stayed green (retention
+      location/read/survive pins and the citation-by-path/no-restatement
+      guards are untouched by this task's edit) -- listed here as the
+      retention half (C5) this task's edit must not weaken, confirmed
+      still passing after the edit. Popped the stash to restore.
+  AC-6:
+    tests:
+      - test_replanning_carry_over.TestFixtureCarryOverShape.test_valid_merged_tasks_fixture_carries_every_registered_id
+      - test_replanning_carry_over.TestFixtureCarryOverShape.test_valid_merged_tasks_fixture_task0009_files_include_a_deviation_admitted_path
+      - test_replanning_carry_over.TestFixtureCarryOverShape.test_drops_existing_task_fixture_carried_task_ids_omits_a_registered_id
+      - test_replanning_carry_over.TestFixtureCarryOverShape.test_entry_for_registered_id_fixture_entries_names_a_registered_id
+      - test_validate_worker_output.TestReplanningMandatoryPreserveAndTaskIdAllocation.test_corrected_replanning_merged_tasks_fixture_passes
+      - test_validate_worker_output.TestReplaceAllCreatePlanEntryStatus.test_replanning_reentry_with_merged_task_passes
+      - test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+    red_confirmed: true
+    red_reason: >-
+      Stashed the two edited fixture input.json files (valid-replace-all-
+      replanning-merged-tasks, invalid-replace-all-replanning-drops-
+      existing-task) and workflow.json back to their pre-task0023 HEAD
+      content and re-ran TestFixtureCarryOverShape:
+      test_valid_merged_tasks_fixture_carries_every_registered_id and
+      test_drops_existing_task_fixture_carried_task_ids_omits_a_registered_id
+      both errored (KeyError: 'carried_task_ids' -- the field did not
+      exist in either fixture's pre-change input.json), and
+      test_valid_merged_tasks_fixture_task0009_files_include_a_deviation_admitted_path
+      failed (1 != 2 -- the pre-change workflow.json's task0009 carried
+      only `x.go`, no deviation-admitted second path).
+      test_entry_for_registered_id_fixture_entries_names_a_registered_id
+      passed unaffected (it reads the NEW, untracked
+      invalid-replace-all-replanning-entry-for-registered-id fixture,
+      which the stash of two OTHER paths does not touch). Popped the
+      stash to restore. The remaining tests in this AC's set --
+      test_corrected_replanning_merged_tasks_fixture_passes,
+      test_replanning_reentry_with_merged_task_passes,
+      test_every_fixture_matches_its_declared_exit_code -- are retention
+      assertions (same fixture names keep passing after the edit,
+      verified green post-change); their pre-change red is already
+      task0017's (see task0017.tests.yaml AC-4/AC-7).
+  AC-7:
+    tests:
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Before refreshing the three SHA256 constants, ran the full suite
+      (python3 -m unittest discover -s tests) against the already-edited
+      workflow-patch.md / validate-worker-output.py /
+      test_validate_worker_output.py with the OLD pinned digests still in
+      test_gate_option_vocabulary.py: exactly three failures, all three
+      byte-identity tests (computed digest != stale pinned constant; full
+      stdout captured in this task's working transcript). Refreshing the
+      three constants (with the reason recorded in the comment above each,
+      per convention C10) turned all three green;
+      test_pinned_validator_test_line_unchanged was never touched and
+      stayed green throughout (the line it pins was never edited). A full
+      `python3 -m unittest discover -s tests` run after every edit in this
+      task ends at 2017 tests, 0 failures (baseline was 1991 tests, 0
+      failures -- this task adds 26 net new tests across
+      test_replanning_carry_over.py (new) and the extended
+      TestReplanningCarryOverEnforcement /
+      TestCarriedTaskIdsNamingAnUnregisteredIdRejected /
+      TestPreserveSectionCarriedIdRemark / new TestApplicationRules and
+      TestReplanningTaskIdAllocationRule methods).

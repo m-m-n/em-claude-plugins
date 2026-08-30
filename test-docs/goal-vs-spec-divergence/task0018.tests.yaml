@@ -1,0 +1,95 @@
+task_id: task0018
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestReentryIsPartialUpdateNotReconstruction.test_document_states_reentry_is_a_partial_update_tied_to_needs_update
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, locating the new statement's own slice
+      (REENTRY_STATEMENT_START "**Partial update on re-entry**" up to the
+      pre-existing "**The `goal` field**" heading) raised ValueError from
+      str.index (marker not found), surfacing as ERROR rather than FAIL for
+      every test scoped to that slice; the section-level regex test
+      (test_document_states_reentry_is_a_partial_update_tied_to_needs_update)
+      failed cleanly with "Regex didn't match". Both demonstrate the
+      statement did not exist before the edit.
+  AC-2:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestPreservedSetEnumeratesAllFourNamesIndividually.test_tasks_named_as_preserved
+      - tests.test_create_spec_reentry_preservation.TestPreservedSetEnumeratesAllFourNamesIndividually.test_each_steps_status_named_as_preserved
+      - tests.test_create_spec_reentry_preservation.TestPreservedSetEnumeratesAllFourNamesIndividually.test_base_commit_named_as_preserved
+      - tests.test_create_spec_reentry_preservation.TestPreservedSetEnumeratesAllFourNamesIndividually.test_completed_at_commit_named_as_preserved
+    red_confirmed: true
+    red_reason: >-
+      These are scoped to the new statement's own slice (not the whole
+      section) precisely because `completed_at_commit` and
+      `references/workflow-patch.md` already appear elsewhere in section 11
+      for unrelated reasons (the create-spec step's own field; the "workers
+      never write workflow.yaml themselves" sentence) -- an unscoped check
+      would have passed vacuously before the edit. Scoped to the slice, all
+      four failed with ValueError (slice marker not found) before the edit
+      and passed after it. A first, unscoped draft of this test was run and
+      observed to falsely pass pre-edit for `completed_at_commit`, which is
+      why the slice was introduced.
+  AC-3:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestReentryWriteScopeIsBoundedInBothDirections.test_states_what_the_reentry_does_write
+      - tests.test_create_spec_reentry_preservation.TestReentryWriteScopeIsBoundedInBothDirections.test_states_the_step_statuses_the_transition_assigns
+    red_confirmed: true
+    red_reason: "ValueError from str.index (slice marker not found) before the edit; both assertions pass after it."
+  AC-4:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestGoalCarveoutRetainedUnabsorbed.test_goal_carveout_sentence_one_still_present_verbatim
+      - tests.test_create_spec_reentry_preservation.TestGoalCarveoutRetainedUnabsorbed.test_goal_carveout_sentence_two_still_present_verbatim
+      - tests.test_create_spec_reentry_preservation.TestGoalCarveoutRetainedUnabsorbed.test_goal_field_heading_still_present
+      - tests.test_create_spec_reentry_preservation.TestGoalCarveoutRetainedUnabsorbed.test_new_statement_precedes_and_is_distinct_from_the_goal_heading
+    red_confirmed: false
+    red_reason: >-
+      This is the retention half of the task (C5): the pre-existing `goal`
+      carve-out sentences were already present before task0018 touched the
+      document (written by task0001/task0007/task0014), so these
+      assertions passed both before and after this task's edit -- there was
+      never supposed to be a red state for "the pre-existing text is still
+      there unmodified". The one sub-check that could regress
+      (test_new_statement_precedes_and_is_distinct_from_the_goal_heading)
+      depends on REENTRY_STATEMENT_START, which did not exist pre-edit, so
+      it errored (ValueError) rather than failing cleanly before the edit;
+      it is listed here for completeness but the retention checks
+      themselves were green throughout by design.
+  AC-5:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestCitesWithoutRestatingSiblingDocuments.test_cites_rework_task_synthesis_path
+      - tests.test_create_spec_reentry_preservation.TestCitesWithoutRestatingSiblingDocuments.test_cites_workflow_patch_path
+      - tests.test_create_spec_reentry_preservation.TestCitesWithoutRestatingSiblingDocuments.test_does_not_restate_the_replanning_paths_own_rule_text
+      - tests.test_create_spec_reentry_preservation.TestCitesWithoutRestatingSiblingDocuments.test_does_not_restate_the_spec_change_transitions_own_step_list
+    red_confirmed: true
+    red_reason: >-
+      test_cites_rework_task_synthesis_path and test_cites_workflow_patch_path
+      are scoped to the new statement's own slice, which did not exist
+      pre-edit (ValueError). The two "does not restate" absence checks are
+      non-vacuous negative proofs (see
+      test_synthetic_sample_with_restated_text_fails_the_absence_checks) but
+      were trivially true both before and after this edit since the
+      implementation never restates the cited documents' rule text; they
+      are carried here because they are part of the same AC and would catch
+      a future regression that DID restate that text.
+  AC-6:
+    tests:
+      - tests.test_create_spec_reentry_preservation.TestSectionHeadingsUnchangedAndInOrder.test_expected_headings_all_present_in_order
+    red_confirmed: false
+    red_reason: >-
+      Build/lint outcome, not a behavior red: this is a guard that the
+      document's numbered section list is unchanged, and it was already
+      true before this task's edit (no heading was touched). Non-vacuity /
+      negative-proof discipline (NFR5/NFR8) is satisfied by
+      `python3 -m unittest discover -s tests` passing for every module this
+      task owns and touches, run in full both before (baseline) and after
+      implementation.

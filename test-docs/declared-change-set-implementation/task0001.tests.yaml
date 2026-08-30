@@ -1,0 +1,81 @@
+task_id: task0001
+baseline_failures: []          # full suite (1452 tests) was green before this task started
+final_failures: []             # full suite (1452 tests) remained green after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_spec_template_declared_change_set.TestEnumerationAndCitation.test_every_feature_docs_member_named
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: '`IMPLEMENTATION.md`' not found in the sliced
+      '## Declared Change Set' section -- observed after adding
+      IMPLEMENTATION.md to the test module's FEATURE_DOCS_MEMBERS tuple but
+      before editing the SPEC template.
+  AC-2:
+    tests:
+      - tests.test_requirements_template_declared_change_set.TestEnumerationAndCitation.test_all_feature_docs_members_named
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'IMPLEMENTATION.md' not found in the sliced
+      '### 9.4 宣言された変更集合' subsection -- observed after adding
+      IMPLEMENTATION.md to the test module's FEATURE_DOCS_MEMBERS tuple but
+      before editing the REQUIREMENTS template.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Structural property of the two test modules themselves (same member
+      string, same relative position immediately after SPEC.md, all
+      pre-existing entries unchanged in spelling/order). Per the task plan's
+      Test Notes, this is verified by inspection of the diff, not by a
+      dedicated test -- adding one would require a new test module, which
+      NFR4 places out of scope. Confirmed by inspection: both
+      FEATURE_DOCS_MEMBERS tuples gained "IMPLEMENTATION.md" as the sole new
+      entry, inserted directly after "SPEC.md", with every other entry
+      unchanged and in the same order.
+  AC-4:
+    tests:
+      - tests.test_spec_template_declared_change_set.TestValidationDetectsRegressions.test_enumeration_and_citation_matcher_flags_absence_in_pre_change_sample
+      - tests.test_requirements_template_declared_change_set.TestValidationDetectsRegressions.test_feature_docs_members_matcher_flags_absence_in_pre_change_section
+    red_confirmed: false
+    red_reason: >-
+      These negative-proof tests iterate the enlarged FEATURE_DOCS_MEMBERS
+      set and assert absence from the frozen pre-change samples; they passed
+      both immediately after the literal-set edit and after the template
+      edit, because the captured pre-change samples never contained
+      "IMPLEMENTATION.md" to begin with -- there is no red state to observe
+      here by design (the negative proof holds automatically once the new
+      entry is added to the set). The other half of AC-4 (the samples
+      themselves being byte-unchanged) is verified by inspection of the
+      diff: neither PRE_CHANGE_SAMPLE nor PRE_CHANGE_SECTION_9_SAMPLE appears
+      in the diff.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by running `python3 -m unittest discover -s tests` from the
+      repository root after implementation: "Ran 1452 tests ... OK", no
+      failures or errors. Both modified test modules' imports were inspected
+      and use only `re`, `unittest`, and `pathlib.Path` from the standard
+      library.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Comment-text criterion, verified by inspection of the diff: the DM-2
+      comment in tests/test_requirements_template_declared_change_set.py was
+      changed from "the eight feature-docs members" to "the nine
+      feature-docs members" in the same edit that added the new entry. No
+      other comment or docstring in either module states a member count.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by inspection of `git diff --stat`/`git status`: exactly the
+      four files listed under Scope
+      (em-workflow/references/templates/spec-document.md,
+      em-workflow/references/templates/requirements-document.md,
+      tests/test_spec_template_declared_change_set.py,
+      tests/test_requirements_template_declared_change_set.py) are modified;
+      no file is created, renamed, or deleted, and no other section,
+      heading, member, or line of either template was altered.

@@ -1,0 +1,98 @@
+task_id: task0015
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_change_set_derivation.TestThirdInputStated.test_implement_derived_additions_named
+      - tests.test_change_set_derivation.TestThirdInputStated.test_implement_phase_cited_by_path
+      - tests.test_change_set_derivation.TestThirdInputStated.test_all_three_inputs_present_together
+      - tests.test_deviation_auto_addition.TestCreatePlanPhaseCitesAutoAdditionRule.test_derivation_section_cites_this_document_by_path
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, §12's Inputs named only two sources. The new
+      "implement-derived additions" phrase, the "references/implement-phase.md"
+      citation, and the combined all-three-inputs check were all absent, so
+      test_implement_derived_additions_named / test_implement_phase_cited_by_path
+      / test_all_three_inputs_present_together (test_change_set_derivation.py)
+      and test_derivation_section_cites_this_document_by_path
+      (test_deviation_auto_addition.py) failed with assertIn/assertTrue
+      AssertionErrors quoting the pre-edit §12 text.
+  AC-1-evidence-not-restated:
+    tests:
+      - tests.test_change_set_derivation.TestThirdInputStated.test_evidence_condition_not_restated
+      - tests.test_deviation_auto_addition.TestCreatePlanPhaseCitesAutoAdditionRule.test_derivation_section_does_not_restate_the_evidence_condition
+    red_confirmed: false
+    red_reason: >-
+      This is a restraint/negative assertion (the evidence-condition phrase
+      must be ABSENT from §12). It was vacuously true before any
+      implementation existed (the whole third-input citation was absent, so
+      the evidence condition could not have been restated either), and it
+      remains true after implementation by design. It only carries meaning
+      jointly with the positive AC-1 tests above, which did go red->green;
+      carried into notes per tdd-testing discipline for a criterion with no
+      observable pre/post difference by itself.
+  AC-2:
+    tests:
+      - tests.test_change_set_derivation.TestRetentionLocationStated.test_retention_location_named
+      - tests.test_change_set_derivation.TestRetentionLocationStated.test_rederivation_reads_that_location
+      - tests.test_change_set_derivation.TestRetentionLocationStated.test_survives_every_later_rederivation
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, §12 had no "Retention" bullet at all. All three
+      literals ("the `files` list of the task whose deviation was admitted",
+      "Re-derivation reads that location", "survive every later
+      re-derivation") were absent, so all three tests failed with
+      assertIn AssertionErrors quoting the pre-edit §12 text (which had no
+      Retention bullet between Inputs and Status).
+  AC-3:
+    tests:
+      - tests.test_change_set_derivation.TestThirdTriggerStated.test_all_three_triggers_present_together
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, Timing named only "re-planning, or a rework append"
+      as triggers -- "an implement wake that admitted a deviation" was
+      absent, so the combined all-three-triggers assertTrue failed.
+  AC-4:
+    tests:
+      - tests.test_change_set_derivation.TestGuardStatusStated.test_guard_not_goal_phrase_present
+      - tests.test_change_set_derivation.TestInputsStated.test_cites_both_templates_for_default_entries
+      - tests.test_change_set_derivation.TestSemanticsAndTimingStated.test_semantics_cited_not_restated
+    red_confirmed: false
+    red_reason: >-
+      Retention pin (task plan: "AC-4 ... retention pin"). These
+      pre-existing task0009 tests were green before this task started and
+      stay green after -- the task plan explicitly requires the guard
+      status, default-entry citation and containment semantics to be
+      UNCHANGED, so there is no red state to observe for a criterion whose
+      whole point is "nothing here moved."
+  AC-5:
+    tests:
+      - tests.test_change_set_derivation.TestNoForbiddenLiteralsInSection.test_root_globs_never_co_occur
+      - tests.test_change_set_derivation.TestNoForbiddenLiteralsInSection.test_no_exclusion_wording_at_all
+      - tests.test_deviation_auto_addition.TestAC6DerivationCitationAndNoGlobEnumeration.test_whole_document_never_enumerates_both_root_globs_together
+    red_confirmed: false
+    red_reason: >-
+      Restraint pin (C6c/C6d, NFR1): these assert ABSENCE of forbidden
+      literals/wording that the new text must not introduce. They passed
+      before this task's edit (nothing forbidden was present) and continue
+      to pass after, by design of the new §12 text -- there is no
+      "expected-to-fail-first" state for a rule whose entire content is a
+      prohibition never violated in either version.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by the full-suite run (`python3 -m unittest discover -s
+      tests`), not a dedicated new test: 1808 tests run post-implementation
+      (1791 pre-implementation baseline + 17 new tests added by this task),
+      with the same 3 pre-existing baseline failures and zero regressions.
+      No guard was deleted; test_declared_change_set_invariants.py (the
+      repository-wide exclusion-rule guard) reports zero offenders for
+      create-plan-phase.md both before and after.

@@ -1,0 +1,66 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_quiet_output_phase_wiring.TestAC1MarkerOnlyTurns.test_launch_turn_states_marker_only_message
+      - tests.test_batch_quiet_output_phase_wiring.TestAC1MarkerOnlyTurns.test_wake_turn_states_marker_only_message
+      - tests.test_batch_quiet_output_phase_wiring.TestAC1MarkerOnlyTurns.test_launch_clause_does_not_restate_marker_prefix_or_fields
+      - tests.test_batch_quiet_output_phase_wiring.TestAC1MarkerOnlyTurns.test_wake_clause_does_not_restate_marker_prefix_or_fields
+      - tests.test_batch_quiet_output_phase_wiring.TestAC1MarkerOnlyTurns.test_launch_guard_journal_write_sentence_retained
+    red_confirmed: true
+    red_reason: "ValueError: substring not found -- _MARKER_ONLY_TURN_RE found zero matches in both the I.2.a and I.2.b sections of the pre-edit implement-phase.md (no `--batch` marker-only-turn clause existed at either site)"
+  AC-2:
+    tests:
+      - tests.test_batch_quiet_output_phase_wiring.TestAC2WakePhaseWithheldWritesUnchanged.test_wake_reconcile_cleanup_refill_withheld_paired_with_unchanged
+      - tests.test_batch_quiet_output_phase_wiring.TestAC2WakePhaseWithheldWritesUnchanged.test_wake_clause_names_reconcile_commit_cleanup_as_unchanged
+      - tests.test_batch_quiet_output_phase_wiring.TestAC2WakePhaseWithheldWritesUnchanged.test_i2c_drain_and_retry_narration_withheld_paired_with_unchanged
+      - tests.test_batch_quiet_output_phase_wiring.TestAC2WakePhaseWithheldWritesUnchanged.test_i2c_withheld_clause_names_task_status_and_failed_write_as_unchanged
+      - tests.test_batch_quiet_output_phase_wiring.TestAC2WakePhaseWithheldWritesUnchanged.test_retry_once_gate_wording_retained
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- _withheld_paired_with_unchanged found no 'withheld' term paired with 'unchanged' in either the pre-edit I.2.b or I.2.c sections; the ValueError variants came from .index() calls on the not-yet-added clause text"
+  AC-3:
+    tests:
+      - tests.test_batch_quiet_output_phase_wiring.TestAC3DeclineChannel.test_decline_channel_stated
+      - tests.test_batch_quiet_output_phase_wiring.TestAC3DeclineChannel.test_admission_record_stated_unchanged
+      - tests.test_batch_quiet_output_phase_wiring.TestAC3DeclineChannel.test_interactive_wake_report_behaviour_stated_unchanged
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true (test_decline_channel_stated) -- no 'wake commit message' phrase existed in the pre-edit I.2.b section; the other two errored with ValueError: substring '**Batch mode**: for a `--batch` run' not found"
+  AC-4:
+    tests:
+      - tests.test_batch_quiet_output_phase_wiring.TestAC4ReviewPhaseR5R6.test_r6_report_body_withheld_paired_with_round_record_unchanged
+      - tests.test_batch_quiet_output_phase_wiring.TestAC4ReviewPhaseR5R6.test_r6_clause_names_round_record_content_fields_write_timing
+      - tests.test_batch_quiet_output_phase_wiring.TestAC4ReviewPhaseR5R6.test_r5_auto_rework_defer_cap_counter_record_stated_unchanged
+      - tests.test_batch_quiet_output_phase_wiring.TestAC4ReviewPhaseR5R6.test_r5_rework_cap_wording_retained
+      - tests.test_batch_quiet_output_phase_wiring.TestAC4ReviewPhaseR5R6.test_r6_japanese_rendering_rules_retained
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true (test_r6_report_body_withheld_paired_with_round_record_unchanged) -- no withholding clause existed in the pre-edit Phase R6 section; test_r5_auto_rework_defer_cap_counter_record_stated_unchanged errored with ValueError: substring 'This batch auto-rework / defer-at-cap behaviour above' not found"
+  AC-5:
+    tests:
+      - tests.test_batch_quiet_output_phase_wiring.TestAC5StopAbortException.test_implement_second_failure_abort_covered_by_reference
+      - tests.test_batch_quiet_output_phase_wiring.TestAC5StopAbortException.test_implement_abort_report_full_output_retained
+      - tests.test_batch_quiet_output_phase_wiring.TestAC4ReviewPhaseR5R6.test_r5_abort_covered_by_pointer_to_stop_abort_exception
+      - tests.test_batch_quiet_output_phase_wiring.TestAC5StopAbortException.test_abort_phase_existing_terminal_write_and_commit_retained
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- _pointer_by_reference found no 'stop/abort exception' phrase naming `references/batch-mode.md` nearby in either the pre-edit I.2.c or Phase R5 sections"
+  AC-6:
+    tests:
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6PointerSites.test_create_spec_completion_site_has_exactly_one_pointer_sentence
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6PointerSites.test_create_plan_completion_site_has_exactly_one_pointer_sentence
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6PointerSites.test_create_spec_pointer_names_batch_mode_without_forbidden_literal
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6PointerSites.test_create_plan_pointer_names_batch_mode_without_forbidden_literal
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6PointerSites.test_create_spec_pointer_does_not_reorder_existing_steps
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6PointerSites.test_create_plan_pointer_does_not_reorder_existing_bullets
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6ForbiddenLiteralsAbsentAndGateIdUnchanged.test_gate_id_mention_count_unchanged_per_document
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6ForbiddenLiteralsAbsentAndGateIdUnchanged.test_marker_prefix_literal_absent_from_all_four_documents
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6ForbiddenLiteralsAbsentAndGateIdUnchanged.test_terminal_prefix_literal_absent_from_all_four_documents
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6ForbiddenLiteralsAbsentAndGateIdUnchanged.test_d6b_reason_codes_absent_from_all_four_documents
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6ForbiddenLiteralsAbsentAndGateIdUnchanged.test_no_step_sentinel_absent_from_all_four_documents
+      - tests.test_batch_quiet_output_phase_wiring.TestAC6ForbiddenLiteralsAbsentAndGateIdUnchanged.test_phase_done_literal_absent_from_all_four_documents
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 1 (the pointer-sentence tests) -- neither create-spec-phase.md's Completion section nor create-plan-phase.md's Completion-or-failure section contained a pointer sentence naming references/batch-mode.md before the edit; the literal-absence and gate_id-count tests were already green before the edit (nothing to add contradicted them) and stayed green after -- included here as the AC-6 evidence that the edit introduced no forbidden literal and no new gate_id, verified by diffing the pre-edit and post-edit runs rather than by an independent red observation"
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "AC-7 has no dedicated new test: it is the whole pre-existing suite staying green (verified by running `python3 -m unittest discover -s tests` before touching any file -- 2506 passed -- and again after the edit plus the new module -- 2556 passed, zero regressions) and no pre-existing tests/*.py module being modified (verified via `git status --short`, which shows only the four target docs modified and one new test file added). This is a whole-suite regression property, not a single red-then-green assertion, so red_confirmed is false by construction; the same property is reported as `regressions: []` in the final report."

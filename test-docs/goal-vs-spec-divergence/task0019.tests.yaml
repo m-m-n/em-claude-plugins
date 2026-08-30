@@ -1,0 +1,153 @@
+task_id: task0019
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_routed_arm_condition_is_gate_id_not_category
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_routed_arm_condition_negative_twin_category_keyed_wording_fails
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the routed arm's entry condition was stated as
+      `category` being `spec-change`, with `gate_id: rework.spec-change`
+      only parenthetical; the positive assertion
+      "the routed arm's entry condition is the question's `gate_id` being
+      `rework.spec-change`" was absent -- AssertionError confirmed by
+      running the new test class against the unmodified document.
+  AC-2:
+    tests:
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_malformed_pairing_aborts_reaching_neither_arm
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_malformed_pairing_negative_twin_no_mismatch_rule_fails
+    red_confirmed: true
+    red_reason: >-
+      The document had no malformed-pairing abort at all before this task
+      (a `rework.spec-change` gate_id with a disagreeing category fell
+      through to the unlisted-gate fallback); the "is malformed and aborts"
+      assertion failed against the unmodified document.
+  AC-3:
+    tests:
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_decided_from_orchestrator_held_metadata
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_reversible_false_still_aborts_in_addition
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_omitting_the_assumption_cannot_remove_the_abort
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_orchestrator_held_abort_records_its_reason
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_negative_twin_packet_only_wording_fails
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, irreversibility was decided solely from the
+      packet's own `assumptions[].reversible` field; the
+      orchestrator-held-metadata paragraph did not exist and all four
+      positive assertions above raised AssertionError against the
+      unmodified document.
+  AC-4:
+    tests:
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_ac4_all_three_abort_arms_and_precedence_reservation_survive
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_security_and_license_abort_arm_retained
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_irreversible_assumption_abort_arm_retained
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_routed_arm_states_precedence_reservation
+    red_confirmed: false
+    red_reason: >-
+      AC-4 is the retention half (C5): it requires the three pre-existing
+      abort arms and the precedence reservation to survive UNCHANGED. All
+      four pins listed were already green before this task touched the
+      document (the retained bullets/sentences are byte-identical to the
+      baseline) and stay green after -- there is no behavior delta to
+      observe here, only an absence of regression. The consolidated
+      test_ac4_... test was added this task but asserts exactly the
+      pre-existing, already-passing substrings; it was never expected to
+      go red.
+  AC-5:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_record_never_supplied_by_the_packet
+      - tests.test_classification_gate.TestClassificationGate.test_orchestrator_locates_record_from_r5_position
+      - tests.test_classification_gate.TestClassificationGate.test_searches_only_the_located_record
+      - tests.test_classification_gate.TestClassificationGate.test_evidence_path_demoted_to_never_opened_hint
+      - tests.test_classification_gate.TestClassificationGate.test_negative_twin_packet_supplied_path_wording_fails
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, step 3 read "together with the review round record
+      that carries them (`references/review-phase.md` ... cited, not
+      restated)" without stating the orchestrator itself resolves that
+      position, without the "searches only there" clause, and without any
+      statement that `evidence[].path` is a never-opened hint; all four
+      positive assertions raised AssertionError against the unmodified
+      document (confirmed by running tests.test_classification_gate before
+      the doc edit).
+  AC-6:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_security_license_or_irreversible
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_aborts_on_absent_unresolvable_or_unmatched_origin
+      - tests.test_classification_gate.TestClassificationGate.test_origin_verification_records_reason_and_evidence_no_unanswerable_confirmation
+    red_confirmed: false
+    red_reason: >-
+      These three pins pre-date this task and pin wording this task
+      deliberately keeps byte-identical (the security/license abort, the
+      absent/unresolvable/unmatched-origin abort, and the
+      records-reason/no-unanswerable-confirmation sentence) while
+      rewriting the surrounding sentence to fix the trust-boundary bug.
+      They were green before this task's edit and remain green after --
+      the task plan's own Test Notes call this the retention half of
+      step 3, so no new red was expected or produced for it.
+  AC-7:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_requires_finding_stable_id_on_at_least_one_evidence_entry
+      - tests.test_classification_gate.TestClassificationGate.test_missing_finding_stable_id_aborts_a_spec_change_question
+      - tests.test_classification_gate.TestClassificationGate.test_negative_twin_no_finding_stable_id_requirement_fails
+      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceFindingStableIdField.test_field_table_has_existing_evidence_rows
+      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceFindingStableIdField.test_finding_stable_id_field_present
+      - tests.test_worker_contract_docs.TestQuestionPacketEvidenceFindingStableIdField.test_finding_stable_id_negative_proof_missing_field_is_detected
+    red_confirmed: true
+    red_reason: >-
+      `finding_stable_id` did not exist anywhere in
+      question-packet-schema.md's field table before this task
+      (`_evidence_row("finding_stable_id")` raised AssertionError: field
+      row not found), and step 3 had no requirement that any `evidence[]`
+      entry carry it.
+  AC-8:
+    tests:
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_names_stable_id_via_finding_stable_id_field
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_states_packet_does_not_name_the_record_path
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_old_packet_names_record_path_wording_is_gone
+      - tests.test_worker_contract_docs.TestReworkPlannerContractSpecChangeCitation.test_does_not_restate_the_r5_position_or_path_formula
+      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesStableIdNotRecordPath.test_packet_names_stable_id_via_finding_stable_id_field
+      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesStableIdNotRecordPath.test_packet_does_not_name_the_record_path
+      - tests.test_rework_synthesis_contract.TestSpecChangePacketCarriesStableIdNotRecordPath.test_gate_cited_not_restated
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, rework-planner-contract.md's paragraph read "names
+      each originating review finding's `stable_id` AND the review round
+      record path in the question's `evidence[]` entries -- the gate's
+      origin verification (...) reads them from there"; every positive
+      assertion for the new wording ("in the question's
+      `evidence[].finding_stable_id` entries", "does not name the review
+      round record path", "locates that record itself") raised
+      AssertionError against the unmodified document in both test files.
+  AC-9:
+    tests:
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_orchestrator_held_abort_records_its_reason
+      - tests.test_classification_gate.TestClassificationGate.test_missing_finding_stable_id_aborts_a_spec_change_question
+    red_confirmed: true
+    red_reason: >-
+      Both stop paths (the orchestrator-held-metadata irreversibility
+      abort and the missing-`finding_stable_id` abort) are newly added by
+      this task; the "records its reason"/"recording that reason" clauses
+      did not exist before the edit (the underlying abort sentences
+      themselves were absent), confirmed red under the same runs as AC-3
+      and AC-7 above.
+  AC-10:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by inspection, not a dedicated test: `grep -Eno
+      "task[0-9]{4}"` and `grep -in "decision table|決定表"` against the
+      three edited reference documents both returned no matches (exit 1)
+      after the edit, and `python3 -m unittest discover -s tests` was run
+      in full (1915 tests) with only the 3 pre-existing baseline failures
+      surviving -- no test dedicated to "no forbidden literal was
+      introduced" existed to go red beforehand since the literals were
+      simply never written.

@@ -64,9 +64,9 @@ reviews/round1.yaml for the reproductions these classes pin:
   kind worker-result (see that test's inline comment).
 
 task0003 (feature-docs/create-plan-status-conflict/tasks/task0003.md) adds
-TestReplaceAllCreatePlanEntryStatus below, pinning the (frozen,
-IMPLEMENTATION.md D1) validator's `replace_all` dry-run-apply permission
-check against the create-plan step's entry status:
+TestReplaceAllCreatePlanEntryStatus below, pinning the validator's
+`replace_all` dry-run-apply permission check against the create-plan step's
+entry status:
 
 - AC-3: a new `invalid-replace-all-create-plan-in-progress` fixture makes
   the check reject the patch with the `replace-all-not-permitted`
@@ -78,6 +78,168 @@ check against the create-plan step's entry status:
 - AC-5: the `in_progress` rejection carries exactly one error identifier --
   no staleness, vocabulary, or expected-mismatch entry rides along, so the
   regression cannot pass for the wrong reason.
+
+task0016 (feature-docs/goal-vs-spec-divergence review round1 rework) extends
+TestReplaceAllCreatePlanEntryStatus further: the create-plan/task-status
+permission check is no longer frozen (feature-docs/create-plan-status-
+conflict's D1 freeze is superseded here) because FR4/FR6 require the
+re-planning path to permit `merged` tasks, which the check rejected before
+this task:
+
+- AC-1: `valid-replace-all-replanning-merged-tasks` -- create-plan `pending`
+  re-entered via the SPEC-change transition (a `spec_change` record in
+  `--phase-state` plus `workflow.implement.base_commit` already set) permits
+  a `merged` task.
+- AC-2 / AC-6: `invalid-replace-all-initial-planning-merged-tasks` -- the
+  same patch shape without the re-entry signal (no `--phase-state`) is still
+  rejected: a narrower invocation never widens what replace_all permits.
+- AC-3: `invalid-replace-all-after-implementation-started` (`create-plan:
+  needs_update` with an `in_progress` task) still fails on the re-planning
+  path too, with exactly one error identifier.
+
+task0017 (feature-docs/goal-vs-spec-divergence review round2 rework) settles
+the re-planning permission contract in one place after task0013 (document)
+and task0016 (validator) disagreed when changed in separate worktrees:
+
+- AC-1 (FR6): `TestCanonicalReentryInvocation` drives the validator in
+  EXACTLY create-plan-phase.md's canonical invocation form -- `--feature-dir`
+  plus `--phase-state` pointing at the create-plan phase's own state file,
+  never at rework.yaml -- and asserts acceptance. `resolve_rework_phase_
+  state()` / `workflow_replace_all_spec_change_reentry()` now read the
+  signal from `{feature-dir}/phase-state/rework.yaml`, or from a
+  `--phase-state` mapping whose own `phase` is `rework` (an equivalence
+  case, proven separately, never substituted for this AC).
+- AC-2 (FR4): `TestReplanningReentrySignalHelper` adds direct proofs for
+  every new failure direction (missing `phase`, wrong `phase`, feature
+  mismatch, a `spec_change` record missing a mandatory field, `consumed:
+  true`) -- each falls back to the initial-planning rule, fail-closed.
+- AC-3 (FR5) / AC-5: `TestReplanningMandatoryPreserveAndTaskIdAllocation`
+  pins the two new re-planning-path-only obligations: `workflow.implement.
+  base_commit` mandatory in `preserve`, and `entries` must re-declare every
+  task id already registered in `workflow.yaml` (new ids allocated above
+  the highest registered one) -- via three new fixtures (`invalid-replace-
+  all-replanning-missing-base-commit-preserve`, `invalid-replace-all-
+  replanning-consumed-spec-change`, `invalid-replace-all-replanning-drops-
+  existing-task`).
+- AC-4: the corrected `valid-replace-all-replanning-merged-tasks` fixture
+  (preserve gains `workflow.implement.base_commit`, `phase-state.json`
+  gains `phase`/`feature`/a complete unconsumed `spec_change` record, and
+  its `entries` stop re-issuing `task0009`, the id its own `workflow.json`
+  already registers) is asserted by name in both TestReplaceAllCreatePlan
+  EntryStatus and the new class above.
+- AC-7: every pre-existing fixture in the `replace_planning` group keeps
+  its name and its outcome (unchanged in this round) -- already asserted by
+  name throughout `TestReplaceAllCreatePlanEntryStatus`, unaffected by this
+  round's edits.
+
+task0022 (goal-vs-spec-divergence, review round 3, finding
+consumed-flag-split) splits the single `consumed` flag into two independent
+flags -- `consumed` (stop-condition-3 suppression) and `replan_authorized`
+(the re-planning authorization) -- because the ordering the re-planning path
+actually runs through always has `consumed: true` by the time `create-plan`
+is reached, so the pre-existing helper always fell back to the
+initial-planning rule (FR6 never held):
+
+- AC-3 (FR4, FR6): `workflow_replace_all_spec_change_reentry` now reads
+  `replan_authorized` instead of `consumed` -- `TestReplanningReentrySignal
+  Helper` below is updated so its "spent authorization" / "malformed
+  authorization" cases key on `replan_authorized`, not `consumed`.
+- AC-4 (FR6): `TestReentryOrdering` reproduces the transition's real
+  sequence (record written -> `create-spec` dispatched, `consumed` becomes
+  `true` -> `create-plan` read `pending` with `merged` tasks present) and
+  asserts the re-planning `replace_all` is accepted despite `consumed:
+  true`, via `valid-replace-all-replanning-after-create-spec-dispatch`.
+- AC-6 (FR5, NFR8): the pre-existing `invalid-replace-all-replanning-
+  consumed-spec-change` fixture is retired -- the reading it pinned
+  (`consumed: true` alone forces rejection) is exactly what this task
+  removes -- in favour of the new `invalid-replace-all-replan-authorization-
+  spent` fixture, which pins the surviving reading (an already-spent
+  `replan_authorized` forces rejection, regardless of `consumed`).
+  `valid-replace-all-replanning-merged-tasks` gains `replan_authorized:
+  true` alongside its existing `consumed: false`.
+
+task0025 (feature-docs/goal-vs-spec-divergence review round3 rework, AC-2)
+adds `TestGateResolvedAnswerSource`: `batch-classification-gate` (the
+classification gate's proceed-outcome answer source,
+references/question-resolution.md's Classification gate Outcome step) is
+present in `ANSWER_SOURCE_VALUES`, and a real answer object using it
+validates with `validate_answer()`. The cross-document agreement between
+this constant and references/question-packet-schema.md's `source`
+vocabulary is asserted in tests/test_gate_outcome_packet_lifecycle.py, not
+here (C4: this module owns the validator script, not the schema document).
+
+task0023 (feature-docs/goal-vs-spec-divergence review round 3, D10) revises
+task0017's "entries must re-declare every registered id" form: a
+re-planning `replace_all` now carries an already-registered id in
+`tasks_patch.carried_task_ids` (record copied from `workflow.yaml`
+verbatim) rather than re-declaring its body under `tasks_patch.entries`.
+Covers task0023 Acceptance Criteria
+(feature-docs/goal-vs-spec-divergence/tasks/task0023.md):
+
+- AC-3: `TestReplanningCarryOverEnforcement` -- a new
+  `invalid-replace-all-replanning-entry-for-registered-id` fixture pins the
+  `replace-all-entry-for-registered-id` identifier (an `entries` key naming
+  a registered id), reported alone. The other two AC-3 rejections
+  (`carried_task_ids` omitting a registered id; a new id at or below the
+  high-water mark) are `replace-all-drops-task` (re-grounded, see
+  `TestReplanningMandatoryPreserveAndTaskIdAllocation` above) and the
+  unchanged `replace-all-task-id-reused`.
+- AC-4: field-by-field carry-over (the applied workflow's carried task
+  record equals the pre-apply record, including `files`) is proven directly
+  against `apply_patch()` in `tests/test_replanning_carry_over.py`, not
+  re-tested here (this module stops at the validator's error-identifier
+  surface, C4).
+- AC-6: `valid-replace-all-replanning-merged-tasks`'s `entries` stop
+  re-issuing `task0009` -- it moves to `carried_task_ids` instead (a
+  positive demonstration of the rule, not a counter-example pinned as
+  valid); `invalid-replace-all-replanning-drops-existing-task` is
+  re-grounded on an empty `carried_task_ids` rather than an incomplete
+  `entries`. `test_corrected_replanning_merged_tasks_fixture_passes` and
+  `test_drops_existing_registered_task_id_rejected` above still assert
+  both fixtures by name.
+
+Also touched by task0023 as a necessary follow-on of the merge with
+task0022 (D10 meets the consumed-flag-split): `TestCanonicalReentryInvocation.
+_patch_obj` (task0022's version still re-declared task0009 under `entries`;
+moved to `carried_task_ids`) -- see this module's own git history for the
+exact hunk, not restated as a separate docstring paragraph.
+
+rework-contract-drift/task0004 (FR3 validator half, FR4, FR6) adds three
+new test classes, covering this task's own AC-6 and AC-7:
+
+- `TestOriginKindVocabulary`: `workflow_replace_all_spec_change_reentry`
+  rejects an out-of-vocabulary `spec_change.origin_kind`, accepting only
+  `review` and `verify` (mirroring `classification`'s classifier/verdict/
+  decision vocabulary enforcement).
+- `TestFailedItemCategoryVocabulary`: the new
+  `_validate_verify_failed_items_categories` (wired into
+  `validate_workflow_patch`, unconditional on `--dry-run-apply`) rejects a
+  `workflow.yaml` verify-step `failed_items[]` entry whose `category` is
+  missing, empty, or out of the seven-value vocabulary
+  (IMPLEMENTATION.md Shared Components), accepting each of the seven.
+- `TestOriginIdEvidenceRequirement`: `validate_question` rejects a
+  `rework.spec-change` question with no `evidence[]` entry carrying a
+  non-empty `origin_id` (the mechanical half of `references/
+  question-resolution.md`'s Classification gate origin verification),
+  driven directly against the two new fixtures under
+  `references/fixtures/question-packet/origin-verification/` (also swept,
+  by exit code, through `TestFixtureCorpusDataDriven` above).
+
+rework-contract-drift/task0008 (review round1 rework, FR3, NFR1, NFR2, D11)
+narrows `_validate_verify_failed_items_categories`: task0004's version ran
+unconditionally over every `failed_items[]` entry regardless of what the
+patch touched, rejecting a legacy, category-less entry even when the patch
+never went near the verify step -- a defect no worker can repair (a step
+patch may set only `status`). The function now takes the patch itself and
+is scoped by the new `_verify_step_targeted_by_patch` helper: it errors
+only for the entries of a verify step the patch targets via `step_patches`.
+`TestFailedItemCategoryVocabulary` below is updated in place (every direct
+call now supplies a patch) and gains the two scoping cases (untargeted:
+no error even over a non-conforming entry; targeted: retained teeth). The
+existing wiring test's patch now targets the verify step, exercising the
+new scope instead of the removed unconditional one. Covers this task's
+AC-6 and (together with the new fixture case under
+`references/fixtures/workflow-patch/append_rework/`) AC-7.
 """
 
 import importlib.util
@@ -1288,6 +1450,124 @@ class TestGateRegistryDerivation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(VWO.build_gate_registry(Path(tmp) / "does-not-exist"), {})
 
+    def test_rework_spec_change_is_registered_via_the_contract_section(self):
+        # goal-vs-spec-divergence/task0024 AC-4: rework-planner-contract.md's
+        # own "## Gate identifiers" section (tests/test_worker_contract_docs.
+        # py pins that document's half) is what makes this entry exist --
+        # this test asserts the registry entry itself, per the task's
+        # Acceptance Criterion, rather than asserting the contract sentence.
+        registry = VWO.build_gate_registry(self.REFERENCES_DIR)
+        entry = registry.get("rework.spec-change")
+        self.assertIsNotNone(
+            entry, "expected rework.spec-change in the derived registry"
+        )
+        self.assertEqual(entry["worker"], "rework-planner")
+        self.assertEqual(entry["category"], "spec-change")
+
+    def test_rework_spec_change_carries_no_required_option_id(self):
+        # D1: rework.spec-change stays intentionally unlisted in
+        # batch-policies.yaml (no action: select gate), so it has no
+        # option_id to require -- unlike create-spec.design-step.
+        registry = VWO.build_gate_registry(self.REFERENCES_DIR)
+        entry = registry.get("rework.spec-change")
+        self.assertIsNotNone(entry)
+        self.assertIsNone(entry["required_option_id"])
+
+
+# ---------------------------------------------------------------------------
+# goal-vs-spec-divergence/task0024 (AC-5): the gate registry's category
+# binding, previously enforced in one direction only (gate_id -> category,
+# TestGateRegistryBinding above), now also rejects the missing direction --
+# category: spec-change paired with any gate_id other than
+# rework.spec-change. Driven directly through validate_question (not a
+# document scan, per Test Notes), against the plugin's own real registry so
+# the fixture corpus's actual attribution (rework-planner-contract.md) is
+# what proves the binding, not a synthetic stand-in.
+# ---------------------------------------------------------------------------
+
+class TestSpecChangeCategoryGateBidirectionalBinding(unittest.TestCase):
+    REFERENCES_DIR = REPO_ROOT / "em-workflow" / "references"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.registry = VWO.build_gate_registry(cls.REFERENCES_DIR)
+
+    @staticmethod
+    def _question(gate_id, category):
+        return {
+            "question_id": "q.spec-change-binding",
+            "gate_id": gate_id,
+            "category": category,
+            "priority": "high",
+            "blocking": True,
+            "prompt": "p",
+            "header": "h",
+            "answer_mode": "freeform",
+            "options": [],
+            "why_needed": "w",
+            "on_unanswered": "block",
+        }
+
+    def _errors(self, gate_id, category):
+        return VWO.validate_question(
+            self._question(gate_id, category),
+            0,
+            gate_registry=self.registry,
+            packet_phase="rework",
+            packet_worker="rework-planner",
+        )
+
+    def test_spec_change_category_with_foreign_gate_id_is_rejected(self):
+        # AC-5 direction 1: category: spec-change paired with a gate_id
+        # that is not rework.spec-change -- the direction bs2's original
+        # fix left open (Design section, Defect 1).
+        errors = self._errors("create-spec.requirement-clarification", "spec-change")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn(
+            "category 'spec-change' requires gate_id to be one of "
+            "['rework.spec-change']",
+            messages,
+        )
+
+    def test_spec_change_category_with_wholly_unregistered_gate_id_is_rejected(
+        self,
+    ):
+        # The exact reproduction from the Design section: a gate_id that is
+        # neither on batch-policies.yaml's gate list nor attributed by any
+        # contract -- previously silent (no registry entry to compare
+        # against at all).
+        errors = self._errors("not-a-registered-gate.foo", "spec-change")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn(
+            "category 'spec-change' requires gate_id to be one of "
+            "['rework.spec-change']",
+            messages,
+        )
+
+    def test_rework_spec_change_gate_id_with_foreign_category_is_rejected(self):
+        # AC-5 direction 2: gate_id: rework.spec-change paired with a
+        # category other than spec-change (the pre-existing forward-
+        # direction check, re-asserted here alongside its new counterpart
+        # for a single side-by-side proof of both directions).
+        errors = self._errors("rework.spec-change", "other")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("requires category 'spec-change'", messages)
+
+    def test_correctly_paired_spec_change_question_has_no_binding_error(self):
+        errors = self._errors("rework.spec-change", "spec-change")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("requires gate_id", messages)
+        self.assertNotIn("requires category", messages)
+
+    def test_unrelated_category_is_unaffected_by_the_new_direction(self):
+        # The new category -> gate_id direction must not fire for a
+        # category that has no worker-attributed gate_id binding at all
+        # (an as-yet-unconstrained category stays unconstrained -- see
+        # _gate_ids_for_category's docstring).
+        errors = self._errors("gate.unrelated", "other")
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("requires gate_id", messages)
+
 
 # ---------------------------------------------------------------------------
 # bs9 (round 2, comprehensive) / AC-3: every element of the patch entries,
@@ -1527,16 +1807,25 @@ class TestNeedsUserInputPayloadExemption(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# task0003 (feature-docs/create-plan-status-conflict): pins the frozen
-# validate-worker-output.py replace_all/create-plan permission check with
+# task0003 (feature-docs/create-plan-status-conflict): pins
+# validate-worker-output.py's replace_all/create-plan permission check with
 # regression fixtures. AC-3/AC-4/AC-5.
+#
+# task0016 (feature-docs/goal-vs-spec-divergence review round1 rework):
+# extends the same class -- workflow-patch.md's `replace_all` permission
+# conditions define two permitted paths (initial-planning, re-planning) and
+# one rule common to both (no in_progress/failed task); this check now
+# implements the path split instead of applying the task-status test
+# independently of create-plan's status. AC-1/AC-2/AC-3/AC-4/AC-5/AC-6.
 # ---------------------------------------------------------------------------
 
 class TestReplaceAllCreatePlanEntryStatus(unittest.TestCase):
     """The validator's dry-run application (5.5.5 rule 5 /
     _validate_dry_run_apply) rejects replace_all unless the create-plan
-    step's entry status is pending or needs_update. This class pins that
-    behaviour without touching the validator (IMPLEMENTATION.md D1)."""
+    step's entry status is pending or needs_update, and unless the
+    task-status rule for whichever of the two permitted paths applies is
+    satisfied (workflow-patch.md "replace_all permission conditions"). This
+    class pins that behaviour."""
 
     def _run(self, case_name):
         case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / case_name
@@ -1576,6 +1865,1094 @@ class TestReplaceAllCreatePlanEntryStatus(unittest.TestCase):
         # pending branch.
         result = self._run("valid-dry-run-apply")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_replanning_reentry_with_merged_task_passes(self):
+        # AC-1 (FR4, FR6): create-plan pending, re-entered via the
+        # SPEC-change transition (spec_change record in --phase-state +
+        # workflow.implement.base_commit already set), permits a merged
+        # task -- the re-planning path drops the task-status test for
+        # merged, keeping only rule 3 (in_progress/failed).
+        result = self._run("valid-replace-all-replanning-merged-tasks")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_initial_planning_with_merged_task_still_rejected(self):
+        # AC-2 (FR4): the same patch shape and workflow, but on the
+        # initial-planning path (no re-entry signal), is still rejected --
+        # a merged task never passes the empty-or-all-pending test.
+        result = self._run("invalid-replace-all-initial-planning-merged-tasks")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-not-permitted"})
+
+    def test_missing_reentry_signal_defaults_to_initial_planning(self):
+        # AC-6: the same fixture as AC-2, from the fail-closed angle -- no
+        # --phase-state is passed at all, so the check must never read the
+        # merged task's pending create-plan status as a re-planning
+        # re-entry. A narrower invocation (missing --phase-state) never
+        # widens what replace_all permits.
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / "invalid-replace-all-initial-planning-merged-tasks"
+        self.assertFalse(
+            (case_dir / "phase-state.json").exists(),
+            "this fixture must exercise the missing-signal path -- a "
+            "phase-state.json here would prove a different scenario",
+        )
+        result = self._run("invalid-replace-all-initial-planning-merged-tasks")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertIn("replace-all-not-permitted", codes)
+
+    def test_after_implementation_started_rejected_on_replanning_path_too(self):
+        # AC-3 (FR4): a replace_all received while a task is in_progress is
+        # a protocol error on BOTH paths, not just initial-planning --
+        # create-plan: needs_update (squarely the re-planning path) with an
+        # in_progress task still fails, with exactly one error identifier.
+        result = self._run("invalid-replace-all-after-implementation-started")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-not-permitted"})
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("in_progress", messages)
+
+
+class TestReplanningMandatoryPreserveAndTaskIdAllocation(unittest.TestCase):
+    """task0017 (goal-vs-spec-divergence, review round 2 rework), AC-3 /
+    AC-5: on the re-planning path, `workflow.implement.base_commit` is
+    mandatory in `preserve`, and new ids are allocated above the highest
+    registered one.
+
+    task0023 (review round 3, D10) re-grounds
+    `test_drops_existing_registered_task_id_rejected` below on
+    `tasks_patch.carried_task_ids` instead of `tasks_patch.entries` -- a
+    re-planning `replace_all` no longer re-declares a registered id's body
+    under `entries` at all (see `TestReplanningCarryOverEnforcement`
+    below); omitting the id from `carried_task_ids` is what the
+    `replace-all-drops-task` identifier now names."""
+
+    def _run(self, case_name):
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / case_name
+        return run_cli(build_case_args("workflow-patch", "replace_planning", case_dir))
+
+    def test_missing_base_commit_preserve_on_replanning_path_rejected(self):
+        # AC-3
+        result = self._run("invalid-replace-all-replanning-missing-base-commit-preserve")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("workflow.implement.base_commit", result.stdout)
+
+    def test_missing_base_commit_preserve_rejected_for_exactly_one_reason(self):
+        result = self._run("invalid-replace-all-replanning-missing-base-commit-preserve")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"preserve"})
+
+    def test_missing_base_commit_preserve_still_accepted_on_initial_planning_path(self):
+        # AC-3: the same omission on the initial-planning path is still
+        # accepted -- valid-dry-run-apply already pins exactly this (its
+        # own preserve is [], and it is on the initial-planning path).
+        result = self._run("valid-dry-run-apply")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_corrected_replanning_merged_tasks_fixture_passes(self):
+        # AC-4: the corrected valid- fixture -- base_commit in preserve, a
+        # rework-shaped phase-state.json, and task ids that do not re-issue
+        # any id its workflow.json already registers.
+        result = self._run("valid-replace-all-replanning-merged-tasks")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_drops_existing_registered_task_id_rejected(self):
+        # AC-5
+        result = self._run("invalid-replace-all-replanning-drops-existing-task")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-drops-task"})
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("task0009", messages)
+
+    def test_spent_replan_authorization_record_is_rejected(self):
+        # task0022 (review round 3, AC-6): the same corrected patch shape,
+        # but the spec_change record's re-planning authorization is already
+        # spent (`replan_authorized: false`, `consumed: true`) -- fails
+        # closed to the initial-planning path's rule, and the merged task
+        # fails that rule's floor. Supersedes the pre-task0022
+        # `invalid-replace-all-replanning-consumed-spec-change` fixture,
+        # which pinned a reading (`consumed: true` alone forces rejection)
+        # this task removes -- see TestReentryOrdering below for the
+        # `consumed: true` + unspent-authorization acceptance case.
+        result = self._run("invalid-replace-all-replan-authorization-spent")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-not-permitted"})
+
+
+class TestReplanningCarryOverEnforcement(unittest.TestCase):
+    """task0023 (goal-vs-spec-divergence, review round 3), AC-3: the
+    validator's carry-over declaration checks (workflow-patch.md's
+    "Re-planning task-id allocation" section / D10) -- three independently
+    reported rejections, exercised each by its own fixture so a case
+    proving one never rides along with the other two:
+
+    - `entries` naming an id already registered in `workflow.yaml`
+      (`replace-all-entry-for-registered-id`), pinned here.
+    - `carried_task_ids` omitting a registered id
+      (`replace-all-drops-task`), already pinned by
+      `TestReplanningMandatoryPreserveAndTaskIdAllocation.
+      test_drops_existing_registered_task_id_rejected` above -- re-grounded
+      on `carried_task_ids` rather than `entries` by this task's fixture
+      edit, not re-tested a second time here.
+    - a new id in `entries` at or below the high-water mark
+      (`replace-all-task-id-reused`) -- unchanged behaviour, no dedicated
+      fixture in this group; covered structurally by the max-id computation
+      carried over unmodified from task0017.
+    """
+
+    def _run(self, case_name):
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / case_name
+        return run_cli(build_case_args("workflow-patch", "replace_planning", case_dir))
+
+    def test_entry_for_registered_id_rejected(self):
+        result = self._run("invalid-replace-all-replanning-entry-for-registered-id")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertIn("replace-all-entry-for-registered-id", codes)
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("task0009", messages)
+
+    def test_entry_for_registered_id_rejected_for_exactly_one_reason(self):
+        # Test Notes: each of AC-3's three rejections must report exactly
+        # one error identifier -- a fixture that also trips the drop check
+        # or the reused-id check would not isolate the finding this AC
+        # names.
+        result = self._run("invalid-replace-all-replanning-entry-for-registered-id")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        codes = {e["code"] for e in payload["errors"]}
+        self.assertEqual(codes, {"replace-all-entry-for-registered-id"})
+
+    def test_carried_task_ids_field_present_and_correct_in_the_new_fixture(self):
+        # Sanity check on the fixture itself: carried_task_ids DOES list the
+        # registered id (so the failure is isolated to the entries-side
+        # re-declaration, not to an incidentally-also-missing carry).
+        case_dir = FIXTURES_ROOT / "workflow-patch" / "replace_planning" / "invalid-replace-all-replanning-entry-for-registered-id"
+        input_data = json.loads((case_dir / "input.json").read_text(encoding="utf-8"))
+        tasks_patch = input_data["tasks_patch"]
+        self.assertEqual(tasks_patch["carried_task_ids"], ["task0009"])
+        self.assertIn("task0009", tasks_patch["entries"])
+
+
+class TestReplanningReentrySignalHelper(unittest.TestCase):
+    """Direct unit tests of workflow_replace_all_spec_change_reentry (the
+    pure helper backing the re-planning path's second entry form), covering
+    each required condition independently -- fixture-driven CLI coverage
+    above exercises the combined check, not each condition in isolation.
+
+    task0017 (review round 2 rework): the helper's contract widened -- it no
+    longer accepts ANY mapping carrying a `spec_change` record as proof of
+    re-entry (that was round 1's own bug: the test harness handed it a
+    rework-shaped mapping directly, and that mapping carried no `phase` key
+    at all, so nothing in the suite noticed create-plan-phase.md's canonical
+    invocation could never actually produce it). A rework-shaped mapping
+    must now also declare `phase: rework` and a `feature` matching the
+    workflow's own, and its `spec_change` record must carry every
+    mandatory phase-state.md field. Every pre-existing test below now
+    supplies `phase`/`feature` so it continues to prove the condition it
+    names, rather than accidentally exercising the now-mandatory
+    phase/feature check instead.
+
+    task0022 (review round 3, consumed-flag-split): the helper's
+    re-planning-authorization judgement moved from `consumed` to the
+    independent `replan_authorized` flag (`references/phase-state.md`'s
+    `spec_change` flag pair) -- `consumed` is never consulted here any
+    more. `_rework_phase_state`'s default record now carries
+    `replan_authorized: True` (an unspent authorization) so every
+    pre-existing test below keeps proving the condition it names rather
+    than failing on the newly-mandatory field; the two `consumed`-keyed
+    tests this superseded are renamed and re-pointed at
+    `replan_authorized` below."""
+
+    FEATURE = "example"
+
+    def _workflow(self, base_commit):
+        step = {"id": "implement", "status": "pending"}
+        if base_commit is not None:
+            step["base_commit"] = base_commit
+        return {
+            "feature": self.FEATURE,
+            "workflow": [{"id": "create-plan", "status": "pending"}, step],
+        }
+
+    def _rework_phase_state(self, **overrides):
+        base = {
+            "phase": "rework",
+            "feature": self.FEATURE,
+            "spec_change": {
+                "reason": "x",
+                "origin_kind": "review",
+                "origin_id": "abc",
+                "recorded_at_commit": "deadbeef",
+                "consumed": False,
+                "replan_authorized": True,
+            },
+        }
+        base.update(overrides)
+        return base
+
+    def test_no_phase_state_is_not_a_reentry(self):
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), None)
+        )
+
+    def test_phase_state_without_spec_change_record_is_not_a_reentry(self):
+        phase_state = {"phase": "rework", "feature": self.FEATURE}
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_spec_change_record_without_base_commit_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state()
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow(None), phase_state)
+        )
+
+    def test_spec_change_record_with_base_commit_is_a_reentry(self):
+        phase_state = self._rework_phase_state()
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    # --- task0017 (AC-2): the conditions this round's contract adds -------
+
+    def test_missing_phase_key_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state()
+        del phase_state["phase"]
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_phase_other_than_rework_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state(phase="create-plan")
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_feature_mismatch_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state(feature="other-feature")
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_spec_change_missing_mandatory_field_is_not_a_reentry(self):
+        for missing in ("reason", "origin_kind", "origin_id", "recorded_at_commit"):
+            with self.subTest(missing=missing):
+                phase_state = self._rework_phase_state()
+                del phase_state["spec_change"][missing]
+                self.assertFalse(
+                    VWO.workflow_replace_all_spec_change_reentry(
+                        self._workflow("deadbeef"), phase_state
+                    )
+                )
+
+    def test_missing_consumed_field_does_not_block_reentry(self):
+        # task0022 (review round 3, consumed-flag-split): `consumed` is no
+        # longer consulted by this helper at all -- its presence or
+        # absence must not affect the outcome. Supersedes the pre-task0022
+        # test_spec_change_missing_consumed_field_is_not_a_reentry, which
+        # pinned exactly the reading this task removes.
+        phase_state = self._rework_phase_state()
+        del phase_state["spec_change"]["consumed"]
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_consumed_true_no_longer_blocks_reentry(self):
+        # task0022 (review round 3, AC-3/AC-4): this is exactly the
+        # ordering the SPEC-change transition -> create-spec dispatch ->
+        # create-plan re-entry sequence always produces (create-plan is
+        # never reached before the record is marked consumed) -- FR6
+        # requires it to still be a re-planning re-entry when the
+        # authorization is unspent. Supersedes the pre-task0022
+        # test_consumed_true_is_not_a_reentry, which pinned exactly the
+        # reading this task removes. See TestReentryOrdering in
+        # test_spec_change_replan_authorization.py for the full sequential
+        # (not merely state-final) proof.
+        phase_state = self._rework_phase_state()
+        phase_state["spec_change"]["consumed"] = True
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_replan_authorized_missing_is_not_a_reentry(self):
+        phase_state = self._rework_phase_state()
+        del phase_state["spec_change"]["replan_authorized"]
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_replan_authorized_false_is_not_a_reentry(self):
+        # The spent-authorization direction (AC-3): the mirror of
+        # test_spec_change_record_with_base_commit_is_a_reentry above.
+        phase_state = self._rework_phase_state()
+        phase_state["spec_change"]["replan_authorized"] = False
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(self._workflow("deadbeef"), phase_state)
+        )
+
+    def test_replan_authorized_non_boolean_is_not_a_reentry(self):
+        for bad_value in ("true", 1, 0, None, []):
+            with self.subTest(bad_value=bad_value):
+                phase_state = self._rework_phase_state()
+                phase_state["spec_change"]["replan_authorized"] = bad_value
+                self.assertFalse(
+                    VWO.workflow_replace_all_spec_change_reentry(
+                        self._workflow("deadbeef"), phase_state
+                    )
+                )
+
+    # --- task0017 (AC-1): {feature-dir}/phase-state/rework.yaml is an
+    # equivalent source, resolved even when --phase-state carries a
+    # DIFFERENT phase's state (create-plan.yaml, exactly the canonical
+    # invocation's own form). Full CLI-level coverage of the canonical
+    # invocation lives in TestCanonicalReentryInvocation below; these are
+    # direct unit tests of the resolution helper itself.
+
+    def test_feature_dir_rework_yaml_is_an_equivalent_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            feature_dir = Path(tmp)
+            phase_state_dir = feature_dir / "phase-state"
+            phase_state_dir.mkdir()
+            (phase_state_dir / "rework.yaml").write_text(
+                "phase: rework\n"
+                f"feature: {self.FEATURE}\n"
+                "spec_change:\n"
+                "  reason: x\n"
+                "  origin_kind: review\n"
+                "  origin_id: abc\n"
+                "  recorded_at_commit: deadbeef\n"
+                "  consumed: false\n"
+                "  replan_authorized: true\n",
+                encoding="utf-8",
+            )
+            # --phase-state carries the CREATE-PLAN phase's own state (the
+            # canonical form) -- no spec_change here at all.
+            create_plan_phase_state = {"phase": "create-plan", "feature": self.FEATURE}
+            self.assertTrue(
+                VWO.workflow_replace_all_spec_change_reentry(
+                    self._workflow("deadbeef"), create_plan_phase_state, feature_dir=feature_dir
+                )
+            )
+
+    def test_missing_feature_dir_rework_yaml_falls_back_to_initial_planning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            feature_dir = Path(tmp)
+            create_plan_phase_state = {"phase": "create-plan", "feature": self.FEATURE}
+            self.assertFalse(
+                VWO.workflow_replace_all_spec_change_reentry(
+                    self._workflow("deadbeef"), create_plan_phase_state, feature_dir=feature_dir
+                )
+            )
+
+
+# ---------------------------------------------------------------------------
+# task0017 (review round 2 rework) / AC-1 (FR6): the re-entry signal must be
+# recognized from the EXACT invocation create-plan-phase.md's canonical form
+# documents -- --feature-dir plus --phase-state pointing at the CREATE-PLAN
+# phase's own state file (never rework.yaml itself). A test that instead
+# passes the rework file directly as --phase-state proves the OLD wiring,
+# not the new one -- kept in TestReplanningReentrySignalHelper above as an
+# additional equivalence case, never as this AC's own proof. This class
+# drives the real CLI, end to end, through --dry-run-apply.
+# ---------------------------------------------------------------------------
+
+class TestCanonicalReentryInvocation(unittest.TestCase):
+    FEATURE = "example"
+
+    def _workflow_obj(self, base_commit="deadbeef", task_status="merged"):
+        return {
+            "feature": self.FEATURE,
+            "project": {"license": "MIT"},
+            "requirements": {"FR1": {"status": "ok", "tasks": [], "tests": [], "title": "x"}},
+            "schema_version": 1,
+            "tasks": {
+                "task0009": {
+                    "branch": "em-workflow/example/task0009",
+                    "complexity": "low",
+                    "domains": [],
+                    "files": ["x.go"],
+                    "notes": None,
+                    "plan": "tasks/task0009.md",
+                    "requirements": ["FR1"],
+                    "skills": [],
+                    "status": task_status,
+                    "title": "existing",
+                }
+            },
+            "workflow": [
+                {"completed_at_commit": "aaa", "id": "create-spec", "status": "completed"},
+                {"id": "design", "skipped_reason": "no UI", "status": "skipped"},
+                {"id": "create-plan", "status": "pending"},
+                {"base_commit": base_commit, "id": "implement", "status": "pending"},
+                {"id": "review", "status": "pending"},
+                {"id": "verify", "status": "pending"},
+                {"id": "retrospect", "status": "pending"},
+            ],
+        }
+
+    def _patch_obj(self, base_input_digest):
+        # task0023 (goal-vs-spec-divergence, review round 3, D10): a
+        # re-planning replace_all carries an already-registered id
+        # (task0009) in tasks_patch.carried_task_ids rather than
+        # re-declaring its body under tasks_patch.entries -- entries names
+        # only the genuinely new task0010.
+        return {
+            "base_input_digest": base_input_digest,
+            "base_workflow_blob": "8f17c04",
+            "operation": "replace_planning",
+            "patch_id": "create-plan-p0001",
+            "preserve": ["workflow.implement.base_commit"],
+            "requirements_patch": None,
+            "schema_version": 1,
+            "step_patches": [],
+            "tasks_patch": {
+                "carried_task_ids": ["task0009"],
+                "entries": {
+                    "task0010": {
+                        "complexity": "medium",
+                        "domains": ["api-contract"],
+                        "files": ["src/api/register.go"],
+                        "initial_status": "pending",
+                        "plan": "tasks/task0010.md",
+                        "requirements": ["FR1"],
+                        "skills": ["backend-impl"],
+                        "title": "User registration API",
+                    },
+                },
+                "mode": "replace_all",
+            },
+        }
+
+    def _digest_source_obj(self):
+        return {
+            "answers_digest": "sha256:" + "2" * 64,
+            "digest_inputs": {},
+            "mode": "interactive",
+            "value_inputs": {"task_description": None},
+            "worker": "implementation-planner",
+            "workflow_blob": "8f17c04",
+            "write_policy_digest": "sha256:" + "3" * 64,
+        }
+
+    def _write(self, path, obj):
+        path.write_text(json.dumps(obj), encoding="utf-8")
+
+    def _run_canonical(self, tmp_path, *, rework_yaml_present):
+        # The canonical invocation, verbatim: --feature-dir plus
+        # --phase-state pointing at the CREATE-PLAN phase's own state file
+        # (create-plan-phase.md never passes rework.yaml as --phase-state).
+        feature_dir = tmp_path / "feature-dir"
+        (feature_dir / "phase-state").mkdir(parents=True)
+        if rework_yaml_present:
+            (feature_dir / "phase-state" / "rework.yaml").write_text(
+                "phase: rework\n"
+                f"feature: {self.FEATURE}\n"
+                "spec_change:\n"
+                "  reason: x\n"
+                "  origin_kind: review\n"
+                "  origin_id: abc\n"
+                "  recorded_at_commit: deadbeef\n"
+                "  consumed: false\n"
+                "  replan_authorized: true\n",
+                encoding="utf-8",
+            )
+
+        create_plan_yaml = tmp_path / "create-plan.yaml"
+        create_plan_yaml.write_text(
+            f"phase: create-plan\nfeature: {self.FEATURE}\n", encoding="utf-8"
+        )
+
+        digest_source = self._digest_source_obj()
+        base_input_digest = VWO.normalize_json_sha256(digest_source)
+
+        input_path = tmp_path / "input.json"
+        workflow_path = tmp_path / "workflow.json"
+        digest_source_path = tmp_path / "digest-source.json"
+        self._write(input_path, self._patch_obj(base_input_digest))
+        self._write(workflow_path, self._workflow_obj())
+        self._write(digest_source_path, digest_source)
+
+        return run_cli(
+            [
+                "--kind", "workflow-patch",
+                "--worker", "implementation-planner",
+                "--input", str(input_path),
+                "--workflow", str(workflow_path),
+                "--digest-source", str(digest_source_path),
+                "--feature-dir", str(feature_dir),
+                "--phase-state", str(create_plan_yaml),
+                "--dry-run-apply",
+            ]
+        )
+
+    def test_canonical_invocation_form_accepts_merged_task_reentry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._run_canonical(Path(tmp), rework_yaml_present=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_missing_feature_dir_rework_yaml_is_rejected_under_the_same_invocation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._run_canonical(Path(tmp), rework_yaml_present=False)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            payload = json.loads(result.stdout)
+            codes = {e["code"] for e in payload["errors"]}
+            self.assertIn("replace-all-not-permitted", codes)
+
+    def test_rework_file_passed_directly_as_phase_state_is_an_equivalence_case_not_this_ac(self):
+        # Test Notes: proves the OLD wiring path still works, as an
+        # EQUIVALENT source (a caller that already has the rework file open
+        # is not forced to re-supply it) -- kept as an additional case, not
+        # as AC-1's own proof (the two tests above are).
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            rework_yaml = tmp_path / "rework.yaml"
+            rework_yaml.write_text(
+                "phase: rework\n"
+                f"feature: {self.FEATURE}\n"
+                "spec_change:\n"
+                "  reason: x\n"
+                "  origin_kind: review\n"
+                "  origin_id: abc\n"
+                "  recorded_at_commit: deadbeef\n"
+                "  consumed: false\n"
+                "  replan_authorized: true\n",
+                encoding="utf-8",
+            )
+            digest_source = self._digest_source_obj()
+            base_input_digest = VWO.normalize_json_sha256(digest_source)
+
+            input_path = tmp_path / "input.json"
+            workflow_path = tmp_path / "workflow.json"
+            digest_source_path = tmp_path / "digest-source.json"
+            self._write(input_path, self._patch_obj(base_input_digest))
+            self._write(workflow_path, self._workflow_obj())
+            self._write(digest_source_path, digest_source)
+
+            result = run_cli(
+                [
+                    "--kind", "workflow-patch",
+                    "--worker", "implementation-planner",
+                    "--input", str(input_path),
+                    "--workflow", str(workflow_path),
+                    "--digest-source", str(digest_source_path),
+                    "--phase-state", str(rework_yaml),
+                    "--dry-run-apply",
+                ]
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+# ---------------------------------------------------------------------------
+# task0025 AC-2: the batch-classification-gate answer source.
+#
+# References/question-resolution.md's Classification gate (Outcome step) and
+# references/question-packet-schema.md's `source` vocabulary (the SSOT for
+# this value) are covered in tests/test_gate_outcome_packet_lifecycle.py,
+# alongside the cross-document agreement check between that vocabulary and
+# ANSWER_SOURCE_VALUES below (C4: this module owns the validator, not the
+# schema document). This class owns only the validator's own half: the
+# constant carries the value, and a real answer object using it validates.
+# ---------------------------------------------------------------------------
+
+class TestGateResolvedAnswerSource(unittest.TestCase):
+    def test_batch_classification_gate_is_in_answer_source_values(self):
+        self.assertIn("batch-classification-gate", VWO.ANSWER_SOURCE_VALUES)
+
+    def test_answer_object_using_batch_classification_gate_validates(self):
+        answer = {
+            "question_id": "q.spec-change",
+            "packet_id": "rework-q0001",
+            "answered_at": "2026-08-24T10:00:00+09:00",
+            "source": "batch-classification-gate",
+            "answer_mode": "freeform",
+            "selected_option_ids": [],
+            "freeform": "proceed: spec gap confirmed against FR14",
+            "normalized_answer": "proceed",
+            "resolution_note": (
+                "classification gate verdict: spec_gap; see the "
+                "rework.yaml classification record"
+            ),
+        }
+        errors = VWO.validate_answer(answer)
+        self.assertEqual(errors, [], errors)
+
+    def test_unrecognized_source_value_is_still_rejected(self):
+        # Non-vacuity guard: proves the check above is not vacuously
+        # passing on a validator that accepts any string as `source`.
+        answer = {
+            "question_id": "q.spec-change",
+            "packet_id": "rework-q0001",
+            "answered_at": "2026-08-24T10:00:00+09:00",
+            "source": "not-a-real-source",
+            "answer_mode": "freeform",
+            "selected_option_ids": [],
+            "freeform": "x",
+            "normalized_answer": "x",
+            "resolution_note": None,
+        }
+        errors = VWO.validate_answer(answer)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("source", messages)
+
+
+# ---------------------------------------------------------------------------
+# rework-contract-drift/task0004 AC-6 (FR6): origin_kind's closed
+# vocabulary is enforced by the validator.
+# ---------------------------------------------------------------------------
+
+class TestOriginKindVocabulary(unittest.TestCase):
+    FEATURE = "example"
+
+    def _workflow(self, base_commit="deadbeef"):
+        return {
+            "feature": self.FEATURE,
+            "workflow": [
+                {"id": "create-plan", "status": "pending"},
+                {"id": "implement", "status": "pending", "base_commit": base_commit},
+            ],
+        }
+
+    def _phase_state(self, origin_kind):
+        return {
+            "phase": "rework",
+            "feature": self.FEATURE,
+            "spec_change": {
+                "reason": "x",
+                "origin_kind": origin_kind,
+                "origin_id": "abc",
+                "recorded_at_commit": "deadbeef",
+                "replan_authorized": True,
+            },
+        }
+
+    def test_review_origin_kind_accepted(self):
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(
+                self._workflow(), self._phase_state("review")
+            )
+        )
+
+    def test_verify_origin_kind_accepted(self):
+        self.assertTrue(
+            VWO.workflow_replace_all_spec_change_reentry(
+                self._workflow(), self._phase_state("verify")
+            )
+        )
+
+    def test_out_of_vocabulary_origin_kind_rejected(self):
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(
+                self._workflow(), self._phase_state("audit")
+            )
+        )
+
+    def test_empty_origin_kind_rejected(self):
+        self.assertFalse(
+            VWO.workflow_replace_all_spec_change_reentry(
+                self._workflow(), self._phase_state("")
+            )
+        )
+
+
+# ---------------------------------------------------------------------------
+# rework-contract-drift/task0004 AC-6 (FR3 validator half), scoped by
+# rework-contract-drift/task0008 (review round1 rework, FR3, NFR1, NFR2,
+# D11): a `workflow.yaml` verify-step `failed_items[]` entry's `category`
+# is rejected when missing, empty, or out of the seven-value vocabulary
+# (IMPLEMENTATION.md Shared Components), and accepted for each of the
+# seven values -- enforced by `_validate_verify_failed_items_categories`,
+# wired into `validate_workflow_patch` unconditional on --dry-run-apply,
+# but ONLY for the entries of a verify step the patch targets via
+# `step_patches` (workflow-schema.md's pre-change compatibility rule): a
+# pre-existing entry outside that reach -- one a worker's step patch has no
+# way to repair -- contributes no error.
+# ---------------------------------------------------------------------------
+
+class TestFailedItemCategoryVocabulary(unittest.TestCase):
+    SEVEN_VALUES = (
+        "comprehensive",
+        "spec",
+        "security",
+        "performance",
+        "architecture",
+        "license",
+        "unknown",
+    )
+
+    def _workflow(self, category):
+        failed_item = {"id": "TS-1"}
+        if category is not _OMIT:
+            failed_item["category"] = category
+        return {
+            "feature": "example",
+            "workflow": [
+                {
+                    "id": "verify",
+                    "status": "pending",
+                    "failed_items": [failed_item],
+                },
+            ],
+        }
+
+    def _patch(self, *, targets_verify):
+        step_patches = [{"step_id": "verify"}] if targets_verify else []
+        return {"step_patches": step_patches}
+
+    def _errors(self, category, *, targets_verify=True):
+        return VWO._validate_verify_failed_items_categories(
+            self._workflow(category), self._patch(targets_verify=targets_verify)
+        )
+
+    def test_each_of_the_seven_values_accepted(self):
+        for value in self.SEVEN_VALUES:
+            with self.subTest(category=value):
+                self.assertEqual(self._errors(value), [])
+
+    def test_missing_category_rejected(self):
+        errors = self._errors(_OMIT)
+        self.assertTrue(errors)
+        self.assertIn("category", errors[0]["message"])
+
+    def test_empty_category_rejected(self):
+        errors = self._errors("")
+        self.assertTrue(errors)
+
+    def test_out_of_vocabulary_category_rejected(self):
+        errors = self._errors("not-a-real-category")
+        self.assertTrue(errors)
+
+    def test_no_verify_step_yields_no_errors(self):
+        workflow = {"feature": "example", "workflow": []}
+        self.assertEqual(
+            VWO._validate_verify_failed_items_categories(
+                workflow, self._patch(targets_verify=True)
+            ),
+            [],
+        )
+
+    def test_no_failed_items_key_yields_no_errors(self):
+        workflow = {
+            "feature": "example",
+            "workflow": [{"id": "verify", "status": "pending"}],
+        }
+        self.assertEqual(
+            VWO._validate_verify_failed_items_categories(
+                workflow, self._patch(targets_verify=True)
+            ),
+            [],
+        )
+
+    def test_untargeted_verify_step_yields_no_category_error(self):
+        # task0008 AC-6 (pre-change case): a patch touching no verify step
+        # produces no error even over a non-conforming (here: entirely
+        # missing) category -- the party that would receive the rejection
+        # has no way to repair a pre-existing entry.
+        self.assertEqual(
+            self._errors(_OMIT, targets_verify=False), []
+        )
+
+    def test_targeted_verify_step_retains_the_category_check(self):
+        # task0008 AC-6 (retained-teeth case): a patch that DOES target the
+        # verify step still rejects a non-conforming entry within it.
+        errors = self._errors(_OMIT, targets_verify=True)
+        self.assertTrue(errors)
+        self.assertIn("category", errors[0]["message"])
+
+    def test_verify_step_target_among_other_step_patches_still_scopes_in(self):
+        # A patch touching several steps, one of which is verify, still
+        # reaches the verify step's entries.
+        patch = {
+            "step_patches": [
+                {"step_id": "implement"},
+                {"step_id": "verify"},
+            ]
+        }
+        errors = VWO._validate_verify_failed_items_categories(
+            self._workflow(_OMIT), patch
+        )
+        self.assertTrue(errors)
+
+    def test_wired_into_validate_workflow_patch_unconditional_on_dry_run(
+        self,
+    ):
+        # AC-6: the check runs on the invocation path that already reads
+        # --workflow, not only under --dry-run-apply. task0008: the patch
+        # now targets the verify step, exercising the new scope instead of
+        # the removed unconditional one.
+        patch = {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "append_rework",
+            "tasks_patch": {
+                "mode": "append",
+                "expected_next_task_id": "task0001",
+                "entries": {},
+            },
+            "step_patches": [{"step_id": "verify"}],
+            "preserve": ["workflow.implement.base_commit"],
+        }
+        errors = VWO.validate_workflow_patch(
+            patch,
+            workflow=self._workflow("not-a-real-category"),
+            dry_run=False,
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("category", messages)
+
+    def test_check_also_runs_under_dry_run_apply(self):
+        # AC-6: "driven ... with and without dry-run apply" -- a targeted
+        # verify step still errors when --dry-run-apply is also requested.
+        patch = {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "append_rework",
+            "tasks_patch": {
+                "mode": "append",
+                "expected_next_task_id": "task0001",
+                "entries": {},
+            },
+            "step_patches": [{"step_id": "verify"}],
+            "preserve": ["workflow.implement.base_commit"],
+        }
+        errors = VWO.validate_workflow_patch(
+            patch,
+            workflow=self._workflow("not-a-real-category"),
+            dry_run=True,
+        )
+        codes = {e.get("code") for e in errors}
+        self.assertIn("category", codes)
+
+    def test_untargeted_scope_also_holds_under_dry_run_apply(self):
+        # AC-6 (pre-change case), driven through the whole entry point with
+        # --dry-run-apply also requested: an untargeted patch still
+        # produces no category error.
+        patch = {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "append_rework",
+            "tasks_patch": {
+                "mode": "append",
+                "expected_next_task_id": "task0001",
+                "entries": {},
+            },
+            "step_patches": [],
+            "preserve": ["workflow.implement.base_commit"],
+        }
+        errors = VWO.validate_workflow_patch(
+            patch,
+            workflow=self._workflow(_OMIT),
+            dry_run=True,
+        )
+        codes = {e.get("code") for e in errors}
+        self.assertNotIn("category", codes)
+
+
+_OMIT = object()
+
+
+# ---------------------------------------------------------------------------
+# rework-contract-drift/task0004 AC-7 (FR4): a `rework.spec-change`
+# question with no `evidence[]` entry carrying a non-empty `origin_id` is
+# rejected -- the mechanical half of `references/question-resolution.md`'s
+# Classification gate origin verification -- driven both directly against
+# `validate_question` and against the two new fixtures under
+# `references/fixtures/question-packet/origin-verification/`.
+# ---------------------------------------------------------------------------
+
+class TestOriginIdEvidenceRequirement(unittest.TestCase):
+    ORIGIN_VERIFICATION_DIR = (
+        FIXTURES_ROOT / "question-packet" / "origin-verification"
+    )
+
+    @staticmethod
+    def _question(evidence):
+        return {
+            "question_id": "rework.spec-change.probe",
+            "gate_id": "rework.spec-change",
+            "category": "spec-change",
+            "priority": "high",
+            "blocking": True,
+            "prompt": "p",
+            "header": "h",
+            "answer_mode": "freeform",
+            "options": [],
+            "why_needed": "w",
+            "on_unanswered": "block",
+            "evidence": evidence,
+        }
+
+    def test_evidence_with_origin_id_accepted(self):
+        errors = VWO.validate_question(
+            self._question([{"path": "x", "origin_id": "TS-9"}]), 0
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("evidence", messages)
+
+    def test_empty_evidence_list_rejected(self):
+        errors = VWO.validate_question(self._question([]), 0)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("origin_id", messages)
+
+    def test_evidence_entry_without_origin_id_rejected(self):
+        errors = VWO.validate_question(
+            self._question([{"path": "x", "line": 1, "detail": "d"}]), 0
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("origin_id", messages)
+
+    def test_empty_string_origin_id_rejected(self):
+        errors = VWO.validate_question(
+            self._question([{"path": "x", "origin_id": ""}]), 0
+        )
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("origin_id", messages)
+
+    def test_non_spec_change_gate_id_unaffected(self):
+        # Non-vacuity guard: the check is scoped to gate_id
+        # rework.spec-change, never applied to unrelated questions.
+        question = self._question([])
+        question["gate_id"] = "create-plan.tbd-resolution"
+        question["category"] = "tbd-resolution"
+        errors = VWO.validate_question(question, 0)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertNotIn("origin_id", messages)
+
+    def test_valid_verify_origin_fixture_passes_via_cli(self):
+        case_dir = self.ORIGIN_VERIFICATION_DIR / "valid-verify-origin"
+        result = run_cli(
+            [
+                "--kind",
+                "question-packet",
+                "--worker",
+                "rework-planner",
+                "--input",
+                str(case_dir / "input.json"),
+            ]
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_invalid_missing_origin_id_fixture_rejected_naming_the_reason(
+        self,
+    ):
+        case_dir = self.ORIGIN_VERIFICATION_DIR / "invalid-missing-origin-id"
+        result = run_cli(
+            [
+                "--kind",
+                "question-packet",
+                "--worker",
+                "rework-planner",
+                "--input",
+                str(case_dir / "input.json"),
+            ]
+        )
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        messages = " ".join(e["message"] for e in payload["errors"])
+        self.assertIn("origin_id", messages)
+
+
+# ---------------------------------------------------------------------------
+# rework-contract-drift/task0004 AC-2 (FR4, NFR3): owner-scoped absence
+# scan. Shared Components "Retired-identifier absence scan": reads live
+# files, covers this task's own closed path set (IMPLEMENTATION.md D3's
+# task0004 partition), and builds its search term at run time rather than
+# carrying it as a contiguous literal in its own source, so the scan never
+# matches itself.
+#
+# Stated exclusions (D3), never scanned here: this feature's own
+# feature-docs/rework-contract-drift/REQUIREMENTS.md and SPEC.md (which
+# name the retired field in order to require its removal), the completed
+# feature-docs/goal-vs-spec-divergence/ and test-docs/ records of the
+# previous feature (rewriting a delivered record would falsify history),
+# and git history.
+# ---------------------------------------------------------------------------
+
+class TestRetiredOriginIdentifierAbsenceScan(unittest.TestCase):
+    OWNED_PATHS = [
+        REPO_ROOT / "em-workflow" / "references" / "question-packet-schema.md",
+        REPO_ROOT / "em-workflow" / "references" / "question-resolution.md",
+        REPO_ROOT
+        / "em-workflow"
+        / "references"
+        / "contracts"
+        / "rework-planner-contract.md",
+        SCRIPT_PATH,
+        REPO_ROOT / "tests" / "test_classification_gate.py",
+        REPO_ROOT / "tests" / "test_worker_contract_docs.py",
+        REPO_ROOT / "tests" / "test_rework_synthesis_contract.py",
+        REPO_ROOT / "tests" / "test_question_resolution_doc.py",
+        REPO_ROOT / "tests" / "test_validate_worker_output.py",
+        REPO_ROOT / "tests" / "test_gate_option_vocabulary.py",
+        REPO_ROOT / "tests" / "test_spec_change_origin_binding.py",
+        REPO_ROOT / "tests" / "test_spec_change_replan_authorization.py",
+        REPO_ROOT / "tests" / "test_replanning_carry_over.py",
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        # Built at run time -- never a contiguous literal anywhere in this
+        # module's own source -- so this scan cannot match itself merely
+        # because it TALKS ABOUT the retired field.
+        cls.retired_field = "finding" + "_stable_id"
+
+    def _scan(self, paths):
+        offenders = []
+        for path in paths:
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            if self.retired_field in text:
+                offenders.append(str(path))
+        return offenders
+
+    def test_retired_field_absent_from_every_owned_file(self):
+        for path in self.OWNED_PATHS:
+            with self.subTest(path=str(path.relative_to(REPO_ROOT))):
+                self.assertEqual(self._scan([path]), [])
+
+    def test_fixtures_directory_is_scanned_recursively(self):
+        fixtures_root = REPO_ROOT / "em-workflow" / "references" / "fixtures"
+        offenders = self._scan(p for p in fixtures_root.rglob("*") if p.is_file())
+        self.assertEqual(offenders, [])
+
+    def test_scan_does_not_match_itself(self):
+        # Non-vacuity guard: the scan's own source file, read live, must
+        # not trip the matcher -- proving the search term genuinely never
+        # appears as a contiguous literal anywhere in this module.
+        this_file = REPO_ROOT / "tests" / "test_validate_worker_output.py"
+        self.assertNotIn(
+            self.retired_field, this_file.read_text(encoding="utf-8")
+        )
+
+    def test_negative_proof_scan_detects_a_planted_occurrence(self):
+        # Non-vacuity guard (Test Notes): the scan logic, applied to a
+        # synthetic file that DOES carry the retired field, must report
+        # it -- proving the absence above cannot pass vacuously.
+        with tempfile.TemporaryDirectory() as tmp:
+            planted = Path(tmp) / "planted.md"
+            planted.write_text(
+                f"evidence[].{self.retired_field} was here", encoding="utf-8"
+            )
+            self.assertEqual(self._scan([planted]), [str(planted)])
 
 
 if __name__ == "__main__":

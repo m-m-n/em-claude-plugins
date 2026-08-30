@@ -1,0 +1,104 @@
+task_id: task0007
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_domain_declared
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_step_domain_declaration_precedes_no_step_anchor
+    red_confirmed: true
+    red_reason: >-
+      Before the doc edit: test_field_values_step_domain_declared failed with
+      "AssertionError: set() is not true : no `step` value-domain declaration
+      found at the front of the `step` bullet" (the extractor found nothing
+      to match against STEP_VALUE_DOMAIN); test_step_domain_declaration_precedes_no_step_anchor
+      errored with ValueError from section.index("a closed value domain:")
+      -- substring not found, since the declaration did not yet exist in the
+      document.
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_domain_declared
+    red_confirmed: true
+    red_reason: >-
+      Same observed failure as AC-1's first test: the structural extractor
+      (`_extract_step_value_domain`) returned an empty set against the
+      pre-edit document, so the set-equality assertion against the fixed
+      8-member STEP_VALUE_DOMAIN (7 step ids + `no-step`) never had anything
+      to compare -- assertTrue(domain, ...) failed first.
+  AC-3:
+    tests:
+      - tests.test_batch_stop_contract.TestStepValueDomainMatcherNegativeProof.test_forged_bullet_is_otherwise_well_formed
+      - tests.test_batch_stop_contract.TestStepValueDomainMatcherNegativeProof.test_missing_domain_declaration_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      The matcher and its negative-proof test were authored together, so
+      the pinned forged sample (FORGED_STEP_BULLET_WITHOUT_DOMAIN_DECLARATION,
+      verbatim task0005-applied bullet text) was rejected on first run.
+      To confirm the negative proof genuinely discriminates (rather than
+      passing vacuously), I temporarily replaced _extract_step_value_domain
+      with an over-permissive stub that always returns the full
+      STEP_VALUE_DOMAIN regardless of input, re-ran
+      test_missing_domain_declaration_is_rejected, and observed it fail:
+      "AssertionError: Items in the first set but not the second:
+      'create-spec' 'no-step' 'retrospect' 'implement' 'create-plan'
+      'design' 'review' 'verify'" (assertRaises did not see the expected
+      AssertionError because the stub wrongly accepted the forged text).
+      Reverted the stub and confirmed green again before proceeding.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract.TestNoStepAnchorUnaffectedByDomainDeclaration.test_anchor_matches_on_one_physical_line
+      - tests.test_batch_stop_contract.TestNoStepAnchorUnaffectedByDomainDeclaration.test_extracted_stop_points_still_match_the_coverage_table
+      - tests.test_batch_stop_contract.TestNoStepAnchorUnaffectedByDomainDeclaration.test_create_spec_and_create_plan_are_excluded
+    red_confirmed: true
+    red_reason: >-
+      This is a regression guard over the pre-existing NO_STEP_BULLET_RE /
+      _extract_no_step_stop_points mechanism, which my change does not
+      modify, so it never failed against my actual (correctly front-placed)
+      edit. To prove it would catch the exact regression R-C warns against,
+      I temporarily moved the domain declaration to AFTER the `no-step`
+      anchor in the real document (simulating a misplacement) and re-ran
+      this class: test_extracted_stop_points_still_match_the_coverage_table
+      failed ("{'step-a-abort', 'create-plan', 'step-c-abort',
+      'stop-condition-6', 'create-spec'} != frozenset({'step-a-abort',
+      'step-c-abort', 'stop-condition-6'})") and
+      test_create_spec_and_create_plan_are_excluded failed ("'create-spec'
+      unexpectedly found in {...}"), confirming create-spec/create-plan leak
+      into the extracted stop-point set exactly as the plan predicts.
+      Restored the correct document immediately after and confirmed green.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_names_the_executed_step
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_at_verify_fail_rework_is_verify
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_precedence_stated
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_c_asymmetry_stated
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard (task0005's own tests, unmodified by this task
+      per the plan's explicit instruction not to touch them): they were
+      green in the baseline and stay green after my edit, since my change
+      only prepends text before the general-rule sentence these tests
+      check and does not alter any of the wording they assert on. No red
+      state is expected or applicable -- proving AC-5 is exactly "these
+      stay green unmodified", which the full-suite pass demonstrates.
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_seven_level_2_headings_in_order
+      - tests.test_batch_stop_contract.TestContractDocumentStructure.test_no_document_wording_states_a_terminal_state_count
+      - tests.test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_eleven_fixed_codes
+      - tests.test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
+      - tests.test_batch_stop_contract.TestPrefixUniqueness.test_prefix_occurs_only_in_the_contract_document
+    red_confirmed: false
+    red_reason: >-
+      Non-regression guard: these pre-existing tests are unaffected by this
+      task's edit (headings, reason-code table, coverage table and prefix
+      sweep are untouched) and stayed green throughout -- no red state was
+      expected or exercised. Their continued passing (part of the full
+      2503-test green run) is the evidence for AC-6.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Whole-suite outcome, not a single test. `python3 -m unittest discover
+      -s tests` was run repeatedly during implementation and finished with
+      "Ran 2503 tests ... OK" (0 failures, 0 errors) after the final edit,
+      reported in the implementer's final report.

@@ -1,0 +1,94 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_develop_once_option.TestArgumentProcessingOnceOption.test_once_bullet_present
+      - tests.test_develop_once_option.TestArgumentProcessingOnceOption.test_ends_turn_after_one_phase
+      - tests.test_develop_once_option.TestArgumentProcessingOnceOption.test_combinable_with_batch
+      - tests.test_develop_once_option.TestArgumentProcessingOnceOption.test_not_persisted_to_workflow_yaml_or_phase_state
+      - tests.test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: substring not found. Pre-implementation SKILL.md had no
+      `--once` bullet in 引数処理 and no `--once` token in the frontmatter
+      argument-hint line, so every assertIn against those substrings failed
+      (e.g. `assertIn(ARGUMENT_HINT_LINE, self.text)`).
+  AC-2:
+    tests:
+      - tests.test_develop_once_option.TestOnceSectionCoversAllFourPhaseBoundaryKinds.test_blanket_committed_sentence_present
+      - tests.test_develop_once_option.TestOnceSectionCoversAllFourPhaseBoundaryKinds.test_covers_all_four_phase_boundary_kinds
+      - tests.test_develop_once_option.TestOnceSectionCoversAllFourPhaseBoundaryKinds.test_ordinary_step_boundary_names_design_skipped_exception
+      - tests.test_develop_once_option.TestOnceSectionCoversAllFourPhaseBoundaryKinds.test_retrospect_boundary_defers_step_c_to_next_launch
+      - tests.test_develop_once_option.TestOnceSectionCoversAllFourPhaseBoundaryKinds.test_verify_fail_rework_boundary_names_implement_and_verify_pending
+      - tests.test_develop_once_option.TestOnceSectionCoversAllFourPhaseBoundaryKinds.test_automatic_reentry_boundary_names_both_transitions
+    red_confirmed: true
+    red_reason: >-
+      ValueError raised inside setUpClass: `text.index("## \`--once\` の
+      フェーズ境界")` failed because the section did not exist in
+      pre-implementation SKILL.md, so every test in the class errored before
+      running.
+  AC-3:
+    tests:
+      - tests.test_develop_once_option.TestStopCondition7AppendedWithoutAlteringExisting.test_items_1_to_6_immediately_followed_by_item_7_unchanged
+      - tests.test_develop_once_option.TestStopCondition7AppendedWithoutAlteringExisting.test_item_7_mentions_once
+      - tests.test_develop_once_option.TestStopCondition7AppendedWithoutAlteringExisting.test_anchor_sentence_follows_item_7
+    red_confirmed: true
+    red_reason: >-
+      AssertionError (ITEMS_1_TO_6_VERBATIM + ITEM_7_VERBATIM not found as a
+      contiguous substring, since item 7 did not exist yet) and ValueError
+      (`text.index("7. \`--once\`")` not found) before this task's change.
+  AC-4:
+    tests:
+      - tests.test_develop_once_option.TestNonBoundariesStated.test_no_mid_implement_termination
+      - tests.test_develop_once_option.TestNonBoundariesStated.test_stop_condition_5_wait_turn_is_non_terminal
+      - tests.test_develop_once_option.TestNonBoundariesStated.test_implement_launch_and_wake_turns_are_non_terminal
+    red_confirmed: true
+    red_reason: >-
+      ValueError raised inside setUpClass: the `--once` のフェーズ境界
+      section (which carries the 非境界 paragraph) did not exist in
+      pre-implementation SKILL.md, so every test in the class errored before
+      running.
+  AC-5:
+    tests:
+      - tests.test_develop_once_option.TestInteractiveClosingLineMatchesSpecFR12.test_closing_line_present_verbatim
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: the whitespace-stripped closing line
+      ("{step}が完了したよ。続きは..." ) was not a substring of
+      pre-implementation SKILL.md's whitespace-stripped text; the sibling
+      test `test_closing_line_carries_both_placeholders` only checks the
+      constant's own literal content and was always green (not evidence for
+      this AC).
+  AC-6:
+    tests:
+      - tests.test_develop_once_option.TestPlacementInvariantsD3.test_once_section_precedes_stop_report_heading
+      - tests.test_develop_once_option.TestPlacementInvariantsD3.test_no_state_value_literal_anywhere_in_skill_md
+      - tests.test_develop_once_option.TestPlacementInvariantsD3.test_new_content_introduces_no_gate_id_mention
+    red_confirmed: true
+    red_reason: >-
+      ValueError raised inside setUpClass: `--once` のフェーズ境界 heading
+      absent from pre-implementation SKILL.md, so every test in the class
+      errored before running (all three depend on that section's slice).
+  AC-7:
+    tests:
+      - tests.test_develop_once_option.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - tests.test_develop_once_option.TestPhaseBoundaryMatcherCanFail.test_forged_three_kind_table_is_well_formed_and_found
+      - tests.test_develop_once_option.TestPhaseBoundaryMatcherCanFail.test_matcher_rejects_the_three_kind_forgery
+      - tests.test_develop_once_option.TestStateValueLiteralMatcherCanFail.test_forged_text_is_well_formed_and_contains_the_literal
+      - tests.test_develop_once_option.TestStateValueLiteralMatcherCanFail.test_matcher_rejects_the_forged_state_literal
+      - tests.test_develop_once_option.TestStateValueLiteralMatcherCanFail.test_matcher_passes_ordinary_step_status_prose
+    red_confirmed: false
+    red_reason: >-
+      This AC verifies properties of the test module itself (stdlib-only
+      import check via AST; each new matcher's negative-proof and
+      non-vacuity guard against forged/synthetic text) rather than SKILL.md
+      content, so these specific tests exercised fixed fixtures / the
+      module's own AST and were green both before and after the SKILL.md
+      change -- there was never a meaningful red state to observe for them.
+      AC-7 is instead evidenced by: (1) `python3 -m unittest discover -s
+      tests` exiting 0 with this module included (module discovery, NFR3),
+      and (2) each matcher (`_covers_all_four_phase_boundary_kinds`,
+      `_restates_state_value_literal`) having its negative-proof and
+      non-vacuity guard pair present in the module, reviewed directly.

@@ -1,0 +1,136 @@
+task_id: task0024
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_classification_gate.TestRoutedArmSingleExceptionToRestoredAbort.test_category_spec_change_is_back_on_the_immediate_abort_list
+      - tests.test_classification_gate.TestRoutedArmSingleExceptionToRestoredAbort.test_routed_arm_written_as_the_abort_lists_single_exception
+      - tests.test_classification_gate.TestRoutedArmSingleExceptionToRestoredAbort.test_any_other_gate_id_is_stated_to_abort_recording_its_reason
+      - tests.test_classification_gate.TestRoutedArmSingleExceptionToRestoredAbort.test_negative_twin_plain_spec_change_bullet_without_exception_fails
+      - tests.test_classification_gate.TestRoutedArmSingleExceptionToRestoredAbort.test_routed_arm_still_reachable_after_restored_abort
+    red_confirmed: true
+    red_reason: >-
+      Stashed em-workflow/references/question-resolution.md back to its
+      pre-task0024 state and re-ran; test_category_spec_change_is_back_on_the_immediate_abort_list
+      and test_routed_arm_written_as_the_abort_lists_single_exception errored
+      with ValueError (the abort-list slice locator could not find the new
+      bullet text at all) since category: spec-change was absent from the
+      abort list before this task.
+  AC-2:
+    tests:
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_malformed_pairing_reverse_direction_also_aborts
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_malformed_pairing_neither_direction_reaches_policy_lookup_or_on_unanswered
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_malformed_pairing_reverse_direction_negative_twin_fails
+    red_confirmed: true
+    red_reason: >-
+      Stashed question-resolution.md to pre-task0024 state and re-ran:
+      test_malformed_pairing_reverse_direction_also_aborts and
+      test_malformed_pairing_neither_direction_reaches_policy_lookup_or_on_unanswered
+      failed with AssertionError -- "the reverse mismatch is equally
+      malformed" was not found in the section (the Malformed pairing
+      paragraph only covered the gate_id-foreign-category direction before
+      this task).
+  AC-3:
+    tests:
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_basis_is_the_packets_own_declaration
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_basis_named_worker_declared_limitation
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_no_orchestrator_held_source_claimed
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_orchestrator_held_irreversible_operations_list_claim_is_gone
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_abort_still_records_its_reason
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_irreversibility_negative_twin_bare_bullet_wording_fails
+    red_confirmed: true
+    red_reason: >-
+      Stashed question-resolution.md to pre-task0024 state and re-ran:
+      test_irreversibility_basis_is_the_packets_own_declaration and
+      test_irreversibility_basis_named_worker_declared_limitation failed
+      with AssertionError (the replacement sentence was absent -- the old
+      text still asserted the withdrawn orchestrator-held-metadata claim),
+      and test_no_orchestrator_held_source_claimed /
+      test_orchestrator_held_irreversible_operations_list_claim_is_gone
+      failed because the withdrawn claim ("decided from metadata the
+      orchestrator holds about that operation") was still present.
+  AC-4:
+    tests:
+      - tests.test_worker_contract_docs.TestReworkPlannerContractGateIdentifiers.test_section_exists_and_names_the_gate_id
+      - tests.test_worker_contract_docs.TestReworkPlannerContractGateIdentifiers.test_section_states_no_batch_policies_entry
+      - tests.test_worker_contract_docs.TestReworkPlannerContractGateIdentifiers.test_section_cites_classification_gate_not_restated
+      - tests.test_worker_contract_docs.TestReworkPlannerContractGateIdentifiers.test_section_states_the_registry_consequence
+      - tests.test_validate_worker_output.TestGateRegistryDerivation.test_rework_spec_change_is_registered_via_the_contract_section
+      - tests.test_validate_worker_output.TestGateRegistryDerivation.test_rework_spec_change_carries_no_required_option_id
+      - tests.test_spec_change_gate_binding.TestGateIdAndCategoryAgreeAcrossAllThreeArtifacts.test_contract_names_the_same_gate_id_in_gate_identifiers
+      - tests.test_spec_change_gate_binding.TestGateIdAndCategoryAgreeAcrossAllThreeArtifacts.test_registry_derives_the_same_pairing_from_the_contract_section
+    red_confirmed: true
+    red_reason: >-
+      Stashed rework-planner-contract.md and validate-worker-output.py to
+      pre-task0024 state and re-ran: TestReworkPlannerContractGateIdentifiers
+      tests errored (ValueError, no "## Gate identifiers" heading in the
+      document), TestGateRegistryDerivation's two new tests and
+      test_registry_derives_the_same_pairing_from_the_contract_section
+      failed with AssertionError (registry.get("rework.spec-change") was
+      None -- rework.spec-change appeared in neither batch-policies.yaml
+      nor any contract's Gate identifiers section, so the registry never
+      produced an entry for it).
+  AC-5:
+    tests:
+      - tests.test_validate_worker_output.TestSpecChangeCategoryGateBidirectionalBinding.test_spec_change_category_with_foreign_gate_id_is_rejected
+      - tests.test_validate_worker_output.TestSpecChangeCategoryGateBidirectionalBinding.test_spec_change_category_with_wholly_unregistered_gate_id_is_rejected
+      - tests.test_validate_worker_output.TestSpecChangeCategoryGateBidirectionalBinding.test_rework_spec_change_gate_id_with_foreign_category_is_rejected
+      - tests.test_validate_worker_output.TestSpecChangeCategoryGateBidirectionalBinding.test_correctly_paired_spec_change_question_has_no_binding_error
+      - tests.test_validate_worker_output.TestSpecChangeCategoryGateBidirectionalBinding.test_unrelated_category_is_unaffected_by_the_new_direction
+      - tests.test_spec_change_gate_binding.TestBidirectionalRejectionHoldsEndToEnd.test_category_spec_change_with_a_foreign_gate_id_is_rejected
+      - tests.test_spec_change_gate_binding.TestBidirectionalRejectionHoldsEndToEnd.test_gate_id_rework_spec_change_with_a_foreign_category_is_rejected
+      - tests.test_spec_change_gate_binding.TestBidirectionalRejectionHoldsEndToEnd.test_the_correctly_paired_question_is_accepted
+    red_confirmed: true
+    red_reason: >-
+      Stashed validate-worker-output.py (and rework-planner-contract.md,
+      whose registration this direction depends on) to pre-task0024 state
+      and re-ran: test_rework_spec_change_gate_id_with_foreign_category_is_rejected
+      and test_gate_id_rework_spec_change_with_a_foreign_category_is_rejected
+      failed with AssertionError (the registry had no rework.spec-change
+      entry yet, so the pre-existing forward-direction check never fired
+      either); test_spec_change_category_with_foreign_gate_id_is_rejected
+      and test_spec_change_category_with_wholly_unregistered_gate_id_is_rejected
+      failed because the reverse category -> gate_id check
+      (_gate_ids_for_category) did not exist in validate_question at all --
+      confirmed manually before writing the test (a category: spec-change
+      question paired with an arbitrary gate_id produced zero
+      category/gate_id errors against the pre-task0024 validator).
+  AC-6:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_security_and_license_abort_arm_retained
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_irreversible_assumption_abort_arm_retained
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_explicit_gate_list_mechanism_retained_as_a_slot
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_precedence_reservation_names_all_three_conditions
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_precedence_reservation_states_abort_final_and_non_overridable
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_ac4_all_three_abort_arms_and_precedence_reservation_survive
+    red_confirmed: false
+    red_reason: >-
+      Retention criterion: these are pre-existing pins from earlier tasks
+      (task0004/task0019) asserting the three unchanged abort arms and the
+      precedence reservation survive this task's edits verbatim. They were
+      already green before this task touched the document (by design --
+      the whole point is that they must NOT go red) and remained green
+      after every edit in this task, confirmed by re-running the full
+      module after each change. No new test was written for AC-6 itself;
+      its verification is that the pre-existing retention suite never went
+      red across this task's edits, plus AC-1/AC-2/AC-3's own tests proving
+      the new/changed text sits alongside the retained text without
+      replacing it.
+  AC-7:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Ran the full suite (python3 -m unittest discover -s tests) after
+      editing validate-worker-output.py and test_validate_worker_output.py
+      but before refreshing their sha256 pins in test_gate_option_vocabulary.py:
+      test_validate_worker_output_py_byte_identical failed with
+      AssertionError (actual sha256 1f2e963d...96ea73 != pinned
+      5e14f038...e4e43). Refreshed both VALIDATE_WORKER_OUTPUT_SHA256 and
+      TEST_VALIDATE_WORKER_OUTPUT_SHA256 with a comment naming this task
+      and the reason, per C10; PINNED_VALIDATOR_TEST_LINE is unaffected and
+      stayed green throughout. Full suite verified green afterward (2020
+      tests, 0 failures).

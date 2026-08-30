@@ -318,6 +318,66 @@ class TestBatchPoliciesYaml(unittest.TestCase):
             "ONLY the gates expressed as question packets", header
         )
 
+    # --- task0006: header wording for the classification-gate carve-out ----
+
+    def test_header_states_classification_gate_routing(self):
+        # AC-1 (FR11): rework.spec-change carries a gate_id, is
+        # intentionally unlisted, and in batch is routed into the
+        # classification gate defined in question-resolution.md rather than
+        # aborted outright.
+        header = self.policy_text.split("gate_policies:", 1)[0]
+        norm = self._norm_yaml_comment_header(header)
+        self.assertIn(
+            "`rework.spec-change` is intentionally NOT listed below, even "
+            "though it does carry a `gate_id`",
+            norm,
+        )
+        self.assertIn("references/question-resolution.md", norm)
+        self.assertIn("classification gate", norm)
+        self.assertIn("instead of aborting the phase outright", norm)
+
+    def test_header_no_longer_claims_unconditional_abort(self):
+        # AC-2 (FR11): the superseded "aborts ... rather than guessing an
+        # answer" wording is gone from this file.
+        header = self.policy_text.split("gate_policies:", 1)[0]
+        norm = self._norm_yaml_comment_header(header)
+        self.assertNotIn("guessing an answer", norm)
+        # Non-vacuity guard: prove the assertion above is meaningful by
+        # checking it against a synthetic string that DOES carry the
+        # superseded phrase, so a no-op assertion could not slip through.
+        synthetic = (
+            norm
+            + " fail-closed classification aborts a specification-change "
+            "gate rather than guessing an answer for it."
+        )
+        self.assertIn("guessing an answer", synthetic)
+
+    def test_header_does_not_imply_other_arms_relaxed(self):
+        # AC-4 (NFR2): the header must not state or imply any change to the
+        # security / license / irreversible-operation arms.
+        header = self.policy_text.split("gate_policies:", 1)[0]
+        norm = self._norm_yaml_comment_header(header)
+        self.assertIn("category: security", norm)
+        self.assertIn("category: license", norm)
+        self.assertIn("reversible: false", norm)
+        self.assertIn("unchanged strength", norm)
+
+    def test_header_does_not_restate_gate_internals(self):
+        # AC-5 (NFR1): cites question-resolution.md by path and restates
+        # none of the gate's verdicts, asymmetry or evidence criterion.
+        header = self.policy_text.split("gate_policies:", 1)[0]
+        norm = self._norm_yaml_comment_header(header)
+        self.assertIn("references/question-resolution.md", norm)
+        for leaked_term in (
+            "goal_not_met",
+            "spec_gap",
+            "not_applicable",
+            "evidence_ids",
+            "verdict",
+            "asymmetry",
+        ):
+            self.assertNotIn(leaked_term, norm)
+
 
 class TestGateIdSetComparisonIsSymmetric(unittest.TestCase):
     """Edge case from the task plan: a gate ID present in one side but not

@@ -1,0 +1,108 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_failed_items_category.TestSchemaDefinesCategoryField.test_field_is_stated_required_and_non_empty
+      - tests.test_failed_items_category.TestSchemaDefinesCategoryField.test_vocabulary_exact_seven_values_in_order
+      - tests.test_failed_items_category.TestSchemaDefinesCategoryField.test_negative_proof_extra_value_is_detected
+      - tests.test_failed_items_category.TestSchemaDefinesCategoryField.test_negative_proof_missing_value_is_detected
+      - tests.test_failed_items_category.TestSchemaDefinesCategoryField.test_states_never_interpreted_as_default
+      - tests.test_failed_items_category.TestSchemaDefinesCategoryField.test_states_single_owner_of_the_definition
+      - tests.test_failed_items_category.TestSchemaDefinesCategoryField.test_verify_step_yaml_points_at_the_new_section
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, workflow-schema.md had no "## `failed_items[].category`"
+      heading; every test that locates the section via _section() raised
+      ValueError: substring not found, and the YAML-pointer test failed with
+      an AssertionError (the comment text did not mention
+      failed_items[].category). The two negative-proof tests
+      (extra/missing value detected) are self-contained against synthetic
+      strings and were already green before the doc existed -- they prove the
+      comparison mechanism, not the doc's content, so they are listed here for
+      traceability but were not part of the red observation.
+  AC-2:
+    tests:
+      - tests.test_failed_items_category.TestVerifyStepAssignsCategoryAtRecordTime.test_states_orchestrator_assigns_at_record_time
+      - tests.test_failed_items_category.TestVerifyStepAssignsCategoryAtRecordTime.test_states_derivation_via_verification_index
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, SKILL.md's verify-step section contained neither the
+      assignment-timing sentence nor the verification_index-derivation
+      sentence; both assertIn checks failed with AssertionError showing the
+      unmodified section text.
+  AC-3:
+    tests:
+      - tests.test_failed_items_category.TestVerifyStepAssignsSentinelOnInsufficientEvidence.test_states_sentinel_condition
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the sentinel-condition sentence (insufficient /
+      unmapped / contradictory / cannot exclude security or license) did not
+      exist anywhere in the verify-step section; assertIn failed with
+      AssertionError.
+  AC-4:
+    tests:
+      - tests.test_failed_items_category.TestVerifyPhaseDoesNotAbortOnCategory.test_states_no_abort_on_any_category_value
+      - tests.test_failed_items_category.TestVerifyPhaseDoesNotAbortOnCategory.test_states_every_case_reaches_the_gate
+      - tests.test_failed_items_category.TestVerifyPhaseDoesNotAbortOnCategory.test_cites_the_gate_by_path_and_section
+      - tests.test_failed_items_category.TestVerifyPhaseDoesNotAbortOnCategory.test_does_not_describe_the_abort_itself
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the no-abort statement, the reaches-the-gate
+      statement, and the gate citation did not exist in the verify-step
+      section; the three positive assertIn checks failed with
+      AssertionError. The negative check (no "non-overridable" wording) was
+      already true pre-change and stayed true after -- it guards against a
+      future regression rather than proving new content, so it is listed
+      for traceability but was not part of the red observation.
+  AC-5:
+    tests:
+      - tests.test_failed_items_category.TestVerifyStepDoesNotRestateVocabulary.test_no_vocabulary_terms_backtick_quoted_in_verify_section
+      - tests.test_failed_items_category.TestVerifyStepDoesNotRestateVocabulary.test_cites_owning_document_and_field_by_path
+      - tests.test_failed_items_category.TestVerifyStepDoesNotRestateVocabulary.test_negative_proof_detector_fires_on_a_restating_synthetic_copy
+    red_confirmed: true
+    red_reason: >-
+      test_cites_owning_document_and_field_by_path failed before the edit
+      (assertIn on the citation sentence raised AssertionError against the
+      unmodified section). test_no_vocabulary_terms_backtick_quoted_in_verify_section
+      was already true before any implementation (the section restated
+      nothing because it did not yet mention category at all), so it alone
+      would not prove the criterion; the negative-proof test demonstrates
+      the same detector DOES fire against a synthetic restating copy,
+      closing that gap per the task plan's own negative-proof requirement.
+  AC-6:
+    tests:
+      - tests.test_failed_items_category.TestOutOfScopeDocumentsAreUntouched.test_verification_format_template_has_no_restated_vocabulary
+      - tests.test_failed_items_category.TestOutOfScopeDocumentsAreUntouched.test_verification_index_document_has_no_restated_vocabulary
+      - tests.test_failed_items_category.TestOutOfScopeDocumentsAreUntouched.test_retrospect_phase_has_no_restated_vocabulary
+      - tests.test_failed_items_category.TestOutOfScopeDocumentsAreUntouched.test_rework_planner_agent_has_no_restated_vocabulary
+      - tests.test_failed_items_category.TestOutOfScopeDocumentsAreUntouched.test_negative_proof_detector_fires_on_synthetic_restatement
+      - tests.test_failed_items_category.TestOutOfScopeDocumentsAreUntouched.test_specification_document_still_states_its_own_fr3_text
+    red_confirmed: false
+    red_reason: >-
+      This criterion is a negative constraint (these five documents stay
+      untouched by this task) that was already satisfied before any
+      implementation began, because this task never writes to them --
+      there is no zero-to-green transition to observe. The absence checks
+      against the four em-workflow-owned documents were true both before
+      and after my edits (confirmed non-vacuous by the negative-proof
+      sub-test, which shows the same detector DOES fire against a
+      synthetic restating copy). SPEC.md is structurally out of this
+      task's write access (worktree-task-workflow: never modify
+      feature-docs/**), so its sub-test is a presence check of the FR3
+      text already there, not an absence check -- SPEC.md is the
+      requirement's own source and legitimately names the vocabulary
+      already, so "no failing-item category text" cannot apply to it
+      literally. This interpretation of AC-6/Test Notes is recorded as a
+      deviation/note in the implementer report.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not a dedicated test in this module (task plan Coverage paragraph
+      only names AC-1 through AC-5's assertions and the task's own Test
+      Notes route AC-6 to the out-of-scope checks above); exercised by
+      running the whole suite (python3 -m unittest discover -s tests),
+      which exits 0 with 2258 tests green and no third-party import added
+      by this task's new module.

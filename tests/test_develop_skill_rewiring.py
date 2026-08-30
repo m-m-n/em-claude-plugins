@@ -75,6 +75,15 @@ task0004 (create-plan-status-conflict rework round 1, finding
 - AC-6: the create-plan `in_progress` exemption remains create-plan-only.
 - AC-7: the spec-change transition is cited, never restated with per-step
   status assignments.
+
+task0002 (rework-contract-drift/tasks/task0002.md) AC-2 aligns the
+discriminator record's field names to the origin pair (`origin_kind` /
+`origin_id`, IMPLEMENTATION.md Shared Components) in place of the
+`finding` / single-field wording task0004 originally pinned, and cites
+`references/workflow-patch.md` for the field definitions rather than
+restating them.
+`TestStopCondition3AutomaticReentryCarveOut.test_discriminator_names_consumed_rework_yaml_record`
+is updated in place (not duplicated) to pin the new wording.
 """
 
 import re
@@ -606,10 +615,18 @@ class TestStopCondition3AutomaticReentryCarveOut(unittest.TestCase):
         self.assertIn("正真正銘のユーザー介入待ち", self.carve_out_section)
 
     def test_discriminator_names_consumed_rework_yaml_record(self):
-        # AC-4 (discriminator)
+        # AC-4 (discriminator); task0002 (rework-contract-drift) AC-2
+        # supersedes the `finding` / single-field wording this test used to
+        # pin with the origin pair `origin_kind` / `origin_id`, and adds
+        # the citation to workflow-patch.md for the field definitions.
         self.assertIn("phase-state/rework.yaml", self.carve_out_section)
         self.assertIn("consumed", self.carve_out_section)
-        self.assertIn("stable_id", self.carve_out_section)
+        self.assertIn("origin_kind", self.carve_out_section)
+        self.assertIn("origin_id", self.carve_out_section)
+        self.assertIn(
+            "references/workflow-patch.md", self.carve_out_section
+        )
+        self.assertIn("繰り返さない", self.carve_out_section)
         # 消費が dispatch 時点で起きること（completed 到達を条件にする表現に
         # 戻っていないこと）を固定するガード。
         self.assertIn("dispatch", self.carve_out_section)

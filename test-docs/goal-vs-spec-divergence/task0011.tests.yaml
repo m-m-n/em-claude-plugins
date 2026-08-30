@@ -1,0 +1,68 @@
+task_id: task0011
+baseline_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_goal_vs_spec_divergence_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+    red_confirmed: true
+    red_reason: "AssertionError: 48 not greater than 48 (plugin.json still read 0.1.48 before the bump)"
+  AC-2:
+    tests:
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_equals_plugin_manifest_exactly
+    red_confirmed: true
+    red_reason: "AssertionError: 48 not greater than 48 (marketplace.json's em-workflow entry still read 0.1.48 before the bump); the equality-with-plugin-manifest test was already trivially true pre-bump (both read 0.1.48), so only the baseline half of AC-2 was observed red"
+  AC-3:
+    tests:
+      - tests.test_goal_vs_spec_divergence_version_bump.TestPluginManifestVersion.test_key_set_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestPluginManifestVersion.test_author_field_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestPluginManifestVersion.test_description_field_retains_stable_anchor
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_top_level_key_set_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_schema_field_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_top_level_name_field_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_top_level_description_field_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_owner_field_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_plugins_list_length_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_key_set_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_name_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_author_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_category_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_source_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_description_retains_stable_anchor
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_name_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_author_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_category_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_description_retains_stable_anchor
+      - tests.test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+    red_confirmed: false
+    red_reason: "These are retention/guard matchers over fields this task never touches (name, author, description anchors, key sets, em-review entry). Before any edit, current state already equals the expected retained values exactly (nothing had changed yet), so every one of these tests passed from the moment it was written -- there was no real violation to observe going red, per the exemption precedent in tests/test_spec_file_set_completeness_version_bump.py's 'Retention matchers (no negative proof needed)' convention. The matchers' ability to actually detect a violation is not separately exercised by a synthetic forged sample either, since a plain assertEqual/assertIn against a captured field cannot be meaningfully forged without asserting a tautology; the meaningful proof is that these tests reference the exact real fields (not a mock), so any accidental edit by this task's own diff would have flipped them to fail (verified after the implementation edit: still green, i.e. this task in fact touched only 'version')."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "Verifiable outcome is discovery + import review, not a unit test result: running `python3 -m unittest discover -s tests` from the repository root executes this module's 33 tests (confirmed in the implementer report), and the module's import block (json, re, unittest, pathlib) is standard-library only by manual inspection."
+  AC-5:
+    tests:
+      - tests.test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_component_wise_comparison_is_numeric_not_lexicographic
+      - tests.test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_parser_does_not_crash_on_version_with_two_components
+      - tests.test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_parser_does_not_crash_on_version_with_four_components
+      - tests.test_goal_vs_spec_divergence_version_bump.TestValidationDetectsRegressions.test_parser_returns_none_for_non_numeric_component
+    red_confirmed: false
+    red_reason: "These are self-contained proofs of the comparator's own numeric/no-crash properties (matcher and its test written together), not assertions over the manifests' evolving state, so there was no separate pre-implementation state for them to be red against; they passed as soon as written, same as the negative-proof helper tests in every prior *_version_bump.py module in this repository."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "Verified by running the full suite (python3 -m unittest discover -s tests): every pre-existing module reading either manifest (test_spec_file_set_completeness_version_bump.py, test_routeback_reset_scope_version_bump.py, test_batch_stop_contract_version_bump.py, test_batch_policy_option_id_version_bump.py, test_recycled_task_id_version_bump.py, test_recycled_task_id_carveout_version_bump.py, test_recycled_task_id_contract_version_bump.py) still passes after the bump to 0.1.49 (all have BASELINE_PATCH <= 44, so patch 49 clears every one). Not unit-testable from inside this task's own module, since it would assert over files/tests this task does not own."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "Verified by running python3 -m unittest discover -s tests: 1668 tests ran (1635 pre-existing + 33 new), with exactly the same 3 pre-existing failures as the 4a baseline and zero new failures. Not a dedicated test in this module; this is the overall suite gate, not a per-criterion assertion."

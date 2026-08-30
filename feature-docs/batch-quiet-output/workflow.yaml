@@ -1,0 +1,313 @@
+schema_version: 1
+feature: batch-quiet-output
+created: 2026-08-29
+base_branch: main
+goal: |
+  `develop`コマンドで`--batch`を指定した際、メインコンテキストの出力はほぼ行わなくて良いです
+  --batchコマンドは`claude -p`や`claude-batch`を経由して実行されることを念頭に置きます
+parent_branch: em-workflow/batch-quiet-output/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+    hooks:
+      language: python
+      build_command: ""
+      test_command: "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 446c5c6c0cfd63bafcc08954b99783c9c8ba028b
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "変更対象が em-workflow プラグインの protocol ドキュメントとオーケストレーターの出力規律のみで、画面・視覚要素・デザイントークンを一切持たない。design system 候補も 0 件。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: completed
+    completed_at_commit: 53c643b89cd4f1d8b434d37eb2247c43953554e2
+  - id: implement
+    status: completed
+    base_commit: 4dc8c598399daad7e89ba07d98f32e31a2e20cf9
+    completed_at_commit: e63c3451bd1b7aac13642fddc1d2e5d7fc2e6a73
+  - id: review
+    status: completed
+    completed_at_commit: 010d8f8f5159e1497274618e1c6d3c68ccc8176b
+  - id: verify
+    status: completed
+    completed_at_commit: c9650c3563f00c84790e7fb4c76596714d08ade1
+    result: pass
+    failed_items: []
+    notes: >-
+      TS-1 - TS-9 / SC-1 - SC-6 すべて成立。`python3 -m unittest discover -s tests` は
+      2758 tests OK、`python3 em-workflow/hooks/tests/run-destructive-guard.py` は 36/36 passed。
+      build / format / E2E コマンドは project.components に未定義のため対象外。
+      FR13 の version は plugin.json と marketplace.json とも 0.1.54 で一致。
+      SC-6 は reviews/round3.yaml の residual_critical_high: 0 で成立（前回 fail の直接原因を解消）。
+      excluded 状態の要件は無し。手動項目 M-1 - M-5 は無人実行のため未実施で、
+      成果物（reviews/round*.yaml と各 SSOT ドキュメント）から人間が確認できる。
+  - id: retrospect
+    status: completed
+    completed_at_commit: 3a690df489fd85f269a0e3ec61a45d393e50c222
+
+tasks:
+  task0001:
+    title: "Define the batch output-suppression discipline in batch-mode.md"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/batch-terminal-line.md
+      - tests/test_batch_quiet_output_discipline.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0001
+  task0002:
+    title: "Wire develop/SKILL.md to the suppression discipline"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/skills/develop/SKILL.md
+      - tests/test_batch_quiet_output_skill_wiring.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR1, FR2, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0002
+  task0003:
+    title: "Wire the phase protocols to the suppression discipline"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/references/review-phase.md
+      - em-workflow/references/phases/create-spec-phase.md
+      - em-workflow/references/phases/create-plan-phase.md
+      - tests/test_batch_quiet_output_phase_wiring.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR2, FR4, FR6, FR9, FR10, FR11, FR12, NFR1, NFR3, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0003
+  task0004:
+    title: "Plugin version bump in both registries"
+    plan: tasks/task0004.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_batch_quiet_output_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR13]
+    status: merged
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0004
+
+  task0005:
+    title: "Persist batch audit records instead of routing them to output or commit messages"
+    plan: tasks/task0005.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/implement-phase.md
+      - em-workflow/references/phase-state.md
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_batch_quiet_output_audit_persistence.py
+      - tests/test_batch_quiet_output_phase_wiring.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR2, FR4, FR5, FR9, FR10, FR11, FR12, FR13, NFR1, NFR3, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0005
+    provenance:
+      source: review
+      source_ids: [1cd0e6ab9dba1fef, 48ac1e2b5f7d90c3, b0f4c7d2e819a635, 2a6b8f0c3d5e7192, 9d1f4e6a2c8b0537, 7e3a95c14b0d82ff]
+      review_round: 1
+
+  task0006:
+    title: "Align the batch audit record file's consumers and rules with its own schema"
+    plan: tasks/task0006.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/phase-state.md
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_batch_quiet_output_audit_record_contract.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR9, FR10, FR11, FR12, FR13, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/batch-quiet-output/task0006
+    provenance:
+      source: verify
+      source_ids: [SC-6, SC-6-b]
+      review_round: null
+
+review:
+  status: completed
+  rounds_completed: 3
+  perspectives:
+    comprehensive: {claude: completed}
+    architecture: {claude: completed, litellm: completed}
+    spec: {claude: completed, litellm: completed}
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor: [comprehensive, architecture, spec]
+    discretionary: []
+    cross_validation: true
+
+requirements:
+  FR1:
+    title: "抑制の適用条件"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-1]
+  FR2:
+    title: "非終端ターンは 1 行マーカーのみ"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0005]
+    tests: [TS-2, TS-8]
+  FR3:
+    title: "1 行マーカーの書式と終端行との識別"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-3]
+  FR4:
+    title: "抑制される中間出力の範囲"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0005]
+    tests: [TS-2, TS-8]
+  FR5:
+    title: "Step C 終了報告は全文維持"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0005]
+    tests: [TS-4]
+  FR6:
+    title: "停止・中断ターンは抑制の例外"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-4]
+  FR7:
+    title: "終端行の契約は不変"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-3]
+  FR8:
+    title: "`--once` フェーズ境界ターンの出力"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-4]
+  FR9:
+    title: "ファイル成果物への書き込みは不変"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS-5, TS-8, TS-9]
+  FR10:
+    title: "ゲート解決・状態遷移の挙動は不変"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS-6]
+  FR11:
+    title: "Step C 監査項目の出所を成果物に固定"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS-5, TS-8, TS-9]
+  FR12:
+    title: "規律の定義箇所"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS-7, TS-9]
+  FR13:
+    title: "プラグイン version の更新"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0004, task0005, task0006]
+    tests: [TS-6]
+  NFR1:
+    title: "対話モードへの非回帰"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0005]
+    tests: [TS-1]
+  NFR2:
+    title: "既存 consumer の互換性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-3]
+  NFR3:
+    title: "停止時の診断可能性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0005]
+    tests: [TS-4]
+  NFR4:
+    title: "SSOT の単一性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0005, task0006]
+    tests: [TS-7, TS-9]
+  NFR5:
+    title: "文体"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-7]
+
+batch:
+  review_rework_count: 1
+  verify_rework_count: 1

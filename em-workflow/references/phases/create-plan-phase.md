@@ -15,7 +15,7 @@ This document does not restate the shapes it builds on — it cites them:
   `references/phase-state.md`.
 - `implementation-planner`'s input and output contract:
   `references/contracts/planner-contract.md`.
-- Workflow patch structure and its sixteen application rules:
+- Workflow patch structure and its application rules:
   `references/workflow-patch.md`.
 - `input_digest` (rule R1) and the seven validation layers:
   `references/contracts/worker-envelope.md` (provenance: design-input.md 5.0
@@ -253,3 +253,44 @@ invocation above is a coverage regression, not a smaller valid invocation.
   (Reconcile on entry), applying the pending patch per
   `references/phase-state.md`'s Resume decision table
   (`applying_patch`, not yet applied).
+
+In a `--batch` run, this phase's completion narration above is withheld
+per `references/batch-mode.md`'s output-suppression discipline; the patch
+application (section 10) and this section's completion / resumable-
+partial-completion writes above are unchanged.
+
+## 12. Declared change set derivation
+
+A feature's declared change set is derived — not authored.
+
+- **Inputs**: the union of three sources. Every `tasks.*.files` entry
+  registered in `workflow.yaml` by planning; the default entries, whose
+  enumeration and membership semantics live in
+  `references/templates/spec-document.md` and
+  `references/templates/requirements-document.md` (this document cites
+  them and never restates them); and the implement-derived additions
+  admitted by the deviation auto-addition rule in
+  `references/implement-phase.md` — cited here by path, its evidence
+  condition not restated in this document.
+- **Retention**: an admitted addition is retained in exactly one
+  location — the `files` list of the task whose deviation was admitted, in
+  `workflow.yaml`, the same list the union above is read from.
+  Re-derivation reads that location, which is what makes an admitted
+  addition survive every later re-derivation: a re-planning `replace_all`
+  carries every already-registered task id verbatim rather than
+  re-declaring it, so the task carrying the admitted path is still there,
+  with its `files` unchanged, to be read
+  (`references/workflow-patch.md`'s Re-planning task-id allocation section
+  owns that guarantee — cited here, never restated). The audit trail of
+  the admission decision stays where `references/implement-phase.md` puts
+  it; this retention rule does not change that.
+- **Status**: this derivation is a guard, not a statement of the goal — it
+  bounds what the implement phase may touch, and it is not itself a
+  description of what the feature sets out to achieve.
+- **Semantics**: the templates cited above state the superset/containment
+  semantics; this document does not restate them.
+- **Timing**: the derivation is available once planning's proposed patch
+  has registered the task set (section 10 above), and it is re-derived
+  whenever the task set changes — re-planning, a rework append, or an
+  implement wake that admitted a deviation — rather than being frozen at
+  the first successful planning pass.

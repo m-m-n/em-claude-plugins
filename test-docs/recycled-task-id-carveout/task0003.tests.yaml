@@ -1,0 +1,35 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recycled_task_id_carveout_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_recycled_task_id_carveout_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+    red_confirmed: true
+    red_reason: "AssertionError: 44 not greater than 44 (test_version_is_past_baseline against pre-bump plugin.json)"
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+    red_confirmed: true
+    red_reason: "AssertionError: 44 not greater than 44 (test_em_workflow_entry_version_is_past_baseline against pre-bump marketplace.json)"
+  AC-3:
+    tests:
+      - tests.test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_recycled_task_id_carveout_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+    red_confirmed: true
+    red_reason: "Module discovered automatically by `python3 -m unittest discover -s tests` with no registration step (confirmed by full-suite run: 1452 baseline tests + 10 new = 1462). Equality and past-baseline checks observed red pre-bump as above; literal 0.1.45 is never asserted (BASELINE_PATCH=44, patch > 44 only)."
+  AC-4:
+    tests:
+      - tests.test_recycled_task_id_carveout_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_recycled_task_id_carveout_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+    red_confirmed: false
+    red_reason: "These are negative-proof tests: they assert that the matcher REJECTS a forged sample (wrapped in assertRaises), so they pass as soon as written and never go red themselves -- the thing they prove (the matcher can fail) is demonstrated by the assertRaises succeeding, not by the test itself failing first. This mirrors the established precedent in tests/test_routeback_reset_scope_version_bump.py."
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: "Verified via full-suite run: baseline (before any change) was 1452 tests / 0 failures; after implementation, 1462 tests / 0 failures (10 new, all pre-existing green). `git diff` scoped to exactly the two version fields in the two expected files plus the new test module (git status confirms no other file touched). Only stdlib modules (json, re, unittest, pathlib) are imported."

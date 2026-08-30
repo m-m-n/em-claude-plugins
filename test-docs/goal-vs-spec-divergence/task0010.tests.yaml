@@ -1,0 +1,89 @@
+task_id: task0010
+baseline_failures:
+  - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+final_failures:
+  - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_exists
+  - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_names_every_repository_rule
+  - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_root_claude_md_points_at_the_rules_directory
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_deviation_auto_addition.TestAC1EvidenceGatedAutoAddition.test_states_evidence_gated_auto_addition
+      - tests.test_deviation_auto_addition.TestDeviationRegionIsLocated.test_region_was_located_and_is_non_empty
+    red_confirmed: true
+    red_reason: >-
+      Before the implement-phase.md paragraph existed, _slice_region raised
+      ValueError: substring not found for REGION_START_ANCHOR
+      ("**Deviation auto-addition rule**"), so setUpClass errored for every
+      test scoped to the region, including this one.
+  AC-2:
+    tests:
+      - tests.test_deviation_auto_addition.TestAC2ConvenienceDoesNotQualify.test_states_convenience_is_not_auto_added
+    red_confirmed: true
+    red_reason: >-
+      Same region-not-found error pre-implementation as AC-1. Post-edit, a
+      first pass also failed with AssertionError: False is not true because
+      the matcher used a literal single space ("implementer convenience")
+      against text the document hard-wraps across a line break; fixed by
+      normalizing whitespace before matching, not by relaxing what is
+      asserted.
+  AC-3:
+    tests:
+      - tests.test_deviation_auto_addition.TestAC3ContainmentCheckRetained.test_states_containment_check_retained
+    red_confirmed: true
+    red_reason: >-
+      Region-not-found error pre-implementation, same as AC-1.
+  AC-4:
+    tests:
+      - tests.test_deviation_auto_addition.TestAC4AuditRecordRule.test_states_audit_record_rule
+    red_confirmed: true
+    red_reason: >-
+      Region-not-found error pre-implementation, same as AC-1.
+  AC-5:
+    tests:
+      - tests.test_deviation_auto_addition.TestAC5NoNewPhaseStateField.test_states_no_new_phase_state_field
+    red_confirmed: true
+    red_reason: >-
+      Region-not-found error pre-implementation, same as AC-1. Post-edit,
+      a first pass also failed with AssertionError: False is not true
+      because "no new phase-state field" spans a hard line-wrap in the
+      document; fixed the same way as AC-2 (whitespace normalization in
+      the matcher, not in the assertion).
+  AC-6:
+    tests:
+      - tests.test_deviation_auto_addition.TestAC6DerivationCitationAndNoGlobEnumeration.test_region_cites_the_create_plan_derivation_by_path
+      - tests.test_deviation_auto_addition.TestAC6DerivationCitationAndNoGlobEnumeration.test_derivation_is_not_restated_only_cited
+      - tests.test_deviation_auto_addition.TestAC6DerivationCitationAndNoGlobEnumeration.test_whole_document_never_enumerates_both_root_globs_together
+      - tests.test_deviation_auto_addition.TestNoExclusionRuleStated.test_no_verify_side_exclusion_rule_found
+    red_confirmed: true
+    red_reason: >-
+      test_region_cites_the_create_plan_derivation_by_path errored
+      pre-implementation with the same region-not-found ValueError as AC-1
+      (the citation lives inside the new paragraph). The two glob-enumeration
+      and exclusion-rule tests are retention pins over the WHOLE document
+      (scoped like the repository-wide guard, not the new region) and were
+      already true before this task's edit -- there is no pre-change wording
+      to construct a violation from for these two, consistent with the
+      documented exemption pattern for retention pins that assert content a
+      task did not write (see tests/test_declared_change_set_invariants.py's
+      TestRecycledTaskIdRetentionPin docstring for the precedent this
+      follows).
+  AC-7:
+    tests:
+      - tests.test_deviation_auto_addition.TestAC7FullSuiteOwnershipNote.test_shared_guard_module_exists_and_scans_this_document
+    red_confirmed: false
+    red_reason: >-
+      AC-7's verifiable outcome is the full suite run, not a unit test this
+      task's own module can red/green: tests/test_declared_change_set_invariants.py
+      is owned by an already-merged, unrelated feature (spec-file-set-completeness)
+      and C4 forbids this task's module from asserting over a file it does not
+      own. The supporting test above only confirms that guard module exists
+      and already scans implement-phase.md by name; it was true before this
+      task touched anything, so it is not itself a red-then-green proof. The
+      actual AC-7 verification is: full suite run before this task's edit
+      (1601 tests, 3 pre-existing failures, none from the declared-change-set
+      guard) and after this task's edit (1624 tests, the SAME 3 pre-existing
+      failures, none from the declared-change-set guard) -- recorded in
+      baseline_failures / final_failures above.

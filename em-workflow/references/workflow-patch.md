@@ -66,19 +66,98 @@ requires `files` / `skills` / `domains` / `complexity` / `requirements` on
 every task entry, so a partial apply must never leave that mandatory set
 incomplete.
 
+`tasks_patch.carried_task_ids` (a list of `taskNNNN` strings) is present
+only on a re-planning `replace_all` (Re-planning task-id allocation,
+below): it is empty or absent on the Initial-planning path and on
+`append`. `carried_task_ids` and `entries` are disjoint — a carried id's
+body is never re-supplied under `entries`.
+
 ### `replace_all` permission conditions
 
-`replace_all` is permitted ONLY when ALL of the following hold; otherwise the
-patch is rejected:
+`replace_all` is permitted through exactly two paths; a patch matching
+neither is rejected:
 
-- `tasks` is empty, OR every existing task's `status` is `pending`
-- AND, additionally, one of:
-  - the `create-plan` step is `pending` (first planning pass), OR
-  - the `create-plan` step is `needs_update` (an explicit re-plan)
+- **Initial-planning path** — the `create-plan` step is `pending` (first
+  planning pass), permitted only when:
+  - `tasks` is empty, OR every existing task's `status` is `pending`
+- **Re-planning path** — an explicit re-plan (e.g. the SPEC-change
+  transition): permitted regardless of task status, including existing
+  `merged` tasks. Either of two states satisfies this path:
+  - the `create-plan` step is `needs_update`, OR
+  - `create-plan` reads `pending` on a re-entry recognizable as having come
+    through a `create-spec: needs_update` cycle — the signal is a
+    `spec_change` record (`references/phase-state.md`) carrying an
+    **unspent re-planning authorization** together with
+    `workflow.implement.base_commit` already being set. The record is read
+    from `{feature-dir}/phase-state/rework.yaml`, or from a `--phase-state`
+    mapping whose own `phase` is `rework` (an equivalent source for a
+    caller that already has that file open) — either source's mapping must
+    also carry a `feature` matching the workflow's `feature`. An unspent
+    re-planning authorization means the record carries `reason`, the
+    origin pair `origin_kind` and `origin_id`, and `recorded_at_commit`
+    (all non-empty), carries `replan_authorized` as a boolean, and
+    `replan_authorized` is `true` — a record whose authorization is
+    already spent (`replan_authorized: false`) is not a standing
+    permission. The origin pair's own meaning is
+    `references/rework-task-synthesis.md` Invariant 6's — cited here, not
+    restated. `consumed`'s value plays no part in this decision
+    (`references/phase-state.md`'s `spec_change` flag pair). Any one of
+    these conditions missing means this is not the
+    second case: the invocation falls back to the Initial-planning path's
+    rule (fail-closed — a narrower invocation never widens what
+    `replace_all` permits). The SPEC-change transition
+    (`references/rework-task-synthesis.md` Section 10) sets `create-plan`
+    to `pending`, not `needs_update` — this second case is the state that
+    transition actually produces, which is why the first case alone does
+    not cover it.
 
-A `replace_all` received while any task is `in_progress` / `merged` /
-`failed` is a protocol error. Re-planning after implementation has started
-goes through the rework path (`append`) instead.
+  A `replace_all` reaching either case of this path after implementation
+  has already produced `merged` tasks is the intended flow, not an
+  accident.
+
+  On this path, `workflow.implement.base_commit` appears in the patch's
+  `preserve` list. This does not contradict the rework invariant that an
+  `append_rework` patch never changes `base_commit` (see Mandatory
+  `preserve` per operation, below) — the two state the same fact about
+  `base_commit` survival from different sides of the SPEC-change /
+  implementation boundary.
+
+A `replace_all` received while any task is `in_progress` or `failed` is a
+protocol error on BOTH paths above. Neither this protocol-error rule nor
+the Initial-planning path's floor condition above changes as a result of
+the Re-planning path's widening.
+
+### Re-planning task-id allocation
+
+A `replace_all` re-planning pass allocates its new task ids continuing
+ABOVE the highest `taskNNNN` id the feature has ever registered. A task id
+already used by any task — retired or not — is never re-issued to a
+different task, on either case of the Re-planning path above.
+
+Because `replace_all` replaces `tasks` wholesale, a re-planning pass
+declares two disjoint sets rather than re-declaring registered ids as
+`entries`:
+
+- `tasks_patch.carried_task_ids` — every task id already registered in the
+  `workflow.yaml` the patch is applied to. Each carried id's record is
+  copied from that `workflow.yaml` **verbatim** — `title`, `plan`, `files`,
+  `skills`, `domains`, `complexity`, `requirements`, `status`, `branch`,
+  `notes` — and the patch supplies no body for it: a carried id must not
+  also be a key of `tasks_patch.entries`.
+- `tasks_patch.entries` — only task ids NOT yet registered in that
+  `workflow.yaml`. Every field of an entry (including `initial_status:
+  pending`, application rule 12) is worker-supplied and validated exactly as
+  on the Initial-planning path.
+
+Omitting a registered id from `carried_task_ids`, naming an unregistered id
+in `carried_task_ids`, or naming a registered id under `entries`, is
+rejected. Because a carried id's record is copied verbatim, a `merged` task
+keeps its `status`, its `branch` and its `files` across the patch without
+either field entering the `preserve` vocabulary.
+
+The high-water mark is `max(carried_task_ids ∪ entries)`, still readable
+directly from the `workflow.yaml` the patch is applied to — any genuinely
+new task in `entries` is numbered above it.
 
 ### `append` requirements
 
@@ -147,7 +226,7 @@ rejected.
 | operation | mandatory `preserve` |
 |---|---|
 | `append_rework` | `workflow.implement.base_commit` |
-| `replace_planning` | (none) |
+| `replace_planning` | `workflow.implement.base_commit`, mandatory on the Re-planning path; the Initial-planning path has no `implement` base commit yet, so nothing is mandatory there |
 
 `append_rework` also needs the status of every pre-existing task to survive
 the patch. Listing `tasks.<task_id>.status` for each ID in `existing_tasks`
@@ -155,9 +234,15 @@ is RECOMMENDED, not mandatory — rule 4 below already forbids `append` from
 overwriting an existing task ID, so the recommendation is a belt-and-braces
 check rather than the only thing preventing the overwrite.
 
+A re-planning `replace_all`'s carried task ids (Re-planning task-id
+allocation, above) need no `tasks.<task_id>.status` / `tasks.<task_id>.branch`
+entry in `preserve` to survive the patch — the carry-over declaration
+guarantees it structurally. A patch MAY still list them; because the carried
+record is copied verbatim, the invariance check (rule 14) holds.
+
 ## Application rules (in order)
 
-All sixteen rules apply, in order, to every patch:
+All eighteen rules apply, in order, to every patch:
 
 1. Reject unless `base_input_digest` matches the digest recomputed from the
    current input (rule R1).
@@ -177,7 +262,9 @@ All sixteen rules apply, in order, to every patch:
    (see Domains vocabulary SSOT below).
 10. `complexity` must be one of `low` / `medium` / `high`.
 11. `requirements` entries must be IDs that already exist in `workflow.yaml`.
-12. `initial_status` must be `pending`.
+12. Every entry under `tasks_patch.entries` must set `initial_status` to
+    `pending`. This rule applies to `entries` only — a `carried_task_ids`
+    id carries no entry at all (Re-planning task-id allocation, above).
 13. The operation's mandatory `preserve` set must be present.
 14. Every path listed in `preserve` must hold the same value before and
     after the patch.
@@ -186,6 +273,59 @@ All sixteen rules apply, in order, to every patch:
     (single-write application — no partial or incremental writes).
 16. The commit sequence follows rule R2: the artifact commit first, then the
     status-update commit.
+17. A re-planning `replace_all` must carry `tasks_patch.carried_task_ids`
+    listing every task id already registered in the current `workflow.yaml`,
+    and `tasks_patch.entries` must name only ids not registered there
+    (Re-planning task-id allocation, above); omitting a registered id from
+    `carried_task_ids`, or naming a registered id in `entries`, is rejected.
+18. Once a re-planning `replace_all` (Re-planning path) has been applied,
+    the orchestrator sets that record's `spec_change.replan_authorized` to
+    `false`, in the same phase-state write that records the application
+    (`references/phase-state.md`) — an authorization grounds exactly one
+    re-planning pass. Does not apply to the Initial-planning path, which
+    has no `spec_change` record to spend.
+
+## Interrupted authorization-spend recovery
+
+Rule 18's authorization-spending write is recoverable and idempotent
+across an interruption between rule 15's patch write and rule 18's own
+write. This procedure is not one of the numbered application rules above —
+its whole effect is to recognize a patch as already applied and thereby
+short-circuit rule 2, so stating it inside a list declared to apply "in
+order" would contradict that ordering. It is a recovery procedure the
+orchestrator runs on resume, not a rule every patch is checked against.
+
+**Recognition.** For the patch in hand, a resumed run recognizes that this
+patch has already been applied only when BOTH of the following hold:
+
+- `references/phase-state.md` owns the already-applied determination — the
+  Resume decision table's own read input "whether a patch is already
+  applied", backed by the recorded per-patch entry (`patches[]`) whose
+  `status` is `applied` — and that determination returns applied for this
+  patch, matched on the patch's own `patch_id` against that entry's
+  `patch_id`. How the determination itself is computed is
+  `references/phase-state.md`'s own — cited here, not restated.
+- the `spec_change` record this patch's re-planning pass was authorized
+  under still stands: rework's spec-change transition has not since
+  replaced it wholesale with a fresh record (`references/phase-state.md`'s
+  "ID uniqueness and idempotency" — every occurrence of the transition
+  replaces the record afresh).
+
+A `base_workflow_blob` mismatch (rule 2) that the already-applied
+determination above does not confirm remains an ordinary rejection under
+rule 2 on its own — no authorization is ever spent on a rejected patch. No
+sentence in this section makes a bare blob mismatch a recognized case on
+its own; recognition depends only on the determination above.
+
+**Idempotency.** Under the recognized case, the resumed run performs only
+rule 18's write instead of treating a `base_workflow_blob` mismatch as an
+ordinary rejection. If `replan_authorized` is already `false` (a prior
+resumption already performed the spend), repeating the write is a no-op,
+not an error: the resumed run leaves the record unchanged and reports
+success. The state reached after any number of resumptions is the same as
+the state reached by one uninterrupted run. Where `replan_authorized`
+lives is `references/phase-state.md`'s own definition — cited here, not
+restated.
 
 ## Ownership boundary
 
@@ -193,6 +333,14 @@ All sixteen rules apply, in order, to every patch:
 orchestrator-updated only. No operation, mode, or field of this contract
 targets them — they are absent from every worker patch by construction, not
 by convention workers are expected to honor voluntarily.
+
+Application rule 18's write is this contract's one crossing into
+`references/phase-state.md`: the orchestrator, never a worker, owns the
+write that sets `spec_change.replan_authorized` to `false`, and the
+crossing is permitted only once a re-planning `replace_all` (Re-planning
+path) has been applied, in the same phase-state write that records the
+application. The record's own definition is
+`references/phase-state.md`'s — cited here, not restated.
 
 ## Domains vocabulary SSOT
 

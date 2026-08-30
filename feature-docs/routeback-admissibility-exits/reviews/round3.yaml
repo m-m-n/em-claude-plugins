@@ -1,0 +1,302 @@
+round: 3
+executed_at: "2026-08-30T15:10:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 5b7e6a4c83a931b8d5e876272b73ed3a2aa16ce4
+  head_commit: d240a0c897ebe50e5da5a4d0d8cfd94c64c61a66
+  base_commit_note: >-
+    round 2 と同じく、implement の base_commit (4097a72) ではなく main 取り込み
+    マージ (b521d4e) の main 側親 5b7e6a4 を diff base にした。4097a72 起点だと
+    main 316 コミット分 (275 files / 51854 insertions) が差分に混ざり、この
+    feature の変更を切り出せないため。
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/routeback-admissibility-exits/task0001.tests.yaml
+    - test-docs/routeback-admissibility-exits/task0002.tests.yaml
+    - test-docs/routeback-admissibility-exits/task0003.tests.yaml
+    - tests/test_implement_routeback_gate.py
+    - tests/test_recycled_task_id_consistency.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+
+findings:
+  - stable_id: 12839a507a7df994
+    severity: critical
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 426
+    title: "FR3/AC-2 が名指しする stale `launched` 状態に abort 以外の復旧路が無い"
+    description: >-
+      SPEC FR3 は「journal last event が `launched` かつ worktree 不在かつ branch
+      不在かつ live agent 不在」の plan に abort 以外の protocol-defined recovery
+      path を要求する。I.2.b step 1 の second independent condition はまさにその
+      状態を扱うが、帰結は「no stop-tool call occurs and this condition falls to
+      the same Residual treatment ... the task stays in-flight, the route-back
+      gate blocks, and the phase takes the existing gate-rejected terminal」で、
+      その gate-rejected terminal は本文書自身が I.2.c で「the same terminal as
+      the 'abort phase' option below」と定義する終端。FR3 が要求した当の状態に
+      対して abort 相当の終端しか無い。US2「so that the phase is not forced to
+      terminate」も満たされない。
+    suggestion: >-
+      SPEC FR3 が例示する reconciled-state 前倒し案を採る。`launched` かつ
+      worktree・branch がともに不在の task を I.2.b step 1 の reconciled state で
+      terminal (`failed`) とし、I.2.c の in_progress 半の第2ソースから除外する。
+      これで route-back が admissible になり write set が全 task を `pending` に
+      戻せる。I.2.a の「a `launched` last event is always in-flight」に例外条項を
+      追加し、hook 分類表との差分を FR5 の観点で明記する必要がある。AC-7 の
+      matcher 更新と pre-change バイト列への negative proof を同一変更に含めること。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 2da3c75adac32650
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 639
+    title: "ancestor 検証失敗 `merged` タスクが自認の行き止まりになり Objectives 第1項に反する"
+    description: >-
+      SPEC Objectives 第1項は「no plan may be left with abort as its only option」
+      を要求する。I.2.c の第3 conjunct 説明は、ancestor 検証が失敗した `merged`
+      タスクについて「neither retry nor route back to planning actually resolves
+      the task from here; the only way out is a human ... outside this protocol」
+      と自ら行き止まりを宣言し、さらに「This is the one state where
+      workflow-schema.md's status semantics are not met by an automated path」と
+      参照仕様違反まで明記している。FR1 の unreachability 枝の字面は満たすが、
+      その代償として本 feature が消すはずだった「plan が abort 相当終端しか
+      持たない状態」を新たに作っている。
+    suggestion: >-
+      Either (a) FR1 の automatically-recoverable exit 側に切り替える — I.2.b
+      step 1 で ancestor 検証が失敗した時点でその task の journal `merged` を
+      gate 目的では失効扱いとする規則を owning site に定義し、I.2.c 第3 conjunct を
+      その失効済みケースに限って narrow する。or (b) SPEC 側の Objectives /
+      Error Handling を先に改訂して当該状態を明示的に scope 外とする。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: bc57aa350bb027c7
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 388
+    title: "候補集合を前セッション由来の `launched` に限定したため、同一セッション内 stale `launched` に復旧が届かない"
+    description: >-
+      SPEC Data Flow の Defect 2 は「a launch is allowed but never actually
+      starts」を FR3/FR4 の対象事象として定義している。loop 2 の修正は候補集合を
+      「`launched` が現セッション開始前に記録されたもの」に限定したため、その
+      発生セッション内では復旧が一切走らず、route-back gate が in-flight で
+      塞がれ続け gate-rejected terminal に落ちる。
+    suggestion: >-
+      候補集合の除外条件を「`launched` が現セッション由来」ではなく「その task の
+      `Task()` 呼び出しがまだ return していない」に置き換えれば、drain 保証を
+      守ったまま同一セッション内 stale も救える。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: >-
+      batch mode: rework cap reached。なお loop 3 の 2b2a38ef1032bb8e 修正が
+      提案どおり候補集合の述語を「this reconcile step's own currently-outstanding
+      calls に含まれないこと」へ置き換えたため、本指摘は付随的に解消された
+      可能性が高いが、loop cap により再レビューでの確認は行っていない。
+  - stable_id: 59e58726b1b22211
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 641
+    title: "Failed-task resolution invariant violated for ancestor-check-failure state"
+    description: >-
+      workflow-schema.md の無条件不変条件「A `failed` task resolves ONLY by retry
+      or by routing back to planning」に対し、implement-phase.md I.2.c は
+      ancestor-check-failure 状態でその不変条件が自動経路では満たされないことを
+      自ら宣言している。SSOT 側に carve-out が無いため、schema を根拠に「failed
+      には必ず解決経路がある」と仮定する consumer (develop の停止条件、planner の
+      replace_all 可否推論) と実挙動が乖離する。
+    suggestion: >-
+      Either (a) workflow-schema.md の該当 bullet にこの 1 ケースを明示的な例外
+      として追記し、所有記述が implement-phase.md I.2.c であることを明記する。
+      or (b) この状態に自動的な出口を与えて例外自体を消す。
+    sources: [claude:architecture, litellm:vertex-glm-5:architecture]
+    confidence: 100
+    resolution: deferred
+    resolution_reason: >-
+      batch mode: rework cap reached。auto-fix loop 3 で dispatch したが、修正の
+      本体は workflow-schema.md への編集を要し、review-editor の single-file
+      スコープ外のため未解決のまま。同 dispatch では隣接する自己矛盾
+      (870479ee3e50a85f) の additive 修正のみ適用した。
+  - stable_id: 94de80a315821a55
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 816
+    title: "agents.jsonl の読み手集合と欠損時の影響が SSOT (workflow-schema.md) とドリフトしている"
+    description: >-
+      本 feature は Agent index に 2 番目の読み手 (Orchestrator-side read) を追加し
+      Resume の情報源も 3 → 4 に増やしたが、SSOT の workflow-schema.md は
+      「read by `queue_taskstop_net.py` at stop」「exists solely to make a stop
+      resolvable back to a task」「its absence only degrades the stop-tool
+      recorder to a no-op」のまま。実際には index の欠損／stale で I.2.b step 1 の
+      Recovery が解決不能となり implement フェーズが gate-rejected terminal で
+      終わるため、影響は recorder の no-op に留まらない。
+    suggestion: >-
+      workflow-schema.md の agents.jsonl 段落を同じ変更内で更新する。読み手を 2 者
+      として列挙し、欠損時の影響に stale-`launched` recovery の Residual 化を含める。
+      逆方向参照の選択規則は IMPLEMENTATION.md の Agent index contract 側に置き、
+      implement-phase.md はそこを cite するだけにする。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: >-
+      severity medium のため auto-fix の候補ゲート (critical/high) に該当せず。
+      round 3 の初回では high (57bfbe9e145971bc) として dispatch したが、修正が
+      workflow-schema.md への編集を要し single-file スコープ外で abort している。
+  - stable_id: 9cc0ce6b64087d2f
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 633
+    title: "status semantics 不変条件を破る状態を SSOT 未更新のまま consumer 側で宣言している"
+    description: >-
+      59e58726b1b22211 と同じ SSOT ドリフトを別の行から捉えたもの。
+      workflow-schema.md L345-347 は無条件のまま、例外は implement-phase.md の
+      散文にしか存在しない。
+    suggestion: >-
+      workflow-schema.md の Status semantics にこの 1 ケースを明示的な例外として
+      追記し、implement-phase.md からはその例外項を cite するだけにする。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "severity medium のため auto-fix の候補ゲートに該当せず"
+  - stable_id: 1e5469443fbaecb4
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 426
+    title: "I.2.b step 1 の in-flight 検査が worktree/branch の片方だけ存在する状態を取りこぼす"
+    description: >-
+      条件1 は「`launched` かつ worktree と branch が両方存在」、条件2 は
+      「`launched` かつ worktree 不在かつ branch 不在」。片方だけ残る状態は
+      どちらにも当たらず recovery も Residual も起動しない。I.2.a の clean
+      re-attempt と I.2.c の route-back cleanup はいずれも 2 コマンドの間で
+      中断すると片欠けを残すため到達可能。
+    suggestion: "条件2 を片欠けも含む形に広げ、`launched` なタスク集合を分割する"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3 (additive: partial-artifact 状態も同じ recovery に落とす節を追加)"
+  - stable_id: 2b2a38ef1032bb8e
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 388
+    title: "liveness probe の候補集合がセッション内メモリ依存で、I.2.a の「メモリを跨いで持ち越すな」規則と衝突する"
+    description: >-
+      loop 2 の修正で候補集合の適格性が「`launched` が現セッション開始前に記録
+      されたか」に紐付けられたが、この事実は in-session memory にしか存在せず、
+      I.2.a 冒頭の『never carry in-flight state across turns from memory』に反する。
+      禁止規則側が勝つと実行中の兄弟タスクが not-live 判定され停止され、I.2.c の
+      drain 保証を破る。not-live 集合が候補集合で定義される循環も残っていた。
+    suggestion: "適格性を観測可能な事実に置き換え、not-live 集合を候補集合と別物として定義し直す"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: >-
+      auto-applied loop 3。候補集合の述語を「this reconcile step's own
+      currently-outstanding calls に含まれないこと」へ置き換え、その bookkeeping が
+      ターンを跨がないことを明記。not-live 集合を Agent index 解決の結果として
+      独立に定義し循環を解消した。
+  - stable_id: 432d00e93c697ff7
+    severity: high
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 366
+    title: "I.2.b step 1 の liveness 判定が、その時点で参照可能な情報源を持たない（候補集合と not-live 集合が循環定義）"
+    description: >-
+      検査は『live でないこと』を追加条件とするが、それを判定できる Agent index
+      参照と harness stop tool は同じ段落で『Recovery でのみ参照する』と後段に
+      追いやられている。検出段が解決段の情報源に依存しているのに参照順序を逆に
+      固定した設計で、(a) liveness テストが実行手段を持たない／(b) not-live 集合＝
+      候補集合で追加条件が無内容、という矛盾する 2 通りの読みが成立する。
+    suggestion: "検査段で Agent index を参照可能にし、Recovery に残す制約を stop tool の呼び出しのみに緩める"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: >-
+      auto-applied loop 3 (2b2a38ef1032bb8e の修正と併せて)。検査段自身が Agent
+      index lookup を行い not-live 集合を決めること、Recovery に残るのは stop tool
+      の呼び出しのみであることを明記した。なお同 dispatch が Recovery 段の
+      冒頭文も書き換えたが、それが tests/test_implement_routeback_gate.py の
+      byte-exact pin (`the wake phase resolves that task's recorded agent through
+      the Agent index writer's orchestrator-read rule`) を壊してスイートが 1 件
+      red になったため、その 1 文のみ pin どおりに復元した。検査段側の修正は保持
+      している。
+  - stable_id: 5810054fae2ed4d5
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 408
+    title: "Recovery が追記する `failed` を「next replay」に委ねているため、当該 wake で failed handling に到達せず phase が停止しうる"
+    description: >-
+      Recovery は『so the next replay reconciles the task as `failed`』とする一方、
+      同じ段落末尾は『This recovery runs during this wake-phase reconcile step,
+      hence before I.2.c's user-facing menu is offered』と書いており両立しない。
+      「next replay」を字義どおり取ると step 3 / step 5 / I.2.c がその wake では
+      failed を見ず、最後の in-flight タスクの復帰だった場合は次の replay が
+      永遠に来ないため、terminal 書き込みも menu も無いまま無言停止する。
+    suggestion: "同じ wake の step 1 内で journal を再 replay し、その結果を step 3 / step 5 / I.2.c が消費すると明記する"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3 (pinned 文を保持したまま additive に、再 replay が同一 wake 内で起きることを明記)"
+  - stable_id: 870479ee3e50a85f
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 633
+    title: "第3 conjunct の「way out」記述が同一段落内で自己矛盾しており、この状態で phase が取る terminal が確定しない"
+    description: >-
+      段落冒頭は『still has a way out that is not this section's own gate-rejected
+      or abort terminal』と宣言するが、続く結論は『in effect the same dead end as
+      this section's own gate-rejected terminal』。宣言と結論が逆で、この状態で
+      terminal 書き込みを行うべきか否かが読み手の解釈に委ねられる。
+    suggestion: "宣言を結論と一致する形に書き直し、gate-rejected terminal を確定的に取ることを述べる"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: fixed
+    resolution_reason: >-
+      auto-applied loop 3 (59e58726b1b22211 の dispatch 内で)。pinned 文に触れずに
+      「a way into this failed-handling branch, not a way out of it once reached」
+      という限定の挿入で矛盾を解消した。
+
+auto_fix:
+  loops_run: 3
+  applied_total: 8
+  termination: loop-cap
+  notes: >-
+    loop 1: 2 件 dispatch / 1 件適用 (c75a14873f82b364) / 1 件 abort
+    (57bfbe9e145971bc — 修正が workflow-schema.md への編集を要し single-file
+    スコープ外)。再レビューで適用分が新規 high (98a698682e71364e) を生んだ。
+    loop 2: 2 件 dispatch / 2 件適用 (98a698682e71364e, ea9352d098c32363)。
+    再レビューで新規 critical 1 (spec) と新規 high 2 を検出。
+    loop 3: 5 件 dispatch / 5 件が applied を返し、うち 4 件が実質適用、
+    59e58726b1b22211 は本体未解決のまま隣接指摘の修正のみ適用。loop 上限 3 に
+    達したため loop 3 後の再レビューは実施していない。
+    432d00e93c697ff7 の適用が byte-exact pin を 1 件壊したため、該当 1 文のみ
+    pin どおりに復元したうえでコミットしている。
+    全 loop を通じてテストスイートは 2830 件 green を維持している。
+    fix コミット: 81c67a6 (loop 1) / 0d9d0dc (loop 2) / d240a0c (loop 3)。
+
+residual_critical_high: 4
+rework_required: false
