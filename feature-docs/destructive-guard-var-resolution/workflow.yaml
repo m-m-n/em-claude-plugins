@@ -126,7 +126,7 @@ tasks:
     branch: em-workflow/destructive-guard-var-resolution/task0002
 review:
   status: in_progress
-  rounds_completed: 0
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -137,8 +137,13 @@ review:
     - perspective: performance
       reason: このフックは全 Bash ツール呼び出しの PreToolUse で走る。今回の変更は文ごとの代入収集と対象トークンの解決パスを追加するため、NFR4（bounded cost）に対する実測観点が要る
     cross_validation: true
-  perspectives: {}
-  residual_critical_high: 0
+  perspectives:
+    comprehensive: completed
+    security: completed
+    architecture: completed
+    spec: completed
+    performance: completed
+  residual_critical_high: 13
   needs_rework: false
 requirements:
   FR1:
