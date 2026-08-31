@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-var-resolution
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: d3b907092599f17d928a0a6bffe3f08821f76d36
+base_revision: cdb29f7d062166da9ed1b21ac70943ce76f2b028
 last_input_digest: sha256:aef36eb11f2459f216a443a1b12f28bec55e5f7d8ba9674f53f3d379e5f8d3eb
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -22,6 +22,8 @@ packets:
     - question_id: requirement.assignment-scope
       status: answered
     - question_id: design-step.decision
+      status: answered
+    - question_id: design-system.kind
       status: answered
 answers:
   requirement.resolution-scope:
@@ -80,6 +82,16 @@ answers:
     - skip
     freeform: null
     normalized_answer: design ステップはスキップする。
+  design-system.kind:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-01T00:40:00+09:00'
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - none
+    freeform: null
+    normalized_answer: project.design_system.kind は none。検出候補 em-workflow/references/templates/design-tokens.yaml
+      は em-workflow プラグインが配布物として持つスキーマテンプレートであり、このプロジェクト固有の design system ではない。
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
@@ -90,10 +102,16 @@ worker_runs:
   input_digest: sha256:00c3bf1ae140781e616c9357cacf2f41d7ed987b5b7d13571837f522f4f7ce41
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:aef36eb11f2459f216a443a1b12f28bec55e5f7d8ba9674f53f3d379e5f8d3eb
-  output_digest: null
-artifacts: []
+  output_digest: sha256:93b5dabb11126506a0f454846084c591c1fb073d92710783f7795fa5b43b0cf3
+artifacts:
+- path: feature-docs/destructive-guard-var-resolution/REQUIREMENTS.md
+  sha256: sha256:93b5dabb11126506a0f454846084c591c1fb073d92710783f7795fa5b43b0cf3
+  produced_by: create-spec-run-0003
+- path: feature-docs/destructive-guard-var-resolution/SPEC.md
+  sha256: sha256:f018f538d8bb9ed1251aad1b9ec666830e04647f87c9818232d087226b4ff25b
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

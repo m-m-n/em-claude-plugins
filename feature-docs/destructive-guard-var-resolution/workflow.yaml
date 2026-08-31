@@ -1,0 +1,207 @@
+schema_version: 1
+feature: destructive-guard-var-resolution
+created: '2026-09-01'
+base_branch: main
+goal: |
+  em-workflow/hooks/destructive-guard.py の誤爆を修正する。
+
+  同一コマンド文字列の中でリテラル代入された変数を `rm -r` の対象に使うと、
+  check_rm が DYNAMIC パターン（`$VAR`）を検知して rule `rm-unresolvable` の
+  ask を返す。実際に踏んだ例:
+
+    BACKUP_DIR=/tmp/claude-1000/-home-sakura-go-src-mcp-bridge/f20c1168.../scratchpad/review-r1-loop2-backup
+    rm -rf "$BACKUP_DIR"; mkdir -p "$BACKUP_DIR/src/lib" && chmod 700 "$BACKUP_DIR"
+
+  この `BACKUP_DIR` は同じコマンド文字列の 3 行上でリテラル代入されており、
+  静的に解決できる。展開後のパスは SAFE_DELETE（`^/tmp/`）に一致するため、
+  実パスを直書きしていれば無言 allow になっていた。つまりこれは誤爆。
+  無人実行（claude-batch）では ask が deny に降格されるため、誤爆 1 件が
+  その場で走行を止める。
+
+  原因は check_rm が DYNAMIC を見た瞬間に ask している点（destructive-guard.py:706-716）で、
+  同一コマンド内のリテラル代入を追跡する仕組みが無い。head() は代入トークンを
+  読み飛ばすだけで値を保持していない。
+
+  同一コマンド文字列内のリテラル代入だけを解決して判定に使えるようにする。
+  解決できない代入（コマンド置換・他変数参照・環境由来・条件付き代入）は
+  従来どおり解決不能として扱い、検知力を落とさない。
+
+parent_branch: em-workflow/destructive-guard-var-resolution/integration
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    hooks:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: cdb29f7d062166da9ed1b21ac70943ce76f2b028
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 変更対象は PreToolUse フックの判定ロジックと、そのテストケース JSON・プラグイン version のみ。UI も画面も持たず、唯一のユーザー可視出力は既存形式の permissionDecision JSON と理由文であり、視覚的な設計判断が発生しない（create-spec.design-step gate、ユーザー回答 skip）。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 0e5e866fa3d5cd8f641a56033f404948fd1568e2
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Collect plain assignments from the command string
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: Substitute resolved values into target tokens
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-6
+    - TS-7
+    - TS-8
+  FR3:
+    title: Apply resolved values to every target-path check
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-8
+    - TS-9
+    - TS-10
+  FR4:
+    title: Verdict for a resolved path outside SAFE_DELETE
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR5:
+    title: Assignment forms in scope
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR6:
+    title: Reassignment excludes the variable, with a rewrite hint
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR7:
+    title: Same-nesting-level scope only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR8:
+    title: Test cases per the project rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-11
+  FR9:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Static-only resolution
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Fail closed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Determinism
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Bounded cost
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Single-file, stdlib-only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: Existing behaviour untouched
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
