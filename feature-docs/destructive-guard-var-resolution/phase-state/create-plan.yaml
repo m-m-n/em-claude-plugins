@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-var-resolution
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 1c342b891260d6db9be435414ca503cb6b7c4059
+last_input_digest: "sha256:524c9d84751c35faed1771f274b6c7241c2f395e641c960e2870c74f03f6acd9"
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: "sha256:524c9d84751c35faed1771f274b6c7241c2f395e641c960e2870c74f03f6acd9"
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
