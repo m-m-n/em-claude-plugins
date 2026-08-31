@@ -1,0 +1,53 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 2830 tests, all pass, before any edit
+final_failures: []             # same command after the edit: 2830 tests, all pass
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Manual literal-value check (no dedicated unit test; verified outcome
+      per the infra Test Notes). Before the edit,
+      em-workflow/.claude-plugin/plugin.json's "version" read "0.1.56"
+      (expected "0.1.57" -> criterion failed). After the edit it reads
+      "0.1.57".
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Manual literal-value check. Before the edit, the em-workflow entry in
+      .claude-plugin/marketplace.json (located by name, not position) read
+      "0.1.56" (expected "0.1.57" -> criterion failed). After the edit it
+      reads "0.1.57", agrees with plugin.json, no other key in either file
+      changed (confirmed via `git diff --stat`: 2 files, 1 line each), and
+      the em-review sibling entry still carries no "version" key.
+  AC-3:
+    tests:
+      - test_plugin_version_parity.TestPluginManifestVersion
+      - test_plugin_version_parity.TestMarketplaceEntryVersion
+      - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey
+      - test_plugin_version_parity.TestVersionComparisonIsDotSeparatedNumeric
+      - test_plugin_version_parity.TestValidationDetectsRegressions
+      - test_plugin_version_parity.TestOwnModuleStdlibOnly
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing test module (added by an earlier feature's task0004,
+      pinned to a 0.1.50 baseline) already passed before this task's edit,
+      because its "past baseline" check is satisfied by any version greater
+      than 0.1.50 -- including the pre-edit 0.1.56. Per the task plan's Test
+      Notes, no new test module is added for this bump (the postcondition
+      already has an automated home and a second module pinned to this
+      feature's own baseline would duplicate it). Verified green after the
+      edit: `python3 -m unittest discover -s tests` exits 0 (2830 tests, no
+      failures).
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No dedicated unit test in this module's scope; verified outcome is
+      the script's exit code. `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      passed (exit 0) both before and after the edit -- it does not check
+      the version-bump postcondition, only structural plugin invariants, so
+      it was never expected to go red for this change. Task plan lists it
+      as a required acceptance check regardless; confirmed green after the
+      edit.
