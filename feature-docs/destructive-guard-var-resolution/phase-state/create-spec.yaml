@@ -1,14 +1,18 @@
 schema_version: 1
 feature: destructive-guard-var-resolution
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: 0e5e866fa3d5cd8f641a56033f404948fd1568e2
-last_input_digest: null
-active_request_id: null
+base_revision: 09287ec393ceefc38b13fdbe093da81fbf501c7e
+last_input_digest: "sha256:13b163781c777c59363474a0a6430590ecab416f5b030e8fd7aa000de5b1ed79"
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: "sha256:13b163781c777c59363474a0a6430590ecab416f5b030e8fd7aa000de5b1ed79"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
