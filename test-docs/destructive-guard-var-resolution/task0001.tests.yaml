@@ -1,0 +1,112 @@
+task_id: task0001
+baseline_failures: []          # both project.components suites were fully green (59/59, 2830/2830) before this task touched anything
+final_failures: []             # unchanged: 77/77 (run-destructive-guard.py), 2830/2830 (unittest discover -s tests), both re-run twice with identical output
+acceptance_tests:
+  AC-1:
+    tests: ["destructive-guard-cases.json: 変数解決: スクラッチ領域への rm -rf"]
+    red_confirmed: true
+    red_reason: >-
+      Pre-implementation run of the (already-added) new case against
+      em-workflow/hooks/destructive-guard.py at HEAD (git show HEAD:...)
+      returned ask/rm-unresolvable ("再帰削除の対象 `$X` が変数/グロブで、
+      影響範囲を静的に確定できない") instead of the expected allow — `$X`
+      was never substituted, so it read as an unresolvable dynamic target.
+  AC-2:
+    tests: ["destructive-guard-cases.json: 変数解決: スクラッチ外への rm -rf"]
+    red_confirmed: true
+    red_reason: >-
+      Same pre-implementation run: got ask/rm-unresolvable instead of the
+      expected deny/rm-recursive. Direct invocation post-implementation
+      confirms rule id rm-recursive and a reason built from the resolved
+      path: "`rm -r` の対象 `/home/sakura/y` はスクラッチ領域の外。`gio
+      trash -- /home/sakura/y` に書き換える…" — not the unexpanded `$X`.
+  AC-3:
+    tests:
+      - "destructive-guard-cases.json: 変数解決: ホーム省略形へのrm -rf"
+      - "destructive-guard-cases.json: 変数解決: ルートへのrm -rf"
+    red_confirmed: true
+    red_reason: >-
+      Pre-implementation both returned ask/rm-unresolvable (target text
+      still literally `$X`). Direct invocation post-implementation confirms
+      rule id rm-root for both: `X=~; rm -rf $X` -> "削除対象が `~` —
+      ホーム/ルート全体に届く。", `X=/; rm -rf $X` -> "削除対象が `/` —
+      ホーム/ルート全体に届く。".
+  AC-4:
+    tests:
+      - "destructive-guard-cases.json: 変数解決: 設定ファイルへの書き込み"
+      - "destructive-guard-cases.json: 変数解決: transcript への書き込み"
+    red_confirmed: true
+    red_reason: >-
+      Pre-implementation both returned allow ("破壊的なパターンに一致しな
+      い。") — the write target was the literal `$X`, which never matches
+      SELF_CONFIG/TRANSCRIPT. Direct invocation post-implementation
+      confirms rule id self-modification for the settings.json case and
+      transcript-write for the .jsonl case.
+  AC-5:
+    tests:
+      - "destructive-guard-cases.json: 変数解決: コマンド接頭辞代入は未解決のまま"
+      - "destructive-guard-cases.json: 変数解決: サブシェル境界で未解決"
+      - "destructive-guard-cases.json: 変数解決: shell -c 境界で未解決"
+      - "destructive-guard-cases.json: 変数解決: 二重代入は未解決のまま"
+    red_confirmed: false
+    red_reason: >-
+      The verdict (ask/rm-unresolvable) and reason text for the
+      command-prefix, subshell, and shell -c sub-cases are byte-identical
+      before and after this task: with no resolution stage at all, any
+      `$X` reference was unconditionally unresolved, so these three already
+      passed pre-implementation and a flip cannot be observed for them —
+      the criterion is enforced by the resolution stage correctly
+      EXCLUDING these shapes (non-qualifying statement shape / scope
+      mismatch), verified by code review and by these entries staying
+      green as regression guards, not by a red-to-green transition. The
+      fourth sub-case (name assigned twice) DOES have a confirmed
+      red-to-green delta in its reason text specifically: direct invocation
+      pre-implementation showed the plain rm-unresolvable reason with no
+      hint; post-implementation the same command's reason gains "同じ名前
+      に2回代入されているのが原因で未解決になっている。値ごとに別の変数名
+      へ分けて代入し直すと解決できる。" — confirmed via direct invocation,
+      the verdict itself (ask) was already true before.
+  AC-6:
+    tests:
+      - "destructive-guard-cases.json: 変数解決: 展開後もグロブが残る"
+      - "destructive-guard-cases.json: 変数解決: 展開後もコマンド置換が残る"
+    red_confirmed: false
+    red_reason: >-
+      Both sub-cases already returned ask/rm-unresolvable pre-implementation
+      (no resolution stage existed, so `$X` was unconditionally
+      unresolved) — the verdict cannot flip for a criterion whose whole
+      point is "stays unresolved". Post-implementation the SAME verdict is
+      now produced for a different, verified reason: resolve_target()
+      substitutes the mapped literal value (confirmed via code
+      inspection/tracing — e.g. `X=/home/sakura/*` maps to the literal
+      value containing `*`) and then re-applies the pre-existing DYNAMIC
+      regex to the substituted text, which still matches, so resolution
+      correctly reports not-resolved and the original token stands.
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      No single named test; this is the suite-level gate. With the 18 new
+      case-list entries added first (per the project's hook-test rule) but
+      before any implementation code existed, `python3
+      em-workflow/hooks/tests/run-destructive-guard.py` reported 68/77
+      passed (9 FAIL, exit 1) against the pre-implementation guard (git
+      show HEAD:em-workflow/hooks/destructive-guard.py) run over the
+      already-updated case list. After implementation: 77/77 passed (exit
+      0), run twice with byte-identical output (determinism, NFR3); `python3
+      -m unittest discover -s tests` reports 2830/2830 (exit 0); `git diff`
+      of destructive-guard-cases.json shows only line additions after the
+      pre-existing 58 entries (no edits, no deletions).
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Structural/code-inspection criterion (IMPLEMENTATION.md's own Open
+      Questions section carries NFR4 the same way — no automated scenario,
+      verified by inspection). Confirmed by review of the diff: the only
+      new import is stdlib `itertools`; collect_assignments()/
+      resolve_target()/make_resolver() perform pure text/dict operations
+      with no os.stat/open/subprocess/shell invocation; statements() is
+      materialized into a list exactly once in main() and iterated twice
+      (collect_assignments(), then the judgment loop) without re-invoking
+      the lexer.

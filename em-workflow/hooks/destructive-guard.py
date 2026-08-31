@@ -43,6 +43,7 @@ kill-guard.py's job, and it runs as a separate PreToolUse hook.
 Output: a PreToolUse permission decision on stdout; exit 0 either way.
 """
 
+import itertools
 import json
 import os
 import re
@@ -283,8 +284,8 @@ class _TrackingLexer(shlex.shlex):
         return super().read_token()
 
 
-def lex_segments(chunk):
-    """Split a chunk into statements, each returned as (tokens, lexed).
+def lex_segments(chunk, base_scope, next_scope):
+    """Split a chunk into statements, each returned as (tokens, lexed, scope).
 
     Separators only count when they sit OUTSIDE quotes, and telling those
     apart is the whole reason shlex does the splitting rather than a regex.
@@ -298,11 +299,23 @@ def lex_segments(chunk):
     a word/quoted span — the signal split_redirects() needs to tell a real
     `>` apart from a quoted string that merely looks like one.
 
+    SCOPE is the resolution layer's identity for the statement (see
+    collect_assignments()/resolve_target()): BASE_SCOPE for everything at
+    this chunk's own nesting level, a fresh id from NEXT_SCOPE() for a
+    subshell group (a statement whose first token is a bare `(`, reverting
+    to the enclosing scope once a statement's last token is the matching
+    `)`), and another fresh id for whatever follows a genuine pipe (`|`,
+    never the sequential `||`). This never changes which statements are
+    produced or their order (NFR6) — it only tags each one.
+
     Falls back to the regex split when the chunk will not parse — an
     unbalanced quote, usually. That path keeps the old false positives and
     returns LEXED False, since per-token provenance is unavailable there; a
     parse failure is rare, and waving the chunk through unexamined would be
-    a hole rather than a nuisance.
+    a hole rather than a nuisance. Per the resolution layer's fail-closed
+    rule, every statement on this path gets its OWN fresh scope — not even
+    shared with siblings in the same fallback batch — so nothing resolves
+    across, or within, it.
     """
     try:
         lex = _TrackingLexer(chunk, posix=True, punctuation_chars=PUNCTUATION)
@@ -316,10 +329,38 @@ def lex_segments(chunk):
             toks.append(Tok(raw, lex.last_was_operator))
     except ValueError:
         return [
-            (tokens(seg), False) for seg in SEGMENT_SPLIT.split(chunk) if seg.strip()
+            (tokens(seg), False, next_scope())
+            for seg in SEGMENT_SPLIT.split(chunk) if seg.strip()
         ]
 
     out, current = [], []
+    scope_stack = [base_scope]
+    current_scope = base_scope
+
+    def flush(sep_text):
+        nonlocal current, current_scope
+        scope = current_scope
+        if current and current[0] == "(":
+            # Bare `(` opening a subshell group: everything from here until
+            # the matching `)` runs in a scope of its own.
+            new_id = next_scope()
+            scope_stack.append(new_id)
+            scope = new_id
+            current_scope = new_id
+        out.append((current, True, scope))
+        if current and current[-1] == ")":
+            if len(scope_stack) > 1:
+                scope_stack.pop()
+            current_scope = scope_stack[-1]
+        # A lone `|` is a real pipe — each side runs in its own subshell in
+        # the shell this hook is modeling, so the statement after it starts
+        # a fresh scope. `||` is sequential control flow (like `&&`/`;`) and
+        # must NOT trigger this — same for the other separators, which
+        # continue in whatever scope split_redirects()'s (); tracking above
+        # already has active.
+        current_scope = next_scope() if sep_text == "|" else scope_stack[-1]
+        current = []
+
     for t in toks:
         # punctuation_chars makes shlex fuse adjacent punctuation into one
         # token, so a separator with no space before the next operator
@@ -351,11 +392,10 @@ def lex_segments(chunk):
             segs = [t]
         for seg in segs:
             if seg and all(c in SEGMENT_CHARS for c in seg):
-                out.append((current, True))
-                current = []
+                flush(seg)
             else:
                 current.append(seg)
-    out.append((current, True))
+    flush(None)
     return out
 
 
@@ -448,34 +488,48 @@ def strip_heredocs(chunk):
 
 
 def statements(command):
-    """Yield (text, tokens, lexed) per command segment, substitution bodies
-    included.
+    """Yield (text, tokens, lexed, scope) per command segment, substitution
+    bodies included.
 
     The text is the tokens rejoined, so quoting is already resolved by the
     time the regex-based checks see it. LEXED is lex_segments()'s per-segment
     parse-success flag — False only on the parse-failure fallback, where
     token provenance is unavailable.
+
+    SCOPE is the resolution layer's identity for the statement (item B of
+    the task plan): a fresh id from a process-local counter every time a
+    chunk is pushed onto PENDING — a shell `-c`/`eval`/here-string payload,
+    a command-substitution body, or a here-doc body re-queued as script —
+    so each such re-queued payload starts in a scope of its own, distinct
+    from whatever statement pushed it. Within one chunk, lex_segments()
+    further distinguishes a subshell group and each pipeline element the
+    same way. Sequential composition (`;`, `&&`, `||`, `&`, newline) shares
+    the enclosing scope. This changes nothing about which statements are
+    yielded or their order (NFR6); the scope travels alongside them.
     """
-    pending = [command]
+    next_scope = itertools.count(1).__next__
+    pending = [(command, next_scope())]
     budget = [MAX_SHELL_PAYLOAD_EXPANSIONS]
     while pending:
-        chunk = pending.pop()
+        chunk, base_scope = pending.pop()
         chunk, bodies = strip_heredocs(chunk)
         if bodies and SHELL_SINK.search(chunk):
             # `bash <<EOF` does execute its body, so put it back in the queue.
-            pending.extend(b for b in bodies if b.strip())
+            pending.extend((b, next_scope()) for b in bodies if b.strip())
         for m in SUBSTITUTION.finditer(chunk):
             body = m.group(1) or m.group(2) or ""
             if body.strip():
-                pending.append(body)
-        for toks, lexed in lex_segments(SUBSTITUTION.sub(" ", chunk)):
+                pending.append((body, next_scope()))
+        for toks, lexed, scope in lex_segments(
+            SUBSTITUTION.sub(" ", chunk), base_scope, next_scope
+        ):
             if toks:
-                yield " ".join(toks), toks, lexed
+                yield " ".join(toks), toks, lexed, scope
                 if budget[0] > 0:
                     payload = extract_shell_payload(toks, lexed)
                     if payload and payload.strip():
                         budget[0] -= 1
-                        pending.append(payload)
+                        pending.append((payload, next_scope()))
 
 
 def tokens(segment):
@@ -518,6 +572,126 @@ def head(toks):
     if i >= len(toks):
         return None, []
     return os.path.basename(toks[i]), toks[i + 1 :]
+
+
+# --- Resolution (layer 3): plain literal VAR=value assignments -------------
+#
+# Collects standalone `VAR=value` assignments from the statement stream
+# statements() already produces, and substitutes them into a target token
+# before check_rm()/check_self_modification() read it, so a delete or write
+# reached through such a variable is judged exactly as the literal path
+# would be. See feature-docs/destructive-guard-var-resolution/tasks/task0001.md
+# for the full design; this section implements items A-C and F of it.
+
+# A statement's entire content, once a single lexed token: NAME=VALUE. VALUE
+# may be empty or contain anything (re.S), including embedded newlines from
+# a quoted multi-line value shlex already resolved.
+ASSIGNMENT_STATEMENT = re.compile(r"([A-Za-z_]\w*)=(.*)", re.S)
+
+# A reference to another shell variable, either spelling. Used both to
+# exclude a value that chains to another variable (single-stage resolution
+# only) and to substitute a reference in a target token.
+VAR_REF = re.compile(r"\$\{([A-Za-z_]\w*)\}|\$([A-Za-z_]\w*)")
+
+# Appended to the rm-unresolvable reason when the reference that stayed
+# unresolved named a variable assigned more than once (item F).
+REASSIGN_HINT = (
+    "同じ名前に2回代入されているのが原因で未解決になっている。"
+    "値ごとに別の変数名へ分けて代入し直すと解決できる。"
+)
+
+
+def collect_assignments(all_statements):
+    """Collect plain literal `VAR=value` assignments from ALL_STATEMENTS —
+    the (text, tokens, lexed, scope) tuples statements() already produced
+    for one command string, in one linear pass (NFR4).
+
+    Returns (values, reassigned):
+      values     -- dict name -> (literal value, defining scope), one entry
+                    per name assigned exactly once anywhere in the command.
+      reassigned -- set of names assigned two or more times anywhere in the
+                    command string (FR6). Such a name is absent from VALUES
+                    even though every occurrence was seen, so every
+                    reference to it stays unresolved and resolve_target()
+                    can report that it was the reassigned name, for the
+                    rewrite hint in the unresolvable reason (item F).
+
+    Only a statement whose entire content is a single lexed token shaped
+    like NAME=VALUE is a candidate (FR5's qualifying shape): a
+    command-prefix assignment (`X=v rm ...`) or one introduced by a command
+    word (`export X=v`) always yields more than one token in its own
+    statement and is excluded by that alone; a value referencing another
+    variable is excluded too, since resolution is single-stage with no
+    chaining. The parse-failure fallback (LEXED False) never contributes —
+    per-token provenance is unavailable there, so a statement on that path
+    cannot be trusted to be a bare assignment at all.
+    """
+    counts = {}
+    values = {}
+    for _text, toks, lexed, scope in all_statements:
+        if not lexed or len(toks) != 1:
+            continue
+        m = ASSIGNMENT_STATEMENT.fullmatch(toks[0])
+        if not m:
+            continue
+        name, value = m.group(1), m.group(2)
+        if VAR_REF.search(value):
+            continue
+        counts[name] = counts.get(name, 0) + 1
+        values[name] = (value, scope)
+    reassigned = {name for name, n in counts.items() if n > 1}
+    for name in reassigned:
+        values.pop(name, None)
+    return values, reassigned
+
+
+def resolve_target(token, values, reassigned, scope):
+    """Attempt to resolve TOKEN using VALUES/REASSIGNED (collect_assignments()'
+    output) for SCOPE — the resolution layer's identity for the statement
+    TOKEN came from (item B: a reference resolves only when the assignment's
+    identity and the use site's identity are the same).
+
+    Returns (text, resolved, hit_reassigned):
+      text           -- the substituted text when fully resolved; otherwise
+                        TOKEN unchanged, so the caller's existing judgment
+                        runs on the original text exactly as before (NFR2).
+      resolved       -- whether TEXT has no dynamic construct left at all:
+                        no glob metacharacter, no command substitution in
+                        either spelling, and no remaining variable reference
+                        (item C's postcondition — the same DYNAMIC regex
+                        the pre-existing checks already use).
+      hit_reassigned -- names referenced in TOKEN that were dropped from
+                        VALUES for being assigned twice (item F).
+
+    Every reference of a mapped name, bare or braced, is replaced; a
+    reference to an unmapped name, or to a mapped name from a different
+    scope, is left exactly as written (item C).
+    """
+    hit = set()
+
+    def replace(m):
+        name = m.group(1) or m.group(2)
+        if name in reassigned:
+            hit.add(name)
+            return m.group(0)
+        entry = values.get(name)
+        if entry is None:
+            return m.group(0)
+        value, def_scope = entry
+        if def_scope != scope:
+            return m.group(0)
+        return value
+
+    substituted = VAR_REF.sub(replace, token)
+    if DYNAMIC.search(substituted):
+        return token, False, hit
+    return substituted, True, hit
+
+
+def make_resolver(values, reassigned, scope):
+    """Bind VALUES/REASSIGNED/SCOPE into a one-argument resolver a caller can
+    apply to any target token via resolve_target()."""
+    return lambda token: resolve_target(token, values, reassigned, scope)
 
 
 def git_subcommand(args):
@@ -690,32 +864,39 @@ def deletion_alternative(target):
     )
 
 
-def check_rm(args):
+def check_rm(args, resolve):
+    """RESOLVE is resolve_target() bound to this statement (make_resolver()) —
+    every candidate target is resolved before either judgment below reads it,
+    so a delete reached through a plain literal `VAR=value` is judged on the
+    resolved path exactly as the literal path would be (task0001 item D).
+    """
     flags = short_flags(args)
     recursive = "r" in flags or "R" in flags or has(args, "--recursive")
-    targets = [a for a in args if not a.startswith("-")]
+    raw_targets = [a for a in args if not a.startswith("-")]
 
-    if not targets:
+    if not raw_targets:
         return
-    for t in targets:
-        if re.fullmatch(r"/+|/\*|~|~/|\$HOME/?", t):
-            decide("deny", "rm-root", f"削除対象が `{t}` — ホーム/ルート全体に届く。")
+    resolved = [resolve(a) for a in raw_targets]
+    for text, _ok, _hit in resolved:
+        if re.fullmatch(r"/+|/\*|~|~/|\$HOME/?", text):
+            decide("deny", "rm-root", f"削除対象が `{text}` — ホーム/ルート全体に届く。")
     if not recursive:
         return
-    for t in targets:
-        if SAFE_DELETE.match(t):
+    for text, _ok, hit in resolved:
+        if SAFE_DELETE.match(text):
             continue
-        if DYNAMIC.search(t):
+        if DYNAMIC.search(text):
+            hint = f" {REASSIGN_HINT}" if hit else ""
             decide(
                 "ask",
                 "rm-unresolvable",
-                f"再帰削除の対象 `{t}` が変数/グロブで、影響範囲を静的に確定できない。"
-                f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+                f"再帰削除の対象 `{text}` が変数/グロブで、影響範囲を静的に確定できない。"
+                f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。{hint}",
             )
         decide(
             "deny",
             "rm-recursive",
-            f"`rm -r` の対象 `{t}` はスクラッチ領域の外。{deletion_alternative(t)}",
+            f"`rm -r` の対象 `{text}` はスクラッチ領域の外。{deletion_alternative(text)}",
         )
 
 
@@ -1036,7 +1217,7 @@ def normalize_candidate(target):
     return re.sub(r"^//(?=[^/])", "/", normalized)
 
 
-def check_self_modification(word, args, redirects, segment, lexed):
+def check_self_modification(word, args, redirects, segment, lexed, resolve):
     """Ask/deny only when an assembled write TARGET matches a protected path.
 
     Matching used to run over the whole segment text, so a command that
@@ -1055,9 +1236,13 @@ def check_self_modification(word, args, redirects, segment, lexed):
     judgment always had on this fallback path before the write-target set
     existed.
 
-    Each candidate is also checked in its normalized form (`~`/`$HOME`/
-    `${HOME}` expanded, `..` segments collapsed lexically) so equivalent
-    spellings of a protected path are not missed.
+    Each raw candidate is resolved (RESOLVE — resolve_target() bound to this
+    statement, task0001 item D) before either pattern is tested, so a write
+    reached through a plain literal `VAR=value` is judged exactly as the
+    literal path would be; a candidate that does not resolve is tested
+    exactly as before (NFR2). Each candidate is also checked in its
+    normalized form (`~`/`$HOME`/`${HOME}` expanded, `..` segments collapsed
+    lexically) so equivalent spellings of a protected path are not missed.
     """
     if lexed:
         candidates = write_targets(word, args, redirects)
@@ -1069,7 +1254,8 @@ def check_self_modification(word, args, redirects, segment, lexed):
             or word in ("rm", "mv", "cp", "ln", "chmod", "chown")
         )
         candidates = [segment] if writes else []
-    for target in candidates:
+    for raw in candidates:
+        target, _ok, _hit = resolve(raw)
         normalized = normalize_candidate(target)
         if SELF_CONFIG.search(target) or SELF_CONFIG.search(normalized):
             decide(
@@ -1207,21 +1393,29 @@ def main():
     # loop below and the check would never fire.
     check_pipe_to_shell(command)
 
-    for segment, toks, lexed in statements(command):
+    # Materialized once: collect_assignments() needs the whole stream to
+    # build its name-to-value map (item A), and the judgment loop below
+    # walks the same list again. Neither pass re-lexes the command (NFR4) —
+    # statements() itself still runs exactly once.
+    all_statements = list(statements(command))
+    values, reassigned = collect_assignments(all_statements)
+
+    for segment, toks, lexed, scope in all_statements:
         check_bypass(segment, toks)
 
         words, redirects = split_redirects(toks, lexed)
         word, args = head(words)
+        resolve = make_resolver(values, reassigned, scope)
         # `> ~/.claude/settings.json` のようにコマンド語を持たない純リダイレクト
         # 文も対象を切り詰める。word が無くても redirects だけで判定する。
-        check_self_modification(word or "", args, redirects, segment, lexed)
+        check_self_modification(word or "", args, redirects, segment, lexed, resolve)
         if word is None:
             continue
 
         if word == "git":
             check_git(args, segment)
         elif word == "rm":
-            check_rm(args)
+            check_rm(args, resolve)
         else:
             check_file_destruction(word, args, segment)
             check_external(word, args, segment)
