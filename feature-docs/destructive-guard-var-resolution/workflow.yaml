@@ -70,7 +70,7 @@ workflow:
   base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
   completed_at_commit: d4fd6d4e567341fcd9afe743cf0053ba568b0a3a
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -125,9 +125,18 @@ tasks:
     notes: null
     branch: em-workflow/destructive-guard-var-resolution/task0002
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: このフックは全 Bash ツール呼び出しの PreToolUse で走る。今回の変更は文ごとの代入収集と対象トークンの解決パスを追加するため、NFR4（bounded cost）に対する実測観点が要る
+    cross_validation: true
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
