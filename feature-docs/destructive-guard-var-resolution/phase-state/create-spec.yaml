@@ -1,39 +1,111 @@
 schema_version: 1
 feature: destructive-guard-var-resolution
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
-base_revision: 09287ec393ceefc38b13fdbe093da81fbf501c7e
-last_input_digest: "sha256:13b163781c777c59363474a0a6430590ecab416f5b030e8fd7aa000de5b1ed79"
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+base_revision: 4055e1ec816cf36e1b5b3f986ffb41212cef99eb
+last_input_digest: sha256:13b163781c777c59363474a0a6430590ecab416f5b030e8fd7aa000de5b1ed79
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-01T00:05:00+09:00'
+    questions:
+    - question_id: requirement.resolution-scope
+      status: answered
+    - question_id: requirement.resolved-unsafe-verdict
+      status: answered
+    - question_id: requirement.assignment-forms
+      status: answered
+    - question_id: requirement.reassignment
+      status: answered
+    - question_id: requirement.assignment-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.resolution-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-01T00:05:00+09:00'
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - all_target_checks
+    freeform: null
+    normalized_answer: 解決した値は check_rm だけでなく、対象パスを見る全判定（write_targets 経由の self-modification / transcript-write、rm-root
+      を含む）で使う。
+  requirement.resolved-unsafe-verdict:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-01T00:05:00+09:00'
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - deny_as_literal
+    freeform: null
+    normalized_answer: 解決した実パスが SAFE_DELETE の外なら、実パス直書きと同じ deny（rule rm-recursive）を出し、deletion_alternative
+      の代替コマンドを提示する。
+  requirement.assignment-forms:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-01T00:05:00+09:00'
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - plain_only
+    freeform: null
+    normalized_answer: プレーンな VAR=value 形（単一段・リテラル値のみ）だけを解決する。解決済み変数の連鎖参照と export 付き代入は解決対象に含めない。
+  requirement.reassignment:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-01T00:05:00+09:00'
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - unresolvable_on_conflict
+    freeform: 変数を分ける旨のコンテキスト注入
+    normalized_answer: 同一コマンド文字列内で同じ変数に 2 回以上代入がある場合、その変数は解決対象から外して従来どおり解決不能（ask）に倒す。その際の理由文に「変数を分ければ解決できる」旨を含め、エージェントが書き直せるようにする。
+  requirement.assignment-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-01T00:05:00+09:00'
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - same_stream_only
+    freeform: null
+    normalized_answer: 代入と使用が同じ入れ子レベルにあるときだけ解決する。サブシェル・bash -c ペイロード・コマンド置換本体・パイプ要素・ヒアドキュメント本文を跨ぐ参照は解決不能のまま。
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-01T00:05:00+09:00'
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design ステップはスキップする。
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: "sha256:13b163781c777c59363474a0a6430590ecab416f5b030e8fd7aa000de5b1ed79"
-    output_digest: null
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:13b163781c777c59363474a0a6430590ecab416f5b030e8fd7aa000de5b1ed79
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache:
   design_system_candidates:
-    generation_digest: "sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba"
+    generation_digest: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
     resolved_at_generation: 1
     paths:
-      - em-workflow/references/templates/design-tokens.yaml
+    - em-workflow/references/templates/design-tokens.yaml
     digests:
-      em-workflow/references/templates/design-tokens.yaml: "sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba"
+      em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
     truncated: false
   e2e:
-    generation_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    generation_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
     resolved_at_generation: 1
     paths: []
     digests: {}
     truncated: false
   reference_scan_targets:
-    generation_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    generation_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
     resolved_at_generation: 1
     paths: []
     digests: {}
