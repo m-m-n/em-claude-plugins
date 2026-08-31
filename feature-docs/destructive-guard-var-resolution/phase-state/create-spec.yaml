@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-var-resolution
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
-base_revision: 4055e1ec816cf36e1b5b3f986ffb41212cef99eb
-last_input_digest: sha256:13b163781c777c59363474a0a6430590ecab416f5b030e8fd7aa000de5b1ed79
-active_request_id: null
+base_revision: 668456e86b54132747cc7755b3c8846eea250be7
+last_input_digest: sha256:00c3bf1ae140781e616c9357cacf2f41d7ed987b5b7d13571837f522f4f7ce41
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -82,8 +82,12 @@ answers:
     normalized_answer: design ステップはスキップする。
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:13b163781c777c59363474a0a6430590ecab416f5b030e8fd7aa000de5b1ed79
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:00c3bf1ae140781e616c9357cacf2f41d7ed987b5b7d13571837f522f4f7ce41
   output_digest: null
 artifacts: []
 patches: []
