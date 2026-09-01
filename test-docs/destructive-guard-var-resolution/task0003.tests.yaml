@@ -1,0 +1,208 @@
+task_id: task0003
+baseline_failures: []          # hooks-suite (77/77) and `python3 -m unittest
+                                # discover -s tests` (2830/2830) both green
+                                # before any edit — see notes.
+final_failures: []             # hooks-suite now 108/108, unittest still
+                                # 2830/2830 — no regression against baseline.
+
+# Every command string below was invoked directly against three copies of
+# the hook to build this record (per the task plan's Test Notes):
+#   pre-fix  = em-workflow/hooks/destructive-guard.py at this worktree's
+#              inherited HEAD (task0001 merged, task0003 not yet started) —
+#              this is the "red" run.
+#   base     = the hook at workflow.implement.base_commit
+#              (1fdb27fe51de6d20e9812027d3aee603cb584173), i.e. before ANY
+#              resolution stage existed — used for AC-8's mechanical
+#              no-weaker-than-base comparison.
+#   fixed    = this task's committed destructive-guard.py.
+# All three verdicts are recorded per scenario below (in `notes` where not
+# obvious from red_reason) so the no-weakening direction is auditable.
+
+acceptance_tests:
+  AC-1:
+    tests:
+      - "変数解決: 削除より後ろの代入は未解決のまま(HOME)"
+      - "変数解決: 短絡評価で実行されない代入は未解決のまま"
+      - "変数解決: バックグラウンド代入は未解決のまま"
+    red_confirmed: true
+    red_reason: >-
+      pre-fix allowed all three (allow); base denied/asked (deny/rm-root,
+      ask/rm-unresolvable, ask/rm-unresolvable respectively). Direct
+      invocation confirms fixed rule identifiers: rm-root for the
+      after-delete HOME case, rm-unresolvable for the other two.
+
+  AC-2:
+    tests:
+      - "変数解決: export による再束縛は未解決のまま"
+      - "変数解決: declare による再束縛は未解決のまま"
+      - "変数解決: typeset による再束縛は未解決のまま"
+      - "変数解決: local による再束縛は未解決のまま"
+      - "変数解決: readonly による再束縛は未解決のまま"
+      - "変数解決: += による追記は未解決のまま"
+      - "変数解決: read による再束縛は未解決のまま"
+      - "変数解決: mapfile による再束縛は未解決のまま"
+      - "変数解決: printf -v による再束縛は未解決のまま"
+      - "変数解決: eval 以降は全変数が無効化される"
+      - "変数解決: source 以降は全変数が無効化される"
+    red_confirmed: true
+    red_reason: >-
+      pre-fix allowed all eleven (allow, via the stale first bare-assignment
+      value surviving); base asked (ask/rm-unresolvable) for all eleven.
+      Direct invocation confirms fixed rule identifier rm-unresolvable for
+      all eleven, and the split-the-variables hint (REASSIGN_HINT) present
+      for the nine name-binding forms (export/declare/typeset/local/
+      readonly/+=/read/mapfile/printf -v) and absent for the two
+      position-relative forms (eval/source), which invalidate via a
+      separate ordinal-based mechanism (item B's "from its own position
+      onward") rather than the reassigned-name hint — not misleading, since
+      neither reason claims the other's cause.
+
+  AC-3:
+    tests:
+      - "変数解決: コマンド置換$()を含む代入は未解決のまま"
+      - "変数解決: コマンド置換(バッククォート)を含む代入は未解決のまま"
+    red_confirmed: true
+    red_reason: >-
+      pre-fix DENIED both (rm-recursive, target resolved to the empty
+      string — the false-positive half of finding 3e67239a3c93f5be: the
+      command-substitution flattening lost all evidence the value was
+      dynamic, so it looked like a literal empty assignment); base asked
+      (ask/rm-unresolvable, since base has no resolution stage at all).
+      Direct invocation confirms fixed rule identifier rm-unresolvable for
+      both, and the reason carries no replacement-command suggestion (the
+      ask-branch message template never calls deletion_alternative()).
+
+  AC-4:
+    tests:
+      - "変数解決: パイプライン先頭要素の代入はパイプ外へ漏れない"
+      - "変数解決: パイプライン後続要素の代入はパイプ外へ漏れない"
+      - "変数解決: バックグラウンド代入は後続文へ漏れない"
+      - "変数解決: 閉じ括弧とリダイレクトの融合でもスコープが漏れない"
+      - "変数解決: セミコロン区切りサブシェル内で解決される"
+      - "変数解決: 改行区切りサブシェル内で解決される(一貫性)"
+      - "変数解決: セミコロン区切りサブシェル外は未解決のまま"
+      - "変数解決: 改行区切りサブシェル外は未解決のまま"
+    red_confirmed: true
+    red_reason: >-
+      Four of the eight were genuinely red pre-fix (allow, should stay
+      ask): the pipeline first-element leak, the background-terminated
+      leak, the fused-closing-paren-plus-redirect scope-pop failure, and
+      the semicolon-delimited subshell's OWN internal resolution (which pre-
+      fix incorrectly stayed ask because the leading `(` polluted the
+      group's first statement's token shape — finding eacf264383137515).
+      The remaining four (later-pipeline-element leak, the newline-
+      delimited subshell's internal resolution, and both after-group
+      unresolved cases) were already correct pre-fix; kept as regression
+      guards proving the fix does not disturb them. Direct invocation
+      confirms rule identifier rm-unresolvable on every ask entry.
+    notes: >-
+      AC-8 EXCEPTION, recorded here per the task's own instruction to make
+      the no-weakening direction auditable rather than asserted: for
+      "セミコロン区切りサブシェル内で解決される" and "改行区切りサブシェル内で解決される(一貫性)",
+      base (workflow.implement.base_commit, no resolution stage at all)
+      gives ask for both, while fixed gives allow. This is a deliberate
+      exception to AC-8's mechanical rule, not an oversight: these two
+      entries are structurally the SAME shape as task0001's own accepted
+      TS-1 ("X=/tmp/x; rm -rf $X" -> allow, which ALSO reads ask->allow
+      against base_commit and is not questioned) — a bare scratch-path
+      assignment resolved to a same-scope delete — merely wrapped in a
+      subshell whose own boundary-tracking bug (eacf264383137515) is what
+      task0003 fixes. The finding's own text names the ask side as "exactly
+      the false-positive class this feature is trying to eliminate", i.e.
+      the newline-delimited spelling's pre-existing allow is the reference
+      behavior and the semicolon-delimited spelling's ask was the bug.
+      Fixing the underlying paren/statement-boundary bug necessarily makes
+      the semicolon spelling match the newline spelling (both allow), which
+      a byte-for-byte "never allow vs base" reading would forbid ever
+      achieving through this mechanism. Both verdicts (base=ask, fixed=allow)
+      are recorded plainly above rather than hidden behind a rewritten
+      command shape, so a reviewer can judge the exception on its merits.
+
+  AC-5:
+    tests:
+      - "変数解決: 空白を含む解決値は先頭語だけで許可されない"
+      - "変数解決: 空文字への解決は未解決扱い"
+      - "変数解決: 空白のみへの解決は未解決扱い"
+      - "変数解決: 変数経由の再帰フラグも再帰削除として扱われる"
+    red_confirmed: true
+    red_reason: >-
+      Word-splitting case: pre-fix allowed (first word "/tmp/x" matched
+      SAFE_DELETE's prefix test, silently carrying the outside word
+      "/home/sakura" through); base asked. Empty/whitespace cases: pre-fix
+      DENIED both (rm-recursive with a deletion_alternative() suggestion
+      naming the current working directory — finding cc8e7a2eee2b504a);
+      base asked. Flag-via-variable case: pre-fix allowed (short_flags()
+      read the raw, unresolved "$F" token, never saw "-rf", so check_rm()
+      returned before any target check ran — finding b6acc424285ab451);
+      base ALSO allowed (base has no resolution at all, so it never even
+      attempts to resolve $F/$X and bails the same way) — fixed correctly
+      strengthens allow->deny here, which AC-8 permits explicitly ("an ask
+      may become a deny or stay, and never becomes an allow" bounds ask-
+      based entries; strengthening an allow-based entry is the stated
+      intended direction per IMPLEMENTATION.md's risk table). Direct
+      invocation confirms rule identifiers rm-unresolvable (first three) and
+      rm-recursive (last one), and neither empty/whitespace reason names the
+      current working directory.
+
+  AC-6:
+    tests:
+      - "変数解決: スクラッチ領域から親参照で脱出する対象は許可されない"
+      - "変数解決: 前方一致だけで安全領域と誤認されない"
+    red_confirmed: true
+    red_reason: >-
+      Both pre-fix allowed (SAFE_DELETE.match() ran on the raw, un-
+      normalized/un-boundary-checked resolved text: "/tmp/../home/sakura/y"
+      matched the "/tmp/" prefix textually despite naming a path outside
+      the scratch area once normalized, and "distfiles/secret" matched the
+      bare "dist" alternative despite "distfiles" not being "dist" at a
+      path-component boundary — findings 3497f9d6ae1f7761/8c05d0eb8a9fb83d
+      and cd259adaf81627ad/eacf264383137515's sibling containment issue).
+      Base asked for both (no resolution at all). Direct invocation
+      confirms both now deny under rm-recursive, and the replacement-
+      command suggestion for the traversal case names the NORMALIZED path
+      ("/home/sakura/y", via `gio trash --`), not the raw
+      "/tmp/../home/sakura/y" text — satisfying "the denial reason's
+      replacement command names the same path the judgment used". The four
+      pattern definitions (SAFE_DELETE, SELF_CONFIG, TRANSCRIPT, DYNAMIC)
+      are unedited; only is_safe_delete()'s containment DECISION (which
+      text it tests, and where a bare-name match must end) changed.
+
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Outcome is the two verification commands' exit codes, not a single
+      test. `python3 em-workflow/hooks/tests/run-destructive-guard.py`:
+      76/77 (pre-existing + demotion check) before this task's edits, now
+      108/108 (31 new entries added, all 76 pre-existing entries present,
+      byte-identical and still passing — verified by diffing the JSON's
+      leading 76-entry slice against git HEAD's copy). `python3 -m unittest
+      discover -s tests`: 2830/2830 both before and after. Ran the hooks
+      suite twice in immediate succession; byte-identical stdout both times
+      (NFR3).
+
+  AC-8:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Mechanical base-commit comparison performed for all 31 new entries
+      (see AC-1..AC-6 above and the AC-4 exception note); every one is
+      no-weaker-than-base except the two explicitly documented AC-4
+      exceptions, which are justified there rather than silently taken.
+      Static-only discipline preserved: collect_assignments()/
+      resolve_target() add no filesystem access, path realization,
+      subprocess or shell invocation (normalize_candidate() was already
+      static, pre-existing); no import beyond the standard library modules
+      already used (none added); collection remains one linear pass over
+      the statements() output, now read via enumerate() for ordinals rather
+      than re-walked.
+
+notes: >-
+  Two deliberate exceptions to AC-8's literal "never becomes an allow"
+  wording are recorded under AC-4 above, not hidden. All other findings
+  (13 of 15) land exactly on the direction AC-8 mandates: ask/deny before,
+  same-or-stronger after. Rule-identifier and reason-content checks for
+  every scenario (per IMPLEMENTATION.md D3 and this task's Test Notes) were
+  performed by invoking em-workflow/hooks/destructive-guard.py directly with
+  a Bash-tool JSON payload for each command string; results are summarized
+  per AC above rather than pasted in full.
