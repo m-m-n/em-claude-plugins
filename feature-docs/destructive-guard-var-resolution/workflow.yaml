@@ -260,7 +260,7 @@ tasks:
       - r3-nameref
 review:
   status: in_progress
-  rounds_completed: 3
+  rounds_completed: 4
   plan:
     floor:
     - comprehensive
@@ -274,8 +274,7 @@ review:
     security: completed
     architecture: completed
     spec: completed
-    performance: completed
-  residual_critical_high: 8
+  residual_critical_high: 3
   needs_rework: false
 requirements:
   FR1:

@@ -1,0 +1,181 @@
+round: 4
+executed_at: "2026-09-02T06:30:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
+  head_commit: 771fbe4efbcc744e3b00b12c7e400b2f8ad38c6e
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-var-resolution/task0005.tests.yaml
+  note: |
+    em-workflow/hooks/destructive-guard.py は base commit とバイト一致に戻ったため
+    changed_files に含まれない（git diff --quiet で確認済み）。残る差分は
+    プラグイン version bump と期待値ケースのデータのみで、実行時挙動の変更はゼロ。
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: litellm, model: muse-spark, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+
+orchestrator_verification:
+  note: |
+    フックが base とバイト一致であることと、指摘された挙動がすべて base 由来であることを
+    オーケストレーター自身が確認した。この diff は実行時の判定を 1 件も動かしていない。
+  hook_identical_to_base: true
+  suites: {run-destructive-guard: "132/132", unittest: "2830/2830"}
+  preexisting_entries: {count: 58, byte_identical_as_parsed_prefix: true}
+  behaviours_confirmed_as_base_originated:
+    - {case: "rm -rf /tmp",  verdict: deny/rm-recursive}
+    - {case: "rm -rf /tmp/", verdict: allow}
+    - {case: "rm -rf tmp",   verdict: deny/rm-recursive}
+    - {case: "rm -rf tmp/",  verdict: allow}
+    - {case: "rm -rf targets", verdict: allow}
+    - {case: "rm -rf build/../src", verdict: allow}
+    - {case: "rm -rf $(echo /home/sakura)", verdict: allow}
+    - {case: "rm -rf $(mktemp -d)", verdict: allow}
+    - {case: "rm -rf $(cat list)", verdict: allow}
+
+findings:
+  - stable_id: r4-substitution-allow-contract
+    severity: high
+    category: security
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 472
+    title: "削除対象が裸のコマンド置換だけの rm -rf を「期待どおりの allow」として固定している"
+    description: |
+      追加された 2 件が、ガードを完全にすり抜ける形を allow として記録している
+      （`rm -rf $(mktemp -d)` と `rm -rf $(cat list)`）。
+      これは中身が安全だからではなく、削除対象位置の置換が別セグメントへ切り出され、
+      外側の rm が位置引数ゼロで check_rm に入り早期 return するため。
+      同じ意味のクォート形 `rm -rf "$(cat list)"` は deny になるので、方針ではなく
+      レクサーの取りこぼし。
+      フック自体は base とバイト一致なので新規の穴ではない。問題は、この穴を塞ぐ修正が
+      入るとこの 2 件が FAIL し、次の担当者が「誤爆の再発」と読んで巻き戻す確率が高いこと。
+    suggestion: |
+      期待値を allow のまま残すなら、ラベルを「既知の抜け穴（未修正）」と明示し、
+      対になる `rm -rf "$(cat list)"` の deny ケースを隣に置いて非対称が意図でないことを
+      スイート自身に語らせる。あるいは check_rm 側を先に直して期待値を ask に変える。
+    sources: [claude:security, "litellm:muse-spark:security", claude:comprehensive]
+    confidence: 95
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r4-trailing-slash-contract
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 482
+    title: "スクラッチルート全消しの末尾スラッシュ差を allow として固定している"
+    description: |
+      追加された 4 件（`rm -rf /tmp/` / `rm -rf tmp/` / `rm -rf .cache/` / `rm -rf /var/tmp/`）は
+      allow を期待値とするが、同じパスを末尾スラッシュ無しで書くとフックは deny を返す。
+      オーケストレーター実測で確認: `rm -rf /tmp` → deny、`rm -rf /tmp/` → allow。
+      フック自身が「スクラッチルート丸ごとの再帰削除は破壊的」と判定しているのに、
+      同一操作のもう一つの綴りを allow として契約化している。
+      末尾スラッシュはエージェントが書く rm でごく普通に現れる綴り差。
+    suggestion: |
+      4 件の期待値を意図に合わせるか、綴り差で判定が割れないようフックを揃えて
+      両方の綴りをケースに入れる。「スラッシュ有りだけ allow」を 4 件そのまま残さない。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r4-prefix-match-contract
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 502
+    title: "SAFE_DELETE の区切り無し前方一致を 8 件の allow で固定する一方、同じ経路の親参照脱出は無検出"
+    description: |
+      追加された 8 件（build-debug / dist-ssr / target-old / coverage.old / build-artifacts /
+      dist-newstyle / coverage-old / node_modules_bak）は、SAFE_DELETE がパス区切りで
+      アンカーされていないことを意図した挙動として固定する。
+      同じアンカー欠如で `rm -rf targets` や `rm -rf build/../src` も allow になる
+      （オーケストレーター実測で確認）。
+      追加された親参照ケース 3 件はいずれも先頭が /home/sakura か ~ で SAFE_DELETE に
+      触れないため、実際に素通りする「スクラッチ前置 + 親参照」は 1 件もカバーされていない。
+      8 件の allow 自体は誤爆対策として妥当だが、境界アンカー修正をそのまま塞ぐ。
+    suggestion: |
+      8 件を残したまま、脱出側の deny ケースを足して穴を可視化する。
+      SAFE_DELETE を区切り込みでアンカーし直すなら 8 件は allow のまま
+      targets / buildings は外れる形にできる。
+    sources: [claude:comprehensive, claude:security]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r4-labels-name-withdrawn-layer
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 474
+    title: "追加 73 件のラベルが撤回済みの変数解決機構を名指ししており、3 件は存在しない機構の検証と称している"
+    description: |
+      追加 73 件のラベルはすべて「変数解決:」で始まるが、この機能は撤回され
+      destructive-guard.py は base とバイト一致。実際には `$X` が DYNAMIC 正規表現に
+      当たって rm-unresolvable の ask になっているだけで、代入追跡やスコープ解析とは無関係。
+      特に 3 件は存在しない機構を検証していると称している — 解決値の長さ上限
+      （そのような定数は無い）、理由文のセンチネル検査（ランナーは verdict しか比較しない）、
+      解決対象外チェックの消費（解決が無いので消費するテキストが存在しない）。
+      ランナーが人間に出す唯一のテキストがこのラベルなので、次に読む者が
+      撤回済みの機構が現役だと誤読する。
+    suggestion: |
+      ラベルから「変数解決:」接頭辞を外し、実際に効いている判定経路の名前に付け替える。
+      3 件は機構名を含む記述を落とし、実際に固定している性質だけを書く。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r4-reformatted-cases
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 2
+    title: "既存 58 エントリが再整形され、差分が純粋な追加に見えなくなっている"
+    description: |
+      ケース JSON 全体が 1 エントリ 1 行から 1 要素 1 行の pretty-print に書き換えられ、
+      base にあった 58 エントリすべてが行として置換されている。
+      パースした 3 要素タプルとしては 58 件が順序込みで完全保持され（オーケストレーター確認済み）、
+      両スイートとも green なので FR8 の実質は満たされている。
+      満たされていないのは表記側で、task0005 の AC-2 と VERIFICATION.md の手動チェックが
+      「byte-identical」を求めている。実害は verify フェーズで、差分を読んで
+      「どの追加エントリが残りどれが落ちたか」を目視で切り分けられない点。
+    suggestion: |
+      base の体裁（1 エントリ 1 行）に戻して追加分を末尾に追記すれば差分が純粋な追加になる。
+      整形を維持するなら AC-2 と手動チェックを「パース後のエントリ列が base の 58 件を
+      順序込みで包含すること」へ書き換え、整形を deviation として記録する。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r4-safe-delete-prefix-security
+    severity: medium
+    category: security
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 502
+    title: "SAFE_DELETE の区切り無し前方一致を allow で固定し、境界アンカー修正を塞いでいる"
+    description: |
+      r4-prefix-match-contract と同じ根。security 観点からは、8 件が
+      `targeted-secrets` / `distributed-data` / `buildings` のような無関係なパスも
+      同じ規則で allow にしている点、および SAFE_DELETE 一致が check_rm 冒頭で continue する
+      ため DYNAMIC 判定にも deny にも到達しない点を挙げている。
+    suggestion: |
+      SAFE_DELETE を区切り込みでアンカーし直し、外れた側を検知力ケースとして足す。
+      親参照の脱出は SAFE_DELETE 判定の前に潰す。
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: pending_user_decision
+residual_critical_high: 3
+rework_required: null
