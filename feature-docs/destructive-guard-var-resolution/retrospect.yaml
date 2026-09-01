@@ -1,0 +1,217 @@
+feature: destructive-guard-var-resolution
+collected_at: '2026-09-02T11:20:00+09:00'
+session_ids:
+- c923f5f5-d00d-4cc4-8b1b-de5ac4ca3fd9.jsonl
+signals:
+  review_critical_high:
+  - round: 1
+    stable_id: f11f6a1aac9cf9b4
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 解決値の単語分割とクォート文脈を無視し、SAFE_DELETE の前方一致で残りの削除対象が素通りする
+    resolution: unresolved
+  - round: 1
+    stable_id: 2c696d520373ceb2
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 解決層が実行順を見ないため、使用より後ろの代入でガードがすり抜ける
+    resolution: unresolved
+  - round: 1
+    stable_id: 480361011164af5b
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: FR6 の再代入除外が素の代入文だけを数えており、別形式で上書きされた変数が古い値で解決される
+    resolution: unresolved
+  - round: 1
+    stable_id: 96be1fbe15d44317
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 代入の実行順序・分岐・バックグラウンドをモデル化せず、実行時に効いていない値で対象を解決する
+    resolution: unresolved
+  - round: 1
+    stable_id: deafd14791607b66
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: Global assignment map can substitute a value the shell never uses
+    resolution: unresolved
+  - round: 1
+    stable_id: 0b16e740ce83b0f5
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: Pipeline and background assignments incorrectly escape into the parent scope
+    resolution: unresolved
+  - round: 1
+    stable_id: 8e1e8deaf6e92ca2
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: FR7 のパイプ要素境界が片側しか効かず、パイプライン内の代入が後続の同一階層文へ漏れる
+    resolution: unresolved
+  - round: 1
+    stable_id: d70fdfdbf2b99934
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: Removing command substitutions makes dynamic assignments appear literal
+    resolution: unresolved
+  - round: 1
+    stable_id: 3e67239a3c93f5be
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: コマンド置換の代入が空文字リテラルとして収集されて mktemp 定番形が deny になり、export の再束縛では古い値が生き残る
+    resolution: unresolved
+  - round: 1
+    stable_id: 3497f9d6ae1f7761
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: check_rm が解決後パスを正規化せずに SAFE_DELETE 判定するため、親参照でスクラッチ領域を脱出できる
+    resolution: unresolved
+  - round: 1
+    stable_id: 8c05d0eb8a9fb83d
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: Safe-delete prefix check permits path traversal after resolution
+    resolution: unresolved
+  - round: 1
+    stable_id: cd259adaf81627ad
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: サブシェル閉じ判定がトークン完全一致のため、句読点が融合すると scope スタックが復帰しない
+    resolution: unresolved
+  - round: 2
+    stable_id: r2-rebind-compound
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 再束縛の検出が文の先頭トークンのみで、if/then・do・波括弧・for・代入接頭辞越しの再代入を見落とす
+    resolution: unresolved
+  - round: 2
+    stable_id: r2-paren-provenance
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: 括弧のスコープ判定が Tok.is_operator の provenance 契約を無視し、クォート済みの括弧で文が分断される
+    resolution: unresolved
+  - round: 2
+    stable_id: r2-normalize-before-gate
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 正規化後テキストでスクラッチ領域判定を未解決ゲートより先に行うため、未展開の参照が親参照で相殺される
+    resolution: unresolved
+  - round: 2
+    stable_id: r2-chained-rebind
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: 連鎖値による再代入が再代入カウントから漏れ、古いリテラルが解決され続ける
+    resolution: unresolved
+  - round: 2
+    stable_id: r2-trailing-slash-scratch
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 正規化で末尾スラッシュが落ち、スクラッチ領域そのものの削除が deny になる
+    resolution: unresolved
+  - round: 2
+    stable_id: r2-literal-verdict-drift
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: 境界判定と正規化前置により、変数を含まない既存コマンドの判定が変わる（NFR6 違反）
+    resolution: unresolved
+  - round: 2
+    stable_id: r2-unset-for-read
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: unset / for / while read による再束縛が無効化集合から漏れる
+    resolution: unresolved
+  - round: 3
+    stable_id: r3-quoted-name-assign
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: shlex がクォートを剥がした NAME=VALUE を実代入として記録し、bash が代入しない語で対象を解決する
+    resolution: unresolved
+  - round: 3
+    stable_id: r3-compound-constructs
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: if / while / case / 波括弧 / 関数本体の中の代入が無条件の代入として記録される
+    resolution: unresolved
+  - round: 3
+    stable_id: r3-scratch-glob-gate
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: DYNAMIC ゲートの前倒しで、スクラッチ領域配下のグロブ削除が allow から ask へ退行
+    resolution: unresolved
+  - round: 3
+    stable_id: r3-positional-after-resolve
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 解決後に残った位置パラメータが DYNAMIC に一致せず、スクラッチ前方一致で allow になる
+    resolution: unresolved
+  - round: 3
+    stable_id: r3-process-substitution
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: プロセス置換の開き括弧が文を分断し、以降の引数が全チェックから消える
+    resolution: unresolved
+  - round: 3
+    stable_id: r3-invalidated-names-quadratic
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    title: invalidated_names() が束縛ワード数×トークン数で二乗になり、44KB のコマンドでフックタイムアウトに達する
+    resolution: unresolved
+  - round: 3
+    stable_id: r3-resolved-stricter-than-literal
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: 解決済みトークンが同一リテラルより厳しく判定され、FR2 に矛盾する
+    resolution: unresolved
+  - round: 3
+    stable_id: r3-array-assignment
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 配列要素代入が束縛として数えられず、先行するリテラルが無効化されない
+    resolution: unresolved
+  - round: 4
+    stable_id: r4-substitution-allow-contract
+    category: security
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    title: 削除対象が裸のコマンド置換だけの rm -rf を「期待どおりの allow」として固定している
+    resolution: unresolved
+  - round: 4
+    stable_id: r4-trailing-slash-contract
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    title: スクラッチルート全消しの末尾スラッシュ差を allow として固定している
+    resolution: unresolved
+  - round: 4
+    stable_id: r4-prefix-match-contract
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    title: SAFE_DELETE の区切り無し前方一致を 8 件の allow で固定する一方、同じ経路の親参照脱出は無検出
+    resolution: unresolved
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0005
+    files:
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    note: 計画では削除のみと記述していたが、AC-3 が明示的に要求する `rm -rf dist/*` の allow ケースを 1 件新規追加した（deviation として承認）
+  verification_failures: []
+  discretionary_perspectives:
+  - round: 1
+    perspective: performance
+    reason: このフックは全 Bash ツール呼び出しの PreToolUse で走る。今回の変更は文ごとの代入収集と対象トークンの解決パスを追加するため、NFR4（bounded cost）に対する実測観点が要る
+  - round: 2
+    perspective: performance
+    reason: このフックは全 Bash ツール呼び出しの PreToolUse で走る。rework で解決段が全面的に書き直されたため、NFR4（bounded cost）を再度確認する
+  - round: 3
+    perspective: performance
+    reason: 解決後テキストの長さ上限（RESOLVED_TEXT_MAX）が round 2 の二乗コストへの対処として入ったため、その有効性を再確認する
+  declined_findings: []
+lessons_candidates:
+- 3 ラウンド連続で、rework が前ラウンドの findings を全て閉じながら同程度の重さの新しい退行を生んだ。ラウンドごとの findings 数（15 / 14 / 15）だけでは収束/非収束が読めず、「前ラウンドの指摘は閉じたか」と「新しい退行が出たか」を分けて追う必要がある。
+- 差分実行（base コミットのフックと現行を同一入力で突き合わせる）が、この機能で最も検知力の高い手法だった。round 1 では使われず、round 2 以降でレビュアーに明示的に指示してから退行が大量に見つかった。判定ロジックを変更する機能では、レビュー観点に関係なく最初から必須にする価値がある。
+- テストスイートが緑でも退行は防げなかった。round 2 の 10 件、round 3 の 10 件はいずれも既存ケースが覆っていない形で、スイートは常に緑だった。「スイートが緑」は「退行が無い」の証拠にならないことを、実測付きで
+  2 回確認した。
+- オーケストレーター自身が base との差分実行を行い、その結果を round record の orchestrator_verification ブロックに残したことが、撤回の判断根拠として決定的だった。レビュアーの報告だけでは
+  11 件中 10 件が退行という全体像が見えなかった。
+- 撤回を選んだあとも、レビューが見つけたシェイプのテストケースは資産として残った（58 → 138 件）。うち 16 件は base 由来の既知の穴を記録するもので、マーカー付きで固定した。機能そのものが失敗しても、レビューの副産物が残る形にできる。
+- implementer が 1 応答で大量のテストケースを書き出そうとして 64000 トークンの出力上限で落ちた。worktree の作業は残っていたので同一エージェントを再開して復旧できたが、大量のデータファイルを書くタスクでは最初から小分けを指示するとよい。
+- codex レビュアーが 600 秒のラッパータイムアウトで 2 回とも JSON 未出力に終わり、round 2 の security クロスモデルがシグナル無しになった。大きなファイルの全体レビューでは
+  reasoning effort と timeout の組み合わせが破綻する。
+- vertex-review のモデルがスキーマのプレースホルダ文字列をそのまま返した回があり（round 2 spec）、findings 0 が「問題なし」ではなく「シグナル無し」を意味していた。round
+  record に note として区別を残した。
