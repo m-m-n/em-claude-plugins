@@ -6,8 +6,9 @@
 **SPEC.md**: `feature-docs/destructive-guard-var-resolution/SPEC.md` /
 **IMPLEMENTATION.md**: `feature-docs/destructive-guard-var-resolution/IMPLEMENTATION.md`
 
-This document covers the INTEGRATED verification run after both tasks are
-merged. Per-task acceptance criteria live in the task plans.
+This document covers the INTEGRATED verification run after every task is
+merged — the two first-pass tasks and the rework task added after review round
+1. Per-task acceptance criteria live in the task plans.
 
 ## Build Verification
 
@@ -35,6 +36,13 @@ content, the runner cannot see it (its entries carry the expected verdict
 only), so that half is a manual check — see IMPLEMENTATION.md D3 and the
 manual section below.
 
+TS-1 through TS-11 come from SPEC.md's own scenario list. TS-13 onward were
+added by the rework round that followed review round 1: each states a property
+the round-1 findings showed the merged implementation does not hold, and each
+is exercised the same way — an expectation entry in
+`em-workflow/hooks/tests/destructive-guard-cases.json`, plus the manual half
+where the row asserts a rule identifier or reason text.
+
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
 | TS-1 | Standalone literal assignment of a scratch-area path, then a recursive delete through that variable at the same nesting level | allow | Unit |
@@ -48,6 +56,15 @@ manual section below.
 | TS-9 | Resolved value reaching a write target under Claude Code's own configuration | ask, rule `self-modification` | Unit |
 | TS-10 | Resolved value reaching a session transcript write target | deny, rule `transcript-write` | Unit |
 | TS-11 | The full pre-existing expectation set, plus the trailing unattended-demotion check the runner performs after the table | every recorded verdict unchanged; runner exits 0 | Integration |
+| TS-13 | An assignment that the shell does not execute before the use site: the assignment written after the delete, an assignment reached only through a short-circuit that does not run, and an assignment terminated so it runs in the background | the reference stays unresolved and the command keeps the verdict it had before any resolution existed — the home-directory form stays a `rm-root` deny, the unknown-target form stays an `rm-unresolvable` ask | Unit (verdict) + Manual (rule) |
+| TS-14 | The same name bound a second time through a form other than a bare assignment statement — the export / declare / typeset / local / readonly assignment forms, the append form, `read`, and `printf -v` | the name is excluded from resolution exactly as a twice-written bare assignment is; the delete through it is an `rm-unresolvable` ask | Unit (verdict) + Manual (rule) |
+| TS-15 | An assignment whose right-hand side contains a command substitution, in either spelling | the value is never collected as a literal: the scratch-directory idiom that captures a command substitution and then deletes through the variable is an `rm-unresolvable` ask — neither an allow nor a deny, and no replacement-command suggestion is emitted for it | Unit (verdict) + Manual (rule, reason) |
+| TS-16 | An assignment inside one pipeline element used from outside that pipeline, taken in both directions — assignment in the pipeline's FIRST element, and assignment in a later element — and an assignment in a statement terminated as a background job | the use site outside the pipeline or background job stays unresolved, keeping its pre-resolution verdict | Unit |
+| TS-17 | Subshell group boundaries under two spellings that must not change the answer: the group's closing parenthesis written adjacent to a redirection operator, and the group's statements separated by `;` versus by a newline | a use inside the group resolves the group's own assignment identically under both spellings; a use outside the group stays unresolved under both spellings, and no statement after the group inherits the group's identity | Unit |
+| TS-18 | A resolved value that contains whitespace, so the real command names more than one target — the first word inside the scratch area, a later word outside it | never allowed on the strength of the first word: either the reference stays unresolved (`rm-unresolvable` ask) or every word is judged as an independent target and the outside word produces its own deny | Unit (verdict) + Manual (rule) |
+| TS-19 | A resolved target that begins inside a scratch root and then climbs out of it with parent-reference segments, and a target whose leading path component merely starts with a scratch-area name as a string prefix | judged on the path the shell would actually act on, at path-component boundaries: neither is treated as inside the scratch area, and the denial reason's replacement-command suggestion names that same path | Unit (verdict) + Manual (reason) |
+| TS-20 | A reference that substitutes to an empty or whitespace-only value | not treated as resolved: the pre-resolution `rm-unresolvable` ask stands, and no denial reason is emitted whose replacement-command suggestion names the current working directory | Unit (verdict) + Manual (reason) |
+| TS-21 | A recursive-delete flag supplied through a variable rather than written literally | the delete is recognised as recursive and the target is judged by the recursive-delete path, matching the verdict of the same command with the flag written literally | Unit |
 
 ### Additional verification scenarios (verification-plan additions)
 
@@ -84,21 +101,21 @@ cover have a named, automated check rather than an empty mapping.
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-1 |
-| FR2 | task0001 | TS-1, TS-2, TS-6, TS-7, TS-8 |
-| FR3 | task0001 | TS-1, TS-2, TS-8, TS-9, TS-10 |
-| FR4 | task0001 | TS-2, plus the manual reason check confirming the suggestion is built from the resolved path |
-| FR5 | task0001 | TS-5 |
-| FR6 | task0001 | TS-3, plus the manual reason check for the split hint |
-| FR7 | task0001 | TS-4 |
-| FR8 | task0001 | TS-11, plus the additions-only diff check |
+| FR1 | task0001, task0003 | TS-1, TS-13, TS-14, TS-15 |
+| FR2 | task0001, task0003 | TS-1, TS-2, TS-6, TS-7, TS-8, TS-15, TS-18, TS-20, TS-21 |
+| FR3 | task0001, task0003 | TS-1, TS-2, TS-8, TS-9, TS-10, TS-18, TS-19, TS-21 |
+| FR4 | task0001, task0003 | TS-2, TS-19, TS-20, plus the manual reason check confirming the suggestion is built from the resolved path |
+| FR5 | task0001, task0003 | TS-5, TS-14 |
+| FR6 | task0001, task0003 | TS-3, TS-14, plus the manual reason check for the split hint |
+| FR7 | task0001, task0003 | TS-4, TS-13, TS-16, TS-17 |
+| FR8 | task0001, task0003 | TS-11, plus the additions-only diff check |
 | FR9 | task0002 | TS-12, plus the manual manifest read |
-| NFR1 | task0001 | TS-11 (the suite runs the hook hermetically and repeatably), plus the diff inspection for filesystem/subprocess/shell operations |
-| NFR2 | task0001 | TS-3, TS-4, TS-5, TS-6, TS-7, TS-11 — every unresolved shape keeps its pre-change verdict |
-| NFR3 | task0001 | TS-11, run twice with identical output |
-| NFR4 | task0001 | No automated scenario — SPEC.md states this is met structurally; checked by the cost-shape inspection in the manual section |
-| NFR5 | task0001 | TS-11 (both suites run under a plain interpreter with no package installation, so a non-standard-library import would fail the run), plus the import-list inspection |
-| NFR6 | task0001 | TS-11, plus the diff inspection confirming the four pattern definitions are unchanged |
+| NFR1 | task0001, task0003 | TS-11 (the suite runs the hook hermetically and repeatably), plus the diff inspection for filesystem/subprocess/shell operations |
+| NFR2 | task0001, task0003 | TS-3, TS-4, TS-5, TS-6, TS-7, TS-11, and TS-13 through TS-21 — every shape the resolver cannot settle keeps its pre-resolution verdict |
+| NFR3 | task0001, task0003 | TS-11, run twice with identical output |
+| NFR4 | task0001, task0003 | No automated scenario — SPEC.md states this is met structurally; checked by the cost-shape inspection in the manual section |
+| NFR5 | task0001, task0003 | TS-11 (both suites run under a plain interpreter with no package installation, so a non-standard-library import would fail the run), plus the import-list inspection |
+| NFR6 | task0001, task0003 | TS-11, plus the diff inspection confirming the four pattern definitions are unchanged |
 
 ## E2E Testing
 
@@ -138,6 +155,18 @@ applies.
 - [ ] Manifest read: parse both registries, confirm the two version values are
       identical and read 0.1.57, and confirm no other plugin's version key was
       added or changed. (AC-7, FR9)
+- [ ] Rework round 1 rule/reason checks: invoke the hook directly with a tool
+      payload for the TS-13, TS-14, TS-15, TS-18, TS-19 and TS-20 command
+      strings and read the emitted reason. Confirm the bracketed rule
+      identifier is the one the row states, that TS-15 and TS-20 emit no
+      replacement-command suggestion at all, and that TS-19's suggestion names
+      the path the command would really act on rather than the text as
+      written. (TS-13, TS-14, TS-15, TS-18, TS-19, TS-20)
+- [ ] Pre-resolution parity check for the rework scenarios: for every command
+      string added by TS-13 through TS-21, confirm the verdict is no weaker
+      than the verdict the same command string receives from the hook as it
+      stood at `workflow.implement.base_commit` — resolution may turn an ask
+      into a deny or leave it, never into an allow. (NFR2)
 - [ ] Optional, environment-dependent: after the installed plugin cache has
       picked up the new version, run the hook expectation suite against the
       installed copy by passing its path to the runner. Requires a Claude Code
@@ -162,7 +191,7 @@ applies.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 12 | 12 | 0 | 3 also carry a manual rule/reason half (TS-2, TS-3, TS-12) |
+| Test scenarios | 21 | 21 | 0 | 9 also carry a manual rule/reason half (TS-2, TS-3, TS-12, TS-13, TS-14, TS-15, TS-18, TS-19, TS-20) |
 | Success criteria | 7 | 7 | 0 | 5 also carry a manual half (AC-2, AC-3, AC-4, AC-5, AC-7) |
 | Requirements | 15 | 14 | 0 | NFR4 is manual only; 7 others also carry a manual check |
-| Manual checks | 9 | — | — | 9 (1 optional, environment-dependent) |
+| Manual checks | 11 | — | — | 11 (1 optional, environment-dependent) |
