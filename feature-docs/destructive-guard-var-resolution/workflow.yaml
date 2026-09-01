@@ -222,7 +222,7 @@ tasks:
       - r2-ordinal-implicit
       - r2-constant-factor-scans
 review:
-  status: in_progress
+  status: pending
   rounds_completed: 3
   plan:
     floor:
@@ -241,13 +241,13 @@ review:
     spec: completed
     performance: completed
   residual_critical_high: 8
-  needs_rework: false
+  needs_rework: true
 requirements:
   FR1:
     title: Collect plain assignments from the command string
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
     tasks:
     - task0001
     - task0003
@@ -260,9 +260,9 @@ requirements:
     - TS-25
   FR2:
     title: Substitute resolved values into target tokens
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
     tasks:
     - task0001
     - task0003
@@ -283,9 +283,9 @@ requirements:
     - TS-26
   FR3:
     title: Apply resolved values to every target-path check
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
     tasks:
     - task0001
     - task0003
@@ -303,9 +303,9 @@ requirements:
     - TS-28
   FR4:
     title: Verdict for a resolved path outside SAFE_DELETE
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
     tasks:
     - task0001
     - task0003
@@ -317,9 +317,9 @@ requirements:
     - TS-26
   FR5:
     title: Assignment forms in scope
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
     tasks:
     - task0001
     - task0003
@@ -330,9 +330,9 @@ requirements:
     - TS-25
   FR6:
     title: Reassignment excludes the variable, with a rewrite hint
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
     tasks:
     - task0001
     - task0003
@@ -343,9 +343,9 @@ requirements:
     - TS-25
   FR7:
     title: Same-nesting-level scope only
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
     tasks:
     - task0001
     - task0003
@@ -378,9 +378,9 @@ requirements:
     - TS-12
   NFR1:
     title: Static-only resolution
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
     tasks:
     - task0001
     - task0003
@@ -389,9 +389,9 @@ requirements:
     - TS-11
   NFR2:
     title: Fail closed
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
     tasks:
     - task0001
     - task0003
@@ -419,9 +419,9 @@ requirements:
     - TS-28
   NFR3:
     title: Determinism
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
     tasks:
     - task0001
     - task0003
@@ -431,9 +431,9 @@ requirements:
     - TS-25
   NFR4:
     title: Bounded cost
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
     tasks:
     - task0001
     - task0003
@@ -453,9 +453,9 @@ requirements:
     - TS-11
   NFR6:
     title: Existing behaviour untouched
-    status: ok
+    status: excluded
     tbd_reason: null
-    excluded_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
     tasks:
     - task0001
     - task0003
