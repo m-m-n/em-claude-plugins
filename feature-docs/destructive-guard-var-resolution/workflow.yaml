@@ -175,7 +175,7 @@ tasks:
       - b6acc424285ab451
 review:
   status: in_progress
-  rounds_completed: 1
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -192,7 +192,7 @@ review:
     architecture: completed
     spec: completed
     performance: completed
-  residual_critical_high: 13
+  residual_critical_high: 7
   needs_rework: false
 requirements:
   FR1:
