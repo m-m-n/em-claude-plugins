@@ -73,9 +73,57 @@ workflow:
   status: completed
   completed_at_commit: ac9f99c57e3245f24424b24679a4b6309d9810ab
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  completed_at_commit: 5290e079106144c3d3c2877889f683b30ff5d050
+  evaluated_scenarios:
+  - id: TS-11
+    result: pass
+    evidence: run-destructive-guard.py 139/139
+  - id: TS-12
+    result: pass
+    evidence: unittest discover 2830/2830 OK; plugin.json と marketplace.json がともに 0.1.57
+  - id: TS-29
+    result: pass
+    evidence: destructive-guard.py は base とバイト一致。138 コマンドの差分実行で verdict+rule の不一致 0
+  - id: TS-30
+    result: pass
+    evidence: ケース JSON の差分は追加 81 行 / 変更 1 行（base 最終エントリの末尾カンマのみ）
+  - id: TS-31
+    result: pass
+    evidence: 撤回済み機構を名指すラベル 0 件、既知の穴マーカー 16 件
+    caveat: VERIFICATION.md の TS-31 本文は counter-case にもマーカーを要求する書き方になっているが、実ファイルの counter-case 5 件は正しい deny を記録するためマーカーを持たない。シナリオが意図する性質（ラベルが実測した判定経路を述べる）は成立している。本文の記述欠陥は review round 5 の r5-ts31-marker-scope として未解決のまま記録済み
+  excluded_requirements:
+  - id: FR1
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR2
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR3
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR4
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR5
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR6
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR7
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: NFR1
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  - id: NFR2
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  - id: NFR3
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  - id: NFR4
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  - id: NFR6
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  retired_scenarios: TS-1..TS-10, TS-13..TS-28（excluded 要件に紐づくため評価対象外。VERIFICATION.md に retired として記録済み）
+  commands_not_configured:
+  - build_command
+  - format_command
+  - e2e_test_command
 - id: retrospect
   status: pending
 tasks:
