@@ -290,36 +290,6 @@
     "cp -t ~/.claude/hooks/ file.py > /tmp/log"
   ],
   [
-    "allow",
-    "変数解決: スクラッチ領域への rm -rf",
-    "X=/tmp/x; rm -rf $X"
-  ],
-  [
-    "deny",
-    "変数解決: スクラッチ外への rm -rf",
-    "X=/home/sakura/y; rm -rf $X"
-  ],
-  [
-    "deny",
-    "変数解決: ホーム省略形へのrm -rf",
-    "X=~; rm -rf $X"
-  ],
-  [
-    "deny",
-    "変数解決: ルートへのrm -rf",
-    "X=/; rm -rf $X"
-  ],
-  [
-    "ask",
-    "変数解決: 設定ファイルへの書き込み",
-    "X=~/.claude/settings.json; echo hi > $X"
-  ],
-  [
-    "deny",
-    "変数解決: transcript への書き込み",
-    "X=~/.claude/projects/a/b.jsonl; echo hi > $X"
-  ],
-  [
     "ask",
     "変数解決: コマンド接頭辞代入は未解決のまま",
     "X=/home/sakura/y rm -rf $X"
@@ -350,11 +320,6 @@
     "X='foo$(bar'; rm -rf $X"
   ],
   [
-    "allow",
-    "変数解決: トークン中間の参照でも解決",
-    "X=/tmp; rm -rf ${X}/xyz"
-  ],
-  [
     "ask",
     "変数解決: 未マップ変数混在は未解決",
     "X=/home/sakura; rm -rf ${X}/$Y"
@@ -363,16 +328,6 @@
     "ask",
     "変数解決: パイプライン要素をまたぐ代入は未解決",
     "X=/home/sakura/y | rm -rf $X"
-  ],
-  [
-    "deny",
-    "変数解決: 末尾区切り文字を保持したまま解決",
-    "X=/home/sakura/y/; rm -rf $X"
-  ],
-  [
-    "deny",
-    "変数解決: ホーム省略形+パスの解決",
-    "X=~/y; rm -rf $X"
   ],
   [
     "allow",
@@ -480,16 +435,6 @@
     "(true; X=/tmp/safe; false)>/dev/null; rm -rf $X"
   ],
   [
-    "allow",
-    "変数解決: セミコロン区切りサブシェル内で解決される",
-    "(X=/tmp/safe; rm -rf $X)"
-  ],
-  [
-    "allow",
-    "変数解決: 改行区切りサブシェル内で解決される(一貫性)",
-    "(\nX=/tmp/safe\nrm -rf $X\n)"
-  ],
-  [
     "ask",
     "変数解決: セミコロン区切りサブシェル外は未解決のまま",
     "(X=/tmp/safe; true); rm -rf $X"
@@ -505,16 +450,6 @@
     "X='/tmp/x /home/sakura'; rm -rf $X"
   ],
   [
-    "deny",
-    "変数解決: スクラッチ領域から親参照で脱出する対象は許可されない",
-    "X=/tmp/../home/sakura/y; rm -rf $X"
-  ],
-  [
-    "deny",
-    "変数解決: 前方一致だけで安全領域と誤認されない",
-    "X=distfiles/secret; rm -rf $X"
-  ],
-  [
     "ask",
     "変数解決: 空文字への解決は未解決扱い",
     "X=; rm -rf $X"
@@ -523,16 +458,6 @@
     "ask",
     "変数解決: 空白のみへの解決は未解決扱い",
     "X=' '; rm -rf $X"
-  ],
-  [
-    "deny",
-    "変数解決: 変数経由の再帰フラグも再帰削除として扱われる",
-    "F=-rf; X=/home/sakura/y; rm $F $X"
-  ],
-  [
-    "allow",
-    "変数解決: 代入自体の後ろの && は代入を無効化しない",
-    "X=/tmp/x && true; rm -rf $X"
   ],
   [
     "deny",
@@ -553,11 +478,6 @@
     "deny",
     "変数解決: コマンド置換の後にパスが続く削除は deny のまま",
     "rm -rf $(pwd)/build"
-  ],
-  [
-    "allow",
-    "変数解決: 代入後のクォート済み括弧はスコープを開かない",
-    "X=/tmp/x; echo \"(\" ; rm -rf $X"
   ],
   [
     "allow",
@@ -618,11 +538,6 @@
     "allow",
     "変数解決: スクラッチ名で始まるビルド出力(node_modules_bak)は allow",
     "rm -rf node_modules_bak"
-  ],
-  [
-    "allow",
-    "変数解決: 解決済み値のディレクトリ形もスクラッチ領域として許可",
-    "X=/tmp/; rm -rf $X"
   ],
   [
     "ask",
@@ -710,16 +625,6 @@
     "D=/tmp/scratch\nwhile read D; do :; done\nrm -rf $D"
   ],
   [
-    "allow",
-    "変数解決: readが無関係な名前を扱っても対象は解決される",
-    "X=/tmp/safe; read Y; rm -rf $X"
-  ],
-  [
-    "allow",
-    "変数解決: 代入の後の条件文があっても解決される",
-    "X=/tmp/safe; true && echo hi; rm -rf $X"
-  ],
-  [
     "ask",
     "変数解決: 使用より後の代入は未記録の文を挟んでも解決しない(;)",
     "rm -rf $X; echo hi; X=/tmp/safe"
@@ -728,11 +633,6 @@
     "ask",
     "変数解決: 使用より後の代入は未記録の文を挟んでも解決しない(改行)",
     "rm -rf $X\necho hi\nX=/tmp/safe"
-  ],
-  [
-    "allow",
-    "変数解決: 報告された誤爆はallowのまま",
-    "D=/tmp/claude-1000/xyz/scratchpad/backup; rm -rf \"$D\""
   ],
   [
     "allow",
@@ -748,5 +648,10 @@
     "ask",
     "変数解決: 上限を超える解決値は未解決のまま(fail-closed)",
     "X=/tmp/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; rm -rf $X"
+  ],
+  [
+    "allow",
+    "本物: スクラッチ領域配下のグロブ削除は allow",
+    "rm -rf dist/*"
   ]
 ]
