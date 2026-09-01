@@ -200,7 +200,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/destructive-guard-var-resolution/task0004
     provenance:
