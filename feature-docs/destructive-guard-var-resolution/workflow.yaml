@@ -223,7 +223,7 @@ tasks:
       - r2-constant-factor-scans
 review:
   status: in_progress
-  rounds_completed: 2
+  rounds_completed: 3
   plan:
     floor:
     - comprehensive
@@ -240,7 +240,7 @@ review:
     architecture: completed
     spec: completed
     performance: completed
-  residual_critical_high: 7
+  residual_critical_high: 8
   needs_rework: false
 requirements:
   FR1:
