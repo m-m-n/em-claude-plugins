@@ -70,7 +70,7 @@ workflow:
   base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
   completed_at_commit: 78b0ddf83e0bcfae39508e83e95f622fb28bf774
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -174,7 +174,7 @@ tasks:
       - cc8e7a2eee2b504a
       - b6acc424285ab451
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 1
   plan:
     floor:
@@ -184,7 +184,7 @@ review:
     - spec
     discretionary:
     - perspective: performance
-      reason: このフックは全 Bash ツール呼び出しの PreToolUse で走る。今回の変更は文ごとの代入収集と対象トークンの解決パスを追加するため、NFR4（bounded cost）に対する実測観点が要る
+      reason: このフックは全 Bash ツール呼び出しの PreToolUse で走る。rework で解決段が全面的に書き直されたため、NFR4（bounded cost）を再度確認する
     cross_validation: true
   perspectives:
     comprehensive: completed
@@ -193,7 +193,7 @@ review:
     spec: completed
     performance: completed
   residual_critical_high: 13
-  needs_rework: true
+  needs_rework: false
 requirements:
   FR1:
     title: Collect plain assignments from the command string
