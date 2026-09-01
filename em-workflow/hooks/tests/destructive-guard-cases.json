@@ -533,5 +533,220 @@
     "allow",
     "変数解決: 代入自体の後ろの && は代入を無効化しない",
     "X=/tmp/x && true; rm -rf $X"
+  ],
+  [
+    "deny",
+    "本物: find の括弧グループ化でも delete 検知",
+    "find /home/sakura \\( -name '*.log' \\) -delete"
+  ],
+  [
+    "deny",
+    "本物: 引用符付き括弧の force push も検知",
+    "git push \"(\" --force origin main"
+  ],
+  [
+    "allow",
+    "変数解決: 裸のコマンド置換を削除対象にしても allow",
+    "rm -rf $(mktemp -d)"
+  ],
+  [
+    "deny",
+    "変数解決: コマンド置換の後にパスが続く削除は deny のまま",
+    "rm -rf $(pwd)/build"
+  ],
+  [
+    "allow",
+    "変数解決: 代入後のクォート済み括弧はスコープを開かない",
+    "X=/tmp/x; echo \"(\" ; rm -rf $X"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチルート自身(/tmp/)の削除は allow",
+    "rm -rf /tmp/"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチルート自身(tmp/)の削除は allow",
+    "rm -rf tmp/"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチルート自身(.cache/)の削除は allow",
+    "rm -rf .cache/"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチルート自身(/var/tmp/)の削除は allow",
+    "rm -rf /var/tmp/"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチ名で始まるビルド出力(build-debug)は allow",
+    "rm -rf build-debug"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチ名で始まるビルド出力(dist-ssr)は allow",
+    "rm -rf dist-ssr"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチ名で始まるビルド出力(target-old)は allow",
+    "rm -rf target-old"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチ名で始まるビルド出力(coverage.old)は allow",
+    "rm -rf coverage.old"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチ名で始まるビルド出力(build-artifacts)は allow",
+    "rm -rf build-artifacts"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチ名で始まるビルド出力(dist-newstyle)は allow",
+    "rm -rf dist-newstyle"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチ名で始まるビルド出力(coverage-old)は allow",
+    "rm -rf coverage-old"
+  ],
+  [
+    "allow",
+    "変数解決: スクラッチ名で始まるビルド出力(node_modules_bak)は allow",
+    "rm -rf node_modules_bak"
+  ],
+  [
+    "allow",
+    "変数解決: 解決済み値のディレクトリ形もスクラッチ領域として許可",
+    "X=/tmp/; rm -rf $X"
+  ],
+  [
+    "ask",
+    "変数解決: 未展開参照+親参照での脱出はaskのまま(参照形)",
+    "rm -rf /home/sakura/$DIR/../../../tmp/y"
+  ],
+  [
+    "ask",
+    "変数解決: 未展開参照+親参照での脱出はaskのまま(グロブ形)",
+    "rm -rf /home/sakura/*/../../../tmp/y"
+  ],
+  [
+    "ask",
+    "変数解決: 未展開参照+親参照での脱出はaskのまま(チルダ形)",
+    "rm -rf ~/$DIR/../../../tmp/y"
+  ],
+  [
+    "deny",
+    "変数解決: if/thenに融合した再代入はrm-rootに戻る(;)",
+    "HOME=/tmp/x; if true; then HOME=/home/sakura; fi; rm -rf $HOME"
+  ],
+  [
+    "deny",
+    "変数解決: if/thenに融合した再代入はrm-rootに戻る(改行)",
+    "HOME=/tmp/x\nif true; then HOME=/home/sakura; fi\nrm -rf $HOME"
+  ],
+  [
+    "ask",
+    "変数解決: 連鎖値による再代入は未解決のまま(;)",
+    "D=/tmp/scratch; D=$HOME/project; rm -rf $D"
+  ],
+  [
+    "ask",
+    "変数解決: 連鎖値による再代入は未解決のまま(改行)",
+    "D=/tmp/scratch\nD=$HOME/project\nrm -rf $D"
+  ],
+  [
+    "ask",
+    "変数解決: 自己参照の再代入は未解決のまま(;)",
+    "X=/tmp/safe; X=$X/sub; rm -rf $X"
+  ],
+  [
+    "ask",
+    "変数解決: 自己参照の再代入は未解決のまま(改行)",
+    "X=/tmp/safe\nX=$X/sub\nrm -rf $X"
+  ],
+  [
+    "ask",
+    "変数解決: unsetによる無効化は未解決のまま(;)",
+    "D=/tmp/scratch; unset D; rm -rf $D"
+  ],
+  [
+    "ask",
+    "変数解決: unsetによる無効化は未解決のまま(改行)",
+    "D=/tmp/scratch\nunset D\nrm -rf $D"
+  ],
+  [
+    "ask",
+    "変数解決: forループの変数束縛は未解決のまま(;)",
+    "D=/tmp/scratch; for D in a b c; do :; done; rm -rf $D"
+  ],
+  [
+    "ask",
+    "変数解決: forループの変数束縛は未解決のまま(改行)",
+    "D=/tmp/scratch\nfor D in a b c; do :; done\nrm -rf $D"
+  ],
+  [
+    "ask",
+    "変数解決: getoptsの名前引数は未解決のまま(;)",
+    "D=/tmp/scratch; getopts \"a:\" D; rm -rf $D"
+  ],
+  [
+    "ask",
+    "変数解決: getoptsの名前引数は未解決のまま(改行)",
+    "D=/tmp/scratch\ngetopts \"a:\" D\nrm -rf $D"
+  ],
+  [
+    "ask",
+    "変数解決: whileのread束縛は未解決のまま(;)",
+    "D=/tmp/scratch; while read D; do :; done; rm -rf $D"
+  ],
+  [
+    "ask",
+    "変数解決: whileのread束縛は未解決のまま(改行)",
+    "D=/tmp/scratch\nwhile read D; do :; done\nrm -rf $D"
+  ],
+  [
+    "allow",
+    "変数解決: readが無関係な名前を扱っても対象は解決される",
+    "X=/tmp/safe; read Y; rm -rf $X"
+  ],
+  [
+    "allow",
+    "変数解決: 代入の後の条件文があっても解決される",
+    "X=/tmp/safe; true && echo hi; rm -rf $X"
+  ],
+  [
+    "ask",
+    "変数解決: 使用より後の代入は未記録の文を挟んでも解決しない(;)",
+    "rm -rf $X; echo hi; X=/tmp/safe"
+  ],
+  [
+    "ask",
+    "変数解決: 使用より後の代入は未記録の文を挟んでも解決しない(改行)",
+    "rm -rf $X\necho hi\nX=/tmp/safe"
+  ],
+  [
+    "allow",
+    "変数解決: 報告された誤爆はallowのまま",
+    "D=/tmp/claude-1000/xyz/scratchpad/backup; rm -rf \"$D\""
+  ],
+  [
+    "allow",
+    "変数解決: コマンド置換経由の削除の理由にセンチネルが出ない(検証用allow)",
+    "rm -rf $(cat list)"
+  ],
+  [
+    "allow",
+    "変数解決: 解決対象外チェックは解決済みテキストを消費しない",
+    "D=--delete; rsync $D src dst"
+  ],
+  [
+    "ask",
+    "変数解決: 上限を超える解決値は未解決のまま(fail-closed)",
+    "X=/tmp/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; rm -rf $X"
   ]
 ]
