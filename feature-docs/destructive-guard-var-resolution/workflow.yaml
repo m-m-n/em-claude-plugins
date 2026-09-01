@@ -66,11 +66,11 @@ workflow:
   status: completed
   completed_at_commit: e4d4f7f082b5beb5341af2d0f2e16722e54fcdb6
 - id: implement
-  status: completed
+  status: pending
   base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
   completed_at_commit: e88f66139af0d041bc709ee9c492819426aaed32
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -258,6 +258,32 @@ tasks:
       - r3-poison-scan
       - r3-substitute-then-cap
       - r3-nameref
+  task0006:
+    title: make the retained expectation entries state what they actually pin
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR8
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 4
+      source_ids:
+      - r4-substitution-allow-contract
+      - r4-trailing-slash-contract
+      - r4-prefix-match-contract
+      - r4-labels-name-withdrawn-layer
+      - r4-reformatted-cases
+      - r4-safe-delete-prefix-security
 review:
   status: pending
   rounds_completed: 4
@@ -400,9 +426,12 @@ requirements:
     - task0003
     - task0004
     - task0005
+    - task0006
     tests:
     - TS-11
     - TS-29
+    - TS-30
+    - TS-31
   FR9:
     title: Plugin version bump
     status: ok
