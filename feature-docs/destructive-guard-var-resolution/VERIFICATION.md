@@ -8,7 +8,25 @@
 
 This document covers the INTEGRATED verification run after every task is
 merged — the two first-pass tasks and the rework tasks added after review
-rounds 1 and 2. Per-task acceptance criteria live in the task plans.
+rounds 1, 2 and 3. Per-task acceptance criteria live in the task plans.
+
+### What this feature now delivers, and what it no longer does
+
+After review round 3, the variable-resolution layer is withdrawn. FR1-FR7 and
+NFR1/NFR2/NFR3/NFR4/NFR6 carry `status: excluded` in `workflow.yaml` with the
+reason recorded there; the requirements that remain in force are **FR8** (the
+expectation entries, per `.claude/rules/hook-tests.md`), **FR9** (the
+0.1.56 → 0.1.57 version bump, merged by task0002) and **NFR5** (single-file,
+standard-library-only hook). task0005 restores the hook to the behaviour of
+`1fdb27fe51de6d20e9812027d3aee603cb584173` and keeps every expectation entry
+this feature added whose recorded expectation matches what that hook actually
+produces.
+
+Twenty-six scenarios below therefore verify behaviour that no longer exists.
+They are **retired in place, not deleted**: each keeps its ID and its original
+subject, and states which excluded requirement it belonged to, so the mapping
+from a retired scenario to a withdrawn requirement stays readable. A retired
+scenario is not run and is not a gap — its requirement is excluded, not unmet.
 
 ## Build Verification
 
@@ -24,62 +42,56 @@ rounds 1 and 2. Per-task acceptance criteria live in the task plans.
 - Command (main component): `python3 -m unittest discover -s tests`
 - Expected: both exit 0, with no failing case reported by either.
 - Coverage target: none configured for this repository. Coverage is expressed
-  as scenario coverage of the table below and as retention of every
-  pre-existing expectation entry (58 at the base revision).
+  as scenario coverage of the table below, as retention of every pre-existing
+  expectation entry (58 at the base revision), and as the differential ledger
+  of TS-29.
 
 ### Test Scenarios from SPEC.md
 
-Each scenario's verdict is checked by an expectation entry in
+Each active scenario's verdict is checked by an expectation entry in
 `em-workflow/hooks/tests/destructive-guard-cases.json`, executed by the hooks
-component command. Where a scenario also asserts a rule identifier or reason
-content, the runner cannot see it (its entries carry the expected verdict
-only), so that half is a manual check — see IMPLEMENTATION.md D3 and the
-manual section below.
+component command, or by the differential run TS-29 defines. Where a scenario
+also asserts a rule identifier, the runner cannot see it (its entries carry the
+expected verdict only), so that half is a manual check — see IMPLEMENTATION.md
+D3 and the manual section below.
 
-TS-1 through TS-11 come from SPEC.md's own scenario list. TS-13 onward were
-added by the rework round that followed review round 1: each states a property
-the round-1 findings showed the merged implementation does not hold, and each
-is exercised the same way — an expectation entry in
-`em-workflow/hooks/tests/destructive-guard-cases.json`, plus the manual half
-where the row asserts a rule identifier or reason text.
-
-TS-22 onward were added by the rework round that followed review round 2. That
-round measured ten command strings against the hook as it stood at
-`workflow.implement.base_commit` and found nine of them moved in an unintended
-direction, two of them on commands containing no variable at all. These rows
-therefore share one subject — which text a check is entitled to judge — and
-each names its expected result as the verdict that hook gives the same string,
-so "unchanged" is a measurement rather than a claim.
+TS-1 through TS-11 come from SPEC.md's own scenario list. TS-13 through TS-21
+were added by the rework round that followed review round 1 and TS-22 through
+TS-28 by the round that followed review round 2; both sets state properties of
+the resolution layer. TS-29 is added by the rework round that followed review
+round 3 and states the property that replaces them: the hook answers as the
+pre-feature hook answers.
 
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
-| TS-1 | Standalone literal assignment of a scratch-area path, then a recursive delete through that variable at the same nesting level | allow | Unit |
-| TS-2 | Same shape aimed at a path outside the scratch area | deny, rule `rm-recursive`, reason carries the replacement-command suggestion built from the resolved path | Unit (verdict) + Manual (rule, reason) |
-| TS-3 | The same name assigned twice, then a recursive delete through it | ask, rule `rm-unresolvable`, reason states that splitting the values across separate variables makes it resolvable | Unit (verdict) + Manual (rule, reason) |
-| TS-4 | Assignment separated from its use by a shell `-c` payload, and separately by a subshell | ask, rule `rm-unresolvable` | Unit |
-| TS-5 | Command-prefix assignment on the delete command itself | ask, rule `rm-unresolvable` | Unit |
-| TS-6 | Resolved value still containing a glob metacharacter | ask, rule `rm-unresolvable` | Unit |
-| TS-7 | Resolved value still containing a command substitution | ask, rule `rm-unresolvable` | Unit |
-| TS-8 | Resolved value that is the bare home shorthand, and one that is the filesystem root | deny, rule `rm-root` | Unit |
-| TS-9 | Resolved value reaching a write target under Claude Code's own configuration | ask, rule `self-modification` | Unit |
-| TS-10 | Resolved value reaching a session transcript write target | deny, rule `transcript-write` | Unit |
-| TS-11 | The full pre-existing expectation set, plus the trailing unattended-demotion check the runner performs after the table | every recorded verdict unchanged; runner exits 0 | Integration |
-| TS-13 | An assignment that the shell does not execute before the use site: the assignment written after the delete, an assignment reached only through a short-circuit that does not run, and an assignment terminated so it runs in the background | the reference stays unresolved and the command keeps the verdict it had before any resolution existed — the home-directory form stays a `rm-root` deny, the unknown-target form stays an `rm-unresolvable` ask | Unit (verdict) + Manual (rule) |
-| TS-14 | The same name bound a second time through a form other than a bare assignment statement — the export / declare / typeset / local / readonly assignment forms, the append form, `read`, and `printf -v` | the name is excluded from resolution exactly as a twice-written bare assignment is; the delete through it is an `rm-unresolvable` ask | Unit (verdict) + Manual (rule) |
-| TS-15 | An assignment whose right-hand side contains a command substitution, in either spelling | the value is never collected as a literal: the scratch-directory idiom that captures a command substitution and then deletes through the variable is an `rm-unresolvable` ask — neither an allow nor a deny, and no replacement-command suggestion is emitted for it | Unit (verdict) + Manual (rule, reason) |
-| TS-16 | An assignment inside one pipeline element used from outside that pipeline, taken in both directions — assignment in the pipeline's FIRST element, and assignment in a later element — and an assignment in a statement terminated as a background job | the use site outside the pipeline or background job stays unresolved, keeping its pre-resolution verdict | Unit |
-| TS-17 | Subshell group boundaries under two spellings that must not change the answer: the group's closing parenthesis written adjacent to a redirection operator, and the group's statements separated by `;` versus by a newline | a use inside the group resolves the group's own assignment identically under both spellings; a use outside the group stays unresolved under both spellings, and no statement after the group inherits the group's identity | Unit |
-| TS-18 | A resolved value that contains whitespace, so the real command names more than one target — the first word inside the scratch area, a later word outside it | never allowed on the strength of the first word: either the reference stays unresolved (`rm-unresolvable` ask) or every word is judged as an independent target and the outside word produces its own deny | Unit (verdict) + Manual (rule) |
-| TS-19 | A resolved target that begins inside a scratch root and then climbs out of it with parent-reference segments, and a target whose leading path component merely starts with a scratch-area name as a string prefix | judged on the path the shell would actually act on, at path-component boundaries: neither is treated as inside the scratch area, and the denial reason's replacement-command suggestion names that same path | Unit (verdict) + Manual (reason) |
-| TS-20 | A reference that substitutes to an empty or whitespace-only value | not treated as resolved: the pre-resolution `rm-unresolvable` ask stands, and no denial reason is emitted whose replacement-command suggestion names the current working directory | Unit (verdict) + Manual (reason) |
-| TS-21 | A recursive-delete flag supplied through a variable rather than written literally | the delete is recognised as recursive and the target is judged by the recursive-delete path, matching the verdict of the same command with the flag written literally | Unit |
-| TS-22 | Commands carrying no assignment the collector records, in the shapes the resolution layer's own lexing touches: a file search whose grouping parentheses are escaped and whose action is a delete, a force push whose first argument is a quoted parenthesis, a delete of a bare command substitution, a delete of a command substitution followed by a path segment, and an assignment followed by a statement containing a quoted parenthesis and then a delete through that variable | each keeps the verdict the hook at `workflow.implement.base_commit` gives the same string — the two parenthesis-bearing detections deny under their own rules, the bare substitution delete allows, the substitution-plus-path delete denies, and the quoted parenthesis opens no scope so the delete through the variable allows | Unit (verdict) + Manual (rule) |
-| TS-23 | Scratch-area containment for a target nothing was substituted into: the scratch roots written in directory form, and build-output directory names that begin with a scratch-area name as a string prefix; plus, on the resolved side, a value written in directory form naming a scratch root | every literal form is allowed exactly as at `workflow.implement.base_commit`, and the directory form survives normalization on the resolved side so the resolved value is allowed too; the four pattern definitions are unchanged | Unit |
-| TS-24 | A delete whose target still carries an unexpanded reference, a glob component or a substitution, followed by enough parent-reference segments to climb out of the named tree, in all three spellings | the unresolvable gate decides on the raw text before any normalization-based containment runs: `rm-unresolvable` ask in every spelling, never an allow reached by collapsing an unexpanded component | Unit (verdict) + Manual (rule) |
-| TS-25 | A name bound a second time in a shape other than a bare assignment statement: fused into a conditional statement, carrying a value that contains a variable reference including a self-reference, `unset`, a loop or selection construct binding the name, the option-parsing builtin's name argument, and a reading builtin naming it anywhere in its statement — each command also run with newline separators in place of `;` | the name is dropped from the map and the delete through it returns to the verdict it has when no value is applied, the home-directory case to its `rm-root` deny and the unknown-target cases to their `rm-unresolvable` ask; the verdict is identical under both separator spellings | Unit (verdict) + Manual (rule) |
-| TS-26 | The reason string emitted for a delete whose target is a command substitution | contains no internal placeholder or sentinel identifier and names no identifier absent from the command string as written, so the rewrite it asks for is performable | Manual |
-| TS-27 | Cost of resolution at command sizes the round measured — the 44KB and 88KB shapes — and one command whose resolution would exceed the resolved-text ceiling | each is judged in at most twice the time the hook at `workflow.implement.base_commit` takes on the same input and in under one second, with nothing approaching the hook's 10-second timeout; the over-ceiling token is treated as unresolved and keeps its pre-resolution verdict rather than producing no verdict at all | Unit (verdict) + Manual (measurement) |
-| TS-28 | Argument supplied through a variable to a check outside the declared resolved-text set, and an assignment written after its use with statements the collector does not record sitting between them, under both separator spellings | the check outside the declared set returns the verdict the hook at `workflow.implement.base_commit` gives the same string; the later assignment never resolves the earlier use under either spelling | Unit |
+| TS-1 | RETIRED (FR1, FR2, FR3 excluded) — standalone literal assignment of a scratch-area path, then a recursive delete through that variable at the same nesting level | Not run. The resolution layer this asserted is withdrawn; the command returns to the pre-feature `rm-unresolvable` ask, which is TS-29's business, not this row's | — |
+| TS-2 | RETIRED (FR2, FR3, FR4 excluded) — same shape aimed at a path outside the scratch area | Not run. Asserted a deny reached through a resolved value | — |
+| TS-3 | RETIRED (FR6, NFR2 excluded) — the same name assigned twice, then a recursive delete through it, with the split-the-variables reason hint | Not run. The hint is a resolution-layer reason and no longer exists | — |
+| TS-4 | RETIRED (FR7, NFR2 excluded) — assignment separated from its use by a shell `-c` payload, and separately by a subshell | Not run. Asserted a scope rule of the resolution layer | — |
+| TS-5 | RETIRED (FR5, NFR2 excluded) — command-prefix assignment on the delete command itself | Not run. Asserted an exclusion rule of the resolution layer | — |
+| TS-6 | RETIRED (FR2, NFR2 excluded) — resolved value still containing a glob metacharacter | Not run. Asserted a post-substitution outcome | — |
+| TS-7 | RETIRED (FR2, NFR2 excluded) — resolved value still containing a command substitution | Not run. Asserted a post-substitution outcome | — |
+| TS-8 | RETIRED (FR2, FR3 excluded) — resolved value that is the bare home shorthand, and one that is the filesystem root | Not run. Asserted a deny reached through a resolved value | — |
+| TS-9 | RETIRED (FR3 excluded) — resolved value reaching a write target under Claude Code's own configuration | Not run. Asserted the write-target check consuming resolved text | — |
+| TS-10 | RETIRED (FR3 excluded) — resolved value reaching a session transcript write target | Not run. Asserted the write-target check consuming resolved text | — |
+| TS-11 | The retained expectation set — every pre-existing entry (58 at the base revision), plus every entry added by task0001, task0003 or task0004 that task0005 retains — plus the trailing unattended-demotion check the runner performs after the table | every recorded verdict is produced; runner exits 0; the run is identical when repeated; the hook is one script whose imports are all standard library | Integration |
+| TS-13 | RETIRED (FR1, FR7, NFR2 excluded) — an assignment the shell does not execute before the use site | Not run. Asserted which assignments the resolution layer may read | — |
+| TS-14 | RETIRED (FR1, FR5, FR6, NFR2 excluded) — a name bound a second time through a form other than a bare assignment statement | Not run. Asserted the layer's invalidation rules | — |
+| TS-15 | RETIRED (FR1, FR2, NFR2 excluded) — an assignment whose right-hand side contains a command substitution | Not run. Asserted what the layer may collect as a literal | — |
+| TS-16 | RETIRED (FR7, NFR2 excluded) — an assignment inside one pipeline element used from outside it, and one in a background job | Not run. Asserted the layer's scope boundaries | — |
+| TS-17 | RETIRED (FR7, NFR2 excluded) — subshell group boundaries under two spellings | Not run. Asserted the layer's scope boundaries | — |
+| TS-18 | RETIRED (FR2, FR3, NFR2 excluded) — a resolved value containing whitespace, so the real command names more than one target | Not run. Asserted a post-substitution outcome | — |
+| TS-19 | RETIRED (FR3, FR4, NFR2 excluded) — a resolved target that climbs out of a scratch root, and a leading component that merely prefixes a scratch name | Not run as a resolved-side scenario. Its literal-side half — a directory name that merely begins with a scratch-area name — survives as a retained expectation entry under TS-11 and is measured against the base hook by TS-29 | — |
+| TS-20 | RETIRED (FR2, FR4, NFR2 excluded) — a reference that substitutes to an empty or whitespace-only value | Not run. Asserted a post-substitution outcome | — |
+| TS-21 | RETIRED (FR2, FR3, NFR2 excluded) — a recursive-delete flag supplied through a variable | Not run. Asserted flag recognition through the resolution layer | — |
+| TS-22 | RETIRED (FR2, NFR2, NFR6 excluded) — commands carrying no recorded assignment, in the shapes the layer's lexing touched | Not run as a layer-lexing scenario. Its five command strings survive as retained expectation entries under TS-11, and each is measured against the base hook by TS-29 — that is where the escaped-parenthesis `find … -delete` and the quoted-parenthesis force push are now held | — |
+| TS-23 | RETIRED (FR2, FR3, NFR6 excluded) — scratch-area containment for a target nothing was substituted into, plus the resolved-side directory form | Not run as written. Its literal-side command strings survive as retained expectation entries under TS-11 and are measured by TS-29 | — |
+| TS-24 | RETIRED (FR2, NFR2 excluded) — a dynamic target followed by enough parent references to climb out of the named tree | Not run. Asserted the ordering of the layer's unresolvable gate against containment | — |
+| TS-25 | RETIRED (FR1, FR5, FR6, NFR2, NFR3 excluded) — a name bound a second time in shapes other than a bare assignment statement | Not run. Asserted the layer's invalidation rules | — |
+| TS-26 | RETIRED (FR2, FR4 excluded) — the reason string emitted for a delete whose target is a command substitution | Not run. The internal placeholder it guarded against belonged to the layer; the base hook emits no such text and TS-29 compares rule identifiers on the same command | — |
+| TS-27 | RETIRED (NFR2, NFR4 excluded) — cost of resolution at 44KB and 88KB, and an over-ceiling token | Not run as a resolution-cost scenario. The two measured shapes are carried forward by TS-29, whose comparison is against the base hook rather than against a ceiling the layer defined | — |
+| TS-28 | RETIRED (FR3, FR7, NFR2 excluded) — an argument supplied through a variable to a check outside the declared resolved-text set, and a later assignment | Not run. Asserted where the layer was wired | — |
+| TS-29 | Behavioural equivalence with the pre-feature hook: every command string in the retained expectation list, every command string quoted in a finding or spot-check table of review rounds 1, 2 and 3 (including round 3's eleven verified inputs), and the 44KB and 88KB shapes round 3 timed, each run through `em-workflow/hooks/destructive-guard.py` and through the hook at `1fdb27fe51de6d20e9812027d3aee603cb584173` on the same machine in the same session | every input yields the same verdict and the same bracketed rule identifier on both sides — zero differing pairs, recorded pairwise; every input yields a verdict at all, none reaching the hook's 10-second timeout; the two timed shapes are judged within twice the base time and under one second | Integration (differential) + Manual (ledger, rule identifiers, timings) |
 
 ### Additional verification scenarios (verification-plan additions)
 
@@ -93,10 +105,9 @@ cover have a named, automated check rather than an empty mapping.
 ## Code Quality Verification
 
 - Format: none configured (`format_command` is empty for both components).
-- Static analysis: none configured. Two properties are instead checked by
-  reading the diff, in the manual section below: the hook's import list stays
-  within the standard library, and the resolution path performs no filesystem,
-  subprocess or shell operation.
+- Static analysis: none configured. One property is instead checked by reading
+  the diff, in the manual section below: the hook's import list stays within the
+  standard library and the hook remains a single script (NFR5).
 
 ## SPEC.md Compliance
 
@@ -104,33 +115,33 @@ cover have a named, automated check rather than an empty mapping.
 
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
-| AC-1 | The reported false positive is allowed | TS-1 |
-| AC-2 | The same shape outside the scratch area is denied with rule `rm-recursive` and the replacement-command suggestion for the resolved path | TS-2 (verdict) plus the manual rule/reason check |
-| AC-3 | A resolved value reaching root or home is denied with rule `rm-root` | TS-8 (verdict) plus the manual rule check |
-| AC-4 | A resolved write target under Claude Code's config asks; one naming a transcript denies | TS-9, TS-10 (verdicts) plus the manual rule check |
-| AC-5 | Every unresolvable form keeps its pre-change verdict, and the reassignment reason carries the split hint | TS-3, TS-4, TS-5, TS-6, TS-7 plus the manual reason check |
-| AC-6 | The hook expectation suite passes with every pre-existing deny/ask entry still present | TS-11 plus the additions-only diff check |
+| AC-1 | RETIRED with FR1-FR3 — the reported false positive is allowed | Not verified. The false positive is not fixed: with the resolution layer withdrawn, the reported command returns to its `rm-unresolvable` ask. This is the accepted outcome of the withdrawal, recorded here rather than dropped |
+| AC-2 | RETIRED with FR2-FR4 — the same shape outside the scratch area is denied with the resolved-path suggestion | Not verified; asserted resolution behaviour |
+| AC-3 | RETIRED with FR2, FR3 — a resolved value reaching root or home is denied | Not verified; asserted resolution behaviour |
+| AC-4 | RETIRED with FR3 — a resolved write target asks or denies per its pattern | Not verified; asserted resolution behaviour |
+| AC-5 | RETIRED with FR5-FR7, NFR2 — every unresolvable form keeps its pre-change verdict and the reassignment reason carries the split hint | Not verified as written. Its stronger successor is TS-29: EVERY form, resolvable or not, keeps the pre-feature verdict |
+| AC-6 | The hook expectation suite passes with every pre-existing entry still present | TS-11 plus TS-29's per-entry verdict pairs, plus the pre-existing-entry byte-identity check below |
 | AC-7 | Both manifests read 0.1.57 | TS-12 plus the manual manifest read |
 
 ### Functional Requirements Coverage
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001, task0003, task0004 | TS-1, TS-13, TS-14, TS-15, TS-25 |
-| FR2 | task0001, task0003, task0004 | TS-1, TS-2, TS-6, TS-7, TS-8, TS-15, TS-18, TS-20, TS-21, TS-22, TS-23, TS-24, TS-26 |
-| FR3 | task0001, task0003, task0004 | TS-1, TS-2, TS-8, TS-9, TS-10, TS-18, TS-19, TS-21, TS-23, TS-28 |
-| FR4 | task0001, task0003, task0004 | TS-2, TS-19, TS-20, TS-26, plus the manual reason check confirming the suggestion is built from the resolved path |
-| FR5 | task0001, task0003, task0004 | TS-5, TS-14, TS-25 |
-| FR6 | task0001, task0003, task0004 | TS-3, TS-14, TS-25, plus the manual reason check for the split hint |
-| FR7 | task0001, task0003, task0004 | TS-4, TS-13, TS-16, TS-17, TS-28 |
-| FR8 | task0001, task0003, task0004 | TS-11, plus the additions-only diff check |
+| FR1 | task0001, task0003, task0004 | EXCLUDED (see `workflow.yaml` `excluded_reason`). Retired scenarios: TS-1, TS-13, TS-14, TS-15, TS-25 |
+| FR2 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-1, TS-2, TS-6, TS-7, TS-8, TS-15, TS-18, TS-20, TS-21, TS-22, TS-23, TS-24, TS-26 |
+| FR3 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-1, TS-2, TS-8, TS-9, TS-10, TS-18, TS-19, TS-21, TS-23, TS-28 |
+| FR4 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-2, TS-19, TS-20, TS-26 |
+| FR5 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-5, TS-14, TS-25 |
+| FR6 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-3, TS-14, TS-25 |
+| FR7 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-4, TS-13, TS-16, TS-17, TS-28 |
+| FR8 | task0001, task0003, task0004, task0005 | TS-11 (the retained expectation set runs green, twice, with every pre-existing entry byte-identical) and TS-29 (each retained added entry's expectation equals the base hook's verdict for its command, and each removed entry's did not) |
 | FR9 | task0002 | TS-12, plus the manual manifest read |
-| NFR1 | task0001, task0003, task0004 | TS-11 (the suite runs the hook hermetically and repeatably), plus the diff inspection for filesystem/subprocess/shell operations |
-| NFR2 | task0001, task0003, task0004 | TS-3, TS-4, TS-5, TS-6, TS-7, TS-11, TS-13 through TS-21, and TS-22, TS-24, TS-25, TS-27, TS-28 — every shape the resolver cannot settle keeps its pre-resolution verdict |
-| NFR3 | task0001, task0003, task0004 | TS-11, run twice with identical output, and TS-25's separator-spelling pairs |
-| NFR4 | task0001, task0003, task0004 | TS-27 (measured against the same hook revision the parity checks use), plus the cost-shape inspection in the manual section |
-| NFR5 | task0001, task0003, task0004 | TS-11 (both suites run under a plain interpreter with no package installation, so a non-standard-library import would fail the run), plus the import-list inspection |
-| NFR6 | task0001, task0003, task0004 | TS-11, TS-22, TS-23, plus the diff inspection confirming the four pattern definitions are unchanged |
+| NFR1 | task0001, task0003, task0004 | EXCLUDED. Retired coverage: TS-11's static-only half |
+| NFR2 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-3 through TS-7, TS-13 through TS-22, TS-24, TS-25, TS-27, TS-28 |
+| NFR3 | task0001, task0003, task0004 | EXCLUDED. Retired coverage: TS-25's separator pairs. TS-11's doubled run is retained as an FR8 check |
+| NFR4 | task0001, task0003, task0004 | EXCLUDED. Retired scenario: TS-27. TS-29 measures the same two shapes against the base hook instead |
+| NFR5 | task0001, task0003, task0004, task0005 | TS-11 (both suites run under a plain interpreter with no package installation, so a non-standard-library import would fail the run), plus the import-list inspection |
+| NFR6 | task0001, task0003, task0004 | EXCLUDED. Its subject — existing behaviour untouched — is now the whole feature's outcome and is measured by TS-29 rather than by a requirement of its own |
 
 ## E2E Testing
 
@@ -140,96 +151,70 @@ applies.
 
 ## Manual Testing (E2E Not Possible)
 
-- [ ] Rule identifier and reason content: invoke the hook directly with a tool
-      payload for the TS-2, TS-3, TS-8, TS-9 and TS-10 command strings and read
-      the emitted reason. Confirm the bracketed rule identifier is
-      `rm-recursive`, `rm-unresolvable`, `rm-root`, `self-modification` and
-      `transcript-write` respectively; confirm TS-2's reason carries the
-      replacement-command suggestion for the RESOLVED path (not the variable
-      reference), and TS-3's reason carries the split-the-variables hint.
-      (AC-2, AC-3, AC-4, AC-5, FR4, FR6)
-- [ ] Expectation-list diff is additions only: every pre-existing entry (58 at
-      the base revision) is present and byte-identical, with no deletion,
-      edit or expectation change. (AC-6, FR8)
-- [ ] Red-run evidence: the implement-phase test record for task0001 shows the
-      suite failing on the newly added entries before the resolution stage was
-      implemented, with those entries as the only failures. (FR8)
-- [ ] Static-only inspection: the hook diff introduces no filesystem access,
-      path realization, subprocess or shell invocation on the resolution path,
-      and no import outside the standard library modules already used. (NFR1,
-      NFR5)
-- [ ] Cost-shape inspection: collection is a single pass over the statements
-      the hook already produces; nothing re-lexes the command string per target
-      and no new expansion loop is added. (NFR4)
-- [ ] Untouched-pattern inspection: the scratch-area allowance, the
-      Claude-Code-config pattern, the session-transcript pattern and the
-      dynamic-construct pattern are unchanged, and no new rule identifier
-      exists. (NFR6)
-- [ ] Determinism: run the hook expectation suite twice and confirm identical
-      output. (NFR3)
+- [ ] Differential ledger (TS-29): for every corpus input, record side by side
+      the verdict and bracketed rule identifier from the hook at
+      `1fdb27fe51de6d20e9812027d3aee603cb584173` and from the merged hook, both
+      run on the same machine in one session. Confirm zero differing pairs and
+      that every input produced a verdict. (FR8, TS-29)
+- [ ] Cost measurement (TS-29): run the 44KB repeated-binding-word shape and the
+      88KB shape through both hook revisions in the same session and record all
+      four times; confirm each current-side time is at most twice its base
+      counterpart and under one second, with nothing near the 10-second hook
+      timeout. (FR8, TS-29)
+- [ ] Pre-existing entries intact: every entry present at the base revision (58)
+      is present and byte-identical, with no deletion, edit or expectation
+      change. (AC-6, FR8)
+- [ ] Retention decision per added entry: for every entry added by task0001,
+      task0003 or task0004, the test record shows the base hook's verdict for
+      its command string beside the entry's recorded expectation, and the entry
+      is present exactly when the two agree. Confirm the entries for
+      `rm -rf /tmp/`, `rm -rf build-debug`, `rm -rf dist/*`, the
+      escaped-parenthesis `find … -delete` and the `git push "(" --force …`
+      form are among those present. (FR8, TS-29)
+- [ ] Single-file, stdlib-only inspection: the hook is one executable script and
+      every import is a standard library module; no dependency is introduced.
+      (NFR5, TS-11)
+- [ ] Determinism of the suite: run the hook expectation suite twice and confirm
+      identical output. (FR8, TS-11)
 - [ ] Manifest read: parse both registries, confirm the two version values are
       identical and read 0.1.57, and confirm no other plugin's version key was
-      added or changed. (AC-7, FR9)
-- [ ] Rework round 1 rule/reason checks: invoke the hook directly with a tool
-      payload for the TS-13, TS-14, TS-15, TS-18, TS-19 and TS-20 command
-      strings and read the emitted reason. Confirm the bracketed rule
-      identifier is the one the row states, that TS-15 and TS-20 emit no
-      replacement-command suggestion at all, and that TS-19's suggestion names
-      the path the command would really act on rather than the text as
-      written. (TS-13, TS-14, TS-15, TS-18, TS-19, TS-20)
-- [ ] Pre-resolution parity check for the rework scenarios: for every command
-      string added by TS-13 through TS-21, confirm the verdict is no weaker
-      than the verdict the same command string receives from the hook as it
-      stood at `workflow.implement.base_commit` — resolution may turn an ask
-      into a deny or leave it, never into an allow. (NFR2)
-- [ ] Rework round 2 rule/reason checks: invoke the hook directly with a tool
-      payload for the TS-22, TS-24, TS-25 and TS-26 command strings and read the
-      emitted reason. Confirm the bracketed rule identifier is the one the row
-      states, and that TS-26's reason contains no internal placeholder or
-      sentinel identifier and names no identifier absent from the command as
-      written. (TS-22, TS-24, TS-25, TS-26)
-- [ ] Base-verdict ledger for the rework round 2 scenarios: for every command
-      string added by TS-22 through TS-28, and for every command string quoted
-      in a round-2 finding or in that round's spot-check table, record side by
-      side the verdict of the hook at `workflow.implement.base_commit` and the
-      verdict of the merged hook. Every pair matches, with the single exception
-      of the reported false positive, which is allow on the current side only.
-      (NFR2, NFR6)
-- [ ] Cost measurement (TS-27): run the 44KB and the 88KB command shapes
-      through both hook revisions on the same machine in one session and record
-      all four times; confirm each current-side time is at most twice its base
-      counterpart and under one second. Confirm the over-ceiling command still
-      produces a verdict. (NFR4)
+      added or changed, and that task0005 modified neither file. (AC-7, FR9)
 - [ ] Optional, environment-dependent: after the installed plugin cache has
       picked up the new version, run the hook expectation suite against the
       installed copy by passing its path to the runner. Requires a Claude Code
       restart first.
 
+Retired manual checks (their requirements are excluded; listed so the drop is
+visible rather than silent): the resolution-layer rule/reason checks for TS-2,
+TS-3, TS-8, TS-9, TS-10; the round-1 rule/reason checks for TS-13 through
+TS-20; the round-2 rule/reason checks for TS-22, TS-24, TS-25, TS-26; the
+red-run evidence check for the resolution stage; the static-only inspection of
+the resolution path; the cost-shape inspection of the resolution pass; the
+untouched-pattern inspection; and both pre-resolution parity ledgers, which
+TS-29's single ledger supersedes at a wider scope.
+
 ## Performance / Security Verification
 
-- NFR4 (bounded cost): SPEC.md specifies no threshold, so TS-27 states the
-  bound relatively — no worse than twice the hook at
-  `workflow.implement.base_commit` on the same input, and far inside the hook's
-  own 10-second timeout — and the cost-shape inspection above still applies.
-  The bound fails closed: a token whose resolution would exceed the
-  resolved-text ceiling is unresolved, so a large command still receives a
-  verdict.
-- Fail-closed (NFR2): every shape the resolver cannot settle keeps its
-  pre-change verdict — covered by TS-3 through TS-7 and by the retained
-  expectation set.
+- Cost: the hook's cost on every measured shape is the base hook's cost
+  (TS-29). The superlinear paths the third round measured — 9.85s at 44KB
+  against a 10-second timeout — are removed with the layer, so the failure mode
+  of emitting no verdict at all is gone.
 - Detection preservation: the asymmetric-cost property of this hook means a new
-  false positive ends an unattended run on the spot, and a missed real target
-  is unrecoverable. Both directions are held by the same retained expectation
-  set (TS-11): the allow entries guard the false-positive cost, the deny/ask
-  entries guard detection.
-- Static-only analysis (NFR1): the judgment path executes nothing and touches
-  no filesystem object belonging to the inspected command.
+  false positive ends an unattended run on the spot, and a missed real target is
+  unrecoverable. Both directions are held by TS-11's retained expectation set —
+  the allow entries guard the false-positive cost, the deny/ask entries guard
+  detection — and by TS-29, which is what proves neither direction moved
+  relative to the pre-feature hook.
+- Withdrawn-requirement note: the fail-closed property (NFR2) is excluded not
+  because it stopped mattering but because the layer it constrained no longer
+  exists. The equivalence in TS-29 is a strictly stronger statement over the
+  same inputs: not "no weaker than base", but "identical to base".
 
 ## Verification Summary
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 28 | 27 | 0 | 14 also carry a manual rule/reason/measurement half (TS-2, TS-3, TS-12, TS-13, TS-14, TS-15, TS-18, TS-19, TS-20, TS-22, TS-24, TS-25, TS-27) and TS-26 is manual only |
-| Success criteria | 7 | 7 | 0 | 5 also carry a manual half (AC-2, AC-3, AC-4, AC-5, AC-7) |
-| Requirements | 15 | 15 | 0 | NFR4 is now carried by TS-27 as well as the cost-shape inspection; 8 others also carry a manual check |
-| Manual checks | 14 | — | — | 14 (1 optional, environment-dependent) |
+| Test scenarios | 29 (3 active: TS-11, TS-12, TS-29; 26 retired with their excluded requirements) | 3 | 0 | TS-29 carries a manual ledger/rule/timing half |
+| Success criteria | 7 (2 active: AC-6, AC-7; 5 retired) | 2 | 0 | AC-7 also carries a manual manifest read |
+| Requirements | 15 (3 in force: FR8, FR9, NFR5; 12 excluded) | 3 | 0 | FR8 and NFR5 also carry manual checks |
+| Manual checks | 8 (1 optional, environment-dependent) | — | — | 8 |
