@@ -66,11 +66,11 @@ workflow:
   status: completed
   completed_at_commit: e4d4f7f082b5beb5341af2d0f2e16722e54fcdb6
 - id: implement
-  status: completed
+  status: pending
   base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
   completed_at_commit: 969b07b8e6b462261d2d45f6e2069957d2204b23
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -221,6 +221,43 @@ tasks:
       - r2-partial-wiring
       - r2-ordinal-implicit
       - r2-constant-factor-scans
+  task0005:
+    title: withdraw the variable-resolution layer and restore the hook's base behaviour
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR8
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 3
+      source_ids:
+      - r3-quoted-name-assign
+      - r3-compound-constructs
+      - r3-scratch-glob-gate
+      - r3-positional-after-resolve
+      - r3-process-substitution
+      - r3-invalidated-names-quadratic
+      - r3-resolved-stricter-than-literal
+      - r3-array-assignment
+      - r3-fallback-sentinel-leak
+      - r3-double-count-hint
+      - r3-resolver-application-point
+      - r3-positional-tuple
+      - r3-poison-scan
+      - r3-substitute-then-cap
+      - r3-nameref
 review:
   status: pending
   rounds_completed: 3
@@ -365,8 +402,10 @@ requirements:
     - task0001
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-11
+    - TS-29
   FR9:
     title: Plugin version bump
     status: ok
@@ -449,6 +488,7 @@ requirements:
     - task0001
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-11
   NFR6:
