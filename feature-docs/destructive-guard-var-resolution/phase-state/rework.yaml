@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-var-resolution
 phase: rework
-status: completed
-generation: 3
-base_revision: 4b4708a03db950bd7443a81468d650f73ff8bc51
-last_input_digest: sha256:dc5b1aa0805d505de8e0de8f519399e96817fe733d67dd1578014825e7c52279
-active_request_id: null
+status: dispatching
+generation: 4
+base_revision: 429a35eeecf436b9ee01f9f83fc4ca6974f35aac
+last_input_digest: sha256:73b38c7136c611d384b2d77d65d3c6cc6410fd4524f11955eab23e4bd8236812
+active_request_id: rework-run-0004
 packets: {}
 answers: {}
 worker_runs:
