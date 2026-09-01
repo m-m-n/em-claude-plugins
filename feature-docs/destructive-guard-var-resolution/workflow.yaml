@@ -125,7 +125,7 @@ tasks:
     notes: null
     branch: em-workflow/destructive-guard-var-resolution/task0002
 review:
-  status: in_progress
+  status: pending
   rounds_completed: 1
   plan:
     floor:
@@ -144,7 +144,7 @@ review:
     spec: completed
     performance: completed
   residual_critical_high: 13
-  needs_rework: false
+  needs_rework: true
 requirements:
   FR1:
     title: Collect plain assignments from the command string
