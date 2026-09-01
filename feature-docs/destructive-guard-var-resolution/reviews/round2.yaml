@@ -1,0 +1,336 @@
+round: 2
+executed_at: "2026-09-01T13:40:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
+  head_commit: 47cd792180322f48cfc831ee8eae3a979bfa2eea
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-var-resolution/task0001.tests.yaml
+    - test-docs/destructive-guard-var-resolution/task0002.tests.yaml
+    - test-docs/destructive-guard-var-resolution/task0003.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+    - perspective: performance
+      reason: "このフックは全 Bash ツール呼び出しの PreToolUse で走る。rework で解決段が全面的に書き直されたため、NFR4（bounded cost）を再度確認する"
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed, note: "wrapper の 600 秒タイムアウトで調査中に打ち切られ、JSON 未出力。findings 0 はシグナル無しを意味する"}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed, note: "モデルがスキーマのプレースホルダ文字列をそのまま返した。findings 0 はシグナル無しを意味する"}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+
+# オーケストレーター自身が base(1fdb27f) と現行を同一入力で突き合わせた実測。
+# 10 件中 9 件が意図しない方向に動いており、意図どおり動いたのは
+# 「報告された誤爆の解消」1 件だけ。
+orchestrator_spot_check:
+  - {case: "rm -rf /tmp/",                         base: allow,                current: deny/rm-recursive,   intended: false}
+  - {case: "rm -rf tmp/",                          base: allow,                current: deny/rm-recursive,   intended: false}
+  - {case: "rm -rf build-debug",                   base: allow,                current: deny/rm-recursive,   intended: false}
+  - {case: "rm -rf $(mktemp -d)",                  base: allow,                current: ask/rm-unresolvable, intended: false}
+  - {case: "find /home/sakura \\( -name '*.log' \\) -delete", base: deny/find-delete, current: allow,      intended: false}
+  - {case: "git push \"(\" --force origin main",   base: deny/git-force-push,  current: allow,               intended: false}
+  - {case: "HOME=/tmp/x; if true; then HOME=/home/sakura; fi; rm -rf $HOME", base: deny/rm-root, current: allow, intended: false}
+  - {case: "D=/tmp/scratch; D=$HOME/project; rm -rf $D", base: ask/rm-unresolvable, current: allow,          intended: false}
+  - {case: "rm -rf /home/sakura/$DIR/../../../tmp/y", base: ask/rm-unresolvable, current: allow,             intended: false}
+  - {case: "D=/tmp/claude-1000/xyz/scratchpad/backup; rm -rf \"$D\"", base: ask/rm-unresolvable, current: allow, intended: true}
+
+findings:
+  - stable_id: r2-rebind-compound
+    severity: critical
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 712
+    title: "再束縛の検出が文の先頭トークンのみで、if/then・do・波括弧・for・代入接頭辞越しの再代入を見落とす"
+    description: |
+      invalidated_names() は toks[0] だけを見て再束縛を判定し、collect_assignments() は
+      単一トークンの代入文以外を読み飛ばす。シェルキーワードや代入接頭辞と同じ文に融合した
+      再代入は代入としても再束縛としてもカウントされず、先行する代入の値が残り続ける。
+      実測（base → 現行）: `HOME=/tmp/x; if true; then HOME=/home/sakura; fi; rm -rf $HOME`
+      が deny(rm-root) → allow。for のループ変数束縛、関数本体の波括弧、`A=1 export X=…`、
+      `while read X` も同様。改行区切りにすると偶然 2 回数えられて ask に留まるため、
+      同じ意味のコマンドが書き方だけで allow/ask に割れる。
+    suggestion: |
+      単一トークンの代入として記録できなかった文についても全トークンを走査し、
+      代入形にマッチしたトークンの名前を counts に加算する（候補には入れない）。
+      あわせて for / select の直後の識別子、getopts の第 2 引数、文中どこかに現れる
+      read / mapfile / readarray、unset を束縛として扱う。方向は常に「解決しない」側へ。
+    sources: [claude:security, claude:comprehensive, claude:spec]
+    confidence: 90
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-paren-provenance
+    severity: critical
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 426
+    title: "括弧のスコープ判定が Tok.is_operator の provenance 契約を無視し、クォート済みの括弧で文が分断される"
+    description: |
+      lex_segments() の括弧処理は文字列比較 `seg == "("` だけでスコープを開閉する。
+      Tok は str のサブクラスなので、クォート語やエスケープ語の括弧も一致してしまう。
+      split_redirects() は同じ罠を is_operator で既に塞いでいるのに、新規コードが
+      その契約を破っている。
+      実測（base → 現行）: `find /home/sakura \( -name '*.log' \) -delete` が
+      deny(find-delete) → allow、`git push "(" --force origin main` が
+      deny(git-force-push) → allow。変数を一切含まないコマンドの検知が落ちている。
+      逆方向の誤爆もある: 閉じられない括弧が以降を別スコープにするため
+      `X=/tmp/x; echo "(" ; rm -rf $X` は allow → ask に落ちる。
+    suggestion: |
+      括弧の dispatch を `seg == "(" and getattr(seg, "is_operator", False)` の形にし、
+      provenance の無い括弧は従来どおり語として残す。融合句読点の carve-out にも
+      同じ条件を付ける。lexed=False のフォールバック経路では括弧をスコープ境界として
+      扱わない。
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 90
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-normalize-before-gate
+    severity: critical
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1113
+    title: "正規化後テキストでスクラッチ領域判定を未解決ゲートより先に行うため、未展開の参照が親参照で相殺される"
+    description: |
+      check_rm() は normalize_candidate() の結果を is_safe_delete() にかける処理を
+      DYNAMIC ゲートより前に置いている。normpath は純字句処理なので、未展開の変数参照や
+      グロブ 1 コンポーネントを後続の親参照が「ただの 1 階層」として相殺してしまう。
+      動的な削除対象が字句上だけスクラッチ領域に着地し、未解決ゲートに到達しない。
+      実測（base → 現行）: `rm -rf /home/sakura/$DIR/../../../tmp/y` が
+      ask(rm-unresolvable) → allow。実際の削除先は $DIR の深さで動く。
+      グロブ版・チルダ版も同じ。
+    suggestion: |
+      DYNAMIC 判定を先に行い、動的なテキストには base と同じく生テキストで
+      SAFE_DELETE を当てる。正規化が封じ込めを決めてよいのは未展開コンポーネントを
+      含まないテキストだけ。
+    sources: [claude:security]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-chained-rebind
+    severity: critical
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 796
+    title: "連鎖値による再代入が再代入カウントから漏れ、古いリテラルが解決され続ける"
+    description: |
+      collect_assignments() は値に変数参照を含む代入を counts に加算せず continue する。
+      同じ名前への 2 回目の代入が値に変数参照を含むと「1 回しか代入されていない」と
+      見なされ、先行のリテラルが適用される。同型の PROCESS_SUB 側は加算してから
+      continue しており、VAR_REF 側だけが非対称に加算を落としている。
+      実測（base → 現行）: `D=/tmp/scratch; D=$HOME/project; rm -rf $D` が
+      ask → allow。`X=/tmp/safe; X=$X/sub; rm -rf $X` も同じ。
+      SPEC FR6「2 回以上代入された変数は解決マップから完全に除外する」に反する。
+    suggestion: |
+      counts への加算を continue より前に移し、VAR_REF / PROCESS_SUB のいずれに
+      当たった場合も加算してから候補登録だけをスキップする。
+    sources: [claude:spec]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-trailing-slash-scratch
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1113
+    title: "正規化で末尾スラッシュが落ち、スクラッチ領域そのものの削除が deny になる"
+    description: |
+      is_safe_delete() に normalize_candidate() の出力だけを渡すため、normpath が
+      末尾の区切りを落とす。SAFE_DELETE のうち末尾スラッシュ込みの綴りしか持たない
+      alternative は、対象がそのディレクトリ自身のときに一致しなくなる。
+      実測（base → 現行）: `rm -rf /tmp/`・`rm -rf tmp/`・`rm -rf .cache/`・
+      `rm -rf /var/tmp/` がいずれも allow → deny。
+      ユーザーの global rules が一時ファイルの第一選択に据えている領域そのもの。
+    suggestion: |
+      元の綴りがディレクトリ形（末尾スラッシュ）なら、正規化後に境界を復元してから
+      判定する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-literal-verdict-drift
+    severity: high
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1113
+    title: "境界判定と正規化前置により、変数を含まない既存コマンドの判定が変わる（NFR6 違反）"
+    description: |
+      SAFE_DELETE の生テキスト前方一致を、正規化後テキストに対する成分境界付き判定へ
+      置き換えたため、変数参照を一切含まないリテラルコマンドの判定が変わる。
+      実測（base → 現行）: `rm -rf dist-ssr`・`rm -rf target-old`・`rm -rf coverage.old`・
+      `rm -rf build-artifacts` が allow → deny。
+      SPEC NFR6「変数解決以外の既存挙動は変更しない」および Assumptions
+      「SAFE_DELETE 等の正規表現はそのまま使う」に反する。
+    suggestion: |
+      境界判定と正規化前置を解決済みトークンだけに適用し、未解決の生テキストには
+      従来の前方一致を残す。リテラル側も締めるなら、それはスコープ外の検知強化として
+      SPEC に明記し、該当コマンドを deny 期待の新規ケースとして登録する。
+    sources: [claude:spec, claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-unset-for-read
+    severity: high
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 703
+    title: "unset / for / while read による再束縛が無効化集合から漏れる"
+    description: |
+      invalidated_names() は toks[0] が束縛語集合にあるときだけ束縛を認識する。
+      unset は集合に無く、`for NAME in …` と `while read NAME` は束縛語が toks[0] に
+      来ないため素通りする。
+      実測（base → 現行）: `D=/tmp/scratch; unset D; rm -rf $D` が ask → allow。
+      for 版・while read 版も同じ。
+    suggestion: |
+      unset を名前束縛語として扱い、for / select は toks[1] を返し、行読み込み語は
+      先頭固定ではなくトークン列のどこかに現れた時点でその文を全名前無効化として扱う。
+    sources: [claude:spec, claude:security]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-substitution-flattening
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 593
+    title: "置換プレースホルダの平坦化が、代入を含まないコマンドの判定も変える"
+    description: |
+      置換をプレースホルダに畳む処理が判定対象の全文に効くため、変数代入を一切
+      含まないコマンドでも判定が変わる。
+      実測（base → 現行）: `rm -rf $(mktemp -d)` が allow → ask、
+      `rm -rf $(pwd)/build` が deny → ask。片側は緩和方向で、Objectives の
+      「検知を弱めない」とも整合しない。無人実行では ask が deny に降格して走行を止める。
+    suggestion: |
+      プレースホルダを代入収集の入力にだけ効かせ、判定ループが見る文テキストは
+      従来どおりにする。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-bare-name-boundary
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1075
+    title: "bare-name のパス境界要求で、実在するビルド出力ディレクトリが deny になる"
+    description: |
+      is_safe_delete() が bare-name alternative に「マッチ直後が終端か区切り」を
+      要求したことで、スクラッチ名を接頭辞に持つ別ディレクトリが一律にスクラッチ領域外へ
+      落ちる。狙い自体は妥当だが巻き添えが広い。
+      実測（base → 現行）: `rm -rf build-debug`・`rm -rf dist-newstyle`・
+      `rm -rf coverage-old`・`rm -rf node_modules_bak` が allow → deny。
+      build-debug は CMake、dist-newstyle は cabal の標準ビルド出力。
+    suggestion: |
+      SAFE_DELETE に区切り付き派生を明示の alternative として足すか、bare-name の
+      境界を外れたときは deny ではなく ask に落として実行者に判断を返す。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-sentinel-in-reason
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 83
+    title: "内部センチネルがそのまま拒否理由に出て、書き換え指示が実行不能になる"
+    description: |
+      置換を語として残すための内部表現が、判定理由の文字列にそのまま埋め込まれる。
+      `rm -rf $(cat list)` の理由文が、ユーザーが 1 文字も書いていない識別子を
+      「あなたの書いた対象」として提示する。理由文はエージェントが読んで書き換えるための
+      ものなので、存在しない変数名を名指しすると書き換え先を誤らせる。
+    suggestion: |
+      理由文を組み立てる直前でセンチネルを人間可読な語に戻す。判定ロジック側は
+      センチネル入りのテキストで動かし、表示だけ差し替える。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-quadratic-resolution
+    severity: medium
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    line: 872
+    title: "解決後テキストに長さ上限が無く、コマンド長に対して二乗の CPU とメモリを消費する"
+    description: |
+      resolve_target() は参照を値に置換するが、置換後テキストの長さに上限が無い。
+      長さ V の値を R 回参照すると V×R の文字列が生成され、check_rm() は全引数の
+      解決結果を同時に保持する。実測: 44KB のコマンドで base 0.040s → 現行 1.76s、
+      88KB で base 0.078s → 現行 6.95s、子プロセス maxrss 346MB。
+      hooks.json はこのフックを timeout 10 の同期 PreToolUse として全 Bash 呼び出しに
+      掛けるので、110KB 程度で打ち切られ、判定が出ないまま素通りする側に倒れる。
+      通常サイズのコマンドへの追加コスト（約 4µs）は無視できる。
+    suggestion: |
+      解決後テキストに長さ上限を設け、超過時は未解決として返す。上限超過は
+      「解決できなかった」扱いなので呼び出し側は解決前と同じ判定を行い、fail-closed に倒れる。
+    sources: [claude:performance]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-partial-wiring
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1641
+    title: "解決層が 6 チェック中 2 つにだけ配線され、同一文が判定器ごとに別テキストで裁かれる"
+    description: |
+      main() は文ごとに resolver を作り、check_self_modification() と check_rm() に
+      だけ渡す。同じループ内の他 4 チェックは生の引数を読み続ける。
+      `D=--delete; rsync $D src dst` は allow、`F=-rf; X=/home/sakura/y; rm $F $X` は deny。
+      同じ「フラグを変数経由で渡す」形が、どのチェックに当たるかだけで結論が変わる。
+    suggestion: |
+      文が生成される境界で 1 度だけ解決を適用し、全チェックへ同じものを渡す。
+      当面 2 チェックのままにするなら、対象外であることを 1 箇所で宣言する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-ordinal-implicit
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 779
+    title: "ordinal だけが文と一緒に運ばれず、2 箇所の enumerate の暗黙の一致に依存している"
+    description: |
+      statements() は scope と conditional を文と一緒に運ぶのに、判定の要である
+      ordinal だけは運ばれない。collect_assignments() と main() がそれぞれ独立に
+      enumerate して添字を作り、その 2 つが常に一致することを前提にしている。
+      どちらかにフィルタや並べ替えが入ると ordinal 空間がずれ、「使用より後ろの代入」を
+      先行と誤認して解決する — 失敗方向が fail-open。
+    suggestion: |
+      ordinal を scope / conditional と同じ扱いにして statements() が文と一緒に返すか、
+      少なくとも採番を 1 箇所に集約する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r2-constant-factor-scans
+    severity: medium
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    line: 735
+    title: "collect_assignments / resolve_target / check_rm が文・トークン・引数ごとに複数回の正規表現走査を行う"
+    description: |
+      クロスモデルレビュアーが挙げた 3 件（collect_assignments の 2 パス＋複数正規表現、
+      resolve_target のトークンごとの複数走査、check_rm の引数リスト 3 パス）。
+      いずれも定数倍で、NFR4 の線形境界そのものは満たす。レビュアー自身が
+      「confirmed defect ではなく borderline nit」と位置づけている。
+    suggestion: |
+      正規表現走査の統合や 1 パス化。優先度は低い。
+    sources: ["litellm:vertex-deepseek-v3.2:performance"]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: null
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: pending_user_decision
+residual_critical_high: 7
+rework_required: null
