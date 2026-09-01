@@ -174,7 +174,7 @@ tasks:
       - cc8e7a2eee2b504a
       - b6acc424285ab451
 review:
-  status: in_progress
+  status: pending
   rounds_completed: 2
   plan:
     floor:
@@ -193,7 +193,7 @@ review:
     spec: completed
     performance: completed
   residual_critical_high: 7
-  needs_rework: false
+  needs_rework: true
 requirements:
   FR1:
     title: Collect plain assignments from the command string
