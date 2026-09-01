@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-var-resolution
 phase: rework
-status: applying_patch
+status: completed
 generation: 1
 base_revision: f2908098bbf7612f8af5ef02fd67be5dca816f52
 last_input_digest: sha256:184a3b9f8bd4949656da6e949d5f1f536c088d25df7e06592be29377e29dd178
@@ -22,7 +22,7 @@ artifacts:
   produced_by: rework-run-0001
 patches:
 - patch_id: destructive-guard-var-resolution-rework-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:184a3b9f8bd4949656da6e949d5f1f536c088d25df7e06592be29377e29dd178
   base_workflow_blob: eb5234065238dd87b973604a077bca255d2fafe7
 progress_fingerprint: null
