@@ -236,8 +236,8 @@ tasks:
     requirements:
     - FR8
     - NFR5
-    status: in_progress
-    notes: null
+    status: merged
+    notes: 'deviation admitted: destructive-guard-cases.json に `rm -rf dist/*` の allow ケースを 1 件新規追加（AC-3 が明示的に要求。既存エントリで同コマンド文字列を覆うものは無かった）'
     branch: em-workflow/destructive-guard-var-resolution/task0005
     provenance:
       source: review
