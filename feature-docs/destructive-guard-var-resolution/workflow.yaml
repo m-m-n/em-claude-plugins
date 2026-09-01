@@ -66,11 +66,11 @@ workflow:
   status: completed
   completed_at_commit: e4d4f7f082b5beb5341af2d0f2e16722e54fcdb6
 - id: implement
-  status: completed
+  status: pending
   base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
   completed_at_commit: d4fd6d4e567341fcd9afe743cf0053ba568b0a3a
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -124,6 +124,55 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/destructive-guard-var-resolution/task0002
+  task0003:
+    title: make variable resolution reflect what the shell would really do
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - f11f6a1aac9cf9b4
+      - 2c696d520373ceb2
+      - 480361011164af5b
+      - 96be1fbe15d44317
+      - deafd14791607b66
+      - 0b16e740ce83b0f5
+      - 8e1e8deaf6e92ca2
+      - d70fdfdbf2b99934
+      - 3e67239a3c93f5be
+      - 3497f9d6ae1f7761
+      - 8c05d0eb8a9fb83d
+      - cd259adaf81627ad
+      - eacf264383137515
+      - cc8e7a2eee2b504a
+      - b6acc424285ab451
 review:
   status: pending
   rounds_completed: 1
@@ -153,8 +202,12 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-1
+    - TS-13
+    - TS-14
+    - TS-15
   FR2:
     title: Substitute resolved values into target tokens
     status: ok
@@ -162,12 +215,17 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-1
     - TS-2
     - TS-6
     - TS-7
     - TS-8
+    - TS-15
+    - TS-18
+    - TS-20
+    - TS-21
   FR3:
     title: Apply resolved values to every target-path check
     status: ok
@@ -175,12 +233,16 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-1
     - TS-2
     - TS-8
     - TS-9
     - TS-10
+    - TS-18
+    - TS-19
+    - TS-21
   FR4:
     title: Verdict for a resolved path outside SAFE_DELETE
     status: ok
@@ -188,8 +250,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-2
+    - TS-19
+    - TS-20
   FR5:
     title: Assignment forms in scope
     status: ok
@@ -197,8 +262,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-5
+    - TS-14
   FR6:
     title: Reassignment excludes the variable, with a rewrite hint
     status: ok
@@ -206,8 +273,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-3
+    - TS-14
   FR7:
     title: Same-nesting-level scope only
     status: ok
@@ -215,8 +284,12 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-4
+    - TS-13
+    - TS-16
+    - TS-17
   FR8:
     title: Test cases per the project rule
     status: ok
@@ -224,6 +297,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-11
   FR9:
@@ -242,6 +316,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-11
   NFR2:
@@ -251,6 +326,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-3
     - TS-4
@@ -258,6 +334,15 @@ requirements:
     - TS-6
     - TS-7
     - TS-11
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-19
+    - TS-20
+    - TS-21
   NFR3:
     title: Determinism
     status: ok
@@ -265,6 +350,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-11
   NFR4:
@@ -274,6 +360,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests: []
   NFR5:
     title: Single-file, stdlib-only
@@ -282,6 +369,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-11
   NFR6:
@@ -291,5 +379,6 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0003
     tests:
     - TS-11
