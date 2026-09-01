@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-var-resolution
 phase: rework
-status: completed
-generation: 1
-base_revision: f2908098bbf7612f8af5ef02fd67be5dca816f52
-last_input_digest: sha256:184a3b9f8bd4949656da6e949d5f1f536c088d25df7e06592be29377e29dd178
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: 4bd745e21759d917c71718ab33fcf526732a3983
+last_input_digest: sha256:56cabddac19ae7d04f11940b15501e8ebd5005297c697beb6527691c27eeeac2
+active_request_id: rework-run-0002
 packets: {}
 answers: {}
 worker_runs:
@@ -13,6 +13,10 @@ worker_runs:
   status: completed
   input_digest: sha256:184a3b9f8bd4949656da6e949d5f1f536c088d25df7e06592be29377e29dd178
   output_digest: sha256:b2ebdf8ab5500e7206752e7334a967764656eb7391b3cf1e0770131967241d3b
+- request_id: rework-run-0002
+  status: dispatched
+  input_digest: sha256:56cabddac19ae7d04f11940b15501e8ebd5005297c697beb6527691c27eeeac2
+  output_digest: null
 artifacts:
 - path: feature-docs/destructive-guard-var-resolution/tasks/task0003.md
   sha256: sha256:26afeb0d936c9cbf4231571e9d93de0f8a15d7973155228beca3ae5ea90b237d
