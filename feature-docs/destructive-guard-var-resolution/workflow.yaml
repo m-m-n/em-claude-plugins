@@ -66,11 +66,11 @@ workflow:
   status: completed
   completed_at_commit: e4d4f7f082b5beb5341af2d0f2e16722e54fcdb6
 - id: implement
-  status: completed
+  status: pending
   base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
   completed_at_commit: 78b0ddf83e0bcfae39508e83e95f622fb28bf774
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -173,6 +173,54 @@ tasks:
       - eacf264383137515
       - cc8e7a2eee2b504a
       - b6acc424285ab451
+  task0004:
+    title: judge unsubstituted text with the pre-resolution path, and close the remaining binding leaks
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      review_round: 2
+      source_ids:
+      - r2-rebind-compound
+      - r2-paren-provenance
+      - r2-normalize-before-gate
+      - r2-chained-rebind
+      - r2-trailing-slash-scratch
+      - r2-literal-verdict-drift
+      - r2-unset-for-read
+      - r2-substitution-flattening
+      - r2-bare-name-boundary
+      - r2-sentinel-in-reason
+      - r2-quadratic-resolution
+      - r2-partial-wiring
+      - r2-ordinal-implicit
+      - r2-constant-factor-scans
 review:
   status: pending
   rounds_completed: 2
@@ -203,11 +251,13 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-1
     - TS-13
     - TS-14
     - TS-15
+    - TS-25
   FR2:
     title: Substitute resolved values into target tokens
     status: ok
@@ -216,6 +266,7 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-1
     - TS-2
@@ -226,6 +277,10 @@ requirements:
     - TS-18
     - TS-20
     - TS-21
+    - TS-22
+    - TS-23
+    - TS-24
+    - TS-26
   FR3:
     title: Apply resolved values to every target-path check
     status: ok
@@ -234,6 +289,7 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-1
     - TS-2
@@ -243,6 +299,8 @@ requirements:
     - TS-18
     - TS-19
     - TS-21
+    - TS-23
+    - TS-28
   FR4:
     title: Verdict for a resolved path outside SAFE_DELETE
     status: ok
@@ -251,10 +309,12 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-2
     - TS-19
     - TS-20
+    - TS-26
   FR5:
     title: Assignment forms in scope
     status: ok
@@ -263,9 +323,11 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-5
     - TS-14
+    - TS-25
   FR6:
     title: Reassignment excludes the variable, with a rewrite hint
     status: ok
@@ -274,9 +336,11 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-3
     - TS-14
+    - TS-25
   FR7:
     title: Same-nesting-level scope only
     status: ok
@@ -285,11 +349,13 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-4
     - TS-13
     - TS-16
     - TS-17
+    - TS-28
   FR8:
     title: Test cases per the project rule
     status: ok
@@ -298,6 +364,7 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-11
   FR9:
@@ -317,6 +384,7 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-11
   NFR2:
@@ -327,6 +395,7 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-3
     - TS-4
@@ -343,6 +412,11 @@ requirements:
     - TS-19
     - TS-20
     - TS-21
+    - TS-22
+    - TS-24
+    - TS-25
+    - TS-27
+    - TS-28
   NFR3:
     title: Determinism
     status: ok
@@ -351,8 +425,10 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-11
+    - TS-25
   NFR4:
     title: Bounded cost
     status: ok
@@ -361,7 +437,9 @@ requirements:
     tasks:
     - task0001
     - task0003
-    tests: []
+    - task0004
+    tests:
+    - TS-27
   NFR5:
     title: Single-file, stdlib-only
     status: ok
@@ -370,6 +448,7 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-11
   NFR6:
@@ -380,5 +459,8 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-11
+    - TS-22
+    - TS-23
