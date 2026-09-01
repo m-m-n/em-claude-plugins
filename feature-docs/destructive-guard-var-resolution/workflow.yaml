@@ -259,7 +259,7 @@ tasks:
       - r3-substitute-then-cap
       - r3-nameref
 review:
-  status: in_progress
+  status: pending
   rounds_completed: 4
   plan:
     floor:
@@ -275,7 +275,7 @@ review:
     architecture: completed
     spec: completed
   residual_critical_high: 3
-  needs_rework: false
+  needs_rework: true
 requirements:
   FR1:
     title: Collect plain assignments from the command string
