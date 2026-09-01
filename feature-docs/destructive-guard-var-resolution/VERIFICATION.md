@@ -8,7 +8,7 @@
 
 This document covers the INTEGRATED verification run after every task is
 merged — the two first-pass tasks and the rework tasks added after review
-rounds 1, 2 and 3. Per-task acceptance criteria live in the task plans.
+rounds 1, 2, 3 and 4. Per-task acceptance criteria live in the task plans.
 
 ### What this feature now delivers, and what it no longer does
 
@@ -20,7 +20,11 @@ expectation entries, per `.claude/rules/hook-tests.md`), **FR9** (the
 standard-library-only hook). task0005 restores the hook to the behaviour of
 `1fdb27fe51de6d20e9812027d3aee603cb584173` and keeps every expectation entry
 this feature added whose recorded expectation matches what that hook actually
-produces.
+produces. task0006 then makes those retained entries describe themselves
+correctly — labels naming the judgment path that really produces each verdict
+instead of the withdrawn layer, an explicit marker on every verdict that
+records a known guard gap, and the base revision's file layout so the diff
+reads as an append. It changes no verdict and does not touch the hook.
 
 Twenty-six scenarios below therefore verify behaviour that no longer exists.
 They are **retired in place, not deleted**: each keeps its ID and its original
@@ -60,7 +64,10 @@ were added by the rework round that followed review round 1 and TS-22 through
 TS-28 by the round that followed review round 2; both sets state properties of
 the resolution layer. TS-29 is added by the rework round that followed review
 round 3 and states the property that replaces them: the hook answers as the
-pre-feature hook answers.
+pre-feature hook answers. TS-30 and TS-31 are added by the rework round that
+followed review round 4 and state properties of the expectation list as a
+document rather than of the hook: the shape of its diff against the base
+revision, and whether each entry's label is true of the verdict beside it.
 
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
@@ -92,6 +99,8 @@ pre-feature hook answers.
 | TS-27 | RETIRED (NFR2, NFR4 excluded) — cost of resolution at 44KB and 88KB, and an over-ceiling token | Not run as a resolution-cost scenario. The two measured shapes are carried forward by TS-29, whose comparison is against the base hook rather than against a ceiling the layer defined | — |
 | TS-28 | RETIRED (FR3, FR7, NFR2 excluded) — an argument supplied through a variable to a check outside the declared resolved-text set, and a later assignment | Not run. Asserted where the layer was wired | — |
 | TS-29 | Behavioural equivalence with the pre-feature hook: every command string in the retained expectation list, every command string quoted in a finding or spot-check table of review rounds 1, 2 and 3 (including round 3's eleven verified inputs), and the 44KB and 88KB shapes round 3 timed, each run through `em-workflow/hooks/destructive-guard.py` and through the hook at `1fdb27fe51de6d20e9812027d3aee603cb584173` on the same machine in the same session | every input yields the same verdict and the same bracketed rule identifier on both sides — zero differing pairs, recorded pairwise; every input yields a verdict at all, none reaching the hook's 10-second timeout; the two timed shapes are judged within twice the base time and under one second | Integration (differential) + Manual (ledger, rule identifiers, timings) |
+| TS-30 | Diff shape of the expectation list: `em-workflow/hooks/tests/destructive-guard-cases.json` compared against `1fdb27fe51de6d20e9812027d3aee603cb584173`, after task0006 restores the base revision's one-entry-per-line layout | the file holds one entry per line; every one of the 58 base-revision entry lines is present, in order, byte-identical; the diff consists of added lines only, with at most one non-added line — the base file's final entry line re-emitted with a trailing comma appended, differing from its base form by that comma alone; `em-workflow/hooks/destructive-guard.py` shows no diff against the same revision | Integration (diff) + Manual (one read of the diff) |
+| TS-31 | Label truthfulness of the retained expectation entries: each entry this feature added, read against the verdict and the bracketed rule identifier the merged hook actually produces for its command string | no label in the file contains the string `変数解決`, and no label names a resolution stage, assignment map, scope rule, value-length ceiling or reason sentinel; each label names the judgment path that produces its entry's verdict; every entry whose verdict records a known guard gap — the bare command substitution as sole delete target, the trailing-slash scratch-root spelling, the unanchored scratch-name prefix, and the paired counter-cases added beside them — carries the literal marker `既知の穴(未修正)`, and no other entry does; every verdict and every command string is unchanged from before task0006; both suites stay green | Integration (suite, string search) + Manual (label/verdict pairing table) |
 
 ### Additional verification scenarios (verification-plan additions)
 
@@ -120,7 +129,7 @@ cover have a named, automated check rather than an empty mapping.
 | AC-3 | RETIRED with FR2, FR3 — a resolved value reaching root or home is denied | Not verified; asserted resolution behaviour |
 | AC-4 | RETIRED with FR3 — a resolved write target asks or denies per its pattern | Not verified; asserted resolution behaviour |
 | AC-5 | RETIRED with FR5-FR7, NFR2 — every unresolvable form keeps its pre-change verdict and the reassignment reason carries the split hint | Not verified as written. Its stronger successor is TS-29: EVERY form, resolvable or not, keeps the pre-feature verdict |
-| AC-6 | The hook expectation suite passes with every pre-existing entry still present | TS-11 plus TS-29's per-entry verdict pairs, plus the pre-existing-entry byte-identity check below |
+| AC-6 | The hook expectation suite passes with every pre-existing entry still present | TS-11 plus TS-29's per-entry verdict pairs, plus TS-30's diff-shape check (which is where the pre-existing entries' byte identity is now established: line for line against the base revision, inside a diff that is additions only) |
 | AC-7 | Both manifests read 0.1.57 | TS-12 plus the manual manifest read |
 
 ### Functional Requirements Coverage
@@ -134,7 +143,7 @@ cover have a named, automated check rather than an empty mapping.
 | FR5 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-5, TS-14, TS-25 |
 | FR6 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-3, TS-14, TS-25 |
 | FR7 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-4, TS-13, TS-16, TS-17, TS-28 |
-| FR8 | task0001, task0003, task0004, task0005 | TS-11 (the retained expectation set runs green, twice, with every pre-existing entry byte-identical) and TS-29 (each retained added entry's expectation equals the base hook's verdict for its command, and each removed entry's did not) |
+| FR8 | task0001, task0003, task0004, task0005, task0006 | TS-11 (the retained expectation set runs green, twice), TS-29 (each retained added entry's expectation equals the base hook's verdict for its command, and each removed entry's did not), TS-30 (the pre-existing entries are byte-identical line for line and the diff against the base revision is additions only) and TS-31 (every entry's label is true of the verdict beside it, and every verdict that records a known guard gap says so) |
 | FR9 | task0002 | TS-12, plus the manual manifest read |
 | NFR1 | task0001, task0003, task0004 | EXCLUDED. Retired coverage: TS-11's static-only half |
 | NFR2 | task0001, task0003, task0004 | EXCLUDED. Retired scenarios: TS-3 through TS-7, TS-13 through TS-22, TS-24, TS-25, TS-27, TS-28 |
@@ -161,9 +170,26 @@ applies.
       four times; confirm each current-side time is at most twice its base
       counterpart and under one second, with nothing near the 10-second hook
       timeout. (FR8, TS-29)
-- [ ] Pre-existing entries intact: every entry present at the base revision (58)
-      is present and byte-identical, with no deletion, edit or expectation
-      change. (AC-6, FR8)
+- [ ] Pre-existing entries intact (TS-30): every entry present at the base
+      revision (58) is present, in order, and byte-identical **line for line**
+      in the base revision's one-entry-per-line layout, with no deletion, edit
+      or expectation change. Check this on the diff against
+      `1fdb27fe51de6d20e9812027d3aee603cb584173`, not by reading the file: the
+      diff must contain added lines only, with at most one non-added line — the
+      base file's final entry line re-emitted with a trailing comma appended.
+      (Round 4 found the earlier wording of this check unverifiable: the file
+      had been reformatted to one element per line, so "byte-identical" was
+      false of every line while remaining true of every parsed entry. task0006
+      restores the layout, which is what makes this check answerable again.)
+      (AC-6, FR8, TS-30)
+- [ ] Label / verdict pairing (TS-31): for every entry this feature added, the
+      test record shows the entry's label beside the verdict and bracketed rule
+      identifier the merged hook produces for its command string. Confirm no
+      label names the withdrawn resolution layer, that each label names the
+      judgment path that actually produced the verdict, and that every entry
+      recording a known guard gap — bare command substitution as sole delete
+      target, trailing-slash scratch root, unanchored scratch-name prefix —
+      carries the `既知の穴(未修正)` marker. (FR8, TS-31)
 - [ ] Retention decision per added entry: for every entry added by task0001,
       task0003 or task0004, the test record shows the base hook's verdict for
       its command string beside the entry's recorded expectation, and the entry
@@ -205,6 +231,16 @@ TS-29's single ledger supersedes at a wider scope.
   the allow entries guard the false-positive cost, the deny/ask entries guard
   detection — and by TS-29, which is what proves neither direction moved
   relative to the pre-feature hook.
+- Known gaps recorded rather than endorsed: several retained allow entries hold
+  a verdict that follows from a pre-existing weakness of the guard (a delete
+  whose only target is an unquoted command substitution reaches the check with
+  no targets; the scratch-area allowance matches a name prefix without a path
+  separator; a scratch root with a trailing slash is allowed where the same root
+  without one is denied). Those weaknesses are base behaviour, unchanged by this
+  feature and out of its scope. TS-31 is what keeps them legible: the entry
+  stays as a false-positive guard, and its label says the verdict records an
+  unfixed gap, so a later change that closes the gap reads as intended rather
+  than as a regression.
 - Withdrawn-requirement note: the fail-closed property (NFR2) is excluded not
   because it stopped mattering but because the layer it constrained no longer
   exists. The equivalence in TS-29 is a strictly stronger statement over the
@@ -214,7 +250,7 @@ TS-29's single ledger supersedes at a wider scope.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 29 (3 active: TS-11, TS-12, TS-29; 26 retired with their excluded requirements) | 3 | 0 | TS-29 carries a manual ledger/rule/timing half |
+| Test scenarios | 31 (5 active: TS-11, TS-12, TS-29, TS-30, TS-31; 26 retired with their excluded requirements) | 5 | 0 | TS-29, TS-30 and TS-31 each carry a manual half (ledger/rule/timing, diff read, label pairing) |
 | Success criteria | 7 (2 active: AC-6, AC-7; 5 retired) | 2 | 0 | AC-7 also carries a manual manifest read |
 | Requirements | 15 (3 in force: FR8, FR9, NFR5; 12 excluded) | 3 | 0 | FR8 and NFR5 also carry manual checks |
-| Manual checks | 8 (1 optional, environment-dependent) | — | — | 8 |
+| Manual checks | 9 (1 optional, environment-dependent) | — | — | 9 |
