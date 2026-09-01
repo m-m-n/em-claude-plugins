@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-var-resolution
 phase: rework
-status: dispatching
+status: applying_patch
 generation: 4
 base_revision: 429a35eeecf436b9ee01f9f83fc4ca6974f35aac
 last_input_digest: sha256:73b38c7136c611d384b2d77d65d3c6cc6410fd4524f11955eab23e4bd8236812
-active_request_id: rework-run-0004
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -21,18 +21,22 @@ worker_runs:
   status: completed
   input_digest: sha256:dc5b1aa0805d505de8e0de8f519399e96817fe733d67dd1578014825e7c52279
   output_digest: sha256:15ba55068f1a7cb04b139ff363884a6075407e81e987eaa5a33946a4bb93c592
+- request_id: rework-run-0004
+  status: completed
+  input_digest: sha256:73b38c7136c611d384b2d77d65d3c6cc6410fd4524f11955eab23e4bd8236812
+  output_digest: sha256:5ac64648a03e848297a0292da0c9302656a7e468845f9b0c40d0d784ec89d079
 artifacts:
-- path: feature-docs/destructive-guard-var-resolution/tasks/task0005.md
-  sha256: sha256:3429050933f3c2670a8de2ef8327c1b8541041d61f8fa2b652b5f852ef30eec7
-  produced_by: rework-run-0003
+- path: feature-docs/destructive-guard-var-resolution/tasks/task0006.md
+  sha256: sha256:4a650f139056d1072b40ee627f64b24679ec10fa634a9bf040e3efadfa618d69
+  produced_by: rework-run-0004
 - path: feature-docs/destructive-guard-var-resolution/VERIFICATION.md
-  sha256: sha256:15ba55068f1a7cb04b139ff363884a6075407e81e987eaa5a33946a4bb93c592
-  produced_by: rework-run-0003
+  sha256: sha256:5ac64648a03e848297a0292da0c9302656a7e468845f9b0c40d0d784ec89d079
+  produced_by: rework-run-0004
 patches:
-- patch_id: rework-run-0003-p0001
-  status: applied
-  base_input_digest: sha256:dc5b1aa0805d505de8e0de8f519399e96817fe733d67dd1578014825e7c52279
-  base_workflow_blob: 8e9c93ec2a8068686e1329e4a85080a0344bda10
+- patch_id: destructive-guard-var-resolution-p0004
+  status: validated
+  base_input_digest: sha256:73b38c7136c611d384b2d77d65d3c6cc6410fd4524f11955eab23e4bd8236812
+  base_workflow_blob: 46ebae7ae4ed5f215c50a58e5c0e82fb3410fa74
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
