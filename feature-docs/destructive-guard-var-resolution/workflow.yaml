@@ -66,11 +66,11 @@ workflow:
   status: completed
   completed_at_commit: e4d4f7f082b5beb5341af2d0f2e16722e54fcdb6
 - id: implement
-  status: in_progress
+  status: completed
   base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
-  completed_at_commit: e88f66139af0d041bc709ee9c492819426aaed32
+  completed_at_commit: a0452d317addc941cd7fda9093f745b79dec32bf
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -285,7 +285,7 @@ tasks:
       - r4-reformatted-cases
       - r4-safe-delete-prefix-security
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 4
   plan:
     floor:
@@ -301,7 +301,7 @@ review:
     architecture: completed
     spec: completed
   residual_critical_high: 3
-  needs_rework: true
+  needs_rework: false
 requirements:
   FR1:
     title: Collect plain assignments from the command string
