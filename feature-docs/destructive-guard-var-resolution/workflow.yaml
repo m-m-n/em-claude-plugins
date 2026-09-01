@@ -70,7 +70,8 @@ workflow:
   base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
   completed_at_commit: a0452d317addc941cd7fda9093f745b79dec32bf
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: ac9f99c57e3245f24424b24679a4b6309d9810ab
 - id: verify
   status: pending
   result: null
@@ -285,8 +286,8 @@ tasks:
       - r4-reformatted-cases
       - r4-safe-delete-prefix-security
 review:
-  status: in_progress
-  rounds_completed: 4
+  status: completed
+  rounds_completed: 5
   plan:
     floor:
     - comprehensive
@@ -300,7 +301,7 @@ review:
     security: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 3
+  residual_critical_high: 0
   needs_rework: false
 requirements:
   FR1:
