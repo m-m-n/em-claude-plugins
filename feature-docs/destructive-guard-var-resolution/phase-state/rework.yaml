@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-var-resolution
 phase: rework
-status: dispatching
+status: applying_patch
 generation: 2
 base_revision: 4bd745e21759d917c71718ab33fcf526732a3983
 last_input_digest: sha256:56cabddac19ae7d04f11940b15501e8ebd5005297c697beb6527691c27eeeac2
-active_request_id: rework-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,21 +14,21 @@ worker_runs:
   input_digest: sha256:184a3b9f8bd4949656da6e949d5f1f536c088d25df7e06592be29377e29dd178
   output_digest: sha256:b2ebdf8ab5500e7206752e7334a967764656eb7391b3cf1e0770131967241d3b
 - request_id: rework-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:56cabddac19ae7d04f11940b15501e8ebd5005297c697beb6527691c27eeeac2
-  output_digest: null
+  output_digest: sha256:bc25b7582629336bd6338092af92ed1a05d66b0b44d78a0790a86eea0bfdd1da
 artifacts:
-- path: feature-docs/destructive-guard-var-resolution/tasks/task0003.md
-  sha256: sha256:26afeb0d936c9cbf4231571e9d93de0f8a15d7973155228beca3ae5ea90b237d
-  produced_by: rework-run-0001
+- path: feature-docs/destructive-guard-var-resolution/tasks/task0004.md
+  sha256: sha256:a299b7ca735cdd5322620c71364ea5e73af75d74f680f485ad51e4b3fed2d3ea
+  produced_by: rework-run-0002
 - path: feature-docs/destructive-guard-var-resolution/VERIFICATION.md
-  sha256: sha256:b2ebdf8ab5500e7206752e7334a967764656eb7391b3cf1e0770131967241d3b
-  produced_by: rework-run-0001
+  sha256: sha256:bc25b7582629336bd6338092af92ed1a05d66b0b44d78a0790a86eea0bfdd1da
+  produced_by: rework-run-0002
 patches:
-- patch_id: destructive-guard-var-resolution-rework-p0001
-  status: applied
-  base_input_digest: sha256:184a3b9f8bd4949656da6e949d5f1f536c088d25df7e06592be29377e29dd178
-  base_workflow_blob: eb5234065238dd87b973604a077bca255d2fafe7
+- patch_id: destructive-guard-var-resolution-p0002
+  status: validated
+  base_input_digest: sha256:56cabddac19ae7d04f11940b15501e8ebd5005297c697beb6527691c27eeeac2
+  base_workflow_blob: 406d09ab1005e0cb0dd89feabc01ec0b87341ade
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
