@@ -141,6 +141,21 @@ review:
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - spec
+    - security
+    - performance
+    - architecture
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: pending
+    spec: pending
+    security: pending
+    performance: pending
+    architecture: pending
 requirements:
   FR1:
     title: Guard hook addition and registration
