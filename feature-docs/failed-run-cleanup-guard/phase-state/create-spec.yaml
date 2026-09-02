@@ -1,26 +1,59 @@
 schema_version: 1
 feature: failed-run-cleanup-guard
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: 686f5d8532455054060f0bbfae76aed26b3f87b8
-last_input_digest: null
-active_request_id: null
+base_revision: a9502ab9dab346b92b4ca719a9f4e59260408344
+last_input_digest: sha256:c4f378ac871f43a5476e3bb91163b35f30563d73326d2b0a6c9e470da6014e00
+active_request_id: create-spec-run-0001
 packets: {}
 answers:
   create-spec.feature-identity:
     packet_id: null
-    answered_at: "2026-09-03T08:00:59+09:00"
+    answered_at: '2026-09-03T08:00:59+09:00'
     source: batch-decision-table
     answer_mode: freeform
     selected_option_ids: []
-    freeform: "failed-run-cleanup-guard"
-    normalized_answer: "failed-run-cleanup-guard"
-    resolution_note: "gate: create-spec.feature-identity; policy option_id derive_from_task_description; feature name derived from the task description (PreToolUse guard that blocks integration-worktree cleanup while a workflow step is failed)"
-worker_runs: []
+    freeform: failed-run-cleanup-guard
+    normalized_answer: failed-run-cleanup-guard
+    resolution_note: 'gate: create-spec.feature-identity; policy option_id derive_from_task_description;
+      feature name derived from the task description (PreToolUse guard that blocks
+      integration-worktree cleanup while a workflow step is failed)'
+    question_id: create-spec.feature-identity
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:c4f378ac871f43a5476e3bb91163b35f30563d73326d2b0a6c9e470da6014e00
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:bd0ee5db26f101a44cca0f4978ae5c1824bc97f224b767be2331e49b4849b3fb
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/references/templates/design-tokens.yaml
+    digests:
+      em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    truncated: false
+  e2e:
+    generation_digest: sha256:549cc09a68bbf8d8c433c1c74704a68ce7dbbb4799a0847bc88f825b613d91f7
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  reference_scan_targets:
+    generation_digest: sha256:549cc09a68bbf8d8c433c1c74704a68ce7dbbb4799a0847bc88f825b613d91f7
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  package_files:
+    generation_digest: sha256:549cc09a68bbf8d8c433c1c74704a68ce7dbbb4799a0847bc88f825b613d91f7
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
