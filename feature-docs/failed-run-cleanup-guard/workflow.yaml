@@ -59,7 +59,7 @@ workflow:
   base_commit: 0922425660e4d33b370d16fdafdab2b76e54344e
   completed_at_commit: ae170989874b5f25297e3420e62cae80c403f299
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -137,7 +137,7 @@ tasks:
     notes: null
     branch: em-workflow/failed-run-cleanup-guard/task0003
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
