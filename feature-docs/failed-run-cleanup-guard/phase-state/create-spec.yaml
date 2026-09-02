@@ -1,12 +1,24 @@
 schema_version: 1
 feature: failed-run-cleanup-guard
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: a9502ab9dab346b92b4ca719a9f4e59260408344
 last_input_digest: sha256:c4f378ac871f43a5476e3bb91163b35f30563d73326d2b0a6c9e470da6014e00
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: '2026-09-03T08:10:09+09:00'
+    questions:
+    - question_id: requirement.failed-status-range
+      status: issued
+    - question_id: requirement.gh-pr-create-target
+      status: issued
+    - question_id: edge-case.workflow-yaml-unreadable
+      status: issued
+    - question_id: design-step.recommendation
+      status: issued
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -22,7 +34,7 @@ answers:
     question_id: create-spec.feature-identity
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:c4f378ac871f43a5476e3bb91163b35f30563d73326d2b0a6c9e470da6014e00
   output_digest: null
 artifacts: []
