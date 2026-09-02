@@ -23,6 +23,12 @@
           },
           {
             "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/failed-run-cleanup-guard.py",
+            "timeout": 15,
+            "statusMessage": "失敗した実行のクリーンアップでないか検証中..."
+          },
+          {
+            "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/destructive-guard.py",
             "timeout": 10,
             "statusMessage": "破壊的コマンドを検証中..."
