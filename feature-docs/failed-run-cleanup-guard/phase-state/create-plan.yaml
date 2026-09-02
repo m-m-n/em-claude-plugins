@@ -1,0 +1,29 @@
+schema_version: 1
+feature: failed-run-cleanup-guard
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: a1f63134be1c40ca09b4273c02f30c8dd1c63c13
+last_input_digest: sha256:1d146493ff9ed1c860382c68683e12983524e914fe48f9120761eb8c61e9ac06
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:1d146493ff9ed1c860382c68683e12983524e914fe48f9120761eb8c61e9ac06
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  project_design_system:
+    generation_digest: sha256:bd0ee5db26f101a44cca0f4978ae5c1824bc97f224b767be2331e49b4849b3fb
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/references/templates/design-tokens.yaml
+    digests:
+      em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    truncated: false
+last_error: null
