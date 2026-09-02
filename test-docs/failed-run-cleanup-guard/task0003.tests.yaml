@@ -1,0 +1,103 @@
+task_id: task0003
+baseline_failures: []          # 4a: `python3 -m unittest discover -s tests` -> 2830/2830 OK;
+                                # `python3 em-workflow/hooks/tests/run-destructive-guard.py` -> 139/139 passed
+final_failures: []             # after implementation: unittest suite still 2830/2830 OK;
+                                # destructive-guard expectation suite now 150/150 passed
+acceptance_tests:
+  AC-1:
+    tests:
+      - "destructive-guard-cases.json::S1(worktree remove): 判定対象は allow を留保し無出力"
+      - "destructive-guard-cases.json::S2(branch -d): 判定対象は allow を留保し無出力"
+      - "destructive-guard-cases.json::S3(gh pr create): 判定対象は allow を留保し無出力"
+    red_confirmed: true
+    red_reason: >-
+      Against the unmodified destructive-guard.py (before any implementation
+      change), all three rows returned "allow" instead of the expected
+      "(silent)" — the blanket allow fired because the deferral did not
+      exist yet. Observed via
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py`: 147/150
+      passed, with exactly these three rows FAILing
+      (got=allow, want=(silent)).
+  AC-2:
+    tests:
+      - "destructive-guard-cases.json::S1 のクォート内言及は allow のまま"
+      - "destructive-guard-cases.json::S2 のコミットメッセージ内言及は allow のまま"
+      - "destructive-guard-cases.json::S3 のヒアドキュメント本文内言及は allow のまま"
+    red_confirmed: true
+    red_reason: >-
+      These rows already passed against the unmodified hook (nothing there
+      withheld the allow at all), so that state proved nothing about the
+      narrowness half of decision D2. To get a meaningful red, a
+      deliberately naive implementation was written first: a raw regex
+      substring scan over the whole command string
+      (`git\s+worktree\s+remove|git\s+branch\s+(-d|--delete)\b|gh\s+pr\s+create`),
+      mirroring the existing KILL_WORDS approach. Under that naive version
+      all three AC-1 rows correctly went green, but these three AC-2 rows
+      FAILed (got=(silent), want=allow) because the scan matched the target
+      phrase inside the quoted string / commit message / here-doc body.
+      This confirmed the rows genuinely exercise the "not a raw substring
+      scan" requirement before the naive code was replaced with the
+      quote-aware, per-statement matches_target_shape() implementation that
+      ships in this task (which returns all three to green).
+  AC-3:
+    tests:
+      - "destructive-guard-cases.json::近傍(S1 ではない): worktree list は allow のまま"
+      - "destructive-guard-cases.json::近傍(S2 ではない): branch の新規作成は allow のまま"
+      - "destructive-guard-cases.json::近傍(S3 ではない): pr view は allow のまま"
+    red_confirmed: false
+    red_reason: >-
+      A near-miss command differs from its shape textually, not just
+      structurally (`git worktree list` contains no "remove"; `git branch
+      feature-new` contains no "-d"/"--delete"; `gh pr view 42` contains no
+      "create"). Neither the unmodified hook nor the deliberately-naive
+      substring-scan implementation used to red-confirm AC-2 ever flagged
+      these commands, so there is no implementation state — buggy or
+      correct — under which these three rows go red. The behavior they pin
+      (near-misses keep the blanket allow) is exercised meaningfully by
+      construction rather than by a red/green transition; AC-2's rows are
+      what actually distinguish the naive scan from the correct
+      implementation.
+  AC-4:
+    tests:
+      - "destructive-guard-cases.json::本物: worktree の強制削除は S1 と重なっても deny のまま"
+      - "destructive-guard-cases.json::複合: 先頭が S1 でも後続の rm 再帰は deny のまま"
+    red_confirmed: false
+    red_reason: >-
+      Both rows exercise pre-existing deny logic in check_git()/check_rm()
+      that predates this task (forced `git worktree remove --force` was
+      already denied by check_git()'s existing rule; a genuinely
+      destructive second statement in a compound command was already
+      denied by check_rm()). Both commands were already denied before any
+      change in this task, and remain denied after — the deny fires before
+      main()'s loop ever reaches the trailing-allow decision the deferral
+      touches, so this criterion has no observable red state under this
+      task's change. The rows exist to pin the invariant that the new
+      deferral does not swallow these existing denials, and that "every
+      pre-existing expectation row's verdict is unchanged" (the rest of
+      AC-4) — verified by the full suite still showing all 139 pre-existing
+      rows unchanged and none removed/edited (git diff on
+      destructive-guard-cases.json is an append-only tail).
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Outcome check on the expectation-suite run as a whole, not a single
+      named test. With the 11 new rows added but before any implementation
+      change: `python3 em-workflow/hooks/tests/run-destructive-guard.py`
+      reported 147/150 passed (the 3 AC-1 rows failing). After the correct
+      implementation: 150/150 passed, including the trailing "無人実行では
+      ask が deny に降格" demotion check, and the added rows cover all four
+      Design "Expectation rows" categories (no-match/silent, quoted
+      mention/allow, near-miss/allow, existing-denial-overlap/deny) plus
+      the Test Notes compound edge case.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Non-regression check, not a new-capability criterion: `python3 -m
+      unittest discover -s tests` reported 2830/2830 passing before this
+      task's change (baseline, step 4a) and 2830/2830 passing after
+      (final). There is no observable red state for a criterion whose
+      entire content is "stays green" — it is verified by set difference
+      (final_failures ⊆ baseline_failures, both empty) rather than a
+      red→green transition.
