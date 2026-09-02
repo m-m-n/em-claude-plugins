@@ -115,7 +115,7 @@ tasks:
     - FR1
     - FR11
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/failed-run-cleanup-guard/task0002
   task0003:
