@@ -90,6 +90,21 @@ answers:
     normalized_answer: design step は requirements-analyst の推奨どおり skipped とする。
     resolution_note: 'gate: create-spec.design-step; policy option_id decide_autonomously
       (references/batch-policies.yaml)'
+  create-spec.design-system:
+    question_id: create-spec.design-system
+    packet_id: null
+    answered_at: '2026-09-03T08:21:47+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'project.design_system: kind project_native, paths [em-workflow/references/templates/design-tokens.yaml]'
+    resolution_note: 'gate: create-spec.design-system; policy option_id top_candidate_or_none
+      (references/batch-policies.yaml): one candidate reported by requirements-analyst
+      (category: token definition files) -> project_native. Analyst detail notes the
+      file is em-workflow''s own schema template rather than this repository''s design
+      system; batch policy applied mechanically, flagged for the human evaluator.'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
@@ -100,10 +115,16 @@ worker_runs:
   input_digest: sha256:d69e3c457c58a0092354643078b7380299dea02223257e2e00aea6e770413ac0
   output_digest: sha256:f256b858328271e609c8b1717b85e2dcaf7971015847646ac68563de22d3f157
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:3dd47a2154055cc60d19b2465508a69cd7b4c15fe6fdc982d80b0e5265e258cd
-  output_digest: null
-artifacts: []
+  output_digest: sha256:2eef3e59bcf283dd66eea677bf5d625e6bcd9b6a6ab37a79d81d2b3dcd0ae61d
+artifacts:
+- path: feature-docs/failed-run-cleanup-guard/REQUIREMENTS.md
+  sha256: sha256:df90c79d22feec7d0a360bec3e4cfa46a034861f3c60c7dbdaa063ea73bdb39a
+  produced_by: create-spec-run-0003
+- path: feature-docs/failed-run-cleanup-guard/SPEC.md
+  sha256: sha256:3199b68a01f69dbc74c3dd34081b45323831c543ec45a2a5acef108fec8da52e
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:bb45637a588c0185e4c9d96a4644cb66b3076d7cbe97bd1a9782c2539bdde960
 stale_redispatch_count: 0
