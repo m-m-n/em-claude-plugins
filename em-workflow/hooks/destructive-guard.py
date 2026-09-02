@@ -38,7 +38,10 @@ Decision tiers:
   allow — everything else, when ALLOW_NON_DESTRUCTIVE is on
 
 Process termination (kill / pkill / killall) is NOT handled here — that is
-kill-guard.py's job, and it runs as a separate PreToolUse hook.
+kill-guard.py's job, and it runs as a separate PreToolUse hook. The same
+withholding applies to `git worktree remove`, a non-force `git branch`
+deletion, and `gh pr create` — those belong to failed-run-cleanup-guard.py;
+see matches_target_shape().
 
 Output: a PreToolUse permission decision on stdout; exit 0 either way.
 """
@@ -1181,6 +1184,47 @@ def check_permissions(word, args):
         decide("ask", "chown-recursive", "再帰的な所有者変更。")
 
 
+def matches_target_shape(word, args):
+    """Whether (WORD, ARGS) is a real invocation of failed-run-cleanup-guard's
+    target shapes S1/S2/S3 (IMPLEMENTATION.md "Target invocation shapes
+    (S1/S2/S3)", decision D2): a `git worktree remove`, a `git branch`
+    deletion carrying a non-force flag (`-d`/`--delete`), or a `gh pr
+    create`. That other hook owns the verdict for these; this hook's own
+    checks below still run against them, but its trailing blanket `allow`
+    must be withheld or it would override the other hook's deny — the same
+    reason KILL_WORDS above is excluded from that allow.
+
+    WORD/ARGS are already the product of head()/split_redirects() over one
+    lexed statement from statements(), the same quote-aware decomposition
+    check_git()/check_external() judge on — never a raw substring scan of
+    the command text. A mention inside quotes, a here-doc body not aimed at
+    a shell sink, or a commit message never surfaces as a `git`/`gh`
+    invocation of its own, so it is not matched here either, exactly as the
+    other hook's own classifier stays silent for those same mentions.
+
+    S1 does not exclude the `--force` spelling: a forced worktree removal is
+    already denied outright by check_git() before main()'s loop can reach
+    the trailing allow, so the distinction has no observable effect, and
+    S1's own definition draws none either. S2 DOES exclude `-D`/`--force`,
+    matching its definition exactly — harmless for the same reason (also
+    denied earlier), but this keeps the shape match an honest statement of
+    S2 as specified rather than relying on that other rule firing first.
+    """
+    if word == "git":
+        sub, rest = git_subcommand(args)
+        if sub == "worktree" and rest[:1] == ["remove"]:
+            return True
+        if sub == "branch" and has(rest, "-d", "--delete") and not (
+            has(rest, "-D") or has(rest, "--force")
+        ):
+            return True
+        return False
+    if word == "gh":
+        positional = [a for a in args if not a.startswith("-")]
+        return positional[:2] == ["pr", "create"]
+    return False
+
+
 def main():
     try:
         payload = json.load(sys.stdin)
@@ -1202,6 +1246,15 @@ def main():
         re.search(rf"(^|[^\w./-]){w}([^\w./-]|$)", command) for w in KILL_WORDS
     )
 
+    # Whether failed-run-cleanup-guard.py owns the verdict for this command
+    # (decision D2). Unlike defer_to_kill_guard above, this is NOT a raw
+    # substring scan of COMMAND — the D2 narrowness requirement means a
+    # mention inside quotes or a here-doc body must keep its blanket allow,
+    # so this is set from matches_target_shape() inside the loop below, over
+    # each statement's already quote-resolved WORD/ARGS. See
+    # matches_target_shape() for the full rationale.
+    defer_to_new_guard = False
+
     # Judged on the whole command string, not per segment: `statements()`
     # splits on `|`, so a `curl … | sh` pipeline is never one unit inside the
     # loop below and the check would never fire.
@@ -1218,6 +1271,9 @@ def main():
         if word is None:
             continue
 
+        if matches_target_shape(word, args):
+            defer_to_new_guard = True
+
         if word == "git":
             check_git(args, segment)
         elif word == "rm":
@@ -1227,7 +1283,7 @@ def main():
             check_external(word, args, segment)
             check_permissions(word, args)
 
-    if ALLOW_NON_DESTRUCTIVE and not defer_to_kill_guard:
+    if ALLOW_NON_DESTRUCTIVE and not defer_to_kill_guard and not defer_to_new_guard:
         decide("allow", None, "破壊的なパターンに一致しない。")
     sys.exit(0)
 
