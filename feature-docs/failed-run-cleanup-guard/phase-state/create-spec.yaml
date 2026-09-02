@@ -1,24 +1,24 @@
 schema_version: 1
 feature: failed-run-cleanup-guard
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: a9502ab9dab346b92b4ca719a9f4e59260408344
-last_input_digest: sha256:c4f378ac871f43a5476e3bb91163b35f30563d73326d2b0a6c9e470da6014e00
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:d69e3c457c58a0092354643078b7380299dea02223257e2e00aea6e770413ac0
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
-    status: issued
+    status: answered
     issued_at: '2026-09-03T08:10:09+09:00'
     questions:
     - question_id: requirement.failed-status-range
-      status: issued
+      status: answered
     - question_id: requirement.gh-pr-create-target
-      status: issued
+      status: answered
     - question_id: edge-case.workflow-yaml-unreadable
-      status: issued
+      status: answered
     - question_id: design-step.recommendation
-      status: issued
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -32,14 +32,76 @@ answers:
       feature name derived from the task description (PreToolUse guard that blocks
       integration-worktree cleanup while a workflow step is failed)'
     question_id: create-spec.feature-identity
+  requirement.failed-status-range:
+    question_id: requirement.failed-status-range
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-03T08:11:44+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - failed_only
+    freeform: null
+    normalized_answer: 'status: failed の step が 1 つでもあれば deny。task_description の記述そのまま。中断・未完了で終わったランは素通りする。'
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation
+      (1 turn, converged); Codex suggested failed_only which maps onto an existing
+      option_id; orchestrator adopted it. Codex rationale: タスク記述が明示する status: failed
+      に厳密に限定でき、needs_update や pending まで塞いで無人実行を誤停止させる拡張を避けられる。 record_as_assumption:
+      true'
+  requirement.gh-pr-create-target:
+    question_id: requirement.gh-pr-create-target
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-03T08:11:44+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - cwd_only
+    freeform: null
+    normalized_answer: cwd が .claude/worktrees/em-workflow/{feature}/integration の内側なら、その
+      feature の workflow.yaml を読む。外側なら判定を出さず素通り。
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation
+      (1 turn, converged); Codex suggested cwd_only which maps onto an existing option_id;
+      orchestrator adopted it. Codex rationale: 既存フックが利用する payload の cwd から integration
+      worktree を確実に同定できる場合だけ判定し、引数形式が固定されない --head の推測による他リポジトリへの誤爆を避けられる。 record_as_assumption:
+      true'
+  edge-case.workflow-yaml-unreadable:
+    question_id: edge-case.workflow-yaml-unreadable
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-03T08:11:44+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - fail_open
+    freeform: null
+    normalized_answer: 既存フック群の「壊れた入力は自分の責任範囲外」という fail-open 規律に揃える。誤爆ゼロだが、workflow.yaml
+      ごと壊れたランは守られない。
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation
+      (1 turn, converged); Codex suggested fail_open which maps onto an existing option_id;
+      orchestrator adopted it. Codex rationale: destructive-guard.py の不正入力に対する fail-open
+      規律と、誤検知も無人実行を即時停止させるという hook-tests.md のコスト原則に一致する。 record_as_assumption: true'
+  design-step.recommendation:
+    question_id: design-step.recommendation
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-03T08:11:44+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は requirements-analyst の推奨どおり skipped とする。
+    resolution_note: 'gate: create-spec.design-step; policy option_id decide_autonomously
+      (references/batch-policies.yaml)'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:c4f378ac871f43a5476e3bb91163b35f30563d73326d2b0a6c9e470da6014e00
   output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:d69e3c457c58a0092354643078b7380299dea02223257e2e00aea6e770413ac0
+  output_digest: null
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:bb45637a588c0185e4c9d96a4644cb66b3076d7cbe97bd1a9782c2539bdde960
 stale_redispatch_count: 0
 resolved_input_cache:
   design_system_candidates:
