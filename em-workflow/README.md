@@ -125,10 +125,11 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 | `hooks/gitleaks-precommit.sh` | PreToolUse(Bash) | `git commit` を含むコマンドの前に staged / unstaged の diff と、git の追跡対象外の新規ファイル（新規 `.env` 等）を gitleaks でスキャンし、検出したらコミットをブロックする |
 | `hooks/kill-guard.py` | PreToolUse(Bash) | `kill` / `pkill` / `killall` の対象プロセスを解決し、claude プロセスの祖先なら常に拒否、子孫なら許可、それ以外は確認に回す（無人実行では拒否に降格） |
 | `hooks/bash_guard.py` | PreToolUse(Bash) | 前節のコマンド実行ガード（workflow.yaml 由来のシェル文字列のみ判断） |
+| `hooks/failed-run-cleanup-guard.py` | PreToolUse(Bash) | 対象 feature の workflow.yaml が failed ステップを含む em-workflow run に対する worktree 削除・integration ブランチ削除・pull request 作成を拒否し、無人実行が報告して停止できるよう理由を返す。対象を解決できない場合は確認に回り、無人実行では拒否に降格する |
 | `hooks/destructive-guard.py` | PreToolUse(Bash) | 破壊的コマンドの静的ブロックリスト。**マッチしないコマンドは `allow` で返す** |
 | `hooks/gitleaks-write-guard.sh` | PreToolUse(Write\|Edit\|MultiEdit) | 書き込む内容を gitleaks でスキャンし、シークレットを含むなら書き込みをブロックする |
 
-PreToolUse(Bash) の 4 本は `hooks.json` の配列順（gitleaks → kill-guard → bash_guard → destructive-guard）で実行される。`destructive-guard.py` は広域 `allow` を返すため必ず最後に置く — 先に allow が確定すると `bash_guard.py` の承認ゲートが働くべき経路を潰しかねない。
+PreToolUse(Bash) の 5 本は `hooks.json` の配列順（gitleaks → kill-guard → bash_guard → failed-run-cleanup-guard → destructive-guard）で実行される。`destructive-guard.py` は広域 `allow` を返すため必ず最後に置く — 先に allow が確定すると `bash_guard.py` の承認ゲートが働くべき経路を潰しかねない。
 
 gitleaks 系 2 本はバイナリを `command -v gitleaks` → `$HOME/.local/share/mise/shims/gitleaks` の順で解決し、どちらにも無ければスキャンせず通す（fail-open）。gitleaks 未インストール環境で全コミット・全書き込みがブロックされるのを避けるため。develop の Step 0（git-setup ゲート）が gitleaks 不在で workflow ごと中断するのとは判断が異なる — この hook は develop の外でも動くため。
 
