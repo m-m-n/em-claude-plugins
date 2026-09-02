@@ -1,7 +1,7 @@
 schema_version: 1
 feature: failed-run-cleanup-guard
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: a1f63134be1c40ca09b4273c02f30c8dd1c63c13
 last_input_digest: sha256:1d146493ff9ed1c860382c68683e12983524e914fe48f9120761eb8c61e9ac06
@@ -10,11 +10,30 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:1d146493ff9ed1c860382c68683e12983524e914fe48f9120761eb8c61e9ac06
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:0a30a10f0461040a7949093c1929d1f6551ac01bad76e2a93e9451db0d62d21c
+artifacts:
+- path: feature-docs/failed-run-cleanup-guard/IMPLEMENTATION.md
+  sha256: sha256:dbad53921879e711a884b48942e33d58f1111847ddedeee1e1a2ff19b0d84e7b
+  produced_by: create-plan-run-0001
+- path: feature-docs/failed-run-cleanup-guard/VERIFICATION.md
+  sha256: sha256:97bcd37299eea7c9804d3c06965dddd8b0685415967658ae7206a5459c62947b
+  produced_by: create-plan-run-0001
+- path: feature-docs/failed-run-cleanup-guard/tasks/task0001.md
+  sha256: sha256:8075e9dd5323bfccd17389dc8ec4f957fc9c9f44b56f2c68967b3e60877fbfcd
+  produced_by: create-plan-run-0001
+- path: feature-docs/failed-run-cleanup-guard/tasks/task0002.md
+  sha256: sha256:a5fb04b22eb91c1ab417824b2bfced492606db5dbe7343bd128efabb47e5b1f2
+  produced_by: create-plan-run-0001
+- path: feature-docs/failed-run-cleanup-guard/tasks/task0003.md
+  sha256: sha256:68573a1975f987acd396af513a2b8945e0d4a603e5a1327eaa907b68163bf296
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:1d146493ff9ed1c860382c68683e12983524e914fe48f9120761eb8c61e9ac06
+  base_workflow_blob: 187692b6f17d1b5af47d1e9d0507bbfc1b7b0e9a
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache:
