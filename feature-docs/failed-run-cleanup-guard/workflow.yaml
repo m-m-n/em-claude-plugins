@@ -1,0 +1,194 @@
+schema_version: 1
+feature: failed-run-cleanup-guard
+created: '2026-09-03'
+base_branch: main
+goal: |
+  誤爆回避について
+  ```
+    em-workflow の hooks.json にはもう PreToolUse(Bash) のガード列（kill-guard / bash_guard / destructive-guard）があるから、同じ形でもう 1 本足せば済む。
+
+    - 判定: コマンドに git worktree remove があり、対象が .claude/worktrees/em-workflow/*/integration なら、その worktree 内の feature-docs/{feature}/workflow.yaml を読んで、status: failed の step があれば
+      deny
+    - 理由をツール結果で返すので、batch でもエージェントは「報告して停止」に戻れる（kill-guard と同じ設計）
+    - gh pr create と git branch -d も同じ条件で塞げる
+
+    制約は 1 つ。対象パスが $WT みたいな変数だと静的に解決できないから、その場合は batch では deny に倒す必要があるよ。
+  ```
+parent_branch: em-workflow/failed-run-cleanup-guard/integration
+project:
+  license: none
+  design_system:
+    kind: project_native
+    paths:
+    - em-workflow/references/templates/design-tokens.yaml
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    hooks:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 36c1300bf2c8e2aa1634b114ecb8cd2c87384a82
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 成果物は PreToolUse(Bash) フックスクリプト 1 本、hooks.json への登録、テスト、version 更新のみ。ユーザーに見える画面・視覚要素・画面遷移がなく、デザイン対象が存在しない。gate create-spec.design-step は batch policy の option_id decide_autonomously により、requirements-analyst の推奨（skipped）をそのまま採用した。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Guard hook addition and registration
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Commands under evaluation
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Identifying the target worktree
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Identifying the target of gh pr create
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Failure determination
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Returning the denial reason
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Targets that cannot be resolved statically
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: Coexistence with destructive-guard's blanket allow
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: Out-of-scope commands pass with no decision
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: When workflow.yaml cannot be read
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: Simultaneous plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Minimizing false-positive cost
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Static evaluation only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Execution cost
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Fail-open on broken input
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Treating workflow.yaml as untrusted
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: Test placement as distributed content
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
