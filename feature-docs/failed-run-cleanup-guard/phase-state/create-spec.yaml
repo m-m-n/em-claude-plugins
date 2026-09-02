@@ -1,11 +1,11 @@
 schema_version: 1
 feature: failed-run-cleanup-guard
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: a9502ab9dab346b92b4ca719a9f4e59260408344
 last_input_digest: sha256:3dd47a2154055cc60d19b2465508a69cd7b4c15fe6fdc982d80b0e5265e258cd
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
