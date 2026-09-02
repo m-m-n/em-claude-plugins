@@ -58,10 +58,14 @@ MIGRATED_HOOK_FILES = (
 )
 
 # The execution order the PreToolUse(Bash) group must declare, verbatim.
+# `failed-run-cleanup-guard.py` runs after `bash_guard.py` and before
+# `destructive-guard.py`'s blanket allow (failed-run-cleanup-guard
+# IMPLEMENTATION.md decision D1).
 EXPECTED_BASH_GUARD_ORDER = [
     "gitleaks-precommit.sh",
     "kill-guard.py",
     "bash_guard.py",
+    "failed-run-cleanup-guard.py",
     "destructive-guard.py",
 ]
 
