@@ -96,9 +96,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/failed-run-cleanup-guard/task0001
   task0002:
     title: plugin documentation and version bump
     plan: tasks/task0002.md
@@ -115,9 +115,9 @@ tasks:
     - FR1
     - FR11
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/failed-run-cleanup-guard/task0002
   task0003:
     title: withhold destructive-guard's blanket allow for the new guard's targets
     plan: tasks/task0003.md
@@ -132,9 +132,9 @@ tasks:
     requirements:
     - FR8
     - NFR1
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/failed-run-cleanup-guard/task0003
 review:
   status: pending
   rounds_completed: 0
