@@ -1209,15 +1209,48 @@ def matches_target_shape(word, args):
     matching its definition exactly — harmless for the same reason (also
     denied earlier), but this keeps the shape match an honest statement of
     S2 as specified rather than relying on that other rule firing first.
+
+    Narrowed to only the shapes failed-run-cleanup-guard.py can actually
+    judge, so unrelated worktree removals / branch deletions do not lose
+    their blanket allow and fall through to the auto mode classifier every
+    time. A trailing dynamic token (`$`, backtick, `*`, `?`) is treated as
+    matching, since its resolved value is unknown here and the other hook
+    is the one that judges it at run time.
+    S1: only when the operand's last path segment (after stripping a
+    trailing `/`) is literally `integration`, or is dynamic.
+    S2: only when the branch name's first segment is `em-workflow` (or
+    dynamic) AND its last segment is `integration` (or dynamic).
+    S3 is left unchanged: this function has no access to cwd.
     """
+
+    def is_dynamic_or(seg, literal):
+        if seg == literal:
+            return True
+        return any(c in seg for c in ("$", "`", "*", "?"))
+
     if word == "git":
         sub, rest = git_subcommand(args)
         if sub == "worktree" and rest[:1] == ["remove"]:
-            return True
+            operand = next((a for a in rest[1:] if not a.startswith("-")), None)
+            if operand is None:
+                return False
+            last_seg = operand.rstrip("/").rsplit("/", 1)[-1]
+            return is_dynamic_or(last_seg, "integration")
         if sub == "branch" and has(rest, "-d", "--delete") and not (
             has(rest, "-D") or has(rest, "--force")
         ):
-            return True
+            name = next(
+                (a for a in rest if not a.startswith("-") and a not in ("-d", "--delete")),
+                None,
+            )
+            if name is None:
+                return False
+            segs = name.split("/")
+            first_seg = segs[0]
+            last_seg = segs[-1]
+            return is_dynamic_or(first_seg, "em-workflow") and is_dynamic_or(
+                last_seg, "integration"
+            )
         return False
     if word == "gh":
         # `-R`/`--repo` take a value token of their own (`gh -R owner/repo pr
