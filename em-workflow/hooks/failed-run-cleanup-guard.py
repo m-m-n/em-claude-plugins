@@ -73,6 +73,13 @@ SEPARATORS = frozenset(";|&\n")
 # variable expansion, command substitution, or a glob metacharacter.
 DYNAMIC = re.compile(r"\$\(|`|\$\{|\$[A-Za-z_]|\*|\?|\[")
 
+# Wrapper commands that pass their remaining argument list through to a
+# nested command word, mirroring destructive-guard.py's WRAPPERS skip so the
+# two classifiers agree on the same set of shapes.
+WRAPPERS = frozenset(
+    {"sudo", "env", "nohup", "time", "command", "nice", "ionice", "doas"}
+)
+
 # S2's branch-name spelling; the feature is its middle segment.
 BRANCH_RE = re.compile(r"^em-workflow/([a-z0-9][a-z0-9-]*)/integration$")
 
@@ -190,14 +197,28 @@ def statements(command):
 
 
 def head(tokens):
-    """Skip leading `VAR=value` assignment tokens; return (command word,
-    remaining args), or (None, []) when nothing but assignments remain."""
+    """Skip leading `VAR=value` assignment tokens, then skip any leading
+    wrapper commands (sudo/env/nohup/time/command/nice/ionice/doas) along
+    with their own option and assignment tokens, so a wrapped invocation
+    classifies the same as its bare form; return (command word, remaining
+    args), or (None, []) when nothing but assignments/wrappers remain."""
     i = 0
-    while i < len(tokens) and re.match(r"^[A-Za-z_]\w*=", tokens[i]):
+    n = len(tokens)
+    while True:
+        while i < n and re.match(r"^[A-Za-z_]\w*=", tokens[i]):
+            i += 1
+        if i >= n:
+            return None, []
+        word = os.path.basename(tokens[i])
+        if word not in WRAPPERS:
+            return word, tokens[i + 1 :]
         i += 1
-    if i >= len(tokens):
-        return None, []
-    return os.path.basename(tokens[i]), tokens[i + 1 :]
+        # Skip the wrapper's own options (and, for `env`, its VAR=value
+        # assignment tokens) before looking at what follows it.
+        while i < n and (
+            tokens[i].startswith("-") or re.match(r"^[A-Za-z_]\w*=", tokens[i])
+        ):
+            i += 1
 
 
 def git_subcommand(args):
@@ -268,6 +289,13 @@ def is_dynamic(text):
 
 def resolve_worktree_remove(operand, cwd):
     """S1: OPERAND is the `git worktree remove` target path."""
+    last_seg = operand.rstrip("/").rsplit("/", 1)[-1]
+    if last_seg and not is_dynamic(last_seg) and last_seg != "integration":
+        # The trailing segment is statically known and cannot spell the
+        # integration worktree shape, regardless of any dynamic parts
+        # earlier in the path (e.g. `$WT_ROOT/task0001`) -- out of scope,
+        # no decision needed.
+        return None
     if is_dynamic(operand):
         return _UNRESOLVABLE
     path = operand
@@ -311,6 +339,22 @@ def locate_worktree_by_ancestor_walk(cwd, feature):
 
 def resolve_branch_delete(operand, cwd):
     """S2: OPERAND is the `git branch -d`/`--delete` target branch name."""
+    parts = operand.split("/")
+    if len(parts) == 3:
+        first, _feature, last = parts
+        if (
+            not is_dynamic(first)
+            and first != "em-workflow"
+            or not is_dynamic(last)
+            and last != "integration"
+        ):
+            # The statically-known literal parts already rule out the
+            # `em-workflow/<feature>/integration` shape -- out of scope,
+            # no decision needed, regardless of any dynamic feature segment.
+            return None
+    elif not is_dynamic(operand):
+        # Fully static and not 3 segments: cannot match BRANCH_RE at all.
+        return None
     if is_dynamic(operand):
         return _UNRESOLVABLE
     m = BRANCH_RE.match(operand)
