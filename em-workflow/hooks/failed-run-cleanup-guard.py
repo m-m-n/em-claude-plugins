@@ -136,8 +136,29 @@ def decide(decision, reason):
 def strip_heredocs(command):
     """Replace each here-document's body and closing delimiter line with
     nothing, keeping only the opening `<<WORD` line -- so a target command
-    written only inside the body is never seen as its own statement."""
-    return HEREDOC.sub(lambda m: m.group(0)[: m.start(3) - m.start(0)], command)
+    written only inside the body is never seen as its own statement.
+
+    Exception: when the opening line's own command word (after skipping
+    leading assignments/wrappers) is a shell sink (sh/bash/zsh/dash/ksh),
+    the body is itself a script the sink will execute -- its text is
+    returned alongside the stripped command so the caller can scan it too,
+    the same way a `-c` script argument is scanned."""
+    kept_nested = []
+
+    def repl(m):
+        opening = command[m.start(0) : m.start(3)]
+        head_line = opening.split("<<", 1)[0]
+        try:
+            toks = shlex.split(head_line, comments=True)
+        except ValueError:
+            toks = []
+        cmdword, _ = head(toks) if toks else (None, [])
+        if cmdword in SHELLS:
+            kept_nested.append(m.group(3))
+        return m.group(0)[: m.start(3) - m.start(0)]
+
+    stripped = HEREDOC.sub(repl, command)
+    return stripped, kept_nested
 
 
 def statements(command, _depth=0):
@@ -153,9 +174,9 @@ def statements(command, _depth=0):
     sh/bash/zsh/dash/ksh invocation are each split and yielded too, so a
     target shape hidden inside one of those cannot evade the guard.
     """
-    chunk = strip_heredocs(command)
+    chunk, heredoc_nested = strip_heredocs(command)
     segments, buf = [], []
-    nested = []
+    nested = list(heredoc_nested)
     quote = None
     depth = 0
     paren_start = None
@@ -260,6 +281,13 @@ def statements(command, _depth=0):
                     if a == "-c" and idx + 1 < len(args):
                         nested.append(args[idx + 1])
                         break
+                    if a == "<<<" and idx + 1 < len(args):
+                        nested.append(args[idx + 1])
+                        break
+            elif word == "eval":
+                args = tokens[1:]
+                if args:
+                    nested.append(" ".join(args))
 
     results = list(top)
     if _depth < MAX_NEST_DEPTH:
@@ -282,6 +310,17 @@ def head(tokens):
         if i >= n:
             return None, []
         word = os.path.basename(tokens[i])
+        if word in ("mise", "asdf") and i + 1 < n and tokens[i + 1] == "exec":
+            i += 2
+            # `mise exec [args] -- <command>` / `asdf exec [args] -- <command>`:
+            # skip everything up to and including the `--` separator, so the
+            # wrapped invocation classifies the same as its bare form.
+            while i < n and tokens[i] != "--":
+                i += 1
+            if i < n and tokens[i] == "--":
+                i += 1
+                continue
+            return None, []
         if word not in WRAPPERS:
             return word, tokens[i + 1 :]
         i += 1
@@ -334,15 +373,30 @@ def classify(tokens):
                 return None
             return ("worktree_remove", operand)
         if sub == "branch":
-            has_force_delete = "-D" in rest
-            has_delete = "-d" in rest or "--delete" in rest
-            has_force_flag = "--force" in rest
+            flat = []
+            for a in rest:
+                if re.fullmatch(r"-[A-Za-z]+", a):
+                    flat.extend("-" + c for c in a[1:])
+                else:
+                    flat.append(a)
+            has_force_delete = "-D" in flat
+            has_delete = "-d" in flat or "--delete" in flat
+            has_force_flag = "--force" in flat
             if has_delete and not has_force_delete and not has_force_flag:
-                operand = first_non_flag(
-                    [a for a in rest if a not in ("-d", "--delete")]
-                )
-                if operand is None:
+                operands = [
+                    a
+                    for a in rest
+                    if not (re.fullmatch(r"-[A-Za-z]+", a) or a.startswith("-"))
+                ]
+                if not operands:
                     return None
+                operand = None
+                for a in operands:
+                    if is_dynamic(a) or BRANCH_RE.match(a):
+                        operand = a
+                        break
+                if operand is None:
+                    operand = operands[0]
                 return ("branch_delete", operand)
         return None
 
