@@ -1184,6 +1184,53 @@ def check_permissions(word, args):
         decide("ask", "chown-recursive", "再帰的な所有者変更。")
 
 
+# A bare function-signature token: shlex's punctuation_chars fuses adjacent
+# punctuation into one token, so `f()` arrives as two tokens (the name, then
+# this) rather than three.
+FUNC_SIGNATURE = "()"
+IDENT = re.compile(r"^[A-Za-z_]\w*$")
+
+
+def strip_grouping_prefix(toks):
+    """Strip leading grouping-construct tokens so the statement's REAL head —
+    the invocation nested one level in — is what matches_target_shape()
+    judges (IMPLEMENTATION.md "Guard parity vocabulary" / task0004's D7
+    grouping-construct list): a subshell's bare `(`, a brace group's bare
+    `{`, or a function signature (`NAME` then the fused `()` then `{`) that
+    defines and, in the same command, invokes its body.
+
+    Repeated so nested combinations (a function defined inside a subshell,
+    etc.) unwrap fully. Trailing closers (`)`, `}`) are left exactly where
+    they are — every extraction this feeds (S1/S2/S3's operand search) takes
+    the FIRST matching token from what follows, so a closer sitting after
+    the real operand never changes the result, and stripping it here would
+    only add code with no observable effect.
+
+    Only ever feeds the deferral check in main(): check_git()/check_rm()/the
+    other destructive checks keep calling head() on the UNSTRIPPED tokens,
+    so no existing verdict changes because of this function — a subshell- or
+    brace-wrapped destructive command is exactly as unexamined by those
+    checks after this change as before it (out of scope for this task; see
+    the task plan's "Which side moves").
+    """
+    toks = list(toks)
+    changed = True
+    while toks and changed:
+        changed = False
+        if toks[0] in ("(", "{"):
+            toks = toks[1:]
+            changed = True
+        elif (
+            len(toks) >= 3
+            and IDENT.match(toks[0])
+            and toks[1] == FUNC_SIGNATURE
+            and toks[2] == "{"
+        ):
+            toks = toks[3:]
+            changed = True
+    return toks
+
+
 def matches_target_shape(word, args):
     """Whether (WORD, ARGS) is a real invocation of failed-run-cleanup-guard's
     target shapes S1/S2/S3 (IMPLEMENTATION.md "Target invocation shapes
@@ -1202,6 +1249,13 @@ def matches_target_shape(word, args):
     invocation of its own, so it is not matched here either, exactly as the
     other hook's own classifier stays silent for those same mentions.
 
+    The caller (main()) passes WORD/ARGS already unwrapped by
+    strip_grouping_prefix(): a statement whose real head sits one level
+    inside a subshell, a brace group, or a function signature defined and
+    invoked in the same command is matched on that real head, not on the
+    grouping token — matching the new guard's own recursion into those same
+    constructs (D7's grouping-construct vocabulary).
+
     S1 does not exclude the `--force` spelling: a forced worktree removal is
     already denied outright by check_git() before main()'s loop can reach
     the trailing allow, so the distinction has no observable effect, and
@@ -1213,27 +1267,39 @@ def matches_target_shape(word, args):
     Narrowed to only the shapes failed-run-cleanup-guard.py can actually
     judge, so unrelated worktree removals / branch deletions do not lose
     their blanket allow and fall through to the auto mode classifier every
-    time. A trailing dynamic token (`$`, backtick, `*`, `?`) is treated as
-    matching, since its resolved value is unknown here and the other hook
-    is the one that judges it at run time.
+    time. A trailing dynamic token (`$`, backtick, `${`, a variable-name
+    sigil, `*`, `?`, `[`) is treated as matching, since its resolved value
+    is unknown here and the other hook is the one that judges it at run
+    time — the same unresolvable-marker character set failed-run-cleanup-
+    guard.py's own DYNAMIC regex uses, bracket-glob spelling included (D7).
     S1: only when the operand's last path segment (after stripping a
     trailing `/`) is literally `integration`, or is dynamic.
     S2: only when the branch name's first segment is `em-workflow` (or
     dynamic) AND its last segment is `integration` (or dynamic).
     S3 is left unchanged: this function has no access to cwd.
+
+    When the operand/branch-name token is missing entirely (S1's `rest[1:]`
+    or S2's filtered `rest` has nothing left), that is treated as matching
+    too, not as out of scope: a real `git worktree remove`/`git branch -d`
+    is never genuinely pathless, so an empty tail here only happens when
+    statements()'s command-substitution hoisting already lifted the whole
+    operand out of this statement's own token list before this function
+    ever saw it (its body is re-scanned separately, as its own statement).
+    Treating the gap itself as unresolved mirrors the trailing-dynamic-token
+    rule above rather than adding a new one.
     """
 
     def is_dynamic_or(seg, literal):
         if seg == literal:
             return True
-        return any(c in seg for c in ("$", "`", "*", "?"))
+        return any(c in seg for c in ("$", "`", "*", "?", "["))
 
     if word == "git":
         sub, rest = git_subcommand(args)
         if sub == "worktree" and rest[:1] == ["remove"]:
             operand = next((a for a in rest[1:] if not a.startswith("-")), None)
             if operand is None:
-                return False
+                return True
             last_seg = operand.rstrip("/").rsplit("/", 1)[-1]
             return is_dynamic_or(last_seg, "integration")
         if sub == "branch" and has(rest, "-d", "--delete") and not (
@@ -1244,7 +1310,7 @@ def matches_target_shape(word, args):
                 None,
             )
             if name is None:
-                return False
+                return True
             segs = name.split("/")
             first_seg = segs[0]
             last_seg = segs[-1]
@@ -1317,11 +1383,20 @@ def main():
         # `> ~/.claude/settings.json` のようにコマンド語を持たない純リダイレクト
         # 文も対象を切り詰める。word が無くても redirects だけで判定する。
         check_self_modification(word or "", args, redirects, segment, lexed)
+
+        # The deferral is judged on the statement's REAL head — leading
+        # grouping tokens (subshell `(`, brace group `{`, a function
+        # signature) stripped first (D7) — never on the unstripped WORD/ARGS
+        # check_git()/check_rm()/the rest of this loop use below. A
+        # subshell's `(` is itself WORD when ungrouped ("(" != "git"), so
+        # this must run even when WORD is None or not "git"/"gh"; it is
+        # placed before the `continue` below for that reason.
+        gword, gargs = head(strip_grouping_prefix(words))
+        if matches_target_shape(gword, gargs):
+            defer_to_new_guard = True
+
         if word is None:
             continue
-
-        if matches_target_shape(word, args):
-            defer_to_new_guard = True
 
         if word == "git":
             check_git(args, segment)

@@ -137,8 +137,10 @@
   ["deny", "スクラッチ外(rm-recursive): 末尾スラッシュ無し `/var/tmp` は deny — 対になる `/var/tmp/`(既知の穴)との非対称を示す", "rm -rf /var/tmp"],
   ["allow", "既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で無関係な `targets` も許可", "rm -rf targets"],
   ["allow", "既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で親参照混じりの `build/../src` も許可", "rm -rf build/../src"],
-  ["(silent)", "S1(worktree remove): 判定対象は allow を留保し無出力", "git worktree remove /home/sakura/scratch/old-worktree"],
-  ["(silent)", "S2(branch -d): 判定対象は allow を留保し無出力", "git branch -d feature-done"],
+  ["allow", "S1 だが integration 形状ではない対象は allow のまま（絞り込みは意図通り）", "git worktree remove /home/sakura/scratch/old-worktree"],
+  ["allow", "S2 だが integration 形状ではない対象は allow のまま（絞り込みは意図通り）", "git branch -d feature-done"],
+  ["(silent)", "S1(worktree remove, integration 形状): 判定対象は allow を留保し無出力", "git worktree remove /home/sakura/.claude/worktrees/em-workflow/some-feature/integration"],
+  ["(silent)", "S2(branch -d, integration 形状): 判定対象は allow を留保し無出力", "git branch -d em-workflow/some-feature/integration"],
   ["(silent)", "S3(gh pr create): 判定対象は allow を留保し無出力", "gh pr create --title \"add feature\" --body \"desc\""],
   ["allow", "S1 のクォート内言及は allow のまま", "echo \"git worktree remove /home/sakura/x\""],
   ["allow", "S2 のコミットメッセージ内言及は allow のまま", "git commit -m \"docs: explain git branch --delete usage\""],
@@ -147,5 +149,9 @@
   ["allow", "近傍(S2 ではない): branch の新規作成は allow のまま", "git branch feature-new"],
   ["allow", "近傍(S3 ではない): pr view は allow のまま", "gh pr view 42"],
   ["deny", "本物: worktree の強制削除は S1 と重なっても deny のまま", "git worktree remove --force /home/sakura/wt/task0007"],
-  ["deny", "複合: 先頭が S1 でも後続の rm 再帰は deny のまま", "git worktree remove /home/sakura/wt/task0007; rm -rf /home/sakura/other"]
+  ["deny", "複合: 先頭が S1 でも後続の rm 再帰は deny のまま", "git worktree remove /home/sakura/wt/task0007; rm -rf /home/sakura/other"],
+  ["deny", "複合(integration 形状): 先頭が S1(integration 形状)でも後続の rm 再帰は deny のまま — 留保は末尾の allow だけを止める", "git worktree remove /home/sakura/.claude/worktrees/em-workflow/some-feature/integration; rm -rf /home/sakura/unrelated-target"],
+  ["(silent)", "複合(integration 形状)の対照: 後続が無害なら deny は出ず留保のみ", "git worktree remove /home/sakura/.claude/worktrees/em-workflow/some-feature/integration; echo done"],
+  ["(silent)", "S1 解決不能(角カッコ形式のグロブ): 判定対象は allow を留保し無出力", "git worktree remove /home/sakura/wt/inte[gr]ation"],
+  ["allow", "S1 解決不能の対照: 角カッコを含むクォート内言及は allow のまま", "echo \"worktree remove target: inte[gr]ation\""]
 ]
