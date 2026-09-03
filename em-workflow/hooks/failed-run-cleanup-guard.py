@@ -80,6 +80,26 @@ WRAPPERS = frozenset(
     {"sudo", "env", "nohup", "time", "command", "nice", "ionice", "doas"}
 )
 
+# Wrapper options that take a value of their own (a separate token), keyed by
+# wrapper name -- mirrors destructive-guard.py's WRAPPER_VALUE_FLAGS so the
+# two classifiers agree on where the wrapped command word starts. Without
+# consuming these, the value token is mistaken for the wrapped command word
+# (`env -u NAME cp …` would read `NAME` as the command).
+WRAPPER_VALUE_FLAGS = {
+    "sudo": {
+        "-u", "-g", "-p", "-C", "-h", "-R", "-T", "-U", "-D", "-r", "-t",
+        "--user", "--group", "--prompt", "--close-from", "--host",
+        "--chroot", "--type", "--other-user", "--role", "--chdir",
+    },
+    "env": {"-u", "-C", "-S", "--unset", "--chdir", "--split-string"},
+    "nice": {"-n", "--adjustment"},
+    "ionice": {"-c", "-n", "-p", "--class", "--classdata", "--pid"},
+    "time": {"-o", "--output"},
+    "doas": {"-u", "-C"},
+    "command": set(),
+    "nohup": set(),
+}
+
 # Shell command words whose `-c <script>` argument is itself a command line
 # to be scanned, so `bash -c '...'` cannot hide a target shape.
 SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
@@ -146,8 +166,8 @@ def strip_heredocs(command):
     kept_nested = []
 
     def repl(m):
-        opening = command[m.start(0) : m.start(3)]
-        head_line = opening.split("<<", 1)[0]
+        line_start = command.rfind("\n", 0, m.start(0)) + 1
+        head_line = command[line_start : m.start(0)]
         try:
             toks = shlex.split(head_line, comments=True)
         except ValueError:
@@ -323,13 +343,20 @@ def head(tokens):
             return None, []
         if word not in WRAPPERS:
             return word, tokens[i + 1 :]
+        value_flags = WRAPPER_VALUE_FLAGS.get(word, set())
         i += 1
         # Skip the wrapper's own options (and, for `env`, its VAR=value
-        # assignment tokens) before looking at what follows it.
+        # assignment tokens) before looking at what follows it. An option
+        # that takes a separate value token (per WRAPPER_VALUE_FLAGS) has
+        # that value token skipped too, so it is never mistaken for the
+        # wrapped command word.
         while i < n and (
             tokens[i].startswith("-") or re.match(r"^[A-Za-z_]\w*=", tokens[i])
         ):
+            flag = tokens[i]
             i += 1
+            if flag in value_flags and i < n:
+                i += 1
 
 
 def git_subcommand(args):
@@ -607,7 +634,11 @@ def evaluate(kind, operand, cwd):
                 if parent == current:
                     break
                 current = parent
-        if found_any_worktree and not found_failed:
+        # failed な worktree が見つからないなら黙る。列挙できた中に failed が
+        # 無い場合も、em-workflow worktree を 1 つも列挙できなかった場合も同じ
+        # 扱いにする -- 後者で ask(=無人実行では deny) を出すと、em-workflow と
+        # 無関係なリポジトリの `git worktree remove "$WT"` まで止めてしまう。
+        if not found_failed:
             return
         decide(
             "ask",
