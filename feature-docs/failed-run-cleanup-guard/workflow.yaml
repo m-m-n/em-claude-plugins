@@ -137,10 +137,10 @@ tasks:
     notes: null
     branch: em-workflow/failed-run-cleanup-guard/task0003
 review:
-  status: in_progress
-  rounds_completed: 0
-  residual_critical_high: 0
-  needs_rework: false
+  status: pending
+  rounds_completed: 1
+  residual_critical_high: 5
+  needs_rework: true
   plan:
     floor:
     - comprehensive
@@ -151,11 +151,11 @@ review:
     discretionary: []
     cross_validation: true
   perspectives:
-    comprehensive: pending
-    spec: pending
-    security: pending
-    performance: pending
-    architecture: pending
+    comprehensive: completed
+    spec: completed
+    security: completed
+    performance: completed
+    architecture: completed
 requirements:
   FR1:
     title: Guard hook addition and registration
