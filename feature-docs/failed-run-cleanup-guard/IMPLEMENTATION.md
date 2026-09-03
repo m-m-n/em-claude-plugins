@@ -49,6 +49,7 @@ This feature introduces no shared module either.
 | Target invocation shapes (S1/S2/S3) | The single vocabulary of command shapes this feature reasons about | S1: a `git` invocation whose subcommand is `worktree` with the `remove` operation. S2: a `git` invocation whose subcommand is `branch` carrying a non-force delete flag (short `-d` or long `--delete`; the force spelling is already denied by destructive-guard's own branch rule). S3: a `gh` invocation with the `pr create` subcommand pair. Postcondition (INVARIANT): the set of commands for which destructive-guard withholds its blanket allow is a SUPERSET of the set of commands on which the new guard can emit a decision | task0001 (classifier), task0003 (deferral) |
 | Decision output contract | The wire shape every decision this feature emits uses | On deny/ask: a single JSON object on stdout carrying the PreToolUse hook-specific output block (event name, permission decision, permission decision reason), then exit 0. On no decision: nothing on stdout, exit 0. The reason string is Japanese prose prefixed with a bracketed hook tag in the existing style used by kill-guard and destructive-guard. An `ask` is demoted to `deny` when the unattended-run environment variable is set to anything other than its "off" spellings (empty, `0`, `false`, `no`) | task0001 |
 | Plugin version value | The single value both registries carry after this feature | `0.1.58` (patch step from `0.1.57`), written identically to the plugin manifest and to the em-workflow entry of the marketplace manifest, the latter selected by entry name and never by array position | task0002 |
+| Guard parity vocabulary | The two lists both guards must interpret identically, so the superset invariant above cannot drift | Grouping constructs: subshell, brace group, a function body defined and invoked within the same command, command substitution, and an inline interpreter string — in each, the invocation one level in is the statement's real head, not the grouping token. Unresolvable markers: the one character set that makes an operand statically unresolvable, identical on both sides, glob spellings included. Postcondition: the pairing is asserted by an executable check over a fixed command corpus (D7), never by a comment | task0001 (its classifier defines the vocabulary), task0003 (its deferral consumed it), task0004 (restores the pairing and pins it) |
 
 ## Conventions
 
@@ -165,6 +166,35 @@ locate the target worktree, plus at most ONE `workflow.yaml` read per
 evaluated command.
 
 Affected tasks: task0001.
+
+### D7 — The superset invariant is pinned by a parity check, not by prose
+
+D2's superset property is a relation between two independently written
+scripts, and the layer structure above deliberately keeps them from sharing
+code. A relation stated only in prose drifts the first time one side is
+narrowed without the other: that is exactly what the first review round
+found, in both directions at once.
+
+The relation is therefore given one executable owner: a check that feeds one
+fixed corpus of command strings to BOTH guards and asserts, per member,
+that whenever the new guard emits a decision the destructive guard emits no
+allow — plus the narrowness converse, that a mention or a near miss keeps its
+blanket allow. The corpus is data, so a newly discovered shape is added as a
+row rather than as new assertion code, and it lives in the repository-root
+test directory per the NFR6 convention above.
+
+Two consequences bind future changes to either script:
+
+- The Guard parity vocabulary row above is the shared contract. A grouping
+  construct or an unresolvable marker recognized by one guard is recognized
+  by the other; neither list is extended on one side alone.
+- The relation is a SUPERSET, not an equality. A form on which the
+  destructive guard withholds its allow while the new guard stays silent is
+  permitted — it costs one classifier round trip (the NFR1 tax) and denies
+  nothing. Only the opposite direction is a defect.
+
+Affected tasks: task0004 (owns the check and the alignment), task0001 and
+task0003 (their scripts are the two sides the check compares).
 
 ## Risk Assessment
 

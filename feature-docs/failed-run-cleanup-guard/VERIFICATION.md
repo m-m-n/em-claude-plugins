@@ -38,11 +38,15 @@ merged. Task-level acceptance criteria live in the task plans.
 | TS-5 | The destructive-guard expectation suite after its deferral rows are added: real invocations of the three target shapes, quoted mentions of them, near-miss commands of the same families, and the pre-existing rows | Real invocations produce no output (blanket allow withheld); quoted mentions and near misses still receive the blanket allow; every pre-existing deny/ask/allow row keeps its verdict and none is removed | Integration |
 | TS-6 | Manifest-driven registration checks over the edited hook manifest: declared order of the Bash matcher group, command form, interpreter/extension pairing, per-script timeout, referenced script existence, no duplicate registration | The group declares the five guards in the pinned order with the blanket-allow guard last; the new entry is well-formed with the standard timeout and its script exists | Unit |
 | TS-7 | Version parity across the plugin manifest and the marketplace entry, the latter looked up by plugin name | Both carry the identical value, strictly greater than the recorded baseline under component-wise numeric comparison; the other plugin's entry is untouched | Unit |
+| TS-8 | Deferral superset parity: one fixed command corpus fed to both guards — each target shape in its plain form, nested in a subshell, in a brace group, in a function body invoked in the same command, in a command substitution and in an inline interpreter string, and with a statically unresolvable operand — together with narrowness members (quoted mention, here-document body, near miss of the same family, unrelated command) | For every member on which the new guard emits a decision, the blanket-allow guard emits no allow; for every narrowness member, the new guard is silent and the blanket allow survives; the plain forms are asserted to decide, so no member is vacuous | Integration |
 
 TS-1 through TS-5 are SPEC.md's own scenarios. TS-6 and TS-7 are added here
 for two SPEC.md Success Criteria that its scenario list does not number
 (registration in the hook manifest, and the paired version bump); both are
-satisfied by existing repository test modules once the tasks land.
+satisfied by existing repository test modules once the tasks land. TS-8 is
+added by the first review round's rework: it turns the superset half of
+IMPLEMENTATION.md's decision D2 from a prose promise into an executable
+check, which is what that round found had silently drifted.
 
 ## Code Quality Verification
 
@@ -57,8 +61,8 @@ satisfied by existing repository test modules once the tasks land.
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
 | SC-1 | All functional requirements are implemented and tested | The requirement coverage table below has no empty cell |
-| SC-2 | All test scenarios pass | TS-1 through TS-7 all pass in the integrated tree |
-| SC-3 | The destructive-guard expectation suite passes in full, and a case proves the new guard's deny is not cancelled by the blanket allow | Run the hooks-component command; confirm the added deferral rows are present and green (TS-5) |
+| SC-2 | All test scenarios pass | TS-1 through TS-8 all pass in the integrated tree |
+| SC-3 | The destructive-guard expectation suite passes in full, and a case proves the new guard's deny is not cancelled by the blanket allow | Run the hooks-component command; confirm every row passes and the added deferral rows are present and green (TS-5), and that the cross-guard parity check finds no command on which a decision is cancelled (TS-8) |
 | SC-4 | The repository-root unit test command passes in full, including the new tests | Run the main-component command (TS-1 through TS-4, TS-6, TS-7) |
 | SC-5 | The new guard is registered in the Bash matcher of the hook manifest | TS-6 |
 | SC-6 | Both registries carry the same raised version | TS-7 |
@@ -77,16 +81,16 @@ satisfied by existing repository test modules once the tasks land.
 | FR5 | task0001 | TS-1, TS-2 |
 | FR6 | task0001 | TS-1 |
 | FR7 | task0001 | TS-4 |
-| FR8 | task0003 | TS-5 |
+| FR8 | task0003, task0004 | TS-5, TS-8 |
 | FR9 | task0001 | TS-1, TS-2 |
 | FR10 | task0001 | TS-2 |
 | FR11 | task0002 | TS-7 |
-| NFR1 | task0001, task0003 | TS-2, TS-5 |
+| NFR1 | task0001, task0003, task0004 | TS-2, TS-5, TS-8 |
 | NFR2 | task0001 | TS-1 |
 | NFR3 | task0001, task0002 | TS-1, TS-6 |
 | NFR4 | task0001 | TS-2 |
 | NFR5 | task0001 | TS-2 |
-| NFR6 | task0001, task0003 | TS-1, TS-5 |
+| NFR6 | task0001, task0003, task0004 | TS-1, TS-5 |
 
 ## E2E Testing
 
@@ -125,7 +129,7 @@ run, and nothing regressed by omission.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 7 | 7 | 0 | 0 |
+| Test scenarios | 8 | 8 | 0 | 0 |
 | Success criteria | 9 | 7 | 0 | 1 (SC-8; SC-9 is the review phase's own record) |
 | Functional requirements | 11 | 11 | 0 | 0 |
 | Non-functional requirements | 6 | 6 | 0 | 0 |
