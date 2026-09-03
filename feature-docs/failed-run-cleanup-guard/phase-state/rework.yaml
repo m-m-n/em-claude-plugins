@@ -1,20 +1,33 @@
 schema_version: 1
 feature: failed-run-cleanup-guard
 phase: rework
-status: dispatching
+status: completed
 generation: 1
 base_revision: 287c99c6090b60634500c4e12a988b4a4aaf0161
 last_input_digest: sha256:89a29c8e39ad872ba257b63bf8031f6c661ed0cfb1c0d57f799376ce129013b0
-active_request_id: rework-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: rework-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:89a29c8e39ad872ba257b63bf8031f6c661ed0cfb1c0d57f799376ce129013b0
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:ca267c5c886b1bfbb63d5ba194d5ef10529387d0585a08d763d7eb86724a5888
+artifacts:
+- path: feature-docs/failed-run-cleanup-guard/tasks/task0004.md
+  sha256: sha256:91c8bb9c474093819adee6118a2ddc8d01239557f3fb3df21f9eb62c033f257b
+  produced_by: rework-run-0001
+- path: feature-docs/failed-run-cleanup-guard/VERIFICATION.md
+  sha256: sha256:9f18a4823e9d0f5cd69b43bc54898e8edc628a2b2418a2a84ca1c17f930206c5
+  produced_by: rework-run-0001
+- path: feature-docs/failed-run-cleanup-guard/IMPLEMENTATION.md
+  sha256: sha256:8f892b3946a87cdff4c6b6fd0b01f0a01ce640f77d43d4a738d74141be036d61
+  produced_by: rework-run-0001
+patches:
+- patch_id: rework-p0001
+  status: applied
+  base_input_digest: sha256:89a29c8e39ad872ba257b63bf8031f6c661ed0cfb1c0d57f799376ce129013b0
+  base_workflow_blob: c805cb4dcdedff2885f5ba7ddec973bc28cfad61
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}

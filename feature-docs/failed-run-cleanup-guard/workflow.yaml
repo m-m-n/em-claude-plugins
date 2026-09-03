@@ -55,7 +55,7 @@ workflow:
   status: completed
   completed_at_commit: 397e98fba00ac9d109cc9f2a4356684b6d3d181e
 - id: implement
-  status: completed
+  status: pending
   base_commit: 0922425660e4d33b370d16fdafdab2b76e54344e
   completed_at_commit: ae170989874b5f25297e3420e62cae80c403f299
 - id: review
@@ -136,6 +136,35 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/failed-run-cleanup-guard/task0003
+  task0004:
+    title: restore the deferral's superset parity and re-green the expectation suite
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_guard_deferral_parity.py
+    - test-docs/failed-run-cleanup-guard/task0003.tests.yaml
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR8
+    - NFR1
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: review
+      source_ids:
+      - 9f4b314b33772913
+      - 0171a90a8e2beb1b
+      - 6c3eb2fa0577d0b7
+      - dcf7c51ca985abaf
+      - 33e784e69b844598
+      review_round: 1
 review:
   status: pending
   rounds_completed: 1
@@ -230,8 +259,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0003
+    - task0004
     tests:
     - TS-5
+    - TS-8
   FR9:
     title: Out-of-scope commands pass with no decision
     status: ok
@@ -268,9 +299,11 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-2
     - TS-5
+    - TS-8
   NFR2:
     title: Static evaluation only
     status: ok
@@ -317,9 +350,10 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0004
     tests:
     - TS-1
     - TS-5
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 0
