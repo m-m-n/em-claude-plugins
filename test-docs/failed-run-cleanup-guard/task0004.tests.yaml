@@ -1,0 +1,132 @@
+task_id: task0004
+baseline_failures:              # 4a, run against the UNMODIFIED tree (2026-09-03):
+                                 # `python3 -m unittest discover -s tests` -> 2867/2867 OK
+                                 # `python3 em-workflow/hooks/tests/run-destructive-guard.py` -> 148/150 passed
+  - "destructive-guard-cases.json::S1(worktree remove): 判定対象は allow を留保し無出力"
+  - "destructive-guard-cases.json::S2(branch -d): 判定対象は allow を留保し無出力"
+final_failures: []              # after implementation:
+                                 # `python3 -m unittest discover -s tests` -> 2870/2870 OK
+                                 # `python3 em-workflow/hooks/tests/run-destructive-guard.py` -> 156/156 passed
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Not a code test but a recorded-observation criterion. Step 4a's run
+      against the unmodified tree (before this task touched anything) was
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` ->
+      148/150, with these two rows FAILing (got=allow, want=(silent)):
+      "S1(worktree remove): 判定対象は allow を留保し無出力" and
+      "S2(branch -d): 判定対象は allow を留保し無出力". That observed
+      result — the counts and the two failing rows' identities — is what
+      test-docs/failed-run-cleanup-guard/task0003.tests.yaml now states
+      (replacing its prior "150/150" claim), with no other claim in that
+      record touched.
+  AC-2:
+    tests:
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 nested in subshell]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 nested in brace group]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 nested in function defined and invoked in the same command]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 nested in subshell]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 nested in brace group]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 nested in function defined and invoked in the same command]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S3 nested in subshell]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S3 nested in brace group]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S3 nested in function defined and invoked in the same command]"
+    red_confirmed: true
+    red_reason: >-
+      The module was run directly (`python3 -m unittest
+      tests.test_guard_deferral_parity -v`) against the UNMODIFIED
+      destructive-guard.py (git-stashed the fix back out, confirmed
+      identical to the fixed version afterward with `diff`, then restored
+      it). 13 subTests failed; the 9 named above are the grouping-construct
+      ones (subshell/brace group/function-defined-and-invoked, all three
+      shapes) — each reported "destructive-guard emitted allow while the
+      new guard decided", e.g. command='(git worktree remove
+      .../integration)', new='deny', destructive='allow'. The command-
+      substitution and inline-interpreter-string grouping rows in the same
+      corpus were already green pre-fix (destructive-guard's existing
+      SUBSTITUTION-hoisting and extract_shell_payload() mechanisms already
+      re-scan those forms as their own statement), so they are not listed
+      as red-confirmed here — they still run as regression coverage for
+      that already-correct behavior.
+  AC-3:
+    tests:
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 unresolvable: bracket-form glob]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S1 unresolvable: command substitution (whole operand)]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 unresolvable: bracket-form glob]"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant[S2 unresolvable: command substitution (whole operand)]"
+      - "destructive-guard-cases.json::S1 解決不能(角カッコ形式のグロブ): 判定対象は allow を留保し無出力"
+    red_confirmed: true
+    red_reason: >-
+      Same stashed-unfixed run as AC-2. The 4 subTests above failed
+      (e.g. command='git worktree remove .../inte[gr]ation', new='ask',
+      destructive='allow'; command='git branch -d $(get_branch_name)',
+      new='ask', destructive='allow'). The destructive-guard-cases.json
+      bracket row failed the same way before the JSON edit and the script
+      fix (got=allow, want=(silent)), confirmed via
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` on the
+      unmodified tree. The corpus's variable-expansion and glob-star
+      unresolvable rows for S1/S2 were already green pre-fix (`$` and `*`
+      were already in matches_target_shape()'s dynamic-marker set before
+      this task) — included in the corpus for regression coverage of
+      AC-3's full marker enumeration, not listed as red-confirmed here.
+  AC-4:
+    tests:
+      - "tests/test_guard_deferral_parity.py::TestFixtureProducesRealDecisions::test_plain_form_of_each_shape_yields_a_decision_from_the_new_guard"
+      - "tests/test_guard_deferral_parity.py::TestSupersetInvariantHoldsAcrossTheCorpus::test_superset_invariant"
+      - "destructive-guard-cases.json::複合(integration 形状): 先頭が S1(integration 形状)でも後続の rm 再帰は deny のまま — 留保は末尾の allow だけを止める"
+    red_confirmed: true
+    red_reason: >-
+      test_superset_invariant as a whole reported 13/22 subTests failing
+      against the unmodified destructive-guard.py (same stashed run as
+      AC-2/AC-3), which is exactly what AC-4 requires: the parity check
+      fails when a corpus member violates the superset relation. After the
+      script fix, the same run is 0 failures. The compound destructive-
+      guard-cases.json row was already green pre-fix (check_rm()'s deny
+      fires before the trailing allow is ever reached, independent of the
+      deferral's own correctness) — carried as an explicit pin of "the
+      checks still run" rather than a red-confirmed row.
+  AC-5:
+    tests:
+      - "tests/test_guard_deferral_parity.py::TestNarrownessConverseHoldsAcrossTheCorpus::test_narrowness_converse"
+    red_confirmed: false
+    red_reason: >-
+      Narrowness was never broken by the previous round or by this task's
+      fix — every row here (quoted mention, here-doc body, near miss per
+      shape, unrelated command) already left the new guard silent and
+      destructive-guard's blanket allow intact both before and after this
+      task's change. No implementation state under this task produces a red
+      transition for this criterion; it pins the invariant going forward
+      (mirrors task0003.tests.yaml's own AC-3 entry for the same reason).
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Whole-suite outcome, not a single test. Step 4a baseline: `python3
+      em-workflow/hooks/tests/run-destructive-guard.py` -> 148/150 (two
+      rows failing under the pre-correction expectations). After adding the
+      2 corrected rows + 2 companion rows + 2 compound rows + 2 unresolvable
+      rows (156 total) and the script fix: 156/156 passed. `git diff` on
+      destructive-guard-cases.json confirms every pre-existing row's
+      command AND expected verdict is byte-identical (the two corrected
+      rows' commands are unchanged; only their expected value moved from
+      "(silent)" to "allow", and their commands survive verbatim as the
+      plan requires) — no row is deleted.
+  AC-7:
+    tests:
+      - "tests/test_guard_deferral_parity.py (module presence + location under repository-root tests/, not em-workflow/hooks/tests/)"
+    red_confirmed: true
+    red_reason: >-
+      Before this task the module did not exist at all, so `python3 -m
+      unittest discover -s tests` could not have exercised it. Once
+      written and run directly against the unmodified destructive-guard.py
+      (same stashed run as AC-2), it failed with 13 subTest failures across
+      its own three test methods — the concrete evidence that, had it
+      shipped before the script fix, `discover -s tests` would not have
+      passed in full. After the fix, `python3 -m unittest discover -s
+      tests` reports 2870/2870 OK (baseline 2867 + this module's 3 test
+      methods), and the module lives at tests/test_guard_deferral_parity.py
+      — the repository-root test directory, not
+      em-workflow/hooks/tests/ — per NFR6 and the Test placement convention
+      in IMPLEMENTATION.md.
