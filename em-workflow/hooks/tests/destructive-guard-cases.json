@@ -141,7 +141,7 @@
   ["allow", "S2 だが integration 形状ではない対象は allow のまま（絞り込みは意図通り）", "git branch -d feature-done"],
   ["(silent)", "S1(worktree remove, integration 形状): 判定対象は allow を留保し無出力", "git worktree remove /home/sakura/.claude/worktrees/em-workflow/some-feature/integration"],
   ["(silent)", "S2(branch -d, integration 形状): 判定対象は allow を留保し無出力", "git branch -d em-workflow/some-feature/integration"],
-  ["(silent)", "S3(gh pr create): 判定対象は allow を留保し無出力", "gh pr create --title \"add feature\" --body \"desc\""],
+  ["allow", "S3(gh pr create): cwd 依存のため、cwd を渡さないこの harness では留保を再現できない。cwd 付きの留保は tests/test_guard_deferral_parity.py が担保", "gh pr create --title \"add feature\" --body \"desc\""],
   ["allow", "S1 のクォート内言及は allow のまま", "echo \"git worktree remove /home/sakura/x\""],
   ["allow", "S2 のコミットメッセージ内言及は allow のまま", "git commit -m \"docs: explain git branch --delete usage\""],
   ["allow", "S3 のヒアドキュメント本文内言及は allow のまま", "cat <<'EOF'\ngh pr create --title x\nEOF"],

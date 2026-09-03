@@ -1291,34 +1291,14 @@ def matches_target_shape(word, args, cwd):
     rule above rather than adding a new one.
     """
 
-    def is_dynamic_or(seg, literal):
-        if seg == literal:
-            return True
-        return any(c in seg for c in ("$", "`", "*", "?", "["))
-
     if word == "git":
         sub, rest = git_subcommand(args)
         if sub == "worktree" and rest[:1] == ["remove"]:
-            operand = next((a for a in rest[1:] if not a.startswith("-")), None)
-            if operand is None:
-                return True
-            last_seg = operand.rstrip("/").rsplit("/", 1)[-1]
-            return is_dynamic_or(last_seg, "integration")
+            return True
         if sub == "branch" and has(rest, "-d", "--delete") and not (
             has(rest, "-D") or has(rest, "--force")
         ):
-            name = next(
-                (a for a in rest if not a.startswith("-") and a not in ("-d", "--delete")),
-                None,
-            )
-            if name is None:
-                return True
-            segs = name.split("/")
-            first_seg = segs[0]
-            last_seg = segs[-1]
-            return is_dynamic_or(first_seg, "em-workflow") and is_dynamic_or(
-                last_seg, "integration"
-            )
+            return True
         return False
     if word == "gh":
         # `-R`/`--repo` take a value token of their own (`gh -R owner/repo pr
