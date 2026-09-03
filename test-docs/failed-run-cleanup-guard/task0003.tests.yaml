@@ -1,8 +1,19 @@
 task_id: task0003
 baseline_failures: []          # 4a: `python3 -m unittest discover -s tests` -> 2830/2830 OK;
                                 # `python3 em-workflow/hooks/tests/run-destructive-guard.py` -> 139/139 passed
-final_failures: []             # after implementation: unittest suite still 2830/2830 OK;
-                                # destructive-guard expectation suite now 150/150 passed
+# task0004 correction (AC-1): this record claimed a fully green destructive-
+# guard suite after task0003's implementation. Re-run once against the
+# unmodified tree (the state task0003 actually left it in, before any
+# task0004 change) on 2026-09-03 produced 148/150, not 150/150 -- the two
+# rows below failed because the previous round's shape-narrowing (limiting
+# the deferral to integration-shaped operands) made these two rows' plain,
+# non-integration-shaped commands stop matching S1/S2, so the trailing
+# blanket allow fired instead of staying withheld. `python3 -m unittest
+# discover -s tests` was unaffected (2830/2830 OK, same as baseline). No
+# other claim in this record is altered.
+final_failures:
+  - "destructive-guard-cases.json::S1(worktree remove): 判定対象は allow を留保し無出力"
+  - "destructive-guard-cases.json::S2(branch -d): 判定対象は allow を留保し無出力"
 acceptance_tests:
   AC-1:
     tests:
