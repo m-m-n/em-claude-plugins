@@ -591,6 +591,56 @@ def failed_step_id(steps):
     return None
 
 
+_FAILED_SCAN_CACHE = {}
+
+
+def any_failed_worktree(cwd):
+    """Whether the `ask` for a statically-unresolvable operand should be
+    kept, based on em-workflow integration worktrees reachable from the
+    given cwd (walking ancestors, same as locate_worktree_by_ancestor_walk).
+
+    Returns False (silent, no ask) only when at least one em-workflow
+    integration worktree could be enumerated and every one of them is
+    healthy. Returns True (keep the `ask`) both when some enumerable
+    worktree still records a failed step in its own workflow.yaml, and
+    when no worktree can be enumerated at all -- the inability to enumerate
+    must not be read as "healthy" (FR7's protection is preserved).
+
+    The answer depends only on cwd, so it is memoized: a command carrying
+    several unresolvable target statements must not re-read and re-parse
+    every worktree's workflow.yaml once per statement."""
+    if cwd in _FAILED_SCAN_CACHE:
+        return _FAILED_SCAN_CACHE[cwd]
+    found_any_worktree = False
+    found_failed = False
+    if cwd and yaml is not None:
+        current = os.path.normpath(cwd)
+        for _ in range(MAX_ANCESTOR_STEPS):
+            base = os.path.join(current, ".claude", "worktrees", "em-workflow")
+            if os.path.isdir(base):
+                try:
+                    entries = os.listdir(base)
+                except Exception:
+                    entries = []
+                for feature in entries:
+                    integration_dir = os.path.join(base, feature, "integration")
+                    if not os.path.isdir(integration_dir):
+                        continue
+                    found_any_worktree = True
+                    steps = read_workflow_steps(integration_dir, feature)
+                    if steps is not None and failed_step_id(steps) is not None:
+                        found_failed = True
+                        break  # 判定はもう変わらない
+                break
+            parent = os.path.dirname(current)
+            if parent == current:
+                break
+            current = parent
+    result = found_failed or not found_any_worktree
+    _FAILED_SCAN_CACHE[cwd] = result
+    return result
+
+
 def evaluate(kind, operand, cwd):
     """Resolve one classified statement to a decision, or None for no
     decision. Emits directly via decide() on ask/deny."""
@@ -602,43 +652,11 @@ def evaluate(kind, operand, cwd):
         target = resolve_pr_create(cwd)
 
     if target is _UNRESOLVABLE:
-        # Before asking, look for any em-workflow integration worktree
-        # reachable from the payload's cwd (walking ancestors, same as
-        # locate_worktree_by_ancestor_walk) whose own workflow.yaml still
-        # records a failed step. If none is found -- either because no
-        # worktree can be enumerated at all, or because every enumerable
-        # one is healthy -- a statically-unresolvable operand in a healthy
-        # run's own cleanup should not be blocked. Any worktree with a
-        # failed step, or the inability to enumerate any worktree at all,
-        # keeps the `ask` (FR7's protection is preserved).
-        found_any_worktree = False
-        found_failed = False
-        if cwd and yaml is not None:
-            current = os.path.normpath(cwd)
-            for _ in range(MAX_ANCESTOR_STEPS):
-                base = os.path.join(current, ".claude", "worktrees", "em-workflow")
-                if os.path.isdir(base):
-                    try:
-                        entries = os.listdir(base)
-                    except Exception:
-                        entries = []
-                    for feature in entries:
-                        integration_dir = os.path.join(base, feature, "integration")
-                        if os.path.isdir(integration_dir):
-                            found_any_worktree = True
-                            steps = read_workflow_steps(integration_dir, feature)
-                            if steps is not None and failed_step_id(steps) is not None:
-                                found_failed = True
-                    break
-                parent = os.path.dirname(current)
-                if parent == current:
-                    break
-                current = parent
-        # failed な worktree が見つからないなら黙る。列挙できた中に failed が
-        # 無い場合も、em-workflow worktree を 1 つも列挙できなかった場合も同じ
-        # 扱いにする -- 後者で ask(=無人実行では deny) を出すと、em-workflow と
-        # 無関係なリポジトリの `git worktree remove "$WT"` まで止めてしまう。
-        if not found_failed:
+        # Before asking, check whether every em-workflow integration
+        # worktree reachable from the payload's cwd is healthy (see
+        # any_failed_worktree()); if none could even be enumerated, or any
+        # has a failed step, the ask is kept.
+        if not any_failed_worktree(cwd):
             return
         decide(
             "ask",
