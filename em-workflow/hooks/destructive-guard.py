@@ -1220,7 +1220,23 @@ def matches_target_shape(word, args):
             return True
         return False
     if word == "gh":
-        positional = [a for a in args if not a.startswith("-")]
+        # `-R`/`--repo` take a value token of their own (`gh -R owner/repo pr
+        # create`); without skipping it, the repo spelling is mistaken for
+        # the first positional and `pr create` is missed.
+        positional = []
+        skip_next = False
+        for a in args:
+            if skip_next:
+                skip_next = False
+                continue
+            if a in ("-R", "--repo"):
+                skip_next = True
+                continue
+            if a.startswith("--repo="):
+                continue
+            if a.startswith("-"):
+                continue
+            positional.append(a)
         return positional[:2] == ["pr", "create"]
     return False
 
