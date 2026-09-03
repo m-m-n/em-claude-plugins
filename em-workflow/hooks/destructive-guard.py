@@ -1231,7 +1231,7 @@ def strip_grouping_prefix(toks):
     return toks
 
 
-def matches_target_shape(word, args):
+def matches_target_shape(word, args, cwd):
     """Whether (WORD, ARGS) is a real invocation of failed-run-cleanup-guard's
     target shapes S1/S2/S3 (IMPLEMENTATION.md "Target invocation shapes
     (S1/S2/S3)", decision D2): a `git worktree remove`, a `git branch`
@@ -1276,7 +1276,9 @@ def matches_target_shape(word, args):
     trailing `/`) is literally `integration`, or is dynamic.
     S2: only when the branch name's first segment is `em-workflow` (or
     dynamic) AND its last segment is `integration` (or dynamic).
-    S3 is left unchanged: this function has no access to cwd.
+    S3: only when CWD's path segments contain the consecutive run
+    `.claude/worktrees/em-workflow/<feature>/integration`, matching the
+    window failed-run-cleanup-guard.py's own resolve_pr_create() judges.
 
     When the operand/branch-name token is missing entirely (S1's `rest[1:]`
     or S2's filtered `rest` has nothing left), that is treated as matching
@@ -1336,7 +1338,17 @@ def matches_target_shape(word, args):
             if a.startswith("-"):
                 continue
             positional.append(a)
-        return positional[:2] == ["pr", "create"]
+        if positional[:2] != ["pr", "create"]:
+            return False
+        segs = [s for s in cwd.split("/") if s]
+        window = [".claude", "worktrees", "em-workflow"]
+        for i in range(len(segs) - 4):
+            if (
+                segs[i : i + 3] == window
+                and segs[i + 4] == "integration"
+            ):
+                return True
+        return False
     return False
 
 
@@ -1351,6 +1363,7 @@ def main():
     command = (payload.get("tool_input") or {}).get("command", "")
     if not command.strip():
         sys.exit(0)
+    cwd = payload.get("cwd") or ""
 
     # Whether kill-guard.py owns the verdict for this command. The destructive
     # checks below still run — a compound such as
@@ -1392,7 +1405,7 @@ def main():
         # this must run even when WORD is None or not "git"/"gh"; it is
         # placed before the `continue` below for that reason.
         gword, gargs = head(strip_grouping_prefix(words))
-        if matches_target_shape(gword, gargs):
+        if matches_target_shape(gword, gargs, cwd):
             defer_to_new_guard = True
 
         if word is None:
