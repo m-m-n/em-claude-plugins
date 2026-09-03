@@ -106,12 +106,15 @@ MAX_SHELL_PAYLOAD_EXPANSIONS = 25
 
 # Wrapper commands that prefix the real one. `mise exec -- gcloud …` and
 # `sudo rm -rf …` must be judged on the wrapped command, not the wrapper.
+# Mirrored in failed-run-cleanup-guard.py's own WRAPPERS — keep both in sync.
 WRAPPERS = {"sudo", "env", "nohup", "time", "command", "nice", "ionice", "doas"}
 
 # Wrapper options that take a value of their own (a separate token), keyed by
 # wrapper name. Without consuming these, the value token is mistaken for the
 # wrapped command word (`env -u NAME cp …` would read `NAME` as the command).
 # `--flag=value` spellings are attached and need no extra consumption.
+# Mirrored in failed-run-cleanup-guard.py's own WRAPPER_VALUE_FLAGS — keep
+# both in sync.
 WRAPPER_VALUE_FLAGS = {
     "sudo": {
         "-u", "-g", "-p", "-C", "-h", "-R", "-T", "-U", "-D", "-r", "-t",
@@ -490,7 +493,10 @@ def tokens(segment):
 
 
 def head(toks):
-    """Return (command word, remaining args), skipping assignments/wrappers."""
+    """Return (command word, remaining args), skipping assignments/wrappers.
+
+    Mirrored in failed-run-cleanup-guard.py's own head() — keep both in sync.
+    """
     i = 0
     while i < len(toks):
         t = toks[i]
@@ -531,10 +537,37 @@ def _deferral_head(words):
     and every other caller of it, still compares raw tokens, so no existing
     deny/ask verdict changes because of this.
     """
-    normalized = [
-        os.path.basename(t) if os.path.sep in t and os.path.basename(t) in WRAPPERS else t
-        for t in words
-    ]
+    normalized = list(words)
+    i = 0
+    n = len(normalized)
+    while i < n:
+        t = normalized[i]
+        if re.match(r"^[A-Za-z_]\w*=", t):
+            i += 1
+            continue
+        basename = os.path.basename(t) if os.path.sep in t else t
+        if basename in WRAPPERS:
+            normalized[i] = basename
+            i += 1
+            value_flags = WRAPPER_VALUE_FLAGS.get(basename, set())
+            while i < n:
+                a = normalized[i]
+                if a == "--":
+                    i += 1
+                    break
+                if a == "-" or not a.startswith("-"):
+                    break
+                i += 1
+                if a in value_flags:
+                    i += 1  # consume the option's value token
+            continue
+        if t in ("mise", "asdf") and i + 1 < n and normalized[i + 1] == "exec":
+            i += 2
+            while i < n and normalized[i] != "--":
+                i += 1
+            i += 1  # step past the `--`
+            continue
+        break
     return head(normalized)
 
 
@@ -560,7 +593,11 @@ def _expand_short_clusters(args):
 
 
 def git_subcommand(args):
-    """Strip git's global options and return (subcommand, its args)."""
+    """Strip git's global options and return (subcommand, its args).
+
+    Mirrored in failed-run-cleanup-guard.py's own git_subcommand() (used
+    inside its classify()) — keep both in sync.
+    """
     i = 0
     while i < len(args):
         a = args[i]
@@ -1267,6 +1304,14 @@ def strip_grouping_prefix(toks):
     return toks
 
 
+def _seg_matches(seg, literal):
+    """Whether a branch-name path segment matches LITERAL exactly, or is
+    dynamic (see DYNAMIC above) — used by matches_target_shape()'s S2 branch
+    segment check.
+    """
+    return seg == literal or bool(DYNAMIC.search(seg))
+
+
 def matches_target_shape(word, args, cwd):
     """Whether (WORD, ARGS) is a real invocation of failed-run-cleanup-guard's
     target shapes S1/S2/S3 (IMPLEMENTATION.md "Target invocation shapes
@@ -1330,18 +1375,35 @@ def matches_target_shape(word, args, cwd):
     if word == "git":
         sub, rest = git_subcommand(args)
         if sub == "worktree" and rest[:1] == ["remove"]:
-            return True
+            operand = next((a for a in rest[1:] if not a.startswith("-")), None)
+            if operand is None:
+                return True
+            last = operand.rstrip("/").rsplit("/", 1)[-1]
+            return last == "integration" or bool(DYNAMIC.search(operand))
         if sub == "branch":
             expanded_rest = _expand_short_clusters(rest)
             if has(expanded_rest, "-d", "--delete") and not (
                 has(expanded_rest, "-D") or has(expanded_rest, "--force")
             ):
-                return True
+                operands = [a for a in rest if not a.startswith("-")]
+                if not operands:
+                    return True
+                for name in operands:
+                    if DYNAMIC.search(name):
+                        return True
+                    parts = name.split("/")
+                    if len(parts) == 3 and _seg_matches(
+                        parts[0], "em-workflow"
+                    ) and _seg_matches(parts[-1], "integration"):
+                        return True
         return False
     if word == "gh":
         # `-R`/`--repo` take a value token of their own (`gh -R owner/repo pr
         # create`); without skipping it, the repo spelling is mistaken for
         # the first positional and `pr create` is missed.
+        # This positional-argument extraction mirrors the one in
+        # failed-run-cleanup-guard.py's own classify() (its `gh pr create`
+        # detection, S3) — keep both in sync.
         positional = []
         skip_next = False
         for a in args:

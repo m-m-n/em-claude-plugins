@@ -126,6 +126,14 @@ MAX_ANCESTOR_STEPS = 12
 _UNRESOLVABLE = object()
 
 
+def split_tokens(text):
+    """shlex.split(text, comments=True), with whitespace-only tokens
+    dropped -- a `\\` + newline line continuation surfaces from shlex as a
+    token containing only the newline, which must never be read as an
+    operand or subcommand. ValueError propagates unchanged."""
+    return [t for t in shlex.split(text, comments=True) if t.strip()]
+
+
 def unattended():
     """True when this session runs under claude-batch with nobody watching."""
     return os.environ.get(BATCH_ENV, "").strip().lower() not in BATCH_OFF
@@ -169,7 +177,7 @@ def strip_heredocs(command):
         line_start = command.rfind("\n", 0, m.start(0)) + 1
         head_line = command[line_start : m.start(0)]
         try:
-            toks = shlex.split(head_line, comments=True)
+            toks = split_tokens(head_line)
         except ValueError:
             toks = []
         cmdword, _ = head(toks) if toks else (None, [])
@@ -289,7 +297,7 @@ def statements(command, _depth=0):
     if _depth < MAX_NEST_DEPTH:
         for seg in top:
             try:
-                tokens = shlex.split(seg, comments=True)
+                tokens = split_tokens(seg)
             except ValueError:
                 tokens = []
             if not tokens:
@@ -703,7 +711,7 @@ def main():
 
     for segment in statements(command):
         try:
-            tokens = shlex.split(segment, comments=True)
+            tokens = split_tokens(segment)
         except ValueError:
             continue
         if not tokens:
