@@ -1,0 +1,229 @@
+feature: failed-run-cleanup-guard
+collected_at: '2026-09-04T00:25:22+09:00'
+session_ids:
+- 4f389f60-2f64-43b2-8173-f49362d16198
+signals:
+  review_critical_high:
+  - stable_id: eab1bc5307462738
+    category: spec
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: 動的パスの ask 判定が FR3 のスコープ判定より前に出て、正常ランの worktree 掃除を deny する
+    resolution: fixed
+    round: 1
+    severity: critical
+  - stable_id: 9f4b314b33772913
+    category: spec
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    title: destructive-guard 期待値スイートが 148/150 で失敗し Success Criteria を満たしていない
+    resolution: unresolved
+    round: 1
+    severity: critical
+  - stable_id: e03bcbdeb216417a
+    category: architecture
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: 2 つのフックで S1/S2/S3 分類器が二重実装され、実際に食い違っている
+    resolution: fixed
+    round: 1
+    severity: high
+  - stable_id: 0171a90a8e2beb1b
+    category: architecture
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: 2 本のガードの分類器が非対称で D2 の superset 性が崩れている（subshell / brace group で deny が blanket allow に打ち消される）
+    resolution: unresolved
+    round: 1
+    severity: high
+  - stable_id: b9326da733ada647
+    category: architecture
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: S1/S2/S3 の shape 判定が 2 ファイルに二重実装され、fix loop 1 で `gh -R` 分だけ片側に入り契約がずれた
+    resolution: fixed
+    round: 1
+    severity: high
+  - stable_id: dfd054073891212a
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: blanket allow の留保が広すぎ、常用コマンド 3 種が毎回 auto mode classifier に回る
+    resolution: fixed
+    round: 1
+    severity: high
+  - stable_id: 6c3eb2fa0577d0b7
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: loop3 の再帰追加で deny が広域 allow に上書きされる経路が新たに生まれた
+    resolution: unresolved
+    round: 1
+    severity: high
+  - stable_id: c578e4bbb81b425e
+    category: comprehensive
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: スコープ外の task worktree 削除まで ask→deny になり、無人実行の定常クリーンアップが止まる
+    resolution: fixed
+    round: 1
+    severity: high
+  - stable_id: dcf7c51ca985abaf
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    title: destructive-guard 期待値スイートが red（148/150）— 記録された 150/150 と食い違う
+    resolution: unresolved
+    round: 1
+    severity: high
+  - stable_id: b3b72583d12eb66a
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: Shell and CLI syntax variants bypass both guards and receive an explicit allow
+    resolution: fixed
+    round: 1
+    severity: high
+  - stable_id: e989a90d78802acb
+    category: security
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: statements() がサブシェル/コマンド置換/シェルシンクを見ないためガードを回避でき、destructive-guard が allow を返す
+    resolution: fixed
+    round: 1
+    severity: high
+  - stable_id: 33e784e69b844598
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: FR8 の allow 留保が subshell / brace group / `[` グロブで漏れ、新ガードの deny を打ち消す
+    resolution: unresolved
+    round: 1
+    severity: high
+  - stable_id: 810fe30b7406b1c8
+    category: spec
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: FR7 の ask が「failed な worktree を列挙できたとき」に条件化され、US3 の受け入れ条件とテストが落ちる
+    resolution: deferred
+    round: 2
+    severity: critical
+  - stable_id: 879e0cf1536b4fc6
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: matches_target_shape() の S1/S2 絞り込みが消え、全 worktree 削除・branch 削除で blanket allow が失われる（期待スイート 154/156 で赤）
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: 46b3ad3747d14f97
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: matches_target_shape() の絞り込みが実装から消え、docstring・期待値スイートと契約が乖離している
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: a6c24fe31159e5c4
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: matches_target_shape() の S1/S2 絞り込みが未実装で、destructive-guard 期待スイートが 154/156 に落ちる
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: 528c1720469de70c
+    category: performance
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: 解決不能オペランドのフォールバックが全 integration worktree の workflow.yaml を毎ステートメント再パースする
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: 5eaab470a88b501d
+    category: comprehensive
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: 解決不能ターゲットの ask 経路が事実上死に、AC-6 の 5 テストが ERROR（`unittest discover -s tests` が赤）
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: 4ced7ccbacb47aae
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: matches_target_shape() の S1/S2 が docstring の絞り込みを実装しておらず、全ての worktree remove / branch -d が blanket allow を失う
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: bc65965fd2c61769
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: matches_target_shape() の git 分岐に docstring・期待表が要求する絞り込みが実装されておらず、2 フック間の deferral 契約がドリフトしている
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: c157d86d8d74dc94
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 2 つのガードのトークナイザが食い違い、superset 不変条件が破れて blanket allow が新ガードの deny を上書きする
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: b3016fc678f1b134
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    title: Success Criteria の run-destructive-guard.py が全通しない（S1/S2 の絞り込みが未実装）
+    resolution: fixed
+    round: 2
+    severity: critical
+  - stable_id: a6a3cd3db3838ab9
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Duplicated parsing vocabulary between guards (worsened by loop 2)
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: 8a68552880072b37
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: matches_target_shape が docstring の S1/S2 絞り込みを実装しておらず、同梱ケーススイートが赤（154/156）
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: f6871b00f6ca873a
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: matches_target_shape() の S1/S2 絞り込みが docstring・期待表と一致せず、無関係な worktree 削除/ブランチ削除まで allow を留保する
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: 6ca3093379ad6914
+    category: spec
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: FR7's unconditional ask for static unresolvability violated by failed-worktree scan
+    resolution: deferred
+    round: 2
+    severity: high
+  - stable_id: 841884b4d6307df3
+    category: comprehensive
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: 行継続（`\` + 改行）で S1 の worktree 削除がガードを完全にすり抜ける
+    resolution: fixed
+    round: 2
+    severity: high
+  - stable_id: 4d09d9ebc571e749
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: S1/S2 の dynamic 判定が新ガードより広く、`git worktree remove "$WT_ROOT/task0001"` が blanket allow を失う
+    resolution: deferred
+    round: 2
+    severity: high
+  - stable_id: 6f0106be184f20a7
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行継続（`\`+改行）を挟んだ S1/S2/S3 で defer が外れ、広域 allow が新ガードの deny を上書きする
+    resolution: deferred
+    round: 2
+    severity: high
+  - stable_id: 3caf5dca38b9e1af
+    category: spec
+    file: em-workflow/hooks/failed-run-cleanup-guard.py
+    title: 'FR7: Unresolvable target ask incorrectly suppressed when enumerable worktrees are healthy'
+    resolution: deferred
+    round: 2
+    severity: high
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+notes:
+- 'conflict_reworks: implementer reports were not persisted in feature-docs; the four task merges (df9f91a, a44c213, 4c06189, 4b2611d) landed without merge-conflict commits, so nothing could be derived from git'
+- review round 2 was started by a previous session (f519037; loops 3cf3177 / bf6cb42 / 3bb279b) whose context was lost mid-round; this session re-ran the round from the initial pass (loops a1f2414 / 5dfab30 / e4042fe)
+lessons_candidates:
+- 'auto-fix loops on the destructive-guard / failed-run-cleanup-guard pair repeatedly traded one parity gap for another (loop 3 in both sessions): the parity corpus in tests/test_guard_deferral_parity.py should grow before a fix lands, not after'
+- the batch rework cap (1) was reached with three critical/high findings still open; two of them (4d09d9ebc571e749 line-continuation and dynamic-granularity gaps) were introduced by the round's own auto-fix loops — consider re-running the full expectation suite as an auto-fix scope gate, not only after the loop
+- re-review after loop 1 lost the security and spec Claude reviewers to an HTTP 429 session limit; the harness failure is recorded in perspective_runs but the protocol has no retry rule for it
+- the FR7 ask-conditioning (any_failed_worktree gate) was kept by three loops for NFR1's sake but every spec reviewer flags it as a SPEC contradiction — the SPEC text and the implementation need to be reconciled by a human, not by auto-fix

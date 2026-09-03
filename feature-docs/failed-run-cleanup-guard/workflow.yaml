@@ -67,7 +67,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 7dfdf73c1cbf3256f3703245c46635da8c440b3d
 tasks:
   task0001:
     title: failed-run cleanup guard hook and its registration
