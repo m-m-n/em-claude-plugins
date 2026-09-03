@@ -153,9 +153,9 @@ tasks:
     - FR8
     - NFR1
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/failed-run-cleanup-guard/task0004
     provenance:
       source: review
       source_ids:
