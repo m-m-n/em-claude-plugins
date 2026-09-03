@@ -523,6 +523,42 @@ def head(toks):
     return os.path.basename(toks[i]), toks[i + 1 :]
 
 
+def _deferral_head(words):
+    """Like head(), but a wrapper token spelled with an absolute/relative
+    path (`/usr/bin/sudo`) is normalized to its basename before the wrapper
+    check, matching failed-run-cleanup-guard.py's own basename-based wrapper
+    detection. Only feeds the deferral computation in main() — head() itself,
+    and every other caller of it, still compares raw tokens, so no existing
+    deny/ask verdict changes because of this.
+    """
+    normalized = [
+        os.path.basename(t) if os.path.sep in t and os.path.basename(t) in WRAPPERS else t
+        for t in words
+    ]
+    return head(normalized)
+
+
+def _expand_short_clusters(args):
+    """Split a clustered short-option token (`-dr`) into its individual
+    letters (`-d`, `-r`), the same expansion failed-run-cleanup-guard.py's
+    own classify() applies, so a flag bundled into a cluster is still found
+    by has(). `--` stops expansion (options after it are operands, not
+    flags) and `--long` spellings are left untouched. Only used by
+    matches_target_shape()'s S2 shape match; check_git()'s own has()/
+    short_flags() calls are untouched, so no existing verdict changes.
+    """
+    out = []
+    stop = False
+    for a in args:
+        if stop or not re.fullmatch(r"-[A-Za-z]+", a):
+            out.append(a)
+        else:
+            out.extend(f"-{c}" for c in a[1:])
+        if a == "--":
+            stop = True
+    return out
+
+
 def git_subcommand(args):
     """Strip git's global options and return (subcommand, its args)."""
     i = 0
@@ -1295,10 +1331,12 @@ def matches_target_shape(word, args, cwd):
         sub, rest = git_subcommand(args)
         if sub == "worktree" and rest[:1] == ["remove"]:
             return True
-        if sub == "branch" and has(rest, "-d", "--delete") and not (
-            has(rest, "-D") or has(rest, "--force")
-        ):
-            return True
+        if sub == "branch":
+            expanded_rest = _expand_short_clusters(rest)
+            if has(expanded_rest, "-d", "--delete") and not (
+                has(expanded_rest, "-D") or has(expanded_rest, "--force")
+            ):
+                return True
         return False
     if word == "gh":
         # `-R`/`--repo` take a value token of their own (`gh -R owner/repo pr
@@ -1384,7 +1422,7 @@ def main():
         # subshell's `(` is itself WORD when ungrouped ("(" != "git"), so
         # this must run even when WORD is None or not "git"/"gh"; it is
         # placed before the `continue` below for that reason.
-        gword, gargs = head(strip_grouping_prefix(words))
+        gword, gargs = _deferral_head(strip_grouping_prefix(words))
         if matches_target_shape(gword, gargs, cwd):
             defer_to_new_guard = True
 
