@@ -521,6 +521,40 @@ def evaluate(kind, operand, cwd):
         target = resolve_pr_create(cwd)
 
     if target is _UNRESOLVABLE:
+        # Before asking, look for any em-workflow integration worktree
+        # reachable from the payload's cwd (walking ancestors, same as
+        # locate_worktree_by_ancestor_walk) whose own workflow.yaml still
+        # records a failed step. If none is found -- either because no
+        # worktree can be enumerated at all, or because every enumerable
+        # one is healthy -- a statically-unresolvable operand in a healthy
+        # run's own cleanup should not be blocked. Any worktree with a
+        # failed step, or the inability to enumerate any worktree at all,
+        # keeps the `ask` (FR7's protection is preserved).
+        found_any_worktree = False
+        found_failed = False
+        if cwd and yaml is not None:
+            current = os.path.normpath(cwd)
+            for _ in range(MAX_ANCESTOR_STEPS):
+                base = os.path.join(current, ".claude", "worktrees", "em-workflow")
+                if os.path.isdir(base):
+                    try:
+                        entries = os.listdir(base)
+                    except Exception:
+                        entries = []
+                    for feature in entries:
+                        integration_dir = os.path.join(base, feature, "integration")
+                        if os.path.isdir(integration_dir):
+                            found_any_worktree = True
+                            steps = read_workflow_steps(integration_dir, feature)
+                            if steps is not None and failed_step_id(steps) is not None:
+                                found_failed = True
+                    break
+                parent = os.path.dirname(current)
+                if parent == current:
+                    break
+                current = parent
+        if found_any_worktree and not found_failed:
+            return
         decide(
             "ask",
             "対象のパス/ブランチ名に変数展開・コマンド置換・グロブが含まれており、"
