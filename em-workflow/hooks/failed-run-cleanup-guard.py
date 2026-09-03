@@ -275,7 +275,24 @@ def classify(tokens):
         return None
 
     if word == "gh":
-        non_flags = [a for a in args if not a.startswith("-")]
+        # `-R`/`--repo` take a value token of their own (`gh -R owner/repo pr
+        # create`); without skipping it the repo spelling is mistaken for the
+        # first positional and `pr create` is missed. Kept identical to
+        # destructive-guard.py's matches_target_shape().
+        non_flags = []
+        skip_next = False
+        for a in args:
+            if skip_next:
+                skip_next = False
+                continue
+            if a in ("-R", "--repo"):
+                skip_next = True
+                continue
+            if a.startswith("--repo="):
+                continue
+            if a.startswith("-"):
+                continue
+            non_flags.append(a)
         if non_flags[:2] == ["pr", "create"]:
             return ("pr_create", None)
         return None
