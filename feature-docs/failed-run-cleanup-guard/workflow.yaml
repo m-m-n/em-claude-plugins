@@ -166,7 +166,7 @@ tasks:
       - 33e784e69b844598
       review_round: 1
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 1
   residual_critical_high: 5
   needs_rework: true
@@ -180,11 +180,11 @@ review:
     discretionary: []
     cross_validation: true
   perspectives:
-    comprehensive: completed
-    spec: completed
-    security: completed
-    performance: completed
-    architecture: completed
+    comprehensive: pending
+    spec: pending
+    security: pending
+    performance: pending
+    architecture: pending
 requirements:
   FR1:
     title: Guard hook addition and registration
