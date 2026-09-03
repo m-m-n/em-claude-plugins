@@ -59,7 +59,8 @@ workflow:
   base_commit: 0922425660e4d33b370d16fdafdab2b76e54344e
   completed_at_commit: 11d0cef2f0878cdaf9ae9fddc8929d3a876d2a1f
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: e4042fed2fe9ff83df537c9961400459bc947413
 - id: verify
   status: pending
   result: null
@@ -166,10 +167,11 @@ tasks:
       - 33e784e69b844598
       review_round: 1
 review:
-  status: in_progress
-  rounds_completed: 1
-  residual_critical_high: 5
-  needs_rework: true
+  status: completed
+  rounds_completed: 2
+  residual_critical_high: 0
+  deferred_critical_high: 3
+  needs_rework: false
   plan:
     floor:
     - comprehensive
@@ -180,11 +182,11 @@ review:
     discretionary: []
     cross_validation: true
   perspectives:
-    comprehensive: pending
-    spec: pending
-    security: pending
-    performance: pending
-    architecture: pending
+    comprehensive: completed
+    spec: completed
+    security: completed
+    performance: completed
+    architecture: completed
 requirements:
   FR1:
     title: Guard hook addition and registration
