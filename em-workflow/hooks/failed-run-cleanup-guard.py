@@ -80,6 +80,15 @@ WRAPPERS = frozenset(
     {"sudo", "env", "nohup", "time", "command", "nice", "ionice", "doas"}
 )
 
+# Shell command words whose `-c <script>` argument is itself a command line
+# to be scanned, so `bash -c '...'` cannot hide a target shape.
+SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
+
+# Bound on how many levels statements() recurses into subshells/brace
+# groups/command substitutions/`-c` scripts, so a pathological nesting
+# cannot recurse unboundedly.
+MAX_NEST_DEPTH = 5
+
 # S2's branch-name spelling; the feature is its middle segment.
 BRANCH_RE = re.compile(r"^em-workflow/([a-z0-9][a-z0-9-]*)/integration$")
 
@@ -131,17 +140,27 @@ def strip_heredocs(command):
     return HEREDOC.sub(lambda m: m.group(0)[: m.start(3) - m.start(0)], command)
 
 
-def statements(command):
+def statements(command, _depth=0):
     """Yield each top-level statement of COMMAND: heredoc bodies removed,
     and quote-aware so that a separator character inside a single-quoted or
     double-quoted span, inside a backtick span, or inside the parentheses of
     a subshell/command-substitution never produces a false statement
     boundary. A target command quoted this way is data, not an invocation.
+
+    Also recursive (bounded by MAX_NEST_DEPTH): the body of a subshell
+    `( … )`, a brace group `{ … }`, a command substitution `$( … )` or
+    backtick span, and the `-c` script argument of a nested
+    sh/bash/zsh/dash/ksh invocation are each split and yielded too, so a
+    target shape hidden inside one of those cannot evade the guard.
     """
     chunk = strip_heredocs(command)
     segments, buf = [], []
+    nested = []
     quote = None
     depth = 0
+    paren_start = None
+    brace_depth = 0
+    brace_start = None
     i, n = 0, len(chunk)
     while i < n:
         c = chunk[i]
@@ -165,27 +184,58 @@ def statements(command):
             buf.append(chunk[i + 1])
             i += 2
             continue
+        if c == "$" and i + 1 < n and chunk[i + 1] == "(":
+            j = i + 2
+            d = 1
+            while j < n and d > 0:
+                if chunk[j] == "(":
+                    d += 1
+                elif chunk[j] == ")":
+                    d -= 1
+                j += 1
+            nested.append(chunk[i + 2 : j - 1 if d == 0 else j])
+            buf.append(chunk[i:j])
+            i = j
+            continue
         if c == "`":
-            buf.append(c)
-            i += 1
-            while i < n and chunk[i] != "`":
-                buf.append(chunk[i])
-                i += 1
-            if i < n:
-                buf.append(chunk[i])
-                i += 1
+            j = i + 1
+            while j < n and chunk[j] != "`":
+                j += 1
+            nested.append(chunk[i + 1 : j])
+            buf.append(chunk[i : min(j + 1, n)])
+            i = j + 1 if j < n else j
             continue
         if c == "(":
+            if depth == 0:
+                paren_start = i + 1
             depth += 1
             buf.append(c)
             i += 1
             continue
         if c == ")":
+            if depth == 1 and paren_start is not None:
+                nested.append(chunk[paren_start:i])
+                paren_start = None
             depth = max(0, depth - 1)
             buf.append(c)
             i += 1
             continue
-        if depth == 0 and c in SEPARATORS:
+        if c == "{" and depth == 0 and (i == 0 or chunk[i - 1] != "$"):
+            if brace_depth == 0:
+                brace_start = i + 1
+            brace_depth += 1
+            buf.append(c)
+            i += 1
+            continue
+        if c == "}" and brace_depth > 0:
+            brace_depth -= 1
+            if brace_depth == 0 and brace_start is not None:
+                nested.append(chunk[brace_start:i])
+                brace_start = None
+            buf.append(c)
+            i += 1
+            continue
+        if depth == 0 and brace_depth == 0 and c in SEPARATORS:
             segments.append("".join(buf))
             buf = []
             i += 1
@@ -193,7 +243,29 @@ def statements(command):
         buf.append(c)
         i += 1
     segments.append("".join(buf))
-    return [s for s in segments if s.strip()]
+    top = [s for s in segments if s.strip()]
+
+    if _depth < MAX_NEST_DEPTH:
+        for seg in top:
+            try:
+                tokens = shlex.split(seg, comments=True)
+            except ValueError:
+                tokens = []
+            if not tokens:
+                continue
+            word = os.path.basename(tokens[0])
+            if word in SHELLS:
+                args = tokens[1:]
+                for idx, a in enumerate(args):
+                    if a == "-c" and idx + 1 < len(args):
+                        nested.append(args[idx + 1])
+                        break
+
+    results = list(top)
+    if _depth < MAX_NEST_DEPTH:
+        for nested_text in nested:
+            results.extend(statements(nested_text, _depth + 1))
+    return results
 
 
 def head(tokens):
