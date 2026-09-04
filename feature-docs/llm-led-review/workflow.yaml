@@ -169,7 +169,7 @@ tasks:
     domains: [api-contract, external-io, input-handling]
     complexity: high
     requirements: [FR1, FR3, FR9, FR10, FR12, NFR2, NFR3]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/llm-led-review/task0007
     provenance:
