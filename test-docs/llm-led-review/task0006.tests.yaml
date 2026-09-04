@@ -1,0 +1,140 @@
+task_id: task0006
+baseline_failures: []          # python3 -m unittest discover -s tests: 3047 passed, 0 failed
+final_failures: []             # same command after implementation: 3087 passed, 0 failed
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_no_coverage_gate_or_whole_evaluation_discard_survives
+      - test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_exactly_two_structural_triggers_stated
+      - test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_successful_task_with_lifted_sites_recorded_completed_degraded
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by running these tests against the pre-edit (git HEAD)
+      review-phase.md: test_no_coverage_gate_or_whole_evaluation_discard_survives
+      failed with "'evaluator coverage gate' unexpectedly found";
+      test_exactly_two_structural_triggers_stated and
+      test_successful_task_with_lifted_sites_recorded_completed_degraded both
+      failed with the new "exactly two structural triggers" / "status:
+      completed and degraded: true" phrasing not found in the old text
+      (old text still had the three-trigger coverage-gate list and no
+      degraded marker).
+  AC-2:
+    tests:
+      - test_review_evaluation_contract.TestTask0006AC2DismissedSites.test_dismissed_sites_listed_among_root_fields
+      - test_review_evaluation_contract.TestTask0006AC2DismissedSites.test_dismissed_sites_entry_shape_defined
+      - test_review_evaluation_contract.TestTask0006AC2DismissedSites.test_dismissed_sites_reason_vocabulary_stated
+      - test_review_phase_llm_led.TestTask0006EvaluatorAgentDismissedSitesAndInspectionDuty.test_states_dismissed_sites_accountability_obligation
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against pre-edit review-evaluation-contract.md and
+      agents/review-evaluator.md: test_dismissed_sites_listed_among_root_fields
+      failed (dismissed_sites absent from Root fields), the entry-shape and
+      reason-vocabulary tests errored (ValueError: substring "Each entry of
+      `dismissed_sites` carries" not found -- the field did not exist yet),
+      and the agent-side obligation test failed ("`dismissed_sites`" absent
+      from agents/review-evaluator.md).
+  AC-3:
+    tests:
+      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_floor_heading_present
+      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_floor_checked_by_same_site_against_findings_and_dismissed_sites
+      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_lifted_site_carries_the_pinned_values
+      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_all_dismissed_case_lifts_nothing_and_keeps_the_evaluation
+      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_no_file_line_bucket_site_reduction_survives
+      - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_same_site_named_as_the_floor_predicate
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against pre-edit review-phase.md: test_floor_heading_present
+      failed ("**Evaluator accountability floor**" absent -- old text had
+      "**Evaluator coverage gate**" instead); test_no_file_line_bucket_site_reduction_survives
+      failed because the OLD gate's "(file, line_bucket)" reduction text was
+      still present (this is the AC's negative/removal assertion, which by
+      construction must find the phrase in the old doc and not find it in
+      the new one -- confirmed both directions); the remaining floor-content
+      assertions failed or errored because none of the new floor prose
+      existed in the old gate's all-or-nothing wording.
+  AC-4:
+    tests:
+      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_independent_inspection_duty_section_present
+      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_duty_covers_every_dispatched_perspective
+      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_empty_reviewer_result_is_not_sufficient_evidence
+      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_per_perspective_coverage_statement_required_in_output
+      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_no_second_reviewer_dispatched_fr3_untouched
+      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_read_budget_stays_a_fixed_number_and_is_not_raised
+      - test_review_evaluation_contract.TestTask0006AC4IndependentInspectionDuty.test_nfr5_no_write_constraint_unchanged
+      - test_review_phase_llm_led.TestTask0006EvaluatorAgentDismissedSitesAndInspectionDuty.test_states_independent_inspection_duty
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against pre-edit review-evaluation-contract.md and
+      agents/review-evaluator.md: test_independent_inspection_duty_section_present
+      failed ("## Independent Inspection Duty" heading absent),
+      test_duty_covers_every_dispatched_perspective /
+      test_empty_reviewer_result_is_not_sufficient_evidence /
+      test_no_second_reviewer_dispatched_fr3_untouched errored
+      (ValueError: the heading they index() from did not exist),
+      test_per_perspective_coverage_statement_required_in_output failed
+      ("per-perspective coverage statement" absent from round_summary),
+      and the agent-side duty test failed ("independently inspect" absent).
+      test_read_budget_stays_a_fixed_number_and_is_not_raised failed because
+      the old Read-Only Constraint paragraph did not yet say "not raised".
+      test_nfr5_no_write_constraint_unchanged passed on both old and new
+      text -- it asserts an unchanged invariant (NFR5 no-write), not new
+      content, per this task's own AC-4 wording ("NFR5 ... is unchanged").
+  AC-5:
+    tests:
+      - test_review_evaluation_contract.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences
+      - test_review_evaluation_contract.TestTask0006AC5SourcesRename.test_sources_is_the_finding_field_name
+      - test_review_evaluation_contract.TestTask0006AC5SourcesRename.test_orchestrator_overwrites_with_its_own_run_identities
+      - test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences_in_review_phase
+      - test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences_in_evaluator_agent
+      - test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_sources_field_and_orchestrator_overwrite_stated_in_review_phase
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against pre-edit documents for the contract and
+      review-phase.md: test_source_run_ids_has_zero_occurrences (contract)
+      and test_source_run_ids_has_zero_occurrences_in_review_phase both
+      failed because the old text still contained "source_run_ids"
+      literally (the field the rename retires);
+      test_orchestrator_overwrites_with_its_own_run_identities and
+      test_sources_is_the_finding_field_name failed against the old
+      contract wording ("sources" was not yet the finding-field name /
+      the "run identities it itself assigned" phrasing did not exist).
+      test_source_run_ids_has_zero_occurrences_in_evaluator_agent passed
+      unchanged before and after implementation -- agents/review-evaluator.md
+      never contained "source_run_ids" to begin with (there was nothing to
+      rename in this file), so this sub-assertion cannot red-confirm; the
+      AC is still red-confirmed overall via the other five tests, which
+      cover the contract and review-phase.md renames plus the agent's
+      no-old-name invariant is verified true throughout.
+  AC-6:
+    tests:
+      - test_review_evaluation_contract.TestTask0006AC6CategoryGateEquality.test_category_rule_is_equality_with_source_run_dispatched_perspective
+      - test_review_evaluation_contract.TestTask0006AC6CategoryGateEquality.test_no_valid_run_case_still_requires_a_dispatched_category
+      - test_review_evaluation_contract.TestTask0006AC6CategoryGateEquality.test_old_set_membership_wording_is_gone
+      - test_review_phase_llm_led.TestTask0006AC6CategoryGateEquality.test_category_gate_is_equality_with_source_run_dispatched_perspective
+      - test_review_phase_llm_led.TestTask0006AC6CategoryGateEquality.test_no_valid_run_case_still_requires_dispatched_category
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against pre-edit documents: the two
+      test_category_rule/category_gate_is_equality_with_source_run_dispatched_perspective
+      tests errored/failed (the old text read "must be one of THIS round's
+      dispatched perspectives" -- set membership -- not the new equality
+      wording); the two no_valid_run_case tests errored/failed for the same
+      reason (the no-valid-run clause did not exist in the old set-membership
+      rule); test_old_set_membership_wording_is_gone failed against the old
+      text (it still contained the literal old phrase, confirming the
+      negative assertion is a real discriminator).
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Not a document assertion but a command-exit-code criterion, verified
+      by actually running each command in this worktree after
+      implementation: `python3 -m unittest discover -s tests` (3087 passed,
+      0 failed, exit 0), `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      (all 7 invariants PASS, exit 0), `python3
+      em-workflow/hooks/tests/run-destructive-guard.py` (156/156 passed,
+      exit 0), and `python3 -m unittest
+      tests.test_review_implement_develop_lock_contracts` (17 passed, 0
+      failed -- unchanged, since this task's edits stayed inside Phase
+      R3a/R3b/R5's `perspective_runs` role prose and never touched the
+      Phase R4 fix-commit block D7 protects).

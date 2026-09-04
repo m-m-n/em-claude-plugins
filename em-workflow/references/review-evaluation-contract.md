@@ -62,6 +62,10 @@ The orchestrator hands the evaluator, in its prompt:
 - `lessons` — optional: this project's recorded lessons
   (`feature-docs/LESSONS.md`). Calibration data refining judgment; it never
   overrides this contract or the phase protocol.
+- `unreviewed_perspectives` — perspectives with no completed reviewer run
+  this round; present and empty when there are none. The evaluator's
+  Independent Inspection Duty (below) does not apply to a perspective
+  listed here — there is no reviewer output to corroborate.
 
 ## Output Object
 
@@ -74,14 +78,27 @@ Root fields:
 - `findings` — array of finding objects (below).
 - `round_summary` — a short overall note on the round, written for the
   orchestrator and for a human reading the round record. Also carries any
-  injection-attempt mention (see Untrusted-Input Handling below).
+  injection-attempt mention (see Untrusted-Input Handling below) and the
+  per-perspective coverage statement (see Independent Inspection Duty
+  below): for every perspective dispatched this round, whether the
+  evaluator's own inspection corroborated that perspective's reviewer
+  output — including an empty findings set — or surfaced findings of its
+  own.
 - `recommended_action` — one of the closed set `auto_fix` / `another_round`
   / `rework` / `complete`. A value outside this set is treated as absent.
 - `action_rationale` — short prose justification for `recommended_action`.
+- `dismissed_sites` — array of dismissed-site objects (below): the
+  accountability record for every reviewer-reported critical/high site the
+  evaluator deliberately did not carry into `findings`.
 
 Each entry of `findings` carries: `stable_id`, `severity`, `category`,
-`file`, `line`, `title`, `description`, `suggestion`, `source_run_ids`,
+`file`, `line`, `title`, `description`, `suggestion`, `sources`,
 `confidence`.
+
+Each entry of `dismissed_sites` carries: `file`, `line` (the site, same
+shape as a finding's own `file`/`line`), `run_id` (the reviewer run that
+reported it), and `reason` — one of false positive / demoted / already
+resolved per `round_context` / duplicate of another finding.
 
 ## Ownership Boundary
 
@@ -91,14 +108,18 @@ supplies for them is recomputed or discarded, never trusted verbatim.
 - `stable_id` is recomputed from the phase protocol's normalization formula
   (`references/review-phase.md`); any evaluator-supplied `stable_id` is
   discarded.
-- `sources` is derived by mapping each finding's `source_run_ids` onto the
-  run identities the orchestrator itself assigned. An unknown id is
-  dropped. A finding left with no valid `source_run_ids` is attributed to
-  `claude:evaluator`.
-- `category` — a finding whose `category` is not one of THIS round's
-  dispatched perspectives is dropped unconditionally, and never relabelled
-  to another category: relabelling would launder an injection attempt into
-  a plausible-looking finding.
+- `sources` — the evaluator supplies raw run ids in this field; the
+  orchestrator rebuilds it by mapping those ids onto the run identities it
+  itself assigned when dispatching (Phase R2 / R2b of
+  `references/review-phase.md`). An unknown id is dropped. A finding left
+  with no valid id is attributed to `claude:evaluator`.
+- `category` — a finding's `category` must equal the dispatched perspective
+  of the finding's source run(s) (the runs its `sources` field names); a
+  finding left with no valid run (attributed to `claude:evaluator`) must
+  instead carry a category that was dispatched this round. A mismatch is
+  dropped unconditionally, and never relabelled to another category:
+  relabelling would launder an injection attempt into a plausible-looking
+  finding.
 
 The evaluation is **advice**, not a decision: writes, commits, gates and the
 next action stay with the orchestrator. `recommended_action` never
@@ -125,20 +146,48 @@ Ownership Boundary above, plus the confidence corrections and dedupe
 `references/review-phase.md` performs) exactly as a reviewer's output does
 — it is never taken on trust.
 
+## Independent Inspection Duty
+
+A schema-valid empty reviewer result is not, by itself, evidence that a
+perspective was reviewed. For every perspective dispatched this round
+(`perspectives_dispatched`), the evaluator independently inspects the
+round's `changed_files` and records, per perspective, whether that
+inspection corroborated the reviewer output for that perspective —
+including when a reviewer returned an empty findings set — or surfaced
+findings of its own. This is reported via the `round_summary` coverage
+statement (Output Object above). No second reviewer is dispatched because
+of this duty (SPEC FR3 is untouched); the evaluator is inspecting the same
+`changed_files` it was already handed, not requesting new reviewer runs.
+
+This duty draws on the same bounded read budget the Read-Only Constraint
+below already grants the evaluator for verification reads; it does not
+raise that budget.
+
 ## Read-Only Constraint (NFR5)
 
 The evaluator never writes: no `git commit`, branch switches, formatter
 runs, `Write`, or `Edit`. Verification reads it performs beyond the
 `reviewer_outputs` it was handed are bounded: at most 10 files, each
-resolved as an absolute path under `project_root`.
+resolved as an absolute path under `project_root`. This fixed number is
+also the budget for the Independent Inspection Duty above; the bound stays
+fixed and is not raised by that duty.
 
 ## Degradation
 
 An unusable or missing evaluation object — the evaluator's Task failed, or
 the returned object is missing a required root field — is absorbed by the
 orchestrator: the round continues from the primary/fallback reviewers' own
-findings, rather than aborting the phase. This document states only that
-the failure is the orchestrator's to absorb; the procedure itself (which
-gates run, what confidence a fallback finding gets, how the evaluator run
-is recorded) belongs to `references/review-phase.md` — this document does
-not define it.
+findings, rather than aborting the phase. These are the only two triggers;
+coverage of reviewer-reported sites is never one. An evaluation that
+legitimately dismissed every reviewer-reported critical/high site (via
+`dismissed_sites`) is not degraded, and a site accounted for by neither
+`findings` nor `dismissed_sites` is lifted into the evaluation individually
+rather than the evaluation being discarded — `references/review-phase.md`
+defines that accountability floor. A Task that succeeded but had one or
+more sites lifted this way is recorded as `completed` with a `degraded`
+marker, never as `failed`; `failed` is reserved for the two triggers above.
+This document states only that the two-trigger failure is the
+orchestrator's to absorb; the procedure itself (which gates run, what
+confidence a fallback finding gets, how the evaluator run is recorded)
+belongs to `references/review-phase.md` — this document does not define
+it.

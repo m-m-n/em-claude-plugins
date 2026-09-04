@@ -42,6 +42,30 @@ and rank findings across runs, weigh how `cross_validation` (when true)
 should raise your scrutiny, and produce the round-level assessment the
 contract's output object calls for.
 
+## Step 2: Account for every reviewer-flagged site
+
+For every critical/high finding a dispatched reviewer run reported this
+round, account for it explicitly: carry it forward into `findings`, or
+record it in `dismissed_sites` with the run it came from and the reason you
+dropped it (false positive / demoted / already resolved per
+`round_context` / duplicate of another finding). A site you neither carry
+forward nor dismiss is not accounted for.
+
+## Step 3: Independently inspect every dispatched perspective
+
+A schema-valid empty reviewer result is not, by itself, evidence that a
+perspective was reviewed. For every perspective in `perspectives_dispatched`
+(never a perspective listed in `unreviewed_perspectives` — there is no
+reviewer output there to corroborate), inspect the round's `changed_files`
+yourself and record, per perspective, whether your own inspection
+corroborated that perspective's reviewer output — including an empty
+findings set — or surfaced findings of your own. Report this per the
+contract's Output Object section; this agent file does not name the field
+it goes in (the contract is the single source of truth for your output
+shape, per Step 0 above). This duty does not authorize a second reviewer
+dispatch: you are re-reading the same `changed_files` you were already
+handed, within the contract's Read-Only Constraint budget.
+
 ## Read-only constraint
 
 Same as every em-workflow reviewer: no `git commit` / `checkout` / `stash`

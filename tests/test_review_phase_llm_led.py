@@ -54,6 +54,26 @@ text inside review-phase.md; the contract file itself
 (references/review-evaluation-contract.md) is NOT asserted to exist on disk
 -- it is task0001's deliverable and will not be present in this task's
 worktree.
+
+Also covers task0006 (rework round 1) Acceptance Criteria
+(feature-docs/llm-led-review/tasks/task0006.md), in classes prefixed
+`TestTask0006`:
+
+- AC-1: Phase R3b's Evaluator-failure degradation lists exactly two
+  triggers (evaluator Task failure, missing required root field), no
+  surviving coverage-gate discard of the whole evaluation, and a
+  Task-succeeded-but-floor-lifted-sites run is recorded `status: completed`
+  plus `degraded: true`, never `status: failed`.
+- AC-3: the per-site accountability floor -- `same_site` against neither
+  `findings` nor `dismissed_sites` lifts a site individually with the
+  pinned values; no `(file, line_bucket)` site reduction survives.
+- AC-5: `source_run_ids` has zero occurrences in review-phase.md and in
+  `agents/review-evaluator.md`; `sources` is the field name in both, and
+  both still state the orchestrator-overwrite / `claude:evaluator`
+  fallback rule.
+- AC-6: Phase R3b's category gate is equality with the dispatched
+  perspective of the finding's source run(s), not set membership, and
+  keeps "drop unconditionally" / "never relabel".
 """
 
 import re
@@ -412,10 +432,11 @@ class TestAC4PhaseR3bMechanicalGates(unittest.TestCase):
         markers = [
             "`file` lexical check: reject absolute paths",
             "`severity` ∈ {critical, high, medium} else drop.",
+            "`category` must equal the dispatched perspective",
             "**drop unconditionally**",
             "Cap `title`/`description`/`suggestion` at 4096 bytes each",
             "`stable_id` recomputed from the unchanged normalization formula",
-            "`sources` rebuilt by mapping `source_run_ids`",
+            "`sources` rebuilt by mapping the evaluator-supplied `sources`",
             "Confidence = the evaluator's value, then the two mechanical corrections",
         ]
         indices = [norm.index(m) for m in markers]
@@ -610,6 +631,185 @@ class TestValidationDetectsRegressions(unittest.TestCase):
     def test_dispatch_count_matcher_flags_a_second_dispatch(self):
         forged = EVALUATOR_DISPATCH + " ... " + EVALUATOR_DISPATCH
         self.assertEqual(forged.count(EVALUATOR_DISPATCH), 2)
+
+
+# ---------------------------------------------------------------------------
+# task0006 (rework round 1) Acceptance Criteria.
+# ---------------------------------------------------------------------------
+
+
+class TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers(unittest.TestCase):
+    """AC-1."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.r3b = DocumentFixture.r3b()
+
+    def test_no_coverage_gate_or_whole_evaluation_discard_survives(self):
+        lowered = self.r3b.lower()
+        self.assertNotIn("evaluator coverage gate", lowered)
+        self.assertNotIn("treated as unusable", lowered)
+        self.assertNotIn("all-or-nothing", lowered)
+
+    def test_exactly_two_structural_triggers_stated(self):
+        norm = _norm(self.r3b)
+        self.assertIn(
+            "either of exactly two structural triggers fires — the "
+            "evaluator's Task failed, or the returned object is missing a "
+            "required root field",
+            norm,
+        )
+        self.assertIn("Coverage is never a trigger", norm)
+
+    def test_successful_task_with_lifted_sites_recorded_completed_degraded(self):
+        norm = _norm(self.r3b)
+        self.assertIn(
+            "the evaluator run is instead recorded with `status: "
+            "completed` and `degraded: true` in `perspective_runs`",
+            norm,
+        )
+        self.assertIn("never `status: failed`", norm)
+
+    def test_regression_check_old_two_trigger_wording_not_reintroduced_verbatim(self):
+        # tdd-testing "a test that can never fail is not a test": prove the
+        # exact-triggers assertion above actually discriminates by forging
+        # the OLD three-trigger phrasing and confirming it does not match.
+        forged = (
+            "if the evaluator's Task fails, returns an object missing a "
+            "required root field, or fails the coverage gate above"
+        )
+        self.assertNotIn(
+            "either of exactly two structural triggers fires", forged
+        )
+
+
+class TestTask0006AC3AccountabilityFloor(unittest.TestCase):
+    """AC-3."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.r3b = DocumentFixture.r3b()
+
+    def test_floor_heading_present(self):
+        self.assertIn("**Evaluator accountability floor**", self.r3b)
+
+    def test_floor_checked_by_same_site_against_findings_and_dismissed_sites(self):
+        norm = _norm(self.r3b)
+        self.assertIn(
+            "that site must appear — by `same_site`, the same predicate "
+            "step 5 defines",
+            norm,
+        )
+        self.assertIn(
+            "in either the evaluation's `findings` or its `dismissed_sites`",
+            norm,
+        )
+
+    def test_lifted_site_carries_the_pinned_values(self):
+        norm = _norm(self.r3b)
+        self.assertIn("lifted into `findings` on its own", norm)
+        self.assertIn("the reviewer run's own text", norm)
+        self.assertIn("that run's orchestrator-assigned source identity", norm)
+        self.assertIn("the dispatching perspective as `category`", norm)
+        self.assertIn("confidence `60`", norm)
+        self.assertIn("nothing else about the evaluation is discarded", norm)
+        self.assertIn("no relabelling occurs", norm)
+
+    def test_all_dismissed_case_lifts_nothing_and_keeps_the_evaluation(self):
+        norm = _norm(self.r3b)
+        self.assertIn(
+            "A round where every reviewer critical/high site is "
+            "legitimately dismissed lifts nothing and the evaluation is "
+            "kept as-is",
+            norm,
+        )
+
+    def test_no_file_line_bucket_site_reduction_survives(self):
+        self.assertNotIn("(file, line_bucket)", self.r3b)
+
+    def test_same_site_named_as_the_floor_predicate(self):
+        idx = self.r3b.index("**Evaluator accountability floor**")
+        window = self.r3b[idx : idx + 400]
+        self.assertIn("`same_site`", window)
+
+
+class TestTask0006AC5SourcesRename(unittest.TestCase):
+    """AC-5."""
+
+    def test_source_run_ids_has_zero_occurrences_in_review_phase(self):
+        self.assertNotIn("source_run_ids", DocumentFixture.text())
+
+    def test_sources_field_and_orchestrator_overwrite_stated_in_review_phase(self):
+        text = DocumentFixture.text()
+        self.assertTrue(_has_exact_token(text, "sources"))
+        norm = _norm(text)
+        self.assertIn("orchestrator itself assigned", norm)
+        self.assertIn("claude:evaluator", text)
+
+    def test_source_run_ids_has_zero_occurrences_in_evaluator_agent(self):
+        text = _read(EVALUATOR_AGENT_PATH)
+        self.assertNotIn("source_run_ids", text)
+
+
+class TestTask0006AC6CategoryGateEquality(unittest.TestCase):
+    """AC-6."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.r3b = DocumentFixture.r3b()
+
+    def test_category_gate_is_equality_with_source_run_dispatched_perspective(self):
+        norm = _norm(self.r3b)
+        self.assertIn(
+            "`category` must equal the dispatched perspective of the "
+            "finding's source run(s)",
+            norm,
+        )
+        self.assertNotIn(
+            "`category` must be one of THIS round's dispatched perspectives",
+            norm,
+        )
+
+    def test_no_valid_run_case_still_requires_dispatched_category(self):
+        norm = _norm(self.r3b)
+        self.assertIn(
+            "a finding left with no valid run (attributed to "
+            "`claude:evaluator`) must instead carry a category that was "
+            "dispatched this round",
+            norm,
+        )
+
+    def test_still_drop_unconditionally_never_relabel(self):
+        self.assertIn("**drop unconditionally**", self.r3b)
+        self.assertIn("never relabel", self.r3b)
+
+
+class TestTask0006EvaluatorAgentDismissedSitesAndInspectionDuty(unittest.TestCase):
+    """task0006 AC-2 / AC-4 as they land in agents/review-evaluator.md
+    (the contract's own AC-2/AC-4 coverage lives in
+    tests/test_review_evaluation_contract.py, which owns the contract
+    document; this class owns only the agent file)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(EVALUATOR_AGENT_PATH)
+
+    def test_states_dismissed_sites_accountability_obligation(self):
+        self.assertIn("`dismissed_sites`", self.text)
+        lowered = self.text.lower()
+        self.assertIn("account for", lowered)
+
+    def test_states_independent_inspection_duty(self):
+        lowered = self.text.lower()
+        self.assertIn("independently inspect", lowered)
+        self.assertIn("perspectives_dispatched", self.text)
+        self.assertIn("empty findings set", _norm(lowered))
+
+    def test_still_does_not_restate_round_summary_or_action_rationale(self):
+        # Re-confirms TestAC3PhaseR3aAndEvaluatorAgent's discipline holds
+        # after task0006's additions to this same file.
+        self.assertNotIn("round_summary", self.text)
+        self.assertNotIn("action_rationale", self.text)
 
 
 # ---------------------------------------------------------------------------
