@@ -29,6 +29,22 @@ plan, is the source when the two ever disagree"). Each hardcoded candidate
 tuple below is confirmed present in its owning row by a self-check test, so
 a future edit to IMPLEMENTATION.md that drops or renames a field is caught
 here instead of silently drifting from the shipped document.
+
+Also covers task0006 (rework round 1) Acceptance Criteria
+(feature-docs/llm-led-review/tasks/task0006.md) over this same document,
+in classes prefixed `TestTask0006`:
+
+- AC-2: `dismissed_sites` is an always-present root field with a defined
+  entry shape (`file`, `line`, `run_id`, `reason`).
+- AC-4: the Independent Inspection Duty and the per-perspective coverage
+  statement, plus the unchanged fixed 10-file Read-Only Constraint budget.
+- AC-5: `source_run_ids` has zero occurrences in this document; `sources`
+  is the finding field name and the orchestrator-overwrite /
+  `claude:evaluator` fallback rule is still stated.
+- AC-6: the Ownership Boundary's `category` rule reads as equality with
+  the dispatched perspective of the finding's source run(s), not
+  membership in the round's perspective set, and still says "drop
+  unconditionally" / "never relabel".
 """
 
 import re
@@ -108,6 +124,24 @@ class ImplementationFixtures:
             cls.text(), "`recommended_action` vocabulary"
         )
 
+    @classmethod
+    def accountability_field_cell(cls):
+        return _shared_components_contract_cell(
+            cls.text(), "Evaluator accountability field (rework round 1)"
+        )
+
+    @classmethod
+    def finding_source_field_cell(cls):
+        return _shared_components_contract_cell(
+            cls.text(), "Evaluator finding source field (rework round 1)"
+        )
+
+    @classmethod
+    def degradation_marker_cell(cls):
+        return _shared_components_contract_cell(
+            cls.text(), "Evaluator run degradation marker (rework round 1)"
+        )
+
 
 # Candidate vocabularies, each confirmed present in its owning
 # IMPLEMENTATION.md Shared Components row by
@@ -154,7 +188,7 @@ FINDING_FIELDS = (
     "title",
     "description",
     "suggestion",
-    "source_run_ids",
+    "sources",
     "confidence",
 )
 
@@ -166,6 +200,15 @@ RECOMMENDED_ACTION_VOCAB = ("auto_fix", "another_round", "rework", "complete")
 REVIEWER_ONLY_ROOT_FIELDS = ("skipped",)
 REVIEWER_ONLY_FINDING_FIELDS = ("line_end",)
 RETRYABLE_SKIP_VOCAB = ("rate_limited", "budget_exhausted", "harness_unavailable")
+
+# task0006 (rework round 1) candidate vocabularies, each confirmed present
+# in its owning IMPLEMENTATION.md Shared Components row (a NEW row added
+# this rework round, separate from the original "Evaluator output object"
+# row above) by TestTask0006ImplementationFixturesSelfCheck below.
+DISMISSED_SITES_ROOT_FIELD = "dismissed_sites"
+DISMISSED_SITE_ENTRY_FIELDS = ("file", "line", "run_id", "reason")
+RETIRED_FINDING_SOURCE_FIELD = "source_run_ids"
+DEGRADATION_MARKER_LITERALS = ("status: completed", "degraded: true", "status: failed")
 
 
 class TestImplementationFixturesSelfCheck(unittest.TestCase):
@@ -194,7 +237,15 @@ class TestImplementationFixturesSelfCheck(unittest.TestCase):
             self.assertTrue(_has_exact_token(cell, field), field)
 
     def test_output_object_cell_contains_every_finding_field(self):
-        cell = ImplementationFixtures.output_object_cell()
+        # `sources` supersedes the original row's `source_run_ids` as of
+        # the rework-round rename (task0006 D-F / AC-5); the current truth
+        # is the UNION of the original row and the rename's own row, not
+        # either row alone.
+        cell = (
+            ImplementationFixtures.output_object_cell()
+            + " "
+            + ImplementationFixtures.finding_source_field_cell()
+        )
         for field in FINDING_FIELDS:
             self.assertTrue(_has_exact_token(cell, field), field)
 
@@ -202,6 +253,28 @@ class TestImplementationFixturesSelfCheck(unittest.TestCase):
         cell = ImplementationFixtures.recommended_action_cell()
         for value in RECOMMENDED_ACTION_VOCAB:
             self.assertTrue(_has_exact_token(cell, value), value)
+
+
+class TestTask0006ImplementationFixturesSelfCheck(unittest.TestCase):
+    """Non-vacuity guard for task0006's own candidate vocabularies (rework
+    round 1), proving each is present in its owning NEW IMPLEMENTATION.md
+    Shared Components row."""
+
+    def test_accountability_field_cell_contains_dismissed_sites_and_entry_shape(self):
+        cell = ImplementationFixtures.accountability_field_cell()
+        self.assertTrue(_has_exact_token(cell, DISMISSED_SITES_ROOT_FIELD))
+        for field in DISMISSED_SITE_ENTRY_FIELDS:
+            self.assertTrue(_has_exact_token(cell, field), field)
+
+    def test_finding_source_field_cell_documents_the_rename(self):
+        cell = ImplementationFixtures.finding_source_field_cell()
+        self.assertTrue(_has_exact_token(cell, "sources"))
+        self.assertTrue(_has_exact_token(cell, RETIRED_FINDING_SOURCE_FIELD))
+
+    def test_degradation_marker_cell_documents_the_recorded_values(self):
+        cell = ImplementationFixtures.degradation_marker_cell()
+        for literal in DEGRADATION_MARKER_LITERALS:
+            self.assertIn(literal, cell)
 
 
 class TestContractDocExists(unittest.TestCase):
@@ -341,23 +414,33 @@ class TestOwnershipBoundary(unittest.TestCase):
         cls.text = _read(CONTRACT_DOC_PATH)
 
     def test_states_stable_id_orchestrator_owned_and_recomputed(self):
-        idx = self.text.index("`stable_id`")
-        window = self.text[idx : idx + 400].lower()
+        # Scoped to the Ownership Boundary section's own `stable_id` bullet
+        # (not merely the first `stable_id` mention in the document, which
+        # is now the Output Object's finding-field list -- task0006 added
+        # the `dismissed_sites` entry-shape paragraph between that list and
+        # this section).
+        section_idx = self.text.index("## Ownership Boundary")
+        section = self.text[section_idx:]
+        idx = section.index("`stable_id`")
+        window = section[idx : idx + 400].lower()
         self.assertIn("recomputed", window)
 
-    def test_states_sources_derived_from_source_run_ids(self):
-        # `source_run_ids` occurs more than once (the finding-field list and
-        # the ownership-boundary rule); the assertion must hold for the
-        # ownership rule's own occurrence, not merely the first mention.
-        self.assertTrue(_has_exact_token(self.text, "source_run_ids"))
+    def test_states_sources_derived_from_evaluator_supplied_run_ids(self):
+        # task0006 D-F / AC-5: the finding field is `sources` (the old name
+        # `source_run_ids` is retired -- see
+        # TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences
+        # for the corresponding negative assertion). The ownership-boundary
+        # rule's own occurrence of `sources` must be near language about the
+        # orchestrator mapping raw ids onto the run identities it assigned.
         found = False
-        for m in re.finditer(re.escape("`source_run_ids`"), self.text):
-            window = self.text[max(0, m.start() - 300) : m.start() + 300].lower()
-            if "sources" in window:
+        for m in re.finditer(re.escape("`sources`"), self.text):
+            window = self.text[max(0, m.start() - 100) : m.start() + 400].lower()
+            if "orchestrator" in window and "run identities" in window:
                 found = True
                 break
         self.assertTrue(
-            found, "expected a source_run_ids mention near the word 'sources'"
+            found,
+            "expected a `sources` mention near the orchestrator-rebuild rule",
         )
 
     def test_states_unmatched_category_dropped_never_relabelled(self):
@@ -468,6 +551,159 @@ class TestDoesNotRestateReviewerOutputSchema(unittest.TestCase):
         # The +15/cap 100/hard cap 50/default 60 numbers are owned by
         # IMPLEMENTATION.md's Shared Components / review-phase.md.
         self.assertNotIn("+15", self.text)
+
+
+# ---------------------------------------------------------------------------
+# task0006 (rework round 1) Acceptance Criteria over this same document.
+# ---------------------------------------------------------------------------
+
+
+class TestTask0006AC2DismissedSites(unittest.TestCase):
+    """AC-2: `dismissed_sites` is an always-present root field with a
+    defined entry shape."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CONTRACT_DOC_PATH)
+
+    def test_dismissed_sites_listed_among_root_fields(self):
+        self.assertTrue(_has_exact_token(self.text, DISMISSED_SITES_ROOT_FIELD))
+        root_fields_idx = self.text.index("Root fields:")
+        ownership_idx = self.text.index("## Ownership Boundary")
+        section = self.text[root_fields_idx:ownership_idx]
+        self.assertTrue(_has_exact_token(section, DISMISSED_SITES_ROOT_FIELD))
+
+    def test_dismissed_sites_entry_shape_defined(self):
+        idx = self.text.index("Each entry of `dismissed_sites` carries")
+        window = self.text[idx : idx + 300]
+        for field in DISMISSED_SITE_ENTRY_FIELDS:
+            self.assertTrue(_has_exact_token(window, field), field)
+
+    def test_dismissed_sites_reason_vocabulary_stated(self):
+        idx = self.text.index("Each entry of `dismissed_sites` carries")
+        window = self.text[idx : idx + 400].lower()
+        self.assertIn("false positive", window)
+        self.assertIn("demoted", window)
+        self.assertIn("round_context", window)
+        self.assertIn("duplicate", window)
+
+
+class TestTask0006AC4IndependentInspectionDuty(unittest.TestCase):
+    """AC-4: the per-perspective independent-inspection duty, a required
+    per-perspective coverage statement (including the empty-findings case),
+    the fixed 10-file Read-Only Constraint budget, and NFR5 (no-write)
+    unchanged."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CONTRACT_DOC_PATH)
+
+    def test_independent_inspection_duty_section_present(self):
+        self.assertIn("## Independent Inspection Duty", self.text)
+
+    def test_duty_covers_every_dispatched_perspective(self):
+        idx = self.text.index("## Independent Inspection Duty")
+        window = self.text[idx : idx + 700]
+        self.assertIn("`perspectives_dispatched`", window)
+        self.assertIn("changed_files", window)
+
+    def test_empty_reviewer_result_is_not_sufficient_evidence(self):
+        idx = self.text.index("## Independent Inspection Duty")
+        window = self.text[idx : idx + 700].lower()
+        self.assertIn("not, by itself, evidence", window)
+        self.assertIn("empty findings set", window)
+
+    def test_per_perspective_coverage_statement_required_in_output(self):
+        idx = self.text.index("`round_summary`")
+        window = self.text[idx : idx + 500].lower()
+        self.assertIn("per-perspective coverage statement", window)
+        self.assertIn("empty findings set", window)
+
+    def test_no_second_reviewer_dispatched_fr3_untouched(self):
+        idx = self.text.index("## Independent Inspection Duty")
+        window = self.text[idx : idx + 700]
+        self.assertIn("No second reviewer is dispatched", window)
+        self.assertIn("FR3", window)
+
+    def test_read_budget_stays_a_fixed_number_and_is_not_raised(self):
+        idx = self.text.index("## Read-Only Constraint")
+        window = self.text[idx : idx + 600]
+        self.assertRegex(window, r"\bat most 10 files\b")
+        self.assertIn("not raised", window.lower())
+
+    def test_nfr5_no_write_constraint_unchanged(self):
+        idx = self.text.index("## Read-Only Constraint (NFR5)")
+        window = self.text[idx : idx + 300]
+        self.assertIn("never writes", window)
+        self.assertIn("Write", window)
+        self.assertIn("Edit", window)
+
+
+class TestTask0006AC5SourcesRename(unittest.TestCase):
+    """AC-5: `source_run_ids` has zero occurrences in this document;
+    `sources` is the finding field, and the orchestrator overwrites it /
+    attributes an unmatched finding to `claude:evaluator`."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CONTRACT_DOC_PATH)
+
+    def test_source_run_ids_has_zero_occurrences(self):
+        self.assertNotIn(RETIRED_FINDING_SOURCE_FIELD, self.text)
+
+    def test_sources_is_the_finding_field_name(self):
+        idx = self.text.index("Each entry of `findings` carries")
+        window = self.text[idx : idx + 200]
+        self.assertTrue(_has_exact_token(window, "sources"))
+
+    def test_orchestrator_overwrites_with_its_own_run_identities(self):
+        normalized = _normalize_ws(self.text).lower()
+        self.assertIn("run identities it itself assigned", normalized)
+
+    def test_unmatched_finding_attributed_to_claude_evaluator(self):
+        self.assertIn("claude:evaluator", self.text)
+
+
+class TestTask0006AC6CategoryGateEquality(unittest.TestCase):
+    """AC-6: the Ownership Boundary's `category` rule is equality with the
+    dispatched perspective of the finding's source run(s), not membership
+    in the round's dispatched-perspective set; still "drop unconditionally"
+    / "never relabel"."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CONTRACT_DOC_PATH)
+
+    def test_category_rule_is_equality_with_source_run_dispatched_perspective(self):
+        idx = self.text.index("- `category` — a finding's `category`")
+        window = _normalize_ws(self.text[idx : idx + 400])
+        self.assertIn(
+            "must equal the dispatched perspective of the finding's source "
+            "run(s)",
+            window,
+        )
+
+    def test_no_valid_run_case_still_requires_a_dispatched_category(self):
+        idx = self.text.index("- `category` — a finding's `category`")
+        window = _normalize_ws(self.text[idx : idx + 400])
+        self.assertIn(
+            "a finding left with no valid run (attributed to "
+            "`claude:evaluator`) must instead carry a category that was "
+            "dispatched this round",
+            window,
+        )
+
+    def test_old_set_membership_wording_is_gone(self):
+        normalized = _normalize_ws(self.text)
+        self.assertNotIn(
+            "not one of THIS round's dispatched perspectives", normalized
+        )
+
+    def test_still_dropped_unconditionally_never_relabelled(self):
+        idx = self.text.index("- `category` — a finding's `category`")
+        window = self.text[idx : idx + 400].lower()
+        self.assertIn("dropped unconditionally", window)
+        self.assertIn("never relabelled", window)
 
 
 if __name__ == "__main__":
