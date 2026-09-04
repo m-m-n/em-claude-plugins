@@ -54,7 +54,11 @@ workflow:
   base_commit: 9d21d0898352fbda6be6cd67c65ad0c88cad1acc
   completed_at_commit: 5b0431a4a7289635a07ed83816dff23557e738ae
 - id: review
-  status: pending
+  status: in_progress
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
 - id: verify
   status: pending
   result: null
