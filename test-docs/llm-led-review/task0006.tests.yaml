@@ -1,6 +1,29 @@
 task_id: task0006
-baseline_failures: []          # python3 -m unittest discover -s tests: 3047 passed, 0 failed
-final_failures: []             # same command after implementation: 3087 passed, 0 failed
+# Original baseline (before any implementation): 3047 passed, 0 failed.
+# Refreshed baseline (worktree-task-workflow conflict protocol): after
+# merging em-workflow/llm-led-review/integration and adopting its side of
+# em-workflow/references/review-phase.md wholesale for the conflicted file
+# (task0007 landed first with D9 / unreviewed_perspectives production
+# changes to that same file), re-running the suite showed 13 failures --
+# all in this task's OWN test classes over review-phase.md, because the
+# adopted parent content does not yet carry this task's re-implementation.
+# That is the refreshed baseline below; final_failures (after
+# re-implementing on top of the adopted parent) is empty, a strict subset.
+baseline_failures:
+  - test_review_phase_llm_led.TestAC4PhaseR3bMechanicalGates.test_seven_ordered_checks_present_in_order
+  - test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_exactly_two_structural_triggers_stated
+  - test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_no_coverage_gate_or_whole_evaluation_discard_survives
+  - test_review_phase_llm_led.TestTask0006AC1EvaluatorFailureDegradationNarrowedTriggers.test_successful_task_with_lifted_sites_recorded_completed_degraded
+  - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_all_dismissed_case_lifts_nothing_and_keeps_the_evaluation
+  - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_floor_checked_by_same_site_against_findings_and_dismissed_sites
+  - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_floor_heading_present
+  - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_lifted_site_carries_the_pinned_values
+  - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_no_file_line_bucket_site_reduction_survives
+  - test_review_phase_llm_led.TestTask0006AC3AccountabilityFloor.test_same_site_named_as_the_floor_predicate
+  - test_review_phase_llm_led.TestTask0006AC5SourcesRename.test_source_run_ids_has_zero_occurrences_in_review_phase
+  - test_review_phase_llm_led.TestTask0006AC6CategoryGateEquality.test_category_gate_is_equality_with_source_run_dispatched_perspective
+  - test_review_phase_llm_led.TestTask0006AC6CategoryGateEquality.test_no_valid_run_case_still_requires_dispatched_category
+final_failures: []             # after re-implementation: 3108 passed, 0 failed
 acceptance_tests:
   AC-1:
     tests:
