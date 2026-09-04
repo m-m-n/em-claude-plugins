@@ -1,0 +1,130 @@
+task_id: task0005
+# Pre-existing failure in the repository-level invariants check
+# (test_check_plugin_invariants.py), caused by agents/review-evaluator.md
+# not existing yet in this isolated task worktree -- that file is
+# task0002's deliverable (em-workflow/agents/ is Out of Scope for
+# task0005). Unaffected by this task's doc-only change; present before and
+# after.
+baseline_failures:
+  - "test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root"
+final_failures:
+  - "test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root"
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_plugin_manifest_version_is_pinned_value
+      - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_marketplace_entry_version_is_pinned_value
+      - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_registries_agree_by_reading_both_values
+      - tests.test_llm_led_review_user_docs.TestRegistryVersions.test_version_is_strictly_past_baseline
+      - tests.test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, plugin.json and the marketplace entry both read
+      "0.1.58": test_plugin_manifest_version_is_pinned_value and
+      test_marketplace_entry_version_is_pinned_value failed with
+      AssertionError ('0.1.58' != '0.1.59'), and
+      test_version_is_strictly_past_baseline failed the same way. The
+      em-review byte-identical check was already true beforehand (nothing
+      in this task touches that entry) and stays true after -- a permanent
+      invariant guard rather than a red/green criterion.
+  AC-2:
+    tests:
+      - tests.test_llm_led_review_user_docs.TestDescriptionsStateNewComposition.test_plugin_manifest_description
+      - tests.test_llm_led_review_user_docs.TestDescriptionsStateNewComposition.test_marketplace_description
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, AssertionError: 'non-Claude primary reviewer' not
+      found in the plugin.json description text (which still read "Claude
+      + conditional cross-model validation via GPT/Codex..."); the
+      marketplace description failed the same way.
+  AC-3:
+    tests:
+      - tests.test_llm_led_review_user_docs.TestReadmeAgentTable.test_review_evaluator_row_names_opus_and_evaluation_role
+      - tests.test_llm_led_review_user_docs.TestReadmeAgentTable.test_reviewer_row_is_fallback_only
+      - tests.test_llm_led_review_user_docs.TestReadmeAgentTable.test_codex_reviewer_row_is_primary_reviewer
+    red_confirmed: true
+    red_reason: >-
+      Before the edit: test_review_evaluator_row_names_opus_and_evaluation_role
+      raised AssertionError "no table row found for cell 'review-evaluator'"
+      (the row did not exist yet); test_reviewer_row_is_fallback_only failed
+      because the reviewer row read "汎用 Claude レビュアー（観点はスキル注入）"
+      with no フォールバック wording; test_codex_reviewer_row_is_primary_reviewer
+      failed because the row read "クロスバリデーション用" with no "primary
+      reviewer" wording.
+  AC-4:
+    tests:
+      - tests.test_llm_led_review_user_docs.TestReadmeReviewSection.test_describes_one_primary_reviewer_dispatch
+      - tests.test_llm_led_review_user_docs.TestReadmeReviewSection.test_describes_claude_fallback_on_full_chain_unavailability
+      - tests.test_llm_led_review_user_docs.TestReadmeReviewSection.test_describes_evaluator_step
+      - tests.test_llm_led_review_user_docs.TestReadmeReviewSection.test_describes_orchestrator_decision
+      - tests.test_llm_led_review_user_docs.TestReadmeReviewSection.test_chain_table_lists_all_six_perspectives_with_pinned_chains
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, each "describes_*" assertion raised AssertionError
+      for a missing substring (e.g. "primary_chain" / "Opus 評価者" /
+      "決定は常にオーケストレーターが行う" were absent from the old review
+      section prose). test_chain_table_lists_all_six_perspectives_with_pinned_chains
+      raised ValueError ("primary-reviewer" substring not found) because the
+      old README had no retitled chain table -- a legitimate red for missing
+      behavior, not an unrelated error.
+  AC-5:
+    tests:
+      - tests.test_llm_led_review_user_docs.TestReadmePrerequisites.test_codex_cli_bullet_describes_fallback_degradation
+      - tests.test_llm_led_review_user_docs.TestReadmePrerequisites.test_vertex_review_bullet_describes_fallback_degradation
+      - tests.test_llm_led_review_user_docs.TestReadmePrerequisites.test_no_forbidden_parallel_double_run_or_agreement_wording
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the Codex CLI / vertex-review prerequisite bullets
+      described cross-validation being "skipped" with no フォールバック
+      wording (AssertionError), and the forbidden-phrase sweep found the
+      old "クロスモデル二重化" / "で二重実行される" / "クロスバリデーションは
+      全滅してクリーンにスキップされる" wording still present
+      (assertNotIn failed).
+  AC-6:
+    tests:
+      - tests.test_llm_led_review_user_docs.TestSkillDescribesComposition.test_description_states_new_composition
+      - tests.test_llm_led_review_user_docs.TestSkillDescribesComposition.test_body_states_one_primary_reviewer_and_fallback_and_evaluator
+      - tests.test_llm_led_review_user_docs.TestSkillDescribesComposition.test_no_forbidden_cross_model_wording
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the SKILL.md description lacked "primary_chain" /
+      "非 Claude レビュアー" / "Opus 評価者" (AssertionError); the body's
+      composition bullet still read "Cross-model validation per
+      review-rules.yaml (`cross_validation`), subject to per-perspective
+      provider availability" with no "non-Claude primary reviewer" /
+      "falls back to the Claude generic reviewer" wording, and the
+      forbidden-phrase sweep found the old "Cross-model validation per
+      review-rules.yaml" / "cross-model agreement signal" text present.
+    notes: >-
+      The remaining SkillDescribesComposition sub-tests
+      (test_frontmatter_fields_unchanged, test_still_delegates_to_review_phase_in_standalone_mode,
+      test_no_reviewer_selection_logic_of_its_own, test_never_commit_statement_unchanged,
+      test_report_only_behaviour_unchanged, test_round_record_path_unchanged,
+      test_auto_apply_caution_unchanged) were already green before any
+      implementation, by design -- they are regression guards proving the
+      task plan's "stay unchanged" clauses (frontmatter, delegation,
+      never-commit, --report-only, round-record path, auto-apply caution),
+      not proofs of new behavior. red_confirmed: false would be misleading
+      here since they were never meant to go red; they are listed under
+      AC-6's covering tests implicitly via the file but intentionally
+      omitted from this AC's red-tracked list above.
+  AC-7:
+    tests:
+      - tests.test_llm_led_review_user_docs.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      This is a self-referential hygiene check (module imports only the
+      standard library) that is true by construction as soon as the file
+      is written correctly -- there is no prior "red" state to observe for
+      it. The AC's other clause -- both `python3 -m unittest discover -s
+      tests` and `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      exiting 0 -- is a CLI-level property verified by actually running
+      both commands (recorded in the implementer report), not something
+      this in-process module can assert about itself. In this isolated
+      task worktree neither command exits 0: both fail on the single
+      pre-existing baseline failure (agents/review-evaluator.md missing,
+      task0002's file, out of task0005's scope) recorded above in
+      baseline_failures/final_failures -- unaffected by this task's
+      change, and expected to clear once every task's worktree is
+      integrated (per check-plugin-invariants.py's own docstring: "No
+      task worktree contains that integrated state").

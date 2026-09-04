@@ -17,13 +17,13 @@
     },
     {
       "name": "em-workflow",
-      "description": "Unified SDD + parallel-implementation + dynamic-review workflow. /em-workflow:develop drives a git-setup gate (gitleaks pre-commit hook; aborts when gitleaks is absent) → spec → plan with task decomposition → wave-based parallel implementation in git worktrees → dynamic review selection (rule floor + discretion) → bounded auto-fix → retrospect collection. Skill-injected generic implementer/reviewer agents (Claude + conditional cross-model validation via GPT/Codex and, when the separately-installed vertex-review plugin is present, Vertex AI MaaS / Meta Muse through its LiteLLM harness); review records persist per round. License consistency runs as a cross-workflow constraint (project license recorded at spec time, checked at library selection, reviewed on manifest changes). /em-workflow:git-setup and /em-workflow:gen-license also run standalone.",
+      "description": "Unified SDD + parallel-implementation + dynamic-review workflow. /em-workflow:develop drives a git-setup gate (gitleaks pre-commit hook; aborts when gitleaks is absent) → spec → plan with task decomposition → wave-based parallel implementation in git worktrees → dynamic review selection (rule floor + discretion) → bounded auto-fix → retrospect collection. Skill-injected generic implementer agents and, for review, one non-Claude primary reviewer per perspective taken from a registry-defined chain (Codex and, when the separately-installed vertex-review plugin is present, Vertex AI MaaS / Meta Muse through its LiteLLM harness), a Claude fallback only when a perspective's whole chain is unavailable, and a single Opus evaluator subagent that evaluates every round before the orchestrator decides the next action; review records persist per round. License consistency runs as a cross-workflow constraint (project license recorded at spec time, checked at library selection, reviewed on manifest changes). /em-workflow:git-setup and /em-workflow:gen-license also run standalone.",
       "author": {
         "name": "em"
       },
       "category": "workflow",
       "source": "./em-workflow",
-      "version": "0.1.58"
+      "version": "0.1.59"
     }
   ]
 }
