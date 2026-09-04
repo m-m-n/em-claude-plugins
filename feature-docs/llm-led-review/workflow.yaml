@@ -131,7 +131,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR11, FR14]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/llm-led-review/task0005
 review:
