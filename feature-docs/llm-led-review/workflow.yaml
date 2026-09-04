@@ -1,0 +1,245 @@
+schema_version: 1
+feature: llm-led-review
+created: '2026-09-04'
+base_branch: main
+goal: "develop コマンドのレビュー段を他 LLM 主体と Opus 評価の構成に改修する\n\n## やりたいこと（必須）\ndevelop コマンドのレビュー段を、他 LLM がメインでレビューし、その結果を Opus のサブエージェントがまとめて評価し、オーケストレーターがその評価に基づいて次の行動を決める構成に改修する。\n## 背景・なぜ（必須）\n現在は Claude のレビュアーとセカンドオピニオン（Codex）が並列でレビューを行い、その結果を突合する形になっている。\n該当箇所:\n- `em-workflow/skills/develop/SKILL.md`\n- `em-workflow/references/review-phase.md`\n- `em-workflow/references/reviewers.yaml`\n- `em-workflow/agents/reviewer.md`\n- `em-workflow/agents/codex-reviewer.md`\n## 受け入れ条件 / 完了の定義（必須）\n- [ ] レビューのメインを他 LLM が実行する\n- [ ] 他 LLM の結果が出たら、Opus のサブエージェントがまとめて評価する\n- [ ] Opus の評価がオーケストレーターに返る\n- [ ] オーケストレーターは Opus の評価に基づいて次の行動を決める\n- [ ] 現在の Claude と Codex の並列レビューと突合の流れを、上記の構成に置き換える\n## スコープ外（任意）\n- 従来のクロスレビュー（Claude と Codex の並列レビューと突合）は `/em-review:multi-review` を使う\n- em-review の multi-review には今回手を入れない\n## 制約・前提（任意）\n\\<触ってほしくない箇所 / 使う技術 / 互換性など。あれば\\>\n---\n## 再開条件 2026-09-04T09:04:47+09:00\n## 申し送り\n不明瞭な点はサブエージェントやセカンドオピニオンと相談して決める\n決めた内容をNotionに記載していれば好きに進めて良い\n---\n## 再開条件 2026-09-04T09:47:15+09:00\n\
+  ## 再開に必要な条件\n### 停止の直接原因（最優先）\n- `review.sanitization-ownership` (category: security / blocking) — 他 LLM 出力の untrusted 扱いを誰が担保するか。選択肢は (a) オーケストレーターの機械的サニタイズを評価役の出力にも従来どおり適用する、(b) サニタイズ責務を評価役へ移す。評価役の出力自体を untrusted として扱うかも明記が必要\n\t- 評価役がそれを含めて評価する\n### 現在の状態\n- ブランチ `em-workflow/llm-led-review/integration` と worktree `.claude/worktrees/em-workflow/llm-led-review/integration` を残置\n- コミット済みは `feature-docs/llm-led-review/phase-state/create-spec.yaml` のみ\n- REQUIREMENTS.md / SPEC.md / workflow.yaml は未生成\n- リポジトリ本体の作業ツリーに em-workflow/references/review-phase.md と em-workflow/references/reviewers.yaml の未コミット変更（litellm モデル名の更新）が残っている\n"
+parent_branch: em-workflow/llm-led-review/integration
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin_invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+    destructive_guard_hook:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 0d6142f2519d29c0f2ca64c8c94642ecf60113af
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: ユーザー可視の UI 面を一切持たない改修。変更対象はプラグインのプロトコル文書・エージェントプロンプト・YAML レジストリ・テストで、DESIGN.md / HTML モックアップ / design-system/tokens.yaml の対象が無い。design-system 候補も visual inputs も 0 件。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: null
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 主レビューを他 LLM が実行する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS5
+  FR2:
+    title: reviewers.yaml を主レビュアーレジストリへ転換する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR3:
+    title: Claude 汎用レビュアーはフォールバック専任にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+  FR4:
+    title: Opus 評価サブエージェントを新設する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+  FR5:
+    title: 他 LLM 出力の untrusted 扱いは評価役が担保する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 評価役の出力もオーケストレーターから見て untrusted
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR7:
+    title: 評価役の出力契約を定義する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR8:
+    title: 次の行動はオーケストレーターが決める
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR9:
+    title: fan-out 形状とチェーンウォークの維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS5
+  FR10:
+    title: ハーネス不在時の劣化動作
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR11:
+    title: standalone レビューも同じ構成になる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR12:
+    title: ラウンド記録の後方互換
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR13:
+    title: confidence モデルの再定義
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR14:
+    title: プラグインバージョンと説明文の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  FR15:
+    title: プラグイン不変条件の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+    - TS3
+  NFR1:
+    title: injection 洗浄の防止を維持する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  NFR2:
+    title: 外部依存を増やさない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS5
+  NFR3:
+    title: batch モードで停止しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS3
+  NFR4:
+    title: review-protocol.md の SSOT 性を壊さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: レビューは read-only のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  NFR6:
+    title: 既存テストの前提を壊さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
