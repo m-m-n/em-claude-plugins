@@ -1,11 +1,11 @@
 schema_version: 1
 feature: llm-led-review
 phase: create-spec
-status: failed
-generation: 1
-base_revision: 9a229a8e489490ef10e0140c38a19715ef35bcf8
-last_input_digest: sha256:2efb589e8da81f69ae8114c6077f718dea6826d93f4f06a673bad7bef8165a86
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: 99fe16c
+last_input_digest: sha256:d73f5a38ccdedcc2c4992ddd3c9065cb038483b7365b9bd3ac0a93ae7d28ff02
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: issued
@@ -26,7 +26,7 @@ packets:
       - question_id: review.claude-only-perspectives
         status: unanswered
       - question_id: review.sanitization-ownership
-        status: unanswered
+        status: answered
       - question_id: review.standalone-scope
         status: unanswered
       - question_id: review.confidence-model
@@ -37,11 +37,30 @@ packets:
         status: unanswered
       - question_id: design.step-decision
         status: unanswered
-answers: {}
+answers:
+  review.sanitization-ownership:
+    question_id: review.sanitization-ownership
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-04T09:47:15+09:00"
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: "評価役がそれを含めて評価する"
+    normalized_answer: >-
+      他 LLM 出力の untrusted 扱いは評価役（Opus サブエージェント）が評価の一部として
+      担保する。評価役の出力自体もオーケストレーターから見て untrusted として扱う。
+    resolution_note: >-
+      Answered by the human in the Notion task page
+      (再開条件 2026-09-04T09:47:15+09:00). This is the human answer the
+      previous run's fail-closed security abort required.
 worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
     input_digest: sha256:2efb589e8da81f69ae8114c6077f718dea6826d93f4f06a673bad7bef8165a86
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: dispatching
+    input_digest: sha256:d73f5a38ccdedcc2c4992ddd3c9065cb038483b7365b9bd3ac0a93ae7d28ff02
     output_digest: null
 artifacts: []
 patches: []
@@ -50,15 +69,8 @@ stale_redispatch_count: 0
 resolved_input_cache:
   design_system_candidates:
     generation_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-    resolved_at_generation: 1
+    resolved_at_generation: 2
     paths: []
     digests: {}
     truncated: false
-last_error: |
-  fail-closed classification abort (references/question-resolution.md).
-  Question review.sanitization-ownership carries category: security, which
-  aborts the phase immediately in batch mode -- before any batch-policies.yaml
-  lookup, before Codex consultation, and before on_unanswered is read.
-  Batch mode never auto-decides a security-category question.
-  Resolution requires a human answer; re-enter interactively with
-  /em-workflow:develop llm-led-review
+last_error: null
