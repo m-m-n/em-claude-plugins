@@ -14,7 +14,9 @@
 # `model` value below is handed to the reviewer verbatim — the reviewer never
 # picks one on its own. Valid litellm model names are defined by the
 # vertex-review plugin's `litellm-harness` skill:
-#   vertex-deepseek-v3.2 | vertex-glm-5 | muse-spark
+#   vertex-glm-5.2 | muse-spark
+#   (vertex-deepseek-v3.2 / vertex-glm-5 retire on Vertex on 2026-10-21 and are
+#   no longer assigned here.)
 #
 # The review phase reads this file to drive fan-out:
 # - For each SELECTED perspective (per review-rules.yaml + discretion), launch
@@ -38,9 +40,12 @@
 #   context, which a second model can't add).
 #   security keeps codex in front (existing track record) and falls back to
 #   muse-spark, whose upstream is Meta rather than Vertex. The other
-#   perspectives take the cheap Vertex model first, muse-spark second (still
-#   cheap, different upstream), and codex last — the only entry that survives
-#   a LiteLLM budget wipeout.
+#   perspectives split their first hop across the two LiteLLM upstreams —
+#   architecture on vertex-glm-5.2 (Vertex, Preview), performance / spec on
+#   muse-spark (Meta) — so a Vertex 429 streak or a Preview regression never
+#   takes out every perspective at once. Each then falls back to the other
+#   upstream, and to codex last — the only entry that survives a LiteLLM
+#   budget wipeout.
 
 version: 2
 
@@ -55,22 +60,22 @@ perspectives:
     claude_skill: review-performance
     requires_spec: false
     cross_validation:
-      - {harness: litellm, model: vertex-deepseek-v3.2}
       - {harness: litellm, model: muse-spark}
+      - {harness: litellm, model: vertex-glm-5.2}
       - {harness: codex}
   - perspective: architecture
     claude_skill: review-architecture
     requires_spec: false
     cross_validation:
-      - {harness: litellm, model: vertex-glm-5}
+      - {harness: litellm, model: vertex-glm-5.2}
       - {harness: litellm, model: muse-spark}
       - {harness: codex}
   - perspective: spec
     claude_skill: review-spec
     requires_spec: true
     cross_validation:
-      - {harness: litellm, model: vertex-deepseek-v3.2}
       - {harness: litellm, model: muse-spark}
+      - {harness: litellm, model: vertex-glm-5.2}
       - {harness: codex}
   - perspective: comprehensive
     claude_skill: review-comprehensive

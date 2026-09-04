@@ -428,7 +428,7 @@ perspective_runs:
   - {perspective: security, source: claude, status: completed}
   - {perspective: security, source: codex, status: skipped, skip_reason: "rate_limited"}
   - {perspective: security, source: litellm, model: muse-spark, status: completed}
-  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: skipped, skip_reason: "budget_exhausted"}
+  - {perspective: performance, source: litellm, model: muse-spark, status: skipped, skip_reason: "budget_exhausted"}
   - {perspective: performance, source: codex, status: completed}
   # `model` は litellm ハーネスのときだけ付ける。R2b の chain walk は
   # 1 観点につき複数行になる — 最後の行がその観点のクロスモデル結果。

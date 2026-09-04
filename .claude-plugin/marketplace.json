@@ -13,7 +13,8 @@
         "name": "em"
       },
       "category": "code-review",
-      "source": "./em-review"
+      "source": "./em-review",
+      "version": "0.5.7"
     },
     {
       "name": "em-workflow",
@@ -23,7 +24,7 @@
       },
       "category": "workflow",
       "source": "./em-workflow",
-      "version": "0.1.58"
+      "version": "0.1.59"
     }
   ]
 }
