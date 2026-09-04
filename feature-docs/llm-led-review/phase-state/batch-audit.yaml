@@ -17,3 +17,19 @@ records:
       Already present in the approval store before this run:
       `python3 -m unittest discover -s tests`,
       `python3 em-workflow/hooks/tests/run-destructive-guard.py`.
+- gate_id: null
+  phase: create-plan
+  asked_at: "2026-09-04T14:45:51+09:00"
+  resolution_note: >-
+    implementation-planner が written_artifacts の sha256 を算出できずに null で返したため、
+    オーケストレーターが integration worktree 上の実ファイルから算出して layer 5 を実施した。
+    layer 4（scope 検証）で宣言外の書き込みが無いことを併せて確認済み。
+- gate_id: null
+  phase: create-plan
+  asked_at: "2026-09-04T14:45:51+09:00"
+  resolution_note: >-
+    validate-worker-output.py が task0001/0004/0005 の Files セクション記法
+    （バッククォート付きパスを含まない bullet・1 bullet に複数のバッククォート語）を
+    エラーにしたため、オーケストレーターが記述の意味を変えずに記法だけ整えた。
+    タスクの files リストとの一致は再検証で確認済み。
+
