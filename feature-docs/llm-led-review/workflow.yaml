@@ -71,9 +71,9 @@ tasks:
     domains: [api-contract, input-handling]
     complexity: high
     requirements: [FR5, FR7, NFR5]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/llm-led-review/task0001
   task0002:
     title: "LLM-led review phase protocol and the evaluator agent"
     plan: tasks/task0002.md
@@ -85,9 +85,9 @@ tasks:
     domains: [input-handling, api-contract, external-io, data-persistence]
     complexity: high
     requirements: [FR1, FR3, FR4, FR6, FR8, FR9, FR10, FR12, FR13, FR15, NFR1, NFR3, NFR5, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/llm-led-review/task0002
   task0003:
     title: "primary-reviewer registry conversion"
     plan: tasks/task0003.md
@@ -99,9 +99,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR2, FR3, FR10]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/llm-led-review/task0003
   task0004:
     title: "reviewer-side role framing and category vocabulary"
     plan: tasks/task0004.md
@@ -115,9 +115,9 @@ tasks:
     domains: [api-contract, input-handling]
     complexity: high
     requirements: [FR1, FR2, FR3, NFR2, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/llm-led-review/task0004
   task0005:
     title: "user-facing docs and plugin version bump"
     plan: tasks/task0005.md
@@ -131,9 +131,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR11, FR14]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/llm-led-review/task0005
 review:
   status: pending
   rounds_completed: 0
