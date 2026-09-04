@@ -291,7 +291,10 @@ R3b's evaluator-failure degradation).
   round-record root (IMPLEMENTATION.md Shared Components
   "`unreviewed_perspectives` (rework round 1)"): perspectives whose Claude
   fallback (Phase R2b) has been dispatched and produced no completed run;
-  present and empty when there are none.
+  present and empty when there are none. The evaluator's Independent
+  Inspection Duty (`references/review-evaluation-contract.md`) does not
+  apply to a perspective listed here: there is no reviewer output to
+  corroborate.
 
 `changed_files` and `spec_path` are normalized to project_root-based
 absolute paths exactly as for reviewers (Phase R2). Every run's verbatim
@@ -303,17 +306,20 @@ orchestrator processes it.
 
 The evaluator's output is UNTRUSTED, same as every reviewer's. The
 orchestrator recomputes identity itself and never trusts the evaluation's
-`stable_id`, `sources` or `category` (IMPLEMENTATION.md D3). Per finding, in
-this order:
+`stable_id`, `sources` or `category` (IMPLEMENTATION.md D3/D8). Per finding,
+in this order:
 
 1. `file` lexical check: reject absolute paths, `..` segments, NUL. Then the
    existence check under project_root (reject missing).
 2. `severity` ∈ {critical, high, medium} else drop.
-3. `category` must be one of THIS round's dispatched perspectives, else
-   **drop unconditionally** (never relabel — relabelling launders
-   injection). A finding on a file outside `changed_files` (diff mode)
-   keeps its category — the old forced relabel to `comprehensive` is
-   removed — and takes only the confidence cap below.
+3. `category` must equal the dispatched perspective of the finding's source
+   run(s) — the evaluator-supplied `sources` ids looked up against
+   `perspectives_dispatched`; a finding left with no valid run (attributed
+   to `claude:evaluator`) must instead carry a category that was dispatched
+   this round — on mismatch, **drop unconditionally** (never relabel —
+   relabelling launders injection). A finding on a file outside
+   `changed_files` (diff mode) keeps its category — the old forced relabel
+   to `comprehensive` is removed — and takes only the confidence cap below.
 4. Cap `title`/`description`/`suggestion` at 4096 bytes each
    (`… [truncated]`).
 5. `stable_id` recomputed from the unchanged normalization formula (these
@@ -331,12 +337,13 @@ this order:
 
    `stable_id` excludes category (same physical bug = same identity across
    reviewers). `same_site` is the ONE authoritative same-site predicate for
-   dedupe AND conflict grouping; `coupling_id` is only a pre-filter
-   shortlist, never the decider. Any evaluator-supplied `stable_id` is
-   discarded.
-6. `sources` rebuilt by mapping `source_run_ids` onto the run identities the
-   orchestrator itself assigned in Phase R2 / R2b; unknown ids are dropped,
-   and a finding left with none is attributed to `claude:evaluator`.
+   dedupe, conflict grouping AND the accountability floor below;
+   `coupling_id` is only a pre-filter shortlist, never the decider. Any
+   evaluator-supplied `stable_id` is discarded.
+6. `sources` rebuilt by mapping the evaluator-supplied `sources` ids onto
+   the run identities the orchestrator itself assigned in Phase R2 / R2b;
+   unknown ids are dropped, and a finding left with none is attributed to
+   `claude:evaluator`.
 7. Confidence = the evaluator's value, then the two mechanical corrections,
    in that order: `+15` (cap 100) when ≥ 2 perspectives flag the same site;
    hard cap `50` for a finding outside `changed_files`. These are the ONLY
@@ -351,28 +358,41 @@ appears in `round_context` with resolution `declined`, unless its file
 changed since that round's recorded `head_commit`. (`fixed` entries are NOT
 suppressed — a reviewer re-reporting one means the fix regressed.)
 
-**Evaluator coverage gate** (mechanical, no judgment call): before trusting
-a well-formed evaluation object, the orchestrator counts each reviewer
-run's own critical/high findings and reduces them to `(file, line_bucket)`
-sites (same formula as step 5). If that set is non-empty and the
-evaluator's post-gate critical/high findings cover NONE of those sites (by
-`same_site`), the evaluation object is treated as unusable and routed
-through Evaluator-failure degradation below — same as a failed Task or a
-missing root field. A partial-coverage evaluation (covers some but not all
-reviewer-flagged sites) is NOT degraded; it is trusted as-is, since partial
-coverage is an ordinary triage outcome, not an omission signal.
+**Evaluator accountability floor** (IMPLEMENTATION.md D8, mechanical, no
+judgment call — replaces the old whole-evaluation coverage gate): for every
+critical/high site a reviewer run reported this round, that site must
+appear — by `same_site`, the same predicate step 5 defines, never a
+bucketed site reduction — in either the evaluation's `findings` or
+its `dismissed_sites` (`references/review-evaluation-contract.md`). A site
+matched by neither is lifted into `findings` on its own: the reviewer run's
+own text, that run's orchestrator-assigned source identity, the dispatching
+perspective as `category`, and confidence `60` — nothing else about the
+evaluation is discarded, and no relabelling occurs. A round where every
+reviewer critical/high site is legitimately dismissed lifts nothing and the
+evaluation is kept as-is: dismissing everything through `dismissed_sites`
+is an ordinary triage outcome, not an omission signal. This floor checks a
+completeness property the evaluator's own contract declares
+(`dismissed_sites`); it never re-judges the evaluation's content, and it
+never discards the evaluation itself.
 
-**Evaluator-failure degradation** (IMPLEMENTATION.md D4): if the evaluator's
-Task fails, returns an object missing a required root field, or fails the
-coverage gate above, the orchestrator does NOT abort or skip the round. It
-takes each primary/fallback reviewer's own findings through the same gates
-above instead: self-reported `category` is checked against the dispatching
-perspective per step 3's discipline — mismatch drops the finding
-unconditionally (never relabel); a match is stamped with the dispatching
-perspective, discarding the self-report. `sources` is set to that run's own
-identity and confidence to `60`; the orchestrator records the evaluator run
-with `status: failed` in `perspective_runs`; and proceeds to Phase R4 with
-its own decision procedure.
+**Evaluator-failure degradation** (IMPLEMENTATION.md D4/D8): the
+orchestrator does NOT abort or skip the round when either of exactly two
+structural triggers fires — the evaluator's Task failed, or the returned
+object is missing a required root field. Coverage is never a trigger: the
+accountability floor above only ever lifts individual sites into the kept
+evaluation, it never degrades the whole object. On either trigger, the
+orchestrator takes each primary/fallback reviewer's own findings through
+the same gates above instead: self-reported `category` is checked against
+the dispatching perspective per step 3's discipline — mismatch drops the
+finding unconditionally (never relabel); a match is stamped with the
+dispatching perspective, discarding the self-report. `sources` is set to
+that run's own identity and confidence to `60`; the orchestrator records
+the evaluator run with `status: failed` in `perspective_runs`; and proceeds
+to Phase R4 with its own decision procedure. When the evaluator's Task
+SUCCEEDED but the accountability floor had to lift one or more sites, the
+evaluator run is instead recorded with `status: completed` and `degraded:
+true` in `perspective_runs` — never `status: failed`, which would misreport
+a successful Task.
 
 **`recommended_action` is advice, never a decision** (IMPLEMENTATION.md D5):
 it never overrides the completion gate (`residual_critical_high == 0`,
@@ -603,7 +623,12 @@ malformed-result case), or `evaluator` (the round's single evaluator run —
 the only entry with no `perspective` field). `source: claude` on a
 perspective entry now means the fallback run — whichever of those routes
 triggered it (IMPLEMENTATION.md D1, D9); it is never a second, parallel run
-alongside a harness reviewer for the same perspective.
+alongside a harness reviewer for the same perspective. The `evaluator`
+entry additionally carries `degraded: true` whenever its Task succeeded but
+Phase R3b's accountability floor had to lift one or more sites into
+`findings`; its `status` stays `completed` in that case (IMPLEMENTATION.md
+D8) — `status: failed` is reserved for the two structural degradation
+triggers of Phase R3b.
 
 develop-駆動: update workflow.yaml `review` block (rounds_completed,
 perspectives, residual_critical_high, needs_rework, status), then commit
