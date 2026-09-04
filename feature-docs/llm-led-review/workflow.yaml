@@ -50,19 +50,11 @@ workflow:
   status: completed
   completed_at_commit: aabc1b55b491d527f1f445dbeeb98dd3566c2366
 - id: implement
-  status: completed
+  status: pending
   base_commit: 9d21d0898352fbda6be6cd67c65ad0c88cad1acc
   completed_at_commit: 5b0431a4a7289635a07ed83816dff23557e738ae
 - id: review
   status: pending
-  needs_rework: true
-  rounds_completed: 1
-  perspectives: [comprehensive, security, performance, architecture, spec]
-  residual_critical_high: 7
-  plan:
-    floor: [comprehensive, security, performance, architecture, spec]
-    discretionary: []
-    cross_validation: true
 - id: verify
   status: pending
   result: null
@@ -143,23 +135,74 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/llm-led-review/task0005
+  task0006:
+    title: "evaluator accountability floor and SPEC-conformant evaluation output"
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/references/review-evaluation-contract.md
+    - em-workflow/references/review-phase.md
+    - em-workflow/agents/review-evaluator.md
+    - tests/test_review_evaluation_contract.py
+    - tests/test_review_phase_llm_led.py
+    skills: []
+    domains: [api-contract, input-handling, data-persistence]
+    complexity: high
+    requirements: [FR4, FR5, FR6, FR7, FR13, NFR1, NFR5]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      origin_kind: review
+      origin_id: 2473033f751cd158
+      source_ids: [2473033f751cd158, fce739c4dabb8993, ecae1046a059d74b, 2ff41c71809b14bc, 22933066ce52b21d, e76acd6780af5cef]
+      review_round: 1
+  task0007:
+    title: "fallback reachability so no perspective ends a round unreviewed"
+    plan: tasks/task0007.md
+    files:
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/review-protocol.md
+    - em-workflow/agents/reviewer.md
+    - tests/test_review_phase_llm_led.py
+    - tests/test_reviewer_roles_protocol.py
+    skills: []
+    domains: [api-contract, external-io, input-handling]
+    complexity: high
+    requirements: [FR1, FR3, FR9, FR10, FR12, NFR2, NFR3]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      origin_kind: review
+      origin_id: 0113d89b57312c50
+      source_ids: [0113d89b57312c50]
+      review_round: 1
 review:
   status: pending
-  rounds_completed: 0
-  plan: null
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  rounds_completed: 1
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 7
+  needs_rework: true
 requirements:
   FR1:
     title: 主レビューを他 LLM が実行する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0004]
+    tasks: [task0002, task0004, task0007]
     tests:
     - TS1
     - TS5
+    - TS8
   FR2:
     title: reviewers.yaml を主レビュアーレジストリへ転換する
     status: ok
@@ -173,42 +216,46 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003, task0004]
+    tasks: [task0002, task0003, task0004, task0007]
     tests:
     - TS1
     - TS2
+    - TS8
   FR4:
     title: Opus 評価サブエージェントを新設する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
+    tasks: [task0002, task0006]
     tests:
     - TS1
     - TS2
+    - TS7
   FR5:
     title: 他 LLM 出力の untrusted 扱いは評価役が担保する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS1]
+    tasks: [task0001, task0006]
+    tests: [TS1, TS7]
   FR6:
     title: 評価役の出力もオーケストレーターから見て untrusted
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
+    tasks: [task0002, task0006]
     tests:
     - TS1
+    - TS7
   FR7:
     title: 評価役の出力契約を定義する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
+    tasks: [task0001, task0002, task0006]
     tests:
     - TS1
+    - TS7
   FR8:
     title: 次の行動はオーケストレーターが決める
     status: ok
@@ -222,18 +269,20 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
+    tasks: [task0002, task0007]
     tests:
     - TS1
     - TS5
+    - TS8
   FR10:
     title: ハーネス不在時の劣化動作
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003]
+    tasks: [task0002, task0003, task0007]
     tests:
     - TS1
+    - TS8
   FR11:
     title: standalone レビューも同じ構成になる
     status: ok
@@ -247,17 +296,19 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
+    tasks: [task0002, task0007]
     tests:
     - TS1
+    - TS8
   FR13:
     title: confidence モデルの再定義
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
+    tasks: [task0002, task0006]
     tests:
     - TS1
+    - TS7
   FR14:
     title: プラグインバージョンと説明文の更新
     status: ok
@@ -280,26 +331,29 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
+    tasks: [task0002, task0006]
     tests:
     - TS1
+    - TS7
   NFR2:
     title: 外部依存を増やさない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0004]
+    tasks: [task0004, task0007]
     tests:
     - TS5
+    - TS8
   NFR3:
     title: batch モードで停止しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
+    tasks: [task0002, task0007]
     tests:
     - TS1
     - TS3
+    - TS8
   NFR4:
     title: review-protocol.md の SSOT 性を壊さない
     status: ok
@@ -312,9 +366,10 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
+    tasks: [task0001, task0002, task0006]
     tests:
     - TS1
+    - TS7
   NFR6:
     title: 既存テストの前提を壊さない
     status: ok
@@ -324,5 +379,5 @@ requirements:
     tests:
     - TS4
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 0

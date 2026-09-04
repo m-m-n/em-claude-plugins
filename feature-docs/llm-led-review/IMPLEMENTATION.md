@@ -63,6 +63,10 @@ never by checking that a sibling task's file exists on disk.
 | Perspective → category vocabulary | Must accept every perspective that now has a primary chain | `references/review-output-schema.json`'s `category` enum contains all six registry perspectives, `license` included | 0003, 0004 |
 | Phase headings | Stable anchors for tests and cross-document citations | `## Phase R3a: Evaluation (single Opus evaluator)` and `## Phase R3b: Mechanical gates on the evaluation` replace today's `## Phase R3: Aggregate, sanitize, score`; the R0 / R1 / R2 / R2b / R4 / R5 / R6 headings are unchanged | 0002 |
 | Plugin version | One value in two registries | `0.1.59` in `em-workflow/.claude-plugin/plugin.json` and in the `em-workflow` entry of `.claude-plugin/marketplace.json` (patch bump from 0.1.58, matching this repository's practice of patch-stepping behaviour changes) | 0005 |
+| Evaluator accountability field (rework round 1) | The reviewer sites an evaluation must account for | Output-object root field `dismissed_sites`; each entry carries `file`, `line`, `run_id` and `reason`. A reviewer-reported critical/high site matched by `same_site` against neither `findings` nor `dismissed_sites` is lifted into `findings` individually, carrying that run's own text, the run's orchestrator-assigned source identity, the dispatching perspective as `category`, and confidence `60` | 0006 |
+| Evaluator finding source field (rework round 1) | FR7-conformant field name | The evaluator's finding field is `sources`; the name `source_run_ids` is retired. Its values are run ids and are ALWAYS overwritten by the orchestrator with its own run identities; a finding left with no valid run is attributed to `claude:evaluator` | 0006 |
+| Evaluator run degradation marker (rework round 1) | How a successful-but-incomplete evaluation is recorded | The evaluator's `perspective_runs` entry is `status: completed` with `degraded: true` whenever its Task succeeded; `status: failed` is used only when the Task itself failed or a required root field was missing | 0006, 0007 |
+| `unreviewed_perspectives` (rework round 1) | Perspectives that produced no completed reviewer run | A list of perspective names. It is BOTH a round-record root field (Phase R5) and a Phase R3a evaluator input field; present and empty when there are none. A perspective enters it only after its Claude fallback has been dispatched and produced no completed run. Producing the value is task0007's; stating what the evaluator does with it is task0006's | 0006, 0007 |
 
 ## Conventions
 
@@ -202,6 +206,42 @@ them:
   (`tests/test_plugin_version_parity.py`).
 
 Affects tasks 0002, 0003, 0004, 0005.
+
+### D8 — Evaluator accountability is a per-site floor declared by the evaluation contract (rework round 1)
+
+Amends D3 and D4; the rest of both decisions stands. An evaluation object is
+never discarded on coverage grounds: coverage is not a degradation trigger,
+and D4's degradation keeps exactly its two structural triggers (evaluator
+Task failure, missing required root field). In its place, every critical/high
+site a reviewer run reported must appear in the evaluation's `findings` or in
+its `dismissed_sites`; a site in neither is lifted individually with the
+values pinned in Shared Components. Because `dismissed_sites` is part of the
+evaluator's own contract, the floor checks a declared completeness property
+of the output rather than re-judging the evaluation's content. `same_site` is
+the only site predicate anywhere in R3b — the `(file, line_bucket)` reduction
+is not a site predicate. D3's step 3 tightens from set membership to equality
+with the dispatched perspective of the finding's source run (SPEC FR6), and
+D3's step 6 reads the field as `sources`. The evaluator additionally inspects
+the round's `changed_files` per dispatched perspective, so a schema-valid
+empty reviewer result is corroborated rather than accepted in silence — no
+second reviewer is dispatched, so SPEC FR3 is untouched. Affects task0006.
+
+### D9 — The Claude fallback is reachable at chain exhaustion (rework round 1)
+
+Amends D1's timing, not its exclusivity. "No available chain entry" is
+evaluated whenever the orchestrator must decide who reviews a perspective:
+at Phase R2 from the availability probes, and again at Phase R2b when the
+walk ends with every eligible entry having proven unavailable (retryable
+skip, or unavailable harness) or with a malformed result and no further
+entry. In that state the perspective receives exactly ONE Claude fallback
+dispatch, after the walk — never concurrently with a harness reviewer and
+never as a second opinion alongside a completed one, so D1's mutual
+exclusivity and SPEC FR3's no-parallel clause both hold unchanged. That
+dispatch does not consume the 2-hop harness budget, and all perspectives
+reaching the state in one round go in ONE message (FR9). A perspective whose
+fallback also produces no completed run stays in `unreviewed_perspectives`,
+which remains record-keeping and never becomes a completion blocker — a
+blocker would need a new user gate, which NFR3 forbids. Affects task0007.
 
 ## Risk Assessment
 

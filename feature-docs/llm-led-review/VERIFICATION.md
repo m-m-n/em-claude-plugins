@@ -36,6 +36,8 @@ regression modules whose assumptions the change could break.
 | TS4 | flock contract regression on the review phase's fix-commit block and its commit-message literal | `tests/test_review_implement_develop_lock_contracts.py` passes | Unit |
 | TS5 | codex-reviewer scratchpad temp-file isolation regression (more load-bearing now that the agent runs for every perspective in one message) | `tests/test_codex_reviewer_temp_file_isolation.py` passes | Unit |
 | TS6 | Version-bump regression: both registries agree on the em-workflow version and it compares strictly greater than the recorded baseline | `tests/test_plugin_version_parity.py` passes | Unit |
+| TS7 | Evaluator accountability and output conformance (rework round 1): no coverage-based discard of a whole evaluation; degradation limited to the two structural triggers; `dismissed_sites` declared in the evaluation contract; an unaccounted reviewer critical/high site lifted individually at confidence 60 with the run's identity and the dispatching perspective; `same_site` the only site predicate; the finding field named `sources` with `source_run_ids` gone; the category gate stated as equality with the source run's dispatched perspective and still drop-not-relabel; the per-perspective independent-inspection duty and the read-only bound | `tests/test_review_evaluation_contract.py` and `tests/test_review_phase_llm_led.py` pass, including their absence assertions for the removed text | Unit |
+| TS8 | Fallback reachability (rework round 1): a perspective whose chain walk ends with no completed run — exhaustion or malformed result — receives exactly one Claude fallback dispatch after the walk, never concurrently with a harness reviewer and without consuming the 2-hop budget; `unreviewed_perspectives` keeps its name, root position and non-blocking status but is reachable only after that fallback failed, is carried in the Phase R3a input block, and is stated as carried by the committed round record in batch mode; no new `gate_id` and no `batch-policies.yaml` change | `tests/test_review_phase_llm_led.py` and `tests/test_reviewer_roles_protocol.py` pass; `check-plugin-invariants.py` still reports `agent_dispatch_parity` and `gate_id_coverage` OK | Unit |
 
 ## Code Quality Verification
 
@@ -86,6 +88,16 @@ regression modules whose assumptions the change could break.
 | NFR5 | task0001, task0002 | TS1 (read-only constraint stated for the evaluator and the reviewers) |
 | NFR6 | task0002 | TS4 |
 
+### Rework round 1 additions
+
+The two scenarios above cover the rework tasks synthesized from review round
+1. They extend, and never replace, the requirement rows in the table above.
+
+| Requirement | Rework task | Verification |
+|-------------|-------------|--------------|
+| FR4, FR5, FR6, FR7, FR13, NFR1, NFR5 | task0006 | TS7 (plus TS1, whose modules are the ones TS7 extends) |
+| FR1, FR3, FR9, FR10, FR12, NFR2, NFR3 | task0007 | TS8 (plus TS1 and TS2 for the retained dispatch parity) |
+
 ## E2E Testing
 
 No E2E framework exists in this repository (`resolved_input_paths.e2e` is
@@ -123,7 +135,7 @@ intentionally.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 6 | 6 | 0 | 0 |
+| Test scenarios | 8 | 8 | 0 | 0 |
 | Success criteria | 7 | 7 | 0 | 0 |
 | Requirements (FR + NFR) | 21 | 21 | 0 | 0 |
 | Behavioural confirmation | 3 | 0 | 0 | 3 |
