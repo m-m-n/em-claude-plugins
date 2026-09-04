@@ -47,7 +47,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: aabc1b55b491d527f1f445dbeeb98dd3566c2366
 - id: implement
   status: pending
   base_commit: null
@@ -59,7 +60,80 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: "evaluation contract SSOT for the Opus evaluator"
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/review-evaluation-contract.md
+    - tests/test_review_evaluation_contract.py
+    skills: []
+    domains: [api-contract, input-handling]
+    complexity: high
+    requirements: [FR5, FR7, NFR5]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: "LLM-led review phase protocol and the evaluator agent"
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/review-phase.md
+    - em-workflow/agents/review-evaluator.md
+    - tests/test_review_phase_llm_led.py
+    skills: []
+    domains: [input-handling, api-contract, external-io, data-persistence]
+    complexity: high
+    requirements: [FR1, FR3, FR4, FR6, FR8, FR9, FR10, FR12, FR13, FR15, NFR1, NFR3, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: "primary-reviewer registry conversion"
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/reviewers.yaml
+    - em-workflow/references/review-rules.yaml
+    - tests/test_reviewers_primary_chains.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR2, FR3, FR10]
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: "reviewer-side role framing and category vocabulary"
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/review-protocol.md
+    - em-workflow/references/review-output-schema.json
+    - em-workflow/agents/reviewer.md
+    - em-workflow/agents/codex-reviewer.md
+    - tests/test_reviewer_roles_protocol.py
+    skills: []
+    domains: [api-contract, input-handling]
+    complexity: high
+    requirements: [FR1, FR2, FR3, NFR2, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0005:
+    title: "user-facing docs and plugin version bump"
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/README.md
+    - em-workflow/skills/review/SKILL.md
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_llm_led_review_user_docs.py
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR11, FR14]
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -73,7 +147,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002, task0004]
     tests:
     - TS1
     - TS5
@@ -82,7 +156,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003, task0004]
     tests:
     - TS1
   FR3:
@@ -90,7 +164,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002, task0003, task0004]
     tests:
     - TS1
     - TS2
@@ -99,7 +173,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS1
     - TS2
@@ -108,14 +182,14 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS1]
   FR6:
     title: 評価役の出力もオーケストレーターから見て untrusted
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS1
   FR7:
@@ -123,7 +197,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests:
     - TS1
   FR8:
@@ -131,7 +205,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS1
   FR9:
@@ -139,7 +213,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS1
     - TS5
@@ -148,7 +222,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002, task0003]
     tests:
     - TS1
   FR11:
@@ -156,7 +230,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0005]
     tests:
     - TS1
   FR12:
@@ -164,7 +238,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS1
   FR13:
@@ -172,7 +246,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS1
   FR14:
@@ -180,7 +254,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0005]
     tests:
     - TS6
   FR15:
@@ -188,7 +262,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS2
     - TS3
@@ -197,7 +271,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS1
   NFR2:
@@ -205,7 +279,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests:
     - TS5
   NFR3:
@@ -213,7 +287,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS1
     - TS3
@@ -222,14 +296,14 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0004]
+    tests: [TS1]
   NFR5:
     title: レビューは read-only のまま
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests:
     - TS1
   NFR6:
@@ -237,7 +311,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests:
     - TS4
 batch:
