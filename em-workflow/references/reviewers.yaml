@@ -1,8 +1,8 @@
-# reviewers.yaml - Review-perspective registry (em-workflow SSOT)
+# reviewers.yaml - Primary-reviewer registry (em-workflow SSOT)
 #
-# em-workflow uses a Claude generic reviewer agent (em-workflow:reviewer) plus
-# one cross-validation reviewer agent per HARNESS, and injects the perspective
-# as a skill:
+# em-workflow dispatches ONE non-Claude reviewer per SELECTED perspective as
+# that perspective's primary (main) review, and injects the perspective as a
+# skill:
 #   - codex   → em-workflow:codex-reviewer (Codex CLI via the wrapper script;
 #               the model is Codex's own recommended default)
 #   - litellm → vertex-review:vertex-reviewer (`codex exec -p litellm -m
@@ -16,66 +16,63 @@
 # vertex-review plugin's `litellm-harness` skill:
 #   vertex-deepseek-v3.2 | vertex-glm-5 | muse-spark
 #
-# The review phase reads this file to drive fan-out:
-# - For each SELECTED perspective (per review-rules.yaml + discretion), launch
-#   em-workflow:reviewer with instructions to load `claude_skill` via the
-#   Skill tool.
-# - When cross-validation fires (review-rules.yaml), ALSO launch ONE
-#   cross-model reviewer per selected perspective: the FIRST entry in that
-#   perspective's `cross_validation` chain whose harness is available
-#   (codex_available / litellm_available, per review-phase.md Phase R0). No
-#   available entry → no cross-model run for that perspective; the Claude
-#   reviewer output stands alone.
-# - A retryable skip advances along the chain in Phase R2b:
-#   `rate_limited` → next entry; `budget_exhausted` / `harness_unavailable` →
-#   next entry of a DIFFERENT harness. Budget is per harness, not per model:
-#   every litellm entry draws on one virtual key with one monthly cap, so
-#   another model on it fails identically.
+# The review phase reads this file to drive fan-out: for each SELECTED
+# perspective (per review-rules.yaml + discretion), it dispatches exactly ONE
+# reviewer, taken from the front of that perspective's `primary_chain`. See
+# references/review-phase.md for the Claude-reviewer fallback used when no
+# chain entry is available, and for the retryable chain walk a skip can
+# trigger — neither rule is restated here.
 #
 # requires_spec: perspective only runs when a SPEC.md is available.
-# cross_validation: ordered fallback chain for this perspective (empty =
-#   Claude-only by design — comprehensive's value is breadth inside one
-#   context, which a second model can't add).
+# primary_chain: ordered, non-empty list of {harness, model?} entries -- every
+#   perspective must have one, since a perspective without a chain has no
+#   primary reviewer at all.
 #   security keeps codex in front (existing track record) and falls back to
-#   muse-spark, whose upstream is Meta rather than Vertex. The other
+#   muse-spark, whose upstream is Meta rather than Vertex. Most other
 #   perspectives take the cheap Vertex model first, muse-spark second (still
 #   cheap, different upstream), and codex last — the only entry that survives
-#   a LiteLLM budget wipeout.
+#   a LiteLLM budget wipeout. comprehensive and license lead with codex
+#   instead, since neither has a track record as a non-Claude primary
+#   reviewer yet; the Vertex/Muse entries behind it are the budget /
+#   rate-limit fallbacks.
 
-version: 2
+version: 3
 
 perspectives:
   - perspective: security
     claude_skill: review-security
     requires_spec: false
-    cross_validation:
+    primary_chain:
       - {harness: codex}
       - {harness: litellm, model: muse-spark}
   - perspective: performance
     claude_skill: review-performance
     requires_spec: false
-    cross_validation:
+    primary_chain:
       - {harness: litellm, model: vertex-deepseek-v3.2}
       - {harness: litellm, model: muse-spark}
       - {harness: codex}
   - perspective: architecture
     claude_skill: review-architecture
     requires_spec: false
-    cross_validation:
+    primary_chain:
       - {harness: litellm, model: vertex-glm-5}
       - {harness: litellm, model: muse-spark}
       - {harness: codex}
   - perspective: spec
     claude_skill: review-spec
     requires_spec: true
-    cross_validation:
+    primary_chain:
       - {harness: litellm, model: vertex-deepseek-v3.2}
       - {harness: litellm, model: muse-spark}
       - {harness: codex}
   - perspective: comprehensive
     claude_skill: review-comprehensive
     requires_spec: false
-    cross_validation: []
+    primary_chain:
+      - {harness: codex}
+      - {harness: litellm, model: vertex-glm-5}
+      - {harness: litellm, model: muse-spark}
   - perspective: license
     # Layer-2-only: never selected by the mechanical floor (review-rules.yaml
     # has no manifest signal). Added by discretion when the diff touches
@@ -83,4 +80,7 @@ perspectives:
     # (review-phase.md R1 Layer 2).
     claude_skill: review-license
     requires_spec: false
-    cross_validation: []
+    primary_chain:
+      - {harness: codex}
+      - {harness: litellm, model: vertex-deepseek-v3.2}
+      - {harness: litellm, model: muse-spark}
