@@ -196,16 +196,19 @@ or input problem that every entry would hit identically. Keep the skip.
 
 **Malformed non-retryable results.** A dispatched reviewer's result that is
 neither a valid `skipped: true` object (with one of the `skip_reason`s above)
-nor schema-valid per `schemas/review-output.schema.json` — it fails schema
+nor schema-valid per the Phase R0-resolved `schema_path`
+(`references/review-output-schema.json`) — it fails schema
 validation, or the Task output is truncated/unparseable as JSON — is not a
 skip and is not routed through this table. Record that run in
 `perspective_runs` with `status: failed` (not `skipped`, not `completed`);
 do not invent a `skip_reason` for it. A perspective whose only run this round
 is `status: failed` has no `perspective_runs` entry with `status: completed`,
-so it is caught by Phase R5's Completion gate like any other perspective
-lacking a completed run — handle it there, per `references/
-workflow-failure-recovery.md`, rather than dispatching an additional reviewer
-from R2b.
+so Phase R5's Unreviewed-perspective disclosure lists it in
+`unreviewed_perspectives` — that disclosure is record-keeping, not a
+completion blocker, so it does NOT by itself hold the step open. Run
+`references/workflow-failure-recovery.md`'s workflow-doctor when the
+harness-level cause needs diagnosing, and report it in Phase R6; do not
+dispatch an additional reviewer from R2b.
 
 A result that IS schema-valid — including a well-formed empty `findings: []`
 with `skipped: false`, `skip_reason: null` — is a substantive completed
