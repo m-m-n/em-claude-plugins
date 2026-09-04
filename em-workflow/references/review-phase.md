@@ -194,27 +194,24 @@ Every other `skip_reason` (`protocol_unresolved`, `schema_unresolved`,
 `skill_unresolved`, `no_spec`, …) is **not** retryable: it reports a config
 or input problem that every entry would hit identically. Keep the skip.
 
-**Malformed or empty non-retryable results.** A dispatched reviewer's result
-that is neither a valid `skipped: true` object (with one of the
-`skip_reason`s above) nor a schema-valid substantive review (e.g. it fails
-schema validation, is truncated/unparseable, or is a well-formed empty
-`findings: []` returned by a reviewer whose own output gives no evidence it
-actually inspected the diff — contents that could plausibly result from a
-prompt injection in the reviewed diff suppressing the review) is treated the
-same as an exhausted chain for that perspective: dispatch the Claude fallback
-(`em-workflow:reviewer`, same input block as Phase R2) for this perspective
-as an ADDITIONAL run, never a silent substitution. Record the harness run
-itself with `status: skipped`, `skip_reason: malformed_result` in
-`perspective_runs` (this reason is never retried further down the chain —
-it is a content problem, not an availability one) and add a second entry for
-the Claude run with `role: fallback`. The Claude run's result — not the
-harness's malformed one — is this perspective's usable result for Phase
-R3a's `reviewer_outputs`; both entries' `run_id`s stay distinct and both are
-reported. This is the only place a perspective can end a round with two
-primary-slot dispatches, and it exists precisely so the Completion gate
-(Phase R5) — which only requires ANY `perspective_runs` entry with `status:
-completed` — cannot be satisfied by a suppressed harness reviewer that
-returned an empty, unexamined result while masquerading as `completed`.
+**Malformed non-retryable results.** A dispatched reviewer's result that is
+neither a valid `skipped: true` object (with one of the `skip_reason`s above)
+nor schema-valid per `schemas/review-output.schema.json` — it fails schema
+validation, or the Task output is truncated/unparseable as JSON — is not a
+skip and is not routed through this table. Record that run in
+`perspective_runs` with `status: failed` (not `skipped`, not `completed`);
+do not invent a `skip_reason` for it. A perspective whose only run this round
+is `status: failed` has no `perspective_runs` entry with `status: completed`,
+so it is caught by Phase R5's Completion gate like any other perspective
+lacking a completed run — handle it there, per `references/
+workflow-failure-recovery.md`, rather than dispatching an additional reviewer
+from R2b.
+
+A result that IS schema-valid — including a well-formed empty `findings: []`
+with `skipped: false`, `skip_reason: null` — is a substantive completed
+result and is used as-is for Phase R3a's `reviewer_outputs`. Schema validity
+is the only test; do not additionally judge whether the reviewer "really"
+inspected the diff.
 
 Walk rules:
 
@@ -331,17 +328,32 @@ appears in `round_context` with resolution `declined`, unless its file
 changed since that round's recorded `head_commit`. (`fixed` entries are NOT
 suppressed — a reviewer re-reporting one means the fix regressed.)
 
+**Evaluator coverage gate** (mechanical, no judgment call): before trusting
+a well-formed evaluation object, the orchestrator counts each reviewer
+run's own critical/high findings and reduces them to `(file, line_bucket)`
+sites (same formula as step 5). If that set is non-empty and the
+evaluator's post-gate critical/high findings cover NONE of those sites (by
+`same_site`), the evaluation object is treated as unusable and routed
+through Evaluator-failure degradation below — same as a failed Task or a
+missing root field. A partial-coverage evaluation (covers some but not all
+reviewer-flagged sites) is NOT degraded; it is trusted as-is, since partial
+coverage is an ordinary triage outcome, not an omission signal.
+
 **Evaluator-failure degradation** (IMPLEMENTATION.md D4): if the evaluator's
-Task fails, or returns an object missing a required root field, the
-orchestrator does NOT abort or skip the round. It takes each primary/
-fallback reviewer's own findings through the same gates above instead, with
-`category` fixed to the dispatching perspective, `sources` set to that run's
-own identity, and confidence `60`; records the evaluator run with `status:
-failed` in `perspective_runs`; and proceeds to Phase R4 with its own
-decision procedure.
+Task fails, returns an object missing a required root field, or fails the
+coverage gate above, the orchestrator does NOT abort or skip the round. It
+takes each primary/fallback reviewer's own findings through the same gates
+above instead: self-reported `category` is checked against the dispatching
+perspective per step 3's discipline — mismatch drops the finding
+unconditionally (never relabel); a match is stamped with the dispatching
+perspective, discarding the self-report. `sources` is set to that run's own
+identity and confidence to `60`; the orchestrator records the evaluator run
+with `status: failed` in `perspective_runs`; and proceeds to Phase R4 with
+its own decision procedure.
 
 **`recommended_action` is advice, never a decision** (IMPLEMENTATION.md D5):
-it never overrides the completion gate (`residual_critical_high == 0`), the
+it never overrides the completion gate (`residual_critical_high == 0`,
+defined once in Phase R5's Completion gate — not restated here), the
 `--report-only` flag, the auto-fix loop cap, the batch rework cap, or the
 fixed rework ordering of `references/rework-task-synthesis.md` Section 10.
 Writes, commits and AskUserQuestion stay orchestrator-exclusive; this new
@@ -497,9 +509,11 @@ the evaluator — Phase R3a's "never more than one [dispatch], and never
 skipped" per round is not relaxed here. Instead, run each re-reviewed
 perspective's own findings straight through the Phase R3b mechanical gates,
 the same path Phase R3b's evaluator-failure degradation already uses:
-`category` fixed to the dispatching perspective, `sources` set to that run's
-own identity, confidence `60` (the two mechanical corrections in R3b step 7
-still apply on top). Record each in-loop re-review run in `perspective_runs`
+self-reported `category` checked against the dispatching perspective per
+step 3's discipline (mismatch drops unconditionally, never relabel; a
+match is stamped with the dispatching perspective, discarding the
+self-report), `sources` set to that run's own identity, confidence `60`
+(the two mechanical corrections in R3b step 7 still apply on top). Record each in-loop re-review run in `perspective_runs`
 exactly like a normal round run (`role: primary`/`fallback`, `status`). Then:
 zero residual critical/high non-spec → `clean`; `loop == 3` → `loop-cap`; no
 progress and no user-resolvable candidates → `no-progress`.
@@ -575,15 +589,27 @@ integration branch immediately, including the batch-mode rework/defer
 updates below.
 
 **Completion gate**: the review step may be marked `completed` ONLY when
-`residual_critical_high == 0` AND every selected perspective has at least one
-`perspective_runs` entry with `status: completed` (a perspective whose only
-entries this round are all `status: skipped` — the R2b chain-exhausted case —
-has not actually been reviewed, regardless of its finding count). Otherwise:
-offer another round / rework / explicit user acceptance (recorded as
-`deferred` with reason — this is the opt-out that keeps committed records
-free of undisclosed critical items). Batch mode: same rule, recorded as
-`deferred` per the batch non-packet gates table below rather than offered
-interactively.
+`residual_critical_high == 0`. Otherwise: offer another round / rework /
+explicit user acceptance (recorded as `deferred` with reason — this is the
+opt-out that keeps committed records free of undisclosed critical items).
+Batch mode: same rule, recorded as `deferred` per `references/batch-mode.md`'s
+Non-packet gates table (gate `review.residual-critical-high`) rather than
+offered interactively.
+
+**Unreviewed-perspective disclosure** (record-keeping only — never a
+completion blocker): among perspectives actually dispatched this round in
+Phase R2 (excluding any `requires_spec` perspective skipped there because
+`spec_available == false` — no dispatch, no `perspective_runs` entry, nothing
+to disclose), any perspective whose entries this round are all `status:
+skipped` or `status: failed` — no `status: completed` entry at all (the R2b
+chain-exhausted case, or an R2b malformed-result case) — has not actually
+been reviewed this round regardless of its finding count. List such
+perspectives under a round-record-root `unreviewed_perspectives` field
+(present and empty when there are none). This is disclosure, not a gate: the
+step still completes whenever `residual_critical_high == 0` above holds, and
+no new gate identifier or batch non-packet gates table entry is introduced
+for it. Interactive mode surfaces the same list in the Phase R6 report so a
+human is not silently left unaware that a perspective went unreviewed.
 
 Rework path (interactive): when the user selects rework, follow the fixed
 ordering `references/rework-task-synthesis.md` Section 10 states for
