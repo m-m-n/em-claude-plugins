@@ -1,21 +1,51 @@
 schema_version: 1
 feature: llm-led-review
 phase: create-spec
-status: dispatching
+status: failed
 generation: 1
-base_revision: e232ade35fee5da8c916f56363ee83d20a7e54de
+base_revision: 9a229a8e489490ef10e0140c38a19715ef35bcf8
 last_input_digest: sha256:2efb589e8da81f69ae8114c6077f718dea6826d93f4f06a673bad7bef8165a86
-active_request_id: create-spec-run-0001
-packets: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: "2026-09-04T09:03:00+09:00"
+    questions:
+      - question_id: review.main-llm-harness
+        status: unanswered
+      - question_id: review.claude-reviewer-disposition
+        status: unanswered
+      - question_id: review.no-harness-fallback
+        status: unanswered
+      - question_id: review.evaluator-responsibility
+        status: unanswered
+      - question_id: review.evaluator-output-contract
+        status: unanswered
+      - question_id: review.fanout-shape
+        status: unanswered
+      - question_id: review.claude-only-perspectives
+        status: unanswered
+      - question_id: review.sanitization-ownership
+        status: unanswered
+      - question_id: review.standalone-scope
+        status: unanswered
+      - question_id: review.confidence-model
+        status: unanswered
+      - question_id: review.round-record-compat
+        status: unanswered
+      - question_id: project.commands
+        status: unanswered
+      - question_id: design.step-decision
+        status: unanswered
 answers: {}
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:2efb589e8da81f69ae8114c6077f718dea6826d93f4f06a673bad7bef8165a86
     output_digest: null
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:b1ef3c85fba4b1c0c47ce04e801a9e166267832cfbb6cc1db70dbca54d22d617
 stale_redispatch_count: 0
 resolved_input_cache:
   design_system_candidates:
@@ -24,4 +54,11 @@ resolved_input_cache:
     paths: []
     digests: {}
     truncated: false
-last_error: null
+last_error: |
+  fail-closed classification abort (references/question-resolution.md).
+  Question review.sanitization-ownership carries category: security, which
+  aborts the phase immediately in batch mode -- before any batch-policies.yaml
+  lookup, before Codex consultation, and before on_unanswered is read.
+  Batch mode never auto-decides a security-category question.
+  Resolution requires a human answer; re-enter interactively with
+  /em-workflow:develop llm-led-review
