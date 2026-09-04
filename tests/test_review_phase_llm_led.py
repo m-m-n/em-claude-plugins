@@ -329,11 +329,27 @@ class TestAC2PhaseR2bChainWalk(unittest.TestCase):
         )
         self.assertIn("go in ONE message", self.r2b)
 
-    def test_exhausted_chain_keeps_skip_not_a_claude_rerun(self):
+    def test_exhausted_chain_triggers_one_claude_fallback_dispatch(self):
+        # task0007 AC-1: chain exhaustion (or no eligible entry) now
+        # dispatches exactly ONE Claude fallback, after the walk, never
+        # concurrently with a harness reviewer.
         self.assertIn(
-            "a skip contribution, not a Claude re-run", self.r2b
+            "the perspective receives exactly ONE Claude fallback",
+            _norm(self.r2b),
         )
+        self.assertIn('Task(subagent_type="em-workflow:reviewer")', self.r2b)
+        self.assertIn("issued after the walk", _norm(self.r2b))
         self.assertIn(
+            "never concurrently with a harness reviewer", _norm(self.r2b)
+        )
+
+    def test_old_no_claude_rerun_prohibition_is_gone(self):
+        # task0007 AC-1: "the current sentence forbidding a Claude re-run at
+        # exhaustion is gone" -- explicit absence check (a document that
+        # kept both the old prohibition and the new permission would
+        # otherwise pass the positive assertion above).
+        self.assertNotIn("a skip contribution, not a Claude re-run", self.r2b)
+        self.assertNotIn(
             "the Claude fallback branch is decided in R2 from availability",
             _norm(self.r2b),
         )
@@ -342,7 +358,15 @@ class TestAC2PhaseR2bChainWalk(unittest.TestCase):
         self.assertIn(
             "dispatched only after every selected", _norm(self.r2b)
         )
-        self.assertIn("chain walk has finished", self.r2b)
+        self.assertIn("chain walk", self.r2b)
+        self.assertIn("has finished", self.r2b)
+        # task0007 AC-1: the walk this waits on now includes the
+        # chain-exhaustion Claude fallback dispatch, not just the harness
+        # hops.
+        self.assertIn(
+            "including any chain-exhaustion Claude fallback",
+            _norm(self.r2b),
+        )
 
     def test_harness_level_failure_carveout_kept(self):
         self.assertIn(
@@ -835,6 +859,156 @@ class TestOwnModuleStdlibOnly(unittest.TestCase):
                     modules.add(node.module.split(".")[0])
         non_stdlib = sorted(m for m in modules if m not in stdlib)
         self.assertEqual(non_stdlib, [])
+
+
+# ---------------------------------------------------------------------------
+# task0007 (rework round 1): fallback reachability at chain exhaustion.
+#
+# Covers task0007 Acceptance Criteria
+# (feature-docs/llm-led-review/tasks/task0007.md):
+#
+# - AC-1: covered above by TestAC2PhaseR2bChainWalk's
+#   test_exhausted_chain_triggers_one_claude_fallback_dispatch (the new
+#   permission) and test_old_no_claude_rerun_prohibition_is_gone (explicit
+#   absence of the removed prohibition).
+# - AC-2: the fallback dispatch does not consume the 2-hop harness budget,
+#   and every perspective reaching that state in the same round is
+#   dispatched in ONE message -- TestAC2FallbackBudgetAndBatching below.
+# - AC-4: Phase R5's Unreviewed-perspective disclosure only lists a
+#   perspective after its Claude fallback has been dispatched and produced
+#   no completed run; field name / root position / present-and-empty rule /
+#   non-blocking status stay unchanged; the committed round record is named
+#   as the batch-visible channel; no new gate_id -- TestAC4
+#   UnreviewedPerspectiveDisclosureAfterFallback below.
+# - AC-5: Phase R3a's evaluator input block carries
+#   `unreviewed_perspectives`, and Phase R5's `role` note covers both routes
+#   to `role: fallback` without adding/redefining any `perspective_runs`
+#   field -- TestAC5EvaluatorInputAndRoleNoteWidened below.
+# ---------------------------------------------------------------------------
+
+
+class TestAC2FallbackBudgetAndBatching(unittest.TestCase):
+    """AC-2: the chain-exhaustion fallback dispatch does not consume the
+    2-hop harness budget, and all perspectives reaching that state in the
+    same round go in ONE message (FR9)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.r2b = DocumentFixture.r2b()
+
+    def test_fallback_dispatch_does_not_consume_the_two_hop_budget(self):
+        norm = _norm(self.r2b)
+        self.assertIn(
+            "This dispatch does NOT consume the 2-hop budget above", norm
+        )
+        self.assertIn("that budget counts harness dispatches", norm)
+
+    def test_perspectives_reaching_exhaustion_state_go_in_one_message(self):
+        norm = _norm(self.r2b)
+        self.assertIn(
+            "every perspective reaching this state in the same round", norm
+        )
+        self.assertIn("is dispatched in ONE message (FR9)", norm)
+
+    def test_fallback_failure_ends_the_round_unreviewed_but_degrades(self):
+        norm = _norm(self.r2b)
+        self.assertIn("has no further reviewer to try", norm)
+        self.assertIn(
+            "the round continues and degrades rather than aborting", norm
+        )
+
+
+class TestAC4UnreviewedPerspectiveDisclosureAfterFallback(unittest.TestCase):
+    """AC-4: a perspective is listed in `unreviewed_perspectives` only after
+    its Claude fallback has been dispatched and produced no completed run;
+    the field's name/position/empty-rule/non-blocking status are unchanged;
+    the committed round record is named as the batch-visible channel; no new
+    `gate_id` anywhere in the file set."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = DocumentFixture.text()
+        cls.r5 = DocumentFixture.r5()
+
+    def test_disclosure_gated_on_fallback_having_been_dispatched(self):
+        norm = _norm(self.r5)
+        self.assertIn(
+            "a perspective is listed here ONLY after its Phase R2b Claude "
+            "fallback",
+            norm,
+        )
+        self.assertIn(
+            "has itself been dispatched and produced no `status: "
+            "completed` entry",
+            norm,
+        )
+
+    def test_field_name_root_position_and_empty_rule_unchanged(self):
+        self.assertIn(
+            "List such perspectives under a round-record-root "
+            "`unreviewed_perspectives` field",
+            _norm(self.r5),
+        )
+        self.assertIn(
+            "(present and empty when there are none)", self.r5
+        )
+
+    def test_non_blocking_status_unchanged(self):
+        norm = _norm(self.r5)
+        self.assertIn(
+            "This is disclosure, not a gate: the step still completes "
+            "whenever `residual_critical_high == 0`",
+            norm,
+        )
+
+    def test_committed_round_record_named_as_batch_visible_channel(self):
+        norm = _norm(self.r5)
+        self.assertIn("The committed round record `reviews/round{N}.yaml`", norm)
+        self.assertIn("does not touch", norm)
+        self.assertIn("is the batch-visible channel", norm)
+
+    def test_no_new_gate_id_or_batch_policies_reference_introduced(self):
+        self.assertNotIn("gate_id:", self.r5)
+        self.assertNotIn("batch-policies.yaml", self.text)
+
+
+class TestAC5EvaluatorInputAndRoleNoteWidened(unittest.TestCase):
+    """AC-5: Phase R3a's evaluator input block lists
+    `unreviewed_perspectives`, and Phase R5's `role` note covers both routes
+    to `role: fallback` without adding or redefining any `perspective_runs`
+    field."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.r3a = DocumentFixture.r3a()
+        cls.r5 = DocumentFixture.r5()
+
+    def test_r3a_input_block_lists_unreviewed_perspectives(self):
+        self.assertTrue(_has_exact_token(self.r3a, "unreviewed_perspectives"))
+        norm = _norm(self.r3a)
+        self.assertIn(
+            "the same list Phase R5 records at the round-record root", norm
+        )
+
+    def test_r5_role_note_covers_both_routes_to_fallback(self):
+        norm = _norm(self.r5)
+        self.assertIn("`fallback`", norm)
+        self.assertIn(
+            "whether that was decided at Phase R2 fan-out", norm
+        )
+        self.assertIn(
+            "discovered only after Phase R2b's chain walk exhausted every "
+            "entry",
+            norm,
+        )
+        self.assertIn("R2b's\nmalformed-result case", self.r5)
+
+    def test_role_note_adds_no_new_perspective_runs_field(self):
+        # The role vocabulary itself (primary/fallback/evaluator) is
+        # unchanged -- no new role value and no new field name introduced.
+        self.assertIn("`role` field: `primary`", self.r5)
+        for forbidden in ["`unreviewed`", "`exhausted`"]:
+            self.assertNotIn(forbidden, self.r5)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,107 @@
+task_id: task0007
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_exhausted_chain_triggers_one_claude_fallback_dispatch
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_old_no_claude_rerun_prohibition_is_gone
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_evaluator_dispatch_happens_only_after_walk_completes
+    red_confirmed: true
+    red_reason: >
+      Stashed the review-phase.md edit only (test edits kept) and re-ran:
+      test_exhausted_chain_triggers_one_claude_fallback_dispatch failed
+      (AssertionError: 'the perspective receives exactly ONE Claude
+      fallback' not found -- pre-edit text still said "the perspective
+      keeps its last skip result -- a skip contribution, not a Claude
+      re-run"); test_old_no_claude_rerun_prohibition_is_gone failed
+      (assertNotIn found the old prohibition sentence still present);
+      test_evaluator_dispatch_happens_only_after_walk_completes failed
+      (AssertionError: 'including any chain-exhaustion Claude fallback'
+      not found).
+  AC-2:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC2FallbackBudgetAndBatching.test_fallback_dispatch_does_not_consume_the_two_hop_budget
+      - tests.test_review_phase_llm_led.TestAC2FallbackBudgetAndBatching.test_perspectives_reaching_exhaustion_state_go_in_one_message
+      - tests.test_review_phase_llm_led.TestAC2FallbackBudgetAndBatching.test_fallback_failure_ends_the_round_unreviewed_but_degrades
+    red_confirmed: true
+    red_reason: >
+      Same stash-and-rerun: all three failed against pre-edit
+      review-phase.md -- 'This dispatch does NOT consume the 2-hop budget
+      above' / 'is dispatched in ONE message (FR9)' / 'the round continues
+      and degrades rather than aborting' were absent from the original
+      R2b walk-rules bullet, which only described the skip-keeping
+      behaviour this task replaces.
+  AC-3:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestProtocolTriggerFramingCoversBothRoutes.test_states_trigger_as_moment_of_decision
+      - tests.test_reviewer_roles_protocol.TestProtocolTriggerFramingCoversBothRoutes.test_still_states_no_second_opinion_alongside_completed_run
+      - tests.test_reviewer_roles_protocol.TestProtocolTriggerFramingCoversBothRoutes.test_old_no_available_harness_entry_phrase_still_present
+      - tests.test_reviewer_roles_protocol.TestProtocolTriggerFramingCoversBothRoutes.test_still_states_never_dispatched_together
+      - tests.test_reviewer_roles_protocol.TestReviewerAgentTriggerFramingCoversBothRoutes.test_states_trigger_as_moment_of_decision
+      - tests.test_reviewer_roles_protocol.TestReviewerAgentTriggerFramingCoversBothRoutes.test_still_states_no_second_opinion_alongside_completed_run
+    red_confirmed: true
+    red_reason: >
+      Stashed review-protocol.md and reviewer.md edits (test edits kept)
+      and re-ran: test_states_trigger_as_moment_of_decision failed on all
+      three subTest phrases ('no chain entry is available at the moment of
+      the decision', 'at fan-out', 'chain walk has exhausted every entry')
+      in BOTH files -- neither pre-edit document mentioned the
+      exhaustion-time route, only "no available harness entry" at a single
+      unqualified moment; test_still_states_no_second_opinion_alongside_completed_run
+      failed in both files (the "never as a second ... opinion alongside
+      one that already completed" sentence did not exist pre-edit).
+  AC-4:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC4UnreviewedPerspectiveDisclosureAfterFallback.test_disclosure_gated_on_fallback_having_been_dispatched
+      - tests.test_review_phase_llm_led.TestAC4UnreviewedPerspectiveDisclosureAfterFallback.test_committed_round_record_named_as_batch_visible_channel
+      - tests.test_review_phase_llm_led.TestAC4UnreviewedPerspectiveDisclosureAfterFallback.test_field_name_root_position_and_empty_rule_unchanged
+      - tests.test_review_phase_llm_led.TestAC4UnreviewedPerspectiveDisclosureAfterFallback.test_non_blocking_status_unchanged
+      - tests.test_review_phase_llm_led.TestAC4UnreviewedPerspectiveDisclosureAfterFallback.test_no_new_gate_id_or_batch_policies_reference_introduced
+    red_confirmed: true
+    red_reason: >
+      Stash-and-rerun on review-phase.md: test_disclosure_gated_on_fallback_having_been_dispatched
+      and test_committed_round_record_named_as_batch_visible_channel both
+      failed against the pre-edit R5 disclosure paragraph (it disclosed any
+      perspective with no `status: completed` entry outright, with no
+      "fallback dispatched first" gating, and never named the committed
+      round record as the batch-visible channel). The other three tests in
+      this AC (field name / root position / empty rule / non-blocking
+      status / no new gate_id) assert INVARIANTS the task plan requires to
+      stay unchanged -- they pass on both the pre- and post-edit text by
+      design (AC-4's own wording: "unchanged"), so they are not themselves
+      red-green proof; the two red-confirmed tests above are what prove
+      this criterion's actual behaviour change.
+  AC-5:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC5EvaluatorInputAndRoleNoteWidened.test_r3a_input_block_lists_unreviewed_perspectives
+      - tests.test_review_phase_llm_led.TestAC5EvaluatorInputAndRoleNoteWidened.test_r5_role_note_covers_both_routes_to_fallback
+      - tests.test_review_phase_llm_led.TestAC5EvaluatorInputAndRoleNoteWidened.test_role_note_adds_no_new_perspective_runs_field
+    red_confirmed: true
+    red_reason: >
+      Stash-and-rerun on review-phase.md: test_r3a_input_block_lists_unreviewed_perspectives
+      failed (the pre-edit Phase R3a input-block bullet list had no
+      `unreviewed_perspectives` entry at all); test_r5_role_note_covers_both_routes_to_fallback
+      failed (the pre-edit `role` note only described "no chain entry was
+      available" with no fan-out/exhaustion distinction). The third test
+      (no new `perspective_runs` field introduced) is an invariant check
+      that passes on both pre- and post-edit text by construction -- it
+      guards against a regression this task must not introduce, not the
+      criterion's own change.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      Not a document assertion -- verified by actually running the three
+      named commands in this task's worktree after the implementation:
+      `python3 -m unittest discover -s tests` (3068 passed, 0 failures,
+      baseline was 3047/0 before this task's edits), `python3
+      em-workflow/scripts/check-plugin-invariants.py .` (all 7 checks
+      PASS, exit 0), `python3
+      em-workflow/hooks/tests/run-destructive-guard.py` (156/156 passed,
+      exit 0). `agent_dispatch_parity` (part of check-plugin-invariants.py)
+      passed, confirming a dispatch site for agents/reviewer.md still
+      exists (it now has two: Phase R2's original branch and the new Phase
+      R2b fallback dispatch). tests/test_codex_reviewer_temp_file_isolation.py
+      and tests/test_review_implement_develop_lock_contracts.py were run
+      individually and both passed unchanged (38/38).

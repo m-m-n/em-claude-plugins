@@ -148,9 +148,9 @@ tasks:
     domains: [api-contract, input-handling, data-persistence]
     complexity: high
     requirements: [FR4, FR5, FR6, FR7, FR13, NFR1, NFR5]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/llm-led-review/task0006
     provenance:
       origin_kind: review
       origin_id: 2473033f751cd158
@@ -169,9 +169,9 @@ tasks:
     domains: [api-contract, external-io, input-handling]
     complexity: high
     requirements: [FR1, FR3, FR9, FR10, FR12, NFR2, NFR3]
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/llm-led-review/task0007
     provenance:
       origin_kind: review
       origin_id: 0113d89b57312c50

@@ -727,5 +727,101 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# task0007 (rework round 1): the Claude reviewer's trigger framing widens to
+# cover both the fan-out-time and the chain-exhaustion-time route.
+#
+# Covers task0007 AC-3 (feature-docs/llm-led-review/tasks/task0007.md):
+# review-protocol.md and agents/reviewer.md state the Claude reviewer's
+# trigger as "no chain entry is available at the moment of the decision --
+# at fan-out, or after the chain walk has exhausted every entry", and keep
+# the constraint that a Claude reviewer and a harness reviewer are never
+# dispatched simultaneously for the same perspective. Both halves are
+# asserted in both files below.
+# ---------------------------------------------------------------------------
+
+MOMENT_OF_DECISION_PHRASES = [
+    "no chain entry is available at the moment of the decision",
+    "at fan-out",
+    "chain walk has exhausted every entry",
+]
+
+
+class TestProtocolTriggerFramingCoversBothRoutes(unittest.TestCase):
+    """AC-3 (review-protocol.md): the fallback trigger is framed as 'no
+    chain entry available at the moment of the decision', covering both the
+    R2 fan-out route and the R2b chain-exhaustion route, and the
+    mutual-exclusivity constraint (never dispatched together / never a
+    second opinion alongside a completed harness run) survives."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PROTOCOL_PATH)
+        cls.normalized = _normalize_whitespace(cls.text)
+
+    def test_states_trigger_as_moment_of_decision(self):
+        for phrase in MOMENT_OF_DECISION_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.normalized)
+
+    def test_still_states_never_dispatched_together(self):
+        self.assertIn("never dispatched together", self.normalized.lower())
+
+    def test_still_states_no_second_opinion_alongside_completed_run(self):
+        self.assertIn(
+            "never runs as a second, parallel opinion", self.normalized
+        )
+
+    def test_old_no_available_harness_entry_phrase_still_present(self):
+        # task0004's AC-1 pinned this phrase; task0007 widens the framing
+        # but must not delete it.
+        self.assertIn("no available harness entry", self.normalized.lower())
+
+
+class TestReviewerAgentTriggerFramingCoversBothRoutes(unittest.TestCase):
+    """AC-3 (agents/reviewer.md): same trigger framing, same
+    mutual-exclusivity constraint, stated in the agent's own body -- while
+    the frontmatter and the protocol-following steps (task0004's frozen
+    hash boundary) stay untouched."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(REVIEWER_AGENT_PATH)
+        cls.normalized = _normalize_whitespace(cls.text)
+
+    def test_states_trigger_as_moment_of_decision(self):
+        for phrase in MOMENT_OF_DECISION_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.normalized)
+
+    def test_still_states_never_run_alongside_a_harness_reviewer(self):
+        self.assertIn(
+            "you never run alongside a harness reviewer", self.normalized
+        )
+
+    def test_still_states_no_second_opinion_alongside_completed_run(self):
+        self.assertIn(
+            "never as a second opinion alongside one that already "
+            "completed",
+            self.normalized,
+        )
+
+    def test_frontmatter_fields_unchanged_by_this_task(self):
+        for line in REVIEWER_FROZEN_FRONTMATTER_LINES:
+            with self.subTest(line=line):
+                self.assertIn(line, self.text)
+
+    def test_protocol_following_steps_still_intact(self):
+        frontmatter_end = self.text.index("---", 3)
+        body = self.text[frontmatter_end:]
+        _assert_section_hash(
+            body,
+            REVIEWER_STEPS_START,
+            None,
+            REVIEWER_STEPS_SHA256,
+            "task0007 (Steps 0-3 unchanged)",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
