@@ -54,7 +54,8 @@ workflow:
   base_commit: 9d21d0898352fbda6be6cd67c65ad0c88cad1acc
   completed_at_commit: 2984f1c556d4d7438be2050d08395e1a87be0d1a
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 2119d3a99b4b5a6fad57bf8fa7f9888e0b225109
 - id: verify
   status: pending
   result: null
@@ -178,8 +179,8 @@ tasks:
       source_ids: [0113d89b57312c50]
       review_round: 1
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
@@ -190,8 +191,8 @@ review:
     performance: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 7
-  needs_rework: true
+  residual_critical_high: 6
+  needs_rework: false
 requirements:
   FR1:
     title: 主レビューを他 LLM が実行する
