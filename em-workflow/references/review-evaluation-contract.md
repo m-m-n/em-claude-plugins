@@ -80,10 +80,10 @@ Root fields:
   orchestrator and for a human reading the round record. Also carries any
   injection-attempt mention (see Untrusted-Input Handling below) and the
   per-perspective coverage statement (see Independent Inspection Duty
-  below): for every perspective dispatched this round, whether the
-  evaluator's own inspection corroborated that perspective's reviewer
-  output — including an empty findings set — or surfaced findings of its
-  own.
+  below): for every perspective dispatched this round — including one
+  whose reviewer returned an empty findings set — one of `corroborated` /
+  `findings` / `not verified — read budget exhausted`, per the three-value
+  status defined in Independent Inspection Duty below.
 - `recommended_action` — one of the closed set `auto_fix` / `another_round`
   / `rework` / `complete`. A value outside this set is treated as absent.
 - `action_rationale` — short prose justification for `recommended_action`.
