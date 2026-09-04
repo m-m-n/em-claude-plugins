@@ -1,10 +1,11 @@
 schema_version: 1
 feature: llm-led-review
 phase: create-plan
-status: dispatching
+status: completed
 generation: 1
-base_revision: 0f41f9a7b653ef8c8bf27bda69cc63bcb0c09fc1
+base_revision: aabc1b55b491d527f1f445dbeeb98dd3566c2366
 last_input_digest: sha256:1f4e42801b42eec270eacd76f345c8258082cfd70ffafe377e3484ad40258565
-active_request_id: create-plan-run-0001
+active_request_id: null
+applied_patch_id: llm-led-review-p0001
 packets: {}
 answers: {}
