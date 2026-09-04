@@ -132,13 +132,18 @@ take the FIRST entry whose harness is available (`codex_available` for
 reviewer for this perspective:
 
 - `{harness: codex}` → `Task(subagent_type="em-workflow:codex-reviewer")`
-- `{harness: litellm, model: M}` →
+- `{harness: litellm, model: M}` → before dispatching, validate `M` against
+  the vertex-review plugin's litellm-harness skill's allow-list of known
+  litellm models. If `M` is not on that allow-list, treat this chain entry
+  as unavailable (fail closed) and continue the chain walk — do not dispatch
+  with an unvalidated or substituted value. Otherwise
   `Task(subagent_type="vertex-review:vertex-reviewer")` with `model: M`
   added to the input block (a separately-installed plugin; the block is
   otherwise identical — that reviewer fetches diff/file data itself exactly
   like the codex reviewer). `M` is passed through verbatim from the
-  registry; never substitute a model of your own choosing, and never
-  dispatch this reviewer without a `model`.
+  registry only after passing the allow-list check;
+  never substitute a model of your own choosing, and never dispatch this
+  reviewer without a `model`.
 
 **No entry of the chain available** → dispatch
 `Task(subagent_type="em-workflow:reviewer")` instead. The two branches are
@@ -258,7 +263,12 @@ before any Task call.
 A reviewer that fails at the **harness** level never reaches this table: the
 Task call itself comes back `is_error`, a permission denial lands in its
 output, or the Codex wrapper script never executed, so there is no
-`skip_reason` to route on. That is not a chain-walk case — diagnose it per
+`skip_reason` to route on. That is not a chain-walk case, but the
+perspective still has no completed run and no further chain entry to try, so
+— separately from diagnosing the harness failure — it receives the same ONE
+Claude fallback dispatch as the malformed-result and chain-exhaustion cases
+above, issued after this determination and never concurrently with a harness
+reviewer. Diagnose the harness-level cause per
 `references/workflow-failure-recovery.md` (dispatch `workflow-doctor` over
 the failed agents' JSONL logs) and include the diagnosis in the R6 report
 rather than silently recording the perspective as missing.
@@ -367,13 +377,21 @@ its `dismissed_sites` (`references/review-evaluation-contract.md`). A site
 matched by neither is lifted into `findings` on its own: the reviewer run's
 own text, that run's orchestrator-assigned source identity, the dispatching
 perspective as `category`, and confidence `60` — nothing else about the
-evaluation is discarded, and no relabelling occurs. A round where every
-reviewer critical/high site is legitimately dismissed lifts nothing and the
-evaluation is kept as-is: dismissing everything through `dismissed_sites`
-is an ordinary triage outcome, not an omission signal. This floor checks a
-completeness property the evaluator's own contract declares
-(`dismissed_sites`); it never re-judges the evaluation's content, and it
-never discards the evaluation itself.
+evaluation is discarded, and no relabelling occurs. A lifted entry is not
+inserted directly; it is first taken through the same per-finding gates as
+every other finding — step 1's `file` lexical check and existence check,
+step 4's 4096-byte cap, step 5's `stable_id`/`coupling_id` recomputation,
+and step 7's confidence corrections applied on top of the floor's base
+confidence `60` — the same discipline the evaluator-failure degradation
+below applies to reviewer self-reports. A site whose `file` fails step 1 is
+not lifted; the orchestrator discloses that it was dropped at this stage
+instead of silently omitting it. A round where every reviewer critical/high
+site is legitimately dismissed lifts nothing and the evaluation is kept
+as-is: dismissing everything through `dismissed_sites` is an ordinary
+triage outcome, not an omission signal. This floor checks a completeness
+property the evaluator's own contract declares (`dismissed_sites`); it
+never re-judges the evaluation's content, and it never discards the
+evaluation itself.
 
 **Evaluator-failure degradation** (IMPLEMENTATION.md D4/D8): the
 orchestrator does NOT abort or skip the round when either of exactly two
@@ -606,6 +624,11 @@ findings:                    # post-dedupe, post-sanitize; FULL detail
     confidence: 95
     resolution: fixed        # fixed | declined | deferred | unresolved
     resolution_reason: "auto-applied loop 1"   # declined は理由必須
+dismissed_sites:             # evaluator's dismissed critical/high sites; present and empty when there are none
+  - file: src/bar.go
+    line: 88
+    run_id: {run_id}
+    reason: "..."
 auto_fix:
   loops_run: 2
   applied_total: 3
@@ -630,6 +653,13 @@ Phase R3b's accountability floor had to lift one or more sites into
 D8) — `status: failed` is reserved for the two structural degradation
 triggers of Phase R3b.
 
+The round record persists the evaluation's `dismissed_sites` verbatim
+(`file`, `line`, `run_id`, `reason` per entry) at the round-record root,
+present and empty when there are none — the same `dismissed_sites` the
+accountability floor in Phase R3b checks against. This is disclosure only:
+it introduces no new gate identifier and never affects the completion gate
+below.
+
 develop-駆動: update workflow.yaml `review` block (rounds_completed,
 perspectives, residual_critical_high, needs_rework, status), then commit
 both the round record and the workflow.yaml update in the same step —
@@ -652,8 +682,9 @@ completion blocker): among perspectives actually dispatched this round in
 Phase R2 (excluding any `requires_spec` perspective skipped there because
 `spec_available == false` — no dispatch, no `perspective_runs` entry, nothing
 to disclose), a perspective is listed here ONLY after its Phase R2b Claude
-fallback (the chain-exhausted case, or the malformed-result case) has itself
-been dispatched and produced no `status: completed` entry — the common case
+fallback (the chain-exhausted case, the malformed-result case, or the
+harness-level-failure case) has itself been dispatched and produced no
+`status: completed` entry — the common case
 of a perspective ending the round with zero completed runs is now
 structurally closed by that fallback dispatch rather than merely disclosed.
 List such perspectives under a round-record-root `unreviewed_perspectives`
@@ -706,6 +737,10 @@ output.
 Rendering rules: skip-aware perspective sections, summary
 table (severity × counts × confidence × auto-fixed × residual),
 confidence-scored integrated findings, per-loop auto-fix stats, and 推奨事項.
+Each critical/high entry of the round record's `dismissed_sites` is
+rendered as one line (file, line, reason) in its own subsection — an
+interactive-mode-only surfacing of Phase R5's `dismissed_sites`
+disclosure, not a new gate.
 タメ語・女性・体言止めなし。develop-駆動では末尾に round 記録のパスと
 workflow.yaml の review サマリ更新結果を1行ずつ添える。
 
