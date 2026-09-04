@@ -1,0 +1,121 @@
+task_id: task0002
+baseline_failures:
+  - test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC1PhaseR2PrimaryReviewerDispatch.test_walks_primary_chain_from_the_front
+      - tests.test_review_phase_llm_led.TestAC1PhaseR2PrimaryReviewerDispatch.test_codex_and_litellm_primary_dispatch_present
+      - tests.test_review_phase_llm_led.TestAC1PhaseR2PrimaryReviewerDispatch.test_claude_reviewer_dispatched_only_on_no_available_entry_branch
+      - tests.test_review_phase_llm_led.TestAC1PhaseR2PrimaryReviewerDispatch.test_exactly_one_primary_reviewer_per_perspective_stated
+      - tests.test_review_phase_llm_led.TestAC1PhaseR2PrimaryReviewerDispatch.test_claude_and_harness_reviewer_are_mutually_exclusive
+      - tests.test_review_phase_llm_led.TestAC1PhaseR2PrimaryReviewerDispatch.test_no_second_dispatch_when_cross_validation_fires_r1
+      - tests.test_review_phase_llm_led.TestAC1PhaseR2PrimaryReviewerDispatch.test_document_has_no_surviving_double_run_or_agreement_description
+    red_confirmed: true
+    red_reason: >-
+      Before editing, self.r2 was still the old Phase R2 text (Claude
+      reviewer launched unconditionally + an optional parallel cross-model
+      dispatch when cross_validation fired). AssertionError:
+      'mutually exclusive' not found in R2; 'primary_chain' not found;
+      test_claude_reviewer_dispatched_only_on_no_available_entry_branch
+      failed because CLAUDE_REVIEWER_DISPATCH appeared unconditionally, not
+      gated behind a "No entry of the chain available" sentence; the
+      forbidden-literal scan found "gets the cross-model double-run too"
+      and "Confidence: claude+cross-model (any harness) ..." still present.
+  AC-2:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_applies_to_r2_primary_reviewer_dispatch
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_exactly_three_retryable_skip_reasons_unchanged
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_two_fallback_cap_unchanged
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_one_message_per_hop_rule_kept
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_exhausted_chain_keeps_skip_not_a_claude_rerun
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_evaluator_dispatch_happens_only_after_walk_completes
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_harness_level_failure_carveout_kept
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: "Applies to every perspective whose R2
+      primary-reviewer dispatch returned" not found (old text said
+      "R2 cross-model dispatch"); "a skip contribution, not a Claude
+      re-run" not found (old text said "and the Claude reviewer stands
+      alone"); "dispatched only after every selected" / "chain walk has
+      finished" not found anywhere in R2b (the evaluator-timing sentence
+      did not exist before this task).
+  AC-3:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC3PhaseR3aAndEvaluatorAgent.test_r3a_heading_pinned
+      - tests.test_review_phase_llm_led.TestAC3PhaseR3aAndEvaluatorAgent.test_evaluator_dispatched_exactly_once_per_round
+      - tests.test_review_phase_llm_led.TestAC3PhaseR3aAndEvaluatorAgent.test_every_evaluator_input_field_name_present
+      - tests.test_review_phase_llm_led.TestAC3PhaseR3aAndEvaluatorAgent.test_evaluator_agent_file_exists
+      - tests.test_review_phase_llm_led.TestAC3PhaseR3aAndEvaluatorAgent.test_evaluator_agent_frontmatter_pinned
+      - tests.test_review_phase_llm_led.TestAC3PhaseR3aAndEvaluatorAgent.test_evaluator_agent_has_no_task_assignment_heading
+      - tests.test_review_phase_llm_led.TestAC3PhaseR3aAndEvaluatorAgent.test_evaluator_agent_does_not_restate_the_output_object_field_list
+    red_confirmed: true
+    red_reason: >-
+      ValueError: substring '## Phase R3a: Evaluation (single Opus
+      evaluator)' not found (the document still had only the old
+      '## Phase R3: Aggregate, sanitize, score' heading), so
+      DocumentFixture.r3a() raised before any assertion ran;
+      test_evaluator_agent_file_exists failed because
+      em-workflow/agents/review-evaluator.md did not exist yet.
+  AC-4:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC4PhaseR3bMechanicalGates.test_r3b_heading_pinned
+      - tests.test_review_phase_llm_led.TestAC4PhaseR3bMechanicalGates.test_seven_ordered_checks_present_in_order
+      - tests.test_review_phase_llm_led.TestAC4PhaseR3bMechanicalGates.test_category_never_relabeled_forced_comprehensive_relabel_removed
+      - tests.test_review_phase_llm_led.TestAC4PhaseR3bMechanicalGates.test_normalization_formula_kept_verbatim
+      - tests.test_review_phase_llm_led.TestAC4PhaseR3bMechanicalGates.test_only_two_confidence_corrections_remain
+      - tests.test_review_phase_llm_led.TestAC4PhaseR3bMechanicalGates.test_evaluator_failure_degradation_stated
+      - tests.test_review_phase_llm_led.TestAC4PhaseR3bMechanicalGates.test_recommended_action_advisory_stated
+    red_confirmed: true
+    red_reason: >-
+      ValueError: substring '## Phase R3b: Mechanical gates on the
+      evaluation' not found (heading did not exist); once the fixture was
+      pointed at the old Phase R3 body directly during drafting, the
+      forced-relabel assertion failed because "force `category =
+      comprehensive`" was still present, and the agreement-table
+      assertion failed because "Confidence: claude+cross-model (any
+      harness) same perspective same_site" was still present.
+  AC-5:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC5NoNewGateInTheNewPath.test_no_askuserquestion_dispatch_in_the_new_path
+      - tests.test_review_phase_llm_led.TestAC5NoNewGateInTheNewPath.test_no_gate_id_declaration_in_the_new_path
+      - tests.test_review_phase_llm_led.TestAC5NoNewGateInTheNewPath.test_r3b_states_writes_commits_gates_stay_orchestrator_exclusive
+    red_confirmed: true
+    red_reason: >-
+      ValueError propagated from DocumentFixture.r3b() (heading absent)
+      before the R3b-specific assertion could run; the evaluator-failure
+      degradation and recommended_action-is-advisory statements this AC
+      requires did not exist anywhere in the pre-task document.
+  AC-6:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC6PhaseR5RoleVocabulary.test_role_vocabulary_documented
+      - tests.test_review_phase_llm_led.TestAC6PhaseR5RoleVocabulary.test_perspective_runs_example_has_role_and_evaluator_entry
+      - tests.test_review_phase_llm_led.TestAC6PhaseR5RoleVocabulary.test_source_claude_now_means_fallback
+      - tests.test_review_phase_llm_led.TestAC6PhaseR5RoleVocabulary.test_round_record_path_and_file_name_unchanged
+      - tests.test_review_phase_llm_led.TestAC6PhaseR5RoleVocabulary.test_downstream_read_fields_unchanged
+      - tests.test_review_phase_llm_led.TestAC6PhaseR5RoleVocabulary.test_d7_fix_commit_lock_literals_present
+      - tests.test_review_phase_llm_led.TestAC6PhaseR5RoleVocabulary.test_d7_r6_withheld_report_body_unchanged
+      - tests.test_review_phase_llm_led.TestAC6PhaseR5RoleVocabulary.test_d7_r5_rework_ordering_citations_unchanged
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: "role: primary" / "role: fallback" / "role:
+      evaluator" not found in Phase R5's perspective_runs example (the
+      old example had five rows, all {perspective, source, status[,
+      skip_reason][, model]} with no role key and no evaluator row);
+      "`source: claude` on a perspective entry now means the fallback
+      run" not found anywhere in R5.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-7 is the meta-criterion that this module itself exists and
+      asserts AC-1..AC-6, plus that the two commands
+      (`python3 -m unittest discover -s tests` and
+      `python3 em-workflow/scripts/check-plugin-invariants.py .`) exit 0.
+      Not independently red/green-able as a unit test (a suite cannot
+      assert its own full-suite outcome); verified by actually running
+      both commands after implementation -- both exited 0 (2919 tests
+      passed; all seven invariant checks PASS, including
+      agent_dispatch_parity now that em-workflow/agents/review-
+      evaluator.md exists and is dispatched from Phase R3a).
