@@ -1,0 +1,19 @@
+schema_version: 1
+feature: llm-led-review
+records:
+  - question_id: create-spec.command-approval
+    packet_id: null
+    answered_at: "2026-09-04T14:19:00+09:00"
+    source: batch-decision-table
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "auto_record"
+    normalized_answer: "auto_record"
+    resolution_note: >-
+      gate: create-spec.command-approval; policy: batch-policies.yaml
+      action auto_record; refusal_patterns: none matched.
+      Auto-approved command strings (newly recorded this run):
+      `python3 em-workflow/scripts/check-plugin-invariants.py .`.
+      Already present in the approval store before this run:
+      `python3 -m unittest discover -s tests`,
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py`.
