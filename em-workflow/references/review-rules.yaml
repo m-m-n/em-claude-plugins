@@ -23,9 +23,11 @@
 # set (floor + Layer 2 discretionary additions) includes security. Layer 1
 # computes a provisional value from this table; the orchestrator re-evaluates
 # it after Layer 2 (review-phase.md R1), so a discretionarily-added security
-# perspective also fires it. When it fires, each selected perspective whose
-# reviewers.yaml `cross_validation` chain has an available harness entry is
-# double-run (claude + that entry's model) for agreement scoring.
+# perspective also fires it. The flag is recorded in workflow.yaml
+# review.plan.cross_validation and passed to the round evaluator as a
+# high-intensity marker; it no longer adds a second reviewer dispatch,
+# because every selected perspective already runs a non-Claude primary
+# reviewer.
 #
 # domains vocabulary (fixed, 8 values — planner assigns from these only):
 #   auth / input-handling / data-persistence / external-io / concurrency /
