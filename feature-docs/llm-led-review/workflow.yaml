@@ -115,7 +115,7 @@ tasks:
     domains: [api-contract, input-handling]
     complexity: high
     requirements: [FR1, FR2, FR3, NFR2, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/llm-led-review/task0004
   task0005:
