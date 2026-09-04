@@ -201,14 +201,17 @@ nor schema-valid per the Phase R0-resolved `schema_path`
 validation, or the Task output is truncated/unparseable as JSON — is not a
 skip and is not routed through this table. Record that run in
 `perspective_runs` with `status: failed` (not `skipped`, not `completed`);
-do not invent a `skip_reason` for it. A perspective whose only run this round
-is `status: failed` has no `perspective_runs` entry with `status: completed`,
-so Phase R5's Unreviewed-perspective disclosure lists it in
+do not invent a `skip_reason` for it, and do not dispatch an ADDITIONAL
+harness reviewer from R2b — the walk does not continue past a malformed
+result. The perspective now has no completed run and no further chain entry
+to try, so it receives the same ONE Claude fallback dispatch as the
+chain-exhaustion case below, issued after this determination and never
+concurrently with a harness reviewer. Only when that fallback dispatch also
+fails to produce a completed run does the perspective end up in Phase R5's
 `unreviewed_perspectives` — that disclosure is record-keeping, not a
 completion blocker, so it does NOT by itself hold the step open. Run
 `references/workflow-failure-recovery.md`'s workflow-doctor when the
-harness-level cause needs diagnosing, and report it in Phase R6; do not
-dispatch an additional reviewer from R2b.
+harness-level cause needs diagnosing, and report it in Phase R6.
 
 A result that IS schema-valid — including a well-formed empty `findings: []`
 with `skipped: false`, `skip_reason: null` — is a substantive completed
@@ -221,20 +224,32 @@ Walk rules:
 - Resume after the chain index R2 recorded; skip entries whose harness is
   unavailable (that costs no hop) and entries excluded by the table above.
 - **At most 2 fallback dispatches per perspective**, which walks a 3-entry
-  chain to its end. Exhausted chain, or no eligible entry → the perspective
-  keeps its last skip result — a skip contribution, not a Claude re-run: the
-  Claude fallback branch is decided in R2 from availability, never from a
-  skip.
-- The LAST dispatched result is this perspective's primary-reviewer result
+  chain to its end. Exhausted chain, or no eligible entry — every entry has
+  proven unavailable: each returned a retryable skip, or was excluded as
+  unavailable — the perspective receives exactly ONE Claude fallback
+  dispatch, `Task(subagent_type="em-workflow:reviewer")`, issued after the
+  walk and never concurrently with a harness reviewer, and never as a second
+  opinion alongside one that already completed. This dispatch does NOT
+  consume the 2-hop budget above (that budget counts harness dispatches
+  only), and every perspective reaching this state in the same round —
+  together with any perspective reaching the malformed-result state above at
+  the same point — is dispatched in ONE message (FR9). A perspective whose
+  fallback dispatch itself skips or fails has no further reviewer to try:
+  it ends the round unreviewed for this perspective (Phase R5's
+  `unreviewed_perspectives`), and the round continues and degrades rather
+  than aborting.
+- The LAST dispatched result — including the chain-exhaustion Claude
+  fallback, when one was dispatched — is this perspective's reviewer result
   for Phase R3a, in place of the skips that preceded it.
 - Each hop depends on the previous result, so hops are sequential — but
   perspectives are independent: all perspectives falling back at the same hop
   go in ONE message.
 - The evaluator (Phase R3a) is dispatched only after every selected
-  perspective's chain walk has finished. This chain-walk mechanism (R2b as a
-  whole) applies identically to Phase R4's in-loop re-reviews; only the
-  evaluator dispatch at the end of the walk is skipped there (Phase R3a,
-  Phase R4 Loop termination).
+  perspective's chain walk — including any chain-exhaustion Claude fallback
+  dispatch — has finished. This chain-walk mechanism (R2b as a whole)
+  applies identically to Phase R4's in-loop re-reviews; only the evaluator
+  dispatch at the end of the walk is skipped there (Phase R3a, Phase R4 Loop
+  termination).
 
 This is the only cross-validation step that runs after seeing another
 reviewer's result — every dispatch in R2 is availability-based and decided
@@ -272,6 +287,11 @@ R3b's evaluator-failure degradation).
   `model` for litellm runs.
 - `reviewer_outputs` — one entry per run, carrying `run_id` plus that run's
   verbatim reviewer output.
+- `unreviewed_perspectives` — the same list Phase R5 records at the
+  round-record root (IMPLEMENTATION.md Shared Components
+  "`unreviewed_perspectives` (rework round 1)"): perspectives whose Claude
+  fallback (Phase R2b) has been dispatched and produced no completed run;
+  present and empty when there are none.
 
 `changed_files` and `spec_path` are normalized to project_root-based
 absolute paths exactly as for reviewers (Phase R2). Every run's verbatim
@@ -575,12 +595,15 @@ rework_required: false       # true → implement へ差し戻し
 ```
 
 `perspective_runs` entries gain a `role` field: `primary` (a `primary_chain`
-entry ran for that perspective), `fallback` (no chain entry was available;
-the entry's `source` is `claude`), or `evaluator` (the round's single
-evaluator run — the only entry with no `perspective` field). `source:
-claude` on a perspective entry now means the fallback run (IMPLEMENTATION.md
-D1); it is never a second, parallel run alongside a harness reviewer for the
-same perspective.
+entry ran for that perspective), `fallback` (the entry's `source` is
+`claude`; no chain entry was available — whether that was decided at Phase
+R2 fan-out from the availability probes, or discovered only after Phase
+R2b's chain walk exhausted every entry, or reached via R2b's
+malformed-result case), or `evaluator` (the round's single evaluator run —
+the only entry with no `perspective` field). `source: claude` on a
+perspective entry now means the fallback run — whichever of those routes
+triggered it (IMPLEMENTATION.md D1, D9); it is never a second, parallel run
+alongside a harness reviewer for the same perspective.
 
 develop-駆動: update workflow.yaml `review` block (rounds_completed,
 perspectives, residual_critical_high, needs_rework, status), then commit
@@ -603,16 +626,21 @@ offered interactively.
 completion blocker): among perspectives actually dispatched this round in
 Phase R2 (excluding any `requires_spec` perspective skipped there because
 `spec_available == false` — no dispatch, no `perspective_runs` entry, nothing
-to disclose), any perspective whose entries this round are all `status:
-skipped` or `status: failed` — no `status: completed` entry at all (the R2b
-chain-exhausted case, or an R2b malformed-result case) — has not actually
-been reviewed this round regardless of its finding count. List such
-perspectives under a round-record-root `unreviewed_perspectives` field
-(present and empty when there are none). This is disclosure, not a gate: the
-step still completes whenever `residual_critical_high == 0` above holds, and
-no new gate identifier or batch non-packet gates table entry is introduced
-for it. Interactive mode surfaces the same list in the Phase R6 report so a
-human is not silently left unaware that a perspective went unreviewed.
+to disclose), a perspective is listed here ONLY after its Phase R2b Claude
+fallback (the chain-exhausted case, or the malformed-result case) has itself
+been dispatched and produced no `status: completed` entry — the common case
+of a perspective ending the round with zero completed runs is now
+structurally closed by that fallback dispatch rather than merely disclosed.
+List such perspectives under a round-record-root `unreviewed_perspectives`
+field (present and empty when there are none). This is disclosure, not a
+gate: the step still completes whenever `residual_critical_high == 0` above
+holds, and no new gate identifier or batch non-packet gates table entry is
+introduced for it. The committed round record `reviews/round{N}.yaml` —
+which `references/batch-mode.md`'s output-suppression discipline explicitly
+does not touch (Phase R6) — is the batch-visible channel that carries this
+disclosure; interactive mode additionally surfaces the same list in the
+Phase R6 report so a human is not silently left unaware that a perspective
+went unreviewed.
 
 Rework path (interactive): when the user selects rework, follow the fixed
 ordering `references/rework-task-synthesis.md` Section 10 states for
