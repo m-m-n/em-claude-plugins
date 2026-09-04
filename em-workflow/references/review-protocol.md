@@ -30,8 +30,13 @@ reviewer: the harness reviewer — `em-workflow:codex-reviewer` or
 `vertex-review:vertex-reviewer`, whichever entry the perspective's registry
 chain resolves to — runs as the **main review** for that perspective.
 `em-workflow:reviewer` (the Claude reviewer) runs only as the **fallback**,
-when that perspective's chain has no available harness entry. The two are
-never dispatched together for the same perspective.
+when that perspective's chain has no available harness entry — no chain
+entry is available at the moment of the decision, whether that decision is
+made at fan-out or after the chain walk has exhausted every entry
+(`references/review-phase.md` Phase R2 / Phase R2b). The two are never
+dispatched together for the same perspective, and the Claude reviewer never
+runs as a second, parallel opinion alongside a harness reviewer that already
+completed.
 
 The perspective skill owns WHAT to flag / WHAT NOT to flag. This protocol owns
 everything else: input handling, target resolution, budget, severity, output
