@@ -1,0 +1,215 @@
+schema_version: 1
+feature: orphaned-implementer-recovery
+created: 2026-09-05
+base_branch: main
+goal: |
+  em-workflow: 前セッションで消失した implementer（孤児 launched）を自動復旧する
+
+  指示メモ: 既存 feature orphaned-implementer-recovery（ブランチ em-workflow/orphaned-implementer-recovery/integration）を再開する。新しい feature 名を作らない。
+
+  ## やりたいこと（必須）
+  em-workflow の implement フェーズで、journal 最終イベントが `launched` のまま記録されたエージェントのセッションがもう存在しない task（孤児 launched）を、orchestrator 自身が `failed`（reason: `orphaned`）として journal に記録できるようにする。これにより既存の I.2.c の failed 扱いと、batch の `implement.failed-task` ポリシー（kept worktree + resume guard で 1 回 retry）に乗せる。
+
+  ## 背景・なぜ（必須）
+  2026-09-04、ディスパッチャの再起動で implementer（task0001）がコミット直前に kill された。次の run（22:59 JST）の wake フェーズ reconcile は次の経路をたどった。
+  - journal 最終イベント `launched`、task worktree と branch は両方存在、`agents.jsonl` の agent は現セッションに無い、と正しく候補を検出した
+  - しかし journal に `failed` を書けるのは harness の stop tool 経由の recorder だけで、前セッションの agent には stop tool が `No task found` を返す
+  - `references/implement-phase.md` I.2.b の Residual 規定どおり journal は不変、task は in-flight 扱い、route-back ゲートが block、gate-rejected terminal で implement が `failed` になった
+  - batch の `implement.failed-task`（1 回自動 retry）は journal が `failed` のときしか発動しないため、ここでは効かなかった
+  - task0001 の worktree には未コミット差分（`crates/term_core/src/ring_buffer/tests.rs` +73/-6）が残っていて、I.2.a の resume guard で拾える状態だった
+  「`launched` を書き換えない」規律の目的は二重起動の防止なので、記録されたセッションの消滅が証明できる場合に限って orchestrator が terminal イベントを書いてよい、という例外を設ける。
+
+  ## 受け入れ条件 / 完了の定義（必須）
+  - [ ] launch 時に `agents.jsonl` へ orchestrator の `session_id` を記録する
+  - [ ] I.2.b の reconcile で、候補 task（`launched` + worktree と branch あり + Agent index に live なし）の記録 `session_id` が現セッションと異なり、かつそのセッションの transcript（`~/.claude/projects/{encoded-cwd}/{session_id}.jsonl`）に現セッションの開始より新しい活動が無いと確認できたら、journal に `failed` を reason `orphaned` 付きで記録する
+  - [ ] `orphaned` な `failed` は I.2.c の通常の failed 扱いになり、batch では `implement.failed-task` の retry 1 回（kept worktree、resume guard）が発動する。interactive では retry / route-back / abort の三択が出る
+  - [ ] `session_id` が無い、同一セッション、終端を確認できない、のいずれかの場合は従来どおり Residual（journal 不変、gate-rejected terminal）を維持する
+  - [ ] `references/implement-phase.md` の I.2.b Recovery / Residual と「Supporting cast」の journal 書き込み規則、`references/workflow-schema.md` の journal イベント定義を更新する
+  - [ ] 検証: unittest の fixture（journal.jsonl / agents.jsonl / task worktree と branch / transcript）で `launched` のまま agent が消えた状態を再現し、`failed`（reason `orphaned`）が 1 回だけ書かれること、条件を満たさない場合に Residual へ退化すること、`failed` 後の launch が launch guard で許可されることを確認する。実 develop 実行は要求しない
+
+  ## スコープ外（任意）
+  - implementer が fmt / テスト通過時点で WIP コミットする運用（別途検討）
+  - failed の理由分類による停止条件 3 の回避（別タスクで起票）
+  - ディスパッチャ側の graceful shutdown（loop-develop に別タスクで起票）
+
+  ## 制約・前提（任意）
+  - 二重起動防止の規律を崩さない。セッション消滅が証明できたときだけ例外を適用する
+  - journal イベントの後方互換を保つ（`session_id` の無い既存 `agents.jsonl` は従来経路）
+  - feature 名は `orphaned-implementer-recovery`。既存ブランチ `em-workflow/orphaned-implementer-recovery/integration` と worktree を再開し、新しい feature 名を作らない
+  - journal への `failed`（reason `orphaned`）の書き込みは `em-workflow/scripts/` の新ヘルパー経由で行う。`merge-task.sh` と同じ journal.jsonl への排他 flock、replay-then-append、最終イベントが terminal なら no-op
+  - `agents.jsonl` の「task status のソースにしない」規律は維持し、I.2.b の orphan recovery が参照する session identity のみを例外として SSOT に明記する。`session_id` が無い entry は従来の Residual 経路
+  - `session_id` は entry の独立フィールドに置き、`agent_ids` 候補リストには入れない
+  - `agents.jsonl` から読んだ `session_id` は比較値と transcript パスのファイル名要素にのみ使い、形式検証を通してからパスに補間する。transcript パスは `~/.claude/projects/` 配下に収まることを確認してから読む
+  - design step はスキップする（UI 面が無い）
+
+  ## 人間が決定済みの 3 件（再開条件、2026-09-05 10:36 JST に解消）
+  1. journal-write-mechanism: 新しい `em-workflow/scripts/` ヘルパー（merge-task.sh 前例の flock + replay-then-append、単体テスト可能）を採用する
+  2. session-termination-proof: transcript 証拠のみ（session_id 不一致 かつ 現セッション開始より新しい活動が無い）を終端の証明とする
+  3. agent-index-authority: `agents.jsonl` の不変条件を維持しつつ、I.2.b の orphan recovery が参照する session identity のみを例外として明記する
+
+parent_branch: em-workflow/orphaned-implementer-recovery/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: c09bd8cb3a18a1e0d65a5f36377c16587196de78
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "UI 面が無い。変更対象は Markdown SSOT ドキュメント・Python hook・em-workflow/scripts/ の新ヘルパー・tests/ 配下の unittest のみで、視覚的成果物もデザインシステム候補も存在しない"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "launch 時の session_id 記録"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-6]
+  FR2:
+    title: "孤児 launched の検出条件"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-3]
+  FR3:
+    title: "journal への failed(reason: orphaned) 書き込みヘルパー"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-2]
+  FR4:
+    title: "orphaned failed の下流合流"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR5:
+    title: "条件を満たさない場合の Residual 退化"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3, TS-5]
+  FR6:
+    title: "session_id の形式検証と transcript パスの封じ込め"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR7:
+    title: "SSOT ドキュメントの更新"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: "agents.jsonl の権限範囲の明記"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: "後方互換"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  NFR1:
+    title: "二重起動防止規律の維持"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "journal 追記の排他規律"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "hook の fail-open 規律の維持"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "テストの依存制約"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "テスト配置と命名"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: "プラグイン version bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: "SSOT の重複禁止規律"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
