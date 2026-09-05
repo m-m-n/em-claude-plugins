@@ -1,0 +1,21 @@
+schema_version: 1
+feature: orphaned-implementer-recovery
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 7aa24fb81787ec8e8a21a08089dc13bec5a363e8
+last_input_digest: "sha256:7b5bdfe4696af1e0a75be6456b324a1c519b0bd06c342ea8a43bf0c07b5bd0d8"
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: "sha256:7b5bdfe4696af1e0a75be6456b324a1c519b0bd06c342ea8a43bf0c07b5bd0d8"
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
