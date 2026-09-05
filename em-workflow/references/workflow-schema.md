@@ -309,8 +309,15 @@ diagnosis). Its writer set is unambiguous: `merge-task.sh` (the sole writer
 of `merged`) and exactly the journal-writing hooks — `queue_launch_guard.py`
 (the sole writer of `launched`), `queue_failure_net.py`, and
 `queue_taskstop_net.py` (both write `failed`, independently, each idempotent
-against an already-terminal last event). No other hook, and never the
-orchestrator, appends to `journal.jsonl`; in particular the Stop hook
+against an already-terminal last event) — plus one narrowly-scoped
+exception, `em-workflow/scripts/journal-append-failed.py`: invoked only by
+the orchestrator's I.2.b orphan-recovery attempt
+(`em-workflow/references/implement-phase.md`'s I.2.b Recovery / Residual
+block — cited here as the owning section, not restated), it appends
+`failed` with reason `orphaned`, an additive value of the existing `failed`
+reason field (no existing event name or reason is renamed or removed). No
+other hook, and never the orchestrator directly, appends to `journal.jsonl`
+outside this one exception; in particular the Stop hook
 (`queue_stop_guard.py`) only reads it and the agent index writer
 (`queue_agent_index.py`, next paragraph) never touches it at all.
 `workflow.yaml` stays the LLM-managed summary and SSOT; no script or hook
@@ -327,8 +334,14 @@ em-workflow task identity that launched it, written by
 stop. It is NOT part of the journal contract above and must never be
 treated as a second authoritative state file: it carries no status
 semantics of its own, may be absent or stale, and its absence only
-degrades the stop-tool recorder to a no-op. `journal.jsonl` alone is the
-authoritative raw-event record; `agents.jsonl` exists solely to make a
+degrades the stop-tool recorder to a no-op. The sole exception to "no
+status semantics of its own" is the session identity (`session_id`) it
+also carries per launch:
+`em-workflow/references/implement-phase.md`'s I.2.b Recovery / Residual
+block (cited here, not restated) reads it — a comparison value only, never
+a status value and never a match candidate on the stop side — to judge
+whether the launching session is provably gone. `journal.jsonl` alone is
+the authoritative raw-event record; `agents.jsonl` exists solely to make a
 stop resolvable back to a task. Full contract (candidate-list format,
 matching rule, staleness/supersede rule): IMPLEMENTATION.md's Agent index
 contract.
