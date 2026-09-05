@@ -194,6 +194,8 @@ COMMIT_DOCS_SH_PATH = PLUGIN_ROOT / "scripts" / "commit-docs.sh"
 DEVELOP_SKILL_PATH = PLUGIN_ROOT / "skills" / "develop" / "SKILL.md"
 PLUGIN_MANIFEST_PATH = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
 MARKETPLACE_PATH = PLUGIN_ROOT.parent / ".claude-plugin" / "marketplace.json"
+WORKFLOW_SCHEMA_PATH = PLUGIN_ROOT / "references" / "workflow-schema.md"
+README_PATH = PLUGIN_ROOT / "README.md"
 
 I2B_HEADING = "### I.2.b: Wake phase"
 I2C_HEADING = "### I.2.c: Failed handling"
@@ -649,9 +651,120 @@ BATCH_MODE_STATUS_WRITTEN_FAILED_PHRASE = (
 )
 BATCH_MODE_WRITE_COMMITTED_PHRASE = "that write is committed"
 
+# --- task0004 (orphaned-implementer-recovery): module-level constants for
+# the new I.2.b step 1 orphan-recovery owning block (IMPLEMENTATION.md
+# SC1-SC6, D1-D3), the Supporting cast Journal bullet's and the
+# Stale-`launched` caveat's new exception wording, the Agent index writer
+# bullet's added `session_id` field, workflow-schema.md's writer-set and
+# agents.jsonl paragraphs, em-workflow/README.md's journal description, and
+# the I.2.c orphaned-failed convergence statement. Each constant is read by
+# its own positive test below -- the literal is never spelled twice (same
+# Contract 1 pattern as elsewhere in this module). This content is
+# genuinely new (not a rewrite of an existing sentence), so there is no
+# paired pre-change sample to run a negative proof against; the red/green
+# discipline instead rests on each test having been run and observed to
+# fail before the corresponding prose existed (recorded in this task's own
+# tests.yaml, not reproduced here).
+
+# I.2.b step 1 orphan-recovery block (AC-1; FR2, FR3, FR7, NFR7).
+ORPHAN_CANDIDATE_REUSE_PHRASE = (
+    "for exactly the not-live candidate set already established above"
+)
+ORPHAN_MARKER_EMISSION_PHRASE = (
+    "emits a marker token into its own transcript via a command run "
+    "immediately before the next step"
+)
+ORPHAN_D2_FORM1_PRECEDENCE_PHRASE = (
+    "D2 form 1 takes precedence over the marker scan"
+)
+ORPHAN_RECOVER_SCRIPT_INVOCATION_PHRASE = (
+    "invokes `em-workflow/scripts/recover-orphaned-task.py` for the "
+    "candidate task"
+)
+ORPHAN_JOURNAL_HELPER_INVOCATION_PHRASE = (
+    "invoke `em-workflow/scripts/journal-append-failed.py` exactly once, "
+    "with the task id and reason `orphaned`"
+)
+ORPHAN_ONLY_CASE_PHRASE = (
+    "This is the ONLY case in which the orchestrator's own action results "
+    "in an append to `journal.jsonl`"
+)
+ORPHAN_RESIDUAL_REASON_CODES = (
+    "no-agent-entry",
+    "no-session-id",
+    "invalid-session-id",
+    "current-session-unknown",
+    "same-session",
+    "transcripts-dir-missing",
+    "transcript-unreadable",
+    "transcript-active",
+)
+
+# Supporting cast Journal bullet + Stale-`launched` caveat exception wording
+# (AC-2; FR7).
+JOURNAL_BULLET_EXCEPTION_PHRASE = "with one narrowly-scoped exception"
+JOURNAL_BULLET_CITATION_PHRASE = (
+    "em-workflow/references/implement-phase.md`'s own I.2.b Recovery / "
+    "Residual block"
+)
+OLD_JOURNAL_BULLET_UNCONDITIONAL_PHRASE = "The orchestrator NEVER"
+CAVEAT_ORPHAN_EXCEPTION_PHRASE = (
+    "the sole exception to the Journal bullet's rule that the "
+    "orchestrator never writes the journal directly"
+)
+
+# Agent index writer bullet + workflow-schema.md agents.jsonl paragraph
+# (AC-4; FR1, FR8).
+AGENT_INDEX_SESSION_ID_FIELD_PHRASE = (
+    "records the launching session's own identity (`session_id`, "
+    "IMPLEMENTATION.md SC1)"
+)
+AGENT_INDEX_NOT_MATCH_CANDIDATE_PHRASE = "never itself a match candidate"
+SCHEMA_AGENTS_JSONL_NO_STATUS_INVARIANT_PHRASE = (
+    "it carries no status semantics of its own, may be absent or stale"
+)
+SCHEMA_AGENTS_JSONL_SESSION_ID_EXCEPTION_PHRASE = (
+    'The sole exception to "no status semantics of its own" is the '
+    "session identity"
+)
+
+# workflow-schema.md journal writer-set paragraph (AC-3; FR3, FR7).
+SCHEMA_JOURNAL_HELPER_NAME_PHRASE = "journal-append-failed.py"
+SCHEMA_ORPHANED_ADDITIVE_REASON_PHRASE = (
+    "an additive value of the existing `failed` reason field"
+)
+SCHEMA_JOURNAL_EXCEPTION_CITATION_PHRASE = (
+    "em-workflow/references/implement-phase.md`'s I.2.b Recovery / "
+    "Residual block"
+)
+OLD_SCHEMA_NEVER_ORCHESTRATOR_PHRASE = (
+    "No other hook, and never the orchestrator, appends to "
+    "`journal.jsonl`"
+)
+
+# em-workflow/README.md journal description (AC-3; FR7).
+README_ORPHAN_CITATION_PHRASE = "references/implement-phase.md"
+
+# I.2.c orphaned-failed convergence statement (AC-5; FR4).
+I2C_ORPHANED_NOT_DISTINCT_TERMINAL_PHRASE = (
+    "is not a distinct terminal: it is exactly the ordinary failed "
+    "handling below"
+)
+I2C_ORPHANED_NO_NEW_POLICY_PHRASE = (
+    "no new policy, threshold, or branch introduced for it"
+)
+
 
 def _read():
     return IMPLEMENT_PHASE_PATH.read_text(encoding="utf-8")
+
+
+def _read_workflow_schema():
+    return WORKFLOW_SCHEMA_PATH.read_text(encoding="utf-8")
+
+
+def _read_readme():
+    return README_PATH.read_text(encoding="utf-8")
 
 
 def _read_batch_mode():
@@ -2217,6 +2330,218 @@ class TestBatchModeGateRowRegressionGuard(unittest.TestCase):
         self.assertNotIn(
             BATCH_MODE_STATUS_WRITTEN_FAILED_PHRASE, BATCH_MODE_PRE_CHANGE_ROW
         )
+
+
+class TestI2bOrphanRecoveryOwningSection(unittest.TestCase):
+    """task0004 (orphaned-implementer-recovery) AC-1 / FR2, FR3, FR7, NFR7:
+    the I.2.b step 1 Recovery / Residual block owns the orphan-recovery
+    rule in full -- the candidate conditions (reused from the existing
+    not-live candidate set, cited not restated), the evidence order with
+    its SC6 residual reason codes, the invocation protocol for the two new
+    helpers (`recover-orphaned-task.py`, `journal-append-failed.py`)
+    including the D2 marker emission that precedes it, and the statement
+    that this is the only case in which the orchestrator appends a journal
+    event -- and no other location in this document restates the reason
+    codes."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read()
+        cls.whole = _normalize_ws(cls.text)
+        cls.i2b = _normalize_ws(_i2b_section(cls.text))
+
+    def test_reuses_not_live_candidate_set_by_citation(self):
+        self.assertIn(ORPHAN_CANDIDATE_REUSE_PHRASE, self.i2b)
+
+    def test_states_marker_emission_precedes_invocation(self):
+        self.assertIn(ORPHAN_MARKER_EMISSION_PHRASE, self.i2b)
+        self.assertIn(ORPHAN_D2_FORM1_PRECEDENCE_PHRASE, self.i2b)
+
+    def test_states_recover_orphaned_task_invocation(self):
+        self.assertIn(ORPHAN_RECOVER_SCRIPT_INVOCATION_PHRASE, self.i2b)
+
+    def test_states_all_evidence_order_reason_codes(self):
+        for code in ORPHAN_RESIDUAL_REASON_CODES:
+            with self.subTest(code=code):
+                self.assertIn(f"`{code}`", self.i2b)
+
+    def test_states_journal_helper_invocation_on_proof(self):
+        self.assertIn(ORPHAN_JOURNAL_HELPER_INVOCATION_PHRASE, self.i2b)
+
+    def test_states_only_case_orchestrator_appends_journal(self):
+        self.assertIn(ORPHAN_ONLY_CASE_PHRASE, self.i2b)
+
+    def test_reason_codes_not_restated_outside_i2b(self):
+        # NFR7: the evidence order / reason codes are owned exclusively by
+        # this block -- no other section of the document restates them.
+        for code in ORPHAN_RESIDUAL_REASON_CODES:
+            with self.subTest(code=code):
+                token = f"`{code}`"
+                self.assertEqual(
+                    self.whole.count(token), self.i2b.count(token)
+                )
+
+
+class TestJournalBulletAndCaveatNameOrphanException(unittest.TestCase):
+    """task0004 AC-2 / FR7: the Supporting cast Journal bullet and the
+    Stale-`launched` caveat no longer assert unconditionally that the
+    orchestrator never writes the journal -- each names the new exception
+    and cites the I.2.b owning section by repository-relative path."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.supporting_cast = _normalize_ws(_supporting_cast_section(_read()))
+        start = cls.supporting_cast.index("Stale-`launched` caveat")
+        end = cls.supporting_cast.index("**Resume**", start)
+        cls.caveat = cls.supporting_cast[start:end]
+
+    def test_journal_bullet_states_exception_and_cites_owner(self):
+        self.assertIn(JOURNAL_BULLET_EXCEPTION_PHRASE, self.supporting_cast)
+        self.assertIn(JOURNAL_BULLET_CITATION_PHRASE, self.supporting_cast)
+        self.assertIn(SCHEMA_JOURNAL_HELPER_NAME_PHRASE, self.supporting_cast)
+
+    def test_old_unconditional_never_phrase_absent(self):
+        self.assertNotIn(
+            OLD_JOURNAL_BULLET_UNCONDITIONAL_PHRASE, self.supporting_cast
+        )
+
+    def test_caveat_states_orphan_exception(self):
+        self.assertIn(CAVEAT_ORPHAN_EXCEPTION_PHRASE, self.caveat)
+
+    def test_caveat_still_scopes_stop_tool_recorder_to_deliberate_stop(self):
+        # RETENTION: this task adds a fourth bounding mechanism alongside
+        # the three existing ones; it must not disturb their wording.
+        self.assertIn("specifically for the deliberate-stop case", self.caveat)
+        self.assertIn(
+            "the outcome that check produces is defined there, not "
+            "restated here",
+            self.caveat,
+        )
+
+
+class TestWorkflowSchemaJournalWriterSetNamesException(unittest.TestCase):
+    """task0004 AC-3 / FR3, FR7: workflow-schema.md's journal writer-set
+    paragraph names the new writer script and records `orphaned` as an
+    additive value of the existing `failed` reason field, citing
+    implement-phase.md's I.2.b block as the owning section."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_read_workflow_schema())
+
+    def test_names_new_writer_script(self):
+        self.assertIn(SCHEMA_JOURNAL_HELPER_NAME_PHRASE, self.section)
+
+    def test_states_orphaned_is_additive_reason_value(self):
+        self.assertIn("`orphaned`", self.section)
+        self.assertIn(SCHEMA_ORPHANED_ADDITIVE_REASON_PHRASE, self.section)
+
+    def test_cites_owning_section_by_repo_relative_path(self):
+        self.assertIn(SCHEMA_JOURNAL_EXCEPTION_CITATION_PHRASE, self.section)
+
+    def test_old_unconditional_never_orchestrator_phrase_absent(self):
+        self.assertNotIn(OLD_SCHEMA_NEVER_ORCHESTRATOR_PHRASE, self.section)
+
+    def test_existing_events_not_renamed_or_removed(self):
+        self.assertIn(
+            "no existing event name or reason is renamed or removed",
+            self.section,
+        )
+
+
+class TestWorkflowSchemaAgentsJsonlSessionIdException(unittest.TestCase):
+    """task0004 AC-4 / FR8: workflow-schema.md's agents.jsonl paragraph
+    keeps the existing no-task-status invariant and names the
+    session-identity exception the I.2.b orphan recovery reads."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_read_workflow_schema())
+
+    def test_no_status_invariant_survives(self):
+        self.assertIn(
+            SCHEMA_AGENTS_JSONL_NO_STATUS_INVARIANT_PHRASE, self.section
+        )
+
+    def test_states_session_id_exception(self):
+        self.assertIn(
+            SCHEMA_AGENTS_JSONL_SESSION_ID_EXCEPTION_PHRASE, self.section
+        )
+
+    def test_cites_implement_phase_i2b_by_path(self):
+        self.assertIn(SCHEMA_JOURNAL_EXCEPTION_CITATION_PHRASE, self.section)
+
+
+class TestAgentIndexWriterBulletRecordsSessionIdField(unittest.TestCase):
+    """task0004 AC-4 / FR1, FR8: implement-phase.md's Agent index writer
+    bullet records the SC1 session identity field and states it is never a
+    match candidate, citing I.2.b's orphan recovery as the owning site."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.supporting_cast = _normalize_ws(_supporting_cast_section(_read()))
+
+    def test_states_session_id_field_recorded(self):
+        self.assertIn(
+            AGENT_INDEX_SESSION_ID_FIELD_PHRASE, self.supporting_cast
+        )
+
+    def test_states_never_a_match_candidate(self):
+        self.assertIn(
+            AGENT_INDEX_NOT_MATCH_CANDIDATE_PHRASE, self.supporting_cast
+        )
+
+    def test_cites_i2b_orphan_recovery_as_owner(self):
+        self.assertIn("orphan-recovery attempt above", self.supporting_cast)
+
+
+class TestReadmeJournalDescriptionAgreesByCitation(unittest.TestCase):
+    """task0004 AC-3 / FR7: em-workflow/README.md's journal description
+    agrees with the writer-set exception by citation, never restating the
+    evidence order or the SC6 reason-code set."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read_readme()
+
+    def test_states_orphaned_exception(self):
+        self.assertIn("orphaned", self.text)
+
+    def test_cites_implement_phase_for_detail(self):
+        self.assertIn(README_ORPHAN_CITATION_PHRASE, self.text)
+
+    def test_does_not_restate_reason_codes(self):
+        for code in ORPHAN_RESIDUAL_REASON_CODES:
+            with self.subTest(code=code):
+                self.assertNotIn(code, self.text)
+
+
+class TestI2cStatesOrphanedFailedConvergence(unittest.TestCase):
+    """task0004 AC-5 / FR4: the I.2.c text states that a `failed` carrying
+    reason `orphaned` converges into the ordinary failed handling for both
+    batch and interactive, introducing no new policy, threshold or
+    branch -- existing wording is reused."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _normalize_ws(_i2c_section(_read()))
+
+    def test_states_orphaned_is_not_a_distinct_terminal(self):
+        self.assertIn("`orphaned`", self.section)
+        self.assertIn(I2C_ORPHANED_NOT_DISTINCT_TERMINAL_PHRASE, self.section)
+
+    def test_states_no_new_policy_threshold_or_branch(self):
+        self.assertIn(I2C_ORPHANED_NO_NEW_POLICY_PHRASE, self.section)
+
+    def test_states_batch_single_retry_applies(self):
+        self.assertIn("implement.failed-task", self.section)
+        self.assertIn("single retry", self.section)
+
+    def test_i2c_still_contains_neither_banned_token(self):
+        # Regression guard: this task's own addition must not introduce
+        # either of task0001's pre-existing banned tokens.
+        self.assertNotIn("rework", self.section)
+        self.assertNotIn("append", self.section)
 
 
 if __name__ == "__main__":
