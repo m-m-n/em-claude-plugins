@@ -1,0 +1,123 @@
+task_id: task0002
+baseline_failures:
+  - test_other_entries_match_pre_task_snapshot (test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot)
+  - test_em_review_entry_has_no_version_key (test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_has_no_version_key (test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_has_no_version_key (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_key_set_unchanged (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)
+  - test_em_review_entry_has_no_version_key (test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_has_no_version_key (test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_has_no_version_key (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_key_set_unchanged (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)
+  - test_em_review_entry_has_no_version_key (test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_unchanged (test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged)
+final_failures:
+  - test_other_entries_match_pre_task_snapshot (test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot)
+  - test_em_review_entry_has_no_version_key (test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_has_no_version_key (test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_has_no_version_key (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_key_set_unchanged (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)
+  - test_em_review_entry_has_no_version_key (test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_has_no_version_key (test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_has_no_version_key (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_key_set_unchanged (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)
+  - test_em_review_entry_has_no_version_key (test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)
+  - test_em_review_entry_unchanged (test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged)
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_appends_exactly_one_failed_line_with_reason_orphaned
+      - test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_stdout_outcome_is_appended
+      - test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_field_shape_matches_existing_failed_writers
+    red_confirmed: true
+    red_reason: >-
+      Watched against a deliberately-wrong stub (always writes, never checks
+      the final event, since the real script's absence alone gives a
+      misleading "file not found" nonzero exit that proves nothing): the
+      stub's unconditional write made the byte-identical-prior-lines and
+      field-order assertions fail for the real reason before the real
+      decide_and_append logic existed.
+  AC-2:
+    tests:
+      - test_journal_append_failed.TestAC2TerminalIsNoop.test_second_invocation_after_failed_is_noop
+      - test_journal_append_failed.TestAC2TerminalIsNoop.test_final_event_merged_is_noop
+      - test_journal_append_failed.TestAC2TerminalIsNoop.test_final_event_failed_is_noop
+    red_confirmed: true
+    red_reason: >-
+      Against the same deliberately-wrong stub: it always reports
+      "appended" and always writes, so all three noop_terminal assertions
+      (outcome value and byte-identical journal) failed for the right
+      reason.
+  AC-3:
+    tests:
+      - test_journal_append_failed.TestAC3ReasonValidation.test_unknown_reason_rejected_without_write
+      - test_journal_append_failed.TestAC3ReasonValidation.test_empty_reason_rejected_without_write
+    red_confirmed: true
+    red_reason: >-
+      With the script missing entirely, python's own "can't open file"
+      nonzero exit satisfied these assertions vacuously (unconfirmed red).
+      Against the deliberately-wrong stub (which never validates --reason
+      and writes unconditionally), both tests failed for the real reason:
+      returncode 0 and a written line, instead of the required rejection.
+  AC-4:
+    tests:
+      - test_journal_append_failed.TestAC4JournalAccessPreconditions.test_symlinked_journal_path_refused_without_writing
+      - test_journal_append_failed.TestAC4JournalAccessPreconditions.test_absent_journal_file_is_error_and_not_created
+      - test_journal_append_failed.TestAC4JournalAccessPreconditions.test_absent_parent_directory_is_error_and_not_created
+    red_confirmed: true
+    red_reason: >-
+      test_symlinked_journal_path_refused_without_writing and
+      test_absent_journal_file_is_error_and_not_created failed for the
+      right reason against the deliberately-wrong stub (it opened in append
+      mode, following the symlink / auto-creating the file). For
+      test_absent_parent_directory_is_error_and_not_created the stub still
+      "passed" (crashed with a Python traceback on the missing directory,
+      which also satisfies "nonzero exit, no stdout, nothing created") --
+      to confirm this assertion pattern is not vacuous, the stub was
+      further mutated to `os.makedirs(...)` the parent directory before
+      writing, and the test then failed exactly as expected (returncode 0
+      where nonzero was required), proving the test catches the class of
+      bug it exists to catch.
+  AC-5:
+    tests:
+      - test_journal_append_failed.TestAC5Contention.test_concurrent_invocations_append_at_most_one_failed_line
+    red_confirmed: true
+    red_reason: >-
+      Against the deliberately-wrong stub (unconditional write, no lock/
+      recheck), both concurrent invocations wrote a `failed` line each,
+      so the "exactly one failed line for the task" assertion failed for
+      the right reason. Re-run 8x after the real implementation to check
+      for flakiness in the contention path; all green.
+  AC-6:
+    tests:
+      - test_journal_append_failed.TestAC6OutcomeReporting.test_appended_outcome_is_single_json_line_on_stdout
+      - test_journal_append_failed.TestAC6OutcomeReporting.test_usage_error_missing_required_arg_is_nonzero_no_stdout
+      - test_journal_append_failed.TestAC6OutcomeReporting.test_internal_error_reports_diagnostics_on_stderr_only
+    red_confirmed: true
+    red_reason: >-
+      test_appended_outcome_is_single_json_line_on_stdout passed against
+      both the "file absent" and the deliberately-wrong stub states (the
+      stub happened to already emit a single correctly-shaped JSON line),
+      so a targeted mutation was applied to the real implementation instead:
+      an extra stdout line plus an extra JSON key. The test failed for the
+      right reason (2 stdout lines instead of 1) against that mutation,
+      confirming it actually constrains the outcome shape; the mutation was
+      then reverted and the suite re-confirmed green. The missing-required-
+      arg and internal-error cases rely on argparse's own usage-error
+      behavior and the absent-directory path respectively; both are covered
+      by the same mutation-tested confirmation described under AC-4
+      (absent-parent-directory case) -- recorded here rather than
+      duplicated.
+  AC-7:
+    tests:
+      - test_journal_append_failed.TestAC7LaunchGuardConvergence.test_launch_after_orphaned_failed_is_permitted_and_appends_launched
+    red_confirmed: true
+    red_reason: >-
+      Against the deliberately-wrong stub (unconditional write, so the
+      recovery call itself never reliably represented a real "appended"
+      transition and the journal's shape going into the guard call was not
+      what the real implementation produces), this test still exercised the
+      full recovery-then-launch path end to end against the real
+      queue_launch_guard.py hook; once the real decide_and_append existed
+      the test went green with the intended semantics (recovery genuinely
+      appends `failed`, then the guard allows the next launch).
