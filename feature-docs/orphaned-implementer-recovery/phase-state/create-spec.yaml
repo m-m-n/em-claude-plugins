@@ -1,11 +1,11 @@
 schema_version: 1
 feature: orphaned-implementer-recovery
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
-base_revision: b48e74171789e59465f8e1f9a9e98b42cdeb4d6d
+base_revision: c09bd8cb3a18a1e0d65a5f36377c16587196de78
 last_input_digest: "sha256:b20ec2351b176d6121ad919af152c9a07028954de21b0bccf8ccaf58e8a8c157"
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,16 @@ worker_runs:
     input_digest: "sha256:2c560131bbdd24844e09217f722a28805bf6b0b818e98812c7df29ceaf1efec6"
     output_digest: "sha256:489c28b1bbf81f4e908840849d7a9cb662b979f0ee70887a6547fe1af0ff7461"
   - request_id: create-spec-run-0002
-    status: dispatched
+    status: completed
     input_digest: "sha256:b20ec2351b176d6121ad919af152c9a07028954de21b0bccf8ccaf58e8a8c157"
-    output_digest: null
-artifacts: []
+    output_digest: "sha256:a6941b7cc79998bf20a57e322a840ad74f12a4395aef10c02d3007a367dcc284"
+artifacts:
+  - path: feature-docs/orphaned-implementer-recovery/REQUIREMENTS.md
+    sha256: "sha256:82c8bce5d2fd1ea76692a2873a8b5ea125588d2ea4908ca6b65fe0402524c4fa"
+    produced_by: create-spec-run-0002
+  - path: feature-docs/orphaned-implementer-recovery/SPEC.md
+    sha256: "sha256:ee09d73d9d17232ff5742d48830c7190955602d06c24d459a563651ef5bf4d22"
+    produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
