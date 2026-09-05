@@ -28,7 +28,8 @@ orchestrator (skills/develop/SKILL.md, Step 0) at workflow start.
 3. Read `{git_setup_reference}` and execute its procedure against
    `{project_root}` (resolve the hooks dir via
    `git -C {project_root} rev-parse --git-path hooks`; relative output is
-   relative to `{project_root}`).
+   relative to `{project_root}`, NOT to the git dir — from the main worktree
+   it returns `.git/hooks`, so the hooks dir is `{project_root}/.git/hooks`).
 4. Map the procedure outcome to a status: hook already contains `gitleaks` →
    `already_configured`; hook file newly created → `created`; snippet
    appended to an existing hook → `appended`; anything went wrong
@@ -38,6 +39,10 @@ orchestrator (skills/develop/SKILL.md, Step 0) at workflow start.
 
 - The ONLY file you may create or modify is the repository's `pre-commit`
   hook resolved in step 3.
+- Never create directories (no `mkdir`). The hooks dir always exists in a
+  git repository; if the dir resolved in step 3 does not exist, the path was
+  resolved wrong → report `failed` ("hooks dir not found") without creating
+  anything.
 - Never weaken or remove existing hook content — additions only, per the
   reference procedure.
 - No `git add`, no `git commit`, no `git status` — git is only used for the
