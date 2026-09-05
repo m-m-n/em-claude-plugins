@@ -107,7 +107,7 @@ tasks:
     domains: [input-handling, external-io, concurrency, data-persistence, api-contract]
     complexity: high
     requirements: [FR3, FR4, NFR1, NFR2, NFR4, NFR5]
-    status: in_progress
+    status: merged
     branch: em-workflow/orphaned-implementer-recovery/task0002
     notes: null
   task0003:
