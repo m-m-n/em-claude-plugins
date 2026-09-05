@@ -1,11 +1,11 @@
 schema_version: 1
 feature: orphaned-implementer-recovery
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 7aa24fb81787ec8e8a21a08089dc13bec5a363e8
 last_input_digest: "sha256:7b5bdfe4696af1e0a75be6456b324a1c519b0bd06c342ea8a43bf0c07b5bd0d8"
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -34,7 +34,7 @@ artifacts:
     produced_by: create-plan-run-0001
 patches:
   - patch_id: orphaned-implementer-recovery-p0001
-    status: validated
+    status: applied
     base_input_digest: "sha256:7b5bdfe4696af1e0a75be6456b324a1c519b0bd06c342ea8a43bf0c07b5bd0d8"
     base_workflow_blob: dd9e06ca6c5ea7e848376f89eabda944933e506a
 progress_fingerprint: null

@@ -73,7 +73,8 @@ workflow:
     skipped_reason: "UI 面が無い。変更対象は Markdown SSOT ドキュメント・Python hook・em-workflow/scripts/ の新ヘルパー・tests/ 配下の unittest のみで、視覚的成果物もデザインシステム候補も存在しない"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 8bbb5660c23bd05e83087bbbb0717ac958f496fa
   - id: implement
     status: pending
     base_commit: null
@@ -86,7 +87,51 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "Record the launching session identity in the agent index"
+    plan: tasks/task0001.md
+    files: [em-workflow/hooks/queue_agent_index.py, tests/test_queue_agent_index.py, tests/test_queue_taskstop_net.py]
+    skills: [infra-impl]
+    domains: [input-handling, external-io, api-contract]
+    complexity: medium
+    requirements: [FR1, FR9, NFR3, NFR4, NFR5]
+    status: pending
+    branch: null
+    notes: null
+  task0002:
+    title: "Journal terminal-append helper"
+    plan: tasks/task0002.md
+    files: [em-workflow/scripts/journal-append-failed.py, tests/test_journal_append_failed.py]
+    skills: [infra-impl]
+    domains: [input-handling, external-io, concurrency, data-persistence, api-contract]
+    complexity: high
+    requirements: [FR3, FR4, NFR1, NFR2, NFR4, NFR5]
+    status: pending
+    branch: null
+    notes: null
+  task0003:
+    title: "Orphaned-launched detection and recovery entry point"
+    plan: tasks/task0003.md
+    files: [em-workflow/scripts/recover-orphaned-task.py, tests/test_recover_orphaned_task.py]
+    skills: [infra-impl]
+    domains: [input-handling, external-io, data-persistence, api-contract]
+    complexity: high
+    requirements: [FR2, FR5, FR6, NFR1, NFR4, NFR5]
+    status: pending
+    branch: null
+    notes: null
+  task0004:
+    title: "SSOT document updates and plugin version bump"
+    plan: tasks/task0004.md
+    files: [em-workflow/references/implement-phase.md, em-workflow/references/workflow-schema.md, em-workflow/README.md, em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json, tests/test_implement_routeback_gate.py]
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR4, FR7, FR8, NFR6, NFR7]
+    status: pending
+    branch: null
+    notes: null
 
 review:
   status: pending
@@ -102,113 +147,113 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1, TS-6]
   FR2:
     title: "孤児 launched の検出条件"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS-1, TS-3]
   FR3:
     title: "journal への failed(reason: orphaned) 書き込みヘルパー"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-1, TS-2]
+    tasks: [task0002]
+    tests: [TS-1, TS-2, TS-7]
   FR4:
     title: "orphaned failed の下流合流"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002, task0004]
     tests: [TS-4]
   FR5:
     title: "条件を満たさない場合の Residual 退化"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS-3, TS-5]
   FR6:
     title: "session_id の形式検証と transcript パスの封じ込め"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-5]
+    tasks: [task0003]
+    tests: [TS-5, TS-9]
   FR7:
     title: "SSOT ドキュメントの更新"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0004]
+    tests: [TS-10]
   FR8:
     title: "agents.jsonl の権限範囲の明記"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0004]
+    tests: [TS-10]
   FR9:
     title: "後方互換"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-6]
   NFR1:
     title: "二重起動防止規律の維持"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002, task0003]
+    tests: [TS-3, TS-5]
   NFR2:
     title: "journal 追記の排他規律"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-7]
   NFR3:
     title: "hook の fail-open 規律の維持"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-8]
   NFR4:
     title: "テストの依存制約"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003, task0004]
+    tests: [TS-12]
   NFR5:
     title: "テスト配置と命名"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003, task0004]
+    tests: [TS-12]
   NFR6:
     title: "プラグイン version bump"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0004]
+    tests: [TS-11]
   NFR7:
     title: "SSOT の重複禁止規律"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0004]
+    tests: [TS-10]
 
 batch:
   review_rework_count: 0
