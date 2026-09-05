@@ -1,17 +1,51 @@
 schema_version: 1
 feature: orphaned-implementer-recovery
 phase: create-spec
-status: initialized
+status: failed
 generation: 1
-base_revision: 75c8fbf657dc47b7d0879c612676e4e172b81311
-last_input_digest: null
+base_revision: 01935c1612233786830960fbeb94e15da3560d6b
+last_input_digest: "sha256:87372716002a4fa44f5bad3aec1ec89ed1e0ee00656c6fa576c1f19fc44d7512"
 active_request_id: null
-packets: {}
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: "2026-09-05T09:30:33+09:00"
+    questions:
+      - question_id: journal-write-mechanism
+        status: issued
+      - question_id: session-termination-proof
+        status: issued
+      - question_id: agent-index-authority
+        status: issued
+      - question_id: verification-depth
+        status: issued
+      - question_id: design-step
+        status: issued
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:87372716002a4fa44f5bad3aec1ec89ed1e0ee00656c6fa576c1f19fc44d7512"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: |
+  fail-closed classification abort (references/question-resolution.md,
+  "Fail-closed classification"): requirements-analyst's packet
+  create-spec-q0001 carries assumption a3 with reversible: false, whose
+  related_question_ids names the questions "session-termination-proof" and
+  "agent-index-authority". Both are blocking. Per the rule, the phase
+  aborts before any policy-table lookup, before Codex consultation, before
+  on_unanswered is read and before any option is selected.
+
+  a3: "A recorded session_id is used ONLY as a comparison value and as a
+  filename component of a transcript path, and is shape-validated before
+  any interpolation." (impact: high, reversible: false)
+
+  Human decisions required before this feature can be re-run:
+    1. journal-write-mechanism (not itself fail-closed, listed for context)
+    2. session-termination-proof  <- fail-closed
+    3. agent-index-authority      <- fail-closed
