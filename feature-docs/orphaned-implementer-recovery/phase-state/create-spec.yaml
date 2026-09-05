@@ -1,17 +1,33 @@
 schema_version: 1
 feature: orphaned-implementer-recovery
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 2
-base_revision: f31eccab2a51bbdb7b7b652671e15f3c59175212
-last_input_digest: null
-active_request_id: null
+base_revision: aa0058ce6dd0b3227b8862fb7db420142d1f25af
+last_input_digest: "sha256:2c560131bbdd24844e09217f722a28805bf6b0b818e98812c7df29ceaf1efec6"
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: "sha256:2c560131bbdd24844e09217f722a28805bf6b0b818e98812c7df29ceaf1efec6"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  e2e:
+    generation_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    resolved_at_generation: 2
+    paths: []
+    digests: {}
+    truncated: false
+  design_system_candidates:
+    generation_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    resolved_at_generation: 2
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
