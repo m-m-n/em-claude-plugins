@@ -3,15 +3,19 @@ feature: orphaned-implementer-recovery
 phase: create-spec
 status: dispatching
 generation: 2
-base_revision: aa0058ce6dd0b3227b8862fb7db420142d1f25af
-last_input_digest: "sha256:2c560131bbdd24844e09217f722a28805bf6b0b818e98812c7df29ceaf1efec6"
-active_request_id: create-spec-run-0001
+base_revision: b48e74171789e59465f8e1f9a9e98b42cdeb4d6d
+last_input_digest: "sha256:b20ec2351b176d6121ad919af152c9a07028954de21b0bccf8ccaf58e8a8c157"
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: completed
     input_digest: "sha256:2c560131bbdd24844e09217f722a28805bf6b0b818e98812c7df29ceaf1efec6"
+    output_digest: "sha256:489c28b1bbf81f4e908840849d7a9cb662b979f0ee70887a6547fe1af0ff7461"
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: "sha256:b20ec2351b176d6121ad919af152c9a07028954de21b0bccf8ccaf58e8a8c157"
     output_digest: null
 artifacts: []
 patches: []
