@@ -83,9 +83,16 @@ workflow:
     status: completed
     completed_at_commit: 481b6f67689678be29f298221c694bd31a349ba9
   - id: verify
-    status: in_progress
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: TS-12
+        category: comprehensive
+        note: "`python3 -m unittest discover -s tests` exits 1: 11 pre-existing failures in 8 stale marketplace-snapshot test modules assert the `em-review` entry of `.claude-plugin/marketplace.json` carries no `version` key, but it carries `0.5.7`. The identical 11 failures reproduce at base_commit 3f5db49, so none is attributable to this feature; the feature's own 353 tests pass."
+      - id: SC-C
+        category: comprehensive
+        note: "SC-C requires the project test command to exit 0. It exits 1 for the TS-12 cause above. TS-1..TS-11 themselves all pass, as does the destructive-guard regression suite (156/156) and the TS-11 version-parity check (0.1.60 in both registries, up from 0.1.59)."
+
   - id: retrospect
     status: pending
 
