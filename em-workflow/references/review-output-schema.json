@@ -15,7 +15,7 @@
           "line":        { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
           "line_end":    { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
           "severity":    { "enum": ["critical", "high", "medium"] },
-          "category":    { "enum": ["security", "performance", "architecture", "spec", "comprehensive"] },
+          "category":    { "enum": ["security", "performance", "architecture", "spec", "comprehensive", "license"] },
           "title":       { "type": "string" },
           "description": { "type": "string" },
           "suggestion":  { "type": "string" }
