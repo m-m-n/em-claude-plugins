@@ -71,8 +71,9 @@ def post_tool_use_payload(
     subagent_type="em-workflow:implementer",
     include_header=True,
     tool_name="Task",
+    session_id=None,
 ):
-    return {
+    payload = {
         "hook_event_name": "PostToolUse",
         "tool_name": tool_name,
         "tool_input": {
@@ -82,6 +83,9 @@ def post_tool_use_payload(
         },
         "tool_response": tool_response,
     }
+    if session_id is not None:
+        payload["session_id"] = session_id
+    return payload
 
 
 def structured_result(agent_id):
@@ -160,6 +164,113 @@ class TestFirstLaunchAppendsIndexEntry(unittest.TestCase):
             self.assertEqual(entry["task"], "task0001")
             self.assertEqual(entry["worktree_path"], worktree_path)
             assert_rfc3339_with_offset(entry["at"])
+
+
+class TestSessionIdentityRecorded(unittest.TestCase):
+    """AC-1 (task0001): a launch whose hook input carries a valid session
+    identity produces exactly one entry containing that identity as an
+    independent top-level field, with every previously existing field
+    unchanged in name and value."""
+
+    def test_valid_session_identity_recorded_alongside_existing_fields(self):
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            payload = post_tool_use_payload(
+                "task0001",
+                worktree_path,
+                structured_result("agent-sess-1"),
+                session_id="sess-abc123",
+            )
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            lines = read_index_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            entry = lines[0]
+            self.assertEqual(entry["session_id"], "sess-abc123")
+            self.assertEqual(entry["agent_id"], "agent-sess-1")
+            self.assertEqual(entry["agent_ids"], ["agent-sess-1"])
+            self.assertEqual(entry["task"], "task0001")
+            self.assertEqual(entry["worktree_path"], worktree_path)
+            assert_rfc3339_with_offset(entry["at"])
+
+
+class TestSessionIdentityNeverBecomesMatchCandidate(unittest.TestCase):
+    """AC-2 (task0001): the session identity never appears inside the
+    agent-identifier candidate list, and is never usable as a match
+    candidate on the stop side -- even when it coincidentally resembles a
+    plausible agent identifier."""
+
+    def test_session_identity_absent_from_candidate_list(self):
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            payload = post_tool_use_payload(
+                "task0001",
+                worktree_path,
+                structured_result("agent-xyz-9"),
+                session_id="agent-xyz-9-sess",
+            )
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            lines = read_index_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            entry = lines[0]
+            self.assertNotIn("agent-xyz-9-sess", entry["agent_ids"])
+            self.assertEqual(entry["agent_id"], "agent-xyz-9")
+            self.assertEqual(entry["session_id"], "agent-xyz-9-sess")
+
+
+class TestInvalidOrMissingSessionIdentityOmitsField(unittest.TestCase):
+    """AC-3 (task0001): when the hook input carries no session identity, or
+    a value that fails SC5's validation rule, the entry is appended without
+    the field and the hook exits 0. Three cases per Test Notes: identity
+    absent, identity of the wrong type, identity present but failing SC5
+    (a path separator)."""
+
+    def test_missing_session_identity_omits_field(self):
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            payload = post_tool_use_payload(
+                "task0001", worktree_path, structured_result("agent-a")
+            )
+            self.assertNotIn("session_id", payload)
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            lines = read_index_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            self.assertNotIn("session_id", lines[0])
+
+    def test_non_string_session_identity_omits_field(self):
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            payload = post_tool_use_payload(
+                "task0001", worktree_path, structured_result("agent-b")
+            )
+            payload["session_id"] = 12345
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            lines = read_index_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            self.assertNotIn("session_id", lines[0])
+
+    def test_session_identity_containing_path_separator_omits_field(self):
+        with _tmp_worktree() as worktree_path:
+            os.makedirs(worktree_path, exist_ok=True)
+            payload = post_tool_use_payload(
+                "task0001",
+                worktree_path,
+                structured_result("agent-c"),
+                session_id="sess/evil",
+            )
+            proc = run_hook_payload(payload)
+
+            self.assertEqual(proc.returncode, 0)
+            lines = read_index_lines(worktree_path)
+            self.assertEqual(len(lines), 1)
+            self.assertNotIn("session_id", lines[0])
 
 
 class TestBothLaunchToolNamesSupported(unittest.TestCase):
