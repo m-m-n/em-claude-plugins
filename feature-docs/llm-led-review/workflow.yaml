@@ -62,7 +62,8 @@ workflow:
   failed_items: []
   completed_at_commit: a2ed36e7284db03035feebc305007b99e08cb048
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 58d728442239d1cbd432f05555708a96a3e29977
 tasks:
   task0001:
     title: "evaluation contract SSOT for the Opus evaluator"
