@@ -76,8 +76,9 @@ workflow:
     status: completed
     completed_at_commit: 8bbb5660c23bd05e83087bbbb0717ac958f496fa
   - id: implement
-    status: in_progress
+    status: completed
     base_commit: 3f5db490b46d5190e54a5665f1d6c44876ec42da
+    completed_at_commit: 5257856c95affd4c5ca43256cab65f17bbf72def
   - id: review
     status: pending
   - id: verify
@@ -129,7 +130,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR4, FR7, FR8, NFR6, NFR7]
-    status: in_progress
+    status: merged
     branch: em-workflow/orphaned-implementer-recovery/task0004
     notes: null
 
