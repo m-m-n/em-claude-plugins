@@ -1,0 +1,17 @@
+schema_version: 1
+feature: orphaned-implementer-recovery
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 75c8fbf657dc47b7d0879c612676e4e172b81311
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
