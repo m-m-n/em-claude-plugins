@@ -96,8 +96,8 @@ tasks:
     domains: [input-handling, external-io, api-contract]
     complexity: medium
     requirements: [FR1, FR9, NFR3, NFR4, NFR5]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/orphaned-implementer-recovery/task0001
     notes: null
   task0002:
     title: "Journal terminal-append helper"
@@ -107,8 +107,8 @@ tasks:
     domains: [input-handling, external-io, concurrency, data-persistence, api-contract]
     complexity: high
     requirements: [FR3, FR4, NFR1, NFR2, NFR4, NFR5]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/orphaned-implementer-recovery/task0002
     notes: null
   task0003:
     title: "Orphaned-launched detection and recovery entry point"
@@ -118,8 +118,8 @@ tasks:
     domains: [input-handling, external-io, data-persistence, api-contract]
     complexity: high
     requirements: [FR2, FR5, FR6, NFR1, NFR4, NFR5]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/orphaned-implementer-recovery/task0003
     notes: null
   task0004:
     title: "SSOT document updates and plugin version bump"
@@ -129,8 +129,8 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR4, FR7, FR8, NFR6, NFR7]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/orphaned-implementer-recovery/task0004
     notes: null
 
 review:
