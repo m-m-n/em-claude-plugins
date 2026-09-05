@@ -25,6 +25,19 @@ an input:
   never chooses one itself — WHICH model each perspective gets is decided by
   the orchestrator from references/reviewers.yaml.
 
+For a selected perspective, the review phase dispatches **exactly one**
+reviewer: the harness reviewer — `em-workflow:codex-reviewer` or
+`vertex-review:vertex-reviewer`, whichever entry the perspective's registry
+chain resolves to — runs as the **main review** for that perspective.
+`em-workflow:reviewer` (the Claude reviewer) runs only as the **fallback**,
+when that perspective's chain has no available harness entry — no chain
+entry is available at the moment of the decision, whether that decision is
+made at fan-out or after the chain walk has exhausted every entry
+(`references/review-phase.md` Phase R2 / Phase R2b). The two are never
+dispatched together for the same perspective, and the Claude reviewer never
+runs as a second, parallel opinion alongside a harness reviewer that already
+completed.
+
 The perspective skill owns WHAT to flag / WHAT NOT to flag. This protocol owns
 everything else: input handling, target resolution, budget, severity, output
 schema, skip semantics, and safety constraints.
@@ -203,11 +216,11 @@ Every skip object sets `skip_reason` to a short machine-stable
 
 - **Spec perspective** with no readable SPEC.md:
   `{"findings": [], "summary": "skipped: no SPEC.md found", "skipped": true, "skip_reason": "no_spec", "source": "<source>"}`
-- **Any cross-model reviewer** when its harness cannot be reached at all
+- **A harness reviewer (codex / litellm)** when its harness cannot be reached at all
   (codex: wrapper script or CLI missing; litellm: proxy down, `-p litellm`
   profile broken, `model` absent or unknown):
   `{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "harness_unavailable", "source": "codex"}`
-- **Any cross-model reviewer** when the upstream reports a rate limit
+- **A harness reviewer (codex / litellm)** when the upstream reports a rate limit
   (Codex's own limit, or a Vertex 429 surfaced through LiteLLM):
   `{"findings": [], "summary": "skipped: codex rate limited", "skipped": true, "skip_reason": "rate_limited", "source": "codex"}`
 - **litellm reviewer** when the harness budget is spent (LiteLLM's monthly
@@ -220,7 +233,7 @@ Every skip object sets `skip_reason` to a short machine-stable
 - **Any reviewer** with unresolved protocol/schema/skill (Step 0):
   `{"findings": [], "summary": "skipped: protocol unresolved", "skipped": true, "skip_reason": "protocol_unresolved", "source": "<source>"}`
   (`"skill_unresolved"` / `"schema_unresolved"` for the other two gates).
-- **Any cross-model reviewer** that cannot allocate its own scratchpad temp
+- **A harness reviewer (codex / litellm)** that cannot allocate its own scratchpad temp
   files: `skip_reason: "scratchpad_unavailable"`.
 - **litellm reviewer** when the assembled prompt still exceeds the model's
   context after dropping investigation files and whole-file contents:

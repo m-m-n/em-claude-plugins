@@ -1,0 +1,145 @@
+task_id: task0003
+baseline_failures:
+  - test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+final_failures:
+  - test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_exactly_six_expected_perspectives
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_claude_skill_and_requires_spec_unchanged
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_chain_key_is_primary_chain_for_every_perspective
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_cross_validation_key_absent_from_whole_file
+    red_confirmed: true
+    red_reason: >-
+      test_chain_key_is_primary_chain_for_every_perspective failed on all
+      six perspectives before the rename: AssertionError: 'cross_validation'
+      != 'primary_chain'. test_cross_validation_key_absent_from_whole_file
+      failed with "'cross_validation' unexpectedly found in ..." against the
+      pre-change file text. test_exactly_six_expected_perspectives and
+      test_claude_skill_and_requires_spec_unchanged were already green
+      pre-change (those facts were not being changed by this task, only the
+      chain key and chain contents were), which is expected -- the
+      compound criterion's changed half (the key rename) is what the other
+      two tests prove red-to-green.
+  AC-2:
+    tests:
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_every_chain_non_empty
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_chain_entries_well_formed
+    red_confirmed: true
+    red_reason: >-
+      test_every_chain_non_empty failed for comprehensive and license before
+      the edit: "AssertionError: [] is not true : comprehensive has an empty
+      primary_chain" (and same for license) -- both had `cross_validation:
+      []` pre-change. test_chain_entries_well_formed iterates each chain's
+      entries and was vacuously true pre-change for those same two
+      perspectives (nothing to check in an empty list) while already true
+      for the four pre-existing non-empty chains; its non-vacuous coverage
+      of comprehensive/license only exists once the chain is populated,
+      which is exactly what this task adds.
+  AC-3:
+    tests:
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_chains_match_pinned_contract
+    red_confirmed: true
+    red_reason: >-
+      Failed for perspective='comprehensive' and perspective='license'
+      before the edit ("Lists differ: [] != [{'harness': 'codex'}, ...]" --
+      the pinned three-entry chains did not exist yet). The four
+      pre-existing-chain subTests (security/performance/architecture/spec)
+      were already green pre-change, which is correct: AC-3 requires those
+      four to be UNCHANGED, so they were never expected to go red.
+  AC-4:
+    tests:
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse.test_keeps_responsibility_split_statement
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse.test_keeps_verbatim_model_statement
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse.test_states_one_reviewer_dispatched_from_chain_front
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse.test_no_surviving_claude_per_perspective_launch_text
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse.test_no_surviving_cross_model_beside_text
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse.test_no_surviving_agreement_scoring_text
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse.test_non_vacuity_of_stale_phrase_checks
+    red_confirmed: true
+    red_reason: >-
+      test_states_one_reviewer_dispatched_from_chain_front,
+      test_no_surviving_claude_per_perspective_launch_text and
+      test_no_surviving_cross_model_beside_text all failed against the
+      pre-change header (it still described launching
+      "em-workflow:reviewer" per perspective and an "ALSO launch ONE
+      cross-model reviewer" second dispatch, and had no "dispatches exactly
+      ONE reviewer ... front of ... primary_chain" statement).
+      test_keeps_responsibility_split_statement and
+      test_keeps_verbatim_model_statement were already green pre-change
+      (those two statements were never meant to change, only kept).
+      test_no_surviving_agreement_scoring_text was also already green
+      pre-change because reviewers.yaml never contained that exact phrase to
+      begin with (it lived only in review-rules.yaml); it stays as a
+      forward-looking guard per the plan's explicit AC-4 wording.
+      test_non_vacuity_of_stale_phrase_checks is a self-contained fixture
+      test (asserts a synthetic string, not the real file) and was always
+      green; it exists only to prove the stale-phrase assertions above are
+      capable of failing.
+  AC-5:
+    tests:
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse.test_cites_review_phase_for_fallback_and_chain_walk
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse.test_does_not_restate_chain_walk_mechanics
+    red_confirmed: true
+    red_reason: >-
+      test_cites_review_phase_for_fallback_and_chain_walk failed pre-change
+      (no "dispatches exactly one reviewer" / "claude-reviewer fallback"
+      phrasing existed yet, only the old cross-model-comparison prose).
+      test_does_not_restate_chain_walk_mechanics failed for all three
+      leaked terms (rate_limited, budget_exhausted, harness_unavailable),
+      which the pre-change header spelled out in full
+      ("`rate_limited` -> next entry; `budget_exhausted` /
+      `harness_unavailable` -> next entry of a DIFFERENT harness").
+  AC-6:
+    tests:
+      - tests.test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+      - tests.test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+      - tests.test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_spec_review_unchanged
+      - tests.test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+      - tests.test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_domains_vocabulary_header_intact
+      - tests.test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_no_longer_describes_claude_plus_cross_model_double_run
+      - tests.test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_states_no_second_dispatch_because_primary_reviewer_runs
+      - tests.test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+      - tests.test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_non_vacuity_of_double_run_check
+    red_confirmed: true
+    red_reason: >-
+      test_states_no_second_dispatch_because_primary_reviewer_runs and
+      test_computation_semantics_preserved_in_prose both failed pre-change
+      (the new sentences "no longer adds a second reviewer dispatch" /
+      "already runs a non-claude primary reviewer" did not exist yet).
+      test_no_longer_describes_claude_plus_cross_model_double_run failed
+      because the pre-change header still contained the literal phrase
+      "double-run (claude + that entry's model) for agreement scoring". The
+      five TestReviewRulesDataUnchanged tests and
+      test_non_vacuity_of_double_run_check were already green pre-change by
+      design -- AC-6 requires baseline/rules/spec_review/cross_validation
+      (data) and the domains vocabulary block to stay UNTOUCHED, so those
+      assertions were true both before and after this task's edit, and the
+      non-vacuity test is a self-contained fixture check.
+  AC-7:
+    tests:
+      - tests.test_reviewers_primary_chains (whole module, AC-1..AC-6 above)
+    red_confirmed: false
+    red_reason: >-
+      The module itself (asserting AC-1..AC-6) is fully red-confirmed per
+      the entries above and is green after this task's edit (27/27 in
+      `python3 -m unittest tests.test_reviewers_primary_chains`). The
+      second half of AC-7 -- that `python3 -m unittest discover -s tests`
+      and `python3 em-workflow/scripts/check-plugin-invariants.py .` both
+      exit 0 in this worktree -- cannot be made true from inside task0003
+      alone: both commands were already non-zero at the 4a baseline (one
+      unittest failure, check-plugin-invariants exit 1) because
+      agent_dispatch_parity flags `em-workflow/agents/review-evaluator.md`
+      as a dispatched-but-missing definition. That agent file is task0002's
+      deliverable (IMPLEMENTATION.md Shared Components: "Evaluator agent
+      definition ... 0002, 0005"), referenced today only from
+      feature-docs/llm-led-review/tasks/task0002.md and IMPLEMENTATION.md --
+      files task0003 must never touch (worktree-task-workflow: never modify
+      feature-docs/**) and does not own. Neither command's exit code moved
+      before vs. after this task's edit (both commands: identical single
+      failure/offender, byte-for-byte, before and after); this task
+      introduces no new failure into either command and carries the
+      pre-existing one forward unchanged, as tdd-testing directs for a
+      baseline failure outside this task's scope. This will resolve once
+      task0002 merges into the integration branch.

@@ -1,0 +1,386 @@
+schema_version: 1
+feature: llm-led-review
+created: '2026-09-04'
+base_branch: main
+goal: "develop コマンドのレビュー段を他 LLM 主体と Opus 評価の構成に改修する\n\n## やりたいこと（必須）\ndevelop コマンドのレビュー段を、他 LLM がメインでレビューし、その結果を Opus のサブエージェントがまとめて評価し、オーケストレーターがその評価に基づいて次の行動を決める構成に改修する。\n## 背景・なぜ（必須）\n現在は Claude のレビュアーとセカンドオピニオン（Codex）が並列でレビューを行い、その結果を突合する形になっている。\n該当箇所:\n- `em-workflow/skills/develop/SKILL.md`\n- `em-workflow/references/review-phase.md`\n- `em-workflow/references/reviewers.yaml`\n- `em-workflow/agents/reviewer.md`\n- `em-workflow/agents/codex-reviewer.md`\n## 受け入れ条件 / 完了の定義（必須）\n- [ ] レビューのメインを他 LLM が実行する\n- [ ] 他 LLM の結果が出たら、Opus のサブエージェントがまとめて評価する\n- [ ] Opus の評価がオーケストレーターに返る\n- [ ] オーケストレーターは Opus の評価に基づいて次の行動を決める\n- [ ] 現在の Claude と Codex の並列レビューと突合の流れを、上記の構成に置き換える\n## スコープ外（任意）\n- 従来のクロスレビュー（Claude と Codex の並列レビューと突合）は `/em-review:multi-review` を使う\n- em-review の multi-review には今回手を入れない\n## 制約・前提（任意）\n\\<触ってほしくない箇所 / 使う技術 / 互換性など。あれば\\>\n---\n## 再開条件 2026-09-04T09:04:47+09:00\n## 申し送り\n不明瞭な点はサブエージェントやセカンドオピニオンと相談して決める\n決めた内容をNotionに記載していれば好きに進めて良い\n---\n## 再開条件 2026-09-04T09:47:15+09:00\n\
+  ## 再開に必要な条件\n### 停止の直接原因（最優先）\n- `review.sanitization-ownership` (category: security / blocking) — 他 LLM 出力の untrusted 扱いを誰が担保するか。選択肢は (a) オーケストレーターの機械的サニタイズを評価役の出力にも従来どおり適用する、(b) サニタイズ責務を評価役へ移す。評価役の出力自体を untrusted として扱うかも明記が必要\n\t- 評価役がそれを含めて評価する\n### 現在の状態\n- ブランチ `em-workflow/llm-led-review/integration` と worktree `.claude/worktrees/em-workflow/llm-led-review/integration` を残置\n- コミット済みは `feature-docs/llm-led-review/phase-state/create-spec.yaml` のみ\n- REQUIREMENTS.md / SPEC.md / workflow.yaml は未生成\n- リポジトリ本体の作業ツリーに em-workflow/references/review-phase.md と em-workflow/references/reviewers.yaml の未コミット変更（litellm モデル名の更新）が残っている\n"
+parent_branch: em-workflow/llm-led-review/integration
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    plugin_invariants:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      format_command: ''
+      e2e_test_command: ''
+    destructive_guard_hook:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 0d6142f2519d29c0f2ca64c8c94642ecf60113af
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: ユーザー可視の UI 面を一切持たない改修。変更対象はプラグインのプロトコル文書・エージェントプロンプト・YAML レジストリ・テストで、DESIGN.md / HTML モックアップ / design-system/tokens.yaml の対象が無い。design-system 候補も visual inputs も 0 件。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: aabc1b55b491d527f1f445dbeeb98dd3566c2366
+- id: implement
+  status: completed
+  base_commit: 9d21d0898352fbda6be6cd67c65ad0c88cad1acc
+  completed_at_commit: 2984f1c556d4d7438be2050d08395e1a87be0d1a
+- id: review
+  status: completed
+  completed_at_commit: 2119d3a99b4b5a6fad57bf8fa7f9888e0b225109
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: a2ed36e7284db03035feebc305007b99e08cb048
+- id: retrospect
+  status: completed
+  completed_at_commit: 58d728442239d1cbd432f05555708a96a3e29977
+tasks:
+  task0001:
+    title: "evaluation contract SSOT for the Opus evaluator"
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/review-evaluation-contract.md
+    - tests/test_review_evaluation_contract.py
+    skills: []
+    domains: [api-contract, input-handling]
+    complexity: high
+    requirements: [FR5, FR7, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/llm-led-review/task0001
+  task0002:
+    title: "LLM-led review phase protocol and the evaluator agent"
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/review-phase.md
+    - em-workflow/agents/review-evaluator.md
+    - tests/test_review_phase_llm_led.py
+    skills: []
+    domains: [input-handling, api-contract, external-io, data-persistence]
+    complexity: high
+    requirements: [FR1, FR3, FR4, FR6, FR8, FR9, FR10, FR12, FR13, FR15, NFR1, NFR3, NFR5, NFR6]
+    status: merged
+    notes: null
+    branch: em-workflow/llm-led-review/task0002
+  task0003:
+    title: "primary-reviewer registry conversion"
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/reviewers.yaml
+    - em-workflow/references/review-rules.yaml
+    - tests/test_reviewers_primary_chains.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR2, FR3, FR10]
+    status: merged
+    notes: null
+    branch: em-workflow/llm-led-review/task0003
+  task0004:
+    title: "reviewer-side role framing and category vocabulary"
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/review-protocol.md
+    - em-workflow/references/review-output-schema.json
+    - em-workflow/agents/reviewer.md
+    - em-workflow/agents/codex-reviewer.md
+    - tests/test_reviewer_roles_protocol.py
+    skills: []
+    domains: [api-contract, input-handling]
+    complexity: high
+    requirements: [FR1, FR2, FR3, NFR2, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/llm-led-review/task0004
+  task0005:
+    title: "user-facing docs and plugin version bump"
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/README.md
+    - em-workflow/skills/review/SKILL.md
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_llm_led_review_user_docs.py
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR11, FR14]
+    status: merged
+    notes: null
+    branch: em-workflow/llm-led-review/task0005
+  task0006:
+    title: "evaluator accountability floor and SPEC-conformant evaluation output"
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/references/review-evaluation-contract.md
+    - em-workflow/references/review-phase.md
+    - em-workflow/agents/review-evaluator.md
+    - tests/test_review_evaluation_contract.py
+    - tests/test_review_phase_llm_led.py
+    skills: []
+    domains: [api-contract, input-handling, data-persistence]
+    complexity: high
+    requirements: [FR4, FR5, FR6, FR7, FR13, NFR1, NFR5]
+    status: merged
+    notes: null
+    branch: em-workflow/llm-led-review/task0006
+    provenance:
+      origin_kind: review
+      origin_id: 2473033f751cd158
+      source_ids: [2473033f751cd158, fce739c4dabb8993, ecae1046a059d74b, 2ff41c71809b14bc, 22933066ce52b21d, e76acd6780af5cef]
+      review_round: 1
+  task0007:
+    title: "fallback reachability so no perspective ends a round unreviewed"
+    plan: tasks/task0007.md
+    files:
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/review-protocol.md
+    - em-workflow/agents/reviewer.md
+    - tests/test_review_phase_llm_led.py
+    - tests/test_reviewer_roles_protocol.py
+    skills: []
+    domains: [api-contract, external-io, input-handling]
+    complexity: high
+    requirements: [FR1, FR3, FR9, FR10, FR12, NFR2, NFR3]
+    status: merged
+    notes: null
+    branch: em-workflow/llm-led-review/task0007
+    provenance:
+      origin_kind: review
+      origin_id: 0113d89b57312c50
+      source_ids: [0113d89b57312c50]
+      review_round: 1
+review:
+  status: completed
+  rounds_completed: 2
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 6
+  needs_rework: false
+requirements:
+  FR1:
+    title: 主レビューを他 LLM が実行する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0004, task0007]
+    tests:
+    - TS1
+    - TS5
+    - TS8
+  FR2:
+    title: reviewers.yaml を主レビュアーレジストリへ転換する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0003, task0004]
+    tests:
+    - TS1
+  FR3:
+    title: Claude 汎用レビュアーはフォールバック専任にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0003, task0004, task0007]
+    tests:
+    - TS1
+    - TS2
+    - TS8
+  FR4:
+    title: Opus 評価サブエージェントを新設する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0006]
+    tests:
+    - TS1
+    - TS2
+    - TS7
+  FR5:
+    title: 他 LLM 出力の untrusted 扱いは評価役が担保する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0006]
+    tests: [TS1, TS7]
+  FR6:
+    title: 評価役の出力もオーケストレーターから見て untrusted
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0006]
+    tests:
+    - TS1
+    - TS7
+  FR7:
+    title: 評価役の出力契約を定義する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0006]
+    tests:
+    - TS1
+    - TS7
+  FR8:
+    title: 次の行動はオーケストレーターが決める
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests:
+    - TS1
+  FR9:
+    title: fan-out 形状とチェーンウォークの維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0007]
+    tests:
+    - TS1
+    - TS5
+    - TS8
+  FR10:
+    title: ハーネス不在時の劣化動作
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0003, task0007]
+    tests:
+    - TS1
+    - TS8
+  FR11:
+    title: standalone レビューも同じ構成になる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0005]
+    tests:
+    - TS1
+  FR12:
+    title: ラウンド記録の後方互換
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0007]
+    tests:
+    - TS1
+    - TS8
+  FR13:
+    title: confidence モデルの再定義
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0006]
+    tests:
+    - TS1
+    - TS7
+  FR14:
+    title: プラグインバージョンと説明文の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0005]
+    tests:
+    - TS6
+  FR15:
+    title: プラグイン不変条件の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests:
+    - TS2
+    - TS3
+  NFR1:
+    title: injection 洗浄の防止を維持する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0006]
+    tests:
+    - TS1
+    - TS7
+  NFR2:
+    title: 外部依存を増やさない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0004, task0007]
+    tests:
+    - TS5
+    - TS8
+  NFR3:
+    title: batch モードで停止しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0007]
+    tests:
+    - TS1
+    - TS3
+    - TS8
+  NFR4:
+    title: review-protocol.md の SSOT 性を壊さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0004]
+    tests: [TS1]
+  NFR5:
+    title: レビューは read-only のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0006]
+    tests:
+    - TS1
+    - TS7
+  NFR6:
+    title: 既存テストの前提を壊さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests:
+    - TS4
+batch:
+  review_rework_count: 1
+  verify_rework_count: 0
