@@ -142,7 +142,7 @@ tasks:
     domains: [config-infra]
     complexity: medium
     requirements: [NFR4, NFR5]
-    status: pending
+    status: in_progress
     branch: em-workflow/orphaned-implementer-recovery/task0005
     notes: null
     provenance:
