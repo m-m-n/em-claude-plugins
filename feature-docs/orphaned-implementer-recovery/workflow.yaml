@@ -76,7 +76,7 @@ workflow:
     status: completed
     completed_at_commit: 8bbb5660c23bd05e83087bbbb0717ac958f496fa
   - id: implement
-    status: failed
+    status: pending
     base_commit: 3f5db490b46d5190e54a5665f1d6c44876ec42da
     completed_at_commit: 5257856c95affd4c5ca43256cab65f17bbf72def
   - id: review
@@ -142,7 +142,7 @@ tasks:
     domains: [config-infra]
     complexity: medium
     requirements: [NFR4, NFR5]
-    status: in_progress
+    status: pending
     branch: em-workflow/orphaned-implementer-recovery/task0005
     notes: null
     provenance:
