@@ -55,7 +55,8 @@ workflow:
     skipped_reason: "成果物は em-workflow プラグインのプロトコル文書（Markdown）と、必要なら Python フック／スクリプトとその unittest のみ。ユーザーに見える視覚的表面・UI・画面遷移・デザイントークンのいずれも持たないため、design ステップの入力も出力も存在しない。"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: aab6e2be59ab1ff0cbc5c00d660ccc9264bab2a6
   - id: implement
     status: pending
     base_commit: null
