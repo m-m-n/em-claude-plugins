@@ -62,7 +62,7 @@ workflow:
     completed_at_commit: c146ee35830802b2a006edd9911270a16a56353b
     base_commit: b49240996c198da1528b4b8d6265baab75a90931
   - id: review
-    status: in_progress
+    status: pending
   - id: verify
     status: pending
     result: null
@@ -143,15 +143,20 @@ tasks:
     branch: em-workflow/implement-failed-kind/task0005
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
     cross_validation: true
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 1
+  needs_rework: true
 
 requirements:
   FR1:
