@@ -243,22 +243,31 @@ OLD_JOURNAL_ONLY_PHRASE = "for every task whose last journal event is `failed`"
 
 # TS-9's byte-identical literal, copied here per the task plan rather than
 # imported from tests/test_implement_routeback_gate.py (that module is not
-# imported and not modified). Brought to the post-change text by task0001
-# (abort-phase-terminal).
+# imported and not modified). Brought to the post-change text by
+# implement-failed-kind/task0002: the batch second-failure abort now writes
+# `failed_kind` valued `decision` unconditionally, including the
+# orphaned-origin case, and cites `references/batch-terminal-line.md` for
+# why the run's stop is unaffected.
 PRE_CHANGE_BATCH_MODE_PARAGRAPH = (
     "Batch mode (`references/batch-mode.md`'s Non-packet gates table,\n"
     "`implement.failed-task`): no AskUserQuestion —\n"
     "after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a\n"
     "resume guard). A task that fails a second time → **abort phase**: refresh\n"
     "the integration worktree, capture the tip, then set and commit the\n"
-    "`implement` step's `status` to `failed` via `commit-docs.sh` (no\n"
-    "`create-plan` `needs_update`, no task status or notes write set, no\n"
-    "worktree or branch cleanup — the terminal status write and its own commit\n"
-    "are the ONLY side effect), then report and stop; control returns via\n"
-    "develop's stop condition 3, firing on the next Step B iteration reading\n"
-    "`implement: failed`. The external service cuts a follow-up task.\n"
-    "Route-back-to-planning is never taken automatically. Track the\n"
-    "retry-consumed state per task in `tasks.{T}.notes`.\n"
+    "`implement` step's `status` to `failed`, together with `failed_kind`\n"
+    "valued `decision` unconditionally — including when the failure\n"
+    "originates from a journal `failed` event whose reason is `orphaned`,\n"
+    "overriding the abort-phase option's rule above for this entrance — via\n"
+    "`commit-docs.sh` (no `create-plan` `needs_update`, no task status or\n"
+    "notes write set, no worktree or branch cleanup — the terminal status\n"
+    "write and its own commit are the ONLY side effect), then report and\n"
+    "stop; control returns via develop's stop condition 3, firing on the next\n"
+    "Step B iteration reading `implement: failed` — unaffected by this\n"
+    "override, since `references/batch-terminal-line.md` already gives\n"
+    "`implement-second-failure` precedence over `stop-condition-3`. The\n"
+    "external service cuts a follow-up task. Route-back-to-planning is never\n"
+    "taken automatically. Track the retry-consumed state per task in\n"
+    "`tasks.{T}.notes`.\n"
     "\n"
 )
 
@@ -1080,11 +1089,15 @@ class TestBatchModeParagraphRestatesSC1Terminal(unittest.TestCase):
         self.assertIn("refresh the integration worktree", self.paragraph)
 
     def test_states_implement_failed_write_via_commit_docs_sh(self):
+        # implement-failed-kind/task0002 inserts the `failed_kind` clause
+        # between the `status` write and the `commit-docs.sh` mention, so
+        # the two halves are asserted separately rather than as one
+        # contiguous literal.
         self.assertIn(
-            "set and commit the `implement` step's `status` to `failed` "
-            "via `commit-docs.sh`",
+            "set and commit the `implement` step's `status` to `failed`",
             self.paragraph,
         )
+        self.assertIn("via `commit-docs.sh`", self.paragraph)
 
     def test_states_report_and_stop(self):
         self.assertIn("report and stop", self.paragraph)
