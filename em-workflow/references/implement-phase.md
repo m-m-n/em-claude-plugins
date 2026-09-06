@@ -125,17 +125,33 @@ document is written; this phase never creates them itself.
    fail-closed with the same trusted-root fallback discipline as the review
    protocol (search `$HOME/.claude/plugins` / `$HOME/.claude/skills` with
    path filter `*/em-workflow/*/scripts/*`, never cwd).
-5. **Rework re-entry precondition**: when this phase is entered because
+5. **Re-entry precondition**: Step I.0 recognises three entry routes into
+   `implement: pending` — a fresh first pass, a rework re-entry, and the
+   develop skill's batch infra auto-resume (`skills/develop/SKILL.md`, the
+   auto-resume block; its own precondition and write set are stated there,
+   not restated here). A fresh first pass carries no further condition
+   here.
+
+   Rework re-entry: when this phase is entered because
    review or verify sent `implement` back to `pending` (rework, not a fresh
    first pass), require at least one task in `tasks` whose
    `status == pending` — this is Invariant 1 of
    `references/rework-task-synthesis.md`: the synthesis step that flips
    `implement` to `pending` never does so without registering a pending
-   rework task alongside it. Entering this phase with every task `merged`
-   (or otherwise none `pending`) is therefore a protocol error, not a fresh
-   idle state to wait out: ABORT the phase immediately with a clear report
-   naming the offending workflow.yaml state, rather than looping through
-   Step I.2 with nothing to launch.
+   rework task alongside it.
+
+   Batch infra auto-resume re-entry: when instead this phase is entered via
+   the auto-resume route above, require at least one task whose Step
+   I.2.b step 1's reconciled state is `failed` — that is what the resumed
+   phase has work to do about; no `pending` task is required on this
+   route, since the auto-resume's write set registers no task.
+
+   A non-fresh entry satisfying neither condition — every task `merged`
+   (or otherwise none `pending`), and no task whose reconciled state is
+   `failed` — is therefore a protocol error, not a fresh idle state to
+   wait out: ABORT the phase immediately with a clear report naming the
+   offending workflow.yaml state, rather than looping through Step I.2
+   with nothing to launch.
 
 ## Step I.1: Confirm the integration worktree, record the implement baseline
 
@@ -169,7 +185,11 @@ implement entry for the feature); on resume (implement already
 sent it back) the existing `base_commit` value is preserved unchanged, per
 `references/rework-task-synthesis.md` Section 10 point 3 / Section 11
 Invariant 5. In all cases set `implement` status to
-`in_progress`; commit the update with
+`in_progress`; when this phase is entered with `implement`'s prior status
+`failed`, this same write also clears `failed_kind`
+(`references/workflow-schema.md`) back to null — the write set that
+carries the field's lifecycle clear on an entry from `failed` (cited
+above, not restated). Commit the update with
 `commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase start" "$BASE_COMMIT"`
 (the third argument is `expected_base_tip`; exit-4 recovery: Branch &
 Worktree Model above).
@@ -738,10 +758,12 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   set — every task whose Step I.2.b step 1 reconciled state is
   `failed`: set `create-plan` to `needs_update`, set the `implement`
   step back to `pending`, clear `failed_kind`
-  (`references/workflow-schema.md`) back to null in that same write set
-  since the step is leaving `failed`, record each such task's failure
-  reason (the implementer's report `notes`) in `tasks.{T}.notes`, and set
-  `tasks.{T}.status` back to `pending` for every task in that set — the
+  (`references/workflow-schema.md`) back to null in that same write set —
+  re-asserting the null value Step I.1's phase-start write already set on
+  this entry, so this adds no extra write and no extra commit — record
+  each such task's failure reason (the implementer's report `notes`) in
+  `tasks.{T}.notes`, and set `tasks.{T}.status` back to `pending` for
+  every task in that set — the
   gate above already established that no task is `merged` or
   `in_progress` at this point, so the result is that no task is left
   `merged` or `in_progress` or `failed`, which is exactly what makes the
