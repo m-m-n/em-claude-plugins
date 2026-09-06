@@ -1,0 +1,185 @@
+schema_version: 1
+feature: implement-failed-kind
+created: 2026-09-06
+base_branch: main
+goal: |
+  em-workflow: implement の failed に理由分類を持たせ、インフラ起因なら停止条件 3 を発火させず続行する
+
+  ## やりたいこと（必須）
+  workflow.yaml の implement step の `failed` に理由の分類を持たせ、インフラ起因（implementer の孤児化など）の `failed` は develop の Step B で停止条件 3 を発火させず、implement を `pending` に戻して続行できるようにする。設計判断が必要な `failed` だけを従来どおり人に回す。
+
+  ## 背景・なぜ（必須）
+  2026-09-05 08:06 JST の run は、workflow.yaml の implement が `failed` だったため Step B の停止条件 3（ユーザー介入が必要）で即停止した。
+  - この `failed` の理由は「implementer がディスパッチャ再起動で消えた」であり、人の判断は不要だった
+  - task0001 の worktree には未コミット差分が残っていて、I.2.a の resume guard で続行できる状態だった
+  - 停止条件 3 は `failed` / `needs_update` を一律にユーザー介入と扱うため、人が workflow.yaml を `pending` に戻すまで、何回 dispatch しても 1〜2 分で同じ報告を繰り返す
+
+  ## 受け入れ条件 / 完了の定義（必須）
+  - [ ] `references/workflow-schema.md` の implement step に `failed_kind: infra | decision` を追加する。`infra` は外部要因（孤児化、harness 障害）、`decision` は実装内容の失敗や計画の見直しが必要なもの
+  - [ ] implement を `failed` に書く各箇所（I.2.c の abort、batch の 2 回目 failed、gate-rejected terminal）で `failed_kind` を必ず書く。孤児化由来は `infra`、それ以外は `decision`
+  - [ ] Step B の停止条件 3 は `failed_kind: decision` のときだけ発火する。`infra` のときは implement を `pending` に戻し、その write をコミットしてからフェーズを実行する
+  - [ ] `infra` 起因の自動続行に回数上限を設け、上限到達時は `decision` 扱いで停止する。上限値と回数は workflow.yaml の `batch` セクションに記録する
+  - [ ] `references/batch-terminal-line.md` の `step_needs_intervention` の説明と、`skills/develop/SKILL.md` の停止条件 3、`references/batch-mode.md` を更新する
+  - [ ] 検証: `failed_kind: infra` の workflow.yaml から `--batch --once` を起動し、停止せず implement が続行することを確認する。`failed_kind: decision` では従来どおり停止することを確認する
+
+  ## スコープ外（任意）
+  - 孤児 launched の検出と journal への `failed` 記録（別タスク「孤児 implementer の自動復旧」で扱う）
+  - review / verify の `failed` への分類の適用
+
+  ## 制約・前提（任意）
+  - 別タスク「孤児 implementer の自動復旧」が journal に `failed`（reason: `orphaned`）を書く経路を前提にする。着手順はそちらが先
+  - `failed_kind` が無い既存の workflow.yaml は `decision` として扱い、後方互換を保つ
+parent_branch: em-workflow/implement-failed-kind/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Markdown + Python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: d7d9927e645f04f299f8ecf0d4dbf6ee3f87f730
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "成果物は em-workflow プラグインのプロトコル文書（Markdown）と、必要なら Python フック／スクリプトとその unittest のみ。ユーザーに見える視覚的表面・UI・画面遷移・デザイントークンのいずれも持たないため、design ステップの入力も出力も存在しない。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "implement step への `failed_kind` フィールド追加"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: "`failed_kind` のライフサイクル（設定・保持・クリア）"
+    status: tbd
+    tbd_reason: "未決定事項『failed_kind のライフサイクル』（question_id: failed-kind.lifecycle、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `clear_on_leaving_failed`（implement が `failed` を離れる書き込みと同じ write set で `failed_kind` を null に戻す）。create-plan の tbd-resolution で確定する。"
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: "I.2.c abort 経路での `failed_kind` 書き込み"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: "batch の 2 回目 failed 経路での `failed_kind` 書き込み"
+    status: tbd
+    tbd_reason: "未決定事項『batch 2 回目 failed の分類』（question_id: batch.second-failure.kind、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `second_always_decision`（2 回目失敗は原因を問わず常に `decision`）。この推奨は既存の precedence 規則と整合する — `references/batch-terminal-line.md` の Stop point coverage で `implement-second-failure` は `implement_task_failed` として `stop-condition-3` より優先されるため、`infra` に分類しても走行は停止する。create-plan の tbd-resolution で確定する。"
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: "route-back gate-rejected terminal での `failed_kind` 書き込み"
+    status: tbd
+    tbd_reason: "未決定事項『gate-rejected terminal の分類』（question_id: gate-rejected.kind、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `always_decision`（gate 不成立は `merged` / `in_progress` タスクの存在という計画側の状態が原因であり、自動続行しても同じ gate で再び弾かれるため常に `decision`）。create-plan の tbd-resolution で確定する。"
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: "停止条件 3 の発火条件を `failed_kind: decision` に限定する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: "`infra` 自動続行の回数上限とその記録"
+    status: tbd
+    tbd_reason: "未決定事項『infra 起因の自動続行の回数上限』（question_id: infra.retry-cap-value、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `cap_2`（上限 2 回）。上限値そのものが未確定のため、キー名・カウント更新規則・上限到達時の報告文面もあわせて create-plan の tbd-resolution で確定する。"
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: "`infra` 自動続行を適用するモードの範囲"
+    status: tbd
+    tbd_reason: "未決定事項『infra 自動続行の適用モード』（question_id: infra.mode-scope、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `batch_only`（回数の記録先が workflow.yaml の `batch` セクションであること、および `batch` ブロックが --batch 走行でのみ作成される既存規則と整合するため）。create-plan の tbd-resolution で確定する。"
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: "`failed_kind` 欠落時の後方互換"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: "関連ドキュメントの更新"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "SSOT 規律"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "write とコミットの単位を変えない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "プラグイン version bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "スクリプト／フックを変更する場合のテスト追随"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
