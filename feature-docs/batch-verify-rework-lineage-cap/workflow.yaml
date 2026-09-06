@@ -216,7 +216,7 @@ tasks:
     domains: ["ui", "config-infra"]
     complexity: medium
     requirements: [FR9, FR10, NFR2, NFR3, NFR4, NFR5]
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-verify-rework-lineage-cap/task0004
   task0005:
     title: "em-workflow プラグイン version の同時 bump"
