@@ -329,3 +329,11 @@ batch:
   infra_resume:
     rounds: 0
     cap: 2
+
+review:
+  status: in_progress
+  rounds_completed: 2
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
