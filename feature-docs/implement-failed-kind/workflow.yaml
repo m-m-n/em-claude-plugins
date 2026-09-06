@@ -190,9 +190,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/implement-failed-kind/task0008
     provenance:
       source: verify
       source_ids: [TS-5]
