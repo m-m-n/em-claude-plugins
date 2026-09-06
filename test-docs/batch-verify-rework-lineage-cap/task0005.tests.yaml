@@ -1,0 +1,95 @@
+task_id: task0005
+baseline_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+final_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_verify_rework_lineage_cap_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - test_verify_rework_lineage_cap_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+    red_confirmed: true
+    red_reason: >-
+      Not independently red before the bump (the equality holds trivially
+      when both registries still read the baseline 0.1.61); the
+      not-yet-bumped condition this AC actually cares about is covered by
+      AC-2's red observation below, which failed with "61 not greater than
+      61" before the plugin.json / marketplace.json edits.
+  AC-2:
+    tests:
+      - test_verify_rework_lineage_cap_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - test_verify_rework_lineage_cap_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+    red_confirmed: true
+    red_reason: "AssertionError: 61 not greater than 61 (both registries still at 0.1.61 before the edit)"
+  AC-3:
+    tests:
+      - test_verify_rework_lineage_cap_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_unchanged
+    red_confirmed: false
+    red_reason: >-
+      This test asserts a non-change (em-review's version stays at its
+      pre-task snapshot 0.5.7). It passed before this task's edit because
+      the task never touches the em-review entry, so there was no
+      implementation to make it go red -- the criterion is a "did not
+      touch" guard, not a behavior this task introduces. Carried into the
+      report's notes per the tdd-testing skill's guidance for
+      genuinely-no-observable-change criteria.
+  AC-4:
+    tests:
+      - test_plugin_version_parity
+    red_confirmed: false
+    red_reason: >-
+      Regression check, not new behavior: this pre-existing module already
+      exercises em-workflow version parity and comparison logic
+      independent of this task, and all of that logic passed both before
+      and after this task's edit (verified via `python3 -m unittest
+      tests.test_plugin_version_parity -v`). One test in this module,
+      TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key,
+      was already failing before this task started (baseline_failures
+      above) -- it pins the em-review marketplace entry as carrying no
+      `version` key, but that entry already carries one (0.5.7) on the
+      tree this task started from. That failure predates this task, is
+      about the em-review entry (out of this task's scope, which is the
+      em-workflow version bump), and is left untouched per the tdd-testing
+      skill's rule that a pre-existing baseline failure is not this task's
+      to fix.
+  AC-5:
+    tests:
+      - test_verify_rework_lineage_cap_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_malformed_version_shape
+    red_confirmed: true
+    red_reason: >-
+      Wrote the module (with its negative-proof tests already present)
+      before touching plugin.json/marketplace.json and ran the whole
+      module: the two baseline-comparison tests failed with "61 not
+      greater than 61" while the negative-proof tests (which assert
+      `assertRaises(AssertionError)` around the matchers, independent of
+      the real files' current version) passed from the start, since they
+      exercise the matcher against forged/synthetic data rather than the
+      real manifests -- confirming the negative-proof assertions correctly
+      raise, not merely that they were never exercised.
