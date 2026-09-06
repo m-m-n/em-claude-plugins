@@ -229,7 +229,7 @@ tasks:
     domains: ["config-infra"]
     complexity: low
     requirements: [FR12, NFR3, NFR4, NFR5]
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-verify-rework-lineage-cap/task0005
 
 review:
