@@ -62,8 +62,8 @@ workflow:
     completed_at_commit: 185de9ceff2eac0f85d7f2a407450487b26424e7
     base_commit: b49240996c198da1528b4b8d6265baab75a90931
   - id: review
-    status: in_progress
-    completed_at_commit: 1a2067cbb93a6f8a76af15e61e4bea19291eb867
+    status: completed
+    completed_at_commit: 83477a01b45768ef1ba73990c04f67b5dd6d4a65
   - id: verify
     status: pending
     result: fail
@@ -331,9 +331,17 @@ batch:
     cap: 2
 
 review:
-  status: in_progress
-  rounds_completed: 2
+  status: completed
+  rounds_completed: 3
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
     cross_validation: true
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 0
+  needs_rework: false
