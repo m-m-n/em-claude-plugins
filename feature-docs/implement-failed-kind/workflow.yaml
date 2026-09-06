@@ -106,7 +106,7 @@ tasks:
     domains: [input-handling, api-contract, config-infra]
     complexity: high
     requirements: [FR2, FR6, FR7, FR8, NFR1, NFR2, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/implement-failed-kind/task0003
   task0004:
