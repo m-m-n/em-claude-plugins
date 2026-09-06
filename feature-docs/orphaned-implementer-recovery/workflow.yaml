@@ -155,8 +155,8 @@ tasks:
     domains: [input-handling, data-persistence, api-contract, config-infra]
     complexity: medium
     requirements: [FR2, FR5, FR7, NFR1, NFR4, NFR5, NFR6, NFR7]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/orphaned-implementer-recovery/task0006
     notes: null
     provenance:
       source: review
