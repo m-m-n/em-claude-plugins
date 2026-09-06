@@ -58,8 +58,8 @@ workflow:
     status: completed
     completed_at_commit: aab6e2be59ab1ff0cbc5c00d660ccc9264bab2a6
   - id: implement
-    status: in_progress
-    completed_at_commit: 4466395bab2d4aa8d2400beaa2fb2379aab175f6
+    status: completed
+    completed_at_commit: 185de9ceff2eac0f85d7f2a407450487b26424e7
     base_commit: b49240996c198da1528b4b8d6265baab75a90931
   - id: review
     status: pending
@@ -190,7 +190,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/implement-failed-kind/task0008
     provenance:
