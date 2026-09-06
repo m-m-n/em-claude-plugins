@@ -1,0 +1,12 @@
+schema_version: 1
+feature: implement-failed-kind
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-06T23:36:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline"
+    normalized_answer: "decline"
+    resolution_note: "task_id: task0003; declined deviation path tests/test_develop_once_option.py; missing evidence part: the acceptance-criterion or requirement identifier that would otherwise be dropped was not named in the completion report (the report cites the task plan and the tdd-testing skill exception in prose, but names no AC-n of task0003's own plan and no requirement id registered in workflow.yaml). Path shape check and workflow-control-path check both passed; the identifier part alone was unresolved, so the path was not auto-added to tasks.task0003.files and the containment check handles it as an ordinary deviation."
