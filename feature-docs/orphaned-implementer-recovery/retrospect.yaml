@@ -1,0 +1,54 @@
+feature: orphaned-implementer-recovery
+collected_at: '2026-09-06T20:10:00+09:00'
+session_ids:
+- 01a07668-1b58-75e7-a650-7aa48447b3df.jsonl
+signals:
+  review_critical_high:
+  - stable_id: 1ca085e307eacd90
+    category: comprehensive
+    file: em-workflow/scripts/recover-orphaned-task.py
+    title: Bind session evidence to the current launch
+    resolution: unresolved
+  - stable_id: ebad15de2c79c36c
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    title: I.2.b orphan-recovery launches the new helper by repo-relative path, so recovery never fires
+      in an installed plugin
+    resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+  - id: MANUAL-D2
+    category: unknown
+    note: 'VERIFICATION.md 「Manual Testing」の 2 件目（IMPLEMENTATION.md D2 の marker ベース現セッション解決が、実セッションから
+      1 度試したときに 現セッションの transcript を見つけること）が不成立。 `_resolve_current_session_via_marker` は marker を含む transcript
+      を 正しく特定するが、`_first_entry_timestamp` が「最初の非空行」だけを見て `timestamp` フィールドが無ければ None を返すため解決に失敗する。実際の
+      `~/.claude/projects/{encoded-cwd}/*.jsonl` は先頭行が `{"type":"last-prompt",...}` のような timestamp を持たない記録である
+      ことが多く（この機のサンプル 40 件中 34 件）、本セッションの transcript でも実測で marker は含まれるのに解決結果は None だった。結果として D2 form 2
+      は実運用でほぼ常に `current-session-unknown` に落ち、 I.2.b の orphan recovery（FR2 の証明経路）が発火しない。form 1 （session
+      id + start の明示指定）を使える場合のみ機能する。 自動テスト（TS-1..TS-13, 3029 件）は fixture が timestamp 付き 先頭行を前提としているため全て
+      pass しており、この乖離は Manual Testing 項目でのみ露出する。 category の根拠: VERIFICATION.md に verification_index が無く、この
+      Manual Testing 項目は Requirements Coverage 表のどの行にも写像して いないため、references/workflow-schema.md の fail-closed
+      規律に従い sentinel 値 `unknown` を割り当てた。'
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts:
+- origin_kind: verify
+  origin_id: MANUAL-D2
+  title: D2 marker-based current-session resolution fails on transcripts whose first line has no timestamp
+  body: '_first_entry_timestamp reads only the first non-empty line of the transcript and returns None
+    when that line has no "timestamp" field. Real ~/.claude/projects/{encoded-cwd}/*.jsonl files often
+    begin with a record such as {"type":"last-prompt",...} that carries no timestamp (34 of 40 sampled
+    files on this machine). As a result _resolve_current_session_via_marker locates the marker-bearing
+    transcript but still fails to resolve, so D2 form 2 degrades to current-session-unknown and the I.2.b
+    orphan recovery never fires outside form 1 (explicit session id + start). Reproduce by running the
+    D2 form-2 path from a real session; the automated suite (TS-1..TS-13) misses it because its fixtures
+    always place a timestamp on the first line. Affected: em-workflow/scripts/recover-orphaned-task.py.'
+lessons_candidates:
+- task0005 itself was orphaned mid-run and recovered by this feature's own helper (journal shows launched
+  -> failed(orphaned) -> launched -> merged); the feature dogfooded itself during its own implement phase.
+- 'The verify failure was only reachable through a Manual Testing item: the automated fixtures encoded
+  an assumption (first transcript line carries a timestamp) that real data violates. Fixtures derived
+  from the implementation rather than from sampled real data hid the defect across 3029 tests.'
+- VERIFICATION.md carried no verification_index, so the failing Manual Testing item could not be mapped
+  to a requirement and had to take the sentinel category "unknown".
