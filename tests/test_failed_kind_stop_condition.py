@@ -71,10 +71,43 @@ STOP_CONDITION_3_START = "3. ある step の status が `failed` / `needs_update
 STOP_CONDITION_4_START = "4. workflow.yaml の YAML parse エラー"
 
 NEW_BLOCK_ANCHOR = "**batch: implement の failed_kind による自動再開**"
+# task0006 (implement-failed-kind, round-1 rework, AC-5): NEW_BLOCK_ANCHOR's
+# label text also appears earlier, inside the stop-condition-3 list item's
+# own pointer sentence (`STOP_CONDITION_3_START`'s section, "詳細は Step B
+# の「**batch: implement の failed_kind による自動再開**」参照"). `_section`
+# slices FROM a marker's position ONWARD, so extracting from that pointer's
+# bare-anchor position does not reach backward to item 3's own opening text
+# -- instead it slices forward from mid-item-3 all the way to `NEW_BLOCK_END`,
+# swallowing the rest of the stop-condition list (items 4-7), the precedence
+# block's own heading and body, and the verify-cap exception block's own
+# heading and body whole -- each block's heading occurrence appears an EXTRA
+# time on top of the auto-resume block's own single legitimate citation of
+# it. `NEW_BLOCK_HEADING_ANCHOR` below includes the heading's own trailing FR
+# citation, which occurs exactly once in the document (at the block's own
+# heading, never at the pointer sentence) -- this is the anchor the
+# extraction must start from instead.
+NEW_BLOCK_HEADING_ANCHOR = (
+    "**batch: implement の failed_kind による自動再開**（FR6, FR7, FR8）:"
+)
 NEW_BLOCK_END = "| step | 実行方法 |"
 
 PRECEDENCE_BLOCK_ANCHOR = "**停止条件 3 との優先関係**"
 VERIFY_CAP_EXCEPTION_ANCHOR = "**batch: verify の cap 到達に対する停止条件の例外**"
+
+# task0006 AC-5: content unique to each excluded block's own BODY (not its
+# bolded label -- the auto-resume block's own independence-declaration
+# sentence legitimately cites both labels once, so a bare label-presence
+# check cannot distinguish the correctly-scoped block from the buggy
+# superset; these body markers never appear inside that citation).
+PRECEDENCE_EXHAUSTIVENESS_SENTENCE = (
+    "この列挙は、所有 SSOT 自身がフェーズの自動再エントリを"
+    "明記している遷移だけが対象という構成上の理由で網羅的で"
+    "あり、他の遷移はこの除外の対象外。"
+)
+VERIFY_CAP_FIRST_BULLET = (
+    "停止条件 3（ある step の status が `failed` なら停止）に対する"
+    "例外: この `failed` を停止理由にしない。"
+)
 
 # The real two-value vocabulary this task must never restate (IMPLEMENTATION.md
 # D2's table: the two values the three write paths set).
@@ -188,7 +221,7 @@ class SkillDocTestCase(unittest.TestCase):
         cls.stop_condition_3_item = _section(
             cls.text, STOP_CONDITION_3_START, STOP_CONDITION_4_START
         )
-        cls.new_block = _section(cls.text, NEW_BLOCK_ANCHOR, NEW_BLOCK_END)
+        cls.new_block = _section(cls.text, NEW_BLOCK_HEADING_ANCHOR, NEW_BLOCK_END)
 
 
 # --- AC-1: narrowed firing condition + citation ----------------------------
@@ -432,6 +465,107 @@ class TestAC8ExistingBlocksUnchangedAndIndependenceDeclared(SkillDocTestCase):
         self.assertGreaterEqual(
             _stripped_count(self.text, VERIFY_CAP_EXCEPTION_ANCHOR), 3
         )
+
+
+# --- task0006 (implement-failed-kind, round-1 rework) AC-5: the extraction
+# --- anchor defect -----------------------------------------------------
+
+
+class TestExtractionStartsAtTheBlocksOwnHeading(SkillDocTestCase):
+    """AC-5: `cls.new_block` (built in `setUpClass` from
+    `NEW_BLOCK_HEADING_ANCHOR`) must start at the auto-resume block's OWN
+    heading occurrence, not at the label's first (pointer-sentence)
+    occurrence inside the stop-condition-3 item. Written as EXCLUSION
+    assertions over the extracted section (Test Notes: this criterion's
+    failure mode is a passing test -- a presence assertion over the
+    correctly-scoped block passes on the buggy superset too, since the
+    superset strictly contains the correct block's own text; only an
+    assertion that the superset's EXTRA content is absent can distinguish
+    the two).
+
+    The excluded blocks' bolded LABELS cannot be used as bare
+    presence/absence markers here: the auto-resume block's own
+    independence-declaration sentence legitimately cites both labels once
+    (`TestAC8...test_new_block_declares_independence_from_both` above), so
+    a plain "label absent" assertion would be false even for the correctly
+    fixed block. Instead: (a) the labels are asserted to occur AT MOST the
+    one legitimate time (the buggy superset swallows each block's own
+    heading occurrence on top of that citation, tripling the count), and
+    (b) content unique to each block's own BODY -- never quoted inside the
+    citation -- is asserted absent outright."""
+
+    def test_extracted_section_excludes_stop_condition_3_items_opening_text(
+        self,
+    ):
+        self.assertNotIn(STOP_CONDITION_3_START, self.new_block)
+
+    def test_non_vacuity_a_stop_condition_3_anchored_extraction_would_include_it(
+        self,
+    ):
+        # The check above cannot be proven against the actual historical bug
+        # (`_section` slices FORWARD from a marker, so even the buggy
+        # bare-anchor extraction starts mid-item-3, after its opening text --
+        # never before it). Proven instead against a plausible ALTERNATIVE
+        # wrong implementation (anchoring on the item's own opening text),
+        # which the exclusion assertion above is capable of catching.
+        wrong_section = _section(self.text, STOP_CONDITION_3_START, NEW_BLOCK_END)
+        self.assertIn(STOP_CONDITION_3_START, wrong_section)
+
+    def test_precedence_block_label_cited_at_most_the_one_legitimate_time(
+        self,
+    ):
+        self.assertLessEqual(
+            _stripped_count(self.new_block, PRECEDENCE_BLOCK_ANCHOR), 1
+        )
+
+    def test_verify_cap_exception_label_cited_at_most_the_one_legitimate_time(
+        self,
+    ):
+        self.assertLessEqual(
+            _stripped_count(self.new_block, VERIFY_CAP_EXCEPTION_ANCHOR), 1
+        )
+
+    def test_extracted_section_excludes_the_precedence_blocks_own_body(self):
+        self.assertFalse(
+            _contains(self.new_block, PRECEDENCE_EXHAUSTIVENESS_SENTENCE)
+        )
+
+    def test_extracted_section_excludes_the_verify_cap_exceptions_own_body(
+        self,
+    ):
+        self.assertFalse(_contains(self.new_block, VERIFY_CAP_FIRST_BULLET))
+
+    def test_non_vacuity_the_bare_anchor_superset_contains_both_bodies_and_extra_label_citations(
+        self,
+    ):
+        # Proves the four checks above are not vacuously true: the SAME
+        # document, sliced from the label's bare (buggy) first occurrence
+        # instead of the heading anchor, DOES contain both blocks' own body
+        # content and cites both labels MORE than the one legitimate time --
+        # so a regression back to the bare anchor would be caught by every
+        # one of the four assertions above.
+        buggy_superset = _section(self.text, NEW_BLOCK_ANCHOR, NEW_BLOCK_END)
+        self.assertTrue(_contains(buggy_superset, PRECEDENCE_EXHAUSTIVENESS_SENTENCE))
+        self.assertTrue(_contains(buggy_superset, VERIFY_CAP_FIRST_BULLET))
+        self.assertGreater(
+            _stripped_count(buggy_superset, PRECEDENCE_BLOCK_ANCHOR), 1
+        )
+        self.assertGreater(
+            _stripped_count(buggy_superset, VERIFY_CAP_EXCEPTION_ANCHOR), 1
+        )
+
+    def test_heading_anchor_occurs_exactly_once(self):
+        # Guards NEW_BLOCK_HEADING_ANCHOR's own uniqueness assumption: if a
+        # second heading occurrence were ever introduced, `_section`'s
+        # `str.index` would silently keep matching the first one, and this
+        # whole fix would regress silently.
+        self.assertEqual(self.text.count(NEW_BLOCK_HEADING_ANCHOR), 1)
+
+    def test_extracted_section_still_contains_the_blocks_own_content(self):
+        # Non-vacuity for the fix itself: the corrected extraction must
+        # still contain the block's own substance, not an empty or
+        # truncated slice.
+        self.assertIn("実行済み回数を 1 増やす", self.new_block)
 
 
 # --- AC-9: stop-condition-3 list item points at the new block -------------
