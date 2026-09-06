@@ -1,0 +1,21 @@
+schema_version: 1
+feature: implement-failed-kind
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 0e396986c48a189cdedb69d2a6ea3df5fd328ca7
+last_input_digest: "sha256:b86927804628cf691bb56a99d31bfe99e50388a229b0c03792f7bad7e8f828d9"
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: "sha256:b86927804628cf691bb56a99d31bfe99e50388a229b0c03792f7bad7e8f828d9"
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
