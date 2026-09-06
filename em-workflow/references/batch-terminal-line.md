@@ -97,7 +97,7 @@ Closed set of eleven stop reason codes:
 | Code | Meaning | Applies to `state` |
 |---|---|---|
 | `step_stuck` | A workflow step could not make progress and is stuck | `stopped` |
-| `step_needs_intervention` | A workflow step reported `needs_update`, or reported `failed` — for the `implement` step, `failed` counts only when `failed_kind` reads `decision`, including the missing-value case per `references/workflow-schema.md`; other steps' `failed` is unchanged | `stopped` |
+| `step_needs_intervention` | A workflow step reported `needs_update`, or reported `failed` — for the `implement` step, `failed` counts when `failed_kind` reads `decision` (including the missing-value case per `references/workflow-schema.md`), or when the automatic-resume attempt count has reached its cap per `skills/develop/SKILL.md`; other steps' `failed` is unchanged | `stopped` |
 | `workflow_yaml_unparseable` | `workflow.yaml` could not be parsed | `stopped` |
 | `git_setup_aborted` | Step 0's git setup aborted (e.g. gitleaks missing) | `stopped` |
 | `gate_fail_closed` | A gate was classified fail-closed and the phase aborted | `stopped` |
@@ -144,7 +144,8 @@ and in each case the phase-specific row wins. Correspondingly, the
 `stop-condition-3` row's meaning is restricted to `failed` / `needs_update`
 states that no phase-specific row covers, and, for the `implement` step's
 `failed`, further restricted to the cases where `failed_kind` reads
-`decision` (see the `step_needs_intervention` row above).
+`decision`, or where the automatic-resume attempt count has reached its cap
+per `skills/develop/SKILL.md` (see the `step_needs_intervention` row above).
 
 ## No line on a wait turn
 
