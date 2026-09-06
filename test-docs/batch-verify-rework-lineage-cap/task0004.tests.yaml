@@ -1,0 +1,129 @@
+task_id: task0004
+baseline_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+final_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_step_c_verify_failed_default.TestStepCCompletionMethodChoicesRetained.test_three_choice_markers_present
+      - tests.test_step_c_verify_failed_default.TestStepCCompletionMethodChoicesRetained.test_askuserquestion_and_three_way_wording_present
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard: this task does not remove or narrow the
+      three-choice AskUserQuestion, so there is no red state to observe
+      for this criterion -- the three bullet markers and the 三択/
+      AskUserQuestion wording were present before this task's edit and
+      remain present after it (the edit is confined to the default-switch
+      sentence preceding the bullet list).
+  AC-2:
+    tests:
+      - tests.test_step_c_verify_failed_default.TestStepCVerifyFailedDefaultWiring.test_conditional_default_and_disclosure_present_without_old_wording
+      - tests.test_step_c_verify_failed_default.TestStepCVerifyFailedDefaultWiring.test_non_failed_branch_default_is_merge
+      - tests.test_step_c_verify_failed_default.TestStepCVerifyFailedDefaultWiring.test_failed_branch_default_is_keep_branch
+    red_confirmed: true
+    red_reason: >-
+      Observed before the SKILL.md edit: AssertionError:
+      '`verify.status`が`failed`なら「ブランチを残す」' not found in the
+      sliced Step C step-1 section (which at that point still read
+      'デフォルト（推奨表示）は「`{base_branch}` にマージ」' unconditionally).
+      test_non_failed_branch_default_is_merge failed for the same reason
+      (the `verify.status` が `failed` 以外 phrase did not exist yet).
+  AC-3:
+    tests:
+      - tests.test_step_c_verify_failed_default.TestStepCVerifyFailedDefaultWiring.test_failed_disclosure_requirement_present
+      - tests.test_step_c_verify_failed_default.TestStepCVerifyFailedDefaultWiring.test_conditional_default_and_disclosure_present_without_old_wording
+    red_confirmed: true
+    red_reason: >-
+      Observed before the SKILL.md edit: AssertionError:
+      '`verify.status`が`failed`のときは、質問文にverifyがfailedである事実と
+      `failed_items`の件数を明記する' not found in the sliced Step C step-1
+      section (the disclosure sentence did not exist yet).
+  AC-4:
+    tests:
+      - tests.test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+      - tests.test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard over wording this task never touches (the
+      `batch:` auto-select clause and its Non-packet gates / develop.completion
+      references sit unchanged, byte-identical, both before and after the
+      edit to the preceding default-switch sentence).
+  AC-5:
+    tests:
+      - tests.test_step_c_verify_failed_default.TestReviewPhaseCapNonRegression.test_review_cap_regression_markers_present
+      - tests.test_step_c_verify_failed_default.TestBatchModeResidualCriticalHighRowUnchanged.test_row_present
+      - tests.test_step_c_verify_failed_default.TestBatchModeResidualCriticalHighRowUnchanged.test_row_states_completion_gate_and_auto_rework_cap_behaviour
+      - tests.test_step_c_verify_failed_default.TestReviewCapRegressionMatcherCanFail.test_forged_text_is_well_formed_and_missing_markers
+      - tests.test_step_c_verify_failed_default.TestReviewCapRegressionMatcherCanFail.test_matcher_rejects_text_missing_cap_markers
+    red_confirmed: false
+    red_reason: >-
+      Pure regression/non-change guard (Design section 2 / IMPLEMENTATION.md
+      D2 exception): this task's `files` never include review-phase.md or
+      batch-mode.md, and per the task plan no other task in this feature
+      changes the Phase R5 batch paragraph or the
+      `review.residual-critical-high` row either, so there is no red state
+      for this criterion to pass through -- the three elements and the row
+      were present before this task ran and remain present, unmodified,
+      after it. The matcher's ability to fail is proven directly against a
+      synthetic forged paragraph (TestReviewCapRegressionMatcherCanFail),
+      which does go red-then-confirmed-red-by-design (it never touches real
+      files).
+  AC-6:
+    tests:
+      - tests.test_step_c_verify_failed_default.TestReviewPhaseNeverReferencesVerifySideCounters.test_verify_side_counter_names_absent
+      - tests.test_step_c_verify_failed_default.TestReviewPhaseNeverReferencesVerifySideCounters.test_verify_side_counter_names_are_non_trivial_non_vacuity
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard: review-phase.md does not reference the
+      verify-side lineage counter names before this task ran (confirmed by
+      grep) and this task does not touch that file, so there is no red
+      state to observe -- the absence holds both before and after.
+  AC-7:
+    tests:
+      - tests.test_step_c_verify_failed_default.TestReworkTaskSynthesisInvariant7Unchanged.test_invariant_7_present
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard: this task does not modify
+      rework-task-synthesis.md (NFR2), and Invariant 7's wording was present
+      before this task ran and remains present, unmodified, after it -- no
+      red state exists for a criterion that requires a file to stay
+      untouched.
+  AC-8:
+    tests:
+      - tests.test_step_c_verify_failed_default.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - tests.test_step_c_verify_failed_default.TestConditionalDefaultMatcherCanFail.test_matcher_rejects_old_unconditional_default_text
+      - tests.test_step_c_verify_failed_default.TestConditionalDefaultMatcherCanFail.test_forged_old_unconditional_text_is_well_formed_and_found
+    red_confirmed: false
+    red_reason: >-
+      Property of the test module itself (stdlib-only imports, and the
+      matcher's demonstrated ability to reject a synthetic old-wording
+      excerpt), not a criterion that observes the production doc going from
+      red to green -- the negative-proof matcher function was written
+      alongside its own forged-text test in the same commit, so both passed
+      from the module's first run. Verified directly: `ast`-based import
+      scan finds only stdlib names, and the forged-text tests confirm the
+      matcher correctly rejects text carrying the pre-task0004 unconditional
+      "default is merge" wording.
