@@ -737,8 +737,10 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   then make one ordered workflow.yaml write set over the reset target
   set — every task whose Step I.2.b step 1 reconciled state is
   `failed`: set `create-plan` to `needs_update`, set the `implement`
-  step back to `pending`, record each such task's failure reason (the
-  implementer's report `notes`) in `tasks.{T}.notes`, and set
+  step back to `pending`, clear `failed_kind`
+  (`references/workflow-schema.md`) back to null in that same write set
+  since the step is leaving `failed`, record each such task's failure
+  reason (the implementer's report `notes`) in `tasks.{T}.notes`, and set
   `tasks.{T}.status` back to `pending` for every task in that set — the
   gate above already established that no task is `merged` or
   `in_progress` at this point, so the result is that no task is left
@@ -782,7 +784,10 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   the integration worktree first (the same `reset --hard` as above),
   captures `TERMINAL_TIP=$(git -C "$WT_ROOT/integration" rev-parse
   HEAD)`, sets the `implement` step's `status` to `failed` in
-  workflow.yaml — the single write this path makes — and commits exactly
+  workflow.yaml, together with `failed_kind` valued `decision`
+  unconditionally — the blocker is a planning-side state (a `merged` or
+  in-flight task), so an automatic resume would meet the same gate again
+  — the single write this path makes — and commits exactly
   that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
   implement route-back gate rejected" "$TERMINAL_TIP"`. There is no
   route-back write set, no worktree/branch cleanup and no route-back
@@ -796,7 +801,11 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   `reset --hard em-workflow/{feature}/integration` the rejected path
   above uses), capture `ABORT_TIP=$(git -C "$WT_ROOT/integration"
   rev-parse HEAD)`, set the `implement` step's `status` to `failed` in
-  workflow.yaml — the single write this path makes — and commit exactly
+  workflow.yaml, together with `failed_kind` in that same single write —
+  `infra` when the failing task's failure originates from a journal
+  `failed` event whose reason is `orphaned` (the orphaned-`launched`
+  convergence paragraph above already establishes this), `decision`
+  otherwise — the single write this path makes — and commit exactly
   that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
   implement phase aborted" "$ABORT_TIP"` (no `create-plan`
   `needs_update`, no task status or notes write set, no worktree or
@@ -822,14 +831,20 @@ Batch mode (`references/batch-mode.md`'s Non-packet gates table,
 after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a
 resume guard). A task that fails a second time → **abort phase**: refresh
 the integration worktree, capture the tip, then set and commit the
-`implement` step's `status` to `failed` via `commit-docs.sh` (no
-`create-plan` `needs_update`, no task status or notes write set, no
-worktree or branch cleanup — the terminal status write and its own commit
-are the ONLY side effect), then report and stop; control returns via
-develop's stop condition 3, firing on the next Step B iteration reading
-`implement: failed`. The external service cuts a follow-up task.
-Route-back-to-planning is never taken automatically. Track the
-retry-consumed state per task in `tasks.{T}.notes`.
+`implement` step's `status` to `failed`, together with `failed_kind`
+valued `decision` unconditionally — including when the failure
+originates from a journal `failed` event whose reason is `orphaned`,
+overriding the abort-phase option's rule above for this entrance — via
+`commit-docs.sh` (no `create-plan` `needs_update`, no task status or
+notes write set, no worktree or branch cleanup — the terminal status
+write and its own commit are the ONLY side effect), then report and
+stop; control returns via develop's stop condition 3, firing on the next
+Step B iteration reading `implement: failed` — unaffected by this
+override, since `references/batch-terminal-line.md` already gives
+`implement-second-failure` precedence over `stop-condition-3`. The
+external service cuts a follow-up task. Route-back-to-planning is never
+taken automatically. Track the retry-consumed state per task in
+`tasks.{T}.notes`.
 
 ### Supporting cast: journal, hooks, resume
 
