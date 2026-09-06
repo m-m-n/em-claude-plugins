@@ -43,8 +43,13 @@ Per-task acceptance criteria live in `feature-docs/implement-failed-kind/tasks/`
 | TS-11 | Assert the auto-resume re-entry contract across the three documents that describe it: the implement phase's precondition recognises the auto-resume entry route and its own satisfying condition, the rework invariant is scoped to rework-derived transitions, the develop skill states why its write set touches no task state, the route-back clear's reason is accurate, and the develop-skill module's section extraction is anchored on the block's own heading | `tests/test_failed_kind_resume_reentry.py` and the repaired `tests/test_failed_kind_stop_condition.py` pass, including the anchor's exclusion guard and each matcher's negative proof | Unit |
 | TS-12 | Start `--batch --once` on a workflow.yaml whose `implement` step is `failed` with the external-cause `failed_kind`, below the resume cap, where every task is `merged` except one that is `failed` — the state the auto-resume actually leaves behind | The resumed implement phase does not abort on its re-entry precondition; it reconciles the failed task and reaches its failure-handling branch, and the run neither repeats the same report nor ends at the stuck-step stop with the resume round already spent | Manual |
 | TS-13 | Assert the `batch.infra_resume` record's cross-document consistency: the two documents' `batch` snippet key sets are equal, the block's persisted content is described to include the auto-resume record, the cap's ownership is cited per part, the record's materialising write path is named, and the external-cause gloss separates meaning from detection while leaving the vocabulary, required-ness and missing-value rules intact | `tests/test_failed_kind_batch_docs.py` and `tests/test_failed_kind_schema.py` pass, including their negative proofs | Unit |
+| TS-14 | Assert the repaired em-review marketplace-entry guard: the entry's identity fields and its key set are pinned exactly, its `version` is asserted by shape and never against a literal, the guard is still present and enabled against the live registry with a non-vacuity lookup guard, and its detection power survives | `tests/test_llm_led_review_user_docs.py` passes, including the positive proof that a higher forged version is accepted and the negative proofs that an altered identity field, a missing or malformed `version`, and an unexpected extra key are each rejected | Unit |
 
-TS-11 through TS-13 were added by the round-1 rework (task0006, task0007).
+TS-11 through TS-13 were added by the round-1 review rework (task0006,
+task0007). TS-14 was added by the verify rework (task0008): TS-5 alone
+constrains only the suite's exit code, which a repair that deleted the
+failing guard would also satisfy, so TS-14 pins the guard's retained
+detection power separately.
 
 TS-1 through TS-4 are SPEC.md's own integration scenarios. They exercise an
 LLM-driven orchestrator loop rather than a callable unit, and the project
@@ -93,7 +98,7 @@ every suite run.
 | NFR1 | task0001, task0002, task0003, task0004, task0006, task0007 | TS-6, TS-7, TS-8, TS-9, TS-11, TS-13 |
 | NFR2 | task0002, task0003, task0006 | TS-1, TS-7, TS-8, TS-12 |
 | NFR3 | task0005 | TS-10 |
-| NFR4 | task0001, task0002, task0003, task0004, task0005, task0006, task0007 | TS-5 |
+| NFR4 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-5, TS-14 |
 
 ## E2E Testing
 
@@ -148,7 +153,7 @@ and no visual artefact exists.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1..TS-13) | 13 | 8 | 0 | 5 |
+| Test scenarios (TS-1..TS-14) | 14 | 9 | 0 | 5 |
 | Success criteria (AC1..AC8) | 8 | 8 | 0 | 4 |
 | Requirements (FR1..FR10, NFR1..NFR4) | 14 | 14 | 0 | 6 |
 
@@ -158,4 +163,5 @@ check, and the interactive counterpart of TS-1 is a manual-only check of
 FR8 alongside its automated document check. TS-11 and TS-13 are the
 round-1 rework's automated document-contract checks; TS-12 is its
 manual behavioural counterpart, covering the task-state situation TS-1
-leaves unspecified.
+leaves unspecified. TS-14 is the verify rework's automated check and shares
+NFR4 with TS-5, so the requirement count is unchanged by its addition.
