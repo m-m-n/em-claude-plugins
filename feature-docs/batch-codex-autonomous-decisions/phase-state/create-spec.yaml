@@ -1,16 +1,36 @@
 schema_version: 1
 feature: batch-codex-autonomous-decisions
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
-base_revision: b95dd25064d604f07900d62c999c53ffce56bd17
+base_revision: 218472c1c834134cf42d1bf4ad300ddd4b74a968
 last_input_digest: sha256:4ea197269d7d6c3ab62bb4a577834e9f47aacbc77229bb84e70e6897dfc224c1
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: "2026-09-07T08:57:00+09:00"
+    questions:
+      - question_id: requirement.escalation-subagent
+        status: issued
+      - question_id: requirement.backend-fallback-chain
+        status: issued
+      - question_id: requirement.classification-gate-scope
+        status: issued
+      - question_id: requirement.on-unanswered-block-coupling
+        status: issued
+      - question_id: requirement.gate-fail-closed-terminal-reason
+        status: issued
+      - question_id: requirement.notion-reporting-scope
+        status: issued
+      - question_id: requirement.verification-fixture-shape
+        status: issued
+      - question_id: design-step.recommendation
+        status: issued
 answers: {}
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:4ea197269d7d6c3ab62bb4a577834e9f47aacbc77229bb84e70e6897dfc224c1
     output_digest: null
 artifacts: []
