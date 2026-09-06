@@ -258,6 +258,11 @@ of such resumes). No migration runs: an absent `batch` block, an absent
 `rounds` is incremented, how the cap is compared, and what happens once it
 is reached — is defined once in `skills/develop/SKILL.md` and is not
 restated here, exactly as this section does for `verify_rework` above.
+The record is materialised by the same orchestrator write that creates
+the `batch` block (`references/batch-mode.md`), with its initial member
+values equal to the unset-read defaults above (`rounds: 0`, `cap: 2`), so
+materialising the record never produces a state the read rule above would
+not have produced.
 
 **Retired key.** A `workflow.yaml` written before this block's current
 shape may still carry the retired `verify_rework_count` key. No
@@ -290,7 +295,11 @@ closed two-value vocabulary and no other value: an external-cause value
 and a decision-required value.
 
 - `infra` — the failure's cause is external to the implementation: the
-  implementer was orphaned, or a harness failure occurred.
+  implementer was orphaned, or a harness failure occurred. Which concrete
+  failures are attributed to this value today is
+  `references/implement-phase.md`'s to state, not restated here; a
+  failure that carries no external-cause signal reads as the
+  decision-required value below (fail-closed).
 - `decision` — the failure is in the implementation itself, or the plan
   needs to be revisited.
 
