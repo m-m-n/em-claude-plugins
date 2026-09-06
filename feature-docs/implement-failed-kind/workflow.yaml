@@ -158,9 +158,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: high
     requirements: [FR2, FR6, FR7, NFR1, NFR2, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/implement-failed-kind/task0006
   task0007:
     title: "The batch.infra_resume record: key set, materialising writer, cap ownership and value gloss"
     plan: tasks/task0007.md
@@ -173,9 +173,9 @@ tasks:
     domains: [api-contract, data-persistence, config-infra]
     complexity: medium
     requirements: [FR1, FR7, FR10, NFR1, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/implement-failed-kind/task0007
 
 review:
   status: pending
