@@ -1,0 +1,48 @@
+task_id: task0005
+baseline_failures:
+  - "tests.test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot"
+final_failures:
+  - "tests.test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot"
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_failed_kind_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_failed_kind_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+    red_confirmed: false
+    red_reason: "test_em_workflow_entry_version_matches_plugin_manifest was already green pre-implementation: both registries started at the identical baseline value 0.1.62, so equality held vacuously before this task's edit and stayed true after it. The matcher's actual failure path is exercised instead by the paired negative proof (test_equality_matcher_rejects_forged_differing_versions), which does raise on forged disagreeing versions."
+  AC-2:
+    tests:
+      - tests.test_failed_kind_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_failed_kind_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+    red_confirmed: true
+    red_reason: "AssertionError: 62 not greater than 62 -- observed on both the plugin manifest and the marketplace entry before the version files were edited"
+  AC-3:
+    tests:
+      - tests.test_failed_kind_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_unchanged
+    red_confirmed: false
+    red_reason: "This criterion asserts a non-change (em-review entry stays at 0.5.7). Nothing in this task's diff touches the em-review entry, so the test was green before implementation began -- there is no behavior to drive red here; it functions as a regression guard rather than a red-green criterion."
+  AC-4:
+    tests:
+      - tests.test_failed_kind_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_fails_on_a_missing_entry_name
+      - tests.test_failed_kind_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_succeeds_on_a_present_entry_name
+      - tests.test_failed_kind_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+    red_confirmed: false
+    red_reason: "The lookup-by-name helper (_marketplace_entry) is new code written alongside its own tests in the same commit, following the established pattern from test_verify_rework_lineage_cap_version_bump.py; there was no prior implementation to be red against. The negative proof (test_lookup_fails_on_a_missing_entry_name) does exercise the guard's failure path directly and passed on first run against the finished helper."
+  AC-5:
+    tests:
+      - tests.test_failed_kind_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_failed_kind_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_failed_kind_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_failed_kind_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_failed_kind_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_failed_kind_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_malformed_version_shape
+      - tests.test_failed_kind_version_bump.TestValidationDetectsRegressions.test_parse_version_distinguishes_parse_failure_from_none
+    red_confirmed: true
+    red_reason: "AC-1/AC-2's red run (62 not greater than 62) is the primary observed red for the version-parity matchers this suite exercises; the negative-proof and non-vacuity-guard tests in this class assert the matchers' failure/pass behavior against synthetic data and are new tests written alongside the matchers they test, per the project's established test-module convention (test_verify_rework_lineage_cap_version_bump.py). `python3 -m unittest discover -s tests` passing with the new module present, plus the AST-based stdlib-only check, were verified directly."
+notes: >
+  AC-3 and AC-4 are non-behavior-change / new-helper criteria respectively;
+  their tests could not be driven red by this task's diff because either
+  nothing in the diff touches what they guard (AC-3) or the tested code was
+  authored together with its tests in the same commit with no prior
+  implementation to be red against (AC-4). Both are carried into the
+  implementer report's unconfirmed_reds per the tdd-testing skill.
