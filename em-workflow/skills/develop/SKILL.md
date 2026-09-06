@@ -29,7 +29,9 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 3. ある step の status が `failed` / `needs_update`（= ユーザー介入が必要。
    ただし、フェーズプロトコルがそのフェーズの自動再エントリのために設定した
    `needs_update` の間はこの条件では停止しない — 詳細は Step B の
-   「**停止条件 3 との優先関係**」参照）
+   「**停止条件 3 との優先関係**」参照。`implement` step の `failed` は
+   `failed_kind` により発火条件が絞られる — 詳細は Step B の
+   「**batch: implement の failed_kind による自動再開**」参照）
 4. workflow.yaml の YAML parse エラー（= リカバリ不能）
 5. implement フェーズでバックグラウンド implementer の完了通知を待つとき
    （= キューループが定める正常な待機。次の 2 形がある:
@@ -381,6 +383,54 @@ exit 4 ならそこでフェーズを中断し、状況をユーザーに報告�
 この例外は上記「**停止条件 3 との優先関係**」ブロックが定める自動再エントリ
 carve-out（`needs_update` に対する例外）とは独立しており、同ブロックの
 本文・網羅性宣言を変更しない。
+
+**batch: implement の failed_kind による自動再開**（FR6, FR7, FR8）:
+`implement` step の `status` が `failed` のとき、停止条件 3 が発火するのは
+`failed_kind` が要ユーザー判断の値を示す場合に限る。定義・許容値・値が
+無い場合の読み方は `references/workflow-schema.md` が唯一の定義元であり、
+ここでは繰り返さない。この判定は、Step B が実行対象の step として
+`implement` を特定し、その `status` を `failed` と読み取った時点
+（IMPLEMENTATION.md D4）で、次の手順として順に評価する。この block は
+上記「**停止条件 3 との優先関係**」および「**batch: verify の cap 到達に
+対する停止条件の例外**」のいずれとも独立しており、両ブロックの本文を
+変更しない。
+
+1. `failed_kind` を読む。
+2. 値が要ユーザー判断を示す場合 → 停止条件 3 が従来どおり発火する。以降の
+   手順は実行しない。
+3. 値が外部要因を示し、かつ対話実行の場合 → 停止条件 3 が従来どおり発火
+   する（FR8: 自動再開は batch 専用であり、対話実行の挙動はこの変更で
+   一切変わらない）。
+4. 値が外部要因を示し、かつ batch 実行の場合 → `batch` ブロックが持つ
+   自動再開の記録の 2 つのメンバーを読む。そのキーパス・意味・未設定時の
+   読み方は `references/workflow-schema.md` が定義し、ここでは繰り返さ
+   ない。`batch` ブロック自体の作成規則は `references/batch-mode.md` が
+   定義し、ここでは繰り返さない。
+5. 実行済み回数が cap に達している場合 → 要ユーザー判断の場合と同じ扱い
+   とし、停止条件 3 が発火する。レポートには cap への到達を理由として
+   明記し、通常の停止と区別できるようにする。この分岐では workflow.yaml
+   への書き込みは一切行わない。
+6. それ以外の場合 → 1 つの順序付き workflow.yaml 書き込みセット:
+   `implement` の `status` を `pending` へ戻す、`failed_kind` を null へ
+   戻す（FR2 — `failed` を離れる同じ書き込みセットでフィールドをクリア
+   する既存規則と同じ）、実行済み回数を 1 増やす。この書き込みセットを、
+   フェーズを実行する**前**に `commit-docs.sh` で 1 回だけコミットする
+   （NFR2: 1 つの書き込みセット、1 回のコミット、その後にフェーズを
+   実行）。その後、Step B の通常シーケンスで implement フェーズを実行
+   する。
+
+この自動再開について、次の 3 点は変更しない:
+- 実行済み回数は feature ごとに単調増加し、リセットされない
+  （workflow.yaml の同じブロックが持つ既存の rework カウンタと同様）。
+- 自動再開は停止ではない: バッチ終端行を出さず、新しい stop reason code
+  も追加しない（`references/batch-terminal-line.md` — 引用のみで繰り返
+  さない）。
+- 自動再開はそれ自体で `--once` のフェーズ境界にはならない。境界は
+  implement フェーズ自身が定める位置のままである。
+
+停止条件 3 のもう一方の発火条件（`needs_update`）、および `review` /
+`verify` step に対する挙動はこの block の対象外であり、一切変更しない
+（SPEC assumption A3）。
 
 | step | 実行方法 |
 |------|----------|
