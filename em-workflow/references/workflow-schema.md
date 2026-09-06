@@ -75,7 +75,9 @@ workflow:                          # fixed step sequence; orchestrator advances 
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
     status: pending
   - id: implement                  # fully-parallel implementation, merge included
-    status: pending
+    status: pending                # `failed_kind` field set alongside a
+                                   #   `failed` status (see "## `failed_kind`"
+                                   #   below); not restated here
     base_commit: {sha}             # HEAD when the integration branch was created;
                                    # the review phase diffs base_commit..parent_branch
   - id: review                     # dynamic review + bounded auto-fix
@@ -142,6 +144,10 @@ batch:                             # present only after a --batch run touched
                                    #   note. Never used to activate batch
                                    #   mode — that is the --batch flag's
                                    #   per-invocation job
+  infra_resume:                    # infra auto-resume record — see
+    rounds: 0                      #   "## `batch` block" below for the
+    cap: 2                         #   unset-read rule; the consuming
+                                   #   judgment lives in skills/develop/SKILL.md
 ```
 
 ## `goal` block
@@ -243,6 +249,16 @@ judgment itself — cap values, the counting rule, the two caps'
 independent evaluation, and the outcome at cap — is defined once in
 `skills/develop/SKILL.md`「verify フェーズ」and is not restated here.
 
+`infra_resume` carries the infra auto-resume record: `rounds` (how many
+infra-caused automatic resumes have already been performed for this
+feature; monotonic, never reset) and `cap` (the permitted maximum number
+of such resumes). No migration runs: an absent `batch` block, an absent
+`infra_resume` block, or an absent member key is read as unset
+(`rounds: 0`, `cap: 2`). The judgment that consumes these keys — when
+`rounds` is incremented, how the cap is compared, and what happens once it
+is reached — is defined once in `skills/develop/SKILL.md` and is not
+restated here, exactly as this section does for `verify_rework` above.
+
 **Retired key.** A `workflow.yaml` written before this block's current
 shape may still carry the retired `verify_rework_count` key. No
 migration runs: a `batch` block missing `verify_rework.rounds` /
@@ -266,6 +282,37 @@ Schema consequences:
   back to the normal permission prompt).
 - Editing a command string in workflow.yaml invalidates its approval — the
   orchestrator re-runs the approval gate on the next hook deny.
+
+## `failed_kind`
+
+`failed_kind` belongs to the `implement` step of `workflow` and carries a
+closed two-value vocabulary and no other value: an external-cause value
+and a decision-required value.
+
+- `infra` — the failure's cause is external to the implementation: the
+  implementer was orphaned, or a harness failure occurred.
+- `decision` — the failure is in the implementation itself, or the plan
+  needs to be revisited.
+
+This document is the single owner of the field's meaning, its
+required-ness and its permitted values; every other document cites this
+section by repository-relative path instead of restating it.
+
+**Required-ness.** The field is REQUIRED on every write that sets the
+`implement` step's `status` to `failed`. Three write paths make such a
+write; they are owned by `references/implement-phase.md`, which this
+section cites without restating which value each path writes.
+
+**Lifecycle.** The field is set only by the same write that sets `status`
+to `failed`; it is held for exactly as long as that `failed` status; it is
+returned to null by the same write set that moves the `implement` step off
+`failed`. No separate write and no separate commit exists for the set or
+for the clear.
+
+**Missing-value compatibility.** An `implement` `failed` carrying no
+`failed_kind` reads as the `decision` value. No migration runs. This
+compatibility rule does not weaken the required-ness above for the write
+paths that are in scope.
 
 ## `completed_at_commit` (rule R2)
 
