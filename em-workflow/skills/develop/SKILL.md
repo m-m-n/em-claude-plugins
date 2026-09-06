@@ -426,6 +426,14 @@ carve-out（`needs_update` に対する例外）とは独立しており、同�
    実行）。その後、Step B の通常シーケンスで implement フェーズを実行
    する。
 
+この書き込みセットは `tasks.*` のいずれのキーも変更しない設計である。
+タスクの `status` をここで巻き戻さない理由: `tasks.{T}.status` をリセット
+すると、I.2.a の recycled-task-id carve-out の下でそのタスクが未起動と
+して選択可能になり、I.2.c の failure handling を経由せずに再起動されて
+しまう。再開後の implement フェーズは、この失敗タスクを自身の reconcile
+と failure handling（`references/implement-phase.md` の Step I.2.b /
+I.2.c、引用のみでここでは繰り返さない）を通じて扱う。
+
 この自動再開について、次の 3 点は変更しない:
 - 実行済み回数は feature ごとに単調増加し、リセットされない
   （workflow.yaml の同じブロックが持つ既存の rework カウンタと同様）。
