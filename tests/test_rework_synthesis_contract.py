@@ -128,8 +128,32 @@ class TestReworkSynthesisSSOTInvariants(unittest.TestCase):
         )
 
     def test_states_pending_task_precondition_invariant(self):
+        # task0006 (implement-failed-kind, round-1 rework, AC-2): Invariant
+        # 1's wording is scoped to rework-derived transitions -- the pinned
+        # literal follows that edit's line wrap.
         self.assertIn(
-            "at least one new rework task is\n   registered in workflow.yaml",
+            "at least one new rework task is registered in\n   "
+            "workflow.yaml",
+            self.text,
+        )
+
+    def test_invariant_1_scoped_to_rework_derived_transitions(self):
+        self.assertIn(
+            "For a rework-derived transition (Section 10), before "
+            "`implement`",
+            self.text,
+        )
+
+    def test_invariant_1_names_auto_resume_as_out_of_scope(self):
+        self.assertIn(
+            "also returns\n   `implement` to `pending`, but is not a "
+            "rework-derived transition and\n   registers no task; this "
+            "invariant does not govern it",
+            self.text,
+        )
+        self.assertIn(
+            "its precondition\n   is `references/implement-phase.md`'s "
+            "Step I.0",
             self.text,
         )
 
