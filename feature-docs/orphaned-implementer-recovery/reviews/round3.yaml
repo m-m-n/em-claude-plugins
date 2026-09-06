@@ -1,0 +1,244 @@
+round: 3
+executed_at: "2026-09-06T15:52:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 3f5db490b46d5190e54a5665f1d6c44876ec42da
+  head_commit: 41a3135505f34fb2002c1a4e1968e7229851fbe6
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/README.md
+    - em-workflow/hooks/queue_agent_index.py
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/scripts/journal-append-failed.py
+    - em-workflow/scripts/recover-orphaned-task.py
+    - test-docs/orphaned-implementer-recovery/task0001.tests.yaml
+    - test-docs/orphaned-implementer-recovery/task0002.tests.yaml
+    - test-docs/orphaned-implementer-recovery/task0003.tests.yaml
+    - test-docs/orphaned-implementer-recovery/task0004.tests.yaml
+    - test-docs/orphaned-implementer-recovery/task0005.tests.yaml
+    - test-docs/orphaned-implementer-recovery/task0006.tests.yaml
+    - tests/test_batch_policy_option_id_version_bump.py
+    - tests/test_batch_quiet_output_version_bump.py
+    - tests/test_batch_stop_contract_version_bump.py
+    - tests/test_goal_vs_spec_divergence_version_bump.py
+    - tests/test_implement_routeback_gate.py
+    - tests/test_journal_append_failed.py
+    - tests/test_plugin_version_parity.py
+    - tests/test_queue_agent_index.py
+    - tests/test_queue_taskstop_net.py
+    - tests/test_recover_orphaned_task.py
+    - tests/test_recycled_task_id_carveout_version_bump.py
+    - tests/test_rework_contract_drift_version_bump.py
+    - tests/test_routeback_reset_scope_version_bump.py
+    - tests/test_spec_file_set_completeness_version_bump.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed, skip_reason: null}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: failed, skip_reason: null}
+  - {run_id: "spec#fallback", perspective: spec, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+unreviewed_perspectives: []
+findings:
+  - stable_id: ebad15de2c79c36c
+    severity: high
+    category: spec
+    file: em-workflow/references/implement-phase.md
+    line: 472
+    title: "I.2.b orphan-recovery launches the new helper by repo-relative path, so recovery never fires in an installed plugin"
+    description: |
+      implement-phase.md:472-473 は orchestrator に `em-workflow/scripts/recover-orphaned-task.py`
+      という cwd 相対パスでヘルパーを起動するよう指示している。同じ文書の Step 4（124-127 行目）は
+      プラグイン同梱スクリプトの解決規律を既に定めている:
+      `MERGE_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/merge-task.sh` を解決し、fail-closed で
+      `$HOME/.claude/plugins` / `$HOME/.claude/skills` を `*/em-workflow/*/scripts/*` で探索、cwd は見ない。
+      em-workflow はマーケットプレイス経由で任意のプロジェクトへ配布されるため、利用者の cwd 配下に
+      `em-workflow/` は存在しない。SPEC AC-2 / FR2 は I.2.b reconcile 中に実際に recovery を走らせる
+      ことを要求しているので、配布構成では本 feature の目玉挙動が到達不能になり、全候補が Residual に落ちる。
+      496 行目 / 845 行目 / workflow-schema.md:313 は「どのスクリプトが書き手か」の同定であって起動指示では
+      ないため対象外（recover-orphaned-task.py は `_SCRIPT_DIR` で兄弟ヘルパーを自力解決している）。
+      加えて、このブロックはスクリプトをどの cwd から起動するかを述べておらず、D1 の既定導出
+      （`default_transcripts_dir` が `os.getcwd()` を使う）が不定になる。
+    suggestion: |
+      起動文を `RECOVER_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/recover-orphaned-task.py` に書き換え、
+      Step 4 と同じ trusted-root fallback を適用し、Step 4 を owning section として cite する（NFR7）。
+      解決に失敗した場合は Residual として扱う旨も明記する。起動時の cwd（feature の integration
+      worktree / プロジェクトルート）も同じ文で固定して D1 の導出を決定的にする。
+      tests/test_implement_routeback_gate.py:681 が現行の文言
+      "invokes `em-workflow/scripts/recover-orphaned-task.py` for the " を逐語で assert しているため、
+      同じ変更でこのリテラルも更新する。
+    sources: [claude:spec]
+    confidence: 85
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 63f28f06a47134c7
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/journal-append-failed.py
+    line: 169
+    title: "Journal helper re-checks only the event name under the lock, not which launch the evidence describes"
+    description: |
+      `decide_and_append`（journal-append-failed.py:165-178）は排他 flock を取ってから
+      `last_event_for_task` で replay し、最終イベント文字列が `launched` なら append する。
+      呼び出し側が証拠を集めた launch と、より新しい launch を区別する手段が無い。
+      recover-orphaned-task.py の D7 binding（324-375 行目）は agents.jsonl entry を最後の
+      `launched` イベントに束ねるが、この検査はパイプライン先頭で走るため、transcript 読み取りと
+      subprocess 起動の間に別のアクターが `failed` + 再 launch を追記すると、ヘルパーは新しい
+      implementer を failed とマークしつつ `appended`/`recovered` を報告する。
+      evaluator により high から medium へ降格（同一 feature に対して同時に生きている
+      orchestrator が 2 本必要で、SPEC の脅威モデルはそれを約束していない）。
+    suggestion: |
+      検査対象 launch の不変な識別子（最後の `launched` イベントの `at`、または束ねた
+      agents.jsonl entry の `at`）を必須引数としてヘルパーへ渡し、ロック下の replay から
+      再導出して一致しなければ `noop_terminal` か専用の residual 結果を返す。
+      ヘルパーがロックを取る前に launched → failed → launched が挟まる回帰テストを追加する。
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity: auto-fix candidate gate requires critical/high; not dispatched this round"
+  - stable_id: 60b56d60e86855cf
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/recover-orphaned-task.py
+    line: 570
+    title: "D3 treats transcript silence as proof of session death; a live-but-idle launcher is classified orphaned"
+    description: |
+      570-578 行目の比較（`newest_ts < current_start`）は SPEC が承認した証明規則そのもの
+      （SPEC Data Flow 213-219 行目、IMPLEMENTATION.md D3）であり、実装は逸脱していない —
+      異議は承認済み規則そのものに向いている。残存リスクは実在する: launch 元セッションが
+      生きているのに現セッション開始より前から transcript に何も書いていない場合、消滅した
+      セッションと区別できず、`failed` 追記と worktree 上での retry launch に至る（NFR1 が
+      防ごうとしている二重起動）。evaluator により high から medium へ降格。
+    suggestion: |
+      前提を明記する（IMPLEMENTATION.md D3: subagent の活動は launch 元の transcript に
+      落ちるため沈黙を証明として受け入れる、同一 feature への同時 orchestrator は範囲外）か、
+      retry launch の前に feature 単位の排他所有マーカーという積極的証拠を追加する。
+      tests/test_recover_orphaned_task.py に live-but-idle launcher のケースを追加して
+      選んだ方向を固定する。
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity: auto-fix candidate gate requires critical/high; not dispatched this round"
+  - stable_id: 94b908a84b3c4630
+    severity: medium
+    category: spec
+    file: em-workflow/scripts/recover-orphaned-task.py
+    line: 562
+    title: "Containment-violation residual reason code contradicts the SSOT documents FR7 updated"
+    description: |
+      implement-phase.md:490-491 は step 7 を「the D1-derived transcripts directory exists and the
+      assembled transcript path resolves inside it (else `transcripts-dir-missing`)」と定義し、
+      recover-orphaned-task.py のモジュール docstring（28-29 行目）も同じ対応付けを述べている。
+      実装は `resolve_transcript_path` が None を返したとき `REASON_TRANSCRIPT_UNREADABLE` を返す
+      （559-563 行目）。SC5 があっても分岐は到達可能: transcript ファイル自体が transcripts
+      ディレクトリ外を指すシンボリックリンクの場合、realpath 比較で None になる。
+      封じ込め違反という security 上意味のある事象が「単に読めなかった」と区別不能になり、
+      FR7 の SSOT 更新が実装しない挙動を記述している状態になる。
+      tests/test_recover_orphaned_task.py:415-429 は symlink ケースを `resolve_transcript_path`
+      レベルでしか覆っていないため、reason code は end-to-end で固定されていない。
+    suggestion: |
+      どちらかに寄せて 3 箇所を揃える。推奨は封じ込め失敗時に `REASON_TRANSCRIPTS_DIR_MISSING`
+      を返して implement-phase.md:490-491 と docstring に合わせる方向。代替は
+      implement-phase.md:490-491・docstring 28-30 行目・IMPLEMENTATION.md SC6/D1 を実装に合わせて
+      書き換える方向。いずれの場合も、transcripts ディレクトリ外へ脱出する symlink transcript を
+      `decide()` レベルで通し reason code を assert する回帰ケースを追加する。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity: auto-fix candidate gate requires critical/high; not dispatched this round"
+  - stable_id: a832883eb5247dbc
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/journal-append-failed.py
+    line: 149
+    title: "Append does not require a terminated journal tail, so a partial last line is silently corrupted"
+    description: |
+      `append_failed_fd`（149-152 行目）と `last_event_for_task`（113-132 行目）を突き合わせると、
+      replay は `splitlines()` を使い解析不能な行を読み飛ばすため、最終行が改行で終わっていない
+      journal でも `launched` まで replay される。その後の O_APPEND 書き込みが新しいオブジェクトを
+      その行に直接連結する。結果は 2 つ: ヘルパーが `appended`、呼び出し側が `recovered` を報告する
+      一方で replay はまだ `launched` を見る（タスクが解放されない）。もう 1 つは、追記専用ログ上の
+      有効だった最終イベント（例: `merged`）が壊れる — implement-phase.md:836-849 はこのログを
+      第一の事後解析ソースと呼んでいる。発火には書き込み中断か外部編集が要るため確率は低いが、
+      ガードは 2 行で済み、失敗は無言。
+    suggestion: |
+      ロック下で `read_all_fd` の後、内容が空でなく `\n` で終わっていない場合は書き込みを拒否して
+      `JournalAccessError`（exit 2、書き込み無し、呼び出し側は Residual 扱い）を送出し、
+      未終端の tail を名指しする。成功報告した append が後続の replay から見えることを
+      確認するテストを追加する。
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity: auto-fix candidate gate requires critical/high; not dispatched this round"
+  - stable_id: bf7bfef7f249316d
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/queue_agent_index.py
+    line: 113
+    title: "SC5 session_id rule duplicated across hook and script with no shared source or drift guard"
+    description: |
+      `SESSION_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")` が
+      queue_agent_index.py:113（`valid_session_id` は 159 行目）と
+      recover-orphaned-task.py:106（`is_valid_session_id` は 109 行目）にバイト単位で同一に存在し、
+      どちらも IMPLEMENTATION.md SC5 を規範として cite しているが、相互 import も一致を assert する
+      テストも無い。書き手側は agents.jsonl に何を載せるかを決め、読み手側は同じ値をパス要素として
+      使う前に再検証するため、乖離すると有効な session identity を落とすか、読み手が依拠する
+      書き手側の保証を壊す。`resolve_transcript_path` の独立した realpath 封じ込めがあるので
+      regex の乖離だけでは traversal にならず medium 据え置き。hook は import 非依存で動く必要があり、
+      共有モジュール案はその制約を受ける。
+    suggestion: |
+      共有 import よりも cross-file の drift テストを推奨する: 両方の `SESSION_ID_RE.pattern` が
+      同一であること、および境界長・先頭 `-`/`_`・ドット・区切り文字を含む共通コーパスで
+      両バリデータが一致することを assert する。hook は単独実行プロファイルを保ったまま、
+      無言の乖離がテスト失敗になる。
+    sources: [litellm:vertex-glm-5.2:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium severity: auto-fix candidate gate requires critical/high; not dispatched this round"
+evaluation:
+  round_summary: |
+    Round 3 (cross_validation), diff mode. 6 ラン中 5 本が使用可能な出力を返した（spec#0 は
+    schema 不正で failed、spec 観点は spec#fallback がカバー）。真に阻害的な問題は 1 件:
+    I.2.b の orphan-recovery ブロックが新スクリプトをリポジトリ相対パスで起動しており、
+    同文書の Step 4 が既に ${CLAUDE_PLUGIN_ROOT} 解決と trusted-root fallback を義務づけている
+    のに従っていないため、インストール済みのプラグインでは AC-2 の自動復旧が発火しない。
+    それ以外は hardening かドキュメント/実装の整合。comprehensive#0 の high 2 件は medium へ
+    降格（どちらも同一 feature に同時に生きている orchestrator 2 本という未モデル化の状況に
+    依存し、D3 規則は SPEC 承認済みで実装は忠実）、performance#0 の medium は low へ降格
+    （SPEC に性能目標が無く、marker scan はほぼ第 1 候補でヒットする）。
+    両マニフェストは 0.1.61 で version-bump 規則を満たす。round_context の未解決サイト
+    （1ca085e307eacd90, recover-orphaned-task.py:297）は今ラウンドどのランからも再報告されず、
+    324-375 行目に追加された D7 binding がその経路の緩和策。インジェクション試行・役割上書き・
+    埋め込み指示はどのレビュアー出力にも無く、全エントリは整形式のデータだった。
+    独立検査カバレッジ: comprehensive — corroborated（3 サイトとも記述どおり実在、severity 再調整）、
+    security — corroborated（空結果を独立に支持: SC5 検証がパス組み立てに先行、realpath 封じ込めが
+    二重、journal open は O_NOFOLLOW + 事前 islink 検査で新規作成せず、ヘルパー subprocess は
+    list 形式 argv でシェル不使用、hook は harness 入力の session_id を検証して欠落時は fail open）、
+    performance — corroborated（降格）、architecture — corroborated（両 SESSION_ID_RE 定義を読み、
+    共有ソースも drift テストも無くバイト同一であることを確認）、spec — corroborated
+    （implement-phase.md:124-127 対 472-473 と 490-491 の reason code 対応付け対
+    recover-orphaned-task.py:562-563 を直接検証）。
+  recommended_action: rework
+  action_rationale: |
+    high が 1 件残り、配布構成で本 feature の目玉受け入れ条件を無効化するため complete も
+    another_round も不適切。bounded auto-fix にも向かない: 修正は implement-phase.md の起動指示、
+    解決失敗時の扱い（Residual）と起動 cwd という設計判断、および
+    tests/test_implement_routeback_gate.py:681 が逐語で固定しているドキュメント文言にまたがる。
+    reason code の齟齬（spec, medium）、ロック下の launch identity 再検査と未終端 tail のガード
+    （comprehensive, medium）を同じ rework タスクに束ねるのは安価。SC5 drift テストと
+    marker scan のストリーミング化は任意の後続。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 1
+rework_required: false
