@@ -77,7 +77,8 @@ workflow:
       TS-1..TS-4・TS-12・TS-1 の interactive 対照は VERIFICATION.md が Manual と
       宣言したシナリオで、無人走行の中では実行していない。
   - id: retrospect
-    status: in_progress
+    status: completed
+    completed_at_commit: 6b5de1ea8e8e99d7b4de28ad2ea80111dc4f47f8
 
 tasks:
   task0001:
