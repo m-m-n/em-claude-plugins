@@ -1,0 +1,188 @@
+task_id: task0006
+baseline_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+final_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_names_three_entry_routes
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_auto_resume_route_cited_to_develop_skill_not_restated
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_fresh_first_pass_route_unchanged
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_rework_route_condition_unchanged
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_auto_resume_satisfying_condition_stated
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_no_pending_task_required_on_auto_resume_route
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_abort_covers_neither_condition
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_negative_proof_synthetic_two_route_text_fails_every_matcher
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by stashing em-workflow/references/implement-phase.md,
+      em-workflow/references/rework-task-synthesis.md and
+      em-workflow/skills/develop/SKILL.md and re-running
+      tests.test_failed_kind_resume_reentry against the pre-edit text (only
+      the rework-only precondition existed, naming two routes with no
+      auto-resume carve-out). test_names_three_entry_routes,
+      test_auto_resume_route_cited_to_develop_skill_not_restated,
+      test_auto_resume_satisfying_condition_stated,
+      test_no_pending_task_required_on_auto_resume_route and
+      test_abort_covers_neither_condition all raised "AssertionError: False
+      is not true"; test_fresh_first_pass_route_unchanged raised the same.
+      test_rework_route_condition_unchanged (the rework route's own
+      condition, unaffected by this task) and the negative-proof test were
+      already green pre-edit -- they are retention/detector-capability
+      checks, not proof of this task's own addition.
+  AC-2:
+    tests:
+      - tests.test_failed_kind_resume_reentry.TestAC2Invariant1ScopedToReworkTransitions.test_invariant_1_scoped_to_rework_derived_transitions
+      - tests.test_failed_kind_resume_reentry.TestAC2Invariant1ScopedToReworkTransitions.test_invariant_1_still_requires_registration_before_pending
+      - tests.test_failed_kind_resume_reentry.TestAC2Invariant1ScopedToReworkTransitions.test_invariant_1_names_auto_resume_as_out_of_scope
+      - tests.test_failed_kind_resume_reentry.TestAC2Invariant1ScopedToReworkTransitions.test_invariant_1_cites_step_i0_for_auto_resume_precondition
+      - tests.test_failed_kind_resume_reentry.TestAC2Invariant1ScopedToReworkTransitions.test_other_ten_invariants_and_count_unchanged
+      - tests.test_failed_kind_resume_reentry.TestAC2Invariant1ScopedToReworkTransitions.test_negative_proof_synthetic_unscoped_invariant_fails_every_matcher
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_states_pending_task_precondition_invariant
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_invariant_1_scoped_to_rework_derived_transitions
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_invariant_1_names_auto_resume_as_out_of_scope
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by the same stash-and-rerun as AC-1: Invariant 1's old
+      unscoped wording ("Before `implement` returns to `pending`, at least
+      one new rework task is registered...") had no rework-derived scoping
+      clause and no auto-resume carve-out.
+      test_invariant_1_scoped_to_rework_derived_transitions,
+      test_invariant_1_names_auto_resume_as_out_of_scope and
+      test_invariant_1_cites_step_i0_for_auto_resume_precondition all raised
+      "AssertionError: False is not true".
+      test_invariant_1_still_requires_registration_before_pending and
+      test_other_ten_invariants_and_count_unchanged were already true
+      pre-edit (the registration requirement and invariant count are
+      unaffected by the scoping edit). The two new
+      test_rework_synthesis_contract.py assertions
+      (test_invariant_1_scoped_to_rework_derived_transitions,
+      test_invariant_1_names_auto_resume_as_out_of_scope, added alongside
+      the pre-existing pinned-literal update) were written and confirmed
+      green against the post-edit document only, since that module's own
+      convention is to co-edit the assertion with the literal it pins
+      (Test Notes) rather than re-derive a second independent red state for
+      an already-covered statement.
+  AC-3:
+    tests:
+      - tests.test_failed_kind_resume_reentry.TestAC3WriteSetRationale.test_states_write_set_touches_no_tasks_key
+      - tests.test_failed_kind_resume_reentry.TestAC3WriteSetRationale.test_states_why_status_reset_is_not_performed
+      - tests.test_failed_kind_resume_reentry.TestAC3WriteSetRationale.test_states_resumed_phase_handles_failure_via_implement_phase_reconcile
+      - tests.test_failed_kind_resume_reentry.TestAC3WriteSetRationale.test_no_failed_kind_value_named_outside_a_branch_condition
+      - tests.test_failed_kind_resume_reentry.TestAC3WriteSetRationale.test_negative_proof_synthetic_write_set_only_description_fails
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by the same stash-and-rerun: the auto-resume block's
+      pre-edit text (D4's write-set steps only) named neither the
+      `tasks.*`-untouched design nor the task-status-reset rationale nor
+      the reconcile/failure-branch handoff.
+      test_states_write_set_touches_no_tasks_key,
+      test_states_why_status_reset_is_not_performed and
+      test_states_resumed_phase_handles_failure_via_implement_phase_reconcile
+      all raised "AssertionError: False is not true".
+      test_no_failed_kind_value_named_outside_a_branch_condition asserts
+      over the module's own constants (not the document) and was green
+      throughout -- it is a D7-discipline regression guard on this task's
+      own addition, not proof of the addition's presence.
+  AC-4:
+    tests:
+      - tests.test_failed_kind_resume_reentry.TestAC4RouteBackReasonCorrectedAndPhaseStartNamesClear.test_stale_leaving_failed_reason_is_gone_from_the_whole_document
+      - tests.test_failed_kind_resume_reentry.TestAC4RouteBackReasonCorrectedAndPhaseStartNamesClear.test_step_i1_names_the_write_set_carrying_the_lifecycle_clear
+      - tests.test_failed_kind_resume_reentry.TestAC4RouteBackReasonCorrectedAndPhaseStartNamesClear.test_step_i1_cites_the_lifecycle_rules_owner
+      - tests.test_failed_kind_resume_reentry.TestAC4RouteBackReasonCorrectedAndPhaseStartNamesClear.test_route_back_states_its_own_accurate_role
+      - tests.test_failed_kind_resume_reentry.TestAC4RouteBackReasonCorrectedAndPhaseStartNamesClear.test_route_back_still_cites_the_lifecycle_rules_owner
+      - tests.test_failed_kind_resume_reentry.TestAC4RouteBackReasonCorrectedAndPhaseStartNamesClear.test_exactly_one_place_names_the_write_set_carrying_the_clear
+      - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_states_own_accurate_role_as_a_reassertion
+      - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_stale_leaving_failed_reason_is_gone
+      - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_negative_proof_matcher_flags_absence_when_role_statement_removed
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_first_failed_kind_occurrence_is_the_phase_start_write
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_first_use_cites_workflow_schema
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by the same stash-and-rerun. Before the edit, the
+      route-back clause still read "since the step is leaving `failed`"
+      (test_stale_leaving_failed_reason_is_gone_from_the_whole_document
+      raised "AssertionError: 'since the step is leaving `failed`'
+      unexpectedly found in ..."); Step I.1's phase-start write contained
+      no `failed_kind` mention at all
+      (test_step_i1_names_the_write_set_carrying_the_lifecycle_clear raised
+      "AssertionError: False is not true"; test_step_i1_cites_the_lifecycle_rules_owner
+      raised ValueError "substring not found" since `self.step_i1.index("failed_kind")`
+      had nothing to find); the route-back clause's own accurate-role
+      sentence did not exist yet
+      (test_route_back_states_its_own_accurate_role raised
+      AssertionError: False is not true).
+      test_route_back_still_cites_the_lifecycle_rules_owner was already
+      true pre-edit (the citation phrase at the route-back site pre-dates
+      this task; only its adjacent reason clause changed) -- a retention
+      check, not proof of this task's own addition.
+      test_exactly_one_place_names_the_write_set_carrying_the_clear DID
+      fail pre-edit (count was 0, not 1, since Step I.1 named no clear at
+      all yet). test_first_use_cites_workflow_schema was also red pre-edit
+      (ValueError, `failed_kind` absent from the document).
+  AC-5:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestExtractionStartsAtTheBlocksOwnHeading.test_extracted_section_excludes_stop_condition_3_items_opening_text
+      - tests.test_failed_kind_stop_condition.TestExtractionStartsAtTheBlocksOwnHeading.test_non_vacuity_a_stop_condition_3_anchored_extraction_would_include_it
+      - tests.test_failed_kind_stop_condition.TestExtractionStartsAtTheBlocksOwnHeading.test_precedence_block_label_cited_at_most_the_one_legitimate_time
+      - tests.test_failed_kind_stop_condition.TestExtractionStartsAtTheBlocksOwnHeading.test_verify_cap_exception_label_cited_at_most_the_one_legitimate_time
+      - tests.test_failed_kind_stop_condition.TestExtractionStartsAtTheBlocksOwnHeading.test_extracted_section_excludes_the_precedence_blocks_own_body
+      - tests.test_failed_kind_stop_condition.TestExtractionStartsAtTheBlocksOwnHeading.test_extracted_section_excludes_the_verify_cap_exceptions_own_body
+      - tests.test_failed_kind_stop_condition.TestExtractionStartsAtTheBlocksOwnHeading.test_non_vacuity_the_bare_anchor_superset_contains_both_bodies_and_extra_label_citations
+      - tests.test_failed_kind_stop_condition.TestExtractionStartsAtTheBlocksOwnHeading.test_heading_anchor_occurs_exactly_once
+      - tests.test_failed_kind_stop_condition.TestExtractionStartsAtTheBlocksOwnHeading.test_extracted_section_still_contains_the_blocks_own_content
+    red_confirmed: true
+    red_reason: >-
+      Directly observed while iterating on this fix (not via stash -- the
+      test module's own bug fix IS the change under test, so red was
+      watched against the live, already-corrected SKILL.md content). First
+      attempt used bare label-presence exclusion assertions
+      (`assertNotIn(PRECEDENCE_BLOCK_ANCHOR, self.new_block)` etc.) and
+      FAILED with "AssertionError: '**停止条件 3 との優先関係**'
+      unexpectedly found in ..." -- because the auto-resume block's own
+      independence-declaration sentence legitimately cites both labels
+      once, so a bare-label exclusion is wrong even for the CORRECTLY fixed
+      extraction. Root-caused via a standalone Python probe of both the
+      buggy (bare-anchor) and fixed (heading-anchor) extractions, which
+      showed both extractions contain the labels (buggy: 3x each via
+      swallowed headings + the legitimate citation; fixed: 1x, the
+      legitimate citation only) and that only the block-BODY content
+      (the precedence block's exhaustiveness sentence, the verify-cap
+      block's first bullet) discriminates cleanly (present in buggy,
+      absent in fixed). Rewrote the exclusion assertions on that basis;
+      re-ran and confirmed green (44/44) with the corrected anchor
+      (NEW_BLOCK_HEADING_ANCHOR) and failing again when reverted to the
+      bare NEW_BLOCK_ANCHOR (verified via test_non_vacuity_the_bare_anchor_superset_contains_both_bodies_and_extra_label_citations,
+      which asserts the buggy extraction's own contrasting properties).
+  AC-6:
+    tests: []
+    red_reason: >-
+      AC-6's verifiable outcome is the existence and structure of
+      tests/test_failed_kind_resume_reentry.py itself (asserting AC-1..AC-4,
+      each backed by a negative proof) -- satisfied by that module's own
+      27 tests (see AC-1..AC-4 above for the ones red-confirmed against the
+      real documents) plus TestOwnModuleStdlibOnly, which is a build/lint
+      check (AST-based stdlib-only import guard) rather than a document
+      assertion; the module did not exist before this task, so "the file is
+      importable and collected by unittest discover" is itself the
+      criterion's degenerate red-before-green (a missing module is an
+      ImportError under discovery, confirmed by running discovery before
+      the file was created in this same session).
+  AC-7:
+    tests: []
+    red_reason: >-
+      Build/whole-suite-pass criterion, verified by running
+      `python3 -m unittest discover -s tests` (3633 tests, 1 failure --
+      the pre-existing baseline test_em_review_entry_matches_pre_task_snapshot,
+      unrelated to this task). The three neighbouring pinned-literal
+      modules named in the task plan were checked individually: no changes
+      to tests/test_recycled_task_id_consistency.py were needed (this
+      task's Step I.0 edit preserves the exact pinned line-wrap literal
+      "in `tasks` whose\n   `status == pending`" byte-for-byte, verified by
+      `python3 -m unittest tests.test_recycled_task_id_consistency` passing
+      unmodified); tests/test_failed_kind_write_paths.py and
+      tests/test_rework_synthesis_contract.py were updated in place where
+      this task's edits moved their pinned literals (see AC-2 and AC-4
+      above) and both pass. No module outside this task's declared file set
+      required an edit.
