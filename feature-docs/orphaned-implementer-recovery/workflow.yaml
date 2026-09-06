@@ -83,45 +83,9 @@ workflow:
     status: completed
     completed_at_commit: 41a3135505f34fb2002c1a4e1968e7229851fbe6
   - id: verify
-    status: failed
-    result: fail
-    failed_items:
-      - id: MANUAL-D2
-        category: unknown
-        note: >-
-          VERIFICATION.md 「Manual Testing」の 2 件目（IMPLEMENTATION.md D2 の
-          marker ベース現セッション解決が、実セッションから 1 度試したときに
-          現セッションの transcript を見つけること）が不成立。
-          `_resolve_current_session_via_marker` は marker を含む transcript を
-          正しく特定するが、`_first_entry_timestamp` が「最初の非空行」だけを見て
-          `timestamp` フィールドが無ければ None を返すため解決に失敗する。実際の
-          `~/.claude/projects/{encoded-cwd}/*.jsonl` は先頭行が
-          `{"type":"last-prompt",...}` のような timestamp を持たない記録である
-          ことが多く（この機のサンプル 40 件中 34 件）、本セッションの transcript
-          でも実測で marker は含まれるのに解決結果は None だった。結果として
-          D2 form 2 は実運用でほぼ常に `current-session-unknown` に落ち、
-          I.2.b の orphan recovery（FR2 の証明経路）が発火しない。form 1
-          （session id + start の明示指定）を使える場合のみ機能する。
-          自動テスト（TS-1..TS-13, 3029 件）は fixture が timestamp 付き
-          先頭行を前提としているため全て pass しており、この乖離は
-          Manual Testing 項目でのみ露出する。
-          category の根拠: VERIFICATION.md に verification_index が無く、この
-          Manual Testing 項目は Requirements Coverage 表のどの行にも写像して
-          いないため、references/workflow-schema.md の fail-closed 規律に従い
-          sentinel 値 `unknown` を割り当てた。
-    note: >-
-      `python3 -m unittest discover -s tests` -> 3029 tests, 0 failures, exit 0。
-      `python3 em-workflow/hooks/tests/run-destructive-guard.py` -> 156/156, exit 0。
-      TS-11: plugin.json と marketplace.json はともに 0.1.61、base commit
-      3f5db49 時点の 0.1.59 より高い。SC-F（Declared Change Set 封じ込め）:
-      `git diff --name-status 3f5db49 HEAD` の 35 パスはすべて tasks の files
-      union と 2 つの既定エントリに含まれる。Manual Testing 1 件目（D1 の
-      transcripts ディレクトリ導出）は成立を確認。2 件目（D2）が不成立のため
-      SC-D / SC-C の実運用面が満たされず fail。
-      batch.verify_rework_count は既に 1（上限）のため自動 rework は行わず停止。
+    status: pending
   - id: retrospect
-    status: completed
-    completed_at_commit: 2dc1310c91e91c7c49e97d95a9f112954dbeb0ff
+    status: pending
 
 tasks:
   task0001:
@@ -331,4 +295,6 @@ requirements:
 
 batch:
   review_rework_count: 1
-  verify_rework_count: 1
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
