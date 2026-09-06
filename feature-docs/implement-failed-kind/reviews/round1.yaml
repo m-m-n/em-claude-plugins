@@ -46,7 +46,7 @@ perspective_runs:
   - {run_id: "architecture#loop1", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
   - {run_id: "architecture#loop1fallback", perspective: architecture, role: fallback, source: claude, status: completed}
   - {run_id: "spec#loop1", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
-  - {run_id: "comprehensive#loop2", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: failed, skip_reason: null}
+  - {run_id: "comprehensive#loop2", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: completed, skip_reason: null}
   - {run_id: "comprehensive#loop2fallback", perspective: comprehensive, role: fallback, source: claude, status: completed}
   - {run_id: "security#loop2", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed}
   - {run_id: "performance#loop2", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
@@ -249,6 +249,23 @@ findings:
     confidence: 60
     resolution: unresolved
     resolution_reason: "high の rework と同一ドキュメント群に属するため rework へ送る"
+  - stable_id: PLACEHOLDER
+    severity: medium
+    category: comprehensive
+    file: tests/test_failed_kind_stop_condition.py
+    line: 149
+    title: "cls.new_block section starts at the wrong anchor occurrence — superset of the intended new block"
+    description: |
+      `NEW_BLOCK_ANCHOR` の最初の出現は SKILL.md:34 の停止条件 3 内のポインタ文であり、新ブロック自身の
+      見出し（SKILL.md:387）ではない。`_section()` が `text.index()` を使うため `cls.new_block` は
+      停止条件 3 の項目・precedence ブロック・verify cap 例外ブロックまで含む superset になり、
+      このテストクラスの `_contains` 系アサーションは、対象内容が別ブロックへ移動しても、
+      新ブロックの見出し自体が削除されても通ってしまう。
+    suggestion: "FR ラベル付きの見出し文字列をアンカーにするか、stop_condition_3_item の終端以降から検索を始めて最初のポインタ出現をスキップする。"
+    sources: [litellm:vertex-glm-5.2:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "遅延到着した comprehensive#loop2 の結果。auto-fix ループ終了後に到着したため rework へ送る"
 evaluation:
   round_summary: |
     Round 1, cross_validation=true, diff mode over 21 files (protocol markdown + 5 new read-only unittest modules
