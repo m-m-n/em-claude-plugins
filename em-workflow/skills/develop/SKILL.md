@@ -51,6 +51,10 @@ batch: 停止条件 5 の待機ターンは、(a)(b) いずれの形でも最後
 出力抑制規律が定めるマーカー行のみを出す（implement の launch / wake
 ターンについては下記「`--once` のフェーズ境界」の非境界の note も参照）。
 
+条件 1・条件 3 は、batch で verify が系譜 cap または hard cap の到達により
+`failed` である場合の例外も含む — 詳細は Step B の
+「**batch: verify の cap 到達に対する停止条件の例外**」参照。
+
 これらに該当しない限り、フェーズ完了のたびに workflow.yaml を Read し直して
 **必ず**次の pending step を実行する。サブエージェントやフェーズプロトコルの
 自然言語出力を判断材料にしない — 根拠は **workflow.yaml の status のみ**。
@@ -359,6 +363,25 @@ re-derive して書き直し、`commit-docs.sh` を 1 回だけ再試行する�
 exit 4 ならそこでフェーズを中断し、状況をユーザーに報告する（無限リトライ
 しない）。
 
+**batch: verify の cap 到達に対する停止条件の例外**（FR7）: 次の条件が
+揃ったときにのみ適用される — batch モードであり、かつ verify が系譜 cap
+または hard cap の到達により `failed` であること。
+
+- 停止条件 3（ある step の status が `failed` なら停止）に対する例外:
+  この `failed` を停止理由にしない。
+- 停止条件 1（全 step が `completed` でないとターンを終えられない）に
+  対する例外: verify がこの理由で `failed` のままであっても、retrospect
+  の完了後に Step C へ進み、走行を完了させてよい。
+- 非適用: 上記以外の理由による `failed`（implement の失敗、review の
+  失敗、cap 未到達の verify 失敗）には適用されない。interactive にも
+  適用されない。
+- `verify.status` は `failed` のままであり、別 status も `deferred` も
+  導入しない。
+
+この例外は上記「**停止条件 3 との優先関係**」ブロックが定める自動再エントリ
+carve-out（`needs_update` に対する例外）とは独立しており、同ブロックの
+本文・網羅性宣言を変更しない。
+
 | step | 実行方法 |
 |------|----------|
 | create-spec | `${CLAUDE_PLUGIN_ROOT}/references/phases/create-spec-phase.md` に従う（対話フェーズ。batch: 同ファイルの Batch Mode セクションに従い、ユーザー対話の代わりにタスク記述 + Codex 相談で書き切る） |
@@ -556,7 +579,7 @@ Invariant 6 を参照し、ここでは再定義しない。`title` / `body` は
 `completed` にし、commit-docs.sh で
 `docs({feature}): retrospect signals` としてコミットする。
 
-## Step C: 完了処理（全 step completed — design のみ skipped 可 — 時のみ）
+## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、cap 到達により verify が `failed` のまま残る場合のみ）
 
 workflow.yaml・レビュー記録・retrospect.yaml は Step B / verify /
 retrospect の各更新でその都度 integration worktree に commit-docs.sh
@@ -691,5 +714,14 @@ exit 4 によるフェーズ中断、そして implement / verify フェーズ�
 （implementer の完了通知待ち）はこの規則のインスタンスであり、implement
 フェーズの launch ターン（起動直後にターンを終える）と wake ターン
 （補充後にターンを終える）も同様である。
+
+cap 到達走行（stop point `verify-rework-cap`。値そのものは
+`references/batch-terminal-line.md` の Stop point coverage 表が対応する
+reason code に既に束ねているためここでは書かない）は、Step C の完了処理
+まで到達し worktree 掃除と終了報告を完了させたうえで、通常完了ではなく
+停止として終端行を出す — 外部サービスが cap 到達走行を成功と誤判定しない
+ため。cap 到達走行の実行した step は verify である。detail には「Step C
+まで到達し、worktree 掃除と終了報告は完了した」旨を含める。終端行は 1
+走行につき 1 行であり、cap 到達走行では Step C の完了報告の直後に出力する。
 
 $ARGUMENTS
