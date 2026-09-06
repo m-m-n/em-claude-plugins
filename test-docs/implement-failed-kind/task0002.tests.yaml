@@ -1,0 +1,114 @@
+task_id: task0002
+baseline_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+final_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_failed_kind_write_paths.TestAbortPhaseOptionCarriesFailedKind.test_states_same_single_write_carries_failed_kind
+      - tests.test_failed_kind_write_paths.TestAbortPhaseOptionCarriesFailedKind.test_orphaned_origin_selects_infra
+      - tests.test_failed_kind_write_paths.TestAbortPhaseOptionCarriesFailedKind.test_otherwise_decision_fallback
+      - tests.test_failed_kind_write_paths.TestAbortPhaseOptionCarriesFailedKind.test_cites_orphaned_launched_convergence_rather_than_a_new_lookup
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, workflow.yaml write description had no `failed_kind`
+      mention at all: AssertionError 'together with `failed_kind` in that
+      same single write' not found in the abort bullet (confirmed by
+      stashing em-workflow/references/implement-phase.md and re-running
+      this module).
+  AC-2:
+    tests:
+      - tests.test_failed_kind_write_paths.TestBatchSecondFailureWritesDecisionUnconditionally.test_writes_decision_unconditionally
+      - tests.test_failed_kind_write_paths.TestBatchSecondFailureWritesDecisionUnconditionally.test_explicitly_overrides_orphaned_origin_case
+      - tests.test_failed_kind_write_paths.TestBatchSecondFailureWritesDecisionUnconditionally.test_cites_batch_terminal_line_for_unaffected_stop
+    red_confirmed: true
+    red_reason: >-
+      Before the edit: AssertionError "'together with `failed_kind`\nvalued
+      `decision` unconditionally' not found in" the batch paragraph
+      (confirmed by stashing implement-phase.md and re-running this
+      module).
+  AC-3:
+    tests:
+      - tests.test_failed_kind_write_paths.TestGateRejectedTerminalWritesDecisionUnconditionally.test_writes_decision_unconditionally
+      - tests.test_failed_kind_write_paths.TestGateRejectedTerminalWritesDecisionUnconditionally.test_states_reason_is_planning_side_blocker
+    red_confirmed: true
+    red_reason: >-
+      Before the edit: AssertionError "'together with `failed_kind` valued
+      `decision`\n  unconditionally' not found in" the gate-rejected branch
+      (confirmed by stashing implement-phase.md and re-running this
+      module).
+  AC-4:
+    tests:
+      - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_write_set_clears_failed_kind
+      - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_states_reason_is_leaving_failed
+      - tests.test_failed_kind_write_paths.TestRouteBackWriteSetClearsFailedKind.test_clear_is_member_of_the_same_write_set_before_the_commit
+    red_confirmed: true
+    red_reason: >-
+      Before the edit: AssertionError "'clear `failed_kind`' not found in"
+      the route-back write set text (confirmed by stashing
+      implement-phase.md and re-running this module).
+  AC-5:
+    tests:
+      - tests.test_failed_kind_write_paths.TestOnlySideEffectSentenceSurvivesOnAllThreePaths.test_abort_bullet_states_only_side_effect
+      - tests.test_failed_kind_write_paths.TestOnlySideEffectSentenceSurvivesOnAllThreePaths.test_batch_paragraph_states_only_side_effect
+      - tests.test_failed_kind_write_paths.TestOnlySideEffectSentenceSurvivesOnAllThreePaths.test_gate_rejected_states_only_side_effect
+      - tests.test_failed_kind_write_paths.TestOnlySideEffectSentenceSurvivesOnAllThreePaths.test_routeback_states_single_pre_cleanup_commit
+      - tests.test_failed_kind_write_paths.TestOnlySideEffectSentenceSurvivesOnAllThreePaths.test_negative_proof_matcher_fires_on_synthetic_copy_missing_sentence
+    red_confirmed: false
+    red_reason: >-
+      The "ONLY side effect" sentence pre-exists on all three paths
+      (task0001/routeback-gate-postcondition); this task's edits add
+      failed_kind around it without touching it, so these positive
+      assertions were already green before this task's implementation
+      existed. The negative proof itself
+      (test_negative_proof_matcher_fires_on_synthetic_copy_missing_sentence)
+      is a genuine red/green check of the matcher's own capability
+      (asserts the phrase is absent from a synthetic copy with it
+      stripped), independent of this task's edits, so it is not a
+      fabricated red either -- it tests the detector, not the document
+      change.
+  AC-6:
+    tests:
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_first_failed_kind_occurrence_is_the_write_set_clear
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_first_use_cites_workflow_schema
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_no_definition_shaped_restatement_in_i2c_section
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_negative_proof_detector_fires_on_both_values_enumeration
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_negative_proof_detector_fires_on_meanings_gloss
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_negative_proof_detector_fires_on_missing_value_rule_restatement
+      - tests.test_failed_kind_write_paths.TestCitationDisciplineAtFirstUse.test_non_vacuity_detector_is_false_on_empty_text
+    red_confirmed: true
+    red_reason: >-
+      test_first_use_cites_workflow_schema and
+      test_first_failed_kind_occurrence_is_the_write_set_clear both raised
+      ValueError ("substring not found") before the edit, since
+      `failed_kind` did not appear anywhere in the document (confirmed by
+      stashing implement-phase.md). The negative-proof/non-vacuity tests
+      exercise the detector function itself against synthetic text and are
+      independent of the document edit; they were written and passed
+      first, then the positive assertion
+      (test_no_definition_shaped_restatement_in_i2c_section) was checked
+      against the real, edited section.
+  AC-7:
+    tests:
+      - tests.test_failed_kind_write_paths.TestGateAndConvergenceUnchanged.test_orphaned_launched_convergence_paragraph_present
+      - tests.test_failed_kind_write_paths.TestGateAndConvergenceUnchanged.test_gate_merged_conjunct_present
+      - tests.test_failed_kind_write_paths.TestGateAndConvergenceUnchanged.test_gate_in_progress_conjunct_present
+      - tests.test_failed_kind_write_paths.TestGateAndConvergenceUnchanged.test_gate_third_conjunct_present
+      - tests.test_failed_kind_write_paths.TestGateAndConvergenceUnchanged.test_cleanup_ordering_present
+      - tests.test_failed_kind_write_paths.TestGateAndConvergenceUnchanged.test_no_skip_option_paragraph_present
+    red_confirmed: false
+    red_reason: >-
+      AC-7 is a retention/presence check by design (Test Notes: "a presence
+      check of the existing statements, since this task must not
+      restructure the gate"): these statements pre-date this task and were
+      already true before any edit, so they were green from the start. This
+      is the acceptance criterion's own intended shape, not a criterion
+      whose observable outcome could be made to fail first.
+  AC-8:
+    tests: []
+    red_reason: >-
+      Verified by running `python3 -m unittest discover -s tests` (whole
+      suite passes with only the pre-existing baseline failure) and by
+      TestModuleDiscoverabilityAndStdlibOnly.test_module_uses_only_standard_library_imports
+      (AST-based check that this module imports only os/re/unittest/ast).
