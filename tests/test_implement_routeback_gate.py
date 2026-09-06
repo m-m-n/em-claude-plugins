@@ -202,9 +202,12 @@ I2C_HEADING = "### I.2.c: Failed handling"
 NEXT_SECTION_HEADING = "### Supporting cast"
 STEP_I3_HEADING = "## Step I.3: Phase completion"
 
-# Current literal (task0001, abort-phase-terminal, brought to the
-# post-change text) -- AC-3's/TS-9's byte-identity assertion needs this
-# exact value. Captured via:
+# Current literal (implement-failed-kind/task0002, brought to the
+# post-change text: the batch second-failure abort now writes `failed_kind`
+# valued `decision` unconditionally, including the orphaned-origin case, and
+# cites `references/batch-terminal-line.md` for why the run's stop is
+# unaffected) -- AC-3's/TS-9's byte-identity assertion needs this exact
+# value. Captured via:
 #   text.index("Batch mode (`references/batch-mode.md`")
 #   .. text.index("### Supporting cast")
 PRE_CHANGE_BATCH_MODE_PARAGRAPH = (
@@ -213,14 +216,20 @@ PRE_CHANGE_BATCH_MODE_PARAGRAPH = (
     "after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a\n"
     "resume guard). A task that fails a second time → **abort phase**: refresh\n"
     "the integration worktree, capture the tip, then set and commit the\n"
-    "`implement` step's `status` to `failed` via `commit-docs.sh` (no\n"
-    "`create-plan` `needs_update`, no task status or notes write set, no\n"
-    "worktree or branch cleanup — the terminal status write and its own commit\n"
-    "are the ONLY side effect), then report and stop; control returns via\n"
-    "develop's stop condition 3, firing on the next Step B iteration reading\n"
-    "`implement: failed`. The external service cuts a follow-up task.\n"
-    "Route-back-to-planning is never taken automatically. Track the\n"
-    "retry-consumed state per task in `tasks.{T}.notes`.\n"
+    "`implement` step's `status` to `failed`, together with `failed_kind`\n"
+    "valued `decision` unconditionally — including when the failure\n"
+    "originates from a journal `failed` event whose reason is `orphaned`,\n"
+    "overriding the abort-phase option's rule above for this entrance — via\n"
+    "`commit-docs.sh` (no `create-plan` `needs_update`, no task status or\n"
+    "notes write set, no worktree or branch cleanup — the terminal status\n"
+    "write and its own commit are the ONLY side effect), then report and\n"
+    "stop; control returns via develop's stop condition 3, firing on the next\n"
+    "Step B iteration reading `implement: failed` — unaffected by this\n"
+    "override, since `references/batch-terminal-line.md` already gives\n"
+    "`implement-second-failure` precedence over `stop-condition-3`. The\n"
+    "external service cuts a follow-up task. Route-back-to-planning is never\n"
+    "taken automatically. Track the retry-consumed state per task in\n"
+    "`tasks.{T}.notes`.\n"
     "\n"
 )
 
