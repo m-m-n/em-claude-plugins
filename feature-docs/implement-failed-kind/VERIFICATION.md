@@ -40,6 +40,11 @@ Per-task acceptance criteria live in `feature-docs/implement-failed-kind/tasks/`
 | TS-8 | Assert the develop skill's stop-condition-3 branch, the auto-resume write set and its commit ordering, the cap and its at-cap no-write behaviour, the batch-only scope, and the two unchanged neighbouring carve-outs | `tests/test_failed_kind_stop_condition.py` passes, including its negative proofs | Unit |
 | TS-9 | Assert the batch-mode and terminal-line documents' updated rows, and that the eleven stop reason codes and the `stop-condition-3` mapping are unchanged | `tests/test_failed_kind_batch_docs.py` passes, including its negative proofs | Unit |
 | TS-10 | Assert plugin version parity across both registries, the past-baseline comparison, and the untouched sibling entry | `tests/test_failed_kind_version_bump.py` passes, including its negative proofs | Unit |
+| TS-11 | Assert the auto-resume re-entry contract across the three documents that describe it: the implement phase's precondition recognises the auto-resume entry route and its own satisfying condition, the rework invariant is scoped to rework-derived transitions, the develop skill states why its write set touches no task state, the route-back clear's reason is accurate, and the develop-skill module's section extraction is anchored on the block's own heading | `tests/test_failed_kind_resume_reentry.py` and the repaired `tests/test_failed_kind_stop_condition.py` pass, including the anchor's exclusion guard and each matcher's negative proof | Unit |
+| TS-12 | Start `--batch --once` on a workflow.yaml whose `implement` step is `failed` with the external-cause `failed_kind`, below the resume cap, where every task is `merged` except one that is `failed` — the state the auto-resume actually leaves behind | The resumed implement phase does not abort on its re-entry precondition; it reconciles the failed task and reaches its failure-handling branch, and the run neither repeats the same report nor ends at the stuck-step stop with the resume round already spent | Manual |
+| TS-13 | Assert the `batch.infra_resume` record's cross-document consistency: the two documents' `batch` snippet key sets are equal, the block's persisted content is described to include the auto-resume record, the cap's ownership is cited per part, the record's materialising write path is named, and the external-cause gloss separates meaning from detection while leaving the vocabulary, required-ness and missing-value rules intact | `tests/test_failed_kind_batch_docs.py` and `tests/test_failed_kind_schema.py` pass, including their negative proofs | Unit |
+
+TS-11 through TS-13 were added by the round-1 rework (task0006, task0007).
 
 TS-1 through TS-4 are SPEC.md's own integration scenarios. They exercise an
 LLM-driven orchestrator loop rather than a callable unit, and the project
@@ -63,7 +68,7 @@ every suite run.
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
 | AC1 | The schema document defines `failed_kind` with its two values and their meanings, in one place | TS-6 |
-| AC2 | All three write paths that set `implement` to `failed` write `failed_kind`; orphan-origin is the external-cause value, everything else the decision-required one | TS-7 |
+| AC2 | All three write paths that set `implement` to `failed` write `failed_kind`, with the value each path writes pinned by IMPLEMENTATION.md D2: orphan-origin is the external-cause value on the interactive abort entrance, while the batch second-failure entrance and the route-back gate-rejected terminal write the decision-required value unconditionally (the adopted resolutions of FR4 and FR5, recorded in workflow.yaml's `requirements` block; SPEC.md's AC2 sentence predates those resolutions and states the pre-resolution blanket rule) | TS-7 |
 | AC3 | Stop condition 3 fires for the `implement` step's `failed` only on the decision-required value | TS-2, TS-8 |
 | AC4 | The external-cause branch resets `implement` to `pending` and commits that write before executing the phase | TS-1, TS-8 |
 | AC5 | The auto-resume is capped, stops as decision-required at the cap, and the cap and count live in the `batch` section as defined by the schema document | TS-4, TS-6, TS-8 |
@@ -75,20 +80,20 @@ every suite run.
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-6 |
-| FR2 | task0001, task0002, task0003 | TS-6, TS-7, TS-8 |
+| FR1 | task0001, task0007 | TS-6, TS-13 |
+| FR2 | task0001, task0002, task0003, task0006 | TS-6, TS-7, TS-8, TS-11 |
 | FR3 | task0002 | TS-7 |
 | FR4 | task0002 | TS-7 |
 | FR5 | task0002 | TS-7 |
-| FR6 | task0003 | TS-1, TS-2, TS-8 |
-| FR7 | task0001, task0003 | TS-4, TS-6, TS-8 |
+| FR6 | task0003, task0006 | TS-1, TS-2, TS-8, TS-11, TS-12 |
+| FR7 | task0001, task0003, task0006, task0007 | TS-4, TS-6, TS-8, TS-11, TS-13 |
 | FR8 | task0003 | TS-8 |
 | FR9 | task0001 | TS-3, TS-6 |
-| FR10 | task0004 | TS-9 |
-| NFR1 | task0001, task0002, task0003, task0004 | TS-6, TS-7, TS-8, TS-9 |
-| NFR2 | task0002, task0003 | TS-1, TS-7, TS-8 |
+| FR10 | task0004, task0007 | TS-9, TS-13 |
+| NFR1 | task0001, task0002, task0003, task0004, task0006, task0007 | TS-6, TS-7, TS-8, TS-9, TS-11, TS-13 |
+| NFR2 | task0002, task0003, task0006 | TS-1, TS-7, TS-8, TS-12 |
 | NFR3 | task0005 | TS-10 |
-| NFR4 | task0001, task0002, task0003, task0004, task0005 | TS-5 |
+| NFR4 | task0001, task0002, task0003, task0004, task0005, task0006, task0007 | TS-5 |
 
 ## E2E Testing
 
@@ -120,6 +125,13 @@ observed terminal line and the resulting `workflow.yaml` state for each.
 - [ ] Interactive counterpart of TS-1 (FR8): the same external-cause state
       run WITHOUT `--batch` → confirm it stops exactly as TS-2 does, since
       the auto-resume is batch-only.
+- [ ] TS-12 (FR6, NFR2): external-cause `failed_kind` below the cap, with
+      the task set in the state an abort actually leaves — one task `failed`,
+      every other task `merged`, none `pending` → confirm the resumed
+      implement phase does not abort on its re-entry precondition, that it
+      reconciles the failed task and reaches its failure-handling branch,
+      and that the run does not fall into a repeat of the same report ending
+      at the stuck-step stop with the resume round already consumed.
 
 No mockup comparison applies: the design step is `skipped` for this feature
 and no visual artefact exists.
@@ -136,11 +148,14 @@ and no visual artefact exists.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1..TS-10) | 10 | 6 | 0 | 4 |
+| Test scenarios (TS-1..TS-13) | 13 | 8 | 0 | 5 |
 | Success criteria (AC1..AC8) | 8 | 8 | 0 | 4 |
-| Requirements (FR1..FR10, NFR1..NFR4) | 14 | 14 | 0 | 5 |
+| Requirements (FR1..FR10, NFR1..NFR4) | 14 | 14 | 0 | 6 |
 
 Manual and automated counts overlap by design: AC3, AC4, AC5 and AC7 each
 have both an automated document-contract check and a manual behavioural
 check, and the interactive counterpart of TS-1 is a manual-only check of
-FR8 alongside its automated document check.
+FR8 alongside its automated document check. TS-11 and TS-13 are the
+round-1 rework's automated document-contract checks; TS-12 is its
+manual behavioural counterpart, covering the task-state situation TS-1
+leaves unspecified.
