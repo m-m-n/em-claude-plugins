@@ -80,7 +80,7 @@ tasks:
     domains: [api-contract, data-persistence, config-infra]
     complexity: high
     requirements: [FR1, FR2, FR7, FR9, NFR1, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/implement-failed-kind/task0001
   task0002:
