@@ -1,7 +1,7 @@
 schema_version: 1
 feature: batch-verify-rework-lineage-cap
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 103058d63a05282f47d1b58a9d9712365c3dd55e
 last_input_digest: sha256:de5ce3e2f0beb309baa9ba8b0a5e40a1b87c2fdb057b317375c7a0f9f9d7800b
