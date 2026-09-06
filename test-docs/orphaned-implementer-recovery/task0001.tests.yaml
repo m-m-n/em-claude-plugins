@@ -1,0 +1,56 @@
+task_id: task0001
+baseline_failures:
+  - "test_other_entries_match_pre_task_snapshot (test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot)"
+  - "test_em_review_entry_has_no_version_key (test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_key_set_unchanged (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)"
+  - "test_em_review_entry_has_no_version_key (test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_key_set_unchanged (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)"
+  - "test_em_review_entry_has_no_version_key (test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_unchanged (test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged)"
+final_failures:
+  - "test_other_entries_match_pre_task_snapshot (test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot)"
+  - "test_em_review_entry_has_no_version_key (test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_key_set_unchanged (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)"
+  - "test_em_review_entry_has_no_version_key (test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_key_set_unchanged (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)"
+  - "test_em_review_entry_has_no_version_key (test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_unchanged (test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged)"
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_agent_index.TestSessionIdentityRecorded.test_valid_session_identity_recorded_alongside_existing_fields
+    red_confirmed: true
+    red_reason: "Before the field was implemented: KeyError: 'session_id' on entry[\"session_id\"] -- the entry had no such key at all."
+  AC-2:
+    tests:
+      - tests.test_queue_agent_index.TestSessionIdentityNeverBecomesMatchCandidate.test_session_identity_absent_from_candidate_list
+    red_confirmed: true
+    red_reason: "Same KeyError as AC-1 before the field existed; once a naive (unvalidated) recording pass was added as an intermediate step, this test already passed since the naive version never touched agent_ids -- confirms the never-a-candidate property was correct by construction from the first recording implementation."
+  AC-3:
+    tests:
+      - tests.test_queue_agent_index.TestInvalidOrMissingSessionIdentityOmitsField.test_missing_session_identity_omits_field
+      - tests.test_queue_agent_index.TestInvalidOrMissingSessionIdentityOmitsField.test_non_string_session_identity_omits_field
+      - tests.test_queue_agent_index.TestInvalidOrMissingSessionIdentityOmitsField.test_session_identity_containing_path_separator_omits_field
+    red_confirmed: true
+    red_reason: "Observed with an intermediate naive implementation that recorded session_id whenever the input key was present, with no SC5 validation: the non-string case failed with \"'session_id' unexpectedly found in {... 'session_id': 12345}\" and the path-separator case failed with \"... 'session_id': 'sess/evil'\". The third sub-case (identity entirely absent from stdin) passes both before and after any implementation exists -- there is no code path under which an absent input key could ever produce an output field, so that one sub-case could not be driven red; it is a vacuous but still-correct assertion, not a fabricated one."
+  AC-4:
+    tests:
+      - tests.test_queue_taskstop_net.TestRealAgentIndexWriterInterop.test_stop_resolves_via_the_real_agent_index_writer
+      - tests.test_queue_taskstop_net.TestSessionIdFieldIsInertForResolution.test_match_resolves_the_same_with_and_without_session_id
+      - tests.test_queue_taskstop_net.TestSessionIdFieldIsInertForResolution.test_ambiguity_refusal_unaffected_when_entry_carries_session_id
+      - tests.test_queue_taskstop_net.TestSessionIdFieldIsInertForResolution.test_staleness_guard_unaffected_when_entries_carry_session_id
+      - tests.test_queue_taskstop_net.TestSessionIdFieldIsInertForResolution.test_containment_check_unaffected_when_entry_carries_session_id
+    red_confirmed: false
+    red_reason: "queue_taskstop_net.py itself is out of scope for this task and was never modified -- its resolution logic already ignores any field it doesn't read, by construction, before this change existed. test_stop_resolves_via_the_real_agent_index_writer's added session_id assertion WAS observed red before the queue_agent_index.py change (confirmed via a temporary revert: AssertionError: None != 'sess-real-writer-001'), but the four TestSessionIdFieldIsInertForResolution cases construct their agents.jsonl fixtures by hand and pass regardless of any production change in this task, since they exercise code that was never touched. They are regression guards against a future change to queue_taskstop_net.py, not proof of new behavior added in this task."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "AC-5 names the acceptance gate itself (the full suite passes; changed/added tests import only stdlib and touch no real ~/.claude state) rather than a single behavior to red/green -- verified by running `python3 -m unittest discover -s tests` (2879 tests, same 11 pre-existing failures as the 4a baseline, zero new failures) and by inspection: every test in this change uses tempfile.TemporaryDirectory()/os.path, never a hardcoded ~/.claude path, and imports only json/os/re/subprocess/sys/tempfile/threading/unittest/pathlib/datetime/ast (all stdlib)."

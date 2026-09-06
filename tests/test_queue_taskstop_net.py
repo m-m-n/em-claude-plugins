@@ -107,11 +107,26 @@ def write_agent_index(feature_dir, entries):
     return index_path
 
 
-def index_entry(agent_id, task_id, worktree_path, at="2026-01-01T00:00:00+00:00", key="agent_id"):
+def index_entry(
+    agent_id,
+    task_id,
+    worktree_path,
+    at="2026-01-01T00:00:00+00:00",
+    key="agent_id",
+    session_id=None,
+):
     """Matches queue_agent_index.py's (task0001) actual agents.jsonl entry
     shape: the em-workflow task identifier is stored under the key `task`,
-    not `task_id`."""
-    return {key: agent_id, "task": task_id, "worktree_path": worktree_path, "at": at}
+    not `task_id`.
+
+    `session_id`, when given, adds the independent `session_id` field
+    task0001 (SC1) writes -- passed only by tests that specifically prove
+    the field is inert for stop-side resolution (AC-4); every other caller
+    leaves it out, producing the pre-existing entry shape unchanged."""
+    entry = {key: agent_id, "task": task_id, "worktree_path": worktree_path, "at": at}
+    if session_id is not None:
+        entry["session_id"] = session_id
+    return entry
 
 
 def stop_payload(cwd, input_id=None, result_id=None, tool_name=STOP_TOOL_NAME):
@@ -843,7 +858,12 @@ class TestRealAgentIndexWriterInterop(QueueTaskStopNetTestCase):
     """End-to-end interop with the ACTUAL agent-index writer
     (queue_agent_index.py, task0001) rather than a hand-built fixture --
     proves the two hooks agree on the agents.jsonl entry shape (the field
-    key for the em-workflow task identifier is `task`, not `task_id`)."""
+    key for the em-workflow task identifier is `task`, not `task_id`).
+
+    The launch payload carries a `session_id` (task0001 SC1) so the entry
+    the real writer produces has the CURRENT shape, including the new
+    field -- proving AC-4 (task0001) against the real writer's output, not
+    just a hand-built fixture that could drift from it."""
 
     def test_stop_resolves_via_the_real_agent_index_writer(self):
         feature = "demo"
@@ -856,6 +876,7 @@ class TestRealAgentIndexWriterInterop(QueueTaskStopNetTestCase):
 
         launch_payload = {
             "tool_name": "Agent",
+            "session_id": "sess-real-writer-001",
             "tool_input": {
                 "subagent_type": "em-workflow:implementer",
                 "description": "Implement task0070",
@@ -875,6 +896,10 @@ class TestRealAgentIndexWriterInterop(QueueTaskStopNetTestCase):
         self.assertEqual(writer_result.returncode, 0)
         index_path = os.path.join(feature_dir, "agents.jsonl")
         self.assertTrue(os.path.isfile(index_path), "agent index writer produced no file")
+        with open(index_path, encoding="utf-8") as fh:
+            written_entry = json.loads(fh.readline())
+        self.assertEqual(written_entry.get("session_id"), "sess-real-writer-001")
+        self.assertNotIn("sess-real-writer-001", written_entry.get("agent_ids", []))
 
         stop_result = run_hook_json(
             stop_payload(self.tmp_dir, input_id="a4d2c8f1e0b3a297")
@@ -1242,6 +1267,152 @@ class TestBothWritersLeaveExactlyOneFailedLine(QueueTaskStopNetTestCase):
         lines = [json.loads(l) for l in read_journal_lines(journal_path)]
         failed_lines = [e for e in lines if e.get("task") == task_id and e.get("event") == "failed"]
         self.assertEqual(len(failed_lines), 1)
+
+
+class TestSessionIdFieldIsInertForResolution(QueueTaskStopNetTestCase):
+    """AC-4 (task0001): the new agents.jsonl `session_id` field (SC1) is
+    read by nothing on the stop side. Each resolution behavior -- match,
+    ambiguity refusal, staleness, and containment -- is exercised with an
+    index entry carrying `session_id`, paired against the pre-existing
+    field-less case elsewhere in this file, proving the field is inert
+    rather than merely untested (TS-6)."""
+
+    def test_match_resolves_the_same_with_and_without_session_id(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_with = make_worktree(feature_dir, "task0140")
+        worktree_without = make_worktree(feature_dir, "task0141")
+        write_journal(
+            feature_dir,
+            [
+                {"event": "launched", "task": "task0140", "at": "2026-01-01T00:00:00+00:00"},
+                {"event": "launched", "task": "task0141", "at": "2026-01-01T00:00:00+00:00"},
+            ],
+        )
+        write_agent_index(
+            feature_dir,
+            [
+                index_entry(
+                    "agent-with-sess", "task0140", worktree_with, session_id="sess-140"
+                ),
+                index_entry("agent-without-sess", "task0141", worktree_without),
+            ],
+        )
+
+        result_with = run_hook_json(stop_payload(self.tmp_dir, input_id="agent-with-sess"))
+        result_without = run_hook_json(stop_payload(self.tmp_dir, input_id="agent-without-sess"))
+
+        self.assertEqual(result_with.returncode, 0)
+        self.assertEqual(result_without.returncode, 0)
+        lines = [
+            json.loads(l) for l in read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        ]
+        by_task = {entry["task"]: entry["event"] for entry in lines}
+        self.assertEqual(by_task["task0140"], "failed")
+        self.assertEqual(by_task["task0141"], "failed")
+
+    def test_ambiguity_refusal_unaffected_when_entry_carries_session_id(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        first_worktree = make_worktree(feature_dir, "task0142")
+        second_worktree = make_worktree(feature_dir, "task0143")
+        write_journal(
+            feature_dir,
+            [
+                {"event": "launched", "task": "task0142", "at": "2026-01-01T00:00:00+00:00"},
+                {"event": "launched", "task": "task0143", "at": "2026-01-01T00:01:00+00:00"},
+            ],
+        )
+        write_agent_index(
+            feature_dir,
+            [
+                index_entry(
+                    "agent-reused-sess",
+                    "task0142",
+                    first_worktree,
+                    at="2026-01-01T00:00:00+00:00",
+                    session_id="sess-142",
+                ),
+                index_entry(
+                    "agent-reused-sess",
+                    "task0143",
+                    second_worktree,
+                    at="2026-01-01T00:02:00+00:00",
+                ),
+            ],
+        )
+        payload = stop_payload(self.tmp_dir, input_id="agent-reused-sess")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines = [
+            json.loads(l) for l in read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        ]
+        by_task = {entry["task"]: entry["event"] for entry in lines}
+        self.assertEqual(by_task["task0142"], "launched")  # unaffected
+        self.assertEqual(by_task["task0143"], "launched")  # unaffected -- NOT marked failed
+
+    def test_staleness_guard_unaffected_when_entries_carry_session_id(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0144")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0144", "at": "2026-01-01T00:10:00+00:00"}],
+        )
+        write_agent_index(
+            feature_dir,
+            [
+                index_entry(
+                    "agent-early-sess",
+                    "task0144",
+                    worktree_path,
+                    at="2026-01-01T00:00:00+00:00",
+                    session_id="sess-early",
+                ),
+                index_entry(
+                    "agent-late-sess",
+                    "task0144",
+                    worktree_path,
+                    at="2026-01-01T00:10:00+00:00",
+                    session_id="sess-late",
+                ),
+            ],
+        )
+
+        stale_result = run_hook_json(stop_payload(self.tmp_dir, input_id="agent-early-sess"))
+        self.assertEqual(stale_result.returncode, 0)
+        journal_path = os.path.join(feature_dir, "journal.jsonl")
+        lines = read_journal_lines(journal_path)
+        self.assertEqual(len(lines), 1)  # stale match, no-op -- unchanged by session_id
+
+        fresh_result = run_hook_json(stop_payload(self.tmp_dir, input_id="agent-late-sess"))
+        self.assertEqual(fresh_result.returncode, 0)
+        lines = read_journal_lines(journal_path)
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(json.loads(lines[-1]).get("event"), "failed")
+
+    def test_containment_check_unaffected_when_entry_carries_session_id(self):
+        feature = "demo"
+        feature_dir = make_feature(self.tmp_dir, feature)
+        worktree_path = make_worktree(feature_dir, "task0145")
+        write_journal(
+            feature_dir,
+            [{"event": "launched", "task": "task0145", "at": "2026-01-01T00:00:00+00:00"}],
+        )
+        write_agent_index(
+            feature_dir,
+            [index_entry("agent-contained-sess", "task0145", worktree_path, session_id="sess-145")],
+        )
+        payload = stop_payload(self.tmp_dir, input_id="agent-contained-sess")
+
+        result = run_hook_json(payload)
+
+        self.assertEqual(result.returncode, 0)
+        lines = read_journal_lines(os.path.join(feature_dir, "journal.jsonl"))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(json.loads(lines[-1]).get("event"), "failed")
 
 
 class TestSymlinkJournalPathRefused(QueueTaskStopNetTestCase):
