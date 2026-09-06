@@ -1,0 +1,125 @@
+task_id: task0001
+baseline_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+final_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_failed_kind_schema.TestFailedKindSectionDefinesVocabulary.test_section_exists
+      - test_failed_kind_schema.TestFailedKindSectionDefinesVocabulary.test_vocabulary_exact_two_values_in_order
+      - test_failed_kind_schema.TestFailedKindSectionDefinesVocabulary.test_states_single_owner_of_the_definition
+      - test_failed_kind_schema.TestFailedKindSectionDefinesVocabulary.test_glosses_external_cause_meaning
+      - test_failed_kind_schema.TestFailedKindSectionDefinesVocabulary.test_glosses_decision_required_meaning
+      - test_failed_kind_schema.TestFailedKindSectionDefinesVocabulary.test_negative_proof_extra_value_is_detected
+      - test_failed_kind_schema.TestFailedKindSectionDefinesVocabulary.test_negative_proof_missing_value_is_detected
+    red_confirmed: true
+    red_reason: >
+      Before the section existed, test_section_exists /
+      test_vocabulary_exact_two_values_in_order /
+      test_states_single_owner_of_the_definition raised
+      "ValueError: heading not found as its own line: '## `failed_kind`'"
+      (via _heading_index); the two glosses tests raised the same error
+      through _failed_kind_section(). The two negative-proof tests operate
+      on synthetic text only and were green throughout -- they prove the
+      matcher's shape, not the AC itself, and ride along with the other
+      tests in this group.
+  AC-2:
+    tests:
+      - test_failed_kind_schema.TestFailedKindRequiredness.test_states_belongs_to_implement_step
+      - test_failed_kind_schema.TestFailedKindRequiredness.test_states_required_on_every_failed_write
+      - test_failed_kind_schema.TestFailedKindRequiredness.test_cites_implement_phase_as_write_path_owner
+      - test_failed_kind_schema.TestFailedKindRequiredness.test_does_not_restate_which_value_each_path_writes
+    red_confirmed: true
+    red_reason: >
+      Same "ValueError: heading not found as its own line: '## `failed_kind`'"
+      from _failed_kind_section(), since the section (and therefore its
+      required-ness / citation statements) did not exist yet.
+  AC-3:
+    tests:
+      - test_failed_kind_schema.TestFailedKindLifecycle.test_states_set_only_by_the_failing_write
+      - test_failed_kind_schema.TestFailedKindLifecycle.test_states_held_for_duration_of_failed_status
+      - test_failed_kind_schema.TestFailedKindLifecycle.test_states_cleared_by_same_write_set_leaving_failed
+      - test_failed_kind_schema.TestFailedKindLifecycle.test_states_no_separate_write_or_commit
+    red_confirmed: true
+    red_reason: >
+      Same missing-section ValueError as AC-1/AC-2 -- the Lifecycle
+      paragraph did not exist prior to implementation.
+  AC-4:
+    tests:
+      - test_failed_kind_schema.TestFailedKindMissingValueCompatibility.test_states_missing_value_reads_as_decision
+      - test_failed_kind_schema.TestFailedKindMissingValueCompatibility.test_states_no_migration_runs
+      - test_failed_kind_schema.TestFailedKindMissingValueCompatibility.test_states_compatibility_does_not_weaken_requiredness
+      - test_failed_kind_schema.TestFailedKindMissingValueCompatibility.test_non_vacuity_requiredness_statement_still_present
+      - test_failed_kind_schema.TestFailedKindMissingValueCompatibility.test_negative_proof_matcher_rejects_synthetic_without_the_rule
+    red_confirmed: true
+    red_reason: >
+      Same missing-section ValueError as AC-1/AC-2/AC-3 for the four
+      document-reading tests (the Missing-value compatibility paragraph
+      and the required-ness statement it must not silently replace did
+      not exist yet). The negative-proof test operates on a synthetic
+      string only and was green throughout.
+  AC-5:
+    tests:
+      - test_failed_kind_schema.TestBatchInfraResumeRecord.test_names_both_member_keys
+      - test_failed_kind_schema.TestBatchInfraResumeRecord.test_states_rounds_is_monotonic_and_never_reset
+      - test_failed_kind_schema.TestBatchInfraResumeRecord.test_states_unset_read_rule_rounds_default_independently
+      - test_failed_kind_schema.TestBatchInfraResumeRecord.test_states_unset_read_rule_cap_default_independently
+      - test_failed_kind_schema.TestBatchInfraResumeRecord.test_states_no_migration_runs_for_infra_resume
+      - test_failed_kind_schema.TestBatchInfraResumeRecord.test_cites_develop_skill_as_judgment_owner_not_restated_here
+      - test_failed_kind_schema.TestBatchInfraResumeRecord.test_mirrors_verify_rework_citation_shape
+      - test_failed_kind_schema.TestBatchInfraResumeRecord.test_negative_proof_partial_statement_fails_both_checks
+    red_confirmed: true
+    red_reason: >
+      Before the `infra_resume` paragraph was added to the `## `batch`
+      block` section, these tests failed with AssertionError (e.g.
+      "'infra_resume' not found in ...", "'monotonic, never reset' not
+      found in ...", "'`rounds: 0`' not found in ..."). The negative-proof
+      test operates on a synthetic string only and was green throughout.
+  AC-6:
+    tests:
+      - test_failed_kind_schema.TestFullStructurePointers.test_implement_step_entry_names_failed_kind
+      - test_failed_kind_schema.TestFullStructurePointers.test_implement_step_entry_points_at_defining_section
+      - test_failed_kind_schema.TestFullStructurePointers.test_implement_step_entry_does_not_restate_vocabulary
+      - test_failed_kind_schema.TestFullStructurePointers.test_batch_mapping_names_infra_resume_record
+      - test_failed_kind_schema.TestFullStructurePointers.test_batch_mapping_does_not_restate_vocabulary
+    red_confirmed: true
+    red_reason: >
+      Before the implement step's `status` line gained its `failed_kind`
+      comment and the `batch:` mapping gained `infra_resume:`,
+      test_implement_step_entry_names_failed_kind and
+      test_batch_mapping_names_infra_resume_record failed with
+      AssertionError ("'failed_kind' not found in ...", "'infra_resume'
+      not found in ..."); test_implement_step_entry_points_at_defining_section
+      failed because the window contained no heading to point at.
+      test_implement_step_entry_does_not_restate_vocabulary and
+      test_batch_mapping_does_not_restate_vocabulary passed vacuously
+      before the pointers existed (nothing to restate) and continue to
+      pass after the pointers were added without vocabulary terms --
+      recorded here as a non-vacuity companion of the two positive tests
+      in the same group, not as an independently confirmed red.
+  AC-7:
+    tests:
+      - test_failed_kind_schema.TestSectionIsCitable.test_heading_text_is_present_verbatim
+      - test_failed_kind_schema.TestSectionIsCitable.test_section_is_well_formed_between_its_own_heading_boundaries
+    red_confirmed: true
+    red_reason: >
+      Before implementation, test_heading_text_is_present_verbatim failed
+      with AssertionError ("'## `failed_kind`' not found in ..." -- the
+      full document text); test_section_is_well_formed_between_its_own_heading_boundaries
+      raised the same "heading not found as its own line" ValueError as
+      the AC-1..AC-4 groups.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      AC-8's verifiable outcome is `python3 -m unittest discover -s
+      tests` passing with the new module present and stdlib-only imports
+      -- exercised by the whole suite, not a single test in this module
+      (per the task plan's Test Notes). Not independently red/green-able
+      as its own test: the new module either collects and runs (as part
+      of `discover`) or the run fails outright. Confirmed by running the
+      full suite before implementation (baseline) and after (final);
+      both show only the one pre-existing unrelated failure
+      (test_llm_led_review_user_docs), and `tests/test_failed_kind_schema.py`
+      imports only `os`, `re`, and `unittest`.
