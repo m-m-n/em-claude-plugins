@@ -76,11 +76,10 @@ workflow:
     status: completed
     completed_at_commit: 8bbb5660c23bd05e83087bbbb0717ac958f496fa
   - id: implement
-    status: completed
+    status: pending
     base_commit: 3f5db490b46d5190e54a5665f1d6c44876ec42da
-    completed_at_commit: 68ca438080f81bbc0fa0911f6c5deef9272df85b
   - id: review
-    status: in_progress
+    status: pending
   - id: verify
     status: pending
     result: null
@@ -148,6 +147,21 @@ tasks:
       source: verify
       source_ids: [TS-12, SC-C]
       review_round: null
+  task0006:
+    title: "Bind the agent index evidence to the launch under recovery"
+    plan: tasks/task0006.md
+    files: [em-workflow/scripts/recover-orphaned-task.py, tests/test_recover_orphaned_task.py, em-workflow/references/implement-phase.md, tests/test_implement_routeback_gate.py, em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json]
+    skills: [infra-impl]
+    domains: [input-handling, data-persistence, api-contract, config-infra]
+    complexity: medium
+    requirements: [FR2, FR5, FR7, NFR1, NFR4, NFR5, NFR6, NFR7]
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids: [1ca085e307eacd90]
+      review_round: 2
 
 review:
   status: pending
@@ -178,8 +192,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0003]
-    tests: [TS-1, TS-3]
+    tasks: [task0003, task0006]
+    tests: [TS-1, TS-3, TS-13]
   FR3:
     title: "journal への failed(reason: orphaned) 書き込みヘルパー"
     status: ok
@@ -199,8 +213,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0003]
-    tests: [TS-3, TS-5]
+    tasks: [task0003, task0006]
+    tests: [TS-3, TS-5, TS-13]
   FR6:
     title: "session_id の形式検証と transcript パスの封じ込め"
     status: ok
@@ -213,7 +227,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0004]
+    tasks: [task0004, task0006]
     tests: [TS-10]
   FR8:
     title: "agents.jsonl の権限範囲の明記"
@@ -234,8 +248,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003]
-    tests: [TS-3, TS-5]
+    tasks: [task0002, task0003, task0006]
+    tests: [TS-3, TS-5, TS-13]
   NFR2:
     title: "journal 追記の排他規律"
     status: ok
@@ -255,30 +269,30 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004, task0005]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006]
     tests: [TS-12]
   NFR5:
     title: "テスト配置と命名"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004, task0005]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006]
     tests: [TS-12]
   NFR6:
     title: "プラグイン version bump"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0004]
+    tasks: [task0004, task0006]
     tests: [TS-11]
   NFR7:
     title: "SSOT の重複禁止規律"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0004]
+    tasks: [task0004, task0006]
     tests: [TS-10]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework_count: 1
