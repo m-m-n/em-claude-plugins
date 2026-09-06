@@ -33,6 +33,33 @@ TestCLIEntryPoint exercises the command-line entry point itself (argparse
 wiring, stdout JSON, exit codes) on top of the function-level coverage above
 (IMPLEMENTATION.md Conventions: "scripts are exercised through their
 command-line entry point plus function-level calls").
+
+Covers task0006 Acceptance Criteria (feature-docs/orphaned-implementer-recovery/
+tasks/task0006.md) -- D7's binding step, inserted between the "agent index
+entry exists" and "entry carries a session identity" steps above:
+
+- AC-1: TestAgentEntryBinding.test_ac1_* -- a `launched` -> `failed` ->
+  `launched` journal history whose single agent index entry's `at` is far
+  older than the last `launched` event's `at` reports `residual` with
+  `stale-agent-entry`, leaves the journal byte-identical, and invokes the
+  helper zero times.
+- AC-2: TestAgentEntryBinding.test_ac2_* -- the same fixture with the
+  entry's `at` equal to, later than, or exactly `AGENT_ENTRY_BINDING_TOLERANCE`
+  earlier than the last `launched` event's `at` is admitted and reaches the
+  pre-existing `recovered` outcome.
+- AC-3: TestAgentEntryBinding.test_ac3_* -- each of the six data shapes that
+  cannot be compared (both sides in turn: absent, non-string, unparsable
+  `at`; plus the two aware/naive combinations) is a binding failure, not a
+  pass, reporting `stale-agent-entry` with no write and no helper call.
+- AC-4: TestAgentEntryBinding.test_ac4_* -- the tolerance is
+  `ROT.AGENT_ENTRY_BINDING_TOLERANCE`, pinned to exactly 2 seconds, with a
+  parameterised admitted/rejected pair straddling the boundary.
+- AC-5: no new test -- the pre-existing TestEndToEndDecide cases pass
+  unchanged (the binding step is satisfied by every existing fixture's
+  matching `at` values), which is the no-regression proof itself.
+- AC-6: TestAgentEntryBinding.test_ac6_* -- an entry that is both unbindable
+  AND carries no `session_id` reports `stale-agent-entry`, proving the
+  binding step runs before the session-identity read.
 """
 
 import importlib.util
@@ -42,6 +69,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import timedelta
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -204,6 +232,79 @@ def _decide_from_fixture(fx, **overrides):
     )
     kwargs.update(overrides)
     return ROT.decide(**kwargs)
+
+
+# ---------------------------------------------------------------------------
+# task0006 (D7 binding step) fixtures.
+# ---------------------------------------------------------------------------
+
+# Sentinel meaning "omit the `at` field entirely" -- distinct from any real
+# value (including None/JSON null), so a fixture can build the "no `at`
+# field at all" case (AC-3) explicitly rather than accidentally.
+_OMIT_AT = object()
+
+# The launch under recovery's own `launched` event `at` -- two hours after
+# the fixture's earlier launched/failed pair, which is "far apart" per the
+# Test Notes (an hour is enough) so AC-1's stale case is unambiguously about
+# the binding rule, not the tolerance.
+LAST_LAUNCHED_AT = "2026-01-01T02:00:00+00:00"
+
+
+def _build_binding_fixture(
+    tmp_dir,
+    entry_at=LAST_LAUNCHED_AT,
+    last_launched_at=LAST_LAUNCHED_AT,
+    include_session_id=True,
+    worktree_path=None,
+):
+    """A fixture whose journal holds, for the task, `launched` -> `failed`
+    -> `launched` (the last `launched` being the launch under recovery,
+    its `at` given by `last_launched_at`), and whose agent index holds
+    exactly one entry for the task at `entry_at`. Every OTHER
+    evidence-pipeline step is already satisfied when `include_session_id`
+    is True (a valid, differing session id whose transcript's newest
+    activity is strictly older than the current session's start), so a
+    `residual`/`stale-agent-entry` outcome can only be attributed to the D7
+    binding step itself (task0006 AC-1). `entry_at` / `last_launched_at`
+    accept `_OMIT_AT` to build the "no `at` field at all" cases (AC-3)."""
+    journal_path = os.path.join(tmp_dir, "journal.jsonl")
+    agents_index_path = os.path.join(tmp_dir, "agents.jsonl")
+    transcripts_dir = os.path.join(tmp_dir, "transcripts")
+    os.makedirs(transcripts_dir, exist_ok=True)
+
+    last_launched_event = {"event": "launched", "task": TASK_ID}
+    if last_launched_at is not _OMIT_AT:
+        last_launched_event["at"] = last_launched_at
+    write_jsonl(journal_path, [
+        {"event": "launched", "task": TASK_ID, "at": "2025-12-01T00:00:00+00:00"},
+        {"event": "failed", "task": TASK_ID, "at": "2025-12-01T01:00:00+00:00", "reason": "net"},
+        last_launched_event,
+    ])
+
+    entry = {
+        "agent_id": "a1",
+        "agent_ids": ["a1"],
+        "task": TASK_ID,
+        "worktree_path": worktree_path or "/x/task0099",
+    }
+    if entry_at is not _OMIT_AT:
+        entry["at"] = entry_at
+    if include_session_id:
+        entry["session_id"] = RECORDED_SESSION_ID
+    write_jsonl(agents_index_path, [entry])
+
+    write_transcript(transcripts_dir, RECORDED_SESSION_ID, [
+        {"timestamp": TRANSCRIPT_OLD_TIMESTAMP, "type": "assistant"},
+    ])
+
+    return {
+        "task_id": TASK_ID,
+        "journal_path": journal_path,
+        "agents_index_path": agents_index_path,
+        "transcripts_dir": transcripts_dir,
+        "current_session_id": CURRENT_SESSION_ID,
+        "current_session_start": CURRENT_SESSION_START,
+    }
 
 
 class TestSessionIdValidation(unittest.TestCase):
@@ -686,6 +787,151 @@ class TestEndToEndDecide(unittest.TestCase):
 
             self.assertEqual(exit_code, 0)
             self.assertEqual(outcome["outcome"], "recovered")
+
+
+class TestAgentEntryBinding(unittest.TestCase):
+    """task0006 (orphaned-implementer-recovery review-round-2): D7's binding
+    step, inserted between the "agent index entry exists" step and the
+    "entry carries a session identity" step (AC-1 through AC-6)."""
+
+    def _assert_residual_stale_no_write_no_invoke(self, fx):
+        record_path = os.path.join(os.path.dirname(fx["journal_path"]), "calls.jsonl")
+        helper_path = write_stub_helper(
+            os.path.dirname(fx["journal_path"]), record_path, outcome="appended"
+        )
+        before = Path(fx["journal_path"]).read_bytes()
+
+        outcome, exit_code = _decide_from_fixture(fx, journal_helper=helper_path)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            outcome, {"outcome": "residual", "task": TASK_ID, "reason": "stale-agent-entry"}
+        )
+        after = Path(fx["journal_path"]).read_bytes()
+        self.assertEqual(before, after, "journal must stay byte-identical")
+        self.assertEqual(read_stub_calls(record_path), [], "helper must not be invoked")
+
+    def _assert_recovered(self, fx):
+        record_path = os.path.join(os.path.dirname(fx["journal_path"]), "calls.jsonl")
+        helper_path = write_stub_helper(
+            os.path.dirname(fx["journal_path"]), record_path, outcome="appended"
+        )
+
+        outcome, exit_code = _decide_from_fixture(fx, journal_helper=helper_path)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            outcome, {"outcome": "recovered", "task": TASK_ID, "reason": ""}
+        )
+        calls = read_stub_calls(record_path)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0]["task"], TASK_ID)
+        self.assertEqual(calls[0]["reason"], "orphaned")
+
+    # -- AC-1 ----------------------------------------------------------
+
+    def test_ac1_stale_entry_far_older_than_last_launched_reports_stale_agent_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(
+                tmp,
+                entry_at="2026-01-01T00:00:00+00:00",  # two hours older than LAST_LAUNCHED_AT
+                last_launched_at=LAST_LAUNCHED_AT,
+            )
+            self._assert_residual_stale_no_write_no_invoke(fx)
+
+    # -- AC-2 ----------------------------------------------------------
+
+    def test_ac2_entry_at_equal_to_last_launched_is_admitted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(tmp, entry_at=LAST_LAUNCHED_AT, last_launched_at=LAST_LAUNCHED_AT)
+            self._assert_recovered(fx)
+
+    def test_ac2_entry_at_later_than_last_launched_is_admitted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(
+                tmp, entry_at="2026-01-01T02:00:05+00:00", last_launched_at=LAST_LAUNCHED_AT
+            )
+            self._assert_recovered(fx)
+
+    def test_ac2_entry_at_earlier_by_exactly_tolerance_is_admitted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(
+                tmp, entry_at="2026-01-01T01:59:58+00:00", last_launched_at=LAST_LAUNCHED_AT
+            )
+            self._assert_recovered(fx)
+
+    # -- AC-3 ------------------------------------------------------------
+
+    def test_ac3_entry_has_no_at_field_is_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(tmp, entry_at=_OMIT_AT, last_launched_at=LAST_LAUNCHED_AT)
+            self._assert_residual_stale_no_write_no_invoke(fx)
+
+    def test_ac3_entry_at_not_a_string_is_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(tmp, entry_at=1735689600, last_launched_at=LAST_LAUNCHED_AT)
+            self._assert_residual_stale_no_write_no_invoke(fx)
+
+    def test_ac3_entry_at_unparsable_string_is_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(
+                tmp, entry_at="not-a-timestamp", last_launched_at=LAST_LAUNCHED_AT
+            )
+            self._assert_residual_stale_no_write_no_invoke(fx)
+
+    def test_ac3_last_launched_event_has_no_at_is_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(tmp, entry_at=LAST_LAUNCHED_AT, last_launched_at=_OMIT_AT)
+            self._assert_residual_stale_no_write_no_invoke(fx)
+
+    def test_ac3_last_launched_event_at_unparsable_is_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(
+                tmp, entry_at=LAST_LAUNCHED_AT, last_launched_at="not-a-timestamp"
+            )
+            self._assert_residual_stale_no_write_no_invoke(fx)
+
+    def test_ac3_entry_aware_last_launched_naive_is_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(
+                tmp, entry_at="2026-01-01T02:00:00+00:00", last_launched_at="2026-01-01T02:00:00"
+            )
+            self._assert_residual_stale_no_write_no_invoke(fx)
+
+    def test_ac3_entry_naive_last_launched_aware_is_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(
+                tmp, entry_at="2026-01-01T02:00:00", last_launched_at="2026-01-01T02:00:00+00:00"
+            )
+            self._assert_residual_stale_no_write_no_invoke(fx)
+
+    # -- AC-4 ------------------------------------------------------------
+
+    def test_ac4_tolerance_constant_is_two_seconds(self):
+        self.assertEqual(ROT.AGENT_ENTRY_BINDING_TOLERANCE, timedelta(seconds=2))
+
+    def test_ac4_boundary_exactly_at_tolerance_admitted_one_second_beyond_stale(self):
+        last_dt = ROT.parse_timestamp(LAST_LAUNCHED_AT)
+        admitted_at = (last_dt - ROT.AGENT_ENTRY_BINDING_TOLERANCE).isoformat()
+        rejected_at = (
+            last_dt - ROT.AGENT_ENTRY_BINDING_TOLERANCE - timedelta(seconds=1)
+        ).isoformat()
+        self.assertTrue(ROT.agent_entry_is_bound(admitted_at, LAST_LAUNCHED_AT))
+        self.assertFalse(ROT.agent_entry_is_bound(rejected_at, LAST_LAUNCHED_AT))
+
+    # -- AC-6 ------------------------------------------------------------
+
+    def test_ac6_unbindable_entry_with_no_session_id_reports_stale_agent_entry(self):
+        # Proves ordering: if the session-identity read ran first, an entry
+        # with no session_id would report `no-session-id` instead.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_binding_fixture(
+                tmp,
+                entry_at="2026-01-01T00:00:00+00:00",  # unbindable
+                last_launched_at=LAST_LAUNCHED_AT,
+                include_session_id=False,
+            )
+            self._assert_residual_stale_no_write_no_invoke(fx)
 
 
 class TestCLIEntryPoint(unittest.TestCase):
