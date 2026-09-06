@@ -48,10 +48,10 @@ orchestrator is a helper whose reason value is drawn from a closed set.
 |---|---|---|---|
 | **SC1** — agent index entry `session_id` field | Carries the identity of the session that launched an implementer | Written as an **independent top-level field** of the entry, alongside the existing `agent_id` / `agent_ids` / `task` / `worktree_path` / `at`. **Never** appended to the `agent_ids` candidate list and never a match candidate. Pre: the hook input supplies a value passing SC5. Post: when it does not, the field is omitted and the entry is still appended (fail-open, NFR3). Readers MUST treat absence as "unknown" — legacy entries have no such field — and degrade to Residual | task0001 (writer), task0003 (reader), task0004 (documentation) |
 | **SC2** — `em-workflow/scripts/journal-append-failed.py` | Appends one terminal `failed` event to the journal | Parameters: `--journal PATH`, `--task TASKID`, `--reason NAME` (all required; `--reason` validated against the closed set whose only member is `orphaned`). Pre: the journal file already exists — the helper never creates it and never creates its directory; the file is opened for append **without following a symbolic link**. Critical section: an exclusive advisory lock is taken on the journal file itself, and the replay that determines the task's final event plus the append both happen inside that single lock hold. Post: exactly one `failed` line is appended when the task's final event is `launched`; **nothing** is written when it is already `merged` or `failed`; the appended line's field shape follows SC4. Outcome: one line of JSON on stdout with keys `outcome` (`appended` \| `noop_terminal`), `task`, `reason`; exit 0 for both decided outcomes, non-zero (and no write) for usage or internal errors | task0002 (owner), task0003 (caller), task0004 (documentation) |
-| **SC3** — `em-workflow/scripts/recover-orphaned-task.py` | Decides, for one candidate task, whether the launching session is provably gone; on proof invokes SC2 with reason `orphaned` | Parameters: `--journal PATH`, `--agents-index PATH`, `--task TASKID` (required); `--transcripts-dir PATH`, `--current-session-id ID`, `--current-session-start TIMESTAMP`, `--marker TOKEN`, `--journal-helper PATH` (optional; `--journal-helper` defaults to the sibling `journal-append-failed.py` in the same directory). Pre: the caller has already established the candidate conditions it owns (journal final event `launched`, task worktree and task branch present, no live agent). Post: on proof, SC2 is invoked exactly once with the task identifier and reason `orphaned`, and SC2's outcome is propagated; on every other path the journal is **byte-identical** to its pre-call content, SC2 is not invoked, and no file outside the resolved transcripts directory is opened. Outcome: one line of JSON on stdout with keys `outcome` (`recovered` \| `noop_terminal` \| `residual`), `task`, `reason` (a reason code from SC6; empty for `recovered`); exit 0 for all decided outcomes. A non-zero exit means usage or internal error, is never accompanied by a journal write, and the caller treats it as Residual | task0003 (owner), task0004 (documentation) |
+| **SC3** — `em-workflow/scripts/recover-orphaned-task.py` | Decides, for one candidate task, whether the launching session is provably gone; on proof invokes SC2 with reason `orphaned` | Parameters: `--journal PATH`, `--agents-index PATH`, `--task TASKID` (required); `--transcripts-dir PATH`, `--current-session-id ID`, `--current-session-start TIMESTAMP`, `--marker TOKEN`, `--journal-helper PATH` (optional; `--journal-helper` defaults to the sibling `journal-append-failed.py` in the same directory). Pre: the caller has already established the candidate conditions it owns (journal final event `launched`, task worktree and task branch present, no live agent). The agent index entry it reads is evidence only once it is BOUND to the launch under recovery per D7; an entry that cannot be bound ends the run as `residual` with SC6's `stale-agent-entry`, before the entry's session identity is read. Post: on proof, SC2 is invoked exactly once with the task identifier and reason `orphaned`, and SC2's outcome is propagated; on every other path the journal is **byte-identical** to its pre-call content, SC2 is not invoked, and no file outside the resolved transcripts directory is opened. Outcome: one line of JSON on stdout with keys `outcome` (`recovered` \| `noop_terminal` \| `residual`), `task`, `reason` (a reason code from SC6; empty for `recovered`); exit 0 for all decided outcomes. A non-zero exit means usage or internal error, is never accompanied by a journal write, and the caller treats it as Residual | task0003 (owner), task0004 (documentation) |
 | **SC4** — journal `failed` event line shape | Keeps the new writer's output indistinguishable in shape from the existing ones | The appended line's field names and ordering are **taken from the existing `failed` writers** (`queue_failure_net.py`, `queue_taskstop_net.py`) rather than invented. The change is additive: a new value (`orphaned`) of the existing reason field. No existing event name or reason is renamed or removed (FR9) | task0002 (writer), task0004 (schema documentation) |
 | **SC5** — `session_id` validation rule | Keeps a recorded identity safe to compare and to use as a path element | A value is valid when it is a non-empty string of at most 64 characters whose first character is an ASCII letter or digit and whose remaining characters are ASCII letters, digits, hyphens or underscores. Dots, path separators, whitespace and NUL are rejected, which makes a `..` segment unrepresentable. Applied **before** the value is used as a path element; path containment (D1) is checked in addition, never instead | task0001 (applies it on write), task0003 (applies it on read), task0004 (documentation) |
-| **SC6** — residual reason codes | Makes each unproven path distinguishable in reports and tests | Closed set: `no-agent-entry`, `no-session-id`, `invalid-session-id`, `same-session`, `current-session-unknown`, `transcripts-dir-missing`, `transcript-unreadable`, `transcript-active`, `journal-not-launched`. Every code means "the journal was not written" | task0003 (producer), task0004 (documentation) |
+| **SC6** — residual reason codes | Makes each unproven path distinguishable in reports and tests | Closed set: `no-agent-entry`, `stale-agent-entry`, `no-session-id`, `invalid-session-id`, `same-session`, `current-session-unknown`, `transcripts-dir-missing`, `transcript-unreadable`, `transcript-active`, `journal-not-launched`. Every code means "the journal was not written". `stale-agent-entry` means the agent index entry could not be bound to the launch under recovery (D7) | task0003 (producer), task0004 (documentation), task0006 (adds `stale-agent-entry`) |
 
 ## Conventions
 
@@ -75,9 +75,12 @@ orchestrator is a helper whose reason value is drawn from a closed set.
   writes real state. Hooks are exercised by subprocess with stdin JSON;
   scripts are exercised through their command-line entry point plus
   function-level calls.
-- **Version bump ownership**: task0004 alone touches
+- **Version bump ownership**: exactly one task per round touches
   `em-workflow/.claude-plugin/plugin.json` and
-  `.claude-plugin/marketplace.json` (NFR6). No other task edits either file.
+  `.claude-plugin/marketplace.json` (NFR6) — task0004 for the implement
+  round, task0006 for the review-rework round, which is the only task of that
+  round changing a file under `em-workflow/`. No other task edits either
+  file.
 - **Documentation ownership (NFR7)**: `implement-phase.md`'s I.2.b
   Recovery / Residual block is the single owning section for the orphan
   recovery rule. Every other location cites it by repository-relative path.
@@ -178,6 +181,48 @@ verifiable inside its own worktree; the real end-to-end pairing is
 TS-1, verified in the verify phase after both tasks merge.
 Affects task0002, task0003.
 
+### D7 — Binding the agent index entry to the launch under recovery
+
+Index recording is fail-open (SC1): a launch whose index write was missed —
+absent journal directory, an unobtainable or invalid session identity, any
+hook-level failure — leaves the PREVIOUS launch's entry as the newest entry
+for that task. The newest entry is therefore not evidence about the launch
+under recovery until it has been bound to it, and the `launched` journal
+event carries no session identity of its own to correlate against.
+
+**Rule.** Let `L` be the `at` of the LAST `launched` journal event recorded
+for the task. When the journal records at least one `launched` event for the
+task, the agent index entry is admitted as evidence only when its own `at`
+parses and is not earlier than `L` by more than the tolerance below;
+otherwise the outcome is `residual` with SC6's `stale-agent-entry`, and
+nothing further runs — no session identity is read, no path is assembled, no
+file is opened, the journal stays byte-identical. Data that cannot be
+compared at all (an `at` absent, non-string, unparsable, or incomparable
+across aware/naive instants, on either side) is a binding failure, never a
+pass: the Conventions' error-handling policy applies unchanged, doubt never
+produces a write.
+
+The rule does not apply when the journal records no `launched` event for the
+task. No recovery can result from such a journal — the journal pre-check
+already ends that run as `journal-not-launched` or `noop_terminal` — so
+applying it there would only relabel an existing outcome.
+
+**Tolerance: 2 seconds.** The two writes come from two separate PreToolUse
+hook invocations — `queue_launch_guard.py` appends the journal `launched`
+line, `queue_agent_index.py` appends the index entry — each stamping whole
+seconds from the local clock in an order the harness does not fix, so the
+genuine pair can straddle a second boundary in either direction. A genuinely
+stale entry is separated from the newest launch by a whole implementer run,
+not by seconds, so the tolerance admits the real pair without admitting a
+previous launch's entry.
+
+**Placement.** The check is a step of SC3's fixed evidence order, run
+immediately after "an agent index entry exists for the task" and before the
+entry's session identity is read; every other step keeps its position and its
+reason code. `implement-phase.md`'s I.2.b Orphan recovery block states the
+order (Conventions, NFR7) and is updated in the same change.
+Affects task0003, task0004, task0006.
+
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
@@ -187,6 +232,7 @@ Affects task0002, task0003.
 | A live sibling session blocked on a long tool call shows no recent transcript activity | Low | A live task could be recorded `failed` | Requires the recorded identity to differ from the current session as well; one develop run per feature is a pre-existing assumption; SC2's in-lock replay keeps the journal consistent if the sibling later writes a terminal event |
 | SC4's line shape drifts from the existing `failed` writers | Medium | Downstream readers mis-parse the new line | Shape is derived from the existing writers, not invented; TS-4 proves the launch guard accepts the result |
 | Verbatim documentation constants in the test suite break when the prose is rewritten | High | Test failures | task0004 owns both the prose and the constants in one change |
+| D7's tolerance is too small for the two hooks' clock granularity | Low | The genuine entry is rejected, so recovery does not fire and behaviour stays as today (fail-safe) | Both tolerance boundaries are pinned by tests; a miss costs only the pre-existing Residual, never a false recovery |
 | Two new scripts plus a hook change land in parallel | Medium | Integration mismatch at the SC2/SC3 boundary | SC2's parameter and outcome contract is pinned above; task0003 tests against a stub of that contract; TS-1 verifies the real pairing |
 
 ## Open Questions
