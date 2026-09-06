@@ -156,7 +156,8 @@ workflow:
     base_commit: be58f8a20250f8dd4f7888297c8e77be723d50c2
     completed_at_commit: 95ce48fb6799ea5f384afcfa8f50c7ef5afdb8f2
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: bf8f9e16160b1f1b495c426ae1977f0d375f27c5
   - id: verify
     status: pending
     result: null
@@ -234,13 +235,17 @@ tasks:
     branch: em-workflow/batch-verify-rework-lineage-cap/task0005
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    comprehensive: {status: completed, source: "litellm:vertex-glm-5.2", findings: 1}
+    security: {status: completed, source: "litellm:muse-spark", findings: 0}
+    architecture: {status: completed, source: "litellm:vertex-glm-5.2", findings: 0}
+    spec: {status: completed, source: "litellm:muse-spark", findings: 0}
   residual_critical_high: 0
   needs_rework: false
 
