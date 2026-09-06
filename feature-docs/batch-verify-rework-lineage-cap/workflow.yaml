@@ -162,7 +162,74 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "verify rework の系譜カウント cap と batch ブロック構造"
+    plan: "tasks/task0001.md"
+    files:
+      - "em-workflow/skills/develop/SKILL.md"
+      - "em-workflow/references/batch-mode.md"
+      - "em-workflow/references/workflow-schema.md"
+      - "tests/test_verify_rework_lineage_cap.py"
+      - "tests/test_develop_skill_rewiring.py"
+      - "tests/test_batch_quiet_output_skill_wiring.py"
+    skills: []
+    domains: ["config-infra", "api-contract"]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR8, NFR1, NFR3, NFR4, NFR5]
+    status: pending
+    branch: null
+  task0002:
+    title: "cap 到達走行の継続（停止条件・Step C 実行条件・終端行）"
+    plan: "tasks/task0002.md"
+    files:
+      - "em-workflow/skills/develop/SKILL.md"
+      - "tests/test_verify_cap_run_continuation.py"
+      - "tests/test_batch_quiet_output_skill_wiring.py"
+      - "tests/test_batch_stop_contract_skill_wiring.py"
+    skills: []
+    domains: ["config-infra", "api-contract"]
+    complexity: high
+    requirements: [FR6, FR7, FR11, NFR3, NFR4, NFR5]
+    status: pending
+    branch: null
+  task0003:
+    title: "retrospect への失敗項目の引き渡しと follow_up_drafts"
+    plan: "tasks/task0003.md"
+    files:
+      - "em-workflow/skills/develop/SKILL.md"
+      - "tests/test_retrospect_verification_handoff.py"
+    skills: []
+    domains: ["input-handling", "api-contract", "config-infra"]
+    complexity: medium
+    requirements: [FR4, FR5, NFR6, NFR3, NFR4, NFR5]
+    status: pending
+    branch: null
+  task0004:
+    title: "interactive の Step C デフォルト条件付き変更と非変更ガード"
+    plan: "tasks/task0004.md"
+    files:
+      - "em-workflow/skills/develop/SKILL.md"
+      - "tests/test_step_c_verify_failed_default.py"
+    skills: []
+    domains: ["ui", "config-infra"]
+    complexity: medium
+    requirements: [FR9, FR10, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    branch: null
+  task0005:
+    title: "em-workflow プラグイン version の同時 bump"
+    plan: "tasks/task0005.md"
+    files:
+      - "em-workflow/.claude-plugin/plugin.json"
+      - ".claude-plugin/marketplace.json"
+      - "tests/test_verify_rework_lineage_cap_version_bump.py"
+    skills: ["infra-impl"]
+    domains: ["config-infra"]
+    complexity: low
+    requirements: [FR12, NFR3, NFR4, NFR5]
+    status: pending
+    branch: null
 
 review:
   status: pending
@@ -178,126 +245,126 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1]
   FR2:
     title: "グローバル hard cap"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS2]
   FR3:
     title: "cap 到達時は停止せず retrospect へ"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS3]
   FR4:
     title: "retrospect への失敗項目と証拠の引き渡し"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS4]
   FR5:
     title: "follow_up_drafts の新設"
-    status: tbd
+    status: assumed
     tbd_reason: "draft の生成母集団が未決定 — 「cap 到達時点で未解決の `failed_items` 全件」か「系譜 cap に触れた ID のみ」か。後者を採ると hard cap 3 で停止したケース（毎ラウンド新規 ID で、系譜 cap に触れた ID が 1 つも無い）で draft が空になり、受け入れ条件「follow-up task の draft が定型出力される」が満たせない分岐が生じる。batch policy create-spec.requirement-clarification の action: codex_consultation が Codex CLI の usage limit により実行不能で、unresolved: record_tbd が適用された。キー・フィールド構成（origin_kind / origin_id / title / body）と Invariant 6 の引用方針は確定済みで、未確定なのは母集団のみ。"
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS5]
   FR6:
     title: "Step C 実行条件の変更"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS6]
   FR7:
     title: "Step B 停止条件との整合"
-    status: tbd
+    status: assumed
     tbd_reason: "整合の実現方法が未決定 — (a) 停止条件 3 の既存 carve-out を `failed` まで拡張して網羅的列挙を 2 遷移から 3 遷移へ更新する、(b) 既存 carve-out に触れず batch 専用の独立条項を新設する、(c) `failed` とは別の status を導入する（ただし受け入れ条件「`verify.status` は `failed` のまま」に反する）、のいずれか。既存 carve-out は「フェーズプロトコルが自動再エントリのために設定した `needs_update`」限定で、対象遷移を「厳密に次の 2 つ」と網羅的に宣言しており、tests/test_develop_skill_rewiring.py の TestStopCondition3AutomaticReentryCarveOut がその網羅性宣言と 2 遷移の所有ドキュメントを固定している。選ぶ選択肢によって変更対象テストが変わる。batch policy create-spec.requirement-clarification の codex_consultation が Codex CLI の usage limit により実行不能で、unresolved: record_tbd が適用された。なお本 FR が未解決のままだと FR3 と FR6 は実効しない（Step C の実行条件だけを直しても Step B が retrospect の手前で停止する）。"
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS15]
   FR8:
     title: "workflow-schema.md の batch ブロック構造"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS7]
   FR9:
     title: "interactive の Step C デフォルト条件付き変更"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests: [TS11]
   FR10:
     title: "review 側の非変更"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests: [TS8]
   FR11:
     title: "batch 終端行の扱い"
-    status: tbd
+    status: assumed
     tbd_reason: "終端状態の選択が未決定 — (a) 既存の失敗系終端状態を再利用する（外部サービスの判定ロジック無変更）、(b) 「完了処理まで到達したが verify は failed」を表す終端状態を新設する、(c) 通常完了として扱い failed の事実は報告本文でのみ伝える、のいずれか。batch 走行の唯一の機械可読な結果通知が終端行であるため、(c) は cap 到達走行を外部サービスが成功と誤判定するリスクを持つ。`references/batch-terminal-line.md` は task_description の変更対象ファイル一覧にも reference_scan_targets にも含まれていないため、同ドキュメントの変更要否自体も未確定。batch policy create-spec.requirement-clarification の codex_consultation が Codex CLI の usage limit により実行不能で、unresolved: record_tbd が適用された。"
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS15]
   FR12:
     title: "プラグイン version の同時 bump"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0005]
     tests: [TS10]
   NFR1:
     title: "cap 定義の SSOT 単一化"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS12]
   NFR2:
     title: "rework-task-synthesis.md の非変更"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests: [TS9]
   NFR3:
     title: "テストの無依存性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003, task0004, task0005]
     tests: [TS14]
   NFR4:
     title: "ドキュメント変更の検証方式"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003, task0004, task0005]
+    tests: [TS14]
   NFR5:
     title: "変更範囲の限定"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003, task0004, task0005]
     tests: [TS14]
   NFR6:
     title: "未信頼入力扱いの引き継ぎ"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS13]
 
 batch:
