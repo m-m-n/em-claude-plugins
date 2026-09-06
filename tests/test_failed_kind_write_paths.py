@@ -132,7 +132,17 @@ REJECTED_SINGLE_WRITE_PHRASE = "the single write this path makes"
 WRITE_SET_CLEAR_PHRASE = "clear `failed_kind`"
 WRITE_SET_CITATION_PHRASE = "(`references/workflow-schema.md`)"
 WRITE_SET_NULL_PHRASE = "back to null in that same write set"
-WRITE_SET_LEAVING_FAILED_PHRASE = "since the step is leaving `failed`"
+# task0006 (implement-failed-kind, round-1 rework, D10): the route-back
+# clause no longer claims the step is "leaving `failed`" at this point (the
+# phase writes `in_progress` unconditionally at Step I.1, so by the time
+# I.2.c's route-back write set runs the step already left `failed`, if it
+# was ever there, at phase start). It instead states its own accurate role:
+# a re-assertion of the null value Step I.1's phase-start write already set
+# on this entry, adding no extra write and no extra commit.
+WRITE_SET_REASSERTS_ROLE_PHRASE = (
+    "re-asserting the null value Step I.1's phase-start write already set "
+    "on\n  this entry, so this adds no extra write and no extra commit"
+)
 
 # --- AC-7: gate/conjunct/cleanup/convergence retention ----------------------
 
@@ -322,9 +332,17 @@ class TestRouteBackWriteSetClearsFailedKind(FailedKindDocTestCase):
         self.assertIn(WRITE_SET_CLEAR_PHRASE, write_set)
         self.assertIn(WRITE_SET_NULL_PHRASE, write_set)
 
-    def test_states_reason_is_leaving_failed(self):
+    def test_states_own_accurate_role_as_a_reassertion(self):
+        # task0006 D10: the clause states its own accurate role (a
+        # re-assertion inside the same single write set, no extra write, no
+        # extra commit) rather than the stale "leaving `failed`" reason.
         self.assertIn(
-            WRITE_SET_LEAVING_FAILED_PHRASE, self._routeback_write_set()
+            WRITE_SET_REASSERTS_ROLE_PHRASE, self._routeback_write_set(raw=True)
+        )
+
+    def test_stale_leaving_failed_reason_is_gone(self):
+        self.assertNotIn(
+            "since the step is leaving `failed`", self._routeback_write_set()
         )
 
     def test_clear_is_member_of_the_same_write_set_before_the_commit(self):
@@ -354,11 +372,21 @@ class TestRouteBackWriteSetClearsFailedKind(FailedKindDocTestCase):
     def test_negative_proof_matcher_flags_absence_when_clear_removed(self):
         synthetic = self._routeback_write_set(raw=True).replace(
             "clear `failed_kind`\n  (`references/workflow-schema.md`) back "
-            "to null in that same write set\n  since the step is leaving "
-            "`failed`, ",
+            "to null in that same write set —\n  re-asserting the null "
+            "value Step I.1's phase-start write already set on\n  this "
+            "entry, so this adds no extra write and no extra commit — "
+            "record\n  ",
             "",
         )
         self.assertNotIn(WRITE_SET_CLEAR_PHRASE, synthetic)
+
+    def test_negative_proof_matcher_flags_absence_when_role_statement_removed(
+        self,
+    ):
+        synthetic = self._routeback_write_set(raw=True).replace(
+            WRITE_SET_REASSERTS_ROLE_PHRASE, ""
+        )
+        self.assertNotIn(WRITE_SET_REASSERTS_ROLE_PHRASE, synthetic)
 
 
 # --- AC-6 (NFR1): citation discipline ---------------------------------------
@@ -401,16 +429,37 @@ def _restates_definition(text):
 
 
 class TestCitationDisciplineAtFirstUse(FailedKindDocTestCase):
-    def test_first_failed_kind_occurrence_is_the_write_set_clear(self):
+    # task0006 (D10): Step I.1's phase-start `in_progress` write is now the
+    # single place this document names as carrying the `failed_kind`
+    # lifecycle clear on an entry from `failed` -- it precedes I.2.c's
+    # route-back write set (task0002's original first-use site) in document
+    # order, so the field's first use moved there. The route-back clause
+    # (asserted in TestRouteBackWriteSetClearsFailedKind above) keeps its
+    # own citation but is no longer the FIRST one.
+    PHASE_START_WRITE_MARKER = "In all cases set `implement` status to"
+
+    def test_first_failed_kind_occurrence_is_the_phase_start_write(self):
         first_idx = self.text.index("failed_kind")
-        write_set_start = self.text.index(ROUTEBACK_WRITE_SET_MARKER)
-        # No occurrence of `failed_kind` precedes the write set's own use.
-        self.assertGreaterEqual(first_idx, write_set_start)
+        phase_start_idx = self.text.index(self.PHASE_START_WRITE_MARKER)
+        route_back_idx = self.text.index(ROUTEBACK_WRITE_SET_MARKER)
+        # The phase-start write precedes the route-back write set in
+        # document order, and the first `failed_kind` occurrence is at or
+        # after the phase-start write, strictly before the route-back set.
+        self.assertLess(phase_start_idx, route_back_idx)
+        self.assertGreaterEqual(first_idx, phase_start_idx)
+        self.assertLess(first_idx, route_back_idx)
 
     def test_first_use_cites_workflow_schema(self):
         first_idx = self.text.index("failed_kind")
         window = self.text[first_idx : first_idx + 80]
         self.assertIn("references/workflow-schema.md", window)
+
+    def test_negative_proof_first_use_marker_flags_absence_on_synthetic_text(
+        self,
+    ):
+        synthetic = "no mention of the field here at all"
+        with self.assertRaises(ValueError):
+            synthetic.index("failed_kind")
 
     def test_no_definition_shaped_restatement_in_i2c_section(self):
         self.assertFalse(_restates_definition(self.raw_section))
