@@ -83,7 +83,41 @@ workflow:
     status: completed
     completed_at_commit: 41a3135505f34fb2002c1a4e1968e7229851fbe6
   - id: verify
-    status: in_progress
+    status: failed
+    result: fail
+    failed_items:
+      - id: MANUAL-D2
+        category: unknown
+        note: >-
+          VERIFICATION.md 「Manual Testing」の 2 件目（IMPLEMENTATION.md D2 の
+          marker ベース現セッション解決が、実セッションから 1 度試したときに
+          現セッションの transcript を見つけること）が再度不成立。
+          `_resolve_current_session_via_marker` は marker を含む transcript を
+          正しく特定するが、`_first_entry_timestamp` が「最初の非空行」だけを見て
+          `timestamp` フィールドが無ければ None を返すため解決に失敗する。実測:
+          本セッション（01a076b6-be08-7178-9f33-15276d71fb5d）の transcript は
+          先頭行が `{"type":"last-prompt",...}` で timestamp を持たず、
+          `resolve_current_session(None, None, marker, dir)` は None を返した。
+          同ディレクトリのサンプル 40 件すべてで先頭行に timestamp が無い。
+          結果として D2 form 2 は実運用でほぼ常に `current-session-unknown` に
+          落ち、I.2.b の orphan recovery（FR2 の証明経路）が発火しない。
+          自動テスト（3029 件）は fixture が timestamp 付き先頭行を前提と
+          しているため全て pass しており、この乖離は Manual Testing 項目で
+          のみ露出する。
+          category の根拠: VERIFICATION.md に verification_index が無く、この
+          Manual Testing 項目は Requirements Coverage 表のどの行にも写像して
+          いないため、references/workflow-schema.md の fail-closed 規律に従い
+          sentinel 値 `unknown` を割り当てた。
+    note: >-
+      `python3 -m unittest discover -s tests` -> 3029 tests, 0 failures, exit 0。
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` -> 156/156, exit 0。
+      TS-11: plugin.json と marketplace.json はともに 0.1.61、base commit
+      3f5db49 時点の 0.1.59 より高い。SC-F: 製品パス 22 件は tasks の files
+      union + 既定 2 エントリに含まれる（残り 6 件は test-docs/ 配下の
+      ワークフロー生成物）。Manual Testing 1 件目（D1 の transcripts
+      ディレクトリ導出）は成立を確認。2 件目（D2）が不成立のため fail。
+      batch: verify_rework の系譜 cap / hard cap ともに未到達のため自動 rework
+      へ進む。
   - id: retrospect
     status: pending
 
@@ -296,5 +330,6 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      MANUAL-D2: 1
