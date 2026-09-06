@@ -103,7 +103,8 @@ workflow:
       引用のみ。4 件目は TS-11 と同一。除外要件なし（requirements に status:
       excluded は無い）。
   - id: retrospect
-    status: in_progress
+    status: completed
+    completed_at_commit: bdfb90161e3c07a95c67796449a497a1813d99b9
 
 tasks:
   task0001:
