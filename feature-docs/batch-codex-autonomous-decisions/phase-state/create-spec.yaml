@@ -1,0 +1,17 @@
+schema_version: 1
+feature: batch-codex-autonomous-decisions
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: e8462d2f03b26ebd9791f5b2a75268266b2c2a2f
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
