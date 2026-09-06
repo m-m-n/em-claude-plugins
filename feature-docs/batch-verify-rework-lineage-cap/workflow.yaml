@@ -192,7 +192,7 @@ tasks:
     domains: ["config-infra", "api-contract"]
     complexity: high
     requirements: [FR6, FR7, FR11, NFR3, NFR4, NFR5]
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-verify-rework-lineage-cap/task0002
   task0003:
     title: "retrospect への失敗項目の引き渡しと follow_up_drafts"
