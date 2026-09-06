@@ -691,6 +691,7 @@ ORPHAN_ONLY_CASE_PHRASE = (
 )
 ORPHAN_RESIDUAL_REASON_CODES = (
     "no-agent-entry",
+    "stale-agent-entry",
     "no-session-id",
     "invalid-session-id",
     "current-session-unknown",
@@ -698,6 +699,19 @@ ORPHAN_RESIDUAL_REASON_CODES = (
     "transcripts-dir-missing",
     "transcript-unreadable",
     "transcript-active",
+)
+
+# task0006 (orphaned-implementer-recovery, review round 2): D7's launch-
+# binding step, inserted between the "an Agent index entry exists" and "the
+# entry carries a session identity" conditions above (AC-7; IMPLEMENTATION.md
+# SC3, SC6, D7). This content is genuinely new (not a rewrite of an existing
+# sentence), so there is no paired pre-change sample to run a negative proof
+# against; the red/green discipline instead rests on each test having been
+# run and observed to fail before the corresponding prose existed (recorded
+# in this task's own tests.yaml, not reproduced here).
+ORPHAN_D7_CONTRACT_CITATION_PHRASE = (
+    "SC2 (`journal-append-failed.py`), SC3 (`recover-orphaned-task.py`), "
+    "SC6 (the reason-code set) and D7 (the launch-binding rule)"
 )
 
 # Supporting cast Journal bullet + Stale-`launched` caveat exception wording
@@ -2380,6 +2394,51 @@ class TestI2bOrphanRecoveryOwningSection(unittest.TestCase):
                 self.assertEqual(
                     self.whole.count(token), self.i2b.count(token)
                 )
+
+
+class TestI2bOrphanRecoveryD7Binding(unittest.TestCase):
+    """task0006 (orphaned-implementer-recovery, review round 2) AC-7:
+    the launch-binding condition and its `stale-agent-entry` reason code sit
+    between "an Agent index entry exists" and "the entry carries a session
+    identity" in the fixed evidence order, cite IMPLEMENTATION.md SC3 / SC6
+    / D7 for the contract, and appear in the I.2.b Orphan recovery block
+    only."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read()
+        cls.whole = _normalize_ws(cls.text)
+        cls.i2b = _normalize_ws(_i2b_section(cls.text))
+
+    def test_binding_step_positioned_between_entry_exists_and_session_identity(self):
+        entry_exists_pos = self.i2b.index("an Agent index entry exists for the task")
+        stale_pos = self.i2b.index("`stale-agent-entry`")
+        session_identity_pos = self.i2b.index("the entry carries a session identity")
+        self.assertLess(entry_exists_pos, stale_pos)
+        self.assertLess(stale_pos, session_identity_pos)
+
+    def test_binding_step_cites_d7(self):
+        self.assertIn("per D7", self.i2b)
+
+    def test_full_contract_citation_names_sc3_sc6_and_d7(self):
+        self.assertIn(ORPHAN_D7_CONTRACT_CITATION_PHRASE, self.i2b)
+
+    def test_binding_step_skipped_when_no_launched_event(self):
+        self.assertIn(
+            "skipped entirely when the journal records no `launched` event "
+            "for the task at all",
+            self.i2b,
+        )
+
+    def test_stale_agent_entry_not_restated_outside_i2b(self):
+        token = "`stale-agent-entry`"
+        self.assertEqual(self.whole.count(token), self.i2b.count(token))
+
+    def test_stale_agent_entry_absent_from_workflow_schema_and_readme(self):
+        # Design: "workflow-schema.md and em-workflow/README.md are not
+        # touched, because neither carries the evidence order."
+        self.assertNotIn("stale-agent-entry", _read_workflow_schema())
+        self.assertNotIn("stale-agent-entry", _read_readme())
 
 
 class TestJournalBulletAndCaveatNameOrphanException(unittest.TestCase):

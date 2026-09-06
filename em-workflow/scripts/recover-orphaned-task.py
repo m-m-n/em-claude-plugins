@@ -3,8 +3,9 @@
 orphaned-implementer-recovery feature.
 
 Normative source: feature-docs/orphaned-implementer-recovery/IMPLEMENTATION.md
-(Shared Components SC3, SC5, SC6; Cross-task Design Decisions D1, D2, D3) and
-feature-docs/orphaned-implementer-recovery/tasks/task0003.md.
+(Shared Components SC3, SC5, SC6; Cross-task Design Decisions D1, D2, D3, D7)
+and feature-docs/orphaned-implementer-recovery/tasks/task0003.md,
+task0006.md.
 
 Decides, for ONE candidate task, whether the session that launched its
 implementer is provably gone. Called by the orchestrator's I.2.b reconcile
@@ -16,14 +17,18 @@ Evidence pipeline (fixed order -- each step's failure ends the run as
 `residual` with its SC6 reason code; no write, no helper invocation):
 
   1. an `agents.jsonl` entry for the task exists            -> no-agent-entry
-  2. that entry carries a `session_id`                      -> no-session-id
-  3. the value passes SC5's format rule                     -> invalid-session-id
-  4. the current session's identity + start resolve (D2)    -> current-session-unknown
-  5. the recorded identity differs from the current one     -> same-session
-  6. the transcripts directory (D1) resolves and exists,
+  2. that entry is bound to the launch under recovery (D7): its own `at`
+     is not earlier than the last `launched` journal event's `at` for the
+     task by more than the binding tolerance -- skipped when the journal
+     records no `launched` event for the task at all          -> stale-agent-entry
+  3. that entry carries a `session_id`                      -> no-session-id
+  4. the value passes SC5's format rule                     -> invalid-session-id
+  5. the current session's identity + start resolve (D2)    -> current-session-unknown
+  6. the recorded identity differs from the current one     -> same-session
+  7. the transcripts directory (D1) resolves and exists,
      and the assembled transcript path resolves inside it   -> transcripts-dir-missing
-  7. the transcript yields at least one usable timestamp     -> transcript-unreadable
-  8. its newest usable timestamp is strictly older than the
+  8. the transcript yields at least one usable timestamp     -> transcript-unreadable
+  9. its newest usable timestamp is strictly older than the
      current session's start (D3)                            -> transcript-active
 
 Only once all eight steps pass does the journal pre-check run (the task's
@@ -53,13 +58,14 @@ import os
 import re
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # ---------------------------------------------------------------------------
 # SC6 -- closed set of residual reason codes.
 # ---------------------------------------------------------------------------
 
 REASON_NO_AGENT_ENTRY = "no-agent-entry"
+REASON_STALE_AGENT_ENTRY = "stale-agent-entry"
 REASON_NO_SESSION_ID = "no-session-id"
 REASON_INVALID_SESSION_ID = "invalid-session-id"
 REASON_CURRENT_SESSION_UNKNOWN = "current-session-unknown"
@@ -73,6 +79,15 @@ TERMINAL_JOURNAL_EVENTS = ("merged", "failed")
 
 DEFAULT_JOURNAL_HELPER_NAME = "journal-append-failed.py"
 ORPHANED_REASON = "orphaned"
+
+# D7 -- the agent index entry's own `at` must not be earlier than the last
+# `launched` journal event's `at` for the task by more than this tolerance.
+# 2 seconds: the two writes come from two separate PreToolUse hook
+# invocations, each stamping whole seconds from the local clock in an order
+# the harness does not fix, so the genuine pair can straddle a second
+# boundary in either direction. A genuinely stale entry is separated from
+# the newest launch by a whole implementer run, not by seconds.
+AGENT_ENTRY_BINDING_TOLERANCE = timedelta(seconds=2)
 
 # Module-level so tests can monkeypatch it to exercise the default-helper
 # wiring (AC-7) without touching the real sibling file or the real script
@@ -302,6 +317,65 @@ def find_agent_entry(agents_index_path, task_id):
 
 
 # ---------------------------------------------------------------------------
+# D7 -- binding the agent index entry to the launch under recovery.
+# ---------------------------------------------------------------------------
+
+
+def find_last_launched_at(journal_path, task_id):
+    """Scan the journal for the task's `launched` events (by file order) and
+    return `(found, at_value)`: `found` is True iff at least one `launched`
+    event was recorded for the task at all -- D7's binding step applies only
+    then. `at_value` is the LAST such event's raw `at` field, unparsed and
+    possibly absent (None) -- callers parse it themselves so a missing or
+    unparsable value is uniformly a binding failure, not a pass. Malformed
+    lines are skipped; an absent/unreadable file reports `found=False`,
+    which correctly leaves the binding step inapplicable (the pre-existing
+    journal pre-check handles that case)."""
+    found = False
+    at_value = None
+    try:
+        with open(journal_path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(entry, dict) or entry.get("task") != task_id:
+                    continue
+                if entry.get("event") == "launched":
+                    found = True
+                    at_value = entry.get("at")
+    except OSError:
+        return False, None
+    return found, at_value
+
+
+def agent_entry_is_bound(entry_at, last_launched_at):
+    """D7: True when the agent index entry's own `at` (`entry_at`) binds to
+    the last `launched` journal event's `at` for the task
+    (`last_launched_at`) -- both parse as timestamps, are comparable, and
+    `entry_at` is not earlier than `last_launched_at` by more than
+    `AGENT_ENTRY_BINDING_TOLERANCE`. Data that cannot be compared at all --
+    either side missing, non-string or unparsable, or an aware/naive
+    combination that cannot be compared -- is a binding FAILURE (False),
+    never a pass (Conventions' error-handling policy: doubt never produces
+    a write)."""
+    entry_dt = parse_timestamp(entry_at)
+    last_dt = parse_timestamp(last_launched_at)
+    if entry_dt is None or last_dt is None:
+        return False
+    try:
+        return (last_dt - entry_dt) <= AGENT_ENTRY_BINDING_TOLERANCE
+    except TypeError:
+        # Incomparable aware/naive datetimes: cannot prove the entry binds
+        # from this evidence -- fail safe rather than raise.
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Journal pre-check (non-authoritative; SC2's in-lock replay is the SSOT).
 # ---------------------------------------------------------------------------
 
@@ -447,16 +521,26 @@ def decide(
     if entry is None:
         return _residual(task_id, REASON_NO_AGENT_ENTRY)
 
-    # 2. Session identity present.
+    # 2. Bind the entry to the launch under recovery (D7). Runs before the
+    # entry's session identity is read, so an entry that is not evidence
+    # about THIS launch never has its contents trusted. Skipped entirely
+    # when the journal records no `launched` event for the task at all --
+    # the journal pre-check below already ends that run as
+    # `journal-not-launched` or `noop_terminal`.
+    has_launched_event, last_launched_at = find_last_launched_at(journal_path, task_id)
+    if has_launched_event and not agent_entry_is_bound(entry.get("at"), last_launched_at):
+        return _residual(task_id, REASON_STALE_AGENT_ENTRY)
+
+    # 3. Session identity present.
     recorded_session_id = entry.get("session_id")
     if not isinstance(recorded_session_id, str) or recorded_session_id == "":
         return _residual(task_id, REASON_NO_SESSION_ID)
 
-    # 3. SC5 format validation -- before any path is assembled.
+    # 4. SC5 format validation -- before any path is assembled.
     if not is_valid_session_id(recorded_session_id):
         return _residual(task_id, REASON_INVALID_SESSION_ID)
 
-    # 4. Current session resolution (D2).
+    # 5. Current session resolution (D2).
     current = resolve_current_session(
         current_session_id, current_session_start, marker, resolved_transcripts_dir
     )
@@ -464,11 +548,11 @@ def decide(
         return _residual(task_id, REASON_CURRENT_SESSION_UNKNOWN)
     current_id, current_start = current
 
-    # 5. Recorded identity differs from current.
+    # 6. Recorded identity differs from current.
     if recorded_session_id == current_id:
         return _residual(task_id, REASON_SAME_SESSION)
 
-    # 6. Transcripts directory resolves and exists; path containment.
+    # 7. Transcripts directory resolves and exists; path containment.
     if not os.path.isdir(resolved_transcripts_dir):
         return _residual(task_id, REASON_TRANSCRIPTS_DIR_MISSING)
 
@@ -478,12 +562,12 @@ def decide(
     if transcript_path is None:
         return _residual(task_id, REASON_TRANSCRIPT_UNREADABLE)
 
-    # 7. At least one usable timestamp.
+    # 8. At least one usable timestamp.
     newest_ts = newest_transcript_timestamp(transcript_path)
     if newest_ts is None:
         return _residual(task_id, REASON_TRANSCRIPT_UNREADABLE)
 
-    # 8. Strictly older than the current session's start (D3).
+    # 9. Strictly older than the current session's start (D3).
     try:
         proven_gone = newest_ts < current_start
     except TypeError:
