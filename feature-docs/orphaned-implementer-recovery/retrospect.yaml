@@ -1,0 +1,50 @@
+feature: orphaned-implementer-recovery
+collected_at: "2026-09-06T22:14:00+09:00"
+session_ids:
+  - 01a076d9-989a-7241-b29d-985d72c4e0b4.jsonl
+signals:
+  review_critical_high:
+    - stable_id: 1ca085e307eacd90
+      category: comprehensive
+      file: em-workflow/scripts/recover-orphaned-task.py
+      title: Bind session evidence to the current launch
+      resolution: unresolved
+    - stable_id: ebad15de2c79c36c
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: >-
+        I.2.b orphan-recovery launches the new helper by repo-relative path, so
+        recovery never fires in an installed plugin
+      resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - >-
+    task0005 itself was orphaned mid-run and recovered by this feature's own
+    helper (journal shows launched -> failed(orphaned) -> launched -> merged);
+    the feature dogfooded itself during its own implement phase.
+  - >-
+    Round 1 of verify failed only through a Manual Testing item: the automated
+    fixtures encoded an assumption (the transcript's first line carries a
+    timestamp) that real data violates, so the defect stayed invisible across
+    3029 automated tests. Fixtures derived from the implementation rather than
+    from sampled real data hide this class of defect.
+  - >-
+    VERIFICATION.md carried no verification_index, so the failing Manual Testing
+    item could not be mapped to a requirement and had to take the sentinel
+    category "unknown". Round 2 passed after task0007, but the missing index is
+    still the reason the category was unknowable.
+  - >-
+    The review finding 1ca085e307eacd90 was recorded as "unresolved" because the
+    auto-fix loop's single-file editor could not span the two files the fix
+    needed; it was resolved instead through rework task0006. The round file's
+    resolution field therefore understates what actually happened.
+  - >-
+    ebad15de2c79c36c (helper launched by repo-relative path, so recovery never
+    fires in an installed plugin) survived rounds 3 and 4 as deferred because the
+    batch review-rework cap was already spent. It is still open in the merged
+    code.

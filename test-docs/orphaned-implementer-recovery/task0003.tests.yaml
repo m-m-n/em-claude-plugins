@@ -1,0 +1,104 @@
+task_id: task0003
+baseline_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+final_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac1_proven_orphan_reports_recovered_and_invokes_helper_once
+    red_confirmed: true
+    red_reason: >-
+      With em-workflow/scripts/recover-orphaned-task.py absent, importing
+      the test module raised FileNotFoundError at collection time (spec
+      loader could not read the script), failing every test in the file
+      including this one.
+  AC-2:
+    tests:
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac2a_identity_absent_reports_no_session_id
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac2b_identity_equal_to_current_reports_same_session
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac2c_transcript_unreadable_when_file_missing
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac2c_transcript_unreadable_when_no_usable_timestamp
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac2d_transcript_active_reports_transcript_active
+    red_confirmed: true
+    red_reason: >-
+      Same collection-time FileNotFoundError as AC-1 (script absent).
+  AC-3:
+    tests:
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac3_malformed_identity_with_path_separator_is_invalid_and_decoy_untouched
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac3_empty_identity_is_no_session_id_not_invalid
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac3_over_length_identity_is_invalid_session_id
+      - tests.test_recover_orphaned_task.TestSessionIdValidation.test_path_separator_rejected
+      - tests.test_recover_orphaned_task.TestSessionIdValidation.test_dot_segment_rejected
+      - tests.test_recover_orphaned_task.TestSessionIdValidation.test_empty_string_rejected
+      - tests.test_recover_orphaned_task.TestSessionIdValidation.test_65_chars_over_length_rejected
+      - tests.test_recover_orphaned_task.TestTranscriptPathContainment.test_dot_dot_escape_rejected
+      - tests.test_recover_orphaned_task.TestTranscriptPathContainment.test_symlinked_transcript_escaping_directory_rejected
+    red_confirmed: true
+    red_reason: >-
+      Same collection-time FileNotFoundError as AC-1 (script absent);
+      TestTranscriptPathContainment.test_dot_dot_escape_rejected additionally
+      caught a genuine authoring bug on first green attempt (session_id ".."
+      concatenated with ".jsonl" produces the harmless single component
+      "...jsonl", not a real ".." path segment) -- fixed by rewriting the
+      case to a slash-bearing identity ("../evil") that actually forms two
+      path components, watched fail (AssertionError: path not None) against
+      the then-current resolve_transcript_path, then pass.
+  AC-4:
+    tests:
+      - tests.test_recover_orphaned_task.TestTranscriptsDirDerivation.test_encode_cwd_maps_known_path
+      - tests.test_recover_orphaned_task.TestTranscriptsDirDerivation.test_encode_cwd_replaces_dot_and_underscore_individually
+      - tests.test_recover_orphaned_task.TestTranscriptsDirDerivation.test_encode_cwd_does_not_collapse_consecutive_replacements
+      - tests.test_recover_orphaned_task.TestTranscriptsDirDerivation.test_default_transcripts_dir_maps_known_cwd_to_expected_directory
+      - tests.test_recover_orphaned_task.TestTranscriptsDirDerivation.test_transcripts_dir_flag_replaces_derivation_entirely
+    red_confirmed: true
+    red_reason: >-
+      Same collection-time FileNotFoundError as AC-1 (script absent).
+  AC-5:
+    tests:
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_form1_explicit_pair_takes_precedence_over_marker
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_form1_requires_both_id_and_start_together
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_marker_scan_picks_newest_matching_transcript
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_marker_match_with_unusable_first_entry_fails_resolution
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_no_form_provided_is_unresolved
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_marker_with_no_matching_transcript_is_unresolved
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_form1_with_unparsable_start_is_unresolved
+    red_confirmed: true
+    red_reason: >-
+      Same collection-time FileNotFoundError as AC-1 (script absent).
+  AC-6:
+    tests:
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac6_already_merged_reports_noop_terminal
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac6_already_failed_reports_noop_terminal
+    red_confirmed: true
+    red_reason: >-
+      Same collection-time FileNotFoundError as AC-1 (script absent).
+  AC-7:
+    tests:
+      - tests.test_recover_orphaned_task.TestDefaultJournalHelperPath.test_default_path_is_the_real_sibling_script
+      - tests.test_recover_orphaned_task.TestDefaultJournalHelperPath.test_no_override_wiring_invokes_default_sibling_and_reports_recovered
+      - tests.test_recover_orphaned_task.TestDefaultJournalHelperPath.test_helper_failure_is_non_zero_exit_and_never_recovered
+      - tests.test_recover_orphaned_task.TestDefaultJournalHelperPath.test_helper_unparsable_stdout_is_non_zero_exit
+    red_confirmed: true
+    red_reason: >-
+      Same collection-time FileNotFoundError as AC-1 (script absent).

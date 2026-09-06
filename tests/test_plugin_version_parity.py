@@ -82,6 +82,36 @@ def _assert_versions_agree(test, version_a, version_b):
     )
 
 
+EM_REVIEW_NAME = "em-review"
+EM_REVIEW_AUTHOR = {"name": "em"}
+EM_REVIEW_CATEGORY = "code-review"
+EM_REVIEW_SOURCE = "./em-review"
+
+DOTTED_NUMERIC_VERSION_RE = re.compile(r"^\d+(?:\.\d+)+$")
+
+
+def _is_dotted_numeric_version(value):
+    """A dotted numeric version string: one or more '.'-separated
+    non-negative integers, e.g. "0.5.7"."""
+    return isinstance(value, str) and DOTTED_NUMERIC_VERSION_RE.match(value) is not None
+
+
+def _assert_em_review_entry_matches(test, entry):
+    """The em-review matcher (task0005.md): identity fields (name, author,
+    category, source) are pinned exactly; the `version` field is asserted
+    by shape only -- present and dotted numeric -- never against a literal
+    value, since `.claude/rules/core-plugin-version-bump.md` requires it to
+    change over time."""
+    test.assertEqual(entry.get("name"), EM_REVIEW_NAME)
+    test.assertEqual(entry.get("author"), EM_REVIEW_AUTHOR)
+    test.assertEqual(entry.get("category"), EM_REVIEW_CATEGORY)
+    test.assertEqual(entry.get("source"), EM_REVIEW_SOURCE)
+    test.assertTrue(
+        _is_dotted_numeric_version(entry.get("version")),
+        f"em-review version {entry.get('version')!r} is not a dotted numeric string",
+    )
+
+
 class TestPluginManifestVersion(unittest.TestCase):
     """AC-1: plugin.json parses as JSON and carries a version."""
 
@@ -98,8 +128,8 @@ class TestPluginManifestVersion(unittest.TestCase):
 
 class TestMarketplaceEntryVersion(unittest.TestCase):
     """AC-1/AC-2: the em-workflow marketplace entry's version (found by
-    name, not position -- the em-review entry carries no version key at
-    all) agrees with the plugin manifest's version and is past baseline."""
+    name, not position) agrees with the plugin manifest's version and is
+    past baseline."""
 
     @classmethod
     def setUpClass(cls):
@@ -123,15 +153,17 @@ class TestMarketplaceEntryVersion(unittest.TestCase):
 
 
 class TestEmReviewEntryHasNoVersionKey(unittest.TestCase):
-    """Edge case (task0004.md Test Notes): the em-review entry carries no
-    `version` key. A uniform-scan implementation would either KeyError on
-    it or silently skip verification altogether; this pins the shape the
-    lookup-by-name approach must tolerate."""
+    """Edge case (task0004.md Test Notes): the em-review entry's shape a
+    uniform-scan implementation must tolerate. Its identity fields (name,
+    author, category, source) are pinned exactly; its `version` is asserted
+    present and dotted numeric, never against a literal value, since
+    `.claude/rules/core-plugin-version-bump.md` requires it to change over
+    time (task0005.md)."""
 
-    def test_em_review_entry_has_no_version_key(self):
+    def test_em_review_entry_has_a_dotted_numeric_version(self):
         data = _load_json(MARKETPLACE_PATH)
         entry = _marketplace_entry(data, "em-review")
-        self.assertNotIn("version", entry)
+        _assert_em_review_entry_matches(self, entry)
 
 
 class TestVersionComparisonIsDotSeparatedNumeric(unittest.TestCase):
@@ -182,6 +214,43 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         forged = {"plugins": [{"name": "some-other-plugin"}]}
         with self.assertRaises(AssertionError):
             _marketplace_entry(forged, "em-workflow")
+
+    FORGED_EM_REVIEW_ENTRY = {
+        "name": "em-review",
+        "author": {"name": "em"},
+        "category": "code-review",
+        "source": "./em-review",
+        "version": "0.5.7",
+    }
+
+    def test_em_review_matcher_rejects_altered_identity_field(self):
+        for field, forged_value in (
+            ("name", "em-review-forked"),
+            ("author", {"name": "someone-else"}),
+            ("category", "other"),
+            ("source", "./em-review-forked"),
+        ):
+            with self.subTest(field=field):
+                forged = dict(self.FORGED_EM_REVIEW_ENTRY, **{field: forged_value})
+                with self.assertRaises(AssertionError):
+                    _assert_em_review_entry_matches(self, forged)
+
+    def test_em_review_matcher_rejects_missing_or_malformed_version(self):
+        missing = {
+            key: value
+            for key, value in self.FORGED_EM_REVIEW_ENTRY.items()
+            if key != "version"
+        }
+        malformed = dict(self.FORGED_EM_REVIEW_ENTRY, version="not-a-version")
+        for forged in (missing, malformed):
+            with self.assertRaises(AssertionError):
+                _assert_em_review_entry_matches(self, forged)
+
+    def test_em_review_matcher_accepts_forged_higher_version(self):
+        # AC-3: the matcher never compares the version against a literal,
+        # so a forged sample differing only by a higher version is accepted.
+        forged = dict(self.FORGED_EM_REVIEW_ENTRY, version="99.0.0")
+        _assert_em_review_entry_matches(self, forged)  # must not raise
 
 
 class TestOwnModuleStdlibOnly(unittest.TestCase):

@@ -461,6 +461,51 @@ Triggered whenever a launched implementer's `Task()` call returns.
      existing gate-rejected terminal, with the task named in the report.
      This recovery runs during this wake-phase reconcile step, hence
      before I.2.c's user-facing menu is offered.
+
+     Orphan recovery: for exactly the not-live candidate set already
+     established above — journal last event `launched`, task worktree and
+     task branch both present, Agent index lookup resolving to no live
+     agent (unresolvable, ambiguous, or the third case where the stop tool
+     stops nothing) — the orchestrator makes one further attempt before the
+     Residual above is taken as final. It first emits a marker token into
+     its own transcript via a command run immediately before the next step
+     (IMPLEMENTATION.md D2), then invokes
+     `em-workflow/scripts/recover-orphaned-task.py` for the candidate task,
+     passing that marker (or, when the orchestrator's own session identity
+     and start time are already known some other way, those values
+     directly — D2 form 1 takes precedence over the marker scan). That
+     script gathers evidence in this fixed order, stopping at the first
+     unmet condition with the named residual reason code and invoking
+     nothing further: an Agent index entry exists for the task (else
+     `no-agent-entry`); that entry is bound to the launch under recovery,
+     per D7 — its own `at` is not earlier than the `at` of the LAST
+     `launched` journal event recorded for the task by more than D7's
+     tolerance, with both timestamps parsing and comparable, skipped
+     entirely when the journal records no `launched` event for the task at
+     all (else `stale-agent-entry`); the entry carries a session identity
+     (else `no-session-id`); the identity passes SC5's format-validation
+     rule (else `invalid-session-id`); the current session's identity and
+     start time resolve per D2 (else `current-session-unknown`); the
+     recorded identity differs from the current one (else `same-session`);
+     the D1-derived transcripts directory exists and the assembled
+     transcript path resolves inside it (else `transcripts-dir-missing`);
+     the transcript yields at least one usable timestamp (else
+     `transcript-unreadable`); and that newest usable timestamp is strictly
+     older than the current session's start, per D3 (else
+     `transcript-active`). Only when every condition holds does it invoke
+     `em-workflow/scripts/journal-append-failed.py` exactly once, with the
+     task id and reason `orphaned`; that helper takes the journal's
+     exclusive advisory lock, replays it, and appends `failed` only when
+     the task's final event is still `launched` (a no-op when it is
+     already `merged` or `failed`). This is the ONLY case in which the
+     orchestrator's own action results in an append to `journal.jsonl` —
+     the exception `em-workflow/references/implement-phase.md`'s own
+     Supporting cast Journal bullet below states, cited not restated. Any
+     residual outcome from either script leaves the journal byte-identical
+     to its pre-call content: the Residual above stands unchanged as this
+     candidate's outcome. Full contract: IMPLEMENTATION.md's SC2
+     (`journal-append-failed.py`), SC3 (`recover-orphaned-task.py`), SC6
+     (the reason-code set) and D7 (the launch-binding rule).
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
@@ -606,6 +651,14 @@ Step I.3 and beyond, with output suppression still applying to this wake
 turn's own steps 1/4/5 narration as above.
 
 ### I.2.c: Failed handling
+
+Orphaned-`launched` convergence (FR4): a `failed` event whose reason is
+`orphaned` — recorded by I.2.b step 1's orphan-recovery exception above —
+is not a distinct terminal: it is exactly the ordinary failed handling
+below, with no new policy, threshold, or branch introduced for it.
+Interactive offers retry / route back to planning / abort exactly as for
+any other failed task; in batch, the `implement.failed-task` policy's
+single retry (kept worktree, I.2.a resume guard) fires for it the same way.
 
 The moment any task's reconciled status is `failed`: stop launching new
 tasks (do not refill), let already in-flight tasks drain (their wake
@@ -783,11 +836,17 @@ retry-consumed state per task in `tasks.{T}.notes`.
 **Journal** (`journal.jsonl`, sibling of the per-task worktree directories
 under `.claude/worktrees/em-workflow/{feature}/`): a machine-written,
 append-only event log — `launched` / `merged` / `failed`, one JSON object
-per line, each carrying `task` and an RFC 3339 `at`. The orchestrator NEVER
-writes it; only `merge-task.sh` and the journal-writing hooks below append
-to it. The raw log is never rewritten or deleted — it is the primary source
-for post-mortem diagnosis, distinct from workflow.yaml's LLM-managed
-summary (full schema: IMPLEMENTATION.md's Journal contract).
+per line, each carrying `task` and an RFC 3339 `at`. The orchestrator never
+writes it directly — every append is `merge-task.sh` or one of the
+journal-writing hooks below — with one narrowly-scoped exception: I.2.b
+step 1's orphan-recovery attempt, defined in
+`em-workflow/references/implement-phase.md`'s own I.2.b Recovery / Residual
+block above (cited here, not restated), which invokes
+`em-workflow/scripts/journal-append-failed.py` on proof that a `launched`
+task's launching session is provably gone. The raw log is never rewritten
+or deleted — it is the primary source for post-mortem diagnosis, distinct
+from workflow.yaml's LLM-managed summary (full schema: IMPLEMENTATION.md's
+Journal contract).
 
 **The hooks** (`em-workflow/hooks/`, wired in `hooks.json`):
 
@@ -834,7 +893,13 @@ Stop-hook bullet below cite it as this classification's source.
   mapping every harness agent-identifier candidate it can recover from the
   launch response (the exact identifier field the response carries is
   unverified, so more than one candidate may be recorded per entry) to the
-  launched task id and worktree path. It writes ONLY the agent index — it
+  launched task id and worktree path. For em-workflow implementer launches
+  it additionally records the launching session's own identity
+  (`session_id`, IMPLEMENTATION.md SC1) as an independent top-level field of
+  that same entry — never appended to the harness agent-identifier candidate
+  list above and never itself a match candidate for the stop-side resolution
+  below; I.2.b step 1's orphan-recovery attempt above (cited here, not
+  restated) is the sole reader of this field. It writes ONLY the agent index — it
   never touches `journal.jsonl` — and is fail-open exactly like every hook
   here: an unrecognized launch, an unparsable input, or a missing feature
   directory is a silent no-op. The index is diagnostic plumbing, not a
@@ -893,7 +958,11 @@ existence check) triggers I.2.b step 1's recovery on the next reconcile
 pass — the outcome that check produces is defined there, not restated
 here — and, specifically for the deliberate-stop case, the stop-tool
 recorder appends `failed` as soon as the `TaskStop` call completes,
-closing the gap before a reconcile pass is even needed.
+closing the gap before a reconcile pass is even needed. A fourth mechanism
+closes the gap for exactly the case where the launching session itself is
+gone: I.2.b step 1's orphan-recovery attempt (cited there, not restated
+here) is the sole exception to the Journal bullet's rule that the
+orchestrator never writes the journal directly.
 
 **Resume**: a `/em-workflow:develop` re-entry mid-implement rebuilds state
 from four sources, never from memory: workflow.yaml (`tasks.*.status`), the
