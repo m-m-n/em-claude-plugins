@@ -178,8 +178,8 @@ tasks:
     domains: ["config-infra", "api-contract"]
     complexity: high
     requirements: [FR1, FR2, FR3, FR8, NFR1, NFR3, NFR4, NFR5]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-verify-rework-lineage-cap/task0001
   task0002:
     title: "cap 到達走行の継続（停止条件・Step C 実行条件・終端行）"
     plan: "tasks/task0002.md"
@@ -192,8 +192,8 @@ tasks:
     domains: ["config-infra", "api-contract"]
     complexity: high
     requirements: [FR6, FR7, FR11, NFR3, NFR4, NFR5]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-verify-rework-lineage-cap/task0002
   task0003:
     title: "retrospect への失敗項目の引き渡しと follow_up_drafts"
     plan: "tasks/task0003.md"
@@ -204,8 +204,8 @@ tasks:
     domains: ["input-handling", "api-contract", "config-infra"]
     complexity: medium
     requirements: [FR4, FR5, NFR6, NFR3, NFR4, NFR5]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-verify-rework-lineage-cap/task0003
   task0004:
     title: "interactive の Step C デフォルト条件付き変更と非変更ガード"
     plan: "tasks/task0004.md"
@@ -216,8 +216,8 @@ tasks:
     domains: ["ui", "config-infra"]
     complexity: medium
     requirements: [FR9, FR10, NFR2, NFR3, NFR4, NFR5]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-verify-rework-lineage-cap/task0004
   task0005:
     title: "em-workflow プラグイン version の同時 bump"
     plan: "tasks/task0005.md"
@@ -229,8 +229,8 @@ tasks:
     domains: ["config-infra"]
     complexity: low
     requirements: [FR12, NFR3, NFR4, NFR5]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-verify-rework-lineage-cap/task0005
 
 review:
   status: pending
