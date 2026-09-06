@@ -1,0 +1,76 @@
+schema_version: 1
+feature: batch-verify-rework-lineage-cap
+phase: create-plan
+status: awaiting_answers
+generation: 1
+base_revision: 103058d63a05282f47d1b58a9d9712365c3dd55e
+last_input_digest: sha256:d1217fddb15f8ceb9250a8b214b330fff4ba987508a7fad0fa87df2c4a559750
+active_request_id: null
+packets:
+  create-plan-q0001:
+    status: answered
+    issued_at: "2026-09-06T18:35:00+09:00"
+    questions:
+      - question_id: requirement.fr7.tbd-resolution
+        status: answered
+      - question_id: requirement.fr5.tbd-resolution
+        status: answered
+      - question_id: requirement.fr11.tbd-resolution
+        status: answered
+answers:
+  requirement.fr7.tbd-resolution:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T18:35:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: >-
+      仮定 a-fr7 を置いて進める: 既存の自動再エントリ carve-out には触れず、
+      batch 専用の独立条項を新設し、停止条件 1 と停止条件 3 の双方に
+      「verify が cap 到達により failed」の例外を置く。FR7 の requirement
+      status は assumed になる。
+    resolution_note: >-
+      references/batch-policies.yaml の create-plan.tbd-resolution:
+      action select / option_id assume を適用（Batch resolution sequence
+      step 3-4）。Fail-closed classification は通過（category
+      tbd-resolution、reversible: false の assumption なし）。
+  requirement.fr5.tbd-resolution:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T18:35:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: >-
+      仮定 a-fr5 を置いて進める: follow_up_drafts の生成母集団は
+      「cap 到達時点で未解決の failed_items 全件」とする。FR5 の requirement
+      status は assumed になる。
+    resolution_note: >-
+      references/batch-policies.yaml の create-plan.tbd-resolution:
+      action select / option_id assume を適用。
+  requirement.fr11.tbd-resolution:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T18:35:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: >-
+      仮定 a-fr11 を置いて進める: cap 到達走行の batch 終端行は既存の
+      verify_rework_cap_reached を再利用し、references/batch-terminal-line.md
+      は変更しない。FR11 の requirement status は assumed になる。
+    resolution_note: >-
+      references/batch-policies.yaml の create-plan.tbd-resolution:
+      action select / option_id assume を適用。
+worker_runs:
+  - request_id: create-plan-5ec9d5c3491d
+    status: needs_user_input
+    input_digest: sha256:d1217fddb15f8ceb9250a8b214b330fff4ba987508a7fad0fa87df2c4a559750
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
