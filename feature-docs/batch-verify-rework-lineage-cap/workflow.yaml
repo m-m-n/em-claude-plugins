@@ -204,7 +204,7 @@ tasks:
     domains: ["input-handling", "api-contract", "config-infra"]
     complexity: medium
     requirements: [FR4, FR5, NFR6, NFR3, NFR4, NFR5]
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-verify-rework-lineage-cap/task0003
   task0004:
     title: "interactive の Step C デフォルト条件付き変更と非変更ガード"
