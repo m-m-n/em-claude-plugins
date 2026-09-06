@@ -1,0 +1,277 @@
+round: 1
+executed_at: "2026-09-07T00:40:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: b49240996c198da1528b4b8d6265baab75a90931
+  head_commit: 9e77168f79bf0a4200d648f89d6d22b47cc6ace8
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/implement-failed-kind/task0001.tests.yaml
+    - test-docs/implement-failed-kind/task0002.tests.yaml
+    - test-docs/implement-failed-kind/task0003.tests.yaml
+    - test-docs/implement-failed-kind/task0004.tests.yaml
+    - test-docs/implement-failed-kind/task0005.tests.yaml
+    - tests/test_develop_once_option.py
+    - tests/test_failed_kind_batch_docs.py
+    - tests/test_failed_kind_schema.py
+    - tests/test_failed_kind_stop_condition.py
+    - tests/test_failed_kind_version_bump.py
+    - tests/test_failed_kind_write_paths.py
+    - tests/test_implement_routeback_gate.py
+    - tests/test_recycled_task_id_consistency.py
+    - tests/test_routeback_reset_scope_consistency.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "comprehensive#1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: failed, skip_reason: null}
+  - {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "security#1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+  - {run_id: "comprehensive#loop1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "security#loop1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "performance#loop1", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "architecture#loop1", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "architecture#loop1fallback", perspective: architecture, role: fallback, source: claude, status: completed}
+  - {run_id: "spec#loop1", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "comprehensive#loop2", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: failed, skip_reason: null}
+  - {run_id: "comprehensive#loop2fallback", perspective: comprehensive, role: fallback, source: claude, status: completed}
+  - {run_id: "security#loop2", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "performance#loop2", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "architecture#loop2", perspective: architecture, role: fallback, source: claude, status: completed}
+  - {run_id: "spec#loop2", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+findings:
+  - stable_id: c6d3330fdaa2128b
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 420
+    title: "自動再開の書き込みセットが implement を pending に戻すのに pending タスクを登録せず、implement フェーズの I.0 前提条件に抵触する"
+    description: |
+      手順 6 の書き込みセットは `implement.status` を `pending`、`failed_kind` を null、カウンタを +1
+      するだけで、`tasks.{T}.status` には触れない。一方 `references/implement-phase.md` Step I.0 の 5 番は
+      「fresh first pass でない `implement: pending` 突入で `status == pending` のタスクが 1 つも無い状態は
+      protocol error → 即 ABORT」と定めており、`references/rework-task-synthesis.md` Section 11 Invariant 1
+      も「implement が pending に戻る前に pending タスクが少なくとも 1 つ登録されている」と無条件に述べている。
+      自動再開の直前状態は interactive の abort phase 終端で、その経路は「no task status or notes write set」
+      と明記されているため、失敗タスクは `failed`、他は `merged` のまま。全タスクが launch 済みで 1 つだけ
+      失敗した典型ケースでは `pending` タスクがゼロになり、再開した implement フェーズは I.0 の 5 番で
+      そのまま abort する。abort は status を書かないので `implement` は `pending` のまま残り、次の Step B
+      反復でまた同じ abort を繰り返し、最終的に停止条件 2（`step_stuck`）で止まる。しかもカウンタは
+      フェーズ実行の前にコミット済みなので、再開ラウンドだけが消費される。
+    suggestion: |
+      (a) `references/implement-phase.md` Step I.0 の 5 番に第 3 の突入経路（develop の infra 自動再開）を
+      明示的に切り出し、「reconciled state が `failed` のタスクが存在する場合はこの前提条件を満たす
+      （I.2.c が処理する）」と書き足す。あわせて rework-task-synthesis.md Invariant 1 の適用範囲を
+      rework 由来の遷移に限定する旨を明記する。(b) 自動再開の書き込みセットに `tasks.{T}.status` の
+      リセットを加える。ただし (b) は I.2.a の recycled-task-id carve-out に引っかかり、I.2.c を経ずに
+      タスクが自動再起動されて FR1「no automatic retry」を破るため、採るなら I.2.a 側の除外も同時に
+      定義する必要がある。整合コストの小さい (a) を推奨。
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "auto-fix 対象外 — 修正が finding.file 以外（implement-phase.md / rework-task-synthesis.md）に及ぶため review-editor の単一ファイル境界で適用できない"
+  - stable_id: 5317fda4ef588332
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 404
+    title: "No batch-reachable write path produces `failed_kind: infra`, so the new auto-resume branch is unreachable in a pure `--batch` run"
+    description: |
+      3 つの write path のうち batch 走行中に到達できるものは、いずれも `decision` を書く
+      （route-back gate rejected は無条件 `decision`、batch 2 回目 failed は孤児化由来を含め無条件
+      `decision`、`infra` を書きうる abort phase option は AskUserQuestion 選択肢のため batch では
+      到達しない）。結果、`failed_kind: infra` は batch 走行中に一度も書かれず、SKILL.md 手順 4-6 の
+      自動再開は「先行する interactive 実行が残した `infra`」を batch 再開時に消化する経路でしか
+      発火しない。
+    suggestion: |
+      (a) batch 2 回目 failed の分類を条件付きにする、または (b) `second_always_decision` を維持したまま、
+      自動再開が batch 走行中には発火しないことを SKILL.md の block と SPEC Objective 4 に明記する。
+    sources: [claude:comprehensive]
+    confidence: 85
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1（SKILL.md に到達条件の注記を追加。option (b) の SKILL.md 側のみ）"
+  - stable_id: 07a4366b9e0a0827
+    severity: high
+    category: architecture
+    file: em-workflow/references/batch-terminal-line.md
+    line: 100
+    title: "infra 自動再開の cap 到達停止に対応する stop reason code が閉集合に存在しない"
+    description: |
+      SKILL.md 手順 5 は cap 到達時に「停止条件 3 が発火する」「workflow.yaml への書き込みは一切行わない」
+      と定めるため、その停止時点で `failed_kind` は `infra` のまま残る。一方この diff は
+      `step_needs_intervention` 行と `stop-condition-3` precedence を「`failed_kind` が `decision` の場合のみ」
+      に絞ったため、cap 到達停止が 11 個の閉集合のどの code にも束縛されない終端停止点になり、
+      「Every terminating stop point is bound to exactly one reason code above」と矛盾していた。
+    suggestion: "`step_needs_intervention` の条件を cap 到達ケースにも広げる（option (c)）。"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2（step_needs_intervention の meaning と stop-condition-3 precedence を cap 到達に拡張）"
+  - stable_id: 937d027ab4865f32
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 100
+    title: "At-cap infra auto-resume fires stop condition 3 but step_needs_intervention meaning excludes failed_kind=infra, leaving the stop reason code uncovered"
+    description: "07a4366b9e0a0827 と同一サイトの別観点からの報告。at-cap ケースが step_needs_intervention の意味に含まれず、reason code が決まらない。"
+    suggestion: "step_needs_intervention の meaning に at-cap ケースを明記する。"
+    sources: [litellm:vertex-glm-5.2:comprehensive]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2（07a4366b9e0a0827 と同じ修正でカバー）"
+  - stable_id: f1db09e30c71fbc6
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-terminal-line.md
+    line: 100
+    title: "The cap-reached stop has no reason code in the closed set of eleven, contradicting \"Every terminating stop point is bound to exactly one reason code\""
+    description: "ラウンド初回の評価で確認された同一サイトの報告。"
+    suggestion: "step_needs_intervention の条件を停止条件 3 の発火有無で表現するか、cap 専用の停止点を追加する。"
+    sources: [claude:comprehensive]
+    confidence: 100
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2（07a4366b9e0a0827 と同じ修正でカバー）"
+  - stable_id: 1a620483435c1b35
+    severity: medium
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 413
+    title: "Auto-resume write set touches no task-level state, so a resume can burn a round without re-dispatching any implementer"
+    description: |
+      手順 6 の write set は `implement.status` / `failed_kind` / `rounds` のみで、`tasks.{T}.status` にも
+      `tasks.{T}.notes` にも触れない。再入後、既に retry を消費したタスクでは即 2 回目失敗扱いになり、
+      `rounds` だけを消費して implementer を一度も再投入せずに停止しうる。
+    suggestion: "write set にタスク状態の復元を含めるか、含めない設計なら再入後の挙動の前提を 1 文で明記する。"
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: "c6d3330fdaa2128b（high）と同じ設計判断に属するため rework へ送る"
+  - stable_id: f1e0080bae532dbe
+    severity: medium
+    category: spec
+    file: feature-docs/implement-failed-kind/SPEC.md
+    line: 285
+    title: "AC2's classification rule is contradicted by the adopted FR4/FR5 resolutions and was never reconciled"
+    description: |
+      AC2 は 3 つの write path すべてについて「孤児化由来は `infra`、それ以外は `decision`」と述べるが、
+      create-plan の tbd-resolution が採った `second_always_decision` / `always_decision` は 2 つの path で
+      その規則を上書きしており、diff はその上書きを実装している。SPEC.md は FR4/FR5/FR7/FR8 を `(tbd)` の
+      まま Open Questions に残しており、解決結果を吸収していない。
+    suggestion: "SPEC.md の FR4/FR5/FR7/FR8 を採択値で `(ok)` に更新し、AC2 の分類規則を実装どおりに書き直す。"
+    sources: [claude:evaluator]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "category: spec は auto-fix 候補から除外される"
+  - stable_id: f07a3bc6648bcfe5
+    severity: medium
+    category: architecture
+    file: em-workflow/references/batch-mode.md
+    line: 88
+    title: "`batch` ブロックの生成契約に `infra_resume` が無く、キー等価の宣言が破綻している"
+    description: |
+      workflow-schema.md に `batch.infra_resume`（`rounds` / `cap`）が新設されたが、`batch` ブロックの
+      生成を所有する batch-mode.md のスニペットは未更新のまま「this file shows the same keys only」と
+      キー等価を宣言しており、その宣言が偽になっている。23 行目の「persists rework counters ONLY」も
+      同様に成立しなくなった。
+    suggestion: "batch-mode.md のスニペットに `infra_resume:` / `rounds: 0` / `cap: 2` を追記し、23 行目の記述を改める。"
+    sources: [claude:architecture, litellm:vertex-glm-5.2:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "high の rework と同一ドキュメント群に属するため rework へ送る"
+  - stable_id: 0bbc9aa7d26c9376
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/batch-mode.md
+    line: 91
+    title: "batch-mode.md の `batch` ブロック記述が `infra_resume` 追加に追随しておらず、キー一致の自己宣言が破れている"
+    description: "f07a3bc6648bcfe5 と同一の内容を comprehensive 観点から報告したもの。"
+    suggestion: "batch-mode.md のスニペットに `infra_resume` を追記し、キー集合を workflow-schema.md と一致させる。"
+    sources: [claude:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "high の rework と同一ドキュメント群に属するため rework へ送る"
+  - stable_id: ee77a16e298cf07b
+    severity: medium
+    category: architecture
+    file: em-workflow/references/workflow-schema.md
+    line: 252
+    title: "`infra_resume.cap` は書き手が定義されていない永続キーで、cap の所有先も文書間で食い違う"
+    description: |
+      既存の `verify_rework` は履歴だけを workflow.yaml に持ち cap 値は SKILL.md 側の定数に置くのに対し、
+      新設の `infra_resume` は policy 値である `cap` をファイル常駐キーにしながら、それを書く経路が
+      どの文書にも定義されていない。所有先の citation も batch-mode.md / SKILL.md / workflow-schema.md の
+      三者で食い違う。
+    suggestion: "`infra_resume` と `cap` を materialize する書き込みセットを明記し、cap の所有先の citation を実際の分担に合わせて訂正する。"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "high の rework と同一ドキュメント群に属するため rework へ送る"
+  - stable_id: c425ee3e8459407a
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/workflow-schema.md
+    line: 289
+    title: "Schema defines infra as covering harness failures, but the only infra-producing write path sets infra solely for orphaned"
+    description: |
+      schema の `infra` の語釈は「implementer の孤児化、または harness 障害」を含むが、`infra` を書ける
+      唯一の経路（abort-phase option）は journal `failed` の reason が `orphaned` のときだけ `infra` とし、
+      それ以外は `decision` にする。harness 障害は `infra` に分類されない。
+    suggestion: "abort-phase option の分類に harness 障害を加えるか、schema の語釈を実装に合わせて狭める。"
+    sources: [litellm:vertex-glm-5.2:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "high の rework と同一ドキュメント群に属するため rework へ送る"
+  - stable_id: 780f2eab75440424
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 740
+    title: "route-back 書き込みセットの failed_kind クリアは到達しない状態を根拠にしており、理由が事実と異なる"
+    description: |
+      追加された「the step is leaving `failed`」という理由は、Step I.1 がフェーズ開始時に無条件で
+      `in_progress` を書くため成立しない。このクリアは no-op であり、`implement` が `failed` のまま
+      I.2.c に入りうるという誤った状態モデルを読み手に与える。
+    suggestion: "理由節を実態に合わせて書き直すか、Lifecycle の担い手が SKILL.md 手順 6 であることだけを cite する。"
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "high の rework と同一ドキュメント群に属するため rework へ送る"
+evaluation:
+  round_summary: |
+    Round 1, cross_validation=true, diff mode over 21 files (protocol markdown + 5 new read-only unittest modules
+    + version bump). レビュアーのカバレッジは薄く、comprehensive#0 と security#0 は codex のレート制限による
+    skip、comprehensive#1 は failed、完了した 4 本のうち 4 本が空の findings を返したため、初回のレビュアー側
+    シグナルは comprehensive#fallback からのみ得られた。その 3 件はすべて diff に対して独立に検証され、
+    dismissed は無い。観点別の独立検査では、architecture（batch-mode.md が cap の所有先を SKILL.md と
+    誤って指している）と spec（SPEC.md の AC2 と 4 つの `(tbd)` が create-plan の解決結果と未整合）に
+    追加の findings が出た。支配的な問題は局所的なものではなく構造的で、採択された
+    `second_always_decision`（FR4）と `batch_only`（FR8）の組み合わせにより、無人走行中に
+    `failed_kind: infra` を生む経路が存在しない。どのレビュアー出力にもプロンプトインジェクションの
+    試行・役割の上書き・埋め込み命令は無く、すべてデータとして扱った。
+  recommended_action: rework
+  action_rationale: |
+    high は限定された auto-fix では閉じない。閉じるには FR4 の分類を再決定する（あるいは SPEC Objective 4 と
+    SKILL.md の主張範囲を正式に狭める）必要があり、プロトコル契約と SPEC 成果物を同時に変えることになる。
+    medium 群も同じ決定に付随するため、1 つの rework タスクにまとめて解決するのが自然。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 2
+  applied_total: 2
+  termination: no-progress
+residual_critical_high: 1
+rework_required: true
