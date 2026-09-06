@@ -178,7 +178,7 @@ tasks:
     domains: ["config-infra", "api-contract"]
     complexity: high
     requirements: [FR1, FR2, FR3, FR8, NFR1, NFR3, NFR4, NFR5]
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-verify-rework-lineage-cap/task0001
   task0002:
     title: "cap 到達走行の継続（停止条件・Step C 実行条件・終端行）"
