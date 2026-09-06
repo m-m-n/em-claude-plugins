@@ -135,9 +135,13 @@ requirements:                      # traceability SSOT
 
 batch:                             # present only after a --batch run touched
   review_rework_count: 0           #   this feature (references/batch-mode.md).
-  verify_rework_count: 0           # Rework counters ONLY — batch mode is
-                                   #   activated per-invocation by the --batch
-                                   #   flag, never by this block
+  verify_rework:                   # rework history read by the verify
+    rounds: 0                      #   phase's lineage-cap / hard-cap
+    failed_id_counts: {}           #   judgment — see "## `batch` block"
+                                   #   below for meaning and the retired-key
+                                   #   note. Never used to activate batch
+                                   #   mode — that is the --batch flag's
+                                   #   per-invocation job
 ```
 
 ## `goal` block
@@ -224,6 +228,26 @@ patch-validation time. This compatibility rule changes neither the field's
 required-ness nor its seven-value vocabulary above — this is the same
 shape `references/phase-state.md`'s own Format-version compatibility rule
 takes for its own destructive shape change.
+
+## `batch` block
+
+The `batch` block is created by the orchestrator on the first `--batch`
+run that touches a feature (`references/batch-mode.md`). It never
+activates batch mode itself — that stays the `--batch` flag's
+per-invocation job.
+
+`review_rework_count` is unchanged by this feature. `verify_rework`
+carries the history the verify phase's lineage-cap / hard-cap judgment
+reads and updates each round (`rounds`, `failed_id_counts`); the
+judgment itself — cap values, the counting rule, the two caps'
+independent evaluation, and the outcome at cap — is defined once in
+`skills/develop/SKILL.md`「verify フェーズ」and is not restated here.
+
+**Retired key.** A `workflow.yaml` written before this block's current
+shape may still carry the retired `verify_rework_count` key. No
+migration runs: a `batch` block missing `verify_rework.rounds` /
+`verify_rework.failed_id_counts` is read as unset (`rounds: 0`,
+`failed_id_counts: {}`), and any retired key present is ignored.
 
 ## Command approval store (outside the repository)
 
