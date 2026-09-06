@@ -68,7 +68,74 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "failed_kind definition and the infra-resume record in the schema SSOT"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/workflow-schema.md
+      - tests/test_failed_kind_schema.py
+    skills: []
+    domains: [api-contract, data-persistence, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR7, FR9, NFR1, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: "The three terminal write paths carry failed_kind"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_failed_kind_write_paths.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR2, FR3, FR4, FR5, NFR1, NFR2, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: "Stop condition 3 branches on failed_kind, with a capped batch auto-resume"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/skills/develop/SKILL.md
+      - tests/test_failed_kind_stop_condition.py
+    skills: []
+    domains: [input-handling, api-contract, config-infra]
+    complexity: high
+    requirements: [FR2, FR6, FR7, FR8, NFR1, NFR2, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: "Batch-mode and terminal-line documents follow the failed_kind branch"
+    plan: tasks/task0004.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/batch-terminal-line.md
+      - tests/test_failed_kind_batch_docs.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: low
+    requirements: [FR10, NFR1, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0005:
+    title: "Plugin version bump"
+    plan: tasks/task0005.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_failed_kind_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [NFR3, NFR4]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -84,99 +151,99 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-6]
   FR2:
     title: "`failed_kind` のライフサイクル（設定・保持・クリア）"
-    status: tbd
-    tbd_reason: "未決定事項『failed_kind のライフサイクル』（question_id: failed-kind.lifecycle、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `clear_on_leaving_failed`（implement が `failed` を離れる書き込みと同じ write set で `failed_kind` を null に戻す）。create-plan の tbd-resolution で確定する。"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`clear_on_leaving_failed` を採用した。`failed_kind` は implement を `failed` にする write でのみ設定し、implement が `failed` を離れる write set（I.2.c の route-back による pending 差し戻しと、develop Step B の infra 自動続行による pending 差し戻し）と同じ write set で null に戻す。追加の write もコミットも作らない。"
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003]
+    tests: [TS-6, TS-7, TS-8]
   FR3:
     title: "I.2.c abort 経路での `failed_kind` 書き込み"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-7]
   FR4:
     title: "batch の 2 回目 failed 経路での `failed_kind` 書き込み"
-    status: tbd
-    tbd_reason: "未決定事項『batch 2 回目 failed の分類』（question_id: batch.second-failure.kind、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `second_always_decision`（2 回目失敗は原因を問わず常に `decision`）。この推奨は既存の precedence 規則と整合する — `references/batch-terminal-line.md` の Stop point coverage で `implement-second-failure` は `implement_task_failed` として `stop-condition-3` より優先されるため、`infra` に分類しても走行は停止する。create-plan の tbd-resolution で確定する。"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`second_always_decision` を採用した。batch の `implement.failed-task` による 2 回目失敗の abort phase は、孤児化由来の失敗を含め原因を問わず `failed_kind: decision` を書く。走行の停止挙動は変わらない — `references/batch-terminal-line.md` の precedence rule で `implement-second-failure` が `stop-condition-3` に優先するため。"
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-7]
   FR5:
     title: "route-back gate-rejected terminal での `failed_kind` 書き込み"
-    status: tbd
-    tbd_reason: "未決定事項『gate-rejected terminal の分類』（question_id: gate-rejected.kind、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `always_decision`（gate 不成立は `merged` / `in_progress` タスクの存在という計画側の状態が原因であり、自動続行しても同じ gate で再び弾かれるため常に `decision`）。create-plan の tbd-resolution で確定する。"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`always_decision` を採用した。I.2.c の route-back gate が成立しなかった terminal status write は常に `failed_kind: decision` を書く。gate 不成立の原因は `merged` / in-flight タスクという計画側の状態であり、自動続行しても同じ gate で再び弾かれるため。"
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-7]
   FR6:
     title: "停止条件 3 の発火条件を `failed_kind: decision` に限定する"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-1, TS-2, TS-8]
   FR7:
     title: "`infra` 自動続行の回数上限とその記録"
-    status: tbd
-    tbd_reason: "未決定事項『infra 起因の自動続行の回数上限』（question_id: infra.retry-cap-value、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `cap_2`（上限 2 回）。上限値そのものが未確定のため、キー名・カウント更新規則・上限到達時の報告文面もあわせて create-plan の tbd-resolution で確定する。"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`cap_2` を採用した。記録先のキー名は workflow.yaml の `batch.infra_resume` で、メンバーキーは `rounds`（実施済み回数、feature 単位で単調増加・リセットなし）と `cap`（上限）。カウント更新は implement を `pending` に差し戻す write と同一 write set で行い、1 回のコミットで確定させる。`rounds` が `cap` に達したら decision 扱いで停止し、報告文に上限到達を理由として明記する。キー欠落は `rounds: 0` / `cap: 2` として読む。"
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0003]
+    tests: [TS-4, TS-6, TS-8]
   FR8:
     title: "`infra` 自動続行を適用するモードの範囲"
-    status: tbd
-    tbd_reason: "未決定事項『infra 自動続行の適用モード』（question_id: infra.mode-scope、packet: create-spec-q0001）が batch で TBD として記録された。worker 推奨は `batch_only`（回数の記録先が workflow.yaml の `batch` セクションであること、および `batch` ブロックが --batch 走行でのみ作成される既存規則と整合するため）。create-plan の tbd-resolution で確定する。"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`batch_only` を採用した。`failed_kind: infra` による自動続行は batch 走行にのみ適用する。interactive では `failed_kind` の値によらず従来どおり停止条件 3 が発火する。回数の記録先である `batch` ブロックが --batch 走行でのみ作成される既存規則と整合する。"
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-8]
   FR9:
     title: "`failed_kind` 欠落時の後方互換"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-3, TS-6]
   FR10:
     title: "関連ドキュメントの更新"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0004]
+    tests: [TS-9]
   NFR1:
     title: "SSOT 規律"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003, task0004]
+    tests: [TS-6, TS-7, TS-8, TS-9]
   NFR2:
     title: "write とコミットの単位を変えない"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002, task0003]
+    tests: [TS-1, TS-7, TS-8]
   NFR3:
     title: "プラグイン version bump"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0005]
+    tests: [TS-10]
   NFR4:
     title: "スクリプト／フックを変更する場合のテスト追随"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0002, task0003, task0004, task0005]
+    tests: [TS-5]
 
 batch:
   review_rework_count: 0
