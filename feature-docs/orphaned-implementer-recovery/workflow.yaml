@@ -80,7 +80,7 @@ workflow:
     base_commit: 3f5db490b46d5190e54a5665f1d6c44876ec42da
     completed_at_commit: a33e7bb030e4e6fc9241ec653c63515978acdee8
   - id: review
-    status: pending
+    status: in_progress
     completed_at_commit: 41a3135505f34fb2002c1a4e1968e7229851fbe6
   - id: verify
     status: pending
