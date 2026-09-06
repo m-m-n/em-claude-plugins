@@ -62,7 +62,7 @@ workflow:
     completed_at_commit: 4466395bab2d4aa8d2400beaa2fb2379aab175f6
     base_commit: b49240996c198da1528b4b8d6265baab75a90931
   - id: review
-    status: pending
+    status: in_progress
   - id: verify
     status: pending
     result: null
@@ -178,7 +178,7 @@ tasks:
     branch: em-workflow/implement-failed-kind/task0007
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 1
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
