@@ -20,9 +20,9 @@ finished product. A rejected result becomes a NEW task — develop never waits
 for a human mid-run.
 
 - Active ONLY when the current invocation's arguments contain `--batch`.
-  The `batch` block in workflow.yaml persists rework counters ONLY — it
-  never activates the mode. A re-entry without `--batch` runs fully
-  interactive again.
+  The `batch` block in workflow.yaml persists rework counters and the
+  infra auto-resume record — it never activates the mode. A re-entry
+  without `--batch` runs fully interactive again.
 - In batch mode the orchestrator and every inline phase MUST NOT call
   `AskUserQuestion` (a headless run has no responder; the call would hang
   or fail). **The jurisdiction split is by gate-identifier presence, never
@@ -41,8 +41,11 @@ for a human mid-run.
   cuts a follow-up task. The one exception is the `implement` step's
   infra auto-resume: a bounded, counted retry that resumes the run
   instead of stopping while it is admissible, and returns control the
-  same way once its cap is reached. The branch and the cap are
-  `skills/develop/SKILL.md`'s to define, not this document's to restate.
+  same way once its cap is reached. The branch and the cap's consuming
+  judgment are `skills/develop/SKILL.md`'s to define; the cap's key, its
+  member names and its unset-read defaults are
+  `references/workflow-schema.md`'s `batch` block's, cited there rather
+  than restated here.
 
 ## Non-packet gates
 
@@ -93,6 +96,9 @@ batch:                       # created by the orchestrator on the first
   verify_rework:
     rounds: 0
     failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
 ```
 
 Structure and per-key meaning are defined in `references/workflow-schema.md`'s
