@@ -89,11 +89,14 @@ tasks:
     files:
       - em-workflow/references/implement-phase.md
       - tests/test_failed_kind_write_paths.py
+      - tests/test_implement_routeback_gate.py
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_routeback_reset_scope_consistency.py
     skills: []
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR2, FR3, FR4, FR5, NFR1, NFR2, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/implement-failed-kind/task0002
   task0003:
