@@ -249,7 +249,7 @@ findings:
     confidence: 60
     resolution: unresolved
     resolution_reason: "high の rework と同一ドキュメント群に属するため rework へ送る"
-  - stable_id: PLACEHOLDER
+  - stable_id: 248d00fb3e18643d
     severity: medium
     category: comprehensive
     file: tests/test_failed_kind_stop_condition.py
