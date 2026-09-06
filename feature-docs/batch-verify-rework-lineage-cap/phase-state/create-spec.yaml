@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-verify-rework-lineage-cap
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 3ae97d78afbb66fefd2346adec7b963ecea691ec
-last_input_digest: sha256:9c340fe5f9198f3c26350e19db2df28b6d85f02361c48b0bfefbede81bdaf4bb
-active_request_id: create-spec-run-0003
+last_input_digest: sha256:c2b94db46c8d3b23c70f5890dc7b0ebe52908f24de4621619e7b79bb171b025c
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -75,7 +75,17 @@ worker_runs:
     status: completed
     input_digest: sha256:9c340fe5f9198f3c26350e19db2df28b6d85f02361c48b0bfefbede81bdaf4bb
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:c2b94db46c8d3b23c70f5890dc7b0ebe52908f24de4621619e7b79bb171b025c
+    output_digest: null
+artifacts:
+  - path: feature-docs/batch-verify-rework-lineage-cap/REQUIREMENTS.md
+    sha256: sha256:afb1895e625c0ed7da14a19205d69c36e56c9f4e92826fb242911cb8ad5f4e19
+    produced_by: create-spec-run-0003
+  - path: feature-docs/batch-verify-rework-lineage-cap/SPEC.md
+    sha256: sha256:1b6b1d22c75d160829c8675a5e403d7baadd4bb14cd944ae8a1a8f4d08ded28c
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
