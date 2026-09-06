@@ -514,7 +514,11 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 
 1. **完了方式の決定**: AskUserQuestion —
    「integration ブランチ `em-workflow/{feature}/integration` をどうする？」
-   の三択。デフォルト（推奨表示）は「`{base_branch}` にマージ」
+   の三択。デフォルト（推奨表示）は `verify.status` に応じて切り替える:
+   `verify.status` が `failed` 以外なら「`{base_branch}` にマージ」、
+   `verify.status` が `failed` なら「ブランチを残す」。`verify.status` が
+   `failed` のときは、質問文に verify が failed である事実と
+   `failed_items` の件数を明記する
    （batch: 質問せず自動で「ブランチを残す」を選ぶ。マージ・push・
    PR 作成のいずれも行わない — `batch-mode.md` の Non-packet gates 表、
    `develop.completion`）
