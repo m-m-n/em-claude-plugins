@@ -1,16 +1,75 @@
 schema_version: 1
 feature: implement-failed-kind
 phase: create-plan
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 0e396986c48a189cdedb69d2a6ea3df5fd328ca7
 last_input_digest: "sha256:b86927804628cf691bb56a99d31bfe99e50388a229b0c03792f7bad7e8f828d9"
 active_request_id: create-plan-run-0001
-packets: {}
-answers: {}
+packets:
+  create-plan-q0001:
+    status: answered
+    issued_at: "2026-09-06T22:59:00+09:00"
+    questions:
+      - question_id: fr2.lifecycle
+        status: answered
+      - question_id: fr4.second-failure-kind
+        status: answered
+      - question_id: fr5.gate-rejected-kind
+        status: answered
+      - question_id: fr7.infra-retry-cap
+        status: answered
+      - question_id: fr8.infra-mode-scope
+        status: answered
+answers:
+  fr2.lifecycle:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "clear_on_leaving_failed を採用する。implement が failed を離れる write（pending への差し戻しを含む）と同じ write set で failed_kind を null に戻し、追加の write もコミットも作らない。FR2 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
+  fr4.second-failure-kind:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "second_always_decision を採用する。batch の implement.failed-task による abort phase は原因を問わず failed_kind: decision を書く。FR4 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
+  fr5.gate-rejected-kind:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "always_decision を採用する。I.2.c の route-back gate が成立しなかった terminal status write は常に failed_kind: decision を書く。FR5 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
+  fr7.infra-retry-cap:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "cap_2 を採用する。キー名は batch.infra_resume（rounds / cap）、カウント更新は pending 差し戻し write と同一 write set、rounds >= cap で decision 扱いとして停止。キー欠落は rounds: 0 / cap: 2 として読む。FR7 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
+  fr8.infra-mode-scope:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "batch_only を採用する。interactive では failed_kind の値によらず従来どおり停止条件 3 が発火する。FR8 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
 worker_runs:
   - request_id: create-plan-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: "sha256:b86927804628cf691bb56a99d31bfe99e50388a229b0c03792f7bad7e8f828d9"
     output_digest: null
 artifacts: []
