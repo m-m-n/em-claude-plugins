@@ -1,0 +1,86 @@
+task_id: task0003
+baseline_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+final_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_retrospect_verification_handoff.TestVerificationFailuresSubstructure.test_verification_failures_has_substructure
+      - tests.test_retrospect_verification_handoff.TestVerificationFailuresSubstructure.test_prose_states_items_mirror_failed_items_as_is
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true — before the edit, `verification_failures:` was a bare key (nothing between it and `discretionary_perspectives:`), so `_verification_failures_has_substructure` returned False and the 'そのまま' prose was absent."
+  AC-2:
+    tests:
+      - tests.test_retrospect_verification_handoff.TestCategoryDefinitionNotRedefined.test_section_cites_definition_without_redefining_vocabulary
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true — before the edit, the retrospect section had no citation of workflow-schema.md's `failed_items[].category` section at all."
+  AC-3:
+    tests:
+      - tests.test_retrospect_verification_handoff.TestFollowUpDraftsFourFields.test_follow_up_drafts_key_present
+      - tests.test_retrospect_verification_handoff.TestFollowUpDraftsFourFields.test_follow_up_drafts_has_four_fields
+      - tests.test_retrospect_verification_handoff.TestFollowUpDraftsFourFields.test_follow_up_drafts_is_a_top_level_key_not_nested_under_signals
+    red_confirmed: true
+    red_reason: "ERROR in setUpClass: ValueError('substring not found') — `follow_up_drafts:` did not exist anywhere in SKILL.md before the edit, so `_extract_between` raised before any assertion ran."
+  AC-4:
+    tests:
+      - tests.test_retrospect_verification_handoff.TestOriginPairReferencesInvariant6.test_references_invariant_6_without_restating_pair
+    red_confirmed: true
+    red_reason: "ERROR in setUpClass: ValueError('substring not found') — same root cause as AC-3 (`follow_up_drafts:` absent), so the origin_kind/origin_id block could not even be extracted."
+  AC-5:
+    tests:
+      - tests.test_retrospect_verification_handoff.TestGenerationPopulationStated.test_states_generation_population
+      - tests.test_retrospect_verification_handoff.TestGenerationPopulationStated.test_does_not_narrow_by_lineage_cap_touched_id
+      - tests.test_retrospect_verification_handoff.TestGenerationPopulationStated.test_states_empty_population_when_cap_not_reached
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true / assertIn failed — before the edit, the retrospect section never stated the 'cap 到達時点で未解決の failed_items 全件' population phrase, the 絞り込まない non-narrowing clause, or the empty-population-on-completed clause."
+  AC-6:
+    tests:
+      - tests.test_retrospect_verification_handoff.TestUntrustedInputHandoff.test_states_untrusted_input_handling
+      - tests.test_retrospect_verification_handoff.TestUntrustedInputHandoff.test_cites_document_name_and_section_name_together
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true — before the edit, the retrospect section made no mention of worker-envelope.md, the Untrusted-Input Handling section name, or the no-command-to-external-service clause."
+  AC-7:
+    tests:
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_batch_output_suppression_clause_present
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_other_signals_keys_unchanged
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_review_critical_high_item_shape_unchanged
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_conflict_reworks_item_shape_unchanged
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_file_prediction_misses_item_shape_unchanged
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_discretionary_perspectives_item_shape_unchanged
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_declined_findings_item_shape_unchanged
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_lessons_candidates_present_and_unchanged
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_no_reflection_into_skill_rule_tables
+      - tests.test_retrospect_verification_handoff.TestRetrospectSectionRegression.test_write_then_commit_procedure_unchanged
+    red_confirmed: false
+    red_reason: "Pure regression guard (Test Notes): this criterion asserts pre-existing wording this task never removes or edits. The edit only inserted new lines around the retained text, so these assertions were true both before and after — there is no observable red state to confirm, by design."
+  AC-8:
+    tests:
+      - tests.test_retrospect_verification_handoff.TestVerificationFailuresSubstructureMatcherCanFail.test_old_schema_text_is_well_formed_and_found
+      - tests.test_retrospect_verification_handoff.TestVerificationFailuresSubstructureMatcherCanFail.test_matcher_rejects_old_key_only_schema
+      - tests.test_retrospect_verification_handoff.TestVerificationFailuresSubstructureMatcherCanFail.test_matcher_accepts_new_schema_with_nested_item
+      - tests.test_retrospect_verification_handoff.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: "AC-8 asserts structural properties of the test module itself (stdlib-only imports; the substructure matcher's negative proof over a synthetic literal reproducing the OLD schema). These hold by construction from the moment the module was written and never depend on SKILL.md's content, so there is no red state distinct from the module simply not existing yet."
