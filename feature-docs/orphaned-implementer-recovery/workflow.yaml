@@ -83,9 +83,25 @@ workflow:
     status: completed
     completed_at_commit: 2cab7d5045a47df79f243ba41455538a0f325e18
   - id: verify
-    status: in_progress
-    result: null
+    status: completed
+    completed_at_commit: 5cafb5eaf6bb06cab6ae02458678479a3515c942
+    result: pass
     failed_items: []
+    note: >-
+      round 2。`python3 -m unittest discover -s tests` -> 3038 tests, exit 0。
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` -> 156/156, exit 0。
+      build/format/e2e コマンドは未定義のため対象外。TS-11: plugin.json と
+      marketplace.json はともに 0.1.62 で、base commit 3f5db49 時点の 0.1.59 より高い。
+      Manual Testing 4 件すべて成立。1 件目（D1 transcripts ディレクトリ導出）は
+      /home/sakura/.claude/projects/-home-sakura-src-my-projects-em-claude-plugins が
+      実在。2 件目（MANUAL-D2、round 1 の失敗項目）は task0007 の
+      `_earliest_entry_timestamp` 導入により解消 — 実セッションで
+      `resolve_current_session(None, None, marker, dir)` が
+      ('01a076d6-f859-7086-8510-9286cf9917fb', 2026-09-06T13:09:57.751Z) を返し、
+      current-session-unknown に落ちないことを確認した。3 件目（SSOT 読み通し）は
+      implement-phase.md I.2.b が唯一の所有節で、workflow-schema.md と README.md は
+      引用のみ。4 件目は TS-11 と同一。除外要件なし（requirements に status:
+      excluded は無い）。
   - id: retrospect
     status: pending
 
