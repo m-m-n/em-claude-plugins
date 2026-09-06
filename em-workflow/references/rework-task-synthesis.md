@@ -204,8 +204,14 @@ objective.
 
 ## 11. Invariants
 
-1. Before `implement` returns to `pending`, at least one new rework task is
-   registered in workflow.yaml.
+1. For a rework-derived transition (Section 10), before `implement`
+   returns to `pending`, at least one new rework task is registered in
+   workflow.yaml. The develop skill's own batch infra auto-resume
+   (`skills/develop/SKILL.md`, the auto-resume block) also returns
+   `implement` to `pending`, but is not a rework-derived transition and
+   registers no task; this invariant does not govern it — its precondition
+   is `references/implement-phase.md`'s Step I.0 (cited, not restated
+   here).
 2. Every newly synthesized task's `status` is `pending`.
 3. Every rework task plan states objective, test-translatable Acceptance
    Criteria.
