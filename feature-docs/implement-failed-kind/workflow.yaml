@@ -120,7 +120,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: low
     requirements: [FR10, NFR1, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/implement-failed-kind/task0004
   task0005:
