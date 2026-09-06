@@ -1,0 +1,305 @@
+schema_version: 1
+feature: batch-verify-rework-lineage-cap
+created: 2026-09-06
+base_branch: main
+goal: |
+  # em-workflow: batch の verify rework 上限を系譜カウント化し、cap 到達後も retrospect まで進める
+
+  ## やりたいこと（必須）
+  em-workflow の `--batch` モードで、verify フェーズの自動 rework 上限を「回数」から
+  「系譜ごとの再発回数」に変え、上限到達後も停止せず retrospect と完了処理まで進むようにする。
+  ## 背景・なぜ（必須）
+  ### 実際に起きたこと
+  `claude-batch` の feature `hook-listener-holding-bounds` の無人実行が verify で停止し、
+  人が workflow.yaml のカウンタを手で 0 に戻さないと再開できない状態になった。
+  時系列:
+  1. 1 回目の verify で TS-4 が fail。`TestListener_ConcurrentAdmissionCountBudget_RejectsBeyondLimit_AC4`
+  が非決定的（全パッケージ `-race` 実行 4 回中 1 回で観測）
+  1. 自動 rework が task0004 を生成して TS-4 を修正。**同時に VERIFICATION.md へ TS-10 を新規追加した**
+  （「10 連続のパッケージ race run と 4 回以上の全パッケージ実行で緑」という、1 回目より厳しい検証）
+  1. 2 回目の verify で、その新規追加された TS-10 が fail。落ちたのは TS-4 とは別のテスト
+  `TestListener_HeldByteBudget_RejectsBeyondCeiling_AC4`（10 連続実行中 1 回）
+  1. `batch.verify_rework_count` が既に 1 のため、verify は `failed` のまま停止。
+  retrospect に到達せず integration ブランチが宙に浮いた
+  ### なぜ現行の上限では届かないか
+  上限 1 は `skills/develop/SKILL.md` の verify フェーズ節と `references/batch-mode.md` の
+  Non-packet gates 表にベタ書きされていて、設定で変えられない。
+  そして今回のケースでは、rework は**正しく仕事をしていた**。検証カバレッジを強化し、その
+  強化された検証が新しい欠陥を発見した。それを回数上限が殺した。
+  単純に上限を 2〜3 に上げるだけでは足りない。rework は VERIFICATION.md に検証項目を追加
+  できる（`rework_index` による検証カバレッジ宣言の仕組み）ため、母集団がラウンドごとに動く。
+  「失敗が減ったかどうか」を収束の指標にすること自体が原理的に不安定になる。
+  ### 設計方針（Codex との議論で合意した内容）
+  **1. カウント単位を「系譜ごとの再発回数」にする**
+  - 新規の失敗項目には新規予算を与える（TS-10 は TS-4 の子孫ではないので fresh budget）
+  - 過去ラウンドの `failed_items` にも現れた ID の**再発だけ**をカウントする
+  - 別途グローバル hard cap **3** で暴走を止める二段構え
+  実装は難しくない。TS ID は VERIFICATION.md 側の項目 ID で、rework が項目を追加すれば
+  必然的に新 ID になる。「過去ラウンドの failed_items にも現れた ID の数」を数えるだけで
+  系譜カウントになる。
+  **確定した ****`batch`**** ブロックの構造**:
+  ```yaml
+  batch:
+    review_rework_count: 0      # review 側は現状維持（既存フィールドのまま）
+    verify_rework:
+      rounds: 0                 # rework 実行ラウンド数
+      failed_id_counts: {}      # failed item ID ごとの累積出現回数
+  ```
+  **確定した 2 つの cap**:
+  - **系譜 cap = 1** — 同一 ID が 2 回目の `failed_items` に現れたら停止する。「同じ問題が直らない」
+  ことの検出
+  - **hard cap = 3** — `rounds` が 3 に達したら停止する。「新しい問題が湧き続ける」ことの検出
+  今回の事例に当てると、1 回目 \{TS-4\} で TS-4=1、2 回目 \{TS-10\} で TS-10=1。どちらも系譜 cap 未達
+  なので rework が回る。TS-10 が再発して初めて系譜 cap で止まる。
+  **2. cap 到達時は停止せず、\`verify.status = failed\` を保持したまま retrospect へ進む**
+  `deferred` にして完了扱いにはしない。review 側の defer は「リスク受容の記録」だが、
+  verify の defer は「検証の偽装」になるため。10 回に 1 回落ちるスイートが正常として記録に
+  残るのは避ける。`failed_items` と証拠（ビルド・gofmt・非 race 実行の結果）を retrospect に
+  引き渡す。
+  **3. failed_items の「プロダクション不具合 / テスト側の不備」は cap 判断に使わない**
+  今回の TS-10 は `The production behaviour under test is correct` と note されており、
+  実体はテストヘルパーの不備（server-side close を write エラーと誤認）だった。しかしこの
+  区別を cap の分岐条件にはしない。「production は正しい」は verify 自身の自己申告であり、
+  申告者に判定を委ねれば全失敗がテスト側に分類される。この区別は retrospect の深刻度・
+  follow-up 優先度付けにのみ使う。
+  **4. review 側は揃えない**
+  review の cap 到達時挙動（残 finding を `deferred` にしてステップ完了）は現状のまま。
+  上記 2 の理由により、verify と review の非対称は意図的なものとして残す。
+  **5. retrospect.yaml の出力形式**
+  `signals.verification_failures` は現状 [SKILL.md](http://SKILL.md) 上で構造が未定義のため、verify の `failed_items`
+  をそのまま載せる形で確定させる。加えて `follow_up_drafts` を新設する:
+  ```yaml
+  follow_up_drafts:            # cap 到達で未解決のまま残った項目から生成
+    - origin_kind: verify
+      origin_id: TS-10
+      title: <1 行>
+      body: <再現手順・証拠・該当箇所>
+  ```
+  `origin_kind` / `origin_id` の対は `references/rework-task-synthesis.md` Invariant 6 が定義済みの
+  ものをそのまま使う。
+  ## 受け入れ条件 / 完了の定義（必須）
+  - [ ] verify の自動 rework 上限が「系譜ごとの再発回数」で数えられている。過去ラウンドの
+  `failed_items` に現れなかった新規 ID は新規予算を得る
+  - [ ] グローバル hard cap 3 が別に存在し、系譜 cap とは独立に暴走を止める
+  - [ ] cap 到達時、`verify.status` は `failed` のまま retrospect フェーズへ進む。
+  停止しない。`deferred` にもしない
+  - [ ] `failed_items` と検証の証拠が retrospect.yaml に引き渡される
+  - [ ] retrospect.yaml に follow-up task の draft が定型出力される
+  （外部サービスへの引き継ぎがこれで機械可読になる）
+  - [ ] `verify.status` が `failed` のまま完了処理（Step C）に到達でき、worktree 掃除と
+  終了報告が行われる（下記「制約・前提」の調査結果を参照）
+  - [ ] `references/workflow-schema.md` の `batch` ブロックが、系譜判定に必要な履歴を
+  持てる構造になっている
+  - [ ] review 側の cap 到達時挙動は変更されていない
+  - [ ] `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の
+  version が同じ値に上がっている
+  ## スコープ外（任意）
+  - review フェーズの cap（`batch.review_rework_count`）の挙動変更
+  - Notion への follow-up タスク自動起票そのもの。retrospect.yaml への draft 出力までを
+  この変更の範囲とし、外部サービス連携は別タスクとする
+  - 停止した `hook-listener-holding-bounds` の復旧作業（この変更とは独立に行う）
+  ## 制約・前提（任意）
+  ### 調査済み: completion の merge/PR 封印は batch では既に実装済み
+  `references/batch-mode.md:65` の Non-packet gates 表:
+  > `develop.completion` — Step C completion choice ... Auto-select **keep branch** —
+  > no merge, no push, no PR created.
+  batch モードは既にマージ・push・PR 作成のいずれも行わない。この点の追加実装は不要。
+  ### 調査で新たに見つかった問題: Step C の実行条件
+  `skills/develop/SKILL.md` の Step C（完了処理）の実行条件は
+  **「全 step completed — design のみ skipped 可 — 時のみ」**。
+  `verify.status` を `failed` のまま retrospect へ進めても、この条件のままでは Step C に
+  入れない。worktree の掃除（`git worktree remove`）も終了報告も行われず、integration
+  worktree が残る。受け入れ条件に挙げた「完了処理に到達できる」はこの実行条件の変更を指す。
+  ### 確定: interactive モードで verify が failed のときの完了方式
+  Step C の三択（マージ / ブランチを残す / PR を作成）は維持する。ただしデフォルト（推奨表示）を
+  「ブランチを残す」に切り替え、質問文に verify が `failed` である事実と `failed_items` の件数を
+  提示する。
+  interactive の本質は人が決めることなので、選択肢そのものは奪わない。塞ぐのは「デフォルトが
+  マージ」という一点で、現状はテストが落ちた状態でも Enter 一発でマージが選ばれる。
+  ### 変更対象ファイル（確定）
+  - `em-workflow/skills/develop/SKILL.md` — verify フェーズの rework 分岐、Step C の実行条件、
+  retrospect の signals
+  - `em-workflow/references/batch-mode.md` — Non-packet gates 表の `verify.failed` 行、
+  `batch` ブロックの説明
+  - `em-workflow/references/workflow-schema.md` — `batch` ブロックの構造
+  - `em-workflow/references/rework-task-synthesis.md` — **変更不要**（調査で確定）。cap の値も数え方も持たず、Invariant 7 が「interactive と batch は retry/round cap だけが違う」と述べるのみ。数え方を変えてもこの文言は成立する
+parent_branch: em-workflow/batch-verify-rework-lineage-cap/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: cc9509801574fa4c49a512cd0c267eed58b61874
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "変更対象は em-workflow プラグインの Markdown SSOT（skills/develop/SKILL.md, references/batch-mode.md, references/workflow-schema.md）とプラグインマニフェスト 2 件、および Python の構造テストのみで、UI・視覚的成果物・モックアップを一切生まない。プロジェクトにデザインシステムも存在しない。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "系譜カウントによる cap 判定"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1]
+  FR2:
+    title: "グローバル hard cap"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2]
+  FR3:
+    title: "cap 到達時は停止せず retrospect へ"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS3]
+  FR4:
+    title: "retrospect への失敗項目と証拠の引き渡し"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS4]
+  FR5:
+    title: "follow_up_drafts の新設"
+    status: tbd
+    tbd_reason: "draft の生成母集団が未決定 — 「cap 到達時点で未解決の `failed_items` 全件」か「系譜 cap に触れた ID のみ」か。後者を採ると hard cap 3 で停止したケース（毎ラウンド新規 ID で、系譜 cap に触れた ID が 1 つも無い）で draft が空になり、受け入れ条件「follow-up task の draft が定型出力される」が満たせない分岐が生じる。batch policy create-spec.requirement-clarification の action: codex_consultation が Codex CLI の usage limit により実行不能で、unresolved: record_tbd が適用された。キー・フィールド構成（origin_kind / origin_id / title / body）と Invariant 6 の引用方針は確定済みで、未確定なのは母集団のみ。"
+    excluded_reason: null
+    tasks: []
+    tests: [TS5]
+  FR6:
+    title: "Step C 実行条件の変更"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS6]
+  FR7:
+    title: "Step B 停止条件との整合"
+    status: tbd
+    tbd_reason: "整合の実現方法が未決定 — (a) 停止条件 3 の既存 carve-out を `failed` まで拡張して網羅的列挙を 2 遷移から 3 遷移へ更新する、(b) 既存 carve-out に触れず batch 専用の独立条項を新設する、(c) `failed` とは別の status を導入する（ただし受け入れ条件「`verify.status` は `failed` のまま」に反する）、のいずれか。既存 carve-out は「フェーズプロトコルが自動再エントリのために設定した `needs_update`」限定で、対象遷移を「厳密に次の 2 つ」と網羅的に宣言しており、tests/test_develop_skill_rewiring.py の TestStopCondition3AutomaticReentryCarveOut がその網羅性宣言と 2 遷移の所有ドキュメントを固定している。選ぶ選択肢によって変更対象テストが変わる。batch policy create-spec.requirement-clarification の codex_consultation が Codex CLI の usage limit により実行不能で、unresolved: record_tbd が適用された。なお本 FR が未解決のままだと FR3 と FR6 は実効しない（Step C の実行条件だけを直しても Step B が retrospect の手前で停止する）。"
+    excluded_reason: null
+    tasks: []
+    tests: [TS15]
+  FR8:
+    title: "workflow-schema.md の batch ブロック構造"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS7]
+  FR9:
+    title: "interactive の Step C デフォルト条件付き変更"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS11]
+  FR10:
+    title: "review 側の非変更"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS8]
+  FR11:
+    title: "batch 終端行の扱い"
+    status: tbd
+    tbd_reason: "終端状態の選択が未決定 — (a) 既存の失敗系終端状態を再利用する（外部サービスの判定ロジック無変更）、(b) 「完了処理まで到達したが verify は failed」を表す終端状態を新設する、(c) 通常完了として扱い failed の事実は報告本文でのみ伝える、のいずれか。batch 走行の唯一の機械可読な結果通知が終端行であるため、(c) は cap 到達走行を外部サービスが成功と誤判定するリスクを持つ。`references/batch-terminal-line.md` は task_description の変更対象ファイル一覧にも reference_scan_targets にも含まれていないため、同ドキュメントの変更要否自体も未確定。batch policy create-spec.requirement-clarification の codex_consultation が Codex CLI の usage limit により実行不能で、unresolved: record_tbd が適用された。"
+    excluded_reason: null
+    tasks: []
+    tests: [TS15]
+  FR12:
+    title: "プラグイン version の同時 bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS10]
+  NFR1:
+    title: "cap 定義の SSOT 単一化"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS12]
+  NFR2:
+    title: "rework-task-synthesis.md の非変更"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS9]
+  NFR3:
+    title: "テストの無依存性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS14]
+  NFR4:
+    title: "ドキュメント変更の検証方式"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "変更範囲の限定"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS14]
+  NFR6:
+    title: "未信頼入力扱いの引き継ぎ"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS13]
+
+batch:
+  review_rework_count: 0
+  verify_rework_count: 0
