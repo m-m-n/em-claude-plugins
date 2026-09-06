@@ -1,0 +1,169 @@
+task_id: task0002
+baseline_failures:
+  - "test_other_entries_match_pre_task_snapshot (test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot)"
+  - "test_em_review_entry_has_no_version_key (test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_key_set_unchanged (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)"
+  - "test_em_review_entry_matches_pre_task_snapshot (test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot)"
+  - "test_em_review_entry_has_no_version_key (test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_key_set_unchanged (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)"
+  - "test_em_review_entry_has_no_version_key (test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_unchanged (test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged)"
+final_failures:
+  - "test_other_entries_match_pre_task_snapshot (test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot)"
+  - "test_em_review_entry_has_no_version_key (test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_key_set_unchanged (test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)"
+  - "test_em_review_entry_matches_pre_task_snapshot (test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot)"
+  - "test_em_review_entry_has_no_version_key (test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_has_no_version_key (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_key_set_unchanged (test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged)"
+  - "test_em_review_entry_has_no_version_key (test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key)"
+  - "test_em_review_entry_unchanged (test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged)"
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_verify_cap_run_continuation.TestBatchCapExceptionClausePlacement.test_clause_label_present_in_step_b
+      - tests.test_verify_cap_run_continuation.TestBatchCapExceptionClausePlacement.test_applicability_is_conjunctive_batch_and_cap_failed
+      - tests.test_verify_cap_run_continuation.TestBatchCapExceptionClausePlacement.test_stop_condition_3_exception_wording
+      - tests.test_verify_cap_run_continuation.TestBatchCapExceptionClausePlacement.test_stop_condition_1_exception_wording
+      - tests.test_verify_cap_run_continuation.TestBatchCapExceptionClausePlacement.test_non_applicability_names_other_failed_reasons
+      - tests.test_verify_cap_run_continuation.TestBatchCapExceptionClausePlacement.test_non_applicability_excludes_interactive
+      - tests.test_verify_cap_run_continuation.TestBatchCapExceptionClausePlacement.test_verify_status_stays_failed_no_deferred_status
+    red_confirmed: true
+    red_reason: >-
+      setUpClass raised ValueError: substring not found (BATCH_CAP_EXCEPTION_LABEL
+      absent from Step B before the clause was written); after adding the clause
+      body all seven tests passed.
+  AC-2:
+    tests: []
+    red_reason: >-
+      Pure regression guard, verified by running
+      tests/test_develop_skill_rewiring.py (not modified by this task) after
+      the implementation: all its tests, including
+      TestStopCondition3AutomaticReentryCarveOut's exhaustiveness assertions,
+      pass unmodified. This task additionally pins the new clause's placement
+      OUTSIDE the carve-out block's own text range
+      (TestBatchCapExceptionClausePlacement.test_clause_sits_outside_the_existing_carve_out_block).
+      No pre-implementation red state applies (the carve-out block itself was
+      never touched, so there is nothing to watch go red-to-green for this
+      criterion specifically).
+  AC-3:
+    tests:
+      - tests.test_verify_cap_run_continuation.TestTurnEndConditionsReferenceTheNewClause.test_pointer_sentence_names_conditions_1_and_3
+      - tests.test_verify_cap_run_continuation.TestTurnEndConditionsReferenceTheNewClause.test_pointer_sentence_follows_item_7_without_disturbing_it
+      - tests.test_verify_cap_run_continuation.TestTurnEndConditionsReferenceTheNewClause.test_item_7_text_is_still_present_verbatim
+    red_confirmed: true
+    red_reason: >-
+      test_pointer_sentence_names_conditions_1_and_3 failed with AssertionError
+      ('条件 1' not found in turn_end_section); test_pointer_sentence_follows_item_7_without_disturbing_it
+      raised ValueError (BATCH_CAP_EXCEPTION_LABEL substring not found) before
+      the pointer sentence was added after item 7.
+  AC-4:
+    tests:
+      - tests.test_verify_cap_run_continuation.TestStepCHeadingExpressesCapContinuation.test_new_heading_present_in_skill_md
+      - tests.test_verify_cap_run_continuation.TestStepCHeadingExpressesCapContinuation.test_old_heading_is_gone_from_skill_md
+      - tests.test_verify_cap_run_continuation.TestMatchersRejectOldWording.test_heading_matcher_rejects_the_old_heading
+      - tests.test_verify_cap_run_continuation.TestMatchersRejectOldWording.test_heading_matcher_accepts_the_new_heading
+    red_confirmed: true
+    red_reason: >-
+      test_new_heading_present_in_skill_md failed with AssertionError (new
+      heading string not found; diff showed only the old "時のみ" wording)
+      before the SKILL.md heading was rewritten.
+  AC-5:
+    tests:
+      - tests.test_verify_cap_run_continuation.TestStepCHeadingExpressesCapContinuation.test_quiet_output_module_constant_matches_byte_for_byte
+      - tests.test_verify_cap_run_continuation.TestStepCHeadingExpressesCapContinuation.test_stop_contract_module_constant_matches_byte_for_byte
+      - tests.test_verify_cap_run_continuation.TestStepCHeadingExpressesCapContinuation.test_all_three_sites_are_identical
+      - tests.test_verify_cap_run_continuation.TestStepCHeadingExpressesCapContinuation.test_sibling_modules_setup_class_do_not_raise
+    red_confirmed: true
+    red_reason: >-
+      test_quiet_output_module_constant_matches_byte_for_byte and
+      test_stop_contract_module_constant_matches_byte_for_byte both failed with
+      AssertionError (old heading constant != NEW_STEP_C_HEADING) before the
+      two sibling test modules' STEP_C_HEADING constants were updated. Also
+      confirmed live: after updating SKILL.md's heading alone (before updating
+      the constants), `python3 -m unittest tests.test_batch_quiet_output_skill_wiring
+      tests.test_batch_stop_contract_skill_wiring` failed with ValueError
+      (substring not found) in every class that slices on STEP_C_HEADING,
+      since the old constant no longer matched the rewritten SKILL.md text.
+  AC-6:
+    tests:
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_stop_point_identifier_is_named
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_terminal_state_is_stopped_not_completed
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_executed_step_is_verify
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_detail_names_step_c_completion
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_one_line_per_run_emitted_right_after_step_c_report
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_existing_section_content_is_retained
+    red_confirmed: true
+    red_reason: >-
+      All five content checks (stop point identifier, stopped-not-completed
+      prose, executed-step-is-verify prose, detail wording, one-line-per-run
+      wording) failed with AssertionError (substring not found in the
+      pre-existing バッチ終端行 section text) before the new paragraph was
+      appended; test_existing_section_content_is_retained was already green
+      pre-implementation (it pins pre-existing content) and stayed green after.
+  AC-7:
+    tests: []
+    red_reason: >-
+      Verifiable outcome is a file-diff check, not a unit test: this task
+      never wrote to em-workflow/references/batch-terminal-line.md (confirmed
+      by `git status --short` showing no change to that path after
+      implementation) and the file is absent from expected_files. No
+      in-repo unit test can assert "this task's own git history never touched
+      path X" from a single working-tree snapshot, so this criterion is
+      verified by construction / by the git diff rather than by tests: []
+      is intentional here, not an oversight.
+  AC-8:
+    tests:
+      - tests.test_verify_cap_run_continuation.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - tests.test_verify_cap_run_continuation.TestMatchersRejectOldWording.test_heading_matcher_rejects_the_old_heading
+      - tests.test_verify_cap_run_continuation.TestMatchersRejectOldWording.test_heading_matcher_accepts_the_new_heading
+      - tests.test_verify_cap_run_continuation.TestMatchersRejectOldWording.test_continuation_matcher_rejects_old_stop_on_cap_wording
+      - tests.test_verify_cap_run_continuation.TestMatchersRejectOldWording.test_forged_old_text_is_well_formed_and_found
+      - tests.test_verify_cap_run_continuation.TestMatchersRejectOldWording.test_continuation_matcher_accepts_the_real_clause
+    red_confirmed: false
+    red_reason: >-
+      These are negative-proof / non-vacuity / stdlib-only checks whose
+      subject is a pure Python function or the module's own import list, not
+      SKILL.md content -- they were true (or false, for the "rejects"
+      negative-proof cases, which is their PASSING assertion) from the moment
+      the module was written, independent of the SKILL.md implementation
+      order. test_continuation_matcher_accepts_the_real_clause is the one
+      exception that did go red-to-green (it depends on the real clause
+      existing) but is listed under AC-1/AC-3's red-confirmed set above via
+      the shared setUpClass failure; grouped here because it is also part of
+      the AC-8 matcher inventory. The genuinely red-confirmed member of this
+      set is covered by AC-1's red_reason (setUpClass ValueError) since both
+      draw on the same clause_section fixture.
+notes: >-
+  Deviation from AC-6's literal wording is intentional and load-bearing, not
+  an oversight: writing the literal reason-code string
+  "verify_rework_cap_reached" into SKILL.md (as AC-6's shorthand
+  "reason=verify_rework_cap_reached" would require if taken as a literal
+  string requirement) breaks two pre-existing, task0002-non-owned whole-file
+  absence guards -- TestWholeFileForbiddenLiteralAbsence in
+  tests/test_batch_quiet_output_skill_wiring.py and
+  TestStateValueGuardWholeFileScope in
+  tests/test_batch_stop_contract_skill_wiring.py -- both of which enforce
+  NFR1 (the reason code is defined in exactly one place,
+  references/batch-terminal-line.md, which NFR5 forbids this task from
+  changing). Per D8's ownership table this task may only touch those two
+  modules' STEP_C_HEADING constants, so the guards themselves could not be
+  relaxed even if that were desirable. Confirmed empirically: temporarily
+  writing "verify_rework_cap_reached" into the バッチ終端行 section during
+  drafting reproduced exactly this failure before being reverted in favor of
+  naming the stop point identifier `verify-rework-cap` instead (which
+  `references/batch-terminal-line.md`'s Stop point coverage table already
+  binds to that reason code, per IMPLEMENTATION.md D5) -- the same
+  NFR1-preserving pattern this document already uses for every other
+  terminal-line value (the `state` domain, the removed "2 つの終端状態"
+  count). Full test suite run after implementation: 3139 tests, 12 failures,
+  identical set (by name) to the 12-failure baseline recorded in 4a -- all
+  concern an unrelated em-review marketplace-entry `version` key left over
+  from a prior merged feature, not touched by this task.

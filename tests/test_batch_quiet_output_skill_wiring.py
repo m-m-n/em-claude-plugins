@@ -118,7 +118,7 @@ DESIGN_BRANCH_HEADING = "### design ステップ分岐"
 VERIFY_HEADING = "### verify フェーズ"
 RETROSPECT_HEADING = "### retrospect フェーズ（収集は自動・承認不要）"
 STEP_C_HEADING = (
-    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — 時のみ）"
+    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、cap 到達により verify が `failed` のまま残る場合のみ）"
 )
 ONCE_BOUNDARY_HEADING = "## `--once` のフェーズ境界"
 STOP_REPORT_HEADING = "## 停止時の報告（停止条件 2-4 のみ）"
