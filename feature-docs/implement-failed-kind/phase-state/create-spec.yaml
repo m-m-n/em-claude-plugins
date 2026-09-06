@@ -1,11 +1,11 @@
 schema_version: 1
 feature: implement-failed-kind
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: b821a79417d628d24d11dbbbf857c97f60adb0fc
 last_input_digest: "sha256:0ff1362aa308e63635f83dae822637dd86554e132232f13b829a9a4b13bd902b"
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -88,10 +88,16 @@ worker_runs:
     input_digest: "sha256:5909c0ad7e97fe95094d7d25ee8966aa6b45528d07fafd81266f428b96584425"
     output_digest: null
   - request_id: create-spec-run-0003
-    status: dispatched
+    status: completed
     input_digest: "sha256:0ff1362aa308e63635f83dae822637dd86554e132232f13b829a9a4b13bd902b"
     output_digest: null
-artifacts: []
+artifacts:
+  - path: feature-docs/implement-failed-kind/REQUIREMENTS.md
+    sha256: "sha256:9fe53dc0de7a001b3ac3a34d333db75497a70e6ce73a3b4e9e7b2a2db686ba30"
+    produced_by: create-spec-run-0003
+  - path: feature-docs/implement-failed-kind/SPEC.md
+    sha256: "sha256:21351add06c891f167b9d092dd3d7a017b997da3db281da337c02b9ae97af4ac"
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
