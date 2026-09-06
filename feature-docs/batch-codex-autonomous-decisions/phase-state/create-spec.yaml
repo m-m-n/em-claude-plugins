@@ -1,14 +1,18 @@
 schema_version: 1
 feature: batch-codex-autonomous-decisions
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: e8462d2f03b26ebd9791f5b2a75268266b2c2a2f
-last_input_digest: null
-active_request_id: null
+base_revision: b95dd25064d604f07900d62c999c53ffce56bd17
+last_input_digest: sha256:4ea197269d7d6c3ab62bb4a577834e9f47aacbc77229bb84e70e6897dfc224c1
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:4ea197269d7d6c3ab62bb4a577834e9f47aacbc77229bb84e70e6897dfc224c1
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
