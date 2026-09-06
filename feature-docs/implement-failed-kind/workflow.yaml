@@ -320,3 +320,12 @@ batch:
     rounds: 1
     failed_id_counts:
       TS-5: 1
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
