@@ -159,9 +159,62 @@ workflow:
     status: completed
     completed_at_commit: bf8f9e16160b1f1b495c426ae1977f0d375f27c5
   - id: verify
-    status: in_progress
-    result: null
+    status: completed
+    result: pass
     failed_items: []
+    completed_at_commit: d2eff233970a939669fda8358a342bad603bc8ed
+    note: >-
+      `python3 -m unittest discover -s tests` -> 3255 tests, 12 failures, exit 1.
+      The 12 failures are ALL pre-existing on `main` and lie entirely outside this
+      feature's Declared Change Set, so none is attributed to this feature. They
+      are: test_em_review_entry_has_no_version_key in
+      test_batch_quiet_output_version_bump / test_batch_stop_contract_version_bump /
+      test_goal_vs_spec_divergence_version_bump / test_plugin_version_parity /
+      test_recycled_task_id_carveout_version_bump / test_rework_contract_drift_version_bump /
+      test_routeback_reset_scope_version_bump, test_em_review_entry_key_set_unchanged in
+      test_goal_vs_spec_divergence_version_bump / test_rework_contract_drift_version_bump,
+      test_em_review_entry_matches_pre_task_snapshot in test_llm_led_review_user_docs,
+      test_em_review_entry_unchanged in test_spec_file_set_completeness_version_bump, and
+      test_other_entries_match_pre_task_snapshot in test_batch_policy_option_id_version_bump.
+      Every one of them pins the `em-review` entry of `.claude-plugin/marketplace.json`
+      as having NO `version` key. Hand-made commit 75c8fbf
+      ("chore(reviewers): retire the sunsetting Vertex models from the review chains",
+      2026-09-04, outside any em-workflow feature) set that entry to `version: 0.5.7`,
+      which is what `.claude/rules/core-plugin-version-bump.md` requires; the 12
+      assertions are therefore stale snapshots, not a manifest defect. The same 12
+      failures reproduce byte-for-byte in the main working tree at `main`
+      (3108 tests, 12 failures) and this branch touches the `em-review` entry not at
+      all — `git diff be58f8a HEAD -- .claude-plugin/marketplace.json` is a single
+      hunk changing only em-workflow 0.1.61 -> 0.1.62. Repairing them means deleting
+      assertions inside seven other features' test modules, which NFR5 places outside
+      this change's range, so no rework was routed; the drift is reported as a
+      separate follow-up instead.
+      This feature's own scenarios all pass. `discover -p 'test_verify_*'` -> 81
+      tests OK, and test_retrospect_verification_handoff /
+      test_step_c_verify_failed_default / test_develop_skill_rewiring /
+      test_batch_quiet_output_skill_wiring / test_batch_stop_contract_skill_wiring
+      -> 251 tests OK, covering TS1 .. TS6, TS8, TS11, TS12, TS13, TS15.
+      The manual/direct scenarios were performed: TS9 —
+      `git diff --name-status be58f8a HEAD` does not contain
+      `em-workflow/references/rework-task-synthesis.md` (NFR2/SC6 hold). TS10 —
+      `em-workflow/.claude-plugin/plugin.json` and the em-workflow entry of
+      `.claude-plugin/marketplace.json` both read `0.1.62`, up from `0.1.61`
+      (FR12). TS14 (range half) — the non-`feature-docs/` non-`test-docs/` diff is
+      13 paths: the two manifests, batch-mode.md, workflow-schema.md,
+      skills/develop/SKILL.md and eight files under `tests/`, all inside NFR5's
+      range (SC5). TS7 (direct half) — workflow-schema.md's `batch` block reads
+      `review_rework_count` plus `verify_rework:` with the two keys `rounds` and
+      `failed_id_counts`, and carries no cap value, deferring meaning to the
+      "## `batch` block" section (FR8/NFR1).
+      SC1 .. SC6 hold. No requirement carries `status: excluded`, so no scenario
+      was skipped on that ground.
+    pre_existing_suite_failures:
+      count: 12
+      scope: outside this feature's Declared Change Set
+      origin_commit: 75c8fbf
+      subject: >-
+        stale snapshots asserting the `em-review` marketplace entry has no
+        `version` key; reproduce identically on `main`
   - id: retrospect
     status: pending
 
