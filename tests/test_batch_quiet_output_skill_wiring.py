@@ -446,10 +446,13 @@ class TestDesignVerifyRetrospectBatchClauses(unittest.TestCase):
         self._assert_clause(self.retrospect_clause, "retrospect フェーズ")
 
     def test_verify_rework_cap_wording_unaltered(self):
-        # AC-3 regression guard: the pre-existing rework cap/counter rule
-        # is untouched by this task's addition.
-        self.assertIn("`batch.verify_rework_count == 0`", self.verify_section)
-        self.assertIn("カウンタを +1", self.verify_section)
+        # task0001 (batch-verify-rework-lineage-cap) replaced the fixed
+        # counter cap with an independently-evaluated lineage cap / hard
+        # cap pair. Pin the new wording here so a regression back to the
+        # old fixed counter is caught by this non-regression guard.
+        self.assertIn("系譜 cap", self.verify_section)
+        self.assertIn("hard cap", self.verify_section)
+        self.assertIn("batch.verify_rework", self.verify_section)
 
 
 class TestStepCSourcingWiring(unittest.TestCase):

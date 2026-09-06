@@ -61,7 +61,7 @@ three phases.
 | `review.auto-fix-conflict` — Phase R4 conflict group (`references/review-phase.md`: one option per sibling + `Apply all` + `Skip this site`, via AskUserQuestion) | Skip the site — abort all group members; conflicting prescriptions are not mechanically resolvable. Full detail: `references/review-phase.md` Phase R4 |
 | `review.auto-fix-judgment` — Phase R4 needs-judgment finding (`references/review-phase.md`: parsed alternatives or `Apply as-is` / `Skip`, via AskUserQuestion) | Auto-select **Apply as-is (editor interprets)**. Full detail: `references/review-phase.md` Phase R4 |
 | `review.residual-critical-high` — Phase R5 completion gate when `residual_critical_high > 0` (`references/review-phase.md`: another round / rework / explicit acceptance, via AskUserQuestion) | Auto-rework once (`batch.review_rework_count` cap 1); at cap, mark residuals `deferred` with reason `"batch mode: rework cap reached"` and complete the step. Full detail: `references/review-phase.md` Phase R5 |
-| `verify.failed` — verify-phase failure (`skills/develop/SKILL.md` 「verify フェーズ」: rework to implement / rework to review / abort, via AskUserQuestion) | Auto-rework once (`batch.verify_rework_count` cap 1); at cap, stay `failed` and stop with a report. Full detail: `skills/develop/SKILL.md` 「verify フェーズ」 |
+| `verify.failed` — verify-phase failure (`skills/develop/SKILL.md` 「verify フェーズ」: rework to implement / rework to review / abort, via AskUserQuestion) | Auto-rework, gated by two independently-evaluated caps on `batch.verify_rework`: a lineage cap (per failed-item-ID recurrence) and a hard cap (round count). At either cap, `verify.status` stays `failed` and the run proceeds to retrospect without stopping. Full detail: `skills/develop/SKILL.md` 「verify フェーズ」 |
 | `develop.completion` — Step C completion choice (`skills/develop/SKILL.md` Step C: merge / keep branch / open PR, via AskUserQuestion) | Auto-select **keep branch** — no merge, no push, no PR created. Full detail: `skills/develop/SKILL.md` Step C |
 
 The `{phase}.artifact-overwrite` family (`create-spec.artifact-overwrite`,
@@ -85,11 +85,15 @@ are unchanged per Purpose & activation.
 ```yaml
 batch:                       # created by the orchestrator on the first
   review_rework_count: 0     #   --batch run that touches this feature
-  verify_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
 ```
 
-Counters only. Never used to decide whether batch mode is active (that is
-the `--batch` flag's job, per-invocation).
+Structure and per-key meaning are defined in `references/workflow-schema.md`'s
+`batch` block; this file shows the same keys only, not their definition.
+Never used to decide whether batch mode is active (that is the `--batch`
+flag's job, per-invocation).
 
 ## Terminal line
 

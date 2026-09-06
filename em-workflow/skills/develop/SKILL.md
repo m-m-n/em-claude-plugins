@@ -465,13 +465,39 @@ verify step の status 遷移は対話時と変わらない）:
    SSOT Invariant 1）。タスク合成の中身（grouping / task ID 割当 /
    metadata 導出 / 検証カバレッジ等）は同 SSOT が定義し、ここでは繰り返さ
    ない。pass → `completed`
-   （batch: 確認せず自動 rework。`batch.verify_rework_count == 0` なら
-   interactive と同じ手順で rework-planner を dispatch し、
+   （batch: 確認せず自動 rework。cap 判定は次段落「batch 自動 rework の
+   系譜 cap」のとおり系譜 cap と hard cap を独立に評価する。どちらも
+   未到達なら interactive と同じ手順で rework-planner を dispatch し、
    `${CLAUDE_PLUGIN_ROOT}/references/rework-task-synthesis.md` に従って
-   patch を検証・適用して implement / verify を `pending` に戻し
+   patch を検証・適用して implement / verify を `pending` に戻す
    （`implement` の `pending` 復帰は同 patch の中で行う — 別書き込みには
-   しない）カウンタを +1、既に 1 以上なら `failed` のまま報告して停止）。
+   しない）。どちらか一方でも到達していれば rework を回さず、
+   `verify.status` は `failed` のまま走行を停止せず retrospect フェーズへ
+   進む。残った `failed_items` に `deferred` を与えない）。
    いずれの分岐も workflow.yaml 更新後に commit-docs.sh でコミットする
+
+**batch 自動 rework の系譜 cap**: batch モードの verify 失敗時、自動
+rework を回すかどうかは次の 2 つの独立した判定で決める。どちらか一方でも
+到達していれば cap 到達とする。
+
+- 系譜 cap（値 1）: `batch.verify_rework.failed_id_counts` が保持する
+  failed item ID ごとの累積出現回数が 2 に達した時点（同一 ID が 2 回目の
+  `failed_items` に現れた時点）で到達する。同じ問題が直らないことを検出
+  する。過去ラウンドの `failed_items` に現れなかった新規 ID は累積出現
+  回数が 1 のため系譜 cap に触れず、新規予算を得る
+- hard cap（値 3）: `batch.verify_rework.rounds`（rework を実行した
+  ラウンド数）が 3 に達した時点で到達する。新しい問題が湧き続けることを
+  検出する
+
+カウントの更新規則: verify ラウンドが `failed_items` を確定させたら、
+そのラウンドに現れた**全 ID** について `failed_id_counts` の累積出現
+回数を 1 増やす（1 回目のラウンドも含む）。続けて `rounds` を 1 増やす。
+この更新は rework を回すかどうかの判定より先に行う。
+
+cap 到達時は走行を停止しない。`verify.status` は `failed` のまま次の
+フェーズ（retrospect）へ進む。残った `failed_items` に `deferred` を
+与えない（review の defer は「リスク受容の記録」だが、verify の defer は
+「検証の偽装」になるため）。
 
 ### retrospect フェーズ（収集は自動・承認不要）
 
