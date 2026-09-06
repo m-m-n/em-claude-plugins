@@ -477,14 +477,19 @@ Triggered whenever a launched implementer's `Task()` call returns.
      script gathers evidence in this fixed order, stopping at the first
      unmet condition with the named residual reason code and invoking
      nothing further: an Agent index entry exists for the task (else
-     `no-agent-entry`); the entry carries a session identity (else
-     `no-session-id`); the identity passes SC5's format-validation rule
-     (else `invalid-session-id`); the current session's identity and start
-     time resolve per D2 (else `current-session-unknown`); the recorded
-     identity differs from the current one (else `same-session`); the
-     D1-derived transcripts directory exists and the assembled transcript
-     path resolves inside it (else `transcripts-dir-missing`); the
-     transcript yields at least one usable timestamp (else
+     `no-agent-entry`); that entry is bound to the launch under recovery,
+     per D7 — its own `at` is not earlier than the `at` of the LAST
+     `launched` journal event recorded for the task by more than D7's
+     tolerance, with both timestamps parsing and comparable, skipped
+     entirely when the journal records no `launched` event for the task at
+     all (else `stale-agent-entry`); the entry carries a session identity
+     (else `no-session-id`); the identity passes SC5's format-validation
+     rule (else `invalid-session-id`); the current session's identity and
+     start time resolve per D2 (else `current-session-unknown`); the
+     recorded identity differs from the current one (else `same-session`);
+     the D1-derived transcripts directory exists and the assembled
+     transcript path resolves inside it (else `transcripts-dir-missing`);
+     the transcript yields at least one usable timestamp (else
      `transcript-unreadable`); and that newest usable timestamp is strictly
      older than the current session's start, per D3 (else
      `transcript-active`). Only when every condition holds does it invoke
@@ -499,8 +504,8 @@ Triggered whenever a launched implementer's `Task()` call returns.
      residual outcome from either script leaves the journal byte-identical
      to its pre-call content: the Residual above stands unchanged as this
      candidate's outcome. Full contract: IMPLEMENTATION.md's SC2
-     (`journal-append-failed.py`), SC3 (`recover-orphaned-task.py`) and SC6
-     (the reason-code set).
+     (`journal-append-failed.py`), SC3 (`recover-orphaned-task.py`), SC6
+     (the reason-code set) and D7 (the launch-binding rule).
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
