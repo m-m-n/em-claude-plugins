@@ -78,9 +78,9 @@ orchestrator is a helper whose reason value is drawn from a closed set.
 - **Version bump ownership**: exactly one task per round touches
   `em-workflow/.claude-plugin/plugin.json` and
   `.claude-plugin/marketplace.json` (NFR6) — task0004 for the implement
-  round, task0006 for the review-rework round, which is the only task of that
-  round changing a file under `em-workflow/`. No other task edits either
-  file.
+  round, task0006 for the review-rework round, task0007 for the verify-rework
+  round; each is the only task of its round changing a file under
+  `em-workflow/`. No other task edits either file.
 - **Documentation ownership (NFR7)**: `implement-phase.md`'s I.2.b
   Recovery / Residual block is the single owning section for the orphan
   recovery rule. Every other location cites it by repository-relative path.
@@ -121,12 +121,32 @@ SC3 never guesses which session is current. It accepts either:
 Form 1 takes precedence. With form 2, resolution scans the resolved
 transcripts directory ordered by modification time, newest first, for the
 first transcript containing the token; that file's name stem is the current
-session identity and its **first entry's timestamp** is the current session's
-start. This settles the SPEC's carried-forward question in favour of the
-"first entry of the current session's transcript" source. The scan may be
-bounded by the implementation (the current session's transcript is by
-construction among the newest); a miss is `current-session-unknown`
-(Residual).
+session identity and the **earliest parseable timestamp among its entries**
+is the current session's start. This settles the SPEC's carried-forward
+question in favour of the "first entry of the current session's transcript"
+source. The scan may be bounded by the implementation (the current session's
+transcript is by construction among the newest); a miss is
+`current-session-unknown` (Residual).
+
+**Line-level tolerance in the start-time derivation.** The derivation reads
+the committed transcript's entries with the same tolerance the newest-activity
+reader (D3) applies: blank lines, lines that are not valid JSON, lines that
+are not JSON objects, and entries whose `timestamp` is absent or unparsable
+are SKIPPED. Resolution fails — `current-session-unknown` (Residual) — only
+when no entry of the committed transcript yields a parseable timestamp. It is
+never abandoned on account of what the first line alone happens to contain.
+Committing to the first marker-bearing transcript is unaffected: a later
+failure never falls through to an older transcript.
+
+*Why the earliest instant, and why not the first line.* Transcripts in the
+harness's real layout open with a record that carries no `timestamp`, so a
+derivation reading only the first line resolves nothing in practice and form 2
+degrades to `current-session-unknown` on every real invocation — the verify
+phase's MANUAL-D2 item measured this on 40 of 40 sampled files. The start
+instant is the threshold a recorded session's newest activity must be strictly
+older than (D3), so choosing the earliest parseable instant rather than the
+positionally-first one can only make a recovery harder to prove, never easier:
+the Conventions' fail-safe direction (NFR1) holds under the revision.
 
 The orchestrator emits the token in a command it runs before the recovery
 invocation, then passes the same token — documented by task0004 in the
@@ -138,7 +158,7 @@ verify, and the fail-safe direction means a miss costs only the
 pre-existing Residual behaviour. If a direct source of the current session
 identity turns out to be available, it feeds form 1 without any contract
 change.
-Affects task0003, task0004.
+Affects task0003, task0004, task0007.
 
 ### D3 — Proof condition and timestamp comparison
 
@@ -232,6 +252,7 @@ Affects task0003, task0004, task0006.
 | A live sibling session blocked on a long tool call shows no recent transcript activity | Low | A live task could be recorded `failed` | Requires the recorded identity to differ from the current session as well; one develop run per feature is a pre-existing assumption; SC2's in-lock replay keeps the journal consistent if the sibling later writes a terminal event |
 | SC4's line shape drifts from the existing `failed` writers | Medium | Downstream readers mis-parse the new line | Shape is derived from the existing writers, not invented; TS-4 proves the launch guard accepts the result |
 | Verbatim documentation constants in the test suite break when the prose is rewritten | High | Test failures | task0004 owns both the prose and the constants in one change |
+| The D2 start-time derivation does not match the shape of a real transcript's leading record (REALIZED — verify MANUAL-D2) | High | Form 2 resolves nothing, so the whole FR2 proof path degrades to `current-session-unknown`; fail-safe, but the feature never fires | The derivation reads the earliest parseable timestamp with line-level tolerance (D2); TS-14 pins a fixture whose leading record carries no `timestamp`, so the divergence can no longer hide behind timestamped fixtures |
 | D7's tolerance is too small for the two hooks' clock granularity | Low | The genuine entry is rejected, so recovery does not fire and behaviour stays as today (fail-safe) | Both tolerance boundaries are pinned by tests; a miss costs only the pre-existing Residual, never a false recovery |
 | Two new scripts plus a hook change land in parallel | Medium | Integration mismatch at the SC2/SC3 boundary | SC2's parameter and outcome contract is pinned above; task0003 tests against a stub of that contract; TS-1 verifies the real pairing |
 
