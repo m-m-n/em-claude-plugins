@@ -58,7 +58,7 @@ workflow:
     status: completed
     completed_at_commit: aab6e2be59ab1ff0cbc5c00d660ccc9264bab2a6
   - id: implement
-    status: completed
+    status: pending
     completed_at_commit: c146ee35830802b2a006edd9911270a16a56353b
     base_commit: b49240996c198da1528b4b8d6265baab75a90931
   - id: review
@@ -142,6 +142,41 @@ tasks:
     notes: null
     branch: em-workflow/implement-failed-kind/task0005
 
+  task0006:
+    title: "Infra auto-resume re-entry admissibility and the develop-skill test anchor"
+    plan: tasks/task0006.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/references/rework-task-synthesis.md
+      - em-workflow/skills/develop/SKILL.md
+      - tests/test_failed_kind_resume_reentry.py
+      - tests/test_failed_kind_stop_condition.py
+      - tests/test_failed_kind_write_paths.py
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_rework_synthesis_contract.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR2, FR6, FR7, NFR1, NFR2, NFR4]
+    status: pending
+    notes: null
+    branch: null
+  task0007:
+    title: "The batch.infra_resume record: key set, materialising writer, cap ownership and value gloss"
+    plan: tasks/task0007.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/workflow-schema.md
+      - tests/test_failed_kind_batch_docs.py
+      - tests/test_failed_kind_schema.py
+    skills: []
+    domains: [api-contract, data-persistence, config-infra]
+    complexity: medium
+    requirements: [FR1, FR7, FR10, NFR1, NFR4]
+    status: pending
+    notes: null
+    branch: null
+
 review:
   status: pending
   rounds_completed: 1
@@ -164,15 +199,15 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-6]
+    tasks: [task0001, task0007]
+    tests: [TS-6, TS-13]
   FR2:
     title: "`failed_kind` のライフサイクル（設定・保持・クリア）"
     status: assumed
     tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`clear_on_leaving_failed` を採用した。`failed_kind` は implement を `failed` にする write でのみ設定し、implement が `failed` を離れる write set（I.2.c の route-back による pending 差し戻しと、develop Step B の infra 自動続行による pending 差し戻し）と同じ write set で null に戻す。追加の write もコミットも作らない。"
     excluded_reason: null
-    tasks: [task0001, task0002, task0003]
-    tests: [TS-6, TS-7, TS-8]
+    tasks: [task0001, task0002, task0003, task0006]
+    tests: [TS-6, TS-7, TS-8, TS-11]
   FR3:
     title: "I.2.c abort 経路での `failed_kind` 書き込み"
     status: ok
@@ -199,15 +234,15 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0003]
-    tests: [TS-1, TS-2, TS-8]
+    tasks: [task0003, task0006]
+    tests: [TS-1, TS-2, TS-8, TS-11, TS-12]
   FR7:
     title: "`infra` 自動続行の回数上限とその記録"
     status: assumed
     tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`cap_2` を採用した。記録先のキー名は workflow.yaml の `batch.infra_resume` で、メンバーキーは `rounds`（実施済み回数、feature 単位で単調増加・リセットなし）と `cap`（上限）。カウント更新は implement を `pending` に差し戻す write と同一 write set で行い、1 回のコミットで確定させる。`rounds` が `cap` に達したら decision 扱いで停止し、報告文に上限到達を理由として明記する。キー欠落は `rounds: 0` / `cap: 2` として読む。"
     excluded_reason: null
-    tasks: [task0001, task0003]
-    tests: [TS-4, TS-6, TS-8]
+    tasks: [task0001, task0003, task0006, task0007]
+    tests: [TS-4, TS-6, TS-8, TS-11, TS-13]
   FR8:
     title: "`infra` 自動続行を適用するモードの範囲"
     status: assumed
@@ -227,22 +262,22 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0004]
-    tests: [TS-9]
+    tasks: [task0004, task0007]
+    tests: [TS-9, TS-13]
   NFR1:
     title: "SSOT 規律"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004]
-    tests: [TS-6, TS-7, TS-8, TS-9]
+    tasks: [task0001, task0002, task0003, task0004, task0006, task0007]
+    tests: [TS-6, TS-7, TS-8, TS-9, TS-11, TS-13]
   NFR2:
     title: "write とコミットの単位を変えない"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003]
-    tests: [TS-1, TS-7, TS-8]
+    tasks: [task0002, task0003, task0006]
+    tests: [TS-1, TS-7, TS-8, TS-12]
   NFR3:
     title: "プラグイン version bump"
     status: ok
@@ -255,11 +290,11 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004, task0005]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006, task0007]
     tests: [TS-5]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}

@@ -233,6 +233,67 @@ neither can reconcile mechanically.
 
 *Affected tasks*: task0005 owns; every other task must not touch either file.
 
+### D10 — The auto-resume's re-entry admissibility is one contract across three documents (round-1 rework)
+
+Added by the round-1 rework. D4 states the auto-resume's write set; it does
+not state what makes the resumed `implement` entry ADMISSIBLE. Three
+documents own parts of that one contract, and task0006 is the single owner
+of all three parts:
+
+| Part | Owning document |
+|---|---|
+| The entry routes into `implement: pending` and each route's satisfying condition | `em-workflow/references/implement-phase.md`, Step I.0 |
+| The scope of the invariant that requires a registered rework task before `implement` returns to `pending` | `em-workflow/references/rework-task-synthesis.md`, Invariant 1 |
+| The write set's deliberate omission of task-level state, and what handles the failed task after the resume | `em-workflow/skills/develop/SKILL.md`, the auto-resume block |
+
+Contract: the auto-resume route is admissible when at least one task's
+reconciled state is `failed`; it requires no `pending` task; the rework
+invariant governs rework-derived transitions only; the resumed phase
+converges through the implement phase's own reconcile and failure branch,
+with the batch retry policy and the second-failure abort unchanged; and a
+non-fresh entry satisfying neither condition remains a protocol error with
+its existing ABORT. Each of the three documents states its own part once and
+cites the others by repository-relative path (D7's citation discipline
+applies unchanged).
+
+The `failed_kind` lifecycle clear (D1) belongs to the write set that moves
+the step off `failed`; on a phase entered from `failed` that write set is
+the phase-start `in_progress` write, which is where the document names it —
+the route-back set's clause re-asserts null inside its own single write set
+and states that as its role.
+
+*Affected tasks*: task0006 owns all three parts; task0001's schema
+statements of the lifecycle rule are unchanged.
+
+### D11 — The `batch.infra_resume` record's key set, writer and cap ownership (round-1 rework)
+
+Added by the round-1 rework. C3 defines the record; it does not say who
+materialises it, and the citation of the cap's owner drifted between the
+three documents that mention it. task0007 is the single owner of the
+correction, across two documents:
+
+- `em-workflow/references/workflow-schema.md` owns the key path, the member
+  names, the unset-read defaults (including the cap's default value), and —
+  newly — the write path that materialises the record, which is the same
+  orchestrator write that creates the `batch` block.
+- `em-workflow/references/batch-mode.md` owns the `batch` block's creation
+  rule and shows the block's key set; its snippet's key set must equal the
+  schema's, and its citation names the schema for the key and its defaults
+  and the develop skill for the consuming judgment.
+- `em-workflow/skills/develop/SKILL.md` continues to own only the consuming
+  judgment (when the count is incremented, how the cap is compared, what
+  happens at the cap) and is not edited by this correction.
+
+The record's initial member values equal the unset-read defaults, so
+materialisation never produces a state the read rule would not have
+produced. The `failed_kind` vocabulary, its required-ness and its
+missing-value rule are unchanged; only the external-cause value's gloss
+gains the separation between what the value MEANS and which failures a
+write path can attribute to it today (fail-closed: a failure with no
+external-cause signal reads as the decision-required value).
+
+*Affected tasks*: task0007 owns; task0006 must not edit either document.
+
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
