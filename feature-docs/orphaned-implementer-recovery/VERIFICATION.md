@@ -41,6 +41,7 @@ repeated here.
 | TS-11 | Version consistency (NFR6): `em-workflow/.claude-plugin/plugin.json` and the em-workflow entry of `.claude-plugin/marketplace.json` | Both parse, declare the same version, and that version is higher than at the feature's base commit | Manual |
 | TS-12 | Dependency and isolation constraints (NFR4, NFR5): the whole suite under the project test command | It passes with only the standard library available, all new tests live in repository-root `tests/` as `test_*.py`, and no test reads or writes real `~/.claude` state | Integration |
 | TS-13 | Launch binding (IMPLEMENTATION.md D7): the journal records a newer `launched` event for the task than the newest agent index entry for it — a retry whose index write was missed, with a stale entry from an ended session still present, that session's transcript quiet since before the current session started | The outcome is residual with reason `stale-agent-entry`, the journal is byte-identical to its pre-call content, and the journal helper is never invoked; the admitted boundary (entry timestamp within D7's tolerance of the last `launched`) still reaches its pre-existing outcome | Unit |
+| TS-14 | Current-session resolution against a real-shaped transcript (IMPLEMENTATION.md D2 form 2): the marker-bearing transcript's leading record carries no `timestamp` — the shape the harness actually writes — with later entries timestamped; plus the out-of-order-timestamp case, the two-marker-bearing-transcripts case, and the transcript yielding no parseable timestamp at all | The scan resolves the file-name stem and the earliest parseable timestamp as the current session's start, and an otherwise-proven orphan built on that transcript reaches `recovered` with exactly one `failed` line carrying reason `orphaned`; only a committed transcript with no parseable timestamp anywhere is `current-session-unknown`, and there the journal is byte-identical and no older transcript is adopted instead | Unit |
 
 ## Code Quality Verification
 
@@ -57,7 +58,7 @@ repeated here.
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
 | SC-A | FR1–FR9 are implemented and tested | The requirements coverage table below; every row names at least one task and one scenario |
-| SC-B | NFR1–NFR7 are satisfied | TS-3, TS-5, TS-13 (NFR1), TS-7 (NFR2), TS-8 (NFR3), TS-12 (NFR4, NFR5), TS-11 (NFR6), TS-10 (NFR7) |
+| SC-B | NFR1–NFR7 are satisfied | TS-3, TS-5, TS-13, TS-14 (NFR1), TS-7 (NFR2), TS-8 (NFR3), TS-12 (NFR4, NFR5), TS-11 (NFR6), TS-10 (NFR7) |
 | SC-C | TS-1 – TS-6 pass under `python3 -m unittest discover -s tests` | Run the test command; TS-1 and TS-4 exercise the real helper pairing after both scripts have merged |
 | SC-D | AC-1 – AC-6 of REQUIREMENTS.md are met | AC-1 → TS-8 and the entry-shape assertions of TS-1; AC-2 → TS-1; AC-3 → TS-4 plus the I.2.c text checked by TS-10; AC-4 → TS-3 and TS-5; AC-5 → TS-10; AC-6 → TS-1, TS-2, TS-3, TS-4 |
 | SC-E | The SSOT documents are updated under the cite-not-restate discipline | TS-10, plus the manual read-through below |
@@ -68,20 +69,20 @@ repeated here.
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
 | FR1 | task0001 | TS-1, TS-6 |
-| FR2 | task0003, task0006 | TS-1, TS-3, TS-13 |
+| FR2 | task0003, task0006, task0007 | TS-1, TS-3, TS-13, TS-14 |
 | FR3 | task0002 | TS-1, TS-2, TS-7 |
 | FR4 | task0002, task0004 | TS-4 |
-| FR5 | task0003, task0006 | TS-3, TS-5, TS-13 |
+| FR5 | task0003, task0006, task0007 | TS-3, TS-5, TS-13, TS-14 |
 | FR6 | task0003 | TS-5, TS-9 |
 | FR7 | task0004, task0006 | TS-10 |
 | FR8 | task0004 | TS-10 |
 | FR9 | task0001 | TS-6 |
-| NFR1 | task0002, task0003, task0006 | TS-3, TS-5, TS-13 |
+| NFR1 | task0002, task0003, task0006, task0007 | TS-3, TS-5, TS-13, TS-14 |
 | NFR2 | task0002 | TS-7 |
 | NFR3 | task0001 | TS-8 |
-| NFR4 | task0001, task0002, task0003, task0004, task0005, task0006 | TS-12 |
-| NFR5 | task0001, task0002, task0003, task0004, task0005, task0006 | TS-12 |
-| NFR6 | task0004, task0006 | TS-11 |
+| NFR4 | task0001, task0002, task0003, task0004, task0005, task0006, task0007 | TS-12 |
+| NFR5 | task0001, task0002, task0003, task0004, task0005, task0006, task0007 | TS-12 |
+| NFR6 | task0004, task0006, task0007 | TS-11 |
 | NFR7 | task0004, task0006 | TS-10 |
 
 ## Manual Testing (E2E Not Possible)
@@ -97,6 +98,12 @@ judgement:
       touched.
 - [ ] The marker-based current-session resolution (D2) finds the current
       session's transcript when tried once from a real session — read-only.
+      Pass condition: the resolution returns the current session's own
+      transcript stem together with a start time; a result of
+      `current-session-unknown` is a failure. TS-14 is the automated
+      counterpart pinning the leading-record shape this check exercises, so a
+      failure here means the real layout diverges from TS-14's fixture, not
+      that the fixture is missing.
 - [ ] The rewritten SSOT text reads as one owning section with citations
       elsewhere, with no rule duplicated (NFR7) — a reviewer read-through of
       `implement-phase.md`, `workflow-schema.md` and `em-workflow/README.md`.
@@ -118,6 +125,11 @@ judgement:
   that cannot be bound to the launch under recovery is never used as evidence
   about it, so a launch whose index write was missed cannot be judged by a
   previous launch's recorded session identity.
+- Current-session start derivation (NFR1, IMPLEMENTATION.md D2): TS-14 — the
+  start is the earliest parseable timestamp of the committed transcript, which
+  is the threshold a recorded session's activity must be strictly older than,
+  so the revised derivation can only narrow what is provable; a transcript
+  yielding no parseable timestamp still resolves to `current-session-unknown`.
 - Narrow write authority (NFR1): the journal helper rejects any reason
   outside the closed set (task0002 AC-3).
 - Test isolation (NFR5): TS-12 — no test reads or writes real `~/.claude`
@@ -127,7 +139,7 @@ judgement:
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 13 | 12 | 0 | 1 |
+| Test scenarios | 14 | 13 | 0 | 1 |
 | Success criteria | 6 | 5 | 0 | 1 |
 | Requirements | 16 | 16 | 0 | 0 |
 | Manual checks | 4 | 0 | 0 | 4 |
