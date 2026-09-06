@@ -60,6 +60,36 @@ entry exists" and "entry carries a session identity" steps above:
 - AC-6: TestAgentEntryBinding.test_ac6_* -- an entry that is both unbindable
   AND carries no `session_id` reports `stale-agent-entry`, proving the
   binding step runs before the session-identity read.
+
+Covers task0007 Acceptance Criteria (feature-docs/orphaned-implementer-recovery/
+tasks/task0007.md) -- D2 form 2's start-time derivation revised from "first
+entry's timestamp" to "earliest parseable timestamp among all entries",
+line-level tolerant (MANUAL-D2):
+
+- AC-1: TestCurrentSessionResolution.test_ac1_* -- a real-layout leading
+  record (JSON object, no `timestamp`) resolves via a later parseable entry
+  instead of failing outright.
+- AC-2: TestCurrentSessionResolution.test_ac2_* -- the same fixture with the
+  leading line blank, invalid JSON, or non-object JSON resolves to the same
+  pair as AC-1.
+- AC-3: TestCurrentSessionResolution.test_ac3_* (pure function) and
+  TestEndToEndDecide.test_ac3_* (full invocation) -- no entry anywhere
+  yields a parseable timestamp -> unresolved / `current-session-unknown`,
+  journal byte-identical, helper never invoked.
+- AC-4: TestCurrentSessionResolution.test_ac4_* -- out-of-order timestamps
+  resolve to the earliest instant in the file, not the earliest line.
+- AC-5: TestCurrentSessionResolution.test_ac5_* -- the newer of two
+  marker-bearing transcripts is committed to; when it yields no parseable
+  timestamp, the older (which would resolve on its own) is never adopted.
+- AC-6: no new test -- form 1's existing TestCurrentSessionResolution cases
+  (precedence over the marker, unparsable explicit start) are unchanged and
+  continue to pass; that is the no-regression proof.
+- AC-7: TestEndToEndDecide.test_ac7_end_to_end_real_helpers_* -- both real
+  helper scripts, a marker-bearing transcript with a real-shaped leading
+  record, on an otherwise-proven-orphan fixture.
+- AC-8: no new test module -- tests/test_plugin_version_parity.py already
+  asserts parity and baseline advancement over both manifests.
+- AC-9: verified by running the project test command itself.
 """
 
 import importlib.util
@@ -100,6 +130,17 @@ def write_jsonl(path, lines):
 def write_transcript(transcripts_dir, session_id, entries):
     path = os.path.join(transcripts_dir, f"{session_id}.jsonl")
     write_jsonl(path, entries)
+    return path
+
+
+def write_raw_transcript(transcripts_dir, session_id, raw_lines):
+    """Like `write_transcript`, but each element of `raw_lines` is written
+    verbatim (one per line) instead of JSON-encoded -- lets a fixture place
+    a blank line or invalid-JSON text as the leading line (task0007 AC-2)."""
+    path = os.path.join(transcripts_dir, f"{session_id}.jsonl")
+    with open(path, "w", encoding="utf-8") as fh:
+        for raw in raw_lines:
+            fh.write(raw + "\n")
     return path
 
 
@@ -480,12 +521,122 @@ class TestCurrentSessionResolution(unittest.TestCase):
                 result, ("sess-newer", ROT.parse_timestamp("2021-06-01T12:00:00+00:00"))
             )
 
-    def test_marker_match_with_unusable_first_entry_fails_resolution(self):
+    def test_marker_match_with_unusable_first_entry_still_resolves_via_later_line(self):
+        # D2 revised (task0007, MANUAL-D2): a timestamp-less first entry is
+        # skipped, never a resolution failure -- the real harness layout
+        # always opens with such a record.
         with tempfile.TemporaryDirectory() as tmp:
-            path = write_transcript(tmp, "sess-bad-first-entry", [
+            write_transcript(tmp, "sess-bad-first-entry", [
                 {"text": "carries TOKEN but no timestamp field"},
                 {"timestamp": "2021-06-01T12:00:00+00:00", "text": "TOKEN"},
             ])
+            result = ROT.resolve_current_session(None, None, "TOKEN", tmp)
+            self.assertEqual(
+                result,
+                ("sess-bad-first-entry", ROT.parse_timestamp("2021-06-01T12:00:00+00:00")),
+            )
+
+    def test_ac1_real_shaped_leading_record_with_no_timestamp_resolves_earliest_later_ts(self):
+        # task0007 AC-1: the real harness layout's leading record -- a JSON
+        # object carrying `type` and no `timestamp` -- is skipped, and
+        # resolution returns the file-name stem plus the earliest parseable
+        # timestamp among the LATER entries. It does not return None.
+        with tempfile.TemporaryDirectory() as tmp:
+            write_transcript(tmp, "sess-real-shape", [
+                {"type": "last-prompt"},
+                {"timestamp": "2021-06-01T12:00:00+00:00", "type": "assistant", "text": "TOKEN"},
+                {"timestamp": "2021-06-01T13:00:00+00:00", "type": "user"},
+            ])
+            result = ROT.resolve_current_session(None, None, "TOKEN", tmp)
+            self.assertEqual(
+                result,
+                ("sess-real-shape", ROT.parse_timestamp("2021-06-01T12:00:00+00:00")),
+            )
+
+    def test_ac2_leading_blank_line_skipped_same_pair_as_ac1(self):
+        # task0007 AC-2: changing the AC-1 fixture's leading line to blank
+        # yields the SAME pair -- malformed leading lines are skipped, never
+        # a resolution failure.
+        with tempfile.TemporaryDirectory() as tmp:
+            write_raw_transcript(tmp, "sess-blank-first", [
+                "",
+                json.dumps({"timestamp": "2021-06-01T12:00:00+00:00", "text": "TOKEN"}),
+            ])
+            result = ROT.resolve_current_session(None, None, "TOKEN", tmp)
+            self.assertEqual(
+                result,
+                ("sess-blank-first", ROT.parse_timestamp("2021-06-01T12:00:00+00:00")),
+            )
+
+    def test_ac2_leading_invalid_json_line_skipped_same_pair_as_ac1(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_raw_transcript(tmp, "sess-invalid-json-first", [
+                "not even json {",
+                json.dumps({"timestamp": "2021-06-01T12:00:00+00:00", "text": "TOKEN"}),
+            ])
+            result = ROT.resolve_current_session(None, None, "TOKEN", tmp)
+            self.assertEqual(
+                result,
+                ("sess-invalid-json-first", ROT.parse_timestamp("2021-06-01T12:00:00+00:00")),
+            )
+
+    def test_ac2_leading_non_object_json_line_skipped_same_pair_as_ac1(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_raw_transcript(tmp, "sess-non-object-first", [
+                json.dumps(["TOKEN", "a JSON array, not an object"]),
+                json.dumps({"timestamp": "2021-06-01T12:00:00+00:00", "text": "TOKEN"}),
+            ])
+            result = ROT.resolve_current_session(None, None, "TOKEN", tmp)
+            self.assertEqual(
+                result,
+                ("sess-non-object-first", ROT.parse_timestamp("2021-06-01T12:00:00+00:00")),
+            )
+
+    def test_ac3_no_entry_yields_a_parseable_timestamp_is_unresolved(self):
+        # task0007 AC-3: absent, null, non-string and unparsable timestamps
+        # are all present and none is usable -- resolution returns None.
+        with tempfile.TemporaryDirectory() as tmp:
+            write_transcript(tmp, "sess-no-timestamp-anywhere", [
+                {"type": "last-prompt", "text": "TOKEN"},
+                {"timestamp": None, "text": "TOKEN"},
+                {"timestamp": 12345, "text": "TOKEN"},
+                {"timestamp": "not-a-timestamp", "text": "TOKEN"},
+            ])
+            result = ROT.resolve_current_session(None, None, "TOKEN", tmp)
+            self.assertIsNone(result)
+
+    def test_ac4_out_of_order_timestamps_resolve_to_earliest_not_first_line(self):
+        # task0007 AC-4: a later instant appears on an earlier line; the
+        # resolved start is the earliest parseable timestamp in the file.
+        with tempfile.TemporaryDirectory() as tmp:
+            write_transcript(tmp, "sess-out-of-order", [
+                {"timestamp": "2021-06-01T15:00:00+00:00", "text": "TOKEN later, first line"},
+                {"timestamp": "2021-06-01T10:00:00+00:00", "text": "earlier, second line"},
+                {"timestamp": "2021-06-01T20:00:00+00:00", "text": "latest, third line"},
+            ])
+            result = ROT.resolve_current_session(None, None, "TOKEN", tmp)
+            self.assertEqual(
+                result,
+                ("sess-out-of-order", ROT.parse_timestamp("2021-06-01T10:00:00+00:00")),
+            )
+
+    def test_ac5_newest_marker_transcript_committed_even_when_older_would_resolve(self):
+        # task0007 AC-5: the NEWER marker-bearing transcript is committed to
+        # and yields no parseable timestamp -> unresolved; the OLDER
+        # marker-bearing transcript, which would resolve successfully on
+        # its own, is never adopted instead.
+        with tempfile.TemporaryDirectory() as tmp:
+            older = write_transcript(tmp, "sess-older-would-resolve", [
+                {"timestamp": "2020-01-01T00:00:00+00:00", "text": "TOKEN"},
+            ])
+            newer = write_transcript(tmp, "sess-newer-unresolvable", [
+                {"type": "last-prompt", "text": "TOKEN"},
+                {"timestamp": "not-a-timestamp", "text": "TOKEN"},
+            ])
+            now = 1_700_000_000
+            os.utime(older, (now, now))
+            os.utime(newer, (now + 10, now + 10))
+
             result = ROT.resolve_current_session(None, None, "TOKEN", tmp)
             self.assertIsNone(result)
 
@@ -765,6 +916,86 @@ class TestEndToEndDecide(unittest.TestCase):
                 {"current_session_id": None, "current_session_start": None, "marker": None},
                 "current-session-unknown",
             )
+
+    def test_ac3_marker_transcript_with_no_parseable_timestamp_is_current_session_unknown(self):
+        # task0007 AC-3: full-invocation counterpart of the
+        # resolve_current_session-level unit test -- a marker-bearing
+        # transcript with no parseable timestamp anywhere reports
+        # `residual`/`current-session-unknown`, leaves the journal
+        # byte-identical, and invokes the helper zero times.
+        with tempfile.TemporaryDirectory() as tmp:
+            fx = _build_proven_fixture(tmp)
+            marker = "CURRENT-SESSION-MARKER"
+            write_transcript(fx["transcripts_dir"], "sess-unresolvable", [
+                {"type": "last-prompt", "text": marker},
+                {"timestamp": None, "text": marker},
+                {"timestamp": "not-a-timestamp", "text": marker},
+            ])
+            self._assert_residual_no_write_no_invoke(
+                fx,
+                {"current_session_id": None, "current_session_start": None, "marker": marker},
+                "current-session-unknown",
+            )
+
+    def test_ac7_end_to_end_real_helpers_with_real_shaped_leading_record(self):
+        # task0007 AC-7: end to end with BOTH real helper scripts (no stub)
+        # and a marker-bearing CURRENT-session transcript whose leading
+        # record carries no `timestamp` -- the real harness layout. The
+        # fixture is otherwise a proven orphan: journal final event
+        # `launched`, a bound agent index entry whose session identity
+        # differs from the resolved current session, that session's own
+        # transcript quiet strictly before the resolved start.
+        with tempfile.TemporaryDirectory() as tmp:
+            journal_path = os.path.join(tmp, "journal.jsonl")
+            agents_index_path = os.path.join(tmp, "agents.jsonl")
+            transcripts_dir = os.path.join(tmp, "transcripts")
+            os.makedirs(transcripts_dir)
+
+            write_jsonl(journal_path, [
+                {"event": "launched", "task": TASK_ID, "at": "2026-01-01T00:00:00+00:00"},
+            ])
+            write_jsonl(agents_index_path, [
+                {
+                    "agent_id": "a1", "agent_ids": ["a1"], "task": TASK_ID,
+                    "worktree_path": "/x/task0099", "at": "2026-01-01T00:00:00+00:00",
+                    "session_id": RECORDED_SESSION_ID,
+                },
+            ])
+            # The recorded (orphaned) session's own transcript: quiet
+            # strictly before the current session's resolved start below.
+            write_transcript(transcripts_dir, RECORDED_SESSION_ID, [
+                {"timestamp": TRANSCRIPT_OLD_TIMESTAMP, "type": "assistant"},
+            ])
+            # The CURRENT session's own transcript: real-layout leading
+            # record (no `timestamp` field) carrying the marker, plus a
+            # later timestamped entry -- the earliest parseable timestamp
+            # among ITS entries becomes the current session's start.
+            marker = "CURRENT-SESSION-MARKER-AC7"
+            write_transcript(transcripts_dir, "sess-current-real-shape", [
+                {"type": "last-prompt"},
+                {"timestamp": "2026-01-02T00:00:00+00:00", "text": marker},
+            ])
+
+            real_helper = str(REPO_ROOT / "em-workflow" / "scripts" / "journal-append-failed.py")
+
+            outcome, exit_code = ROT.decide(
+                task_id=TASK_ID,
+                journal_path=journal_path,
+                agents_index_path=agents_index_path,
+                transcripts_dir=transcripts_dir,
+                marker=marker,
+                journal_helper=real_helper,
+            )
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(outcome, {"outcome": "recovered", "task": TASK_ID, "reason": ""})
+            with open(journal_path, encoding="utf-8") as fh:
+                journal_lines = [json.loads(line) for line in fh if line.strip()]
+            self.assertEqual(len(journal_lines), 2)
+            self.assertEqual(journal_lines[0]["event"], "launched")
+            self.assertEqual(journal_lines[1]["event"], "failed")
+            self.assertEqual(journal_lines[1]["task"], TASK_ID)
+            self.assertEqual(journal_lines[1]["reason"], "orphaned")
 
     def test_timestamp_boundary_equal_start_is_transcript_active(self):
         with tempfile.TemporaryDirectory() as tmp:

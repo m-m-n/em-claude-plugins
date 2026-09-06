@@ -219,11 +219,17 @@ def newest_transcript_timestamp(transcript_path):
 # ---------------------------------------------------------------------------
 
 
-def _first_entry_timestamp(lines):
-    """The timestamp of the transcript's FIRST entry (first non-blank JSONL
-    line) -- not the first parseable one. A malformed or timestamp-less
-    first entry fails resolution outright rather than falling through to a
-    later line (D2: "that file's ... first entry's timestamp")."""
+def _earliest_entry_timestamp(lines):
+    """The EARLIEST parseable timestamp among ALL of the transcript's
+    entries -- not the positionally-first line's. The same line-level
+    tolerance the newest-activity reader (D3) applies is used here: blank
+    lines, lines that are not valid JSON, lines that are not JSON objects,
+    and entries whose `timestamp` is absent or unparsable are SKIPPED
+    rather than aborting resolution. None only when NO entry in the file
+    yields a parseable timestamp at all (D2, revised: real transcripts open
+    with a record carrying no `timestamp`, so reading only the first line
+    resolved nothing in practice -- MANUAL-D2)."""
+    earliest = None
     for line in lines:
         stripped = line.strip()
         if not stripped:
@@ -231,11 +237,15 @@ def _first_entry_timestamp(lines):
         try:
             obj = json.loads(stripped)
         except ValueError:
-            return None
+            continue
         if not isinstance(obj, dict):
-            return None
-        return parse_timestamp(obj.get("timestamp"))
-    return None
+            continue
+        dt = parse_timestamp(obj.get("timestamp"))
+        if dt is None:
+            continue
+        if earliest is None or dt < earliest:
+            earliest = dt
+    return earliest
 
 
 def _resolve_current_session_via_marker(marker, transcripts_dir):
@@ -263,14 +273,16 @@ def _resolve_current_session_via_marker(marker, transcripts_dir):
             continue
         if not any(marker in line for line in lines):
             continue
-        # First transcript containing the token: commit to it. Its stem is
-        # the current session identity regardless of what its first entry's
-        # timestamp turns out to be.
-        first_ts = _first_entry_timestamp(lines)
-        if first_ts is None:
+        # First transcript containing the token: commit to it -- a later
+        # failure never falls through to an older transcript. Its stem is
+        # the current session identity; its start is the EARLIEST parseable
+        # timestamp among its entries (D2, revised), never the positionally
+        # first line's.
+        earliest_ts = _earliest_entry_timestamp(lines)
+        if earliest_ts is None:
             return None
         stem = os.path.splitext(os.path.basename(path))[0]
-        return stem, first_ts
+        return stem, earliest_ts
     return None
 
 
