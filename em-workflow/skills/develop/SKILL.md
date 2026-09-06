@@ -406,6 +406,13 @@ carve-out（`needs_update` に対する例外）とは独立しており、同�
    読み方は `references/workflow-schema.md` が定義し、ここでは繰り返さ
    ない。`batch` ブロック自体の作成規則は `references/batch-mode.md` が
    定義し、ここでは繰り返さない。
+
+   この分岐は、直前の interactive 実行が残した `failed_kind` を batch
+   実行が引き継いだ workflow.yaml を対象とする。batch 実行そのものが
+   起こした implement 失敗は、`references/batch-mode.md` の自動リトライ
+   と 2 回目失敗時の扱いを経由するため、この分岐には到達しない
+   （`references/implement-phase.md` が定める書き込み規則の帰結であり、
+   ここでは繰り返さない）。
 5. 実行済み回数が cap に達している場合 → 要ユーザー判断の場合と同じ扱い
    とし、停止条件 3 が発火する。レポートには cap への到達を理由として
    明記し、通常の停止と区別できるようにする。この分岐では workflow.yaml
