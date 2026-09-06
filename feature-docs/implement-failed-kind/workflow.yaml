@@ -58,14 +58,14 @@ workflow:
     status: completed
     completed_at_commit: aab6e2be59ab1ff0cbc5c00d660ccc9264bab2a6
   - id: implement
-    status: completed
+    status: pending
     completed_at_commit: 4466395bab2d4aa8d2400beaa2fb2379aab175f6
     base_commit: b49240996c198da1528b4b8d6265baab75a90931
   - id: review
-    status: completed
+    status: pending
     completed_at_commit: 1a2067cbb93a6f8a76af15e61e4bea19291eb867
   - id: verify
-    status: failed
+    status: pending
     result: fail
     failed_items:
       - id: TS-5
@@ -181,6 +181,23 @@ tasks:
     notes: null
     branch: em-workflow/implement-failed-kind/task0007
 
+  task0008:
+    title: "Repair the over-specified em-review marketplace-entry guard so the suite is green"
+    plan: tasks/task0008.md
+    files:
+      - tests/test_llm_led_review_user_docs.py
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [NFR4]
+    status: pending
+    notes: null
+    branch: null
+    provenance:
+      source: verify
+      source_ids: [TS-5]
+      review_round: null
+
 review:
   status: completed
   rounds_completed: 2
@@ -294,8 +311,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004, task0005, task0006, task0007]
-    tests: [TS-5]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008]
+    tests: [TS-5, TS-14]
 
 batch:
   review_rework_count: 1
