@@ -1,10 +1,10 @@
 schema_version: 1
 feature: batch-verify-rework-lineage-cap
 phase: create-plan
-status: awaiting_answers
+status: applying_patch
 generation: 1
 base_revision: 103058d63a05282f47d1b58a9d9712365c3dd55e
-last_input_digest: sha256:d1217fddb15f8ceb9250a8b214b330fff4ba987508a7fad0fa87df2c4a559750
+last_input_digest: sha256:de5ce3e2f0beb309baa9ba8b0a5e40a1b87c2fdb057b317375c7a0f9f9d7800b
 active_request_id: null
 packets:
   create-plan-q0001:
@@ -68,8 +68,36 @@ worker_runs:
     status: needs_user_input
     input_digest: sha256:d1217fddb15f8ceb9250a8b214b330fff4ba987508a7fad0fa87df2c4a559750
     output_digest: null
-artifacts: []
-patches: []
+  - request_id: create-plan-a8bd983c81f7
+    status: completed
+    input_digest: sha256:de5ce3e2f0beb309baa9ba8b0a5e40a1b87c2fdb057b317375c7a0f9f9d7800b
+    output_digest: null
+artifacts:
+  - path: feature-docs/batch-verify-rework-lineage-cap/IMPLEMENTATION.md
+    sha256: sha256:c1151523f239ff80c0d3a89260180b2f46e6aa0ed0162e63f592debbbc8c9553
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/VERIFICATION.md
+    sha256: sha256:afa2cde89510c19874164aac33318d39614a536a70a9ecdcb6b09c26be9862c9
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0001.md
+    sha256: sha256:d56c0a8714740df6bb804fe128030020dee9703537fc9eab4c860f2b65769063
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0002.md
+    sha256: sha256:a30f9cdb4a57b2038e861597b69989c6d523dd4ad88cf42bb9f5310b2f0b4825
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0003.md
+    sha256: sha256:133d8155d343c0aae5bc608a4729909fe0ebe46091f03545a103f0544a834a6a
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0004.md
+    sha256: sha256:4c00ab9a116db7e64aa0de8acb184a33ca1d2d36178d00d276d19b74f76b2d01
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0005.md
+    sha256: sha256:b10fc6ca48cf9836a2ce8655474d6037c7e06007f2408e0648318b113cd574b6
+    produced_by: create-plan-a8bd983c81f7
+patches:
+  - patch_id: batch-verify-rework-lineage-cap-p0001
+    operation: replace_planning
+    applied: true
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
