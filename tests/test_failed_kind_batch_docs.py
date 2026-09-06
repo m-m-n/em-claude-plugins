@@ -464,6 +464,169 @@ class TestOutOfScopeUntouched(unittest.TestCase):
         self.assertNotIn("failed_kind", text)
 
 
+# --- task0007 (round-1 rework, D11): the `batch.infra_resume` record's ----
+# key set, materialising writer and cap ownership --------------------------
+#
+# Covers task0007 Acceptance Criteria
+# (feature-docs/implement-failed-kind/tasks/task0007.md):
+#
+# - AC-1 (FR7): the batch-mode `batch` block snippet's key set equals the
+#   schema's `batch` block snippet's key set -- derived from both
+#   documents by parsing each snippet, never from a literal list held in
+#   this test.
+# - AC-2 (FR7): the sentence describing what the `batch` block persists
+#   covers the auto-resume record as well as the rework counters, and its
+#   "never activates the mode" clause is unchanged.
+# - AC-3 (FR7, NFR1): the cap citation names the schema document for the
+#   key, the member names and the unset-read defaults, and the develop
+#   skill for the consuming judgment; no sentence attributes the cap's
+#   definition wholly to the develop skill.
+
+SCHEMA_PATH = os.path.join(
+    REPO_ROOT, "em-workflow", "references", "workflow-schema.md"
+)
+
+
+def _strip_yaml_comment(line):
+    idx = line.find("#")
+    return line if idx == -1 else line[:idx]
+
+
+def _yaml_mapping_keys(block_text):
+    """Return the set of mapping keys appearing anywhere in `block_text`,
+    ignoring comments and indentation -- a structural parse of the fenced
+    snippet, not a hard-coded expectation."""
+    keys = set()
+    for raw_line in block_text.splitlines():
+        line = _strip_yaml_comment(raw_line).strip()
+        match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*):", line)
+        if match:
+            keys.add(match.group(1))
+    return keys
+
+
+def _batch_mode_snippet():
+    text = _read(BATCH_MODE_PATH)
+    fence_start = text.index("```yaml\nbatch:")
+    fence_end = text.index("```", fence_start + len("```yaml"))
+    return text[fence_start:fence_end]
+
+
+def _schema_batch_snippet():
+    # Mirrors test_failed_kind_schema.py's _full_structure_block() /
+    # _batch_mapping(): `batch:` is the last top-level mapping in the
+    # schema's "## Full structure" yaml fence, so its own text runs to the
+    # fence's end.
+    text = _read(SCHEMA_PATH)
+    fence_start = text.index("```yaml", text.index("## Full structure"))
+    fence_end = text.index("```", fence_start + len("```yaml"))
+    full_structure = text[fence_start:fence_end]
+    start = full_structure.index("\nbatch:")
+    return full_structure[start:]
+
+
+class TestBatchBlockSnippetKeySetEquivalence(unittest.TestCase):
+    def test_batch_mode_snippet_key_set_equals_schema_snippet_key_set(self):
+        batch_mode_keys = _yaml_mapping_keys(_batch_mode_snippet())
+        schema_keys = _yaml_mapping_keys(_schema_batch_snippet())
+        self.assertEqual(batch_mode_keys, schema_keys)
+
+    def test_batch_mode_snippet_contains_infra_resume_record(self):
+        keys = _yaml_mapping_keys(_batch_mode_snippet())
+        self.assertIn("infra_resume", keys)
+        self.assertIn("rounds", keys)
+        self.assertIn("cap", keys)
+
+    def test_non_vacuity_the_two_snippets_are_not_trivially_empty(self):
+        # Guards the equality check above against passing vacuously
+        # because both sides parsed to an empty set.
+        self.assertTrue(_yaml_mapping_keys(_batch_mode_snippet()))
+        self.assertTrue(_yaml_mapping_keys(_schema_batch_snippet()))
+
+    def test_negative_proof_a_dropped_member_key_is_detected(self):
+        schema_keys = _yaml_mapping_keys(_schema_batch_snippet())
+        reduced = schema_keys - {"cap"}
+        batch_mode_keys = _yaml_mapping_keys(_batch_mode_snippet())
+        self.assertNotEqual(batch_mode_keys, reduced)
+
+
+class TestBatchBlockPersistsSentenceCoversAutoResume(unittest.TestCase):
+    def _bullet(self):
+        text = _read(BATCH_MODE_PATH)
+        return _section(text, "- Active ONLY when", "\n- In batch mode")
+
+    def test_states_the_block_persists_the_auto_resume_record_too(self):
+        bullet = _norm(self._bullet())
+        self.assertIn("infra auto-resume record", bullet)
+        self.assertIn("rework counters", bullet)
+
+    def test_never_activates_the_mode_clause_is_unchanged(self):
+        bullet = _norm(self._bullet())
+        self.assertIn("it never activates the mode", bullet)
+
+    def test_no_longer_claims_rework_counters_only(self):
+        bullet = _norm(self._bullet())
+        self.assertNotIn("rework counters ONLY", bullet)
+
+    def test_negative_proof_only_marker_would_have_matched_pre_task_text(self):
+        # Found-input guard for the assertNotIn above: proves the marker
+        # actually matches the pre-task wording, so its absence now is
+        # meaningful rather than the matcher being unable to fire at all.
+        original = (
+            "The `batch` block in workflow.yaml persists rework counters "
+            "ONLY — it never activates the mode."
+        )
+        self.assertIn("rework counters ONLY", original)
+
+
+class TestCapOwnershipCitationNamesEachOwner(unittest.TestCase):
+    def _cap_sentence(self):
+        text = _read(BATCH_MODE_PATH)
+        return _section(
+            text,
+            "The one exception is the `implement` step's",
+            "\n\n## Non-packet gates",
+        )
+
+    def test_cites_develop_skill_for_the_branch_and_consuming_judgment(self):
+        sentence = _norm(self._cap_sentence())
+        self.assertIn(
+            "The branch and the cap's consuming judgment are "
+            "`skills/develop/SKILL.md`'s to define",
+            sentence,
+        )
+
+    def test_cites_schema_for_the_key_member_names_and_defaults(self):
+        sentence = _norm(self._cap_sentence())
+        self.assertIn(
+            "the cap's key, its member names and its unset-read defaults "
+            "are",
+            sentence,
+        )
+        self.assertIn(SCHEMA_CITATION, sentence)
+
+    def test_no_sentence_in_the_document_attributes_cap_wholly_to_develop_skill(
+        self,
+    ):
+        text = _norm(_read(BATCH_MODE_PATH))
+        self.assertNotIn(
+            "the cap are `skills/develop/SKILL.md`'s to define", text
+        )
+
+    def test_negative_proof_pre_task_wording_would_have_matched_the_forbidden_pattern(
+        self,
+    ):
+        # Found-input guard: the pre-task sentence attributed the cap
+        # wholly to the develop skill in exactly this shape.
+        original = (
+            "The branch and the cap are `skills/develop/SKILL.md`'s to "
+            "define, not this document's to restate."
+        )
+        self.assertIn(
+            "the cap are `skills/develop/SKILL.md`'s to define", original
+        )
+
+
 # --- AC-7: this module imports only the standard library -------------------
 
 

@@ -377,6 +377,131 @@ class TestFullStructurePointers(SchemaDocTestCase):
 # --- AC-7: reachable at a stable, citable path -----------------------------
 
 
+# --- task0007 (round-1 rework, D11): materialising writer + gloss --------
+# separation -----------------------------------------------------------
+#
+# Covers task0007 Acceptance Criteria
+# (feature-docs/implement-failed-kind/tasks/task0007.md):
+#
+# - AC-4 (FR7): the `batch` block section names the write path that
+#   materialises the `infra_resume` record and states that its initial
+#   member values equal the unset-read defaults the same section defines.
+#   Negative proof: the assertion fails on a copy with the writer sentence
+#   removed.
+# - AC-5 (FR10, NFR1): the `failed_kind` section's external-cause gloss
+#   points at the write-path owner for which failures are attributed to
+#   it today and states the fail-closed direction for a failure with no
+#   external-cause signal, while the closed two-value vocabulary, the
+#   required-ness rule and the missing-value read rule stay textually
+#   unchanged (asserted verbatim-present by the task0001 classes above,
+#   which this task does not edit).
+
+
+MATERIALISING_WRITER_PHRASE = (
+    "materialised by the same orchestrator write that creates the "
+    "`batch` block"
+)
+
+INITIAL_VALUES_PHRASE = (
+    "initial member values equal to the unset-read defaults above"
+)
+
+GLOSS_SEPARATION_SENTENCE = (
+    "Which concrete failures are attributed to this value today is "
+    "`references/implement-phase.md`'s to state, not restated here; a "
+    "failure that carries no external-cause signal reads as the "
+    "decision-required value below (fail-closed)."
+)
+
+
+class TestInfraResumeRecordHasAMaterialisingWriter(SchemaDocTestCase):
+    def test_names_the_orchestrator_write_that_creates_the_batch_block(self):
+        section = _norm(self._batch_block_section())
+        self.assertIn(MATERIALISING_WRITER_PHRASE, section)
+        self.assertIn("references/batch-mode.md", section)
+
+    def test_states_initial_member_values_equal_the_unset_read_defaults(self):
+        section = _norm(self._batch_block_section())
+        self.assertIn(INITIAL_VALUES_PHRASE, section)
+        self.assertIn("`rounds: 0`", section)
+        self.assertIn("`cap: 2`", section)
+
+    def test_negative_proof_fails_on_a_copy_with_the_writer_sentence_removed(
+        self,
+    ):
+        section = _norm(self._batch_block_section())
+        self.assertIn(_norm(MATERIALISING_WRITER_PHRASE), section)
+        without_writer = section.replace(_norm(MATERIALISING_WRITER_PHRASE), "")
+        self.assertNotIn(MATERIALISING_WRITER_PHRASE, without_writer)
+
+
+class TestFailedKindExternalCauseGlossSeparatesMeaningFromDetection(
+    SchemaDocTestCase
+):
+    def test_meaning_bullet_unchanged(self):
+        # Non-vacuity: the pre-existing meaning clause (task0001's,
+        # re-asserted by TestFailedKindSectionDefinesVocabulary above) is
+        # still present -- this task edits the bullet by addition, not by
+        # rewrite.
+        section = _norm(self._failed_kind_section())
+        self.assertIn(
+            "the failure's cause is external to the implementation: the "
+            "implementer was orphaned, or a harness failure occurred",
+            section,
+        )
+
+    def test_points_at_the_write_path_owner_for_todays_attribution(self):
+        section = _norm(self._failed_kind_section())
+        self.assertIn(
+            "Which concrete failures are attributed to this value today "
+            "is `references/implement-phase.md`'s to state, not restated "
+            "here",
+            section,
+        )
+
+    def test_states_the_fail_closed_direction_for_no_signal(self):
+        section = _norm(self._failed_kind_section())
+        self.assertIn(
+            "a failure that carries no external-cause signal reads as "
+            "the decision-required value below",
+            section,
+        )
+        self.assertIn("fail-closed", section)
+
+    def test_does_not_disturb_the_missing_value_compatibility_paragraph(self):
+        # The fail-closed sentence above is about write-path attribution,
+        # not the `failed_kind` field being literally absent -- the
+        # separate missing-value paragraph (task0001's) stays present
+        # verbatim, re-asserted by TestFailedKindMissingValueCompatibility
+        # above.
+        section = _norm(self._failed_kind_section())
+        self.assertIn(
+            "An `implement` `failed` carrying no `failed_kind` reads as "
+            "the `decision` value",
+            section,
+        )
+
+    def test_vocabulary_still_exactly_two_values_in_order(self):
+        # Regression: the gloss addition is prose, not a new top-level
+        # bullet -- the closed vocabulary's shape stays intact.
+        section = self._failed_kind_section()
+        found = re.findall(r"^- `([a-z]+)`", section, re.MULTILINE)
+        self.assertEqual(found, VOCAB_VALUES)
+
+    def test_negative_proof_fails_on_a_copy_without_the_separation_sentence(
+        self,
+    ):
+        section = _norm(self._failed_kind_section())
+        self.assertIn(_norm(GLOSS_SEPARATION_SENTENCE), section)
+        without_separation = section.replace(
+            _norm(GLOSS_SEPARATION_SENTENCE), ""
+        )
+        self.assertNotIn(
+            "Which concrete failures are attributed to this value today",
+            without_separation,
+        )
+
+
 class TestSectionIsCitable(SchemaDocTestCase):
     def test_heading_text_is_present_verbatim(self):
         self.assertIn(FAILED_KIND_HEADING, self.text)
