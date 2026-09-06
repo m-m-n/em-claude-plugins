@@ -65,9 +65,12 @@ workflow:
     status: completed
     completed_at_commit: 1a2067cbb93a6f8a76af15e61e4bea19291eb867
   - id: verify
-    status: in_progress
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: TS-5
+        category: comprehensive
+        note: "`python3 -m unittest discover -s tests` が exit 1。tests/test_llm_led_review_user_docs.py の TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot が、marketplace.json の em-review エントリに `version: 0.5.7` が入ったことでスナップショット不一致。base_commit b492409 でも同一に失敗する既存不具合で、本 feature の diff は em-review エントリを変更していない"
   - id: retrospect
     status: pending
 
@@ -297,5 +300,6 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      TS-5: 1
