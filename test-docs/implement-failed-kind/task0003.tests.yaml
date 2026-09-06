@@ -1,0 +1,95 @@
+task_id: task0003
+baseline_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+final_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC1NarrowedFiringConditionAndCitation.test_states_fires_only_on_decision_required_value
+      - tests.test_failed_kind_stop_condition.TestAC1NarrowedFiringConditionAndCitation.test_cites_workflow_schema_for_definition
+    red_confirmed: true
+    red_reason: "setUpClass raised ValueError: substring not found looking up NEW_BLOCK_ANCHOR ('**batch: implement の failed_kind による自動再開**') in SKILL.md -- the new Step B block did not exist yet"
+  AC-2:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC2WriteSetAndOrdering.test_states_implement_status_reset_to_pending
+      - tests.test_failed_kind_stop_condition.TestAC2WriteSetAndOrdering.test_states_failed_kind_cleared_to_null
+      - tests.test_failed_kind_stop_condition.TestAC2WriteSetAndOrdering.test_states_count_incremented
+      - tests.test_failed_kind_stop_condition.TestAC2WriteSetAndOrdering.test_states_single_commit_before_phase_execution
+      - tests.test_failed_kind_stop_condition.TestAC2WriteSetAndOrdering.test_ordering_write_set_then_commit_then_execute
+    red_confirmed: true
+    red_reason: "same setUpClass ValueError as AC-1 (shared SkillDocTestCase.setUpClass builds cls.new_block from the not-yet-existing anchor); the ordering test was written specifically per Test Notes to independently pin write-set-then-commit-then-execute"
+  AC-3:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC3CapAndAtCapNoWrite.test_states_at_cap_treated_as_decision_required
+      - tests.test_failed_kind_stop_condition.TestAC3CapAndAtCapNoWrite.test_states_report_names_the_cap
+      - tests.test_failed_kind_stop_condition.TestAC3CapAndAtCapNoWrite.test_states_no_write_on_at_cap_branch
+      - tests.test_failed_kind_stop_condition.TestAC3CapAndAtCapNoWrite.test_cites_schema_for_record_keys_instead_of_restating_defaults
+    red_confirmed: true
+    red_reason: "same setUpClass ValueError as AC-1 -- new block absent"
+  AC-4:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC4MonotonicNeverReset.test_states_monotonic_never_reset
+      - tests.test_failed_kind_stop_condition.TestAC4MonotonicNeverReset.test_states_mirrors_existing_rework_counters
+    red_confirmed: true
+    red_reason: "same setUpClass ValueError as AC-1 -- new block absent"
+  AC-5:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC5BatchOnlyInteractiveUnchanged.test_states_interactive_stops_unchanged
+      - tests.test_failed_kind_stop_condition.TestAC5BatchOnlyInteractiveUnchanged.test_states_fr8_batch_only_non_change
+    red_confirmed: true
+    red_reason: "same setUpClass ValueError as AC-1 -- new block absent"
+  AC-6:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC6NotAStopNotABoundary.test_states_no_terminal_line_no_new_stop_reason_code
+      - tests.test_failed_kind_stop_condition.TestAC6NotAStopNotABoundary.test_states_not_an_once_boundary
+    red_confirmed: true
+    red_reason: "same setUpClass ValueError as AC-1 -- new block absent"
+  AC-7:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC7NeedsUpdateAndReviewVerifyUnaffected.test_states_needs_update_and_review_verify_unaffected
+    red_confirmed: true
+    red_reason: "same setUpClass ValueError as AC-1 -- new block absent"
+  AC-8:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC8ExistingBlocksUnchangedAndIndependenceDeclared.test_precedence_block_exhaustiveness_declaration_present
+      - tests.test_failed_kind_stop_condition.TestAC8ExistingBlocksUnchangedAndIndependenceDeclared.test_verify_cap_exception_four_bullets_present
+      - tests.test_failed_kind_stop_condition.TestAC8ExistingBlocksUnchangedAndIndependenceDeclared.test_verify_cap_exception_own_independence_paragraph_present
+      - tests.test_failed_kind_stop_condition.TestAC8ExistingBlocksUnchangedAndIndependenceDeclared.test_new_block_declares_independence_from_both
+      - tests.test_failed_kind_stop_condition.TestAC8ExistingBlocksUnchangedAndIndependenceDeclared.test_anchor_labels_reused_by_the_new_block_are_not_bare_duplicates
+    red_confirmed: true
+    red_reason: "same setUpClass ValueError as AC-1 (shared base setUpClass); test_new_block_declares_independence_from_both and test_anchor_labels_reused_by_the_new_block_are_not_bare_duplicates specifically depend on new content that did not exist yet, the other three are regression guards over pre-existing text that already read correctly before this task and continued to after -- the failing fixture is honest evidence they were exercised, not vacuous"
+  AC-9:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC9StopConditionListPointsAtNewBlock.test_keeps_existing_needs_update_pointer
+      - tests.test_failed_kind_stop_condition.TestAC9StopConditionListPointsAtNewBlock.test_adds_pointer_to_new_block_for_implement_failed
+      - tests.test_failed_kind_stop_condition.TestAC9StopConditionListPointsAtNewBlock.test_names_implement_and_failed_kind_in_the_narrowing_pointer
+    red_confirmed: true
+    red_reason: "same setUpClass ValueError as AC-1; test_adds_pointer_to_new_block_for_implement_failed and test_names_implement_and_failed_kind_in_the_narrowing_pointer additionally fail on their own assertions against the pre-edit stop-condition-3 list item text, which had neither the new pointer nor a `failed_kind` mention; test_keeps_existing_needs_update_pointer is a regression guard over the pre-existing pointer text (would have passed on the pre-edit document in isolation) and is included to prove Edit 1 did not remove it"
+  AC-10:
+    tests:
+      - tests.test_failed_kind_stop_condition.TestAC10NoRestatedVocabulary.test_new_block_has_no_restated_definition
+      - tests.test_failed_kind_stop_condition.TestAC10NoRestatedVocabulary.test_stop_condition_item_has_no_restated_definition
+      - tests.test_failed_kind_stop_condition.TestAC10NoRestatedVocabulary.test_new_block_has_no_backtick_quoted_values_at_all
+      - tests.test_failed_kind_stop_condition.TestDetectorNegativeProofAndTolerance.test_negative_proof_fires_on_synthetic_restated_definition
+      - tests.test_failed_kind_stop_condition.TestDetectorNegativeProofAndTolerance.test_detector_tolerates_single_value_branch_condition_mention
+      - tests.test_failed_kind_stop_condition.TestDetectorNegativeProofAndTolerance.test_permitted_set_enumeration_matcher_can_fail_and_pass
+      - tests.test_failed_kind_stop_condition.TestDetectorNegativeProofAndTolerance.test_meanings_gloss_matcher_can_fail_and_pass
+      - tests.test_failed_kind_stop_condition.TestDetectorNegativeProofAndTolerance.test_missing_value_read_rule_matcher_can_fail_and_pass
+    red_confirmed: true
+    red_reason: "TestAC10NoRestatedVocabulary shares the same setUpClass ValueError as AC-1 (block absent), which is genuine red evidence for those three tests. The TestDetectorNegativeProofAndTolerance matcher tests are pure-function tests over synthetic strings only (they never read SKILL.md) and were green from the moment the module was written -- they prove the detector itself can fail (negative proof) and can pass a legitimate branch-condition mention (tolerance), per Test Notes, rather than tracking the document's red-to-green transition; listed here because the task plan's Test Notes require them as part of AC-10's coverage"
+  AC-11:
+    tests: []
+    red_confirmed: false
+    red_reason: "AC-11 is a suite-wide/module-import property (python3 -m unittest discover -s tests passes; module imports stdlib only), not a single behavior with an isolated red state to observe -- TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib is a static self-check over this module's own AST and was true from the moment the file was written (no implementation change could make it fail short of adding a non-stdlib import), and the whole-suite pass is verified directly by running the command, not by a dedicated test"
+notes: |
+  Deviation: tests/test_develop_once_option.py (develop-once-option/task0001,
+  outside expected_files) needed a minimal update to its ITEMS_1_TO_6_VERBATIM
+  constant. That test pinned stop-condition-3's list-item wording as
+  byte-for-byte unchanged; this task's plan explicitly requires adding a
+  second pointer to that same list item (Edit 1). Updated the constant to
+  include the new pointer text (and added a comment explaining why), leaving
+  every other assertion and every other line in that file untouched. This is
+  the tdd-testing skill's documented exception: "unless the task plan
+  EXPLICITLY changes that behavior -- then update the test to assert the new
+  specified behavior." Full suite re-run confirmed no other regressions.
