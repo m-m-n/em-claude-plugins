@@ -103,7 +103,7 @@ workflow:
       引用のみ。4 件目は TS-11 と同一。除外要件なし（requirements に status:
       excluded は無い）。
   - id: retrospect
-    status: pending
+    status: in_progress
 
 tasks:
   task0001:
