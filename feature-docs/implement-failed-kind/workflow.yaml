@@ -134,7 +134,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [NFR3, NFR4]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/implement-failed-kind/task0005
 
