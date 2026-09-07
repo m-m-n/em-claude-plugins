@@ -92,6 +92,7 @@ findings:
     confidence: 85
     resolution: deferred
     resolution_reason: "batch mode: rework cap reached"
+    follow_up_task_url: "<notion-url>"
   - stable_id: 21fcec3b529ebbd1
     severity: medium
     category: architecture
