@@ -284,7 +284,23 @@ def list_security_tasks(entry_point):
         return None
     if not isinstance(data, list):
         return None
-    return data
+    validated = []
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        if not isinstance(entry.get("id"), str):
+            continue
+        if not isinstance(entry.get("package"), str):
+            continue
+        if not isinstance(entry.get("status"), str):
+            continue
+        references = entry.get("references")
+        if references is not None and not isinstance(references, str):
+            continue
+        validated.append(entry)
+    if not validated:
+        return None
+    return validated
 
 
 def _write_references_tempfile(reference_lines):
@@ -630,8 +646,10 @@ def run_ecosystem_command(ecosystem, project_root):
             return None, f"{name}_unparseable_output"
         if name == "go":
             data = {"vulns": _merge_govulncheck_stream(objs)}
+        elif len(objs) == 1:
+            data = objs[-1]
         else:
-            data = objs[-1] if len(objs) == 1 else {"stream": objs}
+            return None, f"{name}_unparseable_output"
     return data, None
 
 
@@ -890,12 +908,45 @@ def _cargo_direct_dependency_names(manifest_path):
     return names
 
 
+def _resolve_project_relative(project_root, rel_path):
+    """Joins project_root with rel_path, confining the result inside
+    project_root. Returns None (never a path) when rel_path is absolute,
+    escapes project_root via '..', or project_root is not supplied --
+    callers must treat None as "cannot resolve", never fall back to
+    joining unsafely."""
+    if project_root is None or not rel_path:
+        return None
+    if os.path.isabs(rel_path):
+        return None
+    root = os.path.realpath(str(project_root))
+    candidate = os.path.realpath(os.path.join(root, rel_path))
+    if candidate != root and not candidate.startswith(root + os.sep):
+        return None
+    return candidate
+
+
+def _cargo_manifest_candidate(project_root, manifest_file):
+    """Resolves the Cargo.toml to scan for direct-dependency names. When
+    manifest_file is itself a lockfile (Cargo.lock -- selected by
+    manifest_file_for when only the lockfile changed), looks for
+    Cargo.toml alongside it instead: Cargo.lock has no [dependencies]
+    tables, so scanning it directly would always yield an empty direct
+    set and silently reclassify every advisory as transitive. Never
+    returns a lockfile path. Returns None when unresolvable/unsafe (see
+    _resolve_project_relative) -- callers must not fall back to opening
+    manifest_file directly in that case."""
+    if os.path.basename(manifest_file) == "Cargo.lock":
+        candidate_rel = os.path.join(os.path.dirname(manifest_file), "Cargo.toml")
+    else:
+        candidate_rel = manifest_file
+    return _resolve_project_relative(project_root, candidate_rel)
+
+
 def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
     findings = []
     entries = ((data.get("vulnerabilities") or {}).get("list")) or []
-    direct_names = _cargo_direct_dependency_names(
-        os.path.join(str(project_root), manifest_file) if project_root else manifest_file
-    )
+    manifest_path = _cargo_manifest_candidate(project_root, manifest_file)
+    direct_names = _cargo_direct_dependency_names(manifest_path) if manifest_path else set()
     for entry in entries:
         if not isinstance(entry, dict):
             continue
