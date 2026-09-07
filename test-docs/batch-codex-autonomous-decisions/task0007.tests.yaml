@@ -1,0 +1,66 @@
+task_id: task0007
+baseline_failures:
+  - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd.test_exactly_one_fallback_line_names_the_answering_entry
+  - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd.test_usage_limit_then_provider_error_falls_through_to_third_entry
+  - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_last_entry_failure_surfaces_that_entrys_outcome_not_a_synthetic_success
+  - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_usage_limit_shaped_response_from_entry_two_does_not_advance
+  - tests.test_codex_wrapper_provider_fallback.TestStdoutCleanlinessOnFallback.test_stdout_excludes_earlier_failed_attempts_text
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestNonPrimaryEntryArgumentSurface.test_entry_two_selects_the_litellm_profile_and_the_vertex_model
+      - tests.test_codex_wrapper_provider_fallback.TestNonPrimaryEntryArgumentSurface.test_entry_three_selects_the_litellm_profile_and_the_muse_model
+    red_confirmed: true
+    red_reason: "both failed under the placeholder implementation (model_provider=\"codex-fallback-provider-{beta,gamma}\", still under --ignore-user-config): AssertionError: 1 != 0 (returncode). The named provider resolved to nothing, so entries 2/3 could only fail; the stub never even reached a `-m` flag to key off, since the old args never carried one."
+  AC-2:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestNonPrimaryEntryArgumentSurface.test_non_primary_entries_resolve_to_distinct_providers_in_spec_order
+    red_confirmed: true
+    red_reason: "AssertionError: 1 != 0 (returncode) under the placeholder args -- the chain never actually resolved a provider at either non-primary entry, so it never advanced through all three attempts to compare them."
+  AC-3:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestHeaderCommentDeclaresStreamAndEnvironmentContract.test_header_declares_which_stream_carries_a_switch_shape
+      - tests.test_codex_wrapper_provider_fallback.TestHeaderCommentDeclaresStreamAndEnvironmentContract.test_header_declares_required_environment_inputs
+    red_confirmed: true
+    red_reason: "test_header_declares_which_stream_carries_a_switch_shape: AssertionError, phrase \"a switch is recognized only from an attempt's stderr\" not found in the pre-task0007 header (the header never declared the stream at all, only mentioned stderr incidentally for the CODEX_FALLBACK: marker line -- the first version of this test used a bare 'stderr' substring check and passed by that coincidence, so it was rewritten to check the specific declarative sentence before being trusted as red). test_header_declares_required_environment_inputs: AssertionError, 'LITELLM_API_KEY' not found in header (no environment-prerequisite contract existed pre-task0007)."
+  AC-4:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd.test_usage_limit_then_provider_error_falls_through_to_third_entry
+      - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd.test_exactly_one_fallback_line_names_the_answering_entry
+      - tests.test_codex_wrapper_provider_fallback.TestStdoutCleanlinessOnFallback.test_stdout_excludes_earlier_failed_attempts_text
+    red_confirmed: true
+    red_reason: "from the Step-4a baseline run (pre-existing bug, not introduced by this task): test_usage_limit_then_provider_error_falls_through_to_third_entry: AssertionError: 1 != 0 (returncode); test_exactly_one_fallback_line_names_the_answering_entry: AssertionError: 0 != 1 : stderr was: ''; test_stdout_excludes_earlier_failed_attempts_text: AssertionError: 'Error: usage limit reached for this account.' unexpectedly found in stdout. Root cause (task plan Design): the switch conditions correctly grepped stderr, but the test stub emitted both response shapes on stdout, so under the module's own harness the chain never advanced at all -- fixed by moving the stub's usage_limit/provider_error replies onto stderr."
+  AC-5:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestSpoofedSwitchShapeInReplyNeverAdvances.test_usage_limit_phrase_in_reply_text_does_not_advance_from_entry_one
+      - tests.test_codex_wrapper_provider_fallback.TestSpoofedSwitchShapeInReplyNeverAdvances.test_provider_error_phrase_in_reply_text_does_not_advance_from_entry_two
+    red_confirmed: false
+    red_reason: "test_provider_error_phrase_in_reply_text_does_not_advance_from_entry_two failed under the pre-task0007 script (AssertionError: stdout was the usage-limit text, not the provider-error text -- the placeholder entry-2 args carried no `-m` flag, so the stub mislabelled the second attempt as entry 1 again and replayed the wrong behavior; this is fixed once entry 2 carries a real `-m` value). test_usage_limit_phrase_in_reply_text_does_not_advance_from_entry_one already passed pre-task0007: entry 1's switch check (grep on $ERRFILE only) was never the buggy half of this feature -- the round-1 bug was the test stub writing to the wrong stream, not this stderr-only scoping -- so a stdout-only spoofed reply at entry 1 already failed to advance the chain before any of this task's changes. Carried into notes as an accepted false, per the tdd-testing skill: the behavior genuinely pre-existed and this task's Design explicitly states the stderr-only property 'is not negotiable... this task keeps it' rather than changes it."
+  AC-6:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestFallbackPrerequisitesAbsent.test_usage_limit_at_entry_one_does_not_advance_when_fallback_unconfigured
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 1 : expected no attempt beyond entry 1 -- the pre-task0007 script had no environment-prerequisite gate at all and always attempted entry 2 regardless of LITELLM_API_KEY / ~/.codex/litellm.config.toml presence."
+  AC-7:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_timeout_at_entry_one_stops_chain_with_existing_diagnostic
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_generic_error_at_entry_one_stops_chain_unchanged
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_provider_error_at_entry_one_does_not_advance_to_entry_two
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_usage_limit_shaped_response_from_entry_two_does_not_advance
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_last_entry_failure_surfaces_that_entrys_outcome_not_a_synthetic_success
+    red_confirmed: true
+    red_reason: "2 of the 5 tests were in the Step-4a baseline failures (same stream-contract bug as AC-4): test_usage_limit_shaped_response_from_entry_two_does_not_advance (AssertionError: Lists differ: [1] != [1, 2]) and test_last_entry_failure_surfaces_that_entrys_outcome_not_a_synthetic_success (AssertionError: 1 != 3), both fixed by the same stderr-stream fix. The other 3 (timeout / generic-error / provider-error-at-entry-1) were already green pre-implementation, since no switch condition fires on those paths and they are unaffected by either the stream fix or the entry-definition change -- kept as guardrails that this task's changes did not disturb them, per this criterion's own wording ('unchanged')."
+  AC-8:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_no_batch_resolution_document_leaks_provider_info
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_marker_list_matches_identifiers_the_script_uses
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_scan_catches_a_forged_provider_name_leak
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_scan_catches_a_forged_usage_limit_detection_leak
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_scan_catches_a_forged_provider_error_detection_leak
+    red_confirmed: true
+    red_reason: "test_marker_list_matches_identifiers_the_script_uses failed under the pre-task0007 script: AssertionError, 'vertex-glm-5.2' not found in em-workflow/scripts/run_codex_exec.sh -- this is the AC-8 clause that the marker list matches the identifiers the script actually uses, and it only holds once the script is rewritten to use the real model identifiers instead of the placeholder names. The scoped leak scan over the six documents was already green (they never named a provider, placeholder or real), and the three forged-sample tests are self-contained checks on the scan helper that do not depend on the wrapper; both are carried forward as the ongoing evidence the criterion still holds."
+  AC-9:
+    tests: []
+    red_confirmed: true
+    red_reason: "AC-9's own outcome is the full-suite exit code: `python3 -m unittest discover -s tests` returned FAILED (failures=5) in the Step-4a baseline (the same 5 tests listed in baseline_failures above) and returns 0 (Ran 3764 tests ... OK) after this task's changes -- see final_failures: []. The pin-replacement half (no existing pin deleted, only the BETA_PROVIDER/GAMMA_PROVIDER constants and their per-entry assertions replaced at equal or greater specificity by VERTEX_MODEL/MUSE_MODEL and the new field-level TestNonPrimaryEntryArgumentSurface class) and the hermetic/stdlib-only half (tests.test_codex_wrapper_provider_fallback.TestHermeticAndStdlibOnly.test_module_imports_are_all_stdlib, already green and unaffected by this change) are structural properties rather than a single dedicated red-green test."
