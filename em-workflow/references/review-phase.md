@@ -74,7 +74,17 @@ Two execution contexts, one protocol:
    or out of budget surfaces as a reviewer skip and is handled by the R2b
    chain walk. An environment without the plugin behaves exactly as before
    litellm support existed — every chain falls through to its codex entry.
-7. Load prior rounds (develop-駆動 only): read existing
+7. Probe notion-task-dispatch: `ntd_path` = the newest match (by
+   version-directory sort) of the glob
+   `$HOME/.claude/plugins/cache/*/notion-task-dispatch/*/scripts/ntd.sh` —
+   the marketplace segment is never hard-coded, and when several plugin
+   versions are installed the newest is the one picked; no match ⇒
+   `ntd_path` unset. Unlike step 1's fail-closed SSOT resolution above,
+   this is an availability probe: an unset `ntd_path` here is an
+   ordinary, supported state, not an abort. Its result is an input the
+   orchestrator later hands to axis 2's filing path (Phase R2 below);
+   nothing here decides the filing branch by itself.
+8. Load prior rounds (develop-駆動 only): read existing
    `reviews/round*.yaml`; build `round_context` = list of
    `{stable_id, file, line, resolution}` for all recorded findings. This is
    what enforces the nit-relitigation ban across rounds and sessions.
@@ -105,6 +115,12 @@ manifests or lockfiles (`package.json`, `go.mod`, `Cargo.toml`,
 third-party source, ADD the `license` perspective. It is never in the floor
 (review-rules.yaml has no manifest signal), so this is the only path that
 selects it.
+
+The same manifest/lockfile trigger above — not the vendored-third-party-source
+clause, which stays `license`-only — additionally ADDs the `vulnerability`
+perspective to the selected set. The `license` behaviour above is
+unchanged, and `vulnerability` is never in the mechanical floor either
+(review-rules.yaml has no manifest signal for it).
 
 After Layer 2 completes, **re-evaluate `cross_validation` against the
 FINAL selected set** (floor ∪ discretionary): it fires when ANY task has
@@ -183,6 +199,34 @@ from the entry after the recorded chain index.
 
 All Task calls go in a SINGLE message. The orchestrator passes only paths and
 the file list — never diff content (each reviewer fetches its own data).
+
+**Axis 2 (`vulnerability`, deterministic, no Task dispatch):** `vulnerability`
+is served by axis 2, never by a Task-dispatched reviewer: the orchestrator
+itself executes the `scan` subcommand of
+`em-workflow/scripts/scan-dependencies.py` (IMPLEMENTATION.md Shared
+Components, "`scan` subcommand") as one deterministic step of THIS SAME
+phase, with no model anywhere on its path. Judging reachability and
+attack-scenario relevance over what the scan reports belongs to the R3a
+evaluator, not to axis 2 — which is why axis 2 needs no LLM reviewer of its
+own and why `vulnerability` never appears among `references/reviewers.yaml`'s
+six perspectives. A `source: tool` run is never looked up in the registry
+this section reads above and never walks a `primary_chain` — the
+registry-lookup and chain-walk machinery this section and Phase R2b define
+apply only to axis 1's Task-dispatched reviewers. The threshold deciding
+which advisories become findings (direct dependencies only, severity high
+and above) lives in `references/vuln-scanners.yaml` as a registry fact; it
+is not restated here as a protocol rule.
+
+Record axis 2's execution as exactly one `perspective_runs` row —
+`run_id: "vulnerability#tool"`, `perspective: vulnerability`, `role: tool`,
+`source: tool`, `status` one of `completed` / `skipped` (with
+`skip_reason`) / `failed` (IMPLEMENTATION.md Shared Components, "Axis-2 run
+identity") — the same kind of row this phase records per LLM-reviewed
+perspective above, and it is what `perspectives_dispatched` /
+`reviewer_outputs` carries into Phase R3a for this perspective. A skipped
+axis-2 run (the scan tool absent on PATH) is recorded exactly as this
+ordinary skip — never as a retryable chain-walk `skip_reason` (Phase R2b):
+axis 2 has no chain to walk in the first place.
 
 ## Phase R2b: Cross-model fallback (chain walk)
 
@@ -279,6 +323,19 @@ reviewer. Diagnose the harness-level cause per
 the failed agents' JSONL logs) and include the diagnosis in the R6 report
 rather than silently recording the perspective as missing.
 
+**Axis 2 exclusion:** none of the chain-walk machinery above applies to
+axis 2's `source: tool` run. It was dispatched exactly once,
+deterministically, in Phase R2 above — there is no `primary_chain` to walk
+and no harness that can be unavailable for it. A `source: tool` run never
+consumes one of this section's fallback hops, never triggers the Claude
+fallback dispatch described above, and never appears in Phase R5's
+`unreviewed_perspectives` list: that list only ever holds a perspective
+whose OWN Phase R2b Claude fallback was dispatched and produced no
+completed run, and axis 2 has no fallback dispatch to produce one from. Its
+Phase R2 skip (the scan tool absent) is not a candidate for this section's
+retryable-`skip_reason` table for the same reason: it is not a
+`skip_reason` this walk ever routes on.
+
 ## Phase R3a: Evaluation (single Opus evaluator)
 
 One dispatch of `Task(subagent_type="em-workflow:review-evaluator")` per
@@ -317,6 +374,13 @@ absolute paths exactly as for reviewers (Phase R2). Every run's verbatim
 output is tagged with the `run_id` the orchestrator itself assigned when
 dispatching it. The evaluator returns one object; Phase R3b defines how the
 orchestrator processes it.
+
+Axis 2's run enters this input exactly like a Task-dispatched perspective's
+run: its `perspective_runs` row (Phase R2, "Axis 2") is one more entry of
+`perspectives_dispatched`, and its own result object is one more entry of
+`reviewer_outputs`, keyed by its `run_id`. Phase R3b treats this run
+identically to any other dispatched perspective's — no special case exists
+for `source: tool`.
 
 ## Phase R3b: Mechanical gates on the evaluation
 
@@ -426,6 +490,17 @@ fixed rework ordering of `references/rework-task-synthesis.md` Section 10.
 Writes, commits and AskUserQuestion stay orchestrator-exclusive; this new
 path introduces no new AskUserQuestion and no new gate identifier.
 
+**Axis 2 interoperates unchanged:** steps 1–7 above and the accountability
+floor above apply to axis 2's `vulnerability` run exactly as they apply to
+any Task-dispatched perspective's run. Step 3's category cross-check
+resolves a `vulnerability` finding against axis 2's `perspective_runs` row
+the same way a `security` finding is resolved against a `security` run, and
+a critical/high site axis 2 reported that the evaluator dropped is lifted
+by the floor the same way — so a tool-reported critical/high cannot be
+silently suppressed by the evaluator. No property, step or exception in
+this phase treats `source: tool` differently from `source: codex` /
+`source: litellm` / `source: claude`.
+
 ## Phase R4: Bounded auto-fix (≤ 3 loops, ON by default)
 
 `--report-only` (aliases `--no-auto-fix`, `--no-fix`) skips R4 entirely.
@@ -454,6 +529,17 @@ Classification (mechanical only — never fuzzy semantic judgment):
   finding.file, no creation/deletion, hunks reference existing lines, target
   not a symlink). Failure: singleton demotes to needs-judgment; agreeing-diffs
   group aborts all members.
+
+A `vulnerability` finding is never classified auto-applicable, regardless
+of `shape`, and always falls to the needs-judgment side above. Two
+independent reasons hold, neither alone load-bearing: the protocol forbids
+it, explicitly, right here; and axis 2's `suggestion` field is prose only
+by contract (IMPLEMENTATION.md D4) — never a unified diff — so the shape
+probe above already classifies it `prose` and routes it through the same
+needs-judgment / conflict path as any other prose prescription. No
+dependency update, lockfile edit or package installation is ever
+auto-applied, or dispatched to an editor without first passing through the
+needs-judgment gate above.
 
 Dispatch:
 
@@ -601,6 +687,43 @@ exactly like a normal round run (`role: primary`/`fallback`, `status`). Then:
 zero residual critical/high non-spec → `clean`; `loop == 3` → `loop-cap`; no
 progress and no user-resolvable candidates → `no-progress`.
 
+### Triage filing: once per review phase, immediately before the final round's R5 (FR11, FR24)
+
+1. **What runs**: the orchestrator invokes the `file-tasks` subcommand of
+   `em-workflow/scripts/scan-dependencies.py` (IMPLEMENTATION.md, Shared
+   Components "`file-tasks` subcommand"), passing the project root, the
+   feature, the unresolved `vulnerability` findings, and the
+   notion-task-dispatch entry point IF R0's probe found one. Selecting
+   which findings are "unresolved" (resolution other than `fixed`, category
+   `vulnerability`) is the orchestrator's job; the script never re-decides
+   it.
+2. **When it runs**: exactly once per review phase, immediately before the
+   final round's R5 — never per round. The deterministic signal is this
+   round's **closing disposition** (IMPLEMENTATION.md D3): computed after
+   Phase R4's loop termination and before the round record is written,
+   from values the orchestrator already holds — the residual critical/high
+   count, the `--report-only` flag, the loop termination reason, and the
+   batch rework counter. The disposition is `another-round` or one of
+   `complete` / `rework` / `defer`. Filing runs iff the disposition is NOT
+   `another-round`.
+3. **Why neither failure mode can arise**: a non-final round always yields
+   the `another-round` disposition, so filing cannot fire early, in a
+   non-final round. A run that dies before R5 wrote no round record, so
+   the resumed review re-runs the round and recomputes the same
+   disposition, filing then — this is safe because the filing path is
+   idempotent under its own package-name duplicate detection.
+4. **The receipt**: Phase R5's round record gains a root field recording
+   whether triage filing ran this round, which branch was taken (the
+   external task system or the report), and the packages filed / appended
+   to / suppressed as duplicates, plus the report path when the report
+   branch ran. The field is present and empty when the disposition was
+   `another-round`. This is disclosure and audit only: it introduces no
+   new gate identifier and never affects the completion gate below.
+
+The branch between filing and report is decided mechanically from R0's
+probe result — no question is put to the user, in either interactive or
+batch mode.
+
 ## Phase R5: Persist the round record
 
 Write `reviews/round{N}.yaml` (develop-駆動: at
@@ -673,6 +796,13 @@ auto_fix:
   termination: clean
 residual_critical_high: 0
 rework_required: false       # true → implement へ差し戻し
+triage_filing:               # present and empty when this round's disposition was `another-round`
+  executed: false
+  branch: null                # ntd | report, null when not executed
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null            # set only when branch == report
 ```
 
 `perspective_runs` entries gain a `role` field: `primary` (a `primary_chain`
@@ -717,6 +847,15 @@ section rendering `evaluation.round_summary` in interactive mode (subject
 to the same output-suppression discipline as the rest of R6 in batch
 mode); the round record itself — which batch-mode output-suppression does
 not touch — remains the batch-visible channel for this content.
+
+The round record also persists the triage-filing receipt under a root
+`triage_filing` field: an `executed` flag, the `branch` taken (`ntd` /
+`report`), the packages `filed` / `appended` / `duplicates_suppressed`, and
+`report_path` (set only when the report branch ran) — see "Triage filing"
+above (Phase R4) for when this runs. `executed` is `false` and every other
+value is empty/null when this round's disposition was `another-round`.
+This is disclosure and audit only: it introduces no new gate identifier
+and never affects the completion gate below.
 
 develop-駆動: update workflow.yaml `review` block (rounds_completed,
 perspectives, residual_critical_high, needs_rework, status), then commit

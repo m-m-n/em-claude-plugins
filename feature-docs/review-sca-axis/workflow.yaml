@@ -59,9 +59,9 @@ tasks:
     domains: [input-handling, external-io, api-contract, config-infra]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR21, FR22, NFR2, NFR3, NFR4, NFR7]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/review-sca-axis/task0001
   task0003:
     title: "Axis 2's placement in review-phase.md R0-R3b"
     plan: tasks/task0003.md
@@ -72,9 +72,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: high
     requirements: [FR6, FR7, FR8, FR9, FR22, FR23, NFR1, NFR5, NFR6]
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-sca-axis/task0003
   task0004:
     title: "R4/R5 triage timing: no auto-apply, once per phase"
     plan: tasks/task0004.md
@@ -85,9 +85,9 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: high
     requirements: [FR10, FR11, FR22, FR24]
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-sca-axis/task0004
   task0005:
     title: "Triage filing and report path in scan-dependencies.py"
     plan: tasks/task0005.md
@@ -98,9 +98,9 @@ tasks:
     domains: [input-handling, external-io]
     complexity: high
     requirements: [FR12, FR13, FR14, FR15, FR16, FR17, FR18, FR22, NFR2, NFR4, NFR7]
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-sca-axis/task0005
   task0006:
     title: "Security-skill delegation note and plugin version bump"
     plan: tasks/task0006.md
@@ -113,9 +113,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR19, FR20, FR22, NFR6]
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-sca-axis/task0006
 
 review:
   rounds: []

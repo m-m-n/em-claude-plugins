@@ -1,0 +1,69 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_axis_triage_timing.TestAC1VulnerabilityNeverAutoApplicable
+      - tests.test_sca_axis_triage_timing.TestAC1RegressionMatcherCanFail
+    red_confirmed: true
+    red_reason: >
+      Before the review-phase.md edit, TestAC1VulnerabilityNeverAutoApplicable
+      failed with AssertionError: "A `vulnerability` finding is never
+      classified auto-applicable" not found in the Phase R4 slice (and
+      similarly for the two-independent-reasons and no-auto-apply
+      assertions) -- the statement did not exist yet.
+  AC-2:
+    tests:
+      - tests.test_sca_axis_triage_timing.TestAC2TriageFilingTimingOncePerPhase
+    red_confirmed: true
+    red_reason: >
+      ValueError: substring "### Triage filing: once per review phase,
+      immediately before the final round's R5 (FR11, FR24)" not found --
+      the subsection did not exist in review-phase.md before this task's
+      edit.
+  AC-3:
+    tests:
+      - tests.test_sca_axis_triage_timing.TestAC3DeterministicFinalRoundSignal
+    red_confirmed: true
+    red_reason: >
+      AssertionError: "closing disposition" not found in the Phase R4
+      slice before the Triage filing subsection was added.
+  AC-4:
+    tests:
+      - tests.test_sca_axis_triage_timing.TestAC4BothFailureModesClosed
+      - tests.test_sca_axis_triage_timing.TestAC4RegressionMatcherCanFail
+    red_confirmed: true
+    red_reason: >
+      AssertionError: "a non-final round always yields the `another-round`
+      disposition" not found in the Phase R4 slice before the "Why neither
+      failure mode can arise" sentence was added.
+  AC-5:
+    tests:
+      - tests.test_sca_axis_triage_timing.TestAC5RoundRecordReceiptField
+    red_confirmed: true
+    red_reason: >
+      AssertionError: "triage_filing:" not found in the Phase R5 slice --
+      the round-record shape had no receipt field before this task's edit.
+  AC-6:
+    tests:
+      - tests.test_sca_axis_triage_timing.TestAC6BranchDecidedMechanically
+    red_confirmed: true
+    red_reason: >
+      AssertionError: "decided mechanically from R0's probe result" not
+      found in the Phase R4 slice before the Triage filing subsection's
+      closing sentence was added.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Not a test-first criterion: it names the full-suite and
+      check-plugin-invariants.py exit codes as the verifiable outcome,
+      which can only be observed as green once the whole task's edit is
+      in place (nothing to watch fail "for the right reason" beforehand
+      beyond AC-1..AC-6's own reds, already recorded above). Verified by
+      actually running both commands in this worktree after implementation:
+      `python3 -m unittest discover -s tests` -> "Ran 3894 tests ... OK"
+      (baseline was 3855, so +39 from this task's new module, no
+      regressions); `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      -> all seven checks PASS, exit 0.
