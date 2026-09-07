@@ -24,6 +24,28 @@ Acceptance criteria covered (feature-docs/review-sca-axis/tasks/task0005.md):
   test here (it depends on the full suite / check-plugin-invariants.py
   against the real repository).
 
+Reworked by task0007 (review round 1, feature-docs/review-sca-axis/tasks/
+task0007.md) -- additional acceptance criteria covered on top of the above:
+
+- AC-1 (task0007): TestListingThreeValuedOutcome -- an available listing
+  with zero validated entries (empty JSON array, or every entry dropped
+  item-wise by validation) takes the filing branch, not the report branch.
+- AC-2 (task0007): TestListingUnavailableReasons -- each of the five
+  genuine unavailability conditions degrades to the report branch with its
+  own distinguishable machine-stable reason.
+- AC-3 (task0007): TestPoisonFindingIsolation -- one malformed finding is
+  skipped and recorded (position + reason, no advisory-sourced text) rather
+  than aborting the batch; an entirely-malformed batch returns the
+  documented summary rather than raising.
+- AC-4 (task0007): TestMidBatchFailurePartialProgress -- a mid-batch
+  external task-system failure returns the documented summary with the
+  packages already filed, the failing package and a machine-stable failure
+  reason, without an exception escaping.
+- AC-5 (task0007): TestMidBatchFailurePartialProgress's retry test -- a
+  re-run against a refreshed listing files only what was not filed before.
+- AC-6 (task0007): the implementer's own definition-of-done run (see AC-8
+  above), not a test here.
+
 Test Notes followed: the external task system is never contacted -- every
 filing test points `--entry-point` at a stand-in executable
 (`_write_standin`) that records the arguments/file contents it received
@@ -94,8 +116,20 @@ CALLS.write_text(json.dumps(calls), encoding="utf-8")
 
 control = json.loads(CONTROL.read_text(encoding="utf-8")) if CONTROL.exists() else {{}}
 key = f"{{noun}} {{verb}}"
+# A per-identifier override ("task create:pkg-b" / "task update:task-id")
+# lets a test script a DIFFERENT response for one specific package/task
+# within the same run (needed for a mid-batch partial-failure scenario) --
+# falls back to the generic "noun verb" key when no override is set, so
+# every pre-existing control file (keyed only by "noun verb") is unaffected.
+identifier = read_flag("--title")
+if identifier is None:
+    identifier = read_flag("--id")
+specific_key = f"{{key}}:{{identifier}}" if identifier is not None else None
 default_stdout = "[]" if key == "task list" else "{{}}"
-resp = control.get(key, {{"exit_code": 0, "stdout": default_stdout, "stderr": ""}})
+if specific_key is not None and specific_key in control:
+    resp = control[specific_key]
+else:
+    resp = control.get(key, {{"exit_code": 0, "stdout": default_stdout, "stderr": ""}})
 sys.stderr.write(resp.get("stderr", ""))
 sys.stdout.write(resp.get("stdout", ""))
 sys.exit(resp.get("exit_code", 0))
@@ -257,7 +291,7 @@ class TestRecoverPackageAdvisory(unittest.TestCase):
         the grouping result accordingly."""
         findings = [_finding("real-package", "CVE-1")]
         with patch.object(sd, "recover_package_advisory", return_value=("patched-package", "patched-advisory")):
-            groups = sd.group_findings_by_package(findings)
+            groups, _malformed = sd.group_findings_by_package(findings)
         self.assertIn("patched-package", groups)
         self.assertNotIn("real-package", groups)
 
@@ -367,7 +401,11 @@ class TestFileTasksBranches(unittest.TestCase):
             result = sd.file_tasks(Path(tmp), "review-sca-axis", findings, str(standin))
             self.assertEqual(result["branch"], "report")
             self.assertTrue(result["degraded"])
-            self.assertEqual(result["degraded_reason"], "task_listing_unavailable")
+            # AC-2: a non-zero listing exit is its OWN machine-stable reason,
+            # distinguishable from the other unavailability conditions --
+            # see TestListingUnavailableReasons for the full distinctness
+            # check across all five.
+            self.assertEqual(result["degraded_reason"], "listing_exit_nonzero")
             content = Path(result["report_path"]).read_text(encoding="utf-8")
             self.assertIn("DEGRADED", content)
 
@@ -380,6 +418,110 @@ class TestFileTasksBranches(unittest.TestCase):
             result = sd.file_tasks(Path(tmp), "review-sca-axis", findings, str(standin))
             self.assertEqual(result["branch"], "report")
             self.assertTrue(result["degraded"])
+            self.assertEqual(result["degraded_reason"], "listing_output_not_json")
+
+
+# ---------------------------------------------------------------------------
+# AC-1 (task0007): the listing outcome is three-valued -- a successful
+# listing with zero validated entries (empty JSON array, or every entry
+# dropped item-wise by validation) is the normal first-run state and must
+# reach the FILING branch, not the report branch.
+# ---------------------------------------------------------------------------
+
+class TestListingThreeValuedOutcome(unittest.TestCase):
+    def test_empty_json_array_listing_takes_filing_branch_not_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            standin, control, calls = _write_standin(tmp)
+            _set_control(control, {"task list": {"exit_code": 0, "stdout": "[]"}})
+            findings = [_finding("pkg-a", "CVE-2024-1")]
+            result = sd.file_tasks(Path(tmp), "review-sca-axis", findings, str(standin))
+            self.assertEqual(result["branch"], "ntd")
+            self.assertFalse(result["degraded"])
+            self.assertEqual(result["filed_packages"], ["pkg-a"])
+
+    def test_listing_with_every_entry_dropped_by_validation_still_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            standin, control, calls = _write_standin(tmp)
+            # This entry is missing "status" (required) -- item-wise
+            # validation drops it, but the listing itself IS available (a
+            # JSON array was produced). Must behave exactly like an empty
+            # array, not like an unavailable listing.
+            _set_control(
+                control,
+                {
+                    "task list": {
+                        "exit_code": 0,
+                        "stdout": json.dumps([{"id": "t-1", "package": "pkg-a"}]),
+                    }
+                },
+            )
+            findings = [_finding("pkg-a", "CVE-2024-1")]
+            result = sd.file_tasks(Path(tmp), "review-sca-axis", findings, str(standin))
+            self.assertEqual(result["branch"], "ntd")
+            self.assertFalse(result["degraded"])
+            self.assertEqual(result["filed_packages"], ["pkg-a"])
+            self.assertEqual(result["listing_dropped_count"], 1)
+
+
+# ---------------------------------------------------------------------------
+# AC-2 (task0007): each genuine unavailability condition degrades to the
+# report branch with its OWN machine-stable reason, distinguishable from
+# the other four.
+# ---------------------------------------------------------------------------
+
+class TestListingUnavailableReasons(unittest.TestCase):
+    def _degraded_reason(self, tmp, entry_point):
+        _init_git_repo(tmp)
+        findings = [_finding("pkg-a", "CVE-2024-1")]
+        result = sd.file_tasks(Path(tmp), "review-sca-axis", findings, entry_point)
+        self.assertEqual(result["branch"], "report")
+        self.assertTrue(result["degraded"])
+        reason = result["degraded_reason"]
+        self.assertIsInstance(reason, str)
+        self.assertTrue(reason)
+        return reason
+
+    def test_five_unavailability_conditions_have_five_distinct_reasons(self):
+        reasons = {}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # 1. invalid entry point: path does not exist at all.
+            reasons["invalid_entry_point"] = self._degraded_reason(
+                tmp, str(Path(tmp) / "does-not-exist-entry-point")
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # 2. launch failure: the file exists and is marked executable
+            # (so it passes the entry-point validity check), but the OS
+            # cannot actually exec it (bad interpreter) -- this surfaces as
+            # an OSError from subprocess.run in the PARENT process.
+            bad_standin = Path(tmp) / "bad-standin"
+            bad_standin.write_text("#!/nonexistent-interpreter-xyz\n")
+            bad_standin.chmod(bad_standin.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+            reasons["launch_failed"] = self._degraded_reason(tmp, str(bad_standin))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # 3. process launches but exits non-zero.
+            standin, control, calls = _write_standin(tmp)
+            _set_control(control, {"task list": {"exit_code": 1, "stdout": "", "stderr": "boom"}})
+            reasons["exit_nonzero"] = self._degraded_reason(tmp, str(standin))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # 4. exits zero but stdout is not JSON at all.
+            standin, control, calls = _write_standin(tmp)
+            _set_control(control, {"task list": {"exit_code": 0, "stdout": "not json"}})
+            reasons["not_json"] = self._degraded_reason(tmp, str(standin))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # 5. exits zero, valid JSON, but not an array.
+            standin, control, calls = _write_standin(tmp)
+            _set_control(
+                control,
+                {"task list": {"exit_code": 0, "stdout": json.dumps({"not": "an array"})}},
+            )
+            reasons["not_array"] = self._degraded_reason(tmp, str(standin))
+
+        self.assertEqual(len(set(reasons.values())), 5, reasons)
 
 
 # ---------------------------------------------------------------------------
@@ -540,6 +682,184 @@ class TestGroupingAndFiling(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# AC-3 (task0007): poison-finding isolation -- a malformed finding's title
+# never aborts the grouping/filing of the rest of the batch, is recorded
+# with its input position and a reason free of advisory-sourced text, and a
+# batch that is ENTIRELY malformed still returns the documented summary
+# rather than raising.
+# ---------------------------------------------------------------------------
+
+def _malformed_finding(title):
+    """A finding whose title violates the text-encoding contract (no valid
+    '{package}: {advisory_id}' separator) -- everything else is well-formed
+    so only the title is under test."""
+    return {
+        "file": "package.json",
+        "line": None,
+        "line_end": None,
+        "severity": "high",
+        "category": "vulnerability",
+        "title": title,
+        "description": "n/a",
+        "suggestion": "n/a",
+    }
+
+
+class TestPoisonFindingIsolation(unittest.TestCase):
+    def test_one_malformed_finding_does_not_abort_filing_of_the_others(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            standin, control, calls = _write_standin(tmp)
+            _set_control(control, {"task list": {"exit_code": 0, "stdout": "[]"}})
+            findings = [
+                _finding("pkg-a", "CVE-1"),
+                _malformed_finding("this title has no colon-space separator"),
+                _finding("pkg-b", "CVE-2"),
+            ]
+            result = sd.file_tasks(Path(tmp), "review-sca-axis", findings, str(standin))
+            self.assertEqual(sorted(result["filed_packages"]), ["pkg-a", "pkg-b"])
+            self.assertEqual(len(result["malformed_findings"]), 1)
+            self.assertEqual(result["malformed_findings"][0]["position"], 1)
+            reason = result["malformed_findings"][0]["reason"]
+            self.assertNotIn("this title has no colon-space separator", reason)
+
+    def test_batch_entirely_malformed_returns_summary_with_empty_sets_no_exception(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            standin, control, calls = _write_standin(tmp)
+            _set_control(control, {"task list": {"exit_code": 0, "stdout": "[]"}})
+            findings = [
+                _malformed_finding("no separator here at all"),
+                _malformed_finding("also no separator here"),
+            ]
+            try:
+                result = sd.file_tasks(Path(tmp), "review-sca-axis", findings, str(standin))
+            except Exception as exc:  # the absence of a raise IS the assertion
+                self.fail(f"file_tasks raised {exc!r} instead of returning a summary")
+            self.assertEqual(result["filed_packages"], [])
+            self.assertEqual(result["appended_packages"], [])
+            self.assertEqual(result["suppressed"], [])
+            self.assertEqual(len(result["malformed_findings"]), 2)
+            self.assertEqual(
+                [m["position"] for m in result["malformed_findings"]], [0, 1]
+            )
+
+    def test_malformed_reason_carries_no_advisory_text_into_the_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_git_repo(tmp)
+            secret_marker = "TOTALLY-UNIQUE-ADVISORY-SOURCED-TEXT-ZZZ"
+            findings = [_malformed_finding(secret_marker)]
+            result = sd.file_tasks(Path(tmp), "review-sca-axis", findings, None)
+            self.assertEqual(result["branch"], "report")
+            self.assertEqual(len(result["malformed_findings"]), 1)
+            reason = result["malformed_findings"][0]["reason"]
+            self.assertNotIn(secret_marker, reason)
+            report_content = Path(result["report_path"]).read_text(encoding="utf-8")
+            self.assertNotIn(secret_marker, report_content)
+
+
+# ---------------------------------------------------------------------------
+# AC-4 / AC-5 (task0007): partial progress survives a mid-batch external
+# task-system failure, and a retry against a refreshed listing files only
+# what was not filed before.
+# ---------------------------------------------------------------------------
+
+class TestMidBatchFailurePartialProgress(unittest.TestCase):
+    def test_failure_on_second_of_three_packages_returns_partial_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            standin, control, calls = _write_standin(tmp)
+            _set_control(
+                control,
+                {
+                    "task list": {"exit_code": 0, "stdout": "[]"},
+                    # Per-package override: task-create for pkg-b fails,
+                    # pkg-a (processed first) and pkg-c (never reached)
+                    # keep the default success response.
+                    "task create:pkg-b": {"exit_code": 1, "stdout": "", "stderr": "task system unavailable"},
+                },
+            )
+            findings = [
+                _finding("pkg-a", "CVE-1"),
+                _finding("pkg-b", "CVE-2"),
+                _finding("pkg-c", "CVE-3"),
+            ]
+            result = sd.file_tasks(Path(tmp), "review-sca-axis", findings, str(standin))
+
+            self.assertEqual(result["filed_packages"], ["pkg-a"])
+            self.assertEqual(result["failed_package"], "pkg-b")
+            self.assertIsInstance(result["failure_reason"], str)
+            self.assertTrue(result["failure_reason"])
+            self.assertNotIn("pkg-c", result["filed_packages"])
+            self.assertNotIn("pkg-c", result["appended_packages"])
+            self.assertEqual(result["branch"], "ntd")
+            # Every pre-existing key keeps its name (task plan: "the summary
+            # dict grows, never changes shape").
+            for key in (
+                "branch", "filed_packages", "appended_packages", "suppressed",
+                "report_path", "degraded", "degraded_reason",
+            ):
+                self.assertIn(key, result)
+
+            recorded = _read_calls(calls)
+            create_calls = [c for c in recorded if c["noun"] == "task" and c["verb"] == "create"]
+            # pkg-a succeeded, pkg-b was attempted and failed, pkg-c was
+            # never attempted -- exactly two create calls, not three.
+            self.assertEqual(sorted(c["--title"] for c in create_calls), ["pkg-a", "pkg-b"])
+
+    def test_retry_after_partial_failure_files_only_what_was_not_filed_before(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            standin, control, calls = _write_standin(tmp)
+            _set_control(
+                control,
+                {
+                    "task list": {"exit_code": 0, "stdout": "[]"},
+                    "task create:pkg-b": {"exit_code": 1, "stdout": "", "stderr": "task system unavailable"},
+                },
+            )
+            findings = [
+                _finding("pkg-a", "CVE-1"),
+                _finding("pkg-b", "CVE-2"),
+                _finding("pkg-c", "CVE-3"),
+            ]
+            first = sd.file_tasks(Path(tmp), "review-sca-axis", findings, str(standin))
+            self.assertEqual(first["filed_packages"], ["pkg-a"])
+            self.assertEqual(first["failed_package"], "pkg-b")
+
+            # Re-derive what is outstanding from a listing that now
+            # reflects pkg-a's task (as the real task system would show
+            # after the first run) -- the earlier failure condition is
+            # gone (fresh control, no override left for pkg-b).
+            _set_control(
+                control,
+                {
+                    "task list": {
+                        "exit_code": 0,
+                        "stdout": json.dumps(
+                            [
+                                {
+                                    "id": "task-pkg-a",
+                                    "package": "pkg-a",
+                                    "status": "incomplete",
+                                    "references": "CVE-1 (high)",
+                                }
+                            ]
+                        ),
+                    },
+                },
+            )
+            second = sd.file_tasks(Path(tmp), "review-sca-axis", findings, str(standin))
+
+            self.assertIsNone(second["failed_package"])
+            self.assertIsNone(second["failure_reason"])
+            # pkg-a's only advisory is already recorded -> suppressed, and
+            # NOT re-filed and NOT appended to (nothing new to append).
+            self.assertEqual(second["suppressed"], [["pkg-a", "CVE-1"]])
+            self.assertEqual(second["appended_packages"], [])
+            self.assertNotIn("pkg-a", second["filed_packages"])
+            # pkg-b and pkg-c were never successfully filed before -> both
+            # get filed now.
+            self.assertEqual(sorted(second["filed_packages"]), ["pkg-b", "pkg-c"])
+
+
+# ---------------------------------------------------------------------------
 # AC-6: severity as a recorded fact, priority always 高, truncation
 # ---------------------------------------------------------------------------
 
@@ -562,7 +882,7 @@ class TestSeverityPriorityAndTruncation(unittest.TestCase):
     def test_long_advisory_sourced_string_is_truncated_with_visible_marker(self):
         huge_advisory_id = "CVE-" + ("0" * 5000)
         finding = _finding("pkg-a", huge_advisory_id)
-        groups = sd.group_findings_by_package([finding])
+        groups, _malformed = sd.group_findings_by_package([finding])
         (advisory_id, _severity), = groups["pkg-a"]
         self.assertLessEqual(len(advisory_id.encode("utf-8")), sd.UNTRUSTED_TEXT_MAX_BYTES)
         self.assertIn(sd.TRUNCATION_MARKER, advisory_id)

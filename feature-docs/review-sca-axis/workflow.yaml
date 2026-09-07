@@ -190,9 +190,9 @@ tasks:
     - FR16
     - FR22
     - NFR4
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-sca-axis/task0007
   task0008:
     title: Bind each scanner invocation to the reviewed project and off repository-controlled dispatch
     plan: tasks/task0008.md
@@ -215,9 +215,9 @@ tasks:
     - FR4
     - FR22
     - NFR2
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/review-sca-axis/task0008
   task0009:
     title: Scan execution outcomes and the partial-coverage result contract
     plan: tasks/task0009.md
@@ -239,9 +239,9 @@ tasks:
     - FR3
     - FR20
     - FR22
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-sca-axis/task0009
 review:
   rounds:
   - 1
