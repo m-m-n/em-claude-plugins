@@ -127,7 +127,7 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR6, NFR3, NFR4, NFR5]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/assumptions-reversible-criteria/task0002
   task0003:
