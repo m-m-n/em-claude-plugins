@@ -1,0 +1,76 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_axis_skill_and_version.TestSecuritySkillDelegationNote.test_section_mentions_axis_2
+      - tests.test_sca_axis_skill_and_version.TestSecuritySkillDelegationNote.test_section_states_the_judgement_is_mechanical
+      - tests.test_sca_axis_skill_and_version.TestSecuritySkillDelegationNote.test_section_scopes_the_delegation_to_known_cve_dependency_judgement
+    red_confirmed: true
+    red_reason: >-
+      Before the SKILL.md edit, the "What NOT to flag" section contained
+      only the two pre-existing sentences; none mentioned "axis 2" or
+      "mechanically", so all three assertions raised AssertionError with the
+      section text shown as the actual value.
+  AC-2:
+    tests:
+      - tests.test_sca_axis_skill_and_version.TestSecuritySkillUnchangedElsewhere.test_headings_all_present
+      - tests.test_sca_axis_skill_and_version.TestSecuritySkillUnchangedElsewhere.test_existing_what_not_to_flag_sentences_survive
+      - tests.test_sca_axis_skill_and_version.TestSecuritySkillUnchangedElsewhere.test_category_requirement_survives
+      - tests.test_sca_axis_skill_and_version.TestSecuritySkillUnchangedElsewhere.test_what_to_flag_section_untouched
+    red_confirmed: false
+    red_reason: >-
+      These assertions pin content that was already true before this task's
+      edit (the pre-existing headings/sentences/category line) and remains
+      true after it -- there is no observable state change for AC-2 to prove
+      by red->green; the criterion is "nothing else moved", which by
+      construction cannot be watched failing before an edit exists. Verified
+      instead by running them green both immediately after the SKILL.md edit
+      and as part of the final full-suite run, confirming the addition did
+      not disturb the pinned surrounding content.
+  AC-3:
+    tests:
+      - tests.test_sca_axis_skill_and_version.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_sca_axis_skill_and_version.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_sca_axis_skill_and_version.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: >-
+      Before the version bump, both registries read 0.1.65 (the baseline),
+      so "past baseline" (tuple (0,1,65) > (0,1,65)) raised
+      AssertionError: "(0, 1, 65) not greater than (0, 1, 65)" for both the
+      plugin manifest and the marketplace entry.
+  AC-4:
+    tests:
+      - tests.test_sca_axis_skill_and_version.TestScaTestModulesImportOnlyStdlib.test_every_sca_module_imports_only_stdlib
+      - tests.test_sca_axis_skill_and_version.TestFilePathScriptLoadingIsNotFlaggedAsImport.test_file_path_loading_source_is_not_flagged
+      - tests.test_sca_axis_skill_and_version.TestFilePathScriptLoadingIsNotFlaggedAsImport.test_the_loaded_module_name_never_appears_as_a_flagged_import
+      - tests.test_sca_axis_skill_and_version.TestScaImportScanDetectsRegressions.test_flags_a_plain_third_party_import
+      - tests.test_sca_axis_skill_and_version.TestScaImportScanDetectsRegressions.test_flags_a_from_import_of_a_third_party_package
+    red_confirmed: true
+    red_reason: >-
+      The scan helper (`_non_stdlib_imports`) and its tests were authored in
+      one pass, so the "must not flag" tests (file-path loading, own-module
+      scan) were already green on first run and prove nothing by themselves.
+      To confirm the checker is not vacuous, the helper was deliberately
+      stubbed to always return `[]` and the suite re-run: the two
+      negative-proof tests went red as expected --
+      `test_flags_a_plain_third_party_import`:
+      "AssertionError: Lists differ: [] != ['yaml']" and
+      `test_flags_a_from_import_of_a_third_party_package`:
+      "AssertionError: Lists differ: [] != ['requests']" -- while the
+      "must not flag" tests stayed green under the stub too (expected: an
+      always-empty return also satisfies "nothing flagged"). The real
+      implementation was then restored and the full 31-test module
+      reconfirmed green.
+  AC-5:
+    tests: []
+    red_reason: >-
+      Not unit-testable from inside the suite (a suite cannot assert its own
+      full-suite exit code without recursion, and check-plugin-invariants.py's
+      CLI exit code is already covered by test_check_plugin_invariants.py).
+      Verified directly: `python3 -m unittest discover -s tests` exited 0
+      (3886 tests, up from a 3855-test baseline) and
+      `python3 em-workflow/scripts/check-plugin-invariants.py <repo-root>`
+      exited 0 (all 7 checks PASS), both run in this task's own worktree
+      after the implementation.
