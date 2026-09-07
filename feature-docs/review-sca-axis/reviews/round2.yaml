@@ -133,7 +133,12 @@ findings:
   resolution_reason: 'auto-applied loop 1 (registry args only). REGRESSION: the editor could only touch
     vuln-scanners.yaml, so the matching test-pin update the suggestion also required was not made; `python3
     -m unittest discover -s tests` now reports FAILED (failures=9). Re-reported independently by spec#loop1
-    as 4699cf4f1c58e38d.'
+    as 4699cf4f1c58e38d. VERIFY-REWORK ROUND 1: the applied registry change is reverted by
+    task0010, because the registry''s single `args` list is shared by BOTH pip target forms, so
+    `--no-deps` also landed on the directory-target form where it is not a valid combination —
+    the applied change was therefore not a correct instance of this mitigation. The hardening
+    this finding asks for remains OPEN and needs a SPEC-level decision on FR1''s command form
+    together with the matching test-pin change; it is filed as a separate follow-up task.'
 - stable_id: 90c05c8482cf46f5
   severity: high
   category: comprehensive

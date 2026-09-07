@@ -37,14 +37,14 @@ workflow:
   status: completed
   completed_at_commit: 760e939e2e12ac47248d239abb63022b5cde9f0f
 - id: implement
-  status: completed
+  status: pending
   base_commit: c57996a1c2875b88b28d65646eb8d47091bc0a47
   completed_at_commit: 4a08bf16d13f5dded6430f08a1071c118bbc66a3
 - id: review
   status: completed
   completed_at_commit: cadfca4d2f9461fc77bc2e4fd4a509c36b5bf0b2
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: AC-22
@@ -260,6 +260,26 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/review-sca-axis/task0009
+  task0010:
+    title: Restore the pinned pip-audit argument form in vuln-scanners.yaml
+    plan: tasks/task0010.md
+    files:
+    - em-workflow/references/vuln-scanners.yaml
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills: []
+    domains:
+    - config-infra
+    - external-io
+    complexity: low
+    requirements:
+    - FR1
+    - FR4
+    - FR20
+    - NFR2
+    status: pending
+    notes: null
+    branch: null
 review:
   rounds:
   - 1
@@ -303,6 +323,7 @@ requirements:
     tasks:
     - task0001
     - task0008
+    - task0010
     tests:
     - TS-1
     - TS-26
@@ -339,6 +360,7 @@ requirements:
     tasks:
     - task0001
     - task0008
+    - task0010
     tests:
     - TS-1
     - TS-3
@@ -495,6 +517,7 @@ requirements:
     tasks:
     - task0006
     - task0009
+    - task0010
     tests:
     - TS-13
   FR21:
@@ -558,6 +581,7 @@ requirements:
     - task0001
     - task0005
     - task0008
+    - task0010
     tests:
     - TS-19
     - TS-18
