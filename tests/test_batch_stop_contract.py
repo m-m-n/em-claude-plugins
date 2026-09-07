@@ -412,6 +412,38 @@ def _assert_well_formed_code_list(test, codes):
     )
 
 
+def _reason_code_meaning(section_text, code):
+    """batch-codex-autonomous-decisions task0003: extracts the `## Stop
+    reason codes` table's second column (Meaning) for the row whose first
+    column is exactly `code`. Returns None when no such row is found --
+    companion to `_extract_reason_code_table`, which only extracts the
+    first column."""
+    for row in _table_rows(section_text):
+        if _first_column_code(row[0]) == code:
+            return row[1]
+    return None
+
+
+def _assert_gate_fail_closed_coverage_wording_stated(test, meaning_cell):
+    """batch-codex-autonomous-decisions task0003 (AC-5, FR22/FR3/NFR1):
+    validation for the `gate_fail_closed` coverage-wording matcher. The
+    wording must name only the aborts that survive in both modes plus
+    interactive's own aborts, via a collective phrase plus a path citation
+    to `question-resolution.md`, the resolution SSOT that enumerates the
+    surviving-abort set exactly once -- and must NOT re-enumerate that set
+    (IMPLEMENTATION.md Shared Components: "the aborts question-resolution.md
+    keeps fail-closed in both modes")."""
+    test.assertIn("references/question-resolution.md", meaning_cell)
+    test.assertIn("both modes", meaning_cell)
+    test.assertIn("interactive", meaning_cell)
+    for leaked_term in (
+        "category: security",
+        "category: license",
+        "reversible: false",
+    ):
+        test.assertNotIn(leaked_term, meaning_cell)
+
+
 def _extract_coverage_table(section_text):
     """Parses the `## Stop point coverage` table into (stop_point_key,
     reason_code) pairs from the first two backticked columns."""
@@ -848,6 +880,71 @@ class TestStopReasonCodes(unittest.TestCase):
             "never as a table row.\n"
         )
         self.assertEqual(_extract_reason_code_table(sample), ["step_stuck"])
+
+
+# batch-codex-autonomous-decisions task0003, AC-5: a forged `Meaning` cell
+# that re-enumerates the surviving-abort set item by item instead of citing
+# it collectively -- otherwise well-formed (names "both modes",
+# "interactive" and the question-resolution.md path).
+FORGED_GATE_FAIL_CLOSED_REENUMERATION = (
+    "A gate was classified fail-closed: `category: security`, `category: "
+    "license`, and `reversible: false` abort in interactive; in both modes "
+    "per references/question-resolution.md."
+)
+
+
+class TestGateFailClosedCoverageWording(unittest.TestCase):
+    """batch-codex-autonomous-decisions task0003, AC-5 (FR22, FR3, NFR1):
+    the `gate_fail_closed` row's coverage wording narrows to name only the
+    aborts that survive in both modes plus interactive's own aborts, by
+    collective phrase plus path citation, without re-enumerating the
+    surviving-abort set -- that set is enumerated exactly once, in
+    `question-resolution.md` (task0001, out of this task's scope)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _sections(_read(CONTRACT_PATH))["Stop reason codes"]
+        cls.meaning = _reason_code_meaning(cls.section, "gate_fail_closed")
+
+    def test_meaning_cell_found(self):
+        self.assertIsNotNone(
+            self.meaning,
+            "no `gate_fail_closed` row found in the reason-code table",
+        )
+
+    def test_coverage_wording_stated(self):
+        _assert_gate_fail_closed_coverage_wording_stated(self, self.meaning)
+
+    def test_old_flat_wording_is_gone(self):
+        # AC-6 (FR21, NFR9, C4 pin replacement): the pre-task0003 wording
+        # that covered every fail-closed abort uniformly, without
+        # distinguishing the two modes, is gone -- negative proof half of
+        # the pin replacement (positive half is
+        # test_coverage_wording_stated above).
+        self.assertNotIn(
+            "A gate was classified fail-closed and the phase aborted",
+            self.section,
+        )
+
+
+class TestGateFailClosedCoverageWordingMatcherNegativeProof(unittest.TestCase):
+    """NFR4: negative proof + non-vacuity guard for
+    `_assert_gate_fail_closed_coverage_wording_stated` (batch-codex-
+    autonomous-decisions task0003, AC-5)."""
+
+    def test_forged_reenumeration_is_otherwise_well_formed(self):
+        self.assertIn("both modes", FORGED_GATE_FAIL_CLOSED_REENUMERATION)
+        self.assertIn("interactive", FORGED_GATE_FAIL_CLOSED_REENUMERATION)
+        self.assertIn(
+            "references/question-resolution.md",
+            FORGED_GATE_FAIL_CLOSED_REENUMERATION,
+        )
+
+    def test_forged_reenumeration_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_gate_fail_closed_coverage_wording_stated(
+                self, FORGED_GATE_FAIL_CLOSED_REENUMERATION
+            )
 
 
 FORGED_DUPLICATE_CODE_TABLE = (
