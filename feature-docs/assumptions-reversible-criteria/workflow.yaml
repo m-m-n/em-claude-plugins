@@ -147,9 +147,14 @@ tasks:
     branch: em-workflow/assumptions-reversible-criteria/task0003
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
+  plan:
+    floor: [comprehensive, architecture, spec]
+    discretionary:
+      - perspective: security
+        reason: "diff が fail-closed abort ゲート（irreversibility arm）の判定基準そのものを書き換えるため、無人実行のガードレール強度に対する観点を追加する"
+    cross_validation: true
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
