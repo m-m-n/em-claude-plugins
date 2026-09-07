@@ -1,0 +1,33 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+    red_confirmed: true
+    red_reason: "AssertionError: 63 not greater than 63 (plugin.json version was still 0.1.63)"
+  AC-2:
+    tests:
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: "AssertionError: 63 not greater than 63 (marketplace.json em-workflow entry version was still 0.1.63); the matches-manifest test was already passing pre-bump (both sides equal at 0.1.63) but the past-baseline sibling test in the same class proves the criterion was unmet before the edit"
+  AC-3:
+    tests:
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_unchanged
+    red_confirmed: false
+    red_reason: "This test pins the em-review entry's version at its pre-task snapshot (0.5.7), a value this task never touches, so it passed before and after the edit. The criterion (no other plugin's version moves) has no observable-false state to force red under TDD since this task's diff never writes that field; the test still serves as a regression guard against a future accidental edit."
+  AC-4:
+    tests:
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_fails_on_a_missing_entry_name
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_succeeds_on_a_present_entry_name
+    red_confirmed: false
+    red_reason: "The lookup helper (_marketplace_entry) is pure test-support code with no implementation counterpart to be incomplete; the negative case (assertRaises AssertionError on a missing name) and positive companion were both correct against forged fixtures from the moment they were written, so there was no failing state to observe before implementation. Covered by design point 4 (forged-sample non-vacuity guard) rather than red-green TDD."
+  AC-5:
+    tests:
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestValidationDetectsRegressions
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "Each matcher's negative proof and well-formedness guard, and the stdlib-only import check, assert properties of the test module itself (self-contained, no forged data touches the real registries) and were correct from first write; the full-suite-passes outcome is verified by actually running `python3 -m unittest discover -s tests` (3679 tests, OK), not by a single test asserting its own suite's result."
+notes: "AC-1/AC-2's past-baseline assertions are the criteria with an observable red->green transition (patch 63 -> 64); watched fail with 'AssertionError: 63 not greater than 63' before editing em-workflow/.claude-plugin/plugin.json and .claude-plugin/marketplace.json, then green after. AC-3/AC-4/AC-5 are non-vacuity/regression-guard style tests with no implementation gap to force red; carried into the report's unconfirmed_reds per the tdd-testing skill's guidance for genuinely red-less criteria."
