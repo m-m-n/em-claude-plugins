@@ -1,0 +1,316 @@
+schema_version: 1
+feature: batch-codex-autonomous-decisions
+created: 2026-09-07
+base_branch: main
+goal: |
+  em-workflow: --batch 指定時は判断の迷いを全て Codex と相談のうえ自律的に決める
+
+  ## やりたいこと（必須）
+  `--batch` 指定時は、判断の迷いを全て Codex と相談のうえ自律的に決めて続行する。`references/question-resolution.md` の即時 abort（`reversible: false`・`category: security`・`category: license`）を batch では廃止し、Codex 相談で決定を確定して先へ進む。決定と議論の要点は記録に残す。
+  相談はClaude Codeが納得するまで行うが、1つの話題について5回目の呼び出しでも収束しない場合はClaude CodeがOpusのサブエージェントに議論で収束していない論点を伝え、決めてもらう
+  この時、なぜその決定なのかもフィードバックしてもらう
+
+  ## 背景・なぜ（必須）
+  2026-09-04 18:39 JST、emterm の feature `ring-push-blank-clears-ridx-test` の create-spec で、requirements-analyst が仮定 A3 に `reversible: false` を付けたため fail-closed ゲートで即中断した。
+  - `references/question-resolution.md` は、worker が不可逆と申告した質問について Codex 相談もポリシー参照も使えないと定めている。文書自身が「今は worker の申告以外に根拠が無い」と限界を認めている
+  - チケットの申し送りに「不明瞭な点はセカンドオピニオンエージェントと議論して決定して良い」とあったが、orchestrator がそれを読む仕組みは無い
+  - 結局、人が Codex と議論して同じ決定（強化する・両方の assert を残す）を Notion に書いて再実行しただけで、無人実行の意味が薄れた
+  `--batch` は無人で回す前提なので、迷いは人に返さず、Codex と相談して比較的良いと考えられる案を採用して進める。
+
+  ## 受け入れ条件 / 完了の定義（必須）
+  - [ ] `--batch` 指定時、`reversible: false` の assumption に紐づく質問、`category: security`、`category: license` の質問はいずれも即時 abort せず、`references/question-resolution.md` の Codex 相談経路に入る
+  - [ ] Codex 相談で決定に至らなかった場合も abort せず、副作用が最小の選択肢を採って続行する（既存の unlisted-gate fallback と同じ規則）
+  - [ ] 決定した内容・採らなかった案・Codex との議論の要点を `feature-docs/{feature}/phase-state/batch-audit.yaml` に記録し、run 報告と Notion の進捗コメントに含める
+  - [ ] interactive モード（`--batch` なし）の挙動は変えない。fail-closed の即時 abort は interactive にのみ残る
+  - [ ] `references/question-resolution.md`・`references/batch-mode.md`・`references/batch-policies.yaml` の該当箇所を更新し、「Precedence reservation」など abort を非上書きと定めている記述を batch について書き換える
+  - [ ] 検証: `reversible: false` を含む質問パケットを fixture で与え、`--batch` では Codex 相談を経て続行し、interactive では従来どおり abort することを確認する
+
+  ## スコープ外（任意）
+  - ディスパッチャのプロンプト補強（loop-develop に別タスクで起票）
+  - interactive モードでの委任判定
+
+  ## 制約・前提（任意）
+  - Codex CLI 不在時はClaude CodeのサブエージェントをOpus/xhighで実行する
+  - Codex CLIがあり、GPTがリミットの場合はGLM5.2 (Vertex AI)、Vertex AIがエラーの場合はMuse Sparkと2段階のフォールバックを持たせる
+  - 記録は `references/phase-state.md` の batch audit record の形式に従う
+parent_branch: em-workflow/batch-codex-autonomous-decisions/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: "Markdown + Python"
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 54edf5562acb76072e3256fe22569693285823bc
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "The feature changes protocol documents, one shell wrapper, one validator's message text, test fixtures and tests. It introduces no user interface, no rendered artifact, no new file format and no design-system surface (design_system_candidates is empty). The affected structures -- the question packet, the answer object, the batch audit record, the terminal line -- are all already specified by existing SSOT documents, so the create-plan phase can split the work directly from these requirements. Confirmed by answer `design-step.recommendation` = `decide_autonomously`."
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "Batch relaxation of the three fail-closed arms"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR2:
+    title: "Interactive abort retained verbatim"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR3:
+    title: "Aborts that survive in batch"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2, TS-6]
+  FR4:
+    title: "Precedence reservation reworded"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  FR5:
+    title: "Classification gate direction 2 relaxed on the same terms"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR6:
+    title: "Direction 1 stays fail-closed"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR7:
+    title: "Consultation batching and ceiling unchanged"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: "Single Opus escalation for the unmapped remainder"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: "Codex-absent route"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: "No abort when nothing maps"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR11:
+    title: "Block-branch prose rewritten"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR12:
+    title: "Batch resolution sequence step 2 updated"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR13:
+    title: "Provider fallback chain inside the wrapper"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11]
+  FR14:
+    title: "Audit record for every autonomous resolution"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7, TS-8]
+  FR15:
+    title: "phase-state.md gains this writer"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  FR16:
+    title: "Reporting contents extended, Notion out of scope"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+  FR17:
+    title: "batch-policies.yaml header rewritten"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR18:
+    title: "on_unanswered constraint kept, rationale reworded"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-9]
+  FR19:
+    title: "Validator check kept, message rationale reworded"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-9]
+  FR20:
+    title: "Fixture plus validator assertion"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-10]
+  FR21:
+    title: "Document-pin assertions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-2, TS-3, TS-4]
+  FR22:
+    title: "Terminal-line reason code retained, coverage narrowed"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  FR23:
+    title: "Plugin version bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "SSOT discipline"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  NFR2:
+    title: "No feature-docs task identifiers in plugin documents"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-12]
+  NFR3:
+    title: "Every stop and every continuation records its reason"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "Provider mechanics confined to the wrapper"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11, TS-12]
+  NFR5:
+    title: "Quiet-output discipline preserved"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: "Bounded consultation cost"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: "External output stays untrusted"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR8:
+    title: "No new gate identifier"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR9:
+    title: "Full suite stays green"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
