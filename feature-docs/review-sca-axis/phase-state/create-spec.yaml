@@ -1,19 +1,29 @@
 schema_version: 1
 feature: review-sca-axis
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 1f9e6da44d80f88d892e9f5c0b3b3ab01a18a02b
 last_input_digest: sha256:218d681269561134062e2f4f68399158c1007c80cdad6307a19d3a0b02633957
-active_request_id: create-spec-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: completed
     input_digest: sha256:218d681269561134062e2f4f68399158c1007c80cdad6307a19d3a0b02633957
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:218d681269561134062e2f4f68399158c1007c80cdad6307a19d3a0b02633957
+    output_digest: null
+artifacts:
+  - path: feature-docs/review-sca-axis/REQUIREMENTS.md
+    sha256: sha256:7d4a2cd22e6eefe6dabbf3a9f52d4c58e70648bfd9ae5ecfda050bc2594466fa
+    produced_by: create-spec-run-0002
+  - path: feature-docs/review-sca-axis/SPEC.md
+    sha256: sha256:0adf050f0311aabc826c9341e63d812fc232caf9f58aa9db1e5458e5c306fae5
+    produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
