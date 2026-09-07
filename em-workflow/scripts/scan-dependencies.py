@@ -27,6 +27,15 @@ Exit codes: 0 = success (exactly one JSON object on stdout); 2 = execution
 error (bad/missing input, a subcommand not yet implemented on this branch,
 or a failure while talking to the external task system) -- the reason is
 printed to stderr, and nothing is printed to stdout.
+
+Reworked by task0007 (review round 1, feature-docs/review-sca-axis/tasks/
+task0007.md): the task-listing outcome is now three-valued (an available
+listing with zero validated entries files rather than degrading), a
+malformed finding is skipped and recorded rather than aborting the batch,
+and the filing loop records partial progress when the external task system
+fails mid-batch instead of letting the exception escape. task0008 and
+task0009 rework the `scan` half in disjoint regions of this same file
+(IMPLEMENTATION.md D8).
 """
 
 import argparse
@@ -123,26 +132,52 @@ def recover_package_advisory(finding):
     return m.group("package"), m.group("advisory_id")
 
 
+# Poison-finding policy (task plan "Poison-finding policy: skip and
+# record"): the ONE reason string recorded for every malformed finding,
+# derived from this script's own contract text -- NEVER from the offending
+# finding's own content (NFR4: advisory-sourced text never becomes part of
+# a reason identifier). recover_package_advisory's own exception message
+# is deliberately not reused here since it may echo the offending finding.
+MALFORMED_FINDING_REASON = (
+    "finding title does not match the finding text-encoding contract "
+    "'{package}: {advisory_id} — {advisory short title}'"
+)
+
+
 def group_findings_by_package(findings):
     """Groups findings by package (recovered via recover_package_advisory),
     de-duplicating repeated advisory ids within the SAME input, and
     truncating package/advisory_id ONCE here so every downstream use (the
     dedup key, a filed field, the report) sees the same canonical string a
-    later run would also derive from the same finding. Returns an ordered
-    dict-like mapping {package: [(advisory_id, severity), ...]}."""
+    later run would also derive from the same finding.
+
+    A finding whose title violates the Finding text-encoding contract is
+    SKIPPED and recorded rather than aborting the whole batch (task plan
+    "Poison-finding policy") -- every other finding is still grouped, even
+    when every finding in the input is malformed.
+
+    Returns (groups, malformed) where `groups` is an ordered dict-like
+    mapping {package: [(advisory_id, severity), ...]} and `malformed` is a
+    list of {"position": <index in `findings`>, "reason": <machine-stable
+    reason>} dicts, in input order."""
     groups = {}
     order = []
-    for finding in findings:
-        package, advisory_id = recover_package_advisory(finding)
+    malformed = []
+    for position, finding in enumerate(findings):
+        try:
+            package, advisory_id = recover_package_advisory(finding)
+        except FindingTitleError:
+            malformed.append({"position": position, "reason": MALFORMED_FINDING_REASON})
+            continue
         package = truncate_untrusted(package)
         advisory_id = truncate_untrusted(advisory_id)
-        severity = finding.get("severity")
+        severity = finding.get("severity") if isinstance(finding, dict) else None
         if package not in groups:
             groups[package] = []
             order.append(package)
         if not any(a == advisory_id for a, _ in groups[package]):
             groups[package].append((advisory_id, severity))
-    return {p: groups[p] for p in order}
+    return {p: groups[p] for p in order}, malformed
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +253,7 @@ def report_destination(project_root, feature):
     return Path(root) / "tmp" / f"sca-triage-{feature}-{timestamp}.md"
 
 
-def write_report(dest, groups, *, degraded, degraded_reason):
+def write_report(dest, groups, *, degraded, degraded_reason, malformed_findings=None):
     dest.parent.mkdir(parents=True, exist_ok=True)
     lines = ["# SCA triage report", ""]
     if degraded:
@@ -226,6 +261,11 @@ def write_report(dest, groups, *, degraded, degraded_reason):
             f"DEGRADED: task-system listing unavailable ({degraded_reason}); "
             "filed as a report instead of the task system (D6)."
         )
+        lines.append("")
+    if malformed_findings:
+        lines.append("## Malformed findings (skipped)")
+        for m in malformed_findings:
+            lines.append(f"- position {m['position']}: {m['reason']}")
         lines.append("")
     for package, entries in groups.items():
         lines.append(f"## {package}")
@@ -257,16 +297,38 @@ def _entry_point_is_valid(entry_point):
         return False
 
 
+class ListingOutcome:
+    """The task-listing outcome is three-valued, not two (task plan "The
+    listing outcome is three-valued, not two"):
+
+    - `available=True` -- the entry point ran, exited successfully, and
+      produced a JSON array. `tasks` is that array after item-wise
+      validation; it may legitimately be an EMPTY list (the normal
+      first-run state, not an error). Entries dropped item-wise by
+      validation while others survive do not make the listing unavailable
+      -- they are just counted in `dropped_count`.
+    - `available=False` -- one of the five genuine unavailability
+      conditions (IMPLEMENTATION.md D6): `tasks` is None and `reason` is a
+      machine-stable identifier distinguishing which condition occurred.
+    """
+
+    def __init__(self, available, tasks=None, reason=None, dropped_count=0):
+        self.available = available
+        self.tasks = tasks
+        self.reason = reason
+        self.dropped_count = dropped_count
+
+
 def list_security_tasks(entry_point):
-    """Returns a list of {"id", "package", "status", "references"} dicts
-    describing every task of the security type, or None when the listing
-    could not be obtained (non-zero exit, stdout that is not a JSON array,
-    or entry_point failing validation) -- the caller degrades to the report
-    branch (IMPLEMENTATION.md D6). `status` is one of "incomplete" /
-    "complete" / "discarded"; `references` is the raw current 参照 field
-    text (possibly empty, possibly multi-line)."""
+    """Returns a ListingOutcome (see class docstring) describing every task
+    of the security type. The caller degrades to the report branch ONLY
+    when `available` is False (IMPLEMENTATION.md D6) -- an available
+    listing with zero validated entries must reach the filing branch.
+    `status` is one of "incomplete" / "complete" / "discarded";
+    `references` is the raw current 参照 field text (possibly empty,
+    possibly multi-line)."""
     if not _entry_point_is_valid(entry_point):
-        return None
+        return ListingOutcome(available=False, reason="entry_point_invalid")
     try:
         proc = subprocess.run(
             [str(entry_point), "task", "list", "--type", SECURITY_TASK_TYPE, "--format", "json"],
@@ -275,32 +337,36 @@ def list_security_tasks(entry_point):
             check=False,
         )
     except OSError:
-        return None
+        return ListingOutcome(available=False, reason="listing_launch_failed")
     if proc.returncode != 0:
-        return None
+        return ListingOutcome(available=False, reason="listing_exit_nonzero")
     try:
         data = json.loads(proc.stdout)
     except (json.JSONDecodeError, ValueError):
-        return None
+        return ListingOutcome(available=False, reason="listing_output_not_json")
     if not isinstance(data, list):
-        return None
+        return ListingOutcome(available=False, reason="listing_output_not_array")
     validated = []
+    dropped_count = 0
     for entry in data:
         if not isinstance(entry, dict):
+            dropped_count += 1
             continue
         if not isinstance(entry.get("id"), str):
+            dropped_count += 1
             continue
         if not isinstance(entry.get("package"), str):
+            dropped_count += 1
             continue
         if not isinstance(entry.get("status"), str):
+            dropped_count += 1
             continue
         references = entry.get("references")
         if references is not None and not isinstance(references, str):
+            dropped_count += 1
             continue
         validated.append(entry)
-    if not validated:
-        return None
-    return validated
+    return ListingOutcome(available=True, tasks=validated, dropped_count=dropped_count)
 
 
 def _write_references_tempfile(reference_lines):
@@ -362,12 +428,27 @@ def file_tasks(project_root, feature, findings, entry_point):
     filed / appended to, the duplicates suppressed, and the report path
     when the report branch ran. Idempotent for the same input: a second
     call against the same unresolved set and the same listing state files
-    nothing new."""
-    groups = group_findings_by_package(findings)
+    nothing new.
+
+    Every pre-existing key (`branch`, `filed_packages`, `appended_packages`,
+    `suppressed`, `report_path`, `degraded`, `degraded_reason`) keeps its
+    name and meaning (task plan "the summary dict grows, never changes
+    shape"). Four keys are ADDED:
+
+    - `malformed_findings` -- findings skipped by the poison-finding policy
+      (position + machine-stable reason, never advisory-sourced text).
+    - `listing_dropped_count` -- entries the task listing dropped item-wise
+      by validation (0 when no listing was consulted or nothing dropped).
+    - `failed_package` / `failure_reason` -- set when the external task
+      system failed mid-batch; both None on a batch that completed without
+      such a failure. No exception escapes this function for a poison
+      finding or a mid-batch external failure -- both degrade to data in
+      the returned summary instead."""
+    groups, malformed_findings = group_findings_by_package(findings)
 
     if entry_point is None:
         dest = report_destination(project_root, feature)
-        write_report(dest, groups, degraded=False, degraded_reason=None)
+        write_report(dest, groups, degraded=False, degraded_reason=None, malformed_findings=malformed_findings)
         return {
             "branch": "report",
             "filed_packages": [],
@@ -376,12 +457,20 @@ def file_tasks(project_root, feature, findings, entry_point):
             "report_path": str(dest),
             "degraded": False,
             "degraded_reason": None,
+            "malformed_findings": malformed_findings,
+            "listing_dropped_count": 0,
+            "failed_package": None,
+            "failure_reason": None,
         }
 
-    listing = list_security_tasks(entry_point)
-    if listing is None:
+    listing_outcome = list_security_tasks(entry_point)
+    if not listing_outcome.available:
         dest = report_destination(project_root, feature)
-        write_report(dest, groups, degraded=True, degraded_reason="task_listing_unavailable")
+        write_report(
+            dest, groups,
+            degraded=True, degraded_reason=listing_outcome.reason,
+            malformed_findings=malformed_findings,
+        )
         return {
             "branch": "report",
             "filed_packages": [],
@@ -389,9 +478,14 @@ def file_tasks(project_root, feature, findings, entry_point):
             "suppressed": [],
             "report_path": str(dest),
             "degraded": True,
-            "degraded_reason": "task_listing_unavailable",
+            "degraded_reason": listing_outcome.reason,
+            "malformed_findings": malformed_findings,
+            "listing_dropped_count": 0,
+            "failed_package": None,
+            "failure_reason": None,
         }
 
+    listing = listing_outcome.tasks
     tasks_by_package_key = {}
     for task in listing:
         key = build_dedup_key(task.get("package"))
@@ -400,6 +494,8 @@ def file_tasks(project_root, feature, findings, entry_point):
     filed_packages = []
     appended_packages = []
     suppressed = []
+    failed_package = None
+    failure_reason = None
 
     for package, entries in groups.items():
         candidate_tasks = tasks_by_package_key.get(build_dedup_key(package), [])
@@ -419,11 +515,23 @@ def file_tasks(project_root, feature, findings, entry_point):
                 new_lines.append(format_reference_line(advisory_id, severity))
 
             if new_lines:
-                append_security_task_references(entry_point, task.get("id"), new_lines)
+                try:
+                    append_security_task_references(entry_point, task.get("id"), new_lines)
+                except EntryPointError as exc:
+                    failed_package = package
+                    failure_reason = "task_update_failed"
+                    print(f"file-tasks: {failure_reason} for package {package!r}: {exc}", file=sys.stderr)
+                    break
                 appended_packages.append(package)
         else:
             lines = [format_reference_line(advisory_id, severity) for advisory_id, severity in entries]
-            create_security_task(entry_point, package, lines)
+            try:
+                create_security_task(entry_point, package, lines)
+            except EntryPointError as exc:
+                failed_package = package
+                failure_reason = "task_create_failed"
+                print(f"file-tasks: {failure_reason} for package {package!r}: {exc}", file=sys.stderr)
+                break
             filed_packages.append(package)
 
     return {
@@ -434,6 +542,10 @@ def file_tasks(project_root, feature, findings, entry_point):
         "report_path": None,
         "degraded": False,
         "degraded_reason": None,
+        "malformed_findings": malformed_findings,
+        "listing_dropped_count": listing_outcome.dropped_count,
+        "failed_package": failed_package,
+        "failure_reason": failure_reason,
     }
 
 
