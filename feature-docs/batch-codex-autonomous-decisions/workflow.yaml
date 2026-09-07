@@ -66,7 +66,8 @@ workflow:
     base_commit: a67e75c6c9fb0c9798a8b4de3df9890fbe32433d
     completed_at_commit: e2cfcb518024a4d7c9fd9318af850cc84f308cdf
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: 9e8471ac63844d7bacd163fff0f3fb2dcb9ae3da
   - id: verify
     status: pending
     result: null
@@ -174,10 +175,11 @@ tasks:
       review_round: 1
 
 review:
-  status: in_progress
-  rounds_completed: 1
-  residual_critical_high: 6
-  needs_rework: true
+  status: completed
+  rounds_completed: 2
+  residual_critical_high: 0
+  deferred_critical_high: 1
+  needs_rework: false
   perspectives: [comprehensive, security, performance, architecture, spec]
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
