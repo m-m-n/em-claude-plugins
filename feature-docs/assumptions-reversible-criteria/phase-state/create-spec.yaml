@@ -1,11 +1,11 @@
 schema_version: 1
 feature: assumptions-reversible-criteria
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: dce0544
 last_input_digest: sha256:bd36538034967ee4010fe8e36e439d7f2450ef39ead86c26854beff8a5292ea2
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,10 +14,16 @@ worker_runs:
   input_digest: sha256:75b4c7bc3e6c57454e625b0a0d4053c89646db618d0ba7de2088db3fe8ab7b43
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:bd36538034967ee4010fe8e36e439d7f2450ef39ead86c26854beff8a5292ea2
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/assumptions-reversible-criteria/REQUIREMENTS.md
+  sha256: sha256:4d8381cf46db662f55a240d478b696cc2929dd72a9acb5e7bdf4abb880cc52c9
+  produced_by: create-spec-run-0002
+- path: feature-docs/assumptions-reversible-criteria/SPEC.md
+  sha256: sha256:333945455537128e837aa352205f4a1031143106e2db24b764c4f7dc1c4d8031
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
