@@ -32,6 +32,24 @@ Covers task0001 Acceptance Criteria
 - AC-10: scan-dependencies.py registers both `scan` and `file-tasks`;
   `file-tasks` is the marked placeholder.
 
+Also covers task0008 (review-sca-axis rework round 1) Acceptance Criteria
+for the pip normalizer specifically
+(feature-docs/review-sca-axis/tasks/task0008.md):
+
+- AC-5: the pip fixture used below is CAPTURED-shape `pip-audit --format
+  json` output (per dependency: name, version, a `vulns` list where each
+  entry carries only id / fix_versions / aliases / description) -- no
+  per-dependency `direct` field and no per-advisory `severity` string
+  anywhere in it.
+- AC-6: directness comes from the reviewed manifest's own declared
+  dependency set (never a tool-supplied field); a direct package's advisory
+  reaches `findings` when its severity is determinable and at or above
+  threshold, a transitive one is dropped regardless.
+- AC-7: an advisory whose severity cannot be determined from the output is
+  never silently treated as below threshold -- it is excluded from
+  `findings` but surfaced through the machine-readable skip surface with an
+  affected count in `summary`, with no advisory-sourced text in either.
+
 Per Test Notes / IMPLEMENTATION.md Conventions: this module's own imports
 stay standard-library only (NFR7) -- the script under test is loaded by
 file path (its name contains a hyphen), following
@@ -174,7 +192,7 @@ EXPECTED_MANIFESTS = {
 }
 EXPECTED_EXECUTABLES = {
     "npm": "npm",
-    "cargo": "cargo",
+    "cargo": "cargo-audit",
     "pip": "pip-audit",
     "go": "govulncheck",
 }
@@ -285,7 +303,7 @@ class TestEcosystemSelectionAndCommandAssembly(unittest.TestCase):
         selected = {e["ecosystem"]: e for e in SCAN.select_ecosystems(self.registry, changed)}
         expected_commands = {
             "npm": ["npm", "audit", "--json"],
-            "cargo": ["cargo", "audit", "--json"],
+            "cargo": ["cargo-audit", "audit", "--json"],
             "pip": ["pip-audit", "--format", "json"],
             "go": ["govulncheck", "-json", "./..."],
         }
@@ -418,44 +436,55 @@ CARGO_FIXTURE = {
     }
 }
 
+# Captured `pip-audit --format json` output shape (pip-audit 2.7.3). Real
+# shape: per dependency, a name/version and a `vulns` list where each
+# vulnerability carries id / fix_versions / aliases / description ONLY --
+# no per-dependency `direct` field and no per-advisory `severity` field
+# anywhere (task0008 AC-5; see also the review finding this task reworks,
+# feature-docs/review-sca-axis/reviews/round1.yaml stable_id
+# 88eb0b9270643a39). django's advisory description embeds a real CVSS v3.1
+# vector (CVE-2021-33203's actual NVD vector) -- the one piece of
+# STRUCTURED severity metadata this shape can carry (see
+# _pip_severity_from_description); the other two advisories carry none, so
+# their severity is undeterminable from this output (task0008 AC-7).
 PIP_FIXTURE = {
     "dependencies": [
         {
             "name": "django",
             "version": "3.2.0",
-            "direct": True,
             "vulns": [
                 {
                     "id": "PYSEC-2021-9",
                     "fix_versions": ["3.2.1"],
-                    "description": "SQL injection in QuerySet.",
-                    "severity": "critical",
+                    "aliases": ["CVE-2021-33203"],
+                    "description": (
+                        "SQL injection in QuerySet.order_by. "
+                        "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+                    ),
                 }
             ],
         },
         {
             "name": "urllib3",
             "version": "1.26.0",
-            "direct": False,
             "vulns": [
                 {
                     "id": "PYSEC-2021-10",
                     "fix_versions": ["1.26.5"],
-                    "description": "A transitive dependency has a high-severity issue.",
-                    "severity": "high",
+                    "aliases": ["CVE-2021-33503"],
+                    "description": "Denial of service via a crafted URL.",
                 }
             ],
         },
         {
             "name": "requests",
             "version": "2.25.0",
-            "direct": True,
             "vulns": [
                 {
                     "id": "PYSEC-2021-11",
                     "fix_versions": ["2.25.1"],
-                    "description": "A direct dependency has a low-severity issue.",
-                    "severity": "low",
+                    "aliases": ["CVE-2021-99999"],
+                    "description": "Certificate verification bypass under a specific proxy configuration.",
                 }
             ],
         },
@@ -560,10 +589,19 @@ def assert_conforms_to_schema(testcase, obj, schema):
         testcase.assertTrue(finding["line_end"] is None or isinstance(finding["line_end"], int))
 
 
-def _run_scan_with_stub(tool_name, fixture, changed_files):
+def _run_scan_with_stub(tool_name, fixture, changed_files, manifest_files=None):
+    """`manifest_files`, when given, is a {project-relative path: content}
+    mapping written into `project_root` before the scan runs -- needed for
+    pip's normalizer, which (unlike the still-fixture-shortcut-carrying
+    cargo/go fixtures below) resolves directness by actually reading the
+    reviewed manifest from disk (task0008 AC-6)."""
     with tempfile.TemporaryDirectory() as tmp:
         project_root = Path(tmp) / "project"
         project_root.mkdir()
+        for rel_path, content in (manifest_files or {}).items():
+            manifest_path = project_root / rel_path
+            manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            manifest_path.write_text(content, encoding="utf-8")
         bin_dir = Path(tmp) / "bin"
         bin_dir.mkdir()
         _write_stub(bin_dir, tool_name, fixture)
@@ -599,7 +637,7 @@ class TestNormalizationProducesSchemaConformantResult(unittest.TestCase):
         self.assertNotIn("qs:", titles)
 
     def test_cargo_sample_normalizes_and_conforms(self):
-        result = _run_scan_with_stub("cargo", CARGO_FIXTURE, ["Cargo.toml"])
+        result = _run_scan_with_stub("cargo-audit", CARGO_FIXTURE, ["Cargo.toml"])
         assert_conforms_to_schema(self, result, self.schema)
         self.assertEqual(len(result["findings"]), 1)
         finding = result["findings"][0]
@@ -608,22 +646,38 @@ class TestNormalizationProducesSchemaConformantResult(unittest.TestCase):
         self.assertEqual(finding["file"], "Cargo.toml")
 
     def test_cargo_transitive_and_below_threshold_dropped(self):
-        result = _run_scan_with_stub("cargo", CARGO_FIXTURE, ["Cargo.toml"])
+        result = _run_scan_with_stub("cargo-audit", CARGO_FIXTURE, ["Cargo.toml"])
         titles = " ".join(f["title"] for f in result["findings"])
         self.assertNotIn("bar:", titles)
         self.assertNotIn("baz:", titles)
 
     def test_pip_sample_normalizes_and_conforms(self):
-        result = _run_scan_with_stub("pip-audit", PIP_FIXTURE, ["pyproject.toml"])
+        # django is declared in the reviewed requirements.txt (direct) and
+        # its advisory's description embeds a determinable CVSS vector
+        # (task0008 AC-6); requests is also declared but its advisory
+        # carries no determinable severity (AC-7, covered by
+        # TestPipNormalizationRealInputContract below); urllib3 is NOT
+        # declared, so it is transitive regardless of its own severity.
+        result = _run_scan_with_stub(
+            "pip-audit",
+            PIP_FIXTURE,
+            ["requirements.txt"],
+            manifest_files={"requirements.txt": "django==3.2.0\nrequests==2.25.0\n"},
+        )
         assert_conforms_to_schema(self, result, self.schema)
         self.assertEqual(len(result["findings"]), 1)
         finding = result["findings"][0]
         self.assertEqual(finding["severity"], "critical")
         self.assertTrue(finding["title"].startswith("django: PYSEC-2021-9"))
-        self.assertEqual(finding["file"], "pyproject.toml")
+        self.assertEqual(finding["file"], "requirements.txt")
 
     def test_pip_transitive_and_below_threshold_dropped(self):
-        result = _run_scan_with_stub("pip-audit", PIP_FIXTURE, ["pyproject.toml"])
+        result = _run_scan_with_stub(
+            "pip-audit",
+            PIP_FIXTURE,
+            ["requirements.txt"],
+            manifest_files={"requirements.txt": "django==3.2.0\nrequests==2.25.0\n"},
+        )
         titles = " ".join(f["title"] for f in result["findings"])
         self.assertNotIn("urllib3", titles)
         self.assertNotIn("requests", titles)
@@ -642,6 +696,139 @@ class TestNormalizationProducesSchemaConformantResult(unittest.TestCase):
         titles = " ".join(f["title"] for f in result["findings"])
         self.assertNotIn("x/text", titles)
         self.assertNotIn("x/sys", titles)
+
+
+# ---------------------------------------------------------------------------
+# task0008 AC-5/AC-6/AC-7 (TS-27/TS-2/TS-3): the pip normalizer's real
+# input contract -- no per-dependency directness field, no per-advisory
+# severity string, directness from the reviewed manifest, and an
+# undeterminable severity that is counted rather than silently dropped.
+# ---------------------------------------------------------------------------
+
+class TestPipNormalizationRealInputContract(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.schema = _load_schema()
+
+    def test_fixture_has_no_direct_field_and_no_severity_field(self):
+        # AC-5: structural proof against the fixture module constant
+        # itself, independent of any run.
+        for dep in PIP_FIXTURE["dependencies"]:
+            self.assertNotIn("direct", dep)
+            for vuln in dep["vulns"]:
+                self.assertNotIn("severity", vuln)
+                self.assertIn("id", vuln)
+                self.assertIn("fix_versions", vuln)
+                self.assertIn("aliases", vuln)
+                self.assertIn("description", vuln)
+
+    def test_direct_advisory_with_determinable_severity_reaches_findings(self):
+        result = _run_scan_with_stub(
+            "pip-audit",
+            PIP_FIXTURE,
+            ["requirements.txt"],
+            manifest_files={"requirements.txt": "django==3.2.0\nrequests==2.25.0\n"},
+        )
+        assert_conforms_to_schema(self, result, self.schema)
+        self.assertEqual(len(result["findings"]), 1)
+        finding = result["findings"][0]
+        self.assertEqual(finding["severity"], "critical")
+        self.assertTrue(finding["title"].startswith("django: PYSEC-2021-9"))
+
+    def test_directness_is_read_from_the_manifest_not_the_tool_payload(self):
+        # AC-6: the fixture itself carries no `direct` field at all
+        # (test_fixture_has_no_direct_field_and_no_severity_field above);
+        # swap which package the reviewed manifest declares and watch the
+        # classification follow the manifest.
+        with_django_direct = _run_scan_with_stub(
+            "pip-audit",
+            PIP_FIXTURE,
+            ["requirements.txt"],
+            manifest_files={"requirements.txt": "django==3.2.0\n"},
+        )
+        with_urllib3_direct = _run_scan_with_stub(
+            "pip-audit",
+            PIP_FIXTURE,
+            ["requirements.txt"],
+            manifest_files={"requirements.txt": "urllib3==1.26.0\n"},
+        )
+        self.assertTrue(any("django" in f["title"] for f in with_django_direct["findings"]))
+        self.assertFalse(any("django" in f["title"] for f in with_urllib3_direct["findings"]))
+
+    def test_undetermined_severity_advisory_is_not_treated_as_below_threshold(self):
+        # AC-7: requests is direct (declared in the manifest) but its
+        # advisory's description carries no determinable severity -- it
+        # must be absent from findings WITHOUT being silently discarded as
+        # below-threshold: the skip surface names a stable reason and the
+        # summary states the affected count, with no advisory-sourced text
+        # in either (NFR4) -- "Certificate verification bypass..." (its
+        # description) never appears.
+        result = _run_scan_with_stub(
+            "pip-audit",
+            PIP_FIXTURE,
+            ["requirements.txt"],
+            manifest_files={"requirements.txt": "django==3.2.0\nrequests==2.25.0\n"},
+        )
+        self.assertFalse(any("requests" in f["title"] for f in result["findings"]))
+        self.assertIn("pip_severity_undetermined", result["summary"])
+        self.assertIn("1", result["summary"])
+        self.assertNotIn("Certificate verification bypass", result["summary"])
+        self.assertFalse(result["skipped"])  # urllib3/django still ran; not a whole-scan skip
+        self.assertIsNone(result["skip_reason"])
+
+    def test_undetermined_severity_never_counted_for_a_transitive_package(self):
+        # urllib3's advisory ALSO carries no determinable severity, but
+        # urllib3 is not declared in the manifest (transitive) -- it must
+        # not inflate the undetermined-severity count, since it would be
+        # dropped for directness regardless of severity.
+        result = _run_scan_with_stub(
+            "pip-audit",
+            PIP_FIXTURE,
+            ["requirements.txt"],
+            manifest_files={"requirements.txt": "django==3.2.0\n"},
+        )
+        # Only requests's package name never even appears in the manifest
+        # here, and urllib3 is transitive -- the sole direct
+        # undetermined-severity advisory is requests's, but requests is
+        # not declared either in THIS manifest, so nothing is undetermined
+        # for a DIRECT package at all.
+        self.assertNotIn("pip_severity_undetermined", result["summary"])
+
+    def test_pyproject_toml_pep621_dependencies_resolve_direct_names(self):
+        content = (
+            "[project]\n"
+            'name = "demo"\n'
+            "dependencies = [\n"
+            '    "django>=3.2",\n'
+            '    "requests>=2.25",\n'
+            "]\n"
+        )
+        result = _run_scan_with_stub(
+            "pip-audit",
+            PIP_FIXTURE,
+            ["pyproject.toml"],
+            manifest_files={"pyproject.toml": content},
+        )
+        self.assertEqual(len(result["findings"]), 1)
+        self.assertTrue(result["findings"][0]["title"].startswith("django: PYSEC-2021-9"))
+
+    def test_normalize_pip_returns_findings_and_skip_info_tuple_directly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            (project_root / "requirements.txt").write_text(
+                "django==3.2.0\nrequests==2.25.0\n", encoding="utf-8"
+            )
+            ecosystem = {
+                "ecosystem": "pip",
+                "severity_map": {"critical": "critical", "high": "high"},
+                "threshold": {"direct_only": True, "min_severity": "high"},
+            }
+            findings, skip_info = SCAN.normalize_pip(
+                ecosystem, PIP_FIXTURE, "requirements.txt", project_root
+            )
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(skip_info, {"reason": "pip_severity_undetermined", "count": 1})
 
 
 # ---------------------------------------------------------------------------

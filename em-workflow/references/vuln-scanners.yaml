@@ -2,18 +2,36 @@
 #
 # Responsibility split: this registry owns WHICH TOOL serves each manifest
 # and WHERE THE THRESHOLD sits (direct-dependency-only, severity high and
-# above); em-workflow/scripts/scan-dependencies.py owns HOW TO RUN that tool
-# and HOW TO NORMALIZE its machine-readable output into a
+# above), and owns that a TRUSTED, STANDALONE BINARY -- never a
+# package-manager front end that resolves a subcommand through
+# configuration read from the reviewed project -- serves each ecosystem,
+# together with the FORM (`target_flag`) through which a tool's own
+# argument vector carries an audited target bound to the reviewed project;
+# em-workflow/scripts/scan-dependencies.py owns HOW TO RUN that tool
+# (resolving the trusted binary on PATH, filling in the target
+# `target_flag` carries, and building an explicit child environment) and
+# HOW TO NORMALIZE its machine-readable output into a
 # review-output-schema.json object. No conditional logic lives here -- this
 # file is data only.
 #
 # Per ecosystem:
 #   manifests     -- the manifest filenames (basenames) that select it.
-#   executable    -- the executable name resolved on PATH; never installed
+#   executable    -- the STANDALONE scanner binary name resolved on PATH;
+#                    never a package-manager front end whose subcommand
+#                    dispatch a file inside the reviewed repository could
+#                    redefine (e.g. a Cargo [alias] entry). Never installed
 #                    when absent (FR3, FR8).
-#   args          -- appended to `executable`, producing machine-readable
+#   args          -- appended to `executable` (after the target_flag's
+#                    value, when present), producing machine-readable
 #                    output while only READING the existing lockfile (no
-#                    install, no lockfile rewrite, no formatter run -- NFR2).
+#                    install, no lockfile rewrite, no formatter run --
+#                    NFR2).
+#   target_flag   -- OPTIONAL. The flag scan-dependencies.py places before
+#                    the audited target path it resolves, so the tool binds
+#                    to the REVIEWED project's own dependency set instead of
+#                    defaulting to the ambient environment. The registry
+#                    owns this flag's literal form; the script owns
+#                    resolving which path fills it in.
 #   severity_map  -- maps the tool's own severity vocabulary onto the
 #                    schema's `critical` / `high`; a value absent from this
 #                    map is below threshold.
@@ -32,7 +50,7 @@ ecosystems:
 
   - ecosystem: cargo
     manifests: [Cargo.toml]
-    executable: cargo
+    executable: cargo-audit
     args: [audit, --json]
     severity_map: {critical: critical, high: high}
     threshold: {direct_only: true, min_severity: high}
@@ -41,6 +59,7 @@ ecosystems:
     manifests: [pyproject.toml, requirements.txt]
     executable: pip-audit
     args: [--format, json]
+    target_flag: -r
     severity_map: {critical: critical, high: high}
     threshold: {direct_only: true, min_severity: high}
 
