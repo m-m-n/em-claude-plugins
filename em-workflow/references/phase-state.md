@@ -414,14 +414,16 @@ against `references/batch-policies.yaml`'s decision table. `question_id`
 is `implement.wake-decline` for the implement wake decline record, which
 is not a gate. `packet_id` is `null` for every writer here except the
 relaxed route (its own bullet below states its rule), because every other
-writer raises its record without a worker packet. `source` is drawn from
+writer raises its record without a worker packet. For the other three
+writers below, `source` is drawn from
 `references/question-packet-schema.md`'s
 closed `source` vocabulary: `batch-safe-default` when no Codex suggestion
 mapped onto an option and the minimum-side-effect default was taken,
 `batch-codex-consultation` when Codex's suggestion did map onto one, or
 `batch-decision-table` for a record whose gate resolves through
-`references/batch-policies.yaml`. No field of the per-phase `answers`
-shape changes.
+`references/batch-policies.yaml`; the relaxed route's own bullet below
+states its complete three-way mapping instead. No field of the per-phase
+`answers` shape changes.
 
 Four writers append to this file, each at resolution time:
 
@@ -460,8 +462,12 @@ Four writers append to this file, each at resolution time:
   both conform to the `question_id` pattern
   `references/question-packet-schema.md` owns. `packet_id` is `null` in the
   orchestrator-opened case and the worker packet's own `packet_id` when a
-  worker packet exists. `source` is `batch-codex-consultation` when a
-  suggestion mapped onto an option, `batch-safe-default` when the
+  worker packet exists. `source` covers all three paths this route can
+  take, drawn from the existing closed vocabulary with no new value
+  minted: `batch-codex-consultation` when the consultation route
+  produced the mapping — its consultation turns or its single
+  escalation, the value naming the route and never asserting that Codex
+  itself was consulted — and `batch-safe-default` when the
   minimum-side-effect branch was taken. `resolution_note` names the gate,
   the option chosen, the options not chosen, the discussion's key points,
   whether Codex was consulted, whether a fallback provider answered, and
