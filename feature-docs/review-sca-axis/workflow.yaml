@@ -49,7 +49,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: b97d7a6522615ebba475dde2f9a9c8ec72fa6e22
 tasks:
   task0001:
     title: Scanner registry, scan/normalize path, and the result-schema contract
