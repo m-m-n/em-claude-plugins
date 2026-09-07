@@ -1,0 +1,98 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_validate_worker_output.TestQuestionPacketSchemaBlockRationale::test_constraint_sentence_is_verbatim
+      - tests.test_validate_worker_output.TestQuestionPacketSchemaBlockRationale::test_rationale_routes_into_the_minimum_side_effect_branch
+      - tests.test_validate_worker_output.TestQuestionPacketSchemaBlockRationale::test_resolution_time_rule_citation_retained
+    red_confirmed: true
+    red_reason: >-
+      test_rationale_routes_into_the_minimum_side_effect_branch failed before
+      the rewording with AssertionError: 'routes the question into the
+      minimum-side-effect branch' not found in the schema doc's normalized
+      text (the old text only had the enforcement + citation sentences, no
+      minimum-side-effect-branch rationale). The verbatim-constraint and
+      citation-retained pins were already true before this task's edit
+      (they assert text this task keeps unchanged), so only the middle test
+      carries the red->green proof for this AC; it is the one that actually
+      exercises the rewording.
+  AC-2:
+    tests:
+      - tests.test_validate_worker_output.TestQuestionCategoryForcesBlockingUnanswered::test_rejection_message_states_the_surviving_rationale
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 'cannot choose the non-blocking handling' not found in
+      "questions[0].on_unanswered must be 'block' when category is
+      'security' (NFR4 fail-closed: a worker cannot disable the batch abort
+      for spec-change / security / license questions)" -- observed before
+      editing validate-worker-output.py's rejection message.
+  AC-3:
+    tests:
+      - tests.test_validate_worker_output.TestIrreversibleAssumptionFixtureAccepted::test_fixture_is_accepted_directly
+    red_confirmed: false
+    red_reason: >-
+      The fixture file itself is the new artifact this AC requires; the
+      direct-run assertion could not fail for a missing-path reason because
+      the fixture was authored (Write tool) before the assertion was run,
+      in the same implementation pass. The fixture's content is well-formed
+      against the validator's existing (unmodified by this task) acceptance
+      rules, so this test passed on its first run. No validator or schema
+      behaviour change underlies this AC -- FR20 requires only that the new
+      fixture be accepted, which it structurally always would be once
+      present, per the frozen validator (D5).
+  AC-4:
+    tests:
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven::test_every_fixture_matches_its_declared_exit_code
+      - tests.test_validate_worker_output.TestFixtureCoverageValidAndInvalidPerBranch::test_every_group_has_a_valid_and_an_invalid_case
+    red_confirmed: false
+    red_reason: >-
+      Both tests are pre-existing, generic, data-driven checks
+      (discover_fixture_cases() walks every fixture directory by naming
+      convention) that were never failing and did not need modification --
+      they automatically picked up the new
+      valid-irreversible-assumption-blocking fixture once it was created.
+      There is no dedicated new test to red/green here; the AC is satisfied
+      by these two pre-existing sweeps continuing to pass with the new
+      fixture included, which
+      tests.test_validate_worker_output.TestIrreversibleAssumptionFixtureAccepted::test_fixture_category_is_outside_the_blocking_required_set
+      additionally confirms is not passing for the wrong reason (category
+      outside BLOCKING_REQUIRED_CATEGORIES) and
+      test_fixture_declares_an_irreversible_assumption confirms the
+      assumptions[] entry actually declares reversible: false against the
+      packet's own question.
+  AC-5:
+    tests:
+      - tests.test_validate_worker_output.TestQuestionCategoryForcesBlockingUnanswered::test_all_three_fail_closed_categories_are_rejected_directly
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing test, unmodified by this task, asserting the frozen
+      behaviour (D5): a security/license/spec-change question with
+      on_unanswered != block is still rejected, for all three categories.
+      It was already green before this task started and stays green after
+      -- this AC is a "no behaviour change" guarantee, not new work, so
+      there is no red state to observe.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No new gate_id or gate_policies entry is introduced by this task
+      (only prose/message rewording). Verified by the existing gate
+      registry derivation tests (tests/test_gate_option_vocabulary.py,
+      tests/test_validate_worker_output.py's TestGateRegistryDerivation-
+      family classes) continuing to pass untouched, plus this task's own
+      code diff touching no gate-registry-derivation logic.
+  AC-7:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionPacketSchemaCategoryBlockingConstraint::test_no_feature_docs_task_identifier_cited
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing test (owned by a different task's file,
+      tests/test_question_resolution_doc.py, not in this task's expected_
+      files) that scans question-packet-schema.md for a task\d{4}-shaped
+      identifier. This task's edit introduces no such identifier and no
+      provider name, so the test stays green throughout; there is no red
+      state to observe for a property this task never violates. "The full
+      suite passes" half of this AC is verified by the final full-suite run
+      (3670 tests, exit 0).
