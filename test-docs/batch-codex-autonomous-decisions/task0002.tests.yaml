@@ -1,0 +1,87 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_question_id_rule_states_both_branches
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_source_has_exactly_the_two_existing_values
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_commit_reach_point_is_in_step_no_new_commit
+      - tests.test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_subsection_states_four_writers
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_four_writers_sentence_occurs_exactly_once
+    red_confirmed: true
+    red_reason: >-
+      Before phase-state.md was edited, TestFourthWriterRelaxedRoute's
+      setUpClass raised ValueError: substring not found (the relaxed-route
+      bullet did not exist yet, so _relaxed_route_bullet's anchor could not
+      be located), failing every test in that class including these; and
+      test_subsection_states_four_writers / test_four_writers_sentence_
+      occurs_exactly_once failed with AssertionError 0 != 1 counting "Four
+      writers append to this file" against the pre-edit "Three writers"
+      sentence. Confirmed by stashing the doc edits and re-running these
+      modules before restoring them.
+  AC-2:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_packet_id_rule_stated_for_both_branches
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_append_only_rule_retained
+    red_confirmed: true
+    red_reason: >-
+      test_packet_id_rule_stated_for_both_branches failed via the same
+      setUpClass ValueError as AC-1 (no relaxed-route packet_id rule
+      existed yet). test_append_only_rule_retained is a regression guard
+      over wording this task intentionally leaves untouched -- it was
+      already green before this task's edits and stays green after; it
+      proves the append-only rule survived the addition, not new behavior.
+  AC-3:
+    tests:
+      - tests.test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_reporting_item_list_unchanged
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: the updated REPORTING_ITEM_LIST_SENTENCE (naming the
+      autonomous fail-closed-route resolutions) was not found in
+      batch-mode.md's ## Reporting section before that document was
+      edited.
+  AC-4:
+    tests:
+      - tests.test_batch_quiet_output_audit_persistence.TestAutonomousFailClosedRouteSourceMapRow.test_source_map_row_names_batch_audit_path
+      - tests.test_batch_quiet_output_audit_persistence.TestAutonomousFailClosedRouteSourceMapRow.test_source_map_row_cites_phase_state_doc
+      - tests.test_batch_quiet_output_audit_persistence.TestAutonomousFailClosedRouteSourceMapRow.test_every_audit_item_still_has_exactly_one_row
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: "no source-map row found for 'autonomous
+      fail-closed-route resolution'" and row count 6 != 7, before
+      batch-mode.md's audit-item source map was edited.
+  AC-5:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC2SourceMapRegressionGuards.test_source_map_still_has_seven_rows
+      - tests.test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_source_map_row_count_matches_reporting_item_count
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC6FirstWriterBulletAndAppendOnlyException.test_four_writers_sentence_occurs_exactly_once
+      - tests.test_batch_quiet_output_audit_persistence.TestAC6PhaseStateDocDefinesBatchAuditFile.test_subsection_states_four_writers
+    red_confirmed: true
+    red_reason: >-
+      Running these modules straight after editing the two documents (but
+      before touching the tests) reproduced AssertionError 7 != 6 (source
+      map row count) and AssertionError 0 != 1 (writer-count sentence
+      count) against the OLD pinned values, proving each moved count was
+      load-bearing before it was updated in place.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      "Must not change" criterion -- no red state is possible for it.
+      Verified instead by the pre-existing, unmodified pins continuing to
+      pass unchanged throughout this task: test_batch_quiet_output_
+      discipline.py's TestSuppressedScope, TestNonTerminalTurnsAndMarkerLine
+      and TestExceptions (suppression list / marker line / terminal-line
+      exceptions), and test_batch_stop_contract.py's
+      test_non_packet_gates_table_row_count_unchanged (still 10 rows).
+  AC-7:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_does_not_restate_relaxation_conditions
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_step7_citation_not_added_to_this_bullet
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_bullet_cites_question_resolution_doc
+    red_confirmed: true
+    red_reason: >-
+      Same setUpClass ValueError as AC-1/AC-2: before the relaxed-route
+      bullet existed, every test in TestFourthWriterRelaxedRoute failed for
+      the same reason, including these three.

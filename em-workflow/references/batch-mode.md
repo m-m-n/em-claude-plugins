@@ -124,8 +124,11 @@ The final report of a batch run MUST include, beyond the normal completion
 report: every auto-approved command string, every assumption recorded during
 create-spec/planning, auto-rework rounds consumed (review / verify), any
 deferred findings with their stable_ids, every unlisted-gate fallback
-resolution (gate / options / choice / Codex consulted or not), and the kept
-integration branch name
+resolution (gate / options / choice / Codex consulted or not), every
+autonomous fail-closed-route resolution (gate / option chosen / options not
+chosen / the discussion's key points / whether Codex was consulted / whether
+a fallback provider answered / whether the Opus escalation ran, with its
+reasoning), and the kept integration branch name
 with the take-over guidance (batch never merges — the human switches to the
 branch in the main working tree and merges locally or pushes + opens a PR).
 The external service relays this to the human evaluator — it is the only
@@ -197,4 +200,5 @@ resolves to a persisted source:
 | Auto-rework rounds consumed (review / verify) | `workflow.yaml`'s `batch` block |
 | Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id` |
 | Every unlisted-gate fallback resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
+| Every autonomous fail-closed-route resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
 | The kept integration branch name | `workflow.yaml` `parent_branch` plus the feature name |
