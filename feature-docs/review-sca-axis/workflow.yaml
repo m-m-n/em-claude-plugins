@@ -277,7 +277,7 @@ tasks:
     - FR4
     - FR20
     - NFR2
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/review-sca-axis/task0010
 review:
