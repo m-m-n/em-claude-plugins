@@ -326,7 +326,10 @@ class TestPartialCoverageAcrossTwoEcosystems(unittest.TestCase):
             bin_dir = Path(tmp) / "bin"
             bin_dir.mkdir()
             _write_stub(bin_dir, "npm", json.dumps(NPM_SUCCESS_FIXTURE), exit_code=0)
-            _write_stub(bin_dir, "cargo", json.dumps(CARGO_SUCCESS_FIXTURE), exit_code=0)
+            # task0008: cargo's trusted binary is the standalone cargo-audit
+            # executable, not the cargo front end -- see vuln-scanners.yaml
+            # and scan-dependencies.py's ALLOWED_EXECUTABLES.
+            _write_stub(bin_dir, "cargo-audit", json.dumps(CARGO_SUCCESS_FIXTURE), exit_code=0)
             result = _run_scan_with_path(bin_dir, project_root, ["package.json", "Cargo.toml"])
         assert_conforms_to_schema(self, result, self.schema)
         self.assertFalse(result["skipped"])
