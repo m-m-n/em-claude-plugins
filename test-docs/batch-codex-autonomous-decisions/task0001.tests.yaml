@@ -1,0 +1,122 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_batch_relaxation_present_and_mode_conditioned
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_batch_relaxation_states_interactive_branch_verbatim_retained
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_batch_relaxation_states_batch_joins_consultation
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_batch_relaxation_old_unconditional_wording_is_gone
+    red_confirmed: true
+    red_reason: >
+      Before the rewrite, "**The batch relaxation.**" did not exist in the
+      document, so the positive pins raised ValueError (marker not found via
+      self.text.index) and the negative-proof pin's target phrase ("at
+      unchanged force and outside this revision's scope") was still present,
+      failing assertNotIn.
+  AC-2:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_surviving_aborts_enumerated_once_and_abort_both_modes
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_surviving_aborts_routed_arm_cannot_convert_them
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_surviving_aborts_heading_appears_exactly_once
+    red_confirmed: true
+    red_reason: >
+      "**The surviving aborts.**" heading did not exist pre-rewrite; the
+      section-locator raised ValueError (marker not found).
+  AC-3:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_precedence_reservation_states_batch_takes_relaxed_route
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_precedence_reservation_states_both_modes_never_convert_surviving_abort
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_step_2_states_batch_relaxed_arms_route_directly
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_block_branch_states_batch_arrival_via_relaxed_route
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_block_branch_interactive_arm_still_never_reaches_here
+    red_confirmed: true
+    red_reason: >
+      AssertionError: the batch-mode sentences (Precedence reservation's
+      "in batch, a question satisfying ... takes the relaxed route", step
+      2's "in batch, none of the three relaxed arms reaches step 3 ...",
+      and the block branch's "in batch, the same three arrive here, through
+      the relaxed route ...") were absent from the pre-rewrite text.
+  AC-4:
+    tests:
+      - tests.test_classification_gate.TestClassificationGate.test_direction_1_alone_marked_final_and_non_overridable
+      - tests.test_classification_gate.TestClassificationGate.test_direction_2_final_and_non_overridable_sentence_is_gone
+      - tests.test_classification_gate.TestClassificationGate.test_direction_2_interactive_aborts_batch_routes_to_consultation
+      - tests.test_classification_gate.TestClassificationGate.test_direction_2_relaxed_in_batch_same_terms_as_fail_closed
+      - tests.test_classification_gate.TestClassificationGate.test_every_relaxed_continuation_records_decision_basis
+    red_confirmed: true
+    red_reason: >
+      test_direction_1_alone_marked_final_and_non_overridable failed with
+      "2 != 1" against the pre-rewrite document (direction 2 still carried
+      its own unconditional copy of the "final and non-overridable"
+      sentence). The other four failed with AssertionError: direction 2's
+      relaxation sentences did not exist yet, and its old unconditional
+      "This abort is final and non-overridable, exactly as" sentence was
+      still present (so the negative proof also failed).
+  AC-5:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_availability_probe_unavailable_runs_escalation
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_old_unavailable_immediate_on_unanswered_wording_is_gone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_trajectory_judgement_hands_off_to_escalation
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_five_turn_ceiling_hands_off_to_escalation
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_opus_escalation_section_present_after_codex_procedure
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_opus_escalation_dispatch_is_single_per_packet
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_opus_escalation_counted_outside_five_turn_ceiling
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_opus_escalation_return_shape
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_step_3_batching_includes_relaxed_and_direction_2_questions
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_step_6_runs_escalation_before_on_unanswered
+    red_confirmed: true
+    red_reason: >
+      "### Opus escalation" did not exist pre-rewrite (ValueError on the
+      marker lookup for the dispatch/return-shape/ceiling pins), and the
+      availability-probe/trajectory-judgement/five-turn-ceiling/step-3/
+      step-6 pins failed with AssertionError because the pre-rewrite text
+      still read "skip straight to step 6 ... without ever reaching Codex"
+      / "fall through to on_unanswered" with no escalation hand-off.
+  AC-6:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_step_10_records_escalation_ran_and_reasoning
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_audit_obligation_cites_phase_state_no_field_restatement
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_audit_obligation_names_the_three_relaxed_route_outcomes
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_opus_escalation_output_untrusted
+      - tests.test_classification_gate.TestClassificationGate.test_every_relaxed_continuation_records_decision_basis
+    red_confirmed: true
+    red_reason: >
+      "**Audit obligation.**" did not exist pre-rewrite (ValueError on
+      marker lookup); step 10's escalation-reasoning clause and direction
+      2's "every relaxed continuation records its decision basis" clause
+      were both absent (AssertionError). The pre-existing "every surviving
+      abort still records its reason and the evidence considered" half was
+      already covered by unchanged, already-green pins (not re-verified
+      red here since that text was not touched).
+  AC-7:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_wrapper_fallback_provider_fact_stated_once_no_name
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_fallback_provider_name_leaked
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_rate_limit_detection_description
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_new_gate_id_minted
+    red_confirmed: true
+    red_reason: >
+      test_wrapper_fallback_provider_fact_stated_once_no_name failed with
+      AssertionError (the one-sentence fallback-provider fact did not
+      exist pre-rewrite). The other three (no leaked provider name, no
+      rate-limit description, no new gate_id) were ALREADY true before any
+      implementation -- they assert an invariant this rewrite must not
+      violate, not a new behaviour it introduces -- so those three were
+      never observed red; see notes.
+notes: >
+  AC-7's three negative-only checks (test_no_fallback_provider_name_leaked,
+  test_no_rate_limit_detection_description, test_no_new_gate_id_minted)
+  passed vacuously against the pre-rewrite document too, since the forbidden
+  terms were already absent there. They remain in the suite as regression
+  guards against this rewrite (and future ones) introducing a provider name,
+  a rate-limit description, or a new gate_id, but they do not themselves
+  prove a red-to-green transition for AC-7 -- only
+  test_wrapper_fallback_provider_fact_stated_once_no_name does that. The
+  fix to tests/test_spec_change_origin_binding.py (outside this task's
+  expected_files) is recorded as a deviation in the implementer report: its
+  test_both_directions_marked_non_overridable pinned the same "final and
+  non-overridable" phrase count (2) that AC-4/C5 changes to 1; it regressed
+  when question-resolution.md was rewritten and was updated in the same
+  change, per C5 ("counting pins are updated, not removed").
