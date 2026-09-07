@@ -832,8 +832,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # patch neither supplies nor targets (a defect no worker can repair).
     # The call site inside `validate_workflow_patch` passes `data` (the
     # patch) through. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by batch-codex-autonomous-decisions/task0004 (FR19):
+    # the on_unanswered != "block" rejection message's parenthetical
+    # rationale is reworded (from justifying the check by "the batch
+    # abort" to the reason that survives it -- a worker cannot choose the
+    # non-blocking handling for spec-change / security / license
+    # questions). No accept/reject behaviour changes (D5).
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    # Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "6736354620f2c70beef43295ddc0461f7ada11538b0eaf225768f4088205e26d"
+        "71513b7b152815f88ed8485533b2633230faf4ee6fa49699d47f233d3df11f45"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -903,8 +912,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # test's patch now targets the verify step via `step_patches`.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
     # Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by batch-codex-autonomous-decisions/task0004 (FR18,
+    # FR20, FR21): TestQuestionPacketSchemaBlockRationale is new (pins
+    # question-packet-schema.md's on_unanswered: block constraint sentence
+    # verbatim and its reworded rationale), TestIrreversibleAssumption
+    # FixtureAccepted is new (direct-run assertion for the new
+    # `valid-irreversible-assumption-blocking` fixture), and
+    # TestQuestionCategoryForcesBlockingUnanswered gains
+    # test_rejection_message_states_the_surviving_rationale (the
+    # message-rationale pin). PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "c161714b88d0fa6d6b1885a2b52fa5510e4e1db18aed95bab876d6ef73aad730"
+        "295f1843403079f58fe1506de63b574ed81e3d01bb764ddf087970d5fe2f2760"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
