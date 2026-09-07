@@ -25,9 +25,11 @@
 # resolution time, which is why this file still carries no entry and no
 # `option_id` for it — a policy lookup here would be answering a question
 # the gate alone settles. Every other fail-closed arm — `category:
-# security`, `category: license`, and `reversible: false` — keeps aborting
-# immediately at unchanged strength; this carve-out is exactly one gate,
-# never a relaxation of the rule as a whole.
+# security`, `category: license`, and `reversible: false` — takes the
+# relaxed route in batch instead of aborting, per
+# `references/question-resolution.md`; in interactive it keeps aborting
+# immediately, exactly as before. This carve-out is exactly one gate, never
+# a relaxation of the rule as a whole.
 #
 # `preserve_and_reuse` (used by every `*.artifact-overwrite` gate — all
 # three phases now live here as one source of truth:

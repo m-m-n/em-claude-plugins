@@ -352,15 +352,36 @@ class TestBatchPoliciesYaml(unittest.TestCase):
         )
         self.assertIn("guessing an answer", synthetic)
 
-    def test_header_does_not_imply_other_arms_relaxed(self):
-        # AC-4 (NFR2): the header must not state or imply any change to the
-        # security / license / irreversible-operation arms.
+    def test_header_no_longer_states_unchanged_strength_for_other_arms(self):
+        # batch-codex-autonomous-decisions task0003, AC-1 (FR17, FR21):
+        # supersedes the pre-task0003
+        # test_header_does_not_imply_other_arms_relaxed, which asserted the
+        # "unchanged strength" wording was PRESENT -- that assertion pinned
+        # exactly the sentence this task's rewrite removes. Negative proof
+        # half of the C4 pin replacement.
+        header = self.policy_text.split("gate_policies:", 1)[0]
+        norm = self._norm_yaml_comment_header(header)
+        self.assertNotIn("unchanged strength", norm)
+        # Non-vacuity guard: prove the assertion above is meaningful by
+        # checking it against a synthetic string that DOES carry the
+        # superseded phrase, so a no-op assertion could not slip through.
+        synthetic = norm + " keeps aborting immediately at unchanged strength."
+        self.assertIn("unchanged strength", synthetic)
+
+    def test_header_states_two_mode_split_naming_all_three_arms(self):
+        # batch-codex-autonomous-decisions task0003, AC-1/AC-2 (FR17, FR21,
+        # NFR1): positive pin half of the C4 pin replacement -- the header
+        # still names all three other fail-closed arms, but now states the
+        # two-mode split (relaxed route in batch, unchanged immediate abort
+        # in interactive) instead of "unchanged strength" in both modes.
         header = self.policy_text.split("gate_policies:", 1)[0]
         norm = self._norm_yaml_comment_header(header)
         self.assertIn("category: security", norm)
         self.assertIn("category: license", norm)
         self.assertIn("reversible: false", norm)
-        self.assertIn("unchanged strength", norm)
+        self.assertIn("references/question-resolution.md", norm)
+        self.assertIn("takes the relaxed route in batch", norm)
+        self.assertIn("in interactive it keeps aborting immediately", norm)
 
     def test_header_does_not_restate_gate_internals(self):
         # AC-5 (NFR1): cites question-resolution.md by path and restates
@@ -777,6 +798,42 @@ class TestSelectGateStructure(unittest.TestCase):
         # gate nor reported as a missing one.
         self.assertNotIn(INTENTIONAL_FALLBACK_EXCEPTION, self.gate_policies)
         self.assertNotIn(INTENTIONAL_FALLBACK_EXCEPTION, SELECT_GATE_IDS)
+
+
+# batch-codex-autonomous-decisions task0003, AC-3 (NFR8): the exact
+# `gate_policies` key set as it stood immediately before this task's header
+# rewrite -- this task touches only the header comment, never the mapping,
+# so the set must come out byte-for-byte identical. Pinned as its own
+# snapshot (rather than relying solely on the pre-existing design-input.md
+# comparison above) so a future entry added "for a relaxed question" is
+# caught even if design-input.md's own illustrative listing drifted too.
+GATE_POLICY_KEY_SET_BEFORE_TASK0003 = {
+    "create-spec.feature-identity",
+    "create-spec.requirement-clarification",
+    "create-spec.design-step",
+    "create-spec.design-system",
+    "design-system.reclassify",
+    "create-spec.artifact-overwrite",
+    "design.artifact-overwrite",
+    "create-plan.artifact-overwrite",
+    "create-spec.command-approval",
+    "create-spec.stalled",
+    "create-plan.tbd-resolution",
+    "create-plan.license-conflict",
+    "create-plan.existing-files",
+}
+
+
+class TestGatePoliciesKeySetUnchangedByTask0003(unittest.TestCase):
+    """batch-codex-autonomous-decisions task0003, AC-3: no key added, none
+    removed, by this task's header-only rewrite."""
+
+    def test_key_set_is_byte_for_byte_the_same_as_before(self):
+        with open(POLICY_PATH, encoding="utf-8") as fh:
+            gate_policies = parse_gate_policies(fh.read())
+        self.assertEqual(
+            set(gate_policies.keys()), GATE_POLICY_KEY_SET_BEFORE_TASK0003
+        )
 
 
 if __name__ == "__main__":

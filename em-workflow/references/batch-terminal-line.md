@@ -100,7 +100,7 @@ Closed set of eleven stop reason codes:
 | `step_needs_intervention` | A workflow step reported `needs_update`, or reported `failed` — for the `implement` step, `failed` counts when `failed_kind` reads `decision` (including the missing-value case per `references/workflow-schema.md`), or when the automatic-resume attempt count has reached its cap per `skills/develop/SKILL.md`; other steps' `failed` is unchanged | `stopped` |
 | `workflow_yaml_unparseable` | `workflow.yaml` could not be parsed | `stopped` |
 | `git_setup_aborted` | Step 0's git setup aborted (e.g. gitleaks missing) | `stopped` |
-| `gate_fail_closed` | A gate was classified fail-closed and the phase aborted | `stopped` |
+| `gate_fail_closed` | A gate was classified fail-closed: the aborts `references/question-resolution.md` keeps fail-closed in both modes, plus, in interactive, that mode's own additional aborts | `stopped` |
 | `gate_option_unavailable` | A policy gate's option was unavailable | `stopped` |
 | `implement_task_failed` | A task failed a second time in the implement phase | `stopped` |
 | `verify_rework_cap_reached` | The verify phase's rework cap was reached | `stopped` |
