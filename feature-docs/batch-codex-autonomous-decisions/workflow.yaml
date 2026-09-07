@@ -93,7 +93,7 @@ tasks:
     domains: [data-persistence, api-contract]
     complexity: medium
     requirements: [FR14, FR15, FR16, FR21, NFR1, NFR3, NFR4, NFR5, NFR9]
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-codex-autonomous-decisions/task0002
     notes: null
   task0003:
