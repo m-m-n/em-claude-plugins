@@ -48,3 +48,26 @@ records:
       between them. Adopted (a) — it matches the protocol's
       minimum-side-effect principle and keeps the findings visible as residual
       rather than silently half-fixed.
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-07T23:48:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined"
+    normalized_answer: "declined"
+    resolution_note: >-
+      task_id: task0008; declined deviation path: tests/test_sca_scan_execution.py;
+      missing evidence part: the identifier of the acceptance criterion or
+      requirement that would otherwise be dropped. The report states the
+      observable failure (task0009's test_both_completing_yields_skipped_false
+      fixture can no longer resolve the cargo executable once task0008's
+      registry/allowlist change lands, so the stub had to be renamed cargo ->
+      cargo-audit) and the path passes the shape check and is not a workflow
+      control path, but it names no AC-n of task0008's own plan and no
+      requirement id registered in workflow.yaml. Missing identifier alone
+      makes the deviation ineligible for auto-addition to tasks.task0008.files;
+      it surfaces as an ordinary deviation for the containment check instead.
+      The task's other reported deviation (em-workflow/scripts/scan-dependencies.py,
+      rewiring run_ecosystem_command to take a job) needs no auto-addition —
+      that path is already declared in tasks.task0008.files.
