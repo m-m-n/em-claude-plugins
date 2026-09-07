@@ -389,10 +389,52 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             "`rework.spec-change`",
             "both directions of the malformed `gate_id` / `category` "
             "pairing below",
-            "the classification gate's step-3 origin-verification "
-            "failures below",
+            "the classification gate's direction-1 origin-membership "
+            "failure below (origin absent, unresolvable, or not a "
+            "member of the bound set)",
         ]:
             self.assertIn(member.lower(), section)
+
+    # --- task0008 AC-1: the enumeration narrows to direction 1 alone ------
+
+    def test_surviving_aborts_old_step_3_wording_is_gone(self):
+        # AC-1 negative proof: the superseded member string, which
+        # conflated both directions of the Classification gate's step 3,
+        # must not survive anywhere in the document.
+        self.assertNotIn(
+            "the Classification gate's step-3 origin-verification "
+            "failures",
+            self.norm,
+        )
+
+    def test_surviving_aborts_old_wording_negative_proof_would_be_caught(
+        self,
+    ):
+        # Non-vacuity guard: the matcher above must actually flag the
+        # pre-task0008 wording it supersedes.
+        fake_section = (
+            "and the Classification gate's step-3 origin-verification "
+            "failures below."
+        )
+        self.assertIn(
+            "the Classification gate's step-3 origin-verification "
+            "failures",
+            fake_section,
+        )
+
+    def test_ac2_no_passage_states_batch_direction_2_question_aborts(self):
+        # AC-2 (retention): direction 1's final-and-non-overridable
+        # wording and direction 2's batch-relaxation wording are both
+        # unchanged (asserted elsewhere); no passage states that a batch
+        # question tripping direction 2 aborts.
+        self.assertNotIn(
+            "a batch question that trips direction 2 aborts",
+            self.norm.lower(),
+        )
+        self.assertNotIn(
+            "a routed question that trips direction 2 aborts",
+            self.norm.lower(),
+        )
 
     def test_surviving_aborts_routed_arm_cannot_convert_them(self):
         section = re.sub(r"\s+", " ", self._surviving_aborts_section()).lower()
@@ -565,6 +607,55 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             section,
         )
 
+    # --- task0008 AC-3: the batch direction-2 continuation is stated once -
+
+    def test_batch_direction_2_continuation_stated_at_exactly_one_site(self):
+        # AC-3: a counting assertion, not a presence assertion -- a
+        # presence assertion would pass on a document stating the fact
+        # three times, which is the defect being fixed. Counted over the
+        # whitespace-normalized rendering since the source wraps long
+        # paragraphs across markdown lines.
+        phrase = (
+            "a routed question that trips direction 2 leaves the "
+            "Classification gate, joins the packet's batched "
+            "consultation, and may reach the Unlisted-gate fallback "
+            "below and, from there, `on_unanswered`"
+        )
+        self.assertEqual(self.norm.count(phrase), 1)
+
+    def test_step_2_old_direction_2_wording_is_gone(self):
+        # Negative proof: the pre-task0008 wording at step 2 itself, which
+        # is superseded by the single-statement phrase above, must not
+        # survive alongside it.
+        self.assertNotIn(
+            "does not stop at the classification gate: it leaves the "
+            "gate and joins the packet's batched consultation, so it "
+            "may still reach the unlisted-gate fallback below and, from "
+            "there, `on_unanswered` — consistent with that fallback's "
+            "own step 3 and step 6.",
+            self.norm.lower(),
+        )
+
+    def test_fallback_step_3_cites_step_2_for_direction_2_routing(self):
+        section = re.sub(r"\s+", " ", self._unlisted_gate_fallback_section())
+        self.assertIn(
+            "or through the Classification gate's direction 2 above "
+            "(Batch resolution sequence step 2 above states this "
+            "routing fact; cited here, not restated), rather than "
+            "through the `gate_id` policy lookup",
+            section,
+        )
+
+    def test_fallback_step_3_old_uncited_wording_is_gone(self):
+        # Negative proof: the pre-task0008 wording, which named direction
+        # 2 as an arrival source without citing where the routing fact
+        # itself is stated, must not survive.
+        self.assertNotIn(
+            "Classification gate's direction 2 above, rather than "
+            "through the `gate_id` policy lookup",
+            self.norm,
+        )
+
     # --- task0025 AC-1: step 2's exit cites the Outcome step instead of ----
     # --- ending the question's story in place -------------------------------
 
@@ -727,9 +818,8 @@ class TestQuestionResolutionDoc(unittest.TestCase):
     def test_block_branch_distinguishes_aborted_set_from_routed_set(self):
         section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
         self.assertIn(
-            "security, licensing and irreversible-operation questions "
-            "never reach here because the fail-closed classification "
-            "above has already aborted them",
+            "the fail-closed classification above owns which questions "
+            "those abort and by which rule, cited here, not restated",
             section,
         )
         self.assertIn(
@@ -738,10 +828,91 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             section,
         )
         self.assertIn(
-            "the routed arm removed them from the sequence entirely at "
-            "step 2",
+            "the routed arm's removal at batch resolution sequence "
+            "step 2 above owns that exclusion, cited here, not restated",
             section,
         )
+
+    # --- task0008 AC-4: the block branch cites, rather than re-narrates,
+    # --- the upstream abort ownership and the routed-arm removal ---------
+    # --- ownership -----------------------------------------------------
+
+    def test_block_branch_old_ownership_narration_is_gone(self):
+        # Negative proof: the pre-task0008 narrative restating WHY the
+        # abort/removal happens, instead of citing where it is stated,
+        # must not survive.
+        norm_lower = re.sub(r"\s+", " ", self.text).lower()
+        self.assertNotIn(
+            "because the fail-closed classification above has already "
+            "aborted them before this branch is reached",
+            norm_lower,
+        )
+        self.assertNotIn(
+            "the routed arm removed them from the sequence entirely at "
+            "step 2 of the batch resolution sequence, so they were "
+            "never subject to this fallback in the first place",
+            norm_lower,
+        )
+
+    def test_block_branch_old_ownership_narration_negative_proof_would_be_caught(
+        self,
+    ):
+        # Non-vacuity guard: the matchers above must actually flag the
+        # pre-task0008 wording they supersede.
+        fake_section = (
+            "in interactive, security, licensing and irreversible-"
+            "operation questions never reach here because the "
+            "Fail-closed classification above has already ABORTED them "
+            "before this branch is reached; in interactive, "
+            "specification-change questions never reach here either, "
+            "but for a different reason -- the routed arm REMOVED them "
+            "from the sequence entirely at step 2 of the Batch "
+            "resolution sequence, so they were never subject to this "
+            "fallback in the first place."
+        )
+        norm_lower = re.sub(r"\s+", " ", fake_section).lower()
+        self.assertIn(
+            "because the fail-closed classification above has already "
+            "aborted them before this branch is reached",
+            norm_lower,
+        )
+        self.assertIn(
+            "the routed arm removed them from the sequence entirely at "
+            "step 2 of the batch resolution sequence, so they were "
+            "never subject to this fallback in the first place",
+            norm_lower,
+        )
+
+    def test_block_branch_direction_2_subset_cites_step_2_not_restated(self):
+        section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
+        self.assertIn(
+            "batch resolution sequence step 2 above states how that "
+            "subset reaches the packet's batched consultation (cited "
+            "here, not restated)",
+            section,
+        )
+        self.assertIn("reaches this branch after all", section)
+
+    def test_block_branch_old_direction_2_restatement_is_gone(self):
+        # Negative proof: the pre-task0008 wording, which restated the
+        # routing mechanism (leaves the gate, joins the consultation)
+        # rather than citing it, must not survive.
+        self.assertNotIn(
+            "a routed spec-change question that trips the "
+            "Classification gate's direction 2 leaves the gate and "
+            "joins the packet's",
+            self.norm,
+        )
+
+    def test_block_branch_no_claim_of_unreachability_contradicts_single_site(
+        self,
+    ):
+        # AC-4: no claim of unreachability for the direction-2 subset
+        # contradicts the single statement site (which says it CAN reach
+        # the Unlisted-gate fallback and, from there, `on_unanswered`).
+        section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
+        self.assertNotIn("direction-2 subset never reaches", section)
+        self.assertNotIn("direction 2 subset never reaches", section)
 
     def test_superseded_single_mechanism_sentence_is_gone(self):
         # C5: the absence half. Non-vacuity: the block-branch locator above
@@ -800,9 +971,9 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
         self.assertIn(
             "in interactive, security, licensing and irreversible-"
-            "operation questions never reach here because the fail-closed "
-            "classification above has already aborted them before this "
-            "branch is reached",
+            "operation questions never reach here — the fail-closed "
+            "classification above owns which questions those abort and "
+            "by which rule, cited here, not restated".lower(),
             section,
         )
 
