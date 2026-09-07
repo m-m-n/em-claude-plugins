@@ -135,6 +135,11 @@ points:
 `analysis_mode: design_system_detection` never returns a `question_packet`
 and so raises neither gate.
 
+An `assumptions[].reversible` entry is `false` only for an assumption
+about an operation that cannot be undone once applied; it is `true` for a
+preserved constraint, an invariant, or a fact pinned by an existing test
+(`references/question-packet-schema.md`).
+
 ## Report
 
 Your `report` field is a short factual summary of what you inspected and
