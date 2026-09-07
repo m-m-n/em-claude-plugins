@@ -616,12 +616,29 @@ class TestModuleCoOwnership(unittest.TestCase):
         self.assertIn("scan", proc.stdout)
         self.assertIn("file-tasks", proc.stdout)
 
-    def test_scan_is_a_marked_placeholder(self):
-        proc = subprocess.run(
-            [sys.executable, str(SCRIPT_PATH), "scan"], capture_output=True, text=True,
-        )
-        self.assertEqual(proc.returncode, sd.EXIT_EXECUTION_ERROR)
-        self.assertIn("implemented by the other task", proc.stderr)
+    def test_scan_is_now_a_real_implementation(self):
+        # task0001 merged into this branch after task0005 and, per the
+        # co-ownership skeleton's symmetric merge duty (IMPLEMENTATION.md
+        # "Module co-ownership skeleton": "a placeholder MUST NEVER
+        # overwrite a real implementation"), re-applied its own real `scan`
+        # on top of this file -- replacing the placeholder this test
+        # originally asserted. `file-tasks` (this task's own half, checked
+        # elsewhere in this module) is unaffected.
+        with tempfile.TemporaryDirectory() as tmp:
+            changed_files_path = Path(tmp) / "changed.json"
+            changed_files_path.write_text(json.dumps(["README.md"]), encoding="utf-8")
+            proc = subprocess.run(
+                [
+                    sys.executable, str(SCRIPT_PATH), "scan",
+                    "--project-root", tmp,
+                    "--changed-files", str(changed_files_path),
+                ],
+                capture_output=True, text=True,
+            )
+        self.assertEqual(proc.returncode, sd.EXIT_OK, proc.stderr)
+        self.assertNotIn("implemented by the other task", proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["source"], "tool")
 
     def test_file_tasks_runs_end_to_end_via_the_real_cli(self):
         with tempfile.TemporaryDirectory() as tmp:
