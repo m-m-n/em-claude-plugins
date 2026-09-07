@@ -53,6 +53,13 @@ merged. Per-task acceptance criteria live in `tasks/taskNNNN.md`.
 | TS-20 | Untrusted-text truncation | Fields over 4096 bytes are truncated with a visible marker; no `suggestion` carries diff hunk markers | Unit |
 | TS-21 | Plugin invariants | `check-plugin-invariants.py` exits 0 with all seven checks PASS | Integration |
 | TS-22 | Test-dependency discipline | Every `tests/test_sca_*.py` module imports only standard-library modules in its own import statements | Unit |
+| TS-23 | Filing-branch selection from a healthy but EMPTY task listing, and from each genuine listing-unavailability form (invalid entry point / launch failure / non-zero exit / non-JSON stdout / JSON that is not an array) | An empty — or entirely dropped-by-validation — listing takes the filing branch; each unavailability form takes the report branch with its own machine-stable degradation reason, distinguishable from the others | Integration |
+| TS-24 | A malformed finding title inside an otherwise valid filing batch | Every other package is still filed or reported; the malformed finding is recorded in the returned summary with its input position and a reason carrying no advisory-sourced text; no exception escapes; an all-malformed batch still returns a summary with empty filed / appended / suppressed sets | Integration |
+| TS-25 | External task-system failure part-way through a filing batch, then a retry | The documented summary dict is returned carrying the packages already filed, the failing package and a machine-stable failure reason, with every pre-existing key's name unchanged; the retry files only what was not filed before | Integration |
+| TS-26 | Scan-job construction: per-manifest pip target, trusted-binary resolution, and a reviewed project carrying a hostile cargo-config alias and a hostile npm registry line | Each job's first argument-vector element is an absolute path to an allowlisted scanner binary and never a multiplexer-front-end + subcommand form; the pip job audits the changed requirements file or project target, never the ambient environment, and carries no install form; the hostile configuration files change neither the executable path nor the child environment's configuration/registry selection; registry and allowlist agree for every ecosystem | Unit |
+| TS-27 | pip normalization against CAPTURED real `pip-audit --format json` output | Directness comes from the reviewed manifest's declared set (never a tool field) and severity from advisory metadata present in the output; an advisory with no determinable severity reaches the machine-readable skip surface with an affected count in the summary instead of being dropped as below threshold; the fixture carries no field the tool does not emit | Unit |
+| TS-28 | Scanner execution outcomes: empty stdout, an npm missing-lockfile error envelope, an undocumented non-zero exit, and a documented advisory-found non-zero exit with a valid payload | The first three are `not_completed` with distinct machine-stable reasons and contribute no findings; only the last is `completed` and its findings reach the emitted result | Unit |
+| TS-29 | Two selected ecosystems where one does not complete, and the protocol statement covering that case | `skipped: true` with the deterministic combined reason, the completed ecosystem's findings still present, schema-valid; `skipped: false` only when every selected ecosystem completed; `review-phase.md`'s axis-2 run paragraph states the partial-coverage row and that findings still enter the evaluator's inputs | Unit |
 
 ## Code Quality Verification
 
@@ -69,10 +76,10 @@ merged. Per-task acceptance criteria live in `tasks/taskNNNN.md`.
 
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
-| AC-1 | scan-dependencies.py exists and determines npm / cargo / pip / go from changed_files, assembling the command | TS-1 |
-| AC-2 | Each tool's output normalizes into a schema-valid object (source tool / category vulnerability) | TS-2 |
-| AC-3 | Tool absent ⇒ findings empty, `skipped: true`, machine-stable `skip_reason`, no LLM fallback | TS-4 |
-| AC-4 | vuln-scanners.yaml holds manifest / command / severity map / threshold | TS-1, TS-3 |
+| AC-1 | scan-dependencies.py exists and determines npm / cargo / pip / go from changed_files, assembling the command | TS-1, TS-26 |
+| AC-2 | Each tool's output normalizes into a schema-valid object (source tool / category vulnerability) | TS-2, TS-27 |
+| AC-3 | Tool absent ⇒ findings empty, `skipped: true`, machine-stable `skip_reason`, no LLM fallback | TS-4, TS-28, TS-29 |
+| AC-4 | vuln-scanners.yaml holds manifest / command / severity map / threshold | TS-1, TS-3, TS-26 |
 | AC-5 | Schema `source` gains `tool`, `category` gains `vulnerability`; required / additionalProperties / severity unchanged | TS-10 |
 | AC-6 | R0 carries the notion-task-dispatch probe with no hard-coded marketplace name and newest-version selection | TS-8 |
 | AC-7 | R1's Mandatory Layer-2 check adds `vulnerability` alongside `license` | TS-8 |
@@ -81,9 +88,9 @@ merged. Per-task acceptance criteria live in `tasks/taskNNNN.md`.
 | AC-10 | R2's fallback / chain-walk / unreviewed_perspectives accounting excludes `source: tool` | TS-8 |
 | AC-11 | R4 never makes `vulnerability` auto-applicable | TS-15 |
 | AC-12 | Task creation runs once per review phase immediately before the final round's R5, with the determining signal stated | TS-9 |
-| AC-13 | Branch implemented: security-type filing when detected, `tmp/` report when not | TS-18 |
+| AC-13 | Branch implemented: security-type filing when detected, `tmp/` report when not | TS-18, TS-23 |
 | AC-14 | Report destination from the first porcelain worktree entry; top-level resolution not used | TS-6 |
-| AC-15 | One task per package; multiple advisories as multiple 参照 lines | TS-7 |
+| AC-15 | One task per package; multiple advisories as multiple 参照 lines | TS-7, TS-24, TS-25 |
 | AC-16 | Two-stage duplicate detection (package name / advisory id) | TS-5, TS-7 |
 | AC-17 | Incomplete tasks only; complete/discarded ⇒ new task filed | TS-7 |
 | AC-18 | Key construction confined to one function | TS-5 |
@@ -97,10 +104,10 @@ merged. Per-task acceptance criteria live in `tasks/taskNNNN.md`.
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-1 |
-| FR2 | task0001 | TS-2, TS-3 |
-| FR3 | task0001 | TS-4 |
-| FR4 | task0001 | TS-1, TS-3 |
+| FR1 | task0001, task0008 | TS-1, TS-26 |
+| FR2 | task0001, task0008, task0009 | TS-2, TS-3, TS-27 |
+| FR3 | task0001, task0009 | TS-4, TS-28, TS-29 |
+| FR4 | task0001, task0008 | TS-1, TS-3, TS-26 |
 | FR5 | task0001 | TS-10, TS-2 |
 | FR6 | task0003 | TS-8 |
 | FR7 | task0003 | TS-8 |
@@ -108,23 +115,23 @@ merged. Per-task acceptance criteria live in `tasks/taskNNNN.md`.
 | FR9 | task0003 | TS-15 |
 | FR10 | task0004 | TS-15 |
 | FR11 | task0004 | TS-9 |
-| FR12 | task0005 | TS-18 |
+| FR12 | task0005, task0007 | TS-18, TS-23, TS-25 |
 | FR13 | task0005 | TS-6 |
-| FR14 | task0005 | TS-7 |
-| FR15 | task0005 | TS-5, TS-7 |
-| FR16 | task0005 | TS-7 |
+| FR14 | task0005, task0007 | TS-7 |
+| FR15 | task0005, task0007 | TS-5, TS-7 |
+| FR16 | task0005, task0007 | TS-7 |
 | FR17 | task0005 | TS-5 |
 | FR18 | task0005 | TS-18 |
 | FR19 | task0006 | TS-12 |
-| FR20 | task0006 | TS-13 |
+| FR20 | task0006, task0009 | TS-13 |
 | FR21 | task0001 | TS-10 |
-| FR22 | task0001, task0003, task0004, task0005, task0006 | TS-22 |
+| FR22 | task0001, task0003, task0004, task0005, task0006, task0007, task0008, task0009 | TS-22 |
 | FR23 | task0003 | TS-8 |
 | FR24 | task0004 | TS-9 |
 | NFR1 | task0003 | TS-16 |
-| NFR2 | task0001, task0005 | TS-19, TS-18 |
+| NFR2 | task0001, task0005, task0008 | TS-19, TS-18 |
 | NFR3 | task0001 | TS-19 |
-| NFR4 | task0001, task0005 | TS-20 |
+| NFR4 | task0001, task0005, task0007 | TS-20, TS-24 |
 | NFR5 | task0003 | TS-17 |
 | NFR6 | task0003, task0006 | TS-21 |
 | NFR7 | task0001, task0005, task0006 | TS-22 |
@@ -194,4 +201,6 @@ Not applicable — the resolved requirements state no performance target.
 | Protocol document pins | 5 | 5 | 0 | 1 |
 | Skill / version pins | 2 | 2 | 0 | 0 |
 | Repository invariants | 2 | 2 | 0 | 0 |
-| **Total** | **23** | **23** | **0** | **5** |
+| Rework round 1 — filing failure modes (TS-23…TS-25) | 3 | 3 | 0 | 0 |
+| Rework round 1 — scan invocation and outcomes (TS-26…TS-29) | 4 | 4 | 0 | 0 |
+| **Total** | **30** | **30** | **0** | **5** |
