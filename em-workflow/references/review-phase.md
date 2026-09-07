@@ -455,6 +455,17 @@ Classification (mechanical only — never fuzzy semantic judgment):
   not a symlink). Failure: singleton demotes to needs-judgment; agreeing-diffs
   group aborts all members.
 
+A `vulnerability` finding is never classified auto-applicable, regardless
+of `shape`, and always falls to the needs-judgment side above. Two
+independent reasons hold, neither alone load-bearing: the protocol forbids
+it, explicitly, right here; and axis 2's `suggestion` field is prose only
+by contract (IMPLEMENTATION.md D4) — never a unified diff — so the shape
+probe above already classifies it `prose` and routes it through the same
+needs-judgment / conflict path as any other prose prescription. No
+dependency update, lockfile edit or package installation is ever
+auto-applied, or dispatched to an editor without first passing through the
+needs-judgment gate above.
+
 Dispatch:
 
 - **auto-applicable** → dispatch WITHOUT AskUserQuestion (one informational
@@ -601,6 +612,43 @@ exactly like a normal round run (`role: primary`/`fallback`, `status`). Then:
 zero residual critical/high non-spec → `clean`; `loop == 3` → `loop-cap`; no
 progress and no user-resolvable candidates → `no-progress`.
 
+### Triage filing: once per review phase, immediately before the final round's R5 (FR11, FR24)
+
+1. **What runs**: the orchestrator invokes the `file-tasks` subcommand of
+   `em-workflow/scripts/scan-dependencies.py` (IMPLEMENTATION.md, Shared
+   Components "`file-tasks` subcommand"), passing the project root, the
+   feature, the unresolved `vulnerability` findings, and the
+   notion-task-dispatch entry point IF R0's probe found one. Selecting
+   which findings are "unresolved" (resolution other than `fixed`, category
+   `vulnerability`) is the orchestrator's job; the script never re-decides
+   it.
+2. **When it runs**: exactly once per review phase, immediately before the
+   final round's R5 — never per round. The deterministic signal is this
+   round's **closing disposition** (IMPLEMENTATION.md D3): computed after
+   Phase R4's loop termination and before the round record is written,
+   from values the orchestrator already holds — the residual critical/high
+   count, the `--report-only` flag, the loop termination reason, and the
+   batch rework counter. The disposition is `another-round` or one of
+   `complete` / `rework` / `defer`. Filing runs iff the disposition is NOT
+   `another-round`.
+3. **Why neither failure mode can arise**: a non-final round always yields
+   the `another-round` disposition, so filing cannot fire early, in a
+   non-final round. A run that dies before R5 wrote no round record, so
+   the resumed review re-runs the round and recomputes the same
+   disposition, filing then — this is safe because the filing path is
+   idempotent under its own package-name duplicate detection.
+4. **The receipt**: Phase R5's round record gains a root field recording
+   whether triage filing ran this round, which branch was taken (the
+   external task system or the report), and the packages filed / appended
+   to / suppressed as duplicates, plus the report path when the report
+   branch ran. The field is present and empty when the disposition was
+   `another-round`. This is disclosure and audit only: it introduces no
+   new gate identifier and never affects the completion gate below.
+
+The branch between filing and report is decided mechanically from R0's
+probe result — no question is put to the user, in either interactive or
+batch mode.
+
 ## Phase R5: Persist the round record
 
 Write `reviews/round{N}.yaml` (develop-駆動: at
@@ -673,6 +721,13 @@ auto_fix:
   termination: clean
 residual_critical_high: 0
 rework_required: false       # true → implement へ差し戻し
+triage_filing:               # present and empty when this round's disposition was `another-round`
+  executed: false
+  branch: null                # ntd | report, null when not executed
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null            # set only when branch == report
 ```
 
 `perspective_runs` entries gain a `role` field: `primary` (a `primary_chain`
@@ -717,6 +772,15 @@ section rendering `evaluation.round_summary` in interactive mode (subject
 to the same output-suppression discipline as the rest of R6 in batch
 mode); the round record itself — which batch-mode output-suppression does
 not touch — remains the batch-visible channel for this content.
+
+The round record also persists the triage-filing receipt under a root
+`triage_filing` field: an `executed` flag, the `branch` taken (`ntd` /
+`report`), the packages `filed` / `appended` / `duplicates_suppressed`, and
+`report_path` (set only when the report branch ran) — see "Triage filing"
+above (Phase R4) for when this runs. `executed` is `false` and every other
+value is empty/null when this round's disposition was `another-round`.
+This is disclosure and audit only: it introduces no new gate identifier
+and never affects the completion gate below.
 
 develop-駆動: update workflow.yaml `review` block (rounds_completed,
 perspectives, residual_critical_high, needs_rework, status), then commit
