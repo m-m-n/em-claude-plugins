@@ -1,0 +1,513 @@
+round: 2
+executed_at: '2026-09-08T00:18:37+09:00'
+scope:
+  review_mode: diff
+  base_commit: c57996a1c2875b88b28d65646eb8d47091bc0a47
+  head_commit: cadfca4d2f9461fc77bc2e4fd4a509c36b5bf0b2
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/review-output-schema.json
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/vuln-scanners.yaml
+  - em-workflow/scripts/scan-dependencies.py
+  - em-workflow/skills/review-security/SKILL.md
+  - test-docs/review-sca-axis/task0001.tests.yaml
+  - test-docs/review-sca-axis/task0003.tests.yaml
+  - test-docs/review-sca-axis/task0004.tests.yaml
+  - test-docs/review-sca-axis/task0005.tests.yaml
+  - test-docs/review-sca-axis/task0006.tests.yaml
+  - test-docs/review-sca-axis/task0007.tests.yaml
+  - test-docs/review-sca-axis/task0008.tests.yaml
+  - test-docs/review-sca-axis/task0009.tests.yaml
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_sca_axis_review_phase_r0_r3.py
+  - tests/test_sca_axis_schema_enums.py
+  - tests/test_sca_axis_skill_and_version.py
+  - tests/test_sca_axis_triage_timing.py
+  - tests/test_sca_scan_execution.py
+  - tests/test_sca_scan_invocation.py
+  - tests/test_sca_scan_normalization.py
+  - tests/test_sca_task_filing.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+  skip_reason: null
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+findings:
+- stable_id: 2febcb34aa888ac7
+  severity: high
+  category: security
+  file: em-workflow/references/vuln-scanners.yaml
+  line: 61
+  title: pip auditing can execute build code from the reviewed project
+  description: pip-audit is invoked in two forms (`-r requirements.txt` and a bare project directory),
+    both of which resolve dependencies and run build backends, so a local/editable/sdist dependency in
+    the reviewed project executes setup.py or PEP 517 hooks with the reviewer process's permissions. build_child_env
+    sanitization, PIP_CONFIG_FILE=/dev/null, PIP_INDEX_URL pinning and argv-array invocation address configuration
+    and injection, not local code execution. tests/test_sca_scan_invocation.py:259 lists --no-deps in
+    forbidden_tokens, so the natural mitigation is currently asserted against.
+  suggestion: Audit a statically extracted, fully pinned dependency inventory with resolution and builds
+    disabled (--no-deps plus --disable-pip), and emit an explicit machine-stable skip reason for inputs
+    that cannot be resolved that way. Update tests/test_sca_scan_invocation.py:259 so the forbidden-token
+    list no longer blocks the mitigation.
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: fixed
+  resolution_reason: 'auto-applied loop 1 (registry args only). REGRESSION: the editor could only touch
+    vuln-scanners.yaml, so the matching test-pin update the suggestion also required was not made; `python3
+    -m unittest discover -s tests` now reports FAILED (failures=9). Re-reported independently by spec#loop1
+    as 4699cf4f1c58e38d.'
+- stable_id: 90c05c8482cf46f5
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 515
+  title: The vulnerability site-identity rule names fields no schema-valid finding can carry
+  description: review-phase.md defined same_site/stable_id's file operand for category vulnerability as
+    file + '#' + package + '@' + advisory_id and required both fields on every vulnerability finding,
+    but _build_finding emits neither and review-output-schema.json sets additionalProperties:false over
+    a required list that has no such fields. The evaluation contract's dismissed_sites entries carry only
+    file/line/run_id/reason, so a dismissal could not name one advisory among several in one manifest
+    and the accountability floor could not honour per-advisory dismissals.
+  suggestion: 'Pick one representation of advisory identity and carry it end to end: add package/advisory_id
+    to the schema and emit them from _build_finding, or define the composite string as the value of file
+    itself so it flows unchanged through findings, same_site, stable_id and dismissed_sites. Then state
+    which representation dismissed_sites uses for vulnerability.'
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: fixed
+  resolution_reason: 'auto-applied loop 1: review-phase.md now encodes the composite identity in the finding''s
+    own `file` value and states that dismissed_sites carries the same composite string. NOTE: this is
+    a document-only change; scan-dependencies.py''s _build_finding still emits the raw manifest path,
+    so the document and the code are now inconsistent in the other direction.'
+- stable_id: 16029fae0ed6921a
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 804
+  title: A changed Python lockfile is never audited; freshly resolved dependencies are audited instead
+  description: _pip_target special-cases only requirements.txt; poetry.lock and Pipfile.lock fall to the
+    directory branch, producing `pip-audit <dir> --format json`. The changed lockfile is never passed
+    to the scanner and never read, so a vulnerable pinned version is missed whenever the manifest range
+    also admits a patched version — the exact case a lockfile change should surface. The result is completed,
+    skipped:false, zero findings. _pip_manifest_candidate reinforces this by redirecting lockfiles to
+    pyproject.toml for directness too.
+  suggestion: Convert each supported Python lockfile into a pinned inventory pip-audit can consume directly,
+    and emit an explicit machine-stable skip reason for formats that cannot be converted, instead of silently
+    substituting manifest resolution.
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 20f7f988c9400af6
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1648
+  title: npm / cargo / go jobs always scan the repository root, and only one project per ecosystem
+  description: build_scan_job appends a target only when name == 'pip'; for npm, cargo and go the argv
+    is [executable] + args with cwd = project_root unconditionally, so manifest_file changes only the
+    finding's file label, never what is scanned. A change to services/api/package.json runs npm audit
+    at the repository root against a different dependency set while the finding is labelled with the nested
+    path. manifest_file_for returns the FIRST matching changed file and one job is built per ecosystem,
+    so a second changed package.json under another directory is left entirely unscanned with no skip reason
+    and skipped:false. Residual of round 1's unresolved target-binding findings 9a56747dc5389bdb / 6e8a02d94f7b3c15.
+  suggestion: Group changed manifests/lockfiles by their containing project directory and build one job
+    per distinct project, binding each scanner to that project. Any project that cannot be bound must
+    contribute a machine-stable skip reason rather than being folded into a root-level scan.
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 7de239a2d3ce0706
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1019
+  title: The Go path is validated only against a synthetic fixture; real govulncheck output yields zero
+    findings
+  description: '_merge_govulncheck_stream reads severity from osv[''database_specific''][''severity''],
+    a GitHub Advisory Database convention. Go vulnerability database entries — the only source govulncheck
+    emits — carry database_specific: {''url'': ...} and publish no CVSS severity, so severity is None
+    for every real finding, _map_severity returns None, _passes_threshold returns False, and every Go
+    advisory is discarded while run_scan reports skipped:false with skip_reason null. Directness is equally
+    unsound: is_direct = len(trace) == 1 is true for module-level findings regardless of go.mod. Invisible
+    to the suite because GO_FIXTURE is a synthetic object already carrying severity ''high'' and is_direct
+    true.'
+  suggestion: Derive Go severity from what govulncheck actually emits (the OSV top-level severity array's
+    CVSS vector via _cvss_severity_band, or an explicit go_severity_undetermined count mirroring the pip
+    path) and never treat an undetermined severity as below threshold. Resolve directness against go.mod's
+    require block rather than trace length. Replace GO_FIXTURE with a captured real govulncheck -json
+    stream.
+  sources:
+  - claude:evaluator
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: de4c569f8b63818d
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 762
+  title: The reviewed project's .npmrc can still redirect audit traffic through a proxy
+  description: ECOSYSTEM_ENV_PINS['npm'] pins npm_config_registry and npm_config_userconfig only, and
+    build_scan_job sets cwd to the reviewed project root, so npm reads that project's own ./.npmrc. The
+    registry pin holds, but proxy, https-proxy, strict-ssl, cafile and noproxy are not pinned and are
+    read from the project .npmrc unopposed. Setting https-proxy plus strict-ssl=false lets a pull-request
+    author interpose on audit traffic and return a clean advisory response; judge_scan_outcome accepts
+    a well-formed empty vulnerabilities object as a completed scan.
+  suggestion: Pin the transport-affecting npm settings through their env-var forms as well (npm_config_proxy
+    / npm_config_https_proxy empty, npm_config_strict_ssl=true, npm_config_cafile unset), or run npm from
+    an isolated directory with a validated copy of the manifest and lockfile so no project .npmrc is on
+    the lookup path.
+  sources:
+  - codex:security
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: d5bca9d78798a428
+  severity: medium
+  category: security
+  file: em-workflow/references/vuln-scanners.yaml
+  line: 53
+  title: cargo-audit still reads the reviewed project's own .cargo/audit.toml
+  description: ECOSYSTEM_ENV_PINS['cargo'] is deliberately empty on the reasoning that resolving cargo-audit
+    directly removes the [alias] dispatch. That is real progress, but cargo-audit independently loads
+    .cargo/audit.toml from its working directory, and build_scan_job sets that working directory to the
+    reviewed project root. The file's [advisories] ignore list and [database] url/path settings let a
+    pull-request author suppress advisories or repoint the advisory database, and the resulting empty
+    vulnerabilities.list is accepted by _has_success_structure as a completed clean scan.
+  suggestion: Invoke cargo-audit from a directory outside the reviewed tree with an explicit --file <validated
+    Cargo.lock> and pinned database settings, or assert that no project-supplied audit configuration is
+    on the lookup path before accepting a clean result.
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 22e4dd8e811a5016
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1495
+  title: Python directness comparison is not PEP 503 normalized
+  description: normalize_pip computes is_direct = package in direct_names where direct_names holds names
+    copied verbatim from the manifest and package is the name pip-audit reports. Python package identity
+    requires PEP 503 normalization (lowercase, runs of -, _, . collapsed to -), which neither side applies.
+    Declaring Django==3.2.0 while pip-audit reports django makes the dependency transitive, _passes_threshold
+    drops the advisory, and the result is zero findings with skipped:false and no undetermined-severity
+    note. The same exact-match comparison is used on the cargo path at line 1300.
+  suggestion: Add one normalization helper (lowercase; re.sub(r'[-_.]+', '-', name)) and apply it to both
+    the declared names and the scanner-reported name before the membership test, on the pip and cargo
+    paths alike.
+  sources:
+  - codex:security
+  - codex:comprehensive
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 05bd51e6d856646f
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1242
+  title: Valid TOML declaration forms are invisible to the direct-dependency parsers
+  description: Three distinct forms. (1) _cargo_direct_dependency_names treats any bracketed line as a
+    table header and keeps only the last dotted segment, so [dependencies.serde] sets current_table =
+    'serde', which is not in _CARGO_DEP_TABLES; every subtable-declared dependency is dropped. (2) The
+    key regex records the declaration key, so a renamed dependency alias = { package = 'real-name', version
+    = '1' } records alias while cargo-audit reports real-name. (3) _pip_pyproject_direct_names extracts
+    entries with a double-quote-only regex, so TOML single-quoted literal strings are dropped. In all
+    three cases the advisory is reclassified transitive and silently discarded with skipped:false and
+    no diagnostic.
+  suggestion: Parse both manifests with a real TOML parser (tomllib on 3.11+, with an explicit skip reason
+    when unavailable), resolve Cargo dependency subtables and package= renames to the actual crate name,
+    and read dependency strings independently of quote style. When directness cannot be resolved, report
+    incomplete coverage rather than defaulting to transitive.
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 14912f8cfe1de920
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1393
+  title: An extras suffix ends pyproject dependency-array parsing early
+  description: The in_dependencies_list state machine terminates on `if ']' in stripped`, which does not
+    distinguish an array-closing bracket from a bracket inside a quoted extras suffix. For an array containing
+    'requests[socks]>=2' followed by 'django==3.2.0', the ] of [socks] ends the list on the second line;
+    django never enters direct_names, its advisory is classified transitive, and _passes_threshold discards
+    it with no finding and no skip information.
+  suggestion: Parse pyproject.toml with a TOML parser and read the resulting dependency list, rather than
+    detecting array boundaries in raw text.
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 3fdb743389932d5e
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1344
+  title: Requirements includes are followed by pip-audit but not by the directness parser
+  description: _pip_requirements_direct_names skips every line starting with -, which includes -r requirements/base.txt
+    and -c constraints.txt. pip-audit follows the include and audits everything the referenced file declares,
+    but none of those names reach direct_names. A requirements.txt that delegates its declarations therefore
+    yields directness False for every advisory pip-audit reports; all are dropped by _passes_threshold
+    and run_scan returns an unqualified skipped:false result with zero findings.
+  suggestion: Resolve -r / --requirement includes recursively within the project root (reusing _resolve_project_relative
+    for containment, with cycle detection), or emit an explicit pip_directness_undetermined count rather
+    than silently defaulting the advisories to transitive.
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 53765f57beaf1658
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1519
+  title: A multiline advisory description produces a finding that cannot be filed
+  description: _pip_advisory_headline returns description[:match.start()].strip(), preserving any newline
+    inside the prose before the CVSS vector, and that value becomes the title. _TITLE_RE is compiled without
+    DOTALL or MULTILINE, so .* cannot cross the embedded newline and recover_package_advisory raises FindingTitleError.
+    The finding scans cleanly and is reported, but group_findings_by_package then classifies it malformed,
+    so it receives no triage task and no entry in the report's package sections — recorded only as a position
+    number.
+  suggestion: Collapse whitespace in the headline before building the title, and add a scan-to-file_tasks
+    round-trip test asserting every title _build_finding emits is recoverable by recover_package_advisory.
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: b6a281b50a243d88
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 528
+  title: A subprocess launch failure escapes file_tasks and crashes the script
+  description: The filing loop catches only EntryPointError, but create_security_task and append_security_task_references
+    call subprocess.run directly and subprocess.run raises OSError on a launch failure. _entry_point_is_valid
+    checks is_file() and os.access(X_OK), which does not exclude a file that fails exec. That OSError
+    propagates out of file_tasks, out of file_tasks_command, and past main's except ExecutionError, so
+    the process dies with a traceback and no JSON on stdout, discarding every package already filed in
+    that batch — the opposite of the docstring's promise. Residual of round 1's partial-progress rework.
+  suggestion: Wrap the subprocess.run calls in both helpers so an OSError becomes an EntryPointError,
+    keeping the existing break-and-return path as the single mid-batch failure route.
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 32d220f68e3f3224
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 737
+  title: The persisted triage receipt cannot record a mid-batch filing failure
+  description: file_tasks now returns failed_package, failure_reason, malformed_findings and listing_dropped_count,
+    and main prints the summary and returns EXIT_OK regardless of them. But review-phase.md's receipt
+    definition and its R5 example carry none of the four, and the document specifies no handling for packages
+    the loop never attempted after the break. If package A files and package B fails, the committed round
+    record is indistinguishable from a fully successful filing of A, while B and every later package receive
+    neither a task nor a report entry — with the run exiting 0.
+  suggestion: Extend the triage_filing receipt with failed_package, failure_reason, malformed_findings
+    and listing_dropped_count, and state in review-phase.md how the orchestrator surfaces or retries the
+    unattempted remainder.
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 487bf6aa49a0e501
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 1638
+  title: run_scan re-implements build_scan_jobs inline, leaving the tested function unused in production
+  description: 'build_scan_jobs is documented as the orchestrator of job construction, but run_scan does
+    not call it: it re-implements the identical validate / resolve / manifest_file_for / build_scan_job
+    sequence. build_scan_jobs'' only call sites are in tests/test_sca_scan_invocation.py, so the function
+    the suite exercises is not the code path that actually runs. Any correction applied to one — notably
+    the per-project job construction 20f7f988c9400af6 requires — silently leaves the other stale while
+    the tests keep passing. Independently re-reported by architecture#loop1.'
+  suggestion: Have run_scan call build_scan_jobs and consume the (jobs, skip_reasons) pair it already
+    returns, so one implementation is both the tested and the executed path.
+  sources:
+  - claude:evaluator
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 4699cf4f1c58e38d
+  severity: high
+  category: spec
+  file: em-workflow/references/vuln-scanners.yaml
+  line: 61
+  title: pip args break AC-22 test suite
+  description: 'SPEC AC-22 (FR21, FR22, NFR7) requires `python3 -m unittest discover -s tests` to exit
+    0, and AC-4 (FR4) pins vuln-scanners.yaml''s command shape. The pip entry now carries --no-deps --disable-pip,
+    contradicting the pinned test contract: the suite reports FAILED (failures=9), including `Lists differ:
+    [''pip-audit'', ''--format'', ''json'', ''--no-deps'', ''--disable-pip''] != [''pip-audit'', ''--format'',
+    ''json'']` in test_command_assembled_from_registry_tool_and_args, and tests/test_sca_scan_invocation.py
+    lists --no-deps in forbidden_tokens. This is a regression introduced by this round''s auto-fix loop
+    1 (2febcb34aa888ac7), not a pre-existing defect.'
+  suggestion: Restore pip args to the pinned form [--format, json] so build_command / build_scan_job match
+    the existing tests and AC-22 exits 0; if the extra flags are spec-required, update the test pins and
+    justify against FR4 / NFR2 instead. Either resolution must be a single change that touches both vuln-scanners.yaml
+    and tests/test_sca_scan_invocation.py.
+  sources:
+  - litellm:muse-spark:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 2de4840d81ae4517
+  severity: high
+  category: architecture
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2
+  title: 'God-module: a 1777-line file absorbs two independently-owned CLI subcommands plus a CVSS implementation,
+    several hand-rolled parsers, and task-system interaction'
+  description: 'scan (ecosystem detection, scanner subprocess execution, JSON/NDJSON normalization, CVSS
+    v3.1 base-score calculation, hand-rolled TOML / requirements.txt / pyproject.toml parsing, threshold
+    filtering) and file-tasks (dedupe/grouping, notion-task-dispatch filing, markdown report fallback,
+    worktree resolution) live in one file, and the module docstring''s git checkout --theirs merge protocol
+    is a direct consequence. Merged same-site siblings from the same run: (a) vuln-scanners.yaml claims
+    sole SSOT over ecosystems while six hard-coded Python structures must be hand-synced with no validation;
+    (b) the CVSS v3.1 calculator is reimplemented from scratch in a normalization script; (c) the four
+    normalizers have inconsistent signatures and return types, forcing name-based dispatch in run_scan;
+    (d) run_scan duplicates build_scan_jobs'' loop; (e) truncate_untrusted and the bidirectional title-encoding
+    contract couple the two supposedly independent halves.'
+  suggestion: Split scan and file-tasks into separate modules, or at minimum move the CVSS calculator,
+    the manifest parsers and the normalizers into their own modules, so the merge protocol becomes unnecessary
+    and the shared contract becomes an explicit inter-module interface.
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+evaluation:
+  round_summary: 'Round 2 (cross_validation: true). Two of five dispatched perspectives produced reviewer
+    output; comprehensive#0 reported 10 findings and security#0 reported 5. All 15 were independently
+    checked against the changed files and all 15 survived as real defects. After cross-run dedupe 14 reviewer
+    findings are carried forward and 1 site is recorded in dismissed_sites as a duplicate; 2 further findings
+    originate from the evaluator''s own inspection, for 15 total. COVERAGE GAP AT PRIMARY FAN-OUT: performance,
+    architecture and spec each returned a non-retryable review_data_too_large skip (377,843-character
+    integrated diff against a 300,000-character reviewer budget) and no fallback reviewer was dispatched
+    per Phase R2b, so the primary pass had NO reviewer output for those three perspectives. Per-perspective
+    status at the primary pass: comprehensive - findings; security - corroborated; performance / architecture
+    / spec - not verified, no reviewer output existed to corroborate. Read budget: 9 of 10 files inspected.
+    Plugin version bump verified correct: 0.1.67 in both plugin.json and marketplace.json. NO INJECTION
+    ATTEMPT was detected in either reviewer output. ORCHESTRATOR ADDENDUM (not the evaluator''s text):
+    the loop-1 re-review was dispatched with per-perspective narrowed diff commands, which brought all
+    three previously-skipped perspectives in under the input budget; all three completed. performance
+    found nothing, architecture reported 6 same-site findings (merged to 2de4840d81ae4517), and spec independently
+    caught the regression that loop 1''s own auto-fix introduced (4699cf4f1c58e38d).'
+  recommended_action: rework
+  action_rationale: 'Five high-severity findings remain open and none is a bounded edit. Four require
+    design changes rather than patches: the pip-audit invocation model must stop resolving and building
+    attacker-supplied code, job construction must bind per project instead of always scanning the repository
+    root, the Python lockfile path must audit the locked set, and the Go normalizer must be rebuilt against
+    govulncheck''s real output because it currently reports every Go project clean. The fifth is a contradiction
+    spanning review-phase.md, review-output-schema.json and scan-dependencies.py that cannot be fixed
+    in any one of them. Nine of the ten mediums are further false-negative paths through the same two
+    subsystems - manifest parsing and scanner invocation - so patching them individually would leave the
+    shared defect. Round 1 closed with 26 findings still unresolved against this same file, indicating
+    the loop is not converging; rework should also split the change into diffs that fit the reviewer budget.'
+dismissed_sites:
+- file: em-workflow/scripts/scan-dependencies.py
+  line: 823
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 2
+  applied_total: 2
+  termination: no-progress
+residual_critical_high: 5
+rework_required: false

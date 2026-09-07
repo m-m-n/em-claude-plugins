@@ -71,3 +71,38 @@ records:
       The task's other reported deviation (em-workflow/scripts/scan-dependencies.py,
       rewiring run_ecosystem_command to take a job) needs no auto-addition —
       that path is already declared in tasks.task0008.files.
+  - question_id: review.non-retryable-skip-fallback
+    packet_id: null
+    answered_at: "2026-09-08T00:02:00+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [keep-the-skip-no-fallback]
+    freeform: null
+    normalized_answer: "keep the skip; dispatch no Claude fallback"
+    resolution_note: >-
+      review round 2, Phase R2b. Three litellm primary reviewers (performance /
+      muse-spark, architecture / vertex-glm-5.2, spec / muse-spark) each
+      returned a schema-valid skip with skip_reason review_data_too_large: the
+      integrated diff is 377,843 characters against the reviewer protocol's
+      300,000-character input budget. Options weighed: (A) literal reading —
+      review_data_too_large is not one of R2b's three retryable reasons, so
+      keep the skip, walk no chain, dispatch no Claude fallback, and disclose
+      the coverage gap in the round record; (B) treat the state as equivalent
+      to chain exhaustion and dispatch one em-workflow:reviewer Claude fallback
+      per affected perspective, on the argument that a Claude reviewer reads
+      files selectively and is not bound by the single-shot prompt budget, so
+      the cause is not one every entry hits identically. Codex was consulted
+      through em-workflow/scripts/run_codex_exec.sh (readonly, xhigh) and
+      judged (A) comparatively better on three grounds: references/review-protocol.md
+      names review_data_too_large as non-retryable by name, which outweighs an
+      analogy to chain exhaustion; R2b defines exhaustion through retryable
+      skips or unavailable entries, so "no completed run" alone is not an
+      authorized fallback trigger even though (B) would violate neither the
+      2-hop harness budget nor the never-alongside-a-completed-run rule; and
+      (A) still yields an auditable record because the skipped runs and the
+      coverage gap are persisted in reviews/round2.yaml, which batch-mode
+      output suppression does not touch. Strongest counter-argument Codex
+      itself named and it stands: (B) would have recovered three perspectives,
+      and the claim that every reviewer hits the identical size failure is not
+      actually true for a Claude reviewer — a real protocol design gap worth a
+      follow-up. Adopted (A).
