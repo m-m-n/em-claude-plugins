@@ -412,9 +412,10 @@ orchestrator-opened gate with no worker packet and no worker-minted
 through `references/question-resolution.md`'s batch resolution sequence
 against `references/batch-policies.yaml`'s decision table. `question_id`
 is `implement.wake-decline` for the implement wake decline record, which
-is not a gate. `packet_id` is always
-`null`, because the orchestrator raises these records rather than a worker
-packet. `source` is drawn from `references/question-packet-schema.md`'s
+is not a gate. `packet_id` is `null` for every writer here except the
+relaxed route (its own bullet below states its rule), because every other
+writer raises its record without a worker packet. `source` is drawn from
+`references/question-packet-schema.md`'s
 closed `source` vocabulary: `batch-safe-default` when no Codex suggestion
 mapped onto an option and the minimum-side-effect default was taken,
 `batch-codex-consultation` when Codex's suggestion did map onto one, or
@@ -422,7 +423,7 @@ mapped onto an option and the minimum-side-effect default was taken,
 `references/batch-policies.yaml`. No field of the per-phase `answers`
 shape changes.
 
-Three writers append to this file, each at resolution time:
+Four writers append to this file, each at resolution time:
 
 - `references/batch-mode.md`'s Non-packet gates table: the review phase
   diff-size gate and the per-command approval fallback each append one
@@ -450,6 +451,23 @@ Three writers append to this file, each at resolution time:
   step has made its own commit, Step A.5's batch branch commits the entry
   itself immediately, via the same `commit-docs.sh` path every other writer
   here uses.
+- `references/question-resolution.md`'s batch resolution sequence: the
+  relaxed route appends one entry for every resolution it reaches, whether
+  the mapping came from the consultation, from the Opus escalation, or from
+  the minimum-side-effect fallthrough. `question_id` is the question's own
+  `question_id` when a worker packet exists, and the gate's own `gate_id`
+  when the gate was orchestrator-opened with no worker-minted identifier —
+  both conform to the `question_id` pattern
+  `references/question-packet-schema.md` owns. `packet_id` is `null` in the
+  orchestrator-opened case and the worker packet's own `packet_id` when a
+  worker packet exists. `source` is `batch-codex-consultation` when a
+  suggestion mapped onto an option, `batch-safe-default` when the
+  minimum-side-effect branch was taken. `resolution_note` names the gate,
+  the option chosen, the options not chosen, the discussion's key points,
+  whether Codex was consulted, whether a fallback provider answered, and
+  whether the Opus escalation ran, together with its reasoning. Committed
+  by the enclosing phase step's next existing `commit-docs.sh` call, the
+  same reach-point the writers above use — no new commit is created for it.
 
 Records are append-only: an existing element of the `records` list is
 never rewritten or removed. Every writer above states its own commit
