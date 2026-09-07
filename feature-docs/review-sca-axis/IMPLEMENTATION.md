@@ -50,6 +50,8 @@ and never invokes a model (FR8, NFR3).
 | **Finding text-encoding contract** | Carry package identity and advisory identity through a schema that forbids extra fields | `file` = the project-relative dependency manifest that declares the package (must exist under the project root, so R3b step 1's existence check passes). `line` = the manifest line when known, else null. `title` = a single line of the fixed form `{package}: {advisory_id} — {advisory short title}` — package name first, then `": "`, then the advisory identifier (CVE / GHSA / RUSTSEC / PYSEC / GO- form), then `" — "`, then the (truncated) advisory title. `description` = affected range, fixed version, and the advisory summary, all truncated per the truncation discipline below. `suggestion` = prose only (see D4). Recovery of `(package, advisory_id)` from a finding is done through ONE function in the script; no call site parses `title` itself. | task0001, task0005 |
 | **Untrusted-text truncation** | One discipline for every attacker-influenced string | Advisory titles, descriptions and any other tool- or advisory-sourced text is treated as untrusted: never concatenated into prompt prose, never interpreted as instructions, and truncated to at most 4096 bytes per field with a visible truncation marker — the same limit R3b step 4 applies. Implemented as ONE helper in the script and used by every producer of a `title` / `description` / `suggestion` / filed-task field. | task0001, task0005 |
 | **Axis-2 run identity** | Make R3b's category cross-check and accountability floor apply to axis 2 | The orchestrator records axis 2's execution as ONE `perspective_runs` row: `run_id: "vulnerability#tool"`, `perspective: vulnerability`, `role: tool` (a new value alongside `primary` / `fallback` / `evaluator`), `source: tool`, `status` one of `completed` / `skipped` (with `skip_reason`) / `failed`. That row is what `perspectives_dispatched` carries into R3a and what R3b step 3 resolves a `vulnerability` finding's source against. | task0003, task0001, task0004 |
+| **Scan job** | Separate "what command to run, where, with what environment" from "run it and judge the outcome" | A value object built by a PURE function of (registry, changed files, project root) — no subprocess is launched during construction. One job per (ecosystem, selected manifest) pair, carrying: the ecosystem name; the project-relative manifest that selected it; the ABSOLUTE path of the resolved, allowlisted scanner binary; the full argument vector, including the audited target when the tool needs one to bind to the reviewed project; the working directory; and the explicit child environment. **Pre**: the registry entry passed its validation and the binary resolved on PATH — an unresolvable binary yields no job and the ecosystem's existing tool-absent skip instead. **Post**: a job is executable as-is; nothing about it depends on configuration read from the reviewed project. | task0008 (builds), task0009 (executes) |
+| **Scan outcome** | Make "did not complete" impossible to confuse with "completed and found nothing" | Executing one scan job yields exactly ONE outcome: `completed` with a payload the ecosystem's normalizer can read, or `not_completed` with a machine-stable reason. There is no third state and no empty-payload completion. Judged from exit status and payload shape TOGETHER, per tool: a documented advisory-found exit status is `completed` only when the payload also has that tool's success structure; an undocumented exit status, an error-envelope payload, and empty stdout are each `not_completed` with their own distinct reason. | task0009 (produces), task0008 (calls, does not change) |
 
 ## Conventions
 
@@ -175,6 +177,47 @@ Every other file in this feature has exactly one writing task. In particular
 task0001's alone: it owns the enum extension AND the frozen-pin update in the
 same change, so no second writer and no cross-branch agreement rule exists
 for them.
+
+### D8 — Rework round 1's shared contracts (task0007 / task0008 / task0009)
+
+Added when review round 1's findings were synthesized into rework tasks. It
+governs only those three tasks and does not restate or revise D1–D7.
+
+**Co-ownership of `scan-dependencies.py`.** Three rework tasks modify the one
+script in DISJOINT regions: task0007 the filing half (task listing, finding
+grouping, the filing loop and its summary), task0008 scan-job construction and
+the pip normalizer, task0009 job execution and result aggregation. No task
+edits another's region, and each carries its own test module, so the file
+overlap produces non-overlapping hunks; where it does not, the implementer's
+parent-side-adoption protocol resolves it and a placeholder never overwrites a
+real implementation (the same duty D7 states for task0001/task0005).
+
+**The scan path's two halves meet at the Shared Components entries above.**
+task0008 builds a "Scan job"; task0009 consumes it and produces a "Scan
+outcome". Each side implements against those contracts alone — neither needs
+the other's code to be complete, and neither may widen the pair to carry
+per-ecosystem structure into the emitted result object: the result schema has
+exactly one `skipped` / `skip_reason` pair and forbids properties outside its
+fixed set. Partial coverage is therefore expressed inside that shape —
+`skipped: true` with the combined reasons whenever ANY selected ecosystem did
+not complete, `findings` still carrying what the completed ecosystems produced,
+and `skipped: false` meaning that every selected ecosystem completed.
+
+**The `file-tasks` summary dict grows, never changes shape.** task0007 adds
+keys for the malformed findings it skipped and for a mid-batch failure's
+reason and failing package. Every key the subcommand already documents
+(`branch`, `filed_packages`, `appended_packages`, `suppressed`, `report_path`,
+`degraded`, `degraded_reason`) keeps its name and meaning, so D3's round-record
+triage-filing receipt keeps mapping onto it without a protocol edit. D6 is
+unchanged: only a listing that genuinely could not be obtained degrades to the
+report branch — a listing that succeeded with zero tasks is the normal
+first-run state and files.
+
+**One version bump for the round, owned by task0009.** The round's changes are
+all under `em-workflow/`, so the plugin version rises once, at one value, in
+`em-workflow/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`.
+task0009 owns both files; task0007 and task0008 do not touch them, so the bump
+cannot land twice or diverge.
 
 ## Risk Assessment
 

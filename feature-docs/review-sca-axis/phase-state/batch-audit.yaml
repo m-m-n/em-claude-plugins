@@ -22,3 +22,29 @@ records:
       real `scan` is re-applied on top of the adopted parent file), but the
       missing identifier alone makes the deviation ineligible for
       auto-addition to tasks.task0001.files.
+  - question_id: review.auto-fix-same-site-classification
+    packet_id: null
+    answered_at: "2026-09-07T22:12:00+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [treat-as-conflict-skip-site]
+    freeform: null
+    normalized_answer: "conflict -> skip the site"
+    resolution_note: >-
+      review round 1, R4 auto-fix dispatch. Question: when two or more prose
+      findings share the same same_site() key but describe independent,
+      mutually non-contradictory defects, is that a conflict (skip the site)
+      or independent fixes (dispatch both)? Options weighed: (a) treat as
+      conflict and skip the site, leaving both findings residual; (b) dispatch
+      both editors against the same site sequentially; (c) merge the two
+      findings into one editor prompt. Codex was consulted through
+      ~/.claude/skills/codex-cli/scripts/run_codex_exec.sh; the primary
+      provider returned a usage-limit error, so the fallback provider
+      (codex exec -p litellm -m muse-spark --sandbox read-only) answered.
+      Codex judged (a) comparatively better: same_site() is deliberately a
+      COARSE key (+-5 lines), so "independent" cannot be established from the
+      finding text alone, and both (b) and (c) let one editor's edit
+      invalidate the other's premise inside a single loop with no re-read
+      between them. Adopted (a) — it matches the protocol's
+      minimum-side-effect principle and keeps the findings visible as residual
+      rather than silently half-fixed.
