@@ -1,5 +1,36 @@
 task_id: task0001
-baseline_failures: []
+# Refreshed per the conflict-cycle protocol (worktree-task-workflow): the
+# merge conflicted (add/add on em-workflow/scripts/scan-dependencies.py,
+# already carrying task0005's real `file-tasks`), so `git merge` +
+# `git checkout --theirs` adopted the parent side, and the suite was
+# re-run right after adoption (BEFORE re-implementing this task's `scan`
+# half on top). At that point `scan` was still task0005's placeholder, so
+# every test in tests/test_sca_scan_normalization.py that exercises real
+# `scan` behavior failed/errored -- this list. The original 4a baseline
+# (recorded before any file in this task was touched) was empty (3855/3855
+# passed); it is superseded by this refreshed one per the skill.
+baseline_failures:
+  - "test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly (setUpClass)"
+  - test_sca_scan_normalization.TestCoOwnershipSkeleton.test_both_subcommands_registered
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_cargo_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_cargo_transitive_and_below_threshold_dropped
+  - test_sca_scan_normalization.TestCoOwnershipSkeleton.test_file_tasks_placeholder_exits_with_execution_error_code
+  - test_sca_scan_normalization.TestCoOwnershipSkeleton.test_file_tasks_placeholder_prints_no_object_on_stdout
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_go_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_go_transitive_and_below_threshold_dropped
+  - test_sca_scan_normalization.TestUntrustedTextTruncation.test_long_advisory_title_is_truncated_with_marker
+  - test_sca_scan_normalization.TestToolNotResolvableIsSkip.test_missing_npm_executable_yields_skip_with_empty_findings
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_npm_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_npm_transitive_and_below_threshold_dropped
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_pip_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_pip_transitive_and_below_threshold_dropped
+  - test_sca_scan_normalization.TestDeterminismAndReadOnlyDiscipline.test_repeated_scan_yields_byte_identical_output
+  - test_sca_scan_normalization.TestDeterminismAndReadOnlyDiscipline.test_scan_leaves_project_root_file_state_unchanged
+  - test_sca_scan_normalization.TestToolNotResolvableIsSkip.test_skip_reason_is_machine_stable_identifier
+  - test_sca_scan_normalization.TestUntrustedTextTruncation.test_suggestion_is_prose_never_diff_shaped
+  - test_sca_scan_normalization.TestUntrustedTextTruncation.test_truncate_helper_leaves_short_text_untouched
+  - test_sca_scan_normalization.TestUntrustedTextTruncation.test_truncate_helper_never_exceeds_limit_and_marks_visibly
+  - test_sca_scan_normalization.TestScanCliProducesOneObjectExitZero.test_scan_subcommand_end_to_end_via_cli
 final_failures: []
 acceptance_tests:
   AC-1:
@@ -154,12 +185,39 @@ acceptance_tests:
   AC-10:
     tests:
       - tests.test_sca_scan_normalization.TestCoOwnershipSkeleton.test_both_subcommands_registered
-      - tests.test_sca_scan_normalization.TestCoOwnershipSkeleton.test_file_tasks_placeholder_exits_with_execution_error_code
-      - tests.test_sca_scan_normalization.TestCoOwnershipSkeleton.test_file_tasks_placeholder_prints_no_object_on_stdout
+      - tests.test_sca_scan_normalization.TestCoOwnershipSkeleton.test_scan_is_a_real_implementation_not_a_placeholder
+      - tests.test_sca_scan_normalization.TestCoOwnershipSkeleton.test_file_tasks_still_dispatches_to_its_own_real_command
+      - tests.test_sca_task_filing.TestModuleCoOwnership.test_scan_is_now_a_real_implementation
     red_confirmed: true
     red_reason: >-
-      Module-blackout observation (see AC-1): `SCAN.build_arg_parser` /
-      `SCAN.main` / `SCAN.cmd_file_tasks` did not exist before this task.
+      Two distinct red observations, matching AC-10's two halves. (1)
+      Module-blackout observation (see AC-1) for the first three tests:
+      `SCAN.build_parser` / `scan_command` did not exist before this task.
+      (2) The merge itself exercised AC-10's second half directly: the
+      integration branch already carried task0005's real `file-tasks`
+      (merged before this task attempted its own merge), so `merge-task.sh`
+      reported an add/add conflict on em-workflow/scripts/
+      scan-dependencies.py. Per the parent-side-adoption protocol, that
+      file was adopted wholesale (`git checkout --theirs`) and the suite
+      was re-run BEFORE re-implementing `scan` -- confirming task0005's own
+      placeholder-`scan` assertion
+      (tests.test_sca_task_filing.TestModuleCoOwnership.test_scan_is_a_marked_placeholder,
+      as it was named at that point) still passed, and every one of this
+      task's own `scan`-exercising tests failed (see baseline_failures
+      above). Re-implementing `scan` on top then flipped
+      test_scan_is_a_marked_placeholder from green to red (its premise --
+      that this branch's `scan` is still a placeholder -- became false the
+      moment the real implementation replaced it), observed directly as a
+      new, unexpected failure outside this task's own test modules after
+      re-implementation; renaming it to test_scan_is_now_a_real_
+      implementation and asserting the real behavior instead (the
+      symmetric merge duty IMPLEMENTATION.md's "Module co-ownership
+      skeleton" assigns to whichever task merges second: "After the second
+      merge the file exposes both subcommands and both tasks' tests
+      pass") is what makes it green again. All four tests listed above are
+      green in the final merged state; the full suite (4043 tests,
+      including tests.test_sca_task_filing's other 31 tests) and
+      check-plugin-invariants.py both confirm no other test moved.
   AC-11:
     tests: []
     red_confirmed: false
@@ -171,10 +229,13 @@ acceptance_tests:
       commands were ALREADY exit 0 at the 4a baseline (3855 tests, 7/7
       invariant checks PASS) in this task's own worktree -- there is no
       "before this task" red state for the aggregate exit code to move
-      from. Verified directly after this task's edits: `python3 -m
-      unittest discover -s tests` -> 3903 tests, 0 failures (the 48 new
-      tests from tests/test_sca_scan_normalization.py and
-      tests/test_sca_axis_schema_enums.py, plus the 3855 pre-existing
-      ones, none newly broken); `python3
+      from. Verified directly after this task's initial edits (before the
+      merge conflict cycle): 3903 tests, 0 failures. Re-verified after the
+      parent-side-adoption + re-implementation cycle (see AC-10): `python3
+      -m unittest discover -s tests` -> 4043 tests, 0 failures (task0003 /
+      task0004 / task0005 / task0006's tests merged in via the parent, plus
+      this task's own 48, plus the one-method fix to
+      tests/test_sca_task_filing.py the co-ownership merge duty required --
+      none newly broken); `python3
       em-workflow/scripts/check-plugin-invariants.py <repo-root>` -> all
       seven checks PASS, exit 0.
