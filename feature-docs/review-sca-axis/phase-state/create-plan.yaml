@@ -1,15 +1,26 @@
 schema_version: 1
 feature: review-sca-axis
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: ef37820
 last_input_digest: sha256:0ef6a36a2b4467511bbb6ac694899a2c3bf44de7f9b45ea14f694814b3a7433d
-active_request_id: create-plan-run-0001
-packets: {}
+active_request_id: null
+packets:
+  create-plan-q0001:
+    status: answered
+    issued_at: "2026-09-07T20:41:35+09:00"
+    questions:
+      - question_id: create-plan.digest-staleness-scope
+        status: answered
+      - question_id: create-plan.co-owned-file-split
+        status: answered
+      - question_id: create-plan.verification-scenarios-beyond-spec
+        status: answered
 answers:
   create-plan.digest-staleness-scope:
-    packet_id: null
+    question_id: create-plan.digest-staleness-scope
+    packet_id: create-plan-q0001
     answered_at: "2026-09-07T20:39:00+09:00"
     source: batch-codex-consultation
     answer_mode: single_select
@@ -28,7 +39,8 @@ answers:
       write_policy_digest and every other input were byte-identical. Codex
       consulted (readonly), chose the exclusion option; adopted.
   create-plan.co-owned-file-split:
-    packet_id: null
+    question_id: create-plan.co-owned-file-split
+    packet_id: create-plan-q0001
     answered_at: "2026-09-07T20:39:00+09:00"
     source: batch-codex-consultation
     answer_mode: multi_select
@@ -52,7 +64,8 @@ answers:
       conflict/adoption overhead. Adopted; the planner was re-dispatched to
       fold task0002 into task0001. Task id 0002 is retired, not reused.
   create-plan.verification-scenarios-beyond-spec:
-    packet_id: null
+    question_id: create-plan.verification-scenarios-beyond-spec
+    packet_id: create-plan-q0001
     answered_at: "2026-09-07T20:39:00+09:00"
     source: batch-codex-consultation
     answer_mode: single_select
@@ -96,7 +109,7 @@ artifacts:
     produced_by: create-plan-run-0001
 patches:
   - patch_id: review-sca-axis-p0002
-    status: proposed
+    status: applied
     base_input_digest: sha256:0ef6a36a2b4467511bbb6ac694899a2c3bf44de7f9b45ea14f694814b3a7433d
     base_workflow_blob: e7d5d51ad59f234e218a6cd27000c5b3513dac76
 progress_fingerprint: sha256:c856f81fabd6f03824a242919b44df0c4c0ff2e75c7688939cfba73b824bca9a

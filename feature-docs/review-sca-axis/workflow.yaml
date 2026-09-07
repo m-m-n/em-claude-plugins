@@ -32,7 +32,8 @@ workflow:
       候補は存在しない。
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 760e939e2e12ac47248d239abb63022b5cde9f0f
   - id: implement
     status: pending
   - id: review
@@ -42,7 +43,78 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "Scanner registry, scan/normalize path, and the result-schema contract"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/vuln-scanners.yaml
+      - em-workflow/scripts/scan-dependencies.py
+      - em-workflow/references/review-output-schema.json
+      - tests/test_reviewer_roles_protocol.py
+      - tests/test_sca_scan_normalization.py
+      - tests/test_sca_axis_schema_enums.py
+    skills: [backend-impl]
+    domains: [input-handling, external-io, api-contract, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR21, FR22, NFR2, NFR3, NFR4, NFR7]
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: "Axis 2's placement in review-phase.md R0-R3b"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/references/review-phase.md
+      - tests/test_sca_axis_review_phase_r0_r3.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR6, FR7, FR8, FR9, FR22, FR23, NFR1, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: "R4/R5 triage timing: no auto-apply, once per phase"
+    plan: tasks/task0004.md
+    files:
+      - em-workflow/references/review-phase.md
+      - tests/test_sca_axis_triage_timing.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR10, FR11, FR22, FR24]
+    status: pending
+    notes: null
+    branch: null
+  task0005:
+    title: "Triage filing and report path in scan-dependencies.py"
+    plan: tasks/task0005.md
+    files:
+      - em-workflow/scripts/scan-dependencies.py
+      - tests/test_sca_task_filing.py
+    skills: [backend-impl]
+    domains: [input-handling, external-io]
+    complexity: high
+    requirements: [FR12, FR13, FR14, FR15, FR16, FR17, FR18, FR22, NFR2, NFR4, NFR7]
+    status: pending
+    notes: null
+    branch: null
+  task0006:
+    title: "Security-skill delegation note and plugin version bump"
+    plan: tasks/task0006.md
+    files:
+      - em-workflow/skills/review-security/SKILL.md
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_sca_axis_skill_and_version.py
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR19, FR20, FR22, NFR6]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   rounds: []
@@ -62,218 +134,218 @@ requirements:
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1]
   FR2:
     title: "ツール出力の findings 正規化"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-2, TS-3]
   FR3:
     title: "ツール不在時の skip"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-4]
   FR4:
     title: "vuln-scanners.yaml の新設"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-3]
   FR5:
     title: "review-output-schema.json の enum 拡張"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-10, TS-2]
   FR6:
     title: "R0 への notion-task-dispatch probe 追加"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-8]
   FR7:
     title: "R1 Layer-2 への vulnerability 相乗り"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-8]
   FR8:
     title: "軸 2 に LLM を置かない"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-11, TS-15]
   FR9:
     title: "R2 のピアとしての実行と下流合流"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-15]
   FR10:
     title: "依存更新の自動適用禁止"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0004]
+    tests: [TS-15]
   FR11:
     title: "タスク化のタイミングと回数"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0004]
+    tests: [TS-9]
   FR12:
     title: "起票先の分岐"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0005]
+    tests: [TS-18]
   FR13:
     title: "レポート出力先の解決方法"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0005]
+    tests: [TS-6]
   FR14:
     title: "タスク粒度"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0005]
+    tests: [TS-7]
   FR15:
     title: "2 段構えの重複検出"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0005]
+    tests: [TS-5, TS-7]
   FR16:
     title: "重複検出の対象範囲"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0005]
+    tests: [TS-7]
   FR17:
     title: "重複検出キーの局所化"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0005]
+    tests: [TS-5]
   FR18:
     title: "severity と優先度の分離"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0005]
+    tests: [TS-18]
   FR19:
     title: "review-security スキルの重複抑止"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0006]
+    tests: [TS-12]
   FR20:
     title: "プラグイン version bump"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0006]
+    tests: [TS-13]
   FR21:
     title: "既存テストの追随（source enum 凍結の更新）"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-10]
   FR22:
     title: "新規テストの追加"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0003, task0004, task0005, task0006]
+    tests: [TS-22]
   FR23:
     title: "tool run を LLM チェーン走査から除外する"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-8]
   FR24:
     title: "最終ラウンド判定の決定論的な信号"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0004]
+    tests: [TS-9]
   NFR1:
     title: "no-network 制約の不変"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-16]
   NFR2:
     title: "レビューの read-only 規律"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0005]
+    tests: [TS-19, TS-18]
   NFR3:
     title: "決定論性"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-19]
   NFR4:
     title: "ツール出力の untrusted 扱い"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0005]
+    tests: [TS-20]
   NFR5:
     title: "新しい gate_id を導入しない"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003]
+    tests: [TS-17]
   NFR6:
     title: "プラグイン不変条件の維持"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0003, task0006]
+    tests: [TS-21]
   NFR7:
     title: "実行環境"
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001, task0005, task0006]
+    tests: [TS-22]
 
 goal: |
   # em-workflow のレビューに依存脆弱性チェック（SCA）の軸を新設する
