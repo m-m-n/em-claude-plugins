@@ -137,7 +137,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR23, NFR9]
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-codex-autonomous-decisions/task0006
     notes: null
 
