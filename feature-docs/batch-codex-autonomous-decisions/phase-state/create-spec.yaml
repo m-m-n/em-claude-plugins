@@ -3,9 +3,9 @@ feature: batch-codex-autonomous-decisions
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 2d4d7da9a8d2a4e5c40b207cfe9cb072ec5d5e0a
+base_revision: 94691e15d6608f2c593b5cead1c556f759da9239
 last_input_digest: sha256:012a9f92f73da5fdeccac39e683b597cfe1e521b3e096e2a6cd67b479ec20bac
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -110,10 +110,16 @@ worker_runs:
     input_digest: sha256:0292b545988570f2ce7c9dcb2c0346c436fb03244d7f6ff7aa66b45d70f7a5ac
     output_digest: null
   - request_id: create-spec-run-0003
-    status: dispatched
+    status: completed
     input_digest: sha256:012a9f92f73da5fdeccac39e683b597cfe1e521b3e096e2a6cd67b479ec20bac
     output_digest: null
-artifacts: []
+artifacts:
+  - path: feature-docs/batch-codex-autonomous-decisions/REQUIREMENTS.md
+    sha256: sha256:ca97a169363bcba5d82e1b8beb911bb621bfef3fc285a27e454805a9321e3f21
+    produced_by: create-spec-run-0003
+  - path: feature-docs/batch-codex-autonomous-decisions/SPEC.md
+    sha256: sha256:ed29603942a35d02535d2349c093439ec6cd9a531d94064692e4be297c9d902f
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
