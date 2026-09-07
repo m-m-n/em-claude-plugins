@@ -1,0 +1,190 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_task_filing.TestFileTasksBranches.test_entry_point_present_files_via_ntd
+      - tests.test_sca_task_filing.TestFileTasksBranches.test_no_entry_point_writes_a_report
+      - tests.test_sca_task_filing.TestFileTasksBranches.test_listing_failure_degrades_to_report_and_states_degradation
+      - tests.test_sca_task_filing.TestFileTasksBranches.test_listing_unparsable_output_also_degrades
+    red_confirmed: true
+    red_reason: >-
+      Against the red-confirmation stub (every real function replaced with
+      `raise NotImplementedError("stub")`, CLI reduced to a fixed
+      "not implemented yet" stderr message and exit 2):
+      test_entry_point_present_files_via_ntd and
+      test_no_entry_point_writes_a_report raised NotImplementedError from
+      file_tasks(); test_listing_failure_degrades_to_report_and_states_degradation
+      and test_listing_unparsable_output_also_degrades raised the same. All
+      four went green immediately after restoring the real implementation
+      (no further edits needed), confirming they exercise the branch logic
+      and not an accidental tautology.
+  AC-2:
+    tests:
+      - tests.test_sca_task_filing.TestReportDestinationResolution.test_resolves_to_main_repo_root_from_main_repo
+      - tests.test_sca_task_filing.TestReportDestinationResolution.test_resolves_to_main_repo_root_from_linked_worktree
+      - tests.test_sca_task_filing.TestReportDestinationResolution.test_report_destination_is_tmp_under_main_repo_root
+      - tests.test_sca_task_filing.TestReportDestinationResolution.test_script_never_uses_the_top_level_resolution_command
+    red_confirmed: true
+    red_reason: >-
+      test_resolves_to_main_repo_root_from_main_repo,
+      test_resolves_to_main_repo_root_from_linked_worktree and
+      test_report_destination_is_tmp_under_main_repo_root all raised
+      NotImplementedError against the stub (resolve_main_worktree_root /
+      report_destination were stubs). Restoring the real implementation
+      turned all three green, including the linked-worktree case (the
+      destination resolves to the main repo root even when invoked from the
+      non-first, "integration"-named worktree -- exercised against a real
+      disposable repository with `git worktree add`, per Test Notes).
+      test_script_never_uses_the_top_level_resolution_command is a static
+      source-text check (absence of a banned substring): it was
+      trivially green against the stub too (the stub obviously does not
+      call it either), so it carries no red-state evidence on its own --
+      see `notes` below. One self-correction during implementation: the
+      script's own explanatory docstring initially spelled out the banned
+      git flag by name in prose, which this same test caught (green
+      became red) after the real implementation was restored; the wording
+      was rephrased to describe the banned command without embedding its
+      literal flag string, after which the test passed.
+  AC-3:
+    tests:
+      - tests.test_sca_task_filing.TestGroupingAndFiling.test_three_advisories_one_package_produce_one_task_with_three_lines
+      - tests.test_sca_task_filing.TestGroupingAndFiling.test_two_packages_produce_two_tasks
+    red_confirmed: true
+    red_reason: >-
+      Both raised NotImplementedError from file_tasks() against the stub
+      (group_findings_by_package / create_security_task were stubs); both
+      went green after restoring the real implementation, confirming the
+      one-task-per-package grouping and the three-参照-lines-per-task
+      count are exercised, not assumed.
+  AC-4:
+    tests:
+      - tests.test_sca_task_filing.TestGroupingAndFiling.test_incomplete_task_present_appends_only_unrecorded_advisories
+      - tests.test_sca_task_filing.TestGroupingAndFiling.test_only_complete_or_discarded_tasks_still_files_a_new_task
+      - tests.test_sca_task_filing.TestGroupingAndFiling.test_idempotent_second_run_files_nothing_new
+    red_confirmed: true
+    red_reason: >-
+      All three raised NotImplementedError against the stub (file_tasks
+      itself). All three went green after restoring the real
+      implementation. test_only_complete_or_discarded_tasks_still_files_a_new_task
+      is the mixed incomplete/complete/discarded-in-one-listing case Test
+      Notes calls for; test_idempotent_second_run_files_nothing_new is the
+      direct idempotency test Test Notes asks for (D3's recovery
+      guarantee): a second run against a listing state that now reflects
+      the first run's filing suppresses every advisory as a duplicate and
+      files/appends nothing.
+  AC-5:
+    tests:
+      - tests.test_sca_task_filing.TestBuildDedupKey.test_package_only_key_is_the_package_itself
+      - tests.test_sca_task_filing.TestBuildDedupKey.test_package_and_advisory_key_combines_both
+      - tests.test_sca_task_filing.TestBuildDedupKey.test_key_disambiguates_pairs_that_would_collide_under_naive_concatenation
+      - tests.test_sca_task_filing.TestBuildDedupKey.test_no_call_site_composes_a_key_itself
+      - tests.test_sca_task_filing.TestRecoverPackageAdvisory.test_no_call_site_parses_title_itself
+    red_confirmed: true
+    red_reason: >-
+      The three direct build_dedup_key tests raised NotImplementedError
+      against the stub. test_no_call_site_composes_a_key_itself and
+      test_no_call_site_parses_title_itself failed differently: they
+      monkeypatch build_dedup_key / recover_package_advisory to a
+      distinguishable stand-in and assert every call site's observable
+      behavior changes accordingly; against the stub these raised
+      NotImplementedError too (the patched-under functions are never
+      reached because file_tasks/group_findings_by_package themselves are
+      stubs). All five went green after restoring the real implementation,
+      and the two monkeypatch tests specifically demonstrate that no call
+      site composes a key or parses a title independently of the one
+      designated function -- the requirement AC-5's second half states.
+  AC-6:
+    tests:
+      - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_priority_is_always_high_regardless_of_severity
+      - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_severity_recorded_as_fact_in_reference_line
+      - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_long_advisory_sourced_string_is_truncated_with_visible_marker
+      - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_truncated_advisory_reaches_the_filed_reference_field
+      - tests.test_sca_task_filing.TestTruncateUntrusted.test_short_text_is_unchanged
+      - tests.test_sca_task_filing.TestTruncateUntrusted.test_none_passes_through
+      - tests.test_sca_task_filing.TestTruncateUntrusted.test_long_text_is_capped_and_marked
+      - tests.test_sca_task_filing.TestTruncateUntrusted.test_never_splits_a_multibyte_utf8_sequence
+    red_confirmed: true
+    red_reason: >-
+      All eight raised NotImplementedError against the stub
+      (truncate_untrusted / format_reference_line / file_tasks /
+      group_findings_by_package were stubs). All eight went green after
+      restoring the real implementation.
+      test_truncated_advisory_reaches_the_filed_reference_field is the
+      end-to-end proof AC-6 names: a 5000-byte advisory id, recorded via
+      the stand-in's --references-file-content capture, arrives truncated
+      to <= 4096+marker bytes with the visible marker present in the exact
+      field that would have been filed.
+  AC-7:
+    tests:
+      - tests.test_sca_task_filing.TestModuleCoOwnership.test_both_subcommands_are_registered
+      - tests.test_sca_task_filing.TestModuleCoOwnership.test_scan_is_a_marked_placeholder
+      - tests.test_sca_task_filing.TestModuleCoOwnership.test_file_tasks_runs_end_to_end_via_the_real_cli
+    red_confirmed: true
+    red_reason: >-
+      Against the stub (whose CLI has no subparsers and only prints a
+      fixed "not implemented yet" message regardless of arguments):
+      test_both_subcommands_are_registered failed because "scan"/
+      "file-tasks" are absent from --help output;
+      test_scan_is_a_marked_placeholder failed because stderr did not
+      contain "implemented by the other task"; test_file_tasks_runs_end_to_end_via_the_real_cli
+      failed because the exit code was 2 with the stub's generic message
+      instead of 0 with a report-branch JSON payload. All three went green
+      after restoring the real implementation. The second half of AC-7
+      (post-merge: the integration branch's real `scan` survives a merge
+      that also lands this task's `file-tasks`) is not independently
+      testable from inside this worktree before task0001 has merged -- it
+      is a property of the merge step itself, carried out per the
+      co-ownership skeleton's symmetric merge duty and reported in the
+      implementer's merge report, not by a unit test here.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Whole-suite / whole-repo checks, not a single behavior a dedicated
+      test can go red/green for in isolation from every other test in the
+      repository. Verified directly: `python3 -m unittest discover -s
+      tests` exits 0 (3887 tests, 0 failures -- 3855 baseline plus 32 new
+      in this task's own module) and `python3
+      em-workflow/scripts/check-plugin-invariants.py <repo-root>` exits 0
+      (all seven checks PASS), both run from this task's own worktree
+      after the implementation landed.
+notes: >-
+  Implementation was written before the test module (a single-pass
+  design given the task plan's already-pinned contracts), so red
+  confirmation was obtained by temporarily replacing
+  em-workflow/scripts/scan-dependencies.py with a stub whose every real
+  function raises NotImplementedError and whose CLI always exits 2 with a
+  fixed message, running the full test module against that stub (31 of 32
+  tests failed for exactly the reasons recorded above; the 32nd,
+  test_script_never_uses_the_top_level_resolution_command, is a static
+  source-text check that is trivially true regardless of implementation
+  state), then restoring the real implementation and re-running (32/32
+  green). This uncovered one real defect before it ever reached a
+  committed state: the script's own module docstring named the banned git
+  flag literally in prose, which the restored-implementation run caught as
+  a genuine (if trivial) regression against that same static check; the
+  wording was fixed in the same pass.
+
+  notion-task-dispatch's installed CLI (0.3.0, scripts/ntd.ts) has no
+  subcommand for listing existing tasks, no 参照 property in its task
+  schema, and no セキュリティ value in its 種別 select (only
+  機能/バグ/改善/調査) -- confirmed by reading scripts/args.ts and
+  scripts/ntd.ts in the installed plugin cache. Per IMPLEMENTATION.md's
+  Open Questions ("if the installed surface cannot support incomplete-task
+  enumeration, D6's report branch is the standing fallback and the
+  mismatch is a reportable plan deviation"), this is exactly that
+  mismatch: against the REAL installed CLI, `list_security_tasks` will
+  always fail (unrecognized `task list` subcommand) and every real
+  invocation therefore takes D6's degraded report branch today. This is
+  expected and out of scope for this task ("Any change to the external
+  task system's own repository or templates" is explicitly excluded); the
+  entry-point invocation surface this script calls (`task list --type
+  セキュリティ --format json`, `task create --title <pkg> --type
+  セキュリティ --priority 高 --references-file <path>`, `task update --id
+  <id> --append-references-file <path>`) is this task's own designed
+  contract for the entry point, exercised end-to-end by every test via a
+  stand-in executable (Test Notes), and is ready for a future task to
+  implement against once notion-task-dispatch grows the corresponding
+  subcommands.
