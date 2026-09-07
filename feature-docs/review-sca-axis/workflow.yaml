@@ -44,7 +44,7 @@ workflow:
   status: completed
   completed_at_commit: cadfca4d2f9461fc77bc2e4fd4a509c36b5bf0b2
 - id: verify
-  status: pending
+  status: in_progress
   result: fail
   failed_items:
   - id: AC-22
