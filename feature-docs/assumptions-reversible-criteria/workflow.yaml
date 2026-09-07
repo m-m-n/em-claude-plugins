@@ -1,0 +1,209 @@
+schema_version: 1
+feature: assumptions-reversible-criteria
+created: 2026-09-07
+base_branch: main
+goal: |
+  # Notion タスク（種別: バグ）
+
+  URL: https://www.notion.so/3cc3509ec8ee818a8444f9bce73d050c
+
+  タイトル: em-workflow: assumptions[].reversible の判定基準が無く、保存される制約に false が付くと無人 run が create-spec で全停止する
+
+  ## 現象（必須）
+  `--batch` 実行が create-spec で停止し、workflow.yaml が 1 度も作られないまま run が終わる。停止理由は `references/question-resolution.md` の fail-closed classification による abort（terminal line は `reason=gate_fail_closed`）。
+  引き金は requirements-analyst が返した `assumptions[]` の 1 件。
+
+  ```plain text
+  A3: "The universal-scope sentence and the single I.2.c carve-out survive
+       verbatim in whichever remedy is chosen, since
+       tests/test_implement_routeback_gate.py pins both."
+      impact: high
+      reversible: false
+      related_question_ids: [remedy.scope-binding]
+  ```
+
+  `question-resolution.md` の fail-closed classification は「`assumptions[]` エントリの `related_question_ids` がその question を名指ししていて `reversible: false` を持つ」ことを abort の唯一のトリガーとして定義しており、この判定は batch-policies.yaml の参照より前・Codex 相談より前・`on_unanswered` を読むより前に発火し、上書き不能と規定されている。したがってオーケストレーター側に裁量は無く、abort が正しい挙動になる。
+  問題は A3 の中身が「不可逆な操作」ではないこと。A3 は「テストが pin しているので全称スコープと carve-out はどの remedy でも保たれる」という**保存される制約の宣言**であって、実行すると元に戻せない操作の宣言ではない。`reversible` フィールドの意図（batch が不可逆な操作を勝手に決めないための門）と、worker が実際に書いた意味（この前提は動かせない）がずれている。
+  `references/contracts/analyst-contract.md` と `agents/requirements-analyst.md` のどちらにも `reversible` の判定基準が書かれていない。`references/question-packet-schema.md` の `assumptions[].reversible` は「Boolean」としか定義されていない。基準が無いまま worker が保守的に `false` を付けると、無人実行が丸ごと 1 本止まる。
+
+  ## 再現手順（必須）
+  1. `/em-workflow:develop --batch <タスク>` を実行する（タスクは remedy の選択肢が複数ある設計判断を含むもの）
+  2. requirements-analyst が `status: needs_user_input` を返し、`assumptions[]` のいずれかが `reversible: false` かつ `related_question_ids` に blocking な question を含んでいることを確認する
+  3. `references/question-resolution.md` の fail-closed classification を適用すると、その question が policy lookup に到達する前に abort することを確認する
+  4. run が create-spec で停止し、workflow.yaml が生成されないことを確認する
+
+  実例: feature `commit-docs-tip-binding`、packet `create-spec-q0001`、question `remedy.scope-binding`。記録は `feature-docs/commit-docs-tip-binding/phase-state/create-spec.yaml` の `last_error`（ブランチ `em-workflow/commit-docs-tip-binding/integration`）。
+
+  ## 期待する挙動（必須）
+  次のいずれか。
+  - (a) `assumptions[].reversible` の判定基準を SSOT に明文化し、requirements-analyst（および他の 4 worker）のプロンプト／contract に「`reversible: false` は、適用すると元に戻せない**操作**にのみ付ける。保存される制約・不変条件・テストが pin している事実には付けない」旨を書く。あわせて `references/question-packet-schema.md` の `assumptions[].reversible` 行に同じ定義を置く。
+  - (b) fail-closed の irreversibility arm を、worker 宣言のみに依存しない形にする。`question-resolution.md` は現状「This basis is worker-declared — a stated limitation of the current design, not a second, independent defence」と自ら限界を認めているので、その限界を埋める。
+
+  (a) のほうが変更面が小さく、既存の fail-closed の強度も落とさない。
+
+  ## 完了の定義（必須）
+  - [ ] 再現手順で現象が起きない（保存される制約に `reversible: false` が付かない）
+  - [ ] 再発を検出するテストがある
+  - [ ] fail-closed classification の 4 つの abort arm（security / license / spec-change / irreversibility）の強度は維持されている
+  - [ ] `python3 -m unittest discover -s tests` が通る
+
+  ## 該当箇所（任意）
+  - `em-workflow/references/question-resolution.md` — Fail-closed classification の irreversibility arm と「The irreversibility abort's basis is the packet's own declaration」段落
+  - `em-workflow/references/question-packet-schema.md` — `assumptions[].reversible`（現状「Boolean」のみ）
+  - `em-workflow/references/contracts/analyst-contract.md` — `reversible` の判定基準が無い
+  - `em-workflow/agents/requirements-analyst.md` — 同上
+
+  ## 実害・発生条件（任意）
+  無人実行（Notion webhook 起点の `claude -p`）で発生すると、run が create-spec で丸ごと止まり、成果物がゼロのまま終わる。人間が気づくのは Notion のコメントを見たときだけ。
+  設計判断の選択肢が複数ある（= worker が assumption を立てやすい）タスクほど踏みやすい。逆に、実装が一意に決まるタスクでは踏まない。em-workflow 自身の仕様変更タスクは前者に偏るため、このプラグインの開発ループで再発しやすい。
+
+parent_branch: em-workflow/assumptions-reversible-criteria/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Markdown + Python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 6f913d6659242543432e51b519b7c5dc6c22b423
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "The feature changes SSOT Markdown documents, agent prompts, one JSON fixture, tests and two manifests. It introduces no user interface, no rendered artifact, no new file format, and no design-system surface; zero design-system candidates were detected."
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "SSOT definition of `assumptions[].reversible`"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR2:
+    title: "The criterion binds the packet-capable worker agent prompts"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  FR3:
+    title: "The criterion binds the packet-capable worker contracts"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  FR4:
+    title: "The fail-closed arms keep their current strength"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4]
+  FR5:
+    title: "Recurrence-detecting tests"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR6:
+    title: "A worked counter-example fixture for the reported shape"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  FR7:
+    title: "Plugin version bump in both registries"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+  NFR1:
+    title: "SSOT discipline"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "No new gate identifier and no policy change"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  NFR3:
+    title: "No feature-docs task identifiers in plugin documents"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  NFR4:
+    title: "Test conventions"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5, TS-8]
+  NFR5:
+    title: "Genuinely irreversible declarations keep working"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-4, TS-6]
+  NFR6:
+    title: "Documentation minimality"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
