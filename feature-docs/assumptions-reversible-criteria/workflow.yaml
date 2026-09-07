@@ -90,7 +90,8 @@ workflow:
     base_commit: b2479d3553594272e683f921a871f159dbf02ce5
     completed_at_commit: 1ad5834d2ce078aa17cdf1e595f3b02b31f10266
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: d853c861e745b51f4963704abd34651d0b4921d8
   - id: verify
     status: pending
     result: null
@@ -147,15 +148,19 @@ tasks:
     branch: em-workflow/assumptions-reversible-criteria/task0003
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor: [comprehensive, architecture, spec]
     discretionary:
       - perspective: security
         reason: "diff が fail-closed abort ゲート（irreversibility arm）の判定基準そのものを書き換えるため、無人実行のガードレール強度に対する観点を追加する"
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    comprehensive: {runs: 3, status: completed, primary_source: "claude (fallback; codex harness failed)"}
+    security: {runs: 2, status: completed, primary_source: "codex"}
+    architecture: {runs: 2, status: completed, primary_source: "litellm:vertex-glm-5.2"}
+    spec: {runs: 2, status: completed, primary_source: "litellm:muse-spark"}
   residual_critical_high: 0
   needs_rework: false
 
