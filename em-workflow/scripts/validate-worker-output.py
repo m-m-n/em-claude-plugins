@@ -1018,8 +1018,8 @@ def validate_question(q, index, *, gate_registry=None, packet_phase=None, packet
             err(
                 "on_unanswered",
                 f"{p}.on_unanswered must be 'block' when category is {category!r} "
-                "(NFR4 fail-closed: a worker cannot disable the batch abort for "
-                "spec-change / security / license questions)",
+                "(NFR4 fail-closed: a worker cannot choose the non-blocking "
+                "handling for spec-change / security / license questions)",
             )
         )
     for did in q.get("depends_on") or []:
