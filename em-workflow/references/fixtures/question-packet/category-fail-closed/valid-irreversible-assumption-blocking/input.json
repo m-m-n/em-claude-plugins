@@ -1,0 +1,48 @@
+{
+  "assumptions": [
+    {
+      "assumption_id": "assume-irreversible-overwrite",
+      "statement": "Replacing the legacy config file cannot be undone once applied.",
+      "reason": "The target file has no backup and the operation is destructive.",
+      "impact": "high",
+      "reversible": false,
+      "related_question_ids": ["artifact-overwrite.legacy-config-replace"]
+    }
+  ],
+  "input_revision": {
+    "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workflow_blob": "8f17c04"
+  },
+  "iteration": 1,
+  "packet_id": "create-spec-q0001",
+  "phase": "create-spec",
+  "questions": [
+    {
+      "answer_mode": "single_select",
+      "blocking": true,
+      "category": "artifact-overwrite",
+      "depends_on": [],
+      "evidence": [],
+      "gate_id": "create-spec.legacy-config-overwrite",
+      "header": "Overwrite",
+      "on_unanswered": "block",
+      "options": [
+        {
+          "option_id": "opt-replace",
+          "label": "Replace the file"
+        },
+        {
+          "option_id": "opt-keep",
+          "label": "Keep the existing file"
+        }
+      ],
+      "priority": "high",
+      "prompt": "Should the legacy config file be replaced?",
+      "question_id": "artifact-overwrite.legacy-config-replace",
+      "supersedes": [],
+      "why_needed": "Determines whether the irreversible overwrite proceeds."
+    }
+  ],
+  "schema_version": 1,
+  "worker": "requirements-analyst"
+}
