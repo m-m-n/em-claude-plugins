@@ -113,7 +113,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR19, FR20, FR22, NFR6]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/review-sca-axis/task0006
 
