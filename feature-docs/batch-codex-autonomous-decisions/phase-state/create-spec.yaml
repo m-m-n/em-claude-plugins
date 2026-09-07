@@ -3,9 +3,9 @@ feature: batch-codex-autonomous-decisions
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 8457805e8f9e0f4a2580566ff22d0bc99b657140
-last_input_digest: sha256:4ea197269d7d6c3ab62bb4a577834e9f47aacbc77229bb84e70e6897dfc224c1
-active_request_id: create-spec-run-0001
+base_revision: 7db840d895e96066a113f435abf9bfba5f0a0145
+last_input_digest: sha256:0292b545988570f2ce7c9dcb2c0346c436fb03244d7f6ff7aa66b45d70f7a5ac
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -104,6 +104,10 @@ worker_runs:
   - request_id: create-spec-run-0001
     status: needs_user_input
     input_digest: sha256:4ea197269d7d6c3ab62bb4a577834e9f47aacbc77229bb84e70e6897dfc224c1
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: sha256:0292b545988570f2ce7c9dcb2c0346c436fb03244d7f6ff7aa66b45d70f7a5ac
     output_digest: null
 artifacts: []
 patches: []
