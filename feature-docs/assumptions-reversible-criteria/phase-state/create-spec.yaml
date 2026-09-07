@@ -1,14 +1,22 @@
 schema_version: 1
 feature: assumptions-reversible-criteria
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: dce0544
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:bd36538034967ee4010fe8e36e439d7f2450ef39ead86c26854beff8a5292ea2
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:75b4c7bc3e6c57454e625b0a0d4053c89646db618d0ba7de2088db3fe8ab7b43
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:bd36538034967ee4010fe8e36e439d7f2450ef39ead86c26854beff8a5292ea2
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
