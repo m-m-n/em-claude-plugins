@@ -389,11 +389,18 @@ When a question's `gate_id` has no entry in `references/batch-policies.yaml`
    same three arrive here, through the relaxed route, whenever neither the
    Codex consultation nor the Opus escalation maps or decides one of their
    options, and this branch then takes the option with the smallest side
-   effect for them exactly as for any other question; specification-change
-   questions never reach here either, but for a different reason — the
-   routed arm REMOVED them from the sequence entirely at step 2 of the
-   Batch resolution sequence, so they were never subject to this fallback
-   in the first place. This branch only ever sees the remainder. This
+   effect for them exactly as for any other question; in interactive,
+   specification-change questions never reach here either, but for a
+   different reason — the routed arm REMOVED them from the sequence
+   entirely at step 2 of the Batch resolution sequence, so they were never
+   subject to this fallback in the first place. In batch, that exclusion
+   does not extend to the direction-2 subset described at Batch resolution
+   sequence step 2 above: a routed spec-change question that trips the
+   Classification gate's direction 2 leaves the gate and joins the packet's
+   batched consultation, so it can reach this branch after all, and this
+   branch then takes the option with the smallest side effect for it
+   exactly as for any other relaxed-route arrival above. This branch only
+   ever sees the remainder. This
    replaces the current continue-on-success-path rule stated in
    `references/batch-mode.md` and is an intentional behaviour change,
    not a regression.
