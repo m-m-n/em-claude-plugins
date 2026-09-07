@@ -120,6 +120,10 @@ tasks:
 
 review:
   rounds: []
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
 
 batch:
   review_rework_count: 0
