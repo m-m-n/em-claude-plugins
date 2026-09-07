@@ -4,9 +4,9 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_assumptions_reversible_criteria_version_bump.TestPluginManifestVersion.test_version_is_pinned_new_value
+      - tests.test_assumptions_reversible_criteria_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
     red_confirmed: true
-    red_reason: "AssertionError: '0.1.64' != '0.1.65'"
+    red_reason: "AssertionError: 64 not greater than 64 : patch component did not increase: '0.1.64' vs baseline '0.1.64'"
   AC-2:
     tests:
       - tests.test_assumptions_reversible_criteria_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
