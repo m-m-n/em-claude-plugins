@@ -27,6 +27,15 @@ Exit codes: 0 = success (exactly one JSON object on stdout); 2 = execution
 error (bad/missing input, a subcommand not yet implemented on this branch,
 or a failure while talking to the external task system) -- the reason is
 printed to stderr, and nothing is printed to stdout.
+
+Reworked by task0007 (review round 1, feature-docs/review-sca-axis/tasks/
+task0007.md): the task-listing outcome is now three-valued (an available
+listing with zero validated entries files rather than degrading), a
+malformed finding is skipped and recorded rather than aborting the batch,
+and the filing loop records partial progress when the external task system
+fails mid-batch instead of letting the exception escape. task0008 and
+task0009 rework the `scan` half in disjoint regions of this same file
+(IMPLEMENTATION.md D8).
 """
 
 import argparse
@@ -123,26 +132,52 @@ def recover_package_advisory(finding):
     return m.group("package"), m.group("advisory_id")
 
 
+# Poison-finding policy (task plan "Poison-finding policy: skip and
+# record"): the ONE reason string recorded for every malformed finding,
+# derived from this script's own contract text -- NEVER from the offending
+# finding's own content (NFR4: advisory-sourced text never becomes part of
+# a reason identifier). recover_package_advisory's own exception message
+# is deliberately not reused here since it may echo the offending finding.
+MALFORMED_FINDING_REASON = (
+    "finding title does not match the finding text-encoding contract "
+    "'{package}: {advisory_id} — {advisory short title}'"
+)
+
+
 def group_findings_by_package(findings):
     """Groups findings by package (recovered via recover_package_advisory),
     de-duplicating repeated advisory ids within the SAME input, and
     truncating package/advisory_id ONCE here so every downstream use (the
     dedup key, a filed field, the report) sees the same canonical string a
-    later run would also derive from the same finding. Returns an ordered
-    dict-like mapping {package: [(advisory_id, severity), ...]}."""
+    later run would also derive from the same finding.
+
+    A finding whose title violates the Finding text-encoding contract is
+    SKIPPED and recorded rather than aborting the whole batch (task plan
+    "Poison-finding policy") -- every other finding is still grouped, even
+    when every finding in the input is malformed.
+
+    Returns (groups, malformed) where `groups` is an ordered dict-like
+    mapping {package: [(advisory_id, severity), ...]} and `malformed` is a
+    list of {"position": <index in `findings`>, "reason": <machine-stable
+    reason>} dicts, in input order."""
     groups = {}
     order = []
-    for finding in findings:
-        package, advisory_id = recover_package_advisory(finding)
+    malformed = []
+    for position, finding in enumerate(findings):
+        try:
+            package, advisory_id = recover_package_advisory(finding)
+        except FindingTitleError:
+            malformed.append({"position": position, "reason": MALFORMED_FINDING_REASON})
+            continue
         package = truncate_untrusted(package)
         advisory_id = truncate_untrusted(advisory_id)
-        severity = finding.get("severity")
+        severity = finding.get("severity") if isinstance(finding, dict) else None
         if package not in groups:
             groups[package] = []
             order.append(package)
         if not any(a == advisory_id for a, _ in groups[package]):
             groups[package].append((advisory_id, severity))
-    return {p: groups[p] for p in order}
+    return {p: groups[p] for p in order}, malformed
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +253,7 @@ def report_destination(project_root, feature):
     return Path(root) / "tmp" / f"sca-triage-{feature}-{timestamp}.md"
 
 
-def write_report(dest, groups, *, degraded, degraded_reason):
+def write_report(dest, groups, *, degraded, degraded_reason, malformed_findings=None):
     dest.parent.mkdir(parents=True, exist_ok=True)
     lines = ["# SCA triage report", ""]
     if degraded:
@@ -226,6 +261,11 @@ def write_report(dest, groups, *, degraded, degraded_reason):
             f"DEGRADED: task-system listing unavailable ({degraded_reason}); "
             "filed as a report instead of the task system (D6)."
         )
+        lines.append("")
+    if malformed_findings:
+        lines.append("## Malformed findings (skipped)")
+        for m in malformed_findings:
+            lines.append(f"- position {m['position']}: {m['reason']}")
         lines.append("")
     for package, entries in groups.items():
         lines.append(f"## {package}")
@@ -257,16 +297,38 @@ def _entry_point_is_valid(entry_point):
         return False
 
 
+class ListingOutcome:
+    """The task-listing outcome is three-valued, not two (task plan "The
+    listing outcome is three-valued, not two"):
+
+    - `available=True` -- the entry point ran, exited successfully, and
+      produced a JSON array. `tasks` is that array after item-wise
+      validation; it may legitimately be an EMPTY list (the normal
+      first-run state, not an error). Entries dropped item-wise by
+      validation while others survive do not make the listing unavailable
+      -- they are just counted in `dropped_count`.
+    - `available=False` -- one of the five genuine unavailability
+      conditions (IMPLEMENTATION.md D6): `tasks` is None and `reason` is a
+      machine-stable identifier distinguishing which condition occurred.
+    """
+
+    def __init__(self, available, tasks=None, reason=None, dropped_count=0):
+        self.available = available
+        self.tasks = tasks
+        self.reason = reason
+        self.dropped_count = dropped_count
+
+
 def list_security_tasks(entry_point):
-    """Returns a list of {"id", "package", "status", "references"} dicts
-    describing every task of the security type, or None when the listing
-    could not be obtained (non-zero exit, stdout that is not a JSON array,
-    or entry_point failing validation) -- the caller degrades to the report
-    branch (IMPLEMENTATION.md D6). `status` is one of "incomplete" /
-    "complete" / "discarded"; `references` is the raw current 参照 field
-    text (possibly empty, possibly multi-line)."""
+    """Returns a ListingOutcome (see class docstring) describing every task
+    of the security type. The caller degrades to the report branch ONLY
+    when `available` is False (IMPLEMENTATION.md D6) -- an available
+    listing with zero validated entries must reach the filing branch.
+    `status` is one of "incomplete" / "complete" / "discarded";
+    `references` is the raw current 参照 field text (possibly empty,
+    possibly multi-line)."""
     if not _entry_point_is_valid(entry_point):
-        return None
+        return ListingOutcome(available=False, reason="entry_point_invalid")
     try:
         proc = subprocess.run(
             [str(entry_point), "task", "list", "--type", SECURITY_TASK_TYPE, "--format", "json"],
@@ -275,32 +337,36 @@ def list_security_tasks(entry_point):
             check=False,
         )
     except OSError:
-        return None
+        return ListingOutcome(available=False, reason="listing_launch_failed")
     if proc.returncode != 0:
-        return None
+        return ListingOutcome(available=False, reason="listing_exit_nonzero")
     try:
         data = json.loads(proc.stdout)
     except (json.JSONDecodeError, ValueError):
-        return None
+        return ListingOutcome(available=False, reason="listing_output_not_json")
     if not isinstance(data, list):
-        return None
+        return ListingOutcome(available=False, reason="listing_output_not_array")
     validated = []
+    dropped_count = 0
     for entry in data:
         if not isinstance(entry, dict):
+            dropped_count += 1
             continue
         if not isinstance(entry.get("id"), str):
+            dropped_count += 1
             continue
         if not isinstance(entry.get("package"), str):
+            dropped_count += 1
             continue
         if not isinstance(entry.get("status"), str):
+            dropped_count += 1
             continue
         references = entry.get("references")
         if references is not None and not isinstance(references, str):
+            dropped_count += 1
             continue
         validated.append(entry)
-    if not validated:
-        return None
-    return validated
+    return ListingOutcome(available=True, tasks=validated, dropped_count=dropped_count)
 
 
 def _write_references_tempfile(reference_lines):
@@ -362,12 +428,27 @@ def file_tasks(project_root, feature, findings, entry_point):
     filed / appended to, the duplicates suppressed, and the report path
     when the report branch ran. Idempotent for the same input: a second
     call against the same unresolved set and the same listing state files
-    nothing new."""
-    groups = group_findings_by_package(findings)
+    nothing new.
+
+    Every pre-existing key (`branch`, `filed_packages`, `appended_packages`,
+    `suppressed`, `report_path`, `degraded`, `degraded_reason`) keeps its
+    name and meaning (task plan "the summary dict grows, never changes
+    shape"). Four keys are ADDED:
+
+    - `malformed_findings` -- findings skipped by the poison-finding policy
+      (position + machine-stable reason, never advisory-sourced text).
+    - `listing_dropped_count` -- entries the task listing dropped item-wise
+      by validation (0 when no listing was consulted or nothing dropped).
+    - `failed_package` / `failure_reason` -- set when the external task
+      system failed mid-batch; both None on a batch that completed without
+      such a failure. No exception escapes this function for a poison
+      finding or a mid-batch external failure -- both degrade to data in
+      the returned summary instead."""
+    groups, malformed_findings = group_findings_by_package(findings)
 
     if entry_point is None:
         dest = report_destination(project_root, feature)
-        write_report(dest, groups, degraded=False, degraded_reason=None)
+        write_report(dest, groups, degraded=False, degraded_reason=None, malformed_findings=malformed_findings)
         return {
             "branch": "report",
             "filed_packages": [],
@@ -376,12 +457,20 @@ def file_tasks(project_root, feature, findings, entry_point):
             "report_path": str(dest),
             "degraded": False,
             "degraded_reason": None,
+            "malformed_findings": malformed_findings,
+            "listing_dropped_count": 0,
+            "failed_package": None,
+            "failure_reason": None,
         }
 
-    listing = list_security_tasks(entry_point)
-    if listing is None:
+    listing_outcome = list_security_tasks(entry_point)
+    if not listing_outcome.available:
         dest = report_destination(project_root, feature)
-        write_report(dest, groups, degraded=True, degraded_reason="task_listing_unavailable")
+        write_report(
+            dest, groups,
+            degraded=True, degraded_reason=listing_outcome.reason,
+            malformed_findings=malformed_findings,
+        )
         return {
             "branch": "report",
             "filed_packages": [],
@@ -389,9 +478,14 @@ def file_tasks(project_root, feature, findings, entry_point):
             "suppressed": [],
             "report_path": str(dest),
             "degraded": True,
-            "degraded_reason": "task_listing_unavailable",
+            "degraded_reason": listing_outcome.reason,
+            "malformed_findings": malformed_findings,
+            "listing_dropped_count": 0,
+            "failed_package": None,
+            "failure_reason": None,
         }
 
+    listing = listing_outcome.tasks
     tasks_by_package_key = {}
     for task in listing:
         key = build_dedup_key(task.get("package"))
@@ -400,6 +494,8 @@ def file_tasks(project_root, feature, findings, entry_point):
     filed_packages = []
     appended_packages = []
     suppressed = []
+    failed_package = None
+    failure_reason = None
 
     for package, entries in groups.items():
         candidate_tasks = tasks_by_package_key.get(build_dedup_key(package), [])
@@ -419,11 +515,23 @@ def file_tasks(project_root, feature, findings, entry_point):
                 new_lines.append(format_reference_line(advisory_id, severity))
 
             if new_lines:
-                append_security_task_references(entry_point, task.get("id"), new_lines)
+                try:
+                    append_security_task_references(entry_point, task.get("id"), new_lines)
+                except EntryPointError as exc:
+                    failed_package = package
+                    failure_reason = "task_update_failed"
+                    print(f"file-tasks: {failure_reason} for package {package!r}: {exc}", file=sys.stderr)
+                    break
                 appended_packages.append(package)
         else:
             lines = [format_reference_line(advisory_id, severity) for advisory_id, severity in entries]
-            create_security_task(entry_point, package, lines)
+            try:
+                create_security_task(entry_point, package, lines)
+            except EntryPointError as exc:
+                failed_package = package
+                failure_reason = "task_create_failed"
+                print(f"file-tasks: {failure_reason} for package {package!r}: {exc}", file=sys.stderr)
+                break
             filed_packages.append(package)
 
     return {
@@ -434,6 +542,10 @@ def file_tasks(project_root, feature, findings, entry_point):
         "report_path": None,
         "degraded": False,
         "degraded_reason": None,
+        "malformed_findings": malformed_findings,
+        "listing_dropped_count": listing_outcome.dropped_count,
+        "failed_package": failed_package,
+        "failure_reason": failure_reason,
     }
 
 
@@ -543,7 +655,7 @@ def unsupported_manifest_reasons(changed_files):
 # executed, regardless of what a registry file/override says).
 ALLOWED_EXECUTABLES = {
     "npm": {"npm"},
-    "cargo": {"cargo-audit"},
+    "cargo": {"cargo"},
     "pip": {"pip-audit"},
     "go": {"govulncheck"},
 }
@@ -610,159 +722,117 @@ def manifest_file_for(ecosystem, changed_files):
 
 
 # ---------------------------------------------------------------------------
-# Scan job construction (IMPLEMENTATION.md Shared Components, "Scan job";
-# task0008 Design, "The scan job" / "Trusted binary, never a multiplexer
-# subcommand" / "Configuration isolation"). PURE: no subprocess is launched
-# by anything in this section. Pre: the registry entry has already passed
-# validate_ecosystem_entry and its executable has already resolved on PATH
-# (resolve_executable) -- an unresolvable/invalid entry yields no job and
-# the ecosystem's existing tool-absent skip reason instead (build_scan_jobs
-# below), never a fallback command form.
+# Scan outcome (IMPLEMENTATION.md Shared Components, "Scan outcome"; task
+# plan Design "Exit status and payload shape are judged together"):
+# executing one scan job yields exactly ONE outcome -- `completed` with a
+# payload the ecosystem's normalizer can read, or `not_completed` with a
+# machine-stable reason distinguishable from every other reason (including
+# the tool-absent skip FR3 already defines). There is no "completed with an
+# empty payload" outcome. Neither exit status nor payload shape alone
+# decides this: an audit tool legitimately exits non-zero precisely when it
+# found something (so exit status alone would discard real findings), and a
+# tool can exit non-zero while printing a well-formed JSON error envelope
+# (so a parseable payload alone would accept a failure as data).
 # ---------------------------------------------------------------------------
 
-# Process plumbing carried through unchanged when present -- locating the
-# shell, temp space, the already-resolved binary on PATH -- never a source
-# of a TOOL'S OWN configuration (a registry endpoint, a subcommand alias).
-# Everything else the reviewed project's environment might carry is left
-# out: the child environment is built explicitly, never inherited
-# wholesale (task0008 Design, "Configuration isolation").
-CHILD_ENV_BASE_KEYS = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "USERPROFILE")
+OUTCOME_COMPLETED = "completed"
+OUTCOME_NOT_COMPLETED = "not_completed"
 
-# Per-ecosystem pins, each through the tool's OWN documented environment
-# variable, keeping the reviewed project's configuration out of the set the
-# child process reads from:
-#   npm   -- npm_config_registry pins the package-registry endpoint ahead of
-#            a hostile `registry=` line in the reviewed project's own
-#            .npmrc (environment variables outrank a project .npmrc in
-#            npm's own documented config precedence); npm_config_userconfig
-#            points the user-level config file outside the reviewed tree.
-#   cargo -- cargo-audit is resolved and executed directly (never through
-#            the `cargo` front end -- see ALLOWED_EXECUTABLES), which
-#            already removes the [alias] dispatch the registry's OLD
-#            `cargo audit` form was vulnerable to; no further pin closes a
-#            vector for this ecosystem today.
-#   pip   -- PIP_CONFIG_FILE keeps a reviewed project's own pip.conf from
-#            being read; PIP_INDEX_URL pins the package index.
-#   go    -- GOENV=off disables reading any go env config file at all;
-#            GOFLAGS is pinned empty and GOPROXY pinned to the public
-#            module proxy so neither can be redirected by one.
-ECOSYSTEM_ENV_PINS = {
-    "npm": {
-        "npm_config_registry": "https://registry.npmjs.org/",
-        "npm_config_userconfig": os.devnull,
-    },
-    "cargo": {},
-    "pip": {
-        "PIP_CONFIG_FILE": os.devnull,
-        "PIP_INDEX_URL": "https://pypi.org/simple/",
-    },
-    "go": {
-        "GOENV": "off",
-        "GOFLAGS": "",
-        "GOPROXY": "https://proxy.golang.org,direct",
-    },
+# The exit statuses each tool's OWN documentation defines: 0 (clean) and the
+# tool's documented "found something" status. An exit status outside this
+# set is `not_completed` regardless of payload shape.
+DOCUMENTED_EXIT_STATUSES = {
+    "npm": {0, 1},
+    "cargo": {0, 1},
+    "pip": {0, 1},
+    "go": {0, 3},
 }
 
 
-def build_child_env(ecosystem, environ=None):
-    """The explicit child environment for one scan job: a minimal base
-    (process plumbing only, see CHILD_ENV_BASE_KEYS) plus this ecosystem's
-    pins (ECOSYSTEM_ENV_PINS) layered on top. Never reads any file inside
-    the reviewed project -- the result is identical regardless of what
-    configuration files that project's tree happens to contain."""
-    environ = os.environ if environ is None else environ
-    name = ecosystem.get("ecosystem", "unknown")
-    env = {key: environ[key] for key in CHILD_ENV_BASE_KEYS if key in environ}
-    env.update(ECOSYSTEM_ENV_PINS.get(name, {}))
-    return env
-
-
-def _pip_target(manifest_file):
-    """task0008 Design, "The pip job audits the reviewed project, not the
-    ambient environment": a changed requirements file IS the audited
-    input, paired with the registry's `target_flag`. Anything else
-    selected for pip (a changed pyproject.toml, or a changed poetry.lock /
-    Pipfile.lock) audits that project's OWN DIRECTORY instead, as a bare
-    positional argument with no flag -- pip-audit's `-r` flag parses pip's
-    own requirements format, not a TOML/JSON lock format, so a lockfile or
-    a manifest that only declares version ranges is never passed to it
-    directly. Returns (flagged, target): `flagged` is True when the
-    registry's `target_flag` belongs immediately before `target` in the
-    argument vector."""
-    if os.path.basename(manifest_file) == "requirements.txt":
-        return True, manifest_file
-    dirname = os.path.dirname(manifest_file)
-    return False, (dirname if dirname else ".")
-
-
-def build_scan_job(ecosystem, manifest_file, project_root, executable_path, environ=None):
-    """Builds ONE scan job from `ecosystem`'s ALREADY-RESOLVED absolute
-    `executable_path` (never re-resolved here -- see build_scan_jobs).
-    Carries: the ecosystem name; the project-relative `manifest_file`; the
-    full argument vector (`argv[0]` is the absolute, allowlisted executable
-    path -- never a package-manager front end resolving a subcommand
-    through the reviewed project's own configuration); the working
-    directory (the reviewed project's own root -- still the thing being
-    audited, NFR2's read-only discipline unchanged); and the explicit
-    child environment (build_child_env). Launches nothing -- every claim
-    about the resulting command is assertable without running a scanner."""
-    name = ecosystem.get("ecosystem", "unknown")
-    argv = [executable_path]
+def _has_success_structure(name, data):
+    """True when `data`'s top level is ecosystem `name`'s OWN successful-
+    report shape -- never the shape of an error envelope, and never an
+    unrelated JSON object."""
+    if not isinstance(data, dict):
+        return False
+    if name == "npm":
+        return isinstance(data.get("vulnerabilities"), dict)
+    if name == "cargo":
+        return isinstance(data.get("vulnerabilities"), dict) and "list" in data["vulnerabilities"]
     if name == "pip":
-        flagged, target = _pip_target(manifest_file)
-        target_flag = ecosystem.get("target_flag")
-        if flagged and target_flag:
-            argv.append(target_flag)
-        argv.append(target)
-    argv.extend(ecosystem.get("args") or [])
-    return {
-        "ecosystem": name,
-        "manifest": manifest_file,
-        "argv": argv,
-        "cwd": str(project_root),
-        "env": build_child_env(ecosystem, environ),
-    }
+        return isinstance(data.get("dependencies"), list)
+    if name == "go":
+        return isinstance(data.get("vulns"), list)
+    return False
 
 
-def build_scan_jobs(registry, changed_files, project_root, environ=None):
-    """Orchestrates job construction for every SELECTED ecosystem
-    (select_ecosystems, unchanged): validates each entry
-    (validate_ecosystem_entry), resolves its executable on PATH
-    (resolve_executable), and builds a job for it (build_scan_job). An
-    invalid entry or an unresolvable binary contributes its existing
-    machine-stable skip reason and NO job -- no fallback command form is
-    ever attempted for it. Returns (jobs, skip_reasons); executing a job
-    (judging its exit status and payload together) is the sibling rework
-    task's contract, not this function's."""
-    selected = select_ecosystems(registry, changed_files)
-    jobs = []
-    skip_reasons = []
-    for ecosystem in selected:
-        name = ecosystem.get("ecosystem", "unknown")
-        validation_error = validate_ecosystem_entry(ecosystem)
-        if validation_error is not None:
-            skip_reasons.append(validation_error)
-            continue
-        executable_path = resolve_executable(ecosystem.get("executable"))
-        if executable_path is None:
-            skip_reasons.append(f"{name}_tool_not_found")
-            continue
-        manifest_file = manifest_file_for(ecosystem, changed_files)
-        jobs.append(build_scan_job(ecosystem, manifest_file, project_root, executable_path, environ))
-    return jobs, skip_reasons
+def _error_envelope_reason(name, data):
+    """A machine-stable reason when `data`'s top level is that tool's own
+    documented error-envelope shape -- a well-formed JSON object reporting a
+    TOOL-side failure, never a scan result. npm's missing-lockfile error
+    object (`{"error": {...}}`) is the concrete case (task plan Design).
+    Returns None when `data` does not match any known error-envelope
+    shape."""
+    if not isinstance(data, dict):
+        return None
+    if name == "npm" and isinstance(data.get("error"), dict):
+        return f"{name}_error_envelope"
+    return None
+
+
+def judge_scan_outcome(name, exit_code, stdout):
+    """Judges exit status and payload shape TOGETHER, per tool (task plan
+    Design). Returns `(OUTCOME_COMPLETED, data)` or
+    `(OUTCOME_NOT_COMPLETED, reason)`.
+
+    `stdout` empty (after stripping) is ALWAYS not_completed -- there is no
+    "completed with an empty payload" outcome: a front end that resolves
+    but has no audit capability, and a scanner that dies before writing
+    anything, both produce it, and both are not_completed. An error
+    envelope is checked before the exit-status/success-structure rule
+    because it applies "regardless of exit status" (Design)."""
+    stripped = (stdout or "").strip()
+    if not stripped:
+        return OUTCOME_NOT_COMPLETED, f"{name}_empty_output"
+
+    try:
+        data = json.loads(stripped)
+    except json.JSONDecodeError:
+        try:
+            objs = _parse_json_stream(stripped)
+        except json.JSONDecodeError:
+            return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
+        if not objs:
+            return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
+        if name == "go":
+            data = {"vulns": _merge_govulncheck_stream(objs)}
+        elif len(objs) == 1:
+            data = objs[-1]
+        else:
+            return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
+
+    error_reason = _error_envelope_reason(name, data)
+    if error_reason is not None:
+        return OUTCOME_NOT_COMPLETED, error_reason
+
+    if exit_code not in DOCUMENTED_EXIT_STATUSES.get(name, set()):
+        return OUTCOME_NOT_COMPLETED, f"{name}_undocumented_exit_status"
+
+    if not _has_success_structure(name, data):
+        return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
+
+    return OUTCOME_COMPLETED, data
 
 
 def run_ecosystem_command(ecosystem, project_root):
     """Runs the registry's command form against the existing lockfile, cwd
     at the project root, reading only -- nothing here writes inside the
-    project root (NFR2). Returns (parsed_json_or_None, error_or_None).
-
-    A non-zero exit is NOT itself an error -- audit tools commonly exit
-    non-zero precisely when they found something to report. Only
-    unparseable stdout (empty results count as `{}`, not a parse failure)
-    or an OS-level failure to even launch the process is an error, and it
-    is surfaced as a machine-stable skip reason -- never as an empty
-    successful scan, which would silently claim the ecosystem is clean."""
+    project root (NFR2). Returns `(outcome, payload)`: `payload` is the
+    parsed data dict when `outcome` is `OUTCOME_COMPLETED`, or the
+    machine-stable reason string when `OUTCOME_NOT_COMPLETED` (see
+    `judge_scan_outcome`). An OS-level failure to even launch the process
+    is its own `not_completed` reason, distinct from every reason
+    `judge_scan_outcome` can produce from an actual process result."""
     name = ecosystem.get("ecosystem", "unknown")
     command = build_command(ecosystem)
     try:
@@ -774,26 +844,8 @@ def run_ecosystem_command(ecosystem, project_root):
             timeout=300,
         )
     except (OSError, subprocess.SubprocessError):
-        return None, f"{name}_execution_failed"
-    stdout = proc.stdout.strip()
-    if not stdout:
-        return {}, None
-    try:
-        data = json.loads(stdout)
-    except json.JSONDecodeError:
-        try:
-            objs = _parse_json_stream(stdout)
-        except json.JSONDecodeError:
-            return None, f"{name}_unparseable_output"
-        if not objs:
-            return None, f"{name}_unparseable_output"
-        if name == "go":
-            data = {"vulns": _merge_govulncheck_stream(objs)}
-        elif len(objs) == 1:
-            data = objs[-1]
-        else:
-            return None, f"{name}_unparseable_output"
-    return data, None
+        return OUTCOME_NOT_COMPLETED, f"{name}_execution_failed"
+    return judge_scan_outcome(name, proc.returncode, proc.stdout)
 
 
 def _parse_json_stream(stdout):
@@ -1122,194 +1174,17 @@ def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
     return findings
 
 
-# ---------------------------------------------------------------------------
-# pip direct-dependency resolution (task0008 Design, "The pip normalizer's
-# real input contract"): pip-audit's `--format json` output carries no
-# per-dependency directness flag, so directness is resolved from the
-# reviewed manifest's own declared dependency set -- the same SHAPE of
-# resolution the cargo path already performs against Cargo.toml
-# (_cargo_direct_dependency_names), reusing _resolve_project_relative so a
-# changed-file entry can never open a file outside the project root.
-# ---------------------------------------------------------------------------
-
-_REQUIREMENTS_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*")
-
-
-def _pip_requirements_direct_names(content):
-    """Package names declared in a requirements.txt-style file: option
-    lines (-e, -r, --hash, ...), blank lines and comments are skipped; an
-    extras suffix (`pkg[extra]`) and an environment marker (`; ...`) are
-    stripped before the bare package name is matched."""
-    names = set()
-    for raw_line in content.splitlines():
-        stripped = raw_line.split("#", 1)[0].strip()
-        if not stripped or stripped.startswith("-"):
-            continue
-        stripped = stripped.split(";", 1)[0].strip()
-        stripped = re.sub(r"\[[^\]]*\]", "", stripped)
-        match = _REQUIREMENTS_NAME_RE.match(stripped)
-        if match:
-            names.add(match.group(0))
-    return names
-
-
-_POETRY_DEP_TABLES = {"tool.poetry.dependencies", "tool.poetry.dev-dependencies"}
-_POETRY_TABLE_KEY_RE = re.compile(r'^"?([A-Za-z0-9][A-Za-z0-9_.\-]*)"?\s*=')
-_PEP508_NAME_HEAD_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*")
-
-
-def _extract_pep508_name(entry):
-    """The bare package name from one PEP 508 dependency string (e.g.
-    `"requests[socks]>=2.25; python_version >= '3.7'"` -> `requests`)."""
-    entry = entry.split(";", 1)[0]            # drop an environment marker
-    entry = re.sub(r"\[[^\]]*\]", "", entry)   # drop an extras suffix
-    match = _PEP508_NAME_HEAD_RE.match(entry.strip())
-    return match.group(0) if match else None
-
-
-def _pip_pyproject_direct_names(content):
-    """Package names declared in pyproject.toml's PEP 621 `[project]`
-    `dependencies` list, or Poetry's `[tool.poetry.dependencies]` /
-    `[tool.poetry.dev-dependencies]` tables -- a lightweight TOML-lite
-    scan, the same shape as the cargo path's own Cargo.toml scan (neither
-    pip-audit's nor cargo-audit's JSON carries a per-entry directness field
-    to read this from directly)."""
-    names = set()
-    current_table = None
-    in_dependencies_list = False
-    for raw_line in content.splitlines():
-        line = raw_line.split("#", 1)[0]
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith("[") and stripped.endswith("]"):
-            current_table = stripped.strip("[]").strip()
-            in_dependencies_list = False
-            continue
-        if current_table == "project":
-            if re.match(r"^dependencies\s*=\s*\[", stripped):
-                in_dependencies_list = True
-                stripped = re.sub(r"^dependencies\s*=\s*\[", "", stripped)
-            if in_dependencies_list:
-                for entry in re.findall(r'"([^"]+)"', stripped):
-                    name = _extract_pep508_name(entry)
-                    if name:
-                        names.add(name)
-                if "]" in stripped:
-                    in_dependencies_list = False
-                continue
-        if current_table in _POETRY_DEP_TABLES:
-            match = _POETRY_TABLE_KEY_RE.match(stripped)
-            if match and match.group(1).lower() != "python":
-                names.add(match.group(1))
-    return names
-
-
-def _pip_manifest_candidate(project_root, manifest_file):
-    """Resolves the manifest to scan for direct-dependency names. When
-    manifest_file is itself a lockfile (poetry.lock / Pipfile.lock --
-    selected by manifest_file_for when only the lockfile changed), looks
-    for pyproject.toml alongside it instead, mirroring
-    _cargo_manifest_candidate's resolution -- a lockfile carries no
-    dependency TABLE to scan. Never returns a lockfile path. Returns None
-    when unresolvable/unsafe (see _resolve_project_relative)."""
-    if os.path.basename(manifest_file) in {"poetry.lock", "Pipfile.lock"}:
-        candidate_rel = os.path.join(os.path.dirname(manifest_file), "pyproject.toml")
-    else:
-        candidate_rel = manifest_file
-    return _resolve_project_relative(project_root, candidate_rel)
-
-
-def _pip_direct_dependency_names(project_root, manifest_file):
-    manifest_path = _pip_manifest_candidate(project_root, manifest_file)
-    if not manifest_path:
-        return set()
-    try:
-        with open(manifest_path, "r", encoding="utf-8") as f:
-            content = f.read()
-    except OSError:
-        return set()
-    if os.path.basename(manifest_path) == "pyproject.toml":
-        return _pip_pyproject_direct_names(content)
-    return _pip_requirements_direct_names(content)
-
-
-# ---------------------------------------------------------------------------
-# pip severity resolution (task0008 Design, "The pip normalizer's real
-# input contract"): pip-audit's `--format json` output carries no
-# per-advisory severity string either -- each vuln entry has only an
-# identifier, fix versions, aliases and a description. The one piece of
-# STRUCTURED severity metadata that description can actually carry is an
-# embedded CVSS v3 vector string; when present, its band is computed with
-# the SAME helper the cargo path already uses for cargo-audit's own CVSS
-# vector (_cvss_severity_band). When no vector is present, severity is
-# genuinely undeterminable from this output -- callers must not treat that
-# as below threshold.
-# ---------------------------------------------------------------------------
-
-_CVSS_VECTOR_RE = re.compile(r"CVSS:3\.[01](?:/[A-Z]{1,3}:[A-Za-z])+")
-
-
-def _pip_severity_from_description(ecosystem, description):
-    """Returns the mapped severity (per this ecosystem's severity_map) when
-    `description` embeds a CVSS v3 vector, else None -- "cannot be
-    determined from that output" (task0008 Design), never a guess."""
-    if not isinstance(description, str):
-        return None
-    match = _CVSS_VECTOR_RE.search(description)
-    if not match:
-        return None
-    band = _cvss_severity_band(match.group(0))
-    if band is None:
-        return None
-    return _map_severity(ecosystem, band)
-
-
-def _pip_advisory_headline(description):
-    """The natural-language sentence(s) preceding an embedded CVSS vector
-    (or the whole description when none is present) -- used as the
-    finding's advisory-short-title source so a raw CVSS vector string
-    never appears in `title`."""
-    if not isinstance(description, str):
-        return None
-    match = _CVSS_VECTOR_RE.search(description)
-    headline = description[: match.start()] if match else description
-    headline = headline.strip()
-    return headline or None
-
-
-def normalize_pip(ecosystem, data, manifest_file, project_root=None):
-    """AC-5/6/7 (task0008): pip-audit's real `--format json` shape carries
-    NEITHER a per-dependency directness flag NOR a per-advisory severity
-    string. Directness is resolved from the reviewed manifest's own
-    declared dependency set (_pip_direct_dependency_names) -- never read
-    from a tool-supplied field, because none exists. Severity is taken
-    from advisory metadata actually present in the output
-    (_pip_severity_from_description); an advisory whose severity cannot be
-    determined that way is NEVER silently treated as below threshold -- it
-    is excluded from `findings` but counted (direct dependencies only,
-    since a transitive one is dropped regardless of severity) and returned
-    as `skip_info` for the caller to fold into the machine-readable skip
-    surface and the summary's affected count (NFR4: counts only, no
-    advisory-sourced text). Returns (findings, skip_info); skip_info is
-    None when nothing was undetermined."""
+def normalize_pip(ecosystem, data, manifest_file):
     findings = []
-    direct_names = _pip_direct_dependency_names(project_root, manifest_file) if project_root else set()
-    undetermined_count = 0
     for dep in data.get("dependencies") or []:
         if not isinstance(dep, dict):
             continue
+        is_direct = bool(dep.get("direct"))
         package = dep.get("name", "unknown")
-        is_direct = package in direct_names
         for vuln in dep.get("vulns") or []:
             if not isinstance(vuln, dict):
                 continue
-            description = vuln.get("description")
-            mapped = _pip_severity_from_description(ecosystem, description)
-            if mapped is None:
-                if is_direct:
-                    undetermined_count += 1
-                continue
+            mapped = _map_severity(ecosystem, vuln.get("severity"))
             if not _passes_threshold(ecosystem, is_direct, mapped):
                 continue
             fix_versions = vuln.get("fix_versions") or []
@@ -1318,15 +1193,14 @@ def normalize_pip(ecosystem, data, manifest_file, project_root=None):
                     manifest_file=manifest_file,
                     package=package,
                     advisory_id=vuln.get("id", "UNKNOWN"),
-                    title=_pip_advisory_headline(description) or vuln.get("id") or "vulnerability",
+                    title=vuln.get("description") or vuln.get("id") or "vulnerability",
                     affected_range=dep.get("version"),
                     fixed_version=fix_versions[0] if fix_versions else None,
-                    summary=description,
+                    summary=vuln.get("description"),
                     severity=mapped,
                 )
             )
-    skip_info = {"reason": "pip_severity_undetermined", "count": undetermined_count} if undetermined_count else None
-    return findings, skip_info
+    return findings
 
 
 def normalize_go(ecosystem, data, manifest_file):
@@ -1378,9 +1252,13 @@ def _empty_result():
     }
 
 
-def _skip_result(skip_reason, summary):
+def _skip_result(skip_reason, summary, findings=None):
+    """`findings` defaults to empty (the no-ecosystem-ran / unsupported-
+    manifest skips), but the partial-coverage case (task plan Design)
+    passes the completed ecosystems' findings through explicitly -- a skip
+    about one ecosystem never suppresses another's advisories."""
     return {
-        "findings": [],
+        "findings": findings if findings is not None else [],
         "summary": summary,
         "skipped": True,
         "skip_reason": skip_reason,
@@ -1399,22 +1277,25 @@ def _findings_result(findings, summary):
 
 
 def run_scan(project_root, changed_files, registry_path):
-    """AC-1..AC-7 flow: select ecosystems, resolve each on PATH, run its
-    registry command, normalize with a threshold applied at normalization
-    time, and emit exactly one review-output-schema.json-conformant object.
+    """AC-1..AC-7 (task0001) plus this task's partial-coverage contract:
+    select ecosystems, resolve each on PATH, execute its scan job and judge
+    the ONE outcome that execution yields (`judge_scan_outcome`), normalize
+    completed payloads with a threshold applied at normalization time, and
+    emit exactly one review-output-schema.json-conformant object.
 
     - No manifest in the change: an empty, non-skipped result.
     - A selected ecosystem's executable is not resolvable on PATH: that
-      ecosystem contributes a skip reason (no fallback of any kind).
-    - Tool-execution failure that is not "tool absent" (unparseable
-      output, a process that cannot be launched) contributes its own
-      machine-stable skip reason.
-    - When every selected ecosystem skipped/failed and nothing was found,
-      the whole result is `skipped: true` with the combined reasons. When
-      at least one ecosystem produced findings (even zero), the result is
-      NOT skipped -- any other ecosystem's skip is folded into `summary`
-      prose instead (the schema has one `skipped`/`skip_reason` pair for
-      the whole object, never per-ecosystem).
+      ecosystem contributes a `not_completed` reason (no fallback of any
+      kind) -- the same accounting as an execution `not_completed` outcome.
+    - `skipped` is `true` whenever ANY selected ecosystem did not complete
+      (tool absent, validation failure, or an execution outcome of
+      `not_completed`), with `skip_reason` carrying every such reason
+      combined in a deterministic (sorted) order. `findings` still carries
+      everything the COMPLETED ecosystems produced -- a skip about one
+      ecosystem never suppresses another's advisories (task plan Design,
+      "Partial coverage is machine-readable, not prose"). `skipped: false`
+      with `skip_reason: null` therefore means, and only means, that every
+      selected ecosystem completed.
     """
     registry = load_registry(registry_path)
     selected = select_ecosystems(registry, changed_files)
@@ -1429,7 +1310,6 @@ def run_scan(project_root, changed_files, registry_path):
     all_findings = []
     skip_reasons = []
     ran_ecosystems = []
-    pip_severity_undetermined_total = 0
     for ecosystem in selected:
         name = ecosystem.get("ecosystem", "unknown")
         validation_error = validate_ecosystem_entry(ecosystem)
@@ -1440,10 +1320,11 @@ def run_scan(project_root, changed_files, registry_path):
         if executable_path is None:
             skip_reasons.append(f"{name}_tool_not_found")
             continue
-        data, error = run_ecosystem_command(ecosystem, project_root)
-        if error is not None:
-            skip_reasons.append(error)
+        outcome, payload = run_ecosystem_command(ecosystem, project_root)
+        if outcome == OUTCOME_NOT_COMPLETED:
+            skip_reasons.append(payload)
             continue
+        data = payload
         normalizer = NORMALIZERS.get(name)
         if normalizer is None:
             skip_reasons.append(f"{name}_no_normalizer")
@@ -1451,34 +1332,23 @@ def run_scan(project_root, changed_files, registry_path):
         manifest_file = manifest_file_for(ecosystem, changed_files)
         if name == "cargo":
             all_findings.extend(normalizer(ecosystem, data, manifest_file, project_root))
-        elif name == "pip":
-            # task0008 AC-7: an advisory whose severity cannot be
-            # determined from pip-audit's own output is never silently
-            # treated as below threshold -- normalize_pip excludes it from
-            # findings but reports it via skip_info instead, folded here
-            # into the SAME machine-readable skip surface every other
-            # ecosystem's reasons use, plus a counts-only summary note
-            # (no advisory-sourced text in either -- NFR4).
-            pip_findings, pip_skip = normalizer(ecosystem, data, manifest_file, project_root)
-            all_findings.extend(pip_findings)
-            if pip_skip:
-                skip_reasons.append(pip_skip["reason"])
-                pip_severity_undetermined_total += pip_skip["count"]
         else:
             all_findings.extend(normalizer(ecosystem, data, manifest_file))
         ran_ecosystems.append(name)
 
-    if not ran_ecosystems:
-        combined_reason = "+".join(sorted(skip_reasons)) if skip_reasons else "no_ecosystem_ran"
-        summary = "Scan skipped: " + "; ".join(sorted(skip_reasons)) if skip_reasons else "Scan skipped."
-        return _skip_result(combined_reason, summary)
+    if skip_reasons:
+        combined_reason = "+".join(sorted(skip_reasons))
+        if ran_ecosystems:
+            summary = (
+                f"Scanned {', '.join(sorted(ran_ecosystems))}; "
+                f"{len(all_findings)} finding(s) at or above threshold. "
+                f"Not completed: {', '.join(sorted(skip_reasons))}."
+            )
+        else:
+            summary = "Scan skipped: " + "; ".join(sorted(skip_reasons))
+        return _skip_result(combined_reason, summary, findings=all_findings)
 
     summary = f"Scanned {', '.join(sorted(ran_ecosystems))}; {len(all_findings)} finding(s) at or above threshold."
-    if skip_reasons:
-        summary += " Skipped: " + "; ".join(sorted(skip_reasons)) + "."
-    if pip_severity_undetermined_total:
-        noun = "advisory" if pip_severity_undetermined_total == 1 else "advisories"
-        summary += f" {pip_severity_undetermined_total} pip {noun} with undetermined severity."
     return _findings_result(all_findings, summary)
 
 
