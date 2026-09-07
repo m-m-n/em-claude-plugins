@@ -1,0 +1,73 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_question_packet_reversible_fixture.TestNewFixtureCaseLayout.test_new_case_directory_exists
+      - tests.test_question_packet_reversible_fixture.TestNewFixtureCaseLayout.test_case_directory_contains_exactly_one_member_file
+      - tests.test_question_packet_reversible_fixture.TestNewFixtureCaseLayout.test_layout_matches_the_sibling_case
+    red_confirmed: true
+    red_reason: >
+      Before the fixture existed: test_new_case_directory_exists failed
+      ("False is not true"); test_case_directory_contains_exactly_one_member_file
+      and test_layout_matches_the_sibling_case errored with
+      FileNotFoundError on NEW_CASE_DIR.iterdir().
+  AC-2:
+    tests:
+      - tests.test_question_packet_reversible_fixture.TestNewFixtureDeclaresReversibleTrue.test_assumption_statement_describes_a_test_pinned_preserved_constraint
+      - tests.test_question_packet_reversible_fixture.TestNewFixtureDeclaresReversibleTrue.test_assumption_declares_reversible_true_on_a_blocking_question
+      - tests.test_question_packet_reversible_fixture.TestNewFixtureDeclaresReversibleTrue.test_helper_rejects_the_same_fixture_mutated_to_reversible_false
+    red_confirmed: true
+    red_reason: >
+      Before the fixture existed: setUpClass raised FileNotFoundError loading
+      NEW_CASE_DIR/input.json, so all three tests in the class errored
+      (reported as a single "ERROR: setUpClass" entry by unittest).
+  AC-3:
+    tests:
+      - tests.test_question_packet_reversible_fixture.TestNewFixtureAcceptedDirectly.test_validator_exits_0_against_the_new_fixture
+    red_confirmed: true
+    red_reason: >
+      Before the fixture existed: validator exited 2 ("execution error:
+      cannot read --input file ... No such file or directory"), not the
+      expected 0.
+  AC-4:
+    tests:
+      - tests.test_question_packet_reversible_fixture.TestQuestionPacketFixtureSweep.test_every_question_packet_fixture_matches_its_declared_exit_code
+      - tests.test_question_packet_reversible_fixture.TestQuestionPacketFixtureSweep.test_the_new_case_is_present_in_the_sweep
+    red_confirmed: true
+    red_reason: >
+      Before the fixture existed: test_the_new_case_is_present_in_the_sweep
+      failed ("'valid-test-pinned-constraint-assumption' not found in {...}").
+      test_every_question_packet_fixture_matches_its_declared_exit_code was
+      already green pre-implementation (it only iterates whatever cases
+      exist), which is expected -- it is the sweep-membership assertion in
+      the second test, not this one, that proves the new case is actually
+      swept.
+  AC-5:
+    tests:
+      - tests.test_question_packet_reversible_fixture.TestExistingIrreversibleFixtureUnaffected.test_fixture_bytes_are_unmodified
+      - tests.test_question_packet_reversible_fixture.TestExistingIrreversibleFixtureUnaffected.test_fixture_still_declares_reversible_false_on_a_blocking_question
+      - tests.test_question_packet_reversible_fixture.TestExistingIrreversibleFixtureUnaffected.test_fixture_is_still_accepted
+    red_confirmed: false
+    red_reason: >
+      This is a preservation criterion over a file this task never touches
+      (Out of Scope: the sibling fixture is read-only reference material).
+      Nothing in this task's implementation can make it fail, so it was
+      already green before any implementation existed -- there is no
+      behavior change to red/green against. The sha256 pin
+      (67e904f72f6fbcd5eff3b2b55b6f0bd2205b81dced70571d10260ffa8453beff,
+      computed from the file as it stood before this task's edits) still
+      gives the test teeth against a FUTURE accidental edit to that file.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >
+      Verifiable as a build/lint outcome, not a single test: the module
+      itself imports only json/subprocess/sys/unittest/pathlib/hashlib
+      (stdlib), and its own AC-1..AC-5 tests above went red before the
+      fixture existed and are all green now in a worktree holding only this
+      task's two new files, confirmed by running
+      `python3 -m unittest discover -s tests` (3800 tests, 0 failures, 0
+      errors; baseline before this task's changes was 3788 tests, 0
+      failures, 0 errors).
