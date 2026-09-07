@@ -106,3 +106,40 @@ records:
       and the claim that every reviewer hits the identical size failure is not
       actually true for a Claude reviewer — a real protocol design gap worth a
       follow-up. Adopted (A).
+  - question_id: implement.task0010-pip-args-form
+    packet_id: null
+    answered_at: "2026-09-08T00:47:54+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [restore-pinned-form]
+    freeform: null
+    normalized_answer: "restore the pinned form; route the security concern to a spec-level follow-up"
+    resolution_note: >-
+      implement phase, verify-rework round 1, task0010. Question: the pip entry's
+      args in em-workflow/references/vuln-scanners.yaml drifted to
+      `--format json --no-deps --disable-pip`, failing 9 pinned tests including a
+      forbidden-token pin that names `--no-deps`; meanwhile review round 2 finding
+      2febcb34aa888ac7 argues the opposite direction, that pip-audit's default
+      resolution can execute build code from the reviewed project. Options weighed:
+      (A) restore the pinned two-token form and route the hardening to a separate
+      specification-level decision on FR1 plus the matching test pins; (B) keep or
+      extend the resolution-disabling flags now and amend FR1 and the pins inside
+      this same task. Codex was consulted through em-workflow/scripts/run_codex_exec.sh
+      (readonly, xhigh); the primary provider returned a usage-limit and entry 2
+      (litellm/vertex-glm-5.2) answered. It judged (A) comparatively better on:
+      tests-as-contract (the drift is the bug, the pins are the spec speaking);
+      a security change that alters a stated requirement belongs at the spec level
+      with its own review path; the registry's single shared args list serves BOTH
+      the `-r <file>` and the `<dir>` target forms, so the flags do not fit
+      uniformly and would give a false sense of safety without per-form analysis;
+      blast radius, since (A) is a surgical revert while (B) mutates spec, pins and
+      registry together; and TDD order, since a legitimate spec change drives the
+      tests first rather than retrofitting pins to absorb drift. Caveat Codex
+      itself raised and it stands: the concern is real and time-sensitive, so it
+      must be a tracked follow-up with an owner, and that follow-up should first
+      verify which flags actually disable resolution for both target forms — likely
+      splitting the shared args into per-form invocations — before FR1 and its pins
+      are amended. Adopted (A), which is what task0010 implemented. The follow-up
+      already exists in Notion as
+      https://app.notion.com/p/3d43509ec8ee81ada1c5cebf1b2e4471 so no duplicate was
+      filed.
