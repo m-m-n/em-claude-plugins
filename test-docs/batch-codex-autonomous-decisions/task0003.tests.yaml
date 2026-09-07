@@ -1,0 +1,108 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_no_longer_states_unchanged_strength_for_other_arms
+      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_states_two_mode_split_naming_all_three_arms
+    red_confirmed: true
+    red_reason: >-
+      Both tests failed against the pre-edit header: the negative-proof test
+      failed because "unchanged strength" was still present, and the
+      positive-pin test failed with AssertionError because neither "takes
+      the relaxed route in batch" nor "in interactive it keeps aborting
+      immediately" was present yet. Confirmed by running
+      `python3 -m unittest tests.test_batch_policies -v` before editing
+      em-workflow/references/batch-policies.yaml.
+  AC-2:
+    tests:
+      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_states_two_mode_split_naming_all_three_arms
+      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_does_not_restate_gate_internals
+      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_states_classification_gate_routing
+    red_confirmed: false
+    red_reason: >-
+      AC-2 is a preservation criterion: the header already cited
+      references/question-resolution.md by path, already restated no gate
+      internals, and already documented rework.spec-change as intentionally
+      unlisted before this task touched anything (those sentences are
+      outside the paragraph this task rewrites). The two pre-existing tests
+      listed here (test_header_does_not_restate_gate_internals,
+      test_header_states_classification_gate_routing) were already green
+      before this task started and stayed green after -- they are cited as
+      the evidence for AC-2's "still" language, not as new red->green
+      criteria. test_header_states_two_mode_split_naming_all_three_arms
+      (AC-1's positive pin) also carries the path-citation assertion and did
+      go red->green (see AC-1), but that transition is attributable to AC-1,
+      not to AC-2's own preservation claim.
+  AC-3:
+    tests:
+      - tests/test_batch_policies.py::TestGatePoliciesKeySetUnchangedByTask0003::test_key_set_is_byte_for_byte_the_same_as_before
+    red_confirmed: false
+    red_reason: >-
+      This task's edit touches only the header comment, never the
+      gate_policies mapping, so the pinned key-set snapshot passed both
+      before and after the edit by construction -- it never went red. It is
+      the regression guard for AC-3 (no entry added or removed), not a
+      criterion with an observable state change to drive red first.
+  AC-4:
+    tests:
+      - tests/test_batch_stop_contract.py::TestStopReasonCodes::test_extracted_set_equals_the_eleven_fixed_codes
+      - tests/test_batch_stop_contract.py::TestStopPointCoverage::test_pairing_matches_expected_key_code_mapping
+      - tests/test_batch_stop_contract.py::TestStopPointCoverage::test_source_paths_resolve_to_existing_files
+    red_confirmed: false
+    red_reason: >-
+      Per the task plan's Test Notes: "The set assertions in
+      tests/test_batch_stop_contract.py should keep passing untouched --
+      that they do is itself the evidence for AC-4, so do not rewrite
+      them." This task changes only the Meaning column text of the
+      gate_fail_closed row, never the reason-code set, the stop-point-key
+      set, or the key->code pairing (including fail-closed-abort ->
+      gate_fail_closed and its Source cell), so these pre-existing pins
+      stayed green throughout and were never expected to go red.
+  AC-5:
+    tests:
+      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_coverage_wording_stated
+      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_old_flat_wording_is_gone
+      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_meaning_cell_found
+      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWordingMatcherNegativeProof::test_forged_reenumeration_is_otherwise_well_formed
+      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWordingMatcherNegativeProof::test_forged_reenumeration_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      test_coverage_wording_stated and test_old_flat_wording_is_gone both
+      failed against the pre-edit batch-terminal-line.md: the coverage-
+      wording matcher raised AssertionError because the old flat Meaning
+      text ("A gate was classified fail-closed and the phase aborted")
+      carried neither "both modes" nor a references/question-resolution.md
+      citation, and the old-wording-is-gone check failed because that exact
+      flat sentence was still present. Confirmed by running
+      `python3 -m unittest tests.test_batch_stop_contract -v` before
+      editing em-workflow/references/batch-terminal-line.md.
+      test_meaning_cell_found and both matcher negative-proof tests operate
+      on the row's mere presence and on a synthetic forged string
+      respectively, independent of which wording the row carries, so they
+      passed both before and after (red_confirmed: false semantics for
+      those three specifically, folded into this entry's true because the
+      entry's primary criterion -- the wording itself -- did go red first).
+  AC-6:
+    tests:
+      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_no_longer_states_unchanged_strength_for_other_arms
+      - tests/test_batch_policies.py::TestBatchPoliciesYaml::test_header_states_two_mode_split_naming_all_three_arms
+      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_coverage_wording_stated
+      - tests/test_batch_stop_contract.py::TestGateFailClosedCoverageWording::test_old_flat_wording_is_gone
+      - tests/test_batch_stop_contract.py::TestContractDocumentStructure::test_fixed_four_field_order
+      - tests/test_batch_stop_contract.py::TestContractDocumentStructure::test_states_same_prefix_and_fields_for_both_terminal_states
+      - tests/test_batch_stop_contract.py::TestPrefixUniqueness::test_prefix_occurs_only_in_the_contract_document
+    red_confirmed: false
+    red_reason: >-
+      AC-6 combines (a) every pin this rewrite touches being replaced at
+      equal specificity -- covered by the AC-1 and AC-5 entries above,
+      which did go red first -- and (b) the terminal line's prefix/field
+      grammar/value sets staying unchanged plus the full suite passing.
+      Part (b) is a preservation + whole-suite-run criterion with no
+      dedicated new test: it is verified by the pre-existing structural
+      regression guards listed here (never touched by this task's edits,
+      always green) and by the full-suite run reported below (3670 passed,
+      0 failures, 0 regressions against the empty baseline recorded in 4a).
+      No new test was written specifically for AC-6 beyond the pin
+      replacements already counted under AC-1/AC-5.
