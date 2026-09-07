@@ -31,6 +31,12 @@ budget, schema, read-only) comes from the reviewer agent + review-protocol.md.
 Style hardening unrelated to a concrete attacker-controlled path. Speculative
 "could be exploited if X and Y and Z" without a realistic threat model.
 
+Known-CVE judgement for a dependency package — whether a published CVE or
+advisory applies to a dependency version — is made mechanically by axis 2's
+dependency-vulnerability scan; do not re-report it here. Whether a
+vulnerable dependency path is actually reachable in this codebase stays in
+scope for this perspective.
+
 ## category
 
 Every finding MUST have `"category": "security"`.
