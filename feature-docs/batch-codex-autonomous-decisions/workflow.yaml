@@ -59,7 +59,8 @@ workflow:
     skipped_reason: "The feature changes protocol documents, one shell wrapper, one validator's message text, test fixtures and tests. It introduces no user interface, no rendered artifact, no new file format and no design-system surface (design_system_candidates is empty). The affected structures -- the question packet, the answer object, the batch audit record, the terminal line -- are all already specified by existing SSOT documents, so the create-plan phase can split the work directly from these requirements. Confirmed by answer `design-step.recommendation` = `decide_autonomously`."
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 49800587906acae1f3f18fd39f370fbd80f3f4f1
   - id: implement
     status: pending
     base_commit: null
