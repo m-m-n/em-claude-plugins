@@ -99,7 +99,9 @@ A question whose `category` is `spec-change`, `security`, or `license` must
 carry `on_unanswered: block` — a question in one of those categories can
 never be left to resolve as `record_tbd` or `use_batch_policy`.
 `scripts/validate-worker-output.py` enforces this constraint mechanically
-and rejects a packet where it does not hold;
+and rejects a packet where it does not hold. In batch, `on_unanswered:
+block` routes the question into the minimum-side-effect branch rather than
+letting a worker choose `record_tbd` or `use_batch_policy` for it;
 `references/question-resolution.md`'s fail-closed classification states the
 resolution-time rule this constraint backs.
 
