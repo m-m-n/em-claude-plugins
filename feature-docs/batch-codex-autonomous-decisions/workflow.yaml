@@ -147,6 +147,10 @@ review:
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
 
 requirements:
   FR1:
