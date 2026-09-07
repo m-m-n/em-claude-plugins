@@ -1,0 +1,326 @@
+schema_version: 1
+feature: review-sca-axis
+created: 2026-09-07
+base_branch: main
+parent_branch: em-workflow/review-sca-axis/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown-python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: ecf2f636e318e2f3c6e1d24cafeddcd9da6c42ed
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      UI / 視覚的成果物が一切無い変更のため。対象は Python スクリプト 1 本、YAML
+      レジストリ 1 本、既存の JSON スキーマ・Markdown プロトコル・スキルのテキスト編集、
+      およびプラグイン version bump。design_system_candidates も空で、デザインシステムの
+      候補は存在しない。
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  rounds: []
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
+
+requirements:
+  FR1:
+    title: "SCA スキャンスクリプトの新設"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: "ツール出力の findings 正規化"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: "ツール不在時の skip"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: "vuln-scanners.yaml の新設"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: "review-output-schema.json の enum 拡張"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: "R0 への notion-task-dispatch probe 追加"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: "R1 Layer-2 への vulnerability 相乗り"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: "軸 2 に LLM を置かない"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: "R2 のピアとしての実行と下流合流"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: "依存更新の自動適用禁止"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: "タスク化のタイミングと回数"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR12:
+    title: "起票先の分岐"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR13:
+    title: "レポート出力先の解決方法"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR14:
+    title: "タスク粒度"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR15:
+    title: "2 段構えの重複検出"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR16:
+    title: "重複検出の対象範囲"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR17:
+    title: "重複検出キーの局所化"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR18:
+    title: "severity と優先度の分離"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR19:
+    title: "review-security スキルの重複抑止"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR20:
+    title: "プラグイン version bump"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR21:
+    title: "既存テストの追随（source enum 凍結の更新）"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR22:
+    title: "新規テストの追加"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR23:
+    title: "tool run を LLM チェーン走査から除外する"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR24:
+    title: "最終ラウンド判定の決定論的な信号"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "no-network 制約の不変"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "レビューの read-only 規律"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "決定論性"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "ツール出力の untrusted 扱い"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "新しい gate_id を導入しない"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: "プラグイン不変条件の維持"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: "実行環境"
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+goal: |
+  # em-workflow のレビューに依存脆弱性チェック（SCA）の軸を新設する
+
+  種別: 機能
+
+  指示メモ: LLM レビュアーの fan-out とは別軸の、決定論的な機械チェック段。スクリプトで完結させモデルは置かない。依存更新は自動適用せず、notion-task-dispatch があれば --type セキュリティ で起票、無ければリポジトリルートの tmp/ にレポート。プラグイン変更なので version bump を忘れずに
+
+  ## やりたいこと (必須)
+  em-workflow のレビューフェーズに、決定論的な機械チェックの軸（軸2）を新設する。依存パッケージの既知脆弱性を SCA ツールで検出し、findings を既存のレビュー評価・ゲートに合流させる。依存更新は自動適用せず、Notion 起票またはリポジトリルートの `tmp/` へのレポートとして残す。
+
+  ## 背景・なぜ (必須)
+  現状の em-workflow のレビューは全 6 観点が LLM レビュアーの fan-out で、`review-protocol.md:255` により no-network 制約が課されている。この制約には「untrusted な diff を読ませる LLM に外部通信させない」という筋の通った理由がある。
+  一方 SCA は脆弱性 DB を引く必要があり、LLM の知識だけで CVE を判定させると知識カットオフで信頼できない。制約に例外を開けるのではなく、**LLM が判断する場ではないツール実行段を別軸として置く**ことで両立させる。SDL でも静的解析ツールと人手のコードレビューは別活動として置かれている。
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+  **軸 2 の実装**
+  - [ ] `scripts/scan-dependencies.py` を新設する。`changed_files` からエコシステムを判定し、対応する SCA ツールを実行する（`npm audit --json` / `cargo audit --json` / `pip-audit --format json` / `govulncheck -json`）
+  - [ ] 出力を `references/review-output-schema.json` 準拠の findings に正規化する
+  - [ ] ツール不在時は `skipped: true` + `skip_reason` で返す。LLM に肩代わりさせない（知識カットオフで軸 2 の意味が消えるため）
+  - [ ] `references/vuln-scanners.yaml` を新設し、マニフェスト → コマンド → severity マッピング → 閾値（direct dependency のみ / severity high 以上）を置く。`reviewers.yaml` と同じ SSOT の作法にする
+  - [ ] `review-output-schema.json` の `source` enum に `tool`、`category` enum に `vulnerability` を追加する（現状はどちらも閉じており、足さないと R3b で落ちる）
+  - [ ] `review-phase.md` R0 に probe を 1 つ追加する（step 5/6 の「Probe codex」「Probe litellm」と同じ形）。実体は `~/.claude/plugins/cache/*/notion-task-dispatch/*/scripts/ntd.sh` の glob。marketplace 名を決め打ちせず、複数バージョンがあれば最新を選ぶ
+  - [ ] `review-phase.md` R1 の「Mandatory Layer-2 check — license」に相乗りして、依存マニフェスト・lockfile に触れた diff で `vulnerability` も追加する
+  - [ ] 軸 2 に LLM を置かない。reachability や攻撃シナリオの判断は R3a の評価者（Opus）が担う
+  **タスク化 / レポート**
+  - [ ] 依存更新の自動適用はしない。R4 では needs-judgment 送りのままにする
+  - [ ] review フェーズにつき 1 回、R5 の直前に未解決の `vulnerability` findings をタスク化する（ラウンドごとにやると最大 3 回起票されるため）
+  - [ ] notion-task-dispatch が入っていれば `--type セキュリティ` で起票する。入っていなければリポジトリルートの `tmp/` にレポートを書く
+  - [ ] レポートの出力先は `git -C {project_root} worktree list --porcelain` の先頭エントリ（メインの作業ツリー）。`rev-parse --show-toplevel` はレビューの `project_root`（統合 worktree）を返すので使わない
+  - [ ] 粒度は 1 パッケージ 1 タスク。同じパッケージの複数 CVE は「参照」欄に複数行で並べる
+  - [ ] 重複検出は 2 段構えにする。タスクの同一性は**パッケージ名**、タスク内の脆弱性エントリの同一性は **CVE / GHSA ID**
+  - [ ] 重複検出の対象は**未完了タスクのみ**にする。`完了` / `破棄` しか無ければ新規起票する（破棄されたパッケージに新しい advisory が立ったなら、改めて判断すべき別件のため）
+  - [ ] 重複検出キーの組み立てをスクリプト内の 1 関数に閉じ込める。後で「パッケージ名 + メジャーバージョン」へ拡張するときに呼び出し側を触らずに済ませる
+  - [ ] severity は「参照」欄に事実として残す。優先度プロパティは初期値「高」で入れ、人がトリアージで動かす（severity は動かない事実、優先度は人が動かす判断で別の軸）
+  - [ ] `review-security` の「What NOT to flag」に「既知 CVE の判定は軸 2 が機械的に行う」を追記し、findings の重複を減らす
+  - [ ] `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の version を同じ値で上げる
+
+  ## スコープ外 (任意)
+  - 設計段階の脅威モデリング（別タスクとして起票済み）
+  - SAST の追加。軸 2 の枠組みに後から乗せられる形にはしておく
+  - 同一パッケージが別バージョンで同時に入るケース（`lodash@3` と `lodash@4` が別の依存元から入り片方だけ脆弱）の分離。実運用で踏んでから対処する
+  - セキュアコーディング知識の実装側注入（security-impl 相当）
+  - loop-develop 側の notion-task-dispatch の修正（別リポジトリ。`--type セキュリティ` とセキュリティ用テンプレートは対応済み）
+
+  ## 制約・前提 (任意)
+  - LLM レビュアーの no-network 制約（`review-protocol.md:255`）は変更しない。軸 2 は LLM が判断する場ではないので同じ制約を適用する理由がない、という整理で別段にする
+  - 軸 2 の findings は既存の R3a 評価・R3b ゲート・R4 auto-fix にそのまま合流させる。下流を作り直さない
+  - 軸 2 を perspective として扱うと R3b の accountability floor が効き、ツールが出した critical/high を R3a の評価者が黙って握りつぶせなくなる
+  - レビューの `project_root` は統合 worktree（`review-phase.md` R0）
