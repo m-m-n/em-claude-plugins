@@ -114,9 +114,9 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR1, FR2, FR3, FR4, FR5, NFR1, NFR2, NFR3, NFR4, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/assumptions-reversible-criteria/task0001
   task0002:
     title: "Add the reversible:true counter-example question-packet fixture"
     plan: tasks/task0002.md
@@ -127,9 +127,9 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR6, NFR3, NFR4, NFR5]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/assumptions-reversible-criteria/task0002
   task0003:
     title: "Bump the em-workflow plugin version in both registries and pin it with a version-bump test"
     plan: tasks/task0003.md
@@ -141,9 +141,9 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR7, NFR4]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/assumptions-reversible-criteria/task0003
 
 review:
   status: pending
