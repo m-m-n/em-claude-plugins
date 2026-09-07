@@ -501,6 +501,22 @@ silently suppressed by the evaluator. No property, step or exception in
 this phase treats `source: tool` differently from `source: codex` /
 `source: litellm` / `source: claude`.
 
+**`vulnerability` site identity:** `same_site` and `stable_id` are computed
+from `file`/`line` alone (step 5), and axis 2 reports every advisory in a
+manifest with the same `file` and `line: null`. Applying `same_site`
+unmodified to `vulnerability` findings would collapse every advisory in one
+manifest into a single site, silently discharging the accountability floor
+for every advisory but the surviving one. To prevent this, `same_site` and
+`stable_id`'s `file` operand for category `vulnerability` is
+`file + "#" + package + "@" + advisory_id` (both fields required on every
+`vulnerability` finding) instead of the raw manifest path; `line` stays
+`null` and matches only other `null` lines within that same composite key.
+Two advisories against the same package still collapse only if `package`
+AND `advisory_id` agree; two advisories against different packages in the
+same manifest never collapse. `file_tasks` recovers `(package,
+advisory_id)` from this composite key, not from parsing the surviving
+finding's title.
+
 ## Phase R4: Bounded auto-fix (≤ 3 loops, ON by default)
 
 `--report-only` (aliases `--no-auto-fix`, `--no-fix`) skips R4 entirely.

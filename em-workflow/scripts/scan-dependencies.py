@@ -453,19 +453,57 @@ def load_registry(path):
     return data
 
 
+# Lockfile basenames per registered ecosystem -- review-phase.md dispatches
+# the `vulnerability` perspective on these manifests "and their lockfiles",
+# a wider trigger than the registry's own `manifests` lists. Kept here
+# (not in the registry file) since a lockfile still resolves to the SAME
+# ecosystem entry/normalizer as its manifest -- it is not a new ecosystem.
+ECOSYSTEM_LOCKFILES = {
+    "npm": {"package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml"},
+    "cargo": {"Cargo.lock"},
+    "pip": {"poetry.lock", "Pipfile.lock"},
+    "go": {"go.sum"},
+}
+
+# Manifests review-phase.md's trigger also covers but this registry has no
+# scanner/normalizer for. Matched separately from `select_ecosystems` so a
+# change confined to one of these yields an explicit skip rather than a
+# silent, unqualified "no findings".
+UNSUPPORTED_MANIFESTS = {
+    "composer.json": "composer_unsupported",
+    "composer.lock": "composer_unsupported",
+    "Gemfile": "bundler_unsupported",
+    "Gemfile.lock": "bundler_unsupported",
+    "build.gradle": "gradle_unsupported",
+    "build.gradle.kts": "gradle_unsupported",
+    "pom.xml": "maven_unsupported",
+}
+
+
 def select_ecosystems(registry, changed_files):
-    """Reduces `changed_files` to the set of manifests the registry
-    recognises (matched by basename -- a manifest can live at any
-    project-relative path), then to the ecosystems those manifests select.
-    Returns registry ecosystem entries in registry order; empty when no
-    changed file matches any registered manifest."""
+    """Reduces `changed_files` to the set of manifests OR lockfiles the
+    registry recognises (matched by basename -- a manifest/lockfile can
+    live at any project-relative path), then to the ecosystems those files
+    select. Returns registry ecosystem entries in registry order; empty
+    when no changed file matches any registered manifest or lockfile."""
     changed_basenames = {os.path.basename(f) for f in changed_files}
     selected = []
     for ecosystem in registry["ecosystems"]:
+        name = ecosystem.get("ecosystem", "unknown")
         manifests = set(ecosystem.get("manifests") or [])
-        if changed_basenames & manifests:
+        lockfiles = ECOSYSTEM_LOCKFILES.get(name, set())
+        if changed_basenames & (manifests | lockfiles):
             selected.append(ecosystem)
     return selected
+
+
+def unsupported_manifest_reasons(changed_files):
+    """Skip reasons for changed files matching review-phase.md's wider
+    `vulnerability` trigger (composer.json, Gemfile, build.gradle/pom.xml)
+    that this registry has no scanner for. Deduplicated, sorted for a
+    stable combined reason string."""
+    changed_basenames = {os.path.basename(f) for f in changed_files}
+    return sorted({UNSUPPORTED_MANIFESTS[b] for b in changed_basenames if b in UNSUPPORTED_MANIFESTS})
 
 
 def build_command(ecosystem):
@@ -483,8 +521,12 @@ def manifest_file_for(ecosystem, changed_files):
     reached in practice, since an ecosystem is only selected when a
     matching changed file exists -- see select_ecosystems)."""
     manifests = set(ecosystem.get("manifests") or [])
+    lockfiles = ECOSYSTEM_LOCKFILES.get(ecosystem.get("ecosystem", "unknown"), set())
     for f in changed_files:
         if os.path.basename(f) in manifests:
+            return f
+    for f in changed_files:
+        if os.path.basename(f) in lockfiles:
             return f
     manifest_list = ecosystem.get("manifests") or ["unknown"]
     return manifest_list[0]
@@ -611,19 +653,134 @@ def normalize_npm(ecosystem, data, manifest_file):
     return findings
 
 
-def normalize_cargo(ecosystem, data, manifest_file):
+_CVSS_METRIC_WEIGHTS = {
+    "AV": {"N": 0.85, "A": 0.62, "L": 0.55, "P": 0.2},
+    "AC": {"L": 0.77, "H": 0.44},
+    "UI": {"N": 0.85, "R": 0.62},
+    "C": {"H": 0.56, "L": 0.22, "N": 0.0},
+    "I": {"H": 0.56, "L": 0.22, "N": 0.0},
+    "A": {"H": 0.56, "L": 0.22, "N": 0.0},
+}
+_CVSS_PR_WEIGHTS = {
+    "U": {"N": 0.85, "L": 0.62, "H": 0.27},
+    "C": {"N": 0.85, "L": 0.68, "H": 0.5},
+}
+
+
+def _cvss_roundup(value):
+    """CVSS v3.1 spec's Roundup(): round to the nearest 0.1 that is not
+    below the input (banker's rounding on the raw float would round some
+    scores down)."""
+    int_value = round(value * 100000)
+    if int_value % 10000 == 0:
+        return int_value / 100000.0
+    return (int_value - (int_value % 10000) + 10000) / 100000.0
+
+
+def _cvss_base_score(vector):
+    """Computes the CVSS v3.1 base score from an advisory's vector string
+    (e.g. "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"). cargo audit's
+    JSON carries no plain severity string -- only this vector -- so the
+    band used for threshold/severity_map lookup has to be derived here.
+    Returns None when the vector is missing or unparseable."""
+    if not vector or not isinstance(vector, str):
+        return None
+    metrics = {}
+    for part in vector.split("/"):
+        if ":" not in part:
+            continue
+        key, _, val = part.partition(":")
+        metrics[key] = val
+    try:
+        scope = metrics["S"]
+        av = _CVSS_METRIC_WEIGHTS["AV"][metrics["AV"]]
+        ac = _CVSS_METRIC_WEIGHTS["AC"][metrics["AC"]]
+        ui = _CVSS_METRIC_WEIGHTS["UI"][metrics["UI"]]
+        pr = _CVSS_PR_WEIGHTS[scope][metrics["PR"]]
+        c = _CVSS_METRIC_WEIGHTS["C"][metrics["C"]]
+        i = _CVSS_METRIC_WEIGHTS["I"][metrics["I"]]
+        a = _CVSS_METRIC_WEIGHTS["A"][metrics["A"]]
+    except KeyError:
+        return None
+    iss = 1 - ((1 - c) * (1 - i) * (1 - a))
+    if scope == "U":
+        impact = 6.42 * iss
+    else:
+        impact = 7.52 * (iss - 0.029) - 3.25 * pow(iss - 0.02, 15)
+    exploitability = 8.22 * av * ac * pr * ui
+    if impact <= 0:
+        return 0.0
+    if scope == "U":
+        return _cvss_roundup(min(impact + exploitability, 10))
+    return _cvss_roundup(min(1.08 * (impact + exploitability), 10))
+
+
+def _cvss_severity_band(vector):
+    """Qualitative severity rating per the CVSS v3.1 spec's score ranges,
+    matched against this registry's severity_map (critical/high/medium/
+    low/none)."""
+    score = _cvss_base_score(vector)
+    if score is None:
+        return None
+    if score >= 9.0:
+        return "critical"
+    if score >= 7.0:
+        return "high"
+    if score >= 4.0:
+        return "medium"
+    if score > 0.0:
+        return "low"
+    return "none"
+
+
+_CARGO_DEP_TABLES = {"dependencies", "dev-dependencies", "build-dependencies"}
+
+
+def _cargo_direct_dependency_names(manifest_path):
+    """Package names declared in Cargo.toml's [dependencies],
+    [dev-dependencies] and [build-dependencies] tables (including their
+    target-specific forms, e.g. target.'cfg(unix)'.dependencies) -- a
+    lightweight TOML-lite scan rather than a full parser, since cargo
+    audit's JSON output carries no per-entry "is_direct" field to read
+    directness from directly."""
+    names = set()
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except OSError:
+        return names
+    current_table = None
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("[") and stripped.endswith("]"):
+            section = stripped.strip("[]").strip()
+            current_table = section.rsplit(".", 1)[-1]
+            continue
+        if current_table in _CARGO_DEP_TABLES:
+            match = re.match(r'^"?([A-Za-z0-9_.\-]+)"?\s*=', stripped)
+            if match:
+                names.add(match.group(1))
+    return names
+
+
+def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
     findings = []
     entries = ((data.get("vulnerabilities") or {}).get("list")) or []
+    direct_names = _cargo_direct_dependency_names(
+        os.path.join(str(project_root), manifest_file) if project_root else manifest_file
+    )
     for entry in entries:
         if not isinstance(entry, dict):
             continue
         advisory = entry.get("advisory") or {}
-        is_direct = bool(entry.get("is_direct"))
-        raw_severity = entry.get("severity") or advisory.get("severity")
+        package = (entry.get("package") or {}).get("name", "unknown")
+        is_direct = package in direct_names
+        raw_severity = _cvss_severity_band(advisory.get("cvss"))
         mapped = _map_severity(ecosystem, raw_severity)
         if not _passes_threshold(ecosystem, is_direct, mapped):
             continue
-        package = (entry.get("package") or {}).get("name", "unknown")
         patched_versions = (entry.get("versions") or {}).get("patched") or []
         fixed_version = patched_versions[0] if patched_versions else None
         findings.append(
@@ -760,6 +917,11 @@ def run_scan(project_root, changed_files, registry_path):
     registry = load_registry(registry_path)
     selected = select_ecosystems(registry, changed_files)
     if not selected:
+        unsupported = unsupported_manifest_reasons(changed_files)
+        if unsupported:
+            combined_reason = "+".join(unsupported)
+            summary = "Scan skipped: " + "; ".join(unsupported)
+            return _skip_result(combined_reason, summary)
         return _empty_result()
 
     all_findings = []
@@ -780,7 +942,10 @@ def run_scan(project_root, changed_files, registry_path):
             skip_reasons.append(f"{name}_no_normalizer")
             continue
         manifest_file = manifest_file_for(ecosystem, changed_files)
-        all_findings.extend(normalizer(ecosystem, data, manifest_file))
+        if name == "cargo":
+            all_findings.extend(normalizer(ecosystem, data, manifest_file, project_root))
+        else:
+            all_findings.extend(normalizer(ecosystem, data, manifest_file))
         ran_ecosystems.append(name)
 
     if not ran_ecosystems:
