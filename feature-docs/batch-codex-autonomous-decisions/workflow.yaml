@@ -77,12 +77,12 @@ tasks:
   task0001:
     title: "Relax the three fail-closed arms in the resolution SSOT"
     plan: tasks/task0001.md
-    files: [em-workflow/references/question-resolution.md, tests/test_question_resolution_doc.py, tests/test_classification_gate.py]
+    files: [em-workflow/references/question-resolution.md, tests/test_question_resolution_doc.py, tests/test_classification_gate.py, tests/test_spec_change_origin_binding.py]
     skills: []
     domains: [input-handling, api-contract, external-io]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR14, FR21, NFR1, NFR2, NFR3, NFR4, NFR6, NFR7, NFR8, NFR9]
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-codex-autonomous-decisions/task0001
     notes: null
   task0002:
