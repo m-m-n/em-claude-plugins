@@ -131,11 +131,16 @@ PROVIDER_NAME_2="codex-fallback-provider-beta"
 PROVIDER_NAME_3="codex-fallback-provider-gamma"
 
 OUTFILE="$(mktemp)"
-trap 'rm -f "$OUTFILE"' EXIT
+ERRFILE="$(mktemp)"
+trap 'rm -f "$OUTFILE" "$ERRFILE"' EXIT
 
 # Runs one chain entry; extra provider args (if any) are passed as "$@".
-# Writes the attempt's combined stdout+stderr to $OUTFILE (truncating
-# whatever a prior attempt left there) and sets $ATTEMPT_EXIT_CODE.
+# Writes the attempt's stdout to $OUTFILE and stderr to $ERRFILE separately
+# (truncating whatever a prior attempt left there) and sets
+# $ATTEMPT_EXIT_CODE. Kept separate (rather than 2>&1 into one file) so the
+# switch-condition matches below can be scoped to the CLI's own stderr
+# diagnostics and never to Codex's model-generated stdout reply, which
+# quotes the reviewed repository and is attacker-influenceable.
 #
 # stdin is redirected from /dev/null so `codex exec` does not block reading
 # additional input when invoked under a parent that leaves stdin as an open
@@ -163,18 +168,20 @@ run_attempt() {
     "${WORKDIR_FLAG[@]}" \
     "${SCHEMA_FLAG[@]}" \
     "$@" \
-    "$FULL_PROMPT" </dev/null > "$OUTFILE" 2>&1 || ATTEMPT_EXIT_CODE=$?
+    "$FULL_PROMPT" </dev/null > "$OUTFILE" 2> "$ERRFILE" || ATTEMPT_EXIT_CODE=$?
 }
 
-# Response-shape recognition: the underlying CLI's output is the only signal
-# available, so a switch condition is a text match on the captured attempt,
-# never an exit-code match alone (a timeout's 124 must never be mistaken for
-# either shape below).
-is_usage_limit_response() { grep -qi 'usage limit' "$OUTFILE"; }
-is_provider_error_response() { grep -qi 'provider error' "$OUTFILE"; }
+# Response-shape recognition: matches run only against $ERRFILE (the CLI's
+# own stderr diagnostics), never against $OUTFILE (Codex's model-generated
+# stdout reply, which quotes the reviewed repository and is
+# attacker-influenceable). A switch condition is a text match on the
+# captured attempt's stderr, never an exit-code match alone (a timeout's 124
+# must never be mistaken for either shape below).
+is_usage_limit_response() { grep -qi 'usage limit' "$ERRFILE"; }
+is_provider_error_response() { grep -qi 'provider error' "$ERRFILE"; }
 
 emit_timeout_and_exit() {
-  cat "$OUTFILE"
+  cat "$OUTFILE" "$ERRFILE"
   echo "CODEX_TIMEOUT: Codex did not respond within ${TIMEOUT} seconds" >&2
   exit 124
 }
@@ -210,7 +217,7 @@ if [[ $exit_code -ne 0 ]] && is_usage_limit_response; then
   fi
 fi
 
-cat "$OUTFILE"
+cat "$OUTFILE" "$ERRFILE"
 
 if [[ $exit_code -eq 0 && $answering_entry -ne 1 ]]; then
   case "$answering_entry" in
