@@ -1,0 +1,21 @@
+schema_version: 1
+feature: assumptions-reversible-criteria
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: a90d31aa62c2ae91d449ee7733dcce6e6c518a8a
+last_input_digest: "sha256:393a269899eef77bb56c95024403765e107a3f1a9fb9a5adfdae27990cad87e4"
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: "sha256:393a269899eef77bb56c95024403765e107a3f1a9fb9a5adfdae27990cad87e4"
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
