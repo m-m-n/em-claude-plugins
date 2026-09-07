@@ -1,0 +1,48 @@
+{
+  "assumptions": [
+    {
+      "assumption_id": "assume-preserved-field-order",
+      "statement": "The exported record's field order stays exactly as documented — a preserved constraint, pinned by an existing test — regardless of which option is chosen.",
+      "reason": "An existing test asserts the exact field order and fails if either option changes it.",
+      "impact": "low",
+      "reversible": true,
+      "related_question_ids": ["config-schema.preserve-field-order"]
+    }
+  ],
+  "input_revision": {
+    "input_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "workflow_blob": "8f17c04"
+  },
+  "iteration": 1,
+  "packet_id": "create-spec-q0002",
+  "phase": "create-spec",
+  "questions": [
+    {
+      "answer_mode": "single_select",
+      "blocking": true,
+      "category": "technical-requirement",
+      "depends_on": [],
+      "evidence": [],
+      "gate_id": "create-spec.config-schema-decision",
+      "header": "Schema",
+      "on_unanswered": "block",
+      "options": [
+        {
+          "option_id": "opt-flat",
+          "label": "Use a flat schema"
+        },
+        {
+          "option_id": "opt-nested",
+          "label": "Use a nested schema"
+        }
+      ],
+      "priority": "high",
+      "prompt": "Should the exported record use a flat or nested schema?",
+      "question_id": "config-schema.preserve-field-order",
+      "supersedes": [],
+      "why_needed": "Determines which schema layout the exporter adopts."
+    }
+  ],
+  "schema_version": 1,
+  "worker": "requirements-analyst"
+}
