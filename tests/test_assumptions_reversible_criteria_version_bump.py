@@ -110,14 +110,14 @@ def _assert_em_review_unchanged(test, entry, expected_version=EM_REVIEW_VERSION)
 
 
 class TestPluginManifestVersion(unittest.TestCase):
-    """AC-1: plugin.json's version is pinned to 0.1.65."""
+    """AC-1: plugin.json's version is a patch bump over the baseline."""
 
     @classmethod
     def setUpClass(cls):
         cls.data = _load_json(PLUGIN_MANIFEST_PATH)
 
-    def test_version_is_pinned_new_value(self):
-        self.assertEqual(self.data.get("version"), NEW_VERSION)
+    def test_version_is_past_baseline(self):
+        _assert_patch_bump_over_baseline(self, self.data.get("version"))
 
 
 class TestMarketplaceEntryVersion(unittest.TestCase):
