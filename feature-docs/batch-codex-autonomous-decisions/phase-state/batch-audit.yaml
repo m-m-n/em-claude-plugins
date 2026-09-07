@@ -1,0 +1,12 @@
+schema_version: 1
+feature: batch-codex-autonomous-decisions
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-07T09:55:57+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline"
+    normalized_answer: "decline"
+    resolution_note: "task_id: task0004; declined files deviation 'tests/test_gate_option_vocabulary.py'; missing evidence part: the identifier of the acceptance criterion or requirement that would otherwise be dropped — the report names no AC-n of task0004's plan and no requirement id registered in workflow.yaml, citing only 'this task's plan required editing the guarded files'. The path shape check and the observable-failure part were satisfied; the missing identifier alone blocks auto-addition."

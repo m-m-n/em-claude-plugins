@@ -115,7 +115,7 @@ tasks:
     domains: [input-handling, api-contract]
     complexity: medium
     requirements: [FR18, FR19, FR20, FR21, NFR1, NFR2, NFR8, NFR9]
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-codex-autonomous-decisions/task0004
     notes: null
   task0005:
