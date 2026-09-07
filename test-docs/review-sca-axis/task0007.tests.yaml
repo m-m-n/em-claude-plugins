@@ -1,0 +1,96 @@
+task_id: task0007
+baseline_failures:
+  - tests.test_sca_task_filing.TestFileTasksBranches.test_entry_point_present_files_via_ntd
+  - tests.test_sca_task_filing.TestGroupingAndFiling.test_idempotent_second_run_files_nothing_new
+  - tests.test_sca_task_filing.TestGroupingAndFiling.test_three_advisories_one_package_produce_one_task_with_three_lines
+  - tests.test_sca_task_filing.TestGroupingAndFiling.test_two_packages_produce_two_tasks
+  - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_priority_is_always_high_regardless_of_severity
+  - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_truncated_advisory_reaches_the_filed_reference_field
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_task_filing.TestFileTasksBranches.test_entry_point_present_files_via_ntd
+      - tests.test_sca_task_filing.TestGroupingAndFiling.test_idempotent_second_run_files_nothing_new
+      - tests.test_sca_task_filing.TestGroupingAndFiling.test_three_advisories_one_package_produce_one_task_with_three_lines
+      - tests.test_sca_task_filing.TestGroupingAndFiling.test_two_packages_produce_two_tasks
+      - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_priority_is_always_high_regardless_of_severity
+      - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_truncated_advisory_reaches_the_filed_reference_field
+      - tests.test_sca_task_filing.TestListingThreeValuedOutcome.test_empty_json_array_listing_takes_filing_branch_not_report
+      - tests.test_sca_task_filing.TestListingThreeValuedOutcome.test_listing_with_every_entry_dropped_by_validation_still_files
+    red_confirmed: true
+    red_reason: >-
+      The six pre-existing tests were the task's baseline (observed failing
+      in step 4a, before any implementation change): each raised GitError
+      ("not a git repository") because list_security_tasks() treated an
+      empty/all-dropped JSON array as unavailable, wrongly routing to
+      report_destination() -> resolve_main_worktree_root() against a tmp
+      dir with no git repo. The two new TestListingThreeValuedOutcome tests
+      were confirmed red by stashing the script change and re-running: both
+      failed with the same GitError for the same reason before the
+      three-valued ListingOutcome was introduced.
+  AC-2:
+    tests:
+      - tests.test_sca_task_filing.TestListingUnavailableReasons.test_five_unavailability_conditions_have_five_distinct_reasons
+      - tests.test_sca_task_filing.TestFileTasksBranches.test_listing_failure_degrades_to_report_and_states_degradation
+      - tests.test_sca_task_filing.TestFileTasksBranches.test_listing_unparsable_output_also_degrades
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by stashing the script change and re-running: the new
+      distinctness test failed with "1 != 5" (every condition collapsed to
+      the single reason "task_listing_unavailable"). The two pinned-reason
+      assertions in TestFileTasksBranches were updated per this task's
+      AC-2 (each condition now gets its own reason) and were re-confirmed
+      red against the old script: AssertionError 'task_listing_unavailable'
+      != 'listing_exit_nonzero' and != 'listing_output_not_json'
+      respectively.
+  AC-3:
+    tests:
+      - tests.test_sca_task_filing.TestPoisonFindingIsolation.test_one_malformed_finding_does_not_abort_filing_of_the_others
+      - tests.test_sca_task_filing.TestPoisonFindingIsolation.test_batch_entirely_malformed_returns_summary_with_empty_sets_no_exception
+      - tests.test_sca_task_filing.TestPoisonFindingIsolation.test_malformed_reason_carries_no_advisory_text_into_the_report
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by stashing the script change and re-running: all three
+      raised/failed via an uncaught FindingTitleError propagating out of
+      group_findings_by_package()/file_tasks() for a malformed title,
+      instead of being skipped and recorded.
+  AC-4:
+    tests:
+      - tests.test_sca_task_filing.TestMidBatchFailurePartialProgress.test_failure_on_second_of_three_packages_returns_partial_summary
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by stashing the script change and re-running: the old
+      file_tasks() let EntryPointError escape the per-package loop on the
+      first failure (uncaught, no partial summary), and separately the old
+      unconditional call to report_destination() (reached via the
+      then-unavailable-on-empty-listing path) raised GitError in the
+      non-git tmp dir used by this test.
+  AC-5:
+    tests:
+      - tests.test_sca_task_filing.TestMidBatchFailurePartialProgress.test_retry_after_partial_failure_files_only_what_was_not_filed_before
+    red_confirmed: true
+    red_reason: >-
+      Confirmed by stashing the script change and re-running: the first
+      file_tasks() call in this test raised the same GitError as AC-4's
+      test (mid-batch failure was not caught, and the report-branch
+      fallback path used to reach it also broke in the non-git tmp dir),
+      so the retry could never be reached.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Verifiable outcome is the definition-of-done command pair, not a
+      unit test: `python3 -m unittest discover -s tests` and `python3
+      em-workflow/scripts/check-plugin-invariants.py <repo-root>`. Both ran
+      green in this worktree after implementation (4051 tests passed, 0
+      failures/errors; all 7 invariant checks PASS). "Red" for this
+      criterion is the pre-implementation baseline run in step 4a, which
+      had 6 errors in the full suite -- the same six tests AC-1 lists.
+notes: >-
+  baseline_failures / AC-1's six tests are the same six modules the task
+  plan identifies as "the six currently failing modules in
+  tests/test_sca_task_filing.py" (task0007.md AC-1). final_failures is
+  empty: the full suite (4051 tests, up from the baseline's 4043 -- 8 new
+  tests added by this task) and check-plugin-invariants.py both pass
+  cleanly after implementation.
