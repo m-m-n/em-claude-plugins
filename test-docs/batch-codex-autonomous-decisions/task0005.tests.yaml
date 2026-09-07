@@ -1,0 +1,53 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestFirstEntrySuccessIsUnchanged.test_only_entry_one_is_attempted_on_success
+      - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd.test_usage_limit_then_provider_error_falls_through_to_third_entry
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_no_batch_resolution_document_leaks_provider_info
+    red_confirmed: true
+    red_reason: "before the chain existed, test_usage_limit_then_provider_error_falls_through_to_third_entry failed: AssertionError: 1 != 0 (the unmodified script had no provider chain at all, so a usage-limit reply from the stub was returned verbatim as a failure instead of advancing to entry 2)"
+  AC-2:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd.test_usage_limit_then_provider_error_falls_through_to_third_entry
+      - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd.test_exactly_one_fallback_line_names_the_answering_entry
+    red_confirmed: true
+    red_reason: "test_usage_limit_then_provider_error_falls_through_to_third_entry: AssertionError: 1 != 0 (returncode); test_exactly_one_fallback_line_names_the_answering_entry: AssertionError: 0 != 1 : stderr was: '' (no CODEX_FALLBACK line was ever produced, since no fallback logic existed)"
+  AC-3:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_timeout_at_entry_one_stops_chain_with_existing_diagnostic
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_generic_error_at_entry_one_stops_chain_unchanged
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_provider_error_at_entry_one_does_not_advance_to_entry_two
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_usage_limit_shaped_response_from_entry_two_does_not_advance
+      - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged.test_last_entry_failure_surfaces_that_entrys_outcome_not_a_synthetic_success
+    red_confirmed: true
+    red_reason: "test_usage_limit_shaped_response_from_entry_two_does_not_advance: AssertionError: Lists differ: [1] != [1, 2] (the unmodified script never reached a second attempt at all, so it could not distinguish a non-switch usage-limit-at-entry-2 case); test_last_entry_failure_surfaces_that_entrys_outcome_not_a_synthetic_success: AssertionError: 1 != 3 (returncode) for the same reason. The timeout and generic-error-at-entry-1 cases were already green pre-implementation because a single-attempt script trivially surfaces its only attempt's outcome -- true red only for the two multi-attempt edge cases above; the two single-attempt tests are kept as guardrails against regressing that pre-existing behavior while the chain is added around it."
+  AC-4:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestArgumentSurfaceUnchanged.test_direct_run_in_consultation_procedure_invocation_form
+      - tests.test_codex_wrapper_provider_fallback.TestArgumentSurfaceUnchanged.test_argument_parsing_vocabulary_is_still_present
+      - tests.test_codex_reviewer_temp_file_isolation.TestWrapperInvocationUnchanged.test_wrapper_invocation_line_is_unchanged_in_both_files
+    red_confirmed: false
+    red_reason: "the wrapper's own CLI argument surface (mode / -C / --output-schema / prompt) was never touched by this task's change -- only the internal provider-chain logic after argument parsing changed. Both AC-4 tests passed before and after the implementation, by design: this criterion is a non-regression guarantee (the plan's own scope explicitly excludes 'the script's own argument surface does not change'), not new behavior to drive red-green on. The pre-existing byte-for-byte pin (test_codex_reviewer_temp_file_isolation.py) stayed green throughout, which is the actual evidence for this criterion."
+  AC-5:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestFirstEntrySuccessIsUnchanged.test_stdout_is_byte_identical_to_stub_answer_with_no_marker
+      - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd.test_exactly_one_fallback_line_names_the_answering_entry
+      - tests.test_codex_wrapper_provider_fallback.TestStdoutCleanlinessOnFallback.test_stdout_excludes_earlier_failed_attempts_text
+    red_confirmed: true
+    red_reason: "test_stdout_excludes_earlier_failed_attempts_text: AssertionError: 'Error: usage limit reached for this account.' unexpectedly found in stdout -- the unmodified script streamed entry 1's failing output straight to stdout with no chain to overwrite it with a later entry's answer. test_exactly_one_fallback_line_names_the_answering_entry failed the same way as under AC-2 (no CODEX_FALLBACK line ever emitted). test_stdout_is_byte_identical_to_stub_answer_with_no_marker was already green pre-implementation (a single unmodified attempt has no marker by construction); kept as a guardrail against a later change adding one."
+  AC-6:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_no_batch_resolution_document_leaks_provider_info
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_scan_catches_a_forged_provider_name_leak
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_scan_catches_a_forged_usage_limit_detection_leak
+      - tests.test_codex_wrapper_provider_fallback.TestProviderNamesScopedToScriptAndTestModule.test_scan_catches_a_forged_provider_error_detection_leak
+    red_confirmed: false
+    red_reason: "the positive check (no leak in the six real documents) was already green before this task touched anything, since those documents currently contain no provider identifiers or usage-limit/provider-error wording at all -- there was nothing to make red by adding the wrapper's chain. The three negative-proof tests (forged samples) are self-contained assertions on the scan helper itself and do not depend on the wrapper implementation; they were written and passed as soon as the test module was authored, before em-workflow/scripts/run_codex_exec.sh was touched. This criterion is proven by the scoped scan holding now (recorded here) and by the forged-sample tests showing the scan is not vacuous, not by a red-to-green transition."
+  AC-7:
+    tests:
+      - tests.test_codex_wrapper_provider_fallback.TestHermeticAndStdlibOnly.test_module_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: "a static import-only check on the test module itself; it was true as soon as the module was written (before touching the wrapper) and stays true, since no implementation change to run_codex_exec.sh can affect what this Python test module imports. The 'contacts no network / no real provider' and 'full suite passes' parts of AC-7 are demonstrated by every other test in this module running against a stubbed codex on PATH, and by the full-suite run recorded in this file's final_failures, rather than by a dedicated red-green test."
