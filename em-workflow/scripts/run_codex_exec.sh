@@ -18,11 +18,35 @@
 # readwrite mode runs with the model's default effort.
 #
 # Provider fallback chain: three fixed entries are tried, in order, on a
-# provider outage. Entry 1 is the invocation above, unmodified. Entry 1
-# hands over to entry 2 on a usage-limit response; entry 2 hands over to
-# entry 3 on a provider error. Any other non-zero outcome -- including a
-# timeout, with its existing diagnostic and exit code -- is NOT a switch
-# condition: it surfaces to the caller unchanged and the chain stops there.
+# provider outage. Entry 1 is the invocation above, unmodified (still with
+# --ignore-user-config). Entries 2 and 3 select the litellm proxy's
+# Vertex-fronted and Muse-fronted models (`-p litellm -m vertex-glm-5.2` /
+# `-p litellm -m muse-spark`) -- the SAME proxy profile and model-selection
+# form the review chain's litellm harness already uses
+# (references/reviewers.yaml), never a second description of a deployment
+# this script does not own. Entries 2/3 do NOT pass --ignore-user-config,
+# so the `litellm` profile they select is not suppressed by the same
+# invocation that selects it. Entry 1 hands over to entry 2 on a
+# usage-limit response; entry 2 hands over to entry 3 on a provider error.
+# Any other non-zero outcome -- including a timeout, with its existing
+# diagnostic and exit code -- is NOT a switch condition: it surfaces to the
+# caller unchanged and the chain stops there.
+#
+# Switch-shape stream: a switch is recognized ONLY from an attempt's
+# STDERR -- the underlying CLI's own diagnostic -- never from stdout (the
+# model-generated reply, which quotes the reviewed repository and is
+# attacker-influenceable). A shape appearing only on stdout never switches.
+#
+# Fallback environment prerequisites: entries 2 and 3 both require the
+# LITELLM_API_KEY environment variable (proxy auth) to be non-empty AND
+# ~/.codex/litellm.config.toml (the `-p litellm` profile) to exist -- the
+# same two conditions references/review-phase.md's harness probe already
+# checks. When a switch condition fires but either is absent, the chain
+# stops immediately without attempting that entry: the caller receives the
+# failing entry's own exit code and output, and exactly one stderr
+# diagnostic prefixed `CODEX_FALLBACK_UNCONFIGURED:` names the fallback
+# entry that was not configured.
+#
 # On entry 1 the wrapper's output is byte-identical to the invocation above,
 # with no marker of any kind. When and only when a later entry answered,
 # exactly one line prefixed `CODEX_FALLBACK:` is written to stderr (never
@@ -121,14 +145,27 @@ else
 fi
 
 # --- Provider chain (fallback on outage) ---
-# Entry 1 is today's invocation, unmodified (no override). Entries 2 and 3
-# are named provider configurations applied via -c overrides, so an
-# observer of the invocation can tell which entry is being attempted.
-PROVIDER_ARGS_1=()
-PROVIDER_ARGS_2=(-c 'model_provider="codex-fallback-provider-beta"')
-PROVIDER_ARGS_3=(-c 'model_provider="codex-fallback-provider-gamma"')
-PROVIDER_NAME_2="codex-fallback-provider-beta"
-PROVIDER_NAME_3="codex-fallback-provider-gamma"
+# Entry 1 is today's invocation, unmodified. Entries 2 and 3 select the
+# litellm proxy's Vertex-fronted and Muse-fronted models by reusing the
+# SAME proxy profile (`-p litellm`) and model-selection flag (`-m <model>`)
+# the review chain's litellm harness already depends on
+# (references/reviewers.yaml) -- never a provider definition this script
+# invents on its own.
+ENTRY_ARGS_1=(--ignore-user-config)
+ENTRY_ARGS_2=(-p litellm -m vertex-glm-5.2)
+ENTRY_ARGS_3=(-p litellm -m muse-spark)
+PROVIDER_NAME_2="litellm/vertex-glm-5.2"
+PROVIDER_NAME_3="litellm/muse-spark"
+
+# Fallback environment prerequisites (see header comment): both non-primary
+# entries need the SAME litellm proxy auth and profile. Checked once per
+# switch point -- before launching an invocation that can only fail -- so
+# the caller can tell "the fallback was never available" from "the
+# fallback was tried and failed".
+FALLBACK_PROFILE_FILE="${HOME:-}/.codex/litellm.config.toml"
+fallback_prerequisites_present() {
+  [[ -n "${LITELLM_API_KEY:-}" ]] && [[ -f "$FALLBACK_PROFILE_FILE" ]]
+}
 
 OUTFILE="$(mktemp)"
 ERRFILE="$(mktemp)"
@@ -162,7 +199,6 @@ run_attempt() {
     --color never \
     --skip-git-repo-check \
     --ignore-rules \
-    --ignore-user-config \
     "${SANDBOX_FLAG[@]}" \
     "${EFFORT_FLAG[@]}" \
     "${WORKDIR_FLAG[@]}" \
@@ -187,7 +223,7 @@ emit_timeout_and_exit() {
 }
 
 # Entry 1
-run_attempt "${PROVIDER_ARGS_1[@]}"
+run_attempt "${ENTRY_ARGS_1[@]}"
 exit_code=$ATTEMPT_EXIT_CODE
 answering_entry=1
 
@@ -196,24 +232,32 @@ if [[ $exit_code -eq 124 ]]; then
 fi
 
 if [[ $exit_code -ne 0 ]] && is_usage_limit_response; then
-  # Entry 2
-  run_attempt "${PROVIDER_ARGS_2[@]}"
-  exit_code=$ATTEMPT_EXIT_CODE
-  answering_entry=2
-
-  if [[ $exit_code -eq 124 ]]; then
-    emit_timeout_and_exit
-  fi
-
-  if [[ $exit_code -ne 0 ]] && is_provider_error_response; then
-    # Entry 3
-    run_attempt "${PROVIDER_ARGS_3[@]}"
+  if fallback_prerequisites_present; then
+    # Entry 2
+    run_attempt "${ENTRY_ARGS_2[@]}"
     exit_code=$ATTEMPT_EXIT_CODE
-    answering_entry=3
+    answering_entry=2
 
     if [[ $exit_code -eq 124 ]]; then
       emit_timeout_and_exit
     fi
+
+    if [[ $exit_code -ne 0 ]] && is_provider_error_response; then
+      if fallback_prerequisites_present; then
+        # Entry 3
+        run_attempt "${ENTRY_ARGS_3[@]}"
+        exit_code=$ATTEMPT_EXIT_CODE
+        answering_entry=3
+
+        if [[ $exit_code -eq 124 ]]; then
+          emit_timeout_and_exit
+        fi
+      else
+        echo "CODEX_FALLBACK_UNCONFIGURED: entry 3 (${PROVIDER_NAME_3}) was not configured -- LITELLM_API_KEY or ${FALLBACK_PROFILE_FILE} not present, so it was not attempted" >&2
+      fi
+    fi
+  else
+    echo "CODEX_FALLBACK_UNCONFIGURED: entry 2 (${PROVIDER_NAME_2}) was not configured -- LITELLM_API_KEY or ${FALLBACK_PROFILE_FILE} not present, so it was not attempted" >&2
   fi
 fi
 
