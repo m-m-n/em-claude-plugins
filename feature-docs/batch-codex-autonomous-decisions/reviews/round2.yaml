@@ -92,6 +92,7 @@ findings:
     confidence: 85
     resolution: deferred
     resolution_reason: "batch mode: rework cap reached"
+    follow_up_task_url: "https://app.notion.com/p/em-workflow-run_codex_exec-sh-rate_limited-3d43509ec8ee8143b69ef74162b6290a"
   - stable_id: 21fcec3b529ebbd1
     severity: medium
     category: architecture
