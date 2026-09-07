@@ -1,0 +1,96 @@
+task_id: task0010
+baseline_failures:
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_changed_lockfile_audits_its_own_directory_not_pyproject_via_r
+  - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='requirements.txt')"
+  - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='pyproject.toml')"
+  - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='poetry.lock')"
+  - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='Pipfile.lock')"
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_at_project_root_audits_the_current_directory
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_in_a_subdirectory_audits_that_directory
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_requirements_file_is_itself_the_audited_target
+  - "test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args (ecosystem='pip')"
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - "test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args (ecosystem='pip')"
+    red_confirmed: true
+    red_reason: >-
+      Baseline: AssertionError: Lists differ:
+      ['pip-audit', '--format', 'json', '--no-deps', '--disable-pip'] !=
+      ['pip-audit', '--format', 'json']. The "manifests/executable/target_flag/
+      severity_map/threshold unchanged" and "no other ecosystem entry changed"
+      halves of this criterion are not separately unit-tested; verified from
+      this task's own diff (git diff --stat shows one line changed inside the
+      pip entry only, per the task plan's Test Notes).
+  AC-2:
+    tests:
+      - "test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args (ecosystem='pip')"
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_requirements_file_is_itself_the_audited_target
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_at_project_root_audits_the_current_directory
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_in_a_subdirectory_audits_that_directory
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_changed_lockfile_audits_its_own_directory_not_pyproject_via_r
+      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='requirements.txt')"
+      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='pyproject.toml')"
+      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='poetry.lock')"
+      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='Pipfile.lock')"
+    red_confirmed: true
+    red_reason: >-
+      All nine tests observed red in the mandatory 4a baseline run before any
+      change (see baseline_failures for the exact assertion diffs), green
+      after the single registry-value edit.
+  AC-3:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Build/outcome check, not a single test: `python3 -m unittest discover -s
+      tests` reported "FAILED (failures=9)" in the 4a baseline run, and
+      "Ran 4098 tests ... OK" after the change. `git diff --stat` (run after
+      implementation) confirms no file under tests/ was modified by this task.
+  AC-4:
+    tests:
+      - tests/test_plugin_version_parity.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_matches_plugin_manifest
+      - tests/test_plugin_version_parity.py::TestPluginManifestVersion::test_version_is_past_baseline
+    red_confirmed: false
+    red_reason: >-
+      These existing pins only assert (a) the two files agree and (b) the
+      version compares strictly greater than a hardcoded historical baseline
+      (0.1.50 / 0.1.65 in the two modules that carry such a check), both of
+      which already held at the pre-task value 0.1.67 -- so they were already
+      green before this task's edit and cannot be made to fail-first without
+      weakening them. This task's specific requirement -- strictly greater
+      than THIS task's pre-change value (0.1.67) -- is not covered by an
+      automated test; per the task plan's Test Notes it is verified manually:
+      both files read "0.1.67" before the edit (git show HEAD:... confirmed)
+      and "0.1.68" after (git diff, shown above), and 0.1.68 > 0.1.67 by
+      dotted-numeric comparison.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/outcome check (`python3 em-workflow/scripts/check-plugin-invariants.py
+      <repo-root>`), not a unittest. The pip-args drift this task fixes does
+      not affect any invariant this script checks (agent_dispatch_parity,
+      stale_references, gate_id_coverage, domains_vocabulary_parity,
+      forbidden_task_assignment_heading, fixture_branch_coverage,
+      digest_reproducibility), so this check was not observed red before the
+      change; it is run once, after the change, and all seven checks report
+      PASS with exit 0.
+  AC-6:
+    tests:
+      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='requirements.txt')"
+      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='pyproject.toml')"
+      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='poetry.lock')"
+      - "test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact (manifest='Pipfile.lock')"
+    red_confirmed: true
+    red_reason: >-
+      Baseline: AssertionError: '--no-deps' unexpectedly found in
+      ['/x/pip-audit', ..., '--format', 'json', '--no-deps', '--disable-pip'],
+      for all four manifest variants. Green after the change (forbidden-token
+      list no longer matches the restored argv, and the audited target
+      position is unchanged by this edit). The clause "a scan run leaves the
+      project root's file state unchanged" has no separate automated test in
+      this task's suite (no test in tests/test_sca_scan_execution.py or
+      elsewhere actually launches pip-audit against a real filesystem); the
+      forbidden-token check above is the available automated proxy, since the
+      restored argv carries no install/write flag for the scanner to act on.
