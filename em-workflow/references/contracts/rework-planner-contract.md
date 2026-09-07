@@ -203,6 +203,11 @@ Outside the specification-change transition, the rework-planner returns a
 3. The review finding alone is not enough to make the Acceptance Criteria
    objectively verifiable.
 
+An `assumptions[].reversible` entry is `false` only for an assumption
+about an operation that cannot be undone once applied; it is `true` for a
+preserved constraint, an invariant, or a fact pinned by an existing test
+(`references/question-packet-schema.md`).
+
 ## Scope & concurrency assumption
 
 During dispatch, only the orchestrator and the dispatched worker may create,
