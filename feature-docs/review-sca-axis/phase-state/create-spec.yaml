@@ -1,0 +1,17 @@
+schema_version: 1
+feature: review-sca-axis
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 1f9e6da44d80f88d892e9f5c0b3b3ab01a18a02b
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
