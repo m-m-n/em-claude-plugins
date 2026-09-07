@@ -182,3 +182,43 @@ records:
       the Go path proven only against a synthetic fixture) reach the integration
       branch relying on a manual confirmation an unattended run cannot perform,
       so each needs a tracked follow-up with an owner. Adopted (A).
+  - question_id: develop.completion-pr-readiness
+    packet_id: null
+    answered_at: "2026-09-08T01:05:00+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [ready-pr-with-known-gaps]
+    freeform: null
+    normalized_answer: "open a ready-for-review PR with an explicit Known gaps / follow-ups section"
+    resolution_note: >-
+      Step C completion. The operator's invocation overrode batch policy's
+      `develop.completion` default (keep branch, no push, no PR) with an explicit
+      instruction: push the integration branch to origin and open a PR against
+      base_branch with `gh pr create`, keeping the branch both locally and on the
+      remote, without auto-merging. That override is explicit and needed no
+      consultation. The genuinely unclear point was PR readiness: verify recorded
+      `pass` (4098 unit tests OK, plugin-invariant checks pass, every requirement
+      resolved) while review left 5 residual high-severity findings, 4 of them
+      real functional gaps, marked `deferred` under batch policy after the rework
+      cap was reached. Options weighed: (A) draft PR — signals the untriaged
+      high-severity gaps and blocks merge until the maintainer marks it ready;
+      (B) ready PR — enumerate the deferred findings in the PR body under an
+      explicit "Known gaps / follow-ups" section. Codex was consulted through
+      em-workflow/scripts/run_codex_exec.sh (readonly, xhigh); entry 1 handed over
+      and entry 2 (litellm/vertex-glm-5.2) answered. It judged (B) comparatively
+      better on: a single-maintainer repository has no review queue for draft
+      status to protect, and "do not auto-merge" plus sole merge control already
+      prevent a premature merge; `gh pr create` defaults to ready, so (B) honors
+      the operator's unqualified "create a Pull Request" without adding an
+      unrequested manual step; the change is additive and non-breaking with verify
+      passing, so `ready` misrepresents no regression risk; the maintainer set the
+      rework cap themselves and already knows the deferred state, leaving draft
+      little informational signal beyond the body section; and enumerating the
+      deferred highs plus the residual mediums in the body preserves triage
+      context without blocking. Strongest counter-argument Codex itself named and
+      it stands: the deferred highs include core correctness gaps (real
+      govulncheck output yields zero findings; npm/cargo/go jobs scan the
+      repository root rather than the projects), so `ready` risks a merge before
+      triage, and draft's merge block would be a cheap guardrail against habit.
+      Adopted (B), with the deferred findings enumerated in the PR body and filed
+      as separate Notion tasks so the triage has an owner outside the PR.
