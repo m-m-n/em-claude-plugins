@@ -254,7 +254,7 @@ review:
   - spec
   residual_critical_high: 9
   needs_rework: true
-  status: pending
+  status: in_progress
   plan:
     floor:
     - comprehensive
