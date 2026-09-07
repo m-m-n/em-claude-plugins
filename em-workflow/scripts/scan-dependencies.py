@@ -247,14 +247,26 @@ SECURITY_TASK_TYPE = "セキュリティ"  # "セキュリティ"
 FILED_PRIORITY = "高"  # "高"
 
 
+def _entry_point_is_valid(entry_point):
+    """Returns True when entry_point is an existing regular file that is
+    executable. Callers must not exec entry_point unless this passes."""
+    try:
+        path = Path(entry_point)
+        return path.is_file() and os.access(path, os.X_OK)
+    except OSError:
+        return False
+
+
 def list_security_tasks(entry_point):
     """Returns a list of {"id", "package", "status", "references"} dicts
     describing every task of the security type, or None when the listing
-    could not be obtained (non-zero exit, or stdout that is not a JSON
-    array) -- the caller degrades to the report branch (IMPLEMENTATION.md
-    D6). `status` is one of "incomplete" / "complete" / "discarded";
-    `references` is the raw current 参照 field text (possibly empty,
-    possibly multi-line)."""
+    could not be obtained (non-zero exit, stdout that is not a JSON array,
+    or entry_point failing validation) -- the caller degrades to the report
+    branch (IMPLEMENTATION.md D6). `status` is one of "incomplete" /
+    "complete" / "discarded"; `references` is the raw current 参照 field
+    text (possibly empty, possibly multi-line)."""
+    if not _entry_point_is_valid(entry_point):
+        return None
     try:
         proc = subprocess.run(
             [str(entry_point), "task", "list", "--type", SECURITY_TASK_TYPE, "--format", "json"],
@@ -282,6 +294,8 @@ def _write_references_tempfile(reference_lines):
 
 
 def create_security_task(entry_point, package, reference_lines):
+    if not _entry_point_is_valid(entry_point):
+        raise EntryPointError(f"entry point {entry_point!r} is not an executable file")
     refs_path = _write_references_tempfile(reference_lines)
     try:
         proc = subprocess.run(
@@ -303,6 +317,8 @@ def create_security_task(entry_point, package, reference_lines):
 
 
 def append_security_task_references(entry_point, task_id, reference_lines):
+    if not _entry_point_is_valid(entry_point):
+        raise EntryPointError(f"entry point {entry_point!r} is not an executable file")
     refs_path = _write_references_tempfile(reference_lines)
     try:
         proc = subprocess.run(
@@ -506,6 +522,51 @@ def unsupported_manifest_reasons(changed_files):
     return sorted({UNSUPPORTED_MANIFESTS[b] for b in changed_basenames if b in UNSUPPORTED_MANIFESTS})
 
 
+# Executable allowlist per known ecosystem (IMPLEMENTATION.md's registered
+# ecosystems only -- an entry naming anything else is rejected rather than
+# executed, regardless of what a registry file/override says).
+ALLOWED_EXECUTABLES = {
+    "npm": {"npm"},
+    "cargo": {"cargo"},
+    "pip": {"pip-audit"},
+    "go": {"govulncheck"},
+}
+
+
+def validate_ecosystem_entry(ecosystem):
+    """Validates a registry ecosystem entry before it is ever turned into a
+    subprocess command: known ecosystem name, executable basename present
+    in ALLOWED_EXECUTABLES for that ecosystem, and args that are a plain
+    list of strings (no shell metacharacters, no path separators -- the
+    registry's args are flags/literal values, not paths to arbitrary
+    binaries). Returns an error string describing the failure, or None
+    when the entry is safe to execute."""
+    name = ecosystem.get("ecosystem")
+    if name not in ALLOWED_EXECUTABLES:
+        return f"{name or 'unknown'}_ecosystem_not_allowlisted"
+
+    executable = ecosystem.get("executable")
+    if not isinstance(executable, str) or not executable:
+        return f"{name}_executable_invalid"
+    if os.path.basename(executable) != executable:
+        return f"{name}_executable_invalid"
+    if executable not in ALLOWED_EXECUTABLES[name]:
+        return f"{name}_executable_not_allowlisted"
+
+    args = ecosystem.get("args") or []
+    if not isinstance(args, list):
+        return f"{name}_args_invalid"
+    for arg in args:
+        if not isinstance(arg, str):
+            return f"{name}_args_invalid"
+        if arg.startswith(os.sep) or (os.altsep and arg.startswith(os.altsep)):
+            return f"{name}_args_invalid"
+        if re.search(r"[;&|`$<>\n\r]", arg):
+            return f"{name}_args_invalid"
+
+    return None
+
+
 def build_command(ecosystem):
     return [ecosystem["executable"]] + list(ecosystem.get("args") or [])
 
@@ -561,8 +622,72 @@ def run_ecosystem_command(ecosystem, project_root):
     try:
         data = json.loads(stdout)
     except json.JSONDecodeError:
-        return None, f"{name}_unparseable_output"
+        try:
+            objs = _parse_json_stream(stdout)
+        except json.JSONDecodeError:
+            return None, f"{name}_unparseable_output"
+        if not objs:
+            return None, f"{name}_unparseable_output"
+        if name == "go":
+            data = {"vulns": _merge_govulncheck_stream(objs)}
+        else:
+            data = objs[-1] if len(objs) == 1 else {"stream": objs}
     return data, None
+
+
+def _parse_json_stream(stdout):
+    """Decodes a whitespace/newline-delimited sequence of JSON values (e.g.
+    `govulncheck -json`'s NDJSON output) using json.JSONDecoder.raw_decode
+    repeatedly, rather than a single json.loads() over the whole stdout --
+    real tool output is not always one JSON object. Raises
+    json.JSONDecodeError when the stream cannot be decoded at all."""
+    decoder = json.JSONDecoder()
+    objs = []
+    idx = 0
+    n = len(stdout)
+    while idx < n:
+        while idx < n and stdout[idx] in " \t\r\n":
+            idx += 1
+        if idx >= n:
+            break
+        obj, end = decoder.raw_decode(stdout, idx)
+        objs.append(obj)
+        idx = end
+    return objs
+
+
+def _merge_govulncheck_stream(objs):
+    """Reduces govulncheck -json's NDJSON stream (separate {"osv": ...} and
+    {"finding": ...} objects) to the same vulns-list shape normalize_go
+    already reads (one dict per vuln carrying "osv", "is_direct",
+    "severity", "package") -- keeps normalize_go itself unchanged so the
+    existing single-object GO_FIXTURE shape still works too."""
+    osv_by_id = {}
+    for obj in objs:
+        if isinstance(obj, dict) and isinstance(obj.get("osv"), dict) and "id" in obj["osv"]:
+            osv_by_id[obj["osv"]["id"]] = obj["osv"]
+
+    vulns = []
+    for obj in objs:
+        if not isinstance(obj, dict):
+            continue
+        finding = obj.get("finding")
+        if not isinstance(finding, dict):
+            continue
+        osv_id = finding.get("osv")
+        osv = osv_by_id.get(osv_id) or {"id": osv_id}
+        trace = finding.get("trace") or []
+        package = trace[0].get("module") if trace and isinstance(trace[0], dict) else None
+        severity = osv.get("database_specific", {}).get("severity") if isinstance(osv.get("database_specific"), dict) else None
+        vulns.append(
+            {
+                "osv": osv,
+                "is_direct": len(trace) == 1,
+                "severity": severity,
+                "package": package or "unknown",
+            }
+        )
+    return vulns
 
 
 def _map_severity(ecosystem, raw_severity):
@@ -776,8 +901,13 @@ def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
             continue
         advisory = entry.get("advisory") or {}
         package = (entry.get("package") or {}).get("name", "unknown")
-        is_direct = package in direct_names
+        if "is_direct" in entry:
+            is_direct = bool(entry.get("is_direct"))
+        else:
+            is_direct = package in direct_names
         raw_severity = _cvss_severity_band(advisory.get("cvss"))
+        if raw_severity is None:
+            raw_severity = entry.get("severity")
         mapped = _map_severity(ecosystem, raw_severity)
         if not _passes_threshold(ecosystem, is_direct, mapped):
             continue
@@ -929,6 +1059,10 @@ def run_scan(project_root, changed_files, registry_path):
     ran_ecosystems = []
     for ecosystem in selected:
         name = ecosystem.get("ecosystem", "unknown")
+        validation_error = validate_ecosystem_entry(ecosystem)
+        if validation_error is not None:
+            skip_reasons.append(validation_error)
+            continue
         executable_path = resolve_executable(ecosystem.get("executable"))
         if executable_path is None:
             skip_reasons.append(f"{name}_tool_not_found")

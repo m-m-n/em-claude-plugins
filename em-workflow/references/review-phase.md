@@ -514,8 +514,8 @@ for every advisory but the surviving one. To prevent this, `same_site` and
 Two advisories against the same package still collapse only if `package`
 AND `advisory_id` agree; two advisories against different packages in the
 same manifest never collapse. `file_tasks` recovers `(package,
-advisory_id)` from this composite key, not from parsing the surviving
-finding's title.
+advisory_id)` by parsing the surviving finding's title per the Finding
+text-encoding contract.
 
 ## Phase R4: Bounded auto-fix (≤ 3 loops, ON by default)
 
