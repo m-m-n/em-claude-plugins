@@ -53,7 +53,7 @@ by the packet's absence or by an empty `questions` array.
 | `assumptions[]`.`statement` | The assumption text |
 | `assumptions[]`.`reason` | Why the assumption was made |
 | `assumptions[]`.`impact` | `low` \| `medium` \| `high` |
-| `assumptions[]`.`reversible` | Boolean |
+| `assumptions[]`.`reversible` | Boolean. `assumptions[].reversible` is `false` only for an assumption about an operation that cannot be undone once applied; it is `true` for a preserved constraint, an invariant, or a fact pinned by an existing test. |
 | `assumptions[]`.`related_question_ids` | Related `question_id` values |
 | `questions` | 1 to 32 question objects |
 | `questions[]`.`question_id` | Question identifier (see pattern above) |

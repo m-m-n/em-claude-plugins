@@ -1,0 +1,135 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_assumptions_reversible_criterion.TestDefinitionSiteCriterion.test_schema_document_states_both_halves
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_definition_site_real_vs_stripped
+    red_confirmed: true
+    red_reason: >-
+      Before the schema-row edit, the row read
+      "| `assumptions[]`.`reversible` | Boolean |" and the matcher failed
+      with "AssertionError: False is not true" (missing the irreversible-half
+      and preserved-half phrases). The minimality half of AC-1 ("adds no
+      justification, no incident reference and no restatement of the
+      resolution procedure") has no mechanical check per IMPLEMENTATION.md's
+      Open Questions (NFR6 is human-verified only); the added row text was
+      written to satisfy it by inspection.
+  AC-2:
+    tests:
+      - tests.test_assumptions_reversible_criterion.TestCitingSitesCarryCriterion.test_requirements_analyst_agent_cites_criterion
+      - tests.test_assumptions_reversible_criterion.TestCitingSitesCarryCriterion.test_implementation_planner_agent_cites_criterion
+      - tests.test_assumptions_reversible_criterion.TestCitingSitesCarryCriterion.test_rework_planner_agent_cites_criterion
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_requirements_analyst_agent_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_implementation_planner_agent_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_rework_planner_agent_real_vs_stripped
+    red_confirmed: true
+    red_reason: >-
+      Before each agent prompt gained its binding sentence, none of the
+      three files contained the field token / irreversible-half /
+      preserved-half phrases together, so `_cites_criterion(real)` returned
+      False and each per-file test failed with "AssertionError: False is
+      not true".
+  AC-3:
+    tests:
+      - tests.test_assumptions_reversible_criterion.TestCitingSitesCarryCriterion.test_analyst_contract_cites_criterion
+      - tests.test_assumptions_reversible_criterion.TestCitingSitesCarryCriterion.test_planner_contract_cites_criterion
+      - tests.test_assumptions_reversible_criterion.TestCitingSitesCarryCriterion.test_rework_planner_contract_cites_criterion
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_analyst_contract_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_planner_contract_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_rework_planner_contract_real_vs_stripped
+    red_confirmed: true
+    red_reason: >-
+      Same failure mode as AC-2, observed on the three worker-contract
+      documents before each gained its binding sentence:
+      "AssertionError: False is not true" on `_cites_criterion(real)`.
+  AC-4:
+    tests:
+      - tests.test_assumptions_reversible_criterion.TestConsumptionSiteUnmodified.test_retains_every_pinned_substring
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_consumption_retention_substrings_absent_from_forged_stripped_copy
+    red_confirmed: false
+    red_reason: >-
+      This task never edits question-resolution.md (D1), so the retention
+      test was green from the very first run -- there is no implementation
+      step that could have made it red, since the criterion is "stays
+      byte-for-byte as it was", not new behavior. The non-vacuity companion
+      substitutes: it forges a copy with every pinned substring removed and
+      confirms each one is genuinely absent from that forgery, proving the
+      positive check is not matching vacuously. `git diff` / `git status`
+      additionally confirm question-resolution.md carries zero changes in
+      this task's commits.
+  AC-5:
+    tests:
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_definition_site_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_requirements_analyst_agent_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_implementation_planner_agent_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_rework_planner_agent_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_analyst_contract_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_planner_contract_real_vs_stripped
+      - tests.test_assumptions_reversible_criterion.TestFailsWhenCriterionStrippedPerFile.test_rework_planner_contract_real_vs_stripped
+    red_confirmed: true
+    red_reason: >-
+      Each test's first assertion (`assertTrue(_carries_criterion(real))` /
+      `assertTrue(_cites_criterion(real))`) is the same assertion pinned
+      under AC-1/AC-2/AC-3 and was observed failing pre-implementation for
+      all seven documents ("AssertionError: False is not true"); the second
+      assertion (forged/stripped copy must fail) passed from the first run
+      in every case, since a document that never carried the criterion
+      trivially fails the matcher once stripped too. Two supplementary edge
+      tests in the same class
+      (test_citing_site_with_pointer_but_missing_preserved_half_fails,
+      test_citing_site_with_pointer_but_missing_irreversible_half_fails)
+      were green from the first run rather than red -- the real document
+      already contained the pointer token for an unrelated, pre-existing
+      reason before this task touched it, so stripping tokens it never had
+      was a no-op against an already-failing matcher. They are kept as
+      forward-looking regression guards but are not claimed as red-confirmed
+      here.
+  AC-6:
+    tests:
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_carries_criterion_accepts_forged_text_with_criterion
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_carries_criterion_rejects_unrelated_forged_text
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_carries_criterion_rejects_field_token_alone
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_carries_criterion_requires_every_preserved_half_token
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_cites_criterion_accepts_forged_text_with_pointer
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_cites_criterion_rejects_forged_text_missing_pointer
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_cites_criterion_rejects_pointer_only_forged_text
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_gate_id_extractor_finds_nothing_in_unrelated_forged_text
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_gate_id_extractor_detects_forged_new_gate_id
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_gate_id_extractor_ignores_file_extension_shaped_tokens
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_feature_attribution_checker_rejects_unrelated_forged_text
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_feature_attribution_checker_detects_forged_feature_path
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_feature_attribution_checker_detects_forged_task_plan_filename
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_stdlib_checker_accepts_forged_stdlib_only_source
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_stdlib_checker_detects_forged_non_stdlib_import
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_consumption_retention_substrings_absent_from_forged_stripped_copy
+    red_confirmed: false
+    red_reason: >-
+      Each matcher/extractor and its non-vacuity companion were authored
+      together in this same new file, so there is no prior implementation
+      state for the companion to have lagged behind -- correctness (accept
+      on forged-with, reject on forged-without) was verified by construction
+      on the very first run rather than by a red-then-green migration. This
+      is a property of the test module's own design (every matcher is
+      exercised against both an accepting and a rejecting forged sample),
+      not of the seven documents' content.
+  AC-7:
+    tests:
+      - tests.test_assumptions_reversible_criterion.TestNoNewGateId.test_no_document_gains_a_new_gate_id
+      - tests.test_assumptions_reversible_criterion.TestNoFeatureAttribution.test_no_document_carries_feature_attribution
+      - tests.test_assumptions_reversible_criterion.TestStandardLibraryOnlyImports.test_every_test_module_imports_only_stdlib
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_gate_id_extractor_detects_forged_new_gate_id
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_feature_attribution_checker_detects_forged_feature_path
+      - tests.test_assumptions_reversible_criterion.TestNonVacuity.test_stdlib_checker_detects_forged_non_stdlib_import
+    red_confirmed: false
+    red_reason: >-
+      All three absence/invariant checks were green from the first run:
+      the six binding sentences added by this task introduce no new
+      gate_id-shaped token, no attribution to this feature (its own
+      feature-docs path or task-plan filenames), and the new test module
+      imports only the standard library (verified all 95 pre-existing
+      modules already did too, so no narrowing was needed). Each has a
+      non-vacuity companion (listed above) that forges a genuine violation
+      and confirms the underlying extractor/checker would catch it, proving
+      the absence checks are not passing by vacuously matching nothing.
