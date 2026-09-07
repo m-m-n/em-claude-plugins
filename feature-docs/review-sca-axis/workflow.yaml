@@ -85,7 +85,7 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: high
     requirements: [FR10, FR11, FR22, FR24]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/review-sca-axis/task0004
   task0005:
