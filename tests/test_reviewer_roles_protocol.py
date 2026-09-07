@@ -416,7 +416,7 @@ FROZEN_FINDING_REQUIRED = [
 ]
 
 FROZEN_SEVERITY_ENUM = ["critical", "high", "medium"]
-FROZEN_SOURCE_ENUM = ["claude", "codex", "litellm"]
+FROZEN_SOURCE_ENUM = ["claude", "codex", "litellm", "tool"]
 
 
 class TestReviewOutputSchemaCategoryWidened(unittest.TestCase):
