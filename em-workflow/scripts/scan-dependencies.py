@@ -543,7 +543,7 @@ def unsupported_manifest_reasons(changed_files):
 # executed, regardless of what a registry file/override says).
 ALLOWED_EXECUTABLES = {
     "npm": {"npm"},
-    "cargo": {"cargo"},
+    "cargo": {"cargo-audit"},
     "pip": {"pip-audit"},
     "go": {"govulncheck"},
 }
@@ -607,6 +607,149 @@ def manifest_file_for(ecosystem, changed_files):
             return f
     manifest_list = ecosystem.get("manifests") or ["unknown"]
     return manifest_list[0]
+
+
+# ---------------------------------------------------------------------------
+# Scan job construction (IMPLEMENTATION.md Shared Components, "Scan job";
+# task0008 Design, "The scan job" / "Trusted binary, never a multiplexer
+# subcommand" / "Configuration isolation"). PURE: no subprocess is launched
+# by anything in this section. Pre: the registry entry has already passed
+# validate_ecosystem_entry and its executable has already resolved on PATH
+# (resolve_executable) -- an unresolvable/invalid entry yields no job and
+# the ecosystem's existing tool-absent skip reason instead (build_scan_jobs
+# below), never a fallback command form.
+# ---------------------------------------------------------------------------
+
+# Process plumbing carried through unchanged when present -- locating the
+# shell, temp space, the already-resolved binary on PATH -- never a source
+# of a TOOL'S OWN configuration (a registry endpoint, a subcommand alias).
+# Everything else the reviewed project's environment might carry is left
+# out: the child environment is built explicitly, never inherited
+# wholesale (task0008 Design, "Configuration isolation").
+CHILD_ENV_BASE_KEYS = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "USERPROFILE")
+
+# Per-ecosystem pins, each through the tool's OWN documented environment
+# variable, keeping the reviewed project's configuration out of the set the
+# child process reads from:
+#   npm   -- npm_config_registry pins the package-registry endpoint ahead of
+#            a hostile `registry=` line in the reviewed project's own
+#            .npmrc (environment variables outrank a project .npmrc in
+#            npm's own documented config precedence); npm_config_userconfig
+#            points the user-level config file outside the reviewed tree.
+#   cargo -- cargo-audit is resolved and executed directly (never through
+#            the `cargo` front end -- see ALLOWED_EXECUTABLES), which
+#            already removes the [alias] dispatch the registry's OLD
+#            `cargo audit` form was vulnerable to; no further pin closes a
+#            vector for this ecosystem today.
+#   pip   -- PIP_CONFIG_FILE keeps a reviewed project's own pip.conf from
+#            being read; PIP_INDEX_URL pins the package index.
+#   go    -- GOENV=off disables reading any go env config file at all;
+#            GOFLAGS is pinned empty and GOPROXY pinned to the public
+#            module proxy so neither can be redirected by one.
+ECOSYSTEM_ENV_PINS = {
+    "npm": {
+        "npm_config_registry": "https://registry.npmjs.org/",
+        "npm_config_userconfig": os.devnull,
+    },
+    "cargo": {},
+    "pip": {
+        "PIP_CONFIG_FILE": os.devnull,
+        "PIP_INDEX_URL": "https://pypi.org/simple/",
+    },
+    "go": {
+        "GOENV": "off",
+        "GOFLAGS": "",
+        "GOPROXY": "https://proxy.golang.org,direct",
+    },
+}
+
+
+def build_child_env(ecosystem, environ=None):
+    """The explicit child environment for one scan job: a minimal base
+    (process plumbing only, see CHILD_ENV_BASE_KEYS) plus this ecosystem's
+    pins (ECOSYSTEM_ENV_PINS) layered on top. Never reads any file inside
+    the reviewed project -- the result is identical regardless of what
+    configuration files that project's tree happens to contain."""
+    environ = os.environ if environ is None else environ
+    name = ecosystem.get("ecosystem", "unknown")
+    env = {key: environ[key] for key in CHILD_ENV_BASE_KEYS if key in environ}
+    env.update(ECOSYSTEM_ENV_PINS.get(name, {}))
+    return env
+
+
+def _pip_target(manifest_file):
+    """task0008 Design, "The pip job audits the reviewed project, not the
+    ambient environment": a changed requirements file IS the audited
+    input, paired with the registry's `target_flag`. Anything else
+    selected for pip (a changed pyproject.toml, or a changed poetry.lock /
+    Pipfile.lock) audits that project's OWN DIRECTORY instead, as a bare
+    positional argument with no flag -- pip-audit's `-r` flag parses pip's
+    own requirements format, not a TOML/JSON lock format, so a lockfile or
+    a manifest that only declares version ranges is never passed to it
+    directly. Returns (flagged, target): `flagged` is True when the
+    registry's `target_flag` belongs immediately before `target` in the
+    argument vector."""
+    if os.path.basename(manifest_file) == "requirements.txt":
+        return True, manifest_file
+    dirname = os.path.dirname(manifest_file)
+    return False, (dirname if dirname else ".")
+
+
+def build_scan_job(ecosystem, manifest_file, project_root, executable_path, environ=None):
+    """Builds ONE scan job from `ecosystem`'s ALREADY-RESOLVED absolute
+    `executable_path` (never re-resolved here -- see build_scan_jobs).
+    Carries: the ecosystem name; the project-relative `manifest_file`; the
+    full argument vector (`argv[0]` is the absolute, allowlisted executable
+    path -- never a package-manager front end resolving a subcommand
+    through the reviewed project's own configuration); the working
+    directory (the reviewed project's own root -- still the thing being
+    audited, NFR2's read-only discipline unchanged); and the explicit
+    child environment (build_child_env). Launches nothing -- every claim
+    about the resulting command is assertable without running a scanner."""
+    name = ecosystem.get("ecosystem", "unknown")
+    argv = [executable_path]
+    if name == "pip":
+        flagged, target = _pip_target(manifest_file)
+        target_flag = ecosystem.get("target_flag")
+        if flagged and target_flag:
+            argv.append(target_flag)
+        argv.append(target)
+    argv.extend(ecosystem.get("args") or [])
+    return {
+        "ecosystem": name,
+        "manifest": manifest_file,
+        "argv": argv,
+        "cwd": str(project_root),
+        "env": build_child_env(ecosystem, environ),
+    }
+
+
+def build_scan_jobs(registry, changed_files, project_root, environ=None):
+    """Orchestrates job construction for every SELECTED ecosystem
+    (select_ecosystems, unchanged): validates each entry
+    (validate_ecosystem_entry), resolves its executable on PATH
+    (resolve_executable), and builds a job for it (build_scan_job). An
+    invalid entry or an unresolvable binary contributes its existing
+    machine-stable skip reason and NO job -- no fallback command form is
+    ever attempted for it. Returns (jobs, skip_reasons); executing a job
+    (judging its exit status and payload together) is the sibling rework
+    task's contract, not this function's."""
+    selected = select_ecosystems(registry, changed_files)
+    jobs = []
+    skip_reasons = []
+    for ecosystem in selected:
+        name = ecosystem.get("ecosystem", "unknown")
+        validation_error = validate_ecosystem_entry(ecosystem)
+        if validation_error is not None:
+            skip_reasons.append(validation_error)
+            continue
+        executable_path = resolve_executable(ecosystem.get("executable"))
+        if executable_path is None:
+            skip_reasons.append(f"{name}_tool_not_found")
+            continue
+        manifest_file = manifest_file_for(ecosystem, changed_files)
+        jobs.append(build_scan_job(ecosystem, manifest_file, project_root, executable_path, environ))
+    return jobs, skip_reasons
 
 
 def run_ecosystem_command(ecosystem, project_root):
@@ -979,17 +1122,194 @@ def normalize_cargo(ecosystem, data, manifest_file, project_root=None):
     return findings
 
 
-def normalize_pip(ecosystem, data, manifest_file):
+# ---------------------------------------------------------------------------
+# pip direct-dependency resolution (task0008 Design, "The pip normalizer's
+# real input contract"): pip-audit's `--format json` output carries no
+# per-dependency directness flag, so directness is resolved from the
+# reviewed manifest's own declared dependency set -- the same SHAPE of
+# resolution the cargo path already performs against Cargo.toml
+# (_cargo_direct_dependency_names), reusing _resolve_project_relative so a
+# changed-file entry can never open a file outside the project root.
+# ---------------------------------------------------------------------------
+
+_REQUIREMENTS_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*")
+
+
+def _pip_requirements_direct_names(content):
+    """Package names declared in a requirements.txt-style file: option
+    lines (-e, -r, --hash, ...), blank lines and comments are skipped; an
+    extras suffix (`pkg[extra]`) and an environment marker (`; ...`) are
+    stripped before the bare package name is matched."""
+    names = set()
+    for raw_line in content.splitlines():
+        stripped = raw_line.split("#", 1)[0].strip()
+        if not stripped or stripped.startswith("-"):
+            continue
+        stripped = stripped.split(";", 1)[0].strip()
+        stripped = re.sub(r"\[[^\]]*\]", "", stripped)
+        match = _REQUIREMENTS_NAME_RE.match(stripped)
+        if match:
+            names.add(match.group(0))
+    return names
+
+
+_POETRY_DEP_TABLES = {"tool.poetry.dependencies", "tool.poetry.dev-dependencies"}
+_POETRY_TABLE_KEY_RE = re.compile(r'^"?([A-Za-z0-9][A-Za-z0-9_.\-]*)"?\s*=')
+_PEP508_NAME_HEAD_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*")
+
+
+def _extract_pep508_name(entry):
+    """The bare package name from one PEP 508 dependency string (e.g.
+    `"requests[socks]>=2.25; python_version >= '3.7'"` -> `requests`)."""
+    entry = entry.split(";", 1)[0]            # drop an environment marker
+    entry = re.sub(r"\[[^\]]*\]", "", entry)   # drop an extras suffix
+    match = _PEP508_NAME_HEAD_RE.match(entry.strip())
+    return match.group(0) if match else None
+
+
+def _pip_pyproject_direct_names(content):
+    """Package names declared in pyproject.toml's PEP 621 `[project]`
+    `dependencies` list, or Poetry's `[tool.poetry.dependencies]` /
+    `[tool.poetry.dev-dependencies]` tables -- a lightweight TOML-lite
+    scan, the same shape as the cargo path's own Cargo.toml scan (neither
+    pip-audit's nor cargo-audit's JSON carries a per-entry directness field
+    to read this from directly)."""
+    names = set()
+    current_table = None
+    in_dependencies_list = False
+    for raw_line in content.splitlines():
+        line = raw_line.split("#", 1)[0]
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("[") and stripped.endswith("]"):
+            current_table = stripped.strip("[]").strip()
+            in_dependencies_list = False
+            continue
+        if current_table == "project":
+            if re.match(r"^dependencies\s*=\s*\[", stripped):
+                in_dependencies_list = True
+                stripped = re.sub(r"^dependencies\s*=\s*\[", "", stripped)
+            if in_dependencies_list:
+                for entry in re.findall(r'"([^"]+)"', stripped):
+                    name = _extract_pep508_name(entry)
+                    if name:
+                        names.add(name)
+                if "]" in stripped:
+                    in_dependencies_list = False
+                continue
+        if current_table in _POETRY_DEP_TABLES:
+            match = _POETRY_TABLE_KEY_RE.match(stripped)
+            if match and match.group(1).lower() != "python":
+                names.add(match.group(1))
+    return names
+
+
+def _pip_manifest_candidate(project_root, manifest_file):
+    """Resolves the manifest to scan for direct-dependency names. When
+    manifest_file is itself a lockfile (poetry.lock / Pipfile.lock --
+    selected by manifest_file_for when only the lockfile changed), looks
+    for pyproject.toml alongside it instead, mirroring
+    _cargo_manifest_candidate's resolution -- a lockfile carries no
+    dependency TABLE to scan. Never returns a lockfile path. Returns None
+    when unresolvable/unsafe (see _resolve_project_relative)."""
+    if os.path.basename(manifest_file) in {"poetry.lock", "Pipfile.lock"}:
+        candidate_rel = os.path.join(os.path.dirname(manifest_file), "pyproject.toml")
+    else:
+        candidate_rel = manifest_file
+    return _resolve_project_relative(project_root, candidate_rel)
+
+
+def _pip_direct_dependency_names(project_root, manifest_file):
+    manifest_path = _pip_manifest_candidate(project_root, manifest_file)
+    if not manifest_path:
+        return set()
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except OSError:
+        return set()
+    if os.path.basename(manifest_path) == "pyproject.toml":
+        return _pip_pyproject_direct_names(content)
+    return _pip_requirements_direct_names(content)
+
+
+# ---------------------------------------------------------------------------
+# pip severity resolution (task0008 Design, "The pip normalizer's real
+# input contract"): pip-audit's `--format json` output carries no
+# per-advisory severity string either -- each vuln entry has only an
+# identifier, fix versions, aliases and a description. The one piece of
+# STRUCTURED severity metadata that description can actually carry is an
+# embedded CVSS v3 vector string; when present, its band is computed with
+# the SAME helper the cargo path already uses for cargo-audit's own CVSS
+# vector (_cvss_severity_band). When no vector is present, severity is
+# genuinely undeterminable from this output -- callers must not treat that
+# as below threshold.
+# ---------------------------------------------------------------------------
+
+_CVSS_VECTOR_RE = re.compile(r"CVSS:3\.[01](?:/[A-Z]{1,3}:[A-Za-z])+")
+
+
+def _pip_severity_from_description(ecosystem, description):
+    """Returns the mapped severity (per this ecosystem's severity_map) when
+    `description` embeds a CVSS v3 vector, else None -- "cannot be
+    determined from that output" (task0008 Design), never a guess."""
+    if not isinstance(description, str):
+        return None
+    match = _CVSS_VECTOR_RE.search(description)
+    if not match:
+        return None
+    band = _cvss_severity_band(match.group(0))
+    if band is None:
+        return None
+    return _map_severity(ecosystem, band)
+
+
+def _pip_advisory_headline(description):
+    """The natural-language sentence(s) preceding an embedded CVSS vector
+    (or the whole description when none is present) -- used as the
+    finding's advisory-short-title source so a raw CVSS vector string
+    never appears in `title`."""
+    if not isinstance(description, str):
+        return None
+    match = _CVSS_VECTOR_RE.search(description)
+    headline = description[: match.start()] if match else description
+    headline = headline.strip()
+    return headline or None
+
+
+def normalize_pip(ecosystem, data, manifest_file, project_root=None):
+    """AC-5/6/7 (task0008): pip-audit's real `--format json` shape carries
+    NEITHER a per-dependency directness flag NOR a per-advisory severity
+    string. Directness is resolved from the reviewed manifest's own
+    declared dependency set (_pip_direct_dependency_names) -- never read
+    from a tool-supplied field, because none exists. Severity is taken
+    from advisory metadata actually present in the output
+    (_pip_severity_from_description); an advisory whose severity cannot be
+    determined that way is NEVER silently treated as below threshold -- it
+    is excluded from `findings` but counted (direct dependencies only,
+    since a transitive one is dropped regardless of severity) and returned
+    as `skip_info` for the caller to fold into the machine-readable skip
+    surface and the summary's affected count (NFR4: counts only, no
+    advisory-sourced text). Returns (findings, skip_info); skip_info is
+    None when nothing was undetermined."""
     findings = []
+    direct_names = _pip_direct_dependency_names(project_root, manifest_file) if project_root else set()
+    undetermined_count = 0
     for dep in data.get("dependencies") or []:
         if not isinstance(dep, dict):
             continue
-        is_direct = bool(dep.get("direct"))
         package = dep.get("name", "unknown")
+        is_direct = package in direct_names
         for vuln in dep.get("vulns") or []:
             if not isinstance(vuln, dict):
                 continue
-            mapped = _map_severity(ecosystem, vuln.get("severity"))
+            description = vuln.get("description")
+            mapped = _pip_severity_from_description(ecosystem, description)
+            if mapped is None:
+                if is_direct:
+                    undetermined_count += 1
+                continue
             if not _passes_threshold(ecosystem, is_direct, mapped):
                 continue
             fix_versions = vuln.get("fix_versions") or []
@@ -998,14 +1318,15 @@ def normalize_pip(ecosystem, data, manifest_file):
                     manifest_file=manifest_file,
                     package=package,
                     advisory_id=vuln.get("id", "UNKNOWN"),
-                    title=vuln.get("description") or vuln.get("id") or "vulnerability",
+                    title=_pip_advisory_headline(description) or vuln.get("id") or "vulnerability",
                     affected_range=dep.get("version"),
                     fixed_version=fix_versions[0] if fix_versions else None,
-                    summary=vuln.get("description"),
+                    summary=description,
                     severity=mapped,
                 )
             )
-    return findings
+    skip_info = {"reason": "pip_severity_undetermined", "count": undetermined_count} if undetermined_count else None
+    return findings, skip_info
 
 
 def normalize_go(ecosystem, data, manifest_file):
@@ -1108,6 +1429,7 @@ def run_scan(project_root, changed_files, registry_path):
     all_findings = []
     skip_reasons = []
     ran_ecosystems = []
+    pip_severity_undetermined_total = 0
     for ecosystem in selected:
         name = ecosystem.get("ecosystem", "unknown")
         validation_error = validate_ecosystem_entry(ecosystem)
@@ -1129,6 +1451,19 @@ def run_scan(project_root, changed_files, registry_path):
         manifest_file = manifest_file_for(ecosystem, changed_files)
         if name == "cargo":
             all_findings.extend(normalizer(ecosystem, data, manifest_file, project_root))
+        elif name == "pip":
+            # task0008 AC-7: an advisory whose severity cannot be
+            # determined from pip-audit's own output is never silently
+            # treated as below threshold -- normalize_pip excludes it from
+            # findings but reports it via skip_info instead, folded here
+            # into the SAME machine-readable skip surface every other
+            # ecosystem's reasons use, plus a counts-only summary note
+            # (no advisory-sourced text in either -- NFR4).
+            pip_findings, pip_skip = normalizer(ecosystem, data, manifest_file, project_root)
+            all_findings.extend(pip_findings)
+            if pip_skip:
+                skip_reasons.append(pip_skip["reason"])
+                pip_severity_undetermined_total += pip_skip["count"]
         else:
             all_findings.extend(normalizer(ecosystem, data, manifest_file))
         ran_ecosystems.append(name)
@@ -1141,6 +1476,9 @@ def run_scan(project_root, changed_files, registry_path):
     summary = f"Scanned {', '.join(sorted(ran_ecosystems))}; {len(all_findings)} finding(s) at or above threshold."
     if skip_reasons:
         summary += " Skipped: " + "; ".join(sorted(skip_reasons)) + "."
+    if pip_severity_undetermined_total:
+        noun = "advisory" if pip_severity_undetermined_total == 1 else "advisories"
+        summary += f" {pip_severity_undetermined_total} pip {noun} with undetermined severity."
     return _findings_result(all_findings, summary)
 
 
