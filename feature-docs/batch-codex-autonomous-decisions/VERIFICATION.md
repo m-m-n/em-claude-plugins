@@ -27,7 +27,9 @@ task's own completion contract lives in its task plan's Acceptance Criteria.
 
 TS-1 through TS-12 are SPEC.md's own scenarios. TS-13 through TS-20 are added
 by this document to cover requirements SPEC.md left without a scenario; they
-add coverage and contradict nothing in SPEC.md.
+add coverage and contradict nothing in SPEC.md. TS-21 through TS-25 are added
+for the review round-1 rework tasks (task0007, task0008); they tighten the
+existing coverage of the same requirements and contradict nothing above.
 
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
@@ -51,6 +53,11 @@ add coverage and contradict nothing in SPEC.md.
 | TS-18 | Gate vocabulary stability | The policy file's gate key set gains no entry and the gate-option exemption registry stays as it is | Unit |
 | TS-19 | Full suite | `python3 -m unittest discover -s tests` exits 0 with every touched pin updated rather than deleted | Integration |
 | TS-20 | Reason recording | Every surviving abort still records its reason and the evidence considered; every relaxed continuation records its decision basis | Unit |
+| TS-21 | The chain's non-primary entries are resolvable | Each non-primary entry's invocation carries a provider definition, not a name alone, and no flag suppressing the source that definition depends on; the two entries resolve to distinct providers in the order the specification names | Integration |
+| TS-22 | What may and may not advance the chain | A switch is decided only from the underlying CLI's own diagnostic output: a switch shape present only in the model-generated reply never advances the chain, and a switch condition whose non-primary entry has no configured environment stops the chain with a diagnostic instead of an unusable invocation | Integration |
+| TS-23 | The surviving-aborts enumeration | Names the Classification gate's direction-1 origin-membership failure explicitly (absent, unresolvable, non-member); the superseded step-3-wide member string is proved absent; the set is still enumerated exactly once and direction 2's relaxation wording is unchanged | Unit |
+| TS-24 | One statement site for the batch direction-2 continuation | The fact is stated once, asserted by an occurrence count; the fallback's step 3 and its `block` branch reach it by citation, and the `block` branch states only the action it owns | Unit |
+| TS-25 | The autonomous decision's `source` mapping | The relaxed route's writer entry maps all three paths (consultation mapping, escalation decision, minimum-side-effect fallthrough) using only the existing closed vocabulary; the escalation case never asserts that Codex was consulted; the resolution SSOT and the record SSOT agree on that case | Unit |
 
 ## Code Quality Verification
 
@@ -81,36 +88,36 @@ add coverage and contradict nothing in SPEC.md.
 |-------------|-------|--------------|
 | FR1 | task0001 | TS-1 |
 | FR2 | task0001 | TS-1 |
-| FR3 | task0001, task0003 | TS-2, TS-6 |
+| FR3 | task0001, task0003, task0008 | TS-2, TS-6, TS-23 |
 | FR4 | task0001 | TS-2 |
 | FR5 | task0001 | TS-4 |
-| FR6 | task0001 | TS-4 |
+| FR6 | task0001, task0008 | TS-4, TS-23 |
 | FR7 | task0001 | TS-13 |
 | FR8 | task0001 | TS-14 |
 | FR9 | task0001 | TS-15 |
 | FR10 | task0001 | TS-3 |
-| FR11 | task0001 | TS-3 |
-| FR12 | task0001 | TS-16 |
-| FR13 | task0005 | TS-11 |
-| FR14 | task0001, task0002 | TS-7, TS-8 |
-| FR15 | task0002 | TS-8 |
+| FR11 | task0001, task0008 | TS-3, TS-24 |
+| FR12 | task0001, task0008 | TS-16, TS-24 |
+| FR13 | task0005, task0007 | TS-11, TS-21, TS-22 |
+| FR14 | task0001, task0002, task0008 | TS-7, TS-8, TS-25 |
+| FR15 | task0002, task0008 | TS-8, TS-25 |
 | FR16 | task0002 | TS-7 |
 | FR17 | task0003 | TS-5 |
 | FR18 | task0004 | TS-9 |
 | FR19 | task0004 | TS-9 |
 | FR20 | task0004 | TS-10 |
-| FR21 | task0001, task0002, task0003, task0004 | TS-1, TS-2, TS-3, TS-4 |
+| FR21 | task0001, task0002, task0003, task0004, task0008 | TS-1, TS-2, TS-3, TS-4, TS-23 |
 | FR22 | task0003 | TS-6 |
 | FR23 | task0006 | TS-17 |
-| NFR1 | task0001, task0002, task0003, task0004 | TS-5 |
+| NFR1 | task0001, task0002, task0003, task0004, task0008 | TS-5, TS-24 |
 | NFR2 | task0001, task0004 | TS-12 |
-| NFR3 | task0001, task0002 | TS-20 |
-| NFR4 | task0001, task0005 | TS-11, TS-12 |
+| NFR3 | task0001, task0002, task0008 | TS-20, TS-25 |
+| NFR4 | task0001, task0005, task0007 | TS-11, TS-12, TS-21 |
 | NFR5 | task0002, task0003 | TS-6, TS-7 |
 | NFR6 | task0001 | TS-13, TS-14 |
-| NFR7 | task0001 | TS-14 |
+| NFR7 | task0001, task0007 | TS-14, TS-22 |
 | NFR8 | task0001, task0003, task0004 | TS-18 |
-| NFR9 | task0001, task0002, task0003, task0004, task0005, task0006 | TS-19 |
+| NFR9 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-19 |
 
 ## E2E Testing
 
@@ -154,6 +161,6 @@ recorded finding rather than an oversight.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 20 | 20 | 0 | 0 |
+| Test scenarios | 25 | 25 | 0 | 0 |
 | Success criteria | 8 | 7 | 0 | 1 |
 | Manual checks | 4 | 0 | 0 | 4 |

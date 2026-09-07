@@ -49,7 +49,7 @@ source of truth for it.
 |-----------|----------------|------------------------------|---------------|
 | The batch relaxation rule | The single statement that, in `--batch`, the three arms route to consultation while interactive aborts immediately | Precondition: the question's `gate_id` has been identified and the invocation's arguments are known. Postcondition: exactly one document (`question-resolution.md`) states the rule; every other document that mentions it cites that path and adds no condition, no exception and no ordering of its own | task0001 (states) / task0002, task0003, task0004 (cite) |
 | The surviving-abort set | The aborts that keep aborting fail-closed in BOTH modes: the explicit fail-closed gate-list slot; `category: spec-change` whose `gate_id` is not exactly `rework.spec-change`; both directions of the malformed `gate_id` / `category` pairing; and the Classification gate's step-3 origin-verification failures | Precondition: none. Postcondition: the set is ENUMERATED once, in `question-resolution.md`. A citing document refers to it by a collective phrase plus that path ("the aborts question-resolution.md keeps fail-closed in both modes") and never re-enumerates its members | task0001 (enumerates) / task0003 (cites, in the `gate_fail_closed` coverage wording) |
-| The batch audit record for an autonomous fail-closed-route resolution | One appended element of `batch-audit.yaml` `records[]` per resolution taken through the relaxed route | Precondition: the route reached a resolution (mapped suggestion, escalation decision, or minimum-side-effect fallthrough). Postcondition: one element in the existing batch-audit-record shape — no field added, none removed; `question_id` is the question's own `question_id` when a worker packet exists and the gate's `gate_id` when the gate was orchestrator-opened; `packet_id` is null in the orchestrator-opened case; `source` is `batch-codex-consultation` when a suggestion mapped and `batch-safe-default` when the minimum-side-effect branch was taken; `resolution_note` names the gate, the option chosen, the options not chosen, the discussion's key points, whether Codex was consulted, whether a fallback provider answered, and whether the Opus escalation ran together with its reasoning. The shape and the writer entry are stated in `phase-state.md`; `question-resolution.md` states only the obligation to append and cites that path | task0002 (defines the writer entry) / task0001 (states the obligation) / task0002 (reports it in `batch-mode.md`) |
+| The batch audit record for an autonomous fail-closed-route resolution | One appended element of `batch-audit.yaml` `records[]` per resolution taken through the relaxed route | Precondition: the route reached a resolution (mapped suggestion, escalation decision, or minimum-side-effect fallthrough). Postcondition: one element in the existing batch-audit-record shape — no field added, none removed; `question_id` is the question's own `question_id` when a worker packet exists and the gate's `gate_id` when the gate was orchestrator-opened; `packet_id` is null in the orchestrator-opened case; `source` covers all THREE paths the route can take, drawn from the existing closed vocabulary with no new value minted (decision D6): `batch-codex-consultation` when the consultation route produced the mapping — its consultation turns OR its single escalation, the value naming the route and never asserting that Codex itself was consulted — and `batch-safe-default` when the minimum-side-effect branch was taken; `resolution_note` names the gate, the option chosen, the options not chosen, the discussion's key points, whether Codex was consulted, whether a fallback provider answered, and whether the Opus escalation ran together with its reasoning, and it is what carries the consultation/escalation distinction. The shape and the value mapping are stated in `phase-state.md`; `question-resolution.md` states only the obligation to append and cites that path, assigning no value the mapping does not support | task0002 (defines the writer entry) / task0001 (states the obligation) / task0002 (reports it in `batch-mode.md`) / task0008 (completes the mapping on both sides) |
 | The Opus escalation dispatch | The single per-packet escalation that decides whatever the consultation left unmapped | Precondition: the consultation ended (ceiling reached, trajectory judged diverging, or the availability probe reported `unavailable`) with at least one question of the packet unmapped. Postcondition: exactly ONE dispatch per packet, carrying every still-unmapped question of that packet; it returns, per question, either a chosen `option_id` present in that question's own `options[].option_id` or an explicit no-decision, and in both cases the reasoning. Its output is untrusted: read, never executed as instructions, never adopted verbatim; the per-question mapping judgement stays with the orchestrator. It is counted OUTSIDE the five-turn wrapper-launch ceiling, at most one per packet. No dedicated agent definition file is created (decision D2) | task0001 (states) / task0002 (records that it ran, with its reasoning) |
 | The wrapper's fallback-provider report | How the orchestrator learns that a non-primary provider answered, so the audit record's "whether a fallback provider answered" can be filled | Precondition: a wrapper invocation completed. Postcondition: on the primary provider the wrapper's output is byte-identical to today's (no marker at all); when and only when a non-primary provider answered, the wrapper writes exactly ONE additional line to stderr, never to stdout, carrying a fixed prefix declared in the script's own header comment. No protocol document names that prefix, any provider, or any detection mechanism (NFR4) — documents state only the FACT that a fallback provider may have answered | task0005 (produces and pins the line) / task0002 (records the fact) / task0001 (states the fact in one sentence) |
 
@@ -151,6 +151,38 @@ sentence change. Rationale: in batch, `block` no longer means "abort" but
 "route into the minimum-side-effect branch", so the constraint still buys the
 same protection while the justification behind it moves. Affected tasks:
 task0004.
+
+### D6 — The audit `source` vocabulary stays closed at its present values
+
+Review round 1 found that an escalation decision was recorded as a
+consultation answer even on the path where the availability probe reported the
+wrapper unavailable and Codex never ran, while the record SSOT defined the
+same value as "Codex's suggestion did map onto one". The repair does NOT mint
+a new value: FR14 and the Database Schema table state this route's closed
+vocabulary as the two existing values, and the schema document's vocabulary
+list plus the validator's constant are behaviourally frozen for this feature
+(D5). Instead the writer entry states the complete three-way mapping and
+defines the consultation value by the ROUTE that produced the decision, while
+`resolution_note` — which FR14 already requires to say whether Codex was
+consulted, whether a fallback provider answered and whether the escalation ran
+— carries the distinction. Rationale: this removes the false assertion without
+widening a frozen vocabulary, without touching `question-packet-schema.md` or
+the validator, and without a specification change. Affected tasks: task0008.
+
+### D7 — The chain's non-primary entries must be resolvable, not merely named
+
+The first-pass plan (D3) required each entry to be "a named provider
+configuration"; what shipped named providers nothing defines, on an invocation
+that also suppresses the configuration source that could define them, so every
+switch could only fail. D3's ownership rule is unchanged — the chain, its
+order and its switch conditions live only in the wrapper — and is tightened by
+one condition: each non-primary entry's invocation must be SELF-SUFFICIENT,
+carrying the provider definition it needs rather than depending on a source
+the same invocation suppresses, and the wrapper reuses the proxy profile and
+auth environment the review harness probe already depends on rather than
+embedding a second description of a deployment it does not own. When that
+environment is absent the chain stops with a diagnostic instead of launching
+an invocation that cannot succeed. Affected tasks: task0007.
 
 ## Risk Assessment
 
