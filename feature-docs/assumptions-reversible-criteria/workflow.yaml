@@ -83,7 +83,8 @@ workflow:
     skipped_reason: "The feature changes SSOT Markdown documents, agent prompts, one JSON fixture, tests and two manifests. It introduces no user interface, no rendered artifact, no new file format, and no design-system surface; zero design-system candidates were detected."
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 1c0c69dee723e9e82b5f4788b7167c8c4054e8b9
   - id: implement
     status: pending
     base_commit: null
@@ -96,7 +97,53 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "Define the assumptions[].reversible criterion at its SSOT and bind it in the six packet-capable worker documents"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/question-packet-schema.md
+      - em-workflow/agents/requirements-analyst.md
+      - em-workflow/agents/implementation-planner.md
+      - em-workflow/agents/rework-planner.md
+      - em-workflow/references/contracts/analyst-contract.md
+      - em-workflow/references/contracts/planner-contract.md
+      - em-workflow/references/contracts/rework-planner-contract.md
+      - tests/test_assumptions_reversible_criterion.py
+    skills: []
+    domains: [api-contract]
+    complexity: medium
+    requirements: [FR1, FR2, FR3, FR4, FR5, NFR1, NFR2, NFR3, NFR4, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: "Add the reversible:true counter-example question-packet fixture"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/fixtures/question-packet/category-fail-closed/valid-test-pinned-constraint-assumption/input.json
+      - tests/test_question_packet_reversible_fixture.py
+    skills: []
+    domains: [api-contract]
+    complexity: medium
+    requirements: [FR6, NFR3, NFR4, NFR5]
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: "Bump the em-workflow plugin version in both registries and pin it with a version-bump test"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_assumptions_reversible_criteria_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR7, NFR4]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -112,91 +159,91 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-1]
   FR2:
     title: "The criterion binds the packet-capable worker agent prompts"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-2]
   FR3:
     title: "The criterion binds the packet-capable worker contracts"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-3]
   FR4:
     title: "The fail-closed arms keep their current strength"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-4]
   FR5:
     title: "Recurrence-detecting tests"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-5]
   FR6:
     title: "A worked counter-example fixture for the reported shape"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS-6]
   FR7:
     title: "Plugin version bump in both registries"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS-7]
   NFR1:
     title: "SSOT discipline"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-2, TS-3]
   NFR2:
     title: "No new gate identifier and no policy change"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS-8]
   NFR3:
     title: "No feature-docs task identifiers in plugin documents"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-8]
   NFR4:
     title: "Test conventions"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003]
     tests: [TS-5, TS-8]
   NFR5:
     title: "Genuinely irreversible declarations keep working"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS-4, TS-6]
   NFR6:
     title: "Documentation minimality"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: []
 
 batch:
