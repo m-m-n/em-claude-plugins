@@ -114,13 +114,13 @@ aborting.
 here, once: the explicit fail-closed gate-list slot above; `category:
 spec-change` whose `gate_id` is not exactly `rework.spec-change`; both
 directions of the malformed `gate_id` / `category` pairing below; and the
-Classification gate's step-3 origin-verification failures below. The
-routed arm below never converts any of them into a classification. The
-abort applies regardless of the question's `on_unanswered` value, regardless
-of whether the `gate_id` is later found to be listed elsewhere, and
-regardless of whether a Codex suggestion would have mapped onto one of the
-question's existing `option_id`s — none of those three can override this
-step.
+Classification gate's direction-1 origin-membership failure below (origin
+absent, unresolvable, or not a member of the bound set). The routed arm
+below never converts any of them into a classification. The abort applies
+regardless of the question's `on_unanswered` value, regardless of whether
+the `gate_id` is later found to be listed elsewhere, and regardless of
+whether a Codex suggestion would have mapped onto one of the question's
+existing `option_id`s — none of those three can override this step.
 
 **The routed arm.** The routed arm's entry condition is the question's
 `gate_id` being `rework.spec-change` — never the worker-set `category`; a
@@ -317,11 +317,12 @@ sequence's policy lookup or its Unlisted-gate fallback.
    lookup, nor the Unlisted-gate fallback, nor `on_unanswered` — the
    Classification gate's Outcome step above (step 11) is the resolution
    for that question; it is not restated here. This holds in interactive
-   mode. In batch, a routed question that trips direction 2 does not stop
-   at the Classification gate: it leaves the gate and joins the packet's
-   batched consultation, so it may still reach the Unlisted-gate fallback
-   below and, from there, `on_unanswered` — consistent with that
-   fallback's own step 3 and step 6.
+   mode. In batch, a routed question that trips direction 2 leaves the
+   Classification gate, joins the packet's batched consultation, and may
+   reach the Unlisted-gate fallback below and, from there,
+   `on_unanswered`. This is stated once, here; the Unlisted-gate
+   fallback's step 3 and its `block` branch below cite this step for it
+   rather than restate it.
 3. Look up the `gate_id` in `references/batch-policies.yaml`.
 4. If a policy entry exists, apply its `option_id` or `action`.
 5. If no policy entry exists, proceed to the Unlisted-gate fallback below.
@@ -356,13 +357,14 @@ When a question's `gate_id` has no entry in `references/batch-policies.yaml`
 3. Batch every unresolved question from the SAME packet that reaches this
    step together into ONE consultation — including any question that
    reaches this step through the batch relaxation above or through the
-   Classification gate's direction 2 above, rather than through the
-   `gate_id` policy lookup — pass each one's `prompt`, `options`,
-   `why_needed`, `evidence`, and the worker's tentative position to Codex
-   in a single combined prompt, following the consultation procedure
-   below. This is what bounds the total number of consultations to one per
-   packet rather than one per question, independent of how many questions
-   the packet carries.
+   Classification gate's direction 2 above (Batch resolution sequence
+   step 2 above states this routing fact; cited here, not restated),
+   rather than through the `gate_id` policy lookup — pass each one's
+   `prompt`, `options`, `why_needed`, `evidence`, and the worker's
+   tentative position to Codex in a single combined prompt, following
+   the consultation procedure below. This is what bounds the total
+   number of consultations to one per packet rather than one per
+   question, independent of how many questions the packet carries.
 4. Judge, per question, whether Codex's suggestion maps onto one of that
    question's existing `option_id`s.
 5. For each question where it maps, record the answer with `source:
@@ -374,34 +376,34 @@ When a question's `gate_id` has no entry in `references/batch-policies.yaml`
    trajectory judgement found it diverging, or the availability probe
    reported the wrapper `unavailable` — the Opus escalation below runs
    once for the whole packet, carrying every such still-unmapped question
-   together. For each question it decides, record the answer with
-   `source: batch-codex-consultation`, exactly as a mapped consultation
-   answer above, carrying the escalation's reasoning in `resolution_note`.
-   For each question it leaves an explicit no-decision, fall through to
+   together. For each question it decides, record the answer using the
+   `source` value `references/phase-state.md`'s relaxed-route writer
+   entry maps an escalation decision to (cited, not restated here),
+   carrying the escalation's reasoning in `resolution_note`. For each
+   question it leaves an explicit no-decision, fall through to
    `on_unanswered`.
 7. `record_tbd` → generate a TBD answer.
 8. `block` → if the question is a merely preferential choice on a success
    path, take the option with the smallest side effect. Two mechanisms keep
    this branch's two carve-outs distinct, and neither is universal any
    longer: in interactive, security, licensing and irreversible-operation
-   questions never reach here because the Fail-closed classification above
-   has already ABORTED them before this branch is reached; in batch, the
-   same three arrive here, through the relaxed route, whenever neither the
-   Codex consultation nor the Opus escalation maps or decides one of their
-   options, and this branch then takes the option with the smallest side
-   effect for them exactly as for any other question; in interactive,
-   specification-change questions never reach here either, but for a
-   different reason — the routed arm REMOVED them from the sequence
-   entirely at step 2 of the Batch resolution sequence, so they were never
-   subject to this fallback in the first place. In batch, that exclusion
-   does not extend to the direction-2 subset described at Batch resolution
-   sequence step 2 above: a routed spec-change question that trips the
-   Classification gate's direction 2 leaves the gate and joins the packet's
-   batched consultation, so it can reach this branch after all, and this
-   branch then takes the option with the smallest side effect for it
-   exactly as for any other relaxed-route arrival above. This branch only
-   ever sees the remainder. This
-   replaces the current continue-on-success-path rule stated in
+   questions never reach here — the Fail-closed classification above owns
+   which questions those abort and by which rule, cited here, not
+   restated; in batch, the same three arrive here, through the relaxed
+   route, whenever neither the Codex consultation nor the Opus escalation
+   maps or decides one of their options, and this branch then takes the
+   option with the smallest side effect for them exactly as for any other
+   question; in interactive, specification-change questions never reach
+   here either, but for a different reason — the routed arm's removal at
+   Batch resolution sequence step 2 above owns that exclusion, cited here,
+   not restated. In batch, that exclusion does not extend to the
+   direction-2 subset: Batch resolution sequence step 2 above states how
+   that subset reaches the packet's batched consultation (cited here, not
+   restated), and when neither the consultation nor the escalation maps or
+   decides it, it reaches this branch after all, taking the option with
+   the smallest side effect exactly as for any other relaxed-route arrival
+   above. This branch only ever sees the remainder. This replaces the
+   current continue-on-success-path rule stated in
    `references/batch-mode.md` and is an intentional behaviour change,
    not a regression.
 9. `use_batch_policy` with no matching policy entry is a schema/policy
