@@ -143,3 +143,42 @@ records:
       already exists in Notion as
       https://app.notion.com/p/3d43509ec8ee81ada1c5cebf1b2e4471 so no duplicate was
       filed.
+  - question_id: verify.gate-disposition
+    packet_id: null
+    answered_at: "2026-09-08T00:58:00+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [record-pass]
+    freeform: null
+    normalized_answer: "record verify as pass / completed"
+    resolution_note: >-
+      verify phase, round 2 (after verify-rework round 1 merged task0010).
+      Question: should verify be recorded as `result: pass` / `status: completed`
+      when every VERIFICATION.md criterion passes, while the preceding review
+      phase left 5 residual high-severity findings marked `deferred` under batch
+      policy, 4 of which describe real functional gaps? Options weighed:
+      (A) record pass, on the reading that the verify phase's mandate is
+      VERIFICATION.md's criteria and the deferred findings were already
+      dispositioned by review's own policy gate; (B) record fail, on the reading
+      that high-severity functional gaps should not pass an integration gate.
+      Observed results: `python3 -m unittest discover -s tests` exit 0 with 4098
+      tests OK; `check-plugin-invariants.py .` exit 0 with all 7 checks PASS;
+      plugin.json and marketplace.json both 0.1.68 (> the pinned 0.1.65); every
+      requirement in workflow.yaml `resolved`, none excluded. Codex was consulted
+      through em-workflow/scripts/run_codex_exec.sh (readonly, xhigh); entry 1
+      returned a usage-limit and entry 2 (litellm/vertex-glm-5.2) answered. It
+      judged (A) comparatively better on: every automated criterion is met;
+      verify's job is defined by VERIFICATION.md, not by review's findings, and
+      verify has no mandate to re-adjudicate items review already dispositioned;
+      VERIFICATION.md itself declares its 5 Manual Testing items a non-gate
+      ("not a gate the suite can hold"), so they cannot fail an unattended run;
+      the one deferred finding verify could act on (4699cf4f1c58e38d, pip args
+      breaking AC-22) was already fixed by verify-rework round 1's task0010 and
+      the suite now passes; and failing would trip an automatic rework loop whose
+      caps are already partly consumed (review rework cap reached, one verify
+      rework round spent) with no new actionable signal. Caveat Codex raised and
+      it stands: the three remaining functional gaps (changed Python lockfile
+      never audited; npm/cargo/go jobs always scanning the repository root;
+      the Go path proven only against a synthetic fixture) reach the integration
+      branch relying on a manual confirmation an unattended run cannot perform,
+      so each needs a tracked follow-up with an owner. Adopted (A).
