@@ -98,7 +98,7 @@ tasks:
     domains: [input-handling, external-io]
     complexity: high
     requirements: [FR12, FR13, FR14, FR15, FR16, FR17, FR18, FR22, NFR2, NFR4, NFR7]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/review-sca-axis/task0005
   task0006:
