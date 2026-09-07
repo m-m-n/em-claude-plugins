@@ -228,6 +228,12 @@ axis-2 run (the scan tool absent on PATH) is recorded exactly as this
 ordinary skip — never as a retryable chain-walk `skip_reason` (Phase R2b):
 axis 2 has no chain to walk in the first place.
 
+A skipped axis-2 run also covers partial coverage across several selected
+ecosystems: when any one of them did not complete, the row's `skip_reason`
+carries the combined machine-stable reasons, and the findings the other
+selected ecosystems did produce still enter Phase R3a's evaluator input
+unchanged.
+
 ## Phase R2b: Cross-model fallback (chain walk)
 
 Applies to every perspective whose R2 primary-reviewer dispatch returned
