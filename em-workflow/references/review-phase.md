@@ -512,16 +512,21 @@ from `file`/`line` alone (step 5), and axis 2 reports every advisory in a
 manifest with the same `file` and `line: null`. Applying `same_site`
 unmodified to `vulnerability` findings would collapse every advisory in one
 manifest into a single site, silently discharging the accountability floor
-for every advisory but the surviving one. To prevent this, `same_site` and
-`stable_id`'s `file` operand for category `vulnerability` is
-`file + "#" + package + "@" + advisory_id` (both fields required on every
-`vulnerability` finding) instead of the raw manifest path; `line` stays
-`null` and matches only other `null` lines within that same composite key.
-Two advisories against the same package still collapse only if `package`
-AND `advisory_id` agree; two advisories against different packages in the
-same manifest never collapse. `file_tasks` recovers `(package,
-advisory_id)` by parsing the surviving finding's title per the Finding
-text-encoding contract.
+for every advisory but the surviving one. To prevent this without adding
+fields the schema does not carry, axis 2 encodes the composite identity
+`file + "#" + package + "@" + advisory_id` directly as the finding's `file`
+value (not as separate `package`/`advisory_id` fields — `review-output-schema.json`
+has no such fields and `additionalProperties: false` forbids adding them);
+`same_site` and `stable_id` then operate on this composite string exactly as
+they do on any other `file` value, with no vulnerability-specific case
+needed. `line` stays `null` and matches only other `null` lines within that
+same composite `file`. Two advisories against the same package still
+collapse only if `package` AND `advisory_id` agree; two advisories against
+different packages in the same manifest never collapse. `dismissed_sites`
+entries for category `vulnerability` carry this same composite string in
+their `file` field (not the raw manifest path), so a dismissal names exactly
+one advisory. `file_tasks` recovers `(package, advisory_id)` by parsing the
+composite `file` value's suffix after the raw manifest path and `#`.
 
 ## Phase R4: Bounded auto-fix (≤ 3 loops, ON by default)
 

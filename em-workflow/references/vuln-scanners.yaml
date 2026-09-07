@@ -58,7 +58,7 @@ ecosystems:
   - ecosystem: pip
     manifests: [pyproject.toml, requirements.txt]
     executable: pip-audit
-    args: [--format, json]
+    args: [--format, json, --no-deps, --disable-pip]
     target_flag: -r
     severity_map: {critical: critical, high: high}
     threshold: {direct_only: true, min_severity: high}
