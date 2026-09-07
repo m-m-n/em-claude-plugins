@@ -1,0 +1,21 @@
+schema_version: 1
+feature: batch-codex-autonomous-decisions
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 71c7d3c80da36b392a686fd2d18bd2ca89d71c2a
+last_input_digest: sha256:95600399c888979d2a24e2249a075c52bc7e470a46d960297cc82ec58fba66f0
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:95600399c888979d2a24e2249a075c52bc7e470a46d960297cc82ec58fba66f0
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
