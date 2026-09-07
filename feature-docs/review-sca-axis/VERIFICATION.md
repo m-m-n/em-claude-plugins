@@ -104,10 +104,10 @@ merged. Per-task acceptance criteria live in `tasks/taskNNNN.md`.
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001, task0008 | TS-1, TS-26 |
+| FR1 | task0001, task0008, task0010 | TS-1, TS-26 |
 | FR2 | task0001, task0008, task0009 | TS-2, TS-3, TS-27 |
 | FR3 | task0001, task0009 | TS-4, TS-28, TS-29 |
-| FR4 | task0001, task0008 | TS-1, TS-3, TS-26 |
+| FR4 | task0001, task0008, task0010 | TS-1, TS-3, TS-26 |
 | FR5 | task0001 | TS-10, TS-2 |
 | FR6 | task0003 | TS-8 |
 | FR7 | task0003 | TS-8 |
@@ -123,13 +123,13 @@ merged. Per-task acceptance criteria live in `tasks/taskNNNN.md`.
 | FR17 | task0005 | TS-5 |
 | FR18 | task0005 | TS-18 |
 | FR19 | task0006 | TS-12 |
-| FR20 | task0006, task0009 | TS-13 |
+| FR20 | task0006, task0009, task0010 | TS-13 |
 | FR21 | task0001 | TS-10 |
 | FR22 | task0001, task0003, task0004, task0005, task0006, task0007, task0008, task0009 | TS-22 |
 | FR23 | task0003 | TS-8 |
 | FR24 | task0004 | TS-9 |
 | NFR1 | task0003 | TS-16 |
-| NFR2 | task0001, task0005, task0008 | TS-19, TS-18 |
+| NFR2 | task0001, task0005, task0008, task0010 | TS-19, TS-18 |
 | NFR3 | task0001 | TS-19 |
 | NFR4 | task0001, task0005, task0007 | TS-20, TS-24 |
 | NFR5 | task0003 | TS-17 |
