@@ -150,8 +150,8 @@ tasks:
     domains: [external-io, config-infra]
     complexity: high
     requirements: [FR13, NFR4, NFR7, NFR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-codex-autonomous-decisions/task0007
     notes: null
     provenance:
       source: review
@@ -165,8 +165,8 @@ tasks:
     domains: [input-handling, api-contract, data-persistence]
     complexity: high
     requirements: [FR3, FR6, FR11, FR12, FR14, FR15, FR21, NFR1, NFR3, NFR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-codex-autonomous-decisions/task0008
     notes: null
     provenance:
       source: review
