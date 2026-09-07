@@ -1,0 +1,300 @@
+round: 2
+executed_at: "2026-09-07T13:52:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: a67e75c6c9fb0c9798a8b4de3df9890fbe32433d
+  head_commit: e7330151b0af0bcef2df7de4f8c3bbce4238f0b2
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/batch-policies.yaml
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/references/fixtures/question-packet/category-fail-closed/valid-irreversible-assumption-blocking/input.json
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/question-packet-schema.md
+    - em-workflow/references/question-resolution.md
+    - em-workflow/scripts/run_codex_exec.sh
+    - em-workflow/scripts/validate-worker-output.py
+    - test-docs/batch-codex-autonomous-decisions/task0001.tests.yaml
+    - test-docs/batch-codex-autonomous-decisions/task0002.tests.yaml
+    - test-docs/batch-codex-autonomous-decisions/task0003.tests.yaml
+    - test-docs/batch-codex-autonomous-decisions/task0004.tests.yaml
+    - test-docs/batch-codex-autonomous-decisions/task0005.tests.yaml
+    - test-docs/batch-codex-autonomous-decisions/task0006.tests.yaml
+    - test-docs/batch-codex-autonomous-decisions/task0007.tests.yaml
+    - test-docs/batch-codex-autonomous-decisions/task0008.tests.yaml
+    - tests/test_batch_codex_autonomous_decisions_version_bump.py
+    - tests/test_batch_policies.py
+    - tests/test_batch_quiet_output_audit_persistence.py
+    - tests/test_batch_quiet_output_audit_record_contract.py
+    - tests/test_batch_quiet_output_discipline.py
+    - tests/test_batch_stop_contract.py
+    - tests/test_classification_gate.py
+    - tests/test_codex_wrapper_provider_fallback.py
+    - tests/test_gate_option_vocabulary.py
+    - tests/test_question_resolution_doc.py
+    - tests/test_spec_change_origin_binding.py
+    - tests/test_validate_worker_output.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "architecture#2", perspective: architecture, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "architecture#fallback", perspective: architecture, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: b915524ad5c7ed09
+    severity: high
+    category: architecture
+    file: em-workflow/scripts/run_codex_exec.sh
+    line: 207
+    title: "Fallback chain truncates the prior attempt's output, destroying the rate-limit signal its only consumer depends on"
+    description: |
+      `run_attempt` writes each attempt with `> "$OUTFILE" 2> "$ERRFILE"` (truncating), so entry 2/3
+      overwrite entry 1's diagnostics, and the final `cat "$OUTFILE" "$ERRFILE"` hands the caller only
+      the LAST attempt's output. Failure path: entry 1 fails with `usage limit` on stderr, the fallback
+      prerequisites hold, entry 2 runs and fails with anything that is not `provider error` (auth
+      failure, bad model name, 404) — the chain stops and the wrapper's output no longer contains any
+      rate-limit phrase. The consumer, `em-workflow/agents/codex-reviewer.md` Step 6, resolves
+      `skip_reason: "rated_limited"` ONLY from the raw Codex output (stdout+stderr combined, per
+      run_codex_exec.sh); with the phrase gone it returns
+      `{"findings": [], "summary": "codex returned non-JSON output", "skipped": false, "skip_reason": null}`.
+      `references/review-phase.md` Phase R2b then treats that schema-valid empty result as a substantive
+      completed result, so the chain walk does NOT advance and no Claude fallback is dispatched — a
+      provider outage is silently recorded as a completed review with zero findings for that perspective.
+      This is a regression from the pre-change single `2>&1` invocation.
+      `tests/test_codex_wrapper_provider_fallback.py` has no case for "entry 1 usage-limited, fallback
+      attempted and failed".
+      This round reproduced the defect for real: architecture#2 (codex) returned `rate_limited` and
+      architecture#0 (litellm) returned `harness_unavailable` — the chain-walk signal that this finding
+      says can be lost.
+    suggestion: |
+      Split output composition by outcome instead of letting each attempt clobber the last. On the
+      SUCCESS path keep emitting only the answering entry's output (naive `>>` appending would prepend
+      entry 1's partial stdout to entry 2's JSON and break codex-reviewer.md Step 6's "parse Codex's
+      JSON FIRST" rule). On the FAILURE path (chain exhausted, non-zero exit) emit the whole chain's
+      stderr in entry order so the first attempt's rate-limit text survives. Keep per-attempt files for
+      `is_usage_limit_response` / `is_provider_error_response` so a prior entry's phrase can never leak
+      into the next switch decision. Update the header comment's "On entry 1 the wrapper's output is
+      byte-identical" clause to state the composition rule when a later entry ran, and update the three
+      exact-stdout-equality assertions in `tests/test_codex_wrapper_provider_fallback.py`
+      (TestNonSwitchFailuresSurfaceUnchanged x2, TestSpoofedSwitchShapeInReplyNeverAdvances x1) plus a
+      new regression case asserting `usage limit` survives when entry 1 rate-limits and entry 2 fails
+      for an unrelated reason.
+    sources: [claude:architecture]
+    confidence: 85
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 21fcec3b529ebbd1
+    severity: medium
+    category: architecture
+    file: em-workflow/README.md
+    line: 40
+    title: "README still promises fail-closed abort for the three gate categories this change relaxed in batch"
+    description: |
+      README.md line 40 still states, for `--batch`, that 仕様変更・セキュリティ・ライセンス・不可逆判断の
+      ゲートは未収載なら安全側で中断する（fail-closed）. This change inverts exactly that for batch:
+      `references/batch-policies.yaml`'s header now says the three fail-closed arms take the relaxed
+      route in batch instead of aborting, and `references/question-resolution.md` step 8 confirms it.
+      `references/batch-terminal-line.md` and the policies header were updated in this diff; README was
+      not. README.md is human-facing and is not auto-loaded into any agent context, so no runtime
+      routing is wrong — but it is the one place a user reads before launching an unattended run.
+      Note this file is outside `changed_files`; the defect is the drift this diff created.
+    suggestion: |
+      Rewrite the clause as the interactive/batch split — interactive aborts, batch enters the relaxed
+      route — and delegate the conditions to `references/question-resolution.md` ("The batch relaxation"
+      / "The surviving aborts") rather than restating them in README. Add one sentence naming the
+      surviving aborts as the only batch stops that remain.
+    sources: [claude:architecture]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 7e1c5176f1992a47
+    severity: medium
+    category: architecture
+    file: em-workflow/scripts/run_codex_exec.sh
+    line: 156
+    title: "litellm model names hardcoded in the wrapper while its own header claims not to duplicate the deployment ledger"
+    description: |
+      `ENTRY_ARGS_2=(-p litellm -m vertex-glm-5.2)` and `ENTRY_ARGS_3=(-p litellm -m muse-spark)` embed
+      model names as literals, with `PROVIDER_NAME_2/3` repeating them a second time in the same file.
+      The header comment asserts these reuse the same profile and model-selection form the review
+      chain's litellm harness already uses, "never a second description of a deployment this script does
+      not own" — the profile and the flag form are reused, but the model NAMES are a fresh copy.
+      `references/reviewers.yaml` treats model names as dated, churning data (it records Vertex
+      retirement dates), and `references/review-phase.md` requires an allow-list check before
+      dispatching a litellm entry; this script performs neither. When a name retires, entry 2 fails, and
+      unless the CLI happens to emit `provider error` the chain stops there with no signal that the
+      fallback path is dead — which compounds directly with b915524ad5c7ed09.
+    suggestion: |
+      Cheapest sufficient fix: add a test asserting `ENTRY_ARGS_2`/`ENTRY_ARGS_3` model names appear in
+      `references/reviewers.yaml`, so a retirement breaks the suite instead of the outage path.
+      Otherwise source the names from the ledger or from `references/codex-cli.yaml` with the literals
+      as defaults only. Either way, retract or qualify the header's "never a second description of a
+      deployment this script does not own".
+    sources: [claude:architecture]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: ad385249e099e34b
+    severity: medium
+    category: architecture
+    file: em-workflow/references/question-resolution.md
+    line: 486
+    title: "Opus escalation section fixes no dispatch route, no contract document, and no scope for non-packet callers"
+    description: |
+      The new "### Opus escalation" section states only "Exactly one dispatch per packet, at Opus". It
+      names no subagent, no contract document for the input/return shape, and no registry holding the
+      model binding — unlike every neighbouring cross-model call in this repo: the Codex consultation
+      pins its route explicitly ("calls the wrapper directly — never a Task-dispatched agent"),
+      `references/review-phase.md` names `Task(subagent_type="em-workflow:review-evaluator")` with
+      `references/review-evaluation-contract.md` as its contract, and `references/reviewers.yaml` is the
+      sole model ledger for reviewers. SPEC.md FR8 requires "ONE Opus subagent dispatch", A4 fixes it as
+      "a Task dispatch at Opus/xhigh", and the Interfaces section lists "An Opus/xhigh subagent Task
+      dispatch (FR8, A4)" — question-resolution.md, the runtime SSOT, drops both the Task-dispatch route
+      and the xhigh effort. Second gap at the same site: the escalation is defined purely in per-packet
+      terms, but the Codex consultation procedure extends itself to "every other batch site that names a
+      Codex consultation ... e.g. the non-packet gates in references/batch-mode.md", and its step 1
+      routes an `unavailable` probe straight to the Opus escalation. A non-packet gate has no packet, so
+      the escalation's own scope rule does not define what such a caller dispatches.
+    suggestion: |
+      Pin the owner in one place, matching the existing pattern: either name a dedicated subagent under
+      `agents/` with its contract in `references/` and cite only the route and path from this section,
+      or state inline that the orchestrator decides without a Task dispatch. Carry the SPEC's
+      `Opus/xhigh` binding into this section and name the registry that holds it. Separately, restate
+      the escalation's scope so a non-packet-gate caller is covered.
+    sources: [claude:architecture]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: f16ba900e23a5497
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/phase-state.md
+    line: 417
+    title: "Escalation-decided non-packet gates have no valid `source` value in the general writer mapping"
+    description: |
+      phase-state.md's general mapping for "the other three writers" offers exactly three values:
+      `batch-safe-default` when no Codex suggestion mapped onto an option and the minimum-side-effect
+      default was taken, `batch-codex-consultation` when Codex's suggestion did map onto one, or
+      `batch-decision-table` for a record whose gate resolves through `references/batch-policies.yaml`,
+      and explicitly scopes the route-based reinterpretation to the relaxed route alone. Only the
+      relaxed-route bullet redefines `batch-codex-consultation` as naming the route rather than
+      asserting Codex ran. Meanwhile question-resolution.md extends the consultation procedure to
+      `references/batch-mode.md`'s non-packet gates, and its step 1 sends an `unavailable` probe
+      straight to the Opus escalation. So when the review diff-size gate or the per-command approval
+      fallback is resolved by the Opus escalation with a non-default option, the writer must emit a
+      `source` that is none of the three the general mapping allows.
+    suggestion: |
+      Extend the route-based reading of `batch-codex-consultation` to every writer that uses the shared
+      consultation procedure, rather than only the relaxed-route bullet — the cleanest form is to state
+      the three-way mapping once and have all four writers cite it. Add a worked case for a non-packet
+      gate resolved by the escalation with no Codex consultation and no safe-default selection, and
+      cover it in `tests/test_batch_quiet_output_audit_record_contract.py`.
+    sources: [codex:comprehensive]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 43504ede8ee2f609
+    severity: medium
+    category: security
+    file: em-workflow/scripts/run_codex_exec.sh
+    line: 216
+    title: "Switch detection rests on an unverified premise that codex's stderr carries no attacker-influenceable content"
+    description: |
+      `is_usage_limit_response` and `is_provider_error_response` are case-insensitive substring greps
+      over `$ERRFILE`. The design is sound only if the premise the header asserts holds — that stderr is
+      the underlying CLI's own diagnostic while stdout is the attacker-influenceable model reply. The
+      security reviewer claims codex's human-output renderer also writes prompt echo, tool output and
+      assistant text to stderr, which would let repository content carrying the literal phrases
+      `usage limit` / `provider error` combine with any unrelated non-timeout failure to force a
+      provider switch. The evaluator could neither confirm nor refute the premise read-only: the
+      reviewer's reproduction exercised the stub. Carried at medium with reduced confidence because the
+      premise is load-bearing for the whole switch design yet is asserted only in a comment, with no
+      test pinning it. Impact if false is bounded — no data leak and no gate bypass; the worst case is a
+      reviewer-model downgrade steered by repository content.
+    suggestion: |
+      Prefer a structured signal (CLI error type or a dedicated exit code) over substring matching, or
+      narrow the match to codex's diagnostic-line shape (anchor on a leading `Error:` / `ERROR` prefix
+      at line start) instead of a bare substring anywhere in the stream. At minimum, add a test that
+      feeds attacker-controlled phrase text on stderr alongside an unrelated failure and asserts no
+      switch — the mirror of the existing stdout-spoofing case — and record in the header what evidence
+      establishes that stderr carries only CLI diagnostics.
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: null
+evaluation:
+  round_summary: |
+    Round 2, cross_validation=true, 5 perspectives dispatched across 7 runs (architecture#0 skipped
+    harness_unavailable, architecture#2 skipped rate_limited, architecture#fallback completed).
+    7 findings carried by the evaluator: 1 high, 5 medium, 1 low. The dominant finding is real and the
+    evaluator reproduced its full causal chain by reading: run_codex_exec.sh truncates each attempt's
+    output, so a rate-limited entry 1 followed by a failed fallback entry emits only the last attempt —
+    codex-reviewer.md Step 6 loses its only rate-limit signal, and review-phase.md R2b explicitly treats
+    the resulting schema-valid empty result as a substantive completed result, so an outage is recorded
+    as a zero-finding completed review with no chain walk and no Claude fallback. Regression from the
+    pre-change single `2>&1` invocation.
+    Independent inspection duty (10 of 10 read budget used) — comprehensive: corroborated (verified the
+    phase-state source-vocabulary hole against both documents; demoted the batch-policies header claim
+    to low after confirming its conclusion still holds); security: corroborated (the ERRFILE-scoped
+    substring matchers are exactly as described, but the load-bearing premise about codex's real stderr
+    content is not verifiable read-only and is pinned by no test — carried at reduced confidence);
+    performance: corroborated (the only executable in the diff is the wrapper; its fallback is
+    sequential and outage-path only, temp files are released by `trap ... EXIT` — empty findings set
+    supported); spec: findings (the evaluator's own SPEC cross-read surfaced what the empty set missed —
+    SPEC FR8/A4 and the Interfaces section fix the escalation as an Opus/xhigh subagent Task dispatch,
+    while question-resolution.md's escalation section drops both the Task route and the xhigh effort,
+    and its per-packet scope does not cover the non-packet-gate callers); architecture: corroborated
+    (all four fallback-run findings verified against the files).
+    No injection attempt was observed in any reviewer output this round. Both reviewer-reported high
+    sites (run_codex_exec.sh:207, README.md:40) are carried forward in findings, so dismissed_sites is
+    empty. README.md:40 lies outside changed_files; it is carried because the drift is what this diff
+    created, and takes the R3b step-7 confidence cap of 50.
+  recommended_action: another_round
+  action_rationale: |
+    One high finding is a genuine regression that makes a provider outage indistinguishable from a clean
+    zero-finding review, and its fix is not a bounded mechanical edit: the wrapper must compose output
+    differently on the success path than on the failure path (naive appending breaks codex-reviewer.md's
+    JSON-first parse) and needs a new regression case. Four mediums are cross-document contract gaps.
+    The SPEC itself is sound and the implementation matches it on every requirement checked, so this is
+    implementation/document drift, not rework. Fix and re-review.
+    (Advice only — the orchestrator's completion gate and the batch rework cap decide, per
+    references/review-phase.md Phase R3b.)
+dismissed_sites: []
+dismissed_sites_dropped: []
+dropped_by_gates:
+  - stable_id_evaluator_supplied: 0c6d195eb8f47a23
+    file: em-workflow/references/batch-policies.yaml
+    line: 25
+    reason: "R3b step 2: severity `low` is outside {critical, high, medium}"
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  notes: |
+    Loop 1 (sequential): 0 auto-applicable, 0 conflicts, 1 needs-judgment. The single candidate was
+    b915524ad5c7ed09 (high, architecture, run_codex_exec.sh) — prose-shaped suggestion, so batch mode
+    auto-selected `Apply as-is (editor interprets)` per references/batch-mode.md gate
+    `review.auto-fix-judgment`. The editor applied a per-entry-file rewrite of the wrapper and passed
+    scope verification (exactly the target file, no new untracked files), but the resulting tree failed
+    3 committed tests in tests/test_codex_wrapper_provider_fallback.py
+    (test_last_entry_failure_surfaces_that_entrys_outcome_not_a_synthetic_success,
+    test_usage_limit_shaped_response_from_entry_two_does_not_advance,
+    test_provider_error_phrase_in_reply_text_does_not_advance_from_entry_two) — each asserts the
+    wrapper's stdout equals exactly the LAST entry's text, which the prescribed chain-wide composition
+    necessarily changes. The prescription is therefore not applicable within a single file: it requires
+    a coordinated wrapper + test change. The edit was restored from the loop backup (target file back to
+    c02199b5e382bb1eb883a3aa97c2c603133b378c, full suite green: 3788 tests OK), applied_total stayed 0,
+    and no fix commit was made. The finding is deferred at the batch rework cap instead.
+residual_critical_high: 0
+deferred_critical_high: 1
+unreviewed_perspectives: []
+rework_required: false
