@@ -721,17 +721,118 @@ def manifest_file_for(ecosystem, changed_files):
     return manifest_list[0]
 
 
+# ---------------------------------------------------------------------------
+# Scan outcome (IMPLEMENTATION.md Shared Components, "Scan outcome"; task
+# plan Design "Exit status and payload shape are judged together"):
+# executing one scan job yields exactly ONE outcome -- `completed` with a
+# payload the ecosystem's normalizer can read, or `not_completed` with a
+# machine-stable reason distinguishable from every other reason (including
+# the tool-absent skip FR3 already defines). There is no "completed with an
+# empty payload" outcome. Neither exit status nor payload shape alone
+# decides this: an audit tool legitimately exits non-zero precisely when it
+# found something (so exit status alone would discard real findings), and a
+# tool can exit non-zero while printing a well-formed JSON error envelope
+# (so a parseable payload alone would accept a failure as data).
+# ---------------------------------------------------------------------------
+
+OUTCOME_COMPLETED = "completed"
+OUTCOME_NOT_COMPLETED = "not_completed"
+
+# The exit statuses each tool's OWN documentation defines: 0 (clean) and the
+# tool's documented "found something" status. An exit status outside this
+# set is `not_completed` regardless of payload shape.
+DOCUMENTED_EXIT_STATUSES = {
+    "npm": {0, 1},
+    "cargo": {0, 1},
+    "pip": {0, 1},
+    "go": {0, 3},
+}
+
+
+def _has_success_structure(name, data):
+    """True when `data`'s top level is ecosystem `name`'s OWN successful-
+    report shape -- never the shape of an error envelope, and never an
+    unrelated JSON object."""
+    if not isinstance(data, dict):
+        return False
+    if name == "npm":
+        return isinstance(data.get("vulnerabilities"), dict)
+    if name == "cargo":
+        return isinstance(data.get("vulnerabilities"), dict) and "list" in data["vulnerabilities"]
+    if name == "pip":
+        return isinstance(data.get("dependencies"), list)
+    if name == "go":
+        return isinstance(data.get("vulns"), list)
+    return False
+
+
+def _error_envelope_reason(name, data):
+    """A machine-stable reason when `data`'s top level is that tool's own
+    documented error-envelope shape -- a well-formed JSON object reporting a
+    TOOL-side failure, never a scan result. npm's missing-lockfile error
+    object (`{"error": {...}}`) is the concrete case (task plan Design).
+    Returns None when `data` does not match any known error-envelope
+    shape."""
+    if not isinstance(data, dict):
+        return None
+    if name == "npm" and isinstance(data.get("error"), dict):
+        return f"{name}_error_envelope"
+    return None
+
+
+def judge_scan_outcome(name, exit_code, stdout):
+    """Judges exit status and payload shape TOGETHER, per tool (task plan
+    Design). Returns `(OUTCOME_COMPLETED, data)` or
+    `(OUTCOME_NOT_COMPLETED, reason)`.
+
+    `stdout` empty (after stripping) is ALWAYS not_completed -- there is no
+    "completed with an empty payload" outcome: a front end that resolves
+    but has no audit capability, and a scanner that dies before writing
+    anything, both produce it, and both are not_completed. An error
+    envelope is checked before the exit-status/success-structure rule
+    because it applies "regardless of exit status" (Design)."""
+    stripped = (stdout or "").strip()
+    if not stripped:
+        return OUTCOME_NOT_COMPLETED, f"{name}_empty_output"
+
+    try:
+        data = json.loads(stripped)
+    except json.JSONDecodeError:
+        try:
+            objs = _parse_json_stream(stripped)
+        except json.JSONDecodeError:
+            return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
+        if not objs:
+            return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
+        if name == "go":
+            data = {"vulns": _merge_govulncheck_stream(objs)}
+        elif len(objs) == 1:
+            data = objs[-1]
+        else:
+            return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
+
+    error_reason = _error_envelope_reason(name, data)
+    if error_reason is not None:
+        return OUTCOME_NOT_COMPLETED, error_reason
+
+    if exit_code not in DOCUMENTED_EXIT_STATUSES.get(name, set()):
+        return OUTCOME_NOT_COMPLETED, f"{name}_undocumented_exit_status"
+
+    if not _has_success_structure(name, data):
+        return OUTCOME_NOT_COMPLETED, f"{name}_unparseable_output"
+
+    return OUTCOME_COMPLETED, data
+
+
 def run_ecosystem_command(ecosystem, project_root):
     """Runs the registry's command form against the existing lockfile, cwd
     at the project root, reading only -- nothing here writes inside the
-    project root (NFR2). Returns (parsed_json_or_None, error_or_None).
-
-    A non-zero exit is NOT itself an error -- audit tools commonly exit
-    non-zero precisely when they found something to report. Only
-    unparseable stdout (empty results count as `{}`, not a parse failure)
-    or an OS-level failure to even launch the process is an error, and it
-    is surfaced as a machine-stable skip reason -- never as an empty
-    successful scan, which would silently claim the ecosystem is clean."""
+    project root (NFR2). Returns `(outcome, payload)`: `payload` is the
+    parsed data dict when `outcome` is `OUTCOME_COMPLETED`, or the
+    machine-stable reason string when `OUTCOME_NOT_COMPLETED` (see
+    `judge_scan_outcome`). An OS-level failure to even launch the process
+    is its own `not_completed` reason, distinct from every reason
+    `judge_scan_outcome` can produce from an actual process result."""
     name = ecosystem.get("ecosystem", "unknown")
     command = build_command(ecosystem)
     try:
@@ -743,26 +844,8 @@ def run_ecosystem_command(ecosystem, project_root):
             timeout=300,
         )
     except (OSError, subprocess.SubprocessError):
-        return None, f"{name}_execution_failed"
-    stdout = proc.stdout.strip()
-    if not stdout:
-        return {}, None
-    try:
-        data = json.loads(stdout)
-    except json.JSONDecodeError:
-        try:
-            objs = _parse_json_stream(stdout)
-        except json.JSONDecodeError:
-            return None, f"{name}_unparseable_output"
-        if not objs:
-            return None, f"{name}_unparseable_output"
-        if name == "go":
-            data = {"vulns": _merge_govulncheck_stream(objs)}
-        elif len(objs) == 1:
-            data = objs[-1]
-        else:
-            return None, f"{name}_unparseable_output"
-    return data, None
+        return OUTCOME_NOT_COMPLETED, f"{name}_execution_failed"
+    return judge_scan_outcome(name, proc.returncode, proc.stdout)
 
 
 def _parse_json_stream(stdout):
@@ -1169,9 +1252,13 @@ def _empty_result():
     }
 
 
-def _skip_result(skip_reason, summary):
+def _skip_result(skip_reason, summary, findings=None):
+    """`findings` defaults to empty (the no-ecosystem-ran / unsupported-
+    manifest skips), but the partial-coverage case (task plan Design)
+    passes the completed ecosystems' findings through explicitly -- a skip
+    about one ecosystem never suppresses another's advisories."""
     return {
-        "findings": [],
+        "findings": findings if findings is not None else [],
         "summary": summary,
         "skipped": True,
         "skip_reason": skip_reason,
@@ -1190,22 +1277,25 @@ def _findings_result(findings, summary):
 
 
 def run_scan(project_root, changed_files, registry_path):
-    """AC-1..AC-7 flow: select ecosystems, resolve each on PATH, run its
-    registry command, normalize with a threshold applied at normalization
-    time, and emit exactly one review-output-schema.json-conformant object.
+    """AC-1..AC-7 (task0001) plus this task's partial-coverage contract:
+    select ecosystems, resolve each on PATH, execute its scan job and judge
+    the ONE outcome that execution yields (`judge_scan_outcome`), normalize
+    completed payloads with a threshold applied at normalization time, and
+    emit exactly one review-output-schema.json-conformant object.
 
     - No manifest in the change: an empty, non-skipped result.
     - A selected ecosystem's executable is not resolvable on PATH: that
-      ecosystem contributes a skip reason (no fallback of any kind).
-    - Tool-execution failure that is not "tool absent" (unparseable
-      output, a process that cannot be launched) contributes its own
-      machine-stable skip reason.
-    - When every selected ecosystem skipped/failed and nothing was found,
-      the whole result is `skipped: true` with the combined reasons. When
-      at least one ecosystem produced findings (even zero), the result is
-      NOT skipped -- any other ecosystem's skip is folded into `summary`
-      prose instead (the schema has one `skipped`/`skip_reason` pair for
-      the whole object, never per-ecosystem).
+      ecosystem contributes a `not_completed` reason (no fallback of any
+      kind) -- the same accounting as an execution `not_completed` outcome.
+    - `skipped` is `true` whenever ANY selected ecosystem did not complete
+      (tool absent, validation failure, or an execution outcome of
+      `not_completed`), with `skip_reason` carrying every such reason
+      combined in a deterministic (sorted) order. `findings` still carries
+      everything the COMPLETED ecosystems produced -- a skip about one
+      ecosystem never suppresses another's advisories (task plan Design,
+      "Partial coverage is machine-readable, not prose"). `skipped: false`
+      with `skip_reason: null` therefore means, and only means, that every
+      selected ecosystem completed.
     """
     registry = load_registry(registry_path)
     selected = select_ecosystems(registry, changed_files)
@@ -1230,10 +1320,11 @@ def run_scan(project_root, changed_files, registry_path):
         if executable_path is None:
             skip_reasons.append(f"{name}_tool_not_found")
             continue
-        data, error = run_ecosystem_command(ecosystem, project_root)
-        if error is not None:
-            skip_reasons.append(error)
+        outcome, payload = run_ecosystem_command(ecosystem, project_root)
+        if outcome == OUTCOME_NOT_COMPLETED:
+            skip_reasons.append(payload)
             continue
+        data = payload
         normalizer = NORMALIZERS.get(name)
         if normalizer is None:
             skip_reasons.append(f"{name}_no_normalizer")
@@ -1245,14 +1336,19 @@ def run_scan(project_root, changed_files, registry_path):
             all_findings.extend(normalizer(ecosystem, data, manifest_file))
         ran_ecosystems.append(name)
 
-    if not ran_ecosystems:
-        combined_reason = "+".join(sorted(skip_reasons)) if skip_reasons else "no_ecosystem_ran"
-        summary = "Scan skipped: " + "; ".join(sorted(skip_reasons)) if skip_reasons else "Scan skipped."
-        return _skip_result(combined_reason, summary)
+    if skip_reasons:
+        combined_reason = "+".join(sorted(skip_reasons))
+        if ran_ecosystems:
+            summary = (
+                f"Scanned {', '.join(sorted(ran_ecosystems))}; "
+                f"{len(all_findings)} finding(s) at or above threshold. "
+                f"Not completed: {', '.join(sorted(skip_reasons))}."
+            )
+        else:
+            summary = "Scan skipped: " + "; ".join(sorted(skip_reasons))
+        return _skip_result(combined_reason, summary, findings=all_findings)
 
     summary = f"Scanned {', '.join(sorted(ran_ecosystems))}; {len(all_findings)} finding(s) at or above threshold."
-    if skip_reasons:
-        summary += " Skipped: " + "; ".join(sorted(skip_reasons)) + "."
     return _findings_result(all_findings, summary)
 
 
