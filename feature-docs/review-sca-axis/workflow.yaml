@@ -239,7 +239,7 @@ tasks:
     - FR3
     - FR20
     - FR22
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/review-sca-axis/task0009
 review:
