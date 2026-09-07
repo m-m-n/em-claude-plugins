@@ -1,0 +1,81 @@
+feature: batch-codex-autonomous-decisions
+collected_at: "2026-09-07T13:05:00+09:00"
+session_ids: ["01a07a78-13bc-7223-8a17-55b3bb9a5cbd"]
+signals:
+  review_critical_high:
+    - stable_id: 3af4ecb279d5fd40
+      category: spec
+      file: em-workflow/scripts/run_codex_exec.sh
+      title: "FR13/AC-5 provider chain is not implemented: entries 2 and 3 name providers that are defined nowhere and cannot be defined under --ignore-user-config"
+      resolution: unresolved
+    - stable_id: 0c57632ebedaa31f
+      category: spec
+      file: em-workflow/scripts/run_codex_exec.sh
+      title: "Stderr-only detectors regress required stdout-shaped fallback switching"
+      resolution: unresolved
+    - stable_id: 95ed359e6b7cc02b
+      category: comprehensive
+      file: em-workflow/scripts/run_codex_exec.sh
+      title: "Fallback switch reads stderr but stub signals on stdout — chain never advances under tests"
+      resolution: unresolved
+    - stable_id: 86a6bdf64241cdb8
+      category: comprehensive
+      file: em-workflow/references/question-resolution.md
+      title: "\"The surviving aborts\" lists all step-3 origin-verification failures as aborting in BOTH modes, contradicting direction 2's explicit batch relaxation"
+      resolution: unresolved
+    - stable_id: 04701f23e186a53e
+      category: comprehensive
+      file: em-workflow/references/question-resolution.md
+      title: "Opus escalation decisions are persisted as `source: batch-codex-consultation`, so the audit record claims Codex was consulted on a path where Codex is never invoked"
+      resolution: unresolved
+    - stable_id: fdf986d8f23a5e06
+      category: architecture
+      file: em-workflow/references/question-resolution.md
+      title: "auto-fix が step 2 に加えた batch 例外により、Unlisted-gate fallback step 8 の spec-change 除外主張が偽になった"
+      resolution: unresolved
+    - stable_id: 3664eb974b84ec5b
+      category: security
+      file: em-workflow/references/question-resolution.md
+      title: "Batch direction-2 carve-out lets fail-closed verify-origin abort auto-resolve via block branch"
+      resolution: declined
+    - stable_id: c19525f08b730bc7
+      category: security
+      file: em-workflow/references/question-resolution.md
+      title: "Untrusted worker/repo evidence is embedded in the consultation prompt with no isolation, and can now steer autonomous security/license/irreversible resolutions"
+      resolution: fixed
+    - stable_id: 90127d5abbf40e7f
+      category: security
+      file: em-workflow/scripts/run_codex_exec.sh
+      title: "Provider switch conditions are case-insensitive substring greps over the whole attempt output, which includes attacker-influenceable model text"
+      resolution: fixed
+    - stable_id: db2436b5bac2bb92
+      category: comprehensive
+      file: em-workflow/references/question-resolution.md
+      title: "Batch resolution sequence step 2 still asserts a Classification-gate question reaches neither the Unlisted-gate fallback nor on_unanswered, which the direction-2 relaxation contradicts"
+      resolution: fixed
+    - stable_id: 628464e729c0b496
+      category: comprehensive
+      file: em-workflow/references/question-resolution.md
+      title: "Step-2 batch routed-plus-direction-2 exception contradicts universal spec-change exclusion"
+      resolution: fixed
+    - stable_id: b915524ad5c7ed09
+      category: architecture
+      file: em-workflow/scripts/run_codex_exec.sh
+      title: "Fallback chain truncates the prior attempt's output, destroying the rate-limit signal its only consumer depends on"
+      resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0004
+      files: [tests/test_gate_option_vocabulary.py]
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - stable_id: 3664eb974b84ec5b
+      category: security
+      resolution_reason: "objects to the feature's own specified intent: SPEC FR1/FR5 require direction 2 to relax in batch and FR10/AC-2 require the minimum-side-effect fallthrough. The spec perspective re-reviewed this exact carve-out in the same round and found no SPEC contradiction; the round evaluator dismissed the equivalent pass-1 objection on the same grounds."
+follow_up_drafts: []
+lessons_candidates:
+  - "run_codex_exec.sh のプロバイダフォールバック連鎖が review round1 で critical/high 4 件を集中的に生んだ。stderr/stdout どちらに切替シグナルが出るかという前提がテストスタブと実装で食い違い、auto-fix ループ 1 が回帰を作った。外部 CLI の出力形状を前提にする実装は、まずその前提を固定するテストから書く必要がある。"
+  - "question-resolution.md への auto-fix が別セクション（Unlisted-gate fallback step 8）の主張を偽にした。同一ドキュメント内の相互参照する主張は、片方を書き換えると他方が壊れる。SSOT 内部の整合をピン留めするテストが薄い。"
+  - "review round2 の architecture 指摘 b915524ad5c7ed09（フォールバック連鎖が直前試行の出力を切り詰め、レート制限シグナルを壊す）は rework cap 到達で deferred。フォローアップが要る。"
+  - "task0004 の implementer が files 予測外の tests/test_gate_option_vocabulary.py を触ろうとし、証拠不足（AC/要件 ID の欠落）で decline された。計画段階の files 予測とテスト命名の対応付けが弱い。"
