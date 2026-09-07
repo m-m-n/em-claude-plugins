@@ -44,7 +44,24 @@ workflow:
   status: completed
   completed_at_commit: cadfca4d2f9461fc77bc2e4fd4a509c36b5bf0b2
 - id: verify
-  status: pending
+  status: failed
+  result: fail
+  failed_items:
+  - id: AC-22
+    category: spec
+    note: '`python3 -m unittest discover -s tests` exits 1 with 9 failures; all nine
+      share one root cause.'
+  - id: TS-26
+    category: spec
+    note: 'Scan-job construction: the pip job''s argv carries `--no-deps --disable-pip`
+      from vuln-scanners.yaml args, while the pinned expected vectors are `pip-audit
+      -r <file> --format json` / `pip-audit <dir> --format json`, and `--no-deps` is
+      listed among the forbidden tokens of the no-install/no-resolution-artifact pin.'
+  - id: TS-1
+    category: spec
+    note: Command assembly for the pip ecosystem yields `['pip-audit', '--format',
+      'json', '--no-deps', '--disable-pip']` against the pinned `['pip-audit', '--format',
+      'json']`.
 - id: retrospect
   status: pending
 tasks:
@@ -269,8 +286,11 @@ review:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      AC-22: 1
+      TS-26: 1
+      TS-1: 1
   infra_resume:
     rounds: 0
     cap: 2
