@@ -119,7 +119,12 @@ tasks:
     branch: em-workflow/review-sca-axis/task0006
 
 review:
-  rounds: []
+  rounds: [1]
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 9
+  needs_rework: true
+  status: pending
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
