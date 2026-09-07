@@ -72,6 +72,18 @@ negative proof, per IMPLEMENTATION.md's Test authoring note.
 TDD-awkward (Test Notes): there is no runtime behaviour to exercise here,
 so "red" means the assertion fails against the current document text before
 either document is edited.
+
+Extended for task0002 (batch-codex-autonomous-decisions; see
+feature-docs/batch-codex-autonomous-decisions/tasks/task0002.md AC-3, AC-4,
+AC-5): `## Reporting`'s item list and the audit-item source map both gain
+one item -- the autonomous fail-closed-route resolutions -- moving
+`REPORTING_ITEM_LIST_SENTENCE` and `SOURCE_MAP_EXPECTATIONS` from six
+entries to seven. `test_source_map_has_one_row_per_audit_item` and
+`test_source_map_row_count_matches_reporting_item_count` are unmodified:
+both are already generic over `SOURCE_MAP_EXPECTATIONS`'s length, so they
+exercise the new item without any test-code change, exactly as task0005's
+docstring (`tests/test_batch_quiet_output_audit_persistence.py`) already
+relied on for its own new row.
 """
 
 import re
@@ -145,25 +157,36 @@ SUPPRESSED_ITEMS = (
     "the running presentation of Step A.5's command-approval results",
 )
 
-# The six audit items `## Reporting` requires (its existing wording,
+# The seven audit items `## Reporting` requires (its existing wording,
 # verbatim), used both as a regression pin on that paragraph and as the key
 # set for the audit-item source map (AC-6).
+#
+# Extended for task0002 (batch-codex-autonomous-decisions; see
+# feature-docs/batch-codex-autonomous-decisions/tasks/task0002.md AC-3,
+# AC-5): the relaxed route's autonomous fail-closed-route resolutions join
+# the list as a seventh item, moving this pin from six items to seven --
+# updated in place per IMPLEMENTATION.md C5, not deleted.
 REPORTING_ITEM_LIST_SENTENCE = (
     "every auto-approved command string, every assumption recorded during "
     "create-spec/planning, auto-rework rounds consumed (review / verify), "
     "any deferred findings with their stable_ids, every unlisted-gate "
     "fallback resolution (gate / options / choice / Codex consulted or "
-    "not), and the kept integration branch name"
+    "not), every autonomous fail-closed-route resolution (gate / option "
+    "chosen / options not chosen / the discussion's key points / whether "
+    "Codex was consulted / whether a fallback provider answered / whether "
+    "the Opus escalation ran, with its reasoning), and the kept "
+    "integration branch name"
 )
 
 # IMPLEMENTATION.md D4: audit item -> the phrase its source-map row must
-# name. Six items, matching `## Reporting`'s six-item list above.
+# name. Seven items, matching `## Reporting`'s seven-item list above.
 SOURCE_MAP_EXPECTATIONS = (
     ("auto-approved command string", "create-spec.command-approval"),
     ("assumption recorded during create-spec/planning", "phase-state"),
     ("Auto-rework rounds consumed", "batch` block"),
     ("deferred findings", "stable_id"),
     ("unlisted-gate fallback resolution", "phase-state"),
+    ("autonomous fail-closed-route resolution", "phase-state"),
     ("kept integration branch name", "parent_branch"),
 )
 

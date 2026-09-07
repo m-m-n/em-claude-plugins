@@ -88,6 +88,46 @@ no-step-7-citation assertion, AC-5's pattern assertion over the wake
 decline value, and AC-6's out-of-step reach-point assertion each fail
 against the tree as committed before this task's edits -- confirmed by
 running this module before touching either document.
+
+Extended for task0002 (batch-codex-autonomous-decisions; see
+feature-docs/batch-codex-autonomous-decisions/tasks/task0002.md): the
+relaxed route joins the writers list as a fourth writer, so the
+writer-count sentence moves from "Three writers" to "Four writers", and
+the audit-item source map's row count moves from six to seven. Both moved
+counts are updated in place below (per IMPLEMENTATION.md C5), and the new
+writer's own entry -- its `question_id` rule's two branches, its two
+`source` values, its `resolution_note` contents, and its commit
+reach-point -- gets its own positive pin, `TestFourthWriterRelaxedRoute`.
+The `_first_writer_bullet` helper is unaffected: it locates the section by
+the (now "Four writers") count sentence and always extracts the FIRST
+bullet that follows, regardless of how many bullets exist after it, so
+AC-6's original assertions about that first bullet still exercise the same
+text.
+
+Covers task0002 Acceptance Criteria
+(feature-docs/batch-codex-autonomous-decisions/tasks/task0002.md):
+
+- AC-1 (FR15, FR14): `phase-state.md`'s Batch audit record file section
+  lists the relaxed route as a fourth writer, with its `question_id` rule
+  (both branches), its two `source` values and its commit reach-point; the
+  writer-count sentence reads "Four writers".
+- AC-2 (FR14, NFR1): the per-field shape is unchanged (no field named in
+  the new bullet is new to the schema); the append-only sentence and the
+  `packet_id` rule for the orchestrator-opened case both still hold.
+- AC-5 (FR21, NFR9): the writer-count sentence and the source-map row
+  count are updated in place, not deleted; each moved count keeps a
+  positive pin at its new value (`TestWriterCountSentence`,
+  `TestAC2SourceMapRegressionGuards.test_source_map_still_has_seven_rows`
+  in `tests/test_batch_quiet_output_discipline.py` /
+  `tests/test_batch_quiet_output_audit_persistence.py`).
+- AC-7 (NFR1, NFR4): the new bullet cites `references/question-resolution.md`
+  by path without repeating "step 7" (the section's single "step 7"
+  citation stays scoped to `create-spec.command-approval`, per the
+  pre-existing `_step7_citation_scope_ok` matcher above, unmodified), never
+  restates the relaxation rule's trigger conditions, and never names a
+  provider (`Codex` and `Opus` are the document's own pre-established
+  terms, not the wrapper's hidden fallback-provider chain NFR4 forbids
+  naming).
 """
 
 import re
@@ -215,7 +255,8 @@ class TestAC1SourceMapRowsNameRecordsContainer(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# AC-2: exactly six rows; the assumption row is byte-identical
+# AC-2: exactly seven rows (task0002 AC-5: moved from six -- see the
+# relaxed-route row this task adds); the assumption row is byte-identical
 # ---------------------------------------------------------------------------
 
 ASSUMPTION_ROW = (
@@ -231,8 +272,8 @@ class TestAC2SourceMapRegressionGuards(unittest.TestCase):
         cls.text = _read(BATCH_MODE_PATH)
         cls.quiet_section = _slice(cls.text, "## Batch quiet output")
 
-    def test_source_map_still_has_six_rows(self):
-        self.assertEqual(len(_table_rows(self.quiet_section)), 6)
+    def test_source_map_still_has_seven_rows(self):
+        self.assertEqual(len(_table_rows(self.quiet_section)), 7)
 
     def test_assumption_row_unchanged_character_for_character(self):
         self.assertIn(ASSUMPTION_ROW, self.quiet_section)
@@ -485,7 +526,7 @@ class TestAC5QuestionIdValuesPatternConforming(unittest.TestCase):
 
 
 def _first_writer_bullet(subsection_text):
-    idx = subsection_text.index("Three writers append to this file")
+    idx = subsection_text.index("Four writers append to this file")
     after = subsection_text[idx:]
     bullet_start = after.index("\n- ") + 1
     bullet_end = after.index("\n- ", bullet_start + 1)
@@ -569,9 +610,12 @@ class TestAC6FirstWriterBulletAndAppendOnlyException(unittest.TestCase):
         self.assertIn("references/implement-phase.md", normalized)
         self.assertIn("I.2.b step 2", normalized)
 
-    def test_three_writers_sentence_occurs_exactly_once(self):
+    def test_four_writers_sentence_occurs_exactly_once(self):
+        # task0002 AC-1/AC-5: the relaxed route's addition moves this
+        # sentence from "Three" to "Four"; the count-of-one property is
+        # retained at the new wording rather than the pin being deleted.
         self.assertEqual(
-            self.subsection.count("Three writers append to this file"), 1
+            self.subsection.count("Four writers append to this file"), 1
         )
 
     def test_append_only_sentence_retains_core_phrase(self):
@@ -592,6 +636,103 @@ class TestAC6FirstWriterBulletAndAppendOnlyException(unittest.TestCase):
         normalized = _normalize_ws(self.subsection)
         self.assertIn("append-only", normalized)
         self.assertIn("never rewritten or removed", normalized)
+
+
+# ---------------------------------------------------------------------------
+# task0002: the fourth writer -- the relaxed route (AC-1, AC-2, AC-7)
+# ---------------------------------------------------------------------------
+
+
+def _relaxed_route_bullet(subsection_text):
+    # Anchored on the bullet's own leading "- `references/..." shape --
+    # the doc's pre-existing (unrelated) mention of the same doc/phrase
+    # sits mid-sentence ("resolved\nthrough `references/..."), never
+    # immediately after a bullet marker, so this raises ValueError
+    # (correctly) against a document that has no such bullet yet.
+    marker = "\n- `references/question-resolution.md`'s batch resolution sequence"
+    bullet_start = subsection_text.index(marker) + 1
+    end = subsection_text.index("\n\nRecords are append-only:", bullet_start)
+    return subsection_text[bullet_start:end]
+
+
+class TestFourthWriterRelaxedRoute(unittest.TestCase):
+    """task0002: the relaxed route's own writer-entry bullet in
+    phase-state.md's `## Batch audit record file` section."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        cls.subsection = _slice(
+            cls.text, "## Batch audit record file", "## Legacy feature compatibility"
+        )
+        cls.bullet = _relaxed_route_bullet(cls.subsection)
+
+    def test_bullet_cites_question_resolution_doc(self):
+        self.assertIn("references/question-resolution.md", self.bullet)
+
+    def test_question_id_rule_states_both_branches(self):
+        # Edge case (task0002 Test Notes): a single-branch pin would pass
+        # on a document mentioning only one of the two branches.
+        normalized = _normalize_ws(self.bullet)
+        self.assertIn(
+            "the question's own `question_id` when a worker packet exists",
+            normalized,
+        )
+        self.assertIn(
+            "the gate's own `gate_id` when the gate was orchestrator-opened",
+            normalized,
+        )
+
+    def test_packet_id_rule_stated_for_both_branches(self):
+        normalized = _normalize_ws(self.bullet)
+        self.assertIn(
+            "`packet_id` is `null` in the orchestrator-opened case", normalized
+        )
+        self.assertIn(
+            "the worker packet's own `packet_id` when a worker packet exists",
+            normalized,
+        )
+
+    def test_source_has_exactly_the_two_existing_values(self):
+        self.assertIn("`batch-codex-consultation`", self.bullet)
+        self.assertIn("`batch-safe-default`", self.bullet)
+
+    def test_resolution_note_contents_named(self):
+        normalized = _normalize_ws(self.bullet)
+        for phrase in (
+            "the gate",
+            "the option chosen",
+            "the options not chosen",
+            "the discussion's key points",
+            "whether Codex was consulted",
+            "whether a fallback provider answered",
+            "whether the Opus escalation ran",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, normalized)
+
+    def test_commit_reach_point_is_in_step_no_new_commit(self):
+        normalized = _normalize_ws(self.bullet)
+        self.assertIn(
+            "enclosing phase step's next existing `commit-docs.sh` call",
+            normalized,
+        )
+        self.assertIn("no new commit is created for it", normalized)
+
+    def test_does_not_restate_relaxation_conditions(self):
+        # AC-7: the trigger conditions (category: security / license /
+        # reversible: false) are question-resolution.md's (L1) to state;
+        # this bullet only names the route and cites the doc by path.
+        self.assertNotIn("category: security", self.bullet)
+        self.assertNotIn("category: license", self.bullet)
+        self.assertNotIn("reversible: false", self.bullet)
+
+    def test_step7_citation_not_added_to_this_bullet(self):
+        # AC-7 / regression: this bullet must not add a second "step 7"
+        # citation -- the subsection-wide singleton (still scoped to
+        # `create-spec.command-approval`) is pinned by
+        # TestAC4QuestionIdRuleCitationScope above.
+        self.assertNotIn("step 7", self.bullet)
 
 
 # ---------------------------------------------------------------------------

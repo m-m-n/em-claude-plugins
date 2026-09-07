@@ -83,6 +83,16 @@ regression guards over retained pre-change wording are exempt):
 - `_decline_persisted_under_phase_state` (decline-persistence matcher):
   negative proof `test_rejects_forged_sample_missing_the_path_literal`;
   non-vacuity guard `test_forged_decline_sample_is_well_formed_and_found`.
+
+Extended for task0002 (batch-codex-autonomous-decisions; see
+feature-docs/batch-codex-autonomous-decisions/tasks/task0002.md): the
+relaxed route becomes this file's fourth writer, so
+`test_subsection_states_three_writers` moves to
+`test_subsection_states_four_writers` (count pin updated in place per
+IMPLEMENTATION.md C5). `batch-mode.md`'s audit-item source map gains one
+row for "Every autonomous fail-closed-route resolution", pinned by the new
+`TestAutonomousFailClosedRouteSourceMapRow`, mirroring
+`TestAC1SourceMapRowPointsAtPhaseStateDoc` above for the pre-existing row.
 """
 
 import re
@@ -426,6 +436,47 @@ class TestAC1SourceMapRowPointsAtPhaseStateDoc(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# task0002 (batch-codex-autonomous-decisions) AC-3, AC-4: the new row for
+# the autonomous fail-closed-route resolutions -- same persisted-source-row
+# matcher, mirroring TestAC1SourceMapRowPointsAtPhaseStateDoc above.
+# ---------------------------------------------------------------------------
+
+
+class TestAutonomousFailClosedRouteSourceMapRow(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(BATCH_MODE_PATH)
+        cls.quiet_section = _slice(cls.text, "## Batch quiet output")
+
+    def test_source_map_row_names_batch_audit_path(self):
+        self.assertTrue(
+            _row_names_persisted_site(
+                self.quiet_section,
+                "autonomous fail-closed-route resolution",
+                BATCH_AUDIT_PATH_LITERAL,
+                assembled_required=False,
+            )
+        )
+
+    def test_source_map_row_cites_phase_state_doc(self):
+        for row in _table_rows(self.quiet_section):
+            if "autonomous fail-closed-route resolution" in row[0]:
+                self.assertIn(PHASE_STATE_DOC_LITERAL, row[-1])
+                return
+        self.fail(
+            "no source-map row found for 'autonomous fail-closed-route resolution'"
+        )
+
+    def test_every_audit_item_still_has_exactly_one_row(self):
+        # task0002 AC-4: the map gains exactly one row, and every audit
+        # item (including the pre-existing six) still has exactly one.
+        rows = _table_rows(self.quiet_section)
+        first_cells = [row[0] for row in rows]
+        self.assertEqual(len(first_cells), len(set(first_cells)))
+        self.assertEqual(len(rows), 7)
+
+
+# ---------------------------------------------------------------------------
 # AC-2: exactly three exceptions; the fourth-bullet phrase is gone
 # ---------------------------------------------------------------------------
 
@@ -634,12 +685,17 @@ class TestAC6PhaseStateDocDefinesBatchAuditFile(unittest.TestCase):
             normalized,
         )
 
-    def test_subsection_states_three_writers(self):
+    def test_subsection_states_four_writers(self):
+        # task0002 (batch-codex-autonomous-decisions) AC-1/AC-5: the
+        # relaxed route joins as a fourth writer, moving this sentence
+        # from "Three" to "Four" -- the count-of-one property is kept at
+        # the new wording rather than the pin being dropped.
         self.assertIn("references/batch-mode.md", self.subsection)
         self.assertIn("references/implement-phase.md", self.subsection)
         self.assertIn("skills/develop/SKILL.md", self.subsection)
+        self.assertIn("references/question-resolution.md", self.subsection)
         self.assertEqual(
-            self.subsection.count("Three writers append to this file"), 1
+            self.subsection.count("Four writers append to this file"), 1
         )
 
     def test_subsection_states_append_only_rule(self):
