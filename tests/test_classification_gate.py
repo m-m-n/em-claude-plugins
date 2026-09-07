@@ -431,12 +431,14 @@ class TestClassificationGate(unittest.TestCase):
             fake_section.lower(),
         )
 
-    def test_both_abort_directions_marked_final_and_non_overridable(self):
-        # task0028 AC-3, refreshed by rework-contract-drift/task0004 AC-4:
-        # both directions are marked non-overridable in the IDENTICAL
-        # wording the Precedence reservation uses -- direction 2 no longer
-        # says "likewise", it repeats direction 1's own closing sentence
-        # verbatim.
+    def test_direction_1_alone_marked_final_and_non_overridable(self):
+        # task0001 AC-4 (C5): the phrase-count assertion is UPDATED, not
+        # deleted, because direction 2 is now relaxed in batch (it no
+        # longer aborts unconditionally, so it loses its own copy of this
+        # sentence) while direction 1 -- an integrity check over
+        # orchestrator-held data, not a judgement call -- keeps its copy
+        # verbatim in both modes. The count therefore drops from the
+        # pre-task0001 value of 2 to 1.
         section = self._norm(self._origin_verification_section())
         non_overridable_phrase = (
             "final and non-overridable, exactly as the fail-closed "
@@ -445,10 +447,10 @@ class TestClassificationGate(unittest.TestCase):
         )
         self.assertEqual(
             section.count(non_overridable_phrase),
-            2,
-            "both direction 1 (membership) and direction 2 (category/"
-            "irreversibility) must use the identical non-overridable "
-            "wording",
+            1,
+            "only direction 1 (membership) should retain this wording "
+            "verbatim now that direction 2 (category/irreversibility) is "
+            "relaxed in batch",
         )
 
     def test_origin_verification_records_reason_and_evidence_no_unanswerable_confirmation(
@@ -663,6 +665,71 @@ class TestClassificationGate(unittest.TestCase):
         )
         self.assertNotIn(
             "missing, unreadable, or outside the vocabulary",
+            fake_section.lower(),
+        )
+
+    # --- task0001 AC-4: direction 2 is relaxed in batch, on the same terms
+    # --- as the Fail-closed classification's batch relaxation --------------
+
+    def test_direction_2_relaxed_in_batch_same_terms_as_fail_closed(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "this direction is relaxed in batch, conditioned on the "
+            "`--batch` invocation flag alone, on the same terms as the "
+            "fail-closed classification's batch relaxation above".lower(),
+            section,
+        )
+
+    def test_direction_2_interactive_aborts_batch_routes_to_consultation(
+        self,
+    ):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "in interactive, the check aborts, regardless of what the "
+            "packet named, when any bound-set member's category is "
+            "`security` or `license`".lower(),
+            section,
+        )
+        self.assertIn(
+            "in batch, on any of those same conditions, the question "
+            "instead takes the relaxed route".lower(),
+            section,
+        )
+
+    def test_direction_2_final_and_non_overridable_sentence_is_gone(self):
+        # AC-4/C5 negative proof: direction 2's own copy of the sentence
+        # must be gone (direction 1's survives, per the count test above).
+        section = self._origin_verification_section()
+        d2_start = section.index(
+            "**The category / irreversibility check (direction 2).**"
+        )
+        d2_section = section[d2_start:]
+        self.assertNotIn(
+            "This abort is final and non-overridable, exactly as",
+            d2_section,
+        )
+
+    def test_every_relaxed_continuation_records_decision_basis(self):
+        section = self._norm(self._origin_verification_section())
+        self.assertIn(
+            "every relaxed continuation records its decision basis",
+            section,
+        )
+
+    def test_direction_2_negative_twin_bare_abort_wording_fails(self):
+        # Non-vacuity guard: a synthetic direction-2 paragraph that still
+        # aborts unconditionally (the pre-task0001 wording) must not
+        # satisfy the batch-relaxation matcher above.
+        fake_section = (
+            "**The category / irreversibility check (direction 2).** The "
+            "check aborts, regardless of what the packet named, when any "
+            "bound-set member's category is `security` or `license`. This "
+            "abort is final and non-overridable, exactly as the "
+            "Fail-closed classification's Precedence reservation above "
+            "states for its own abort arms."
+        )
+        self.assertNotIn(
+            "this direction is relaxed in batch".lower(),
             fake_section.lower(),
         )
 
