@@ -82,8 +82,8 @@ tasks:
     domains: [input-handling, api-contract, external-io]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR14, FR21, NFR1, NFR2, NFR3, NFR4, NFR6, NFR7, NFR8, NFR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-codex-autonomous-decisions/task0001
     notes: null
   task0002:
     title: "Audit record and run-report coverage for the relaxed route"
@@ -93,8 +93,8 @@ tasks:
     domains: [data-persistence, api-contract]
     complexity: medium
     requirements: [FR14, FR15, FR16, FR21, NFR1, NFR3, NFR4, NFR5, NFR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-codex-autonomous-decisions/task0002
     notes: null
   task0003:
     title: "Policy header and terminal-line coverage follow the split"
@@ -104,8 +104,8 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR3, FR17, FR21, FR22, NFR1, NFR5, NFR8, NFR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-codex-autonomous-decisions/task0003
     notes: null
   task0004:
     title: "Packet-schema rationale, validator message, and the irreversibility fixture"
@@ -115,8 +115,8 @@ tasks:
     domains: [input-handling, api-contract]
     complexity: medium
     requirements: [FR18, FR19, FR20, FR21, NFR1, NFR2, NFR8, NFR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-codex-autonomous-decisions/task0004
     notes: null
   task0005:
     title: "Provider fallback chain inside the Codex wrapper"
@@ -126,8 +126,8 @@ tasks:
     domains: [external-io, config-infra]
     complexity: high
     requirements: [FR13, NFR4, NFR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-codex-autonomous-decisions/task0005
     notes: null
   task0006:
     title: "Plugin version bump for both registries"
@@ -137,8 +137,8 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR23, NFR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-codex-autonomous-decisions/task0006
     notes: null
 
 review:
