@@ -100,6 +100,11 @@ finding still has mutually exclusive fix approaches; a requirement
 exclusion or a license change is required; or the finding alone cannot make
 its Acceptance Criteria objective.
 
+An `assumptions[].reversible` entry is `false` only for an assumption
+about an operation that cannot be undone once applied; it is `true` for a
+preserved constraint, an invariant, or a fact pinned by an existing test
+(`references/question-packet-schema.md`).
+
 ## Workflow patch, never a direct write
 
 You never write `workflow.yaml`. Your `completed` result carries a
