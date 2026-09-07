@@ -62,7 +62,7 @@ workflow:
     status: completed
     completed_at_commit: 49800587906acae1f3f18fd39f370fbd80f3f4f1
   - id: implement
-    status: completed
+    status: pending
     base_commit: a67e75c6c9fb0c9798a8b4de3df9890fbe32433d
     completed_at_commit: 9d009de7b12e82a46cd2000136eb921d6fc364a9
   - id: review
@@ -142,6 +142,37 @@ tasks:
     branch: em-workflow/batch-codex-autonomous-decisions/task0006
     notes: null
 
+  task0007:
+    title: "Make the wrapper's fallback entries resolvable and restore the chain"
+    plan: tasks/task0007.md
+    files: [em-workflow/scripts/run_codex_exec.sh, tests/test_codex_wrapper_provider_fallback.py]
+    skills: [infra-impl]
+    domains: [external-io, config-infra]
+    complexity: high
+    requirements: [FR13, NFR4, NFR7, NFR9]
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids: [3af4ecb279d5fd40, 0c57632ebedaa31f, 95ed359e6b7cc02b]
+      review_round: 1
+  task0008:
+    title: "One statement per fact in the relaxed route's two SSOTs"
+    plan: tasks/task0008.md
+    files: [em-workflow/references/question-resolution.md, em-workflow/references/phase-state.md, tests/test_question_resolution_doc.py, tests/test_classification_gate.py, tests/test_spec_change_origin_binding.py, tests/test_batch_quiet_output_audit_record_contract.py, tests/test_phase_state_doc.py]
+    skills: []
+    domains: [input-handling, api-contract, data-persistence]
+    complexity: high
+    requirements: [FR3, FR6, FR11, FR12, FR14, FR15, FR21, NFR1, NFR3, NFR9]
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids: [86a6bdf64241cdb8, fdf986d8f23a5e06, 04701f23e186a53e, f1548ee148063d6c]
+      review_round: 1
+
 review:
   status: pending
   rounds_completed: 1
@@ -173,8 +204,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0003]
-    tests: [TS-2, TS-6]
+    tasks: [task0001, task0003, task0008]
+    tests: [TS-2, TS-6, TS-23]
   FR4:
     title: "Precedence reservation reworded"
     status: ok
@@ -194,8 +225,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-4]
+    tasks: [task0001, task0008]
+    tests: [TS-4, TS-23]
   FR7:
     title: "Consultation batching and ceiling unchanged"
     status: ok
@@ -229,36 +260,36 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-3]
+    tasks: [task0001, task0008]
+    tests: [TS-3, TS-24]
   FR12:
     title: "Batch resolution sequence step 2 updated"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-16]
+    tasks: [task0001, task0008]
+    tests: [TS-16, TS-24]
   FR13:
     title: "Provider fallback chain inside the wrapper"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0005]
-    tests: [TS-11]
+    tasks: [task0005, task0007]
+    tests: [TS-11, TS-21, TS-22]
   FR14:
     title: "Audit record for every autonomous resolution"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
-    tests: [TS-7, TS-8]
+    tasks: [task0001, task0002, task0008]
+    tests: [TS-7, TS-8, TS-25]
   FR15:
     title: "phase-state.md gains this writer"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
-    tests: [TS-8]
+    tasks: [task0002, task0008]
+    tests: [TS-8, TS-25]
   FR16:
     title: "Reporting contents extended, Notion out of scope"
     status: ok
@@ -299,8 +330,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004]
-    tests: [TS-1, TS-2, TS-3, TS-4]
+    tasks: [task0001, task0002, task0003, task0004, task0008]
+    tests: [TS-1, TS-2, TS-3, TS-4, TS-23]
   FR22:
     title: "Terminal-line reason code retained, coverage narrowed"
     status: ok
@@ -320,8 +351,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004]
-    tests: [TS-5]
+    tasks: [task0001, task0002, task0003, task0004, task0008]
+    tests: [TS-5, TS-24]
   NFR2:
     title: "No feature-docs task identifiers in plugin documents"
     status: ok
@@ -334,15 +365,15 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002]
-    tests: [TS-20]
+    tasks: [task0001, task0002, task0008]
+    tests: [TS-20, TS-25]
   NFR4:
     title: "Provider mechanics confined to the wrapper"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0005]
-    tests: [TS-11, TS-12]
+    tasks: [task0001, task0005, task0007]
+    tests: [TS-11, TS-12, TS-21]
   NFR5:
     title: "Quiet-output discipline preserved"
     status: ok
@@ -362,8 +393,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-14]
+    tasks: [task0001, task0007]
+    tests: [TS-14, TS-22]
   NFR8:
     title: "No new gate identifier"
     status: ok
@@ -376,11 +407,11 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004, task0005, task0006]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008]
     tests: [TS-19]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
