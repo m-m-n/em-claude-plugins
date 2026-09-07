@@ -1,0 +1,166 @@
+task_id: task0009
+# 4a baseline: recorded BEFORE any file in this task was touched (verified
+# via git stash: with only the pre-task tree present, these 6 errors were
+# already there). All 6 are in tests/test_sca_task_filing.py (task0007's
+# `file-tasks` half, a sibling rework task this task's plan explicitly
+# excludes -- "Out of Scope"), each failing the same way:
+# `resolve_main_worktree_root` raises GitError because `git worktree list
+# --porcelain` fails with "fatal: not a git repository" for the temporary
+# directory these tests construct in this environment. Not this task's
+# scan-execution path, and not touched by this task's edit.
+baseline_failures:
+  - tests.test_sca_task_filing.TestFileTasksBranches.test_entry_point_present_files_via_ntd
+  - tests.test_sca_task_filing.TestGroupingAndFiling.test_idempotent_second_run_files_nothing_new
+  - tests.test_sca_task_filing.TestGroupingAndFiling.test_three_advisories_one_package_produce_one_task_with_three_lines
+  - tests.test_sca_task_filing.TestGroupingAndFiling.test_two_packages_produce_two_tasks
+  - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_priority_is_always_high_regardless_of_severity
+  - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_truncated_advisory_reaches_the_filed_reference_field
+# Identical set after implementation -- verified by running
+# `python3 -m unittest discover -s tests` again (4060 tests, up from 4043
+# thanks to this task's own 17 new tests; the same 6 errors, nothing else).
+final_failures:
+  - tests.test_sca_task_filing.TestFileTasksBranches.test_entry_point_present_files_via_ntd
+  - tests.test_sca_task_filing.TestGroupingAndFiling.test_idempotent_second_run_files_nothing_new
+  - tests.test_sca_task_filing.TestGroupingAndFiling.test_three_advisories_one_package_produce_one_task_with_three_lines
+  - tests.test_sca_task_filing.TestGroupingAndFiling.test_two_packages_produce_two_tasks
+  - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_priority_is_always_high_regardless_of_severity
+  - tests.test_sca_task_filing.TestSeverityPriorityAndTruncation.test_truncated_advisory_reaches_the_filed_reference_field
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_scan_execution.TestEmptyStdoutIsNotCompleted.test_judge_scan_outcome_direct
+      - tests.test_sca_scan_execution.TestEmptyStdoutIsNotCompleted.test_whitespace_only_stdout_is_also_not_completed
+      - tests.test_sca_scan_execution.TestEmptyStdoutIsNotCompleted.test_run_scan_end_to_end_yields_skipped_with_no_findings
+    red_confirmed: true
+    red_reason: >-
+      Confirmed directly via `git stash` on only the four implementation
+      files (scan-dependencies.py / review-phase.md / plugin.json /
+      marketplace.json), keeping this new test module in place: before the
+      change, `SCAN.judge_scan_outcome` did not exist at all, so
+      test_judge_scan_outcome_direct and test_whitespace_only_stdout_is_also_not_completed
+      failed with `AttributeError: module 'scan_dependencies_execution' has
+      no attribute 'judge_scan_outcome'`, and
+      test_run_scan_end_to_end_yields_skipped_with_no_findings failed with
+      `AssertionError: False is not true` -- the pre-task
+      `run_ecosystem_command` treated empty stdout as `({}, None)`, i.e. an
+      empty COMPLETED payload, so `run_scan` returned `skipped: False`
+      instead of `True`. All three green after `judge_scan_outcome` /
+      `run_ecosystem_command` were introduced.
+  AC-2:
+    tests:
+      - tests.test_sca_scan_execution.TestErrorEnvelopeAndUndocumentedExitAreDistinctReasons.test_error_envelope_is_not_completed_regardless_of_documented_exit
+      - tests.test_sca_scan_execution.TestErrorEnvelopeAndUndocumentedExitAreDistinctReasons.test_undocumented_exit_status_is_not_completed_even_with_valid_payload
+      - tests.test_sca_scan_execution.TestErrorEnvelopeAndUndocumentedExitAreDistinctReasons.test_the_two_reasons_and_the_tool_absent_reason_are_all_distinct
+      - tests.test_sca_scan_execution.TestErrorEnvelopeAndUndocumentedExitAreDistinctReasons.test_error_envelope_end_to_end_via_run_scan
+      - tests.test_sca_scan_execution.TestErrorEnvelopeAndUndocumentedExitAreDistinctReasons.test_undocumented_exit_end_to_end_via_run_scan
+    red_confirmed: true
+    red_reason: >-
+      Same git-stash check as AC-1: the three `judge_scan_outcome`-calling
+      tests failed with the same `AttributeError` (the function did not
+      exist pre-task); the two end-to-end `run_scan` tests failed with
+      `AssertionError: False is not true` on `result["skipped"]` -- the
+      pre-task code accepted ANY parseable JSON as a completed payload
+      regardless of exit status or error-envelope shape (both fixtures used
+      here were previously treated as ordinary success data with 0 or 1
+      findings, never as a skip). All five green once
+      `_error_envelope_reason` and `DOCUMENTED_EXIT_STATUSES` were added.
+  AC-3:
+    tests:
+      - tests.test_sca_scan_execution.TestDocumentedAdvisoryFoundExitIsCompleted.test_judge_scan_outcome_direct
+      - tests.test_sca_scan_execution.TestDocumentedAdvisoryFoundExitIsCompleted.test_run_scan_end_to_end_findings_reach_result
+    red_confirmed: true
+    red_reason: >-
+      test_judge_scan_outcome_direct failed with the same
+      `AttributeError: ... no attribute 'judge_scan_outcome'` as AC-1/AC-2
+      before the function existed. test_run_scan_end_to_end_findings_reach_result
+      was already green pre-task (the pre-task code already normalized a
+      non-zero-exit npm payload into a finding, since it never inspected
+      exit status at all) -- it is kept as a same-behavior regression guard
+      for the case AC-3 names, and the criterion's red-to-green transition
+      is carried by the first (directly confirmed) test rather than this
+      one; noted per tdd-testing discipline rather than claiming a red this
+      second test never showed.
+  AC-4:
+    tests:
+      - tests.test_sca_scan_execution.TestPartialCoverageAcrossTwoEcosystems.test_one_not_completing_yields_skipped_true_with_completed_findings
+      - tests.test_sca_scan_execution.TestPartialCoverageAcrossTwoEcosystems.test_both_completing_yields_skipped_false
+    red_confirmed: true
+    red_reason: >-
+      Confirmed directly via the same git-stash check:
+      test_one_not_completing_yields_skipped_true_with_completed_findings
+      failed with `AssertionError: False is not true` on `result["skipped"]`
+      -- the pre-task aggregation only set `skipped: True` when NO selected
+      ecosystem ran at all, folding a partial skip into `summary` prose
+      instead (exactly the gap this task's rework closes).
+      test_both_completing_yields_skipped_false was already green pre-task
+      (the full-coverage case was never broken) and is kept as the paired
+      assertion AC-4 itself states ("With both completing, skipped is
+      false"), not claimed as a fresh red-to-green transition.
+  AC-5:
+    tests:
+      - tests.test_sca_scan_execution.TestCombinedSkipReasonIsDeterministic.test_partial_coverage_combined_reason_is_order_independent
+    red_confirmed: true
+    red_reason: >-
+      An earlier version of this test used two ecosystems BOTH not
+      completing (registry order reversed between two runs) and passed even
+      before this task's edit -- the sorted-join determinism for the
+      "every selected ecosystem skipped" case pre-dates this task and
+      proves nothing about the rework. Rewritten to require a MIXED
+      scenario (one ecosystem completes, two do not) so the assertion
+      depends on this task's own `skipped: true`-with-partial-findings
+      behavior. Confirmed red via git stash on the implementation files:
+      failed with `AssertionError: False is not true` on `r1["skipped"]`
+      (pre-task, one completed ecosystem forced `skipped: False`
+      regardless of the other two). Green after the rework, with the
+      combined `skip_reason` identical across both registry orderings.
+  AC-6:
+    tests:
+      - tests.test_sca_scan_execution.TestReviewPhasePartialCoverageStatement.test_r2_axis_2_section_states_partial_coverage
+      - tests.test_sca_scan_execution.TestReviewPhasePartialCoverageStatement.test_states_combined_reason_on_the_run_row
+      - tests.test_sca_scan_execution.TestReviewPhasePartialCoverageStatement.test_states_findings_still_enter_the_evaluator_inputs
+      - tests.test_sca_scan_execution.TestReviewPhasePartialCoverageStatement.test_existing_ordinary_skip_pin_still_present
+    red_confirmed: true
+    red_reason: >-
+      Confirmed directly via git stash on review-phase.md alone:
+      test_r2_axis_2_section_states_partial_coverage failed
+      (`'partial coverage' not found in ...`) and
+      test_states_combined_reason_on_the_run_row failed
+      (`'combined' not found in ...`) against the pre-task R2 section text.
+      test_states_findings_still_enter_the_evaluator_inputs was already
+      green pre-task -- the word "evaluator" already appears in the
+      pre-existing R2 paragraph ("belongs to the R3a evaluator"), so this
+      assertion alone does not discriminate the new sentence; kept as a
+      content check for the addition, with the criterion's red-to-green
+      evidence carried by the other three tests in this class. Running the
+      full suite (this task's definition of done) additionally confirms
+      the pre-existing pins in tests/test_sca_axis_review_phase_r0_r3.py
+      (Test Notes: "run the existing review-phase.md pin modules as part of
+      the same change") stayed green, which
+      test_existing_ordinary_skip_pin_still_present duplicates locally as
+      a same-module guard against reflowing the pinned sentence.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Version-bump checks live in tests/test_sca_axis_skill_and_version.py
+      (task0006's module, not owned by this task) and assert only "past
+      0.1.65", already satisfied by the pre-task value (0.1.66). This
+      task's own bump (0.1.66 -> 0.1.67) is a plain value edit with no
+      test-observable red state of its own inside this worktree; verified
+      directly: `em-workflow/.claude-plugin/plugin.json` and
+      `.claude-plugin/marketplace.json`'s em-workflow entry both read
+      "0.1.67" after the edit, and
+      `python3 -m unittest tests.test_sca_axis_skill_and_version` passes
+      (past-baseline and registries-agree checks both hold for 0.1.67).
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Whole-suite / whole-repository Definition-of-Done check, not a single
+      behavior with its own red-to-green transition (a suite cannot assert
+      its own full-suite outcome without recursion). Verified by actually
+      running both commands in this task's worktree after implementation:
+      `python3 -m unittest discover -s tests` -> 4060 tests, 6 errors (the
+      pre-existing baseline_failures above, unchanged); `python3
+      em-workflow/scripts/check-plugin-invariants.py <repo-root>` -> all
+      seven checks PASS, exit 0.
