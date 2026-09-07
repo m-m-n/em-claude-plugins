@@ -1,0 +1,24 @@
+schema_version: 1
+feature: review-sca-axis
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-07T21:08:32+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined"
+    normalized_answer: "declined"
+    resolution_note: >-
+      task_id: task0001; declined deviation path: tests/test_sca_task_filing.py;
+      missing evidence part: the identifier of the acceptance criterion or
+      requirement that would otherwise be dropped. The report cites
+      IMPLEMENTATION.md's "Module co-ownership skeleton" merge duty as its
+      rationale, which is neither an AC-n of task0001's own plan nor a
+      requirement id registered in workflow.yaml. The path itself passes the
+      shape check and is not a workflow control path, and the failure mode is
+      stated as an observable outcome (task0005's
+      test_scan_is_a_marked_placeholder necessarily goes red once task0001's
+      real `scan` is re-applied on top of the adopted parent file), but the
+      missing identifier alone makes the deviation ineligible for
+      auto-addition to tasks.task0001.files.
