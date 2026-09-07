@@ -1,0 +1,52 @@
+# vuln-scanners.yaml - SCA scanner registry (em-workflow SSOT)
+#
+# Responsibility split: this registry owns WHICH TOOL serves each manifest
+# and WHERE THE THRESHOLD sits (direct-dependency-only, severity high and
+# above); em-workflow/scripts/scan-dependencies.py owns HOW TO RUN that tool
+# and HOW TO NORMALIZE its machine-readable output into a
+# review-output-schema.json object. No conditional logic lives here -- this
+# file is data only.
+#
+# Per ecosystem:
+#   manifests     -- the manifest filenames (basenames) that select it.
+#   executable    -- the executable name resolved on PATH; never installed
+#                    when absent (FR3, FR8).
+#   args          -- appended to `executable`, producing machine-readable
+#                    output while only READING the existing lockfile (no
+#                    install, no lockfile rewrite, no formatter run -- NFR2).
+#   severity_map  -- maps the tool's own severity vocabulary onto the
+#                    schema's `critical` / `high`; a value absent from this
+#                    map is below threshold.
+#   threshold     -- direct_only: true (transitive dependencies are always
+#                    dropped); min_severity: high (the schema-side floor).
+
+version: 1
+
+ecosystems:
+  - ecosystem: npm
+    manifests: [package.json]
+    executable: npm
+    args: [audit, --json]
+    severity_map: {critical: critical, high: high}
+    threshold: {direct_only: true, min_severity: high}
+
+  - ecosystem: cargo
+    manifests: [Cargo.toml]
+    executable: cargo
+    args: [audit, --json]
+    severity_map: {critical: critical, high: high}
+    threshold: {direct_only: true, min_severity: high}
+
+  - ecosystem: pip
+    manifests: [pyproject.toml, requirements.txt]
+    executable: pip-audit
+    args: [--format, json]
+    severity_map: {critical: critical, high: high}
+    threshold: {direct_only: true, min_severity: high}
+
+  - ecosystem: go
+    manifests: [go.mod]
+    executable: govulncheck
+    args: [-json, ./...]
+    severity_map: {critical: critical, high: high}
+    threshold: {direct_only: true, min_severity: high}
