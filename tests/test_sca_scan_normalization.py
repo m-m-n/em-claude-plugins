@@ -711,7 +711,7 @@ class TestUntrustedTextTruncation(unittest.TestCase):
         result = _run_scan_with_stub("npm", fixture, ["package.json"])
         self.assertEqual(len(result["findings"]), 1)
         title = result["findings"][0]["title"]
-        self.assertLessEqual(len(title.encode("utf-8")), 4096)
+        self.assertLessEqual(len(title.encode("utf-8")), SCAN.UNTRUSTED_TEXT_MAX_BYTES)
         self.assertIn(SCAN.TRUNCATION_MARKER, title)
         self.assertLess(len(title), len(long_title))
 
@@ -723,12 +723,16 @@ class TestUntrustedTextTruncation(unittest.TestCase):
                 self.assertNotIn(marker, finding["suggestion"])
 
     def test_truncate_helper_never_exceeds_limit_and_marks_visibly(self):
-        truncated = SCAN.truncate("B" * 10000)
-        self.assertLessEqual(len(truncated.encode("utf-8")), SCAN.TRUNCATION_LIMIT_BYTES)
+        # `truncate_untrusted` is the shared helper both `scan` (this task)
+        # and `file-tasks` (task0005) use -- IMPLEMENTATION.md's single-
+        # helper contract, adopted verbatim from task0005's file rather
+        # than duplicated.
+        truncated = SCAN.truncate_untrusted("B" * 10000)
+        self.assertLessEqual(len(truncated.encode("utf-8")), SCAN.UNTRUSTED_TEXT_MAX_BYTES)
         self.assertIn(SCAN.TRUNCATION_MARKER, truncated)
 
     def test_truncate_helper_leaves_short_text_untouched(self):
-        self.assertEqual(SCAN.truncate("short text"), "short text")
+        self.assertEqual(SCAN.truncate_untrusted("short text"), "short text")
 
 
 # ---------------------------------------------------------------------------
@@ -787,13 +791,18 @@ class TestDeterminismAndReadOnlyDiscipline(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# AC-10: co-ownership skeleton -- both subcommands registered; file-tasks
-# is the marked placeholder.
+# AC-10: co-ownership skeleton -- both subcommands registered. task0005's
+# real `file-tasks` implementation was already on the integration branch
+# when this task merged; the parent-side-adoption protocol
+# (worktree-task-workflow) adopted that file wholesale and re-applied only
+# this task's `scan` half on top, so neither subcommand is a placeholder in
+# the merged file (task0005's own tests/test_sca_task_filing.py -- not
+# duplicated here -- is what proves `file-tasks` itself still passes).
 # ---------------------------------------------------------------------------
 
 class TestCoOwnershipSkeleton(unittest.TestCase):
     def test_both_subcommands_registered(self):
-        parser = SCAN.build_arg_parser()
+        parser = SCAN.build_parser()
         subparsers_actions = [
             action
             for action in parser._actions
@@ -804,17 +813,35 @@ class TestCoOwnershipSkeleton(unittest.TestCase):
         self.assertIn("scan", choices)
         self.assertIn("file-tasks", choices)
 
-    def test_file_tasks_placeholder_exits_with_execution_error_code(self):
-        exit_code = SCAN.main(["file-tasks"])
-        self.assertEqual(exit_code, 2)
+    def test_scan_is_a_real_implementation_not_a_placeholder(self):
+        # Directly proves `scan_command` does real normalization work
+        # rather than raising the "implemented by the other task"
+        # placeholder ExecutionError a not-yet-merged half would.
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp) / "project"
+            project_root.mkdir()
+            changed_files_path = Path(tmp) / "changed.json"
+            changed_files_path.write_text(json.dumps(["README.md"]), encoding="utf-8")
+            args = argparse.Namespace(
+                project_root=str(project_root),
+                changed_files=str(changed_files_path),
+                registry=None,
+            )
+            result = SCAN.scan_command(args)
+        self.assertEqual(result["source"], "tool")
+        self.assertFalse(result["skipped"])
 
-    def test_file_tasks_placeholder_prints_no_object_on_stdout(self):
-        # cmd_file_tasks itself returns (None, 2) -- proven directly, since
-        # capturing real stdout/stderr here would need a subprocess.
-        args = argparse.Namespace()
-        result, code = SCAN.cmd_file_tasks(args)
-        self.assertIsNone(result)
-        self.assertEqual(code, 2)
+    def test_file_tasks_still_dispatches_to_its_own_real_command(self):
+        # AC-10's merge-keeps-the-other-real-half guarantee, checked at the
+        # dispatch-wiring level (not re-testing file_tasks's own behavior,
+        # which is tests/test_sca_task_filing.py's job): the `file-tasks`
+        # subparser's registered callback is task0005's real
+        # `file_tasks_command`, not this task's placeholder mechanism.
+        parser = SCAN.build_parser()
+        args = parser.parse_args(
+            ["file-tasks", "--project-root", "x", "--feature", "y", "--findings", "z"]
+        )
+        self.assertIs(args.func, SCAN.file_tasks_command)
 
 
 # ---------------------------------------------------------------------------
