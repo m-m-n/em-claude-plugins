@@ -1,0 +1,129 @@
+task_id: task0007
+baseline_failures: []          # 3029/3029 passing before any change (4a)
+final_failures: []             # 3038/3038 passing after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_ac1_real_shaped_leading_record_with_no_timestamp_resolves_earliest_later_ts
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change implementation (_first_entry_timestamp),
+      resolve_current_session returned None for this fixture instead of
+      ("sess-real-shape", 2021-06-01T12:00:00+00:00): AssertionError
+      "None != ('sess-real-shape', datetime.datetime(2021, 6, 1, 12, 0,
+      tzinfo=utc))".
+  AC-2:
+    tests:
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_ac2_leading_blank_line_skipped_same_pair_as_ac1
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_ac2_leading_invalid_json_line_skipped_same_pair_as_ac1
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_ac2_leading_non_object_json_line_skipped_same_pair_as_ac1
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_marker_match_with_unusable_first_entry_still_resolves_via_later_line
+    red_confirmed: true
+    red_reason: >-
+      All four variants failed against the pre-change implementation with
+      "None != (<stem>, <expected earliest timestamp>)" -- a malformed
+      leading line aborted resolution outright instead of falling through
+      to the later parseable entry. The fourth test is the pre-existing
+      regression fixture (previously named
+      test_marker_match_with_unusable_first_entry_fails_resolution,
+      asserting None), rewritten per the task plan's explicit revision of
+      D2 to assert the new specified behavior instead.
+  AC-3:
+    tests:
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_ac3_no_entry_yields_a_parseable_timestamp_is_unresolved
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac3_marker_transcript_with_no_parseable_timestamp_is_current_session_unknown
+    red_confirmed: false
+    red_reason: >-
+      Both tests already passed against the pre-change implementation.
+      This is structural, not a testing oversight: AC-3's own precondition
+      is "no entry anywhere -- including the first -- carries a parseable
+      timestamp", and the pre-change _first_entry_timestamp always
+      returned None for the leading entry alone whenever that entry itself
+      had no parseable timestamp (it never looked further). Any fixture
+      satisfying AC-3 therefore necessarily made the old code return None
+      too, by construction, so no AC-3-shaped fixture can discriminate old
+      from new behaviour. The tests still guard the specified behaviour
+      going forward (e.g. against a future change that made resolution
+      succeed when it should not).
+  AC-4:
+    tests:
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_ac4_out_of_order_timestamps_resolve_to_earliest_not_first_line
+    red_confirmed: true
+    red_reason: >-
+      Failed against the pre-change implementation with the resolved
+      timestamp equal to the first (positionally earliest) line's instant
+      (2021-06-01T15:00:00+00:00) instead of the true earliest instant in
+      the file (2021-06-01T10:00:00+00:00): AssertionError comparing the
+      two datetimes.
+  AC-5:
+    tests:
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_ac5_newest_marker_transcript_committed_even_when_older_would_resolve
+    red_confirmed: false
+    red_reason: >-
+      Already passed against the pre-change implementation. "Commit to the
+      newest marker-bearing transcript, never fall through to an older
+      one on failure" is pre-existing behaviour in
+      _resolve_current_session_via_marker that this task does not touch;
+      only the single committed transcript's start-time derivation
+      changed. The fixture's newer transcript has a timestamp-less leading
+      record by AC-5's own "yields no parseable timestamp" precondition,
+      so (per the same structural argument as AC-3) the pre-change code
+      also returns None for it, making this fixture unable to
+      discriminate old from new behaviour even though it correctly pins
+      the specified "never adopt the older transcript instead" guarantee.
+  AC-6:
+    tests:
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_form1_explicit_pair_takes_precedence_over_marker
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_form1_requires_both_id_and_start_together
+      - tests.test_recover_orphaned_task.TestCurrentSessionResolution.test_form1_with_unparsable_start_is_unresolved
+    red_confirmed: false
+    red_reason: >-
+      Form 1 (explicit --current-session-id + --current-session-start) is
+      untouched by this task's change, which is entirely inside form 2's
+      marker-scan start-time derivation. These pre-existing tests passed
+      before this task's edit and continue to pass after it -- AC-6 is a
+      no-regression guarantee, not a new failing-then-passing behaviour,
+      so no test could be made to fail first without misrepresenting the
+      criterion.
+  AC-7:
+    tests:
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac7_end_to_end_real_helpers_with_real_shaped_leading_record
+    red_confirmed: true
+    red_reason: >-
+      Failed against the pre-change implementation: outcome was
+      {'outcome': 'residual', 'reason': 'current-session-unknown', ...}
+      instead of {'outcome': 'recovered', 'reason': '', ...} -- the
+      real-shaped leading record (no `timestamp`) made marker-based
+      current-session resolution fail outright, so the pipeline never
+      reached the real journal-append-failed.py invocation.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No new test module per the task plan's Test Notes --
+      tests/test_plugin_version_parity.py already asserts parity and
+      baseline advancement over both manifests. That existing suite checks
+      the version against a fixed historical baseline (0.1.50), which the
+      pre-task version (0.1.61) already satisfied, so it could not be red
+      for this specific bump (it does not test "greater than this task's
+      own starting value"). Verified manually: both
+      em-workflow/.claude-plugin/plugin.json and the em-workflow entry of
+      .claude-plugin/marketplace.json read 0.1.61 before this task's edit
+      and 0.1.62 (parity, strictly greater) after it; the pre-existing
+      parity/baseline tests, and `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      (exit 0, all checks PASS), both still pass with the new value.
+  AC-9:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      A whole-suite-green requirement is a standing invariant this task
+      must not break, not a new failing-then-passing behaviour -- the 4a
+      baseline was already 0 failures / 0 errors across 3029 tests, so it
+      was never "red" to begin with. Verified by running
+      `python3 -m unittest discover -s tests` from the repository root
+      after implementation: 3038 tests, 0 failures, 0 errors. Every new
+      test lives in repository-root tests/ as test_recover_orphaned_task.py
+      (test_*.py), imports only the standard library (json, os, subprocess,
+      sys, tempfile, unittest, datetime, pathlib, importlib.util -- all
+      stdlib), and reads/writes only paths under a tempfile.TemporaryDirectory,
+      never real ~/.claude state.

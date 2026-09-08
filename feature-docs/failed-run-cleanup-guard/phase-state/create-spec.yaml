@@ -1,0 +1,158 @@
+schema_version: 1
+feature: failed-run-cleanup-guard
+phase: create-spec
+status: completed
+generation: 1
+base_revision: a9502ab9dab346b92b4ca719a9f4e59260408344
+last_input_digest: sha256:3dd47a2154055cc60d19b2465508a69cd7b4c15fe6fdc982d80b0e5265e258cd
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-03T08:10:09+09:00'
+    questions:
+    - question_id: requirement.failed-status-range
+      status: answered
+    - question_id: requirement.gh-pr-create-target
+      status: answered
+    - question_id: edge-case.workflow-yaml-unreadable
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-09-03T08:00:59+09:00'
+    source: batch-decision-table
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: failed-run-cleanup-guard
+    normalized_answer: failed-run-cleanup-guard
+    resolution_note: 'gate: create-spec.feature-identity; policy option_id derive_from_task_description;
+      feature name derived from the task description (PreToolUse guard that blocks
+      integration-worktree cleanup while a workflow step is failed)'
+    question_id: create-spec.feature-identity
+  requirement.failed-status-range:
+    question_id: requirement.failed-status-range
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-03T08:11:44+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - failed_only
+    freeform: null
+    normalized_answer: 'status: failed の step が 1 つでもあれば deny。task_description の記述そのまま。中断・未完了で終わったランは素通りする。'
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation
+      (1 turn, converged); Codex suggested failed_only which maps onto an existing
+      option_id; orchestrator adopted it. Codex rationale: タスク記述が明示する status: failed
+      に厳密に限定でき、needs_update や pending まで塞いで無人実行を誤停止させる拡張を避けられる。 record_as_assumption:
+      true'
+  requirement.gh-pr-create-target:
+    question_id: requirement.gh-pr-create-target
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-03T08:11:44+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - cwd_only
+    freeform: null
+    normalized_answer: cwd が .claude/worktrees/em-workflow/{feature}/integration の内側なら、その
+      feature の workflow.yaml を読む。外側なら判定を出さず素通り。
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation
+      (1 turn, converged); Codex suggested cwd_only which maps onto an existing option_id;
+      orchestrator adopted it. Codex rationale: 既存フックが利用する payload の cwd から integration
+      worktree を確実に同定できる場合だけ判定し、引数形式が固定されない --head の推測による他リポジトリへの誤爆を避けられる。 record_as_assumption:
+      true'
+  edge-case.workflow-yaml-unreadable:
+    question_id: edge-case.workflow-yaml-unreadable
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-03T08:11:44+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - fail_open
+    freeform: null
+    normalized_answer: 既存フック群の「壊れた入力は自分の責任範囲外」という fail-open 規律に揃える。誤爆ゼロだが、workflow.yaml
+      ごと壊れたランは守られない。
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation
+      (1 turn, converged); Codex suggested fail_open which maps onto an existing option_id;
+      orchestrator adopted it. Codex rationale: destructive-guard.py の不正入力に対する fail-open
+      規律と、誤検知も無人実行を即時停止させるという hook-tests.md のコスト原則に一致する。 record_as_assumption: true'
+  design-step.recommendation:
+    question_id: design-step.recommendation
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-03T08:11:44+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は requirements-analyst の推奨どおり skipped とする。
+    resolution_note: 'gate: create-spec.design-step; policy option_id decide_autonomously
+      (references/batch-policies.yaml)'
+  create-spec.design-system:
+    question_id: create-spec.design-system
+    packet_id: null
+    answered_at: '2026-09-03T08:21:47+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'project.design_system: kind project_native, paths [em-workflow/references/templates/design-tokens.yaml]'
+    resolution_note: 'gate: create-spec.design-system; policy option_id top_candidate_or_none
+      (references/batch-policies.yaml): one candidate reported by requirements-analyst
+      (category: token definition files) -> project_native. Analyst detail notes the
+      file is em-workflow''s own schema template rather than this repository''s design
+      system; batch policy applied mechanically, flagged for the human evaluator.'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:c4f378ac871f43a5476e3bb91163b35f30563d73326d2b0a6c9e470da6014e00
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:d69e3c457c58a0092354643078b7380299dea02223257e2e00aea6e770413ac0
+  output_digest: sha256:f256b858328271e609c8b1717b85e2dcaf7971015847646ac68563de22d3f157
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:3dd47a2154055cc60d19b2465508a69cd7b4c15fe6fdc982d80b0e5265e258cd
+  output_digest: sha256:2eef3e59bcf283dd66eea677bf5d625e6bcd9b6a6ab37a79d81d2b3dcd0ae61d
+artifacts:
+- path: feature-docs/failed-run-cleanup-guard/REQUIREMENTS.md
+  sha256: sha256:df90c79d22feec7d0a360bec3e4cfa46a034861f3c60c7dbdaa063ea73bdb39a
+  produced_by: create-spec-run-0003
+- path: feature-docs/failed-run-cleanup-guard/SPEC.md
+  sha256: sha256:3199b68a01f69dbc74c3dd34081b45323831c543ec45a2a5acef108fec8da52e
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: sha256:bb45637a588c0185e4c9d96a4644cb66b3076d7cbe97bd1a9782c2539bdde960
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:bd0ee5db26f101a44cca0f4978ae5c1824bc97f224b767be2331e49b4849b3fb
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/references/templates/design-tokens.yaml
+    digests:
+      em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    truncated: false
+  e2e:
+    generation_digest: sha256:549cc09a68bbf8d8c433c1c74704a68ce7dbbb4799a0847bc88f825b613d91f7
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  reference_scan_targets:
+    generation_digest: sha256:549cc09a68bbf8d8c433c1c74704a68ce7dbbb4799a0847bc88f825b613d91f7
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+  package_files:
+    generation_digest: sha256:549cc09a68bbf8d8c433c1c74704a68ce7dbbb4799a0847bc88f825b613d91f7
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null

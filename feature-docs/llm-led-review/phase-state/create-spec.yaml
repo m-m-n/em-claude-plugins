@@ -1,0 +1,83 @@
+schema_version: 1
+feature: llm-led-review
+phase: create-spec
+status: completed
+generation: 2
+base_revision: 99fe16c
+last_input_digest: sha256:e58ceb97d3d1243b3c804286b2979c6ac779e767f7fbd3a543bbad7a85ee81dd
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: obsolete
+    issued_at: '2026-09-04T09:03:00+09:00'
+    questions:
+    - question_id: review.main-llm-harness
+      status: resolved_by_evidence
+    - question_id: review.claude-reviewer-disposition
+      status: resolved_by_evidence
+    - question_id: review.no-harness-fallback
+      status: resolved_by_evidence
+    - question_id: review.evaluator-responsibility
+      status: resolved_by_evidence
+    - question_id: review.evaluator-output-contract
+      status: resolved_by_evidence
+    - question_id: review.fanout-shape
+      status: resolved_by_evidence
+    - question_id: review.claude-only-perspectives
+      status: resolved_by_evidence
+    - question_id: review.sanitization-ownership
+      status: answered
+    - question_id: review.standalone-scope
+      status: resolved_by_evidence
+    - question_id: review.confidence-model
+      status: resolved_by_evidence
+    - question_id: review.round-record-compat
+      status: resolved_by_evidence
+    - question_id: project.commands
+      status: resolved_by_evidence
+    - question_id: design.step-decision
+      status: resolved_by_evidence
+answers:
+  review.sanitization-ownership:
+    question_id: review.sanitization-ownership
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-04T09:47:15+09:00'
+    source: user
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: 評価役がそれを含めて評価する
+    normalized_answer: 他 LLM 出力の untrusted 扱いは評価役（Opus サブエージェント）が評価の一部として 担保する。評価役の出力自体もオーケストレーターから見て untrusted として扱う。
+    resolution_note: Answered by the human in the Notion task page (再開条件 2026-09-04T09:47:15+09:00). This is the human answer the previous run's fail-closed security abort required.
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:2efb589e8da81f69ae8114c6077f718dea6826d93f4f06a673bad7bef8165a86
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:d73f5a38ccdedcc2c4992ddd3c9065cb038483b7365b9bd3ac0a93ae7d28ff02
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:e58ceb97d3d1243b3c804286b2979c6ac779e767f7fbd3a543bbad7a85ee81dd
+  output_digest: null
+artifacts:
+- path: feature-docs/llm-led-review/REQUIREMENTS.md
+  digest: sha256:dd6c1291f0add569206cf2498964357b3439dfcbf5436070eb7b94e303e4795c
+  written_by: spec-writer
+  request_id: create-spec-run-0003
+- path: feature-docs/llm-led-review/SPEC.md
+  digest: sha256:c15187acb7977093f615f90aa8a2c2bef55dbdd0b378fd8cedeca4b22ab9078b
+  written_by: spec-writer
+  request_id: create-spec-run-0003
+patches: []
+progress_fingerprint: sha256:b1ef3c85fba4b1c0c47ce04e801a9e166267832cfbb6cc1db70dbca54d22d617
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    resolved_at_generation: 2
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null

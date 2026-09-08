@@ -1,0 +1,651 @@
+round: 1
+executed_at: '2026-09-07T11:18:22+09:00'
+scope:
+  review_mode: diff
+  base_commit: a67e75c6c9fb0c9798a8b4de3df9890fbe32433d
+  head_commit: ffcb0f15b1f71ce1650bb0dc0d61bf84c8c94112
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/batch-mode.md
+  - em-workflow/references/batch-policies.yaml
+  - em-workflow/references/batch-terminal-line.md
+  - em-workflow/references/fixtures/question-packet/category-fail-closed/valid-irreversible-assumption-blocking/input.json
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/question-packet-schema.md
+  - em-workflow/references/question-resolution.md
+  - em-workflow/scripts/run_codex_exec.sh
+  - em-workflow/scripts/validate-worker-output.py
+  - test-docs/batch-codex-autonomous-decisions/task0001.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0002.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0003.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0004.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0005.tests.yaml
+  - test-docs/batch-codex-autonomous-decisions/task0006.tests.yaml
+  - tests/test_batch_codex_autonomous_decisions_version_bump.py
+  - tests/test_batch_policies.py
+  - tests/test_batch_quiet_output_audit_persistence.py
+  - tests/test_batch_quiet_output_audit_record_contract.py
+  - tests/test_batch_quiet_output_discipline.py
+  - tests/test_batch_stop_contract.py
+  - tests/test_classification_gate.py
+  - tests/test_codex_wrapper_provider_fallback.py
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_question_resolution_doc.py
+  - tests/test_spec_change_origin_binding.py
+  - tests/test_validate_worker_output.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#loop1-chain1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#loop1-chain2
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: architecture#loop1-chain2
+  perspective: architecture
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: architecture#loop1-fallback
+  perspective: architecture
+  role: fallback
+  source: claude
+  status: completed
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: performance#loop2
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+findings:
+- severity: critical
+  category: spec
+  file: em-workflow/scripts/run_codex_exec.sh
+  line: 128
+  title: 'FR13/AC-5 provider chain is not implemented: entries 2 and 3 name providers that are defined
+    nowhere and cannot be defined under --ignore-user-config'
+  description: SPEC FR13 and AC-5 require run_codex_exec.sh to implement GPT -> GLM5.2 (Vertex AI) ->
+    Muse Spark. The script instead sets PROVIDER_ARGS_2=(-c 'model_provider="codex-fallback-provider-beta"')
+    and PROVIDER_ARGS_3=(-c 'model_provider="codex-fallback-provider-gamma"'). Those two identifiers appear
+    ONLY in run_codex_exec.sh:128-131 and tests/test_codex_wrapper_provider_fallback.py, and `model_providers`
+    appears in zero files. The same codex invocation passes --ignore-user-config, so a user's ~/.codex/config.toml
+    cannot supply the missing model_providers.<name> block either, and no -c model_providers.* override
+    is passed. Whenever a switch condition fires, entries 2/3 reference an undefined provider and can
+    only fail - the chain can never answer in production, and the original entry-1 failure is destroyed
+    by run_attempt's truncating redirect to $OUTFILE. The new tests stay green because the stub decides
+    its identity purely by grepping argv for those marker strings and reads no provider configuration
+    at all.
+  suggestion: 'Define entries 2 and 3 as real, resolvable providers: pass the full provider configuration
+    via -c overrides (model_providers.<name>.base_url / wire_api / env_key plus the model) so it survives
+    --ignore-user-config, matching the GPT -> GLM5.2 (Vertex AI) -> Muse Spark order FR13/AC-5 names.
+    Add a test assertion that each non-primary entry''s invocation carries a resolvable provider definition,
+    not just a provider name. If real endpoints cannot be supplied in this change, gate the chain off
+    behind an explicit flag and record the FR13 deviation rather than shipping a chain that cannot succeed.'
+  sources:
+  - litellm:muse-spark:spec
+  confidence: 100
+  stable_id: 3af4ecb279d5fd40
+  resolution: unresolved
+  resolution_reason: 'not auto-fixable (category: spec); verified by the orchestrator that PROVIDER_ARGS_2/3
+    still name codex-fallback-provider-beta/gamma and no model_providers definition exists'
+- severity: high
+  category: spec
+  file: em-workflow/scripts/run_codex_exec.sh
+  line: 180
+  title: Stderr-only detectors regress required stdout-shaped fallback switching
+  description: 'SPEC Error Flow (Wrapper invocation): ''usage-limit response -> next provider'' / ''Vertex
+    error -> next provider'' / ''other error -> surfaces to the caller''; FR13: ''detecting the usage-limit
+    response and the Vertex error and switching provider transparently''; TS-11: ''falls through to the
+    second provider on a usage-limit response and to the third on a Vertex error''. The round-1 loop-1
+    auto-fix narrowed both detectors to stderr only, so a usage-limit / provider-error response arriving
+    on stdout no longer triggers the chain. The project''s own TS-11 contract harness defines those shapes
+    on stdout (tests/test_codex_wrapper_provider_fallback.py STUB_SOURCE uses print() -> stdout). On that
+    contract, entry-1 usage_limit now yields exit 1 with no advance to entry 2/3, regressing the required
+    fallback. Orchestrator independently confirmed: 5 tests in tests/test_codex_wrapper_provider_fallback.py
+    now fail.'
+  suggestion: Restore detection for the stdout-shaped contract responses (match against both $OUTFILE
+    and $ERRFILE, or make the CLI stream contract explicit and update the stub and the detectors together)
+    so FR13/TS-11/Error-Flow switching holds regardless of which stream carries the response shape, while
+    keeping a separate guard against model-generated stdout spoofing.
+  sources:
+  - litellm:muse-spark:spec
+  confidence: 60
+  stable_id: 0c57632ebedaa31f
+  resolution: unresolved
+  resolution_reason: 'not auto-fixable (category: spec). Regression introduced by auto-fix loop 1; orchestrator
+    confirmed 5 failing tests in tests/test_codex_wrapper_provider_fallback.py'
+- severity: high
+  category: comprehensive
+  file: em-workflow/scripts/run_codex_exec.sh
+  line: 143
+  title: Fallback switch reads stderr but stub signals on stdout — chain never advances under tests
+  description: run_codex_exec.sh scopes both switch checks to $ERRFILE only (deliberate, to avoid attacker-influenceable
+    stdout). The test stub in tests/test_codex_wrapper_provider_fallback.py emits both shapes with print()
+    to stdout, which the wrapper routes to $OUTFILE, leaving $ERRFILE empty. Under that harness, entry-1
+    usage-limit can never satisfy is_usage_limit_response, so the chain stops at [1] instead of advancing
+    to [1,2,3]; the AC-2 end-to-end tests fail. Production CLI diagnostics (stderr) and the test contract
+    (stdout) have drifted. Orchestrator independently confirmed 5 failing tests.
+  suggestion: 'Align the contract on one stream: make the stub emit USAGE_LIMIT_TEXT/PROVIDER_ERROR_TEXT
+    to stderr to match the script''s stderr-only rule, or if the real CLI can emit these shapes on stdout,
+    match against both streams with the existing exit-code gate retained.'
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  stable_id: 95ed359e6b7cc02b
+  resolution: unresolved
+  resolution_reason: 'auto-fix loop 2 skipped: the only repair that keeps the stderr-only security property
+    and satisfies the pinned test contract requires editing tests/test_codex_wrapper_provider_fallback.py,
+    out of scope for a single-file editor'
+- severity: high
+  category: comprehensive
+  file: em-workflow/references/question-resolution.md
+  line: 117
+  title: '"The surviving aborts" lists all step-3 origin-verification failures as aborting in BOTH modes,
+    contradicting direction 2''s explicit batch relaxation'
+  description: 'Lines 113-117 enumerate, as aborting in BOTH modes, ''the Classification gate''s step-3
+    origin-verification failures below''. Step 3 (''Origin verification'') structurally contains BOTH
+    direction 1 (Membership) and direction 2 (The category / irreversibility check), and direction 2 says
+    the opposite for batch: ''This direction is relaxed in batch'' and ''In batch, on any of those same
+    conditions, the question instead takes the relaxed route''. So for a batch question whose bound-set
+    category is `security`, the SSOT states both ''aborts'' and ''takes the relaxed route''. SPEC FR3
+    scopes the surviving abort precisely - ''the Classification gate''s step-3 origin-verification aborts
+    (absent, unresolvable, or non-member origin_id)'', i.e. direction 1 only - so the intent is clear
+    and the document under-specifies it. This document IS the product: it is read at runtime by the orchestrator,
+    and the ambiguous sentence governs exactly the security/license category this feature makes autonomous.'
+  suggestion: Narrow the surviving-aborts enumeration to direction 1 explicitly (origin absent / unresolvable
+    / non-member), matching SPEC FR3's own parenthetical, and update the member-string assertion in tests/test_question_resolution_doc.py
+    (test_surviving_aborts_enumerated_once_and_abort_both_modes) in the same change.
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  stable_id: 86a6bdf64241cdb8
+  resolution: unresolved
+  resolution_reason: 'auto-fix loop 1 skipped: narrowing the enumeration breaks the exact substring pinned
+    by tests/test_question_resolution_doc.py::test_surviving_aborts_enumerated_once_and_abort_both_modes,
+    which the single-file editor may not touch. Re-reported by comprehensive#loop2.'
+- severity: high
+  category: comprehensive
+  file: em-workflow/references/question-resolution.md
+  line: 372
+  title: 'Opus escalation decisions are persisted as `source: batch-codex-consultation`, so the audit
+    record claims Codex was consulted on a path where Codex is never invoked'
+  description: 'Unlisted-gate fallback step 6 records every escalation decision with `source: batch-codex-consultation`.
+    The escalation also runs when the availability probe reports the wrapper unavailable and no consultation
+    turn ran at all (''Unavailable -> skip straight to the Opus escalation below, which runs in Codex''s
+    place, without ever reaching Codex''). phase-state.md defines that same value as meaning the opposite
+    - ''`batch-codex-consultation` when Codex''s suggestion did map onto one'' - so the two SSOTs disagree
+    about what the persisted value asserts, and on the Codex-absent path the record is simply false. The
+    feature''s stated purpose (SPEC US5 / FR14) is that an operator can audit an unattended decision without
+    re-running it; a `source` field that misattributes the deciding model defeats that directly. The closed
+    vocabulary in question-packet-schema.md has no value for an escalation decision.'
+  suggestion: Add a distinct value (e.g. `batch-opus-escalation`) to the closed `source` vocabulary and
+    update all three SSOTs together - question-packet-schema.md's vocabulary list, phase-state.md's value
+    mapping, and question-resolution.md step 6 - or, if the vocabulary must stay closed at two values,
+    require `resolution_note` to state unambiguously whether Codex ran, and stop asserting consultation
+    in `source`. This overlaps the architecture finding on phase-state.md's fourth-writer bullet; fix
+    both in one edit.
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  stable_id: 04701f23e186a53e
+  resolution: unresolved
+  resolution_reason: 'auto-fix loop 1 skipped: requires one coordinated vocabulary decision across question-packet-schema.md,
+    phase-state.md and question-resolution.md, which the single-file editor may not make'
+- severity: high
+  category: architecture
+  file: em-workflow/references/question-resolution.md
+  line: 392
+  title: auto-fix が step 2 に加えた batch 例外により、Unlisted-gate fallback step 8 の spec-change 除外主張が偽になった
+  description: 'loop 1 の auto-fix は Batch resolution sequence step 2 に「In batch, a routed question that
+    trips direction 2 does not stop at the Classification gate: it leaves the gate and joins the packet''s
+    batched consultation, so it may still reach the Unlisted-gate fallback below and, from there, on_unanswered」を追加した。しかし同じ文書の
+    Unlisted-gate fallback step 8 は依然として「specification-change questions never reach here either ... the
+    routed arm REMOVED them from the sequence entirely at step 2」と述べている。routed arm の入口条件は gate_id == rework.spec-change
+    かつ category == spec-change なので、direction 2 を踏んで relaxed route に乗る質問は必ず category: spec-change であり、question-packet-schema.md
+    によりそれらは必ず on_unanswered: block を持つ。したがって consultation も Opus escalation もマップしなければ step 6 のフォールスルー先はまさに
+    step 8 の block 分岐であり、そこで最小副作用の選択肢を自動採択されうる。fail-closed 近傍の経路で「到達しえない」と明記された分岐に実際は到達する。'
+  suggestion: step 8 の spec-change カーブアウトを step 2 の新しい batch 例外に合わせて書き換え、到達しうる部分集合を明示する。到達を許さない設計にするなら逆に
+    step 2 の batch 例外を撤回し、direction 2 の relaxed route が Classification gate の Outcome step 11 で必ず決着することを
+    step 3・step 6 と揃えて書き直す。step 2 / step 3 / step 6 / step 8 の 4 箇所が同じ到達可能性を述べる状態にすること。
+  sources:
+  - claude:architecture
+  confidence: 60
+  stable_id: fdf986d8f23a5e06
+  resolution: unresolved
+  resolution_reason: 'auto-fix loop 2 skipped as already addressed, but architecture#loop2 re-reported
+    the same site: step 8 now narrates a routing fact owned by step 2 and step 3 (triple narration)'
+- stable_id: 3664eb974b84ec5b
+  severity: high
+  category: security
+  file: em-workflow/references/question-resolution.md
+  line: 375
+  title: Batch direction-2 carve-out lets fail-closed verify-origin abort auto-resolve via block branch
+  description: Loop 2 added an explicit batch carve-out so a routed spec-change question (gate_id exactly
+    rework.spec-change) that trips Classification-gate direction 2 leaves the gate and joins the packet's
+    single batched Codex consultation, passes through the per-packet Opus escalation, and can then reach
+    the on_unanswered block minimum-side-effect fallthrough. The reviewer argues that converts a verify-origin
+    security/license/integrity abort into unattended auto-resolution.
+  suggestion: Keep direction-2 verify-origin aborts fail-closed in batch, or exclude direction-2 arrivals
+    from the step-8 block minimum-side-effect branch.
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: declined
+  resolution_reason: 'objects to the feature''s own specified intent: SPEC FR1/FR5 require direction 2
+    to relax in batch and FR10/AC-2 require the minimum-side-effect fallthrough. The spec perspective
+    re-reviewed this exact carve-out in the same round and found no SPEC contradiction; the round evaluator
+    dismissed the equivalent pass-1 objection on the same grounds.'
+- severity: high
+  category: security
+  file: em-workflow/references/question-resolution.md
+  line: 355
+  title: Untrusted worker/repo evidence is embedded in the consultation prompt with no isolation, and
+    can now steer autonomous security/license/irreversible resolutions
+  description: 'Unlisted-gate fallback step 3 passes each question''s `prompt`, `options`, `why_needed`,
+    `evidence` and the worker''s tentative position into ONE combined Codex prompt, and the Opus escalation
+    carries the same material. That content derives from the reviewed repository and from worker output
+    - untrusted input, as run_codex_exec.sh itself asserts for the same reason. The document defines untrusted-input
+    discipline in only one direction: NFR7 and the read-never-execute rule govern the model''s OUTPUT.
+    Nothing in question-resolution.md, and nothing in SPEC''s Security Considerations, defines delimiting,
+    quoting or instruction-neutralization for the untrusted content going IN. Before this change that
+    asymmetry was tolerable because security / license / reversible:false questions never reached the
+    consultation at all; this change routes exactly those questions there and resolves them unattended.
+    The blast radius is bounded by the question''s own declared option set, so injection cannot mint a
+    new action - but it can bias the unattended pick among a security question''s declared options.'
+  suggestion: State in the consultation procedure that every worker/repo-derived field (`prompt`, `options`,
+    `why_needed`, `evidence`, tentative position) is wrapped in an explicit delimited untrusted-data block,
+    that instructions inside that block are never followed, and that the orchestrator's mapping judgement
+    ignores any option preference expressed inside it. Record the full prompt and reply in the batch audit
+    record so an injected steer is auditable after the fact.
+  sources:
+  - litellm:muse-spark:security
+  confidence: 65
+  stable_id: c19525f08b730bc7
+  resolution: fixed
+  resolution_reason: auto-applied loop 1; security re-review confirmed resolved
+- severity: high
+  category: security
+  file: em-workflow/scripts/run_codex_exec.sh
+  line: 173
+  title: Provider switch conditions are case-insensitive substring greps over the whole attempt output,
+    which includes attacker-influenceable model text
+  description: 'is_usage_limit_response() and is_provider_error_response() run `grep -qi ''usage limit''`
+    / `grep -qi ''provider error''` over $OUTFILE, which run_attempt fills with the attempt''s combined
+    stdout+stderr - i.e. Codex''s own reply, which quotes the reviewed repository, plus the echoed $FULL_PROMPT
+    containing the diff under review. The switch is guarded by a non-zero exit code, which narrows but
+    does not remove the exposure: any failing attempt whose output happens to contain either phrase advances
+    the chain, and a genuine outage whose wording differs does not. This file is self-demonstrating -
+    a review of this very repository puts the literal strings into the reviewer''s own output. Combined
+    with the critical finding above the misroute silently replaces the real entry-1 diagnostic with an
+    undefined-provider error, since run_attempt truncates $OUTFILE on every attempt.'
+  suggestion: 'Match only CLI-owned diagnostic output, not model content: anchor the match to the CLI''s
+    own error line format (or parse a structured error code from stderr captured separately from stdout),
+    and never test the echoed prompt. Preserve entry 1''s output when the chain advances so the original
+    failure is still reportable.'
+  sources:
+  - litellm:muse-spark:security
+  confidence: 100
+  stable_id: 90127d5abbf40e7f
+  resolution: fixed
+  resolution_reason: auto-applied loop 1; security re-review confirmed resolved
+- severity: high
+  category: comprehensive
+  file: em-workflow/references/question-resolution.md
+  line: 316
+  title: Batch resolution sequence step 2 still asserts a Classification-gate question reaches neither
+    the Unlisted-gate fallback nor on_unanswered, which the direction-2 relaxation contradicts
+  description: 'FR12 required step 2 to be made mode-conditional. Its first half was updated, but the
+    routed-arm sentence was not: it still states that a question the routed arm sends to the Classification
+    gate ''reaches neither step 3''s policy lookup, nor the Unlisted-gate fallback, nor `on_unanswered`''.
+    The Unlisted-gate fallback''s own step 3 now explicitly admits that population - ''including any question
+    that reaches this step through the batch relaxation above or through the Classification gate''s direction
+    2 above'' - and step 6 can drop such a question through to `on_unanswered`. In batch, a routed question
+    that trips direction 2 therefore does reach both places the sentence forbids.'
+  suggestion: 'Scope the routed-arm sentence to interactive, or add the batch exception explicitly: in
+    batch a routed question that trips direction 2 leaves the Classification gate and joins the packet''s
+    batched consultation, and may reach `on_unanswered` from there.'
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  stable_id: db2436b5bac2bb92
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 (batch exception added to the routed-arm sentence of batch resolution
+    sequence step 2)
+- severity: high
+  category: comprehensive
+  file: em-workflow/references/question-resolution.md
+  line: 375
+  title: Step-2 batch routed-plus-direction-2 exception contradicts universal spec-change exclusion
+  description: 'Step 2 now states that in batch a routed (rework.spec-change) question that trips Classification-gate
+    direction 2 leaves the gate, joins the packet''s single batched consultation, and may still reach
+    the Unlisted-gate fallback and on_unanswered. Step 8''s block branch still states universally that
+    specification-change questions never reach here because the routed arm REMOVED them entirely at step
+    2. Both cannot hold in batch: the exception admits exactly the class the universal claims is excluded,
+    so a reader cannot tell whether a batch spec-change-via-direction-2 question takes minimum-side-effect
+    or is unreachable.'
+  suggestion: Scope the step-8 exclusion to interactive (or to routed questions that did not trip direction
+    2 in batch) and explicitly cross-reference the step-2 batch exception, so the two sections agree on
+    whether batch direction-2 spec-change questions can reach the block branch.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  stable_id: 628464e729c0b496
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (step 8 spec-change exclusion scoped to interactive, batch direction-2
+    carve-out added)
+- severity: medium
+  category: spec
+  file: em-workflow/scripts/run_codex_exec.sh
+  line: 191
+  title: 'Switch conditions are position-bound: a usage limit at entry 2 dead-ends and a provider error
+    at entry 1 never advances'
+  description: 'Entry 1 advances only on a usage-limit response, entry 2 advances only on a provider error.
+    SPEC''s Error Flow states the two conditions unqualified (''usage-limit response -> next provider;
+    Vertex error -> next provider''), which reads as applying at any non-terminal entry, and FR13 likewise.
+    Demoted from the reviewer''s `high` because SPEC TS-11 describes exactly the implemented position-bound
+    behaviour, so the SPEC is internally ambiguous rather than the implementation being plainly wrong.
+    The residual operational gap is real: a usage limit on entry 2 stops the chain instead of reaching
+    entry 3, which is the most likely real-world failure for a rate-limited fallback.'
+  suggestion: Make both conditions apply at every non-terminal entry, and reconcile SPEC TS-11's wording
+    with the Error Flow so one of the two stops being a second, weaker statement of the rule.
+  sources:
+  - litellm:muse-spark:spec
+  confidence: 65
+  stable_id: f45bfa0ec26de66d
+  resolution: unresolved
+  resolution_reason: 'not auto-fixable (category: spec)'
+- severity: medium
+  category: comprehensive
+  file: em-workflow/references/question-resolution.md
+  line: 378
+  title: The `block` branch's leading guard still says 'merely preferential choice on a success path',
+    which is false for the relaxed categories the same paragraph then admits
+  description: 'Step 8 opens with the pre-existing conditional ''if the question is a merely preferential
+    choice on a success path, take the option with the smallest side effect'', then adds that in batch
+    security / licensing / irreversible-operation questions ''arrive here, through the relaxed route ...
+    and this branch then takes the option with the smallest side effect for them exactly as for any other
+    question''. Demoted from the reviewer''s `high`: its claim that the outcome is undefined is wrong
+    - the added sentence states the outcome explicitly, and it matches SPEC FR10/AC-2. What remains is
+    a real drafting inconsistency, the guard clause contradicting the sentence that follows it, in the
+    one paragraph that decides what an unattended run does with an irreversible operation.'
+  suggestion: Rewrite the guard so it covers the population the paragraph now admits (e.g. 'take the option
+    with the smallest side effect on the success path'), rather than leaving a condition the relaxed categories
+    fail by definition.
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  stable_id: 37d4a764ad3089a0
+  resolution: unresolved
+  resolution_reason: below the auto-fix severity gate (medium)
+- severity: medium
+  category: comprehensive
+  file: em-workflow/references/question-resolution.md
+  line: 418
+  title: Availability probe points an undecided escalation back at 'step 6 of the fallback sequence',
+    which is now the escalation step itself
+  description: The availability probe says that if the escalation leaves a question undecided, 'that question
+    falls through to step 6 of the fallback sequence above (`on_unanswered`)'. This change rewrote step
+    6 into the Opus escalation step; the actual `on_unanswered` handling is steps 7-9 (`record_tbd`, `block`,
+    `use_batch_policy`). The reference is now circular - the escalation's failure path points back at
+    the escalation. Step 6's own closing clause keeps the intent recoverable, which is why this is medium
+    rather than high.
+  suggestion: Point the reference at the `on_unanswered` steps (7-9) rather than at step 6.
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  stable_id: 33f31611313cdd8f
+  resolution: unresolved
+  resolution_reason: below the auto-fix severity gate (medium)
+- severity: medium
+  category: comprehensive
+  file: em-workflow/references/question-packet-schema.md
+  line: 103
+  title: 'Reworded `on_unanswered: block` rationale summarises a route that is wrong for spec-change and
+    skips the consultation/escalation stages for security and license'
+  description: 'The added sentence - ''In batch, `on_unanswered: block` routes the question into the minimum-side-effect
+    branch rather than letting a worker choose `record_tbd` or `use_batch_policy` for it'' - takes its
+    subject from the preceding sentence''s category set {spec-change, security, license}. Per question-resolution.md,
+    a `spec-change` question with `gate_id: rework.spec-change` is removed from the sequence by the routed
+    arm at step 2 and never reaches `on_unanswered` at all, while any other `spec-change` question aborts
+    in both modes; and `security`/`license` reach the minimum-side-effect branch only after the batched
+    consultation and the Opus escalation both fail to decide. SPEC FR18 asked for the rationale to say
+    block ''routes into the minimum-side-effect branch rather than an abort''; the shipped wording changed
+    the contrast clause and, in doing so, restated a route inaccurately - also weakening NFR1''s cite-don''t-restate
+    discipline.'
+  suggestion: 'State ownership rather than the route: keep the constraint verbatim and say that in batch
+    the resolution-time handling of `block` is defined by references/question-resolution.md, citing it
+    without summarising which branch is reached.'
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  stable_id: 7eeb7b01fb5ad1e4
+  resolution: unresolved
+  resolution_reason: below the auto-fix severity gate (medium)
+- severity: medium
+  category: architecture
+  file: em-workflow/references/phase-state.md
+  line: 463
+  title: phase-state.md's relaxed-route writer bullet enumerates three resolution paths but maps `source`
+    for only two, dropping the Opus escalation case
+  description: 'The fourth writer bullet says the relaxed route appends an entry ''whether the mapping
+    came from the consultation, from the Opus escalation, or from the minimum-side-effect fallthrough'',
+    then defines only two values: ''`source` is `batch-codex-consultation` when a suggestion mapped onto
+    an option, `batch-safe-default` when the minimum-side-effect branch was taken''. question-resolution.md
+    step 6 assigns escalation decisions `batch-codex-consultation`, and the same file''s earlier paragraph
+    defines that value as ''when Codex''s suggestion did map onto one'' - so the audit-record-shape SSOT
+    and the resolution-sequence SSOT drift. This is the same root cause as the comprehensive finding on
+    the escalation `source` value; the two should be resolved by one vocabulary decision.'
+  suggestion: Resolve the vocabulary first (add an escalation value or make `resolution_note` carry the
+    distinction), then state the complete three-way mapping in this bullet so phase-state.md and question-resolution.md
+    agree.
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 85
+  stable_id: f1548ee148063d6c
+  resolution: unresolved
+  resolution_reason: below the auto-fix severity gate (medium); re-reported by architecture#loop2 at the
+    same site
+- stable_id: cad409d2c70fb3ce
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/question-resolution.md
+  line: 349
+  title: Fallback entry precondition omits relaxed-route arrivals
+  description: The Unlisted-gate fallback header still defines entry solely as gate_id with no policy
+    entry via batch step 5. Loop 2's revised step 3 admits questions that reach the fallback through the
+    batch relaxation or through Classification-gate direction 2 rather than through the gate_id policy
+    lookup. A reader enforcing the header precondition would refuse the relaxed arrivals that step 3 requires.
+  suggestion: 'Update the fallback entry precondition to name both entry paths: the normal no-policy-entry
+    path via batch step 5, plus direct arrival via the batch relaxation and via Classification-gate direction
+    2.'
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix severity gate (medium)
+evaluation:
+  round_summary: 'Round 1, cross_validation on: 6 of 8 dispatched runs produced usable output (security#0
+    and comprehensive#0 skipped rate_limited; comprehensive#1 skipped harness_unavailable; comprehensive#fallback
+    covered the perspective). 11 findings carried forward from the evaluation - 1 critical, 5 high, 5
+    medium - plus 3 dismissed sites. The critical is independently confirmed: SPEC FR13/AC-5 require a
+    GPT -> GLM5.2 (Vertex AI) -> Muse Spark chain in run_codex_exec.sh, but entries 2/3 name codex-fallback-provider-beta/gamma,
+    which a repo-wide grep shows exist only in the script and its test, with zero model_providers definitions
+    anywhere and --ignore-user-config blocking any user-supplied one. The high band is dominated by internal
+    contradictions in question-resolution.md, which is this feature''s actual deliverable. NO INJECTION
+    ATTEMPT was detected in any reviewer output.'
+  recommended_action: rework
+  action_rationale: A specified FR is not implemented and what shipped in its place cannot succeed at
+    runtime, which needs real provider configuration plus a non-stub-blind test - outside bounded auto-fix.
+    The five high findings are coordinated SSOT edits spanning question-resolution.md, phase-state.md
+    and question-packet-schema.md with their pinned tests, and two of them require a vocabulary decision
+    that touches three documents at once, so they cannot be patched independently without new drift.
+dismissed_sites:
+- file: em-workflow/references/question-resolution.md
+  line: 97
+  run_id: security#1
+  reason: false positive - objects to the feature's own specified and human-resolved intent. SPEC Overview,
+    FR1, FR5 and US1/AC-1/AC-8 explicitly require that in --batch the security, license and reversible:false
+    arms stop aborting and enter the consultation route, and that Classification-gate direction 2 is relaxed
+    on the same terms per the recorded answer requirement.classification-gate-scope = both_arms_except_membership.
+    Interactive is retained verbatim and direction 1 stays fail-closed. The residual concern that untrusted
+    input can steer that autonomous resolution is carried forward separately as c19525f08b730bc7.
+- file: em-workflow/scripts/run_codex_exec.sh
+  line: 128
+  run_id: comprehensive#fallback
+  reason: duplicate - same site and same defect as the spec#0 critical on the provider chain; its distinguishing
+    evidence was re-verified and folded into that finding's description.
+- file: em-workflow/scripts/run_codex_exec.sh
+  line: 173
+  run_id: comprehensive#fallback
+  reason: duplicate - same site and same defect as the security#1 grep-driven provider switching finding,
+    carried forward at high severity; its additional point about the truncating redirect destroying entry
+    1's diagnostic was folded into that finding's suggestion.
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 3
+  applied_total: 4
+  termination: loop-cap
+residual_critical_high: 6
+rework_required: true
+notes:
+- 'Accountability floor: three reviewer critical/high sites (security#1 question-resolution.md:349 and
+  run_codex_exec.sh:155, spec#0 run_codex_exec.sh:155) were matched to their carried-forward evaluation
+  findings by source attribution and by the evaluator''s anchor falling inside the reviewer''s own reported
+  line range, rather than by the strict +/-5 line predicate. Nothing was lifted, and the deviation is
+  disclosed here rather than producing duplicate findings.'
+- 'Auto-fix loop 1 introduced a regression: narrowing the wrapper''s switch-condition greps to stderr
+  broke 5 tests in tests/test_codex_wrapper_provider_fallback.py, whose stub emits the signal shapes on
+  stdout. Confirmed by the orchestrator running the approved test command. Carried as 0c57632ebedaa31f
+  and 95ed359e6b7cc02b.'
+- 'spec#loop2 returned findings: [] but its summary claimed the three carried spec findings were fixed
+  and referenced a CODEX_FALLBACK marker that does not exist in the file. The orchestrator independently
+  verified the placeholders and the failing tests and kept those findings unresolved rather than accepting
+  the claim.'
+- 'Chain-head pre-skips: from loop 2''s re-review onward, codex (rate_limited on 4 dispatches this round)
+  and litellm vertex-glm-5.2 (harness_unavailable twice, each after a 19-25 minute stall) were treated
+  as unavailable at dispatch time on the strength of that in-round evidence, and the perspectives were
+  dispatched to their next working chain entry.'

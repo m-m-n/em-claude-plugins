@@ -1,0 +1,582 @@
+schema_version: 1
+feature: destructive-guard-var-resolution
+created: '2026-09-01'
+base_branch: main
+goal: |
+  em-workflow/hooks/destructive-guard.py の誤爆を修正する。
+
+  同一コマンド文字列の中でリテラル代入された変数を `rm -r` の対象に使うと、
+  check_rm が DYNAMIC パターン（`$VAR`）を検知して rule `rm-unresolvable` の
+  ask を返す。実際に踏んだ例:
+
+    BACKUP_DIR=/tmp/claude-1000/-home-sakura-go-src-mcp-bridge/f20c1168.../scratchpad/review-r1-loop2-backup
+    rm -rf "$BACKUP_DIR"; mkdir -p "$BACKUP_DIR/src/lib" && chmod 700 "$BACKUP_DIR"
+
+  この `BACKUP_DIR` は同じコマンド文字列の 3 行上でリテラル代入されており、
+  静的に解決できる。展開後のパスは SAFE_DELETE（`^/tmp/`）に一致するため、
+  実パスを直書きしていれば無言 allow になっていた。つまりこれは誤爆。
+  無人実行（claude-batch）では ask が deny に降格されるため、誤爆 1 件が
+  その場で走行を止める。
+
+  原因は check_rm が DYNAMIC を見た瞬間に ask している点（destructive-guard.py:706-716）で、
+  同一コマンド内のリテラル代入を追跡する仕組みが無い。head() は代入トークンを
+  読み飛ばすだけで値を保持していない。
+
+  同一コマンド文字列内のリテラル代入だけを解決して判定に使えるようにする。
+  解決できない代入（コマンド置換・他変数参照・環境由来・条件付き代入）は
+  従来どおり解決不能として扱い、検知力を落とさない。
+
+parent_branch: em-workflow/destructive-guard-var-resolution/integration
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    hooks:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: cdb29f7d062166da9ed1b21ac70943ce76f2b028
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 変更対象は PreToolUse フックの判定ロジックと、そのテストケース JSON・プラグイン version のみ。UI も画面も持たず、唯一のユーザー可視出力は既存形式の permissionDecision JSON と理由文であり、視覚的な設計判断が発生しない（create-spec.design-step gate、ユーザー回答 skip）。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: e4d4f7f082b5beb5341af2d0f2e16722e54fcdb6
+- id: implement
+  status: completed
+  base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
+  completed_at_commit: a0452d317addc941cd7fda9093f745b79dec32bf
+- id: review
+  status: completed
+  completed_at_commit: ac9f99c57e3245f24424b24679a4b6309d9810ab
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: 5290e079106144c3d3c2877889f683b30ff5d050
+  evaluated_scenarios:
+  - id: TS-11
+    result: pass
+    evidence: run-destructive-guard.py 139/139
+  - id: TS-12
+    result: pass
+    evidence: unittest discover 2830/2830 OK; plugin.json と marketplace.json がともに 0.1.57
+  - id: TS-29
+    result: pass
+    evidence: destructive-guard.py は base とバイト一致。138 コマンドの差分実行で verdict+rule の不一致 0
+  - id: TS-30
+    result: pass
+    evidence: ケース JSON の差分は追加 81 行 / 変更 1 行（base 最終エントリの末尾カンマのみ）
+  - id: TS-31
+    result: pass
+    evidence: 撤回済み機構を名指すラベル 0 件、既知の穴マーカー 16 件
+    caveat: VERIFICATION.md の TS-31 本文は counter-case にもマーカーを要求する書き方になっているが、実ファイルの counter-case 5 件は正しい deny を記録するためマーカーを持たない。シナリオが意図する性質（ラベルが実測した判定経路を述べる）は成立している。本文の記述欠陥は review round 5 の r5-ts31-marker-scope として未解決のまま記録済み
+  excluded_requirements:
+  - id: FR1
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR2
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR3
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR4
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR5
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR6
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: FR7
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+  - id: NFR1
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  - id: NFR2
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  - id: NFR3
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  - id: NFR4
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  - id: NFR6
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+  retired_scenarios: TS-1..TS-10, TS-13..TS-28（excluded 要件に紐づくため評価対象外。VERIFICATION.md に retired として記録済み）
+  commands_not_configured:
+  - build_command
+  - format_command
+  - e2e_test_command
+- id: retrospect
+  status: completed
+  completed_at_commit: dbc2f97b1a4df325a9c852063d3f5d5e0f482e51
+tasks:
+  task0001:
+    title: static resolution of literal variable assignments in the destructive-guard hook
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: merged
+    notes: null
+    branch: em-workflow/destructive-guard-var-resolution/task0001
+  task0002:
+    title: plugin version bump to the next patch level
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR9
+    status: merged
+    notes: null
+    branch: em-workflow/destructive-guard-var-resolution/task0002
+  task0003:
+    title: make variable resolution reflect what the shell would really do
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: merged
+    notes: null
+    branch: em-workflow/destructive-guard-var-resolution/task0003
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - f11f6a1aac9cf9b4
+      - 2c696d520373ceb2
+      - 480361011164af5b
+      - 96be1fbe15d44317
+      - deafd14791607b66
+      - 0b16e740ce83b0f5
+      - 8e1e8deaf6e92ca2
+      - d70fdfdbf2b99934
+      - 3e67239a3c93f5be
+      - 3497f9d6ae1f7761
+      - 8c05d0eb8a9fb83d
+      - cd259adaf81627ad
+      - eacf264383137515
+      - cc8e7a2eee2b504a
+      - b6acc424285ab451
+  task0004:
+    title: judge unsubstituted text with the pre-resolution path, and close the remaining binding leaks
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: merged
+    notes: null
+    branch: em-workflow/destructive-guard-var-resolution/task0004
+    provenance:
+      source: review
+      review_round: 2
+      source_ids:
+      - r2-rebind-compound
+      - r2-paren-provenance
+      - r2-normalize-before-gate
+      - r2-chained-rebind
+      - r2-trailing-slash-scratch
+      - r2-literal-verdict-drift
+      - r2-unset-for-read
+      - r2-substitution-flattening
+      - r2-bare-name-boundary
+      - r2-sentinel-in-reason
+      - r2-quadratic-resolution
+      - r2-partial-wiring
+      - r2-ordinal-implicit
+      - r2-constant-factor-scans
+  task0005:
+    title: withdraw the variable-resolution layer and restore the hook's base behaviour
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR8
+    - NFR5
+    status: merged
+    notes: 'deviation admitted: destructive-guard-cases.json に `rm -rf dist/*` の allow ケースを 1 件新規追加（AC-3 が明示的に要求。既存エントリで同コマンド文字列を覆うものは無かった）'
+    branch: em-workflow/destructive-guard-var-resolution/task0005
+    provenance:
+      source: review
+      review_round: 3
+      source_ids:
+      - r3-quoted-name-assign
+      - r3-compound-constructs
+      - r3-scratch-glob-gate
+      - r3-positional-after-resolve
+      - r3-process-substitution
+      - r3-invalidated-names-quadratic
+      - r3-resolved-stricter-than-literal
+      - r3-array-assignment
+      - r3-fallback-sentinel-leak
+      - r3-double-count-hint
+      - r3-resolver-application-point
+      - r3-positional-tuple
+      - r3-poison-scan
+      - r3-substitute-then-cap
+      - r3-nameref
+  task0006:
+    title: make the retained expectation entries state what they actually pin
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR8
+    status: merged
+    notes: null
+    branch: em-workflow/destructive-guard-var-resolution/task0006
+    provenance:
+      source: review
+      review_round: 4
+      source_ids:
+      - r4-substitution-allow-contract
+      - r4-trailing-slash-contract
+      - r4-prefix-match-contract
+      - r4-labels-name-withdrawn-layer
+      - r4-reformatted-cases
+      - r4-safe-delete-prefix-security
+review:
+  status: completed
+  rounds_completed: 5
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: completed
+    security: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Collect plain assignments from the command string
+    status: excluded
+    tbd_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-25
+  FR2:
+    title: Substitute resolved values into target tokens
+    status: excluded
+    tbd_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-15
+    - TS-18
+    - TS-20
+    - TS-21
+    - TS-22
+    - TS-23
+    - TS-24
+    - TS-26
+  FR3:
+    title: Apply resolved values to every target-path check
+    status: excluded
+    tbd_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-18
+    - TS-19
+    - TS-21
+    - TS-23
+    - TS-28
+  FR4:
+    title: Verdict for a resolved path outside SAFE_DELETE
+    status: excluded
+    tbd_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-2
+    - TS-19
+    - TS-20
+    - TS-26
+  FR5:
+    title: Assignment forms in scope
+    status: excluded
+    tbd_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-5
+    - TS-14
+    - TS-25
+  FR6:
+    title: Reassignment excludes the variable, with a rewrite hint
+    status: excluded
+    tbd_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-3
+    - TS-14
+    - TS-25
+  FR7:
+    title: Same-nesting-level scope only
+    status: excluded
+    tbd_reason: null
+    excluded_reason: review round 1/2/3 の実測で、この機能が導入した変数解決層は毎ラウンド、代入と無関係なコマンドを含む同程度の重さの退行を生み続けた（round 3 では 11 件中 10 件が退行。ホームディレクトリの再帰削除と force push を allow に落とす経路、および rm -rf dist/* を無人実行で止める誤爆を含む）。得られる利益は誤爆 1 クラスの解消のみで、守っている層の allow は auto mode 分類器と permissions.deny の双方を飛ばす。ユーザー判断により解決層そのものを取り下げる。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-4
+    - TS-13
+    - TS-16
+    - TS-17
+    - TS-28
+  FR8:
+    title: Test cases per the project rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS-11
+    - TS-29
+    - TS-30
+    - TS-31
+  FR9:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-12
+  NFR1:
+    title: Static-only resolution
+    status: excluded
+    tbd_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-11
+  NFR2:
+    title: Fail closed
+    status: excluded
+    tbd_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-11
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
+    - TS-24
+    - TS-25
+    - TS-27
+    - TS-28
+  NFR3:
+    title: Determinism
+    status: excluded
+    tbd_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-11
+    - TS-25
+  NFR4:
+    title: Bounded cost
+    status: excluded
+    tbd_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-27
+  NFR5:
+    title: Single-file, stdlib-only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-11
+  NFR6:
+    title: Existing behaviour untouched
+    status: excluded
+    tbd_reason: null
+    excluded_reason: 解決層の取り下げに伴い対象消滅（この NFR は解決層の性質を規定していた）。
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS-11
+    - TS-22
+    - TS-23

@@ -1,0 +1,318 @@
+round: 1
+executed_at: "2026-09-04T15:56:47+09:00"
+scope:
+  review_mode: diff
+  base_commit: 9d21d0898352fbda6be6cd67c65ad0c88cad1acc
+  head_commit: e23de5ed6690cfc1cdfd061df85e3e5149a81e9b
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/README.md
+    - em-workflow/agents/codex-reviewer.md
+    - em-workflow/agents/review-evaluator.md
+    - em-workflow/agents/reviewer.md
+    - em-workflow/references/review-evaluation-contract.md
+    - em-workflow/references/review-output-schema.json
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/review-protocol.md
+    - em-workflow/references/review-rules.yaml
+    - em-workflow/references/reviewers.yaml
+    - em-workflow/skills/review/SKILL.md
+    - test-docs/llm-led-review/task0001.tests.yaml
+    - test-docs/llm-led-review/task0002.tests.yaml
+    - test-docs/llm-led-review/task0003.tests.yaml
+    - test-docs/llm-led-review/task0004.tests.yaml
+    - test-docs/llm-led-review/task0005.tests.yaml
+    - tests/test_llm_led_review_user_docs.py
+    - tests/test_review_evaluation_contract.py
+    - tests/test_review_phase_llm_led.py
+    - tests/test_reviewer_roles_protocol.py
+    - tests/test_reviewers_primary_chains.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed, note: "loop-1 re-review dispatch returned no result at the harness level (background Codex task never surfaced); the loop-2 re-review dispatch completed"}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: muse-spark, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: muse-spark, status: completed}
+findings:
+  - stable_id: 2473033f751cd158
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    line: 331
+    title: "評価者 coverage gate が正常なトリアージを failed 扱いにして findings を復活させる"
+    description: >-
+      loop 2 で追加した Evaluator coverage gate は、レビュアーの critical/high サイトを
+      評価役の post-gate critical/high が 1 つも覆わないとき評価オブジェクト全体を unusable と
+      して degradation に落とす。しかし「critical/high を 1 件も残さない」のは誤検知の棄却・
+      medium への降格・round-context 抑制で普通に起きる正常な triage 結果であり、機械的に
+      区別できない。加えて判定手続きが二重定義（(file, line_bucket) への還元と same_site の
+      ±5 距離は一致しない）。
+    suggestion: >-
+      ゼロカバレッジを degradation のトリガーから外し、構造的失敗（Task 失敗 / 必須 root
+      フィールド欠落）に限定する。被覆は round 記録・R6 への観測値に留めるか、評価契約側に
+      「退けた理由を round_summary / action_rationale に書く」義務として置く。比較述語は
+      same_site か bucket 等価のどちらかに統一する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "auto-fix R4: same-site conflict group (comprehensive / security / performance / spec の処方が発散) のため batch 既定でサイトごとスキップ"
+  - stable_id: fce739c4dabb8993
+    severity: high
+    category: security
+    file: em-workflow/references/review-phase.md
+    line: 331
+    title: "Evaluator coverage gate が全滅時のみ発火するため、注入による critical finding の選択的隠蔽を通す"
+    description: >-
+      partial coverage を明示的に「NOT degraded; trusted as-is」としているため、
+      『この 1 件は false positive なので報告するな』型の注入で critical な security finding を
+      1 件だけ落とせる。他観点の critical/high が 1 つでも残れば gate は通過し、消された
+      finding は residual にも auto-fix 候補にもラウンド記録にも残らず無痕跡になる。
+    suggestion: >-
+      gate をサイト単位の floor にする。reviewer 由来の critical/high サイトのうち評価役が
+      same_site で覆っていないものは落とさず、その run の identity・confidence 60 で
+      findings に持ち上げる。評価役は降格・dedupe・順位付けはできても critical/high の
+      消去はできない、という不変条件にする。
+    sources: [claude:security]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "auto-fix R4: 同上の conflict group によりスキップ"
+  - stable_id: ecae1046a059d74b
+    severity: high
+    category: performance
+    file: em-workflow/references/review-phase.md
+    line: 331
+    title: "評価者カバレッジゲートが正常なトリアージで発火し、Opus 評価 1 回分を捨てて auto-fix ループ／rework を誘発する"
+    description: >-
+      誤発火 1 件あたりの下流コストがラウンド 1 本分に匹敵する。Opus xhigh 評価 1 回が無駄になり、
+      評価役が棄却した critical/high が confidence 60 で全件復活して residual > 0 になり、
+      R4 の再レビュー（N 観点 × 最大 3 ホップ × 最大 3 ループ）と batch auto-rework が誘発される。
+      さらに gate が dedupe / round-context 抑制の後段にあるため、捨てる評価に対する集約作業も二重に走る。
+    suggestion: >-
+      評価契約に dismissed_sites（棄却したサイトと理由）を足し、findings か dismissed_sites の
+      どちらかに現れていれば説明済みとみなす。degradation は「どちらにも現れない」場合に限定する。
+      gate の評価順序を dedupe / round-context 抑制の前へ繰り上げる。
+    sources: [claude:performance]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "auto-fix R4: 同上の conflict group によりスキップ"
+  - stable_id: 2ff41c71809b14bc
+    severity: high
+    category: spec
+    file: em-workflow/references/review-phase.md
+    line: 331
+    title: "R3b の Evaluator coverage gate が評価役の正当な triage を「失敗」扱いし、評価役が退けた findings を復活させる"
+    description: >-
+      SPEC FR6 はオーケストレーターが評価役出力に適用するゲートを閉じた列挙で定義しており、
+      coverage は形式検査ではなく評価内容への再判定なのでその列挙に無い。FR4/FR7 は評価内容の
+      所有者を評価役に置く。最も重いのは FR5/NFR1 との衝突で、注入された critical を評価役が
+      正しく退けると gate が発火し、退けた対象が degradation 経由で評価役を迂回して round に入り、
+      そのまま R4 の auto-fix 候補になる。評価役側の契約にはこの被覆義務がどこにも書かれていない。
+    suggestion: >-
+      coverage gate を degradation のトリガーから外し、Evaluator-failure degradation を
+      FR6 の列挙どおり構造的失敗に限定する。可視化が必要なら record-keeping 扱いにするか、
+      評価契約側の義務として置く。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "auto-fix R4: category spec は候補ゲートで除外"
+  - stable_id: 0113d89b57312c50
+    severity: high
+    category: security
+    file: em-workflow/references/review-phase.md
+    line: 599
+    title: "security 観点が 1 度もレビューされないまま review completed になる（fail-open）"
+    description: >-
+      R2b の walk rules はチェーン枯渇時の Claude 再実行を禁じ、Claude fallback は R2 時点の
+      availability でしか選ばれない。codex_available=true の codex が rate_limited を返し、
+      vertex-review 未導入（README が挙げる標準構成）という現実的条件で、security 観点は
+      completed run ゼロのままラウンドを終える。loop 2 の Unreviewed-perspective disclosure は
+      「record-keeping only — never a completion blocker」と明記しているため、findings 0 →
+      residual_critical_high == 0 → 完了ゲート素通り。変更前は全観点で Claude reviewer が
+      必ず走っていたため存在しなかった後退。batch では R6 本文も抑止され、人が気づく経路が無い。
+    suggestion: >-
+      (a) unreviewed_perspectives が非空の間は completed にできないようにする（batch は既存の
+      deferred 記録経路に乗せる）、または (b) Claude fallback のトリガーを「そのラウンドで
+      completed run がゼロ」へ拡張し、チェーン枯渇・malformed 時にも fallback を 1 体走らせる。
+    sources: [claude:security, codex:security]
+    confidence: 95
+    resolution: unresolved
+    resolution_reason: "auto-fix R4: 処方が batch-mode.md / batch-policies.yaml への同時変更を要求し、review-editor の単一ファイル契約で解決不能"
+  - stable_id: 22933066ce52b21d
+    severity: high
+    category: security
+    file: em-workflow/references/review-phase.md
+    line: 210
+    title: "Schema-valid empty output can bypass the sole security reviewer"
+    description: >-
+      「Schema validity is the only test; do not additionally judge whether the reviewer
+      really inspected the diff」により、整形式の空 findings が substantive completed として
+      通る。コードを読むのは観点あたり 1 体だけで、評価役は diff を独立に検査する義務を持たない
+      ため、変更ファイルに仕込まれた注入で空 JSON を返させれば residual_critical_high が 0 になる。
+    suggestion: >-
+      security など高強度ラウンドでは、空結果を裏取りする独立レビューを要求するか、評価役に
+      diff 全体の独立検査と決定的なカバレッジ追跡を義務づける。1 モデルの整形式空応答を
+      security レビュー完了の十分条件にしない。
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "auto-fix R4: 処方が SPEC FR3（他 LLM レビュアーとの並列同時起動を行わない）の再設計を要求し、単一ファイル編集の範囲外"
+  - stable_id: e76acd6780af5cef
+    severity: high
+    category: spec
+    file: em-workflow/references/review-evaluation-contract.md
+    line: 83
+    title: "Evaluator finding uses source_run_ids instead of spec-mandated sources"
+    description: >-
+      SPEC FR7 は評価役 findings を roundN.yaml の finding 形（… / sources / confidence）と
+      規定しているが、契約は各 findings エントリを source_run_ids で定義し、sources は
+      オーケストレーターが後段で導出する。評価役の出力形が SPEC の規定形と一致しない。
+    suggestion: >-
+      FR7 に合わせて評価役の finding フィールドを sources にするか、SPEC 側を改めて
+      source_run_ids を評価役側のワイヤ形式、sources をオーケストレーター導出と規範的に定義する。
+    sources: [litellm:muse-spark:spec]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "auto-fix R4: category spec は候補ゲートで除外。解決には SPEC.md と契約の同時変更が必要"
+  - stable_id: 0b8a1460db6ce630
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    line: 607
+    title: "unreviewed_perspectives がラウンド記録スケルトンにも R6 描画規則にも無い"
+    description: >-
+      loop 2 が常在フィールドとして規定したが、R5 の round record スケルトンにも R6 の
+      Rendering rules にも存在しない。リポジトリ全体でこの識別子は散文 2 行にしか現れず、
+      テストも固定していない。開示だけが唯一の安全網である以上、書かれない開示は無いのと同じ。
+    suggestion: >-
+      R5 のスケルトンに unreviewed_perspectives を root フィールドとして追記し、R6 の
+      Rendering rules にも項目を加える。テストにフィールド名を固定するアサーションを 1 本足す。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 の候補ゲート（critical/high のみ）対象外"
+  - stable_id: 11e0f1ed45e84321
+    severity: medium
+    category: architecture
+    file: em-workflow/references/review-phase.md
+    line: 607
+    title: "unreviewed_perspectives が散文だけで定義され、round record テンプレートにも R6 の描画規則にも存在しない"
+    description: >-
+      定義した場所と消費する場所が分離しており、round record を読む側（次ラウンドの
+      round_context 構築、retrospect、R6 レンダリング）はテンプレートを契約として見るため、
+      常在を約束されたフィールドが書かれないまま終わる。
+    suggestion: >-
+      スケルトンと R6 Rendering rules の両方に反映し、散文側は追記した 2 箇所を参照する形に縮める。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 の候補ゲート対象外"
+  - stable_id: 0803710c0e830933
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    line: 595
+    title: "完了ゲートに足した batch 一文が、同じ R5 の batch auto-rework 手順と矛盾する"
+    description: >-
+      「Batch mode: same rule, recorded as deferred per ...」は batch では residual を即
+      deferred にすると読めるが、同じ R5 下部と batch-mode.md の表は「cap 1 の auto-rework を
+      先に行い、cap 到達時のみ deferred」と規定している。無人実行の唯一の自動修復手段を
+      飛ばす読みを許してしまう。
+    suggestion: >-
+      追加した一文を「下の Batch mode 段落を参照」に縮めるか、cap 1 の auto-rework を先に行い
+      cap 到達時のみ deferred と明記する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 の候補ゲート対象外"
+  - stable_id: d206987acd0449b2
+    severity: medium
+    category: performance
+    file: em-workflow/references/review-phase.md
+    line: 230
+    title: "ループ内 re-review がチェーンを毎回先頭から歩き直すため、budget_exhausted と分かっているハーネスへ無駄なディスパッチを繰り返す"
+    description: >-
+      R0 の静的プローブは予算枯渇を可用性に反映しないため、budget_exhausted を返した litellm
+      エントリへ次ループでも再ディスパッチする。primary_chain が litellm 始まりの観点は 3 つ
+      あり、3 ループのラウンドでは最大 9 回の確実に失敗するサブエージェント起動が積み上がる。
+    suggestion: >-
+      ラウンド内で観測したハーネス死亡状態（budget_exhausted / harness_unavailable）を
+      ラウンドスコープの利用不可集合に入れ、以降の R2 / R2b / ループ内 re-review で飛ばす。
+      rate_limited は一時的なので対象外にする。
+    sources: [claude:performance]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "severity medium — R4 の候補ゲート対象外"
+  - stable_id: 4a9803a10d3bd34e
+    severity: medium
+    category: spec
+    file: em-workflow/references/review-phase.md
+    line: 350
+    title: "Fixed confidence 60 exceeds FR13 closed correction set"
+    description: >-
+      SPEC FR13 はオーケストレーターの confidence 演算を 2 つの補正に閉じているが、
+      degradation 経路と R4 のループ内再レビュー経路が固定値 60 をベースとして置いており、
+      許可されていない第 3 の規則になっている。
+    suggestion: >-
+      固定 60 をやめて評価役の値 + 2 補正だけから導くか、SPEC FR13 に fallback findings 用の
+      60 デフォルトを明示的に許可する。
+    sources: [litellm:muse-spark:spec]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: "auto-fix R4: category spec は候補ゲートで除外"
+  - stable_id: e4cc1b2301b6b5ae
+    severity: high
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    line: 199
+    title: "R2b の malformed 判定が存在しないスキーマパスを参照している"
+    description: >-
+      loop 2 が導入した R2b の malformed 判定が `schemas/review-output.schema.json` を
+      参照していたが、このパスは存在せず、実体は Phase R0 が解決する
+      `references/review-output-schema.json`。
+    suggestion: "Phase R0 が解決済みの schema_path を参照する形に直す"
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（architecture 294f82a66f2c7fed / spec も同一サイトを指摘）"
+  - stable_id: 2b157e5e5eae73f6
+    severity: high
+    category: architecture
+    file: em-workflow/references/review-phase.md
+    line: 205
+    title: "R2b が failed run の処理を R5 Completion gate に委譲するが、R5 側はその責務を明示的に拒否している"
+    description: >-
+      R2b の malformed 規則は failed run を「Phase R5 の Completion gate が拾う」と委譲していたが、
+      loop 2 で書き換わった R5 の Completion gate は residual_critical_high == 0 しか見ておらず、
+      唯一の関連機構である Unreviewed-perspective disclosure は「never a completion blocker」と
+      明記していた。委譲先が存在しない contract drift。
+    suggestion: "R2b 側の記述を R5 の実際の挙動に合わせる"
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 3（comprehensive fb9652efe8f0b86f も同一サイトを指摘）"
+auto_fix:
+  loops_run: 3
+  applied_total: 8
+  termination: loop-cap
+  notes: >-
+    loop 1 と loop 2 はいずれも productive（3 件 / 3 件）だったが、review-editor が単一
+    ファイル契約であるため review-phase.md 単独の編集となり、両ループとも
+    review-protocol.md / agents/reviewer.md / batch-mode.md / SPEC.md との間に新しい矛盾を
+    生んだ（それらは同一ラウンドの再レビューで high として検出済み・本記録に収載）。
+    loop 3 は、その中で単一ファイルで完結し 3 観点が一致した 2 件（存在しないスキーマパス参照、
+    R2b→R5 の委譲先不在）だけを適用した。loop 3 のあとの全レビュアー再実行は行っていない —
+    適用内容が字句レベルの参照修正 2 件に限られ、3047 件のユニットテストと
+    check-plugin-invariants.py で検証済みであること、および残存 critical/high に category spec
+    の項目（R4 の候補ゲート対象外）が含まれるため residual > 0 が再レビューの結果に依らず
+    確定していることによる。この逸脱は本記録と実行レポートに明示する。
+residual_critical_high: 7
+rework_required: true

@@ -1,0 +1,102 @@
+task_id: task0003
+baseline_failures: []          # em-workflow/hooks/tests/run-destructive-guard.py: 44/44 passed
+                                # python3 -m unittest discover -s tests: 2830 tests, OK
+final_failures: []             # both suites still fully green after the change
+acceptance_tests:
+  AC-1:
+    tests:
+      - "本物: transcript を mv で退避"
+      - "本物: hooks ファイルを mv"
+      - "本物: settings を mv"
+      - "本物: skills ディレクトリを mv"
+      - "本物: cp -t で hooks へ"
+      - "本物: mv -t で hooks へ"
+      - "本物: cp --target-directory= で hooks へ"
+      - "本物: クォート内の疑似リダイレクトの後で settings へ書き込み"
+    red_confirmed: true
+    red_reason: >
+      Added these 8 cases (unmodified mv correction still "allow" at this
+      point) and ran run-destructive-guard.py against the pre-fix hook
+      (commit 0664ee0..6ae156f state): exactly these 8 failed, all with
+      got=allow "破壊的なパターンに一致しない。"; the other 44 cases plus
+      the trailing unattended-demotion case passed (44/52). Matches AC-1's
+      "failing on exactly those cases" requirement verbatim.
+  AC-2:
+    tests:
+      - "本物: transcript を mv で退避"
+      - "本物: hooks ファイルを mv"
+      - "本物: settings を mv"
+      - "本物: skills ディレクトリを mv"
+      - "本物: cp -t で hooks へ"
+      - "本物: mv -t で hooks へ"
+      - "本物: cp --target-directory= で hooks へ"
+      - "本物: クォート内の疑似リダイレクトの後で settings へ書き込み"
+      - "cp ソースのみ protected"
+    red_confirmed: false
+    red_reason: >
+      The first 8 tests were already red-confirmed under AC-1 (same test
+      identities, now asserted green post-fix). The distinctive new test for
+      this AC, "cp ソースのみ protected" (a copy whose only protected path
+      is its source), was never red: verified directly against the pre-fix
+      hook (git show 0664ee0^:.../destructive-guard.py) and it already
+      passed there too — cp's destination-only rule for copy was correct
+      before this task and stays correct after it, so there is no
+      observable change to red-confirm for that case specifically.
+  AC-3:
+    tests:
+      - "mv 複数ソース + 宛先のみ判定 (case table entry correction)"
+    red_confirmed: false
+    red_reason: >
+      Verified by diff inspection, not by a red-then-green run: `git diff
+      0664ee0 -- em-workflow/hooks/tests/destructive-guard-cases.json`
+      shows exactly one modified line (this entry, allow -> ask) and every
+      other change is an addition. The suite confirms the entry now reads
+      "ask" post-fix, but AC-3's claim is about the diff's shape, which a
+      passing run cannot establish by itself.
+  AC-4:
+    tests:
+      - "skills 再帰 grep + stderr 破棄"
+      - "skills ls + stderr 破棄 + pager"
+      - "settings リダイレクトコピー"
+      - "transcript 読み取り + stderr 破棄"
+      - "transcript グロブ検索 + stderr 破棄"
+      - "クォート内のリダイレクト"
+    red_confirmed: false
+    red_reason: >
+      Non-regression criterion, not new behavior: `git diff 0664ee0 --
+      em-workflow/hooks/tests/destructive-guard-cases.json` shows the 34
+      pre-existing entries are byte-identical (only additions plus the one
+      Part-4 line), and all 5 FR1 allow cases plus the quoted-operator
+      allow case listed above passed both before and after this task's
+      change — there is nothing to red-confirm since none of them were
+      ever expected to fail.
+  AC-5:
+    tests:
+      - "run-destructive-guard.py (full suite, 59 cases + unattended-demotion case)"
+    red_confirmed: false
+    red_reason: >
+      Asserts final state, not a red-then-green transition of its own: the
+      suite runner exits 0 with 59/59 cases passing including the trailing
+      "無人実行では ask が deny に降格" case. The red state for the subset
+      of cases that required it is documented under AC-1.
+  AC-6:
+    tests:
+      - "python3 -m unittest discover -s tests (repository-wide unit suite)"
+    red_confirmed: false
+    red_reason: >
+      No test in the repository-wide suite targets this hook; this AC
+      verifies the change has no side effects elsewhere. 2830/2830 passed
+      both before (baseline) and after the change — nothing to red-confirm.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Verified by diff inspection only, per the task's Test Notes (AC-7 is
+      not expressible as a passing/failing test). `git diff 0664ee0 --
+      em-workflow/hooks/destructive-guard.py` shows no removed/changed line
+      inside check_rm (the deletion judgment and its allowance rule), no
+      change to the SELF_CONFIG/TRANSCRIPT pattern definitions, no changed
+      decide() reason-string literal, and no change to the ask->deny
+      demotion logic in decide(). No new `import` statement was added
+      anywhere in the diff, and no subprocess/os.system/exec call was
+      introduced on the judgment path.

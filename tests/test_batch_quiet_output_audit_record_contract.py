@@ -88,6 +88,46 @@ no-step-7-citation assertion, AC-5's pattern assertion over the wake
 decline value, and AC-6's out-of-step reach-point assertion each fail
 against the tree as committed before this task's edits -- confirmed by
 running this module before touching either document.
+
+Extended for task0002 (batch-codex-autonomous-decisions; see
+feature-docs/batch-codex-autonomous-decisions/tasks/task0002.md): the
+relaxed route joins the writers list as a fourth writer, so the
+writer-count sentence moves from "Three writers" to "Four writers", and
+the audit-item source map's row count moves from six to seven. Both moved
+counts are updated in place below (per IMPLEMENTATION.md C5), and the new
+writer's own entry -- its `question_id` rule's two branches, its two
+`source` values, its `resolution_note` contents, and its commit
+reach-point -- gets its own positive pin, `TestFourthWriterRelaxedRoute`.
+The `_first_writer_bullet` helper is unaffected: it locates the section by
+the (now "Four writers") count sentence and always extracts the FIRST
+bullet that follows, regardless of how many bullets exist after it, so
+AC-6's original assertions about that first bullet still exercise the same
+text.
+
+Covers task0002 Acceptance Criteria
+(feature-docs/batch-codex-autonomous-decisions/tasks/task0002.md):
+
+- AC-1 (FR15, FR14): `phase-state.md`'s Batch audit record file section
+  lists the relaxed route as a fourth writer, with its `question_id` rule
+  (both branches), its two `source` values and its commit reach-point; the
+  writer-count sentence reads "Four writers".
+- AC-2 (FR14, NFR1): the per-field shape is unchanged (no field named in
+  the new bullet is new to the schema); the append-only sentence and the
+  `packet_id` rule for the orchestrator-opened case both still hold.
+- AC-5 (FR21, NFR9): the writer-count sentence and the source-map row
+  count are updated in place, not deleted; each moved count keeps a
+  positive pin at its new value (`TestWriterCountSentence`,
+  `TestAC2SourceMapRegressionGuards.test_source_map_still_has_seven_rows`
+  in `tests/test_batch_quiet_output_discipline.py` /
+  `tests/test_batch_quiet_output_audit_persistence.py`).
+- AC-7 (NFR1, NFR4): the new bullet cites `references/question-resolution.md`
+  by path without repeating "step 7" (the section's single "step 7"
+  citation stays scoped to `create-spec.command-approval`, per the
+  pre-existing `_step7_citation_scope_ok` matcher above, unmodified), never
+  restates the relaxation rule's trigger conditions, and never names a
+  provider (`Codex` and `Opus` are the document's own pre-established
+  terms, not the wrapper's hidden fallback-provider chain NFR4 forbids
+  naming).
 """
 
 import re
@@ -99,6 +139,7 @@ PLUGIN_ROOT = REPO_ROOT / "em-workflow"
 
 BATCH_MODE_PATH = PLUGIN_ROOT / "references" / "batch-mode.md"
 PHASE_STATE_PATH = PLUGIN_ROOT / "references" / "phase-state.md"
+QUESTION_RESOLUTION_PATH = PLUGIN_ROOT / "references" / "question-resolution.md"
 
 QUESTION_ID_PATTERN = re.compile(r"^[a-z][a-z0-9._-]*$")
 
@@ -215,7 +256,8 @@ class TestAC1SourceMapRowsNameRecordsContainer(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# AC-2: exactly six rows; the assumption row is byte-identical
+# AC-2: exactly seven rows (task0002 AC-5: moved from six -- see the
+# relaxed-route row this task adds); the assumption row is byte-identical
 # ---------------------------------------------------------------------------
 
 ASSUMPTION_ROW = (
@@ -231,8 +273,8 @@ class TestAC2SourceMapRegressionGuards(unittest.TestCase):
         cls.text = _read(BATCH_MODE_PATH)
         cls.quiet_section = _slice(cls.text, "## Batch quiet output")
 
-    def test_source_map_still_has_six_rows(self):
-        self.assertEqual(len(_table_rows(self.quiet_section)), 6)
+    def test_source_map_still_has_seven_rows(self):
+        self.assertEqual(len(_table_rows(self.quiet_section)), 7)
 
     def test_assumption_row_unchanged_character_for_character(self):
         self.assertIn(ASSUMPTION_ROW, self.quiet_section)
@@ -485,7 +527,7 @@ class TestAC5QuestionIdValuesPatternConforming(unittest.TestCase):
 
 
 def _first_writer_bullet(subsection_text):
-    idx = subsection_text.index("Three writers append to this file")
+    idx = subsection_text.index("Four writers append to this file")
     after = subsection_text[idx:]
     bullet_start = after.index("\n- ") + 1
     bullet_end = after.index("\n- ", bullet_start + 1)
@@ -569,9 +611,12 @@ class TestAC6FirstWriterBulletAndAppendOnlyException(unittest.TestCase):
         self.assertIn("references/implement-phase.md", normalized)
         self.assertIn("I.2.b step 2", normalized)
 
-    def test_three_writers_sentence_occurs_exactly_once(self):
+    def test_four_writers_sentence_occurs_exactly_once(self):
+        # task0002 AC-1/AC-5: the relaxed route's addition moves this
+        # sentence from "Three" to "Four"; the count-of-one property is
+        # retained at the new wording rather than the pin being deleted.
         self.assertEqual(
-            self.subsection.count("Three writers append to this file"), 1
+            self.subsection.count("Four writers append to this file"), 1
         )
 
     def test_append_only_sentence_retains_core_phrase(self):
@@ -592,6 +637,287 @@ class TestAC6FirstWriterBulletAndAppendOnlyException(unittest.TestCase):
         normalized = _normalize_ws(self.subsection)
         self.assertIn("append-only", normalized)
         self.assertIn("never rewritten or removed", normalized)
+
+
+# ---------------------------------------------------------------------------
+# task0002: the fourth writer -- the relaxed route (AC-1, AC-2, AC-7)
+# ---------------------------------------------------------------------------
+
+
+def _relaxed_route_bullet(subsection_text):
+    # Anchored on the bullet's own leading "- `references/..." shape --
+    # the doc's pre-existing (unrelated) mention of the same doc/phrase
+    # sits mid-sentence ("resolved\nthrough `references/..."), never
+    # immediately after a bullet marker, so this raises ValueError
+    # (correctly) against a document that has no such bullet yet.
+    marker = "\n- `references/question-resolution.md`'s batch resolution sequence"
+    bullet_start = subsection_text.index(marker) + 1
+    end = subsection_text.index("\n\nRecords are append-only:", bullet_start)
+    return subsection_text[bullet_start:end]
+
+
+class TestFourthWriterRelaxedRoute(unittest.TestCase):
+    """task0002: the relaxed route's own writer-entry bullet in
+    phase-state.md's `## Batch audit record file` section."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        cls.subsection = _slice(
+            cls.text, "## Batch audit record file", "## Legacy feature compatibility"
+        )
+        cls.bullet = _relaxed_route_bullet(cls.subsection)
+
+    def test_bullet_cites_question_resolution_doc(self):
+        self.assertIn("references/question-resolution.md", self.bullet)
+
+    def test_question_id_rule_states_both_branches(self):
+        # Edge case (task0002 Test Notes): a single-branch pin would pass
+        # on a document mentioning only one of the two branches.
+        normalized = _normalize_ws(self.bullet)
+        self.assertIn(
+            "the question's own `question_id` when a worker packet exists",
+            normalized,
+        )
+        self.assertIn(
+            "the gate's own `gate_id` when the gate was orchestrator-opened",
+            normalized,
+        )
+
+    def test_packet_id_rule_stated_for_both_branches(self):
+        normalized = _normalize_ws(self.bullet)
+        self.assertIn(
+            "`packet_id` is `null` in the orchestrator-opened case", normalized
+        )
+        self.assertIn(
+            "the worker packet's own `packet_id` when a worker packet exists",
+            normalized,
+        )
+
+    def test_source_has_exactly_the_two_existing_values(self):
+        self.assertIn("`batch-codex-consultation`", self.bullet)
+        self.assertIn("`batch-safe-default`", self.bullet)
+
+    def test_resolution_note_contents_named(self):
+        normalized = _normalize_ws(self.bullet)
+        for phrase in (
+            "the gate",
+            "the option chosen",
+            "the options not chosen",
+            "the discussion's key points",
+            "whether Codex was consulted",
+            "whether a fallback provider answered",
+            "whether the Opus escalation ran",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, normalized)
+
+    def test_commit_reach_point_is_in_step_no_new_commit(self):
+        normalized = _normalize_ws(self.bullet)
+        self.assertIn(
+            "enclosing phase step's next existing `commit-docs.sh` call",
+            normalized,
+        )
+        self.assertIn("no new commit is created for it", normalized)
+
+    def test_does_not_restate_relaxation_conditions(self):
+        # AC-7: the trigger conditions (category: security / license /
+        # reversible: false) are question-resolution.md's (L1) to state;
+        # this bullet only names the route and cites the doc by path.
+        self.assertNotIn("category: security", self.bullet)
+        self.assertNotIn("category: license", self.bullet)
+        self.assertNotIn("reversible: false", self.bullet)
+
+    def test_step7_citation_not_added_to_this_bullet(self):
+        # AC-7 / regression: this bullet must not add a second "step 7"
+        # citation -- the subsection-wide singleton (still scoped to
+        # `create-spec.command-approval`) is pinned by
+        # TestAC4QuestionIdRuleCitationScope above.
+        self.assertNotIn("step 7", self.bullet)
+
+    # -----------------------------------------------------------------
+    # task0008 (batch-codex-autonomous-decisions): the writer entry states
+    # the complete three-way `source` mapping (AC-5, AC-6, D6).
+    # -----------------------------------------------------------------
+
+    def test_source_mapping_covers_all_three_paths(self):
+        normalized = _normalize_ws(self.bullet)
+        self.assertIn(
+            "`source` covers all three paths this route can take",
+            normalized,
+        )
+        self.assertIn("its single escalation", normalized)
+
+    def test_escalation_value_named_by_route_never_asserts_codex_consulted(
+        self,
+    ):
+        normalized = _normalize_ws(self.bullet)
+        self.assertIn(
+            "the value naming the route and never asserting that Codex "
+            "itself was consulted",
+            normalized,
+        )
+
+    def test_vocabulary_stays_closed_no_new_value_minted(self):
+        normalized = _normalize_ws(self.bullet)
+        self.assertIn("no new value minted", normalized)
+        # Still exactly the two existing values, drawn from the same
+        # closed vocabulary -- no third literal introduced.
+        self.assertEqual(self.bullet.count("`batch-codex-consultation`"), 1)
+        self.assertEqual(self.bullet.count("`batch-safe-default`"), 1)
+
+    def test_old_two_path_source_sentence_is_gone(self):
+        # AC-5/AC-6 negative proof: the pre-task0008 sentence, which
+        # omitted the escalation-decision path entirely and could be read
+        # as asserting Codex was consulted for it, must not survive.
+        # Checked against the whitespace-normalized rendering since the
+        # source wraps this sentence across markdown lines.
+        self.assertNotIn(
+            "`source` is `batch-codex-consultation` when a suggestion "
+            "mapped onto an option, `batch-safe-default` when the "
+            "minimum-side-effect branch was taken.",
+            _normalize_ws(self.text),
+        )
+
+    def test_old_two_path_source_sentence_negative_proof_would_be_caught(
+        self,
+    ):
+        # Non-vacuity guard: the matcher above must actually flag the
+        # pre-task0008 wording it supersedes.
+        fake_bullet = (
+            "`packet_id` is `null` in the orchestrator-opened case. "
+            "`source` is `batch-codex-consultation` when a suggestion "
+            "mapped onto an option, `batch-safe-default` when the "
+            "minimum-side-effect branch was taken. `resolution_note` "
+            "names the gate."
+        )
+        self.assertIn(
+            "`source` is `batch-codex-consultation` when a suggestion "
+            "mapped onto an option, `batch-safe-default` when the "
+            "minimum-side-effect branch was taken.",
+            fake_bullet,
+        )
+
+
+# ---------------------------------------------------------------------------
+# task0008 AC-7: the earlier general `source` definition (which governs the
+# other three writers) states the writers it governs, so it no longer
+# contradicts the relaxed route's own complete three-way mapping above.
+# ---------------------------------------------------------------------------
+
+
+class TestGeneralSourceDefinitionStatesWhichWritersItGoverns(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PHASE_STATE_PATH)
+        cls.subsection = _slice(
+            cls.text, "## Batch audit record file", "## Legacy feature compatibility"
+        )
+
+    def test_general_definition_scoped_to_the_other_three_writers(self):
+        normalized = _normalize_ws(self.subsection)
+        self.assertIn("For the other three writers below", normalized)
+        self.assertIn(
+            "the relaxed route's own bullet below states its complete "
+            "three-way mapping instead",
+            normalized,
+        )
+
+    def test_old_unscoped_general_definition_is_gone(self):
+        # AC-7 negative proof: the pre-task0008 sentence, which stated the
+        # `source` vocabulary as if it governed every writer including
+        # the relaxed route (whose mapping it did not fully cover), must
+        # not survive.
+        self.assertNotIn(
+            "writer raises its record without a worker packet. `source` "
+            "is drawn from",
+            _normalize_ws(self.subsection),
+        )
+
+    def test_old_unscoped_general_definition_negative_proof_would_be_caught(
+        self,
+    ):
+        fake_section = (
+            "writer raises its record without a worker packet. `source` "
+            "is drawn from the closed vocabulary."
+        )
+        self.assertIn(
+            "writer raises its record without a worker packet. `source` "
+            "is drawn from",
+            _normalize_ws(fake_section),
+        )
+
+
+# ---------------------------------------------------------------------------
+# task0008 AC-8: question-resolution.md's escalation step assigns no
+# `source` value the writer entry's mapping does not support, and reaches
+# the mapping by citing references/phase-state.md; asserted from both
+# documents in one test so a later edit to either side fails it.
+# ---------------------------------------------------------------------------
+
+
+class TestEscalationSourceAgreesAcrossDocuments(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.phase_state_text = _read(PHASE_STATE_PATH)
+        cls.resolution_text = _read(QUESTION_RESOLUTION_PATH)
+        subsection = _slice(
+            cls.phase_state_text,
+            "## Batch audit record file",
+            "## Legacy feature compatibility",
+        )
+        cls.relaxed_bullet = _relaxed_route_bullet(subsection)
+
+    def _step_6_text(self):
+        marker = "## Unlisted-gate fallback"
+        end_marker = "### Codex consultation procedure"
+        start = self.resolution_text.index(marker)
+        end = self.resolution_text.index(end_marker, start)
+        section = self.resolution_text[start:end]
+        step6_idx = section.index("6. For each question where it does not map")
+        step7_idx = section.index("7. `record_tbd`")
+        return section[step6_idx:step7_idx]
+
+    def test_writer_entry_maps_escalation_decision_to_batch_codex_consultation(
+        self,
+    ):
+        normalized = _normalize_ws(self.relaxed_bullet)
+        self.assertIn("its single escalation", normalized)
+        self.assertIn("`batch-codex-consultation`", normalized)
+
+    def test_step_6_cites_phase_state_instead_of_hardcoding_a_source_value(
+        self,
+    ):
+        step6 = _normalize_ws(self._step_6_text())
+        self.assertIn("references/phase-state.md", step6)
+        self.assertIn("relaxed-route writer", step6)
+        self.assertNotIn("`source: batch-codex-consultation`", step6)
+
+    def test_old_hardcoded_escalation_source_wording_is_gone(self):
+        # AC-8 negative proof: the pre-task0008 wording, which hardcoded
+        # `source: batch-codex-consultation` for the escalation decision
+        # (a value the writer entry's mapping did not fully support on
+        # the Codex-unavailable path), must not survive.
+        self.assertNotIn(
+            "record the answer with `source: batch-codex-consultation`, "
+            "exactly as a mapped consultation answer above",
+            _normalize_ws(self.resolution_text),
+        )
+
+    def test_old_hardcoded_escalation_source_negative_proof_would_be_caught(
+        self,
+    ):
+        fake_step6 = (
+            "For each question it decides, record the answer with "
+            "`source: batch-codex-consultation`, exactly as a mapped "
+            "consultation answer above, carrying the escalation's "
+            "reasoning in `resolution_note`."
+        )
+        self.assertIn(
+            "record the answer with `source: batch-codex-consultation`, "
+            "exactly as a mapped consultation answer above",
+            _normalize_ws(fake_step6),
+        )
 
 
 # ---------------------------------------------------------------------------

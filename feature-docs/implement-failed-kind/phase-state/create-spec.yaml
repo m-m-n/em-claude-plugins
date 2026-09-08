@@ -1,0 +1,105 @@
+schema_version: 1
+feature: implement-failed-kind
+phase: create-spec
+status: completed
+generation: 1
+base_revision: b821a79417d628d24d11dbbbf857c97f60adb0fc
+last_input_digest: "sha256:0ff1362aa308e63635f83dae822637dd86554e132232f13b829a9a4b13bd902b"
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-09-06T22:38:54+09:00"
+    questions:
+      - question_id: infra.retry-cap-value
+        status: answered
+      - question_id: infra.mode-scope
+        status: answered
+      - question_id: failed-kind.lifecycle
+        status: answered
+      - question_id: gate-rejected.kind
+        status: answered
+      - question_id: batch.second-failure.kind
+        status: answered
+      - question_id: design-step.decision
+        status: answered
+answers:
+  infra.retry-cap-value:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T22:38:54+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: "TBD"
+    normalized_answer: "infra 起因の自動続行の回数上限は TBD。worker 推奨は cap_2（2 回）。create-plan の tbd-resolution で確定する"
+    resolution_note: "codex_consultation per batch-policies.yaml create-spec.requirement-clarification; Codex unavailable at invocation (usage limit until 2026-09-07); fell through to on_unanswered=use_batch_policy -> policy unresolved: record_tbd"
+  infra.mode-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T22:38:54+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: "TBD"
+    normalized_answer: "infra 自動続行の適用モードは TBD。worker 推奨は batch_only。create-plan の tbd-resolution で確定する"
+    resolution_note: "codex_consultation per batch-policies.yaml create-spec.requirement-clarification; Codex unavailable at invocation (usage limit until 2026-09-07); fell through to on_unanswered=use_batch_policy -> policy unresolved: record_tbd"
+  failed-kind.lifecycle:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T22:38:54+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: "TBD"
+    normalized_answer: "failed_kind のライフサイクルは TBD。worker 推奨は clear_on_leaving_failed。create-plan の tbd-resolution で確定する"
+    resolution_note: "codex_consultation per batch-policies.yaml create-spec.requirement-clarification; Codex unavailable at invocation (usage limit until 2026-09-07); fell through to on_unanswered=use_batch_policy -> policy unresolved: record_tbd"
+  gate-rejected.kind:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T22:38:54+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: "TBD"
+    normalized_answer: "gate-rejected terminal の分類は TBD。worker 推奨は always_decision。create-plan の tbd-resolution で確定する"
+    resolution_note: "codex_consultation per batch-policies.yaml create-spec.requirement-clarification; Codex unavailable at invocation (usage limit until 2026-09-07); fell through to on_unanswered=use_batch_policy -> policy unresolved: record_tbd"
+  batch.second-failure.kind:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T22:38:54+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: "TBD"
+    normalized_answer: "batch 2 回目 failed の分類は TBD。worker 推奨は second_always_decision。create-plan の tbd-resolution で確定する"
+    resolution_note: "codex_consultation per batch-policies.yaml create-spec.requirement-clarification; Codex unavailable at invocation (usage limit until 2026-09-07); fell through to on_unanswered=use_batch_policy -> policy unresolved: record_tbd"
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T22:38:54+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "requirements-analyst の design_step_recommendation (skip) をそのまま採用する"
+    resolution_note: "batch-policies.yaml create-spec.design-step -> option_id: decide_autonomously"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:188df652accb0dd884e45e928adb0cab4fcfb583cb1f43ed90bd72b4d174f0de"
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: "sha256:5909c0ad7e97fe95094d7d25ee8966aa6b45528d07fafd81266f428b96584425"
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:0ff1362aa308e63635f83dae822637dd86554e132232f13b829a9a4b13bd902b"
+    output_digest: null
+artifacts:
+  - path: feature-docs/implement-failed-kind/REQUIREMENTS.md
+    sha256: "sha256:9fe53dc0de7a001b3ac3a34d333db75497a70e6ce73a3b4e9e7b2a2db686ba30"
+    produced_by: create-spec-run-0003
+  - path: feature-docs/implement-failed-kind/SPEC.md
+    sha256: "sha256:21351add06c891f167b9d092dd3d7a017b997da3db281da337c02b9ae97af4ac"
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

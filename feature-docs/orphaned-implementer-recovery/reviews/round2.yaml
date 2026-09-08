@@ -1,0 +1,78 @@
+round: 2
+executed_at: "2026-09-06T14:24:07+09:00"
+scope:
+  review_mode: diff
+  base_commit: 3f5db490b46d5190e54a5665f1d6c44876ec42da
+  head_commit: 7f68d5e3cfb08ff05c491c238e59fe52674708c9
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/README.md
+    - em-workflow/hooks/queue_agent_index.py
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/scripts/journal-append-failed.py
+    - em-workflow/scripts/recover-orphaned-task.py
+    - test-docs/orphaned-implementer-recovery/task0001.tests.yaml
+    - test-docs/orphaned-implementer-recovery/task0002.tests.yaml
+    - test-docs/orphaned-implementer-recovery/task0003.tests.yaml
+    - test-docs/orphaned-implementer-recovery/task0004.tests.yaml
+    - test-docs/orphaned-implementer-recovery/task0005.tests.yaml
+    - tests/test_batch_policy_option_id_version_bump.py
+    - tests/test_batch_quiet_output_version_bump.py
+    - tests/test_batch_stop_contract_version_bump.py
+    - tests/test_goal_vs_spec_divergence_version_bump.py
+    - tests/test_implement_routeback_gate.py
+    - tests/test_journal_append_failed.py
+    - tests/test_plugin_version_parity.py
+    - tests/test_queue_agent_index.py
+    - tests/test_queue_taskstop_net.py
+    - tests/test_recover_orphaned_task.py
+    - tests/test_recycled_task_id_carveout_version_bump.py
+    - tests/test_rework_contract_drift_version_bump.py
+    - tests/test_routeback_reset_scope_version_bump.py
+    - tests/test_spec_file_set_completeness_version_bump.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed, degraded: true}
+findings:
+  - stable_id: 1ca085e307eacd90
+    severity: high
+    category: comprehensive
+    file: em-workflow/scripts/recover-orphaned-task.py
+    line: 297
+    title: "Bind session evidence to the current launch"
+    description: |
+      The last index row for a task need not describe its current launch: index recording is fail-open. If session A's task fails, session B retries it, and B's index entry is missing, recovery still uses A's identity. After Resume, when the stale agent lookup stops nothing, A's old transcript satisfies the proof and the helper marks B's newer launch failed -- even if its implementer remains active. The journal check compares only the event name, so it cannot detect this mismatch. An in-memory check confirmed that this sequence invokes the helper. Independently confirmed by the evaluator: find_agent_entry() returns the LAST agents.jsonl line whose task matches and decide() feeds that entry's session_id into the whole evidence pipeline; nothing correlates that entry with the launched event the recovery is about, and the launched journal record carries no session identity at all. I.2.c then fires the failed path with a KEPT worktree, so the retry launches a second implementer into a worktree a live one may still be writing -- the double-launch NFR1/US2 exist to prevent.
+    suggestion: |
+      Bind the index evidence to the launch under recovery before treating it as proof: replay the journal for the last launched event's `at` for this task and reject any agents.jsonl entry whose own `at` predates it (a new SC6 residual reason such as stale-agent-entry), rather than accepting the last matching entry unconditionally. Add the reason code to the fixed evidence order documented in implement-phase.md's Orphan recovery block and to IMPLEMENTATION.md SC3/SC6 under the cite-not-restate discipline (NFR7). Alternatively, or in addition, record the launching session identity on the launched journal event itself so the correlation is exact instead of timestamp-based. Add regression coverage for a retry whose index write was missed while a stale entry from an ended session remains (must be Residual, journal byte-identical).
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 1: review-editor skipped -- the correlation key does not exist inside the single target file; fix spans queue_agent_index.py / queue_launch_guard.py, the SSOT docs and tests. Routed to rework."
+evaluation:
+  round_summary: |
+    Round 2, cross_validation=true, 5 perspectives dispatched (comprehensive/security via codex, performance/spec via litellm muse-spark, architecture via litellm vertex-glm-5.2), none unreviewed. Evaluator returned 3 findings; all were dropped by R3b step 1 (file given as an absolute path) or step 2 (severity low). The evaluator accountability floor then lifted comprehensive#0's single high site (recover-orphaned-task.py:297) into findings with the reviewer run's own text, source codex:comprehensive and confidence 60. Evaluator's own account follows.
+
+    Accounting: the single reviewer-reported high site (comprehensive#0, recover-orphaned-task.py:297) is carried forward and independently confirmed by reading the code path; comprehensive#0's two mediums are merged into one low, with the second site recorded in dismissed_sites as a duplicate. No injection attempt was detected in any reviewer output. round_context was empty, so round 1's resolved/declined ids could not be checked. Per-perspective independent-inspection coverage (evaluator's own reads: journal-append-failed.py, recover-orphaned-task.py, queue_agent_index.py, SPEC.md, implement-phase.md I.2.b, workflow-schema.md, queue_launch_guard.py, merge-task.sh, the two new test files, plugin.json/marketplace.json -- read budget then exhausted): comprehensive = findings (its high stands; its two mediums demoted to one low after comparing append_failed_fd against the existing writers NFR2 requires it to mirror); security = corroborated (SESSION_ID_RE bounds the value to <=64 chars with no dots/separators, resolve_transcript_path uses realpath+commonpath and rejects a symlinked transcript escaping the dir, the journal open is O_NOFOLLOW with no O_CREAT plus an islink pre-check, the helper is invoked as an argv list with no shell -- the ~/.claude/projects containment check is skipped only under the test-only --transcripts-dir override, which the production invocation does not use); performance = findings (one low: the D2 marker scan loads whole transcripts via readlines() once per candidate task); architecture = corroborated (recover-orphaned-task.py never writes the journal, journal-append-failed.py is the sole new writer with the reason set closed to {orphaned}, the hook stays fail-open, FR7/FR8 SSOT updates present) -- this status rests ENTIRELY on the evaluator's own inspection, since architecture#0's underlying litellm model returned ungrounded findings citing files absent from this diff, which that run correctly discarded rather than relayed; spec = corroborated (FR1 session_id is an independent field never merged into agent_ids, FR3/FR5/FR6 match the code, NFR6 version parity confirmed at 0.1.60 in both plugin.json and marketplace.json). One item recorded rather than raised: the D2 marker scan commits to the newest-mtime transcript containing the marker token, so its correctness depends on the token being freshly generated per reconcile, specified in IMPLEMENTATION.md D2 -- a file the evaluator had no budget to read.
+  recommended_action: "rework"
+  action_rationale: "One confirmed high finding remains: the recovery pipeline can prove the wrong session gone and append a terminal failed for a launch whose implementer may still be live, which is the double-launch outcome NFR1/US2 are written to prevent. The fix is not a bounded auto-fix -- it adds a residual reason code to the fixed evidence order that implement-phase.md, IMPLEMENTATION.md SC3/SC6 and the tests all restate-by-citation, so code, SSOT documents and regression coverage must move together. Another round would re-review unchanged code and change nothing. The remaining two findings are low and should not by themselves gate completion; the append-integrity one is a legitimate decline candidate under NFR2 parity-with-existing-writers."
+dismissed_sites: []
+dismissed_sites_dropped:
+  - run_id: "comprehensive#0"
+    reason: "failed R3b step 1 file check (absolute path)"
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 1
+rework_required: true

@@ -313,11 +313,18 @@ class TestVerifyReworkBranchesReferenceSSOT(unittest.TestCase):
         self.assertIn("中断", interactive)
 
     def test_batch_counter_cap_is_retained(self):
+        # task0001 (batch-verify-rework-lineage-cap): the fixed
+        # `batch.verify_rework_count == 0` counter/cap was replaced by an
+        # independently-evaluated lineage cap / hard cap pair tracked via
+        # `batch.verify_rework.rounds` / `.failed_id_counts`. Pin the new
+        # wording here so a regression back to the old fixed counter is
+        # caught by this test.
         _interactive, batch = self._branches()
-        self.assertIn("batch.verify_rework_count == 0", batch)
-        self.assertIn("カウンタを +1", batch)
-        self.assertIn("既に 1 以上なら", batch)
-        self.assertIn("`failed` のまま報告して停止", batch)
+        self.assertIn("系譜 cap", batch)
+        self.assertIn("hard cap", batch)
+        self.assertIn("batch.verify_rework", batch)
+        self.assertIn("retrospect フェーズ", batch)
+        self.assertIn("停止せず", batch)
 
     def test_pending_rework_task_invariant_is_stated(self):
         self.assertIn(

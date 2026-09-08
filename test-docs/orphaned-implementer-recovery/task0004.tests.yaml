@@ -1,0 +1,85 @@
+task_id: task0004
+baseline_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+# Pre-existing, unrelated to this task: these assert the em-review
+# marketplace entry carries no `version` key, but it does (`0.5.7`) at this
+# task's base commit -- an em-review-plugin drift this task never touches.
+final_failures:
+  - test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_pre_task_snapshot
+  - test_batch_quiet_output_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_batch_stop_contract_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_goal_vs_spec_divergence_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+  - test_recycled_task_id_carveout_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_rework_contract_drift_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_key_set_unchanged
+  - test_routeback_reset_scope_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+  - test_spec_file_set_completeness_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_unchanged
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_reuses_not_live_candidate_set_by_citation
+      - test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_marker_emission_precedes_invocation
+      - test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_recover_orphaned_task_invocation
+      - test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_all_evidence_order_reason_codes
+      - test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_journal_helper_invocation_on_proof
+      - test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_only_case_orchestrator_appends_journal
+      - test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_reason_codes_not_restated_outside_i2b
+    red_confirmed: true
+    red_reason: "AssertionError: all 7 methods failed (assertIn on phrases/reason codes absent from implement-phase.md's I.2.b block before the edit; test_states_all_evidence_order_reason_codes failed 8 subTests, one per SC6 reason code)"
+  AC-2:
+    tests:
+      - test_implement_routeback_gate.TestJournalBulletAndCaveatNameOrphanException.test_journal_bullet_states_exception_and_cites_owner
+      - test_implement_routeback_gate.TestJournalBulletAndCaveatNameOrphanException.test_old_unconditional_never_phrase_absent
+      - test_implement_routeback_gate.TestJournalBulletAndCaveatNameOrphanException.test_caveat_states_orphan_exception
+      - test_implement_routeback_gate.TestJournalBulletAndCaveatNameOrphanException.test_caveat_still_scopes_stop_tool_recorder_to_deliberate_stop
+    red_confirmed: true
+    red_reason: "AssertionError: 'The orchestrator NEVER' unexpectedly found in Supporting cast section (unconditional phrase still present); exception/citation phrases not found in the Journal bullet or the Stale-`launched` caveat before the edit"
+  AC-3:
+    tests:
+      - test_implement_routeback_gate.TestWorkflowSchemaJournalWriterSetNamesException.test_names_new_writer_script
+      - test_implement_routeback_gate.TestWorkflowSchemaJournalWriterSetNamesException.test_states_orphaned_is_additive_reason_value
+      - test_implement_routeback_gate.TestWorkflowSchemaJournalWriterSetNamesException.test_cites_owning_section_by_repo_relative_path
+      - test_implement_routeback_gate.TestWorkflowSchemaJournalWriterSetNamesException.test_old_unconditional_never_orchestrator_phrase_absent
+      - test_implement_routeback_gate.TestWorkflowSchemaJournalWriterSetNamesException.test_existing_events_not_renamed_or_removed
+      - test_implement_routeback_gate.TestReadmeJournalDescriptionAgreesByCitation.test_states_orphaned_exception
+    red_confirmed: true
+    red_reason: "AssertionError: 'journal-append-failed.py' / 'orphaned' additive-reason phrase / owning-section citation not found in workflow-schema.md; 'No other hook, and never the orchestrator, appends to `journal.jsonl`' still present unconditionally; 'orphaned' not found in em-workflow/README.md"
+  AC-4:
+    tests:
+      - test_implement_routeback_gate.TestWorkflowSchemaAgentsJsonlSessionIdException.test_no_status_invariant_survives
+      - test_implement_routeback_gate.TestWorkflowSchemaAgentsJsonlSessionIdException.test_states_session_id_exception
+      - test_implement_routeback_gate.TestWorkflowSchemaAgentsJsonlSessionIdException.test_cites_implement_phase_i2b_by_path
+      - test_implement_routeback_gate.TestAgentIndexWriterBulletRecordsSessionIdField.test_states_session_id_field_recorded
+      - test_implement_routeback_gate.TestAgentIndexWriterBulletRecordsSessionIdField.test_states_never_a_match_candidate
+      - test_implement_routeback_gate.TestAgentIndexWriterBulletRecordsSessionIdField.test_cites_i2b_orphan_recovery_as_owner
+    red_confirmed: true
+    red_reason: "AssertionError: session-identity exception phrase absent from workflow-schema.md's agents.jsonl paragraph; session_id field / never-a-match-candidate / owning-site citation phrases absent from implement-phase.md's Agent index writer bullet before the edit"
+  AC-5:
+    tests:
+      - test_implement_routeback_gate.TestI2cStatesOrphanedFailedConvergence.test_states_orphaned_is_not_a_distinct_terminal
+      - test_implement_routeback_gate.TestI2cStatesOrphanedFailedConvergence.test_states_no_new_policy_threshold_or_branch
+      - test_implement_routeback_gate.TestI2cStatesOrphanedFailedConvergence.test_states_batch_single_retry_applies
+    red_confirmed: true
+    red_reason: "AssertionError: the orphaned-failed convergence sentence was absent from I.2.c before the edit ('`orphaned`' did not appear in the I.2.c section at all)"
+  AC-6:
+    tests:
+      - test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_plugin_manifest_and_marketplace_agree_on_version
+      - test_implement_routeback_gate.TestPluginVersionBumpedInLockstep.test_shared_version_is_past_the_pre_task_baseline
+    red_confirmed: false
+    red_reason: "Pre-existing test (not authored by this task); it already passed before this task's bump (base commit version 0.1.59, baseline check is patch > 48) and continues to pass after the bump to 0.1.60 -- it does not go red on its own for this task's specific bump, so it does not prove this task's own version change by itself. The bump itself (0.1.59 -> 0.1.60 in both plugin.json and marketplace.json) was verified by direct read of both files after the edit; per Test Notes, version-bump consistency is a verify-phase check (TS-11), not a unittest this task adds."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "Build/suite-pass criterion, not a single test: verified by running `python3 -m unittest discover -s tests` after all edits (2899 tests, 11 pre-existing baseline failures unchanged, 0 regressions, all 29 new tests in AC-1..AC-5 above green)."

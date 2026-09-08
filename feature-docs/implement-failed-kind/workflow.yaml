@@ -1,0 +1,331 @@
+schema_version: 1
+feature: implement-failed-kind
+created: 2026-09-06
+base_branch: main
+goal: |
+  em-workflow: implement の failed に理由分類を持たせ、インフラ起因なら停止条件 3 を発火させず続行する
+
+  ## やりたいこと（必須）
+  workflow.yaml の implement step の `failed` に理由の分類を持たせ、インフラ起因（implementer の孤児化など）の `failed` は develop の Step B で停止条件 3 を発火させず、implement を `pending` に戻して続行できるようにする。設計判断が必要な `failed` だけを従来どおり人に回す。
+
+  ## 背景・なぜ（必須）
+  2026-09-05 08:06 JST の run は、workflow.yaml の implement が `failed` だったため Step B の停止条件 3（ユーザー介入が必要）で即停止した。
+  - この `failed` の理由は「implementer がディスパッチャ再起動で消えた」であり、人の判断は不要だった
+  - task0001 の worktree には未コミット差分が残っていて、I.2.a の resume guard で続行できる状態だった
+  - 停止条件 3 は `failed` / `needs_update` を一律にユーザー介入と扱うため、人が workflow.yaml を `pending` に戻すまで、何回 dispatch しても 1〜2 分で同じ報告を繰り返す
+
+  ## 受け入れ条件 / 完了の定義（必須）
+  - [ ] `references/workflow-schema.md` の implement step に `failed_kind: infra | decision` を追加する。`infra` は外部要因（孤児化、harness 障害）、`decision` は実装内容の失敗や計画の見直しが必要なもの
+  - [ ] implement を `failed` に書く各箇所（I.2.c の abort、batch の 2 回目 failed、gate-rejected terminal）で `failed_kind` を必ず書く。孤児化由来は `infra`、それ以外は `decision`
+  - [ ] Step B の停止条件 3 は `failed_kind: decision` のときだけ発火する。`infra` のときは implement を `pending` に戻し、その write をコミットしてからフェーズを実行する
+  - [ ] `infra` 起因の自動続行に回数上限を設け、上限到達時は `decision` 扱いで停止する。上限値と回数は workflow.yaml の `batch` セクションに記録する
+  - [ ] `references/batch-terminal-line.md` の `step_needs_intervention` の説明と、`skills/develop/SKILL.md` の停止条件 3、`references/batch-mode.md` を更新する
+  - [ ] 検証: `failed_kind: infra` の workflow.yaml から `--batch --once` を起動し、停止せず implement が続行することを確認する。`failed_kind: decision` では従来どおり停止することを確認する
+
+  ## スコープ外（任意）
+  - 孤児 launched の検出と journal への `failed` 記録（別タスク「孤児 implementer の自動復旧」で扱う）
+  - review / verify の `failed` への分類の適用
+
+  ## 制約・前提（任意）
+  - 別タスク「孤児 implementer の自動復旧」が journal に `failed`（reason: `orphaned`）を書く経路を前提にする。着手順はそちらが先
+  - `failed_kind` が無い既存の workflow.yaml は `decision` として扱い、後方互換を保つ
+parent_branch: em-workflow/implement-failed-kind/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Markdown + Python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: d7d9927e645f04f299f8ecf0d4dbf6ee3f87f730
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "成果物は em-workflow プラグインのプロトコル文書（Markdown）と、必要なら Python フック／スクリプトとその unittest のみ。ユーザーに見える視覚的表面・UI・画面遷移・デザイントークンのいずれも持たないため、design ステップの入力も出力も存在しない。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: completed
+    completed_at_commit: aab6e2be59ab1ff0cbc5c00d660ccc9264bab2a6
+  - id: implement
+    status: completed
+    completed_at_commit: 185de9ceff2eac0f85d7f2a407450487b26424e7
+    base_commit: b49240996c198da1528b4b8d6265baab75a90931
+  - id: review
+    status: completed
+    completed_at_commit: 83477a01b45768ef1ba73990c04f67b5dd6d4a65
+  - id: verify
+    status: completed
+    completed_at_commit: 639d1d442353db0341e6b7f2f8b63ec7b7288e85
+    result: pass
+    failed_items: []
+    notes: |
+      round 2: `python3 -m unittest discover -s tests` は 3663 tests / OK (exit 0)。
+      TS-5 は task0008 のガード修正で解消。TS-6..TS-11 / TS-13 / TS-14 の各テスト
+      モジュールを個別にも実行し全て OK。
+      build_command / format_command / e2e_test_command はいずれも空のため対象外。
+      TS-1..TS-4・TS-12・TS-1 の interactive 対照は VERIFICATION.md が Manual と
+      宣言したシナリオで、無人走行の中では実行していない。
+  - id: retrospect
+    status: completed
+    completed_at_commit: 6b5de1ea8e8e99d7b4de28ad2ea80111dc4f47f8
+
+tasks:
+  task0001:
+    title: "failed_kind definition and the infra-resume record in the schema SSOT"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/references/workflow-schema.md
+      - tests/test_failed_kind_schema.py
+    skills: []
+    domains: [api-contract, data-persistence, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR7, FR9, NFR1, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/implement-failed-kind/task0001
+  task0002:
+    title: "The three terminal write paths carry failed_kind"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - tests/test_failed_kind_write_paths.py
+      - tests/test_implement_routeback_gate.py
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_routeback_reset_scope_consistency.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: medium
+    requirements: [FR2, FR3, FR4, FR5, NFR1, NFR2, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/implement-failed-kind/task0002
+  task0003:
+    title: "Stop condition 3 branches on failed_kind, with a capped batch auto-resume"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/skills/develop/SKILL.md
+      - tests/test_failed_kind_stop_condition.py
+    skills: []
+    domains: [input-handling, api-contract, config-infra]
+    complexity: high
+    requirements: [FR2, FR6, FR7, FR8, NFR1, NFR2, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/implement-failed-kind/task0003
+  task0004:
+    title: "Batch-mode and terminal-line documents follow the failed_kind branch"
+    plan: tasks/task0004.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/batch-terminal-line.md
+      - tests/test_failed_kind_batch_docs.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: low
+    requirements: [FR10, NFR1, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/implement-failed-kind/task0004
+  task0005:
+    title: "Plugin version bump"
+    plan: tasks/task0005.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_failed_kind_version_bump.py
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [NFR3, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/implement-failed-kind/task0005
+
+  task0006:
+    title: "Infra auto-resume re-entry admissibility and the develop-skill test anchor"
+    plan: tasks/task0006.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/references/rework-task-synthesis.md
+      - em-workflow/skills/develop/SKILL.md
+      - tests/test_failed_kind_resume_reentry.py
+      - tests/test_failed_kind_stop_condition.py
+      - tests/test_failed_kind_write_paths.py
+      - tests/test_recycled_task_id_consistency.py
+      - tests/test_rework_synthesis_contract.py
+    skills: []
+    domains: [api-contract, config-infra]
+    complexity: high
+    requirements: [FR2, FR6, FR7, NFR1, NFR2, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/implement-failed-kind/task0006
+  task0007:
+    title: "The batch.infra_resume record: key set, materialising writer, cap ownership and value gloss"
+    plan: tasks/task0007.md
+    files:
+      - em-workflow/references/batch-mode.md
+      - em-workflow/references/workflow-schema.md
+      - tests/test_failed_kind_batch_docs.py
+      - tests/test_failed_kind_schema.py
+    skills: []
+    domains: [api-contract, data-persistence, config-infra]
+    complexity: medium
+    requirements: [FR1, FR7, FR10, NFR1, NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/implement-failed-kind/task0007
+
+  task0008:
+    title: "Repair the over-specified em-review marketplace-entry guard so the suite is green"
+    plan: tasks/task0008.md
+    files:
+      - tests/test_llm_led_review_user_docs.py
+    skills: []
+    domains: [config-infra]
+    complexity: low
+    requirements: [NFR4]
+    status: merged
+    notes: null
+    branch: em-workflow/implement-failed-kind/task0008
+    provenance:
+      source: verify
+      source_ids: [TS-5]
+      review_round: null
+
+requirements:
+  FR1:
+    title: "implement step への `failed_kind` フィールド追加"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0007]
+    tests: [TS-6, TS-13]
+  FR2:
+    title: "`failed_kind` のライフサイクル（設定・保持・クリア）"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`clear_on_leaving_failed` を採用した。`failed_kind` は implement を `failed` にする write でのみ設定し、implement が `failed` を離れる write set（I.2.c の route-back による pending 差し戻しと、develop Step B の infra 自動続行による pending 差し戻し）と同じ write set で null に戻す。追加の write もコミットも作らない。"
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0006]
+    tests: [TS-6, TS-7, TS-8, TS-11]
+  FR3:
+    title: "I.2.c abort 経路での `failed_kind` 書き込み"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS-7]
+  FR4:
+    title: "batch の 2 回目 failed 経路での `failed_kind` 書き込み"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`second_always_decision` を採用した。batch の `implement.failed-task` による 2 回目失敗の abort phase は、孤児化由来の失敗を含め原因を問わず `failed_kind: decision` を書く。走行の停止挙動は変わらない — `references/batch-terminal-line.md` の precedence rule で `implement-second-failure` が `stop-condition-3` に優先するため。"
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS-7]
+  FR5:
+    title: "route-back gate-rejected terminal での `failed_kind` 書き込み"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`always_decision` を採用した。I.2.c の route-back gate が成立しなかった terminal status write は常に `failed_kind: decision` を書く。gate 不成立の原因は `merged` / in-flight タスクという計画側の状態であり、自動続行しても同じ gate で再び弾かれるため。"
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS-7]
+  FR6:
+    title: "停止条件 3 の発火条件を `failed_kind: decision` に限定する"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0003, task0006]
+    tests: [TS-1, TS-2, TS-8, TS-11, TS-12]
+  FR7:
+    title: "`infra` 自動続行の回数上限とその記録"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`cap_2` を採用した。記録先のキー名は workflow.yaml の `batch.infra_resume` で、メンバーキーは `rounds`（実施済み回数、feature 単位で単調増加・リセットなし）と `cap`（上限）。カウント更新は implement を `pending` に差し戻す write と同一 write set で行い、1 回のコミットで確定させる。`rounds` が `cap` に達したら decision 扱いで停止し、報告文に上限到達を理由として明記する。キー欠落は `rounds: 0` / `cap: 2` として読む。"
+    excluded_reason: null
+    tasks: [task0001, task0003, task0006, task0007]
+    tests: [TS-4, TS-6, TS-8, TS-11, TS-13]
+  FR8:
+    title: "`infra` 自動続行を適用するモードの範囲"
+    status: assumed
+    tbd_reason: "create-plan の tbd-resolution で `assume` が選択され、`batch_only` を採用した。`failed_kind: infra` による自動続行は batch 走行にのみ適用する。interactive では `failed_kind` の値によらず従来どおり停止条件 3 が発火する。回数の記録先である `batch` ブロックが --batch 走行でのみ作成される既存規則と整合する。"
+    excluded_reason: null
+    tasks: [task0003]
+    tests: [TS-8]
+  FR9:
+    title: "`failed_kind` 欠落時の後方互換"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS-3, TS-6]
+  FR10:
+    title: "関連ドキュメントの更新"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0004, task0007]
+    tests: [TS-9, TS-13]
+  NFR1:
+    title: "SSOT 規律"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0004, task0006, task0007]
+    tests: [TS-6, TS-7, TS-8, TS-9, TS-11, TS-13]
+  NFR2:
+    title: "write とコミットの単位を変えない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002, task0003, task0006]
+    tests: [TS-1, TS-7, TS-8, TS-12]
+  NFR3:
+    title: "プラグイン version bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0005]
+    tests: [TS-10]
+  NFR4:
+    title: "スクリプト／フックを変更する場合のテスト追随"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008]
+    tests: [TS-5, TS-14]
+
+batch:
+  review_rework_count: 1
+  verify_rework:
+    rounds: 1
+    failed_id_counts:
+      TS-5: 1
+  infra_resume:
+    rounds: 0
+    cap: 2
+
+review:
+  status: completed
+  rounds_completed: 3
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 0
+  needs_rework: false

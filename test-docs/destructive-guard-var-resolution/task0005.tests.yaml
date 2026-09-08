@@ -1,0 +1,123 @@
+task_id: task0005
+baseline_failures: []          # both project.components suites were fully green before this task touched anything: run-destructive-guard.py 151/151, unittest discover -s tests 2830/2830
+final_failures: []             # unchanged and green after: run-destructive-guard.py 132/132, unittest discover -s tests 2830/2830, both re-run twice with identical output
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      This task's check is a throwaway differential harness (per the task
+      plan's Test Notes), not a committed test module. Before restoring the
+      hook, the harness (base=1fdb27f copy vs the still-var-resolution
+      em-workflow/hooks/destructive-guard.py) was run over a 173-string
+      corpus built from every command in the case list plus every literal
+      command quoted in round3.yaml's findings and orchestrator_verification
+      block: 36/173 mismatched, including exactly the round-3-verified
+      regressions — "rm -rf dist/*" (base allow, current
+      ask/rm-unresolvable), "rm -rf <(echo x) /home/sakura/proj" (base
+      deny/rm-recursive, current allow), "X=build-debug; rm -rf $X" (base
+      ask/rm-unresolvable, current deny/rm-recursive). After restoring
+      em-workflow/hooks/destructive-guard.py to the 1fdb27f content and
+      re-running the same harness over a 154-string corpus (131 final
+      case-list commands + 23 round-3-sourced probes, including the 44KB/88KB
+      timing shapes), 154/154 matched — zero mismatches on both verdict and
+      the bracketed rule identifier.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Never red for this task: the 58 pre-existing entries were already an
+      untouched, byte-identical prefix of the 150-entry case list before this
+      task changed anything (`cur[:58] == base` against
+      `git show 1fdb27f:.../destructive-guard-cases.json` was True prior to
+      any edit). This task's job for those 58 was to not touch them, and it
+      didn't — no edit was ever applied to indices 0-57, so there is no
+      fail state to have observed.
+  AC-3:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      After restoring the hook but before pruning cases.json,
+      `run-destructive-guard.py` returned 131/151 with exactly 20 FAILs, all
+      at index >=58 (e.g. "変数解決: スクラッチ領域への rm -rf" got
+      allow-expected but restored hook gave ask/rm-unresolvable; "変数解決:
+      変数経由の再帰フラグも再帰削除として扱われる" wanted deny but restored
+      hook gave allow). A companion script (retention_check.py) independently
+      ran each of the 92 added entries' command directly against the base
+      hook copy and compared to the entry's recorded expectation; its 20
+      DROP decisions were identical, index-for-index, to the runner's 20
+      FAILs. Those 20 were removed; the other 72 added entries plus the 58
+      base entries were left unedited. AC-3's four named examples were
+      checked explicitly: "rm -rf /tmp/" (idx 112, KEEP, base=allow),
+      "rm -rf build-debug" (idx 116, KEEP, base=allow), the escaped-paren
+      find -delete (idx 107, KEEP, base=deny/find-delete), and the
+      quoted-paren "git push \"(\" --force" (idx 108, KEEP,
+      base=deny/git-force-push). The fifth named
+      example, "rm -rf dist/*", had no existing case-list entry (verified by
+      exhaustive grep/search over all 150 pre-prune entries) despite AC-3
+      requiring it present afterward and Design section A naming it as one
+      of "the exact regressions review found" worth retaining as coverage;
+      one new entry was added for it (verdict allow, matching the base
+      hook's directly-measured verdict) — recorded as a deviation from the
+      Scope section's remove-only framing, justified by AC-3's explicit
+      mandatory wording. After pruning + the one addition, re-run is
+      132/132 green.
+  AC-4:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Immediately after restoring the hook (before pruning cases.json),
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` exited 1
+      (131/151 passed, 20 FAILs — see AC-3). After pruning, both commands
+      were run twice each with identical output: run-destructive-guard.py
+      132/132 passed (exit 0, both runs), `python3 -m unittest discover -s
+      tests` Ran 2830 tests OK (exit 0, both runs; 14.1s and 14.3s
+      wall-clock, no flake).
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      This is an end-state performance property of the restored file, not a
+      criterion this task's own work flips from red to green: the restored
+      hook is byte-identical to the 1fdb27f revision by construction (`diff
+      -q` returned no difference, exit 0), so it necessarily inherits base's
+      cost profile regardless of input shape, and grep confirms
+      invalidated_names()/collect_assignments()/RESOLVED_TEXT_MAX are absent
+      from the restored file entirely. Measured directly (repeated-assignment
+      shape continuing the 11/22/44KB doubling series round3.yaml's
+      orchestrator_timing used, extended to 88KB): 44KB (45073B) base=0.051s
+      current=0.051s, both "allow"; 88KB (90133B) base=0.079s current=0.082s,
+      both "allow". Both current numbers are within 2x of base and under 1s;
+      both produced a verdict, neither approached the 10s hook timeout. Note
+      on rigor: an attempt to reproduce round3.yaml's own cited 44KB=9.85s
+      figure by re-running the *pre-restore* (still-var-resolution) hook
+      against this synthetic shape did not reproduce that magnitude (0.077s
+      at 44KB with a plain `V{i}=val{i};` shape, 0.036s at 11KB with an
+      `export V{i}=v;` shape) — the precise adversarial construction
+      invalidated_names() is quadratic on was not independently rediscovered
+      in the time available. AC-5's own requirement is about the restored
+      hook's numbers, which are directly measured and recorded above;
+      round3.yaml's orchestrator_timing (11KB=0.65s/22KB=2.48s/44KB=9.85s
+      current vs 0.02s/0.03s/0.05s base) is relied on as the cited evidence
+      for why the withdrawal was warranted, per the orchestrator's explicit
+      instruction to treat that block as the evidence base.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Never red: both the pre-restore and restored hook import only stdlib
+      modules (`git show HEAD:.../destructive-guard.py` before this task's
+      edit: itertools, json, os, re, shlex, shutil, sys; the restored file:
+      json, os, re, shlex, shutil, sys). Restoring the base content removes
+      the one non-restored-era import (itertools, added by the resolution
+      layer) without ever having introduced a non-stdlib dependency to
+      violate NFR5 in the first place.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Never red: this task never touched em-workflow/.claude-plugin/plugin.json
+      or .claude-plugin/marketplace.json (git status after this task's edits
+      shows only destructive-guard.py and destructive-guard-cases.json
+      modified). Both manifests read "0.1.57" before and after, verified by
+      direct read.

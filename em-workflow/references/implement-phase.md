@@ -126,17 +126,33 @@ document is written; this phase never creates them itself.
    fail-closed with the same trusted-root fallback discipline as the review
    protocol (search `$HOME/.claude/plugins` / `$HOME/.claude/skills` with
    path filter `*/em-workflow/*/scripts/*`, never cwd).
-5. **Rework re-entry precondition**: when this phase is entered because
+5. **Re-entry precondition**: Step I.0 recognises three entry routes into
+   `implement: pending` — a fresh first pass, a rework re-entry, and the
+   develop skill's batch infra auto-resume (`skills/develop/SKILL.md`, the
+   auto-resume block; its own precondition and write set are stated there,
+   not restated here). A fresh first pass carries no further condition
+   here.
+
+   Rework re-entry: when this phase is entered because
    review or verify sent `implement` back to `pending` (rework, not a fresh
    first pass), require at least one task in `tasks` whose
    `status == pending` — this is Invariant 1 of
    `references/rework-task-synthesis.md`: the synthesis step that flips
    `implement` to `pending` never does so without registering a pending
-   rework task alongside it. Entering this phase with every task `merged`
-   (or otherwise none `pending`) is therefore a protocol error, not a fresh
-   idle state to wait out: ABORT the phase immediately with a clear report
-   naming the offending workflow.yaml state, rather than looping through
-   Step I.2 with nothing to launch.
+   rework task alongside it.
+
+   Batch infra auto-resume re-entry: when instead this phase is entered via
+   the auto-resume route above, require at least one task whose Step
+   I.2.b step 1's reconciled state is `failed` — that is what the resumed
+   phase has work to do about; no `pending` task is required on this
+   route, since the auto-resume's write set registers no task.
+
+   A non-fresh entry satisfying neither condition — every task `merged`
+   (or otherwise none `pending`), and no task whose reconciled state is
+   `failed` — is therefore a protocol error, not a fresh idle state to
+   wait out: ABORT the phase immediately with a clear report naming the
+   offending workflow.yaml state, rather than looping through Step I.2
+   with nothing to launch.
 
 ## Step I.1: Confirm the integration worktree, record the implement baseline
 
@@ -170,7 +186,11 @@ implement entry for the feature); on resume (implement already
 sent it back) the existing `base_commit` value is preserved unchanged, per
 `references/rework-task-synthesis.md` Section 10 point 3 / Section 11
 Invariant 5. In all cases set `implement` status to
-`in_progress`; commit the update with
+`in_progress`; when this phase is entered with `implement`'s prior status
+`failed`, this same write also clears `failed_kind`
+(`references/workflow-schema.md`) back to null — the write set that
+carries the field's lifecycle clear on an entry from `failed` (cited
+above, not restated). Commit the update with
 `commit-docs.sh "$WT_ROOT/integration" "docs({feature}): implement phase start" "$BASE_COMMIT"`
 (the third argument is `expected_base_tip`; exit-4 recovery: Branch &
 Worktree Model above).
@@ -517,6 +537,51 @@ Triggered whenever a launched implementer's `Task()` call returns.
      existing gate-rejected terminal, with the task named in the report.
      This recovery runs during this wake-phase reconcile step, hence
      before I.2.c's user-facing menu is offered.
+
+     Orphan recovery: for exactly the not-live candidate set already
+     established above — journal last event `launched`, task worktree and
+     task branch both present, Agent index lookup resolving to no live
+     agent (unresolvable, ambiguous, or the third case where the stop tool
+     stops nothing) — the orchestrator makes one further attempt before the
+     Residual above is taken as final. It first emits a marker token into
+     its own transcript via a command run immediately before the next step
+     (IMPLEMENTATION.md D2), then invokes
+     `em-workflow/scripts/recover-orphaned-task.py` for the candidate task,
+     passing that marker (or, when the orchestrator's own session identity
+     and start time are already known some other way, those values
+     directly — D2 form 1 takes precedence over the marker scan). That
+     script gathers evidence in this fixed order, stopping at the first
+     unmet condition with the named residual reason code and invoking
+     nothing further: an Agent index entry exists for the task (else
+     `no-agent-entry`); that entry is bound to the launch under recovery,
+     per D7 — its own `at` is not earlier than the `at` of the LAST
+     `launched` journal event recorded for the task by more than D7's
+     tolerance, with both timestamps parsing and comparable, skipped
+     entirely when the journal records no `launched` event for the task at
+     all (else `stale-agent-entry`); the entry carries a session identity
+     (else `no-session-id`); the identity passes SC5's format-validation
+     rule (else `invalid-session-id`); the current session's identity and
+     start time resolve per D2 (else `current-session-unknown`); the
+     recorded identity differs from the current one (else `same-session`);
+     the D1-derived transcripts directory exists and the assembled
+     transcript path resolves inside it (else `transcripts-dir-missing`);
+     the transcript yields at least one usable timestamp (else
+     `transcript-unreadable`); and that newest usable timestamp is strictly
+     older than the current session's start, per D3 (else
+     `transcript-active`). Only when every condition holds does it invoke
+     `em-workflow/scripts/journal-append-failed.py` exactly once, with the
+     task id and reason `orphaned`; that helper takes the journal's
+     exclusive advisory lock, replays it, and appends `failed` only when
+     the task's final event is still `launched` (a no-op when it is
+     already `merged` or `failed`). This is the ONLY case in which the
+     orchestrator's own action results in an append to `journal.jsonl` —
+     the exception `em-workflow/references/implement-phase.md`'s own
+     Supporting cast Journal bullet below states, cited not restated. Any
+     residual outcome from either script leaves the journal byte-identical
+     to its pre-call content: the Residual above stands unchanged as this
+     candidate's outcome. Full contract: IMPLEMENTATION.md's SC2
+     (`journal-append-failed.py`), SC3 (`recover-orphaned-task.py`), SC6
+     (the reason-code set) and D7 (the launch-binding rule).
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
@@ -663,6 +728,14 @@ turn's own steps 1/4/5 narration as above.
 
 ### I.2.c: Failed handling
 
+Orphaned-`launched` convergence (FR4): a `failed` event whose reason is
+`orphaned` — recorded by I.2.b step 1's orphan-recovery exception above —
+is not a distinct terminal: it is exactly the ordinary failed handling
+below, with no new policy, threshold, or branch introduced for it.
+Interactive offers retry / route back to planning / abort exactly as for
+any other failed task; in batch, the `implement.failed-task` policy's
+single retry (kept worktree, I.2.a resume guard) fires for it the same way.
+
 The moment any task's reconciled status is `failed`: stop launching new
 tasks (do not refill), let already in-flight tasks drain (their wake
 notifications still arrive and are reconciled normally — a failure never
@@ -740,9 +813,13 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   then make one ordered workflow.yaml write set over the reset target
   set — every task whose Step I.2.b step 1 reconciled state is
   `failed`: set `create-plan` to `needs_update`, set the `implement`
-  step back to `pending`, record each such task's failure reason (the
-  implementer's report `notes`) in `tasks.{T}.notes`, and set
-  `tasks.{T}.status` back to `pending` for every task in that set — the
+  step back to `pending`, clear `failed_kind`
+  (`references/workflow-schema.md`) back to null in that same write set —
+  re-asserting the null value Step I.1's phase-start write already set on
+  this entry, so this adds no extra write and no extra commit — record
+  each such task's failure reason (the implementer's report `notes`) in
+  `tasks.{T}.notes`, and set `tasks.{T}.status` back to `pending` for
+  every task in that set — the
   gate above already established that no task is `merged` or
   `in_progress` at this point, so the result is that no task is left
   `merged` or `in_progress` or `failed`, which is exactly what makes the
@@ -785,7 +862,10 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   the integration worktree first (the same `reset --hard` as above),
   captures `TERMINAL_TIP=$(git -C "$WT_ROOT/integration" rev-parse
   HEAD)`, sets the `implement` step's `status` to `failed` in
-  workflow.yaml — the single write this path makes — and commits exactly
+  workflow.yaml, together with `failed_kind` valued `decision`
+  unconditionally — the blocker is a planning-side state (a `merged` or
+  in-flight task), so an automatic resume would meet the same gate again
+  — the single write this path makes — and commits exactly
   that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
   implement route-back gate rejected" "$TERMINAL_TIP"`. There is no
   route-back write set, no worktree/branch cleanup and no route-back
@@ -799,7 +879,11 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   `reset --hard em-workflow/{feature}/integration` the rejected path
   above uses), capture `ABORT_TIP=$(git -C "$WT_ROOT/integration"
   rev-parse HEAD)`, set the `implement` step's `status` to `failed` in
-  workflow.yaml — the single write this path makes — and commit exactly
+  workflow.yaml, together with `failed_kind` in that same single write —
+  `infra` when the failing task's failure originates from a journal
+  `failed` event whose reason is `orphaned` (the orphaned-`launched`
+  convergence paragraph above already establishes this), `decision`
+  otherwise — the single write this path makes — and commit exactly
   that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
   implement phase aborted" "$ABORT_TIP"` (no `create-plan`
   `needs_update`, no task status or notes write set, no worktree or
@@ -825,25 +909,37 @@ Batch mode (`references/batch-mode.md`'s Non-packet gates table,
 after the drain, auto-select **retry** ONCE per task (kept worktree, I.2.a
 resume guard). A task that fails a second time → **abort phase**: refresh
 the integration worktree, capture the tip, then set and commit the
-`implement` step's `status` to `failed` via `commit-docs.sh` (no
-`create-plan` `needs_update`, no task status or notes write set, no
-worktree or branch cleanup — the terminal status write and its own commit
-are the ONLY side effect), then report and stop; control returns via
-develop's stop condition 3, firing on the next Step B iteration reading
-`implement: failed`. The external service cuts a follow-up task.
-Route-back-to-planning is never taken automatically. Track the
-retry-consumed state per task in `tasks.{T}.notes`.
+`implement` step's `status` to `failed`, together with `failed_kind`
+valued `decision` unconditionally — including when the failure
+originates from a journal `failed` event whose reason is `orphaned`,
+overriding the abort-phase option's rule above for this entrance — via
+`commit-docs.sh` (no `create-plan` `needs_update`, no task status or
+notes write set, no worktree or branch cleanup — the terminal status
+write and its own commit are the ONLY side effect), then report and
+stop; control returns via develop's stop condition 3, firing on the next
+Step B iteration reading `implement: failed` — unaffected by this
+override, since `references/batch-terminal-line.md` already gives
+`implement-second-failure` precedence over `stop-condition-3`. The
+external service cuts a follow-up task. Route-back-to-planning is never
+taken automatically. Track the retry-consumed state per task in
+`tasks.{T}.notes`.
 
 ### Supporting cast: journal, hooks, resume
 
 **Journal** (`journal.jsonl`, sibling of the per-task worktree directories
 under `.claude/worktrees/em-workflow/{feature}/`): a machine-written,
 append-only event log — `launched` / `merged` / `failed`, one JSON object
-per line, each carrying `task` and an RFC 3339 `at`. The orchestrator NEVER
-writes it; only `merge-task.sh` and the journal-writing hooks below append
-to it. The raw log is never rewritten or deleted — it is the primary source
-for post-mortem diagnosis, distinct from workflow.yaml's LLM-managed
-summary (full schema: IMPLEMENTATION.md's Journal contract).
+per line, each carrying `task` and an RFC 3339 `at`. The orchestrator never
+writes it directly — every append is `merge-task.sh` or one of the
+journal-writing hooks below — with one narrowly-scoped exception: I.2.b
+step 1's orphan-recovery attempt, defined in
+`em-workflow/references/implement-phase.md`'s own I.2.b Recovery / Residual
+block above (cited here, not restated), which invokes
+`em-workflow/scripts/journal-append-failed.py` on proof that a `launched`
+task's launching session is provably gone. The raw log is never rewritten
+or deleted — it is the primary source for post-mortem diagnosis, distinct
+from workflow.yaml's LLM-managed summary (full schema: IMPLEMENTATION.md's
+Journal contract).
 
 **The hooks** (`em-workflow/hooks/`, wired in `hooks.json`):
 
@@ -890,7 +986,13 @@ Stop-hook bullet below cite it as this classification's source.
   mapping every harness agent-identifier candidate it can recover from the
   launch response (the exact identifier field the response carries is
   unverified, so more than one candidate may be recorded per entry) to the
-  launched task id and worktree path. It writes ONLY the agent index — it
+  launched task id and worktree path. For em-workflow implementer launches
+  it additionally records the launching session's own identity
+  (`session_id`, IMPLEMENTATION.md SC1) as an independent top-level field of
+  that same entry — never appended to the harness agent-identifier candidate
+  list above and never itself a match candidate for the stop-side resolution
+  below; I.2.b step 1's orphan-recovery attempt above (cited here, not
+  restated) is the sole reader of this field. It writes ONLY the agent index — it
   never touches `journal.jsonl` — and is fail-open exactly like every hook
   here: an unrecognized launch, an unparsable input, or a missing feature
   directory is a silent no-op. The index is diagnostic plumbing, not a
@@ -949,7 +1051,11 @@ existence check) triggers I.2.b step 1's recovery on the next reconcile
 pass — the outcome that check produces is defined there, not restated
 here — and, specifically for the deliberate-stop case, the stop-tool
 recorder appends `failed` as soon as the `TaskStop` call completes,
-closing the gap before a reconcile pass is even needed.
+closing the gap before a reconcile pass is even needed. A fourth mechanism
+closes the gap for exactly the case where the launching session itself is
+gone: I.2.b step 1's orphan-recovery attempt (cited there, not restated
+here) is the sole exception to the Journal bullet's rule that the
+orchestrator never writes the journal directly.
 
 **Resume**: a `/em-workflow:develop` re-entry mid-implement rebuilds state
 from four sources, never from memory: workflow.yaml (`tasks.*.status`), the

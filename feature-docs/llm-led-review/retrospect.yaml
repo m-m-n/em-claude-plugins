@@ -1,0 +1,154 @@
+feature: llm-led-review
+collected_at: '2026-09-05T15:08:59+09:00'
+session_ids:
+- 01a0702d-9620-771e-bc2b-290453c3049a
+signals:
+  review_critical_high:
+  - stable_id: 2473033f751cd158
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: 評価者 coverage gate が正常なトリアージを failed 扱いにして findings を復活させる
+    resolution: unresolved
+  - stable_id: fce739c4dabb8993
+    category: security
+    file: em-workflow/references/review-phase.md
+    title: Evaluator coverage gate が全滅時のみ発火するため、注入による critical finding の選択的隠蔽を通す
+    resolution: unresolved
+  - stable_id: ecae1046a059d74b
+    category: performance
+    file: em-workflow/references/review-phase.md
+    title: 評価者カバレッジゲートが正常なトリアージで発火し、Opus 評価 1 回分を捨てて auto-fix ループ／rework を誘発する
+    resolution: unresolved
+  - stable_id: 2ff41c71809b14bc
+    category: spec
+    file: em-workflow/references/review-phase.md
+    title: R3b の Evaluator coverage gate が評価役の正当な triage を「失敗」扱いし、評価役が退けた findings を復活させる
+    resolution: unresolved
+  - stable_id: 0113d89b57312c50
+    category: security
+    file: em-workflow/references/review-phase.md
+    title: security 観点が 1 度もレビューされないまま review completed になる（fail-open）
+    resolution: unresolved
+  - stable_id: 22933066ce52b21d
+    category: security
+    file: em-workflow/references/review-phase.md
+    title: Schema-valid empty output can bypass the sole security reviewer
+    resolution: unresolved
+  - stable_id: e76acd6780af5cef
+    category: spec
+    file: em-workflow/references/review-evaluation-contract.md
+    title: Evaluator finding uses source_run_ids instead of spec-mandated sources
+    resolution: unresolved
+  - stable_id: e4cc1b2301b6b5ae
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: R2b の malformed 判定が存在しないスキーマパスを参照している
+    resolution: fixed
+  - stable_id: 2b157e5e5eae73f6
+    category: architecture
+    file: em-workflow/references/review-phase.md
+    title: R2b が failed run の処理を R5 Completion gate に委譲するが、R5 側はその責務を明示的に拒否している
+    resolution: fixed
+  - stable_id: e34933fd05b60c85
+    category: security
+    file: em-workflow/references/review-phase.md
+    title: untrusted-origin ゲート `sources != ["claude:evaluator"]` が accountability-floor lift に構造的に一致しない
+    resolution: deferred
+  - stable_id: 40a0b2b1dd238492
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: accountability-floor lift の `sources` が契約と phase で矛盾し、R4 候補ゲートの列挙が機械条件と一致しない
+    resolution: deferred
+  - stable_id: 603f717e701a0370
+    category: architecture
+    file: em-workflow/references/review-phase.md
+    title: accountability-floor lift の sources 帰属が R4 の untrusted-origin ゲートと契約で食い違う
+    resolution: deferred
+  - stable_id: 5f36689238c1b2cd
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: '`unreviewed_perspectives` の定義が契約と食い違い、non-retryable skip の観点が無開示で消える'
+    resolution: deferred
+  - stable_id: 524b2c6901587b44
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: '`run_id` の「round 内で一意」という主張が R4 in-loop 再レビューで破れる'
+    resolution: deferred
+  - stable_id: a644c6c28a4b704a
+    category: spec
+    file: em-workflow/references/review-phase.md
+    title: loop 2 が `review.auto-fix-judgment` の batch 挙動を変えたのに batch-mode.md / batch-policies.yaml を同時更新していない（NFR3
+      違反）
+    resolution: deferred
+  - stable_id: 2f2c9aec114ebf70
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: ハーネスレベルで Task が失敗した観点にはフォールバックも開示も無く、未レビューのまま completed になる
+    resolution: fixed
+  - stable_id: 4d36e79924189653
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: accountability floor が持ち上げる finding は R3b の per-finding ゲートを一つも通らない
+    resolution: fixed
+  - stable_id: bd50848d7bc5a6c8
+    category: security
+    file: em-workflow/references/review-phase.md
+    title: 評価者が `dismissed_sites` で critical/high を全件棄却しても記録にも報告にも残らない / フロアが lift するレビュアー原文がサニタイズを通らない
+    resolution: fixed
+  - stable_id: 7f0f07976daf4420
+    category: security
+    file: em-workflow/references/review-evaluation-contract.md
+    title: 検出したインジェクション試行の報告が category ゲートで無条件 drop される / 評価者経由で untrusted 出力が auto-fix 可能な finding に洗浄される
+    resolution: fixed
+  - stable_id: 3fabec5e0ad963aa
+    category: comprehensive
+    file: em-workflow/references/review-evaluation-contract.md
+    title: Independent Inspection Duty が 10 ファイルの読み取り予算では遂行不能
+    resolution: fixed
+  - stable_id: e88699402f7849a8
+    category: security
+    file: em-workflow/references/review-phase.md
+    title: Unvalidated verbatim model passthrough to shell harness
+    resolution: fixed
+  - stable_id: 1c0a7d1b68d4bb75
+    category: security
+    file: em-workflow/references/review-phase.md
+    title: auto-fix 候補ゲートに untrusted-origin（claude:evaluator）除外が無く、契約が委譲した制御が実在しない
+    resolution: fixed
+  - stable_id: f63e0df17027da04
+    category: comprehensive
+    file: em-workflow/references/review-evaluation-contract.md
+    title: 契約が review-phase.md に委譲した auto-fix 除外・suggestion エスケープが実際には未定義
+    resolution: fixed
+  - stable_id: bfab55ba0ee1e0c6
+    category: comprehensive
+    file: em-workflow/references/review-evaluation-contract.md
+    title: coverage statement の語彙が Output Object（2値）と Independent Inspection Duty（3値）で矛盾
+    resolution: fixed
+  - stable_id: 26e49dc735faee56
+    category: architecture
+    file: em-workflow/references/review-phase.md
+    title: run_id を採番・記録する規定がどこにも無いのに R3a/R3b/R5 が run_id をキーにしている
+    resolution: fixed
+  - stable_id: bfd7c9a966062245
+    category: architecture
+    file: em-workflow/references/review-phase.md
+    title: 評価オブジェクトの round_summary / recommended_action / action_rationale が永続化先を持たず、batch では完全に消える /
+      dismissed_sites を verbatim 永続化して未信頼入力ゲートを迂回する
+    resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+lessons_candidates:
+- review-editor が単一ファイル契約のため、SSOT 間の契約ドリフト型 finding を auto-fix で閉じられない。1 ファイル内の散文修正が毎ループ新しい矛盾を生み、round1
+  は loop-cap、round2 は no-progress で終了した（residual critical/high 7 → 6）。
+- この feature の変更セットは複数の SSOT（review-phase.md / review-evaluation-contract.md / batch-mode.md / batch-policies.yaml
+  / SPEC.md / agents/*.md）を同時に整合させる必要があり、単一ファイル編集を前提とした auto-fix ループの適合範囲外だった。
+- critical/high 26 件のうち 24 件が review-phase.md と review-evaluation-contract.md の 2 ファイルに集中した。1 ファイルに責務が集中した変更ではレビュー観点を跨いだ重複検出が多発する（同一サイトを
+  4 観点が別 stable_id で報告し、R4 の conflict group によりまとめてスキップされた）。
+- codex ハーネスが round2 の security 観点で 600s タイムアウト（exit 124）。ハーネスの死活をラウンド内で記憶せず毎ループ再ディスパッチする点は finding 611f7fdd71c106ff
+  / 1781613dd8f96776 / 4df2f57d353cda5a として繰り返し指摘された。
+- batch の review auto-rework cap（1）に到達し、round2 の high 6 件が deferred のまま review completed になった。verify は
+  pass だが、これらは別タスクとして起票する必要がある。

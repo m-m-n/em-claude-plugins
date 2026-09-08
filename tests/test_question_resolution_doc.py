@@ -308,31 +308,6 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             norm_section,
         )
 
-    def test_fail_closed_categories_named(self):
-        # AC-1: the three abort arms (security, license, irreversible) are
-        # named together with unchanged force. Replaces the old
-        # four-category pin (spec-change no longer aborts here) at the same
-        # specificity (C5) — see test_old_four_category_sentence_is_gone for
-        # the corresponding negative proof.
-        self.assertTrue(
-            re.search(
-                r"Security,\s+licensing,\s+and\s+irreversible\s+operations\s+"
-                r"abort\s+the\s+phase\s+immediately",
-                self.text,
-            ),
-            "fail-closed rule must name security, licensing and "
-            "irreversible operations together, unchanged",
-        )
-
-    def test_fail_closed_categories_outside_revision_scope(self):
-        # AC-1/NFR2: the three-arm sentence states they are outside this
-        # revision's scope, so the classification gate can never be read as
-        # a bypass around them.
-        self.assertIn("outside this revision's scope", self.norm)
-        self.assertIn(
-            "none of the classification gate's steps", self.norm.lower()
-        )
-
     def test_old_four_category_sentence_is_gone(self):
         # Negative proof (Test Notes): no surviving sentence names
         # spec-change among the immediate, unconditional aborts.
@@ -341,6 +316,137 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             "operations abort",
             self.text,
         )
+
+    # --- task0001 AC-1: the batch relaxation (mode-conditional route for
+    # --- the three previously-unconditional abort arms) --------------------
+
+    def _batch_relaxation_section(self):
+        start = self.text.index("**The batch relaxation.**")
+        end = self.text.index("**The surviving aborts.**")
+        return self.text[start:end]
+
+    def test_batch_relaxation_present_and_mode_conditioned(self):
+        self.assertIn("**The batch relaxation.**", self.text)
+        section = re.sub(r"\s+", " ", self._batch_relaxation_section()).lower()
+        self.assertIn(
+            "conditioned on the `--batch` invocation flag alone", section
+        )
+        self.assertIn(
+            "`workflow.yaml`'s `batch` block never activates it", section
+        )
+
+    def test_batch_relaxation_states_interactive_branch_verbatim_retained(
+        self,
+    ):
+        section = re.sub(r"\s+", " ", self._batch_relaxation_section()).lower()
+        self.assertIn(
+            "in interactive, each aborts the phase immediately, before "
+            "any policy-table lookup, before the codex consultation "
+            "described under the unlisted-gate fallback below, before "
+            "`on_unanswered` is read, and before any option is selected",
+            section,
+        )
+        self.assertIn("retained verbatim as the interactive branch", section)
+
+    def test_batch_relaxation_states_batch_joins_consultation(self):
+        section = re.sub(r"\s+", " ", self._batch_relaxation_section()).lower()
+        self.assertIn(
+            "in batch, each instead takes the relaxed route", section
+        )
+        self.assertIn(
+            "joins the packet's single batched codex consultation", section
+        )
+        self.assertIn("rather than aborting", section)
+
+    def test_batch_relaxation_old_unconditional_wording_is_gone(self):
+        # AC-1 negative proof: the superseded "unchanged force / outside
+        # this revision's scope" sentence must not survive anywhere.
+        self.assertNotIn(
+            "at unchanged force and outside this revision's scope",
+            self.text,
+        )
+        self.assertNotIn("is not available to any of the three", self.text)
+        self.assertNotIn(
+            "Security, licensing, and irreversible operations abort the "
+            "phase\nimmediately, at unchanged force",
+            self.text,
+        )
+
+    # --- task0001 AC-2: the surviving-abort set, enumerated once -----------
+
+    def _surviving_aborts_section(self):
+        start = self.text.index("**The surviving aborts.**")
+        end = self.text.index("**The routed arm.**")
+        return self.text[start:end]
+
+    def test_surviving_aborts_enumerated_once_and_abort_both_modes(self):
+        section = re.sub(r"\s+", " ", self._surviving_aborts_section()).lower()
+        self.assertIn("the following abort in both modes", section)
+        self.assertIn("enumerated here, once", section)
+        for member in [
+            "the explicit fail-closed gate-list slot above",
+            "`category: spec-change` whose `gate_id` is not exactly "
+            "`rework.spec-change`",
+            "both directions of the malformed `gate_id` / `category` "
+            "pairing below",
+            "the classification gate's direction-1 origin-membership "
+            "failure below (origin absent, unresolvable, or not a "
+            "member of the bound set)",
+        ]:
+            self.assertIn(member.lower(), section)
+
+    # --- task0008 AC-1: the enumeration narrows to direction 1 alone ------
+
+    def test_surviving_aborts_old_step_3_wording_is_gone(self):
+        # AC-1 negative proof: the superseded member string, which
+        # conflated both directions of the Classification gate's step 3,
+        # must not survive anywhere in the document.
+        self.assertNotIn(
+            "the Classification gate's step-3 origin-verification "
+            "failures",
+            self.norm,
+        )
+
+    def test_surviving_aborts_old_wording_negative_proof_would_be_caught(
+        self,
+    ):
+        # Non-vacuity guard: the matcher above must actually flag the
+        # pre-task0008 wording it supersedes.
+        fake_section = (
+            "and the Classification gate's step-3 origin-verification "
+            "failures below."
+        )
+        self.assertIn(
+            "the Classification gate's step-3 origin-verification "
+            "failures",
+            fake_section,
+        )
+
+    def test_ac2_no_passage_states_batch_direction_2_question_aborts(self):
+        # AC-2 (retention): direction 1's final-and-non-overridable
+        # wording and direction 2's batch-relaxation wording are both
+        # unchanged (asserted elsewhere); no passage states that a batch
+        # question tripping direction 2 aborts.
+        self.assertNotIn(
+            "a batch question that trips direction 2 aborts",
+            self.norm.lower(),
+        )
+        self.assertNotIn(
+            "a routed question that trips direction 2 aborts",
+            self.norm.lower(),
+        )
+
+    def test_surviving_aborts_routed_arm_cannot_convert_them(self):
+        section = re.sub(r"\s+", " ", self._surviving_aborts_section()).lower()
+        self.assertIn(
+            "the routed arm below never converts any of them into a "
+            "classification",
+            section,
+        )
+
+    def test_surviving_aborts_heading_appears_exactly_once(self):
+        # Enumeration guard (AC-2): the set is stated once, not re-listed.
+        self.assertEqual(self.text.count("**The surviving aborts.**"), 1)
 
     # --- retention pins (TS-4): the three unchanged abort arms, individually
 
@@ -480,6 +586,76 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             fake_step_2.lower(),
         )
 
+    # --- task0001 AC-3: step 2 states the two-mode split for the relaxed --
+    # --- arms (batch skips step 3 for a different reason than interactive)
+
+    def test_step_2_states_batch_relaxed_arms_route_directly(self):
+        section = re.sub(r"\s+", " ", self._batch_sequence_section()).lower()
+        self.assertIn(
+            "true of the surviving aborts in both modes, and of the three "
+            "relaxed arms in interactive",
+            section,
+        )
+        self.assertIn(
+            "in batch, none of the three relaxed arms reaches step 3 "
+            "either, but for a different reason",
+            section,
+        )
+        self.assertIn(
+            "each instead takes the relaxed route, joining the packet's "
+            "single batched codex consultation directly",
+            section,
+        )
+
+    # --- task0008 AC-3: the batch direction-2 continuation is stated once -
+
+    def test_batch_direction_2_continuation_stated_at_exactly_one_site(self):
+        # AC-3: a counting assertion, not a presence assertion -- a
+        # presence assertion would pass on a document stating the fact
+        # three times, which is the defect being fixed. Counted over the
+        # whitespace-normalized rendering since the source wraps long
+        # paragraphs across markdown lines.
+        phrase = (
+            "a routed question that trips direction 2 leaves the "
+            "Classification gate, joins the packet's batched "
+            "consultation, and may reach the Unlisted-gate fallback "
+            "below and, from there, `on_unanswered`"
+        )
+        self.assertEqual(self.norm.count(phrase), 1)
+
+    def test_step_2_old_direction_2_wording_is_gone(self):
+        # Negative proof: the pre-task0008 wording at step 2 itself, which
+        # is superseded by the single-statement phrase above, must not
+        # survive alongside it.
+        self.assertNotIn(
+            "does not stop at the classification gate: it leaves the "
+            "gate and joins the packet's batched consultation, so it "
+            "may still reach the unlisted-gate fallback below and, from "
+            "there, `on_unanswered` — consistent with that fallback's "
+            "own step 3 and step 6.",
+            self.norm.lower(),
+        )
+
+    def test_fallback_step_3_cites_step_2_for_direction_2_routing(self):
+        section = re.sub(r"\s+", " ", self._unlisted_gate_fallback_section())
+        self.assertIn(
+            "or through the Classification gate's direction 2 above "
+            "(Batch resolution sequence step 2 above states this "
+            "routing fact; cited here, not restated), rather than "
+            "through the `gate_id` policy lookup",
+            section,
+        )
+
+    def test_fallback_step_3_old_uncited_wording_is_gone(self):
+        # Negative proof: the pre-task0008 wording, which named direction
+        # 2 as an arrival source without citing where the routing fact
+        # itself is stated, must not survive.
+        self.assertNotIn(
+            "Classification gate's direction 2 above, rather than "
+            "through the `gate_id` policy lookup",
+            self.norm,
+        )
+
     # --- task0025 AC-1: step 2's exit cites the Outcome step instead of ----
     # --- ending the question's story in place -------------------------------
 
@@ -600,6 +776,32 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         )
         self.assertNotIn("**Precedence reservation.**", fake_routed_arm)
 
+    # --- task0001 AC-3: precedence reservation's batch-mode addition -------
+
+    def test_precedence_reservation_states_batch_takes_relaxed_route(self):
+        section = re.sub(
+            r"\s+", " ", self._precedence_reservation_section()
+        ).lower()
+        self.assertIn(
+            "in batch, a question satisfying both the routed arm's "
+            "condition and one of the three relaxed arms takes the "
+            "relaxed route",
+            section,
+        )
+        self.assertIn("rather than aborting", section)
+
+    def test_precedence_reservation_states_both_modes_never_convert_surviving_abort(
+        self,
+    ):
+        section = re.sub(
+            r"\s+", " ", self._precedence_reservation_section()
+        ).lower()
+        self.assertIn(
+            "in both modes, the routed arm never converts one of the "
+            "surviving aborts into a classification",
+            section,
+        )
+
     # --- task0012 AC-2 (FR11, NFR2): Unlisted-gate fallback distinguishes
     # --- the aborted set from the routed set --------------------------------
 
@@ -616,9 +818,8 @@ class TestQuestionResolutionDoc(unittest.TestCase):
     def test_block_branch_distinguishes_aborted_set_from_routed_set(self):
         section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
         self.assertIn(
-            "security, licensing and irreversible-operation questions "
-            "never reach here because the fail-closed classification "
-            "above has already aborted them",
+            "the fail-closed classification above owns which questions "
+            "those abort and by which rule, cited here, not restated",
             section,
         )
         self.assertIn(
@@ -627,10 +828,91 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             section,
         )
         self.assertIn(
-            "the routed arm removed them from the sequence entirely at "
-            "step 2",
+            "the routed arm's removal at batch resolution sequence "
+            "step 2 above owns that exclusion, cited here, not restated",
             section,
         )
+
+    # --- task0008 AC-4: the block branch cites, rather than re-narrates,
+    # --- the upstream abort ownership and the routed-arm removal ---------
+    # --- ownership -----------------------------------------------------
+
+    def test_block_branch_old_ownership_narration_is_gone(self):
+        # Negative proof: the pre-task0008 narrative restating WHY the
+        # abort/removal happens, instead of citing where it is stated,
+        # must not survive.
+        norm_lower = re.sub(r"\s+", " ", self.text).lower()
+        self.assertNotIn(
+            "because the fail-closed classification above has already "
+            "aborted them before this branch is reached",
+            norm_lower,
+        )
+        self.assertNotIn(
+            "the routed arm removed them from the sequence entirely at "
+            "step 2 of the batch resolution sequence, so they were "
+            "never subject to this fallback in the first place",
+            norm_lower,
+        )
+
+    def test_block_branch_old_ownership_narration_negative_proof_would_be_caught(
+        self,
+    ):
+        # Non-vacuity guard: the matchers above must actually flag the
+        # pre-task0008 wording they supersede.
+        fake_section = (
+            "in interactive, security, licensing and irreversible-"
+            "operation questions never reach here because the "
+            "Fail-closed classification above has already ABORTED them "
+            "before this branch is reached; in interactive, "
+            "specification-change questions never reach here either, "
+            "but for a different reason -- the routed arm REMOVED them "
+            "from the sequence entirely at step 2 of the Batch "
+            "resolution sequence, so they were never subject to this "
+            "fallback in the first place."
+        )
+        norm_lower = re.sub(r"\s+", " ", fake_section).lower()
+        self.assertIn(
+            "because the fail-closed classification above has already "
+            "aborted them before this branch is reached",
+            norm_lower,
+        )
+        self.assertIn(
+            "the routed arm removed them from the sequence entirely at "
+            "step 2 of the batch resolution sequence, so they were "
+            "never subject to this fallback in the first place",
+            norm_lower,
+        )
+
+    def test_block_branch_direction_2_subset_cites_step_2_not_restated(self):
+        section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
+        self.assertIn(
+            "batch resolution sequence step 2 above states how that "
+            "subset reaches the packet's batched consultation (cited "
+            "here, not restated)",
+            section,
+        )
+        self.assertIn("reaches this branch after all", section)
+
+    def test_block_branch_old_direction_2_restatement_is_gone(self):
+        # Negative proof: the pre-task0008 wording, which restated the
+        # routing mechanism (leaves the gate, joins the consultation)
+        # rather than citing it, must not survive.
+        self.assertNotIn(
+            "a routed spec-change question that trips the "
+            "Classification gate's direction 2 leaves the gate and "
+            "joins the packet's",
+            self.norm,
+        )
+
+    def test_block_branch_no_claim_of_unreachability_contradicts_single_site(
+        self,
+    ):
+        # AC-4: no claim of unreachability for the direction-2 subset
+        # contradicts the single statement site (which says it CAN reach
+        # the Unlisted-gate fallback and, from there, `on_unanswered`).
+        section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
+        self.assertNotIn("direction-2 subset never reaches", section)
+        self.assertNotIn("direction 2 subset never reaches", section)
 
     def test_superseded_single_mechanism_sentence_is_gone(self):
         # C5: the absence half. Non-vacuity: the block-branch locator above
@@ -662,6 +944,37 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             "irreversible-operation question before this branch is "
             "reached",
             fake_section,
+        )
+
+    # --- task0001 AC-3: block branch's batch-mode arrival via the relaxed
+    # --- route (security/license/reversible-false can now reach `block`) --
+
+    def test_block_branch_states_batch_arrival_via_relaxed_route(self):
+        section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
+        self.assertIn(
+            "in batch, the same three arrive here, through the relaxed "
+            "route",
+            section,
+        )
+        self.assertIn(
+            "whenever neither the codex consultation nor the opus "
+            "escalation maps or decides one of their options",
+            section,
+        )
+        self.assertIn(
+            "this branch then takes the option with the smallest side "
+            "effect for them exactly as for any other question",
+            section,
+        )
+
+    def test_block_branch_interactive_arm_still_never_reaches_here(self):
+        section = re.sub(r"\s+", " ", self._fallback_block_branch()).lower()
+        self.assertIn(
+            "in interactive, security, licensing and irreversible-"
+            "operation questions never reach here — the fail-closed "
+            "classification above owns which questions those abort and "
+            "by which rule, cited here, not restated".lower(),
+            section,
         )
 
     # --- classification is stated mechanically -----------------------------
@@ -803,6 +1116,224 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         probe_idx = section.index("Availability probe")
         wrapper_idx = section.index("Wrapper invocation")
         self.assertLess(probe_idx, wrapper_idx)
+
+    # --- task0001 AC-5: the Codex-absent route runs the Opus escalation ----
+    # --- instead of skipping straight to `on_unanswered` -------------------
+
+    def test_availability_probe_unavailable_runs_escalation(self):
+        section = self._codex_procedure_section()
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn(
+            "skip straight to the Opus escalation below, which runs in "
+            "Codex's place",
+            norm_section,
+        )
+        self.assertIn(
+            "if the escalation leaves a question undecided too, that "
+            "question falls through to step 6",
+            norm_section,
+        )
+
+    def test_old_unavailable_immediate_on_unanswered_wording_is_gone(self):
+        # AC-5 negative proof: the pre-rewrite wording, which skipped
+        # straight to `on_unanswered` with no escalation in between, must
+        # be gone.
+        section = self._codex_procedure_section()
+        norm_section = re.sub(r"\s+", " ", section).lower()
+        self.assertNotIn(
+            "skip straight to step 6 of the fallback sequence above "
+            "(`on_unanswered`) without ever reaching codex",
+            norm_section,
+        )
+
+    def test_trajectory_judgement_hands_off_to_escalation(self):
+        section = self._codex_procedure_section()
+        norm_section = re.sub(r"\s+", " ", section).lower()
+        self.assertIn(
+            "diverging → stop consulting and hand the packet's "
+            "still-unmapped questions to the opus escalation below",
+            norm_section,
+        )
+
+    def test_five_turn_ceiling_hands_off_to_escalation(self):
+        section = self._codex_procedure_section()
+        norm_section = re.sub(r"\s+", " ", section).lower()
+        self.assertIn(
+            "whatever remains unmapped when the ceiling is reached passes "
+            "to the opus escalation below",
+            norm_section,
+        )
+        self.assertIn(
+            "the escalation itself is dispatched separately and is "
+            "counted outside this ceiling",
+            norm_section,
+        )
+
+    def test_wrapper_fallback_provider_fact_stated_once_no_name(self):
+        section = self._codex_procedure_section()
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn(
+            "The wrapper's reply may come from a fallback provider "
+            "instead of the primary one",
+            norm_section,
+        )
+        self.assertIn(
+            "with no provider name or detection mechanism named here",
+            norm_section,
+        )
+
+    # --- task0001 AC-5: the Opus escalation subsection itself --------------
+
+    def _opus_escalation_section(self):
+        marker = "### Opus escalation"
+        self.assertIn(marker, self.text)
+        return self.text.split(marker, 1)[1]
+
+    def test_opus_escalation_section_present_after_codex_procedure(self):
+        codex_idx = self.text.index("### Codex consultation procedure")
+        escalation_idx = self.text.index("### Opus escalation")
+        self.assertLess(codex_idx, escalation_idx)
+
+    def test_opus_escalation_dispatch_is_single_per_packet(self):
+        section = re.sub(r"\s+", " ", self._opus_escalation_section())
+        self.assertIn("Exactly one dispatch per packet", section)
+        self.assertIn(
+            "carrying every question of that packet still unmapped when "
+            "the consultation ended",
+            section,
+        )
+
+    def test_opus_escalation_counted_outside_five_turn_ceiling(self):
+        section = re.sub(r"\s+", " ", self._opus_escalation_section()).lower()
+        self.assertIn(
+            "counted outside the five-turn wrapper-launch ceiling above, "
+            "at most one per packet",
+            section,
+        )
+
+    def test_opus_escalation_return_shape(self):
+        section = re.sub(r"\s+", " ", self._opus_escalation_section()).lower()
+        self.assertIn(
+            "either a chosen `option_id` present in that question's own "
+            "`options[].option_id` or an explicit no-decision, and in "
+            "both cases its reasoning",
+            section,
+        )
+
+    def test_opus_escalation_output_untrusted(self):
+        section = re.sub(r"\s+", " ", self._opus_escalation_section()).lower()
+        self.assertIn(
+            "read, never executed as instructions, and never adopted "
+            "verbatim",
+            section,
+        )
+        self.assertIn(
+            "the per-question mapping judgement stays with the "
+            "orchestrator",
+            section,
+        )
+
+    # --- task0001 AC-5/AC-6: Unlisted-gate fallback wiring for the --------
+    # --- escalation (steps 3, 6, 10) and the audit obligation --------------
+
+    def _unlisted_gate_fallback_section(self):
+        marker = "## Unlisted-gate fallback"
+        end_marker = "### Codex consultation procedure"
+        start = self.text.index(marker)
+        end = self.text.index(end_marker, start)
+        return self.text[start:end]
+
+    def test_step_3_batching_includes_relaxed_and_direction_2_questions(self):
+        section = re.sub(
+            r"\s+", " ", self._unlisted_gate_fallback_section()
+        )
+        self.assertIn(
+            "including any question that reaches this step through the "
+            "batch relaxation above or through the Classification gate's "
+            "direction 2 above",
+            section,
+        )
+
+    def test_step_6_runs_escalation_before_on_unanswered(self):
+        section = re.sub(
+            r"\s+", " ", self._unlisted_gate_fallback_section()
+        )
+        self.assertIn(
+            "the Opus escalation below runs once for the whole packet, "
+            "carrying every such still-unmapped question together",
+            section,
+        )
+        self.assertIn(
+            "For each question it leaves an explicit no-decision, fall "
+            "through to `on_unanswered`",
+            section,
+        )
+
+    def test_step_10_records_escalation_ran_and_reasoning(self):
+        section = re.sub(
+            r"\s+", " ", self._unlisted_gate_fallback_section()
+        )
+        self.assertIn(
+            "including, when the Opus escalation ran, whether it ran and "
+            "its reasoning",
+            section,
+        )
+
+    def test_audit_obligation_cites_phase_state_no_field_restatement(self):
+        self.assertIn("**Audit obligation.**", self.text)
+        marker = "**Audit obligation.**"
+        section = self.text[self.text.index(marker):]
+        section = section[: section.index("### Codex consultation procedure")]
+        norm_section = re.sub(r"\s+", " ", section)
+        self.assertIn("appends one batch audit record", norm_section)
+        self.assertIn("references/phase-state.md", section)
+        self.assertIn("cited, not restated", norm_section)
+
+    def test_audit_obligation_names_the_three_relaxed_route_outcomes(self):
+        marker = "**Audit obligation.**"
+        section = self.text[self.text.index(marker):]
+        section = section[: section.index("### Codex consultation procedure")]
+        norm_section = re.sub(r"\s+", " ", section).lower()
+        self.assertIn("a mapped consultation answer", norm_section)
+        self.assertIn("an escalation decision", norm_section)
+        self.assertIn(
+            "the block branch's minimum-side-effect fallthrough",
+            norm_section,
+        )
+
+    # --- task0001 AC-7: no provider name, no rate-limit description, no ---
+    # --- new gate_id --------------------------------------------------------
+
+    def test_no_fallback_provider_name_leaked(self):
+        for name in [
+            "gemini",
+            "openrouter",
+            "openai",
+            "gpt-4",
+            "gpt-5",
+            "grok",
+            "mistral",
+            "llama",
+            "deepseek",
+            "qwen",
+        ]:
+            self.assertNotIn(name, self.text.lower())
+
+    def test_no_rate_limit_detection_description(self):
+        self.assertNotIn("rate limit", self.text.lower())
+        self.assertNotIn("rate-limit", self.text.lower())
+        self.assertNotIn("429", self.text)
+
+    def test_no_new_gate_id_minted(self):
+        gate_ids = set(
+            re.findall(r"`gate_id`\s+is\s+`([\w.\-]+)`", self.text)
+        )
+        gate_ids |= set(re.findall(r"`gate_id:\s*([\w.\-]+)`", self.text))
+        allowed = {"rework.spec-change"}
+        self.assertTrue(
+            gate_ids <= allowed,
+            f"unexpected gate_id literal(s) found: {gate_ids - allowed}",
+        )
 
     # --- Design note: decision basis recorded -----------------------------
 

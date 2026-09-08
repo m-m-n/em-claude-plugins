@@ -1,0 +1,78 @@
+task_id: task0008
+baseline_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_identity_and_shape
+    red_confirmed: true
+    red_reason: >-
+      4a baseline run of the untouched module: AssertionError comparing the
+      live em-review entry (carries `version: 0.5.7`) against the
+      whole-entry `EXPECTED_EM_REVIEW_ENTRY` snapshot that had no `version`
+      key -- "{'nam[680 chars]y': 'code-review', 'source': './em-review',
+      'version': '0.5.7'} != {'nam[680 chars]y': 'code-review', 'source':
+      './em-review'}". This is the sole failure TS-5 reports.
+  AC-2:
+    tests:
+      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_accepts_a_forged_higher_version
+      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_accepts_the_synthetic_baseline_entry
+    red_confirmed: true
+    red_reason: >-
+      Neither `_assert_em_review_entry_matches` nor `EXPECTED_EM_REVIEW_NAME`
+      (and sibling identity-field literals) existed in the pre-task module
+      (confirmed by grepping `git show HEAD:tests/test_llm_led_review_user_docs.py`).
+      Splicing this test class onto the pre-task file and running it
+      reproduced "NameError: name 'EXPECTED_EM_REVIEW_NAME' is not defined"
+      at class-body evaluation time -- watched directly, not inferred.
+  AC-3:
+    tests:
+      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_rejects_an_altered_identity_field
+      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_rejects_a_missing_or_non_dotted_numeric_version
+      - test_llm_led_review_user_docs.TestEmReviewMatcherDetectionPower.test_matcher_rejects_an_unexpected_extra_key
+    red_confirmed: true
+    red_reason: >-
+      Same class as AC-2 (`TestEmReviewMatcherDetectionPower`); the same
+      splice-and-run against the pre-task module produced the same
+      "NameError: name 'EXPECTED_EM_REVIEW_NAME' is not defined" before any
+      of these matcher/literal names existed.
+  AC-4:
+    tests:
+      - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_identity_and_shape
+      - test_llm_led_review_user_docs.TestEmReviewEntryLookupIsNonVacuous.test_lookup_raises_when_no_em_review_entry_present
+    red_confirmed: false
+    red_reason: >-
+      The guard-still-runs-unskipped half is covered by AC-1's confirmed red
+      (the class ran, unskipped, against the live registry, and caught the
+      snapshot mismatch). The non-vacuity half
+      (test_lookup_raises_when_no_em_review_entry_present) exercises
+      `_marketplace_entry`, which already raised AssertionError on a missing
+      entry in the pre-task module (function body unchanged by this task --
+      confirmed by grep against the pre-task file). This test passes before
+      and after; it documents a pre-existing property rather than one this
+      task's implementation newly creates. No rewrite makes it fail first
+      without asserting an invariant this task's diff does not touch.
+  AC-5:
+    tests:
+      - test_llm_led_review_user_docs.TestOwnModuleDocstringStatesRepairedInvariant.test_no_longer_claims_byte_identical_equality
+      - test_llm_led_review_user_docs.TestOwnModuleDocstringStatesRepairedInvariant.test_states_identity_fields_and_key_set_are_pinned
+      - test_llm_led_review_user_docs.TestOwnModuleDocstringStatesRepairedInvariant.test_states_version_is_excepted_and_why
+    red_confirmed: true
+    red_reason: >-
+      Verified against the pre-task module text: it contained the phrase
+      "byte-identical" (grep hit) and contained none of "identity fields",
+      "key set", or "core-plugin-version-bump.md" (grep: zero hits), so all
+      three assertions would have failed against the pre-task docstring.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Whole-suite / whole-module CLI-level property (module docstring's own
+      AC-7 note documents the same situation for this file). Before the fix,
+      `python3 -m unittest discover -s tests` exited non-zero (1 failure,
+      3654 tests). After the fix it exits 0 (3663 tests, all passing --
+      9 more tests than baseline because this task added new proof/self-
+      check tests). `TestOwnModuleStdlibOnly.test_only_standard_library_imports`
+      (pre-existing, unmodified by this task) continues to pass, confirming
+      the module still imports only the standard library.

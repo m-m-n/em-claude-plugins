@@ -1,0 +1,133 @@
+round: 5
+executed_at: "2026-09-02T10:40:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
+  head_commit: ac9f99c57e3245f24424b24679a4b6309d9810ab
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+  note: |
+    em-workflow/hooks/destructive-guard.py は base commit とバイト一致（複数のレビュアーが
+    独立に確認）。差分はプラグイン version bump と期待値ケースの追加 81 行 /
+    変更 1 行（base 最終エントリの末尾カンマ）のみ。
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: litellm, model: muse-spark, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+
+orchestrator_verification:
+  hook_identical_to_base: true
+  suites: {run-destructive-guard: "139/139", unittest: "2830/2830"}
+  preexisting_entries: {count: 58, byte_identical: true}
+  withdrawn_layer_labels_remaining: 0
+  known_gap_markers: 16
+  case_file_diff: {added: 81, changed: 1}
+  round4_findings_status: |
+    round 4 の 6 件はすべて解消。ラベルは実測した判定経路に付け替えられ、既知の穴を
+    記録する 16 件にマーカーが付き、対になる counter-case が並び、1 エントリ 1 行の
+    レイアウトが戻って差分が追加のみになった。
+
+findings:
+  - stable_id: r5-rsync-flag-mislabel
+    severity: medium
+    category: security
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 130
+    title: "変数に隠した rsync --delete の回避を「対象外(判定なし)」と誤ラベルしている"
+    description: |
+      フックは `rsync --delete` の deny 規則（rule rsync-delete）を実際に持つ。
+      実測: `rsync --delete src dst` → deny、`D=--delete; rsync $D src dst` → allow。
+      つまりこれは「判定対象外」ではなく「既存の deny 規則をフラグの変数化で回避できる」
+      既知の穴であり、ラベルは規則の不在を主張していて事実に反する。
+      同じファイルの `cat $X`（本当に規則が無い）と同じ分類に置かれているため、
+      規則の不在と規則の回避が混同されている。
+      スイート全体で rsync に触れるエントリはこの 1 件だけで、直書き `--delete` の
+      deny counter-case が無い。
+      なお同種のフラグ変数化は git push --force / find -delete / rm -rf でも成立する
+      （base 由来の挙動で、この diff の対象外）。
+    suggestion: |
+      ラベルを「既知の穴(未修正): フラグを変数に隠すと deny 規則を回避できる」に改め、
+      対になる `rsync --delete src dst`（deny）を並べて非対称を示す。
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r5-ts31-marker-scope
+    severity: medium
+    category: spec
+    file: feature-docs/destructive-guard-var-resolution/VERIFICATION.md
+    line: 103
+    title: "TS-31 の marker 判定条件が counter-case まで含めており、実ファイルと食い違う"
+    description: |
+      TS-31 は既知の穴を記録するエントリ群として「裸のコマンド置換 / 末尾スラッシュ付き
+      スクラッチ根 / 区切り無し前方一致 / およびそれらに並べた counter-case」を列挙し、
+      その全てがマーカーを持つと断言している。実ファイルでマーカーを持つのは 16 件だけで、
+      counter-case 5 件は持たない。
+      意味論的にも counter-case 側が正しい（`rm -rf /tmp` → deny はガードが正しく
+      効いている判定で、既知の穴を記録する verdict ではない）。
+      同じ VERIFICATION.md 内の Manual Testing 項目は marker 対象を 3 種に限定しており、
+      表の行と手動チェックが別のことを言っている。
+    suggestion: |
+      TS-31 の列挙から counter-case を外し、Manual Testing と同じ 3 種に揃える。
+      counter-case は正しい deny を記録するので marker を持たない旨を明記する。
+      ケース JSON 側は変更しない。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r5-pwd-build-mislabel
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 97
+    title: "rm -rf $(pwd)/build のラベルが判定経路を誤って説明し、誤爆を期待値として固定している"
+    description: |
+      ラベルは「スクラッチ外(rm-recursive)」と述べるが、実測した理由文の対象は `/build`。
+      deny を生んでいるのは対象がスクラッチ外だからではなく、statements() が `$(pwd)` を
+      空白に潰した結果、コマンドが名指ししていない絶対パス `/build` という幻の対象が
+      残るため。実際の削除対象はスクラッチ領域の内側で、`rm -rf build` / `rm -rf ./build`
+      はどちらも allow、`rm -rf $PWD/build` は ask。
+      本来 ask に落ちるべき形が deny になっており、このエントリはその誤爆を
+      正しい挙動として固定している。無人実行では deny のまま走行が止まる。
+      同じ構図が `rm -rf "$(cat list)"` にもある（実対象は空白 1 文字）。
+    suggestion: |
+      ラベルから「スクラッチ外」という誤った根拠を外し、幻の対象で deny していることを
+      書いて既知の穴の群に合流させる。対になる `rm -rf $PWD/build`（ask）と
+      `rm -rf build`（allow）を並べる。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r5-assignment-position-labels
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 61
+    title: "代入の位置を誤って説明したラベル 2 件が、存在しないカバレッジを主張している"
+    description: |
+      2 件のラベルは「サブシェル内に代入を置いた形」「bash -c の中に代入を置いた形」と
+      書くが、実際のコマンドはどちらも代入が外側にある。
+      代入を本当に中に入れた形を直接実行すると、どちらも同じ ask になるので挙動差は
+      隠れていないが、ラベルが覆うと読める 2 形はスイートに 1 件も無い。
+      ラベルだけが唯一のケース説明である以上、存在しないカバレッジの主張が残る。
+    suggestion: |
+      ラベルを「代入の後にサブシェル内で rm する形」「代入の後に bash -c の中で rm する形」
+      に直す。主張していた 2 形も覆いたいなら別エントリとして追加する（実測はいずれも ask）。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false

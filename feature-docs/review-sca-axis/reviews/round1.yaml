@@ -1,0 +1,879 @@
+round: 1
+executed_at: '2026-09-07T22:42:09+09:00'
+scope:
+  review_mode: diff
+  base_commit: c57996a1c2875b88b28d65646eb8d47091bc0a47
+  head_commit: 79dfad1fd365b5f5677dbcc90f415f00eac83264
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/review-output-schema.json
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/vuln-scanners.yaml
+  - em-workflow/scripts/scan-dependencies.py
+  - em-workflow/skills/review-security/SKILL.md
+  - test-docs/review-sca-axis/task0001.tests.yaml
+  - test-docs/review-sca-axis/task0003.tests.yaml
+  - test-docs/review-sca-axis/task0004.tests.yaml
+  - test-docs/review-sca-axis/task0005.tests.yaml
+  - test-docs/review-sca-axis/task0006.tests.yaml
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_sca_axis_review_phase_r0_r3.py
+  - tests/test_sca_axis_schema_enums.py
+  - tests/test_sca_axis_skill_and_version.py
+  - tests/test_sca_axis_triage_timing.py
+  - tests/test_sca_scan_normalization.py
+  - tests/test_sca_task_filing.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: failed
+  note: codex usage limit; the run returned placeholder JSON and self-declared it produced no substantive
+    review
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: failed
+  note: self-declared placeholder non-result ("Placeholder before tool-grounded analysis"); chain walked
+    to comprehensive#2
+- run_id: comprehensive#2
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: performance#loop2
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: security#loop3
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: comprehensive#loop3
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#loop3
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: spec#loop3
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: performance#loop3
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+findings:
+- stable_id: 349ee4c3a40e0fdb
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 493
+  title: R3b dedupe collapses every advisory in a manifest into one finding
+  description: scan-dependencies.py emits every advisory with file = <manifest path> and line = None,
+    so R3b's same_site predicate holds between ALL vulnerability findings from one manifest and within-category
+    dedupe reduces them to a single finding. The accountability floor matches by the same predicate, so
+    retaining or dismissing one advisory discharges the duty for all others. Downstream, file_tasks recovers
+    (package, advisory_id) only from the surviving title.
+  suggestion: Give vulnerability findings a site identity that includes package and advisory id, and make
+    the dedupe/floor predicate use it for category vulnerability.
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 (composite file#package@advisory_id site identity added to review-phase.md)
+- stable_id: 05606bd5952e3405
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 621
+  title: Cargo normalizer keys on fields cargo-audit never emits
+  description: normalize_cargo required entry['is_direct'] and a plain 'severity' string. cargo audit
+    --json emits neither (severity lives in the advisory's cvss vector), so _passes_threshold rejected
+    every real advisory and the scan returned skipped:false with zero findings.
+  suggestion: Derive directness from the reviewed Cargo.toml and severity from the advisory's cvss metadata.
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: fixed
+  resolution_reason: auto-applied loop 1; regression repaired in loop 2 (578546f2900d062f)
+- stable_id: 88eb0b9270643a39
+  severity: high
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 649
+  title: Every Python advisory is dropped and reported as a clean scan
+  description: normalize_pip requires dep['direct'] and vuln['severity']; pip-audit --format json emits
+    neither. _passes_threshold fails on both counts, so 100% of real pip-audit advisories are discarded
+    while run_scan still returns skipped:false. Since FR19 removed known-CVE judgement from the security
+    reviewer's scope, nothing else in the review detects the CVE.
+  suggestion: Resolve directness from the reviewed requirements.txt / pyproject.toml dependency set and
+    take severity from real advisory metadata (e.g. the OSV record). When severity is genuinely unavailable,
+    record that explicitly rather than treating it as below threshold.
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'auto-fix editor declined loop 1: requires new manifest-parser and advisory-severity-resolver
+    helpers, i.e. an implementer pass'
+- stable_id: 05ba59286d545338
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 519
+  title: govulncheck's streaming JSON is parsed as a single document
+  description: govulncheck -json writes a stream of concatenated JSON messages, not one document, so json.loads(stdout)
+    raised and the Go ecosystem could only ever return go_unparseable_output.
+  suggestion: Decode govulncheck output message-by-message and correlate osv advisory records with finding
+    records.
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: fixed
+  resolution_reason: conflict group skipped in loop 1 (batch review.auto-fix-conflict); the same defect
+    was fixed in loop 2 as 6d3eed3e4f6178e0
+- stable_id: 3bd58ab86531c61c
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 462
+  title: Ecosystem selection is narrower than the protocol trigger that dispatches axis 2
+  description: select_ecosystems matched only the registry's manifest basenames while review-phase.md
+    dispatches the vulnerability perspective for those manifests AND their lockfiles plus composer.json
+    / Gemfile / build.gradle / pom.xml. A lockfile-only dependency bump selected nothing and returned
+    an unqualified clean result.
+  suggestion: Register each ecosystem's lockfiles as selection triggers, and return skipped:true with
+    a machine-readable reason for manifests the registry has no scanner for.
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 (ECOSYSTEM_LOCKFILES + UNSUPPORTED_MANIFESTS)
+- stable_id: 8a9b409ad28e3f9a
+  severity: high
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 516
+  title: Scanner execution failures are recorded as completed clean scans
+  description: run_ecosystem_command never inspects proc.returncode, converts empty stdout into {}, and
+    accepts any parseable JSON as scan data. A missing cargo-audit subcommand, an npm EAUDITNOLOCK error
+    object, or any scanner crash that still prints a JSON error envelope all become 'Scanned X; 0 finding(s)'
+    with skipped:false.
+  suggestion: Validate exit status and payload shape together per tool; treat empty stdout, an error-only
+    payload, or an unexpected non-zero exit as skipped/failed with a machine-stable reason.
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: conflict group skipped in loop 1 (batch review.auto-fix-conflict); loop 2 added registry-entry
+    validation but not exit-code/payload validation
+- stable_id: 1d7af5b09082dfee
+  severity: high
+  category: security
+  file: em-workflow/references/vuln-scanners.yaml
+  line: 35
+  title: '`cargo audit` dispatches through repository-controlled aliases'
+  description: The registry runs `cargo audit --json` with cwd set to the reviewed project root. `audit`
+    is not a builtin cargo command, so cargo resolves an [alias] entry from the project's own .cargo/config.toml
+    before falling back to the external cargo-audit binary, giving a contributor arbitrary code execution
+    with the orchestrator's permissions during an unattended review. npm audit similarly honours a repository
+    .npmrc.
+  suggestion: Resolve and execute the trusted scanner binary directly (cargo-audit audit --json), bypassing
+    cargo's alias/subcommand dispatch, and run scanners so repository-controlled configuration cannot
+    redirect the executable, the registry endpoint, or the build.
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: conflict group skipped in loop 1 (batch review.auto-fix-conflict); registry command
+    strings were not changed
+- stable_id: 67e65d3ae66f8487
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/vuln-scanners.yaml
+  line: 40
+  title: pip-audit audits the orchestrator's environment, not the reviewed project
+  description: The pip entry's command is `pip-audit --format json` with no target. With no -r <requirements>
+    and no project path, pip-audit audits the currently active Python environment; cwd does not select
+    the reviewed project's dependency set. Findings are then labelled with the reviewed manifest's path.
+  suggestion: 'Build the pip command per changed manifest: -r <requirements.txt> for requirements files
+    and the project path or its locked input for pyproject.toml.'
+  sources:
+  - codex:comprehensive
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: conflict group skipped in loop 1 (batch review.auto-fix-conflict); registry command
+    strings were not changed
+- stable_id: 9a56747dc5389bdb
+  severity: high
+  category: architecture
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 786
+  title: A partially failed multi-ecosystem scan is reported as a non-skipped run
+  description: 'run_scan aggregates every selected ecosystem into ONE result with a single skipped/skip_reason
+    pair: if any ecosystem produced a normalizer result, each failed or absent ecosystem is demoted to
+    prose in the summary. SPEC FR3''s machine-readable skip guarantee is silently lost for the failed
+    ecosystem while every mechanical consumer sees a completed, unqualified vulnerability run.'
+  suggestion: Either run axis 2 once per selected ecosystem so each gets its own schema-conformant result
+    and perspective_runs row, or make partial coverage machine-readable rather than prose-only.
+  sources:
+  - claude:evaluator
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'batch skipped: sole source is claude:evaluator, so the candidate gate forces needs-judgment
+    and batch never auto-applies untrusted-origin text'
+- stable_id: d464aff67aa50e8e
+  severity: high
+  category: spec
+  file: em-workflow/references/review-phase.md
+  line: 432
+  title: FR14/FR15 one-task-per-package filing is unreachable through the R3b path
+  description: SPEC FR14 requires one task per package with multiple CVEs listed as multiple lines, and
+    FR15 makes package name the task identity and CVE/GHSA the entry identity. The script implements both,
+    but the within-category same_site dedupe merged all vulnerability findings from a manifest first,
+    so a change with three vulnerable packages filed one task and dropped two.
+  suggestion: Preserve per-package/per-advisory identity through R3b before filing, then add an end-to-end
+    multi-package multi-advisory check.
+  sources:
+  - claude:evaluator
+  confidence: 80
+  resolution: fixed
+  resolution_reason: resolved by 349ee4c3a40e0fdb's loop-1 fix; the loop-2 spec re-review confirmed the
+    site no longer presents an unresolved contradiction
+- stable_id: e3981a6773ff98f6
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 505
+  title: Scanner commands are never bound to the changed manifest's project
+  description: 'Changed manifest paths select an ecosystem and label findings but never influence what
+    is scanned: build_command emits fixed argv and run_ecosystem_command always runs it once with cwd=project_root.
+    A vulnerable dependency added in services/api/package.json is checked against the root project.'
+  suggestion: 'Build one scan job per affected dependency project: resolve each changed manifest to its
+    owning project root and run the scanner there with that project''s locked input.'
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: 022fdbf142a013d1
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 590
+  title: npm package-level severity is stamped onto every advisory
+  description: normalize_npm reads entry['severity'] once per package and applies the mapped value to
+    every via advisory. npm's package-level severity is the maximum across that package's advisories,
+    so a moderate advisory is emitted as high and crosses a threshold it should not.
+  suggestion: Read and map severity per via advisory inside the loop, keeping the package-level isDirect
+    check where it is.
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: bcb0a4cc150e6a2d
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 690
+  title: Triage filing sits inside the phase --report-only skips entirely
+  description: 'The ''Triage filing: once per review phase'' section is a subsection of Phase R4, and
+    R4 opens with ''--report-only skips R4 entirely''. A report-only review with unresolved vulnerability
+    findings therefore skips filing, contradicting FR11.'
+  suggestion: Move the filing step to an unconditional boundary between R4 and R5 and state the report-only
+    disposition explicitly.
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: cc3b34a0c6e98c79
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 700
+  title: Closing disposition cannot be computed before R5's continuation choice
+  description: Step 2 derives the disposition from the residual count, the --report-only flag, the loop
+    termination reason and the batch rework counter, but in interactive mode with residual critical/high
+    > 0 the same four inputs precede all three of R5's outcomes, so 'another-round' is not derivable.
+  suggestion: Resolve the R5 continuation choice first, derive the disposition from it, then file and
+    persist; specify a separate deterministic decision table for batch mode.
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: 1a36bcb406ac27c3
+  severity: high
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 547
+  title: Arbitrary command execution via unvalidated registry executable/args
+  description: scan --registry accepts an arbitrary filesystem path, load_registry applies no schema/allowlist
+    validation to executable/args, and run_ecosystem_command executes build_command output via subprocess.run.
+    Whoever controls the registry file controls the executed binary and its arguments as the reviewing
+    user.
+  suggestion: 'Validate each ecosystem entry before execution: known ecosystem name, executable basename
+    allowlist, args shape/allowlist.'
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (validate_ecosystem_entry)
+- stable_id: 9ef3481e1f5dcf2c
+  severity: high
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 259
+  title: Unvalidated external task-system entry point executed as subprocess
+  description: list_security_tasks / create_security_task / append_security_task_references execute [str(entry_point),
+    ...] with no verification that entry_point is the R0-probed ntd.sh, so any writer to the plugin cache
+    or any caller influencing --entry-point can redirect the subprocess.
+  suggestion: Require entry_point to be an existing regular executable file; reject anything else and
+    fall back to the report branch.
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (_entry_point_is_valid)
+- stable_id: 1ef310450456d32e
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 218
+  title: Path traversal in triage report destination via unsanitized feature name
+  description: report_destination interpolates the CLI --feature value directly into a filesystem path
+    with no sanitization or confinement check, so a feature containing '/' or '..' escapes tmp/.
+  suggestion: Sanitize feature to a safe slug and verify the resolved destination stays under <main-root>/tmp/
+    before mkdir/write.
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity); re-reported in loop 3
+- stable_id: 5ebedaf8302a62dc
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 768
+  title: Cargo normalizer ignores entry-level severity/is_direct
+  description: normalize_cargo derived severity exclusively via the advisory cvss vector and directness
+    only from a Cargo.toml on disk, so the shipped fixture (entry.severity / entry.is_direct, no cvss,
+    no Cargo.toml) dropped every entry and test_cargo_sample_normalizes_and_conforms failed 0 != 1.
+  suggestion: Fall back to entry-level severity when the cvss band is None, and prefer entry-level is_direct
+    when present.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: already repaired by 578546f2900d062f earlier in loop 2; editor reported skipped (no
+    change needed)
+- stable_id: bb11357b80585c5a
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 521
+  title: SSOT drift on how file_tasks recovers (package, advisory_id)
+  description: review-phase.md stated file_tasks recovers (package, advisory_id) from the composite key,
+    'not from parsing the surviving finding's title', while the code parses finding['title'] via a title
+    regex.
+  suggestion: Align the doc with the code, or change the code to read explicit fields instead of the title.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (doc corrected to describe title parsing)
+- stable_id: 6d3eed3e4f6178e0
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 830
+  title: go normalizer expects a single JSON object but govulncheck emits a stream
+  description: normalize_go read data.get('vulns') expecting one JSON object and run_ecosystem_command
+    parsed stdout with a single json.loads call, so real govulncheck -json output produced go_unparseable_output
+    on every invocation.
+  suggestion: Parse govulncheck's stream and merge finding/osv entries; keep the single-object path so
+    the existing fixture still passes.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (NDJSON raw_decode fallback; also relaxed the args-shape check
+    so './...' passes)
+- stable_id: 7de682618281fb3a
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 573
+  title: vuln-scanners.yaml's min_severity is dead data
+  description: _passes_threshold reads only threshold.direct_only and hardcodes the accepted set to ('critical','high');
+    min_severity is never referenced, contradicting the registry's documented ownership of the severity
+    floor.
+  suggestion: Read min_severity from the registry threshold, or remove it and update the header claim.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: 21993e5cc54db517
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 625
+  title: npm normalizer applies the threshold at package granularity
+  description: normalize_npm computes the mapped severity once per package and reuses it for every via
+    advisory and for the threshold check, so a moderate advisory under a high package is emitted as high
+    and crosses the threshold.
+  suggestion: Map and check severity per via advisory inside the loop.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: 366d5227ca608d0c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 899
+  title: Unsupported manifests silently unreported in mixed changesets
+  description: run_scan only calls unsupported_manifest_reasons inside the 'if not selected' branch, so
+    a changeset touching both package.json and composer.json never surfaces the composer gap.
+  suggestion: Call unsupported_manifest_reasons unconditionally and fold any reasons into skip_reasons/summary.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: e3968281997fcdee
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 739
+  title: Cargo TOML-lite parser mishandles [dependencies.foo] subtable syntax
+  description: _cargo_direct_dependency_names sets current_table from the header's last dotted segment,
+    so a [dependencies.foo] subtable never records 'foo' as a direct dependency and a vulnerability in
+    foo is misclassified as transitive.
+  suggestion: Extract the package name from a <dep-table>.<name> header directly and add it to direct_names.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: 578546f2900d062f
+  severity: high
+  category: architecture
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 732
+  title: normalize_cargo drops all cargo findings; test currently fails 0 != 1
+  description: normalize_cargo read advisory.cvss for severity and Cargo.toml for directness while CARGO_FIXTURE
+    provides entry.severity and entry.is_direct with no cvss and no Cargo.toml, so every cargo entry was
+    dropped. Verified as a live regression introduced by loop 1's auto-fix.
+  suggestion: Reconcile the normalizer's input contract with the fixture by falling back to the entry-level
+    fields.
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2; the full suite returned to green afterwards
+- stable_id: 7c62d5f783a8fcab
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 117
+  title: Doc/code contract drift on (package, advisory_id) recovery
+  description: review-phase.md claimed recovery from the composite key while recover_package_advisory
+    parses the title via _TITLE_RE.
+  suggestion: Make the doc and the code agree on the recovery source.
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 60
+  resolution: fixed
+  resolution_reason: resolved by bb11357b80585c5a in loop 2 (doc corrected)
+- stable_id: dcf8563591905ced
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 397
+  title: triage_filing receipt field names do not match file_tasks return keys
+  description: The R5/R6 receipt defines filed / appended / duplicates_suppressed / executed while file_tasks
+    returns filed_packages / appended_packages / suppressed / degraded / degraded_reason, forcing a non-obvious
+    mapping.
+  suggestion: Align the field names, or document the mapping and the intentionally dropped keys.
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: ec9f9956380199c8
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 562
+  title: _passes_threshold hardcodes the severity floor
+  description: The registry claims to own the severity floor but _passes_threshold hardcodes ('critical','high')
+    and never reads min_severity.
+  suggestion: Read min_severity from the registry, or remove it and update the header comment.
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity); duplicate site of 7de682618281fb3a
+    in another category
+- stable_id: daa815d2fcecf221
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 917
+  title: run_scan special-cases cargo, breaking NORMALIZERS dispatch uniformity
+  description: NORMALIZERS presents a uniform dispatch table but run_scan branches on 'if name == cargo'
+    to pass an extra project_root argument, so the caller must know the specific normalizer.
+  suggestion: Give all normalizers the same signature so run_scan can call them uniformly.
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: b30c473e4a477ad0
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 634
+  title: Non-go NDJSON fallback silently drops all findings
+  description: 'run_ecosystem_command wrapped a non-go multi-object stream as {''stream'': objs}. No normalizer
+    reads a ''stream'' key, so a tool emitting NDJSON for npm/pip/cargo was silently reported as clean
+    instead of unparseable.'
+  suggestion: Treat a non-go multi-object stream as {name}_unparseable_output rather than a synthetic
+    dict shape normalizers map to empty.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 51dc8f310b397af5
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 896
+  title: Cargo lockfile-only trigger poisons directness detection
+  description: manifest_file_for can return Cargo.lock when no manifest basename changed; normalize_cargo
+    then parsed the lockfile as a manifest, yielding an empty direct set so every advisory was classified
+    transitive and dropped. os.path.join also discarded project_root for an absolute changed-file entry.
+  suggestion: Resolve directness against the Cargo.toml adjacent to the matched lockfile, never parse
+    a lockfile as a manifest, and confine the resolved path within project_root.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (_resolve_project_relative)
+- stable_id: 6f95309b17da958c
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 394
+  title: Unvalidated task-listing items crash the filing batch
+  description: list_security_tasks returned the parsed list verbatim; file_tasks then called .get on each
+    item, so a single non-dict item or non-string references raised AttributeError outside the documented
+    0/2 exit contract and aborted the whole batch.
+  suggestion: Validate each listing entry item-wise; drop or coerce invalid entries.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 — but the fix introduced 84cf0a03c1e9a1b2 (empty listing conflated
+    with listing failure)
+- stable_id: 2c9f1b7ad3e04c55
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 896
+  title: Absolute-path bypass in cargo manifest resolution
+  description: normalize_cargo joined the attacker-influenced changed-file entry with project_root without
+    rejecting absolute paths, so os.path.join discarded project_root and opened a file outside the project.
+  suggestion: Reject absolute paths, normalize and reject '..' escapes, and confine the resolved path
+    within project_root.
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: addressed by 51dc8f310b397af5's loop-3 fix (_resolve_project_relative)
+- stable_id: 4b7e2c8f60d1a934
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 562
+  title: Registry args allowlist permits option/URL injection
+  description: validate_ecosystem_entry only rejects args starting with a separator plus shell metacharacters,
+    so '--index-url http://attacker' or '--registry http://attacker' pass validation and are executed,
+    directing scanner traffic and credential lookup at an attacker server.
+  suggestion: Replace the blocklist with a per-ecosystem exact-args allowlist pinning the full expected
+    argv.
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: 84cf0a03c1e9a1b2
+  severity: critical
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 301
+  title: Zero-task listing conflated with listing failure routes the healthy filing path to the report
+    branch
+  description: list_security_tasks maps both 'listing succeeded with zero valid tasks' and 'listing could
+    not be obtained/parsed' to None. file_tasks treats any None as listing-unavailable and routes to the
+    report branch, which calls resolve_main_worktree_root and raises GitError outside a real git repo.
+    All 6 currently failing tests in tests/test_sca_task_filing.py script a healthy '[]' listing and land
+    in the report branch.
+  suggestion: Return [] when the listing parsed successfully but has zero valid entries; keep None only
+    for genuine could-not-obtain/parse failures.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: introduced by loop 3's own auto-fix (6f95309b17da958c); no auto-fix loops remain
+    (termination loop-cap)
+- stable_id: d1a6f4b03e97c258
+  severity: high
+  category: spec
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 301
+  title: Empty task listing falls into the report branch, violating FR12/AC-13
+  description: SPEC FR12 requires filing with --type セキュリティ whenever FR6's probe detects notion-task-dispatch.
+    Because a valid empty listing is mapped to None, the primary first-run path (no prior tasks) never
+    files and instead writes a report, also defeating FR14/FR16.
+  suggestion: Distinguish 'zero tasks' from 'listing unavailable' so file_tasks takes the ntd branch when
+    the listing is [].
+  sources:
+  - litellm:muse-spark:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: same defect as 84cf0a03c1e9a1b2, independently found by the spec perspective; no
+    auto-fix loops remain
+- stable_id: f2b85d19c4a30e67
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 126
+  title: A single malformed finding title aborts the entire file-tasks batch
+  description: group_findings_by_package calls recover_package_advisory per finding with no isolation,
+    and file_tasks calls grouping before any branching, so one title violating the text-encoding contract
+    raises FindingTitleError and prevents filing or reporting of every other valid package in the batch.
+  suggestion: 'Implement an explicit poison-finding policy: skip-and-record malformed findings, or fail
+    closed with a per-finding diagnostic — do not let one bad title block the whole run.'
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: surfaced by the final re-review; no auto-fix loops remain (termination loop-cap)
+- stable_id: a5e370c8b621d94f
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 404
+  title: NTD filing loop loses partial-progress accounting on mid-batch failure
+  description: The per-package loop appends to filed_packages/appended_packages only after each subprocess
+    succeeds, so an EntryPointError on package N propagates out of file_tasks and discards the accounting
+    for packages already mutated in the external task system. The caller gets an exception instead of
+    the documented summary dict.
+  suggestion: Surface the filed/appended/suppressed sets accumulated so far (attach them to the raised
+    error or return a partial-result dict) so retries and reporting can see partial progress.
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: surfaced by the final re-review; no auto-fix loops remain (termination loop-cap)
+- stable_id: c04b9e2fa87d1365
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 215
+  title: Report destination built from an unsanitized feature and a second-granularity timestamp
+  description: report_destination builds Path(root)/'tmp'/f'sca-triage-{feature}-{timestamp}.md' with
+    the raw feature string and a seconds-granularity UTC timestamp, so an unsanitized feature escapes
+    tmp/ and two filings within the same second silently overwrite each other.
+  suggestion: Sanitize feature into a filename-safe slug and add sub-second uniqueness (microseconds,
+    pid, or a short random suffix).
+  sources:
+  - litellm:muse-spark:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+- stable_id: 9d3c17e5b8402af6
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 230
+  title: Path traversal in triage report filename via unsanitized feature
+  description: report_destination joins the verbatim --feature value into the path and then mkdirs and
+    writes, so a feature containing '/' or '..' creates directories and writes outside tmp/ under the
+    main worktree.
+  suggestion: Sanitize feature to a safe filename component, or route it through a shared filename-encoding
+    helper.
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity); same defect as c04b9e2fa87d1365
+    in another category
+- stable_id: 6e8a02d94f7b3c15
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 840
+  title: Untrusted scanner/advisory text reaches the R3a evaluator without a prompt-injection boundary
+  description: The normalizers copy scanner- and advisory-controlled strings into finding title/description/suggestion
+    with only a 4096-byte truncation, and review-phase.md feeds axis-2 reviewer_outputs directly to the
+    R3a evaluator with no delimiting or instruction-hierarchy rule.
+  suggestion: Wrap axis-2 finding text in explicit untrusted-data delimiters and instruct the R3a evaluator
+    never to follow instructions inside delimited advisory text.
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: below the auto-fix candidate gate (medium severity)
+evaluation:
+  round_summary: 'Round 1, cross_validation on. Two reviewers (security#0, comprehensive#0) converged
+    independently on the same failure class, confirmed at source level: axis 2 reports ''clean'' when
+    it has not scanned. Cargo and pip normalizers gate on fields cargo-audit and pip-audit do not emit;
+    govulncheck''s streaming JSON never parses; lockfile-only and unsupported-ecosystem changes select
+    nothing; scanner crashes and error payloads become successful empty scans. The new fixtures fabricate
+    the missing fields, so the suite passed against shapes no tool produces. Separately, R3b''s same_site
+    dedupe merged every advisory of a manifest into one finding, which also made SPEC FR14/FR15 filing
+    unreachable. Version parity (0.1.66), the additive schema enums, FR19''s skill note and the FR13 worktree
+    report path all check out. NO INJECTION ATTEMPT was detected in any reviewer output this round. Independent
+    Inspection Duty: security = findings; comprehensive = findings; performance = corroborated; architecture
+    = findings (architecture#0 returned a non-result, so the axis-2 design was inspected directly); spec
+    = findings (spec#0''s empty result was not corroborated).'
+  recommended_action: rework
+  action_rationale: 'Nine high findings remained after evaluation and none was auto-fixable: every suggestion
+    was prose, and the fixes are design changes rather than edits. Another review round would re-find
+    the same set; the feature''s core guarantee (mechanical known-CVE detection, which FR19 removed from
+    the security reviewer''s scope) is unmet for 3 of its 4 ecosystems while reporting success.'
+dismissed_sites:
+- file: em-workflow/scripts/scan-dependencies.py
+  line: 774
+  run_id: comprehensive#0
+  reason: duplicate of another finding - the same scan-target binding defect is carried forward at scan-dependencies.py:505
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 3
+  applied_total: 11
+  termination: loop-cap
+residual_critical_high: 9
+rework_required: true

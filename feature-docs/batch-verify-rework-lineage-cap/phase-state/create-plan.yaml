@@ -1,0 +1,104 @@
+schema_version: 1
+feature: batch-verify-rework-lineage-cap
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 103058d63a05282f47d1b58a9d9712365c3dd55e
+last_input_digest: sha256:de5ce3e2f0beb309baa9ba8b0a5e40a1b87c2fdb057b317375c7a0f9f9d7800b
+active_request_id: null
+packets:
+  create-plan-q0001:
+    status: answered
+    issued_at: "2026-09-06T18:35:00+09:00"
+    questions:
+      - question_id: requirement.fr7.tbd-resolution
+        status: answered
+      - question_id: requirement.fr5.tbd-resolution
+        status: answered
+      - question_id: requirement.fr11.tbd-resolution
+        status: answered
+answers:
+  requirement.fr7.tbd-resolution:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T18:35:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: >-
+      仮定 a-fr7 を置いて進める: 既存の自動再エントリ carve-out には触れず、
+      batch 専用の独立条項を新設し、停止条件 1 と停止条件 3 の双方に
+      「verify が cap 到達により failed」の例外を置く。FR7 の requirement
+      status は assumed になる。
+    resolution_note: >-
+      references/batch-policies.yaml の create-plan.tbd-resolution:
+      action select / option_id assume を適用（Batch resolution sequence
+      step 3-4）。Fail-closed classification は通過（category
+      tbd-resolution、reversible: false の assumption なし）。
+  requirement.fr5.tbd-resolution:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T18:35:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: >-
+      仮定 a-fr5 を置いて進める: follow_up_drafts の生成母集団は
+      「cap 到達時点で未解決の failed_items 全件」とする。FR5 の requirement
+      status は assumed になる。
+    resolution_note: >-
+      references/batch-policies.yaml の create-plan.tbd-resolution:
+      action select / option_id assume を適用。
+  requirement.fr11.tbd-resolution:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T18:35:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: >-
+      仮定 a-fr11 を置いて進める: cap 到達走行の batch 終端行は既存の
+      verify_rework_cap_reached を再利用し、references/batch-terminal-line.md
+      は変更しない。FR11 の requirement status は assumed になる。
+    resolution_note: >-
+      references/batch-policies.yaml の create-plan.tbd-resolution:
+      action select / option_id assume を適用。
+worker_runs:
+  - request_id: create-plan-5ec9d5c3491d
+    status: needs_user_input
+    input_digest: sha256:d1217fddb15f8ceb9250a8b214b330fff4ba987508a7fad0fa87df2c4a559750
+    output_digest: null
+  - request_id: create-plan-a8bd983c81f7
+    status: completed
+    input_digest: sha256:de5ce3e2f0beb309baa9ba8b0a5e40a1b87c2fdb057b317375c7a0f9f9d7800b
+    output_digest: null
+artifacts:
+  - path: feature-docs/batch-verify-rework-lineage-cap/IMPLEMENTATION.md
+    sha256: sha256:c1151523f239ff80c0d3a89260180b2f46e6aa0ed0162e63f592debbbc8c9553
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/VERIFICATION.md
+    sha256: sha256:afa2cde89510c19874164aac33318d39614a536a70a9ecdcb6b09c26be9862c9
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0001.md
+    sha256: sha256:d56c0a8714740df6bb804fe128030020dee9703537fc9eab4c860f2b65769063
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0002.md
+    sha256: sha256:a30f9cdb4a57b2038e861597b69989c6d523dd4ad88cf42bb9f5310b2f0b4825
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0003.md
+    sha256: sha256:133d8155d343c0aae5bc608a4729909fe0ebe46091f03545a103f0544a834a6a
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0004.md
+    sha256: sha256:4c00ab9a116db7e64aa0de8acb184a33ca1d2d36178d00d276d19b74f76b2d01
+    produced_by: create-plan-a8bd983c81f7
+  - path: feature-docs/batch-verify-rework-lineage-cap/tasks/task0005.md
+    sha256: sha256:b10fc6ca48cf9836a2ce8655474d6037c7e06007f2408e0648318b113cd574b6
+    produced_by: create-plan-a8bd983c81f7
+patches:
+  - patch_id: batch-verify-rework-lineage-cap-p0001
+    operation: replace_planning
+    applied: true
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

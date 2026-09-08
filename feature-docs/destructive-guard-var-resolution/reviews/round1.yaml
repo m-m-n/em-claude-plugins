@@ -1,0 +1,332 @@
+round: 1
+executed_at: "2026-09-01T09:20:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
+  head_commit: d196851b29705cd308d7ffe8c9028e967ce9fa90
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-var-resolution/task0001.tests.yaml
+    - test-docs/destructive-guard-var-resolution/task0002.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+    - perspective: performance
+      reason: "このフックは全 Bash ツール呼び出しの PreToolUse で走る。今回の変更は文ごとの代入収集と対象トークンの解決パスを追加するため、NFR4（bounded cost）に対する実測観点が要る"
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: f11f6a1aac9cf9b4
+    severity: critical
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 685
+    title: "解決値の単語分割とクォート文脈を無視し、SAFE_DELETE の前方一致で残りの削除対象が素通りする"
+    description: |
+      resolve_target() は置換後テキストに DYNAMIC が残っていなければ解決済みとし、
+      check_rm() はそれを 1 個の削除対象として扱う。クォートされていない参照は
+      シェルでは単語分割されるため、値に空白が含まれると実際には複数パスの削除になる。
+      SAFE_DELETE は前方一致（終端アンカーなし）なので、先頭がスクラッチ領域なら
+      残り全部が無検査で通る。
+      実測: X='/tmp/x /home/sakura' の後に変数経由で再帰削除すると、変更前 ask /
+      変更後 allow。タブ区切り・IFS 変更でも同じ。先頭に安全パスを置くだけで
+      任意パスの再帰削除が通る。
+    suggestion: |
+      置換後テキストに IFS 空白（スペース/タブ/改行）が含まれる場合は resolved=False と
+      して元トークンを返し従来どおり ask に落とす。あるいは空白で分割して各語を
+      独立した削除対象として rm-root / SAFE_DELETE / DYNAMIC 判定にかける。
+      クォート由来情報を保持し、単一引用符・エスケープされた参照は解決しない。
+    sources: [claude:security, codex:security]
+    confidence: 95
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 2c696d520373ceb2
+    severity: critical
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 604
+    title: "解決層が実行順を見ないため、使用より後ろの代入でガードがすり抜ける"
+    description: |
+      collect_assignments() はコマンド全体の statement 列を順序無視で走査して
+      name から value を作り、resolve_target() は使用箇所が代入より前かどうかを見ない。
+      参照より後ろに書かれた代入が、参照時点の値として適用される。
+      実測: HOME を対象にした再帰削除の後ろに HOME=/tmp/x を置くと、変更前 deny
+      (rm-root) / 変更後 allow。実際はホームディレクトリが消える。
+      settings.json へのリダイレクト書き込みも同じ形で ask から allow に落ちる。
+      このフックの allow は auto mode 分類器をスキップさせるため、allow は
+      確認が減るのではなく防御が無効化されることを意味する。
+    suggestion: |
+      collect_assignments() が name から (value, scope, index) を返し、resolve_target() は
+      定義 index が使用 index より小さく、かつ同一 scope のときだけ置換する。
+      それ以外は未解決のまま。該当形の回帰ケースを destructive-guard-cases.json に追加する。
+    sources: [claude:security, claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 480361011164af5b
+    severity: critical
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 632
+    title: "FR6 の再代入除外が素の代入文だけを数えており、別形式で上書きされた変数が古い値で解決される"
+    description: |
+      collect_assignments() は単一トークンの素の代入文だけを counts に数える。
+      2 回目の束縛が別の綴りで書かれると counts は 1 のままで reassigned に入らず、
+      1 回目の古い値が values に残って判定に使われる。
+      実測（いずれも変更前 ask から変更後 allow）: export / declare / local / typeset に
+      よる再束縛、+= による追記、read、printf -v。
+      SPEC の NFR2「fully resolved literal value 以外で ask/deny を allow に変えない」に反する。
+    suggestion: |
+      values への登録と counts の加算を非対称にする。counts にはその名前を束縛しうる
+      あらゆる文を数える — export / declare / typeset / local / readonly の代入形、
+      += 形、read / mapfile / readarray、printf -v、eval / source。
+      counts が 2 以上の名前は values から落として rm-unresolvable の ask に戻す。
+    sources: [claude:spec]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 96be1fbe15d44317
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 631
+    title: "代入の実行順序・分岐・バックグラウンドをモデル化せず、実行時に効いていない値で対象を解決する"
+    description: |
+      値が使用箇所より後に現れても、条件分岐で実行されなくても、バックグラウンドに
+      投げられていても、同じ scope なら resolve_target() が適用する。
+      実測（いずれも変更前 ask から変更後 allow）: 使用が代入より前の形、
+      false と && で短絡して実行されない代入、& でバックグラウンドに投げた代入。
+      安全な値の代入文を 1 つ添えるだけで、対象不明の再帰削除が ask をすり抜ける。
+    suggestion: |
+      解決を「使用箇所より前に、無条件で、同一シェルで実行される代入」に限る。
+      文のインデックスで前後を判定し、&& や || を挟んだ代入は条件付き実行なので
+      values から除き、& は パイプと同様に新しい scope を開始する区切りとして扱う。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: deafd14791607b66
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 631
+    title: "Global assignment map can substitute a value the shell never uses"
+    description: |
+      実行順・制御フロー・未認識の再束縛を考慮せずコマンド全体から代入を集めるため、
+      素の代入のあとに export で別の値へ束縛し直した変数が、古い値で解決されて
+      allow になる。未解決の ask が黙って allow に変わる。
+    suggestion: |
+      各使用箇所で flow-sensitive に解決する。同一シェルで先行実行されることが
+      証明できる代入だけを採用し、条件分岐の境界や export / declare / typeset /
+      read / printf -v / eval / source の後は既知の値を無効化する。不確実は未解決に倒す。
+    sources: [codex:security]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 0b16e740ce83b0f5
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 340
+    title: "Pipeline and background assignments incorrectly escape into the parent scope"
+    description: |
+      パイプの後ろの文にだけ新 scope が割り当てられ、パイプラインの先頭要素は
+      親 scope のままになる。バックグラウンド実行も両側が親 scope に残る。
+      パイプラインの先頭で HOME を安全な値に代入し、パイプラインの外で HOME を
+      対象に再帰削除すると allow になり、実シェルでは本物のホームが消える。
+    suggestion: |
+      パイプラインの左辺要素と非同期リストにも子 scope を割り当ててから代入を記録する。
+      構文の後に親 scope へ戻し、子 scope の代入が後続の親シェルの使用を解決しないようにする。
+    sources: [codex:security]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 8e1e8deaf6e92ca2
+    severity: high
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 361
+    title: "FR7 のパイプ要素境界が片側しか効かず、パイプライン内の代入が後続の同一階層文へ漏れる"
+    description: |
+      lex_segments() の flush() はパイプの後ろの文にだけ新しい scope を割り当てる。
+      パイプラインの先頭要素は base_scope のままとなり、そこでの代入がパイプラインの
+      外の文から解決可能になる。実測で変更前 ask から変更後 allow。
+      既存ケース「パイプライン要素をまたぐ代入は未解決」は逆向きしか押さえていない。
+    suggestion: |
+      パイプラインを構成する全要素（先頭要素を含む）に、囲みスコープとは別の scope を
+      要素単位で与える。バックグラウンドで終端した文も同様にサブシェル扱いで
+      fresh scope にする。両方向の回帰ケースを追加する。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: d70fdfdbf2b99934
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 519
+    title: "Removing command substitutions makes dynamic assignments appear literal"
+    description: |
+      statements() が lex 前にコマンド置換を空白へ潰すため、動的代入である証拠が消える。
+      置換を含む代入がリテラル値として収集され、シェルが実際に組み立てるパスとは
+      別のパスで安全判定される。
+    suggestion: |
+      置換の来歴を保持するか、外側トークンに動的センチネルを挿入する。右辺に
+      コマンド置換・バッククォート・算術/プロセス置換を含んでいた代入は、結果が
+      静的に確定しない限り収集しない。
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 3e67239a3c93f5be
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 638
+    title: "コマンド置換の代入が空文字リテラルとして収集されて mktemp 定番形が deny になり、export の再束縛では古い値が生き残る"
+    description: |
+      誤爆側: mktemp をコマンド置換で受ける代入は、置換が空白に潰された結果
+      単一トークンの空代入になり values に空文字が入る。変数経由の再帰削除の対象が
+      空文字になり SAFE_DELETE にも当たらず rm-recursive で deny する。変更前は ask。
+      この形はこのリポジトリ自身の review-phase.md が規定する定番であり、
+      deny は無人実行をその場で終わらせる。
+      見逃し側: counts に入るのは単一トークンの裸の代入だけなので、export / declare /
+      local / += / read で束縛し直しても古い値で解決されて allow になる。
+    suggestion: |
+      置換のプレースホルダを DYNAMIC / VAR_REF にマッチする形にして既存ガードに乗せるか、
+      置換を含んだチャンク由来の代入を values に入れない。あわせて収集条件と無効化条件を
+      非対称にし、どのトークンであれ代入形にマッチしたらその名前を counts に加算する。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 3497f9d6ae1f7761
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 879
+    title: "check_rm が解決後パスを正規化せずに SAFE_DELETE 判定するため、親参照でスクラッチ領域を脱出できる"
+    description: |
+      check_self_modification() は normalize_candidate() で親参照を畳んでから判定するのに対し、
+      check_rm() は解決後テキストをそのまま SAFE_DELETE（前方一致）にかける。
+      スクラッチ領域で始まってから親参照で外へ抜けるパスが安全と判定され、
+      変更前 ask から変更後 allow になる。
+    suggestion: |
+      解決後テキストに親参照セグメントが含まれる場合は normalize_candidate() の結果に対して
+      SAFE_DELETE 判定を行う。常時適用すると相対形の末尾スラッシュが落ちて誤爆 deny する
+      ので、親参照を含む場合に限定するか SAFE_DELETE 側の相対形パターンを直してから適用する。
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 8c05d0eb8a9fb83d
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 885
+    title: "Safe-delete prefix check permits path traversal after resolution"
+    description: |
+      解決済み削除対象が字句正規化の前に SAFE_DELETE と比較される。スクラッチ領域の
+      前方一致だけで allow になるが、実際の対象は親参照を辿った先のパスになる。
+      変更前は変数が動的なままで ask だった。
+    suggestion: |
+      完全に解決された対象を root / safe-area 判定の前に字句正規化し、前方一致の正規表現
+      ではなくパス構成要素の境界で包含を判定する。未解決の traversal を含む対象は拒否する。
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: cd259adaf81627ad
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 351
+    title: "サブシェル閉じ判定がトークン完全一致のため、句読点が融合すると scope スタックが復帰しない"
+    description: |
+      flush() は最終トークンが閉じ括弧そのものであることでグループ終端を検出するが、
+      上流の punctuation_chars が隣接句読点を融合するため、閉じ括弧とリダイレクトが
+      1 トークンのまま残る。scope_stack が pop されず、以降すべての文がサブシェルの
+      scope id を持ち続ける。実測でサブシェル内の代入がサブシェル外の使用箇所で
+      解決され allow になる。閉じ括弧を単独行にすると正しく ask になる。
+    suggestion: |
+      終端検出をトークン完全一致から外す。トークン列全体を走査して括弧の出現数で
+      深さを数えるか、融合句読点の分割時に括弧を必ず独立した 1 片として切り出し、
+      statement のトークン列に混ぜず区切りとして扱う。融合形のケースを追加する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: eacf264383137515
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 343
+    title: "開き括弧をグループ先頭文のトークンに含めているため、同一入れ子レベルでも区切り文字の綴りで判定が変わる"
+    description: |
+      flush() は開き括弧をその文のトークンとして残すため、グループ先頭の文は必ず
+      2 トークン以上になり collect_assignments() の形状テストを通れない。
+      同じサブシェルでもセミコロン区切りだと ask、改行区切りだと allow になる。
+      前者は本機能が消そうとしている誤爆クラスそのもの。
+    suggestion: |
+      括弧を statement のトークンではなくグループ区切りとして扱う。走査ループ側で
+      scope_stack を push / pop し、statement のトークン列からは除外する。副次的に
+      サブシェル末尾の閉じ括弧が raw_targets に紛れ込む問題も消える。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: cc8e7a2eee2b504a
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 896
+    title: "空文字に解決された削除対象が deny 経路に落ち、代替コマンドがカレントディレクトリの退避を提案する"
+    description: |
+      解決結果が空文字だと rm-root にも SAFE_DELETE にも DYNAMIC にも当たらず
+      rm-recursive の deny に到達し、deletion_alternative が空パスの絶対化で
+      カレントディレクトリを返す。理由文が作業中のディレクトリを丸ごと移動する
+      具体コマンドを提示する。実際のシェルでは空引数が渡るだけで何も消えない。
+    suggestion: |
+      resolve_target() で置換後テキストが空または空白のみなら解決失敗として元トークンを
+      返す。あわせて check_rm() 側でも空文字対象を deny せず ask に落とすか、
+      deletion_alternative() に空パスのガードを置く。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: b6acc424285ab451
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 873
+    title: "解決がフラグ判定に適用されず、変数経由の再帰フラグで再帰削除判定が無効化される"
+    description: |
+      check_rm() は short_flags(args) と raw_targets を解決前の生トークンで計算する。
+      値が再帰フラグになる変数を挟むと recursive が False のまま早期 return する。
+      変更前も allow で回帰ではないが、変数経由をリテラルと同じに判定するという
+      解決層の契約と矛盾する抜けとして残る。
+    suggestion: |
+      raw_targets / short_flags の算出前に各引数を解決に通し、解決済みテキストが
+      ハイフンで始まる場合はフラグとして扱う。回帰ケースを追加する。
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: pending_user_decision
+residual_critical_high: 13
+rework_required: null

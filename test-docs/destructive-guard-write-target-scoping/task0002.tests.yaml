@@ -1,0 +1,59 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 2830 tests, all green before any edit
+final_failures: []             # same command after the edit: 2830 tests, all green
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      No dedicated unit test exists for a manifest version field (task plan
+      Test Notes; the task's Scope also states "This task creates no new
+      file"). Verified instead by an ad hoc check asserting
+      em-workflow/.claude-plugin/plugin.json's version == "0.1.56", run
+      against the pre-edit content read via `git show HEAD:<path>` (the
+      commit prior to this task's edit): the check raised
+      "AC-1 failed: version='0.1.55'". The identical check against the
+      post-edit file on disk then passed.
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Same ad hoc approach as AC-1, applied to the em-workflow entry in
+      .claude-plugin/marketplace.json (looked up by `name`, not array
+      position). Against the pre-edit content via `git show HEAD:<path>`
+      the check raised "AC-2 failed: version='0.1.55'". The identical check
+      against the post-edit file on disk then passed.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not observable as a genuine pre-task red: before this task's edit
+      the two fields already agreed (both 0.1.55, single pre-existing
+      owner) and no other plugin's version had been touched, so the
+      natural pre-task state already satisfies this criterion trivially --
+      it is a post-edit invariant, not a defect this task fixes. Instead
+      the discriminating power of the AC-3 check itself was proven with
+      two synthetic violations run against fabricated data: (1) plugin
+      version "0.1.56" vs. marketplace entry version "0.1.55" -> raised
+      "AC-3 failed: mismatch"; (2) a hypothetical unrelated plugin's
+      version moved between two synthetic marketplace snapshots -> raised
+      "AC-3 failed: em-other version moved". Both were caught correctly.
+      The real post-edit state was then checked and passed: plugin.json
+      and the marketplace em-workflow entry both read "0.1.56", and the
+      em-review entry (the marketplace's other plugin, which carries no
+      version key) was confirmed unchanged by the diff.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not observable as a genuine pre-task red: both files already parsed
+      as valid JSON before this task's edit (the edit only ever changes
+      two string values in place), so JSON validity was never broken by
+      this task. Instead the discriminating power of the parse check was
+      proven with a synthetic malformed-JSON string (`{ "version": "0.1.56", }`,
+      an illegal trailing comma) -> json.loads raised
+      "Illegal trailing comma before end of object". The real post-edit
+      files were then parsed successfully with json.load, and `git diff`
+      was inspected to confirm the change is confined to exactly the two
+      version lines (one line changed per file, no key added/removed/
+      reordered).

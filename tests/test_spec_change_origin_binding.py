@@ -306,17 +306,24 @@ class TestAC3BidirectionalMembershipRuleNonOverridable(unittest.TestCase):
             section,
         )
 
-    def test_both_directions_marked_non_overridable(self):
+    def test_direction_1_alone_marked_non_overridable(self):
         # Refreshed by rework-contract-drift/task0004 AC-4: direction 2 no
         # longer says "likewise" -- it repeats direction 1's own closing
-        # sentence verbatim, so both directions use the IDENTICAL wording.
+        # sentence verbatim, so both directions used the IDENTICAL wording.
+        # Refreshed again by batch-codex-autonomous-decisions/task0001
+        # (C5): direction 2 is now relaxed in batch (it no longer aborts
+        # unconditionally), so its own copy of this sentence is gone;
+        # direction 1 -- an integrity check over orchestrator-held data,
+        # not a judgement call -- keeps its copy verbatim in both modes.
+        # The count is updated from 2 to 1 in this same change, per C5
+        # ("counting pins are updated, not removed").
         section = _norm(self._origin_verification_section()).lower()
         non_overridable_phrase = (
             "this abort is final and non-overridable, exactly as the "
             "fail-closed classification's precedence reservation above "
             "states for its own abort arms"
         )
-        self.assertEqual(section.count(non_overridable_phrase), 2)
+        self.assertEqual(section.count(non_overridable_phrase), 1)
 
     def test_negative_proof_single_direction_membership_rule_fails_matcher(
         self,

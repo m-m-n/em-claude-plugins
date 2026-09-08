@@ -1,0 +1,358 @@
+round: 3
+executed_at: "2026-09-02T02:10:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 1fdb27fe51de6d20e9812027d3aee603cb584173
+  head_commit: 8a1011b7e9e54104a72cd4be838da67272a0e019
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-var-resolution/task0001.tests.yaml
+    - test-docs/destructive-guard-var-resolution/task0002.tests.yaml
+    - test-docs/destructive-guard-var-resolution/task0003.tests.yaml
+    - test-docs/destructive-guard-var-resolution/task0004.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+    - perspective: performance
+      reason: "解決後テキストの長さ上限（RESOLVED_TEXT_MAX）が round 2 の二乗コストへの対処として入ったため、その有効性を再確認する"
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: litellm, model: muse-spark, status: completed, note: "codex は round 2 で 600 秒タイムアウトのため chain 次段へ"}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: muse-spark, status: completed}
+  - {perspective: performance, source: claude, status: completed}
+  - {perspective: performance, source: litellm, model: vertex-deepseek-v3.2, status: completed, note: "モデル出力が途中で切れた。findings 0 はシグナル無しを意味する"}
+
+# オーケストレーター自身が base(1fdb27f) と現行を同一入力で突き合わせた実測。
+# 11 件中 10 件が退行。round 2 の 10 件は task0004 ですべて base 一致に戻っており、
+# ここに挙がるのは round 3 で新たに開いた/見つかった別の穴。
+orchestrator_verification:
+  - {case: "rm -rf dist/*",                          base: allow,             current: ask/rm-unresolvable, regression: true}
+  - {case: "rm -rf node_modules/*",                  base: allow,             current: ask/rm-unresolvable, regression: true}
+  - {case: "rm -rf /tmp/build-*",                    base: allow,             current: ask/rm-unresolvable, regression: true}
+  - {case: "rm -rf <(echo x) /home/sakura/proj",     base: deny/rm-recursive, current: allow,               regression: true}
+  - {case: "git push <(echo x) --force origin main", base: deny/git-force-push, current: allow,             regression: true}
+  - {case: "if false; then\\nHOME=/tmp/safe\\nfi\\nrm -rf $HOME", base: deny/rm-root, current: allow,       regression: true}
+  - {case: "while false; do\\nHOME=/tmp/safe\\ndone\\nrm -rf $HOME", base: deny/rm-root, current: allow,    regression: true}
+  - {case: "\"HOME\"=/tmp/safe\\nrm -rf $HOME",      base: deny/rm-root,      current: allow,               regression: true}
+  - {case: "\\HOME=/tmp/safe\\nrm -rf $HOME",        base: deny/rm-root,      current: allow,               regression: true}
+  - {case: "X=build-debug; rm -rf $X",               base: ask/rm-unresolvable, current: deny/rm-recursive, regression: true}
+  - {case: "rm -rf build-debug",                     base: allow,             current: allow,               regression: false}
+orchestrator_timing:
+  note: "1 文中に束縛ワードを並べた入力。hooks.json のフックタイムアウトは 10 秒"
+  measurements:
+    - {size: 11KB, base: 0.02s, current: 0.65s}
+    - {size: 22KB, base: 0.03s, current: 2.48s}
+    - {size: 44KB, base: 0.05s, current: 9.85s}
+
+findings:
+  - stable_id: r3-quoted-name-assign
+    severity: critical
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 911
+    title: "shlex がクォートを剥がした NAME=VALUE を実代入として記録し、bash が代入しない語で対象を解決する"
+    description: |
+      collect_assignments() は shlex 解決済みのトークンを代入パターンに掛けるだけで、
+      その語が bash にとって本当に代入かを見ていない。bash は名前部や `=` が
+      クォート/エスケープされた語を代入として扱わない。
+      実測: `"HOME"=/tmp/safe` / `\HOME=/tmp/safe` / `HOME"="/tmp/safe` /
+      `HO"ME"=/tmp/safe` の 4 形すべてを正規の代入として記録し、続く
+      `rm -rf $HOME` が deny(rm-root) → allow になる。
+      実シェルではこれらはコマンド不在で流れ、$HOME は本物のホームのまま展開される。
+    suggestion: |
+      記録の判定を shlex 後のトークン文字列ではなく元の綴りに対して行う。
+      _TrackingLexer が既に state を監視しているので、トークンごとのクォート開始
+      オフセットか生ソース span を記録し、「生の綴りの先頭が unquoted で代入形に
+      一致する」ことを条件にする。判定できない場合は記録しない。
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-compound-constructs
+    severity: critical
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 386
+    title: "if / while / case / 波括弧 / 関数本体の中の代入が無条件の代入として記録される"
+    description: |
+      lex_segments() が「実行されないかもしれない文」として扱うのは短絡演算子の直後と
+      サブシェルだけで、if・while・until・case・ブレースグループ・関数本体は
+      文の形として一切モデル化されていない。改行区切りでこれらの中に置かれた代入は
+      囲みスコープの無条件な単独代入文として記録され、解決の適用条件をすべて満たす。
+      実測: `if false; then\nHOME=/tmp/safe\nfi\nrm -rf $HOME` が deny(rm-root) → allow。
+      while / until / case / 呼ばれない関数本体 / パイプ先のブレースグループも同じ。
+      既存ケースが押さえているのは「if/then に融合した *再* 代入は counts が 2 になる」
+      方向だけで、分岐の中に代入が 1 個しかない方向は 1 件も無い。
+    suggestion: |
+      lex_segments() に複合構文の深さを持たせ、then / else / elif / do / in / 波括弧 /
+      関数定義で深さを増やし、fi / done / esac / 閉じ波括弧で減らす。深さが 0 より
+      大きい文は conditional=True として yield すれば、既存の適用条件が弾く。
+    sources: [claude:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-scratch-glob-gate
+    severity: critical
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1278
+    title: "DYNAMIC ゲートの前倒しで、スクラッチ領域配下のグロブ削除が allow から ask へ退行"
+    description: |
+      check_rm() が DYNAMIC ゲートを SAFE_DELETE の包含判定より先に置いたため、
+      変数解決と無関係な「スクラッチ領域配下のグロブ/未解決参照」が base の allow を失った。
+      base は SAFE_DELETE 一致を先に見て continue していた。
+      実測: `rm -rf dist/*`・`rm -rf node_modules/*`・`rm -rf /tmp/build-*`・
+      `rm -rf target/debug/*`・`rm -rf coverage/*`・`rm -rf /tmp/foo/$NAME` などが
+      allow → ask。無人実行では ask が deny に降格するのでその場で走行が止まる。
+      ビルド系タスクの定型そのもの。
+    suggestion: |
+      置換が実際に入ったターゲット以外には base と同じ順序を戻し、正規化を伴う
+      置換済みパスだけをゲート先行に残す。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-positional-after-resolve
+    severity: critical
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 130
+    title: "解決後に残った位置パラメータが DYNAMIC に一致せず、スクラッチ前方一致で allow になる"
+    description: |
+      DYNAMIC は `$1` `$*` `$@` などの位置/特殊パラメータに一致しない。
+      解決で `$X` が `/tmp` に置き換わった結果 `/tmp/$1` になると、DYNAMIC には
+      当たらず SAFE_DELETE の前方一致で allow になる。
+      実測: `X=/tmp; rm -rf $X/$1` が ask(rm-unresolvable) → allow。
+      なお `rm -rf /tmp/$1` 単体は base でも allow で、この変更由来ではない
+      （オーケストレーターが base と突き合わせて確認済み）。
+    suggestion: |
+      DYNAMIC と VAR_REF を位置/特殊パラメータに拡張し、解決後テキストに
+      それらが残る場合は未解決として扱う。
+    sources: ["litellm:muse-spark:security"]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-process-substitution
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 461
+    title: "プロセス置換の開き括弧が文を分断し、以降の引数が全チェックから消える"
+    description: |
+      融合演算子トークンから括弧を常に単独片として切り出す処理と、括弧をスコープ区切りと
+      して扱う分岐の組み合わせにより、プロセス置換の開きがリダイレクトと括弧に割られ、
+      括弧が新スコープを開いた時点で現在の文が確定する。同じ単純コマンドのそれ以降の語が
+      文から丸ごと消える。
+      実測: `rm -rf <(echo x) /home/sakura/proj` が deny → allow、
+      `git push <(echo x) --force origin main` が deny(git-force-push) → allow。
+      危険な引数の手前にプロセス置換を 1 個挟むだけでガード全体を素通りできる。
+    suggestion: |
+      融合トークンの切り出しでプロセス置換の開きを 1 片のまま残し、対応する開き括弧が
+      無い閉じ括弧はスコープを閉じずに通常トークンとして文に残す。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-invalidated-names-quadratic
+    severity: high
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    line: 797
+    title: "invalidated_names() が束縛ワード数×トークン数で二乗になり、44KB のコマンドでフックタイムアウトに達する"
+    description: |
+      束縛ワードを見つけるたびに残りのトークン列を丸ごとスライスコピーして再走査するため、
+      1 文あたり二乗になる。区切りの無い 1 文に束縛ワードが並ぶとコマンド長に対して二乗。
+      オーケストレーター実測: 11KB=0.65s / 22KB=2.48s / 44KB=9.85s（倍長ごとに約 4 倍）。
+      同入力の base は 44KB で 0.05s。hooks.json のフックタイムアウトは 10 秒で、
+      46KB 前後から verdict がまったく出なくなる。
+      束縛ワードが 10% しか混ざらない現実寄りの形でも二乗。
+      round 2 の RESOLVED_TEXT_MAX による二乗解消自体は実測で確認済み。
+    suggestion: |
+      残りトークンの再走査をやめ、束縛ワード群ごとの最初の出現位置以降を 1 回だけ走査する。
+      ホットループ内の未コンパイル正規表現をモジュール定数にする。
+      printf 分岐のスライスコピーもインデックス走査に置き換える。
+    sources: [claude:performance]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-resolved-stricter-than-literal
+    severity: high
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1303
+    title: "解決済みトークンが同一リテラルより厳しく判定され、FR2 に矛盾する"
+    description: |
+      置換が起きたトークンにだけ正規化＋コンポーネント境界判定を適用し、置換の無い
+      テキストには生の前方一致を適用するため、判定基準が値ではなく由来で分かれる。
+      実測: `rm -rf build-debug` は allow だが `X=build-debug; rm -rf $X` は deny。
+      dist-ssr / target-old / coverage.old / node_modules_bak / .next-old でも同じ。
+      base ではこれらは ask で、対話実行なら承認して通せた。
+      SPEC FR2「完全に解決されたトークンはリテラルが書かれた場合とまったく同じに
+      判定される」に対する直接の矛盾。NFR2 は一方向の下限であって、リテラルより
+      厳しくしてよいという許可ではない。
+    suggestion: |
+      (a) コード側で対称性を回復する — 置換の有無に関わらず生の前方一致を使う。
+      代償は round 1 の TS-19 が閉じた穴が base と同じ開き方に戻ること（ただしそれは
+      base 由来の既存の穴で、この機能が新たに開けるものではない）。
+      (b) SPEC に provenance 例外を明記し、allow → deny 方向の変化の受容範囲を書く。
+    sources: [claude:spec]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-array-assignment
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 580
+    title: "配列要素代入が束縛として数えられず、先行するリテラルが無効化されない"
+    description: |
+      `NAME[0]=value` 形は代入としても再束縛としても数えられないため、先行する
+      安全な値が values に残り続ける。
+      実測: `X=/tmp/x; X[0]=/home/sakura/y; rm -rf $X` が ask → allow。
+      bash では代入後のスカラ $X は /home/sakura/y になる。
+    suggestion: |
+      添字付き代入形を counts と無効化集合の両方で束縛として数える。
+    sources: ["litellm:muse-spark:security"]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-fallback-sentinel-leak
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 636
+    title: "「起こらないはず」の文数不一致分岐が実際に到達し、内部センチネルが理由文へ漏れる"
+    description: |
+      二重字句解析の文数一致は散文的な論証だけが根拠で、パース失敗フォールバック経路では
+      成立しない。置換だけで構成されたセグメントが片方のパスでのみ消えるため長さが食い違い、
+      check 用トークンが collect 用トークン（プレースホルダ入り）に差し替わる。
+      実測: 未閉じクォートを含むコマンドで理由文に内部センチネルが現れ、
+      判定も deny → ask / allow → ask にドリフトする。
+    suggestion: |
+      フォールバック経路で両パスのセグメント数を必ず一致させるか、不一致時に collect 側の
+      トークンを流用せず、センチネルを除いたものを check 側に渡す。
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-double-count-hint
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 903
+    title: "全トークン走査が 1 回きりの束縛を二重計上し、誤った「2 回代入」ヒントを出す"
+    description: |
+      引用済みシェルペイロードのトークン自体が代入形に一致する経路と、export 系が
+      無効化集合と全トークン走査の両方で数えられる経路の 2 つで二重計上が起きる。
+      `export D=/tmp/x; rm -rf $D` の理由に「変数を分けると解決できる」ヒントが付くが、
+      D は 1 回しか代入されておらず、その指示に従っても解決しない。
+      判定自体は fail-closed なので verdict の退行ではないが、理由文はエージェントが
+      復帰するための唯一の指示であり、そこが誤っている。
+    suggestion: |
+      無効化集合が名前を返した文では同一名を全トークン走査で再度数えない。
+      値に文区切りを含むトークンは代入候補から外す。
+    sources: [claude:comprehensive]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-resolver-application-point
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1676
+    title: "解決層が 2 つの利用側でパイプライン上の別段階に適用されている"
+    description: |
+      check_rm() は解決してから flag/target を分離するのに対し、check_self_modification()
+      は未解決の引数で構造解釈を先に走らせ、出てきた候補だけをあとから解決する。
+      実測: `R=-rf; rm $R /home/sakura/x` は deny だが `T=-t; cp $T ~/.claude/hooks/ file.py`
+      は allow（リテラル形は ask）。base からの退行ではないが、check_rm の docstring が
+      原則として宣言している内容をもう一方の利用側が満たしていない。
+    suggestion: |
+      どちらかに寄せて、その選択を 1 箇所に記録する。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-positional-tuple
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 651
+    title: "statements() の戻り値が 7 要素の位置タプルへ拡大し、scope と ordinal が型で区別できない"
+    description: |
+      3 箇所で位置アンパックされ、うち 2 箇所は捨て変数を含む。scope と ordinal は
+      どちらも裸の int で、解決関数では位置的に隣接している。取り違えても例外は出ず、
+      判定だけが静かに変わる。round 2 の指摘（暗黙の対応関係）の修正が、別の形で
+      同じ問題を作っている。
+    suggestion: |
+      NamedTuple で 1 件を表す型を定義し、アンパックを属性アクセスに置き換える。
+      解決関数の scope / ordinal をキーワード専用引数にする。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-poison-scan
+    severity: medium
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    line: 926
+    title: "collect_assignments() の poison 走査が候補数×同一スコープの eval/source 数で二乗"
+    description: |
+      候補 1 件ごとに同じスコープの poison リスト全体を線形走査する。
+      実測 72KB=0.27s / 144KB=0.81s / 288KB=2.77s。base は 72KB で 0.07s。
+      poison リストは昇順で append されるので全走査は不要。
+    suggestion: |
+      二分探索で ordinal より大きい最初の要素を取る。
+    sources: [claude:performance]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-substitute-then-cap
+    severity: medium
+    category: performance
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1012
+    title: "長さ上限が置換後に判定されるため、上限が実際のコストを抑えていない"
+    description: |
+      置換が先に全文字列を完成させてから長さを見て捨てる。事前判定が縛るのは値の長さだけで
+      参照数を縛らないため、値を上限ちょうどに置いた入力では上限が効かない。
+      実測: 176KB で 2.42s / 361MB（base は 0.28s / 16MB）。増加率は線形なので round 2 の
+      二乗項は消えているが、定数倍が大きく残る。
+    suggestion: |
+      置換の途中で累積長を打ち切るか、置換前に参照数×値長で見積もって上限超過なら
+      置換自体を行わない。
+    sources: [claude:performance]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: r3-nameref
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 700
+    title: "nameref（declare -n）によるシャドウイングがモデル化されていない"
+    description: |
+      nameref を作ると参照先の値が読まれるが、その連結は追跡されない。
+      ただしオーケストレーターが base と突き合わせた結果、
+      `X=/tmp/safe; declare -n X=Y; Y=/home/sakura/y; rm -rf $X` は base・現行とも
+      ask(rm-unresolvable) で一致しており、この変更由来の退行ではない。
+    suggestion: |
+      declare / typeset / local の -n 指定を無効化として扱う。優先度は低い。
+    sources: ["litellm:muse-spark:security"]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: null
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: pending_user_decision
+residual_critical_high: 8
+rework_required: null

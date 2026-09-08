@@ -1,0 +1,128 @@
+task_id: task0004
+baseline_failures:
+  - test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+final_failures:
+  - test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestSingleReviewerDispatchStatement.test_states_exactly_one_reviewer_dispatched_per_perspective
+      - tests.test_reviewer_roles_protocol.TestSingleReviewerDispatchStatement.test_states_harness_reviewer_as_main_review
+      - tests.test_reviewer_roles_protocol.TestSingleReviewerDispatchStatement.test_states_claude_reviewer_as_fallback_only_when_no_harness_entry
+      - tests.test_reviewer_roles_protocol.TestSingleReviewerDispatchStatement.test_states_the_two_are_mutually_exclusive
+      - tests.test_reviewer_roles_protocol.TestSingleReviewerDispatchStatement.test_three_harness_description_bullets_stay_verbatim
+      - tests.test_reviewer_roles_protocol.TestNoSecondOpinionFramingSurvives.test_no_forbidden_framing_phrase_present
+    red_confirmed: true
+    red_reason: >
+      Before the edit, review-protocol.md contained none of 'exactly one' /
+      'main review' / 'fallback' / 'no available harness entry' / 'never
+      dispatched together' (each assertIn failed: phrase not found), and
+      still contained the forbidden phrase 'cross-model reviewer' 3x in the
+      Skip Semantics section (assertNotIn failed: phrase found). Watched all
+      6 fail with these exact AssertionErrors before adding the dispatch-rule
+      paragraph and rewording the 3 Skip Semantics labels.
+  AC-2:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestFrozenInputFieldNames.test_every_documented_input_field_name_present
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_every_skip_reason_string_present_verbatim
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_retryable_set_statement_present
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_exactly_three_retryable_reasons_named
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_non_retryable_skip_reasons_statement_present
+      - tests.test_reviewer_roles_protocol.TestFrozenSeverityLevels.test_three_severity_levels_defined_verbatim
+      - tests.test_reviewer_roles_protocol.TestFrozenSectionsUnchanged.test_frozen_sections_hash_unchanged
+    red_confirmed: false
+    red_reason: >
+      Freeze invariant: every literal this AC protects (input field names,
+      skip_reason strings, the retryable-set statement, the three severity
+      levels, and the Inputs / Investigation Budget / Severity / Output
+      Schema / Read-only Constraint / Untrusted-Input sections, each frozen
+      by sha256 of its exact pre-edit bytes) was already present and
+      unchanged in review-protocol.md before any task0004 edit -- there is
+      no red state to observe for "must not change". These tests were run
+      immediately after AC-1's edit and confirmed still green, which is what
+      proves AC-1's edit did not regress AC-2; TestValidationDetectsRegressions
+      separately proves the section-hash/extraction helpers themselves are
+      capable of failing (run against deliberately mutated input inside
+      assertRaises).
+  AC-3:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestReviewOutputSchemaCategoryWidened.test_schema_parses_as_json
+      - tests.test_reviewer_roles_protocol.TestReviewOutputSchemaCategoryWidened.test_category_enum_contains_all_six_registry_perspectives
+      - tests.test_reviewer_roles_protocol.TestReviewOutputSchemaCategoryWidened.test_root_required_and_additional_properties_unchanged
+      - tests.test_reviewer_roles_protocol.TestReviewOutputSchemaCategoryWidened.test_finding_required_and_additional_properties_unchanged
+      - tests.test_reviewer_roles_protocol.TestReviewOutputSchemaCategoryWidened.test_severity_enum_unchanged
+      - tests.test_reviewer_roles_protocol.TestReviewOutputSchemaCategoryWidened.test_root_source_enum_unchanged
+    red_confirmed: true
+    red_reason: >
+      Before the edit, test_category_enum_contains_all_six_registry_perspectives
+      failed with "AC-3: category enum must include registry perspective
+      'license'" (license was absent from the enum). Watched it fail, then
+      added "license" to review-output-schema.json's category enum. The
+      other 5 tests in this AC assert unchanged members (required,
+      additionalProperties, severity enum, source enum) and were already
+      green pre-edit as freeze guards.
+  AC-4:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestReviewerAgentFallbackRoleStatement.test_description_states_fallback_only_dispatch_condition
+      - tests.test_reviewer_roles_protocol.TestReviewerAgentFallbackRoleStatement.test_body_states_fallback_only_dispatch_condition
+      - tests.test_reviewer_roles_protocol.TestReviewerAgentFallbackRoleStatement.test_frontmatter_fields_unchanged
+      - tests.test_reviewer_roles_protocol.TestReviewerAgentFallbackRoleStatement.test_protocol_following_steps_intact
+    red_confirmed: true
+    red_reason: >
+      Before the edit, both the description test and the body test failed
+      with "'fallback' not found" / "'no available harness entry' not
+      found" against agents/reviewer.md's original description and opening
+      body paragraph. Watched both fail, then added the fallback-only role
+      sentence to the frontmatter description and a new opening body
+      paragraph. Frontmatter-unchanged and Steps-0-3-intact were already
+      green pre-edit as freeze guards (verified unchanged after the edit via
+      sha256 of the unmodified Steps 0-3 block).
+  AC-5:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_description_states_primary_review_role
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_body_opening_sentence_states_primary_review_role
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_frontmatter_fields_unchanged
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_steps_including_scratchpad_discipline_section_verbatim
+    red_confirmed: true
+    red_reason: >
+      Before the edit, both the description test and the body test failed:
+      description test found "'main' not found in
+      '...クロスバリデーション用の json findings を返します...'"; body test found
+      "'main review' not found" against the original "You obtain an
+      independent second-model review..." opening sentence. Watched both
+      fail, then rewrote the description to lead with "この観点の MAIN レビュー
+      を Codex CLI 経由で実行します" (dropping the クロスバリデーション wording)
+      and the body's opening sentence to "You perform the **main review**
+      for exactly one perspective...". Frontmatter-unchanged and the
+      Steps-0-6-including-scratchpad-section test were already green
+      pre-edit as freeze guards (verified unchanged after the edit via
+      sha256 of the unmodified "## Step 0" ... EOF block, which contains the
+      scratchpad temp-file discipline section verbatim).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Meta-criterion: satisfied by tests/test_reviewer_roles_protocol.py's
+      own existence and structure (it asserts AC-1 through AC-5, including
+      AC-1's negative assertions via TestNoSecondOpinionFramingSurvives).
+      Not independently observable as its own red/green test -- coverage is
+      evidenced by the AC-1..AC-5 entries above and by the module being
+      collected and run under `python3 -m unittest discover -s tests`.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Build/command-exit criterion, not a unit test. `python3 -m unittest
+      discover -s tests` and `python3
+      em-workflow/scripts/check-plugin-invariants.py .` both ran before
+      (4a baseline) and after (4b) this task's implementation with the
+      exact same single failure in both runs
+      (test_checker_exits_cleanly_against_the_repository_root /
+      agent_dispatch_parity, "dispatch of missing definition:
+      review-evaluator") -- inherited from sibling task0001/0002's
+      review-evaluator agent, which does not exist in this isolated
+      task0004 worktree and is not one of this task's files. No exit-0
+      change was possible to observe pre/post for this task's own edits
+      because that failure is orthogonal to them.
+      `tests/test_codex_reviewer_temp_file_isolation.py` was explicitly
+      re-run after implementation: 21/21 passed.

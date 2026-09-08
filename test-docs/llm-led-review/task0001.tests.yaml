@@ -1,0 +1,145 @@
+task_id: task0001
+baseline_failures:
+  - test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+final_failures:
+  - test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests/test_review_evaluation_contract.py::TestContractDocExists::test_file_exists
+      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_orchestrator_supplied_path_is_preferred
+      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_missing_file_fails_closed_with_no_silent_fallback
+      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_plugin_root_fallback
+      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_trusted_plugin_install_locations_fallback
+      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_explicitly_prohibits_resolving_from_cwd
+      - tests/test_review_evaluation_contract.py::TestFailClosedResolution::test_states_same_order_reviewers_resolve_protocol_path
+    red_confirmed: true
+    red_reason: >
+      Directly observed: ran `python3 -m unittest tests.test_review_evaluation_contract -v`
+      before em-workflow/references/review-evaluation-contract.md existed.
+      test_file_exists failed with "AssertionError: False is not true :
+      expected .../review-evaluation-contract.md to exist"; every
+      TestFailClosedResolution test errored at setUpClass with
+      "FileNotFoundError: [Errno 2] No such file or directory:
+      .../review-evaluation-contract.md" (the document did not exist yet).
+      All went green after the document was written.
+  AC-2:
+    tests:
+      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_documents_every_top_level_input_field
+      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_documents_perspectives_dispatched_entry_keys
+      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_documents_reviewer_outputs_entry_keys
+      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_marks_spec_path_as_conditional_on_spec_perspective
+      - tests/test_review_evaluation_contract.py::TestInputBlockFields::test_marks_lessons_as_optional
+    red_confirmed: true
+    red_reason: >
+      Same shared observation as AC-1: every TestInputBlockFields test
+      errored at setUpClass with FileNotFoundError against
+      review-evaluation-contract.md before the document existed (confirmed
+      in the same pre-implementation unittest run). Went green once the
+      Input Block section was written with every field named as an exact
+      backtick token.
+  AC-3:
+    tests:
+      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_documents_every_root_field
+      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_documents_every_finding_field
+      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_documents_recommended_action_closed_vocabulary
+      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_states_object_returned_alone_no_prose
+      - tests/test_review_evaluation_contract.py::TestOutputObjectFields::test_states_every_field_always_present_unknown_line_null
+    red_confirmed: true
+    red_reason: >
+      Same shared observation as AC-1: every TestOutputObjectFields test
+      errored at setUpClass with FileNotFoundError before the document
+      existed. Went green once the Output Object section was written with
+      every root/finding field and the closed recommended_action set.
+  AC-4:
+    tests:
+      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_stable_id_orchestrator_owned_and_recomputed
+      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_sources_derived_from_source_run_ids
+      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_unmatched_category_dropped_never_relabelled
+      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_evaluation_is_advisory
+      - tests/test_review_evaluation_contract.py::TestOwnershipBoundary::test_states_recommended_action_never_overrides_gates
+    red_confirmed: true
+    red_reason: >
+      Same shared observation as AC-1: every TestOwnershipBoundary test
+      errored at setUpClass with FileNotFoundError before the document
+      existed. After the first draft of the Ownership Boundary section was
+      written, test_states_sources_derived_from_source_run_ids additionally
+      failed on its own ("'sources' not found in ...") because the test
+      anchored on the first (finding-field-list) occurrence of
+      `source_run_ids` rather than the ownership-boundary rule's own
+      occurrence -- fixed by searching every occurrence via re.finditer
+      before declaring the assertion satisfied.
+  AC-5:
+    tests:
+      - tests/test_review_evaluation_contract.py::TestUntrustedInputHandling::test_states_reviewer_output_is_untrusted_data
+      - tests/test_review_evaluation_contract.py::TestUntrustedInputHandling::test_states_injection_becomes_finding_under_dispatched_perspective
+      - tests/test_review_evaluation_contract.py::TestUntrustedInputHandling::test_states_evaluators_own_output_is_untrusted_to_orchestrator
+    red_confirmed: true
+    red_reason: >
+      Same shared observation as AC-1: every TestUntrustedInputHandling test
+      errored at setUpClass with FileNotFoundError before the document
+      existed. Went green once the Untrusted-Input Handling section was
+      written.
+  AC-6:
+    tests:
+      - tests/test_review_evaluation_contract.py::TestReadOnlyConstraintAndDegradation::test_states_no_write_commit_branch_switch_formatter
+      - tests/test_review_evaluation_contract.py::TestReadOnlyConstraintAndDegradation::test_states_ten_file_verification_budget
+      - tests/test_review_evaluation_contract.py::TestReadOnlyConstraintAndDegradation::test_states_unusable_evaluation_degrades_round_not_abort
+      - tests/test_review_evaluation_contract.py::TestReadOnlyConstraintAndDegradation::test_does_not_define_the_orchestrator_procedure_itself
+    red_confirmed: true
+    red_reason: >
+      Same shared observation as AC-1: every
+      TestReadOnlyConstraintAndDegradation test errored at setUpClass with
+      FileNotFoundError before the document existed. After the first draft
+      of the Degradation section was written,
+      test_does_not_define_the_orchestrator_procedure_itself additionally
+      failed on its own ("'does not define' not found in ...") because the
+      source line-wrapped between "does" and "not define" and the assertion
+      compared against the raw (non-whitespace-normalized) text -- fixed by
+      collapsing whitespace before the phrase check, matching the
+      established pattern in tests/test_worker_contract_docs.py.
+  AC-7:
+    tests:
+      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_input_block_cell_contains_every_top_level_field
+      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_input_block_cell_contains_perspectives_dispatched_entry_fields
+      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_input_block_cell_contains_reviewer_outputs_entry_fields
+      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_output_object_cell_contains_every_root_field
+      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_output_object_cell_contains_every_finding_field
+      - tests/test_review_evaluation_contract.py::TestImplementationFixturesSelfCheck::test_recommended_action_cell_contains_every_vocabulary_value
+      - tests/test_review_evaluation_contract.py::TestDoesNotRestateReviewerOutputSchema::test_does_not_use_reviewer_only_root_field_skipped
+      - tests/test_review_evaluation_contract.py::TestDoesNotRestateReviewerOutputSchema::test_does_not_use_reviewer_only_finding_field_line_end
+      - tests/test_review_evaluation_contract.py::TestDoesNotRestateReviewerOutputSchema::test_does_not_restate_retryable_skip_vocabulary
+      - tests/test_review_evaluation_contract.py::TestDoesNotRestateReviewerOutputSchema::test_does_not_restate_confidence_correction_arithmetic
+    red_confirmed: false
+    red_reason: >
+      TestImplementationFixturesSelfCheck parses IMPLEMENTATION.md (which
+      already existed, unmodified by this task) and was green from the
+      moment the test module was written -- it has nothing to go red
+      against, by design (it is the non-vacuity guard proving the hardcoded
+      field-name tuples genuinely trace to IMPLEMENTATION.md's own Shared
+      Components rows). TestDoesNotRestateReviewerOutputSchema's negative
+      assertions ("this token must be absent") were vacuously true before
+      the document existed (an absent file contains no forbidden tokens
+      either) and remained true after -- there is no meaningful red state to
+      observe for an absence check whose target section never used the
+      forbidden vocabulary in either draft.
+
+      Coverage of "both `python3 -m unittest discover -s tests` and
+      `python3 em-workflow/scripts/check-plugin-invariants.py .` exit 0 in
+      this task's worktree" (the other half of AC-7): NEITHER exits 0 in
+      this worktree, but not because of anything this task added.
+      check-plugin-invariants.py fails identically before and after this
+      task's changes with exactly one offender --
+      "[FAIL] agent_dispatch_parity - dispatch of missing definition:
+      review-evaluator" -- because references/review-phase.md (owned by
+      task0002, not yet merged into this integration branch as observed
+      from this worktree) already dispatches
+      `subagent_type="em-workflow:review-evaluator"` while
+      agents/review-evaluator.md (also task0002's, per IMPLEMENTATION.md's
+      Shared Components "Evaluator agent definition" row) does not exist
+      yet. Creating that agent file is explicitly Out of Scope for task0001.
+      This is the sole entry in baseline_failures/final_failures above,
+      unchanged by this task's commits; `python3 -m unittest discover -s
+      tests` fails for the identical reason (that CLI-wrapping test invokes
+      the same checker as a subprocess). This task's own 39 new tests in
+      tests/test_review_evaluation_contract.py are unaffected and all pass.

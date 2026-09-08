@@ -1,0 +1,72 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No automated test asserts README table-row content (task0002.md Test
+      Notes: "No new test module is added"). Verified by direct diff
+      review: exactly one new row was added to the bundled-hooks table,
+      naming `hooks/failed-run-cleanup-guard.py`, PreToolUse(Bash), and
+      stating both the deny condition (worktree removal / integration
+      branch deletion / pull-request creation for a run whose workflow.yaml
+      contains a failed step) and the unresolvable-target /
+      unattended-run-demotion behaviour, in the same column shape as the
+      existing rows.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No automated test asserts README prose content for the guard-order
+      sentence. Verified by direct diff review: the sentence now reads
+      "gitleaks -> kill-guard -> bash_guard -> failed-run-cleanup-guard ->
+      destructive-guard" (5, was 4) and keeps its existing explanation that
+      destructive-guard.py must run last because it returns a blanket allow.
+  AC-3:
+    tests:
+      - tests.test_plugin_version_parity.TestPluginManifestVersion.test_manifest_has_a_version_key
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_plugin_version_parity.TestEmReviewEntryHasNoVersionKey.test_em_review_entry_has_no_version_key
+    red_confirmed: false
+    red_reason: >-
+      test_plugin_version_parity.py was written for an earlier task
+      (develop-once-option/task0004) against a fixed baseline of 0.1.50; by
+      the time this task started the registries already read 0.1.57 -- past
+      that baseline -- so these assertions were already green before this
+      task's edit and stayed green after the 0.1.57 -> 0.1.58 bump. No red
+      was observed. The "no other plugin's entry touched" half of AC-3 is
+      not covered by this test at all (it only asserts the em-review entry
+      still carries no version key, unchanged either way); confirmed
+      manually via `git diff .claude-plugin/marketplace.json`, which shows
+      only the em-workflow entry's version line changed.
+  AC-4:
+    tests:
+      - tests.test_plugin_version_parity.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: false
+    red_reason: >-
+      Same pre-existing-green situation as AC-3: the recorded baseline
+      (0.1.50) predates this task by several patch bumps, so both the
+      cross-registry agreement and the past-baseline assertions were
+      already true at 0.1.57 before this task touched anything, and remain
+      true at 0.1.58. Confirmed passing before AND after via `python3 -m
+      unittest discover -s tests` (2830/2830 both times, run from inside
+      the task0002 worktree).
+  AC-5:
+    tests:
+      - tests.test_guardrail_hooks_migration.TestReadmeDocumentsTheClassifierSideEffect.test_readme_names_the_opt_out_flag
+      - tests.test_guardrail_hooks_migration.TestReadmeDocumentsTheClassifierSideEffect.test_readme_states_the_classifier_is_bypassed
+      - tests.test_guardrail_hooks_migration.TestReadmeDocumentsTheClassifierSideEffect.test_readme_names_every_bundled_guard_hook
+    red_confirmed: false
+    red_reason: >-
+      These assertions check for substrings (ALLOW_NON_DESTRUCTIVE, the
+      word "classifier", and each of the four pre-existing
+      MIGRATED_HOOK_FILES names) that this task's edits neither remove nor
+      rename -- true before the edit, true after. The two README edits (one
+      new table row, one rewritten order sentence) are additive/adjacent to
+      the checked text, not a replacement of it. Confirmed passing before
+      and after via `python3 -m unittest discover -s tests`.

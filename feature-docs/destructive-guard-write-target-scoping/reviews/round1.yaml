@@ -1,0 +1,209 @@
+round: 1
+executed_at: "2026-08-30T18:44:09+09:00"
+scope:
+  review_mode: diff
+  base_commit: ca414bc26fa2e0aab433190409b5a83aab9cc6b6
+  head_commit: 7082303b01a725e71a14fa013596329afdd64493
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-write-target-scoping/task0001.tests.yaml
+    - test-docs/destructive-guard-write-target-scoping/task0002.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {perspective: comprehensive, source: claude, status: completed}
+  - {perspective: security, source: claude, status: completed}
+  - {perspective: security, source: codex, status: completed}
+  - {perspective: architecture, source: claude, status: completed}
+  - {perspective: architecture, source: litellm, model: vertex-glm-5, status: completed}
+  - {perspective: spec, source: claude, status: completed}
+  - {perspective: spec, source: litellm, model: vertex-deepseek-v3.2, status: completed}
+findings:
+  - stable_id: f11305d4611accd7
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 571
+    title: "mv の source 側が write-target から漏れ、保護パスの持ち出し・削除が allow になる"
+    description: |
+      write_targets() は cp/mv/ln をまとめて「最後の非フラグ引数だけが宛先」として扱うが、
+      mv の source は読み取りではなく unlink される。保護対象からの mv は破壊的な書き込みなのに
+      write-target 集合に入らない。旧実装との実測差分:
+
+        ask  -> allow | mv /home/sakura/.claude/settings.json /tmp/x
+        ask  -> allow | mv ~/.claude/hooks/destructive-guard.py /tmp/x
+        deny -> allow | mv ~/.claude/projects/p/a.jsonl /tmp/b
+
+      3 件目は本フック唯一の hard deny（transcript-write）が allow に後退している。
+      ALLOW_NON_DESTRUCTIVE により明示 allow は auto mode classifier と
+      settings.json の permissions.deny の両方をスキップさせるため、
+      rm を mv に置き換えるだけでガードを迂回できる。
+
+      同じ site に `-t` / `--target-directory=` 形式の宛先取りこぼしも重なる
+      （cp -t ~/.claude/hooks/ payload.py、mv -t ~/.claude/hooks/ payload.py、
+      cp payload.py --target-directory=/home/sakura/.claude/hooks/ がいずれも旧 ask -> 新 allow）。
+      567 行の `not a.startswith("-")` フィルタでフラグ値が落ちるため恒久的に不可視。
+
+      さらに destructive-guard-cases.json の
+      ["allow", "mv 複数ソース + 宛先のみ判定", "mv ~/.claude/hooks/x.py extra.txt /tmp/y"]
+      がこの検知漏れを期待値として固定しており、
+      .claude/rules/hook-tests.md の「誤爆を潰す修正が検知力を削っていないことを示す」
+      というスイートの役割と齟齬がある。
+    suggestion: |
+      mv を cp/ln から切り離し、全非フラグ引数（source + destination）を write-target に入れる。
+      あわせて cp/mv/ln/install の `-t <DIR>` の値トークンと `--target-directory=<DIR>` の右辺を
+      targets に加える。destructive-guard-cases.json の "mv 複数ソース + 宛先のみ判定" を
+      ask 期待へ改め、`mv ~/.claude/projects/p/a.jsonl /tmp/b` を deny ケース、
+      `cp -t ~/.claude/hooks/ x.py` を ask ケースとして追加する。
+      write_targets() の docstring も mv が source も消す旨に書き換える。
+    sources: [claude:security, codex:security]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: "R4 loop 1: same_site に architecture / comprehensive の非等価な diff 処方が並んだため conflict グループと判定。batch モードのため review.auto-fix-conflict の既定に従い site 全体を skip（機械的に解決不能）"
+  - stable_id: 4eb3d5ac5355b1e5
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 534
+    title: "Quoted redirection operators can hide the real write target"
+    description: |
+      redirect_write_targets() は redirect 形をしたトークンをすべて本物のシェル演算子と仮定するが、
+      前段の shlex がクォート由来かどうかの情報を落としている。
+      `echo ">" > ~/.claude/settings.json` ではクォートされたリテラルと本物のリダイレクトが
+      どちらも `>` トークンになり、前者と後者がペアリングされて settings のパスが記録されない。
+      結果として allow が返り、実際には保護対象の settings が上書きされる。
+      旧実装のセグメント全文マッチはこのパスを見ていたため ask になっていた。
+    suggestion: |
+      クォート・エスケープの由来を保持できる形でリダイレクトを解析し、その構文情報から
+      write-target を導出する。クォート除去後のトークン値から演算子かどうかを推測しない。
+    sources: [codex:security]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: |
+      R4 loop 1 で needs-judgment（単独 prose 処方）と分類し、batch の既定
+      review.auto-fix-judgment に従って Apply as-is で review-editor に適用した。
+      スコープ検証（対象 1 ファイルのみ変更・新規 untracked 無し）は通過したが、
+      適用後に既存の回帰スイートが 43/44 に後退した
+      （`deny 本物: 改行区切りの rm` が allow へ。lex_segments の posix=False 前段で
+      改行トークンが shlex.split で空になり、セグメント分割が働かなくなったため）。
+      .claude/rules/hook-tests.md はこのスイートの半分の役割を「検知力を削っていないことの証明」と
+      定めており、検知後退を含む修正はコミットできない。BACKUP_DIR から復元し
+      （復元後ハッシュ ce938d95d9ab5d5477e1230632fef1a1539aa963、44/44 pass を確認）、
+      この stable_id を loop の候補から abort した。修正自体は必要なので rework に送る。
+  - stable_id: 2a1195baa7a2e0d1
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 571
+    title: "write_targets の宛先専用モデルが mv の破壊性を取りこぼし、保護契約が縮んでいる"
+    description: |
+      判定基盤がセグメント全文の正規表現照合から write_targets() の集合へ置き換わったが、
+      この抽象は cp/mv/ln について「宛先＝最後の非フラグ引数」だけを書き込みとみなす。
+      mv は移動元を消す破壊操作であり、宛先モデルではその面を表現できない。
+      結果としてモジュール docstring と SELF_CONFIG / TRANSCRIPT が守ろうとしている契約
+      （自己設定の変更は ask、transcript の改変は deny）が実装側で縮んでいる。
+
+      同じ site の第 2 面として、非フラグ引数のみを見る位置ベース抽出が
+      `-t DIR` / `--target-directory=DIR` のフラグ宛先を素通しする。
+      位置ベースの前提が破れる形はフラグ宛先だけとは限らないため、
+      この抽象がガードの唯一の入口になっている点が構造上の弱さになる。
+    suggestion: |
+      mv だけ宛先モデルから外し、全 non-flag 引数を write target に入れる（cp/ln は宛先のみで正しい）。
+      加えて cp/mv/ln/install の `-t <DIR>` と `--target-directory=<DIR>` を明示的に解釈するか、
+      位置ベースで宛先を確定できなかったセグメントではセグメント全文照合へ落とす保守的フォールバックを置く。
+    sources: [claude:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "R4 loop 1: conflict グループの一員として site ごと skip（batch: review.auto-fix-conflict）"
+  - stable_id: cdf2f05c1cba5971
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 545
+    title: "「どのコマンドがどこへ書くか」の知識が module 定数と関数内タプルに二分され、単一の登録先が無い"
+    description: |
+      このファイルはコマンド語の集合をすべて module レベル定数として置く方針で書かれている
+      （WRAPPERS, INPLACE_WRITERS, KILL_WORDS, SHELL_SINK, SAFE_DELETE）。
+      write_targets() はその方針から外れ、("cp","mv","ln") と ("rm","chmod","chown") を
+      関数本体にインラインで持ち込んだ。結果として書き込みコマンドの一覧が
+      INPLACE_WRITERS と関数ローカルの 2 タプルに分裂し、どちらに足すべきかがコードから読めない。
+      「引数のどれがパスか」という同じ問いも check_rm / check_permissions / check_git で
+      独立に答えられており、write_targets はその 4 つ目の実装になっている。
+    suggestion: |
+      コマンド語 -> write target 抽出規則を 1 か所の module レベル登録表に集約する
+      （例: WRITE_TARGET_RULES = {"cp": "last", "ln": "last", "mv": "all", ...}）。
+      非フラグ抽出も共通ヘルパー（non_flag_args）に寄せてパス抽出の実装を 1 つにする。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "severity medium のため R4 の候補ゲート（critical/high）に入らない"
+  - stable_id: 3e3993733fd77a92
+    severity: high
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 571
+    title: "mv のソース側が write-target から外れ、~/.claude 配下のフック持ち出しが ask から allow に後退した"
+    description: |
+      SPEC の NFR4「The fix must remove false positives without lowering detection」および
+      Security Considerations の Data Protection と矛盾する。
+      SPEC の FR2(c)「cp / mv / ln は宛先が最後の引数」という記述と、
+      NFR4 の「検知を下げない」という記述が mv について競合しており、
+      実装は前者に従った結果 `mv ~/.claude/hooks/destructive-guard.py /tmp/` が ask -> allow に後退している。
+      FR1-FR7 自体は実装・テストとも満たされ 44/44 パス、version 0.1.56 の 2 箇所一致も確認済み。
+    suggestion: |
+      SPEC の 2 つの記述のどちらを採るか決めて揃える。
+      (a) 実装を直す — mv のソース側も write-target に入れ、
+      destructive-guard-cases.json:44 の期待値を allow から ask に変える。
+      (b) 検知後退を意図的に受け入れるなら SPEC に「mv のソース側は判定しない」を明示の例外として書き、
+      NFR4 / Data Protection との関係を記述する。
+      現状のように SPEC が「検知を下げない」と言ったまま allow ケースだけが増えている状態は残さない。
+    sources: [claude:spec]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "category: spec は R4 の候補ゲートから除外される（仕様側の判断を要するため）"
+  - stable_id: 66fb7959516d7243
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 571
+    title: "mv のソース側が write-target から外れ、~/.claude 配下の移動が検知されなくなった"
+    description: |
+      旧実装（segment 全体マッチ）との実測差分:
+
+        mv ~/.claude/projects/a/b.jsonl /tmp/     OLD=deny(transcript-write) -> NEW=allow
+        mv ~/.claude/hooks/x.py /tmp/y            OLD=ask(self-modification) -> NEW=allow
+        mv ~/.claude/settings.json /tmp/bak       OLD=ask -> NEW=allow
+        mv ~/.claude/skills/foo /tmp/             OLD=ask -> NEW=allow
+
+      rm/chmod/chown は全非フラグ引数を target にしているので、この抜けは mv 固有。
+      同じ site に -t / --target-directory 形式の宛先取りこぼしが重なる
+      （cp -t、cp --target-directory=、install --target-directory= が旧 ask -> 新 allow）。
+      docstring の「フラグ自体は `-` 始まりなので同じ非フラグフィルタで除外される」という記述は
+      `sed -i.bak` のような値付きフラグだけを想定しており、
+      フラグの値が書き込み先そのものになるケースを取りこぼしている。
+    suggestion: |
+      mv を cp/ln から分離して全非フラグ引数を write-target に入れる。
+      cp / ln / mv / install について `-t VALUE` と `--target-directory=VALUE` の値も回収する。
+      回帰ケースとして `mv ~/.claude/projects/a/b.jsonl /tmp/` を deny 期待、
+      `cp -t ~/.claude/hooks/ evil.py` と `cp --target-directory=~/.claude/hooks/ evil.py` を
+      ask 期待で destructive-guard-cases.json に追加する。
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "R4 loop 1: conflict グループの一員として site ごと skip（batch: review.auto-fix-conflict）"
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  aborted_stable_ids:
+    - f11305d4611accd7
+    - 2a1195baa7a2e0d1
+    - 66fb7959516d7243
+    - 4eb3d5ac5355b1e5
+residual_critical_high: 5
+rework_required: true

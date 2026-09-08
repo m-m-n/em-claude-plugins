@@ -30,6 +30,11 @@ question it needs answered is expressed as a `question_packet`
 (`references/question-packet-schema.md`) in its result, for the orchestrator
 to resolve.
 
+An `assumptions[].reversible` entry is `false` only for an assumption
+about an operation that cannot be undone once applied; it is `true` for a
+preserved constraint, an invariant, or a fact pinned by an existing test
+(`references/question-packet-schema.md`).
+
 ## Additional input fields
 
 Beyond the common envelope input, requirements-analyst receives:

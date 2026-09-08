@@ -1,0 +1,23 @@
+feature: assumptions-reversible-criteria
+collected_at: "2026-09-07T17:32:00+09:00"
+session_ids: ["01a07ad7-6393-73d9-82f7-1ddc8c55bff6.jsonl"]
+signals:
+  review_critical_high:
+    - stable_id: 97745c0d0a62cafa
+      category: comprehensive
+      file: tests/test_assumptions_reversible_criteria_version_bump.py
+      title: "Literal version pin makes the new test module fail on the next em-workflow bump"
+      resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: security
+      reason: "diff が fail-closed abort ゲート（irreversibility arm）の判定基準そのものを書き換えるため、無人実行のガードレール強度に対する観点を追加する"
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - "round1 の comprehensive#0 で Codex CLI ハーネスが degenerate な skip_reason を返し、litellm/vertex-glm-5.2 フォールバックでも models-manager refresh error が 3 回続いた。同ラウンドの security#0 は codex で成功しているため全面障害ではない。comprehensive 観点は Claude fallback 1 本で完了した。"
+  - "comprehensive#loop1 の再レビューは chain head（codex）を再走査せず Claude reviewer へ直接ディスパッチした。到達状態は chain walk の要求と一致するが、既知のハーネス障害を再導出しない目的の逸脱として記録されている。"
+  - "新規テストモジュールでプラグイン version をリテラル固定した（high finding）。既存 13 モジュールはすべて major.minor 一致 / patch 増加のマッチャ経由であり、リテラル pin は次の bump で必ず落ちる。version bump テストを書く際の既定形として横展開の余地がある。"
+  - "review round1 の spec finding 17011cf0d79a8023（6 つの worker doc が criterion 全文を再掲しており SSOT を引用していない）が unresolved のまま残っている。severity medium のため走行は完了したが、SSOT 重複の是非は別途判断の余地がある。"

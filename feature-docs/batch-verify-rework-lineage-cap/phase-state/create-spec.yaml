@@ -1,0 +1,93 @@
+schema_version: 1
+feature: batch-verify-rework-lineage-cap
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 3ae97d78afbb66fefd2346adec7b963ecea691ec
+last_input_digest: sha256:c2b94db46c8d3b23c70f5890dc7b0ebe52908f24de4621619e7b79bb171b025c
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-09-06T18:08:00+09:00"
+    questions:
+      - question_id: edge.failed-verify-vs-stop-conditions
+        status: answered
+      - question_id: completion.terminal-line-for-failed-verify
+        status: answered
+      - question_id: requirement.follow-up-drafts-population
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  edge.failed-verify-vs-stop-conditions:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T18:12:00+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: "TBD"
+    resolution_note: >-
+      gate create-spec.requirement-clarification のポリシーは
+      action: codex_consultation / unresolved: record_tbd。Codex CLI は
+      availability probe を通過したが実行時に usage limit で応答不能
+      （retry after 19:10 JST）。Codex consultation procedure step 1 の
+      unavailable 経路により on_unanswered (use_batch_policy) へ落ち、
+      ポリシーの unresolved: record_tbd を適用した。
+  completion.terminal-line-for-failed-verify:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T18:12:00+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: "TBD"
+    resolution_note: >-
+      同上（codex_consultation 不能 -> record_tbd）。
+  requirement.follow-up-drafts-population:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T18:12:00+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: "TBD"
+    resolution_note: >-
+      同上（codex_consultation 不能 -> record_tbd）。
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-06T18:12:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "design ステップは skip（requirements-analyst の推奨を採用）"
+    resolution_note: >-
+      references/batch-policies.yaml の create-spec.design-step:
+      option_id decide_autonomously を適用。
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: sha256:9c340fe5f9198f3c26350e19db2df28b6d85f02361c48b0bfefbede81bdaf4bb
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:9c340fe5f9198f3c26350e19db2df28b6d85f02361c48b0bfefbede81bdaf4bb
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:c2b94db46c8d3b23c70f5890dc7b0ebe52908f24de4621619e7b79bb171b025c
+    output_digest: null
+artifacts:
+  - path: feature-docs/batch-verify-rework-lineage-cap/REQUIREMENTS.md
+    sha256: sha256:afb1895e625c0ed7da14a19205d69c36e56c9f4e92826fb242911cb8ad5f4e19
+    produced_by: create-spec-run-0003
+  - path: feature-docs/batch-verify-rework-lineage-cap/SPEC.md
+    sha256: sha256:1b6b1d22c75d160829c8675a5e403d7baadd4bb14cd944ae8a1a8f4d08ded28c
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

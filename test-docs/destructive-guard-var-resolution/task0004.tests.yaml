@@ -1,0 +1,212 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - "本物: find の括弧グループ化でも delete 検知"
+      - "本物: 引用符付き括弧の force push も検知"
+      - "変数解決: 裸のコマンド置換を削除対象にしても allow"
+      - "変数解決: コマンド置換の後にパスが続く削除は deny のまま"
+      - "変数解決: 代入後のクォート済み括弧はスコープを開かない"
+    red_confirmed: true
+    red_reason: >-
+      pre-task0004 code: find/git-push cases gave allow (paren scope
+      leaked past a quoted/escaped parenthesis, per r2-paren-provenance);
+      $(mktemp -d) alone gave ask/rm-unresolvable quoting the internal
+      DYNAMIC-SUBSTITUTION placeholder (r2-substitution-flattening); the
+      quoted-paren-then-delete case gave ask instead of allow. Verified via
+      run-destructive-guard.py against tmp/pre-task0004-destructive-guard.py
+      (git show HEAD of this branch before any task0004 edit): 5/5 red.
+      Rule identifiers confirmed by direct invocation: find-delete,
+      git-force-push (both match base_commit 1fdb27f exactly).
+  AC-2:
+    tests:
+      - "変数解決: スクラッチルート自身(/tmp/)の削除は allow"
+      - "変数解決: スクラッチルート自身(tmp/)の削除は allow"
+      - "変数解決: スクラッチルート自身(.cache/)の削除は allow"
+      - "変数解決: スクラッチルート自身(/var/tmp/)の削除は allow"
+      - "変数解決: スクラッチ名で始まるビルド出力(build-debug)は allow"
+      - "変数解決: スクラッチ名で始まるビルド出力(dist-ssr)は allow"
+      - "変数解決: スクラッチ名で始まるビルド出力(target-old)は allow"
+      - "変数解決: スクラッチ名で始まるビルド出力(coverage.old)は allow"
+      - "変数解決: スクラッチ名で始まるビルド出力(build-artifacts)は allow"
+      - "変数解決: スクラッチ名で始まるビルド出力(dist-newstyle)は allow"
+      - "変数解決: スクラッチ名で始まるビルド出力(coverage-old)は allow"
+      - "変数解決: スクラッチ名で始まるビルド出力(node_modules_bak)は allow"
+      - "変数解決: 解決済み値のディレクトリ形もスクラッチ領域として許可"
+    red_confirmed: true
+    red_reason: >-
+      pre-task0004 code applied the round-1 component-boundary containment
+      test (is_safe_delete) to RAW/unsubstituted text too, so trailing-slash
+      scratch roots and bare-name-prefixed build directories all became
+      deny/rm-recursive (r2-trailing-slash-scratch, r2-literal-verdict-drift,
+      r2-bare-name-boundary); the resolved-directory-form case also denied
+      because normpath drops the trailing slash before the boundary test.
+      13/13 red against tmp/pre-task0004-destructive-guard.py.
+  AC-3:
+    tests:
+      - "変数解決: 未展開参照+親参照での脱出はaskのまま(参照形)"
+      - "変数解決: 未展開参照+親参照での脱出はaskのまま(グロブ形)"
+      - "変数解決: 未展開参照+親参照での脱出はaskのまま(チルダ形)"
+    red_confirmed: true
+    red_reason: >-
+      pre-task0004 code ran normalize_candidate() (lexical .. collapse)
+      before the DYNAMIC gate, so enough trailing ../ segments cancelled the
+      unexpanded/glob/tilde component and the target landed inside the
+      scratch area lexically, never reaching the ask gate (allow instead of
+      ask; r2-normalize-before-gate). 3/3 red. Rule identifier confirmed by
+      direct invocation on the reference spelling: rm-unresolvable.
+  AC-4:
+    tests:
+      - "変数解決: if/thenに融合した再代入はrm-rootに戻る(;)"
+      - "変数解決: if/thenに融合した再代入はrm-rootに戻る(改行)"
+      - "変数解決: 連鎖値による再代入は未解決のまま(;)"
+      - "変数解決: 連鎖値による再代入は未解決のまま(改行)"
+      - "変数解決: 自己参照の再代入は未解決のまま(;)"
+      - "変数解決: 自己参照の再代入は未解決のまま(改行)"
+      - "変数解決: unsetによる無効化は未解決のまま(;)"
+      - "変数解決: unsetによる無効化は未解決のまま(改行)"
+      - "変数解決: forループの変数束縛は未解決のまま(;)"
+      - "変数解決: forループの変数束縛は未解決のまま(改行)"
+      - "変数解決: getoptsの名前引数は未解決のまま(;)"
+      - "変数解決: getoptsの名前引数は未解決のまま(改行)"
+      - "変数解決: whileのread束縛は未解決のまま(;)"
+      - "変数解決: whileのread束縛は未解決のまま(改行)"
+    red_confirmed: true
+    red_reason: >-
+      pre-task0004 invalidated_names() only inspected toks[0], and
+      collect_assignments() declined to count a VAR_REF-valued reassignment
+      before its own continue — both let a second binding disappear
+      (r2-rebind-compound, r2-chained-rebind, r2-unset-for-read). All 14
+      listed tests (7 shapes × `;`/newline spelling) red against
+      tmp/pre-task0004-destructive-guard.py: 14/14 red (verified by
+      grep -c over the runner's FAIL lines for these labels). Rule
+      identifiers confirmed by
+      direct invocation: rm-root (if/then case), rm-unresolvable (unset
+      case), both matching base_commit 1fdb27f's verdict for the same
+      strings (deny/rm-root and ask/rm-unresolvable respectively — base has
+      no resolution feature at all, so it never applies the stale value
+      either).
+  false_positive_companions:
+    tests:
+      - "変数解決: readが無関係な名前を扱っても対象は解決される"
+      - "変数解決: 代入の後の条件文があっても解決される"
+    red_confirmed: false
+    red_reason: >-
+      Not a fix — a regression guard for item E's widened invalidation.
+      Both already gave the same allow verdict on
+      tmp/pre-task0004-destructive-guard.py (0/2 red): the widened per-token
+      scan only recognises "read"/conditional-separator shapes that
+      genuinely reference/rebind the tracked name, so an unrelated read
+      target or a conditional command after an already-applied assignment
+      never touches it. Kept in the case list so a future narrowing of item
+      E cannot silently reintroduce the false positive.
+  AC-5:
+    tests:
+      - "変数解決: コマンド置換経由の削除の理由にセンチネルが出ない(検証用allow)"
+    red_confirmed: true
+    red_reason: >-
+      pre-task0004 code's reason string for `rm -rf $(cat list)` quoted the
+      literal placeholder `${DYNAMIC-SUBSTITUTION}` (a token the user never
+      wrote), also flipping the verdict itself to ask/rm-unresolvable
+      instead of base's allow. 1/1 red against
+      tmp/pre-task0004-destructive-guard.py. Directly invoked
+      `rm -rf $(cat list)/subdir` (a deny path, to exercise reason text)
+      after the fix: reason quotes `/subdir` only, no
+      "DYNAMIC-SUBSTITUTION" substring present, matching base_commit
+      1fdb27f's own reason for the same string exactly.
+  AC-6:
+    tests:
+      - "変数解決: 上限を超える解決値は未解決のまま(fail-closed)"
+    red_confirmed: true
+    red_reason: >-
+      pre-task0004 code had no length ceiling: a 5000-char resolved value
+      substituted cleanly and matched SAFE_DELETE's `/tmp/` prefix, giving
+      allow instead of the pre-resolution ask. 1/1 red against
+      tmp/pre-task0004-destructive-guard.py.
+    measurement:
+      description: >-
+        AC-6's own timing requirement, not expressible as a verdict case:
+        a large value (V bytes) referenced 40 times in one `rm -rf`
+        argument list, measured on this machine in one run via
+        subprocess wall-clock around both the oracle (base_commit
+        1fdb27f) and the current hook.
+      results:
+        - value_size: 44KB
+          command_bytes: 45186
+          base_seconds: 0.0462
+          current_seconds: 0.0761
+          ratio: 1.65
+        - value_size: 88KB
+          command_bytes: 90242
+          base_seconds: 0.0993
+          current_seconds: 0.1666
+          ratio: 1.68
+      verdict: >-
+        Both ratios are under the AC's 2x bound and both current
+        measurements are under 1 second, nowhere near the hook's 10s
+        PreToolUse timeout.
+  AC-7:
+    tests:
+      - "変数解決: 解決対象外チェックは解決済みテキストを消費しない"
+      - "変数解決: 使用より後の代入は未記録の文を挟んでも解決しない(;)"
+      - "変数解決: 使用より後の代入は未記録の文を挟んでも解決しない(改行)"
+    red_confirmed: false
+    red_reason: >-
+      All 3 were already correct on tmp/pre-task0004-destructive-guard.py
+      (0/3 red): FR3's check set was already narrow (rsync never received
+      `resolve` even before this task) and ordinal ordering (item A, from
+      task0003) already blocked a later assignment from resolving an
+      earlier use. This task's actual change here is architectural — the
+      ordinal now travels with the statement from statements() itself
+      instead of two independent enumerate() calls (r2-ordinal-implicit)
+      — with no observable verdict difference for these shapes; these
+      entries are regression guards for that refactor, not fixes.
+  AC-8:
+    tests:
+      - "変数解決: 報告された誤爆はallowのまま"
+    red_confirmed: false
+    red_reason: >-
+      Already allow on tmp/pre-task0004-destructive-guard.py (0/1 red) —
+      this is the ONE case in the round-2 orchestrator_spot_check table
+      marked intended:true (the reported false positive already fixed
+      before this task; task0004 must not move it). Kept as its own
+      expectation entry so a future change cannot silently regress it.
+      Suite-level AC-8 (byte-identical prior entries, both verification
+      commands exit 0, determinism) is covered by run-destructive-guard.py
+      (151/151, run twice with identical output) and
+      `python3 -m unittest discover -s tests` (2830/2830), not by an
+      individual test name.
+orchestrator_spot_check_parity:
+  description: >-
+    The round-2 orchestrator_spot_check table, re-run against base_commit
+    1fdb27fe51de6d20e9812027d3aee603cb584173 (tmp/oracle-destructive-guard.py,
+    extracted via `git show`) and the current hook, via
+    tmp/compare.py in this worktree.
+  results:
+    - {command: "rm -rf /tmp/", base: allow, current: allow, matches_base: true}
+    - {command: "rm -rf tmp/", base: allow, current: allow, matches_base: true}
+    - {command: "rm -rf build-debug", base: allow, current: allow, matches_base: true}
+    - {command: "rm -rf $(mktemp -d)", base: allow, current: allow, matches_base: true}
+    - {command: "find /home/sakura \\( -name '*.log' \\) -delete", base: "deny/find-delete", current: "deny/find-delete", matches_base: true}
+    - {command: 'git push "(" --force origin main', base: "deny/git-force-push", current: "deny/git-force-push", matches_base: true}
+    - {command: "HOME=/tmp/x; if true; then HOME=/home/sakura; fi; rm -rf $HOME", base: "deny/rm-root", current: "deny/rm-root", matches_base: true}
+    - {command: "D=/tmp/scratch; D=$HOME/project; rm -rf $D", base: "ask/rm-unresolvable", current: "ask/rm-unresolvable", matches_base: true}
+    - {command: "rm -rf /home/sakura/$DIR/../../../tmp/y", base: "ask/rm-unresolvable", current: "ask/rm-unresolvable", matches_base: true}
+    - {command: 'D=/tmp/claude-1000/xyz/scratchpad/backup; rm -rf "$D"', base: "ask/rm-unresolvable", current: allow, matches_base: false, intended: true, note: "the one case round2 marked intended:true — resolution correctly resolves D into a scratch path base cannot see at all, since base has no resolution feature"}
+unconfirmed_reds: []
+notes: >-
+  All 9 unintended round-2 regressions (base vs round-2-head mismatches
+  flagged intended:false in the review) now match base_commit exactly.
+  The 10th (D=/tmp/claude-1000/...) is the one case round2 marked
+  intended:true and stays allow, matching the resolution feature's own
+  purpose. Full case-shape ledger (43 new entries beyond the two suites'
+  verdict comparisons) is in
+  em-workflow/hooks/tests/destructive-guard-cases.json, appended after the
+  pre-existing 107 (verified byte-identical prefix via
+  `git show HEAD:...cases.json` diff). Both verification commands green:
+  run-destructive-guard.py 151/151 (run twice, byte-identical output —
+  NFR3), `python3 -m unittest discover -s tests` 2830/2830 (unchanged from
+  baseline). tmp/ (oracle copy, compare script, measurement scripts) is
+  gitignored and not committed.

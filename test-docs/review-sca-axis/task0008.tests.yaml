@@ -1,0 +1,103 @@
+task_id: task0008
+# Refreshed after a merge conflict: task0007 and task0009 merged into the
+# parent ahead of this task, so the parent-side-adoption protocol adopted
+# task0009's scan-dependencies.py wholesale (git checkout --theirs) before
+# this task's own scan-job-construction and pip-normalizer changes were
+# re-applied on top. baseline_failures below is the suite run RIGHT AFTER
+# that adoption, before re-applying this task's own implementation -- it is
+# dominated by this task's OWN acceptance tests (already committed, since
+# they didn't conflict) failing because the implementation they exercise
+# had just been reverted to the parent's version. final_failures is the
+# suite run after re-implementing this task's changes on top.
+baseline_failures:
+  - test_sca_scan_execution.TestPartialCoverageAcrossTwoEcosystems.test_both_completing_yields_skipped_false
+  - test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_cargo_job_argv0_is_the_absolute_standalone_binary_path
+  - test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_constructing_a_job_launches_nothing
+  - test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_every_job_argv0_is_an_absolute_path
+  - test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_go_job_argv_unaffected_by_this_task
+  - test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_job_carries_ecosystem_manifest_cwd_and_env
+  - test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_npm_job_argv_unaffected_by_this_task
+  - test_sca_scan_invocation.TestConfigurationIsolationIgnoresProjectFiles.test_child_env_never_reads_a_file_inside_the_project
+  - test_sca_scan_invocation.TestConfigurationIsolationIgnoresProjectFiles.test_hostile_cargo_alias_does_not_change_the_job
+  - test_sca_scan_invocation.TestConfigurationIsolationIgnoresProjectFiles.test_hostile_npmrc_registry_line_does_not_change_the_job
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_changed_lockfile_audits_its_own_directory_not_pyproject_via_r
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_nested_requirements_file_path_is_preserved_verbatim
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_at_project_root_audits_the_current_directory
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_in_a_subdirectory_audits_that_directory
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_requirements_file_is_itself_the_audited_target
+  - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_target_is_never_absent_never_the_ambient_environment
+  - test_sca_scan_invocation.TestRegistryAndAllowlistAgree.test_every_registry_executable_is_allowlisted
+  - test_sca_scan_invocation.TestUnresolvableBinaryYieldsSkipNoJob.test_missing_cargo_audit_yields_skip_reason_and_no_job
+  - test_sca_scan_invocation.TestUnresolvableBinaryYieldsSkipNoJob.test_no_job_is_built_for_the_ecosystem_with_no_resolvable_binary
+  - test_sca_scan_invocation.TestUnresolvableBinaryYieldsSkipNoJob.test_present_binary_yields_exactly_one_job_with_absolute_path
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_cargo_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_pip_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_direct_advisory_with_determinable_severity_reaches_findings
+  - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_directness_is_read_from_the_manifest_not_the_tool_payload
+  - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_normalize_pip_returns_findings_and_skip_info_tuple_directly
+  - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_pyproject_toml_pep621_dependencies_resolve_direct_names
+  - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_undetermined_severity_advisory_is_not_treated_as_below_threshold
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_requirements_file_is_itself_the_audited_target
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_nested_requirements_file_path_is_preserved_verbatim
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_at_project_root_audits_the_current_directory
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_in_a_subdirectory_audits_that_directory
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_changed_lockfile_audits_its_own_directory_not_pyproject_via_r
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_target_is_never_absent_never_the_ambient_environment
+      - test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact
+    red_confirmed: true
+    red_reason: "AttributeError: module 'scan_dependencies_invocation' has no attribute 'build_scan_job' (function did not exist before this task's implementation)"
+  AC-2:
+    tests:
+      - test_sca_scan_invocation.TestRegistryAndAllowlistAgree.test_every_registry_executable_is_allowlisted
+      - test_sca_scan_invocation.TestRegistryAndAllowlistAgree.test_cargo_names_the_standalone_binary_not_the_cargo_front_end
+      - test_sca_scan_invocation.TestRegistryAndAllowlistAgree.test_no_registered_ecosystem_names_cargo_itself_as_executable
+      - test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_cargo_job_argv0_is_the_absolute_standalone_binary_path
+      - test_sca_scan_invocation.TestBuildScanJobArgumentVectors.test_every_job_argv0_is_an_absolute_path
+      - test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_executable_per_ecosystem
+      - test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args
+    red_confirmed: true
+    red_reason: "test_cargo_names_the_standalone_binary_not_the_cargo_front_end / test_no_registered_ecosystem_names_cargo_itself_as_executable: AssertionError 'cargo' == 'cargo' (registry still named the `cargo` front end as executable); test_executable_per_ecosystem: AssertionError 'cargo' != 'cargo-audit'; test_command_assembled_from_registry_tool_and_args: AssertionError ['cargo','audit','--json'] != ['cargo-audit','audit','--json']; the build_scan_job-based tests errored with AttributeError before the function existed"
+  AC-3:
+    tests:
+      - test_sca_scan_invocation.TestUnresolvableBinaryYieldsSkipNoJob.test_missing_cargo_audit_yields_skip_reason_and_no_job
+      - test_sca_scan_invocation.TestUnresolvableBinaryYieldsSkipNoJob.test_present_binary_yields_exactly_one_job_with_absolute_path
+      - test_sca_scan_invocation.TestUnresolvableBinaryYieldsSkipNoJob.test_no_job_is_built_for_the_ecosystem_with_no_resolvable_binary
+    red_confirmed: true
+    red_reason: "AttributeError: module 'scan_dependencies_invocation' has no attribute 'build_scan_jobs' (function did not exist before this task's implementation)"
+  AC-4:
+    tests:
+      - test_sca_scan_invocation.TestConfigurationIsolationIgnoresProjectFiles.test_hostile_cargo_alias_does_not_change_the_job
+      - test_sca_scan_invocation.TestConfigurationIsolationIgnoresProjectFiles.test_hostile_npmrc_registry_line_does_not_change_the_job
+      - test_sca_scan_invocation.TestConfigurationIsolationIgnoresProjectFiles.test_child_env_never_reads_a_file_inside_the_project
+    red_confirmed: true
+    red_reason: "AttributeError: module 'scan_dependencies_invocation' has no attribute 'build_scan_job' / 'build_child_env' (functions did not exist before this task's implementation)"
+  AC-5:
+    tests:
+      - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_fixture_has_no_direct_field_and_no_severity_field
+    red_confirmed: true
+    red_reason: "Verified directly: re-injecting the OLD fabricated 'direct' / 'severity' fields into PIP_FIXTURE in-process makes this test fail with 'AssertionError: direct unexpectedly found in {...}' -- confirming it correctly detects the fabricated shape the fixture used to have."
+  AC-6:
+    tests:
+      - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_direct_advisory_with_determinable_severity_reaches_findings
+      - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_directness_is_read_from_the_manifest_not_the_tool_payload
+      - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_pyproject_toml_pep621_dependencies_resolve_direct_names
+      - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_pip_sample_normalizes_and_conforms
+      - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_pip_transitive_and_below_threshold_dropped
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 1 (normalize_pip's old contract gated on tool-supplied 'direct'/'severity' fields the new captured-shape fixture does not carry, so every advisory was dropped); test_directness_is_read_from_the_manifest_not_the_tool_payload: AssertionError False is not true"
+  AC-7:
+    tests:
+      - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_undetermined_severity_advisory_is_not_treated_as_below_threshold
+      - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_normalize_pip_returns_findings_and_skip_info_tuple_directly
+      - test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_undetermined_severity_never_counted_for_a_transitive_package
+    red_confirmed: true
+    red_reason: "test_undetermined_severity_advisory_is_not_treated_as_below_threshold: AssertionError \"'pip_severity_undetermined' not found in 'Scanned pip; 0 finding(s)...'\"; test_normalize_pip_returns_findings_and_skip_info_tuple_directly: AttributeError, normalize_pip's old signature returned a plain list, not a (findings, skip_info) tuple. test_undetermined_severity_never_counted_for_a_transitive_package is a negative-case sanity check that holds under both the old and new code (not itself a red->green transition); AC-7 as a whole is red_confirmed via the other two tests."
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: "Whole-suite/build gate, not new functionality with its own observable red state. Verified directly after re-implementing on top of the parent-side-adopted files: `python3 -m unittest discover -s tests` runs all 4098 tests with zero failures, and `python3 em-workflow/scripts/check-plugin-invariants.py .` exits 0 with all 7 checks PASS."

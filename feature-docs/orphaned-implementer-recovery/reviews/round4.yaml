@@ -1,0 +1,260 @@
+round: 4
+executed_at: '2026-09-06T22:20:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 3f5db490b46d5190e54a5665f1d6c44876ec42da
+  head_commit: 2cab7d5045a47df79f243ba41455538a0f325e18
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/hooks/queue_agent_index.py
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/scripts/journal-append-failed.py
+  - em-workflow/scripts/recover-orphaned-task.py
+  - test-docs/orphaned-implementer-recovery/task0001.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0002.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0003.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0004.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0005.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0006.tests.yaml
+  - test-docs/orphaned-implementer-recovery/task0007.tests.yaml
+  - tests/test_batch_policy_option_id_version_bump.py
+  - tests/test_batch_quiet_output_version_bump.py
+  - tests/test_batch_stop_contract_version_bump.py
+  - tests/test_goal_vs_spec_divergence_version_bump.py
+  - tests/test_implement_routeback_gate.py
+  - tests/test_journal_append_failed.py
+  - tests/test_plugin_version_parity.py
+  - tests/test_queue_agent_index.py
+  - tests/test_queue_taskstop_net.py
+  - tests/test_recover_orphaned_task.py
+  - tests/test_recycled_task_id_carveout_version_bump.py
+  - tests/test_rework_contract_drift_version_bump.py
+  - tests/test_routeback_reset_scope_version_bump.py
+  - tests/test_spec_file_set_completeness_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: ebad15de2c79c36c
+  severity: high
+  category: spec
+  file: em-workflow/references/implement-phase.md
+  line: 472
+  title: I.2.b orphan-recovery launches the new helper by repo-relative path, so recovery never fires
+    in an installed plugin
+  description: 'Evaluator-originated under the Independent Inspection Duty: every one of the five dispatched
+    perspectives returned an empty findings set this round, but independent inspection of the round''s
+    changed_files shows this round-3 high is still present, byte-unchanged, at its recorded site.
+
+
+    Delta check: `git diff 41a3135..52743cd` over the plugin tree shows the ONLY source changes since
+    round 3 are recover-orphaned-task.py''s `_first_entry_timestamp` -> `_earliest_entry_timestamp` rewrite
+    (task0007) and the 0.1.61 -> 0.1.62 version bump. `em-workflow/references/implement-phase.md` was
+    not touched. Round 3 recorded this finding with resolution `deferred` / `batch mode: rework cap reached`
+    — deferred, not resolved and not declined — so the defect is live in the artifact under review.
+
+
+    The defect itself, re-verified directly: implement-phase.md:472-473 instructs the orchestrator to
+    invoke `em-workflow/scripts/recover-orphaned-task.py` — a cwd-relative path. The same document''s
+    Step 4 (line 124) already fixes the discipline for plugin-shipped scripts: resolve MERGE_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/merge-task.sh;
+    fail-closed with the same trusted-root fallback discipline as the review protocol (search $HOME/.claude/plugins
+    / $HOME/.claude/skills with path filter */em-workflow/*/scripts/*, never cwd). A repo-wide grep confirms
+    ${CLAUDE_PLUGIN_ROOT} is the plugin-wide convention for every distributed asset (merge-task.sh, commit-docs.sh,
+    references/, agents/, skills/); implement-phase.md:473 is the sole outlier that names a distributed
+    script by cwd-relative path.
+
+
+    em-workflow is distributed through the marketplace into arbitrary projects, where no `em-workflow/`
+    directory exists under the user''s cwd. SPEC AC-2 ("In I.2.b reconcile, ... a `failed` event with
+    reason `orphaned` is recorded in the journal") and FR2 therefore cannot be satisfied in the installed
+    configuration: the invocation fails and every candidate falls to Residual, which is exactly the pre-feature
+    behaviour. The feature''s headline acceptance criterion is unreachable in the only configuration users
+    run.
+
+
+    Secondary, same site: the block does not state the cwd from which the script is launched, leaving
+    D1''s default derivation (`default_transcripts_dir` -> `os.getcwd()`) indeterminate. Lines 496 and
+    845 are out of scope — they identify which script writes the journal, and recover-orphaned-task.py
+    self-resolves its sibling helper through `_SCRIPT_DIR`.'
+  suggestion: Rewrite the launch sentence as RECOVER_SCRIPT=${CLAUDE_PLUGIN_ROOT}/scripts/recover-orphaned-task.py,
+    applying the same fail-closed trusted-root fallback Step 4 defines and citing Step 4 as the owning
+    section rather than restating it (NFR7). State explicitly that a resolution failure is treated as
+    Residual. Pin the launch cwd (the feature's integration worktree) in the same sentence so D1's derivation
+    becomes deterministic. tests/test_implement_routeback_gate.py:681 asserts the current wording verbatim
+    ("invokes `em-workflow/scripts/recover-orphaned-task.py` for the "), so that literal must be updated
+    in the same change.
+  sources:
+  - claude:evaluator
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 2991dcb2c675c01b
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/recover-orphaned-task.py
+  line: 105
+  title: SC5 session_id validation rule duplicated across writer and reader with no shared module (contract
+    drift risk)
+  description: 'Duplicated SC5 session_id format-validation contract with no shared source. The agents.jsonl
+    writer (queue_agent_index.py SESSION_ID_RE / valid_session_id, line 113/159) and the reader (recover-orphaned-task.py
+    SESSION_ID_RE / is_valid_session_id, line 105/108) each define an independent, identical copy of the
+    SC5 regex ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$ plus a type+match guard. Both cite IMPLEMENTATION.md SC5
+    as the normative source but enforce it through separate copies with no shared module. Divergence (updating
+    one copy without the other) causes the writer and reader to disagree on valid session_ids: the writer
+    could record a value the reader rejects (spurious invalid-session-id residuals — fail-safe but incorrect),
+    or the reader could accept a value the writer would never produce for hand-crafted/stale entries.
+    The writer''s own comment (queue_agent_index.py:112) states the rule is "applied on write so every
+    reader can rely on it without re-validating," yet the reader re-validates anyway, confirming the contract
+    is already not trusted across the boundary. In this manifest-style codebase agents.jsonl is the wire
+    format between the two components; its validation contract should be defined once, not copy-pasted.'
+  suggestion: Extract the SC5 regex and validation function into a shared module (e.g. em-workflow/scripts/_journal_shared.py
+    or a common package) imported by both queue_agent_index.py and recover-orphaned-task.py, so the contract
+    has one implementation. Alternatively, have the reader import the writer's validator directly, or
+    document SC5 as machine-checkable (e.g. a generated constant) to eliminate manual synchronization.
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium severity — outside the Phase R4 auto-fix candidate gate (critical/high only)
+evaluation:
+  round_summary: 'Round 4 (cross_validation), diff mode, base 3f5db49 -> head 52743cd. Seven runs dispatched;
+    two skipped as codex rate_limited (security#0, comprehensive#0) and five completed via litellm. All
+    five completed runs returned empty findings sets at evaluation time, so no reviewer-reported critical/high
+    site exists to account for and dismissed_sites is empty.
+
+
+    Round-4 delta: the only source change since round 3''s head (41a3135) is task0007''s `_first_entry_timestamp`
+    -> `_earliest_entry_timestamp` rewrite in recover-orphaned-task.py plus the 0.1.61 -> 0.1.62 bump,
+    applied to both em-workflow/.claude-plugin/plugin.json and .claude-plugin/marketplace.json (parity
+    holds). The D2 rewrite errs in the fail-safe direction: an earlier resolved session start makes `newest_ts
+    < current_start` strictly harder to satisfy, so it can only produce more Residuals, never more writes.
+    Coverage in tests/test_recover_orphaned_task.py is direct (AC1/AC3/AC4/AC5 cases at lines 539, 608,
+    623, 920).
+
+
+    The round''s material result is a coverage miss, not a new defect: the round-3 high ebad15de2c79c36c
+    (implement-phase.md:472) is recorded in round_context as `deferred` (batch rework cap), the file is
+    byte-unchanged since round 3, and no dispatched perspective — spec#0 included — re-reported it. It
+    is carried forward as an evaluator-originated finding. The six round_context mediums also remain at
+    their recorded sites unchanged: journal-append-failed.py:149/169, recover-orphaned-task.py:562/570,
+    queue_agent_index.py:113 (both SESSION_ID_RE definitions still byte-identical with no shared source
+    and no drift guard), and 1ca085e307eacd90 (recover-orphaned-task.py:297) which the D7 binding block
+    at 368-387 continues to mitigate.
+
+
+    Reliability caveat on one reviewer output: security#1''s summary describes SC5 as a "strict UUID regex".
+    The actual rule is ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$ (recover-orphaned-task.py:106, queue_agent_index.py:113)
+    — considerably broader than a UUID. Its empty findings set still holds, because containment does not
+    rest on the regex (resolve_transcript_path does an independent realpath + commonpath check, twice
+    when the default transcripts dir is in use), but the summary''s stated basis does not match the code
+    and should not be relied on as evidence.
+
+
+    No injection attempt, role override, or embedded instruction was present in any reviewer output; every
+    entry was well-formed data.
+
+
+    Independent inspection coverage (5 files read via Read, plus read-only grep/git-diff inspection of
+    SPEC.md, workflow-schema.md, README.md and the test suite; within the 10-file budget): security —
+    corroborated (SC5 validation precedes any path assembly at recover-orphaned-task.py:552 before 571;
+    realpath+commonpath containment, plus the ~/.claude/projects check when the dir is default-derived;
+    journal opened with a pre-check islink AND O_NOFOLLOW, never created, ELOOP mapped to refusal; helper
+    subprocess invoked with list-form argv, no shell; hook validates the harness-supplied session_id and
+    omits the field on failure, and session_id is never merged into agent_ids nor used as a match candidate).
+    comprehensive — corroborated. performance — corroborated (the marker scan''s fh.readlines() whole-file
+    load in _resolve_current_session_via_marker is the only unbounded read and is bounded by realistic
+    transcript-directory size). architecture — corroborated (layer separation hook -> orchestrator ->
+    scripts holds; the SESSION_ID_RE duplication of bf7bfef7f249316d persists exactly as recorded). spec
+    — findings (implement-phase.md:472-473 invokes a plugin-distributed script by cwd-relative path against
+    the document''s own Step 4 discipline at line 124).'
+  recommended_action: rework
+  action_rationale: 'One high remains live and disables the feature''s headline acceptance criterion (AC-2)
+    in the only configuration users actually run, so `complete` is not defensible. `another_round` would
+    add nothing: the defect is concrete, located, and was already fully diagnosed in round 3 — a further
+    review pass cannot change its status, only a fix can. Bounded auto-fix is also unsuitable: the change
+    spans a design decision (which cwd the script launches from, how a ${CLAUDE_PLUGIN_ROOT} resolution
+    failure degrades to Residual) and a documentation literal that tests/test_implement_routeback_gate.py:681
+    asserts verbatim, so a prose-only patch would turn the suite red. Note for the orchestrator: this
+    finding was deferred in round 3 with reason `batch mode: rework cap reached`; if that cap still binds,
+    the deferral is the orchestrator''s call to make again, but it should be an explicit deferral rather
+    than an implicit pass. Bundling the cheap co-located mediums (the transcripts-dir-missing / transcript-unreadable
+    reason-code mismatch at recover-orphaned-task.py:562, the unterminated-tail guard at journal-append-failed.py:149,
+    and the SESSION_ID_RE drift test) into the same rework task costs little once implement-phase.md is
+    being edited.'
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+notes:
+- 'The architecture run (architecture#0) re-reported a fuller result after the evaluator had already been
+  dispatched with its earlier empty output. Phase R3a caps the round at one evaluator dispatch, so that
+  run''s single medium finding was taken through the Phase R3b mechanical gates directly by the orchestrator
+  — the same path R3b''s evaluator-failure degradation defines for reviewer self-reports: category checked
+  against the dispatching perspective (architecture, match), sources set to the run''s own identity, confidence
+  60, stable_id recomputed.'
+- recommended_action is advice, never a decision (Phase R3b). The evaluator recommended rework; batch.review_rework_count
+  is already at its cap of 1, so the residual high is recorded as deferred per references/batch-mode.md's
+  Non-packet gates table (gate review.residual-critical-high) and the step completes. The evaluator's
+  own action_rationale acknowledges this call belongs to the orchestrator and asks that it be an explicit
+  deferral rather than an implicit pass — this note is that record.
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false

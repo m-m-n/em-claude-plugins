@@ -54,6 +54,11 @@ if license-candidate discovery depends on the answer to a TBD question,
 those two MAY be split across separate iterations, because the second
 question cannot be formed until the first is answered.
 
+An `assumptions[].reversible` entry is `false` only for an assumption
+about an operation that cannot be undone once applied; it is `true` for a
+preserved constraint, an invariant, or a fact pinned by an existing test
+(`references/question-packet-schema.md`).
+
 ## digest_inputs
 
 Per 5.0 R1, the orchestrator builds `input_digest` from exactly the set this

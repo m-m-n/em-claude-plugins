@@ -1,0 +1,118 @@
+schema_version: 1
+feature: review-sca-axis
+phase: create-plan
+status: completed
+generation: 1
+base_revision: ef37820
+last_input_digest: sha256:0ef6a36a2b4467511bbb6ac694899a2c3bf44de7f9b45ea14f694814b3a7433d
+active_request_id: null
+packets:
+  create-plan-q0001:
+    status: answered
+    issued_at: "2026-09-07T20:41:35+09:00"
+    questions:
+      - question_id: create-plan.digest-staleness-scope
+        status: answered
+      - question_id: create-plan.co-owned-file-split
+        status: answered
+      - question_id: create-plan.verification-scenarios-beyond-spec
+        status: answered
+answers:
+  create-plan.digest-staleness-scope:
+    question_id: create-plan.digest-staleness-scope
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-07T20:39:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [exclude_written_artifacts]
+    freeform: null
+    normalized_answer: >-
+      Exclude the worker's own reported written_artifacts from the return-time
+      input_digest recomputation; rely on scope verification to catch
+      out-of-scope writes.
+    resolution_note: >-
+      Rule R1 recomputation vs. planner-contract digest_inputs, which lists the
+      planner's own IMPLEMENTATION.md / VERIFICATION.md / tasks/* — on a first
+      planning pass the recomputation therefore always mismatches. Verified
+      empirically that the only changed digest_inputs keys were exactly the 8
+      files the planner wrote; workflow_blob, answers_digest,
+      write_policy_digest and every other input were byte-identical. Codex
+      consulted (readonly), chose the exclusion option; adopted.
+  create-plan.co-owned-file-split:
+    question_id: create-plan.co-owned-file-split
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-07T20:39:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: multi_select
+    selected_option_ids: [keep_split_review_phase, keep_split_scan_script, collapse_schema_mirror]
+    freeform: null
+    normalized_answer: >-
+      Keep task0003 + task0004 (review-phase.md, disjoint regions) and
+      task0001 + task0005 (scan-dependencies.py, symmetric merge duty) split;
+      collapse the task0001 + task0002 mirrored edit to
+      review-output-schema.json into task0001 alone.
+    resolution_note: >-
+      Codex first proposed declaring an ordering between co-owning tasks; that
+      option is unavailable — implement-phase.md Step I.2 states there is NO
+      ordering mechanism between tasks and the task schema has no depends_on
+      field, so adopting it would mean changing the implement phase itself,
+      outside this feature's scope. Codex was re-consulted with that constraint
+      stated and split its answer per pair: keep the two large splits (a
+      collapsed task0001+task0005 would carry 11+ requirements, a collapsed
+      task0003+task0004 would carry 13), collapse the byte-identical mirrored
+      schema edit because it buys no parallelism and only adds
+      conflict/adoption overhead. Adopted; the planner was re-dispatched to
+      fold task0002 into task0001. Task id 0002 is retired, not reused.
+  create-plan.verification-scenarios-beyond-spec:
+    question_id: create-plan.verification-scenarios-beyond-spec
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-07T20:39:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [accept]
+    freeform: null
+    normalized_answer: >-
+      Accept VERIFICATION.md's TS-15..TS-22, which go beyond SPEC.md's
+      TS-1..TS-14, without routing back to create-spec.
+    resolution_note: >-
+      The added scenarios close test coverage for FR9, FR10 and NFR1..NFR7,
+      requirements already approved in SPEC.md that SPEC left with no test
+      scenario. Codex consulted; judged planning work rather than a
+      specification change, since no product behavior is introduced or
+      altered. Adopted. Requirement coverage is now 31/31.
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: completed
+    input_digest: sha256:0ef6a36a2b4467511bbb6ac694899a2c3bf44de7f9b45ea14f694814b3a7433d
+    output_digest: null
+artifacts:
+  - path: feature-docs/review-sca-axis/IMPLEMENTATION.md
+    sha256: sha256:c856f81fabd6f03824a242919b44df0c4c0ff2e75c7688939cfba73b824bca9a
+    produced_by: create-plan-run-0001
+  - path: feature-docs/review-sca-axis/VERIFICATION.md
+    sha256: sha256:8f1633b9eb98db90adc7f26cf05b61defca1ab551ace4374a0009690a75202a3
+    produced_by: create-plan-run-0001
+  - path: feature-docs/review-sca-axis/tasks/task0001.md
+    sha256: sha256:2414f957dd5ac03dc1a823ae4d3bca444f3e6b8c99aeba21111e018c19af6a05
+    produced_by: create-plan-run-0001
+  - path: feature-docs/review-sca-axis/tasks/task0003.md
+    sha256: sha256:e061a73fd0033a26b9cee5363ce69d7651112bcaede4723939bec0b0f9dd5ca4
+    produced_by: create-plan-run-0001
+  - path: feature-docs/review-sca-axis/tasks/task0004.md
+    sha256: sha256:44186cc92e4cd961d90812c0dcc624bcc2b3d083dc61551c69f0109c91f1e137
+    produced_by: create-plan-run-0001
+  - path: feature-docs/review-sca-axis/tasks/task0005.md
+    sha256: sha256:55390dd612ccdfe5977d0f1362665da95eccd09264cd89f443064608764a679e
+    produced_by: create-plan-run-0001
+  - path: feature-docs/review-sca-axis/tasks/task0006.md
+    sha256: sha256:76b9ade5783c8aed152b1f0457c04151d93a03647d0aa5bb5a7d137209c399c0
+    produced_by: create-plan-run-0001
+patches:
+  - patch_id: review-sca-axis-p0002
+    status: applied
+    base_input_digest: sha256:0ef6a36a2b4467511bbb6ac694899a2c3bf44de7f9b45ea14f694814b3a7433d
+    base_workflow_blob: e7d5d51ad59f234e218a6cd27000c5b3513dac76
+progress_fingerprint: sha256:c856f81fabd6f03824a242919b44df0c4c0ff2e75c7688939cfba73b824bca9a
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

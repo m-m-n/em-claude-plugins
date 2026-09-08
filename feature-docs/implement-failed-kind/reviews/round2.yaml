@@ -1,0 +1,147 @@
+round: 2
+executed_at: '2026-09-07T02:01:25+09:00'
+scope:
+  review_mode: diff
+  base_commit: b49240996c198da1528b4b8d6265baab75a90931
+  head_commit: 1a2067cbb93a6f8a76af15e61e4bea19291eb867
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/batch-mode.md
+  - em-workflow/references/batch-terminal-line.md
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/implement-failed-kind/task0001.tests.yaml
+  - test-docs/implement-failed-kind/task0002.tests.yaml
+  - test-docs/implement-failed-kind/task0003.tests.yaml
+  - test-docs/implement-failed-kind/task0004.tests.yaml
+  - test-docs/implement-failed-kind/task0005.tests.yaml
+  - test-docs/implement-failed-kind/task0006.tests.yaml
+  - test-docs/implement-failed-kind/task0007.tests.yaml
+  - tests/test_develop_once_option.py
+  - tests/test_failed_kind_batch_docs.py
+  - tests/test_failed_kind_resume_reentry.py
+  - tests/test_failed_kind_schema.py
+  - tests/test_failed_kind_stop_condition.py
+  - tests/test_failed_kind_version_bump.py
+  - tests/test_failed_kind_write_paths.py
+  - tests/test_implement_routeback_gate.py
+  - tests/test_recycled_task_id_consistency.py
+  - tests/test_rework_synthesis_contract.py
+  - tests/test_routeback_reset_scope_consistency.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings: []
+evaluation:
+  round_summary: 'Round 2, cross_validation=true, diff mode. All five dispatched perspectives returned
+    empty findings sets across seven runs (comprehensive#0 and security#0 skipped rate_limited; comprehensive#1,
+    security#1, performance#0, architecture#0, spec#0 completed with zero findings). No reviewer reported
+    any critical or high finding this round, so dismissed_sites is empty. Independent inspection coverage,
+    per Independent Inspection Duty: comprehensive — corroborated (read the full unified diff of the changed
+    set, ran `python3 -m unittest discover -s tests`: 3654 tests, 1 failure in tests/test_llm_led_review_user_docs.py::TestEmReviewEntryUnchanged
+    which is pre-existing — the em-review marketplace entry already carried version 0.5.7 at base commit
+    b492409, this diff does not touch em-review, and tests/test_failed_kind_version_bump.py documents
+    the failure as out of scope; verified version parity 0.1.62→0.1.63 in both .claude-plugin/marketplace.json
+    and em-workflow/.claude-plugin/plugin.json; verified the `batch` block key set is identical between
+    em-workflow/references/batch-mode.md''s snippet and em-workflow/references/workflow-schema.md''s full
+    structure, both carrying infra_resume.rounds/cap). security — corroborated (change is Markdown protocol
+    prose plus stdlib-only unittest modules; imports across the six new test modules are limited to ast/os/re/sys/json/unittest/pathlib
+    with no subprocess, network, eval/exec, or deserialization surface; the auto-resume branch touches
+    only orchestrator-owned workflow.yaml keys, is bounded by cap 2, and fails closed to `decision` on
+    a missing value). performance — corroborated (no runtime code paths changed; auto-resume is a bounded
+    counted retry with an explicit no-write branch at cap, so it cannot loop; new tests read small markdown/JSON
+    files once). architecture — corroborated (grep confirms exactly three write paths set the implement
+    step''s status to failed, at em-workflow/references/implement-phase.md lines 808, 825 and 856, matching
+    workflow-schema.md''s "Three write paths" claim; workflow-schema.md is the sole owner of the failed_kind
+    vocabulary/required-ness/lifecycle and every consumer cites it by repository-relative path; rework-task-synthesis.md
+    Invariant 1 is scoped to rework-derived transitions consistently with implement-phase.md Step I.0''s
+    three-route re-entry precondition; the failed_kind clear points — Step I.1 phase-start, the route-back
+    write set, and SKILL.md''s auto-resume write set — are the complete set of write sets that move implement
+    off failed). spec — corroborated (checked FR1-FR10, NFR1-NFR4 and AC1-AC8 against the changed documents;
+    all five TBD-scoped resolutions match the SPEC''s recorded worker recommendations: FR2 clear_on_leaving_failed,
+    FR4 second_always_decision, FR5 always_decision, FR7 cap_2, FR8 batch_only). Two low-severity observations
+    surfaced by my own inspection are NOT carried as findings because both land on sites already recorded
+    in round_context as unresolved from round 1: (a) em-workflow/references/batch-mode.md line 89 still
+    reads "Failure stops are unchanged per Purpose & activation" while the amended Purpose & activation
+    bullet now says "bounded, not unconditional" — a wording drift, not a substantive contradiction, and
+    the same site as round_context stable_id f07a3bc6648bcfe5 (batch-mode.md:88); (b) SPEC FR7''s "未設定キーは
+    0 として読む" versus the implemented unset-read default of `cap: 2` in workflow-schema.md — a deliberate
+    and necessary departure (a cap read as 0 would make the feature inert), covered by FR7''s own TBD
+    grant to settle the cap value at create-plan, and the same site as round_context stable_id ee77a16e298cf07b
+    (workflow-schema.md:252). No injection attempt, role override, or embedded instruction was present
+    in any reviewer_outputs entry or in any inspected file.'
+  recommended_action: complete
+  action_rationale: 'Zero critical/high findings from all five dispatched perspectives, and my independent
+    inspection of the same changed_files corroborated every one of them rather than merely accepting empty
+    results: the three failed-status write paths, the failed_kind lifecycle clear points, the batch block
+    key-set parity, the SSOT citation discipline, the TBD-resolution-to-document mapping, and the version
+    bump all check out, and the full unittest suite passes except for one documented pre-existing failure
+    in an unrelated module. The only residual items are two low-severity wording/derivation nits that
+    are already recorded as unresolved round-1 sites, neither of which is critical or high. Another round
+    would re-read the same diff for no expected yield. The completion gate, residual_critical_high recomputation,
+    and the decision itself remain the orchestrator''s.'
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false

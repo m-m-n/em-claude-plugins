@@ -1,0 +1,224 @@
+schema_version: 1
+feature: review-sca-axis
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-07T21:08:32+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined"
+    normalized_answer: "declined"
+    resolution_note: >-
+      task_id: task0001; declined deviation path: tests/test_sca_task_filing.py;
+      missing evidence part: the identifier of the acceptance criterion or
+      requirement that would otherwise be dropped. The report cites
+      IMPLEMENTATION.md's "Module co-ownership skeleton" merge duty as its
+      rationale, which is neither an AC-n of task0001's own plan nor a
+      requirement id registered in workflow.yaml. The path itself passes the
+      shape check and is not a workflow control path, and the failure mode is
+      stated as an observable outcome (task0005's
+      test_scan_is_a_marked_placeholder necessarily goes red once task0001's
+      real `scan` is re-applied on top of the adopted parent file), but the
+      missing identifier alone makes the deviation ineligible for
+      auto-addition to tasks.task0001.files.
+  - question_id: review.auto-fix-same-site-classification
+    packet_id: null
+    answered_at: "2026-09-07T22:12:00+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [treat-as-conflict-skip-site]
+    freeform: null
+    normalized_answer: "conflict -> skip the site"
+    resolution_note: >-
+      review round 1, R4 auto-fix dispatch. Question: when two or more prose
+      findings share the same same_site() key but describe independent,
+      mutually non-contradictory defects, is that a conflict (skip the site)
+      or independent fixes (dispatch both)? Options weighed: (a) treat as
+      conflict and skip the site, leaving both findings residual; (b) dispatch
+      both editors against the same site sequentially; (c) merge the two
+      findings into one editor prompt. Codex was consulted through
+      ~/.claude/skills/codex-cli/scripts/run_codex_exec.sh; the primary
+      provider returned a usage-limit error, so the fallback provider
+      (codex exec -p litellm -m muse-spark --sandbox read-only) answered.
+      Codex judged (a) comparatively better: same_site() is deliberately a
+      COARSE key (+-5 lines), so "independent" cannot be established from the
+      finding text alone, and both (b) and (c) let one editor's edit
+      invalidate the other's premise inside a single loop with no re-read
+      between them. Adopted (a) — it matches the protocol's
+      minimum-side-effect principle and keeps the findings visible as residual
+      rather than silently half-fixed.
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-07T23:48:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined"
+    normalized_answer: "declined"
+    resolution_note: >-
+      task_id: task0008; declined deviation path: tests/test_sca_scan_execution.py;
+      missing evidence part: the identifier of the acceptance criterion or
+      requirement that would otherwise be dropped. The report states the
+      observable failure (task0009's test_both_completing_yields_skipped_false
+      fixture can no longer resolve the cargo executable once task0008's
+      registry/allowlist change lands, so the stub had to be renamed cargo ->
+      cargo-audit) and the path passes the shape check and is not a workflow
+      control path, but it names no AC-n of task0008's own plan and no
+      requirement id registered in workflow.yaml. Missing identifier alone
+      makes the deviation ineligible for auto-addition to tasks.task0008.files;
+      it surfaces as an ordinary deviation for the containment check instead.
+      The task's other reported deviation (em-workflow/scripts/scan-dependencies.py,
+      rewiring run_ecosystem_command to take a job) needs no auto-addition —
+      that path is already declared in tasks.task0008.files.
+  - question_id: review.non-retryable-skip-fallback
+    packet_id: null
+    answered_at: "2026-09-08T00:02:00+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [keep-the-skip-no-fallback]
+    freeform: null
+    normalized_answer: "keep the skip; dispatch no Claude fallback"
+    resolution_note: >-
+      review round 2, Phase R2b. Three litellm primary reviewers (performance /
+      muse-spark, architecture / vertex-glm-5.2, spec / muse-spark) each
+      returned a schema-valid skip with skip_reason review_data_too_large: the
+      integrated diff is 377,843 characters against the reviewer protocol's
+      300,000-character input budget. Options weighed: (A) literal reading —
+      review_data_too_large is not one of R2b's three retryable reasons, so
+      keep the skip, walk no chain, dispatch no Claude fallback, and disclose
+      the coverage gap in the round record; (B) treat the state as equivalent
+      to chain exhaustion and dispatch one em-workflow:reviewer Claude fallback
+      per affected perspective, on the argument that a Claude reviewer reads
+      files selectively and is not bound by the single-shot prompt budget, so
+      the cause is not one every entry hits identically. Codex was consulted
+      through em-workflow/scripts/run_codex_exec.sh (readonly, xhigh) and
+      judged (A) comparatively better on three grounds: references/review-protocol.md
+      names review_data_too_large as non-retryable by name, which outweighs an
+      analogy to chain exhaustion; R2b defines exhaustion through retryable
+      skips or unavailable entries, so "no completed run" alone is not an
+      authorized fallback trigger even though (B) would violate neither the
+      2-hop harness budget nor the never-alongside-a-completed-run rule; and
+      (A) still yields an auditable record because the skipped runs and the
+      coverage gap are persisted in reviews/round2.yaml, which batch-mode
+      output suppression does not touch. Strongest counter-argument Codex
+      itself named and it stands: (B) would have recovered three perspectives,
+      and the claim that every reviewer hits the identical size failure is not
+      actually true for a Claude reviewer — a real protocol design gap worth a
+      follow-up. Adopted (A).
+  - question_id: implement.task0010-pip-args-form
+    packet_id: null
+    answered_at: "2026-09-08T00:47:54+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [restore-pinned-form]
+    freeform: null
+    normalized_answer: "restore the pinned form; route the security concern to a spec-level follow-up"
+    resolution_note: >-
+      implement phase, verify-rework round 1, task0010. Question: the pip entry's
+      args in em-workflow/references/vuln-scanners.yaml drifted to
+      `--format json --no-deps --disable-pip`, failing 9 pinned tests including a
+      forbidden-token pin that names `--no-deps`; meanwhile review round 2 finding
+      2febcb34aa888ac7 argues the opposite direction, that pip-audit's default
+      resolution can execute build code from the reviewed project. Options weighed:
+      (A) restore the pinned two-token form and route the hardening to a separate
+      specification-level decision on FR1 plus the matching test pins; (B) keep or
+      extend the resolution-disabling flags now and amend FR1 and the pins inside
+      this same task. Codex was consulted through em-workflow/scripts/run_codex_exec.sh
+      (readonly, xhigh); the primary provider returned a usage-limit and entry 2
+      (litellm/vertex-glm-5.2) answered. It judged (A) comparatively better on:
+      tests-as-contract (the drift is the bug, the pins are the spec speaking);
+      a security change that alters a stated requirement belongs at the spec level
+      with its own review path; the registry's single shared args list serves BOTH
+      the `-r <file>` and the `<dir>` target forms, so the flags do not fit
+      uniformly and would give a false sense of safety without per-form analysis;
+      blast radius, since (A) is a surgical revert while (B) mutates spec, pins and
+      registry together; and TDD order, since a legitimate spec change drives the
+      tests first rather than retrofitting pins to absorb drift. Caveat Codex
+      itself raised and it stands: the concern is real and time-sensitive, so it
+      must be a tracked follow-up with an owner, and that follow-up should first
+      verify which flags actually disable resolution for both target forms — likely
+      splitting the shared args into per-form invocations — before FR1 and its pins
+      are amended. Adopted (A), which is what task0010 implemented. The follow-up
+      already exists in Notion as
+      https://app.notion.com/p/3d43509ec8ee81ada1c5cebf1b2e4471 so no duplicate was
+      filed.
+  - question_id: verify.gate-disposition
+    packet_id: null
+    answered_at: "2026-09-08T00:58:00+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [record-pass]
+    freeform: null
+    normalized_answer: "record verify as pass / completed"
+    resolution_note: >-
+      verify phase, round 2 (after verify-rework round 1 merged task0010).
+      Question: should verify be recorded as `result: pass` / `status: completed`
+      when every VERIFICATION.md criterion passes, while the preceding review
+      phase left 5 residual high-severity findings marked `deferred` under batch
+      policy, 4 of which describe real functional gaps? Options weighed:
+      (A) record pass, on the reading that the verify phase's mandate is
+      VERIFICATION.md's criteria and the deferred findings were already
+      dispositioned by review's own policy gate; (B) record fail, on the reading
+      that high-severity functional gaps should not pass an integration gate.
+      Observed results: `python3 -m unittest discover -s tests` exit 0 with 4098
+      tests OK; `check-plugin-invariants.py .` exit 0 with all 7 checks PASS;
+      plugin.json and marketplace.json both 0.1.68 (> the pinned 0.1.65); every
+      requirement in workflow.yaml `resolved`, none excluded. Codex was consulted
+      through em-workflow/scripts/run_codex_exec.sh (readonly, xhigh); entry 1
+      returned a usage-limit and entry 2 (litellm/vertex-glm-5.2) answered. It
+      judged (A) comparatively better on: every automated criterion is met;
+      verify's job is defined by VERIFICATION.md, not by review's findings, and
+      verify has no mandate to re-adjudicate items review already dispositioned;
+      VERIFICATION.md itself declares its 5 Manual Testing items a non-gate
+      ("not a gate the suite can hold"), so they cannot fail an unattended run;
+      the one deferred finding verify could act on (4699cf4f1c58e38d, pip args
+      breaking AC-22) was already fixed by verify-rework round 1's task0010 and
+      the suite now passes; and failing would trip an automatic rework loop whose
+      caps are already partly consumed (review rework cap reached, one verify
+      rework round spent) with no new actionable signal. Caveat Codex raised and
+      it stands: the three remaining functional gaps (changed Python lockfile
+      never audited; npm/cargo/go jobs always scanning the repository root;
+      the Go path proven only against a synthetic fixture) reach the integration
+      branch relying on a manual confirmation an unattended run cannot perform,
+      so each needs a tracked follow-up with an owner. Adopted (A).
+  - question_id: develop.completion-pr-readiness
+    packet_id: null
+    answered_at: "2026-09-08T01:05:00+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [ready-pr-with-known-gaps]
+    freeform: null
+    normalized_answer: "open a ready-for-review PR with an explicit Known gaps / follow-ups section"
+    resolution_note: >-
+      Step C completion. The operator's invocation overrode batch policy's
+      `develop.completion` default (keep branch, no push, no PR) with an explicit
+      instruction: push the integration branch to origin and open a PR against
+      base_branch with `gh pr create`, keeping the branch both locally and on the
+      remote, without auto-merging. That override is explicit and needed no
+      consultation. The genuinely unclear point was PR readiness: verify recorded
+      `pass` (4098 unit tests OK, plugin-invariant checks pass, every requirement
+      resolved) while review left 5 residual high-severity findings, 4 of them
+      real functional gaps, marked `deferred` under batch policy after the rework
+      cap was reached. Options weighed: (A) draft PR — signals the untriaged
+      high-severity gaps and blocks merge until the maintainer marks it ready;
+      (B) ready PR — enumerate the deferred findings in the PR body under an
+      explicit "Known gaps / follow-ups" section. Codex was consulted through
+      em-workflow/scripts/run_codex_exec.sh (readonly, xhigh); entry 1 handed over
+      and entry 2 (litellm/vertex-glm-5.2) answered. It judged (B) comparatively
+      better on: a single-maintainer repository has no review queue for draft
+      status to protect, and "do not auto-merge" plus sole merge control already
+      prevent a premature merge; `gh pr create` defaults to ready, so (B) honors
+      the operator's unqualified "create a Pull Request" without adding an
+      unrequested manual step; the change is additive and non-breaking with verify
+      passing, so `ready` misrepresents no regression risk; the maintainer set the
+      rework cap themselves and already knows the deferred state, leaving draft
+      little informational signal beyond the body section; and enumerating the
+      deferred highs plus the residual mediums in the body preserves triage
+      context without blocking. Strongest counter-argument Codex itself named and
+      it stands: the deferred highs include core correctness gaps (real
+      govulncheck output yields zero findings; npm/cargo/go jobs scan the
+      repository root rather than the projects), so `ready` risks a merge before
+      triage, and draft's merge block would be a cheap guardrail against habit.
+      Adopted (B), with the deferred findings enumerated in the PR body and filed
+      as separate Notion tasks so the triage has an owner outside the PR.

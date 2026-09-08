@@ -1,0 +1,334 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: grep -c 変数解決 em-workflow/hooks/tests/destructive-guard-cases.json returned 70 before this
+      task's edit (every entry this feature added whose label began with the withdrawn-layer prefix) and
+      0 after. All 73 added entries' (label, verdict, rule) triples were measured by invoking destructive-guard.py
+      directly against each entry's unchanged command string before any label was rewritten; see measurements.ac1_all_73.
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: Before this task, all three item-C entries carried labels naming machinery the hook does
+      not contain (a resolved-value length ceiling, a reason-string sentinel check, and a resolution-exempt
+      consumption check). Each was measured against the running hook and relabeled to state only the property
+      its command actually pins; none pinned nothing, so all three are kept (0 dropped). See measurements.ac2_item_c
+      for the three (command, measured verdict, justification) rows.
+  AC-3:
+    tests: []
+    red_confirmed: true
+    red_reason: 'grep -c ''既知の穴(未修正)'' returned 0 before this task and 16 after: the 14 entries item D
+      names (bare command substitution x2, trailing-slash scratch roots x4, unanchored scratch-name prefix
+      x8) plus the 2 item-E entries that ride the same unanchored-prefix gap (`rm -rf targets`, `rm -rf
+      build/../src`). No entry outside those 16 carries the marker (verified by listing every entry whose
+      label contains it).'
+  AC-4:
+    tests: []
+    red_confirmed: true
+    red_reason: The 7 paired counter-cases did not exist before this task (red = absent). Each was measured
+      against the running (unmodified) hook before being written into the file; see measurements.ac4_paired_counter_cases
+      for the (input, verdict, rule) rows taken pre-write. The written entries' verdict and command fields
+      are asserted equal to these measurements by the generation script.
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: 'Before this task (pretty-printed layout), the 58 pre-existing entries were logically
+      preserved as a parsed prefix but NOT byte-identical to the base revision''s lines (git diff --unified=0
+      <base> HEAD showed 58 non-added lines). After restoring the base layout: parsed equality `data[:58]
+      == base` holds, and destructive-guard.py''s diff against the base revision is empty (byte-identical,
+      hook untouched). All 73 added entries'' verdict and command elements were asserted unchanged against
+      the pre-edit file before writing (0 mismatches).'
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: 'Before this task: `git diff --unified=0 1fdb27fe51de6d20e9812027d3aee603cb584173 HEAD
+      -- em-workflow/hooks/tests/destructive-guard-cases.json | grep -c ''^-[^-]''` = 58 (whole-file pretty-print
+      rewrote every pre-existing line). After this task: the same command = 1, and that single removed
+      line is the base file''s final entry, re-added identically plus a trailing comma (the sole permitted
+      exception).'
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: 'Both suites were already green before this task started (round 4''s orchestrator measured
+      132/132 and 2830/2830; this task''s own 4a baseline run reproduced that: 132/132 and 2830/2830,
+      0 failures). This criterion is a preservation invariant, not a behaviour this task introduces, so
+      there is no red state to confirm honestly. After the edit: `python3 em-workflow/hooks/tests/run-destructive-guard.py`
+      reports 139/139 (138 case entries = 131 - 0 dropped under AC-2 + 7 appended under AC-4, plus the
+      fixed batch-demotion case) and exits 0; `python3 -m unittest discover -s tests` reports 2830/2830
+      OK and exits 0. Both commands were run twice; pass/fail results were identical across runs (the
+      only textual diff between unittest runs was the elapsed-time line, e.g. 14.320s vs 14.246s).'
+measurements:
+  ac1_all_73:
+  - label: '動的目標(rm-unresolvable): コマンド接頭辞に代入を置いた形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): サブシェル内に代入を置いた形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): bash -c の中に代入を置いた形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 同じ変数に複数回代入した形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 代入値がグロブを含む形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 代入値にコマンド置換を含む形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): ${X} と $Y が混在する形でも目標は動的なまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): パイプラインをまたいだ代入でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '対象外(判定なし): rm ではない `cat` は判定対象外'
+    verdict: allow
+    rule: destructive-guard
+  - label: 'root/home一致(rm-root): 目標が文字どおり $HOME のため後続の代入位置に関わらず deny'
+    verdict: deny
+    rule: destructive-guard/rm-root
+  - label: '動的目標(rm-unresolvable): 実行されない代入があっても目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): バックグラウンド代入があっても目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): export を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): declare を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): typeset を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): local を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): readonly を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): += を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): read を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): mapfile を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): printf -v を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): eval を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): source を挟んでも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 代入自体が $() を含む形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 代入自体がバッククォートを含む形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): パイプライン先頭要素の代入でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): パイプライン後続要素の代入でも目標は $Y のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): バックグラウンド代入の後続文でも目標は $Z のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): サブシェル閉じ括弧にリダイレクトが続く形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): セミコロン区切りサブシェル外でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 改行区切りサブシェル外でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 代入値に空白を含む形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 代入値が空の形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 代入値が空白のみの形でも目標は $X のまま'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '本物: find の括弧グループ化でも delete 検知'
+    verdict: deny
+    rule: destructive-guard/find-delete
+  - label: '本物: 引用符付き括弧の force push も検知'
+    verdict: deny
+    rule: destructive-guard/git-force-push
+  - label: '既知の穴(未修正): 裸のコマンド置換 `$(mktemp -d)` は対象ゼロで早期returnし allow'
+    verdict: allow
+    rule: destructive-guard
+  - label: 'スクラッチ外(rm-recursive): コマンド置換の後にパスが続く形は deny のまま'
+    verdict: deny
+    rule: destructive-guard/rm-recursive
+  - label: '既知の穴(未修正): SAFE_DELETE がスラッシュ有り `/tmp/` を許可、無し `/tmp` は deny'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE がスラッシュ有り `tmp/` を許可、無し `tmp` は deny'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE がスラッシュ有り `.cache/` を許可、無し `.cache` は deny'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE がスラッシュ有り `/var/tmp/` を許可、無し `/var/tmp` は deny'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で `build-debug` を許可'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で `dist-ssr` を許可'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で `target-old` を許可'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で `coverage.old` を許可'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で `build-artifacts` を許可'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で `dist-newstyle` を許可'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で `coverage-old` を許可'
+    verdict: allow
+    rule: destructive-guard
+  - label: '既知の穴(未修正): SAFE_DELETE の区切り無し前方一致で `node_modules_bak` を許可'
+    verdict: allow
+    rule: destructive-guard
+  - label: '動的目標(rm-unresolvable): 親参照混じりでも $DIR が残るため ask のまま(参照形)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 親参照混じりでもグロブが残るため ask のまま(グロブ形)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 親参照混じりでも $DIR が残るため ask のまま(チルダ形)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: 'root/home一致(rm-root): if/then を挟んでも目標は文字どおり $HOME のため deny(;)'
+    verdict: deny
+    rule: destructive-guard/rm-root
+  - label: 'root/home一致(rm-root): if/then を挟んでも目標は文字どおり $HOME のため deny(改行)'
+    verdict: deny
+    rule: destructive-guard/rm-root
+  - label: '動的目標(rm-unresolvable): 直前の代入をまたいでも目標は $D のまま(;)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 直前の代入をまたいでも目標は $D のまま(改行)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 自己参照の代入があっても目標は $X のまま(;)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 自己参照の代入があっても目標は $X のまま(改行)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): unset を挟んでも目標は $D のまま(;)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): unset を挟んでも目標は $D のまま(改行)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): for ループを挟んでも目標は $D のまま(;)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): for ループを挟んでも目標は $D のまま(改行)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): getopts を挟んでも目標は $D のまま(;)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): getopts を挟んでも目標は $D のまま(改行)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): while read を挟んでも目標は $D のまま(;)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): while read を挟んでも目標は $D のまま(改行)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 後続の代入があっても目標は $X のまま(;)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '動的目標(rm-unresolvable): 後続の代入があっても目標は $X のまま(改行)'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '既知の穴(未修正): 裸のコマンド置換 `$(cat list)` は対象ゼロで早期returnし allow'
+    verdict: allow
+    rule: destructive-guard
+  - label: '対象外(判定なし): rsync の `--delete` は `$D` のまま展開されず検査されない'
+    verdict: allow
+    rule: destructive-guard
+  - label: '動的目標(rm-unresolvable): キロバイト級の代入値でもタイムアウトせず ask に到達'
+    verdict: ask
+    rule: destructive-guard/rm-unresolvable
+  - label: '本物: スクラッチ領域配下のグロブ削除は allow'
+    verdict: allow
+    rule: destructive-guard
+  ac2_item_c:
+  - entry: over-ceiling assignment token (item C, 1st)
+    command_excerpt: X=/tmp/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...(4096 total)...; rm -rf $X
+    decision: kept, relabeled
+    measured_verdict: ask
+    measured_rule: destructive-guard/rm-unresolvable
+    new_label: '動的目標(rm-unresolvable): キロバイト級の代入値でもタイムアウトせず ask に到達'
+    justification: No length-ceiling constant exists in the hook; the command actually pins that a kilobyte-scale
+      $X token still reaches an ask verdict via DYNAMIC/rm-unresolvable rather than timing out (path 1).
+  - entry: reason-sentinel claim (item C, 2nd = item D bare-substitution pair, 2nd of 2)
+    command_excerpt: rm -rf $(cat list)
+    decision: kept, relabeled, marked known-gap (also one of item D's 14)
+    measured_verdict: allow
+    measured_rule: destructive-guard
+    new_label: '既知の穴(未修正): 裸のコマンド置換 `$(cat list)` は対象ゼロで早期returnし allow'
+    justification: 'The runner compares only the verdict, never a reason string, so no sentinel is ever
+      verified. The command actually pins path 5: the bare $(cat list) substitution is carved into its
+      own segment, the outer rm reaches check_rm with zero positional targets, and the function returns
+      before any decide() call -- the same lexer gap as rm -rf $(mktemp -d).'
+  - entry: resolution-exempt-check claim (item C, 3rd)
+    command_excerpt: D=--delete; rsync $D src dst
+    decision: kept, relabeled
+    measured_verdict: allow
+    measured_rule: destructive-guard
+    new_label: '対象外(判定なし): rsync の `--delete` は `$D` のまま展開されず検査されない'
+    justification: With no resolution stage there is no resolved text to consume. check_file_destruction's
+      rsync check does `has(args, "--delete", ...)`, an exact literal-token match; the arg actually passed
+      is the literal string "$D", not "--delete", so the check never fires. This pins path 5 (a delete-style
+      flag on a tool this hook does not recognise the flag spelling for), not a resolution-exemption.
+  ac4_paired_counter_cases:
+  - input: rm -rf "$(cat list)"
+    verdict: deny
+    rule: destructive-guard/rm-recursive
+  - input: rm -rf /tmp
+    verdict: deny
+    rule: destructive-guard/rm-recursive
+  - input: rm -rf tmp
+    verdict: deny
+    rule: destructive-guard/rm-recursive
+  - input: rm -rf .cache
+    verdict: deny
+    rule: destructive-guard/rm-recursive
+  - input: rm -rf /var/tmp
+    verdict: deny
+    rule: destructive-guard/rm-recursive
+  - input: rm -rf targets
+    verdict: allow
+    rule: destructive-guard
+  - input: rm -rf build/../src
+    verdict: allow
+    rule: destructive-guard

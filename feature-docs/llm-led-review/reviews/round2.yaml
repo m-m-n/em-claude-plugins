@@ -1,0 +1,1030 @@
+round: 2
+executed_at: '2026-09-04T17:42:15+09:00'
+scope:
+  review_mode: diff
+  base_commit: 9d21d0898352fbda6be6cd67c65ad0c88cad1acc
+  head_commit: 2119d3a99b4b5a6fad57bf8fa7f9888e0b225109
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/agents/codex-reviewer.md
+  - em-workflow/agents/review-evaluator.md
+  - em-workflow/agents/reviewer.md
+  - em-workflow/references/review-evaluation-contract.md
+  - em-workflow/references/review-output-schema.json
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/review-protocol.md
+  - em-workflow/references/review-rules.yaml
+  - em-workflow/references/reviewers.yaml
+  - em-workflow/skills/review/SKILL.md
+  - test-docs/llm-led-review/task0001.tests.yaml
+  - test-docs/llm-led-review/task0002.tests.yaml
+  - test-docs/llm-led-review/task0003.tests.yaml
+  - test-docs/llm-led-review/task0004.tests.yaml
+  - test-docs/llm-led-review/task0005.tests.yaml
+  - test-docs/llm-led-review/task0006.tests.yaml
+  - test-docs/llm-led-review/task0007.tests.yaml
+  - tests/test_llm_led_review_user_docs.py
+  - tests/test_review_evaluation_contract.py
+  - tests/test_review_phase_llm_led.py
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_reviewers_primary_chains.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- perspective: comprehensive
+  source: claude
+  status: completed
+- perspective: security
+  source: claude
+  status: completed
+- perspective: security
+  source: codex
+  status: failed
+  note: Codex CLI wrapper timed out at 600s (exit 124); returned non-JSON. Treated as a harness-level
+    failure and advanced to the next chain entry of a different harness.
+- perspective: security
+  source: litellm
+  model: muse-spark
+  status: completed
+- perspective: performance
+  source: claude
+  status: completed
+- perspective: performance
+  source: litellm
+  model: muse-spark
+  status: completed
+- perspective: architecture
+  source: claude
+  status: completed
+- perspective: architecture
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+- perspective: spec
+  source: claude
+  status: completed
+- perspective: spec
+  source: litellm
+  model: muse-spark
+  status: completed
+  note: Prompt exceeded the model budget with SPEC.md included; the reviewer dropped SPEC.md and reviewed
+    the diff alone, so it could not cite verbatim SPEC passages and returned no findings.
+- perspective: comprehensive
+  source: claude
+  status: completed
+  loop: 1
+- perspective: security
+  source: claude
+  status: completed
+  loop: 1
+- perspective: security
+  source: litellm
+  model: muse-spark
+  status: skipped
+  skip_reason: review_data_too_large
+  loop: 1
+- perspective: performance
+  source: claude
+  status: completed
+  loop: 1
+- perspective: performance
+  source: litellm
+  model: muse-spark
+  status: skipped
+  skip_reason: review_data_too_large
+  loop: 1
+- perspective: architecture
+  source: claude
+  status: completed
+  loop: 1
+- perspective: architecture
+  source: litellm
+  model: vertex-glm-5.2
+  status: skipped
+  skip_reason: review_data_too_large
+  loop: 1
+- perspective: spec
+  source: claude
+  status: completed
+  loop: 1
+- perspective: spec
+  source: litellm
+  model: muse-spark
+  status: completed
+  loop: 1
+- perspective: comprehensive
+  source: claude
+  status: completed
+  loop: 2
+- perspective: security
+  source: claude
+  status: completed
+  loop: 2
+- perspective: performance
+  source: claude
+  status: completed
+  loop: 2
+- perspective: architecture
+  source: claude
+  status: completed
+  loop: 2
+- perspective: spec
+  source: claude
+  status: completed
+  loop: 2
+findings:
+- stable_id: e34933fd05b60c85
+  severity: high
+  category: security
+  file: em-workflow/references/review-phase.md
+  line: 435
+  title: untrusted-origin ゲート `sources != ["claude:evaluator"]` が accountability-floor lift に構造的に一致しない
+  description: loop 2 が追加した R4 candidate gate は untrusted-origin として injection report / Independent Inspection
+    Duty の write-up / accountability-floor lift の 3 種を挙げるが、R3b の accountability floor は lift した finding
+    に「that run's orchestrator-assigned source identity」(codex:<perspective> 等) を付けると定めているため、lift の sources
+    が ["claude:evaluator"] になることは原理的に無い。ゲートは lift クラスに対して発火せず、evaluator の判断を一度も通っていない untrusted なレビュアー本文が
+    diff 形状の suggestion を持てば auto-applicable に分類され、batch で無人適用される。契約 152-161 が review-phase.md に委譲した統制が空振りしている。
+  suggestion: 'ゲート条件を source identity 文字列の等値比較から origin フラグに変える。(a) R3b の floor が lift した finding に origin:
+    evaluator_lift を付与し R4 はそれで判定する、または (b) R4 のゲート条件を『sources != ["claude:evaluator"] AND not lifted-by-floor
+    AND not evaluator-originated』と明示的に列挙し直す。'
+  sources:
+  - claude:security
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 40a0b2b1dd238492
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 435
+  title: accountability-floor lift の `sources` が契約と phase で矛盾し、R4 候補ゲートの列挙が機械条件と一致しない
+  description: R4 の候補ゲートは sources != ["claude:evaluator"] という機械条件で untrusted-origin を弾き、その対象に accountability-floor
+    lift を挙げるが、R3b:383-386 は lift に元 run の source identity を付けると定めるため絶対にマッチしない。さらに review-evaluation-contract.md:152-155
+    は lifted-site promotion を claude:evaluator 帰属の untrusted-origin と明記しており、phase 側の規定と正面から矛盾する。実装がどちらを読むかで、batch
+    における lift 済み finding の扱いが『常に skip』と『Apply as-is で無人適用』に分岐する。
+  suggestion: 帰属の正を決めて片側を直す。lift はレビュアー本文をそのまま持ち上げるだけなので phase 側 (レビュアー run の identity) が実態に合う。その場合 R4
+    のゲート説明から accountability-floor lift を外し、契約 152-155 の列挙からも外す。逆に契約側を正とするなら R3b の lift の sources を claude:evaluator
+    に変え、run identity は origin_run_id 等の別フィールドに記録する。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 603f717e701a0370
+  severity: high
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 383
+  title: accountability-floor lift の sources 帰属が R4 の untrusted-origin ゲートと契約で食い違う
+  description: R3b の accountability floor は lift した finding に orchestrator-assigned source identity を与えるので
+    sources は ["codex:security"] のようになる。一方 loop 2 が追加した R4 候補ゲートは lift を sources == ["claude:evaluator"]
+    で捕まえるつもりで書かれており、この条件は lift に一度もマッチしない。SSOT 2 文書と参照側 (R4) の 3 者が同一フィールドの所有権で矛盾しており、実装者がどれを読むかで挙動が分岐する。
+  suggestion: '(a) R3b の floor が lift した finding の sources を ["claude:evaluator"] に設定し、元 run の識別子は記録側にだけ残す。または
+    (b) sources を provenance 判定に流用するのをやめ、finding に origin: evaluator_lift のような明示フラグを持たせて R4 ゲートをそれで判定する。いずれにせよ契約
+    152-161 と R3b の lift 規定を同時に直す。'
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 5f36689238c1b2cd
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 742
+  title: '`unreviewed_perspectives` の定義が契約と食い違い、non-retryable skip の観点が無開示で消える'
+  description: 契約 65 は「今ラウンド completed なレビュアー実行が 1 つも無い観点」と定義するが、review-phase.md:742 と R3a は「R2b の Claude
+    fallback が dispatch され、かつ completed を出さなかった観点だけ」と狭く定義する。non-retryable skip (skill_unresolved / schema_unresolved
+    / protocol_unresolved) は fallback を dispatch しないため、たとえば security の観点スキルが解決できないだけで、その観点は completed
+    実行ゼロのままどの一覧にも載らず R5 の開示にも R6 の報告にも出ない。residual_critical_high == 0 で完了ゲートは通るので、無人 batch では気付く経路が無い。
+  suggestion: '契約側の定義 (completed 実行ゼロ = 一覧入り) に review-phase.md を合わせる: R5 の開示条件を「R2 で dispatch された観点のうち
+    status: completed の run を 1 つも持たないもの (fallback が dispatch されたかを問わない)」に書き換え、R3a の説明文も同じ文言に揃える。'
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 524b2c6901587b44
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 171
+  title: '`run_id` の「round 内で一意」という主張が R4 in-loop 再レビューで破れる'
+  description: 'loop 2 が導入した run_id は {perspective}#{chain_index} / #fallback / #loop{N} の 3 形式で「each
+    form is collision-free within the round」と断言するが、R2b は R4 の in-loop 再レビューにも同一適用されると定めるため、1 ループ内で同一観点が
+    primary + chain hop 最大 2 + Claude fallback の最大 4 run を生む。これらは {perspective}#loop{N} に潰れるか、fallback
+    がラウンド序盤の R2b fallback run と衝突する。R3b step 6 の run identity 写像が一意に定まらず、dismissed_sites[].run_id の参照も曖昧になる。'
+  suggestion: 'in-loop 再レビューにも chain 位置と種別を含む形式を与える: {perspective}#loop{L}#{chain_index} / {perspective}#loop{L}#fallback。あわせて
+    R2 の collision-free の根拠文をこの形式に合わせて書き直し、N が loop 番号であることを明示する。'
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: a644c6c28a4b704a
+  severity: high
+  category: spec
+  file: em-workflow/references/review-phase.md
+  line: 476
+  title: loop 2 が `review.auto-fix-judgment` の batch 挙動を変えたのに batch-mode.md / batch-policies.yaml を同時更新していない（NFR3
+    違反）
+  description: SPEC NFR3 は Phase R4/R5 の 3 ゲートについて「挙動を変える場合は references/batch-mode.md の Non-packet gates
+    表と references/batch-policies.yaml ヘッダの除外コメントを同時に直す」と定める。loop 2 が review-phase.md に review.auto-fix-judgment
+    の batch 例外 (untrusted-origin finding は Apply as-is せず skip) を追加したが、batch-mode.md の表は今も無条件に Apply as-is
+    のままで、両ファイルは base..HEAD の diff で一度も変更されていない。同一 gate_id の batch 既定を 2 つの SSOT が別々に規定する状態で、表に従う無人実行は
+    untrusted-origin テキストを Apply as-is してしまう。
+  suggestion: 同じ変更の中で batch-mode.md の Non-packet gates 表の review.auto-fix-judgment 行に例外を明記し、batch-policies.yaml
+    ヘッダの除外コメントも合わせる。表を直さない選択なら review-phase.md 側の例外を撤回するか、NFR3 の同時更新義務を満たす形に SPEC を改める。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: cc3cd7ea66b63794
+  severity: medium
+  category: security
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 152
+  title: Independent Inspection Duty 由来 finding の `claude:evaluator` 帰属が機械的に担保されていない
+  description: 契約は injection report / Duty 由来 / lifted-site promotion の 3 種を untrusted-origin と宣言し claude:evaluator
+    に帰属すると書くが、sources を空にせよと明示的に義務づけているのは injection report だけ。Output Object は evaluator に raw run id を入れよと促すため、evaluator
+    が自前で見つけた finding に関連する run_id を素直に書くと codex:<perspective> 等に帰属され、R4 の untrusted-origin ゲートを通過して batch
+    で Apply as-is の対象になる。
+  suggestion: 契約の Untrusted-Input Handling に「evaluator 自身が originate した finding は sources を必ず空配列にする」という単一の義務を書き、injection
+    report 限定の現行文をその一般則に統合する。review-phase.md R3b 側にも、空 sources → claude:evaluator 帰属が untrusted-origin
+    ゲートの唯一の入力であることを明記する。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 8cce4c47545faf77
+  severity: medium
+  category: security
+  file: em-workflow/references/review-phase.md
+  line: 708
+  title: R5 の新 `evaluation` ブロックで `action_rationale` だけ長さゲートを通さずに永続化される
+  description: loop 2 が追加した root evaluation ブロックは round_summary / recommended_action / action_rationale
+    を永続化するが、4096 バイトキャップを通すと書かれているのは round_summary のみ。action_rationale は evaluator が自由記述する untrusted テキストで、長さ制限も他のゲートもなくコミット対象の
+    YAML に入る。
+  suggestion: 「round_summary と action_rationale は R3b step 4 の 4096 バイトキャップを通してから persist する。recommended_action
+    は閉集合外なら absent 扱い」に直し、サンプル YAML のコメントも更新する。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 10f469eee47e9066
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 694
+  title: '`dismissed_sites` のゲートが R5 に置かれているのに、R3b の accountability floor の match set に影響すると書かれている'
+  description: R5 は「落ちたエントリは persist 対象からも accountability floor の match set からも除く」と規定するが、floor は R5 より前の
+    R3b で実行され、floor 本文には dismissed_sites を検証する手順が無い。順序どおりに読むと floor は未ゲートの dismissed_sites に照合し、その後 R5
+    で落ちた分だけ『dismiss 済み扱いのまま lift もされない』サイトが生じる。
+  suggestion: ゲートの実行位置を R3b 側へ移す。floor の直前に「照合の前に dismissed_sites の各エントリを step 1 の file 検査と step 4 の長さ上限にかけ、落ちたものは
+    match set から除いて dismissed_sites_dropped に記録する」と書き、R5 は「R3b でゲート済みの一覧をそのまま persist する」旨だけを述べる。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: b8532db8c8753557
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 798
+  title: R6 が `dismissed_sites` を critical/high で絞るが、エントリに severity フィールドが無い
+  description: R6 は「Each critical/high entry of the round record's dismissed_sites is rendered as one
+    line」と規定するが、dismissed_sites の 1 エントリは契約でも R5 の YAML 骨子でも file / line / run_id / reason の 4 フィールドだけで
+    severity を持たない。ラウンド記録だけを読んでレンダリングする実装は絞り込みを判定できない。
+  suggestion: 契約の dismissed_sites エントリに severity を追加し R5 の YAML 骨子にも入れる。あるいは floor 上そもそも critical/high
+    サイトしか載らない前提を採るなら R6 の「Each critical/high entry」を「Each entry」に直す。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: ed7cb4d796802c6e
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 94
+  title: 評価者出力の `confidence` の値域が契約に無く、R3b step 7 が未検証の untrusted 値に算術を行う
+  description: 契約の Output Object は confidence をフィールド名として挙げるだけで型も値域も定義していない。一方 R3b step 7 は評価者の値から +15
+    (上限 100) と hard cap 50 という 0-100 前提の算術を行う。評価者出力は UNTRUSTED と宣言されているのに confidence の妥当性検査が 1 つも無く、0.85
+    や 10000 や負値がそのまま記録・報告・R4 の並び順に流れる。
+  suggestion: 契約の Output Object に「confidence は 0-100 の整数」と明記し、R3b に検査ステップを足す (範囲外・非数値は既定値 60 に丸めるか drop)。R5
+    に persist される値がゲート済みであることも 1 行で示す。
+  sources:
+  - claude:comprehensive
+  - claude:architecture
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 2a91939523a13aa8
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 435
+  title: '`sources != ["claude:evaluator"]` が候補ゲートの連言と分類オーバーライドの両方として書かれている'
+  description: loop 2 が追加した条件は候補ゲートの連言として置かれているが、同じ括弧内は『needs-judgment path に強制され AskUserQuestion を要する』と書き、batch
+    節もそれを分類結果として参照する。候補ゲートは候補集合を決める述語であって分類器ではないため両立しない。interactive で『ユーザーに問うて修正できる』のか『黙って auto-fix 対象外になる』のかが未定義になる。
+  suggestion: needs-judgment 強制が意図なら、この条件を候補ゲートの連言から外し Classification 節に分類規則として書く。auto-fix 完全除外が意図なら候補ゲートに残したうえで括弧内の
+    needs-judgment / AskUserQuestion の記述を削り、batch 節の EXCEPT 句も不要にする。
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: d410c49a64f73762
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 171
+  title: run_id 語彙が R2 fan-out fallback を欠き、R4 ループ内 chain walk で衝突する
+  description: loop 2 の run_id 割り当ては 3 形式しか定義しておらず、(1) R2 の fan-out 時点で chain にエントリが無く Claude fallback
+    を出す経路に対応する形式が無い (codex も vertex-review も未導入の既定環境では全観点がこの経路を通る)、(2) R4 のループ内 run に {perspective}#loop{N}
+    の 1 形式しか無いため chain hop や fallback が衝突する。
+  suggestion: '全ディスパッチを {perspective}#{loop}.{seq} (ラウンド本体は loop=0) で採番し role / source は別フィールドで表す。最小修正なら
+    #fallback の説明に R2 fan-out 経路を加え、ループ内 run を #loop{N}.{chain_index} / #loop{N}.fallback に拡張する。'
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 922b64c8e8904edd
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 176
+  title: Independent Inspection Duty が unreviewed_perspectives の除外規定と正面から矛盾する
+  description: Input Block 65-68 と agents/review-evaluator.md Step 3 は「unreviewed_perspectives に載る観点には
+    Duty を適用しない」と規定するが、Duty 本体 176-181 は例外なしで「For every perspective dispatched this round」と書く。unreviewed_perspectives
+    の観点は必ず perspectives_dispatched に含まれるため両条件が同時に成立する。coverage-status の 3 値にも『Duty 対象外』を表す値が無い。
+  suggestion: Duty 本体の対象を「perspectives_dispatched のうち unreviewed_perspectives に載らないもの」と書き直し、Output Object
+    の coverage statement も同じ集合に限定する。除外観点も残したいなら 3 値語彙に第 4 の値 (not applicable — no completed reviewer run)
+    を追加し、3 か所で同じ語彙を参照させる。
+  sources:
+  - claude:architecture
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 611f7fdd71c106ff
+  severity: medium
+  category: performance
+  file: em-workflow/references/review-phase.md
+  line: 258
+  title: 実行時に死んだと判明したハーネスを記憶せず、ループごとに無駄な dispatch を繰り返す
+  description: R0 の可用性判定は静的プローブ 1 回だけで、実行時に budget_exhausted (その走行中は確実に回復しない) や harness_unavailable が判明しても、以降そのハーネスを
+    unavailable として記録する規則が無い。各観点の唯一の reviewer が primary_chain 先頭のハーネスになり、かつ R2b が R4 の in-loop 再レビューにも同一適用されるため、初回ラウンド
+    + auto-fix 3 ループで全選択観点が毎回必ず失敗する dispatch を焼く。本ラウンドでも litellm の 3 観点が再レビューで review_data_too_large を返し、同じ形の空振りが実測された。
+  suggestion: 'R2b の walk rules に、実行時に判明したハーネス死亡状態をフェーズ内で記憶する規則を足す: budget_exhausted / harness_unavailable
+    を返した時点で対応する可用性フラグを false に落とし、以降の chain walk・他観点の残り hop・R4 の各 in-loop 再レビューでは『unavailable (that costs
+    no hop)』として読み飛ばす。rate_limited は一時的なので対象外。'
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 195d1daeac41f0cd
+  severity: medium
+  category: performance
+  file: em-workflow/references/review-phase.md
+  line: 301
+  title: 評価者入力の reviewer_outputs が無制限 verbatim で、上限もオーバーサイズ経路も無い
+  description: 'R3a は全 run の reviewer 出力を verbatim で 1 つの Opus (effort: xhigh) コンテキストへ積むが、長さ上限は R3b step
+    4 の 4096 バイト cap しか存在せず、それは評価者の出力に掛かるゲートで入力側には適用されない。review-protocol.md は litellm reviewer にだけ review_data_too_large
+    という縮退経路を用意しているのに、評価者には相当する経路が無い。大きめのラウンドでは最も高価な 1 dispatch がコンテキスト超過で丸ごと失敗し、degradation に落ちて支払ったコストが無駄になる。'
+  suggestion: 'R3a の入力ブロック定義に縮約規則を書く: (a) 各 reviewer finding の title/description/suggestion に 4096 バイト
+    cap を渡す前に適用、(b) skipped: true の run は reviewer_outputs から省く、(c) それでも超える場合の挙動 (severity 順に切って round_summary
+    で開示、または最初から degradation 経路) を 1 文で決める。'
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 57eb5a3771352d63
+  severity: medium
+  category: spec
+  file: em-workflow/references/review-phase.md
+  line: 217
+  title: FR3 の「利用可能エントリが 1 つも無いときだけ」に反し、chain 未消尽でも Claude fallback を dispatch する
+  description: SPEC FR3 と Error Codes 表は fallback の発火条件を「当該観点のチェーンに利用可能エントリが 0」の 1 行だけに限定するが、review-phase.md
+    は malformed-result 経路で「no further chain entry to try」と断じて Claude fallback を出す。実際には chain の後続エントリが利用可能なまま残り得るため
+    FR1 も同時に外れる。loop 1 が同じパターンを harness-level failure にも拡張して範囲が広がった。review-protocol.md / agents/reviewer.md
+    / reviewers.yaml ヘッダはいずれも 2 経路しか認めておらず、記述が割れている。
+  suggestion: (a) malformed-result / harness-level failure でも chain walk を継続し、Claude fallback は全エントリ消尽時のみに戻す。または
+    (b) SPEC FR3 と Error Codes 表を先に改めて 2 経路を正当なトリガーとして明記し、review-protocol.md と agents/reviewer.md の記述も揃える。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 208b2976beee9281
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 199
+  title: スキーマ厳格判定が、中身のあるレビュー結果を丸ごと failed にして捨てる
+  description: 'malformed 節は completed / failed を schema-valid かどうかだけで分け「Schema validity is the only test」と明示する。review-output-schema.json
+    は additionalProperties: false かつ finding の 8 フィールド全部が required なので、非 Claude モデルが line_end を省く、JSON
+    の前後に一言添える、といった逸脱で中身のあるレビューが failed になり findings ごと捨てられる。捨てた上で Claude フォールバックを追加起動するのでコストも二重にかかる。'
+  suggestion: 判定前の軽い正規化を明示的に許す (出力から JSON ブロックを抽出、欠けている nullable フィールドを null 補完、未知フィールドは破棄) と書き、malformed
+    を「JSON として解釈できない / findings 配列が取り出せない」に限定する。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 9b74f75a16c4f7fe
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 267
+  title: harness レベル失敗の Claude フォールバックが「残りチェーンエントリなし」を誤って前提し、利用可能なエントリを飛ばす
+  description: loop 1 で追加された文が harness レベル失敗について「the perspective still has no completed run and no further
+    chain entry to try」と述べるが、chain index 0 が Task レベルで落ちた観点には index 1 以降が残っており前提が事実と合わない。reviewer が正しく
+    harness_unavailable skip を返した場合は次エントリへ進むのに、Task ごと落ちた場合だけチェーンを打ち切る非対称が生まれている。agents/reviewer.md と
+    review-protocol.md の 2 経路記述とも衝突する。
+  suggestion: '(a) harness レベル失敗を harness_unavailable skip と同じく chain walk 対象として扱う。(b) 即時フォールバックを維持するなら「no
+    further chain entry to try」を「the failure is not attributable to a chain entry, so the walk is not
+    resumed」等に書き換え、reviewer.md / review-protocol.md / R5 の role: fallback 経路列挙の 3 箇所に harness-level-failure
+    経路を追記する。'
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 53ce65e8b0476be2
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 381
+  title: accountability floor の lift が通過するゲート列挙に round-context suppression が無く、declined 済み findings が再流入する
+  description: loop 1 の修正で lift が通るゲートが step 1 / 4 / 5 / 7 と明示的に列挙されたが、floor 自体は Round-context suppression
+    と dedupe の後に置かれており、列挙にもその 2 つが含まれていない。前ラウンドで declined と記録された stable_id を reviewer が再報告し、evaluator
+    が findings にも dismissed_sites にも入れ損ねた場合、floor がそれを持ち上げて suppression を素通りする。今回の列挙によってバイパスが仕様として固定された。
+  suggestion: 列挙に Round-context suppression を加える (declined として記録済みで、かつ当該ファイルがその round の head_commit 以降変更されていない
+    site は lift しない)。dedupe を適用しない方針が意図的ならその旨も 1 文で明示する。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 3c5535577d3be3fd
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 135
+  title: litellm モデルの allow-list を任意プラグイン側スキルに置き、R0 の SSOT 解決も所有境界も外れている
+  description: loop 1 で追加された「validate M against the vertex-review plugin's litellm-harness skill's allow-list」は、(1)
+    R0 が fail-closed で解決すると定める SSOT 群に含まれず path 変数も解決手順も無い、(2) README が明言する所有境界 (観点ごとのモデル選択は em-workflow
+    側の責務) に反し、別途インストールの任意プラグインの内部成果物が em-workflow 自身のレジストリ値を検証する依存になっている。解決に失敗すれば fail-closed で litellm
+    エントリが全滅し、多モデル化の中心価値が黙って codex 一本に縮退する。
+  suggestion: '(a) allow-list を reviewers.yaml に known_litellm_models: として持たせ、R2 はそれと primary_chain の
+    model を突き合わせる。または (b) R0 に litellm_models_path を他の SSOT と同じ fail-closed 手順で解決する項目として追加し、未解決時の挙動を明記する。'
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: fe213c2345d0b9f2
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 577
+  title: R4 の in-loop 再レビュー run を perspective_runs に混ぜる規定が、R5 の「最後の行が primary 結果」という読み取り規則を壊す
+  description: R4 は in-loop 再レビュー run を通常のラウンド run と同じ形式で記録すると定めるが loop 番号にあたる識別子を持たせない。R5 の YAML コメントは「最後の行がその観点の
+    primary reviewer 結果」という読み取り規則を宣言しているため、auto-fix が 1 回でも productive だと最後の行が最終ループの再レビューになる。R3a の perspectives_dispatched
+    は R4 より前のスナップショットなので、評価者が見た run 集合と記録に残る run 集合も食い違う。
+  suggestion: 'perspective_runs エントリに loop: フィールド (R2/R2b の初回 run は省略または 0) を追加し、R5 のコメントを「同一 loop 値の中で最後の行がその観点の
+    primary reviewer 結果」に改める。R3a の perspectives_dispatched が loop 0 のスナップショットである旨も明記する。'
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: e666ef7c2142019a
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 283
+  title: Evaluator lessons resolution delegates to a per-perspective rule that does not accept the evaluator's
+    perspective-agnostic case
+  description: Phase R3a は評価者の入力ブロックの lessons について「same resolution rule as Phase R2」と指定するが、R2 のルールは per-perspective
+    (`## reviewer:{perspective}` セクションを inline) であり、評価者は perspective を持たない。文字どおり適用すると LESSONS.md に該当セクションが無く
+    lessons は常に省略される。一方 契約は lessons を「this project's recorded lessons」と広く記述しており、どちらが正かどの文書も定めていない。
+  suggestion: R3a が perspective-agnostic な評価者向けの lessons 解決規則を自前で定義する (全 `## reviewer:*` セクションを inline
+    する、または専用の `## evaluator` セクションを設ける)。契約側の記述も採用した解決に合わせる。
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: ca6a447cca9c5e41
+  severity: medium
+  category: spec
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 149
+  title: Independent Inspection Duty が評価役に個別観点レビューをさせ、SPEC の役割分離に反する
+  description: SPEC Overview / Objectives / US1 は「Claude(Opus) は個別観点のレビュアーではなく、1 ラウンド分の全レビュアー出力を横断して評価する役に置き直す」と述べ、FR4
+    も評価役の職務をレビュアー出力を入力とする横断評価に限定している。しかし Independent Inspection Duty と agents/review-evaluator.md Step
+    3 は、評価役自身が changed_files を読み直し自ら findings を起票することを義務づけており、SPEC が明示的に外した役割を評価役の中に戻している。loop 2 は read
+    budget との整合を入れただけで責務の逸脱自体は残っている。
+  suggestion: (a) Duty を「レビュアー出力の内的整合性の評価」に限定し、changed_files の独自読み取りから新規 finding を起こす経路を落とす。または (b) SPEC
+    の Overview / Objectives / US1 と FR4 / FR7 を改訂して評価役の独立検査と起票を明示的な要件として追加する (SPEC 変更を伴うため人間の承認が必要)。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 29ba13dc17133628
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 559
+  title: ループ内 re-review の run を判別不能な形で `perspective_runs` に混ぜている
+  description: fe213c2345d0b9f2 と同一の欠陥をラウンド前半に検出したもの。in-loop re-review の run に discriminator が無く、chain
+    walk の primary 複数行・fallback 行・各ループの re-review 行が区別不能に並ぶ。
+  suggestion: 'in-loop の行に loop: {N} を付け、R5 のスケルトン注記と unreviewed_perspectives の判定条件を「loop を持たない行を対象とする」と明示する。'
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 2f2c9aec114ebf70
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 258
+  title: ハーネスレベルで Task が失敗した観点にはフォールバックも開示も無く、未レビューのまま completed になる
+  description: 観点あたりのレビュアーが 1 体になったため、その 1 体の Task 失敗がその観点の全面未レビューを意味するが、フォールバックも unreviewed_perspectives
+    への開示も掛からず完了ゲートを素通りしていた。
+  suggestion: carve-out に ONE Claude fallback dispatch を明記し、R5 の開示規則も harness 失敗経路を含む表現にする。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: fixed
+  resolution_reason: auto-applied loop 1（ただし 9b74f75a16c4f7fe として新たな前提の誤りが残った）
+- stable_id: 4d36e79924189653
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 361
+  title: accountability floor が持ち上げる finding は R3b の per-finding ゲートを一つも通らない
+  description: floor は dedupe と round-context 抑制の後段に置かれ、レビュアーランの生テキストをそのまま findings に挿入していたため step 1/4/5/7
+    がいずれも適用されなかった。security 観点の bd50848d7bc5a6c8（dismissed_sites の無記録抑制経路）と同一サイトで統合。
+  suggestion: lift したエントリも step 1/4/5/7 を通し、dismissed_sites を round record に永続化して R6 に開示する。
+  sources:
+  - claude:comprehensive
+  - claude:security
+  confidence: 80
+  resolution: fixed
+  resolution_reason: auto-applied loop 1（残課題は 53ce65e8b0476be2 として再掲）
+- stable_id: bd50848d7bc5a6c8
+  severity: high
+  category: security
+  file: em-workflow/references/review-phase.md
+  line: 361
+  title: 評価者が `dismissed_sites` で critical/high を全件棄却しても記録にも報告にも残らない / フロアが lift するレビュアー原文がサニタイズを通らない
+  description: accountability floor は棄却を通常のトリアージ結果として許すが dismissed_sites がラウンド記録にも R6 にも現れないため、全件棄却がクリーン完結として記録に残らなかった。同一サイトの
+    2 件を統合。
+  suggestion: dismissed_sites を round record に永続化し R6 に 1 行ずつ開示する。lift も step 1-4 を通す。
+  sources:
+  - claude:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 7f0f07976daf4420
+  severity: high
+  category: security
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 135
+  title: 検出したインジェクション試行の報告が category ゲートで無条件 drop される / 評価者経由で untrusted 出力が auto-fix 可能な finding に洗浄される
+  description: 契約は injection を security finding として報告させるが、R3b step 3 の category ゲートが sources の run 観点との不一致を無条件
+    drop するため、別観点の run に仕込まれた injection の警報が消えていた。litellm:muse-spark:security と同一サイトで統合。
+  suggestion: injection 報告は sources を空にして claude:evaluator 帰属にし、category は今ラウンド dispatch 済みのもの (security、無ければ
+    comprehensive) を使う。evaluator 起源 finding の auto-fix 除外は review-phase.md に委譲。
+  sources:
+  - claude:security
+  - litellm:muse-spark:security
+  confidence: 95
+  resolution: fixed
+  resolution_reason: auto-applied loop 1（委譲先の統制不備は e34933fd05b60c85 として再掲）
+- stable_id: 3fabec5e0ad963aa
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 170
+  title: Independent Inspection Duty が 10 ファイルの読み取り予算では遂行不能
+  description: Duty は全 dispatch 観点についての独立検査を求めるのに読み取り予算は 10 ファイル固定で、予算内では大半のファイルを見ないまま corroborated と書くしかなかった。
+  suggestion: 予算内で検査できた範囲に Duty を限定し、未検査の観点は coverage statement で not verified と申告させる。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: e88699402f7849a8
+  severity: high
+  category: security
+  file: em-workflow/references/review-phase.md
+  line: 145
+  title: Unvalidated verbatim model passthrough to shell harness
+  description: レジストリの model 値を検証なしに codex exec -p litellm -m <model> へ verbatim 展開しており、レジストリ改竄が引数注入になり得た。
+  suggestion: dispatch 前に既知 litellm モデルの allow-list と突き合わせ、外れたら fail-closed でチェーンを進める。never-substitute
+    規則は維持する。
+  sources:
+  - litellm:muse-spark:security
+  confidence: 50
+  resolution: fixed
+  resolution_reason: auto-applied loop 1（allow-list の所在は 3c5535577d3be3fd として別途未解決）
+- stable_id: 1c0a7d1b68d4bb75
+  severity: high
+  category: security
+  file: em-workflow/references/review-phase.md
+  line: 427
+  title: auto-fix 候補ゲートに untrusted-origin（claude:evaluator）除外が無く、契約が委譲した制御が実在しない
+  description: 契約が review-phase.md に委譲した『evaluator 起源 finding の auto-fix 除外』と『suggestion のエスケープ』が R4 に存在しなかった。
+  suggestion: R4 候補ゲートに sources != ["claude:evaluator"] を足し、batch では skip、対話では AskUserQuestion 必須にする。Dispatch
+    節にプロンプト境界の規則を書く。
+  sources:
+  - claude:security
+  - claude:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2（ゲートが lift クラスに一致しない点は e34933fd05b60c85 / 40a0b2b1dd238492 / 603f717e701a0370
+    として再掲）
+- stable_id: f63e0df17027da04
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 156
+  title: 契約が review-phase.md に委譲した auto-fix 除外・suggestion エスケープが実際には未定義
+  description: 1c0a7d1b68d4bb75 を契約側から見た同一欠陥。
+  suggestion: review-phase.md 側に統制を追加する（本 finding 自身の suggestion 選択肢 (a)）。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: fixed
+  resolution_reason: resolved by the same-loop fix at review-phase.md:427 (its own suggestion's option
+    (a))
+- stable_id: bfab55ba0ee1e0c6
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 82
+  title: coverage statement の語彙が Output Object（2値）と Independent Inspection Duty（3値）で矛盾
+  description: Duty に 3 値ステータスが追加された一方、出力形状の正本である Output Object の round_summary は 2 値のままで、not verified
+    を報告する経路が閉じていた。
+  suggestion: Output Object の記述を Duty が定義する 3 値への参照に統一する。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 26e49dc735faee56
+  severity: high
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 171
+  title: run_id を採番・記録する規定がどこにも無いのに R3a/R3b/R5 が run_id をキーにしている
+  description: R3a / R3b step 6 / R5 の dismissed_sites が run_id を結合キーとして前提していたが、採番規則がどの SSOT にも無かった。
+  suggestion: R2 / R2b の記録規定に run_id の採番を明記し、R5 の perspective_runs にも run_id を持たせる。
+  sources:
+  - claude:architecture
+  - claude:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2（衝突可能性は 524b2c6901587b44 / d410c49a64f73762 として再掲）
+- stable_id: bfd7c9a966062245
+  severity: high
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 656
+  title: 評価オブジェクトの round_summary / recommended_action / action_rationale が永続化先を持たず、batch では完全に消える / dismissed_sites
+    を verbatim 永続化して未信頼入力ゲートを迂回する
+  description: 契約が『絶対に失われてはならない』と宣言した injection 記録と coverage status が、batch では記録にも出力にも残らなかった。dismissed_sites
+    も未ゲートで永続化されていた。同一サイトの comprehensive medium (40ea3ad0d475fbf2) を統合。
+  suggestion: R5 に evaluation ブロックを追加し、dismissed_sites の永続化を gated に改める。R6 に coverage statement の描画を足す。
+  sources:
+  - claude:architecture
+  - claude:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2（action_rationale の未ゲートは 8cce4c47545faf77 として再掲）
+- stable_id: 4ddadf55d80e856b
+  severity: medium
+  category: security
+  file: em-workflow/references/review-phase.md
+  line: 288
+  title: '`reviewer_outputs` を無検査・無上限で評価者プロンプトに verbatim 展開している'
+  description: 評価者への入力側に 4096 バイト上限も file の字句検査も掛かっていなかった。
+  suggestion: R3a で展開前に R3b step 4 / step 1 と同じ検査を掛け、明示的なデータ境界で囲む。
+  sources:
+  - claude:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2（R4 dispatch 側のデータ境界として反映。入力側の総量上限は 195d1daeac41f0cd として未解決）
+- stable_id: e6557dfa300e73bf
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 317
+  title: R3b の機械ゲートが findings 限定で、同じ非信頼オブジェクトの dismissed_sites だけ無検査で通る
+  description: 評価者出力は UNTRUSTED と宣言されているのに、dismissed_sites だけがサニタイズ層を素通りしてコミット成果物と人間向け出力に到達していた。
+  suggestion: dismissed_sites にも step 1 の file 検査と step 4 の長さ上限を適用し、落ちたエントリは開示する。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2（ゲートの実行位置は 10f469eee47e9066 として再掲）
+- stable_id: 2d715ecb71e318ed
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 302
+  title: 評価者の `round_summary`（coverage statement と注入検知の唯一の出力先）を消費する規定が無い
+  description: 契約が産出を義務づける round_summary に、review-phase.md 側の消費・永続化規定が存在しなかった。
+  suggestion: R5 の round record に evaluation ブロックを足し、R6 の描画規則に coverage statement を加える。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 0e9ba73ca20f121b
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 586
+  title: '`unreviewed_perspectives` がラウンド記録スケルトンにも R6 描画規則にも無い'
+  description: 常在を約束されたフィールドがスケルトンにも描画規則にも無く、書かれないまま終わっていた。
+  suggestion: スケルトンの root に unreviewed_perspectives を追記し、R6 の Rendering rules に項目を足す。
+  sources:
+  - claude:comprehensive
+  - claude:architecture
+  confidence: 80
+  resolution: fixed
+  resolution_reason: auto-applied loop 1（定義の食い違いは 5f36689238c1b2cd として再掲）
+- stable_id: 1cf960653971e5f1
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 646
+  title: 完了ゲートの batch 一文が、同じ R5 の batch auto-rework 手順と矛盾する
+  description: 完了ゲートの batch 一文が residual をそのまま deferred にすると読めたが、同じ R5 の batch 段落は cap 1 の auto-rework
+    を先に行うと定めていた。
+  suggestion: batch は下の Batch mode 段落に従う旨の参照に縮めるか、順序を一意に明記する。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: d4e49f25a02c2d40
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 75
+  title: Evaluator output fields declared in contract are not persisted in the round record
+  description: 契約が宣言する round_summary / dismissed_sites が round record に永続化されず、triage の監査証跡が揮発していた。
+  suggestion: R5 の round record root に dismissed_sites と round_summary を永続化する。
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 50
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 と loop 2
+- stable_id: 372dd1bfe4ef52b8
+  severity: medium
+  category: spec
+  file: em-workflow/references/review-phase.md
+  line: 558
+  title: R4 ループ内 re-review の findings が評価役を通らず、confidence をオーケストレーターが決め打ちする
+  description: FR13 が評価役に割り当てた confidence 付与を、R4 の in-loop 再レビュー経路ではオーケストレーターが基準値 60 で担っていた。
+  suggestion: 評価役を経由しない 3 経路での基準値付与を明文化するか、in-loop 再レビューにも評価役を通す。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2（R5 の evaluation ブロックと run_id 付与で経路が明文化された）
+- stable_id: 4de8c2921456a841
+  severity: medium
+  category: spec
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 169
+  title: Independent Inspection Duty が評価役に観点別レビューをさせており、SPEC の基本前提と矛盾する（read budget 側）
+  description: Duty と Read-Only Constraint の読み取り予算が整合していなかった。
+  suggestion: 予算内で検査できた範囲に Duty を限定し、3 値の coverage status で申告させる。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2（役割分離そのものの矛盾は ca6a447cca9c5e41 として未解決のまま）
+- stable_id: ea1513063a62b112
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 166
+  title: '`run_id` を採番する規定がどこにも無いのに R3a / R3b / 評価契約がそれを前提にしている'
+  description: 26e49dc735faee56 と同一の欠陥を comprehensive 観点から検出したもの。
+  suggestion: R2 / R2b の記録規定に run_id の採番を明記する。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: c1e79658dbf8bc95
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 166
+  title: '`run_id` を誰がいつ採番するかがどの SSOT にも書かれていない'
+  description: 26e49dc735faee56 と同一の欠陥をラウンド前半に検出したもの。
+  suggestion: R2 / R2b の記録規定と R5 の perspective_runs に run_id を足す。
+  sources:
+  - claude:architecture
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 434589539e96a5e3
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 103
+  title: 評価者由来の `confidence` だけが ownership boundary と機械ゲートの両方から抜けている
+  description: ed7cb4d796802c6e と同一の欠陥をラウンド前半に検出したもの。
+  suggestion: 契約で confidence を 0-100 の整数と定義し、R3b に検査ステップを足す。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 82a3f02b0a20805a
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 65
+  title: '`unreviewed_perspectives` の定義が評価契約と review-phase.md で食い違う'
+  description: 5f36689238c1b2cd と同一の欠陥をラウンド前半に検出したもの。
+  suggestion: 定義を 1 箇所に寄せる。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 1781613dd8f96776
+  severity: medium
+  category: performance
+  file: em-workflow/references/review-phase.md
+  line: 249
+  title: R4 の各ループでチェーンを先頭から歩き直す
+  description: 611f7fdd71c106ff と同一の欠陥をラウンド前半に検出したもの。
+  suggestion: ラウンドスコープのハーネス不可用集合を導入する。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: c9df9d9e05f60d04
+  severity: medium
+  category: performance
+  file: em-workflow/references/review-phase.md
+  line: 288
+  title: 評価者プロンプトに渡す reviewer_outputs が無制限
+  description: 195d1daeac41f0cd と同一の欠陥をラウンド前半に検出したもの。
+  suggestion: R3a の入力ブロック組み立て時に 4096 バイト cap を適用する。
+  sources:
+  - claude:performance
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: d6d7ad5fea9dcb66
+  severity: medium
+  category: spec
+  file: em-workflow/references/review-phase.md
+  line: 208
+  title: malformed 結果時に、チェーンに利用可能エントリが残っていても Claude フォールバックを dispatch する
+  description: 57eb5a3771352d63 と同一の欠陥をラウンド前半に検出したもの。
+  suggestion: chain walk を継続するか、SPEC FR3 と Error Codes 表を改める。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: b7b62d20ee8fe39a
+  severity: medium
+  category: security
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 152
+  title: lifted-site promotion の帰属が review-phase.md と矛盾し、untrusted-origin マーカーが付かない
+  description: cc3cd7ea66b63794 と同じ帰属矛盾を loop 1 直後に検出したもの。
+  suggestion: マーカーの所有者を 1 つに決め、2 文書が同じ帰属を述べる状態にする。
+  sources:
+  - claude:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: ee3102c8530495cc
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 740
+  title: Phase R6 が dismissed_sites を「critical/high エントリ」で絞るが、エントリに severity フィールドが無い
+  description: b8532db8c8753557 と同一の欠陥を loop 1 直後に検出したもの。
+  suggestion: R6 の条件を落とすか、dismissed-site オブジェクトに severity を追加する。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 9c2f4ceb41ea1610
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-evaluation-contract.md
+  line: 176
+  title: Independent Inspection Duty 本文と Input Block の unreviewed_perspectives 除外規定が同一文書内で矛盾
+  description: 922b64c8e8904edd と同一の欠陥を loop 1 直後に検出したもの。
+  suggestion: Duty 本文の対象を unreviewed_perspectives に載らないものに限定する。
+  sources:
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 4df2f57d353cda5a
+  severity: medium
+  category: performance
+  file: em-workflow/references/review-phase.md
+  line: 254
+  title: ループ内 re-review がチェーンを毎回先頭から歩き直す（loop 1 の修正で悪化）
+  description: 611f7fdd71c106ff と同一の欠陥を loop 1 直後に検出したもの。
+  suggestion: ラウンドスコープのハーネス不可用集合を導入する。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: b2bad3118d01a4cf
+  severity: medium
+  category: performance
+  file: em-workflow/references/review-phase.md
+  line: 298
+  title: 評価役の入力 reviewer_outputs がサイズ無制限の verbatim
+  description: 195d1daeac41f0cd と同一の欠陥を loop 1 直後に検出したもの。
+  suggestion: R3a の入力ブロック組み立て時に cap を適用する。
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 180f8c0e3ff05483
+  severity: medium
+  category: spec
+  file: em-workflow/references/review-phase.md
+  line: 211
+  title: Claude フォールバックの発火条件が FR3 を超えている（loop 1 で 3 件目が追加された）
+  description: 57eb5a3771352d63 と同一の欠陥を loop 1 直後に検出したもの。
+  suggestion: chain walk を継続するか、SPEC 側を 3 経路に改める。
+  sources:
+  - claude:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 40ea3ad0d475fbf2
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 656
+  title: 新設の dismissed_sites 永続化が「verbatim」で、R3b の未信頼入力ゲートを丸ごと迂回する
+  description: loop 1 が追加した dismissed_sites の永続化が verbatim で、step 1 / step 4 のいずれも通らなかった。
+  suggestion: 永続化前に file 字句検査と長さ上限を適用する。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: fixed
+  resolution_reason: auto-applied loop 2（bfd7c9a966062245 と同一サイトで統合適用）
+auto_fix:
+  loops_run: 2
+  applied_total: 9
+  termination: no-progress
+  notes: 'loop 1 は 5 件、loop 2 は 4 件を適用（いずれも needs-judgment を batch 既定の Apply as-is で適用）。両ループとも productive
+    だったが、residual critical/high は 6 → 5 → 6 と減っていない。review-editor が単一ファイル契約であるため、この変更セットの指摘（SSOT 間の契約ドリフト）を
+    1 ファイル内の散文修正で閉じると、毎回 review-phase.md / review-evaluation-contract.md / agents/*.md / batch-mode.md
+    の間に新しい矛盾が生まれる。loop 3 を回しても同じ形の churn が続くと判断し、loop 2 の後の再レビュー結果をもって no-progress で打ち切った。この判断はオーケストレーターによるもので、loop-cap（loop
+    == 3）到達ではない。
+
+    逸脱 2 件を明示する: (1) loop 1 と loop 2 の適用直後、review-editor の編集が既存ユニットテストのアサーション文字列を壊したため（loop 1 で 3 件、loop
+    2 で 1 件）、オーケストレーターが適用済み修正の文言だけを最小限に整えた。意味は変えていない。(2) loop 2 後の最終再レビューは Claude レビュアー 5 本のみで実行した。litellm
+    の 3 本は loop 1 後の再レビューでreview_data_too_large を返しており（diff がさらに伸びた後は確実に再現する）、codex は 600 秒でタイムアウトしていたため、再ディスパッチしても結果が得られないと判断した。これは本ラウンドの
+    finding 611f7fdd71c106ff / 195d1daeac41f0cd が指摘している欠陥そのものが実測された形でもある。'
+residual_critical_high: 6
+rework_required: false
