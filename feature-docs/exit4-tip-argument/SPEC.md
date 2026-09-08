@@ -2,7 +2,7 @@
 
 ## Overview
 
-`em-workflow/scripts/commit-docs.sh` accepts an optional third argument, `expected_base_tip`, which its own header documents as the authoritative staleness check closing the window between a caller's refresh+edit and the script's internal BEFORE_TIP read. Inside `em-workflow/references/implement-phase.md`, four call sites already capture a tip and pass it, but two sites that the same document's exit-4 recovery bullet enumerates — Step I.2.a's launch-time task status / task branch write and Step I.3's implement-completed / completed-commit write — state no refresh, no tip capture and no `commit-docs.sh` invocation at all. This feature writes the missing refresh / capture / write / commit-with-tip sequences into those two steps so every call site the exit-4 recovery bullet names passes a captured `expected_base_tip`.
+`em-workflow/scripts/commit-docs.sh` accepts an optional third argument, `expected_base_tip`, which its own header documents as the authoritative staleness check closing the window between a caller's refresh+edit and the script's internal BEFORE_TIP read. Inside `em-workflow/references/implement-phase.md`, four call sites already capture a tip and pass it, but two sites that the same document's exit-4 recovery bullet enumerates — Step I.2.a's launch-time task status / task branch write and Step I.3's implement-completed / completed-commit write — state no refresh, no tip capture and no `commit-docs.sh` invocation at all. This feature writes the missing capture / refresh / write / commit-with-tip sequences into those two steps so every call site the exit-4 recovery bullet names passes a captured `expected_base_tip`.
 
 Requirements source: `feature-docs/exit4-tip-argument/REQUIREMENTS.md`.
 
@@ -15,10 +15,10 @@ Requirements source: `feature-docs/exit4-tip-argument/REQUIREMENTS.md`.
 ## User Stories
 
 ### US1: Launch-time write is committed against a freshly captured tip
-As the em-workflow orchestrator, I want Step I.2.a to state an explicit refresh / capture / write / commit-with-tip sequence, so that the launch-time `tasks.{T}.status` / `tasks.{T}.branch` write is validated against the tip I actually built it on.
+As the em-workflow orchestrator, I want Step I.2.a to state an explicit capture / refresh / write / commit-with-tip sequence, so that the launch-time `tasks.{T}.status` / `tasks.{T}.branch` write is validated against the tip I actually built it on.
 
 **Acceptance Criteria:**
-- [ ] AC1: Step I.2.a's text contains, in order, the `reset --hard em-workflow/{feature}/integration` refresh, a `rev-parse HEAD` tip capture, the `tasks.{T}.status = in_progress` / `tasks.{T}.branch` workflow.yaml write, and a `commit-docs.sh` invocation whose third argument is that captured tip.
+- [ ] AC1: Step I.2.a's text contains, in order, a `rev-parse em-workflow/{feature}/integration` tip capture, the `reset --hard em-workflow/{feature}/integration` refresh, the `tasks.{T}.status = in_progress` / `tasks.{T}.branch` workflow.yaml write covering every task selected in that entry as a single write set, and a `commit-docs.sh` invocation whose third argument is that captured tip.
 - [ ] AC6: Every call site named in the exit-4 recovery bullet's enumeration has a corresponding `commit-docs.sh` invocation with a three-argument form in its own step's text.
 
 ### US2: Phase-completion write is committed against a freshly captured tip
@@ -48,9 +48,9 @@ As a user of the em-workflow plugin, I want the version bumped in both locations
 
 - **FR1 — Every enumerated implement-phase commit-docs.sh call site passes a captured expected_base_tip:** `em-workflow/references/implement-phase.md` must state, for every `commit-docs.sh` call site its "exit-4 recovery" bullet enumerates (Step I.1's baseline commit, Step I.2.a's launch-time task status / task branch write, Step I.2.b's wake-phase commit, Step I.2.c's rejected-path terminal status commit, Step I.2.c's abort-phase terminal status commit, Step I.3's implement-completed / completed-commit write), an explicit invocation that passes a tip captured after that site's own refresh as `commit-docs.sh`'s third argument. After this change no enumerated site relies on the script's secondary start-vs-under-lock check alone.
 
-- **FR2 — Step I.2.a states the refresh / capture / write / commit-with-tip sequence:** Step I.2.a (Launch phase) must state, as an explicit ordered sequence in the step's own text, that the orchestrator (1) refreshes the integration worktree — `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`; (2) captures the tip — `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse HEAD)`; (3) writes `tasks.{T}.status = in_progress` and `tasks.{T}.branch` into workflow.yaml on the worktree just refreshed; (4) commits that write with the captured tip as the third argument — `commit-docs.sh {integration_worktree} "docs({feature}): {summary}" "$LAUNCH_TIP"`, the message following the document's existing `docs({feature}): {summary}` convention; and cross-references the Branch & Worktree Model's exit-4 recovery for the exit-4 case. The ordering is normative: the refresh precedes the capture, the capture precedes the write, and the write precedes the commit. The wording mirrors the pattern Step I.2.b steps 2-3 already use.
+- **FR2 — Step I.2.a states the capture / refresh / write / commit-with-tip sequence:** Step I.2.a (Launch phase) must state, as an explicit ordered sequence in the step's own text, that the orchestrator (1) captures the tip — `LAUNCH_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)`; (2) refreshes the integration worktree to the branch — `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`; (3) writes `tasks.{T}.status = in_progress` and `tasks.{T}.branch` into workflow.yaml on the worktree just refreshed, for EVERY task selected in that entry as one write set rather than one write per task; (4) commits that single write set with the captured tip as the third argument — `commit-docs.sh {integration_worktree} "docs({feature}): {summary}" "$LAUNCH_TIP"`, the message following the document's existing `docs({feature}): {summary}` convention and naming every task selected in that entry; and cross-references the Branch & Worktree Model's exit-4 recovery for the exit-4 case. The ordering is normative: the capture precedes the refresh, the refresh precedes the write, and the write precedes the commit. Two properties of that ordering are themselves normative and must be stated in the document together with their rationale. First, the refresh target is the branch NAME and never a captured SHA: a linked worktree's `HEAD` is an attached symref to the branch, so resetting it hard to a captured SHA would move the branch ref itself backward and silently discard any `merge-task.sh` `update-ref` that landed since the capture. Second, the capture precedes the refresh, so that a branch advance inside the window between them leaves the refreshed tree on the NEW tip while `$LAUNCH_TIP` holds the OLD one — `commit-docs.sh` is then guaranteed to see the mismatch and exit 4 rather than commit a stale tree. Capturing afterwards with `rev-parse HEAD` would instead read the branch ref at read time and could hand `commit-docs.sh` a tip the working tree was never built on.
 
-- **FR3 — Step I.3 states the refresh / capture / write / commit-with-tip sequence:** Step I.3 (Phase completion) must state, as an explicit ordered sequence, the same four-part mechanism for its implement-completed / completed-commit write: (1) `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`; (2) `COMPLETION_TIP=$(git -C {integration_worktree} rev-parse HEAD)`; (3) the workflow.yaml write of `implement` step `status = completed` and `completed_at_commit`; (4) `commit-docs.sh {integration_worktree} "docs({feature}): {summary}" "$COMPLETION_TIP"`, with a cross-reference to the exit-4 recovery bullet. Worded to match Step I.2.b's existing pattern, subject to FR4's placement constraint.
+- **FR3 — Step I.3 states the capture / refresh / write / commit-with-tip sequence:** Step I.3 (Phase completion) must state, as an explicit ordered sequence, the same four-part mechanism for its implement-completed / completed-commit write: (1) `COMPLETION_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)`; (2) `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`; (3) the workflow.yaml write of `implement` step `status = completed` and `completed_at_commit`; (4) `commit-docs.sh {integration_worktree} "docs({feature}): {summary}" "$COMPLETION_TIP"`, with a cross-reference to the exit-4 recovery bullet. The two normative properties FR2 states — the branch-name refresh target and the capture-before-refresh ordering — apply here unchanged. `$COMPLETION_TIP` and the `completed_at_commit` value must both derive from that same step-1 capture so they denote the SAME commit, and must be re-derived together from a fresh capture on an exit-4 retry. Worded to match FR2's sequence, subject to FR4's placement constraint.
 
 - **FR4 — Step I.3's pinned sentence stays byte-identical and its test is not edited:** The Step I.3 sentence pinned by `tests/test_rework_synthesis_contract.py`'s `test_completed_at_commit_wording_is_unchanged` must survive byte-identically, including its internal newline. Every mechanism FR3 adds is placed strictly before or strictly after that sentence; no character inside it, and no character of the substring the assertion matches, is altered, re-wrapped or re-indented. `tests/test_rework_synthesis_contract.py` is NOT edited by this feature.
 
@@ -60,7 +60,7 @@ As a user of the em-workflow plugin, I want the version bumped in both locations
 
 ### Non-Functional Requirements
 
-- **NFR1 - Wording parity with the existing tip-passing call sites:** The sequences FR2 and FR3 add use the same shape, variable-capture idiom and cross-reference phrasing that Step I.1 (`BASE_COMMIT`) and Step I.2.b steps 2-3 (`RECONCILE_TIP`) already use, so all six enumerated call sites read as one consistent mechanism rather than as per-step variants.
+- **NFR1 - Wording parity across the two call sites this feature adds:** The sequences FR2 and FR3 add use the same shape, variable-capture idiom and cross-reference phrasing as each other, so the two new call sites read as one mechanism rather than as per-step variants. Parity with the four sites that already pass a tip — Step I.1 (`BASE_COMMIT`), Step I.2.b steps 2-3 (`RECONCILE_TIP`) and Step I.2.c's two `TERMINAL_TIP` sites — is explicitly OUT of scope for this feature: those four keep the older refresh-then-`rev-parse HEAD` idiom, which the new prose supersedes without rewriting. Because the new prose states why capture-first is required, `implement-phase.md` must also state that the split is a transitional state and that the remaining sites are converted separately, so a reader does not read the two idioms as a contradiction within the document. That conversion is the separate feature `tip-capture-idiom-unification`.
 
 - **NFR2 - Documentation-only change:** `em-workflow/scripts/commit-docs.sh` is not modified: its `expected_base_tip` third argument, its exit-code semantics and its RECOVERY CONTRACT already support this change as-is. No hook, script or agent definition changes behavior; the change is confined to protocol prose plus the FR6 version bump.
 
@@ -89,23 +89,23 @@ Branch & Worktree Model — exit-4 recovery bullet
   Step I.2.c route-back (ROUTEBACK_TIP) — the sole documented carve-out (NFR4)
 ```
 
-**Uniform four-part mechanism (NFR1):**
+**Four-part mechanism (FR2 / FR3):**
 
 ```
-1. refresh   git -C {integration_worktree} reset --hard em-workflow/{feature}/integration
-2. capture   {NAME}_TIP=$(git -C {integration_worktree} rev-parse HEAD)
+1. capture   {NAME}_TIP=$(git -C {integration_worktree} rev-parse em-workflow/{feature}/integration)
+2. refresh   git -C {integration_worktree} reset --hard em-workflow/{feature}/integration
 3. write     the step's own workflow.yaml edit, on the worktree just refreshed
 4. commit    commit-docs.sh {integration_worktree} "docs({feature}): {summary}" "${NAME}_TIP"
              exit 4 -> Branch & Worktree Model's exit-4 recovery
 ```
 
-The ordering in steps 1-4 is normative (FR2).
+The ordering in steps 1-4 is normative (FR2, FR3). Step 2 targets the branch NAME, never the SHA captured in step 1: a linked worktree's `HEAD` is an attached symref to the branch, so resetting it to a SHA would rewind the branch ref itself and discard concurrent merges. Step 1 precedes step 2 so that a branch advance between them surfaces as exit 4 instead of a silently committed stale tree. The four sites that already pass a tip keep the older refresh-then-`rev-parse HEAD` idiom; unifying them is out of scope here (NFR1).
 
 ### Data Flow
 
 ```
 merge-task.sh (concurrent)  ->  advances em-workflow/{feature}/integration tip
-orchestrator: refresh -> capture TIP -> edit workflow.yaml -> commit-docs.sh(..., TIP)
+orchestrator: capture TIP -> refresh -> edit workflow.yaml -> commit-docs.sh(..., TIP)
 commit-docs.sh: compares TIP against the branch tip under lock
   match     -> commit
   mismatch  -> exit 4 -> exit-4 recovery (refresh, re-apply, retry)
@@ -119,7 +119,7 @@ Without the third argument the comparison degrades to the script's start-vs-unde
 Step I.2.b step 2  capture RECONCILE_TIP
 Step I.2.b step 3  commit-docs.sh(..., RECONCILE_TIP)   <-- advances the branch tip
 Step I.2.b step 5  refill -> re-enter Step I.2.a  (same turn; RECONCILE_TIP now stale)
-Step I.2.a         MUST refresh again and capture a NEW tip; MUST NOT reuse $RECONCILE_TIP
+Step I.2.a         MUST capture a NEW tip and refresh again; MUST NOT reuse $RECONCILE_TIP
 ```
 
 ### API Design
@@ -213,7 +213,7 @@ Test command: `python3 -m unittest discover -s tests`. No build command, no form
 - [ ] Not applicable — no e2e surface exists for this feature.
 
 ### Edge Cases
-- [ ] Refill re-entry (FR5): re-entering Step I.2.a from Step I.2.b step 5 within the same turn, where `RECONCILE_TIP` is already stale because Step I.2.b step 3's commit advanced the branch tip. Expected handling: Step I.2.a refreshes again and captures a new tip; `$RECONCILE_TIP` is never passed as the third argument (AC4, AC5).
+- [ ] Refill re-entry (FR5): re-entering Step I.2.a from Step I.2.b step 5 within the same turn, where `RECONCILE_TIP` is already stale because Step I.2.b step 3's commit advanced the branch tip. Expected handling: Step I.2.a captures a new tip and refreshes again; `$RECONCILE_TIP` is never passed as the third argument (AC4, AC5).
 - [ ] Concurrent `merge-task.sh` (FR1): the integration branch tip moves between the caller's refresh and the script's BEFORE_TIP read. Expected handling: `commit-docs.sh` detects the mismatch against the passed tip and returns exit 4, routing to the exit-4 recovery.
 - [ ] Step I.3 pin adjacency (FR4): FR3's insertion sits adjacent to the pinned sentence. Expected handling: mechanics are placed strictly before or strictly after it; no character inside the pinned substring is altered, re-wrapped or re-indented (AC3).
 
