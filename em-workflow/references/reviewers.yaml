@@ -40,6 +40,31 @@
 #   with codex instead, since neither has a track record as a non-Claude
 #   primary reviewer yet; the Vertex/Muse entries behind it are the budget /
 #   rate-limit fallbacks.
+#
+# Contributor-tier pre-dispatch criteria (muse-spark read-mapping): when
+# `muse-spark` is the chain entry the registry selected, reading it as the
+# contributor tier is permitted only after two checks both pass: consent
+# for this project is recorded — mechanical, decided by the consent store,
+# not by prose — and this particular dispatch may use it — a per-dispatch
+# judgment made by the dispatching LLM. The chain itself is never edited to
+# reach the contributor tier; the registry defines exactly one permitted
+# reading and no other.
+#
+# Per-dispatch: do not use
+#   - A change whose core is an unpublished idea: a new feature whose
+#     design or approach is the project's own differentiator. The
+#     per-dispatch default is to use the contributor tier; this is not a
+#     fail-closed gate, and the security perspective is not excluded from
+#     it.
+#
+# Outside the scope of consent
+#   - Secrets present in the diff (API keys, credentials, internal
+#     endpoints, customer data).
+#   - Third-party work (vendored code, externally supplied patches,
+#     contributors' pull requests).
+#   - If the repository is currently private, or its license is not the
+#     one the consent was reasonable under, do not use the contributor
+#     tier.
 
 version: 3
 
