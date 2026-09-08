@@ -22,6 +22,7 @@ import io
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -41,10 +42,13 @@ GUARD_PATHS = {
 CONTRIBUTOR_TIER = "muse-spark-contributor"
 PLAIN_TIER = "muse-spark"
 
-# Every quoting spelling the harness (codex CLI) emits for each of the two
-# flag forms (task0001.md Design, "Command classification rules"): the
-# short flag with the value as a separate word, and the long flag joined by
-# `=`, each in bare / single-quoted / double-quoted forms.
+# Every quoting spelling the harness (codex CLI) emits for each shape in the
+# model-selection flag table (task0006.md Design, "Stage 4"): the short flag
+# with the value as a separate word, the long flag joined by `=` (both
+# already recognized before task0006), plus the newly recognized shapes --
+# the long flag with a separate value, the short flag joined by `=`, and the
+# short flag with the value attached directly -- each in bare /
+# single-quoted / double-quoted forms.
 INVOCATION_COMMAND_TEMPLATES = {
     "short-bare": 'codex exec -m {tier} "review this"',
     "short-single-quoted": "codex exec -m '{tier}' \"review this\"",
@@ -52,6 +56,15 @@ INVOCATION_COMMAND_TEMPLATES = {
     "long-bare": 'codex exec --model={tier} "review this"',
     "long-single-quoted": "codex exec --model='{tier}' \"review this\"",
     "long-double-quoted": 'codex exec --model="{tier}" "review this"',
+    "short-equals-bare": 'codex exec -m={tier} "review this"',
+    "short-equals-single-quoted": "codex exec -m='{tier}' \"review this\"",
+    "short-equals-double-quoted": 'codex exec -m="{tier}" "review this"',
+    "long-separate-bare": 'codex exec --model {tier} "review this"',
+    "long-separate-single-quoted": "codex exec --model '{tier}' \"review this\"",
+    "long-separate-double-quoted": 'codex exec --model "{tier}" "review this"',
+    "short-attached-bare": 'codex exec -m{tier} "review this"',
+    "short-attached-single-quoted": "codex exec -m'{tier}' \"review this\"",
+    "short-attached-double-quoted": 'codex exec -m"{tier}" "review this"',
 }
 
 
@@ -147,6 +160,20 @@ class MuseGuardTestCase(unittest.TestCase, GitEnvMixin):
 
     def remove(self, guard_path, project_dir):
         return run_guard(guard_path, self.git_env, argv=["--remove", "--project-dir", str(project_dir)])
+
+    def _assert_no_decision_for(self, command, cwd, tool_name="Bash"):
+        for name, guard_path in GUARD_PATHS.items():
+            with self.subTest(copy=name, command=command):
+                payload = {"tool_name": tool_name, "tool_input": {"command": command}, "cwd": cwd}
+                result = run_guard(guard_path, self.git_env, payload=payload)
+                assert_no_decision(self, result)
+
+    def _assert_denies_for(self, command, cwd, tool_name="Bash"):
+        for name, guard_path in GUARD_PATHS.items():
+            with self.subTest(copy=name, command=command):
+                payload = {"tool_name": tool_name, "tool_input": {"command": command}, "cwd": cwd}
+                result = run_guard(guard_path, self.git_env, payload=payload)
+                assert_deny(self, result)
 
 
 # --- AC-1: both copies exist, are executable, differ in exactly one line ---
@@ -255,13 +282,6 @@ class TestInvocationSpellingsDenyWithNoConsent(MuseGuardTestCase):
 
 
 class TestNoDecisionCases(MuseGuardTestCase):
-    def _assert_no_decision_for(self, command, cwd, tool_name="Bash"):
-        for name, guard_path in GUARD_PATHS.items():
-            with self.subTest(copy=name, command=command):
-                payload = {"tool_name": tool_name, "tool_input": {"command": command}, "cwd": cwd}
-                result = run_guard(guard_path, self.git_env, payload=payload)
-                assert_no_decision(self, result)
-
     def test_plain_tier_in_every_spelling_is_never_denied(self):
         repo = str(self.init_repo())
         for spelling, template in INVOCATION_COMMAND_TEMPLATES.items():
@@ -283,6 +303,49 @@ class TestNoDecisionCases(MuseGuardTestCase):
         repo = str(self.init_repo())
         command = f"cat <<'EOF'\ncodex exec -m {CONTRIBUTOR_TIER}\nEOF\n"
         self._assert_no_decision_for(command, repo)
+
+    def test_heredoc_header_look_alike_inside_a_quoted_string_does_not_hide_a_real_invocation(self):
+        # AC-4: a `<<WORD` sequence starts a here-document only when it
+        # occurs OUTSIDE any quoted region. Here the header-looking text is
+        # inside a double-quoted string on line 1, so it must not be
+        # honored -- the real invocation on line 2 stays visible and
+        # denies, contrasting with test_heredoc_body_is_not_an_invocation
+        # above (a GENUINE here-document body is still removed).
+        repo = str(self.init_repo())
+        command = (
+            'echo "start <<EOF"\n'
+            f'codex exec -m {CONTRIBUTOR_TIER} "x"\n'
+            "EOF\n"
+        )
+        self._assert_denies_for(command, repo)
+
+    def test_invocation_after_a_genuine_heredocs_terminator_still_denies(self):
+        # AC-4: stripping only ever removes the heredoc's own body and
+        # terminator; a real invocation placed after the terminator is
+        # unaffected.
+        repo = str(self.init_repo())
+        command = (
+            "cat <<'EOF'\n"
+            f"just mentions {CONTRIBUTOR_TIER}\n"
+            "EOF\n"
+            f'codex exec -m {CONTRIBUTOR_TIER} "x"\n'
+        )
+        self._assert_denies_for(command, repo)
+
+    def test_near_miss_tier_spellings_never_match_via_substring(self):
+        # AC-1 / NFR2: every comparison against the contributor tier is
+        # EXACT equality, never prefix/suffix/substring -- so a
+        # near-miss spelling passed as the model value must never deny.
+        repo = str(self.init_repo())
+        near_misses = [
+            "muse-spark-contributor-extra",
+            "not-muse-spark-contributor",
+            "muse-spark-contributorx",
+            "xmuse-spark-contributor",
+        ]
+        for value in near_misses:
+            with self.subTest(value=value):
+                self._assert_no_decision_for(f"codex exec -m {value}", repo)
 
     def test_commit_message_argument_is_not_an_invocation(self):
         repo = str(self.init_repo())
@@ -342,6 +405,63 @@ class TestNoDecisionCases(MuseGuardTestCase):
                 }
                 result = run_guard(guard_path, self.git_env, payload=payload)
                 assert_no_decision(self, result)
+
+
+# --- AC-3: nested invocation shapes (wrappers, shells, substitutions) -----
+
+
+class TestNestedInvocationRecognition(MuseGuardTestCase):
+    """Stage 3 resolves a segment's command word through wrappers and
+    shells rather than reading it literally; each nested construct below is
+    paired with the same construct carrying only a mention, because a fix
+    that widens the command word without keeping the codex-CLI restriction
+    passes one and fails the other (task0006.md Test Notes)."""
+
+    def test_shell_command_string_argument_carries_an_invocation(self):
+        repo = str(self.init_repo())
+        self._assert_denies_for(f"bash -c 'codex exec -m {CONTRIBUTOR_TIER}'", repo)
+
+    def test_shell_command_string_argument_carrying_only_a_mention_is_undecided(self):
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(f"bash -c 'git commit -m {CONTRIBUTOR_TIER}'", repo)
+
+    def test_parenthesized_command_substitution_carries_an_invocation(self):
+        repo = str(self.init_repo())
+        self._assert_denies_for(f"echo $(codex exec -m {CONTRIBUTOR_TIER})", repo)
+
+    def test_parenthesized_command_substitution_carrying_only_a_mention_is_undecided(self):
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(f'echo "$(git commit -m {CONTRIBUTOR_TIER})"', repo)
+
+    def test_backtick_command_substitution_carries_an_invocation(self):
+        repo = str(self.init_repo())
+        self._assert_denies_for(f"echo `codex exec -m {CONTRIBUTOR_TIER}`", repo)
+
+    def test_backtick_command_substitution_carrying_only_a_mention_is_undecided(self):
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(f"echo `git commit -m {CONTRIBUTOR_TIER}`", repo)
+
+    def test_argument_list_expanding_wrapper_carries_an_invocation(self):
+        repo = str(self.init_repo())
+        self._assert_denies_for(f"xargs codex exec -m {CONTRIBUTOR_TIER}", repo)
+
+    def test_argument_list_expanding_wrapper_carrying_only_a_mention_is_undecided(self):
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(f"xargs grep -m {CONTRIBUTOR_TIER}", repo)
+
+    def test_recursion_bound_is_two_levels_and_a_third_level_yields_no_decision(self):
+        # The recursion bound is asserted behaviorally (task0006.md Test
+        # Notes): two levels of shell `-c` nesting around a real invocation
+        # still denies (AT the bound); a third level yields no decision
+        # (ONE PAST the bound) rather than an error.
+        repo = str(self.init_repo())
+        inner = f"codex exec -m {CONTRIBUTOR_TIER}"
+        one_level = f"bash -c {shlex.quote(inner)}"
+        two_levels = f"bash -c {shlex.quote(one_level)}"
+        three_levels = f"bash -c {shlex.quote(two_levels)}"
+        self._assert_denies_for(one_level, repo)
+        self._assert_denies_for(two_levels, repo)
+        self._assert_no_decision_for(three_levels, repo)
 
 
 # --- AC-4: project-key derivation matches the bash guard's own rule -------
@@ -777,12 +897,17 @@ class TestNonInvocationShortCircuit(unittest.TestCase):
 class TestLatencyStaysWellUnderTheRegisteredTimeout(MuseGuardTestCase):
     def test_a_representative_sample_of_hook_calls_completes_quickly(self):
         repo = self.init_repo()
+        nested_inner = f"codex exec -m {CONTRIBUTOR_TIER}"
+        nested_two_levels = f"bash -c {shlex.quote('bash -c ' + shlex.quote(nested_inner))}"
         commands = [
             "ls -la",
             "git status",
             f"codex exec -m {PLAIN_TIER} \"x\"",
             f"codex exec -m {CONTRIBUTOR_TIER} \"x\"",
             f'grep -rn {CONTRIBUTOR_TIER} .',
+            nested_two_levels,
+            f"echo $(codex exec -m {CONTRIBUTOR_TIER})",
+            'echo "start <<EOF"\n' + f'codex exec -m {CONTRIBUTOR_TIER} "x"\n' + "EOF\n",
         ]
         for name, guard_path in GUARD_PATHS.items():
             with self.subTest(copy=name):
