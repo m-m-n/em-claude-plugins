@@ -160,6 +160,13 @@ reviewer for this perspective:
   registry only after passing the allow-list check;
   never substitute a model of your own choosing, and never dispatch this
   reviewer without a `model`.
+- Exception to the prohibition above: when `M` is `muse-spark`, reading
+  this chain entry as the contributor tier is permitted, but only through
+  the single reading the Contributor-tier pre-dispatch criteria below
+  define — never a free choice of model — and only when that reading's two
+  checks already passed before this dispatch step is reached: never
+  decided inside the reviewer, and never after a hop has already been
+  spent.
 
 **No entry of the chain available** → dispatch
 `Task(subagent_type="em-workflow:reviewer")` instead. The two branches are
@@ -233,6 +240,32 @@ ecosystems: when any one of them did not complete, the row's `skip_reason`
 carries the combined machine-stable reasons, and the findings the other
 selected ecosystems did produce still enter Phase R3a's evaluator input
 unchanged.
+
+### Contributor-tier pre-dispatch criteria (muse-spark read-mapping)
+
+When `muse-spark` is the chain entry the registry selected, reading it as
+the contributor tier is permitted only after two checks both pass: consent
+for this project is recorded — mechanical, decided by the consent store,
+not by prose — and this particular dispatch may use it — a per-dispatch
+judgment made by the dispatching LLM. The chain itself is never edited to
+reach the contributor tier; the registry defines exactly one permitted
+reading and no other.
+
+**Per-dispatch: do not use**
+
+- A change whose core is an unpublished idea: a new feature whose design or
+  approach is the project's own differentiator. The per-dispatch default is
+  to use the contributor tier; this is not a fail-closed gate, and the
+  security perspective is not excluded from it.
+
+**Outside the scope of consent**
+
+- Secrets present in the diff (API keys, credentials, internal endpoints,
+  customer data).
+- Third-party work (vendored code, externally supplied patches,
+  contributors' pull requests).
+- If the repository is currently private, or its license is not the one
+  the consent was reasonable under, do not use the contributor tier.
 
 ## Phase R2b: Cross-model fallback (chain walk)
 
