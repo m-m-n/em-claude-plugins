@@ -41,3 +41,23 @@ records:
   freeform: null
   normalized_answer: muse_guard.py と hooks.json は em-workflow / em-review の双方に入れる（em-review は初の hooks.json を新設）
   resolution_note: 'gate: create-spec.em-review-hook-parity (orchestrator-opened, no worker packet); chosen both_plugins_ship_the_hook; not chosen: em_workflow_only; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: requirements-analyst proposed shipping muse_guard.py only in em-workflow because em-review has no hooks surface today, which contradicts the task description''s explicit acceptance criterion that the same change land in both plugins and its stated constraint that duplicating the hook is idempotent; em-review''s own review phase dispatches the same `codex exec -p litellm -m <model>` invocation, so a user who installs em-review without em-workflow would have no mechanical enforcement at all - an environment-dependent security gap; the hook is a silent no-op (exit 0, empty stdout) for every non-contributor command, so adding a hooks surface to em-review changes nothing observable in ordinary use; orchestrator adopted the mapping and amended FR1/FR8/NFR9/AC-6/TS-12 and assumption a6 accordingly'
+- question_id: review.once-boundary-review-sourced-rework
+  packet_id: null
+  answered_at: '2026-09-08T23:35:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - end_turn_at_rework_commit
+  freeform: null
+  normalized_answer: review 由来の rework をコミットした時点で --once のフェーズ境界として扱い、ターンを終える
+  resolution_note: 'gate: review.once-boundary-review-sourced-rework (orchestrator-opened, no worker packet, unlisted-gate fallback); chosen end_turn_at_rework_commit; not chosen: continue_into_implement; codex_consulted: true but the primary Codex CLI returned a usage-limit error (quota reset 2026-09-09) and the litellm/vertex-glm-5.2 route returned HTTP 429 after retry exhaustion; fallback provider answered (litellm/muse-spark, Standard tier — no contributor consent recorded for this project so the registry read-mapping did not apply); opus escalation: not run (the fallback provider answered); key points: the four-row --once boundary table is a taxonomy of safely-resumable state transitions rather than an exhaustive whitelist, and row 3 (verify 失敗時の rework) establishes the principle that a committed rework-routing patch returning control to implement is a boundary; review-sourced rework produces the structurally identical post-state (patch committed, implement and review both pending, next launch resumes at implement); continuing into implement would execute a second phase in the same turn against --once''s stated purpose and stop condition 7, only to end moments later on the explicitly non-terminal implement launch turn, having already fanned out background implementers a --once turn is not designed to abandon mid-flight'
+- question_id: review.evaluator-confidence-string-mapping
+  packet_id: null
+  answered_at: '2026-09-08T23:35:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - normalize_to_integer_90_60_30
+  freeform: null
+  normalized_answer: 評価者が返した confidence の文字列を high=90 / medium=60 / low=30 の整数に正規化してから R3b step 7 の補正を適用する
+  resolution_note: 'gate: review.evaluator-confidence-string-mapping (orchestrator-opened, no worker packet, unlisted-gate fallback); chosen normalize_to_integer_90_60_30; not chosen: persist_the_string_verbatim; codex_consulted: true but the primary Codex CLI returned a usage-limit error and the litellm/vertex-glm-5.2 route returned HTTP 429; fallback provider answered (litellm/muse-spark, Standard tier); opus escalation: not run; key points: the round-record example shows an integer 0-100 and R3b step 7''s two corrections (+15 capped at 100, hard cap 50) are arithmetic, so the field is an integer; the mapping is gate-neutral because the R4 candidate gate reads severity/category/stable_id/suggestion/file/sources and the R5 completion gate reads only residual_critical_high, so neither reads confidence; applied as 90 for the merged high finding and 60 for the here-doc medium finding'
