@@ -104,7 +104,7 @@ workflow:
     status: completed
     completed_at_commit: 5f04f74a1fb1177847f27ac8452ae845696da3d6
   - id: implement
-    status: completed
+    status: pending
     completed_at_commit: a845062012505b8f2740fe2d2af8c5bb05f84aaf
     base_commit: 7430b672cbb36f6776a8514355c550ff5984ae52
   - id: review
@@ -172,6 +172,21 @@ tasks:
     status: merged
     branch: em-workflow/muse-spark-contributor-consent/task0005
     notes: null
+  task0006:
+    title: "invocation-shape recognition in the muse_guard classifier"
+    plan: tasks/task0006.md
+    files: [em-workflow/hooks/muse_guard.py, em-review/hooks/muse_guard.py, tests/test_muse_guard.py]
+    skills: [backend-impl]
+    domains: [auth, input-handling]
+    complexity: high
+    requirements: [FR1, FR4, FR5, FR10, NFR2, NFR4, NFR6]
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids: [1170516129413bc5, 98df40b6ce96c809, e0fb5715d50c4b74]
+      review_round: 1
 
 review:
   status: pending
@@ -195,7 +210,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0006]
     tests: [TS-1, TS-12, TS-19]
   FR2:
     title: "Presence-only consent store"
@@ -216,15 +231,15 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-4, TS-5]
+    tasks: [task0001, task0006]
+    tests: [TS-1, TS-4, TS-5, TS-26, TS-27, TS-28]
   FR5:
     title: "No misfire outside contributor-tier invocations"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-3, TS-4, TS-5, TS-6, TS-7]
+    tasks: [task0001, task0006]
+    tests: [TS-3, TS-4, TS-5, TS-6, TS-7, TS-26, TS-27, TS-28]
   FR6:
     title: "Store-absence and malformed-store handling"
     status: ok
@@ -258,7 +273,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0006]
     tests: [TS-17]
   FR11:
     title: "reviewers.yaml chain immutability"
@@ -293,7 +308,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0006]
     tests: [TS-7, TS-21]
   NFR3:
     title: "Unattended-run safety"
@@ -307,7 +322,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0006]
     tests: [TS-22]
   NFR5:
     title: "Test isolation from real user state"
@@ -321,7 +336,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004, task0005]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006]
     tests: [TS-17, TS-24]
   NFR7:
     title: "Consent store records nothing but presence"
@@ -346,7 +361,7 @@ requirements:
     tests: [TS-25]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
