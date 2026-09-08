@@ -313,6 +313,16 @@ ref AT READ TIME, which could hand `commit-docs.sh` a tip the working
 tree was never built on and let the check pass while silently committing
 a stale tree.
 
+**Idiom split is transitional (NFR1)**: the four call sites that already
+pass a tip — Step I.1's `BASE_COMMIT`, Step I.2.b step 2's
+`RECONCILE_TIP`, and Step I.2.c's two `TERMINAL_TIP` captures — still
+refresh first and capture with `rev-parse HEAD`. The reasoning above
+supersedes that older idiom, but converting those four sites is out of
+scope here and is tracked as its own change; until it lands, the two
+shapes coexist by design. Read them as one mechanism mid-migration, not
+as a contradiction in this document, and write any NEW call site in the
+capture-first form above.
+
 **Refill (FR5)**: this sequence runs ONCE per entry into Step I.2.a —
 including the refill re-entry from Step I.2.b step 5 within the same
 turn — covering every task selected in that entry with a single capture,
