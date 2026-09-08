@@ -1,0 +1,31 @@
+schema_version: 1
+feature: exit4-tip-argument
+records:
+  - question_id: review.diff-scope-after-main-merge
+    packet_id: null
+    answered_at: "2026-09-08T21:05:00+09:00"
+    source: codex
+    answer_mode: select
+    selected_option_ids: [merge-base-scope]
+    freeform: ""
+    normalized_answer: "Use `git diff main...HEAD` (merge-base form) as the round-2 review target instead of the literal `git diff {implement.base_commit} HEAD`."
+    resolution_note: >-
+      gate: review phase diff-scope (unlisted-gate fallback; no gate_id at the
+      originating site). Context: after commit e14a674 merged `main` into the
+      integration branch, the protocol-literal `git diff 2bc54ba..HEAD` expands
+      to 323 files / 69,005 insertions, almost all of which are `main` changes
+      already reviewed and merged upstream. `git diff main...HEAD` yields
+      7 files / 1,106 insertions — exactly the feature's own change set and the
+      same scope round 1 reviewed at head fdffb3f.
+      Options - A: literal `base_commit..HEAD` (323 files);
+      B: merge-base `main...HEAD` (7 files) with the deviation disclosed.
+      codex_consulted: true. The primary Codex CLI returned a usage-limit error
+      (no answer); the litellm fallback provider (vertex-deepseek-v3.2) answered
+      and chose B. No Opus escalation was needed.
+      Codex rationale: the 3 unresolved highs all concern the feature's own
+      implement-phase.md and SPEC; option A destroys signal-to-noise with
+      already-reviewed upstream content; B keeps round-2 scope identical to
+      round 1 and stays consistent with the prior record; the merge itself is
+      validated separately by the verify phase's test run rather than by
+      re-reviewing all of main.
+      Chosen: B. Recorded here and in the round record's scope block.
