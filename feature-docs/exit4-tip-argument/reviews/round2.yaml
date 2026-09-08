@@ -1,0 +1,170 @@
+round: 2
+executed_at: "2026-09-08T21:35:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 02aff93b5f5be3c570bf413a5c79c5d06cf9efe1
+  head_commit: b7541dbb6bc625b4b5a8b52d8fc66277f0c2664e
+  base_commit_note: >-
+    Deviation from the literal `implement.base_commit` (2bc54ba) diff base,
+    resolved by Codex consultation and recorded in
+    phase-state/batch-audit.yaml (question_id review.diff-scope-after-main-merge).
+    Commit e14a674 merged `main` into this integration branch, so
+    `git diff 2bc54ba..HEAD` had grown to 323 files / 69,005 insertions of
+    already-reviewed upstream content. The merge-base form
+    (`git diff main...HEAD` == `git diff 02aff93..HEAD`) restores exactly the
+    feature's own change set and keeps round 2's scope equal to round 1's.
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - test-docs/exit4-tip-argument/task0001.tests.yaml
+    - test-docs/exit4-tip-argument/task0002.tests.yaml
+    - tests/test_exit4_tip_argument_consistency.py
+    - tests/test_exit4_tip_argument_version_bump.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "comprehensive#1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: failed}
+  - {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "architecture#fallback", perspective: architecture, role: fallback, source: claude, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 4773e33be20e67f4
+    severity: medium
+    category: comprehensive
+    file: test-docs/exit4-tip-argument/task0002.tests.yaml
+    line: 16
+    title: "AC-2 の acceptance test ID が実在せず、AC→テスト対応が解決不能"
+    description: >-
+      task0002.tests.yaml の AC-2 が
+      tests.test_exit4_tip_argument_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_has_no_version_key
+      を列挙しているが、そのテストはモジュールに存在しない。main のマージで em-review に
+      version キーが付いたため実装側は test_em_review_entry_version_not_bumped_with_em_workflow
+      にリネームされており、記録だけが旧名で残っている。当該 ID を unittest で解決すると
+      AttributeError で error になる（オーケストレーターも独立に再現確認済み）。
+      {T}.tests.yaml は verify / rework / retrospect が AC→テストを解決する SSOT なので、
+      AC-2 のカバレッジ主張が検証不能になり、リネーム後の実テストはどの AC にも紐づかない。
+      同じドリフトが tests/test_exit4_tip_argument_version_bump.py の docstring 2 箇所と
+      AC-2 の red_reason にも残る。
+    suggestion: >-
+      task0002.tests.yaml の AC-2 の ID を test_em_review_entry_version_not_bumped_with_em_workflow
+      に差し替え、AC-2 の red_reason を実アサーションに合わせて書き換える。あわせて
+      version_bump モジュール docstring の AC-2 記述と AC-4 matcher インベントリも実アサーションに合わせる。
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: "medium — Phase R4 の candidate gate（severity ∈ {critical, high}）に該当しないため auto-fix 対象外。フォローアップタスクとして起票"
+  - stable_id: 9b01398d4f48c1e2
+    severity: medium
+    category: comprehensive
+    file: tests/test_exit4_tip_argument_version_bump.py
+    line: 57
+    title: "BASELINE_PATCH = 44 が実 diff base（0.1.68）より古く、version bump ガードが空振りする"
+    description: >-
+      このラウンドの diff base 02aff93 における em-workflow/.claude-plugin/plugin.json と
+      marketplace.json の em-workflow エントリはともに 0.1.68。BASELINE_PATCH は 44 のままなので
+      patch > 44 は bump 前のツリーでも成立する（オーケストレーターも独立に確認済み）。
+      task0002 の AC-1 / AC-2 の中核である「em-workflow の version が上がっていること」を
+      このモジュールは一切ガードできず、0.1.69 を 0.1.68 に巻き戻しても緑のまま通る。
+      TestValidationDetectsRegressions.FORGED_PRE_BUMP_VERSION = "0.1.44" も現実の pre-bump
+      サンプルではなくなっている。根因は SPEC.md FR6 が currently 0.1.44 と書かれたまま
+      main のマージで実ベースが 0.1.68 に進んだこと。実際の bump（0.1.69）自体は両レジストリで
+      正しく揃っており、成果物の欠陥ではなくテストの検知力の欠落。
+    suggestion: >-
+      BASELINE_PATCH を 68 に、FORGED_PRE_BUMP_VERSION を "0.1.68" に更新し
+      （0.1.69 は 68 より大きいので現ツリーは緑のまま）、docstring の
+      「patch strictly greater than 44」「un-bumped 0.1.44 tree」および
+      task0002.tests.yaml の AC-1 / AC-2 / AC-3 の red_reason を新 baseline に合わせる。
+    sources: [claude:comprehensive]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium — Phase R4 の candidate gate に該当しないため auto-fix 対象外。フォローアップタスクとして起票"
+  - stable_id: bd794c3459ca8c75
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 310
+    title: "起動前に選択タスク全件の in_progress をコミットするため、未起動タスクの in_progress が I.2.c route-back ゲートを恒久的に塞ぐ"
+    description: >-
+      新シーケンス（299-316 行）は step 3 で「この entry で選択された EVERY task」の in_progress を
+      1 つの write set にまとめ、step 4 で 1 コミットにする。だがこのコミットの後に承認ゲート
+      （batch では未承認 project_commands が hard-fail）と Task() 起動ループが来るため、両者の間で
+      中断すると journal に launched イベントが無いまま in_progress が branch にコミット済みで残る。
+      I.2.a の選択規則は再選択できるので通常の再入は自己修復するが、I.2.c は do not refill なので、
+      同一 entry の一部だけ起動して失敗した場合、未起動タスクは二度と起動されない。その状態で
+      route-back ゲートは workflow.yaml の in_progress ユニオンだけで塞がるため、一度も起動されて
+      いないタスクの in_progress が route-back を恒久的にブロックする。変更前は write が未コミットで
+      I.2.b step 2 の reset --hard に捨てられていたため到達しなかった、本変更が新たに作る永続状態。
+    suggestion: >-
+      (a) I.2.c の route-back ゲートの in_progress 半分に「journal に一切イベントが無いタスクの
+      workflow.yaml in_progress は起動前中断の残骸とみなし in-flight として扱わない」という
+      カーブアウトを明記する。または (b) write/commit を承認ゲートと起動の後ろに移し、
+      実際に起動できたタスクだけを in_progress としてコミットする。
+    sources: [claude:comprehensive]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "medium かつ設計判断を伴うため auto-fix 対象外（評価者も同意見）。フォローアップタスクとして起票"
+  - stable_id: ec70b86d6085827e
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 1092
+    title: "Step I.3 の「同一 step-1 capture 由来」という不変条件が、指示されているコマンド列から導けない（SPEC FR3 の literal 未達）"
+    description: >-
+      1092-1093 行は $COMPLETION_TIP と completed_at_commit が both derived from the same
+      step-1 capture なので SAME commit を指す、と断言している。しかし step 3 が書けと言う
+      completed_at_commit の値は、ピン留め文の中の $(git rev-parse "em-workflow/{feature}/integration")
+      という独立したコマンド置換であり、step 1 の COMPLETION_TIP= とは別の rev-parse 呼び出し。
+      指示どおりに実行するエージェントは rev-parse を 2 回走らせることになり、不変条件は文書の主張で
+      あってコマンド列の帰結ではない。SPEC FR3 は both derive from that same step-1 capture を
+      明示要求し、FR4 はピン留め文の改変を禁じているので、両立させる唯一の書き方は step 3 側で
+      値の出所を確定させること。実害は限定的（ずれた場合は commit-docs.sh が exit 4 で拾う）。
+    suggestion: >-
+      AC-3 でバイト一致を要求されているピン留め文は触らず、step 3 に completed_at_commit は
+      $COMPLETION_TIP の値である旨を書き、値の出所を 1 箇所に確定させる。
+    sources: [claude:comprehensive]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "medium — Phase R4 の candidate gate に該当しないため auto-fix 対象外。フォローアップタスクとして起票"
+evaluation:
+  round_summary: >-
+    Round 2 (cross_validation=true) は critical/high がゼロ。primary 2 本（performance#0 /
+    spec#0, litellm）は空、comprehensive と architecture は fallback（claude）で完了、
+    comprehensive#0 と architecture#0 は harness_unavailable、comprehensive#1 は failed。
+    carry したのは medium 4 件 + low 1 件。reviewer_outputs 内に prompt injection /
+    role override の試みは検出されなかった。独自検査は 9 ファイル（read budget 10 以内）。
+    全 4157 テストは緑（NFR3 充足）。perspective 別カバレッジ: comprehensive = corroborated、
+    architecture = corroborated、performance = corroborated、spec = findings
+    （FR3 の literal 未達と FR6 の 0.1.44 乖離を独自確認し eval-r2-04 / eval-r2-02 に統合）。
+  recommended_action: "auto_fix"
+  action_rationale: >-
+    critical/high は無く、価値の高い 3 件は局所的で機械的な編集。eval-r2-03 だけは設計判断を伴い
+    auto-fix の範囲を超える。round_context で round 1 に deferred 済みの architecture 系争点は
+    本ラウンドで再提出されておらず、another_round を要求する新事実も出ていない。
+    （注: recommended_action は助言であり、Phase R4 の candidate gate は severity ∈
+    {critical, high} に限られるため、medium のみの本ラウンドでは auto-fix ループを起動しない）
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+dropped_by_gates:
+  - evaluator_id: eval-r2-05
+    reason: "R3b step 2: severity 'low' は {critical, high, medium} に含まれないため drop"
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
