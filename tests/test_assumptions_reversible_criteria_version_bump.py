@@ -39,7 +39,7 @@ MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 # (IMPLEMENTATION.md C5).
 BASELINE_VERSION = "0.1.64"
 NEW_VERSION = "0.1.65"
-EM_REVIEW_VERSION = "0.5.7"
+EM_REVIEW_VERSION = "0.5.8"
 
 # Exactly major.minor.patch -- the AC-3 comparison operates on parsed
 # numeric components, never on the raw string.
@@ -208,7 +208,7 @@ class TestEmReviewUnchangedMatcherNegativeProof(unittest.TestCase):
     non-vacuity companion."""
 
     def test_rejects_drifted_version(self):
-        forged = {"name": "em-review", "version": "0.5.8"}
+        forged = {"name": "em-review", "version": "0.5.9"}
         with self.assertRaises(AssertionError):
             _assert_em_review_unchanged(self, forged)
 
