@@ -1,0 +1,75 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_muse_consent_no_new_questions.TestDocumentEnumeration.test_walks_only_references_and_skills_of_both_plugins
+      - tests.test_muse_consent_no_new_questions.TestDocumentEnumeration.test_known_develop_and_review_documents_are_included
+    red_confirmed: true
+    red_reason: >-
+      Mutated PLUGINS to drop "em-review" (line-targeted sed on the module
+      after writing it, then reverted): test_known_develop_and_review_documents_are_included
+      failed because em-review/references/review-phase.md and
+      em-review/skills/multi-review/SKILL.md were no longer discovered by
+      iter_document_files().
+  AC-2:
+    tests:
+      - tests.test_muse_consent_no_new_questions.TestBaselineIsLiteral.test_baseline_is_a_plain_positive_int_literal_table
+      - tests.test_muse_consent_no_new_questions.TestBaselineIsLiteral.test_baseline_and_excluded_files_are_disjoint
+      - tests.test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+    red_confirmed: true
+    red_reason: >-
+      Line-targeted mutation of the BASELINE_COUNTS entry for
+      em-workflow/skills/review/SKILL.md from 1 to 0: both
+      test_baseline_is_a_plain_positive_int_literal_table (assertGreater(count, 0)
+      failed) and test_no_develop_or_review_document_exceeds_its_pinned_budget
+      (measured count 1 > pinned 0) failed for the right reason, then reverted.
+  AC-3:
+    tests:
+      - tests.test_muse_consent_no_new_questions.TestBudgetComparisonHelper.test_passes_when_measured_equals_baseline
+      - tests.test_muse_consent_no_new_questions.TestBudgetComparisonHelper.test_passes_when_measured_is_lower_than_baseline
+      - tests.test_muse_consent_no_new_questions.TestBudgetComparisonHelper.test_fails_when_measured_exceeds_baseline
+      - tests.test_muse_consent_no_new_questions.TestBudgetComparisonHelper.test_fails_when_a_file_outside_the_table_has_an_occurrence
+      - tests.test_muse_consent_no_new_questions.TestBudgetComparisonHelper.test_passes_when_a_file_outside_the_table_has_zero_occurrences
+      - tests.test_muse_consent_no_new_questions.TestBudgetComparisonHelper.test_excluded_file_never_violates_even_when_uncounted_and_present
+      - tests.test_muse_consent_no_new_questions.TestBudgetComparisonHelper.test_removal_of_an_unrelated_occurrence_does_not_turn_the_test_red
+    red_confirmed: true
+    red_reason: >-
+      Mutated find_budget_violations' "elif count > pinned:" to
+      "elif count >= pinned:" (off-by-one on the pinned budget): 5 of the 7
+      synthetic tests failed for the right reason (equal-to-baseline cases
+      started reporting spurious violations, e.g. test_passes_when_measured_equals_baseline
+      and test_no_develop_or_review_document_exceeds_its_pinned_budget), then
+      reverted.
+  AC-4:
+    tests:
+      - tests.test_muse_consent_no_new_questions.TestExcludedFilesAreExactlyTheContributorConsentSkillDocs.test_excluded_set_is_exactly_the_two_contributor_consent_skill_docs
+      - tests.test_muse_consent_no_new_questions.TestBaselineIsLiteral.test_baseline_and_excluded_files_are_disjoint
+    red_confirmed: true
+    red_reason: >-
+      Line-targeted mutation of the EXCLUDED_FILES definition only (not the
+      duplicated literal inside the assertion), changing
+      "em-review/skills/contributor-consent/SKILL.md" to
+      ".../skill.md": test_excluded_set_is_exactly_the_two_contributor_consent_skill_docs
+      failed because EXCLUDED_FILES no longer equaled the expected frozenset,
+      then reverted.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Structural property with no meaningful red state to observe: the
+      module imports only unittest and pathlib (verified by inspection of
+      the import statements) and the full command
+      "python3 -m unittest discover -s tests" was run and passed (4170
+      tests, up from the 4157-test baseline). There is no prior state in
+      which this criterion could be shown false without literally adding a
+      disallowed import, which would defeat the point of the check.
+notes: >-
+  This task's own deliverable is the test module; per Test Notes "its
+  acceptance criteria are properties of that module." For AC-1 through AC-4,
+  red was confirmed by line-targeted mutation of the already-written module
+  (breaking the exact logic each criterion depends on), observing the
+  expected test(s) fail, then reverting to a file byte-identical to the
+  pre-mutation version (confirmed with diff) before committing. AC-5 has no
+  meaningful red/green cycle and is recorded as such rather than fabricated.
