@@ -1,0 +1,53 @@
+task_id: task0002
+baseline_failures: []          # full suite (4157 tests) was green before this task touched anything
+final_failures: []             # full suite (4163 tests, +6 new) is green after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac1_files_exist_with_valid_frontmatter_and_no_commands_dir
+    red_confirmed: true
+    red_reason: "FileNotFoundError: missing em-workflow/skills/contributor-consent/SKILL.md and em-review/skills/contributor-consent/SKILL.md (neither file existed yet)"
+  AC-2:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac2_probe_by_reference_and_not_installed_exit
+    red_confirmed: true
+    red_reason: "FileNotFoundError on _load(plugin) before any SKILL.md existed"
+  AC-3:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac3_exactly_three_facts_fixed_labels_order_and_vocabulary
+    red_confirmed: true
+    red_reason: "FileNotFoundError on _load(plugin) before any SKILL.md existed"
+  AC-4:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac4_exactly_one_question_round_with_two_options_each
+    red_confirmed: true
+    red_reason: "FileNotFoundError on _load(plugin) before any SKILL.md existed"
+  AC-5:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac5_record_remove_via_cli_never_the_store_file
+    red_confirmed: true
+    red_reason: "FileNotFoundError on _load(plugin) before any SKILL.md existed"
+  AC-6:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac6_no_develop_phase_document_references_the_skill
+    red_confirmed: true
+    red_reason: >-
+      FileNotFoundError on _load(plugin) before any SKILL.md existed. This
+      test covers only the first clause of AC-6 (no develop-phase document
+      references the skill's directory name), verified by scanning every
+      .md file under both plugin roots. The second clause (no new
+      AskUserQuestion occurrence added to a develop-phase or review-phase
+      document) is satisfied structurally: this task's commits never Edit
+      an existing file, they only Write the two new SKILL.md files and this
+      test module, so no existing document's AskUserQuestion count can have
+      changed. Pinning/verifying that budget across the whole feature is
+      task0005's responsibility per IMPLEMENTATION.md D-F.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-7 describes a property of this test module itself (imports no
+      third-party package, passes under `python3 -m unittest discover -s
+      tests`) rather than a behavior with a red state to observe -- it is
+      verified by the full-suite run (4163 tests, all passing) rather than
+      by a dedicated test within the module.
