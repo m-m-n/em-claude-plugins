@@ -124,8 +124,8 @@ tasks:
     domains: [auth, input-handling, data-persistence, external-io, api-contract, config-infra]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR10, NFR1, NFR2, NFR4, NFR5, NFR6, NFR7, NFR8, NFR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/muse-spark-contributor-consent/task0001
     notes: null
   task0002:
     title: "contributor-consent skill in both plugins"
@@ -135,8 +135,8 @@ tasks:
     domains: [ui, auth, external-io]
     complexity: medium
     requirements: [FR13, NFR3, NFR6]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/muse-spark-contributor-consent/task0002
     notes: null
   task0003:
     title: "written pre-dispatch criteria with review chains untouched"
@@ -146,8 +146,8 @@ tasks:
     domains: [api-contract, config-infra]
     complexity: medium
     requirements: [FR9, FR11, NFR3, NFR6]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/muse-spark-contributor-consent/task0003
     notes: null
   task0004:
     title: "version bump for both plugins"
@@ -157,8 +157,8 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR12, NFR6]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/muse-spark-contributor-consent/task0004
     notes: null
   task0005:
     title: "pin the interactive-question budget of the develop and review paths"
@@ -168,8 +168,8 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [NFR3, NFR6]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/muse-spark-contributor-consent/task0005
     notes: null
 
 review:
