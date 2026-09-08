@@ -334,9 +334,9 @@ tree was never built on and let the check pass while silently committing
 a stale tree.
 
 **Idiom split is transitional (NFR1)**: the four call sites that already
-pass a tip — Step I.1's `BASE_COMMIT`, Step I.2.b step 2's
-`RECONCILE_TIP`, and Step I.2.c's two `TERMINAL_TIP` captures — still
-refresh first and capture with `rev-parse HEAD`. The reasoning above
+pass a tip — Step I.1's baseline capture, Step I.2.b step 2's wake-phase
+capture, and Step I.2.c's two terminal-status captures — still refresh
+first and capture with `rev-parse HEAD`. The reasoning above
 supersedes that older idiom, but converting those four sites is out of
 scope here and is tracked as its own change; until it lands, the two
 shapes coexist by design. Read them as one mechanism mid-migration, not
