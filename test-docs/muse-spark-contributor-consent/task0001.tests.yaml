@@ -1,0 +1,94 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_muse_guard.TestBothCopiesShape
+      - tests.test_muse_guard.TestDenyPayloadContent
+    red_confirmed: true
+    red_reason: >
+      Inserting an extra divergent line (EXTRA_MARKER = "diverges") into the
+      em-workflow copy broke test_copies_differ_in_exactly_one_line_the_plugin_slug
+      with "413 != 412 : the two copies have a different line count".
+  AC-2:
+    tests:
+      - tests.test_muse_guard.TestInvocationSpellingsDenyWithNoConsent
+    red_confirmed: true
+    red_reason: >
+      Forcing is_contributor_invocation() to always return False produced 6
+      subTest errors: json.JSONDecodeError("Expecting value") because stdout
+      was empty where a deny payload was expected for every enumerated
+      spelling.
+  AC-3:
+    tests:
+      - tests.test_muse_guard.TestNoDecisionCases
+    red_confirmed: true
+    red_reason: >
+      Removing the codex-command-word gate from _segment_invokes_contributor_tier
+      made test_commit_message_argument_is_not_an_invocation fail (a deny
+      payload was printed for `git commit -m muse-spark-contributor` instead
+      of zero bytes); separately, skipping _strip_heredoc_bodies() made
+      test_heredoc_body_is_not_an_invocation fail the same way for a
+      here-document body containing `codex exec -m muse-spark-contributor`.
+  AC-4:
+    tests:
+      - tests.test_muse_guard.TestProjectKeyDerivation
+    red_confirmed: true
+    red_reason: >
+      Replacing project_key() with an identity function (dropping the
+      git-common-dir / realpath resolution) broke both cases in this class:
+      --list from a second worktree printed nothing instead of the shared
+      key ('' != '/tmp/.../main'), and --list from a symlinked directory's
+      real path likewise printed nothing instead of the resolved key.
+  AC-5:
+    tests:
+      - tests.test_muse_guard.TestMalformedStoreOnHookPath
+      - tests.test_muse_guard.TestMalformedStoreOnCliPath
+    red_confirmed: true
+    red_reason: >
+      Forcing hook_main()'s consent check to always short-circuit ("if True:
+      return 0" in place of the store-membership test) produced 5 subTest
+      errors across the corruption-shape table (missing / invalid JSON /
+      wrong-shaped / directory): every contributor-tier invocation returned
+      empty stdout instead of a deny payload, raising
+      json.JSONDecodeError("Expecting value") in assert_deny.
+  AC-6:
+    tests:
+      - tests.test_muse_guard.TestCliRoundTrip
+    red_confirmed: true
+    red_reason: >
+      Removing os.makedirs(directory, exist_ok=True) from write_store()
+      broke test_record_creates_parent_directories_that_do_not_exist_yet
+      with FileNotFoundError opening the .tmp file under nonexistent parent
+      directories; separately, making argument-misuse return 0 instead of 2
+      broke test_argument_misuse_exits_2 across 6 subTest cases
+      ("0 != 2 : usage: muse_guard.py ...").
+  AC-7:
+    tests:
+      - tests.test_muse_guard.TestSourceHygiene
+      - tests.test_muse_guard.TestNonInvocationShortCircuit
+    red_confirmed: true
+    red_reason: >
+      Appending a stray `ASK_UNUSED = "ask"` module-level constant broke
+      test_no_ask_decision_literal ('"ask"' unexpectedly found in source).
+      Reordering hook_main() to derive the project key and read the store
+      BEFORE classifying the command broke
+      test_non_invocation_never_derives_a_project_key_or_touches_the_store:
+      git_common_dir was called once where the test expects zero calls for a
+      non-invocation command.
+  AC-8:
+    tests:
+      - tests.test_muse_guard_registration
+    red_confirmed: true
+    red_reason: >
+      Moving muse_guard.py's hooks.json entry to after destructive-guard.py
+      broke all three ordering tests in TestEmWorkflowOrderingAgainstDestructiveGuard:
+      test_muse_guard_precedes_destructive_guard ("5 not less than 4"),
+      test_destructive_guard_remains_last, and
+      test_extracted_order_matches_the_pinned_ordered_guard_constant (order
+      list no longer equal to EXPECTED_BASH_GUARD_ORDER). The pre-existing
+      tests/test_guardrail_hooks_migration.py and
+      tests/test_hooks_registration.py suites were re-run against the
+      updated hooks.json / EXPECTED_BASH_GUARD_ORDER and stay green (54
+      tests, 0 failures).

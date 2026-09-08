@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/muse_guard.py",
+            "timeout": 15,
+            "statusMessage": "muse-spark-contributor の同意を検証中..."
+          }
+        ]
+      }
+    ]
+  }
+}
