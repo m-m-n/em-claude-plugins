@@ -1,17 +1,73 @@
 schema_version: 1
 feature: muse-spark-contributor-consent
 phase: create-spec
-status: initialized
+status: awaiting_answers
 generation: 1
-base_revision: cf7a5913d6a16027c4b433ef1bbde09f3aac5a62
-last_input_digest: null
+base_revision: bbcbf0601881165721f84def103bf21f9034ec94
+last_input_digest: sha256:924c9f548e7fe5b13fc13771a09ba70d2754c203e221aaa269966e395726624b
 active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-08T21:54:03+09:00'
+    questions:
+    - question_id: testing.muse-guard-test-location
+      status: answered
+    - question_id: acceptance.develop-smoke-verification
+      status: answered
+    - question_id: security.out-of-scope-enforcement
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  testing.muse-guard-test-location:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-08T21:54:03+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - repo_root_unittest
+    freeform: null
+    normalized_answer: tests/test_muse_guard.py をリポジトリルート tests/ に置き、python3 -m unittest discover -s tests で走らせる
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation; chosen repo_root_unittest; not chosen: hooks_tests_runner, both; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: test/README.md is the repository''s test-convention SSOT and all six other hooks are already tested from the repository-root tests/ directory, so hooks/tests/ placement alone would never run under the standard entry point, and the ''both'' wrapper adds indirection with no benefit; recorded as an assumption per batch policy record_as_assumption'
+  acceptance.develop-smoke-verification:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-08T21:54:03+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - static_equivalent_tests
+    freeform: null
+    normalized_answer: develop の実走行ではなく、静的等価テストで受け入れ条件を満たす
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation; chosen static_equivalent_tests; not chosen: manual_verify_step, both_static_and_manual; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: this specification is produced inside an unattended batch run of the same develop workflow, so a manual verify step requiring a human to run develop and paste output can never be discharged; the repository has no e2e harness; the static equivalents capture the criterion''s intent and run under the standard entry point; recorded as an assumption per batch policy record_as_assumption'
+  security.out-of-scope-enforcement:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-08T21:54:03+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - documented_only
+    freeform: null
+    normalized_answer: 「同意の範囲外」3 項目は reviewers.yaml / review-phase.md の dispatch 前判定基準として書き、muse_guard.py は同意の有無だけを見る
+    resolution_note: 'gate: create-spec.requirement-clarification; relaxed route (category: security, batch relaxation per references/question-resolution.md); chosen documented_only; not chosen: record_facts_and_recheck, guard_denies_on_drift; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: guard_denies_on_drift would put a network fetch inside a PreToolUse(Bash) hook that fires on every Bash call under a 15s timeout, where a transient failure false-positives and halts an unattended run, breaking the deterministic no-network guard precedent; record_facts_and_recheck widens the store schema the task description pinned and adds fragile sole-contributor tracking, while the drift conditions reduce to a check of the CURRENT visibility and license at dispatch time because consent implies the consent-time state, and secrets-in-diff and third-party content are inherently per-diff judgements that cannot be captured at consent time; the orchestrator adopted the mapping and requires the written criteria to state the current-visibility / current-license check explicitly so condition (c) stays enforceable'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-08T21:54:03+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: analyst の推奨（design ステップを実施する）をそのまま採用
+    resolution_note: 'gate: create-spec.design-step; resolved by references/batch-policies.yaml entry option_id decide_autonomously; codex_consulted: false'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:924c9f548e7fe5b13fc13771a09ba70d2754c203e221aaa269966e395726624b
+  output_digest: null
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:bdbe5a7f33fd021d22a5b06ffb9f77b38a2f13953f7bf3f16ab1a1f87bac5b35
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
