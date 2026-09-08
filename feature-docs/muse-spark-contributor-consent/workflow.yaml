@@ -111,9 +111,25 @@ workflow:
     status: completed
     completed_at_commit: 6a0d0d097c9e7d73f5651dc0396745afd5e6f4bf
   - id: verify
-    status: in_progress
-    result: null
-    failed_items: []
+    status: failed
+    result: fail
+    failed_items:
+      - id: SC-8
+        category: spec
+        note: "review.residual_critical_high が 7 のまま。SC-8 は残存 critical/high ゼロを要求するが、round2 の 7 件は batch の rework cap 到達により deferred されただけで未修正。"
+      - id: TS-5
+        category: security
+        note: "ハーネス自身の呼び出し形（引用符内に ; や改行を含むプロンプト）が _SEGMENT_SPLIT_RE の引用前分割で壊れ、deny が発火しない。`codex exec -m muse-spark-contributor \"review this; check auth\"` を no-decision と再現。"
+      - id: TS-6
+        category: comprehensive
+        note: "引用符内の言及が誤爆 deny になる。`printf %s\\n 'example; codex exec -m muse-spark-contributor; done'` が deny を返すのを再現。FR5 の no-misfire 違反。"
+      - id: TS-26
+        category: comprehensive
+        note: "引用区切り文字を含む綴りで、言及が独立した呼び出しとして切り出される／呼び出しが分割で失われる。TS-26 の綴り網羅は分割前提が崩れた時点で成立していない。"
+      - id: TS-27
+        category: security
+        note: "ネスト・ラッパー認識が抜ける。`bash -lc '...'`（結合短オプション）、`xargs -n 1 codex ...`、`nice -n 1 codex ...` をいずれも no-decision と再現。"
+
   - id: retrospect
     status: pending
 
@@ -364,8 +380,13 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      SC-8: 1
+      TS-5: 1
+      TS-6: 1
+      TS-26: 1
+      TS-27: 1
   infra_resume:
     rounds: 0
     cap: 2
