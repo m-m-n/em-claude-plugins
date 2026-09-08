@@ -1,0 +1,61 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_muse_consent_version_bump.TestEmWorkflowVersion.test_manifest_version_is_past_baseline
+      - tests.test_muse_consent_version_bump.TestEmWorkflowVersion.test_marketplace_entry_version_is_past_baseline
+      - tests.test_muse_consent_version_bump.TestEmWorkflowVersion.test_marketplace_entry_version_matches_manifest
+      - tests.test_muse_consent_version_bump.TestEmWorkflowVersion.test_manifest_version_parses_as_semver
+    red_confirmed: true
+    red_reason: >-
+      Before the version fields were bumped, both em-workflow version reads
+      were 0.1.69 (the baseline literal), so
+      test_manifest_version_is_past_baseline and
+      test_marketplace_entry_version_is_past_baseline failed with
+      "AssertionError: (0, 1, 69) not greater than (0, 1, 69)".
+  AC-2:
+    tests:
+      - tests.test_muse_consent_version_bump.TestEmReviewVersion.test_manifest_version_is_past_baseline
+      - tests.test_muse_consent_version_bump.TestEmReviewVersion.test_marketplace_entry_version_is_past_baseline
+      - tests.test_muse_consent_version_bump.TestEmReviewVersion.test_marketplace_entry_version_matches_manifest
+      - tests.test_muse_consent_version_bump.TestEmReviewVersion.test_manifest_version_parses_as_semver
+    red_confirmed: true
+    red_reason: >-
+      Before the version fields were bumped, both em-review version reads
+      were 0.5.7 (the baseline literal), so
+      test_manifest_version_is_past_baseline and
+      test_marketplace_entry_version_is_past_baseline failed with
+      "AssertionError: (0, 5, 7) not greater than (0, 5, 7)".
+  AC-3:
+    tests:
+      - tests.test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+      - tests.test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_review_manifest_nonversion_content_unchanged
+      - tests.test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+    red_confirmed: false
+    red_reason: >-
+      These three checks compare a SHA-256 digest of each edited file's
+      content (version field stripped) against a baseline digest computed
+      from the pre-edit tree, so they were already green before the
+      implementation existed (no non-version field had moved yet) -- there
+      was nothing to observe going red for this specific criterion at the
+      point the test was written. Coverage for the failure mode this
+      criterion guards against (a non-version field actually changing) is
+      provided by the negative proofs
+      test_digest_check_rejects_a_mutated_nonversion_field and
+      test_digest_check_ignores_only_the_version_field in the same module,
+      which do fail/pass as expected against forged data.
+  AC-4:
+    tests:
+      - tests.test_muse_consent_version_bump
+    red_confirmed: true
+    red_reason: >-
+      Before implementation, `python3 -m unittest tests.test_muse_consent_version_bump`
+      reported 4 failures (the AC-1/AC-2 baseline checks above); after
+      implementation it reports "Ran 24 tests ... OK", the module imports
+      only ast/hashlib/json/re/sys/unittest/pathlib (all standard library,
+      verified by test_only_standard_library_imports), and the pre-existing
+      tests/test_plugin_version_parity.py module still passes as part of
+      the full-suite run (`python3 -m unittest discover -s tests`, 4181
+      tests, OK).
