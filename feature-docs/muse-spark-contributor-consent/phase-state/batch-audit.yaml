@@ -142,3 +142,28 @@ records:
     silently completed; (5) Codex''s preferred third path, recorded for the human: one coherent manually-reviewed
     patch applied to both copies together outside the auto-fix dispatcher, before the independent verify-phase
     budget is spent'
+- question_id: verify.failed
+  packet_id: null
+  answered_at: '2026-09-09T08:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - rework_to_implement
+  freeform: null
+  normalized_answer: verify を fail として記録し、implement への自動 rework を 1 ラウンド回す
+  resolution_note: 'gate: verify.failed; policy action auto_rework (batch-mode.md Non-packet gates);
+    lineage cap and hard cap both unreached (verify_rework.rounds 0 -> 1, all failed ids first
+    occurrence); chosen rework_to_implement; not chosen: rework_to_review, abort, pass-verify-because-
+    findings-were-deferred; codex_consulted: true (user instruction: consult Codex on unclear points);
+    fallback provider answered: no; opus escalation: not run; key points: the unclear point was whether
+    review''s formal ''deferred'' disposition of 7 residual high findings satisfies SC-8. Codex imported
+    muse_guard.py and probed is_contributor_invocation directly, reproducing findings 1, 2, 4, 5, 6 and 7;
+    the orchestrator independently reproduced 4 of them through the hook''s own stdin protocol. Deferral is
+    procedural risk-acceptance that let the review step finish at its cap, not evidence the code meets SC-8
+    (VERIFICATION.md SC-8 requires zero residual critical/high). develop/SKILL.md''s verify section refuses
+    to grant deferred to verify failed_items precisely because that would be verification disguise. The
+    passing suite does not contradict the findings: its fixtures are narrower than the scenarios
+    (separator-free prompts, exact `bash -c`, option-free `xargs`). Codex excluded TS-3 (still holds) and
+    TS-28 (its three enumerated cases still pass; here-document finding 4 belongs in a new scenario), and
+    the orchestrator adopted that narrowing.'
+
