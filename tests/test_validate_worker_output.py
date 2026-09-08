@@ -240,6 +240,33 @@ existing wiring test's patch now targets the verify step, exercising the
 new scope instead of the removed unconditional one. Covers this task's
 AC-6 and (together with the new fixture case under
 `references/fixtures/workflow-patch/append_rework/`) AC-7.
+
+batch-codex-autonomous-decisions/task0004 (FR18-FR21) rewords the rationale
+around the `on_unanswered: block` constraint without touching its
+behaviour: `BLOCKING_REQUIRED_CATEGORIES` and the `on_unanswered != "block"`
+rejection stay exactly as they are (D5).
+
+- AC-1: `TestQuestionPacketSchemaBlockRationale` pins
+  `question-packet-schema.md`'s constraint sentence verbatim and asserts
+  the new rationale (routes into the minimum-side-effect branch instead of
+  the old implicit "batch run aborts" meaning), with a negative proof that
+  the superseded wording is gone.
+- AC-2: `test_rejection_message_states_the_surviving_rationale` (added to
+  `TestQuestionCategoryForcesBlockingUnanswered`) pins a stable fragment of
+  the validator's reworded parenthetical rationale, with the same negative
+  proof.
+- AC-3, AC-4: `TestIrreversibleAssumptionFixtureAccepted` adds
+  `references/fixtures/question-packet/category-fail-closed/valid-
+  irreversible-assumption-blocking/` and asserts it directly (exit 0), that
+  its question's category sits outside `BLOCKING_REQUIRED_CATEGORIES` (so
+  it exercises the irreversibility declaration, not the category rule),
+  and that its `assumptions[]` entry actually declares `reversible: false`
+  against that question. The corpus sweep and the branch-coverage guard
+  already discover this fixture by directory-name convention.
+- AC-5, AC-6: unchanged, pre-existing `TestQuestionCategoryForcesBlocking
+  Unanswered.test_all_three_fail_closed_categories_are_rejected_directly`
+  and the gate-registry tests continue to pass untouched, proving the
+  freeze (D5, NFR8).
 """
 
 import importlib.util
@@ -256,6 +283,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "em-workflow" / "scripts" / "validate-worker-output.py"
 FIXTURES_ROOT = REPO_ROOT / "em-workflow" / "references" / "fixtures"
 DESIGN_INPUT_PATH = REPO_ROOT / "feature-docs" / "agent-separation" / "design-input.md"
+QUESTION_PACKET_SCHEMA_DOC_PATH = (
+    REPO_ROOT / "em-workflow" / "references" / "question-packet-schema.md"
+)
 
 
 def _load_module():
@@ -1037,6 +1067,130 @@ class TestQuestionCategoryForcesBlockingUnanswered(unittest.TestCase):
         }
         errors = VWO.validate_question(q, 0)
         self.assertEqual(errors, [])
+
+    def test_rejection_message_states_the_surviving_rationale(self):
+        # batch-codex-autonomous-decisions/task0004 AC-2 (FR19): the
+        # blocking-required category set and the on_unanswered != "block"
+        # rejection are frozen (D5); only the message's parenthetical
+        # rationale changes -- from justifying the check by the batch
+        # abort, to the reason that survives it: a worker cannot choose
+        # the non-blocking handling for these categories.
+        q = {
+            "question_id": "q.test",
+            "gate_id": "gate.x",
+            "category": "security",
+            "priority": "high",
+            "blocking": True,
+            "prompt": "p",
+            "header": "h",
+            "answer_mode": "freeform",
+            "options": [],
+            "why_needed": "w",
+            "on_unanswered": "record_tbd",
+        }
+        errors = VWO.validate_question(q, 0)
+        messages = " ".join(e["message"] for e in errors)
+        self.assertIn("cannot choose the non-blocking handling", messages)
+        # Negative proof: the superseded rationale ("the batch abort") is
+        # gone, not merely joined by the new wording.
+        self.assertNotIn("disable the batch abort", messages)
+
+
+# ---------------------------------------------------------------------------
+# batch-codex-autonomous-decisions/task0004 AC-1 (FR18, FR21): question-
+# packet-schema.md's on_unanswered: block constraint sentence stays
+# verbatim; only its rationale is reworded -- "block" no longer means the
+# batch run aborts, it means the question routes into the minimum-side-
+# effect branch instead of letting a worker choose record_tbd or
+# use_batch_policy for it. IMPLEMENTATION.md C1: the citation to
+# references/question-resolution.md stays, and no condition of that rule
+# is restated here.
+# ---------------------------------------------------------------------------
+
+class TestQuestionPacketSchemaBlockRationale(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.text = QUESTION_PACKET_SCHEMA_DOC_PATH.read_text(encoding="utf-8")
+        cls.norm = re.sub(r"\s+", " ", cls.text)
+
+    def test_constraint_sentence_is_verbatim(self):
+        self.assertIn(
+            "A question whose `category` is `spec-change`, `security`, or "
+            "`license` must carry `on_unanswered: block` — a question in "
+            "one of those categories can never be left to resolve as "
+            "`record_tbd` or `use_batch_policy`.",
+            self.norm,
+        )
+
+    def test_rationale_routes_into_the_minimum_side_effect_branch(self):
+        self.assertIn(
+            "routes the question into the minimum-side-effect branch",
+            self.norm,
+        )
+        # Negative proof: the old implicit meaning of the constraint (that
+        # "block" meant the batch run itself aborts) is gone.
+        self.assertNotIn("the batch run will abort", self.norm)
+        self.assertNotIn("disable the batch abort", self.norm)
+
+    def test_resolution_time_rule_citation_retained(self):
+        self.assertIn("references/question-resolution.md", self.text)
+        self.assertIn(
+            "states the resolution-time rule this constraint backs",
+            self.norm,
+        )
+
+
+# ---------------------------------------------------------------------------
+# batch-codex-autonomous-decisions/task0004 AC-3, AC-4 (FR20): a new
+# question-packet fixture whose assumptions[] entry declares
+# reversible: false is accepted directly by the validator. Its question's
+# category is deliberately outside BLOCKING_REQUIRED_CATEGORIES, so the
+# fixture exercises the irreversibility declaration rather than the
+# category-forces-block rule already covered above. The corpus sweep
+# (TestFixtureCorpusDataDriven) and the branch-coverage guard
+# (TestFixtureCoverageValidAndInvalidPerBranch) already discover and run
+# this fixture by directory-name convention -- no changes needed there.
+# ---------------------------------------------------------------------------
+
+class TestIrreversibleAssumptionFixtureAccepted(unittest.TestCase):
+    CASE_DIR = (
+        FIXTURES_ROOT
+        / "question-packet"
+        / "category-fail-closed"
+        / "valid-irreversible-assumption-blocking"
+    )
+
+    def test_fixture_category_is_outside_the_blocking_required_set(self):
+        data = json.loads((self.CASE_DIR / "input.json").read_text(encoding="utf-8"))
+        categories = {q["category"] for q in data["questions"]}
+        self.assertTrue(categories, "fixture must declare at least one question")
+        self.assertFalse(
+            categories & VWO.BLOCKING_REQUIRED_CATEGORIES,
+            "fixture must not rely on a category that already forces block",
+        )
+
+    def test_fixture_declares_an_irreversible_assumption(self):
+        data = json.loads((self.CASE_DIR / "input.json").read_text(encoding="utf-8"))
+        question_ids = {q["question_id"] for q in data["questions"]}
+        assumptions = data.get("assumptions") or []
+        self.assertTrue(assumptions, "fixture must declare an assumptions[] entry")
+        matching = [
+            a
+            for a in assumptions
+            if a.get("reversible") is False
+            and question_ids & set(a.get("related_question_ids") or [])
+        ]
+        self.assertTrue(
+            matching,
+            "fixture must carry an assumptions[] entry naming a question "
+            "in this packet with reversible: false",
+        )
+
+    def test_fixture_is_accepted_directly(self):
+        result = run_cli(
+            build_case_args("question-packet", "category-fail-closed", self.CASE_DIR)
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 # ---------------------------------------------------------------------------

@@ -20,9 +20,9 @@ finished product. A rejected result becomes a NEW task — develop never waits
 for a human mid-run.
 
 - Active ONLY when the current invocation's arguments contain `--batch`.
-  The `batch` block in workflow.yaml persists rework counters ONLY — it
-  never activates the mode. A re-entry without `--batch` runs fully
-  interactive again.
+  The `batch` block in workflow.yaml persists rework counters and the
+  infra auto-resume record — it never activates the mode. A re-entry
+  without `--batch` runs fully interactive again.
 - In batch mode the orchestrator and every inline phase MUST NOT call
   `AskUserQuestion` (a headless run has no responder; the call would hang
   or fail). **The jurisdiction split is by gate-identifier presence, never
@@ -34,10 +34,18 @@ for a human mid-run.
   `references/batch-policies.yaml` (including that document's unlisted-gate
   fallback for a `gate_id` with no policy entry). A gate that carries NO
   `gate_id` at all resolves per the table below.
-- Failure stops are UNCHANGED: batch mode removes confirmations on the
-  success path, it never hides failures. Stuck steps, YAML errors, and
-  post-cap failures still stop the run with a report — the external service
-  reads that report and cuts a follow-up task.
+- Failure stops are bounded, not unconditional: batch mode removes
+  confirmations on the success path and never hides a failure that needs
+  a human decision. Stuck steps, YAML errors, and post-cap failures still
+  stop the run with a report — the external service reads that report and
+  cuts a follow-up task. The one exception is the `implement` step's
+  infra auto-resume: a bounded, counted retry that resumes the run
+  instead of stopping while it is admissible, and returns control the
+  same way once its cap is reached. The branch and the cap's consuming
+  judgment are `skills/develop/SKILL.md`'s to define; the cap's key, its
+  member names and its unset-read defaults are
+  `references/workflow-schema.md`'s `batch` block's, cited there rather
+  than restated here.
 
 ## Non-packet gates
 
@@ -57,11 +65,11 @@ three phases.
 | Step A feature resolution (interactive path takes the task description from the conversation) | Explicit feature-name/path argument wins — resolved to its `em-workflow/{feature}/integration` branch (re-materializing the worktree via `git worktree add` if it was removed). No path argument → always a new feature: batch create-spec from the task-description argument; no task description either → abort with report. Existing branches are never enumerated, and a feature is never guessed from them — resuming requires the explicit feature name |
 | Review phase diff-size gate (`references/review-phase.md`) | Codex consultation per `references/question-resolution.md`'s unlisted-gate fallback procedure; no decision reached → take the option with the smallest / most reversible side effect and continue. The resolution is recorded in `feature-docs/{feature}/phase-state/batch-audit.yaml` (`references/phase-state.md`'s batch audit record file), from which the run report is assembled |
 | Per-command approval fallback used when the PreToolUse hook is inactive (`references/command-execution-protocol.md`, python3 missing) | Same as the diff-size gate above: Codex consultation, falling back to the minimum-side-effect option, recorded in `feature-docs/{feature}/phase-state/batch-audit.yaml` (`references/phase-state.md`'s batch audit record file), from which the run report is assembled. Caches the resolution per literal command string within the run — matching the interactive fallback's per-literal-string cache in `references/command-execution-protocol.md` — so an identical command string is decided once, not re-consulted on every occurrence |
-| `implement.failed-task` — Step I.2.c task failure after the parent-side-adoption protocol is exhausted (`references/implement-phase.md` Step I.2.c: retry / route-back-to-planning / abort via AskUserQuestion) | Auto-select **retry** once per task (kept worktree, I.2.a resume guard). A second failure on the SAME task → **abort phase**: the `implement` step's `status` is written to `failed`, and exactly that write is committed. Route-back-to-planning is never taken automatically. Full detail: `references/implement-phase.md` Step I.2.c |
+| `implement.failed-task` — Step I.2.c task failure after the parent-side-adoption protocol is exhausted (`references/implement-phase.md` Step I.2.c: retry / route-back-to-planning / abort via AskUserQuestion) | Auto-select **retry** once per task (kept worktree, I.2.a resume guard). A second failure on the SAME task → **abort phase**: the `implement` step's `status` is written to `failed`, and that same write also sets `failed_kind` — defined in `references/workflow-schema.md` — to `decision`; exactly that write is committed. Route-back-to-planning is never taken automatically. Full detail: `references/implement-phase.md` Step I.2.c |
 | `review.auto-fix-conflict` — Phase R4 conflict group (`references/review-phase.md`: one option per sibling + `Apply all` + `Skip this site`, via AskUserQuestion) | Skip the site — abort all group members; conflicting prescriptions are not mechanically resolvable. Full detail: `references/review-phase.md` Phase R4 |
 | `review.auto-fix-judgment` — Phase R4 needs-judgment finding (`references/review-phase.md`: parsed alternatives or `Apply as-is` / `Skip`, via AskUserQuestion) | Auto-select **Apply as-is (editor interprets)**. Full detail: `references/review-phase.md` Phase R4 |
 | `review.residual-critical-high` — Phase R5 completion gate when `residual_critical_high > 0` (`references/review-phase.md`: another round / rework / explicit acceptance, via AskUserQuestion) | Auto-rework once (`batch.review_rework_count` cap 1); at cap, mark residuals `deferred` with reason `"batch mode: rework cap reached"` and complete the step. Full detail: `references/review-phase.md` Phase R5 |
-| `verify.failed` — verify-phase failure (`skills/develop/SKILL.md` 「verify フェーズ」: rework to implement / rework to review / abort, via AskUserQuestion) | Auto-rework once (`batch.verify_rework_count` cap 1); at cap, stay `failed` and stop with a report. Full detail: `skills/develop/SKILL.md` 「verify フェーズ」 |
+| `verify.failed` — verify-phase failure (`skills/develop/SKILL.md` 「verify フェーズ」: rework to implement / rework to review / abort, via AskUserQuestion) | Auto-rework, gated by two independently-evaluated caps on `batch.verify_rework`: a lineage cap (per failed-item-ID recurrence) and a hard cap (round count). At either cap, `verify.status` stays `failed` and the run proceeds to retrospect without stopping. Full detail: `skills/develop/SKILL.md` 「verify フェーズ」 |
 | `develop.completion` — Step C completion choice (`skills/develop/SKILL.md` Step C: merge / keep branch / open PR, via AskUserQuestion) | Auto-select **keep branch** — no merge, no push, no PR created. Full detail: `skills/develop/SKILL.md` Step C |
 
 The `{phase}.artifact-overwrite` family (`create-spec.artifact-overwrite`,
@@ -85,11 +93,18 @@ are unchanged per Purpose & activation.
 ```yaml
 batch:                       # created by the orchestrator on the first
   review_rework_count: 0     #   --batch run that touches this feature
-  verify_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
 ```
 
-Counters only. Never used to decide whether batch mode is active (that is
-the `--batch` flag's job, per-invocation).
+Structure and per-key meaning are defined in `references/workflow-schema.md`'s
+`batch` block; this file shows the same keys only, not their definition.
+Never used to decide whether batch mode is active (that is the `--batch`
+flag's job, per-invocation).
 
 ## Terminal line
 
@@ -109,8 +124,11 @@ The final report of a batch run MUST include, beyond the normal completion
 report: every auto-approved command string, every assumption recorded during
 create-spec/planning, auto-rework rounds consumed (review / verify), any
 deferred findings with their stable_ids, every unlisted-gate fallback
-resolution (gate / options / choice / Codex consulted or not), and the kept
-integration branch name
+resolution (gate / options / choice / Codex consulted or not), every
+autonomous fail-closed-route resolution (gate / option chosen / options not
+chosen / the discussion's key points / whether Codex was consulted / whether
+a fallback provider answered / whether the Opus escalation ran, with its
+reasoning), and the kept integration branch name
 with the take-over guidance (batch never merges — the human switches to the
 branch in the main working tree and merges locally or pushes + opens a PR).
 The external service relays this to the human evaluator — it is the only
@@ -182,4 +200,5 @@ resolves to a persisted source:
 | Auto-rework rounds consumed (review / verify) | `workflow.yaml`'s `batch` block |
 | Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id` |
 | Every unlisted-gate fallback resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
+| Every autonomous fail-closed-route resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
 | The kept integration branch name | `workflow.yaml` `parent_branch` plus the feature name |

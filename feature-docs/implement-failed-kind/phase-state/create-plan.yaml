@@ -1,0 +1,109 @@
+schema_version: 1
+feature: implement-failed-kind
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 0e396986c48a189cdedb69d2a6ea3df5fd328ca7
+last_input_digest: "sha256:8696a72734d3fb1960534c636f9c1e913f1b969debcf86eff10721d1f3e7ec1f"
+active_request_id: null
+packets:
+  create-plan-q0001:
+    status: answered
+    issued_at: "2026-09-06T22:59:00+09:00"
+    questions:
+      - question_id: fr2.lifecycle
+        status: answered
+      - question_id: fr4.second-failure-kind
+        status: answered
+      - question_id: fr5.gate-rejected-kind
+        status: answered
+      - question_id: fr7.infra-retry-cap
+        status: answered
+      - question_id: fr8.infra-mode-scope
+        status: answered
+answers:
+  fr2.lifecycle:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "clear_on_leaving_failed を採用する。implement が failed を離れる write（pending への差し戻しを含む）と同じ write set で failed_kind を null に戻し、追加の write もコミットも作らない。FR2 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
+  fr4.second-failure-kind:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "second_always_decision を採用する。batch の implement.failed-task による abort phase は原因を問わず failed_kind: decision を書く。FR4 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
+  fr5.gate-rejected-kind:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "always_decision を採用する。I.2.c の route-back gate が成立しなかった terminal status write は常に failed_kind: decision を書く。FR5 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
+  fr7.infra-retry-cap:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "cap_2 を採用する。キー名は batch.infra_resume（rounds / cap）、カウント更新は pending 差し戻し write と同一 write set、rounds >= cap で decision 扱いとして停止。キー欠落は rounds: 0 / cap: 2 として読む。FR7 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
+  fr8.infra-mode-scope:
+    packet_id: create-plan-q0001
+    answered_at: "2026-09-06T22:59:00+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: [assume]
+    freeform: null
+    normalized_answer: "batch_only を採用する。interactive では failed_kind の値によらず従来どおり停止条件 3 が発火する。FR8 は status: assumed になる"
+    resolution_note: "batch-policies.yaml create-plan.tbd-resolution -> option_id: assume"
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: needs_user_input
+    input_digest: "sha256:b86927804628cf691bb56a99d31bfe99e50388a229b0c03792f7bad7e8f828d9"
+    output_digest: null
+  - request_id: create-plan-run-0002
+    status: completed
+    input_digest: "sha256:8696a72734d3fb1960534c636f9c1e913f1b969debcf86eff10721d1f3e7ec1f"
+    output_digest: null
+artifacts:
+  - path: feature-docs/implement-failed-kind/IMPLEMENTATION.md
+    sha256: "sha256:5f8e187908b502b1a12e64884696ffcde2e56408598771e664b925678a901e05"
+    produced_by: create-plan-run-0002
+  - path: feature-docs/implement-failed-kind/VERIFICATION.md
+    sha256: "sha256:1d29486de84fbc40b32e3b825babb6214dc333bfd0c83f95e461abe5f84d5437"
+    produced_by: create-plan-run-0002
+  - path: feature-docs/implement-failed-kind/tasks/task0001.md
+    sha256: "sha256:ae767dba18d72422091573e23cdd5f17ba640de5104ab16e191f57a0f984dd12"
+    produced_by: create-plan-run-0002
+  - path: feature-docs/implement-failed-kind/tasks/task0002.md
+    sha256: "sha256:abe9076a94abe483a1be180817167c709e330a6b60535d1debfda406e4279d00"
+    produced_by: create-plan-run-0002
+  - path: feature-docs/implement-failed-kind/tasks/task0003.md
+    sha256: "sha256:0abb73f0639959e4ce431d31edc0853a49e3c13bbb0c8bceb94c041d97e91fe5"
+    produced_by: create-plan-run-0002
+  - path: feature-docs/implement-failed-kind/tasks/task0004.md
+    sha256: "sha256:47adcbf6f40b1fafcd0b62b0a9f254f1df2a4679785fded81beaff05ba86f63b"
+    produced_by: create-plan-run-0002
+  - path: feature-docs/implement-failed-kind/tasks/task0005.md
+    sha256: "sha256:bc26406fcce2ddac270dde0c79ff0fe608ae2c12623d14293d57a713ff96931a"
+    produced_by: create-plan-run-0002
+patches:
+  - patch_id: create-plan-p0001
+    status: applied
+    base_input_digest: "sha256:8696a72734d3fb1960534c636f9c1e913f1b969debcf86eff10721d1f3e7ec1f"
+    base_workflow_blob: adb6cd32819764efc6678f80a49e69b0b10afd4e
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

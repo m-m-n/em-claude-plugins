@@ -1,0 +1,32 @@
+feature: batch-verify-rework-lineage-cap
+collected_at: "2026-09-06T22:07:00+09:00"
+session_ids:
+  - 01a07653-f397-777b-85e3-86aaffa3f774
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+lessons_candidates:
+  - kind: review_finding_unresolved
+    stable_id: 1975bf8649e26ca4
+    severity: medium
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    note: |
+      hard cap の `rounds` が「rework を実行したラウンド数」と説明されているが、
+      更新規則は cap 判定より前に加算する。severity medium のため auto-fix 候補
+      ゲート（critical/high のみ）に非該当で、記録のみで完了した。文言と更新規則の
+      整合は follow-up の候補。
+  - kind: pre_existing_suite_failures
+    count: 12
+    origin_commit: 75c8fbf
+    note: |
+      `python3 -m unittest discover -s tests` の 12 failures はすべて main でも
+      同一に再現する既存の失敗で、本 feature の Declared Change Set の外。
+      `.claude-plugin/marketplace.json` の `em-review` エントリに `version` キーが
+      無いことを固定した古いスナップショット断言が、手作業コミット 75c8fbf の
+      `version: 0.5.7` 追加で陳腐化したもの。7 つの別 feature のテストモジュールに
+      またがるため NFR5 の範囲外として rework せず、別件の follow-up とした。

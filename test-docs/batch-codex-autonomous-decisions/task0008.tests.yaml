@@ -1,0 +1,187 @@
+task_id: task0008
+baseline_failures:
+  - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd::test_exactly_one_fallback_line_names_the_answering_entry
+  - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd::test_usage_limit_then_provider_error_falls_through_to_third_entry
+  - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged::test_last_entry_failure_surfaces_that_entrys_outcome_not_a_synthetic_success
+  - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged::test_usage_limit_shaped_response_from_entry_two_does_not_advance
+  - tests.test_codex_wrapper_provider_fallback.TestStdoutCleanlinessOnFallback::test_stdout_excludes_earlier_failed_attempts_text
+final_failures:
+  - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd::test_exactly_one_fallback_line_names_the_answering_entry
+  - tests.test_codex_wrapper_provider_fallback.TestFallbackChainEndToEnd::test_usage_limit_then_provider_error_falls_through_to_third_entry
+  - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged::test_last_entry_failure_surfaces_that_entrys_outcome_not_a_synthetic_success
+  - tests.test_codex_wrapper_provider_fallback.TestNonSwitchFailuresSurfaceUnchanged::test_usage_limit_shaped_response_from_entry_two_does_not_advance
+  - tests.test_codex_wrapper_provider_fallback.TestStdoutCleanlinessOnFallback::test_stdout_excludes_earlier_failed_attempts_text
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_surviving_aborts_enumerated_once_and_abort_both_modes
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_surviving_aborts_old_step_3_wording_is_gone
+    red_confirmed: true
+    red_reason: >-
+      test_surviving_aborts_enumerated_once_and_abort_both_modes failed with
+      the new member string "the classification gate's direction-1
+      origin-membership failure below (origin absent, unresolvable, or not a
+      member of the bound set)" not found in the section (the pre-edit
+      document still enumerated "the Classification gate's step-3
+      origin-verification failures below", conflating both directions).
+      test_surviving_aborts_old_step_3_wording_is_gone failed with
+      AssertionError: the superseded phrase was unexpectedly found in the
+      normalized document -- both observed before editing the surviving-
+      aborts bullet in question-resolution.md.
+  AC-2:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_ac2_no_passage_states_batch_direction_2_question_aborts
+    red_confirmed: false
+    red_reason: >-
+      This is a pure retention/regression guard: direction 1's
+      final-and-non-overridable wording and direction 2's batch-relaxation
+      wording are both left byte-identical by this task's edits (verified by
+      the pre-existing test_direction_1_alone_marked_final_and_non_overridable
+      count==1 pins in test_classification_gate.py and
+      test_spec_change_origin_binding.py, neither of which this task
+      touches), and no passage of the document ever stated the forbidden
+      "batch question tripping direction 2 aborts" claim, before or after
+      this task's edits. There is no observable behavior change to drive red
+      for this criterion; it is a non-regression assertion, confirmed to
+      stay true across the whole edit by the unchanged pin counts.
+  AC-3:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_batch_direction_2_continuation_stated_at_exactly_one_site
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_fallback_step_3_cites_step_2_for_direction_2_routing
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_fallback_step_3_old_uncited_wording_is_gone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_step_2_old_direction_2_wording_is_gone
+    red_confirmed: true
+    red_reason: >-
+      test_batch_direction_2_continuation_stated_at_exactly_one_site failed
+      with 0 != 1 (the exact single-statement phrase did not exist verbatim
+      pre-edit; step 2 used different wording -- "does not stop at the
+      Classification gate: it leaves the gate and joins..."). The step-3
+      citation test failed because step 3 named direction 2 as an arrival
+      source with no citation to where the routing fact is stated. Both
+      "old wording is gone" negative-proof tests failed with the superseded
+      wording unexpectedly found. All four observed before editing Batch
+      resolution sequence step 2 and Unlisted-gate fallback step 3.
+  AC-4:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_distinguishes_aborted_set_from_routed_set
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_interactive_arm_still_never_reaches_here
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_old_ownership_narration_is_gone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_direction_2_subset_cites_step_2_not_restated
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_old_direction_2_restatement_is_gone
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc::test_block_branch_no_claim_of_unreachability_contradicts_single_site
+    red_confirmed: true
+    red_reason: >-
+      The first five tests failed pre-edit: the citation-form assertions
+      ("the Fail-closed classification above owns which questions those
+      abort and by which rule, cited here, not restated" / "the routed
+      arm's removal at Batch resolution sequence step 2 above owns that
+      exclusion, cited here, not restated" / "Batch resolution sequence
+      step 2 above states how that subset reaches the packet's batched
+      consultation (cited here, not restated)") were not found, and the two
+      "old narration is gone" negative proofs failed with the pre-task0008
+      re-narrated ownership text unexpectedly found -- all observed before
+      rewriting the `block` branch. The sixth test
+      (test_block_branch_no_claim_of_unreachability_contradicts_single_site)
+      was already passing pre-edit (the forbidden "direction-2 subset never
+      reaches" literal was never present in either version); it is a
+      standing non-contradiction guard rather than a red->green proof, kept
+      as a permanent regression check for this specific AC-4 clause.
+  AC-5:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_source_mapping_covers_all_three_paths
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_vocabulary_stays_closed_no_new_value_minted
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_old_two_path_source_sentence_is_gone
+    red_confirmed: true
+    red_reason: >-
+      test_source_mapping_covers_all_three_paths and
+      test_vocabulary_stays_closed_no_new_value_minted failed with the new
+      phrases ("`source` covers all three paths this route can take" / "its
+      single escalation" / "no new value minted") not found in the bullet
+      (the pre-edit bullet only stated the two-path sentence). The old-
+      sentence-is-gone negative proof failed with the superseded two-path
+      sentence unexpectedly found in the whitespace-normalized document --
+      all three observed before editing phase-state.md's relaxed-route
+      writer entry. The vocabulary-value counts (`batch-codex-consultation`
+      / `batch-safe-default` each exactly once) confirm no third value was
+      minted, satisfying D6.
+  AC-6:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_escalation_value_named_by_route_never_asserts_codex_consulted
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute::test_resolution_note_contents_named
+    red_confirmed: true
+    red_reason: >-
+      test_escalation_value_named_by_route_never_asserts_codex_consulted
+      failed pre-edit with the phrase "the value naming the route and never
+      asserting that Codex itself was consulted" not found -- observed
+      before adding that clause to the `source` sentence.
+      test_resolution_note_contents_named is a pre-existing, unmodified
+      test that already passed before this task (the resolution_note
+      obligation sentence is retained verbatim per AC-6's second half); it
+      stays green throughout and is included here to evidence that
+      retention rather than to claim a fresh red->green cycle for it.
+  AC-7:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestGeneralSourceDefinitionStatesWhichWritersItGoverns::test_general_definition_scoped_to_the_other_three_writers
+      - tests.test_batch_quiet_output_audit_record_contract.TestGeneralSourceDefinitionStatesWhichWritersItGoverns::test_old_unscoped_general_definition_is_gone
+    red_confirmed: true
+    red_reason: >-
+      test_general_definition_scoped_to_the_other_three_writers failed with
+      "For the other three writers below" not found in the normalized
+      subsection (the pre-edit general `source` definition applied itself
+      to every writer, including the relaxed route, without naming that
+      scope). test_old_unscoped_general_definition_is_gone failed with the
+      old unscoped sentence lead-in unexpectedly found. Both observed
+      before scoping the general definition in phase-state.md.
+  AC-8:
+    tests:
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationSourceAgreesAcrossDocuments::test_writer_entry_maps_escalation_decision_to_batch_codex_consultation
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationSourceAgreesAcrossDocuments::test_step_6_cites_phase_state_instead_of_hardcoding_a_source_value
+      - tests.test_batch_quiet_output_audit_record_contract.TestEscalationSourceAgreesAcrossDocuments::test_old_hardcoded_escalation_source_wording_is_gone
+    red_confirmed: true
+    red_reason: >-
+      test_writer_entry_maps_escalation_decision_to_batch_codex_consultation
+      failed because "its single escalation" was absent from phase-state.md's
+      relaxed-route bullet pre-edit. test_step_6_cites_phase_state_instead_
+      of_hardcoding_a_source_value failed because step 6 of
+      question-resolution.md's Unlisted-gate fallback still hardcoded
+      `source: batch-codex-consultation` with no citation to
+      references/phase-state.md's mapping.
+      test_old_hardcoded_escalation_source_wording_is_gone failed with that
+      exact hardcoded phrase unexpectedly found. All three observed before
+      editing step 6 and the relaxed-route bullet together, then re-run
+      together (one test per document plus one cross-document test) so a
+      later edit to either side alone would fail this class.
+  AC-9:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not independently testable by a single assertion -- it is a process
+      constraint over how the other ACs' edits were made. Verified by
+      construction: every pin invalidated by Fact 1/2/3's edits (the
+      surviving-aborts member string, the step-2/step-3/block-branch
+      direction-2 narration, and the phase-state.md two-path `source`
+      sentence) was replaced by a positive pin on the new wording plus a
+      negative proof that the superseded wording is gone (see the "old
+      wording is gone" tests listed under AC-1, AC-3, AC-4, AC-5, AC-7 and
+      AC-8 above), and no existing test was deleted -- the full suite grew
+      from 3754 to 3778 tests (24 added, 0 removed) across this task's
+      edits, confirmed by the before/after `python3 -m unittest discover -s
+      tests` run counts.
+  AC-10:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      `python3 -m unittest discover -s tests` does not exit 0 in this
+      worktree: 5 tests in tests/test_codex_wrapper_provider_fallback.py
+      were already failing before this task touched anything (see
+      baseline_failures above -- confirmed by running the suite before any
+      edit), and remain the only failures after this task's edits
+      (final_failures is identical to baseline_failures, i.e. a subset).
+      Those failures are in a file this task's expected_files does not
+      include and this task's edits never touch
+      (em-workflow/references/question-resolution.md and
+      em-workflow/references/phase-state.md do not intersect the wrapper's
+      provider-fallback-chain behavior); they are outside this task's scope
+      per the worktree-task-workflow discipline ("Tests already failing in
+      your baseline are not yours to fix unless the task plan says so").
+      This task's own diff introduces zero regressions.

@@ -97,10 +97,10 @@ Closed set of eleven stop reason codes:
 | Code | Meaning | Applies to `state` |
 |---|---|---|
 | `step_stuck` | A workflow step could not make progress and is stuck | `stopped` |
-| `step_needs_intervention` | A workflow step reported `failed` or `needs_update` | `stopped` |
+| `step_needs_intervention` | A workflow step reported `needs_update`, or reported `failed` — for the `implement` step, `failed` counts when `failed_kind` reads `decision` (including the missing-value case per `references/workflow-schema.md`), or when the automatic-resume attempt count has reached its cap per `skills/develop/SKILL.md`; other steps' `failed` is unchanged | `stopped` |
 | `workflow_yaml_unparseable` | `workflow.yaml` could not be parsed | `stopped` |
 | `git_setup_aborted` | Step 0's git setup aborted (e.g. gitleaks missing) | `stopped` |
-| `gate_fail_closed` | A gate was classified fail-closed and the phase aborted | `stopped` |
+| `gate_fail_closed` | A gate was classified fail-closed: the aborts `references/question-resolution.md` keeps fail-closed in both modes, plus, in interactive, that mode's own additional aborts | `stopped` |
 | `gate_option_unavailable` | A policy gate's option was unavailable | `stopped` |
 | `implement_task_failed` | A task failed a second time in the implement phase | `stopped` |
 | `verify_rework_cap_reached` | The verify phase's rework cap was reached | `stopped` |
@@ -142,7 +142,10 @@ are the stop points that can also match `stop-condition-3` — all three
 leave a step's status `failed`, which is `stop-condition-3`'s own trigger —
 and in each case the phase-specific row wins. Correspondingly, the
 `stop-condition-3` row's meaning is restricted to `failed` / `needs_update`
-states that no phase-specific row covers.
+states that no phase-specific row covers, and, for the `implement` step's
+`failed`, further restricted to the cases where `failed_kind` reads
+`decision`, or where the automatic-resume attempt count has reached its cap
+per `skills/develop/SKILL.md` (see the `step_needs_intervention` row above).
 
 ## No line on a wait turn
 

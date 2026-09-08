@@ -1,0 +1,100 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 36/36 passed
+final_failures: []             # after implementation: 44/44 passed
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Structural criterion, not a run outcome: verified by inspecting
+      em-workflow/hooks/tests/destructive-guard-cases.json for the five FR1
+      entries (labels "skills 再帰 grep + stderr 破棄", "skills ls + stderr
+      破棄 + pager", "settings リダイレクトコピー", "transcript 読み取り +
+      stderr 破棄", "transcript グロブ検索 + stderr 破棄"), each in the
+      existing three-element [expected, label, command] form with an allow
+      expectation.
+  AC-2:
+    tests:
+      - "skills 再帰 grep + stderr 破棄"
+      - "skills ls + stderr 破棄 + pager"
+      - "settings リダイレクトコピー"
+      - "transcript 読み取り + stderr 破棄"
+      - "transcript グロブ検索 + stderr 破棄"
+    red_confirmed: true
+    red_reason: >-
+      With only the five FR1 cases appended and the judgment not yet
+      rewritten, `run-destructive-guard.py` exited 1 with 36/41 passed,
+      FAILing exactly these five and no others: the first three reported
+      "got=ask [destructive-guard/self-modification] ...", the transcript
+      pair reported "got=deny [destructive-guard/transcript-write] ...".
+      Every other pre-existing case (35 of them) still printed "ok".
+  AC-3:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Whole-suite outcome, not a single named test. Before the rewrite
+      (AC-2's observation) the runner exited 1 with 5 FAILs. After
+      rewriting check_self_modification to the write-target-set model,
+      `run-destructive-guard.py` exits 0 with 44/44 passed, including the
+      trailing "無人実行では ask が deny に降格" unattended-demotion case
+      the runner holds at its end.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Diff-based criterion, not a test outcome, per the task plan's Test
+      Notes. Verified with `git diff <parent-branch> --
+      em-workflow/hooks/tests/destructive-guard-cases.json`: every
+      pre-existing case line is unchanged; the only diff hunk is an
+      appended tail (the five AC-1 cases plus three additional regression
+      cases added after the rewrite, all pure appends, no case was
+      deleted, reordered or edited). Note: the task plan's Acceptance
+      Criteria text says "34" pre-existing cases; the actual pre-existing
+      count in the case table is 35 (confirmed via
+      `json.load(...)` length before any change in this task). The
+      criterion's operative test — byte-identical pre-existing lines,
+      additions-only diff — holds regardless of which count is correct;
+      flagged here as a plan-text discrepancy, not treated as a defect.
+  AC-5:
+    tests:
+      - "transcript 読み取り + stderr 破棄"
+      - "transcript グロブ検索 + stderr 破棄"
+    red_confirmed: true
+    red_reason: >-
+      Both were among the AC-2 red observations: "got=deny
+      [destructive-guard/transcript-write] ..." before the rewrite. After
+      the rewrite both report "ok allow", confirming they are judged allow
+      and not deny.
+  AC-6:
+    tests:
+      - "本物: 設定書き込み"
+      - "本物: 設定を sed -i"
+      - "本物: 設定を rm"
+      - "本物: skills ディレクトリ再帰削除"
+      - "本物: 設定への追記"
+      - "本物: transcript 書き込み"
+      - "無人実行では ask が deny に降格"
+    red_confirmed: false
+    red_reason: >-
+      These are regression guards, not newly-red criteria: all seven
+      already passed in the 4a baseline run (pre-existing cases) or were
+      verified to pass against the pre-rewrite hook copy before being
+      added ("本物: skills ディレクトリ再帰削除" and "本物: 設定への追記",
+      two additional cases appended alongside the rewrite to close a gap
+      the task plan's Test Notes named), and continue to pass after the
+      rewrite. Their purpose is to prove the narrowing does not weaken
+      detection (IMPLEMENTATION.md D3), which is a floor-preservation
+      property, not a red-to-green transition.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by diff inspection, not a test run.
+      `git diff <parent-branch> -- em-workflow/hooks/destructive-guard.py`
+      touches only check_self_modification, its two new helper functions
+      (redirect_write_targets, write_targets) and the single call site in
+      main(); check_rm, check_git and every other judgment function have
+      zero diff lines. No import statement was added or changed (stdlib
+      set: json/os/re/shlex/shutil/sys, unchanged). No subprocess/os.system
+      call was introduced anywhere in the judgment path; the two plugin
+      manifests were not touched by this task's commits.

@@ -1,0 +1,91 @@
+task_id: task0007
+baseline_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+final_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_failed_kind_batch_docs.TestBatchBlockSnippetKeySetEquivalence.test_batch_mode_snippet_key_set_equals_schema_snippet_key_set
+      - tests.test_failed_kind_batch_docs.TestBatchBlockSnippetKeySetEquivalence.test_batch_mode_snippet_contains_infra_resume_record
+      - tests.test_failed_kind_batch_docs.TestBatchBlockSnippetKeySetEquivalence.test_non_vacuity_the_two_snippets_are_not_trivially_empty
+      - tests.test_failed_kind_batch_docs.TestBatchBlockSnippetKeySetEquivalence.test_negative_proof_a_dropped_member_key_is_detected
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, batch-mode.md's `batch` snippet lacked `infra_resume`;
+      test_batch_mode_snippet_key_set_equals_schema_snippet_key_set failed
+      with the parsed key sets unequal (schema-only keys: infra_resume,
+      rounds, cap), and test_batch_mode_snippet_contains_infra_resume_record
+      failed with AssertionError: 'infra_resume' not found in set().
+  AC-2:
+    tests:
+      - tests.test_failed_kind_batch_docs.TestBatchBlockPersistsSentenceCoversAutoResume.test_states_the_block_persists_the_auto_resume_record_too
+      - tests.test_failed_kind_batch_docs.TestBatchBlockPersistsSentenceCoversAutoResume.test_never_activates_the_mode_clause_is_unchanged
+      - tests.test_failed_kind_batch_docs.TestBatchBlockPersistsSentenceCoversAutoResume.test_no_longer_claims_rework_counters_only
+      - tests.test_failed_kind_batch_docs.TestBatchBlockPersistsSentenceCoversAutoResume.test_negative_proof_only_marker_would_have_matched_pre_task_text
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the bullet still read "persists rework counters
+      ONLY"; test_states_the_block_persists_the_auto_resume_record_too
+      failed with AssertionError: 'infra auto-resume record' not found in
+      the bullet text, and test_no_longer_claims_rework_counters_only would
+      have failed to assert non-vacuously without the accompanying
+      negative-proof test (which passed, showing the "ONLY" marker matches
+      the pre-task wording).
+  AC-3:
+    tests:
+      - tests.test_failed_kind_batch_docs.TestCapOwnershipCitationNamesEachOwner.test_cites_develop_skill_for_the_branch_and_consuming_judgment
+      - tests.test_failed_kind_batch_docs.TestCapOwnershipCitationNamesEachOwner.test_cites_schema_for_the_key_member_names_and_defaults
+      - tests.test_failed_kind_batch_docs.TestCapOwnershipCitationNamesEachOwner.test_no_sentence_in_the_document_attributes_cap_wholly_to_develop_skill
+      - tests.test_failed_kind_batch_docs.TestCapOwnershipCitationNamesEachOwner.test_negative_proof_pre_task_wording_would_have_matched_the_forbidden_pattern
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the cap sentence read "The branch and the cap are
+      `skills/develop/SKILL.md`'s to define, not this document's to
+      restate."; test_cites_develop_skill_for_the_branch_and_consuming_judgment,
+      test_cites_schema_for_the_key_member_names_and_defaults, and
+      test_no_sentence_in_the_document_attributes_cap_wholly_to_develop_skill
+      all failed (the last one failed because the forbidden phrase WAS
+      present, confirmed by the accompanying negative-proof test).
+  AC-4:
+    tests:
+      - tests.test_failed_kind_schema.TestInfraResumeRecordHasAMaterialisingWriter.test_names_the_orchestrator_write_that_creates_the_batch_block
+      - tests.test_failed_kind_schema.TestInfraResumeRecordHasAMaterialisingWriter.test_states_initial_member_values_equal_the_unset_read_defaults
+      - tests.test_failed_kind_schema.TestInfraResumeRecordHasAMaterialisingWriter.test_negative_proof_fails_on_a_copy_with_the_writer_sentence_removed
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, workflow-schema.md's `batch` block section named no
+      writer for `infra_resume`; all three tests failed with AssertionError:
+      the "materialised by the same orchestrator write..." phrase was not
+      found in the section text.
+  AC-5:
+    tests:
+      - tests.test_failed_kind_schema.TestFailedKindExternalCauseGlossSeparatesMeaningFromDetection.test_points_at_the_write_path_owner_for_todays_attribution
+      - tests.test_failed_kind_schema.TestFailedKindExternalCauseGlossSeparatesMeaningFromDetection.test_states_the_fail_closed_direction_for_no_signal
+      - tests.test_failed_kind_schema.TestFailedKindExternalCauseGlossSeparatesMeaningFromDetection.test_meaning_bullet_unchanged
+      - tests.test_failed_kind_schema.TestFailedKindExternalCauseGlossSeparatesMeaningFromDetection.test_does_not_disturb_the_missing_value_compatibility_paragraph
+      - tests.test_failed_kind_schema.TestFailedKindExternalCauseGlossSeparatesMeaningFromDetection.test_vocabulary_still_exactly_two_values_in_order
+      - tests.test_failed_kind_schema.TestFailedKindExternalCauseGlossSeparatesMeaningFromDetection.test_negative_proof_fails_on_a_copy_without_the_separation_sentence
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, the `infra` gloss bullet had no separation sentence;
+      test_points_at_the_write_path_owner_for_todays_attribution and
+      test_states_the_fail_closed_direction_for_no_signal both failed with
+      AssertionError: the separation phrases were not found in the section
+      text (test_meaning_bullet_unchanged, test_does_not_disturb_the_missing_value_compatibility_paragraph
+      and test_vocabulary_still_exactly_two_values_in_order already passed
+      pre-edit, since they assert pre-existing, untouched text — carried
+      here as regression coverage, not as this AC's red proof).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-6 is the whole-suite outcome plus a structural property of every
+      new matcher (negative proof + found-input guard where applicable),
+      not an independent behavior with its own red state. It is verified by
+      running `python3 -m unittest discover -s tests` (exits 0, 3613 tests,
+      only the pre-existing baseline failure) and by inspection of the new
+      test classes added in this task, each of which carries at least one
+      negative-proof test and, where an assertNotIn/assertNotEqual matcher
+      could pass vacuously on absent input, a companion non-vacuity or
+      found-input-guard test (see AC-1..AC-5 entries above).

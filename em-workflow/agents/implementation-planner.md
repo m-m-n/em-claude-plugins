@@ -253,6 +253,11 @@ A `needs_user_input` result carries the packet only — no
 `written_artifacts` and no `workflow_patch`. This agent is re-dispatched
 with the resolved `answers` once the orchestrator has them.
 
+An `assumptions[].reversible` entry is `false` only for an assumption
+about an operation that cannot be undone once applied; it is `true` for a
+preserved constraint, an invariant, or a fact pinned by an existing test
+(`${CLAUDE_PLUGIN_ROOT}/references/question-packet-schema.md`).
+
 ## Output
 
 On `status: completed`, the result carries `written_artifacts`
