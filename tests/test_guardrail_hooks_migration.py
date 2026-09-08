@@ -60,12 +60,17 @@ MIGRATED_HOOK_FILES = (
 # The execution order the PreToolUse(Bash) group must declare, verbatim.
 # `failed-run-cleanup-guard.py` runs after `bash_guard.py` and before
 # `destructive-guard.py`'s blanket allow (failed-run-cleanup-guard
-# IMPLEMENTATION.md decision D1).
+# IMPLEMENTATION.md decision D1). `muse_guard.py` runs immediately ahead of
+# `destructive-guard.py` too, for the identical reason: that guard's
+# blanket allow must not be able to terminate the decision before the
+# contributor-tier consent check has had a chance to deny
+# (muse-spark-contributor-consent task0001.md Design, "Registration").
 EXPECTED_BASH_GUARD_ORDER = [
     "gitleaks-precommit.sh",
     "kill-guard.py",
     "bash_guard.py",
     "failed-run-cleanup-guard.py",
+    "muse_guard.py",
     "destructive-guard.py",
 ]
 
