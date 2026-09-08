@@ -166,4 +166,28 @@ records:
     (separator-free prompts, exact `bash -c`, option-free `xargs`). Codex excluded TS-3 (still holds) and
     TS-28 (its three enumerated cases still pass; here-document finding 4 belongs in a new scenario), and
     the orchestrator adopted that narrowing.'
+- question_id: rework.muse-guard-cli-consent-provenance
+  packet_id: muse-spark-contributor-consent-q0001
+  answered_at: '2026-09-09T08:52:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - cli-requires-terminal
+  freeform: null
+  normalized_answer: FR7 を変更し、--record / --remove は標準入力が対話端末でない限り書き込みを拒否する。フックの判定面は変えない。
+  resolution_note: 'gate: rework.spec-change; route: relaxed route (assumption a3 names this question
+    with reversible: false, so question-resolution.md''s Precedence reservation removes the routed arm
+    and the question joins the packet''s batched Codex consultation instead of the Classification gate);
+    chosen cli-requires-terminal; not chosen: hook-denies-own-cli, no-spec-change-accept-residual;
+    codex_consulted: true; fallback provider answered: no; opus escalation: not run; key points: option 1
+    rebuilds the same string-classifier fragility the six other findings are, so it guards enumerated
+    spellings rather than being an independent boundary; option 3 leaves an irreversible hole (the
+    repository''s code becomes training data) that contradicts SPEC''s own prompt-injection-resistance
+    claim and makes SC-8 permanently unsatisfiable; option 2 puts the check at the mutation sink, where
+    quoting, wrappers, shell nesting and here-documents all converge, and keeps --list agent-callable.
+    Carried caveat for the create-spec re-entry: isatty() is a provenance proxy, not proof of human
+    action (an agent may allocate a pseudo-terminal or write the store through another program), and
+    Codex separately judged the goal as literally worded unachievable by all three options, so SPEC''s
+    Prompt-injection Resistance claim and SC-8 must be reworded to the boundary this option actually
+    establishes.'
 
