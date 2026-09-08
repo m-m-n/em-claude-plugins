@@ -1,9 +1,9 @@
 schema_version: 1
 feature: muse-spark-contributor-consent
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
-base_revision: 5e1ab64b8dae9fabeb42e2734ec707d36934eb90
+base_revision: b5610f2bfcfea56b9375c587f26b1c9675ade932
 last_input_digest: sha256:4ffb8057b976b6e48afaf3f4c9807881282eae9d798da810620e1ac149e832d1
 active_request_id: null
 packets:
@@ -79,7 +79,17 @@ worker_runs:
   status: completed
   input_digest: sha256:4ffb8057b976b6e48afaf3f4c9807881282eae9d798da810620e1ac149e832d1
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:2d7d75e5e9b9ba7e221aa4e08178dc5ae4823fdbec7ce6806e7db9f87aa5fbea
+  output_digest: null
+artifacts:
+- path: feature-docs/muse-spark-contributor-consent/REQUIREMENTS.md
+  sha256: sha256:a3a21a6c72b9ab7d040a2fa1d5c91ba70531818a6650bbc080dd24bdc6b20823
+  produced_by: create-spec-run-0003
+- path: feature-docs/muse-spark-contributor-consent/SPEC.md
+  sha256: sha256:b72eec88118e67c6a0556a1686ce654e5ce892da09b1a4d539f9fbeacb35266b
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:bdbe5a7f33fd021d22a5b06ffb9f77b38a2f13953f7bf3f16ab1a1f87bac5b35
 stale_redispatch_count: 0
