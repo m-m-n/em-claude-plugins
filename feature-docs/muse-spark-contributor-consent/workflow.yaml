@@ -168,7 +168,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [NFR3, NFR6]
-    status: in_progress
+    status: merged
     branch: em-workflow/muse-spark-contributor-consent/task0005
     notes: null
 
