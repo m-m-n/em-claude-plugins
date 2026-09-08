@@ -68,3 +68,39 @@ records:
       Chosen: C. TS9's table row, its manual checklist item and a traceability
       note in VERIFICATION.md were rewritten accordingly; the verdict recorded
       in workflow.yaml is pass.
+  - question_id: develop.once-vs-step-c-pr-instruction
+    packet_id: null
+    answered_at: "2026-09-08T21:35:00+09:00"
+    source: codex
+    answer_mode: select
+    selected_option_ids: [continue-into-step-c]
+    freeform: ""
+    normalized_answer: "Continue into Step C in the same turn and fulfil the operator's push + PR instruction, instead of ending the turn at the --once retrospect boundary."
+    resolution_note: >-
+      gate: develop Step C entry under --once (unlisted-gate fallback; no
+      gate_id at the originating site). Context: the run was launched as
+      `/em-workflow:develop --batch exit4-tip-argument --once` together with a
+      free-text operator instruction to push the integration branch and open a
+      PR against base_branch while keeping the branch locally and remotely and
+      not auto-merging. The --once contract ends the turn once `retrospect`
+      reaches `completed`, treating Step C as a separate phase for the next
+      invocation; batch mode's `develop.completion` default is "keep branch"
+      (no merge, no push, no PR). PR #17 for
+      `em-workflow/exit4-tip-argument/integration` is already OPEN against
+      `main`, so `gh pr create` would be rejected as a duplicate and the
+      equivalent fulfilling action is pushing the branch to update that PR.
+      Options - A: honour --once strictly, end the turn after retrospect and
+      leave Step C to the next invocation;
+      B: continue into Step C now and perform the push + PR step.
+      codex_consulted: true. The primary Codex CLI provider did not answer; the
+      litellm fallback provider (entry 2, vertex-glm-5.2) answered and chose B.
+      No Opus escalation was needed.
+      Codex rationale: the operator's explicit free-text deliverable outranks
+      --once, which is a per-invocation bounding mechanism for an external
+      dispatcher rather than a correctness invariant; the effective action is
+      low-risk because the existing open PR only needs a push; and the next
+      invocation would most likely not carry the free-text override, so Step C
+      would fall back to "keep branch" and the requested push/PR would never
+      happen.
+      Chosen: B. Step C runs in this turn with the operator's PR option in
+      place of the batch default.
