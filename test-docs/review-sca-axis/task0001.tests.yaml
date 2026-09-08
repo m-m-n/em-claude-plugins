@@ -1,0 +1,241 @@
+task_id: task0001
+# Refreshed per the conflict-cycle protocol (worktree-task-workflow): the
+# merge conflicted (add/add on em-workflow/scripts/scan-dependencies.py,
+# already carrying task0005's real `file-tasks`), so `git merge` +
+# `git checkout --theirs` adopted the parent side, and the suite was
+# re-run right after adoption (BEFORE re-implementing this task's `scan`
+# half on top). At that point `scan` was still task0005's placeholder, so
+# every test in tests/test_sca_scan_normalization.py that exercises real
+# `scan` behavior failed/errored -- this list. The original 4a baseline
+# (recorded before any file in this task was touched) was empty (3855/3855
+# passed); it is superseded by this refreshed one per the skill.
+baseline_failures:
+  - "test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly (setUpClass)"
+  - test_sca_scan_normalization.TestCoOwnershipSkeleton.test_both_subcommands_registered
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_cargo_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_cargo_transitive_and_below_threshold_dropped
+  - test_sca_scan_normalization.TestCoOwnershipSkeleton.test_file_tasks_placeholder_exits_with_execution_error_code
+  - test_sca_scan_normalization.TestCoOwnershipSkeleton.test_file_tasks_placeholder_prints_no_object_on_stdout
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_go_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_go_transitive_and_below_threshold_dropped
+  - test_sca_scan_normalization.TestUntrustedTextTruncation.test_long_advisory_title_is_truncated_with_marker
+  - test_sca_scan_normalization.TestToolNotResolvableIsSkip.test_missing_npm_executable_yields_skip_with_empty_findings
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_npm_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_npm_transitive_and_below_threshold_dropped
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_pip_sample_normalizes_and_conforms
+  - test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_pip_transitive_and_below_threshold_dropped
+  - test_sca_scan_normalization.TestDeterminismAndReadOnlyDiscipline.test_repeated_scan_yields_byte_identical_output
+  - test_sca_scan_normalization.TestDeterminismAndReadOnlyDiscipline.test_scan_leaves_project_root_file_state_unchanged
+  - test_sca_scan_normalization.TestToolNotResolvableIsSkip.test_skip_reason_is_machine_stable_identifier
+  - test_sca_scan_normalization.TestUntrustedTextTruncation.test_suggestion_is_prose_never_diff_shaped
+  - test_sca_scan_normalization.TestUntrustedTextTruncation.test_truncate_helper_leaves_short_text_untouched
+  - test_sca_scan_normalization.TestUntrustedTextTruncation.test_truncate_helper_never_exceeds_limit_and_marks_visibly
+  - test_sca_scan_normalization.TestScanCliProducesOneObjectExitZero.test_scan_subcommand_end_to_end_via_cli
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_registry_file_exists
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_version_key_present
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_header_states_responsibility_split
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_exactly_four_expected_ecosystems
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_manifests_per_ecosystem
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_executable_per_ecosystem
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_args_is_non_empty_list_per_ecosystem
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_severity_map_maps_critical_and_high
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_threshold_direct_only_and_high_floor
+    red_confirmed: true
+    red_reason: >-
+      Before this task, neither em-workflow/references/vuln-scanners.yaml nor
+      em-workflow/scripts/scan-dependencies.py existed. Confirmed directly:
+      moving both files aside and re-running
+      `python3 -m unittest tests.test_sca_scan_normalization` raised
+      `FileNotFoundError` at module import (test_sca_scan_normalization.py's
+      own module-level `SCAN = _load_module()` call, and
+      REGISTRY_PATH.read_text() in TestVulnScannersRegistryStructure would
+      independently have raised too) -- i.e. every test in this module,
+      including all of AC-1's, was unreachable/red before the registry and
+      script existed. Restoring both files made the whole module (37 tests)
+      pass.
+  AC-2:
+    tests:
+      - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_selects_all_four_ecosystems_from_changed_files
+      - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args
+      - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_no_manifest_in_change_selects_nothing
+      - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_pip_selected_by_either_pyproject_or_requirements
+      - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_no_manifest_in_change_yields_empty_non_skipped_result
+    red_confirmed: true
+    red_reason: >-
+      Same module-blackout observation as AC-1: `SCAN.select_ecosystems` /
+      `SCAN.build_command` / `SCAN.run_scan` did not exist before this task
+      (the whole module failed to import), so every test here was
+      unreachable/red. Green after the script + registry were written.
+  AC-3:
+    tests:
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_npm_sample_normalizes_and_conforms
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_cargo_sample_normalizes_and_conforms
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_pip_sample_normalizes_and_conforms
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_go_sample_normalizes_and_conforms
+    red_confirmed: true
+    red_reason: >-
+      Module-blackout observation (see AC-1): `SCAN.run_scan` and every
+      `normalize_*` function did not exist before this task. Directly
+      exercised during development: before the per-ecosystem `normalize_*`
+      functions and the npm/cargo/pip/go stub-fixture plumbing were wired
+      up correctly (an initial version of the stub's shebang used
+      `/usr/bin/env python3`, which fails to resolve under the
+      PATH-restricted-to-bin_dir these tests deliberately set up), all four
+      `_sample_normalizes_and_conforms` tests failed with
+      "AssertionError: 0 != 1" (empty findings) -- fixed by pointing the
+      stub's shebang at `sys.executable`'s absolute path instead of relying
+      on `env` to resolve `python3` via the restricted PATH.
+  AC-4:
+    tests:
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_npm_transitive_and_below_threshold_dropped
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_cargo_transitive_and_below_threshold_dropped
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_pip_transitive_and_below_threshold_dropped
+      - tests.test_sca_scan_normalization.TestNormalizationProducesSchemaConformantResult.test_go_transitive_and_below_threshold_dropped
+    red_confirmed: true
+    red_reason: >-
+      Module-blackout observation (see AC-1): the threshold filter
+      (`_passes_threshold`, applied before `_build_finding` is ever called)
+      did not exist before this task. Each of the four fixtures embeds one
+      transitive-but-otherwise-high/critical advisory and one
+      direct-but-below-high-severity advisory alongside the kept one, so a
+      threshold-filter regression (e.g. checking severity only, or
+      direct-only only) would surface here independently of AC-3.
+  AC-5:
+    tests:
+      - tests.test_sca_scan_normalization.TestToolNotResolvableIsSkip.test_missing_npm_executable_yields_skip_with_empty_findings
+      - tests.test_sca_scan_normalization.TestToolNotResolvableIsSkip.test_skip_reason_is_machine_stable_identifier
+    red_confirmed: true
+    red_reason: >-
+      Module-blackout observation (see AC-1): `SCAN.run_scan`'s
+      tool-not-resolvable branch did not exist before this task.
+  AC-6:
+    tests:
+      - tests.test_sca_scan_normalization.TestUntrustedTextTruncation.test_long_advisory_title_is_truncated_with_marker
+      - tests.test_sca_scan_normalization.TestUntrustedTextTruncation.test_suggestion_is_prose_never_diff_shaped
+      - tests.test_sca_scan_normalization.TestUntrustedTextTruncation.test_truncate_helper_never_exceeds_limit_and_marks_visibly
+      - tests.test_sca_scan_normalization.TestUntrustedTextTruncation.test_truncate_helper_leaves_short_text_untouched
+    red_confirmed: true
+    red_reason: >-
+      Module-blackout observation (see AC-1): `SCAN.truncate` and
+      `SCAN.TRUNCATION_MARKER` did not exist before this task.
+      `test_suggestion_is_prose_never_diff_shaped` additionally proves the
+      finding set is non-empty before checking the negative assertion
+      (`self.assertTrue(result["findings"])`), so it cannot pass vacuously.
+  AC-7:
+    tests:
+      - tests.test_sca_scan_normalization.TestDeterminismAndReadOnlyDiscipline.test_repeated_scan_yields_byte_identical_output
+      - tests.test_sca_scan_normalization.TestDeterminismAndReadOnlyDiscipline.test_scan_leaves_project_root_file_state_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Module-blackout observation (see AC-1): `SCAN.run_scan` did not exist
+      before this task.
+  AC-8:
+    tests:
+      - tests.test_sca_axis_schema_enums.TestSchemaEnumsWidenedAdditively.test_schema_parses_as_json
+      - tests.test_sca_axis_schema_enums.TestSchemaEnumsWidenedAdditively.test_source_enum_is_exactly_four_values_tool_appended
+      - tests.test_sca_axis_schema_enums.TestSchemaEnumsWidenedAdditively.test_category_enum_is_exactly_seven_values_vulnerability_appended
+    red_confirmed: true
+    red_reason: >-
+      Directly confirmed by temporarily reverting only
+      em-workflow/references/review-output-schema.json (git stash) and
+      re-running `tests.test_sca_axis_schema_enums`:
+      test_source_enum_is_exactly_four_values_tool_appended failed
+      ("Lists differ: ['claude', 'codex', 'litellm', 'tool'] !=
+      ['claude', 'codex', 'litellm']") and
+      test_category_enum_is_exactly_seven_values_vulnerability_appended
+      failed the same way (category enum missing 'vulnerability'). Both
+      passed once the schema edit was restored.
+  AC-9:
+    tests:
+      - tests.test_sca_axis_schema_enums.TestSchemaInvarianceSideUnchanged.test_root_required_unchanged
+      - tests.test_sca_axis_schema_enums.TestSchemaInvarianceSideUnchanged.test_root_additional_properties_unchanged
+      - tests.test_sca_axis_schema_enums.TestSchemaInvarianceSideUnchanged.test_finding_required_unchanged
+      - tests.test_sca_axis_schema_enums.TestSchemaInvarianceSideUnchanged.test_finding_additional_properties_unchanged
+      - tests.test_sca_axis_schema_enums.TestSchemaInvarianceSideUnchanged.test_severity_enum_unchanged
+      - tests.test_sca_axis_schema_enums.TestFrozenSourceEnumPinIsFourValueList.test_frozen_source_enum_constant_is_four_value_list
+      - tests.test_reviewer_roles_protocol.TestReviewOutputSchemaCategoryWidened.test_root_source_enum_unchanged
+    red_confirmed: true
+    red_reason: >-
+      test_frozen_source_enum_constant_is_four_value_list and
+      test_root_source_enum_unchanged (the pre-existing sibling-module pin,
+      tests/test_reviewer_roles_protocol.py) were directly confirmed red
+      before FROZEN_SOURCE_ENUM was updated to the four-value list: with
+      the schema already widened to `tool` but the constant still reading
+      `["claude", "codex", "litellm"]`,
+      `python3 -m unittest tests.test_reviewer_roles_protocol` failed
+      test_root_source_enum_unchanged with "Lists differ:
+      ['claude', 'codex', 'litellm', 'tool'] != ['claude', 'codex',
+      'litellm']" (git-stash-based check, reverting only the schema file
+      while the pin was already at 4 values, reproduces the symmetric
+      failure). The five TestSchemaInvarianceSideUnchanged tests assert
+      values that this task's edit never touches (required lists,
+      additionalProperties, severity enum) -- they are the invariance
+      guard the Design section requires ("the untouched parts must still
+      match their pre-change content") and were already green at every
+      point during this task's edit, by construction, since nothing here
+      ever changed those fields; TestEnumWideningDetectsReplacement in the
+      same module (not itself an AC-9 test, but the regression proof for
+      this AC's assertion style) independently demonstrates the
+      full-list-equality check used above rejects a replacement rather
+      than an append.
+  AC-10:
+    tests:
+      - tests.test_sca_scan_normalization.TestCoOwnershipSkeleton.test_both_subcommands_registered
+      - tests.test_sca_scan_normalization.TestCoOwnershipSkeleton.test_scan_is_a_real_implementation_not_a_placeholder
+      - tests.test_sca_scan_normalization.TestCoOwnershipSkeleton.test_file_tasks_still_dispatches_to_its_own_real_command
+      - tests.test_sca_task_filing.TestModuleCoOwnership.test_scan_is_now_a_real_implementation
+    red_confirmed: true
+    red_reason: >-
+      Two distinct red observations, matching AC-10's two halves. (1)
+      Module-blackout observation (see AC-1) for the first three tests:
+      `SCAN.build_parser` / `scan_command` did not exist before this task.
+      (2) The merge itself exercised AC-10's second half directly: the
+      integration branch already carried task0005's real `file-tasks`
+      (merged before this task attempted its own merge), so `merge-task.sh`
+      reported an add/add conflict on em-workflow/scripts/
+      scan-dependencies.py. Per the parent-side-adoption protocol, that
+      file was adopted wholesale (`git checkout --theirs`) and the suite
+      was re-run BEFORE re-implementing `scan` -- confirming task0005's own
+      placeholder-`scan` assertion
+      (tests.test_sca_task_filing.TestModuleCoOwnership.test_scan_is_a_marked_placeholder,
+      as it was named at that point) still passed, and every one of this
+      task's own `scan`-exercising tests failed (see baseline_failures
+      above). Re-implementing `scan` on top then flipped
+      test_scan_is_a_marked_placeholder from green to red (its premise --
+      that this branch's `scan` is still a placeholder -- became false the
+      moment the real implementation replaced it), observed directly as a
+      new, unexpected failure outside this task's own test modules after
+      re-implementation; renaming it to test_scan_is_now_a_real_
+      implementation and asserting the real behavior instead (the
+      symmetric merge duty IMPLEMENTATION.md's "Module co-ownership
+      skeleton" assigns to whichever task merges second: "After the second
+      merge the file exposes both subcommands and both tasks' tests
+      pass") is what makes it green again. All four tests listed above are
+      green in the final merged state; the full suite (4043 tests,
+      including tests.test_sca_task_filing's other 31 tests) and
+      check-plugin-invariants.py both confirm no other test moved.
+  AC-11:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-11 is a whole-suite/whole-repository Definition-of-Done check
+      (`python3 -m unittest discover -s tests` exits 0; `python3
+      em-workflow/scripts/check-plugin-invariants.py <repo-root>` exits 0),
+      not a single behavior with a red-to-green transition of its own. Both
+      commands were ALREADY exit 0 at the 4a baseline (3855 tests, 7/7
+      invariant checks PASS) in this task's own worktree -- there is no
+      "before this task" red state for the aggregate exit code to move
+      from. Verified directly after this task's initial edits (before the
+      merge conflict cycle): 3903 tests, 0 failures. Re-verified after the
+      parent-side-adoption + re-implementation cycle (see AC-10): `python3
+      -m unittest discover -s tests` -> 4043 tests, 0 failures (task0003 /
+      task0004 / task0005 / task0006's tests merged in via the parent, plus
+      this task's own 48, plus the one-method fix to
+      tests/test_sca_task_filing.py the co-ownership merge duty required --
+      none newly broken); `python3
+      em-workflow/scripts/check-plugin-invariants.py <repo-root>` -> all
+      seven checks PASS, exit 0.

@@ -1,0 +1,221 @@
+round: 1
+executed_at: "2026-09-07T16:46:29+09:00"
+scope:
+  review_mode: diff
+  base_commit: b2479d3553594272e683f921a871f159dbf02ce5
+  head_commit: d853c861e745b51f4963704abd34651d0b4921d8
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/agents/requirements-analyst.md
+    - em-workflow/agents/rework-planner.md
+    - em-workflow/references/contracts/analyst-contract.md
+    - em-workflow/references/contracts/planner-contract.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/references/fixtures/question-packet/category-fail-closed/valid-test-pinned-constraint-assumption/input.json
+    - em-workflow/references/question-packet-schema.md
+    - test-docs/assumptions-reversible-criteria/task0001.tests.yaml
+    - test-docs/assumptions-reversible-criteria/task0002.tests.yaml
+    - test-docs/assumptions-reversible-criteria/task0003.tests.yaml
+    - tests/test_assumptions_reversible_criteria_version_bump.py
+    - tests/test_assumptions_reversible_criterion.py
+    - tests/test_question_packet_reversible_fixture.py
+plan:
+  floor: [comprehensive, architecture, spec]
+  discretionary:
+    - perspective: security
+      reason: "diff が fail-closed abort ゲート（irreversibility arm）の判定基準そのものを書き換えるため、無人実行のガードレール強度に対する観点を追加する"
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: failed, skip_reason: null}
+  - {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed, skip_reason: null}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+  - {run_id: "comprehensive#loop1", perspective: comprehensive, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "security#loop1", perspective: security, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "architecture#loop1", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed, skip_reason: null}
+  - {run_id: "spec#loop1", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+harness_notes:
+  - run_id: "comprehensive#0"
+    note: >-
+      Codex CLI harness degradation. The reviewer returned
+      {"skipped": true, "skip_reason": "premature call; need to investigate first"}
+      — a degenerate placeholder, not a protocol skip_reason. The wrapper log
+      showed the Codex CLI falling through to its litellm/vertex-glm-5.2
+      fallback entry with a models-manager refresh error on each of three
+      attempts, and the backend never engaged with the diff even when the
+      full diff was pasted into the prompt. Recorded as status failed
+      (harness-level failure) and the perspective received exactly one Claude
+      fallback dispatch (comprehensive#fallback) per review-phase.md Phase R2b.
+      The same round's security#0 succeeded through codex, so the failure was
+      not a blanket codex outage. workflow-doctor was not dispatched: the
+      wrapper log already isolated the cause.
+  - run_id: "comprehensive#loop1"
+    note: >-
+      The in-loop re-review was dispatched directly to the Claude reviewer
+      rather than re-walking comprehensive's chain from its codex head entry,
+      because this round had already established that entry as failing at the
+      harness level. The end state matches what the chain walk mandates (the
+      perspective gets exactly one completed run); the deviation only avoids
+      re-deriving a known harness failure.
+findings:
+  - stable_id: 97745c0d0a62cafa
+    severity: high
+    category: comprehensive
+    file: tests/test_assumptions_reversible_criteria_version_bump.py
+    line: 119
+    title: "Literal version pin makes the new test module fail on the next em-workflow bump"
+    description: >-
+      TestPluginManifestVersion.test_version_is_pinned_new_value asserted
+      assertEqual(plugin.json version, NEW_VERSION="0.1.65"), comparing the live
+      manifest against a frozen literal. .claude/rules/core-plugin-version-bump.md
+      makes a bump mandatory for any change under em-workflow/, so the next
+      feature moving the manifest to 0.1.66 would have failed this assertion with
+      certainty and contaminated that unrelated feature's baseline failures. None
+      of the 13 pre-existing tests/*_version_bump.py modules pins the version to a
+      literal; every one routes through a major.minor-equal / patch-greater
+      matcher. The module already defined that matcher
+      (_assert_patch_bump_over_baseline) and applied it to the marketplace entry,
+      so only this one class deviated. NEW_VERSION itself is kept — the
+      non-vacuity companion still uses it as its sample.
+    suggestion: >-
+      Replace the literal assertion with the module's own baseline matcher:
+      def test_version_is_past_baseline(self):
+      _assert_patch_bump_over_baseline(self, self.data.get("version"))
+      Keep the NEW_VERSION constant.
+    sources: [claude:comprehensive]
+    confidence: 80
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1 (needs-judgment / Apply as-is, batch)"
+  - stable_id: a1650b49ec0d445a
+    severity: medium
+    category: comprehensive
+    file: test-docs/assumptions-reversible-criteria/task0003.tests.yaml
+    line: 7
+    title: "AC-1 の tests エントリが存在しないテスト ID を指している（実測で唯一の解決不能 ID）"
+    description: >-
+      Collateral of loop 1's rename. task0003.tests.yaml AC-1 still cited
+      tests.test_assumptions_reversible_criteria_version_bump.TestPluginManifestVersion.test_version_is_pinned_new_value,
+      a method that no longer exists; resolving all 68 test ids across the three
+      tests.yaml files through unittest's loader left this one unresolvable. Its
+      red_reason ("AssertionError: '0.1.64' != '0.1.65'") also no longer matched
+      any message the current assertion can produce.
+    suggestion: >-
+      Point AC-1 at TestPluginManifestVersion.test_version_is_past_baseline and
+      replace red_reason with the patch-bump matcher's actual message.
+    sources: [claude:comprehensive]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: >-
+      Applied by the orchestrator in loop 2. Below the R4 candidate gate's
+      critical/high threshold, so it was not an auto-fix candidate; applied
+      anyway because it is direct collateral of loop 1's own committed fix and
+      leaving it would ship a record that contradicts the code. Two perspectives
+      (comprehensive#loop1, architecture#loop1) reported the same site
+      independently. Verified after the edit: all 68 test ids in the three
+      tests.yaml files resolve.
+  - stable_id: 02b99b9f51e143f0
+    severity: medium
+    category: architecture
+    file: test-docs/assumptions-reversible-criteria/task0003.tests.yaml
+    line: 7
+    title: "Test-docs manifest references a non-existent test method (AC-1, task0003)"
+    description: >-
+      Same site as a1650b49ec0d445a, reported independently from the architecture
+      perspective as manifest-to-implementation contract drift: the test-docs YAML
+      names a test identity that exists nowhere in the module, and its red_reason
+      describes an equality-check failure mode the current patch-bump assertion
+      cannot produce.
+    suggestion: >-
+      Update the YAML entry to reference test_version_is_past_baseline and adjust
+      red_reason to the patch-bump-over-baseline failure mode.
+    sources: [litellm:vertex-glm-5.2:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "same site as a1650b49ec0d445a; fixed by the loop 2 edit"
+  - stable_id: 17011cf0d79a8023
+    severity: medium
+    category: spec
+    file: em-workflow/agents/requirements-analyst.md
+    line: 138
+    title: "Six worker docs restate the criterion's full text instead of citing the SSOT, and a new test pins the restatement"
+    description: >-
+      SPEC FR2 asks the three agent prompts to carry the criterion "pointing at
+      the FR1 SSOT rather than restating its full text"; FR3 asks the three
+      contracts for "the same binding pointer as FR2"; NFR1 says "The criterion is
+      defined once (FR1). Every other site cites it; no site restates it in a way
+      that can drift"; assumption a2 says the six worker-facing documents "cite it
+      rather than duplicating its full wording." The shipped diff instead copies
+      FR1's full two-half sentence essentially byte-for-byte into all six
+      documents (requirements-analyst.md:138-141, implementation-planner.md:256-259,
+      rework-planner.md:103-106, analyst-contract.md:33-36, planner-contract.md:57-60,
+      rework-planner-contract.md:206-209) plus a parenthetical pointer — seven
+      copies of one normative sentence. The evaluator's own inspection added that
+      the duplication is now locked in by the new suite: _cites_criterion in
+      tests/test_assumptions_reversible_criterion.py:118 requires the full text
+      plus the pointer, and test_cites_criterion_rejects_pointer_only_forged_text
+      (line 438) asserts a pointer-only site FAILS — so the SSOT-compliant shape
+      FR2/NFR1/a2 ask for is actively rejected by the tests. Counter-evidence: SPEC
+      AC-5 requires the module to fail "when the criterion text is removed from any
+      one of the seven documents" and TS-2/TS-3 say each file "carries the
+      criterion", which read as text-present-per-file. The SPEC is internally
+      inconsistent between these two readings.
+    suggestion: >-
+      Either (a) reduce the six citing sites to a pointer-only binding rule and
+      relax _cites_criterion (plus rework test_cites_criterion_rejects_pointer_only_forged_text
+      and the per-file real_vs_stripped proofs), or (b) amend SPEC FR2/FR3/NFR1 and
+      assumption a2 so the shipped shape and the specification agree. Do not leave
+      the two in conflict.
+    sources: [litellm:muse-spark:spec]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      Category spec is excluded from the R4 auto-fix candidate gate, and the
+      remedy is a specification-reconciliation decision (the SPEC contradicts
+      itself between FR2/NFR1/a2 and AC-5/TS-2/TS-3), not a mechanical edit.
+      Medium severity, so it does not hold the completion gate. Left for a human
+      decision; the loop-1 spec re-review reported no findings but that is not
+      evidence of a fix.
+evaluation:
+  round_summary: >-
+    Round 1, cross_validation=true, diff mode over 16 changed files (documentation,
+    one question-packet fixture, three new test modules, two manifests). Two
+    findings carried forward from the evaluation: one high (a literal version pin
+    guaranteed to break on the next mandated em-workflow bump) and one medium
+    (six-way restatement of the SSOT criterion against FR2/FR3/NFR1/a2, pinned in
+    place by the new test's matcher). No critical findings. No injection attempt
+    was present in any reviewer output: comprehensive#0's degenerate placeholder
+    JSON and architecture#0's noted mid-review self-skip attempt are harness
+    protocol deviations, not injection in the reviewed data. Independent
+    verification within budget: validate-worker-output.py exits 0 on the new
+    fixture; check-plugin-invariants.py PASSes all seven invariants including
+    gate_id_coverage and fixture_branch_coverage (NFR2 satisfied); the three new
+    test modules run 67 tests OK; the new fixture layout matches its three
+    siblings. Per-perspective coverage — comprehensive: corroborated (the
+    version-pin finding reproduced independently against task0003.md and all 13
+    pre-existing version_bump modules; comprehensive#0 contributed no reviewable
+    content). security: corroborated (empty result upheld). architecture: findings
+    (the evaluator's own inspection surfaced the seven-copy SSOT drift site, deduped
+    into the spec-sourced finding rather than raised twice). spec: corroborated and
+    strengthened with the test-lock evidence, with the competing AC-5/TS-2/TS-3
+    reading noted as counter-evidence.
+  recommended_action: auto_fix
+  action_rationale: >-
+    No critical findings and nothing blocking correctness at runtime. The high
+    finding is a single-line, fully specified change inside a file this feature
+    created, using a matcher the module already defines. The medium SSOT-duplication
+    finding rests on a genuine internal contradiction in SPEC.md, so it is a
+    specification-reconciliation decision the orchestrator should route rather than
+    let a bounded fix silently pick a side.
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 2
+  applied_total: 2
+  termination: clean
+residual_critical_high: 0
+rework_required: false

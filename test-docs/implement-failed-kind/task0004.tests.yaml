@@ -1,0 +1,131 @@
+task_id: task0004
+baseline_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+final_failures:
+  - test_llm_led_review_user_docs.TestEmReviewEntryUnchanged.test_em_review_entry_matches_pre_task_snapshot
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_states_the_same_write_also_sets_failed_kind
+      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_names_the_decision_value
+      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_cites_the_schema_document
+      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_keeps_existing_full_detail_pointer
+      - test_failed_kind_batch_docs.TestImplementFailedTaskRowCarriesFailedKind.test_row_does_not_name_the_infra_value
+    red_confirmed: true
+    red_reason: >-
+      Before the edit the row read "...the implement step's status is
+      written to failed, and exactly that write is committed..." with no
+      mention of failed_kind at all, so
+      test_row_states_the_same_write_also_sets_failed_kind /
+      test_row_names_the_decision_value / test_row_cites_the_schema_document
+      failed with "'`failed_kind`' not found in ..." /
+      "'to `decision`' not found in ..." /
+      "'references/workflow-schema.md' not found in ...".
+  AC-2:
+    tests:
+      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_names_the_bounded_counted_exception
+      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_cites_develop_skill_for_branch_and_cap
+      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_unconditional_phrasing_is_gone
+      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_non_vacuity_gone_matcher_fires_on_original_bullet
+      - test_failed_kind_batch_docs.TestFailureStopsBulletNarrowed.test_still_names_stuck_steps_yaml_errors_and_post_cap_failures
+    red_confirmed: true
+    red_reason: >-
+      Before the edit the bullet read "Failure stops are UNCHANGED: ... it
+      never hides failures." with no auto-resume exception or SKILL.md
+      citation, so test_names_the_bounded_counted_exception failed with
+      "'infra auto-resume' not found in ...",
+      test_cites_develop_skill_for_branch_and_cap failed with
+      "'skills/develop/SKILL.md' not found in ...", and
+      test_unconditional_phrasing_is_gone failed with "'it never hides
+      failures' unexpectedly found in ..." (the phrase was still there).
+      test_non_vacuity_gone_matcher_fires_on_original_bullet passed even
+      pre-edit (it exercises a fixed synthetic constant, not the live
+      file), which is expected for a non-vacuity guard.
+  AC-3:
+    tests:
+      - test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_restricts_implement_failed_to_decision
+      - test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_cites_schema_for_missing_value_case_without_restating
+      - test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_code_and_state_columns_unchanged
+      - test_failed_kind_batch_docs.TestStepNeedsInterventionMeaningNarrowed.test_row_does_not_name_the_infra_value
+    red_confirmed: true
+    red_reason: >-
+      Before the edit the Meaning cell read "A workflow step reported
+      `failed` or `needs_update`" with no implement/failed_kind narrowing,
+      so test_row_restricts_implement_failed_to_decision failed with "'for
+      the `implement` step' not found in ..." and
+      test_row_cites_schema_for_missing_value_case_without_restating failed
+      with "'missing-value case' not found in ...".
+  AC-4:
+    tests:
+      - test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_states_the_phase_specific_row_restriction
+      - test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_states_the_failed_kind_restriction_for_implement
+      - test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_both_restrictions_are_one_coherent_statement
+      - test_failed_kind_batch_docs.TestPrecedenceParagraphStatesBothRestrictions.test_three_phase_specific_stop_points_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Before the edit the paragraph's last sentence ended at "...states
+      that no phase-specific row covers." with no failed_kind narrowing,
+      so test_states_the_failed_kind_restriction_for_implement failed with
+      "\"`implement` step's\" not found in ..." and
+      test_both_restrictions_are_one_coherent_statement errored with
+      "ValueError: substring not found" looking up the failed_kind marker.
+  AC-5:
+    tests:
+      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_exactly_eleven_codes_same_names_and_states_in_order
+      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_added_code_is_detected
+      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_removed_code_is_detected
+      - test_failed_kind_batch_docs.TestCoverageTableMappingUnchanged.test_stop_condition_3_maps_to_step_needs_intervention_via_develop_skill
+      - test_failed_kind_batch_docs.TestCoverageTableMappingUnchanged.test_negative_proof_changed_mapping_is_detected
+    red_confirmed: false
+    red_reason: >-
+      This is a regression backbone: it must hold both before and after
+      the task's own edits (the eleven-code table, the coverage mapping,
+      and the three phase-specific stop points are all explicitly
+      unchanged by this task). It passed pre-edit by construction, and the
+      task's own edits to the step_needs_intervention Meaning cell and the
+      precedence paragraph do not touch the code names, the state column,
+      or the coverage mapping, so it still passes post-edit. The negative
+      proofs (added/removed code, changed mapping) were run against
+      synthetic copies and confirmed to fail as expected, proving the
+      matchers are not vacuous.
+  AC-6:
+    tests:
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_never_names_both_values_together
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_never_names_both_values_together
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_has_no_gloss_phrases
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_has_no_gloss_phrases
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_does_not_restate_missing_value_rule
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_does_not_restate_missing_value_rule
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_batch_mode_cites_the_owning_document
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_terminal_line_cites_the_owning_document
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_both_values_together_is_detected
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_gloss_phrase_is_detected
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_missing_value_restatement_is_detected
+      - test_failed_kind_batch_docs.TestNoRestatedVocabularyOrGloss.test_negative_proof_tolerates_single_value_mentions
+    red_confirmed: false
+    red_reason: >-
+      A no-restatement guard is a property of the final text, not a
+      behavior that must first fail: pre-edit, neither document mentioned
+      failed_kind at all, so the absence checks (no `infra`/`decision`
+      pair, no gloss phrases, no missing-value restatement) trivially held
+      before this task's edits too -- they only become meaningful once the
+      edits introduce the field. test_batch_mode_cites_the_owning_document
+      and test_terminal_line_cites_the_owning_document DID fail red
+      pre-edit (SCHEMA_CITATION was absent from both files), confirmed via
+      the same run as AC-1/AC-3 above. The negative proofs (both values
+      together, gloss phrases, missing-value restatement, and the
+      single-value tolerance case) were run against synthetic strings
+      independent of the live files and confirmed to fire/tolerate as
+      designed.
+  AC-7:
+    tests:
+      - test_failed_kind_batch_docs.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      Verified by running "python3 -m unittest discover -s tests" for the
+      whole suite (3462 tests, one pre-existing unrelated baseline
+      failure carried forward, no regression) and by
+      TestOwnModuleStdlibOnly asserting this module's own AST contains no
+      non-stdlib import (ast, os, re, sys, unittest only). Not a
+      red-then-green criterion in the usual sense -- the module either
+      imports only stdlib or it does not, from the moment it is written.

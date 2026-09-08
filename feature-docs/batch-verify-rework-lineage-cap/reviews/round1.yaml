@@ -1,0 +1,83 @@
+round: 1
+executed_at: "2026-09-06T19:32:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: be58f8a20250f8dd4f7888297c8e77be723d50c2
+  head_commit: bf8f9e16160b1f1b495c426ae1977f0d375f27c5
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/skills/develop/SKILL.md
+    - test-docs/batch-verify-rework-lineage-cap/task0001.tests.yaml
+    - test-docs/batch-verify-rework-lineage-cap/task0002.tests.yaml
+    - test-docs/batch-verify-rework-lineage-cap/task0003.tests.yaml
+    - test-docs/batch-verify-rework-lineage-cap/task0004.tests.yaml
+    - test-docs/batch-verify-rework-lineage-cap/task0005.tests.yaml
+    - tests/test_batch_quiet_output_skill_wiring.py
+    - tests/test_batch_stop_contract_skill_wiring.py
+    - tests/test_develop_skill_rewiring.py
+    - tests/test_retrospect_verification_handoff.py
+    - tests/test_step_c_verify_failed_default.py
+    - tests/test_verify_cap_run_continuation.py
+    - tests/test_verify_rework_lineage_cap.py
+    - tests/test_verify_rework_lineage_cap_version_bump.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "comprehensive#1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "security#1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: "1975bf8649e26ca4"
+    severity: medium
+    category: comprehensive
+    file: em-workflow/skills/develop/SKILL.md
+    line: 511
+    title: "hard cap の `rounds` が「rework を実行したラウンド数」と説明されているが、更新規則は cap 判定より前に加算する"
+    description: |
+      SKILL.md 511-512 は `batch.verify_rework.rounds` を「rework を実行したラウンド数」と定義し、
+      515-518 の更新規則は「verify ラウンドが `failed_items` を確定させたら…続けて `rounds` を 1 増やす。
+      この更新は rework を回すかどうかの判定より先に行う」と定めている。両者は同一段落内で矛盾する:
+      更新規則に従うと `rounds` は「verify が失敗を確定させたラウンド数」であり、cap 到達ラウンド
+      （rework を実行しないラウンド）でも加算される。結果として hard cap「値 3」で実際に回る rework は
+      2 回であり、括弧書きのラベル通り「rework 実行時のみ加算」と読んだ実装者/エージェントは 3 回回す
+      （失敗ラウンド 4 回）。off-by-one が生じる。加えて「値」の意味が 2 つの cap で不揃いになる:
+      系譜 cap は「値 1」で rework 1 回許容（閾値は出現回数 2）、hard cap は「値 3」で rework 2 回許容
+      （閾値は rounds 3）。SPEC FR2 / Data Flow は『verify ラウンド → rounds を更新』側を採っているため、
+      誤っているのは括弧書きのラベル。tests/test_verify_rework_lineage_cap.py の
+      `_states_hard_cap_independent_rule` は「hard cap」「rounds」「値 3」「独立」の存在しか見ないため、
+      このラベルの誤りを検出しない。
+    suggestion: |
+      511-512 の括弧書きを更新規則に合わせる（例: 「rework を実行したラウンド数」→
+      「verify が `failed_items` を確定させたラウンド数」）。数え方を変えたい場合は代わりに `rounds` の
+      加算を cap 判定の後ろへ動かすが、その場合 hard cap の閾値意味が変わるため SPEC FR2 との整合を
+      取り直すこと。
+    sources: ["litellm:vertex-glm-5.2:comprehensive"]
+    confidence: 95
+    resolution: unresolved
+    resolution_reason: "severity medium のため Phase R4 の auto-fix 候補ゲート（critical/high のみ）に非該当。完了ゲート（residual_critical_high == 0）は満たすため記録のみ"
+evaluation:
+  round_summary: "Round 1 (cross_validation=true, diff mode)。critical/high はゼロ。carry したのは medium 1 件（SKILL.md の `rounds` ラベルと更新規則の矛盾 — 差分を直読して再現）と low 3 件。パスは project_root からの相対で、reviewer 出力の表記に合わせた。reviewer_outputs にプロンプトインジェクションの試みは観測されなかった。独立検査（Read-Only 予算内、10 ファイル）による観点別カバレッジ: comprehensive = findings（2 件とも差分・テストコードを読んで裏取り。うち 1 件は low へ降格、加えて評価者自身が終端行 drift を追加検出）。security = corroborated（変更集合は Markdown SSOT・マニフェスト 2 件・テストのみ。唯一のセキュリティ面である NFR6 の未信頼入力引き継ぎは SKILL.md の retrospect 節に記載があり、参照先 em-workflow/references/contracts/worker-envelope.md に「## Untrusted-Input Handling」節が実在することを確認。攻撃者制御の sink・秘密情報・認可経路の変更はなし）。architecture = findings（migration 欠落を low へ降格して carry、加えて batch-terminal-line.md との drift を追加）。spec = corroborated（SPEC の FR1/FR2/FR3/FR6/FR8/FR9/FR12/NFR1/NFR5/NFR6 を差分と突き合わせて一致を確認。TBD だった FR5 は「未解決 failed_items 全件」、FR7 は既存 carve-out に触れない独立条項、FR11 は既存 stop point `verify-rework-cap` の再利用として解決されており、既存の網羅性宣言（SKILL.md:285「厳密に次の 2 つ」）は `needs_update` 限定のため矛盾しないことも確認した）。補足: `python3 -m unittest discover -s tests` は 3255 件中 12 件 fail するが、いずれも marketplace.json の em-review エントリに `version` キーがある前提の旧テストで、main 側でも同じく赤（本ブランチは em-workflow の version 行しか触っていない）。本フィーチャーの新規テストは全件パスしており、Step C 見出し変更に伴う STEP_C_HEADING 更新も setUpClass を通っている。"
+  recommended_action: "auto_fix"
+  action_rationale: "critical/high はゼロで、rework も追加ラウンドも要らない。medium 1 件は SKILL.md 511-512 の括弧書き 1 語の書き換えで閉じ、low 1 件はテストのタプルへバッククォート変種を足すだけの機械的修正。残る low 2 件はドキュメントへの 1〜2 文の追記で、いずれも bounded auto-fix の範囲に収まる。ただし terminal-line drift の 1 件は評価者由来（sources 空）であり、auto-fix 対象に含めるかは review-phase.md の規律に従って orchestrator が決める。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+dropped_by_gates:            # R3b step 2 で severity が critical/high/medium 以外のため落ちた評価者 findings（開示のみ）
+  - {evaluator_stable_id: "forbidden-deferred-patterns-backtick-gap", severity: low, file: tests/test_verify_rework_lineage_cap.py, reason: "severity low — R3b step 2"}
+  - {evaluator_stable_id: "batch-block-retired-key-no-migration", severity: low, file: em-workflow/references/workflow-schema.md, reason: "severity low — R3b step 2"}
+  - {evaluator_stable_id: "terminal-line-stop-condition-3-precedence-drift", severity: low, file: em-workflow/skills/develop/SKILL.md, reason: "severity low — R3b step 2"}
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false

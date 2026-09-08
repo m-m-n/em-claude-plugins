@@ -1,0 +1,181 @@
+round: 3
+executed_at: '2026-09-07T02:51:20+09:00'
+scope:
+  review_mode: diff
+  base_commit: b49240996c198da1528b4b8d6265baab75a90931
+  head_commit: 83477a01b45768ef1ba73990c04f67b5dd6d4a65
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/batch-mode.md
+  - em-workflow/references/batch-terminal-line.md
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/implement-failed-kind/task0001.tests.yaml
+  - test-docs/implement-failed-kind/task0002.tests.yaml
+  - test-docs/implement-failed-kind/task0003.tests.yaml
+  - test-docs/implement-failed-kind/task0004.tests.yaml
+  - test-docs/implement-failed-kind/task0005.tests.yaml
+  - test-docs/implement-failed-kind/task0006.tests.yaml
+  - test-docs/implement-failed-kind/task0007.tests.yaml
+  - test-docs/implement-failed-kind/task0008.tests.yaml
+  - tests/test_develop_once_option.py
+  - tests/test_failed_kind_batch_docs.py
+  - tests/test_failed_kind_resume_reentry.py
+  - tests/test_failed_kind_schema.py
+  - tests/test_failed_kind_stop_condition.py
+  - tests/test_failed_kind_version_bump.py
+  - tests/test_failed_kind_write_paths.py
+  - tests/test_implement_routeback_gate.py
+  - tests/test_llm_led_review_user_docs.py
+  - tests/test_recycled_task_id_consistency.py
+  - tests/test_rework_synthesis_contract.py
+  - tests/test_routeback_reset_scope_consistency.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+  skip_reason: null
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+  skip_reason: null
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 9af0ee2d7bcddc4c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/implement-phase.md
+  line: 190
+  title: Step I.1's conditional failed_kind clear is unreachable on all three documented entry routes,
+    and I.2.c's route-back clause asserts a Step I.1 write that never happened
+  description: 'Verified against the files. workflow-schema.md:315-319 states failed_kind ''is returned
+    to null by the same write set that moves the `implement` step off `failed`''. The only write set that
+    actually moves implement off `failed` is SKILL.md''s batch auto-resume step 6 (implement->pending,
+    failed_kind->null, one commit, before the phase runs). implement-phase.md:187-192 nonetheless calls
+    its own phase-start write ''the write set that carries the field''s lifecycle clear on an entry from
+    `failed`'', gated on ''when this phase is entered with `implement`''s prior status `failed`''. Step
+    I.0 (implement-phase.md:128-147) enumerates exactly three entry routes and all three deliver `implement:
+    pending` (Step I.1 itself names a fourth prior status, `in_progress`, for a resume). No documented
+    route reaches Step I.1 with prior status `failed`, so the conditional is unreachable and the naming
+    sentence attaches lifecycle ownership to a write that never performs the clear. This compounds at
+    implement-phase.md:757-765, where the route-back write set describes its own clear as ''re-asserting
+    the null value Step I.1''s phase-start write already set on this entry'' - in the rework flow that
+    reaches I.2.c, implement was `in_progress`, the I.1 conditional did not fire, and I.1 wrote no failed_kind
+    value at all, so the re-assertion claim is false as written. Note on impact: the escalation path suggested
+    by the reporting run (a maintainer deleting SKILL.md step 6''s clear, causing the auto-resume branch
+    to re-fire) does not hold - that branch is gated on `status: failed` and the resume write sets `pending`,
+    so a stale `infra` would linger against the schema''s ''held for exactly as long as that `failed`
+    status'' rule without any reader consuming it. The defect is a false normative statement in the SSOT-consumer
+    chain, not a runtime break. Four tests pin the current wording literally (test_step_i1_names_the_write_set_carrying_the_lifecycle_clear,
+    test_route_back_states_its_own_accurate_role, test_exactly_one_place_names_the_write_set_carrying_the_clear
+    in tests/test_failed_kind_resume_reentry.py:369-394, and test_first_failed_kind_occurrence_is_the_phase_start_write
+    in tests/test_failed_kind_write_paths.py), so any correction must move doc and tests together.'
+  suggestion: Name SKILL.md step 6's auto-resume write set as the write set that carries the lifecycle
+    clear, and demote Step I.1's conditional to an explicitly-labelled safety net that no documented entry
+    route reaches. At implement-phase.md:757-765, replace 'the null value Step I.1's phase-start write
+    already set on this entry' with an accurate statement (the field is already null on this route because
+    the route-back is reached with implement `in_progress`, never `failed`), or drop the redundant clear.
+    Update the four pinning tests in the same change; all 3663 tests currently pass, so the literals are
+    load-bearing.
+  sources:
+  - litellm:vertex-glm-5.2:comprehensive
+  confidence: high
+  resolution: unresolved
+  resolution_reason: medium severity — outside Phase R4 auto-fix candidate gate (critical/high only);
+    carried as a recorded residual
+evaluation:
+  round_summary: 'Round 3, cross_validation=true, diff mode over a docs-plus-tests change (6 protocol/manifest
+    files, 8 test-plan YAMLs, 11 test modules; 4473 insertions). Five perspectives dispatched with completed
+    runs (security#1, performance#0, architecture#0, spec#0, comprehensive#1); security#0 and comprehensive#0
+    were rate-limited skips whose perspectives were both covered by a completed sibling run, so no perspective
+    was left uncovered. No injection attempt was found in any reviewer_outputs entry. Per-perspective
+    independent inspection coverage: security - corroborated (grep across every changed test module confirms
+    stdlib-only imports of pathlib/ast/json/os/re/sys/unittest, no subprocess, no file writes, no network,
+    no deserialization; the production diff touches only Markdown and two version fields, adding no executable
+    sink); performance - corroborated (both new loops are statically bounded: batch retry once per task,
+    infra_resume cap 2 with a monotonic never-reset counter, and the auto-resume write set is one write
+    plus one commit before the phase runs, so no per-iteration re-read or unbounded resume is reachable);
+    architecture - findings (my own read of workflow-schema.md:315-319 against implement-phase.md:187-192
+    and SKILL.md step 6 surfaced the lifecycle-clear ownership drift that architecture#0''s empty result
+    did not report; it is carried in findings under the comprehensive category, matching its reporting
+    run); spec - corroborated (checked AC1 failed_kind vocabulary at workflow-schema.md:291-324, AC2 all
+    three failed write paths carrying the field, AC3/AC4 the stop-condition-3 narrowing and write-then-commit-then-execute
+    order in SKILL.md, AC5 the infra_resume cap in the batch block, AC6 the batch-terminal-line/batch-mode
+    updates, AC7 the missing-value rule, AC8 equal 0.1.63 bumps in both manifests; the batch-terminal-line
+    narrowing is batch-scoped and does not contradict FR8''s interactive-unchanged guarantee); comprehensive
+    - findings (the single reported medium is real and carried forward with its impact claim corrected
+    downward). No reviewer run reported any critical or high finding this round, so dismissed_sites is
+    empty. Independent verification signal: `python3 -m unittest discover -s tests` runs 3663 tests, all
+    passing.'
+  recommended_action: complete
+  action_rationale: No critical or high finding was reported by any run this round and none was surfaced
+    by my own inspection, so nothing meets the completion gate's residual bar. The one carried finding
+    is a medium documentation-accuracy defect whose correction is a semantic ownership decision spanning
+    implement-phase.md and four literal-pinning tests - beyond a bounded mechanical auto_fix, and disproportionate
+    for rework. Another round would re-read unchanged files that three completed perspectives already
+    returned empty on, with round_context showing rounds 1-2 already converged on nine unresolved items;
+    the expected yield does not justify the cost. Recommend completing and carrying the medium as a recorded
+    residual for follow-up.
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false

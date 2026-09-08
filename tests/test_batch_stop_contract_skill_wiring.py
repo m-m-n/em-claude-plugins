@@ -202,7 +202,7 @@ NEW_SUBSECTION_HEADING = "## バッチ終端行"
 FILE_END_MARKER = "$ARGUMENTS"
 
 STEP_C_HEADING = (
-    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — 時のみ）"
+    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、cap 到達により verify が `failed` のまま残る場合のみ）"
 )
 STOP_REPORT_HEADING = "## 停止時の報告（停止条件 2-4 のみ）"
 

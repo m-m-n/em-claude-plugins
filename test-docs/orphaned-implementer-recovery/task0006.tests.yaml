@@ -1,0 +1,155 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac1_stale_entry_far_older_than_last_launched_reports_stale_agent_entry
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task recover-orphaned-task.py (no D7 binding step),
+      the fixture's stale entry (launched -> failed -> launched, entry `at`
+      two hours older than the last `launched` event) fell through to the
+      pre-existing pipeline unchecked and reported `recovered` with one
+      helper invocation instead of `residual`/`stale-agent-entry`:
+      AssertionError: {'outcome': 'recovered', 'reason': '', 'task':
+      'task0099'} != {'outcome': 'residual', 'reason': 'stale-agent-entry',
+      'task': 'task0099'}.
+  AC-2:
+    tests:
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac2_entry_at_equal_to_last_launched_is_admitted
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac2_entry_at_later_than_last_launched_is_admitted
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac2_entry_at_earlier_by_exactly_tolerance_is_admitted
+    red_confirmed: false
+    red_reason: >-
+      All three admitted-boundary cases already reported `recovered` against
+      the pre-task pipeline, which contained no rejecting binding step at
+      all -- "not rejected" is vacuously true when nothing can reject.
+      Confirmed by running these three tests against the unmodified
+      pre-task script (no failures) and, for the exactly-tolerance case,
+      additionally against a deliberately wrong implementation
+      (`<` instead of `<=` in agent_entry_is_bound's comparison): that
+      mutant DID fail this test (AssertionError: {'outcome': 'residual',
+      'reason': 'stale-agent-entry', ...} != {'outcome': 'recovered', ...}),
+      and the equivalent direct-function assertion in AC-4's boundary test
+      failed the same way (`False is not true`) -- so the test is a live
+      mutation-catcher for the boundary even though it could not be driven
+      red by mere absence of the feature.
+  AC-3:
+    tests:
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac3_entry_has_no_at_field_is_stale
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac3_entry_at_not_a_string_is_stale
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac3_entry_at_unparsable_string_is_stale
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac3_last_launched_event_has_no_at_is_stale
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac3_last_launched_event_at_unparsable_is_stale
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac3_entry_aware_last_launched_naive_is_stale
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac3_entry_naive_last_launched_aware_is_stale
+    red_confirmed: true
+    red_reason: >-
+      All seven cases reported `recovered` (or, for the aware/naive
+      mismatch, would have propagated a TypeError had the pre-task
+      pipeline ever compared them) against the pre-task script, since no
+      binding check existed to turn incomparable/absent data into a
+      rejection. Observed as 7 real AssertionErrors ('recovered' != the
+      expected 'residual'/'stale-agent-entry') running the full
+      TestAgentEntryBinding class against the unmodified pre-task script.
+  AC-4:
+    tests:
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac4_tolerance_constant_is_two_seconds
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac4_boundary_exactly_at_tolerance_admitted_one_second_beyond_stale
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task script, both tests errored with
+      AttributeError: module 'recover_orphaned_task' has no attribute
+      'AGENT_ENTRY_BINDING_TOLERANCE' / 'agent_entry_is_bound' -- the
+      constant and function did not exist yet. After implementing, the
+      boundary test was additionally exercised against a deliberately
+      wrong comparison (`<` instead of `<=`), which made the "exactly at
+      tolerance" assertTrue fail (AssertionError: False is not true),
+      confirming it discriminates the intended off-by-one.
+  AC-5:
+    tests:
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_ac2a_identity_absent_reports_no_session_id
+      - tests.test_recover_orphaned_task.TestEndToEndDecide.test_no_event_at_all_for_task_reports_journal_not_launched
+    red_confirmed: false
+    red_reason: >-
+      No-regression property (task plan Test Notes: "do not rewrite the
+      existing residual cases; run them as they are"). These two
+      pre-existing task0003 tests were already green before this task and
+      remain green unchanged after adding the D7 step -- proved by running
+      the full pre-existing tests/test_recover_orphaned_task.py suite
+      (52 tests, all green) both before and after this task's edits.
+  AC-6:
+    tests:
+      - tests.test_recover_orphaned_task.TestAgentEntryBinding.test_ac6_unbindable_entry_with_no_session_id_reports_stale_agent_entry
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task script (no binding step), a fixture with an
+      unbindable entry AND no session_id reached the pre-existing
+      "no-session-id" step and reported that reason instead of
+      `stale-agent-entry`: AssertionError: {'outcome': 'residual',
+      'reason': 'no-session-id', ...} != {'outcome': 'residual', 'reason':
+      'stale-agent-entry', ...}.
+  AC-7:
+    tests:
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryD7Binding.test_binding_step_positioned_between_entry_exists_and_session_identity
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryD7Binding.test_binding_step_cites_d7
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryD7Binding.test_full_contract_citation_names_sc3_sc6_and_d7
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryD7Binding.test_binding_step_skipped_when_no_launched_event
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryD7Binding.test_stale_agent_entry_not_restated_outside_i2b
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryD7Binding.test_stale_agent_entry_absent_from_workflow_schema_and_readme
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-task implement-phase.md, the position test errored
+      (ValueError: substring '`stale-agent-entry`' not found), and the
+      citation/skip-condition tests failed (AssertionError: 'per D7' /
+      the contract-citation phrase / the skip-condition phrase not found
+      in the I.2.b section). The two "not restated elsewhere" tests
+      (test_stale_agent_entry_not_restated_outside_i2b and
+      test_stale_agent_entry_absent_from_workflow_schema_and_readme) were
+      vacuously green before this task too (the token appeared nowhere at
+      all, including nowhere in the owning block), so they alone do not
+      prove the citation; the four preceding tests do.
+  AC-8:
+    tests:
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_states_all_evidence_order_reason_codes
+      - tests.test_implement_routeback_gate.TestI2bOrphanRecoveryOwningSection.test_reason_codes_not_restated_outside_i2b
+    red_confirmed: true
+    red_reason: >-
+      With `stale-agent-entry` added to ORPHAN_RESIDUAL_REASON_CODES but
+      the pre-task implement-phase.md still in place,
+      test_states_all_evidence_order_reason_codes failed its
+      code='stale-agent-entry' subTest (AssertionError: '`stale-agent-entry`'
+      not found in ...). After updating the prose, both tests -- along with
+      the module's other 5 pre-existing TestI2bOrphanRecoveryOwningSection
+      tests -- pass unchanged.
+  AC-9:
+    tests:
+      - tests.test_plugin_version_parity.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: false
+    red_reason: >-
+      This pre-existing generic module only asserts parity and "past a
+      fixed 0.1.50 baseline"; it was already green with the pre-task value
+      (0.1.60, itself past 0.1.50 from an earlier task's bump) and stays
+      green with the new value (0.1.61) -- it does not pin a floor specific
+      to this task, so it cannot be driven red by this task's edit. AC-9
+      itself (strictly greater than the value each manifest carried
+      BEFORE this task) was verified by direct inspection: both files read
+      "0.1.60" before this task's edit and "0.1.61" (parity, strictly
+      greater) after.
+  AC-10:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/suite-pass criterion, not a single test: verified by running
+      `python3 -m unittest discover -s tests` from the repository root
+      after all edits (3029 tests, 0 baseline failures, 0 regressions, all
+      20 new tests across AC-1..AC-8 above green); `python3
+      em-workflow/scripts/check-plugin-invariants.py .` also exits 0. Every
+      new test lives in repository-root tests/test_recover_orphaned_task.py
+      or tests/test_implement_routeback_gate.py as test_*.py, uses only
+      the standard library, and every path (journal, agents index,
+      transcripts dir) is an injected temp-directory fixture -- no real
+      ~/.claude path is read or written.

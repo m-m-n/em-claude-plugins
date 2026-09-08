@@ -38,7 +38,10 @@ Decision tiers:
   allow — everything else, when ALLOW_NON_DESTRUCTIVE is on
 
 Process termination (kill / pkill / killall) is NOT handled here — that is
-kill-guard.py's job, and it runs as a separate PreToolUse hook.
+kill-guard.py's job, and it runs as a separate PreToolUse hook. The same
+withholding applies to `git worktree remove`, a non-force `git branch`
+deletion, and `gh pr create` — those belong to failed-run-cleanup-guard.py;
+see matches_target_shape().
 
 Output: a PreToolUse permission decision on stdout; exit 0 either way.
 """
@@ -74,7 +77,11 @@ PUNCTUATION = "();<>|&\n"
 # Redirection operators, matched against a whole token. A redirect and its
 # target are not arguments to the command and must be lifted out before the
 # checks run, or `>` and `/dev/null` read as two more paths to delete.
-REDIRECT = re.compile(r"\d*(?:>>?\|?|<<?<?|>&|<&|&>>?)\d*")
+REDIRECT = re.compile(r"\d*(?:>>?\|?|<<?<?|<>|>&|<&|&>>?)\d*")
+
+# `<>` opens its target for both reading and writing (unlike `<`, `<<`,
+# `<<<`, which are read-only) and must join the write-target set.
+READWRITE_REDIRECT = re.compile(r"\d*<>\d*")
 
 # A here-document and its body, up to the line bearing the delimiter.
 HEREDOC = re.compile(
@@ -85,9 +92,43 @@ HEREDOC = re.compile(
 # not data but code, and has to be scanned like any other statement.
 SHELL_SINK = re.compile(r"\b(sh|bash|zsh|dash|ksh|python\d?|perl|ruby|node)\b")
 
+# Shell words whose `-c` argument, or a here-string (`<<<`) redirected into
+# them, is a script the shell executes rather than ordinary data. `eval` gets
+# the same treatment separately in extract_shell_payload() — it takes no
+# `-c`, its own arguments ARE the script.
+SHELL_WORDS = {"sh", "bash", "zsh", "dash", "ksh"}
+
+# Hard cap on how many `-c`/`eval`/here-string payloads statements() will
+# unpack and re-scan for one command, so a deliberately or accidentally
+# nested chain (`bash -c 'bash -c "bash -c ..."'`) cannot make this loop run
+# unbounded.
+MAX_SHELL_PAYLOAD_EXPANSIONS = 25
+
 # Wrapper commands that prefix the real one. `mise exec -- gcloud …` and
 # `sudo rm -rf …` must be judged on the wrapped command, not the wrapper.
+# Mirrored in failed-run-cleanup-guard.py's own WRAPPERS — keep both in sync.
 WRAPPERS = {"sudo", "env", "nohup", "time", "command", "nice", "ionice", "doas"}
+
+# Wrapper options that take a value of their own (a separate token), keyed by
+# wrapper name. Without consuming these, the value token is mistaken for the
+# wrapped command word (`env -u NAME cp …` would read `NAME` as the command).
+# `--flag=value` spellings are attached and need no extra consumption.
+# Mirrored in failed-run-cleanup-guard.py's own WRAPPER_VALUE_FLAGS — keep
+# both in sync.
+WRAPPER_VALUE_FLAGS = {
+    "sudo": {
+        "-u", "-g", "-p", "-C", "-h", "-R", "-T", "-U", "-D", "-r", "-t",
+        "--user", "--group", "--prompt", "--close-from", "--host",
+        "--chroot", "--type", "--other-user", "--role", "--chdir",
+    },
+    "env": {"-u", "-C", "-S", "--unset", "--chdir", "--split-string"},
+    "nice": {"-n", "--adjustment"},
+    "ionice": {"-c", "-n", "-p", "--class", "--classdata", "--pid"},
+    "time": {"-o", "--output"},
+    "doas": {"-u", "-C"},
+    "command": set(),
+    "nohup": set(),
+}
 
 # A token whose value cannot be resolved by reading the command alone.
 DYNAMIC = re.compile(r"\$\(|`|\$\{|\$[A-Za-z_]|\*|\?|\[")
@@ -117,13 +158,44 @@ SAFE_DELETE = re.compile(
 # is permitted to act, so it needs the user in the loop.
 SELF_CONFIG = re.compile(
     r"(?:^|[\"'\s=])(?:~|\$HOME|/home/[^/\s]+)/\.claude/"
-    r"(?:settings[^/\s]*\.json|hooks/|rules/|agents/|skills/|commands/|"
-    r"output-styles/|workflows/|routines/|scheduled_tasks\.json)"
+    r"(?:settings[^/\s]*\.json|(?:hooks|rules|agents|skills|commands|"
+    r"output-styles|workflows|routines)(?:/|$)|scheduled_tasks\.json)"
 )
 # Session transcripts. Reading them is routine; writing them is not.
 TRANSCRIPT = re.compile(r"\.claude/projects/[^\s\"']*\.jsonl")
 # Commands that write to a path given as an argument rather than via `>`.
 INPLACE_WRITERS = {"tee", "truncate", "shred", "install", "patch"}
+
+# The target-directory flag `cp`/`mv`/`ln`/`install` accept, in both spellings
+# GNU coreutils allows: a separate token (`-t DIR`) and the attached-`=` form
+# (`--target-directory=DIR`). Its value is a destination even though it is
+# not the last positional argument.
+TARGET_DIR_FLAGS = ("-t", "--target-directory")
+
+# Flags through which a command receives its write destination instead of a
+# bare positional argument. Keys are command words; values are the flag
+# spellings (separate token or, where the command supports it, `=`-attached)
+# whose value is the destination.
+FLAG_DEST_FLAGS = {
+    "tar": ("-C", "--directory"),
+    "unzip": ("-d",),
+    "curl": ("-o", "--output"),
+    "wget": ("-O", "--output-document"),
+}
+
+# Short options of cp/ln that take a value token of their own. Their value
+# must not be mistaken for the trailing positional destination when scanning
+# non-flag arguments (`cp /tmp/foo ~/.claude/settings.json -S .bak` — `.bak`
+# is `-S`'s value, not the destination).
+VALUE_TAKING_FLAGS = {
+    "cp": ("-S", "--suffix", "-t", "--target-directory"),
+    "ln": ("-S", "--suffix"),
+    "install": (
+        "-m", "--mode", "-o", "--owner", "-g", "--group",
+        "-S", "--suffix", "-t", "--target-directory",
+    ),
+    "rsync": ("--exclude", "--include", "--filter", "-e", "--rsh"),
+}
 
 # Process-termination command words. These belong to kill-guard.py, which
 # runs as its own PreToolUse hook and reaches a deny/ask/allow decision from
@@ -170,8 +242,55 @@ def decide(decision, rule, reason):
     sys.exit(0)
 
 
+class Tok(str):
+    """A token string that also remembers whether shlex read it from bare,
+    unquoted operator syntax (`>`, `2>&1`, …) rather than from a word or
+    quoted span. Every consumer besides split_redirects() treats it as an
+    ordinary str; the attribute defaults to False so a plain str used where
+    a Tok is expected (there is no such caller today) fails closed.
+    """
+
+    is_operator = False
+
+    def __new__(cls, value, is_operator=False):
+        obj = str.__new__(cls, value)
+        obj.is_operator = is_operator
+        return obj
+
+
+class _TrackingLexer(shlex.shlex):
+    """shlex.shlex that also records whether the token `get_token()` just
+    returned began in the base class's punctuation state ('c') — i.e. bare,
+    unquoted operator syntax — as opposed to a word or quoted span.
+
+    shlex resolves quoting before the token text ever reaches a caller, so a
+    quoted `"2>&1"` and a real, unquoted `2>&1` come out as the identical
+    string. `state` is overridden as a property purely to observe every
+    assignment the base class's `read_token()` already makes; no parsing
+    behaviour changes.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.last_was_operator = False
+        super().__init__(*args, **kwargs)
+
+    @property
+    def state(self):
+        return self.__dict__.get("_state", " ")
+
+    @state.setter
+    def state(self, value):
+        self.__dict__["_state"] = value
+        if value == "c":
+            self.last_was_operator = True
+
+    def read_token(self):
+        self.last_was_operator = False
+        return super().read_token()
+
+
 def lex_segments(chunk):
-    """Split a chunk into statements, each returned as its token list.
+    """Split a chunk into statements, each returned as (tokens, lexed).
 
     Separators only count when they sit OUTSIDE quotes, and telling those
     apart is the whole reason shlex does the splitting rather than a regex.
@@ -180,42 +299,96 @@ def lex_segments(chunk):
     denied a command that deletes nothing. Literal command text like that
     shows up constantly in generated docs, tests, and commit messages.
 
+    LEXED is True on this path: each returned token is a Tok, carrying (as
+    `.is_operator`) whether shlex read it from bare operator syntax or from
+    a word/quoted span — the signal split_redirects() needs to tell a real
+    `>` apart from a quoted string that merely looks like one.
+
     Falls back to the regex split when the chunk will not parse — an
-    unbalanced quote, usually. That path keeps the old false positives, but a
-    parse failure is rare, and waving the chunk through unexamined would be a
-    hole rather than a nuisance.
+    unbalanced quote, usually. That path keeps the old false positives and
+    returns LEXED False, since per-token provenance is unavailable there; a
+    parse failure is rare, and waving the chunk through unexamined would be
+    a hole rather than a nuisance.
     """
     try:
-        lex = shlex.shlex(chunk, posix=True, punctuation_chars=PUNCTUATION)
+        lex = _TrackingLexer(chunk, posix=True, punctuation_chars=PUNCTUATION)
         lex.whitespace = " \t\r"
         lex.whitespace_split = True
-        toks = list(lex)
+        toks = []
+        while True:
+            raw = lex.get_token()
+            if raw is None or raw == lex.eof:
+                break
+            toks.append(Tok(raw, lex.last_was_operator))
     except ValueError:
-        return [tokens(seg) for seg in SEGMENT_SPLIT.split(chunk) if seg.strip()]
+        return [
+            (tokens(seg), False) for seg in SEGMENT_SPLIT.split(chunk) if seg.strip()
+        ]
 
     out, current = [], []
     for t in toks:
-        if t and all(c in SEGMENT_CHARS for c in t):
-            out.append(current)
-            current = []
+        # punctuation_chars makes shlex fuse adjacent punctuation into one
+        # token, so a separator with no space before the next operator
+        # (';>', '\n(') arrives as a single token that is neither a clean
+        # separator nor a clean operator. Split such fused tokens back into
+        # their runs — each all-SEGMENT_CHARS or all-non-SEGMENT_CHARS —
+        # before the separator test below, carrying is_operator forward onto
+        # every piece so split_redirects() still recognizes the operator half.
+        if t and all(c in PUNCTUATION for c in t) and not all(
+            c in SEGMENT_CHARS for c in t
+        ):
+            pieces, i = [], 0
+            while i < len(t):
+                # `>|` `>&` `&>>` は 1 個のリダイレクト演算子。`|` / `&` が
+                # SEGMENT_CHARS でも、演算子全体は割らずに 1 片として残す。
+                # 割ると区切りと解釈され、リダイレクト先が次の文へ流出する。
+                if REDIRECT.fullmatch(t[i:]):
+                    pieces.append(t[i:])
+                    break
+                j = i + 1
+                while j < len(t) and (t[j] in SEGMENT_CHARS) == (
+                    t[i] in SEGMENT_CHARS
+                ):
+                    j += 1
+                pieces.append(t[i:j])
+                i = j
+            segs = [Tok(p, t.is_operator) for p in pieces]
         else:
-            current.append(t)
-    out.append(current)
+            segs = [t]
+        for seg in segs:
+            if seg and all(c in SEGMENT_CHARS for c in seg):
+                out.append((current, True))
+                current = []
+            else:
+                current.append(seg)
+    out.append((current, True))
     return out
 
 
-def split_redirects(toks):
+def split_redirects(toks, lexed=True):
     """Return (the statement's own words, its redirection tokens).
 
     `rm -rf /tmp/x > /dev/null` has to be judged on `rm -rf /tmp/x`. With the
     redirect left in, `>` and `/dev/null` looked like two more delete targets
     and the command was denied for writing to the bit bucket. A leading file
     descriptor (`2` in `2>&1`) is part of the redirect too.
+
+    A token counts as a redirect operator only when its text matches the
+    operator shape AND — when LEXED, i.e. token provenance is available —
+    its own `.is_operator` marking confirms it came from real, unquoted
+    operator syntax rather than a word or quoted span. Without that second
+    test, a quoted data word whose text happens to look like an operator
+    (`echo "2>&1" > ~/.claude/settings.json`) paired with the token after it
+    as if it were the operator, and the real `>` that followed lost its
+    target. When LEXED is False (the parse-failure fallback, where tokens
+    carry no provenance), the text-shape test alone applies, unchanged from
+    before this marking existed.
     """
     words, redirects = [], []
     i = 0
     while i < len(toks):
-        if REDIRECT.fullmatch(toks[i]):
+        t = toks[i]
+        if REDIRECT.fullmatch(t) and (not lexed or getattr(t, "is_operator", False)):
             if words and words[-1].isdigit():
                 redirects.append(words.pop())
             redirects.extend(toks[i : i + 2])
@@ -224,6 +397,43 @@ def split_redirects(toks):
         words.append(toks[i])
         i += 1
     return words, redirects
+
+
+def extract_shell_payload(toks, lexed):
+    """Return the literal script a shell-invocation segment (TOKS) will
+    execute via `-c`, `eval`, or a here-string (`<<<`) redirect aimed at a
+    shell word — or None when the segment is not such an invocation, or its
+    payload is not a single literal token statements() can push back onto
+    its own queue and re-scan like any other statement.
+
+    Only lexed (LEXED True) segments are examined: token provenance is what
+    tells split_redirects() a real `<<<` apart from a quoted word that merely
+    looks like one, and head()/split_redirects() both expect that provenance
+    to be present. On the parse-failure fallback (LEXED False) this returns
+    None, same as any other feature here that depends on tokenization; the
+    fallback's own whole-segment matching still sees the raw text.
+    """
+    if not lexed:
+        return None
+    words, redirects = split_redirects(toks, lexed)
+    word, args = head(words)
+    if word == "eval":
+        return " ".join(args) if args else None
+    if word in SHELL_WORDS:
+        if "-c" in args:
+            idx = args.index("-c")
+            if idx + 1 < len(args):
+                return args[idx + 1]
+        i = 0
+        while i < len(redirects):
+            t = redirects[i]
+            if REDIRECT.fullmatch(t):
+                if t == "<<<" and i + 1 < len(redirects):
+                    return redirects[i + 1]
+                i += 2
+            else:
+                i += 1
+    return None
 
 
 def strip_heredocs(chunk):
@@ -244,12 +454,16 @@ def strip_heredocs(chunk):
 
 
 def statements(command):
-    """Yield (text, tokens) per command segment, substitution bodies included.
+    """Yield (text, tokens, lexed) per command segment, substitution bodies
+    included.
 
     The text is the tokens rejoined, so quoting is already resolved by the
-    time the regex-based checks see it.
+    time the regex-based checks see it. LEXED is lex_segments()'s per-segment
+    parse-success flag — False only on the parse-failure fallback, where
+    token provenance is unavailable.
     """
     pending = [command]
+    budget = [MAX_SHELL_PAYLOAD_EXPANSIONS]
     while pending:
         chunk = pending.pop()
         chunk, bodies = strip_heredocs(chunk)
@@ -260,9 +474,14 @@ def statements(command):
             body = m.group(1) or m.group(2) or ""
             if body.strip():
                 pending.append(body)
-        for toks in lex_segments(SUBSTITUTION.sub(" ", chunk)):
+        for toks, lexed in lex_segments(SUBSTITUTION.sub(" ", chunk)):
             if toks:
-                yield " ".join(toks), toks
+                yield " ".join(toks), toks, lexed
+                if budget[0] > 0:
+                    payload = extract_shell_payload(toks, lexed)
+                    if payload and payload.strip():
+                        budget[0] -= 1
+                        pending.append(payload)
 
 
 def tokens(segment):
@@ -274,7 +493,10 @@ def tokens(segment):
 
 
 def head(toks):
-    """Return (command word, remaining args), skipping assignments/wrappers."""
+    """Return (command word, remaining args), skipping assignments/wrappers.
+
+    Mirrored in failed-run-cleanup-guard.py's own head() — keep both in sync.
+    """
     i = 0
     while i < len(toks):
         t = toks[i]
@@ -283,6 +505,17 @@ def head(toks):
             continue
         if t in WRAPPERS:
             i += 1
+            value_flags = WRAPPER_VALUE_FLAGS.get(t, set())
+            while i < len(toks):
+                a = toks[i]
+                if a == "--":
+                    i += 1
+                    break
+                if a == "-" or not a.startswith("-"):
+                    break
+                i += 1
+                if a in value_flags:
+                    i += 1  # consume the option's value token
             continue
         if t in ("mise", "asdf") and i + 1 < len(toks) and toks[i + 1] == "exec":
             i += 2
@@ -296,8 +529,75 @@ def head(toks):
     return os.path.basename(toks[i]), toks[i + 1 :]
 
 
+def _deferral_head(words):
+    """Like head(), but a wrapper token spelled with an absolute/relative
+    path (`/usr/bin/sudo`) is normalized to its basename before the wrapper
+    check, matching failed-run-cleanup-guard.py's own basename-based wrapper
+    detection. Only feeds the deferral computation in main() — head() itself,
+    and every other caller of it, still compares raw tokens, so no existing
+    deny/ask verdict changes because of this.
+    """
+    normalized = list(words)
+    i = 0
+    n = len(normalized)
+    while i < n:
+        t = normalized[i]
+        if re.match(r"^[A-Za-z_]\w*=", t):
+            i += 1
+            continue
+        basename = os.path.basename(t) if os.path.sep in t else t
+        if basename in WRAPPERS:
+            normalized[i] = basename
+            i += 1
+            value_flags = WRAPPER_VALUE_FLAGS.get(basename, set())
+            while i < n:
+                a = normalized[i]
+                if a == "--":
+                    i += 1
+                    break
+                if a == "-" or not a.startswith("-"):
+                    break
+                i += 1
+                if a in value_flags:
+                    i += 1  # consume the option's value token
+            continue
+        if t in ("mise", "asdf") and i + 1 < n and normalized[i + 1] == "exec":
+            i += 2
+            while i < n and normalized[i] != "--":
+                i += 1
+            i += 1  # step past the `--`
+            continue
+        break
+    return head(normalized)
+
+
+def _expand_short_clusters(args):
+    """Split a clustered short-option token (`-dr`) into its individual
+    letters (`-d`, `-r`), the same expansion failed-run-cleanup-guard.py's
+    own classify() applies, so a flag bundled into a cluster is still found
+    by has(). `--` stops expansion (options after it are operands, not
+    flags) and `--long` spellings are left untouched. Only used by
+    matches_target_shape()'s S2 shape match; check_git()'s own has()/
+    short_flags() calls are untouched, so no existing verdict changes.
+    """
+    out = []
+    stop = False
+    for a in args:
+        if stop or not re.fullmatch(r"-[A-Za-z]+", a):
+            out.append(a)
+        else:
+            out.extend(f"-{c}" for c in a[1:])
+        if a == "--":
+            stop = True
+    return out
+
+
 def git_subcommand(args):
-    """Strip git's global options and return (subcommand, its args)."""
+    """Strip git's global options and return (subcommand, its args).
+
+    Mirrored in failed-run-cleanup-guard.py's own git_subcommand() (used
+    inside its classify()) — keep both in sync.
+    """
     i = 0
     while i < len(args):
         a = args[i]
@@ -453,12 +753,15 @@ def deletion_alternative(target):
     """
     path = os.path.abspath(os.path.expanduser(target))
     home = os.path.expanduser("~")
+    if any(ord(c) < 0x20 or ord(c) == 0x7F for c in path):
+        return "パスに制御文字が含まれているため、安全な代替コマンドを提示できない。手動で確認する。"
+    quoted = shlex.quote(path)
     if not gio_available():
-        return f"`mv {path} /tmp/` で退避する（gio が無いのでゴミ箱は使えない）。"
+        return f"`mv -- {quoted} /tmp/` で退避する（gio が無いのでゴミ箱は使えない）。"
     if path == home or path.startswith(home + os.sep):
-        return f"`gio trash {path}` に書き換える（復元情報が残り、ゴミ箱から戻せる）。"
+        return f"`gio trash -- {quoted}` に書き換える（復元情報が残り、ゴミ箱から戻せる）。"
     return (
-        f"`mv {path} /tmp/` で退避する"
+        f"`mv -- {quoted} /tmp/` で退避する"
         f"（$HOME の外はゴミ箱がファイルシステムをまたげないので `gio trash` は失敗する）。"
     )
 
@@ -516,34 +819,349 @@ def check_file_destruction(word, args, segment):
         )
 
 
-def check_self_modification(segment, word, args, redirects):
-    # An output redirect is only a write when it is a real operator token.
-    # Testing `">" in segment` also caught a `>` sitting inside a quoted
-    # string, so writing the text of a command into a file was mistaken for
-    # running it. `<` and `<<` read rather than write, so they do not count.
-    writes = (
-        any(REDIRECT.fullmatch(t) and not t.startswith("<") for t in redirects)
-        or word in INPLACE_WRITERS
-        or (word == "sed" and any(a.startswith("-i") for a in args))
-        or word in ("rm", "mv", "cp", "ln", "chmod", "chown")
+def redirect_write_targets(redirects):
+    """Return the target-side token of each write-shaped redirect in REDIRECTS.
+
+    REDIRECTS is split_redirects()'s flat token list: an optional leading fd
+    digit, then an operator token, then its target, repeated in order. An
+    operator starting with `<` is normally an input form (plain redirect,
+    here-doc, here-string, fd-dup-input) and contributes nothing — that data
+    is read, not written, and must stay out of the write-target set. The one
+    exception is `<>`, which opens its target for both reading and writing;
+    its target does enter the result. Every other operator's target enters
+    the result too, including the bare descriptor number that is the
+    "target" of a descriptor-duplicating redirect (`2>&1`); it is not a
+    path, but neither detection pattern below will match it.
+    """
+    out = []
+    i = 0
+    while i < len(redirects):
+        t = redirects[i]
+        if REDIRECT.fullmatch(t):
+            is_readwrite = READWRITE_REDIRECT.fullmatch(t) is not None
+            if (not t.startswith("<") or is_readwrite) and i + 1 < len(redirects):
+                out.append(redirects[i + 1])
+            i += 2
+        else:
+            i += 1  # a leading fd digit belonging to the next operator
+    return out
+
+
+def flag_destinations(args):
+    """Return the values of target-directory flags (TARGET_DIR_FLAGS) among
+    ARGS, covering every GNU getopt spelling: a separate token (`-t DIR`),
+    the value-attached short form (`-tDIR`), a short-option cluster
+    (`-rt DIR` / `-rtDIR`), the attached `=` form
+    (`--target-directory=DIR`), and unambiguous long-option abbreviations
+    (`--target-dir DIR`). The flag's own token never enters the result —
+    only its value does.
+    """
+    out = []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a.startswith("--"):
+            name, sep, val = a.partition("=")
+            if len(name) > 2 and "--target-directory".startswith(name):
+                if sep:
+                    out.append(val)
+                    i += 1
+                    continue
+                if i + 1 < len(args):
+                    out.append(args[i + 1])
+                i += 2
+                continue
+            i += 1
+            continue
+        if a.startswith("-") and len(a) > 1 and "t" in a[1:]:
+            idx = a.index("t", 1)
+            rest = a[idx + 1 :]
+            if rest:
+                out.append(rest)
+                i += 1
+                continue
+            if i + 1 < len(args):
+                out.append(args[i + 1])
+            i += 2
+            continue
+        i += 1
+    return out
+
+
+def flag_value_destinations(word, args):
+    """Return the values of WORD's flag-carried destination flags (per
+    FLAG_DEST_FLAGS) among ARGS, covering every spelling GNU-style tools
+    accept: a separate token (`-C DIR`), the value-attached short form
+    (`-CDIR`, possibly at the tail of a short-option cluster like `-xCDIR`),
+    and the attached `=` long form (`--directory=DIR`). Mirrors
+    flag_destinations()'s handling of `-t`/`--target-directory`, restricted
+    to the flag spellings WORD actually accepts.
+    """
+    flags = FLAG_DEST_FLAGS.get(word)
+    if not flags:
+        return []
+    short_chars = {
+        f[1] for f in flags if len(f) == 2 and f.startswith("-") and not f.startswith("--")
+    }
+    out = []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a in flags:
+            if i + 1 < len(args):
+                out.append(args[i + 1])
+            i += 2
+            continue
+        matched = False
+        for f in flags:
+            if f.startswith("--") and a.startswith(f + "="):
+                out.append(a.split("=", 1)[1])
+                matched = True
+                break
+        if matched:
+            i += 1
+            continue
+        if short_chars and a.startswith("-") and not a.startswith("--") and len(a) > 1:
+            hit = next((c for c in a[1:] if c in short_chars), None)
+            if hit is not None:
+                idx = a.index(hit, 1)
+                rest = a[idx + 1 :]
+                if rest:
+                    out.append(rest)
+                    i += 1
+                    continue
+                if i + 1 < len(args):
+                    out.append(args[i + 1])
+                i += 2
+                continue
+        i += 1
+    return out
+
+
+def strip_value_tokens(word, args):
+    """Return WORD's positional arguments from ARGS, dropping any token that
+    is actually the value of one of WORD's VALUE_TAKING_FLAGS rather than a
+    positional argument — so the last remaining entry is the real
+    destination for `cp`/`ln`/`rsync`.
+
+    "Positional argument" is decided in exactly one place (here): a token
+    that does not start with `-`, is not itself a value-taking flag, and
+    does not immediately follow one. This covers a value-taking flag given
+    as its own token (`-S .bak`, `--exclude foo`) and as the trailing letter
+    of a short-option cluster (`-vS .bak` — `S` is the last letter, so the
+    next token is its value per getopt rules). Anything after a literal `--`
+    is positional even if it looks like a flag.
+    """
+    value_flags = VALUE_TAKING_FLAGS.get(word)
+    if not value_flags:
+        return [a for a in args if not a.startswith("-")]
+    short_value_chars = {
+        f[1] for f in value_flags if len(f) == 2 and f.startswith("-") and not f.startswith("--")
+    }
+    result = []
+    consumed_next = False
+    seen_dashdash = False
+    for a in args:
+        if consumed_next:
+            consumed_next = False
+            continue
+        if not seen_dashdash and a == "--":
+            seen_dashdash = True
+            continue
+        if seen_dashdash:
+            result.append(a)
+            continue
+        if a in value_flags:
+            consumed_next = True
+            continue
+        if (
+            a.startswith("-")
+            and not a.startswith("--")
+            and len(a) > 2
+            and a[-1] in short_value_chars
+        ):
+            consumed_next = True
+            continue
+        if not a.startswith("-"):
+            result.append(a)
+    return result
+
+
+def write_targets(word, args, redirects):
+    """Assemble the set of paths this segment writes to.
+
+    Sources, unioned (task plan Part 1 and Part 2):
+
+    - the target side of every write-shaped redirect (append and plain
+      output alike; input forms are already excluded upstream)
+    - every non-flag argument of an in-place writer (`tee`, `truncate`,
+      `shred`, `install`, `patch`), or of `sed` invoked with an in-place
+      flag — the flag itself, including its attached-value and
+      empty-suffix forms (`-i.bak`, `-i''`), always starts with `-` and is
+      excluded by the same non-flag filter
+    - the destination of a file-manipulating command: the LAST non-flag
+      argument only for `cp`/`ln` (their destination is positional and
+      their source is genuinely only read), every non-flag argument for
+      `mv`/`rm`/`chmod`/`chown` — a move unlinks each source it names, so a
+      source is written to exactly as much as the destination is
+    - for `cp`/`mv`/`ln`/`install`, the value of a target-directory flag
+      (`-t DIR` / `--target-directory=DIR`). For `cp`/`ln`/`install`, this
+      flag and the positional-last destination are mutually exclusive per
+      GNU's own grammar: once `-t`/`--target-directory` is given, every
+      non-flag argument is a source, not a destination, so the
+      positional-last rule is skipped entirely in that case. `mv` still
+      unlinks every source it names regardless of `-t`, so its non-flag
+      arguments remain targets either way.
+    - the last non-flag argument for `rsync`, and for `git` only the last
+      positional argument of `git clone` (covers `git clone URL DEST`;
+      other git subcommands are not treated as write-target-bearing here)
+    - the value of a command-specific destination flag (`tar -C`/`--directory`,
+      `unzip -d`, `curl -o`/`--output`, `wget -O`/`--output-document`)
+
+    Before taking the last non-flag argument as the destination for `cp`/
+    `ln`/`rsync`, value-taking options of theirs (`-S`/`--suffix`, `-t`/
+    `--target-directory` for `cp`/`ln`; `--exclude`/`--include`/`--filter`/
+    `-e`/`--rsh` for `rsync`) have their value token removed from the
+    candidate list — including when the flag is the trailing letter of a
+    short-option cluster (`-vS .bak`) — so that value is never mistaken for
+    the destination.
+
+    A member need not be a path — a bare descriptor number or `/dev/null`
+    passes through untouched; only the two detection patterns decide
+    whether a member matters.
+    """
+    targets = redirect_write_targets(redirects)
+    non_flags = [a for a in args if not a.startswith("-")]
+
+    flag_dests = (
+        flag_destinations(args) if word in ("cp", "mv", "ln", "install") else []
     )
-    if not writes:
-        return
-    if SELF_CONFIG.search(segment):
-        decide(
-            "ask",
-            "self-modification",
-            "Claude Code 自身の設定（settings / hooks / rules / agents / skills）への書き込み。"
-            "権限やガードの挙動が変わるので、ユーザーの意図を確認する。",
+
+    if word == "install":
+        # install は INPLACE_WRITERS の一員だが、cp/ln 同様 -t/--target-directory
+        # が与えられた時点で宛先は既に決まっており、非フラグ引数は全てソース。
+        # フラグが無ければ従来どおり最後の非フラグ引数だけが宛先で、先行する
+        # 引数（コピー元）は読むだけ。
+        # 値取りフラグ（-m 644 等）の値は位置引数ではない。除いてから
+        # 末尾を取らないと、フラグ後置形で宛先を取り違える。
+        positional = strip_value_tokens(word, args)
+        if not flag_dests and positional:
+            targets = targets + [positional[-1]]
+    elif word in INPLACE_WRITERS or (
+        word == "sed"
+        and any(a.startswith("-i") or a.startswith("--in-place") for a in args)
+    ):
+        targets = targets + non_flags
+    elif word in ("cp", "ln"):
+        if flag_dests:
+            # -t DIR / --target-directory=DIR は「宛先は既に決まっている」
+            # という文法を表す。この場合すべての非フラグ引数はソースであり、
+            # positional-last 規則を重ねて宛先扱いしてはいけない。
+            pass
+        else:
+            positional = strip_value_tokens(word, args)
+            if positional:
+                targets = targets + [positional[-1]]
+    elif word in ("mv", "rm", "chmod", "chown"):
+        targets = targets + non_flags
+    elif word == "rsync":
+        positional = strip_value_tokens(word, args)
+        if positional:
+            targets = targets + [positional[-1]]
+    elif word == "git":
+        # git の文法は git_subcommand() が既に持っている。宛先が位置引数に
+        # 現れるサブコマンドだけを write target として扱う。全サブコマンドの
+        # 末尾引数を宛先扱いすると、`git log -- <path>` や `-m` のメッセージ
+        # 本文まで書き込み先として照合される。
+        sub, rest = git_subcommand(args)
+        if sub == "clone":
+            positional = [a for a in rest if not a.startswith("-")]
+            if len(positional) >= 2:
+                targets = targets + [positional[-1]]
+
+    if word in ("cp", "mv", "ln", "install"):
+        targets = targets + flag_dests
+
+    targets = targets + flag_value_destinations(word, args)
+
+    return targets
+
+
+HOME_VAR = re.compile(r"^(?:\$\{HOME\}|\$HOME)")
+
+
+def normalize_candidate(target):
+    """Expand deterministic home forms and lexically normalize TARGET.
+
+    Only static, filesystem-free transformations: `~`, `$HOME`, and
+    `${HOME}` are replaced with the real HOME (known at hook-start, not
+    resolved via the filesystem), then the result is run through
+    os.path.normpath to collapse `..`/`.`/duplicate slashes lexically —
+    no os.path.realpath, no stat, no subprocess.
+    """
+    home = os.path.expanduser("~")
+    expanded = target
+    if expanded == "~" or expanded.startswith("~/"):
+        expanded = home + expanded[1:]
+    elif HOME_VAR.match(expanded):
+        expanded = HOME_VAR.sub(home, expanded, count=1)
+    normalized = os.path.normpath(expanded)
+    # os.path.normpath is POSIX-compliant and preserves a leading `//`.
+    # `/home/...` and `//home/...` are the same location, so this spelling
+    # difference must not slip past the SELF_CONFIG boundary.
+    return re.sub(r"^//(?=[^/])", "/", normalized)
+
+
+def check_self_modification(word, args, redirects, segment, lexed):
+    """Ask/deny only when an assembled write TARGET matches a protected path.
+
+    Matching used to run over the whole segment text, so a command that
+    merely READ a protected path — `grep -rn foo ~/.claude/skills/
+    2>/dev/null`, say — was asked about as though it wrote there: the
+    `2>/dev/null` made the old `writes` boolean true, and the segment text
+    still contained `~/.claude/skills/` for SELF_CONFIG to match against.
+    Testing the write-target set instead of the whole segment fixes that
+    without touching either pattern's own definition.
+
+    When LEXED is False (the parse-failure fallback), token provenance is
+    unavailable, so the assembled target set cannot be trusted — falls back
+    to matching the two patterns against the whole segment text instead,
+    but only when a `writes` boolean (write-form redirect / INPLACE_WRITERS /
+    `sed -i` / rm・mv・cp・ln・chmod・chown) is true, the same gate this
+    judgment always had on this fallback path before the write-target set
+    existed.
+
+    Each candidate is also checked in its normalized form (`~`/`$HOME`/
+    `${HOME}` expanded, `..` segments collapsed lexically) so equivalent
+    spellings of a protected path are not missed.
+    """
+    if lexed:
+        candidates = write_targets(word, args, redirects)
+    else:
+        writes = (
+            any(REDIRECT.fullmatch(t) and not t.startswith("<") for t in redirects)
+            or word in INPLACE_WRITERS
+            or (word == "sed" and any(a.startswith("-i") for a in args))
+            or word in ("rm", "mv", "cp", "ln", "chmod", "chown")
         )
-    if TRANSCRIPT.search(segment):
-        decide(
-            "deny",
-            "transcript-write",
-            "セッション transcript（~/.claude/projects/**/*.jsonl）への書き込み。"
-            "これはハーネスが管理する状態で、書き換えると以降の判定すべてに影響する。"
-            "読み取りは通常運用なので制限しない。",
-        )
+        candidates = [segment] if writes else []
+    for target in candidates:
+        normalized = normalize_candidate(target)
+        if SELF_CONFIG.search(target) or SELF_CONFIG.search(normalized):
+            decide(
+                "ask",
+                "self-modification",
+                "Claude Code 自身の設定（settings / hooks / rules / agents / skills）への書き込み。"
+                "権限やガードの挙動が変わるので、ユーザーの意図を確認する。",
+            )
+        if TRANSCRIPT.search(target) or TRANSCRIPT.search(normalized):
+            decide(
+                "deny",
+                "transcript-write",
+                "セッション transcript（~/.claude/projects/**/*.jsonl）への書き込み。"
+                "これはハーネスが管理する状態で、書き換えると以降の判定すべてに影響する。"
+                "読み取りは通常運用なので制限しない。",
+            )
 
 
 def check_external(word, args, segment):
@@ -639,6 +1257,181 @@ def check_permissions(word, args):
         decide("ask", "chown-recursive", "再帰的な所有者変更。")
 
 
+# A bare function-signature token: shlex's punctuation_chars fuses adjacent
+# punctuation into one token, so `f()` arrives as two tokens (the name, then
+# this) rather than three.
+FUNC_SIGNATURE = "()"
+IDENT = re.compile(r"^[A-Za-z_]\w*$")
+
+
+def strip_grouping_prefix(toks):
+    """Strip leading grouping-construct tokens so the statement's REAL head —
+    the invocation nested one level in — is what matches_target_shape()
+    judges (IMPLEMENTATION.md "Guard parity vocabulary" / task0004's D7
+    grouping-construct list): a subshell's bare `(`, a brace group's bare
+    `{`, or a function signature (`NAME` then the fused `()` then `{`) that
+    defines and, in the same command, invokes its body.
+
+    Repeated so nested combinations (a function defined inside a subshell,
+    etc.) unwrap fully. Trailing closers (`)`, `}`) are left exactly where
+    they are — every extraction this feeds (S1/S2/S3's operand search) takes
+    the FIRST matching token from what follows, so a closer sitting after
+    the real operand never changes the result, and stripping it here would
+    only add code with no observable effect.
+
+    Only ever feeds the deferral check in main(): check_git()/check_rm()/the
+    other destructive checks keep calling head() on the UNSTRIPPED tokens,
+    so no existing verdict changes because of this function — a subshell- or
+    brace-wrapped destructive command is exactly as unexamined by those
+    checks after this change as before it (out of scope for this task; see
+    the task plan's "Which side moves").
+    """
+    toks = list(toks)
+    changed = True
+    while toks and changed:
+        changed = False
+        if toks[0] in ("(", "{"):
+            toks = toks[1:]
+            changed = True
+        elif (
+            len(toks) >= 3
+            and IDENT.match(toks[0])
+            and toks[1] == FUNC_SIGNATURE
+            and toks[2] == "{"
+        ):
+            toks = toks[3:]
+            changed = True
+    return toks
+
+
+def _seg_matches(seg, literal):
+    """Whether a branch-name path segment matches LITERAL exactly, or is
+    dynamic (see DYNAMIC above) — used by matches_target_shape()'s S2 branch
+    segment check.
+    """
+    return seg == literal or bool(DYNAMIC.search(seg))
+
+
+def matches_target_shape(word, args, cwd):
+    """Whether (WORD, ARGS) is a real invocation of failed-run-cleanup-guard's
+    target shapes S1/S2/S3 (IMPLEMENTATION.md "Target invocation shapes
+    (S1/S2/S3)", decision D2): a `git worktree remove`, a `git branch`
+    deletion carrying a non-force flag (`-d`/`--delete`), or a `gh pr
+    create`. That other hook owns the verdict for these; this hook's own
+    checks below still run against them, but its trailing blanket `allow`
+    must be withheld or it would override the other hook's deny — the same
+    reason KILL_WORDS above is excluded from that allow.
+
+    WORD/ARGS are already the product of head()/split_redirects() over one
+    lexed statement from statements(), the same quote-aware decomposition
+    check_git()/check_external() judge on — never a raw substring scan of
+    the command text. A mention inside quotes, a here-doc body not aimed at
+    a shell sink, or a commit message never surfaces as a `git`/`gh`
+    invocation of its own, so it is not matched here either, exactly as the
+    other hook's own classifier stays silent for those same mentions.
+
+    The caller (main()) passes WORD/ARGS already unwrapped by
+    strip_grouping_prefix(): a statement whose real head sits one level
+    inside a subshell, a brace group, or a function signature defined and
+    invoked in the same command is matched on that real head, not on the
+    grouping token — matching the new guard's own recursion into those same
+    constructs (D7's grouping-construct vocabulary).
+
+    S1 does not exclude the `--force` spelling: a forced worktree removal is
+    already denied outright by check_git() before main()'s loop can reach
+    the trailing allow, so the distinction has no observable effect, and
+    S1's own definition draws none either. S2 DOES exclude `-D`/`--force`,
+    matching its definition exactly — harmless for the same reason (also
+    denied earlier), but this keeps the shape match an honest statement of
+    S2 as specified rather than relying on that other rule firing first.
+
+    Narrowed to only the shapes failed-run-cleanup-guard.py can actually
+    judge, so unrelated worktree removals / branch deletions do not lose
+    their blanket allow and fall through to the auto mode classifier every
+    time. A trailing dynamic token (`$`, backtick, `${`, a variable-name
+    sigil, `*`, `?`, `[`) is treated as matching, since its resolved value
+    is unknown here and the other hook is the one that judges it at run
+    time — the same unresolvable-marker character set failed-run-cleanup-
+    guard.py's own DYNAMIC regex uses, bracket-glob spelling included (D7).
+    S1: only when the operand's last path segment (after stripping a
+    trailing `/`) is literally `integration`, or is dynamic.
+    S2: only when the branch name's first segment is `em-workflow` (or
+    dynamic) AND its last segment is `integration` (or dynamic).
+    S3: only when CWD's path segments contain the consecutive run
+    `.claude/worktrees/em-workflow/<feature>/integration`, matching the
+    window failed-run-cleanup-guard.py's own resolve_pr_create() judges.
+
+    When the operand/branch-name token is missing entirely (S1's `rest[1:]`
+    or S2's filtered `rest` has nothing left), that is treated as matching
+    too, not as out of scope: a real `git worktree remove`/`git branch -d`
+    is never genuinely pathless, so an empty tail here only happens when
+    statements()'s command-substitution hoisting already lifted the whole
+    operand out of this statement's own token list before this function
+    ever saw it (its body is re-scanned separately, as its own statement).
+    Treating the gap itself as unresolved mirrors the trailing-dynamic-token
+    rule above rather than adding a new one.
+    """
+
+    if word == "git":
+        sub, rest = git_subcommand(args)
+        if sub == "worktree" and rest[:1] == ["remove"]:
+            operand = next((a for a in rest[1:] if not a.startswith("-")), None)
+            if operand is None:
+                return True
+            last = operand.rstrip("/").rsplit("/", 1)[-1]
+            return last == "integration" or bool(DYNAMIC.search(operand))
+        if sub == "branch":
+            expanded_rest = _expand_short_clusters(rest)
+            if has(expanded_rest, "-d", "--delete") and not (
+                has(expanded_rest, "-D") or has(expanded_rest, "--force")
+            ):
+                operands = [a for a in rest if not a.startswith("-")]
+                if not operands:
+                    return True
+                for name in operands:
+                    if DYNAMIC.search(name):
+                        return True
+                    parts = name.split("/")
+                    if len(parts) == 3 and _seg_matches(
+                        parts[0], "em-workflow"
+                    ) and _seg_matches(parts[-1], "integration"):
+                        return True
+        return False
+    if word == "gh":
+        # `-R`/`--repo` take a value token of their own (`gh -R owner/repo pr
+        # create`); without skipping it, the repo spelling is mistaken for
+        # the first positional and `pr create` is missed.
+        # This positional-argument extraction mirrors the one in
+        # failed-run-cleanup-guard.py's own classify() (its `gh pr create`
+        # detection, S3) — keep both in sync.
+        positional = []
+        skip_next = False
+        for a in args:
+            if skip_next:
+                skip_next = False
+                continue
+            if a in ("-R", "--repo"):
+                skip_next = True
+                continue
+            if a.startswith("--repo="):
+                continue
+            if a.startswith("-"):
+                continue
+            positional.append(a)
+        if positional[:2] != ["pr", "create"]:
+            return False
+        segs = [s for s in cwd.split("/") if s]
+        window = [".claude", "worktrees", "em-workflow"]
+        for i in range(len(segs) - 4):
+            if (
+                segs[i : i + 3] == window
+                and segs[i + 4] == "integration"
+            ):
+                return True
+        return False
+    return False
+
+
 def main():
     try:
         payload = json.load(sys.stdin)
@@ -650,6 +1443,7 @@ def main():
     command = (payload.get("tool_input") or {}).get("command", "")
     if not command.strip():
         sys.exit(0)
+    cwd = payload.get("cwd") or ""
 
     # Whether kill-guard.py owns the verdict for this command. The destructive
     # checks below still run — a compound such as
@@ -660,20 +1454,42 @@ def main():
         re.search(rf"(^|[^\w./-]){w}([^\w./-]|$)", command) for w in KILL_WORDS
     )
 
+    # Whether failed-run-cleanup-guard.py owns the verdict for this command
+    # (decision D2). Unlike defer_to_kill_guard above, this is NOT a raw
+    # substring scan of COMMAND — the D2 narrowness requirement means a
+    # mention inside quotes or a here-doc body must keep its blanket allow,
+    # so this is set from matches_target_shape() inside the loop below, over
+    # each statement's already quote-resolved WORD/ARGS. See
+    # matches_target_shape() for the full rationale.
+    defer_to_new_guard = False
+
     # Judged on the whole command string, not per segment: `statements()`
     # splits on `|`, so a `curl … | sh` pipeline is never one unit inside the
     # loop below and the check would never fire.
     check_pipe_to_shell(command)
 
-    for segment, toks in statements(command):
+    for segment, toks, lexed in statements(command):
         check_bypass(segment, toks)
 
-        words, redirects = split_redirects(toks)
+        words, redirects = split_redirects(toks, lexed)
         word, args = head(words)
+        # `> ~/.claude/settings.json` のようにコマンド語を持たない純リダイレクト
+        # 文も対象を切り詰める。word が無くても redirects だけで判定する。
+        check_self_modification(word or "", args, redirects, segment, lexed)
+
+        # The deferral is judged on the statement's REAL head — leading
+        # grouping tokens (subshell `(`, brace group `{`, a function
+        # signature) stripped first (D7) — never on the unstripped WORD/ARGS
+        # check_git()/check_rm()/the rest of this loop use below. A
+        # subshell's `(` is itself WORD when ungrouped ("(" != "git"), so
+        # this must run even when WORD is None or not "git"/"gh"; it is
+        # placed before the `continue` below for that reason.
+        gword, gargs = _deferral_head(strip_grouping_prefix(words))
+        if matches_target_shape(gword, gargs, cwd):
+            defer_to_new_guard = True
+
         if word is None:
             continue
-
-        check_self_modification(segment, word, args, redirects)
 
         if word == "git":
             check_git(args, segment)
@@ -684,7 +1500,7 @@ def main():
             check_external(word, args, segment)
             check_permissions(word, args)
 
-    if ALLOW_NON_DESTRUCTIVE and not defer_to_kill_guard:
+    if ALLOW_NON_DESTRUCTIVE and not defer_to_kill_guard and not defer_to_new_guard:
         decide("allow", None, "破壊的なパターンに一致しない。")
     sys.exit(0)
 

@@ -118,7 +118,7 @@ DESIGN_BRANCH_HEADING = "### design ステップ分岐"
 VERIFY_HEADING = "### verify フェーズ"
 RETROSPECT_HEADING = "### retrospect フェーズ（収集は自動・承認不要）"
 STEP_C_HEADING = (
-    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — 時のみ）"
+    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、cap 到達により verify が `failed` のまま残る場合のみ）"
 )
 ONCE_BOUNDARY_HEADING = "## `--once` のフェーズ境界"
 STOP_REPORT_HEADING = "## 停止時の報告（停止条件 2-4 のみ）"
@@ -446,10 +446,13 @@ class TestDesignVerifyRetrospectBatchClauses(unittest.TestCase):
         self._assert_clause(self.retrospect_clause, "retrospect フェーズ")
 
     def test_verify_rework_cap_wording_unaltered(self):
-        # AC-3 regression guard: the pre-existing rework cap/counter rule
-        # is untouched by this task's addition.
-        self.assertIn("`batch.verify_rework_count == 0`", self.verify_section)
-        self.assertIn("カウンタを +1", self.verify_section)
+        # task0001 (batch-verify-rework-lineage-cap) replaced the fixed
+        # counter cap with an independently-evaluated lineage cap / hard
+        # cap pair. Pin the new wording here so a regression back to the
+        # old fixed counter is caught by this non-regression guard.
+        self.assertIn("系譜 cap", self.verify_section)
+        self.assertIn("hard cap", self.verify_section)
+        self.assertIn("batch.verify_rework", self.verify_section)
 
 
 class TestStepCSourcingWiring(unittest.TestCase):

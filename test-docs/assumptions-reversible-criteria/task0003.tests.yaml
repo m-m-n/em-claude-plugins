@@ -1,0 +1,62 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_assumptions_reversible_criteria_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+    red_confirmed: true
+    red_reason: "AssertionError: 64 not greater than 64 : patch component did not increase: '0.1.64' vs baseline '0.1.64'"
+  AC-2:
+    tests:
+      - tests.test_assumptions_reversible_criteria_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: false
+    red_reason: >-
+      Both registries already agreed at the 0.1.64 baseline (both unbumped),
+      so this equality check passed before the manifests were edited; it is
+      still exercised on the real files post-bump and has a dedicated
+      negative-proof/non-vacuity pair
+      (TestVersionsAgreeMatcherNegativeProof) that does go red on forged
+      disagreeing data.
+  AC-3:
+    tests:
+      - tests.test_assumptions_reversible_criteria_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_a_patch_bump_over_baseline
+    red_confirmed: true
+    red_reason: "AssertionError: 64 not greater than 64 : patch component did not increase: '0.1.64' vs baseline '0.1.64'"
+  AC-4:
+    tests:
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+    red_confirmed: false
+    red_reason: >-
+      em-review's version was never touched by this task, so this assertion
+      against the real manifest was green both before and after the
+      em-workflow-only edit; it has a dedicated negative-proof/non-vacuity
+      pair (TestEmReviewUnchangedMatcherNegativeProof) that does go red on a
+      forged drifted-version entry.
+  AC-5:
+    tests:
+      - tests.test_assumptions_reversible_criteria_version_bump.TestVersionsAgreeMatcherNegativeProof.test_rejects_disagreeing_versions
+      - tests.test_assumptions_reversible_criteria_version_bump.TestVersionsAgreeMatcherNegativeProof.test_accepts_agreeing_versions
+      - tests.test_assumptions_reversible_criteria_version_bump.TestPatchBumpMatcherNegativeProof
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewUnchangedMatcherNegativeProof.test_rejects_drifted_version
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewUnchangedMatcherNegativeProof.test_rejects_wrong_name
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewUnchangedMatcherNegativeProof.test_accepts_unchanged_entry
+    red_confirmed: true
+    red_reason: >-
+      Each of the three matcher helpers' negative-proof cases was written
+      against the helper before the helper existed at all (module import
+      error / NameError on first run), and after the helper was implemented
+      each negative case was independently verified to raise AssertionError
+      against its forged violating input while its paired non-vacuity case
+      accepted forged conforming input.
+  AC-6:
+    tests:
+      - tests.test_assumptions_reversible_criteria_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      The module as written only ever imported stdlib names (ast, json, re,
+      sys, unittest, pathlib), so this self-check was green from its first
+      run; there is no non-stdlib import to remove to prove the negative,
+      and forging a non-stdlib import into a copy of the source to prove
+      the check catches it would contradict AC-6 itself. Verified by manual
+      reading of the import list instead.

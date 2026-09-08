@@ -53,7 +53,7 @@ by the packet's absence or by an empty `questions` array.
 | `assumptions[]`.`statement` | The assumption text |
 | `assumptions[]`.`reason` | Why the assumption was made |
 | `assumptions[]`.`impact` | `low` \| `medium` \| `high` |
-| `assumptions[]`.`reversible` | Boolean |
+| `assumptions[]`.`reversible` | Boolean. `assumptions[].reversible` is `false` only for an assumption about an operation that cannot be undone once applied; it is `true` for a preserved constraint, an invariant, or a fact pinned by an existing test. |
 | `assumptions[]`.`related_question_ids` | Related `question_id` values |
 | `questions` | 1 to 32 question objects |
 | `questions[]`.`question_id` | Question identifier (see pattern above) |
@@ -99,7 +99,9 @@ A question whose `category` is `spec-change`, `security`, or `license` must
 carry `on_unanswered: block` — a question in one of those categories can
 never be left to resolve as `record_tbd` or `use_batch_policy`.
 `scripts/validate-worker-output.py` enforces this constraint mechanically
-and rejects a packet where it does not hold;
+and rejects a packet where it does not hold. In batch, `on_unanswered:
+block` routes the question into the minimum-side-effect branch rather than
+letting a worker choose `record_tbd` or `use_batch_policy` for it;
 `references/question-resolution.md`'s fail-closed classification states the
 resolution-time rule this constraint backs.
 

@@ -45,7 +45,13 @@ or `Agent` tool:
      (the representative candidate, unchanged priority order) and
      `agent_ids` (every distinct candidate found), so a reader preferring a
      different join key can still match without this hook ever writing
-     more than one line per launch.
+     more than one line per launch. When the hook input's `session_id`
+     field passes SC5's validation rule (IMPLEMENTATION.md), the entry also
+     gains an independent `session_id` field carrying the launching
+     session's identity -- orphaned-implementer-recovery task0001 SC1. That
+     field is NEVER appended to `agent_ids` and is never a match candidate
+     on the stop side; an absent or invalid value simply omits the field
+     (fail-open, same discipline as every other field here).
 
 Fail-open convention: this hook is a net, not an authority. ALWAYS exits 0,
 enforced by a top-level catch-all in main(), mirroring
@@ -98,6 +104,14 @@ STRUCTURED_ID_FIELDS = ("agentId", "agent_id", "taskId", "task_id")
 # `agentId: a4d2c8f1e0b3a297` or `agent_id="a4d2c8f1e0b3a297"`.
 EMBEDDED_ID_RE = re.compile(r"(?i)agent[_-]?id[\"':=\s]+([A-Za-z0-9_-]{4,})")
 
+# SC5 validation rule (IMPLEMENTATION.md): at most 64 characters total, the
+# first an ASCII letter or digit, the rest ASCII letters/digits/hyphens/
+# underscores. Dots, path separators, whitespace and NUL are all rejected by
+# construction, which makes a `..` segment unrepresentable -- this hook
+# never uses the value as a path element itself, but the same rule is
+# applied on write so every reader can rely on it without re-validating.
+SESSION_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+
 
 def extract_task_assignment(prompt):
     """Pull (task_id, worktree_path) out of a `# Task assignment` block.
@@ -140,6 +154,14 @@ def valid_worktree_path(worktree_path):
         and os.path.isabs(worktree_path)
         and ".." not in worktree_path.split("/")
     )
+
+
+def valid_session_id(value):
+    """SC5 validation rule (IMPLEMENTATION.md Shared Components): the value
+    must be a non-empty string of at most 64 characters, starting with an
+    ASCII letter or digit, the rest ASCII letters/digits/hyphens/
+    underscores. A value failing this check is never recorded."""
+    return isinstance(value, str) and bool(SESSION_ID_RE.match(value))
 
 
 def journal_dir_for(worktree_path):
@@ -224,7 +246,7 @@ def now_rfc3339():
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-def append_index_entry(journal_dir, agent_ids, task_id, worktree_path):
+def append_index_entry(journal_dir, agent_ids, task_id, worktree_path, session_id=None):
     """Append one entry to `agents.jsonl` under an exclusive whole-file lock
     (Agent index contract, IMPLEMENTATION.md): symlink-refusing open,
     `0o644`, created if absent. The containing directory is NEVER created
@@ -235,7 +257,14 @@ def append_index_entry(journal_dir, agent_ids, task_id, worktree_path):
     field keeps the previous representative-value contract (first element
     of `agent_ids`) while `agent_ids` preserves every candidate so a reader
     with a different join-key preference can still match. Exactly one line
-    is written per launch -- candidates are never split across entries."""
+    is written per launch -- candidates are never split across entries.
+
+    `session_id`, when not None, is written as an independent top-level
+    `session_id` field -- never merged into `agent_ids` and never a match
+    candidate (task0001 SC1). Callers pass None whenever the hook input
+    carried no session identity or one that failed SC5's validation rule;
+    this function never validates it itself, it only decides whether to
+    include the field."""
     path = os.path.join(journal_dir, "agents.jsonl")
     entry = {
         "agent_id": agent_ids[0],
@@ -244,6 +273,8 @@ def append_index_entry(journal_dir, agent_ids, task_id, worktree_path):
         "worktree_path": worktree_path,
         "at": now_rfc3339(),
     }
+    if session_id is not None:
+        entry["session_id"] = session_id
     line = json.dumps(entry, ensure_ascii=False)
     # O_NOFOLLOW: a symlink planted at the index path must never redirect
     # the append elsewhere (defense in depth, same as the existing hooks).
@@ -283,7 +314,11 @@ def hook_main(data):
     if not os.path.isdir(journal_dir):
         return  # absent journal directory: fail-open, never create it
 
-    append_index_entry(journal_dir, agent_ids, task_id, worktree_path)
+    session_id = data.get("session_id")
+    if not valid_session_id(session_id):
+        session_id = None  # SC5 rejects it (or it was absent/wrong type): fail-open, omit
+
+    append_index_entry(journal_dir, agent_ids, task_id, worktree_path, session_id)
 
 
 def main():

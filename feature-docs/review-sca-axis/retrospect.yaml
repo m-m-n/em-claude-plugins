@@ -1,0 +1,172 @@
+feature: review-sca-axis
+collected_at: '2026-09-08T00:59:21+09:00'
+session_ids:
+- 01a07c97-1723-74fa-a825-e30b6c1a942e.jsonl
+signals:
+  review_critical_high:
+  - stable_id: 349ee4c3a40e0fdb
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: R3b dedupe collapses every advisory in a manifest into one finding
+    resolution: fixed
+  - stable_id: 05606bd5952e3405
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Cargo normalizer keys on fields cargo-audit never emits
+    resolution: fixed
+  - stable_id: 88eb0b9270643a39
+    category: security
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Every Python advisory is dropped and reported as a clean scan
+    resolution: unresolved
+  - stable_id: 05ba59286d545338
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: govulncheck's streaming JSON is parsed as a single document
+    resolution: fixed
+  - stable_id: 3bd58ab86531c61c
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Ecosystem selection is narrower than the protocol trigger that dispatches axis 2
+    resolution: fixed
+  - stable_id: 8a9b409ad28e3f9a
+    category: security
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Scanner execution failures are recorded as completed clean scans
+    resolution: unresolved
+  - stable_id: 1d7af5b09082dfee
+    category: security
+    file: em-workflow/references/vuln-scanners.yaml
+    title: '`cargo audit` dispatches through repository-controlled aliases'
+    resolution: unresolved
+  - stable_id: 67e65d3ae66f8487
+    category: comprehensive
+    file: em-workflow/references/vuln-scanners.yaml
+    title: pip-audit audits the orchestrator's environment, not the reviewed project
+    resolution: unresolved
+  - stable_id: 9a56747dc5389bdb
+    category: architecture
+    file: em-workflow/scripts/scan-dependencies.py
+    title: A partially failed multi-ecosystem scan is reported as a non-skipped run
+    resolution: unresolved
+  - stable_id: d464aff67aa50e8e
+    category: spec
+    file: em-workflow/references/review-phase.md
+    title: FR14/FR15 one-task-per-package filing is unreachable through the R3b path
+    resolution: fixed
+  - stable_id: 1a36bcb406ac27c3
+    category: security
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Arbitrary command execution via unvalidated registry executable/args
+    resolution: fixed
+  - stable_id: 9ef3481e1f5dcf2c
+    category: security
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Unvalidated external task-system entry point executed as subprocess
+    resolution: fixed
+  - stable_id: 5ebedaf8302a62dc
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Cargo normalizer ignores entry-level severity/is_direct
+    resolution: fixed
+  - stable_id: bb11357b80585c5a
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: SSOT drift on how file_tasks recovers (package, advisory_id)
+    resolution: fixed
+  - stable_id: 6d3eed3e4f6178e0
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: go normalizer expects a single JSON object but govulncheck emits a stream
+    resolution: fixed
+  - stable_id: 578546f2900d062f
+    category: architecture
+    file: em-workflow/scripts/scan-dependencies.py
+    title: normalize_cargo drops all cargo findings; test currently fails 0 != 1
+    resolution: fixed
+  - stable_id: b30c473e4a477ad0
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Non-go NDJSON fallback silently drops all findings
+    resolution: fixed
+  - stable_id: 51dc8f310b397af5
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Cargo lockfile-only trigger poisons directness detection
+    resolution: fixed
+  - stable_id: 6f95309b17da958c
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Unvalidated task-listing items crash the filing batch
+    resolution: fixed
+  - stable_id: 84cf0a03c1e9a1b2
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Zero-task listing conflated with listing failure routes the healthy filing path to the report
+      branch
+    resolution: unresolved
+  - stable_id: d1a6f4b03e97c258
+    category: spec
+    file: em-workflow/scripts/scan-dependencies.py
+    title: Empty task listing falls into the report branch, violating FR12/AC-13
+    resolution: unresolved
+  - stable_id: f2b85d19c4a30e67
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: A single malformed finding title aborts the entire file-tasks batch
+    resolution: unresolved
+  - stable_id: a5e370c8b621d94f
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: NTD filing loop loses partial-progress accounting on mid-batch failure
+    resolution: unresolved
+  - stable_id: 2febcb34aa888ac7
+    category: security
+    file: em-workflow/references/vuln-scanners.yaml
+    title: pip auditing can execute build code from the reviewed project
+    resolution: fixed
+  - stable_id: 90c05c8482cf46f5
+    category: comprehensive
+    file: em-workflow/references/review-phase.md
+    title: The vulnerability site-identity rule names fields no schema-valid finding can carry
+    resolution: fixed
+  - stable_id: 16029fae0ed6921a
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: A changed Python lockfile is never audited; freshly resolved dependencies are audited instead
+    resolution: deferred
+  - stable_id: 20f7f988c9400af6
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: npm / cargo / go jobs always scan the repository root, and only one project per ecosystem
+    resolution: deferred
+  - stable_id: 7de239a2d3ce0706
+    category: comprehensive
+    file: em-workflow/scripts/scan-dependencies.py
+    title: The Go path is validated only against a synthetic fixture; real govulncheck output yields zero
+      findings
+    resolution: deferred
+  - stable_id: 4699cf4f1c58e38d
+    category: spec
+    file: em-workflow/references/vuln-scanners.yaml
+    title: pip args break AC-22 test suite
+    resolution: deferred
+  - stable_id: 2de4840d81ae4517
+    category: architecture
+    file: em-workflow/scripts/scan-dependencies.py
+    title: 'God-module: a 1777-line file absorbs two independently-owned CLI subcommands plus a CVSS implementation,
+      several hand-rolled parsers, and task-system interaction'
+    resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0001
+    files:
+    - tests/test_sca_task_filing.py
+  - task: task0008
+    files:
+    - tests/test_sca_scan_execution.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates: []

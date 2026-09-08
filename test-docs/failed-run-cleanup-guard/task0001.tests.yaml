@@ -1,0 +1,168 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests/test_guardrail_hooks_migration.py::TestPreToolUseBashGuardOrder::test_bash_guards_are_declared_in_the_required_order
+      - tests/test_guardrail_hooks_migration.py::TestPreToolUseBashGuardOrder::test_destructive_guard_is_last
+      - tests/test_guardrail_hooks_migration.py::TestPreToolUseBashGuardOrder::test_bash_guard_still_precedes_the_blanket_allow
+      - tests/test_hooks_registration.py::TestEveryRegisteredHookIsWellFormed::test_every_registered_hook_command_is_well_formed
+    red_confirmed: true
+    red_reason: >
+      Directly observed: temporarily reverted EXPECTED_BASH_GUARD_ORDER to
+      the pre-task0001 4-entry list while keeping the edited (5-entry)
+      hooks.json, and re-ran TestPreToolUseBashGuardOrder. It failed with
+      "Lists differ ... First list contains 1 additional elements ...
+      'failed-run-cleanup-guard.py'", confirming the order assertion
+      genuinely exercises the new registration. Reverted back to the
+      5-entry list afterward; suite green again.
+  AC-2:
+    tests:
+      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_unrelated_command_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_git_status_is_not_classified
+      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_quoted_worktree_remove_mention_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_heredoc_body_mention_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestOnlyTargetShapesAreEvaluated::test_worktree_remove_mentioned_as_an_argument_to_another_command_is_not_an_invocation
+    red_confirmed: true
+    red_reason: >
+      Observed via a deliberately naive stand-in implementation (raw
+      substring match for "worktree remove"/"pr create", no quote or
+      here-document awareness) swapped in for the real script:
+      test_quoted_worktree_remove_mention_yields_no_decision,
+      test_heredoc_body_mention_yields_no_decision and
+      test_worktree_remove_mentioned_as_an_argument_to_another_command_is_not_an_invocation
+      all failed (the naive stub emitted a deny where none is expected,
+      because it matched the target phrase inside quotes / a here-doc body /
+      a grep argument). test_unrelated_command_yields_no_decision and
+      test_git_status_is_not_classified did not go red against either stub
+      tried (a command containing neither "worktree remove" nor "pr create"
+      trivially produces no output from any stub); their coverage is
+      structural (asserting the classifier's word-based gate) rather than
+      independently red-confirmed here — see report unconfirmed_reds.
+  AC-3:
+    tests:
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_worktree_remove_absolute_path_resolves_feature
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_worktree_remove_relative_path_resolves_feature
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_worktree_remove_path_with_trailing_separator_resolves_feature
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_worktree_remove_non_em_workflow_worktree_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_branch_delete_resolves_feature_via_ancestor_walk
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_branch_delete_force_spelling_is_not_classified
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_branch_delete_dash_d_with_force_flag_is_not_classified
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_pr_create_cwd_inside_integration_worktree_resolves_feature
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_pr_create_cwd_below_integration_worktree_resolves_feature
+      - tests/test_failed_run_cleanup_guard.py::TestTargetResolution::test_pr_create_cwd_outside_worktree_yields_no_decision_even_with_head_argument
+    red_confirmed: true
+    red_reason: >
+      Observed against a silent no-op stub (always exit 0, no output):
+      test_worktree_remove_absolute_path_resolves_feature,
+      test_worktree_remove_relative_path_resolves_feature,
+      test_worktree_remove_path_with_trailing_separator_resolves_feature,
+      test_branch_delete_resolves_feature_via_ancestor_walk,
+      test_pr_create_cwd_inside_integration_worktree_resolves_feature and
+      test_pr_create_cwd_below_integration_worktree_resolves_feature all
+      failed with a JSONDecodeError on empty stdout (they expect a deny).
+      test_worktree_remove_non_em_workflow_worktree_yields_no_decision,
+      test_branch_delete_force_spelling_is_not_classified,
+      test_branch_delete_dash_d_with_force_flag_is_not_classified and
+      test_pr_create_cwd_outside_worktree_yields_no_decision_even_with_head_argument
+      stayed green under both stubs tried (they assert silence, and neither
+      stand-in happened to emit a decision for those specific inputs) — not
+      independently red-confirmed; see report unconfirmed_reds.
+  AC-4:
+    tests:
+      - tests/test_failed_run_cleanup_guard.py::TestDenyOnFailedStep::test_worktree_remove_deny_reason_names_feature_and_step
+      - tests/test_failed_run_cleanup_guard.py::TestDenyOnFailedStep::test_branch_delete_deny_reason_names_feature_and_step
+      - tests/test_failed_run_cleanup_guard.py::TestDenyOnFailedStep::test_pr_create_deny_reason_names_feature_and_step
+    red_confirmed: true
+    red_reason: >
+      Observed against the silent no-op stub: all three tests failed
+      (JSONDecodeError on empty stdout, since the stub never emits a
+      decision). Also observed against the naive text-scan stub: all three
+      still failed, but for a different reason — the stub's reason text is
+      "[naive-stub] raw text scan matched 'failed'", which does not contain
+      the feature name or the step id, so assertIn("some-feature", reason)
+      / assertIn("implement", reason) failed. Both runs confirm the
+      assertions are load-bearing.
+  AC-5:
+    tests:
+      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_all_completed_with_design_skipped_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_needs_update_pending_in_progress_only_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_healthy_goal_text_quoting_the_failure_phrase_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_instruction_shaped_natural_language_does_not_influence_the_decision
+      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_missing_workflow_yaml_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_unparsable_workflow_yaml_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_malformed_payload_yields_no_decision
+      - tests/test_failed_run_cleanup_guard.py::TestNoDecisionCases::test_workflow_field_that_is_not_a_list_yields_no_decision
+    red_confirmed: true
+    red_reason: >
+      Observed against the naive text-scan stub (raw substring search for
+      "failed" across the whole workflow.yaml text instead of D3's
+      structured per-step status parse):
+      test_healthy_goal_text_quoting_the_failure_phrase_yields_no_decision
+      and test_instruction_shaped_natural_language_does_not_influence_the_decision
+      both failed (the stub incorrectly denied, because the free-text goal
+      block literally contains the substring "failed").
+      test_missing_workflow_yaml_yields_no_decision and
+      test_malformed_payload_yields_no_decision both failed with an
+      unhandled exception (FileNotFoundError / json.JSONDecodeError,
+      nonzero exit) because the naive stub has no fail-open guard around
+      the file read / payload parse, proving those paths are load-bearing.
+      test_unparsable_workflow_yaml_yields_no_decision failed the same way
+      once the fixture text was written to also literally contain the
+      substring "failed" (confirming the raw-scan antipattern would
+      wrongly deny an unparsable-but-"failed"-mentioning document).
+      test_all_completed_with_design_skipped_yields_no_decision,
+      test_needs_update_pending_in_progress_only_yields_no_decision and
+      test_workflow_field_that_is_not_a_list_yields_no_decision stayed
+      green under both stubs (their fixtures contain no "failed" substring
+      anywhere, so even the naive stub agrees by coincidence) — not
+      independently red-confirmed; see report unconfirmed_reds.
+  AC-6:
+    tests:
+      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_variable_expansion_operand_yields_ask_without_batch
+      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_variable_expansion_operand_yields_deny_with_batch_set
+      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_command_substitution_operand_is_unresolvable
+      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_glob_operand_is_unresolvable
+      - tests/test_failed_run_cleanup_guard.py::TestUnresolvableTargetDemotion::test_dynamic_branch_name_operand_is_unresolvable
+    red_confirmed: true
+    red_reason: >
+      Observed against both the silent stub and the naive text-scan stub:
+      all five tests failed in both runs (JSONDecodeError on empty stdout
+      / no decision emitted), since neither stand-in implements any
+      variable/command-substitution/glob detection at all. Confirms the
+      ask-vs-deny-under-CLAUDE_BATCH assertions genuinely exercise the
+      is_dynamic() + demotion logic.
+  AC-7:
+    tests:
+      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_source_never_imports_or_calls_subprocess
+      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_decide_is_never_invoked_with_allow_in_source
+      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_permission_decision_is_never_allow_across_representative_inputs
+      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_fixture_tree_is_byte_identical_after_a_deny_run
+      - tests/test_failed_run_cleanup_guard.py::TestNeverAllowStaticAndUnmodified::test_fixture_tree_is_byte_identical_after_a_no_decision_run
+    red_confirmed: false
+    red_reason: >
+      Not independently red-confirmed. The two source-inspection tests
+      (no subprocess import, decide() never called with "allow") are
+      static assertions against the real file's own text and are
+      trivially sound by construction rather than something a wrong
+      implementation would plausibly fail; both stand-in stubs used for
+      the other ACs also never call subprocess or emit "allow", so no
+      stub run distinguished a correct from an incorrect implementation
+      here. The tree-unmodified and never-allow-across-inputs tests
+      likewise stayed green under both stubs (neither writes files or
+      emits "allow" either). This is a genuine coverage gap in the
+      red-confirmation exercise, not a claim that the criterion is
+      unimplemented -- see report unconfirmed_reds / notes.
+  D4-parser-unavailable:
+    tests:
+      - tests/test_failed_run_cleanup_guard.py::TestFailsOpenWhenYamlParserUnavailable::test_no_decision_when_yaml_cannot_be_imported
+    red_confirmed: true
+    red_reason: >
+      Observed against the naive text-scan stub (which never imports
+      yaml and so is unaffected by the PYTHONPATH shadow): it read
+      workflow.yaml as raw text and matched "failed", emitting a deny
+      where the real implementation's D4 fail-open path requires silence.
+      Confirms the shadowed-yaml.py subprocess technique in the test
+      genuinely exercises the `except ImportError: yaml = None` branch,
+      not just an accidentally-always-silent path.

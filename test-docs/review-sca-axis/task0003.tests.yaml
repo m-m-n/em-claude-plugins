@@ -1,0 +1,113 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC1R0NotionTaskDispatchProbe.test_probe_names_notion_task_dispatch
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC1R0NotionTaskDispatchProbe.test_probe_glob_path_present
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC1R0NotionTaskDispatchProbe.test_marketplace_segment_not_hard_coded
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC1R0NotionTaskDispatchProbe.test_newest_version_picked_among_several
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC1R0NotionTaskDispatchProbe.test_distinguished_from_step_1_fail_closed_ssot_resolution
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC1R0NotionTaskDispatchProbe.test_negative_result_is_ordinary_supported_state_not_abort
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC1R0NotionTaskDispatchProbe.test_probe_result_is_input_to_filing_path_only
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC1R0NotionTaskDispatchProbe.test_probe_placed_after_probe_litellm_before_load_prior_rounds
+    red_confirmed: true
+    red_reason: >-
+      Before the R0 edit, `.index("Probe notion-task-dispatch")` raised
+      ValueError: substring not found (ordering test), and every assertIn
+      against the probe wording failed with AssertionError: substring not
+      found in the R0 slice (e.g. "Unlike step 1's fail-closed SSOT
+      resolution" not found).
+  AC-2:
+    tests:
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC2R1MandatoryLayerTwoAddsVulnerability.test_license_trigger_paragraph_still_present_unchanged
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC2R1MandatoryLayerTwoAddsVulnerability.test_same_trigger_adds_vulnerability
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC2R1MandatoryLayerTwoAddsVulnerability.test_vendored_source_clause_stays_license_only
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC2R1MandatoryLayerTwoAddsVulnerability.test_license_behaviour_stated_unchanged
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC2R1MandatoryLayerTwoAddsVulnerability.test_vulnerability_never_in_mechanical_floor
+    red_confirmed: true
+    red_reason: >-
+      Before the R1 edit, assertIn("additionally ADDs the `vulnerability`
+      perspective to the selected set", ...) and the sibling assertions
+      failed with AssertionError: substring not found in the R1 slice (the
+      sentence did not exist yet). test_license_trigger_paragraph_still_
+      present_unchanged was already green (it pins pre-existing text) and
+      stayed green after -- it is a non-regression guard, not this AC's own
+      red/green signal.
+  AC-3:
+    tests:
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC3R2Axis2ScriptStep.test_axis_2_served_by_vulnerability_not_task_dispatch
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC3R2Axis2ScriptStep.test_orchestrator_itself_executes_scan_subcommand
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC3R2Axis2ScriptStep.test_no_model_anywhere_on_its_path
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC3R2Axis2ScriptStep.test_reachability_judgement_belongs_to_r3a_evaluator
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC3R2Axis2ScriptStep.test_states_vulnerability_absent_from_reviewers_registry
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC3R2Axis2ScriptStep.test_threshold_lives_in_vuln_scanners_registry_not_restated
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC3R2Axis2ScriptStep.test_reviewers_yaml_has_exactly_six_perspectives_and_no_vulnerability
+    red_confirmed: true
+    red_reason: >-
+      Before the R2 edit, all assertIn checks against the "Axis 2 (`vulnerability`,
+      deterministic, no Task dispatch)" paragraph failed with AssertionError:
+      substring not found (the paragraph did not exist yet).
+      test_reviewers_yaml_has_exactly_six_perspectives_and_no_vulnerability was
+      already green (reviewers.yaml is out of this task's scope and untouched)
+      and stayed green -- included here because it is this AC's registry-side
+      half, not because it went red.
+  AC-4:
+    tests:
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC4SourceToolExcludedFromChainWalk.test_r2_states_source_tool_never_looked_up_in_registry
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC4SourceToolExcludedFromChainWalk.test_r2b_states_no_fallback_hop_consumed
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC4SourceToolExcludedFromChainWalk.test_r2b_states_no_claude_fallback_dispatch_triggered
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC4SourceToolExcludedFromChainWalk.test_r2b_states_never_in_unreviewed_perspectives
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC4SourceToolExcludedFromChainWalk.test_r2b_states_skip_not_a_retryable_chain_walk_candidate
+    red_confirmed: true
+    red_reason: >-
+      Before the R2 / R2b edits, every assertIn here failed with
+      AssertionError: substring not found (e.g. "never triggers the Claude
+      fallback dispatch" absent from the R2b slice).
+  AC-5:
+    tests:
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC5Axis2RunIdentityAndDownstreamPath.test_run_identity_row_values_present_in_r2
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC5Axis2RunIdentityAndDownstreamPath.test_status_enumeration_present
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC5Axis2RunIdentityAndDownstreamPath.test_skipped_axis_2_run_is_ordinary_recorded_skip
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC5Axis2RunIdentityAndDownstreamPath.test_r3a_carries_axis_2_run_like_any_other
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC5Axis2RunIdentityAndDownstreamPath.test_r3b_states_no_special_case_for_source_tool
+    red_confirmed: true
+    red_reason: >-
+      Before the R2/R3a/R3b edits, all assertIn checks failed with
+      AssertionError: substring not found (e.g. 'run_id: "vulnerability#tool"'
+      absent from the R2 slice, "Axis 2 interoperates unchanged" absent from
+      the R3b slice).
+  AC-6:
+    tests:
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC6ReviewProtocolReadOnlyConstraintUnchanged.test_section_matches_pinned_bytes_exactly
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC6ReviewProtocolReadOnlyConstraintUnchanged.test_negative_case_forged_section_does_not_match
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC6NoNewGateIdentifierIntroduced.test_batch_policies_gate_id_set_unchanged
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC6NoNewGateIdentifierIntroduced.test_batch_mode_non_packet_gate_id_set_unchanged
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC6NoNewGateIdentifierIntroduced.test_negative_case_extractor_flags_a_forged_extra_gate_id
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC6NoNewGateIdentifierIntroduced.test_negative_case_table_extractor_flags_a_forged_extra_row
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC6NoNewGateIdentifierIntroduced.test_no_gate_id_declaration_in_new_r0_through_r3b_text
+    red_confirmed: false
+    red_reason: >-
+      This AC is an invariance guard over three files this task never
+      touches (review-protocol.md, batch-policies.yaml, batch-mode.md); the
+      positive assertions (pinned-bytes equality, pinned gate-id-set
+      equality) were true before any implementation existed and stay true
+      after, by construction -- there is no missing behavior to make red.
+      The four negative-case sub-tests (forged Read-only Constraint text,
+      forged extra gate_id key, forged extra Non-packet-gates table row) do
+      exercise real red/green: they prove the comparison/extraction logic
+      can actually discriminate a violation, per task0003.md Test Notes
+      ("A negative case ... is worth one test so the assertion is known to
+      be able to fail") and the precedent in
+      tests/test_review_phase_llm_led.py's TestValidationDetectsRegressions.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by actually running both commands in this worktree rather
+      than by a test module asserting the suite's own outcome (a suite
+      cannot assert its own full-suite result) -- same precedent as
+      test_review_phase_llm_led.py's AC-7. `python3 -m unittest discover -s
+      tests` and `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      both exit 0 in this worktree, recorded in the implementer report.

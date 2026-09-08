@@ -21,7 +21,9 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
     │                  進捗は journal.jsonl（機械書き込み専用の追記ログ）で追跡し、
     │                  workflow.yaml（LLM 管理の要約 SSOT）と役割を分離する
     ├─ review        機械層 (review-rules.yaml × タスク宣言) + 裁量層で観点を動的選択
-    │                  観点スキル注入型の汎用レビュアーを並列起動（条件によりクロスモデル二重化）
+    │                  各観点は primary_chain 先頭の利用可能な非 Claude レビュアーを 1 体だけ起動
+    │                  （チェーン全滅時のみ Claude reviewer にフォールバック）
+    │                  全観点確定後、Opus 評価者が 1 体でラウンド全体を評価 → 次アクションはオーケストレーターが決定
     │                  bounded auto-fix (≤ 3 ループ) → reviews/roundN.yaml に記録
     ├─ verify        VERIFICATION.md に基づく統合検証（ビルド / テスト / E2E）
     └─ retrospect    つまずきの痕跡を retrospect.yaml へ自動収集（判断は手動コマンドで）
@@ -62,11 +64,12 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 | implementation-planner | タスク分割 + domains / complexity / skills 割当。workflow patch を提案（workflow.yaml へ直接書き込まない） | plan-writing |
 | rework-planner | review findings / verify failed_items から追加タスクのみを計画。既存計画は書き換えず、workflow patch（`append_rework`）を提案 | — |
 | implementer | 1 タスク = 1 worktree。TDD 実装からマージ完了まで自走 | worktree-task-workflow, tdd-testing |
-| reviewer | 汎用 Claude レビュアー（観点はスキル注入） | — |
-| codex-reviewer | 汎用 GPT/Codex レビュアー（クロスバリデーション用） | codex-prompting |
+| reviewer | 汎用 Claude レビュアー（フォールバック専用 — 観点の primary_chain が全滅したときだけ起動） | — |
+| codex-reviewer | 汎用 GPT/Codex レビュアー（観点の primary reviewer。`primary_chain` の先頭から選ばれる） | codex-prompting |
 | review-editor | auto-fix 適用専用（Read/Edit のみの最小権限） | — |
+| review-evaluator | 1 ラウンド分の reviewer 出力をまとめて評価する Opus サブエージェント（findings 評価 + `recommended_action` を返す。決定はオーケストレーター） | — |
 
-クロスモデル検証には上記に加えて `vertex-review:vertex-reviewer` も使われる。em-workflow 本体ではなく、別途インストールする `vertex-review` プラグインが提供するエージェントで、`codex exec -p litellm -m <model>` 経由で Vertex AI MaaS と Meta Muse を 1 本の LiteLLM proxy の裏に束ねる。未インストールでも em-workflow は変わらず動作する（後述）。
+`primary_chain` の litellm ハーネス種別のエントリを起動する際は、上記に加えて `vertex-review:vertex-reviewer` も使われる。em-workflow 本体ではなく、別途インストールする `vertex-review` プラグインが提供するエージェントで、`codex exec -p litellm -m <model>` 経由で Vertex AI MaaS と Meta Muse を 1 本の LiteLLM proxy の裏に束ねる。未インストールでもチェーンの次エントリに進むだけで、em-workflow は変わらず動作する（後述）。
 | gitignore-guard | implement 前処理。`.claude/worktrees/` の ignore を確認・追記（haiku） | — |
 | git-setup-guard | develop の Step 0。gitleaks の存在確認 + gitleaks pre-commit hook の冪等設置。gitleaks 不在なら中断を報告（haiku） | — |
 
@@ -80,16 +83,19 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 1. **機械層**: workflow.yaml の tasks 宣言（domains / complexity）だけを入力に `references/review-rules.yaml` を決定的に評価し、必須観点セット（フロア）を出す。comprehensive は常時、spec は SDD 経由なら常時。
 2. **裁量層**: オーケストレーターが統合 diff を見て観点を**追加のみ**できる（削除不可）。追加理由は review plan に記録され、retrospect でルール表育成の材料になる。diff が依存マニフェスト / lockfile に触れる、または vendored コードを追加する場合の `license` 観点の追加は必須（license は裁量層でのみ選択される）。
 
-クロスモデル検証は強度の軸として分離: complexity high のタスクを含む、または security が選ばれた場合に発動。選択された各観点は `reviewers.yaml` の `cross_validation` チェーンのうち利用可能な最初のエントリで claude + それ で二重実行される。
+選択された各観点には、その観点の `primary_chain`（`reviewers.yaml`）先頭から利用可能な最初のエントリを非 Claude レビュアーとして 1 体だけ起動する。チェーンの全エントリが利用不可のときだけ、その観点は Claude 汎用レビュアーにフォールバックする。両者は排他 — Claude レビュアーが非 Claude レビュアーと並行に同一観点を二重実行することはない。全観点の結果が確定した後、Opus 評価者サブエージェントが 1 体、ラウンド全体を横断評価する。評価結果（`recommended_action` を含む）は次アクション（auto-fix / もう1ラウンド / rework / 完了）の参考情報であり、決定は常にオーケストレーターが行う。
 
 ハーネス（どのモデルが存在し、どう到達するか）は vertex-review 側の責務、**観点ごとのモデル選択は em-workflow 側の責務**。`reviewers.yaml` が渡した `model` をレビュアーはそのまま `-m` に流す。
 
+### primary-reviewer チェーン表
+
 | 観点 | チェーン（1st → 2nd → 3rd） |
 |------|------------------------------|
-| security | codex → litellm/muse-spark |
-| performance / spec | litellm/vertex-deepseek-v3.2 → litellm/muse-spark → codex |
-| architecture | litellm/vertex-glm-5 → litellm/muse-spark → codex |
-| comprehensive / license | （なし。Claude 専用） |
+| security | codex → litellm `muse-spark` |
+| performance / spec | litellm `muse-spark` → litellm `vertex-glm-5.2` → codex |
+| architecture | litellm `vertex-glm-5.2` → litellm `muse-spark` → codex |
+| comprehensive | codex → litellm `vertex-glm-5.2` → litellm `muse-spark` |
+| license | codex → litellm `vertex-glm-5.2` → litellm `muse-spark` |
 
 R2b はスキップ理由が retryable なときだけチェーンを進める。`rate_limited` は次のエントリへ、`budget_exhausted` / `harness_unavailable` は**別ハーネス**の次エントリへ飛ぶ（litellm のエントリは仮想キー 1 本の月次予算を共有するため、モデルを変えても同じく落ちる）。フォールバックは 1 観点につき最大 2 ホップ。
 
@@ -98,7 +104,7 @@ R2b はスキップ理由が retryable なときだけチェーンを進める�
 - 最大並列数（`max_parallel_implementers`、デフォルト 6）を上限に、完了通知駆動のワークキューとして全タスクを並列実行する（一括起動してまとめて待ち合わせるチャンク方式は廃止）。タスク間の順序制御は持たず、タスク間で使うコンポーネントの契約は IMPLEMENTATION.md に固定して両側が契約に対して独立に実装する。
 - 「実装完了 = 親ブランチへのマージ完了」。implementer 自身が `scripts/merge-task.sh`（flock 排他 + `merge-tree`/`commit-tree`/`update-ref` の checkout 不要マージ、exit code 0=完了 / 1=コンフリクト / 2=エラー）でマージまで行う。
 - files の重複は許容し、コンフリクトは通常パスとして扱う: 親側採用（`git checkout --theirs`）で本人が再実装 → 再マージ（1 タスクにつき最大 3 サイクル、超過は failed 報告）。
-- 進捗の実体は `journal.jsonl`（`launched`/`merged`/`failed` を機械が追記する raw ログ、追記専用で削除されない）。`workflow.yaml` は LLM が管理する要約 SSOT であり、スクリプト・hook が書き込むことはない。同ループの規律違反（起動漏れ・二重起動・失敗の見逃し）は、複数のフェイルオープンなガード hook が機械的に検知するネットとして働く（一覧・詳細: `references/implement-phase.md`）。オーケストレーターが `TaskStop` で implementer を明示的に停止させた場合も、その停止は journal に `failed` イベントとして記録される。
+- 進捗の実体は `journal.jsonl`（`launched`/`merged`/`failed` を機械が追記する raw ログ、追記専用で削除されない）。`workflow.yaml` は LLM が管理する要約 SSOT であり、スクリプト・hook が書き込むことはない。同ループの規律違反（起動漏れ・二重起動・失敗の見逃し）は、複数のフェイルオープンなガード hook が機械的に検知するネットとして働く（一覧・詳細: `references/implement-phase.md`）。オーケストレーターが `TaskStop` で implementer を明示的に停止させた場合も、その停止は journal に `failed` イベントとして記録される。セッション消失を証明できた `launched` 残留（orphaned）だけは例外的にオーケストレーターがヘルパー経由で `failed` を追記する（詳細: `references/implement-phase.md` Step I.2.b の Recovery / Residual）。
 
 ## レビュー記録と自己改善
 
@@ -125,10 +131,11 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 | `hooks/gitleaks-precommit.sh` | PreToolUse(Bash) | `git commit` を含むコマンドの前に staged / unstaged の diff と、git の追跡対象外の新規ファイル（新規 `.env` 等）を gitleaks でスキャンし、検出したらコミットをブロックする |
 | `hooks/kill-guard.py` | PreToolUse(Bash) | `kill` / `pkill` / `killall` の対象プロセスを解決し、claude プロセスの祖先なら常に拒否、子孫なら許可、それ以外は確認に回す（無人実行では拒否に降格） |
 | `hooks/bash_guard.py` | PreToolUse(Bash) | 前節のコマンド実行ガード（workflow.yaml 由来のシェル文字列のみ判断） |
+| `hooks/failed-run-cleanup-guard.py` | PreToolUse(Bash) | 対象 feature の workflow.yaml が failed ステップを含む em-workflow run に対する worktree 削除・integration ブランチ削除・pull request 作成を拒否し、無人実行が報告して停止できるよう理由を返す。対象を解決できない場合は確認に回り、無人実行では拒否に降格する |
 | `hooks/destructive-guard.py` | PreToolUse(Bash) | 破壊的コマンドの静的ブロックリスト。**マッチしないコマンドは `allow` で返す** |
 | `hooks/gitleaks-write-guard.sh` | PreToolUse(Write\|Edit\|MultiEdit) | 書き込む内容を gitleaks でスキャンし、シークレットを含むなら書き込みをブロックする |
 
-PreToolUse(Bash) の 4 本は `hooks.json` の配列順（gitleaks → kill-guard → bash_guard → destructive-guard）で実行される。`destructive-guard.py` は広域 `allow` を返すため必ず最後に置く — 先に allow が確定すると `bash_guard.py` の承認ゲートが働くべき経路を潰しかねない。
+PreToolUse(Bash) の 5 本は `hooks.json` の配列順（gitleaks → kill-guard → bash_guard → failed-run-cleanup-guard → destructive-guard）で実行される。`destructive-guard.py` は広域 `allow` を返すため必ず最後に置く — 先に allow が確定すると `bash_guard.py` の承認ゲートが働くべき経路を潰しかねない。
 
 gitleaks 系 2 本はバイナリを `command -v gitleaks` → `$HOME/.local/share/mise/shims/gitleaks` の順で解決し、どちらにも無ければスキャンせず通す（fail-open）。gitleaks 未インストール環境で全コミット・全書き込みがブロックされるのを避けるため。develop の Step 0（git-setup ゲート）が gitleaks 不在で workflow ごと中断するのとは判断が異なる — この hook は develop の外でも動くため。
 
@@ -152,5 +159,5 @@ gitleaks 系 2 本はバイナリを `command -v gitleaks` → `$HOME/.local/sha
 - jq — 同梱の gitleaks ガード hook 2 本が hook 入力の JSON を読むのに使う。無い環境ではスキャンされずに素通りする（fail-open）
 - python3 — コマンド実行ガードの hook。無い環境では hook が非ブロッキングで抜け、コマンドごとの AskUserQuestion フォールバックゲートに切り替わる
 - python3 + PyYAML — 同梱の検証スクリプト（`scripts/validate-worker-output.py` / `scripts/check-plugin-invariants.py`）が使う実行時依存。テストコードはこの依存を使わず標準ライブラリのみで動く（`test/README.md`）。環境によっては `python3` の非対話実行に `Bash(python3:*)` 権限エントリの追加が必要
-- Codex CLI（任意 — ただし litellm ハーネスも `codex exec` を使うため、無ければクロスバリデーションは全滅してクリーンにスキップされる）
-- `vertex-review` プラグイン + LiteLLM ハーネス（任意 — 別リポジトリからインストールする独立プラグイン。`LITELLM_API_KEY` と `~/.codex/litellm.config.toml` が揃って初めて `litellm_available` になる。無ければ全観点がチェーン末尾の Codex エントリに落ちる）
+- Codex CLI（任意 — ただし litellm ハーネスも `codex exec` を使うため、無ければそれを使うチェーンエントリが利用不可になる。観点の `primary_chain` が全滅したときはその観点だけ Claude フォールバックが動き、em-workflow はそのまま最後まで走る）
+- `vertex-review` プラグイン + LiteLLM ハーネス（任意 — 別リポジトリからインストールする独立プラグイン。`LITELLM_API_KEY` と `~/.codex/litellm.config.toml` が揃って初めて `litellm_available` になる。無ければ litellm 種別のチェーンエントリが利用不可になる。観点の `primary_chain` が全滅したときはその観点だけ Claude フォールバックが動き、em-workflow はそのまま最後まで走る）

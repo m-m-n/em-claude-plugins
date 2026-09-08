@@ -1,0 +1,127 @@
+schema_version: 1
+feature: batch-codex-autonomous-decisions
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 54edf5562acb76072e3256fe22569693285823bc
+last_input_digest: sha256:012a9f92f73da5fdeccac39e683b597cfe1e521b3e096e2a6cd67b479ec20bac
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-09-07T08:57:00+09:00"
+    questions:
+      - question_id: requirement.escalation-subagent
+        status: answered
+      - question_id: requirement.backend-fallback-chain
+        status: answered
+      - question_id: requirement.classification-gate-scope
+        status: answered
+      - question_id: requirement.on-unanswered-block-coupling
+        status: answered
+      - question_id: requirement.gate-fail-closed-terminal-reason
+        status: answered
+      - question_id: requirement.notion-reporting-scope
+        status: answered
+      - question_id: requirement.verification-fixture-shape
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  requirement.escalation-subagent:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-07T09:05:00+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: [keep_per_packet_ceiling]
+    freeform: null
+    normalized_answer: "Keep the existing per-packet five-turn ceiling; when the consultation ends with any question still unmapped, escalate all of them together in one Opus subagent dispatch."
+    resolution_note: "codex_consulted: true; run_codex_exec.sh readonly returned exit 1 with \"You've hit your usage limit ... try again at 11:32 AM\" on two consecutive attempts, so no Codex suggestion was produced to map onto an option. No GLM5.2/Vertex fallback profile is configured in this environment. Per references/question-resolution.md's unlisted-gate fallback the minimum-side-effect option on the success path was taken; the mapping judgement stayed with the orchestrator. Smallest change and the only option that preserves question-resolution.md:382-388's stated launch bound (a 32-question packet costs at most five wrapper launches)."
+  requirement.backend-fallback-chain:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-07T09:05:00+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: [wrapper_owns_chain]
+    freeform: null
+    normalized_answer: "The GPT -> GLM5.2 (Vertex AI) -> Muse Spark chain lives inside the wrapper script, which detects the rate limit / Vertex error and switches provider transparently; question-resolution.md only states that the wrapper may answer from a fallback provider."
+    resolution_note: "codex_consulted: true; run_codex_exec.sh readonly returned exit 1 with \"You've hit your usage limit ... try again at 11:32 AM\" on two consecutive attempts, so no Codex suggestion was produced to map onto an option. No GLM5.2/Vertex fallback profile is configured in this environment. Per references/question-resolution.md's unlisted-gate fallback the minimum-side-effect option on the success path was taken; the mapping judgement stayed with the orchestrator. Keeps the orchestrator protocol (SSOT) unchanged and confines provider mechanics to one place. Deferring the chain was rejected because the task's constraints name it explicitly, and this very run hit the GPT usage limit the chain exists to survive."
+  requirement.classification-gate-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-07T09:05:00+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: [both_arms_except_membership]
+    freeform: null
+    normalized_answer: "Relax the Classification gate's direction-2 category/irreversibility check in batch on the same terms as the Fail-closed classification, but leave its direction-1 origin-membership and malformed-pairing aborts untouched."
+    resolution_note: "codex_consulted: true; run_codex_exec.sh readonly returned exit 1 with \"You've hit your usage limit ... try again at 11:32 AM\" on two consecutive attempts, so no Codex suggestion was produced to map onto an option. No GLM5.2/Vertex fallback profile is configured in this environment. Per references/question-resolution.md's unlisted-gate fallback the minimum-side-effect option on the success path was taken; the mapping judgement stayed with the orchestrator. Leaving the parallel arm alone would let a batch run still abort on exactly the class of question this feature exists to unblock whenever it arrives through the rework route. Direction 1 is an integrity check on orchestrator-held data, not a judgement call, so it stays fail-closed; naming that split explicitly removes the ambiguity the plain both_arms wording leaves."
+  requirement.on-unanswered-block-coupling:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-07T09:05:00+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: [keep_constraint_reword]
+    freeform: null
+    normalized_answer: "Keep question-packet-schema.md's on_unanswered: block constraint and validate-worker-output.py's BLOCKING_REQUIRED_CATEGORIES check unchanged; reword only their rationale."
+    resolution_note: "codex_consulted: true; run_codex_exec.sh readonly returned exit 1 with \"You've hit your usage limit ... try again at 11:32 AM\" on two consecutive attempts, so no Codex suggestion was produced to map onto an option. No GLM5.2/Vertex fallback profile is configured in this environment. Per references/question-resolution.md's unlisted-gate fallback the minimum-side-effect option on the success path was taken; the mapping judgement stayed with the orchestrator. In batch, `block` now routes into the unlisted-gate fallback's minimum-side-effect branch instead of an abort, which is what the feature wants, so no validator or fixture change is needed and interactive behaviour is untouched."
+  requirement.gate-fail-closed-terminal-reason:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-07T09:05:00+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: [retain_narrowed]
+    freeform: null
+    normalized_answer: "Keep the gate_fail_closed reason code and its stop-point row, narrowing the coverage note to the aborts that survive in batch (the Classification gate's origin-membership and malformed-pairing aborts, and interactive's own aborts)."
+    resolution_note: "codex_consulted: true; run_codex_exec.sh readonly returned exit 1 with \"You've hit your usage limit ... try again at 11:32 AM\" on two consecutive attempts, so no Codex suggestion was produced to map onto an option. No GLM5.2/Vertex fallback profile is configured in this environment. Per references/question-resolution.md's unlisted-gate fallback the minimum-side-effect option on the success path was taken; the mapping judgement stayed with the orchestrator. The closed set of eleven codes stays intact so no consumer pinned to it breaks, while the stop-point coverage table stops asserting a stop point batch no longer reaches."
+  requirement.notion-reporting-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-07T09:05:00+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: [report_only]
+    freeform: null
+    normalized_answer: "em-workflow's obligation ends at batch-mode.md's Reporting section: the autonomous resolutions are added to the required report contents. Relaying them to Notion stays the external task-management service's job."
+    resolution_note: "codex_consulted: true; run_codex_exec.sh readonly returned exit 1 with \"You've hit your usage limit ... try again at 11:32 AM\" on two consecutive attempts, so no Codex suggestion was produced to map onto an option. No GLM5.2/Vertex fallback profile is configured in this environment. Per references/question-resolution.md's unlisted-gate fallback the minimum-side-effect option on the success path was taken; the mapping judgement stayed with the orchestrator. batch-mode.md:126-133 already routes every audit item to the external service rather than to a named tool; an explicit Notion step would add an external integration em-workflow does not document."
+  requirement.verification-fixture-shape:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-07T09:05:00+09:00"
+    source: batch-safe-default
+    answer_mode: select_or_freeform
+    selected_option_ids: [fixture_plus_validator]
+    freeform: null
+    normalized_answer: "Add a question-packet fixture carrying reversible: false under references/fixtures/ and assert validate-worker-output.py accepts it, alongside document-pin assertions that the rewritten documents state the batch route and retain the interactive abort."
+    resolution_note: "codex_consulted: true; run_codex_exec.sh readonly returned exit 1 with \"You've hit your usage limit ... try again at 11:32 AM\" on two consecutive attempts, so no Codex suggestion was produced to map onto an option. No GLM5.2/Vertex fallback profile is configured in this environment. Per references/question-resolution.md's unlisted-gate fallback the minimum-side-effect option on the success path was taken; the mapping judgement stayed with the orchestrator. The acceptance criterion names a fixture explicitly, and references/fixtures/ already exists for exactly this purpose; the document-pin half covers the batch/interactive divergence, which no executable resolver exists to test directly."
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-07T09:05:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "Adopt requirements-analyst's design_step_recommendation (skip the design step) without asking the user."
+    resolution_note: "references/batch-policies.yaml's create-spec.design-step entry: action: select, option_id: decide_autonomously."
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: sha256:4ea197269d7d6c3ab62bb4a577834e9f47aacbc77229bb84e70e6897dfc224c1
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:0292b545988570f2ce7c9dcb2c0346c436fb03244d7f6ff7aa66b45d70f7a5ac
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:012a9f92f73da5fdeccac39e683b597cfe1e521b3e096e2a6cd67b479ec20bac
+    output_digest: null
+artifacts:
+  - path: feature-docs/batch-codex-autonomous-decisions/REQUIREMENTS.md
+    sha256: sha256:ca97a169363bcba5d82e1b8beb911bb621bfef3fc285a27e454805a9321e3f21
+    produced_by: create-spec-run-0003
+  - path: feature-docs/batch-codex-autonomous-decisions/SPEC.md
+    sha256: sha256:ed29603942a35d02535d2349c093439ec6cd9a531d94064692e4be297c9d902f
+    produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: sha256:9056b778d2e7f065fc3df31687f6ca9e32d3281e7e6cf71ddba5167fa7c09bd1
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
