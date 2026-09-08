@@ -1,0 +1,122 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_states_muse_spark_selected_entry_trigger
+      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_names_mechanical_check_distinctly
+      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_names_per_dispatch_judgment_distinctly
+      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_states_chain_never_edited_and_single_reading
+      - tests.test_contributor_tier_criteria.TestAC1ReadMappingRulePresentInAllFourDocuments.test_mechanical_and_per_dispatch_checks_are_textually_distinct
+    red_confirmed: true
+    red_reason: >-
+      Before the reviewers.yaml/review-phase.md edits, none of the four
+      documents contained the read-mapping-rule prose; assertIn raised
+      AssertionError (target phrase not found in the normalized document
+      text) for all four documents in each of these tests.
+  AC-2:
+    tests:
+      - tests.test_contributor_tier_criteria.TestAC2SubstitutionExceptionInReviewPhaseDocs.test_exception_recorded_next_to_prohibition
+      - tests.test_contributor_tier_criteria.TestAC2SubstitutionExceptionInReviewPhaseDocs.test_exception_points_at_read_mapping_rule
+      - tests.test_contributor_tier_criteria.TestAC2SubstitutionExceptionInReviewPhaseDocs.test_exception_states_single_permitted_reading_not_free_choice
+      - tests.test_contributor_tier_criteria.TestAC2SubstitutionExceptionInReviewPhaseDocs.test_exception_states_judgment_made_before_dispatch
+    red_confirmed: true
+    red_reason: >-
+      Before the review-phase.md edits, "Exception to the prohibition
+      above" and the before-dispatch/never-decided-inside-the-reviewer
+      phrasing were absent from both em-workflow/references/review-phase.md
+      and em-review/references/review-phase.md; text.index() raised
+      ValueError (substring not found).
+  AC-3:
+    tests:
+      - tests.test_contributor_tier_criteria.TestAC3OneVersusThreeStructure.test_headings_are_distinct_and_ordered
+      - tests.test_contributor_tier_criteria.TestAC3OneVersusThreeStructure.test_exactly_one_do_not_use_bullet
+      - tests.test_contributor_tier_criteria.TestAC3OneVersusThreeStructure.test_exactly_three_outside_scope_bullets
+      - tests.test_contributor_tier_criteria.TestAC3OneVersusThreeStructure.test_never_merged_or_interleaved
+    red_confirmed: true
+    red_reason: >-
+      Before the edits, none of the four documents contained the
+      "Per-dispatch: do not use" / "Outside the scope of consent" headings
+      at all; text.index() raised ValueError (heading not found) for every
+      document in every one of these tests.
+  AC-4:
+    tests:
+      - tests.test_contributor_tier_criteria.TestAC4PresentStateVisibilityLicenseCheck.test_present_state_dispatch_time_phrasing_positive
+      - tests.test_contributor_tier_criteria.TestAC4PresentStateVisibilityLicenseCheck.test_no_comparison_against_a_recorded_value
+    red_confirmed: true
+    red_reason: >-
+      The positive half (test_present_state_dispatch_time_phrasing_positive)
+      failed before the edits: assertIn raised AssertionError because the
+      present-state visibility/license sentence did not exist yet in any of
+      the four documents -- watched red, then made green by the edit. The
+      negative half (test_no_comparison_against_a_recorded_value) was
+      vacuously true both before and after: the forbidden
+      recorded-value-comparison phrases were absent from all four documents
+      before this task touched them (there was no visibility/license
+      sentence at all yet, forbidden or otherwise) and stayed absent after,
+      by construction of the sentence actually written. It is a regression
+      guard rather than a criterion this task's own change could drive red
+      first; confirmed instead by inspection that the phrase list
+      (FORBIDDEN_RECORDED_VALUE_COMPARISONS) matches real candidate
+      phrasing the plan explicitly forbids (IMPLEMENTATION.md D-D) and by
+      the AC-5-style temporary-corruption check applied to the sibling
+      regression guards below.
+  AC-5:
+    tests:
+      - tests.test_contributor_tier_criteria.TestAC5ChainImmutability.test_em_review_chains_match_literal_pin
+      - tests.test_contributor_tier_criteria.TestAC5ChainImmutability.test_em_review_every_chain_non_empty_or_deliberately_empty
+      - tests.test_contributor_tier_criteria.TestAC5ChainImmutability.test_no_chain_entry_names_the_contributor_tier
+      - tests.test_contributor_tier_criteria.TestAC5ChainImmutability.test_em_workflow_registry_still_has_no_cross_validation_literal
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_chains_match_pinned_contract
+    red_confirmed: true
+    red_reason: >-
+      AC-5 is a "stays unchanged" invariant with no implementation step of
+      its own to drive it red/green through normal TDD (task0003 never
+      edits a chain value). Instead, red was confirmed by deliberately
+      corrupting em-review/references/reviewers.yaml's security chain
+      (changed its litellm entry's model from muse-spark to
+      muse-spark-contributor) after finishing the real edits, re-running
+      TestAC5ChainImmutability, and observing
+      test_em_review_chains_match_literal_pin and
+      test_no_chain_entry_names_the_contributor_tier both fail with the
+      expected AssertionError; the file was then restored to its exact
+      prior content (verified via `git diff --stat` showing only the
+      original +25-line addition) and the full suite re-run green
+      (4176/4176) before this record was written. em-workflow's
+      primary_chain pin (test_chains_match_pinned_contract) is
+      pre-existing coverage from tests/test_reviewers_primary_chains.py,
+      already red/green-proven by that module's own authorship (task0002),
+      not repeated here per this task's Test Notes.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No occurrence of "AskUserQuestion" was added by this task's prose.
+      Verified manually, not by an assertion inside
+      tests/test_contributor_tier_criteria.py: AC-7 explicitly scopes that
+      module to mechanically asserting AC-1 through AC-5 only, and the
+      interactive-question budget's own pinned-baseline test is task0005's
+      deliverable (IMPLEMENTATION.md D-F), not this task's. Verification
+      command and result: `grep -c AskUserQuestion` against both
+      review-phase.md files and both reviewers.yaml files, before vs. after
+      this task's edits (via `git show HEAD:<path> | grep -c
+      AskUserQuestion`) -- em-workflow/references/review-phase.md stayed at
+      9, em-review/references/review-phase.md stayed at 4, both
+      reviewers.yaml files stayed at 0. Not red-confirmable by construction:
+      the criterion is "no new occurrence", and the prose was written from
+      the start without the term, so there was never a red state to
+      observe.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Self-referential (a test module cannot assert its own completeness
+      or its own successful collection). Verified by actually running the
+      commands this criterion names: `python3 -m unittest discover -s
+      tests` collects and passes all 19 tests in
+      tests/test_contributor_tier_criteria.py alongside the rest of the
+      suite (4176/4176 total, up from a 4157-test baseline with 0
+      baseline failures); the module imports only `os`, `re` and
+      `unittest` from the standard library (verified by reading its own
+      import block).
