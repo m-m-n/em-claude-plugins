@@ -1,0 +1,112 @@
+task_id: task0006
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_muse_guard.TestInvocationSpellingsDenyWithNoConsent.test_every_spelling_denies_from_both_copies_and_store_stays_absent
+      - tests.test_muse_guard.TestNoDecisionCases.test_near_miss_tier_spellings_never_match_via_substring
+    red_confirmed: true
+    red_reason: >
+      Before implementation, the 9 new spelling subTests added to
+      INVOCATION_COMMAND_TEMPLATES (long-separate-bare/-single-quoted/-double-quoted,
+      short-equals-bare/-single-quoted/-double-quoted, short-attached-bare/-single-quoted/-double-quoted)
+      produced empty stdout for both copies instead of a deny payload, failing
+      assert_deny's json.loads with "Expecting value: line 1 column 1 (char 0)".
+      test_near_miss_tier_spellings_never_match_via_substring already passed under
+      the pre-existing implementation (exact equality was already correct for the
+      two previously-recognized shapes); it is carried here as boundary-safety
+      coverage for the newly added shapes, not as independently red-confirmed.
+  AC-2:
+    tests:
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_shell_command_string_argument_carrying_only_a_mention_is_undecided
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_parenthesized_command_substitution_carrying_only_a_mention_is_undecided
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_backtick_command_substitution_carrying_only_a_mention_is_undecided
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_argument_list_expanding_wrapper_carrying_only_a_mention_is_undecided
+      - tests.test_muse_guard.TestNoDecisionCases.test_plain_tier_in_every_spelling_is_never_denied
+    red_confirmed: false
+    red_reason: >
+      These assert "no decision", which the pre-implementation guard already
+      produced for every unrecognized construct (fail-open default is the
+      starting state, not something a red run can prove wrong) -- there is no
+      way to make a "must stay undecided" assertion fail informatively before
+      the recognizer for that construct exists. The floor is verified as
+      UNCHANGED by construction: these pass before and after this task's edit.
+      The AC's positive half -- the codex-CLI restriction actually rejecting a
+      widened command word -- is exercised together with its deny counterpart
+      in AC-3, which IS red-confirmed.
+  AC-3:
+    tests:
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_shell_command_string_argument_carries_an_invocation
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_parenthesized_command_substitution_carries_an_invocation
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_backtick_command_substitution_carries_an_invocation
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_argument_list_expanding_wrapper_carries_an_invocation
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_recursion_bound_is_two_levels_and_a_third_level_yields_no_decision
+    red_confirmed: true
+    red_reason: >
+      Before implementation, the shell `-c` argument, parenthesized command
+      substitution, backtick command substitution, and xargs-wrapped invocation
+      cases all produced empty stdout instead of a deny payload (same
+      json.loads-on-empty-string failure as AC-1), confirmed by the ERROR
+      entries for test_shell_command_string_argument_carries_an_invocation,
+      test_parenthesized_command_substitution_carries_an_invocation,
+      test_backtick_command_substitution_carries_an_invocation,
+      test_argument_list_expanding_wrapper_carries_an_invocation, and the
+      two-level nesting case inside test_recursion_bound_... in the
+      pre-implementation run. The three-level (one-past-bound) branch of the
+      recursion-bound test already produced no decision before implementation
+      too (nothing was recognized as nested at all), which is the same
+      fail-open starting state described under AC-2.
+  AC-4:
+    tests:
+      - tests.test_muse_guard.TestNoDecisionCases.test_heredoc_header_look_alike_inside_a_quoted_string_does_not_hide_a_real_invocation
+      - tests.test_muse_guard.TestNoDecisionCases.test_heredoc_body_is_not_an_invocation
+      - tests.test_muse_guard.TestNoDecisionCases.test_invocation_after_a_genuine_heredocs_terminator_still_denies
+    red_confirmed: true
+    red_reason: >
+      test_heredoc_header_look_alike_inside_a_quoted_string_does_not_hide_a_real_invocation
+      failed before implementation (empty stdout instead of deny) because the
+      old quote-unaware heredoc regex matched the quoted `<<EOF` look-alike and
+      stripped the real invocation on the next line along with it -- this is
+      exactly the bug this task closes. test_heredoc_body_is_not_an_invocation
+      is a pre-existing task0001 test (unchanged, still green) confirming the
+      genuine-heredoc floor did not move.
+      test_invocation_after_a_genuine_heredocs_terminator_still_denies already
+      passed under the pre-existing implementation (the old regex's
+      non-greedy body match already stopped at the first real terminator,
+      leaving text after it untouched) -- it is carried here as the paired
+      contrast the task plan's Test Notes call for, not as independently
+      red-confirmed.
+  AC-5:
+    tests:
+      - tests.test_muse_guard.TestBothCopiesShape.test_both_copies_exist
+      - tests.test_muse_guard.TestBothCopiesShape.test_both_copies_are_executable
+      - tests.test_muse_guard.TestBothCopiesShape.test_copies_differ_in_exactly_one_line_the_plugin_slug
+      - tests.test_muse_guard.TestSourceHygiene.test_neither_plugins_hooks_tests_directory_gained_a_file
+    red_confirmed: false
+    red_reason: >
+      These are structural/hygiene checks pre-existing from task0001 that this
+      task must not break, not new behavior this task introduces -- there is no
+      red state to observe short of intentionally breaking copy parity, which
+      would defeat the purpose of the check. Parity was instead verified by
+      construction: em-review/hooks/muse_guard.py was produced by `cp` from the
+      updated em-workflow copy followed by a single `sed` edit of the
+      PLUGIN_SLUG line, and `diff` was inspected manually to confirm exactly
+      one differing line before the suite was run.
+  AC-6:
+    tests:
+      - tests.test_muse_guard.TestSourceHygiene.test_no_ask_decision_literal
+      - tests.test_muse_guard.TestSourceHygiene.test_no_allow_decision_literal
+      - tests.test_muse_guard.TestSourceHygiene.test_the_only_subprocess_launched_is_the_git_call
+      - tests.test_muse_guard.TestNonInvocationShortCircuit.test_non_invocation_never_derives_a_project_key_or_touches_the_store
+      - tests.test_muse_guard.TestNonInvocationShortCircuit.test_an_invocation_does_derive_a_project_key_and_read_the_store
+      - tests.test_muse_guard.TestLatencyStaysWellUnderTheRegisteredTimeout.test_a_representative_sample_of_hook_calls_completes_quickly
+    red_confirmed: false
+    red_reason: >
+      These verify invariants this task must NOT change (no ask/allow literal,
+      exactly one subprocess call site, the pre-store-read short circuit, the
+      latency budget) -- they were already true before this task's edits and
+      are re-run unchanged as a regression guard, not as new red-then-green
+      evidence. `python3 -m unittest discover -s tests` passing in full (see
+      baseline_failures / final_failures above) is itself part of this
+      criterion's verifiable outcome and was run directly rather than inferred.
