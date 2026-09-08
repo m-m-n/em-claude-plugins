@@ -1,0 +1,289 @@
+schema_version: 1
+feature: muse-spark-contributor-consent
+created: 2026-09-08
+base_branch: main
+goal: |
+  # muse-spark-contributor の同意ゲートを実装する
+
+  ## やりたいこと（必須）
+  `muse-spark-contributor`（Meta Contributor tier）をレビューで使えるようにする。プロジェクト単位の同意ゲートを設け、同意済みプロジェクトでは `muse-spark` を `muse-spark-contributor` に読み替える。
+  ## 背景・なぜ（必須）
+  `muse-spark`（Standard, \$1.25 / \$4.25）と `muse-spark-contributor`（Contributor, \$0.10 / \$0.20）は同一モデルで tier だけが違う。Contributor はプロンプトと生成結果が Meta の学習に使われる代わりに単価が約 1/10。
+  現行ルール（vertex-review の `litellm-harness` SKILL.md）は「レビューはプライベートなコードを送るため Standard を使う。Contributor をレビューに使ってはいけない」と全面禁止している。だが公開して構わないリポジトリなら学習提供を受け入れられるケースがあり、その場合にコストを 1/10 にできる。
+  動機はコスト削減のみ。レート制限の分散は動機にならない（同一モデルの tier 違いで混雑を共有すると見るのが自然。仮にレートが別でも、contributor の可否は同意の有無で決まるため `rate_limited` のフォールバック先にできない）。
+  設計判断の全経緯は `tmp/discussion-muse-spark-contributor-policy.md` にある。以下はその決定事項の要約。
+  ### 同意ストア
+  - プロジェクトルートの目印ファイル（`.muse-spark` 等）は**採用しない**。clone したリポジトリが同梱できてしまい、リポジトリの作者が「あなたのコードを Meta の学習に提供する」判断を勝手に下せる穴になる。`command-execution-protocol.md:36` がコマンド承認ストアをリポジトリ外に置いている理由と同じ。
+  - リポジトリ外のユーザー所有ストアにする（`~/.claude/em-workflow/muse-consent.json`）。
+  - プロジェクトのキーは `git rev-parse --path-format=absolute --git-common-dir`。worktree 間で同一になるため task worktree からもそのまま効く。
+  ### 責務の分割
+  すべて em-workflow / em-review 側に置く。**vertex-review は無改造**。
+  `codex exec -p litellm` を呼ぶ経路は両プラグインの review フェーズだけで、グローバル skills / agents / rules に litellm を叩くものは存在しない（調査済み）。強制も `destructive-guard.py` / `bash_guard.py` と同じく PreToolUse(Bash) でグローバルに発火するので、プラグインが入っていれば経路を問わず捕まえられる。
+  \| 層 \| 中身 \|
+  \|---\|---\|
+  \| 判断（LLM） \| 同意状態を取得し、chain のどのエントリを dispatch するか決める。都度判断もここ \|
+  \| 強制（機械的） \| `muse_guard.py` の PreToolUse hook が、同意の無い contributor 呼び出しを deny \|
+  \| 同意の付与 \| `contributor-consent` スキル。ユーザーが手動実行 \|
+  `command-execution-protocol.md:15` の "the LLM proposes, the hook disposes" と同じアーキテクチャ。判断と強制は散らしているのではなく層が違う。
+  ### 同意スキル
+  - 名前は `contributor-consent`。実体は診断ではなく「このリポジトリのコードを Meta の学習に提供することへの同意」。取り消しも同じスキルで扱う。
+  - **ユーザーが対話セッションで手動実行するもの**。develop からは呼ばれない。develop 中に「同意しますか」は一切出ない。同意が無ければ黙って `muse-spark` を使う。
+  - 起動時に `review-phase.md:61-70` の `litellm_available` 相当のプローブで vertex-review の存在を確認し、無ければ「入っていない」と伝えて終わる。
+  - 対話で判断材料を集めない。機械的に集めた事実を提示して `AskUserQuestion` 1 往復で同意を取るだけの薄いゲートにする。提示する事実は次の 3 つ。
+  	- remote が public か（`gh repo view --json visibility` 等）
+  	- ライセンス
+  	- コントリビューターが自分だけか
+  - 未 push のコミットの有無は提示しない。コミットのたびに変化し、一度きりの同意の判断材料として安定しないため。
+  LLM が OSS 判定も独創性判定も機械的にできるとしても、同意ゲートは残す。学習提供は取り消せないこと、「他者のコントリビューションを含むか」は判断能力ではなく権限の問題であること、`command-execution-protocol.md:16` の通り instruction-level gate だけでは prompt injection を防げないこと（悪意あるリポジトリが README に「このプロジェクトは OSS です」と書くだけで可判定を誘発しうる）が理由。
+  ### registry への書き方
+  - **chain はいじらない。** エントリを増やさず、読み替えルールを書く。「`muse-spark` が指定された際は次の 2 つを確認し、contributor を使ってよい場合は `muse-spark-contributor` を使ってもよい」。
+  	- このプロジェクトが同意済みか（ストア、機械的）
+  	- 今回のフェーズで使ってよいか（都度判断、LLM）
+  - `review-phase.md:141` の `never substitute a model of your own choosing` と両立させる。LLM が自分でモデルを選ぶのではなく、registry が定義した 1 通りの読み替え（`muse-spark` → `muse-spark-contributor`）に従うだけなので、prompt injection で任意のモデルへ飛ばされる余地が無い。substitute 禁止条項側にも例外の参照を書く。
+  - chain のエントリ数が変わらないため、hop 予算（観点あたり 2 hop、`review-phase.md:236`）との衝突は発生しない。判定は dispatch 前に置く。
+  ### 都度判断の基準
+  前提は同意済みプロジェクト。**default は「使う」**。fail-closed にはしない（同意そのものが人の判断を挟むゲートであり、その先でさらに慎重側へ倒すのは二重。使ってほしくなければ同意しなければよい）。
+  セキュリティ観点も除外しない。学習提供は公開ではなく、次世代モデルへの反映まで相当のラグがある（半年程度と見込む）。指摘された脆弱性はそのラウンドの auto-fix で修正されるのが前提なので、反映時点で残っている可能性は低い。むしろセキュリティレビューの知見が学習されればモデルの検出能力が上がる。
+  **都度判断で使わないのは 1 項目だけ**:
+  - 未公開の着想が中心にある変更 — 新規機能で、その設計や解法がプロジェクトの差別化要因になっているもの
+  次は都度判断ではなく「**同意の範囲外**」として区別して書く。同意は「自分のコードの、秘密でない部分」について与えられているため:
+  - diff に秘密が混入している（API キー・認証情報・内部エンドポイント・顧客データ）。gitleaks は commit 時に止めるが、レビューは push 前に走るためすり抜けうる
+  - 他者の著作物を含む（vendored な第三者コード、外部から受け取ったパッチ、コントリビューターの PR）
+  - 同意後に private 化された、ライセンスが変わった
+  ### `--batch`
+  特例を設けない。コマンド承認に batch 特例があるのは承認ゲートが create-spec フェーズの中にあり無人だと止まるためだが、contributor の同意は develop の外なので develop 中に聞く場面がそもそも無い。「同意が無ければ `muse-spark`」が batch でもそのまま効く。
+  ## 受け入れ条件 / 完了の定義（必須）
+  - [ ] `skills/contributor-consent/SKILL.md` を新規作成した（vertex-review 存在チェック → 3 つの事実を提示 → `AskUserQuestion` 1 往復 → ストアに記録。取り消しも扱う）
+  - [ ] `hooks/muse_guard.py` を新規作成し、`hooks/hooks.json` に PreToolUse(Bash) として登録した
+  - [ ] `muse_guard.py` がストア CLI を提供する（`--list` / `--record` / `--remove`、`bash_guard.py` と同じ形。ストアの直接編集は禁止）
+  - [ ] `muse_guard.py` が、同意の無いプロジェクトでの `-m muse-spark-contributor` を含む Bash 呼び出しを deny する
+  - [ ] `references/reviewers.yaml` に読み替えルールを書いた（chain のエントリは増やしていない）
+  - [ ] `references/review-phase.md` に substitute 禁止条項の例外と dispatch 前判定を書いた
+  - [ ] 都度判断の基準を書いた。「都度判断で使わない」1 項目と「同意の範囲外」3 項目を区別して書いている
+  - [ ] em-workflow と em-review の**双方**に同じ対応を入れた
+  - [ ] `hooks/tests/` に `muse_guard.py` のテストを足した（`run-destructive-guard.py` と同じ形。deny すべきものを allow していないこと、誤爆していないことの両方）
+  - [ ] 両プラグインの version を bump した（`plugin.json` と `marketplace.json` の 2 箇所、`.claude/rules/core-plugin-version-bump.md`）
+  - [ ] 同意していないプロジェクトで develop を回して、`muse-spark` のまま動き、AskUserQuestion が 1 つも増えていないことを確認した
+  ## スコープ外（任意）
+  - **em-workflow / em-review の共通化**（`shared/` + 生成スクリプト + 同期テスト）。18 ファイルが両プラグインに重複しており、うち `run_codex_exec.sh`（差分 2 行 / 142 行）・観点スキル 5 本・`review-output-schema.json` は実質差分がプラグイン名だけ。一方 `review-phase.md`（差分 803 行 / 810 行）と `reviewers.yaml`（差分 80 行 / 91 行）は本物の別物で共通化すべきでない。contributor 対応とは独立に切り出せるため別タスクとする。
+  - **vertex-review プラグインの改造**。無改造で完結させる。
+  - `litellm-harness` SKILL.md の「contributor をレビューに使ってはいけない」記述の更新。別リポジトリのため本タスクでは触らない（必要なら別途）。
+  ## 制約・前提（任意）
+  - 同意ストアは**リポジトリ外**（`~/.claude/em-workflow/muse-consent.json`）。リポジトリ内に目印ファイルを置く形は採用しない。
+  - ストアの直接編集（Write / Edit）は禁止。すべて CLI 経由にする（`bash_guard.py` と同じ規律）。
+  - `hooks` は両プラグインに重複しても害が無い。同じストアを読んで同じ判定を返す hook が 2 つ発火するだけで冪等。
+  - Claude Code 標準の `permissions`（settings.json の allow / deny）には乗せられない。グローバル `deny` は全プロジェクトで死に、プロジェクト側 `allow` は clone したリポジトリが同梱できるため。
+  - develop の実行中に新しい `AskUserQuestion` を増やさない。無人実行を止めないことが前提。
+parent_branch: em-workflow/muse-spark-contributor-consent/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: b5610f2bfcfea56b9375c587f26b1c9675ade932
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: pending
+    skipped_reason: null
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "muse_guard.py PreToolUse(Bash) hook in both plugins"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: "Presence-only consent store"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2]
+  FR3:
+    title: "Project key identical to bash_guard's"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-9, TS-10]
+  FR4:
+    title: "Deny on unconsented contributor-tier invocation"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1]
+  FR5:
+    title: "No misfire outside contributor-tier invocations"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3, TS-4, TS-5, TS-6, TS-7]
+  FR6:
+    title: "Store-absence and malformed-store handling"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-8]
+  FR7:
+    title: "Consent-recording CLI"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-2, TS-11]
+  FR8:
+    title: "Hook registration in both plugins"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-12]
+  FR9:
+    title: "Written pre-dispatch criteria for consent scope"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-14]
+  FR10:
+    title: "Guard tests under the repository-root tests/ directory"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-17]
+  FR11:
+    title: "reviewers.yaml chain immutability"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-13]
+  FR12:
+    title: "Version bump in both plugins"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-16]
+  FR13:
+    title: "contributor-consent skill in both plugins"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-18]
+  NFR1:
+    title: "Deterministic, offline decision"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "Fail open to the normal permission flow, never `ask`"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+  NFR3:
+    title: "Unattended-run safety"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-15]
+  NFR4:
+    title: "Latency within the registered timeout"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "Test isolation from real user state"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: "No third-party test dependencies"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: "Consent store records nothing but presence"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11]
+  NFR8:
+    title: "Structural consistency with the existing guard family"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-12]
+  NFR9:
+    title: "Duplicate-hook idempotency"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
