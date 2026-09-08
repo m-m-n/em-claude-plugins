@@ -54,6 +54,9 @@ completion is defined by each task plan's own Acceptance Criteria.
 | TS-23 | Isolation audit of the guard test module | Every case sets the store-path override to a path under a temporary directory; no case resolves the real user store path; a full run leaves real user state untouched | Unit |
 | TS-24 | Import audit of every test module this feature adds and of both guard copies | Standard library imports only | Unit |
 | TS-25 | The same payload and store presented to both plugin copies in sequence, in both the consented and unconsented states | Both copies reach the same decision in both states, so a duplicate firing is a no-op | Integration |
+| TS-26 | Every remaining model-selection shape against an empty store, for both copies: the long flag with a separate value, the short and the long flag joined by an equals sign, the short flag with the value attached — each with the value bare, single-quoted and double-quoted — paired with the matching non-invocation shapes (a commit-message argument, a search pattern argument carrying the colliding short flag, quoted mentions, the plain tier in each of the same shapes) | Deny for every invocation shape; no decision for every paired non-invocation shape; the tier names never match each other by prefix, suffix or substring in either direction | Unit |
+| TS-27 | Invocations nested one level deep, against an empty store, for both copies: carried as a shell's command-string argument, inside a parenthesized command substitution, inside a backtick command substitution, and behind the argument-list-expanding wrapper — each paired with the same construct carrying only a mention, plus one case nested past the resolution bound | Deny for each nested invocation; no decision for each nested mention and for the over-bounded nesting; every case completes well inside the registered timeout and launches no subprocess beyond the key-derivation call | Unit |
+| TS-28 | Here-document handling against an empty store, for both copies: a payload whose first line carries a here-document header inside a quoted string, whose second line is a real invocation and whose third line is the header word; a genuine here-document whose body only names the tier; a real invocation placed after a genuine here-document's terminator | Deny for the quoted-header payload and for the post-terminator invocation; no decision for the genuine here-document mention; no path classifies both the stripped and the unstripped text | Unit |
 
 ## Code Quality Verification
 
@@ -71,7 +74,7 @@ completion is defined by each task plan's own Acceptance Criteria.
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
 | SC-1 | Every functional requirement FR1–FR13 is implemented and tested | The requirement coverage table below has a non-empty task list and a non-empty test list for every row |
-| SC-2 | Every scenario TS-1 through TS-25 passes | `python3 -m unittest discover -s tests` exits 0 with every scenario realized by a collected test |
+| SC-2 | Every scenario TS-1 through TS-28 passes | `python3 -m unittest discover -s tests` exits 0 with every scenario realized by a collected test |
 | SC-3 | Every acceptance criterion AC-1 through AC-12 of SPEC.md is met | Each maps through the SPEC's AC-to-requirement table onto rows of the coverage table below |
 | SC-4 | Non-functional requirements NFR1–NFR9 hold | TS-15, TS-19 through TS-25 plus the deny/no-decision scenarios |
 | SC-5 | The consent store is presence-only | TS-11, TS-2 |
@@ -83,25 +86,25 @@ completion is defined by each task plan's own Acceptance Criteria.
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-1, TS-12, TS-19 |
+| FR1 | task0001, task0006 | TS-1, TS-12, TS-19 |
 | FR2 | task0001 | TS-2, TS-11 |
 | FR3 | task0001 | TS-9, TS-10 |
-| FR4 | task0001 | TS-1, TS-4, TS-5 |
-| FR5 | task0001 | TS-3, TS-4, TS-5, TS-6, TS-7 |
+| FR4 | task0001, task0006 | TS-1, TS-4, TS-5, TS-26, TS-27, TS-28 |
+| FR5 | task0001, task0006 | TS-3, TS-4, TS-5, TS-6, TS-7, TS-26, TS-27, TS-28 |
 | FR6 | task0001 | TS-1, TS-8 |
 | FR7 | task0001 | TS-2, TS-11 |
 | FR8 | task0001 | TS-12 |
 | FR9 | task0003 | TS-14 |
-| FR10 | task0001 | TS-17 |
+| FR10 | task0001, task0006 | TS-17 |
 | FR11 | task0003 | TS-13 |
 | FR12 | task0004 | TS-16 |
 | FR13 | task0002 | TS-18 |
 | NFR1 | task0001 | TS-20 |
-| NFR2 | task0001 | TS-7, TS-21 |
+| NFR2 | task0001, task0006 | TS-7, TS-21 |
 | NFR3 | task0002, task0003, task0005 | TS-15 |
-| NFR4 | task0001 | TS-22 |
+| NFR4 | task0001, task0006 | TS-22 |
 | NFR5 | task0001 | TS-23 |
-| NFR6 | task0001, task0002, task0003, task0004, task0005 | TS-17, TS-24 |
+| NFR6 | task0001, task0002, task0003, task0004, task0005, task0006 | TS-17, TS-24 |
 | NFR7 | task0001 | TS-11, TS-2 |
 | NFR8 | task0001 | TS-12 |
 | NFR9 | task0001 | TS-25 |
@@ -147,6 +150,10 @@ own decision.
 - Authorization surface: the only authorization signal is the presence of a project
   key in the store; the guard emits `deny` or nothing and never `allow`, so it does
   not override any later guard — TS-1, TS-3, TS-21.
+- Recognition completeness: no model-selection spelling, wrapper or shell nesting, or
+  quoted here-document header lets an unconsented contributor-tier invocation reach
+  the harness undecided, and no widening of recognition converts a mention into a
+  deny — TS-26, TS-27, TS-28 against the floor of TS-3, TS-6, TS-7.
 - Input validation: unparseable payloads, non-Bash tools, empty commands and
   wrong-shaped stores all end in a no-decision or a deny, never in an exception or a
   store write — TS-7, TS-8.
@@ -164,8 +171,8 @@ own decision.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Unit scenarios | 13 | 13 | 0 | 0 |
+| Unit scenarios | 16 | 16 | 0 | 0 |
 | Integration scenarios | 5 | 5 | 0 | 0 |
 | Structural scenarios | 7 | 7 | 0 | 0 |
 | Manual checks | 4 | 0 | 0 | 4 |
-| **Total** | **29** | **25** | **0** | **4** |
+| **Total** | **32** | **28** | **0** | **4** |
