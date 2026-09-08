@@ -1,0 +1,46 @@
+feature: exit4-tip-argument
+collected_at: "2026-09-08T21:50:00+09:00"
+session_ids: [01a080ff-adc1-71d7-b0bb-ede9d312074b]
+signals:
+  review_critical_high:
+    - stable_id: loop1-regression-reset-to-sha
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: "Step I.2.a の `reset --hard \"$LAUNCH_TIP\"` は統合ブランチを巻き戻し、並行 merge のマージコミットを消す"
+      resolution: fixed
+    - stable_id: 04b858ec69e95afa
+      category: architecture
+      file: em-workflow/references/implement-phase.md
+      title: normative 化した refresh→capture 順序が expected_base_tip の不変条件を成立させない
+      resolution: fixed
+    - stable_id: 7e8e1b7b0b5ec22a
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: I.2.a の refresh/capture が「タスク毎」か「エントリ毎」か未確定 — 複数タスク一括launchで自作の exit 4 が確定発生
+      resolution: fixed
+    - stable_id: cd31cb3178d2168f
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: "Step I.2.a: 順序と tip capture コマンドが FR2 / US1 AC1 の規範と逆のまま"
+      resolution: unresolved
+    - stable_id: 99f62d8f6b2ea0b8
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: "Step I.3: 順序と tip capture コマンドが FR3 / US2 AC2 の規範と逆のまま"
+      resolution: unresolved
+    - stable_id: 16bc95ab0bec754f
+      category: spec
+      file: em-workflow/references/implement-phase.md
+      title: NFR1 のパリティ違反 — 6 サイトのうち新規 2 サイトだけが別 idiom になり、文書内で自己矛盾
+      resolution: unresolved
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - "round 1 の spec カテゴリ high 3 件は auto-fix candidate gate（critical/high かつ spec 以外）から除かれる設計のため、コードではなく SPEC 側の改訂でしか閉じられなかった。実際 2026-09-08 に SPEC の FR2/FR3/NFR1 を出荷物へ合わせて改訂し、3 件の根拠が消えた。仕様と実装が逆方向を向いたまま review に入ると、auto-fix では抜けられない停止に必ず落ちる。"
+  - "capture→refresh の順序と、refresh の対象を SHA ではなくブランチ名にする点は、linked worktree の HEAD が attached symref であることに由来する。round 1 の loop 1 が SHA へ reset する形に倒して critical リグレッションを作り、loop 2 で戻した。worktree の ref 意味論は auto-fix ループが独力で当てにくい領域。"
+  - "NFR1 のパリティを新規 2 サイトに narrow し、既存 4 サイトの idiom 統一を子 feature tip-capture-idiom-unification へ切り出した。過渡状態を文書側に明示する注記を同時に入れたので、矛盾の指摘が再発しない形になっている。"
+  - "round 2 の未解決 medium 4 件（4773e33be20e67f4 / 9b01398d4f48c1e2 / bd794c3459ca8c75 / ec70b86d6085827e）は triage_filing.executed: false のまま。起票が未実行なので、この retrospect の後で残件として起票する必要がある。"
