@@ -1,0 +1,17 @@
+schema_version: 1
+feature: muse-spark-contributor-consent
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: cf7a5913d6a16027c4b433ef1bbde09f3aac5a62
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
