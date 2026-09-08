@@ -1,0 +1,81 @@
+schema_version: 1
+feature: muse-spark-contributor-consent
+phase: rework
+status: completed
+generation: 1
+base_revision: 73f983950917f624cfe01aea098f8f9b8946a7e0
+last_input_digest: null
+active_request_id: null
+packets:
+  muse-spark-contributor-consent-q0001:
+    status: answered
+    issued_at: "2026-09-09T08:50:00+09:00"
+    questions:
+      - question_id: rework.muse-guard-cli-consent-provenance
+        status: answered
+answers:
+  rework.muse-guard-cli-consent-provenance:
+    packet_id: muse-spark-contributor-consent-q0001
+    answered_at: "2026-09-09T08:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [cli-requires-terminal]
+    freeform: null
+    normalized_answer: >-
+      FR7 を変更し、--record / --remove は標準入力が対話端末でない限り書き込みを拒否する。
+      フックの判定面 (FR4 / FR5) は現状のまま変えない。FR13 / AC-12 は、スキルが CLI を
+      自分で実行するのではなくユーザーの端末で実行するコマンドを提示する形に変える。
+    resolution_note: >-
+      gate: rework.spec-change (question rework.muse-guard-cli-consent-provenance,
+      category spec-change). Route: the relaxed route, not the Classification gate --
+      assumptions[] entry a3 names this question with reversible: false, so
+      references/question-resolution.md's Precedence reservation removes the routed arm
+      and sends the question to the packet's batched Codex consultation instead
+      (batch relaxation; the --batch flag alone conditions it). codex_consulted: true;
+      fallback provider answered: no; opus escalation: not run. Codex's suggestion mapped
+      onto the existing option_id cli-requires-terminal, which the orchestrator adopted;
+      Codex's text was not taken verbatim. Not chosen: hook-denies-own-cli --- a second
+      hook-side string classifier reproduces exactly the parsing fragility that findings
+      42f7a860a3dae1c4 / d1cc66c461a2901b / fd9eb309cfa267e7 / 3264f5325cf0117e /
+      2c46224117eeda94 are, so it is defence in depth for enumerated spellings rather than
+      an independent trust boundary. Not chosen: no-spec-change-accept-residual --- the
+      consequence (this repository's code becomes training data) is irreversible and the
+      residual directly contradicts SPEC's own prompt-injection-resistance claim, and it
+      would leave SC-8 permanently unsatisfiable. cli-requires-terminal places the check at
+      the mutation sink, so quoting variants, wrappers, shell nesting and here-document
+      execution all converge on the same guarded code path, and --list stays agent-callable.
+      Carried caveat, to be written into the specification during the create-spec re-entry:
+      isatty() is a provenance proxy, not proof of human action --- a sufficiently capable
+      agent may allocate a pseudo-terminal (script, Python pty) or write the store through
+      another program. Codex additionally classified the gate question as cannot-satisfy-goal
+      on the ground that the goal as literally worded is not achievable by any of the three
+      offered options, and stated that SC-8 cannot honestly pass unless the security claim
+      and SC-8 are reworded to state the TTY boundary. The create-spec re-entry must
+      therefore reword SPEC's Prompt-injection Resistance claim and SC-8 to the boundary
+      this option actually establishes, rather than restating a categorical claim.
+worker_runs:
+  - request_id: rework-run-0001
+    status: needs_user_input
+    input_digest: null
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+spec_change:
+  reason: >-
+    Finding 1050e4ec25fac48a cannot be closed inside the current SPEC: FR5 gives no
+    decision to any command that is not a contributor-tier invocation, while FR13 / AC-12
+    require the contributor-consent skill to record consent through muse_guard.py --record
+    issued from the agent's own Bash tool. "Consent is enforced in code" and "the skill
+    records consent via the agent's --record" cannot both hold. The gate was answered
+    cli-requires-terminal, which changes FR7 (and FR13 / AC-12), so create-spec must run
+    again before planning resumes.
+  origin_kind: verify
+  origin_id: SC-8
+  recorded_at_commit: 73f983950917f624cfe01aea098f8f9b8946a7e0
+  consumed: false
+  replan_authorized: true
+classification: []
