@@ -140,9 +140,13 @@ class TestMarketplaceEntryVersion(unittest.TestCase):
         entry = _marketplace_entry(self.data, "em-review")
         self.assertEqual(entry.get("source"), "./em-review")
 
-    def test_em_review_entry_has_no_version_key(self):
+    def test_em_review_entry_version_not_bumped_with_em_workflow(self):
+        # The entry carried no version key when this feature was written;
+        # main has since given it one. Absence can no longer stand for
+        # "untouched", so assert what still can: em-review's version is not
+        # dragged along by this feature's em-workflow bump.
         entry = _marketplace_entry(self.data, "em-review")
-        self.assertNotIn("version", entry)
+        self.assertNotEqual(entry.get("version"), self.manifest["version"])
 
 
 class TestValidationDetectsRegressions(unittest.TestCase):
