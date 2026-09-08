@@ -1,0 +1,380 @@
+round: 2
+executed_at: '2026-09-09T08:30:26+09:00'
+scope:
+  review_mode: diff
+  base_commit: 7430b672cbb36f6776a8514355c550ff5984ae52
+  head_commit: 6a0d0d097c9e7d73f5651dc0396745afd5e6f4bf
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-review/.claude-plugin/plugin.json
+  - em-review/hooks/hooks.json
+  - em-review/hooks/muse_guard.py
+  - em-review/references/review-phase.md
+  - em-review/references/reviewers.yaml
+  - em-review/skills/contributor-consent/SKILL.md
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/hooks/hooks.json
+  - em-workflow/hooks/muse_guard.py
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/reviewers.yaml
+  - em-workflow/skills/contributor-consent/SKILL.md
+  - test-docs/muse-spark-contributor-consent/task0001.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0002.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0003.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0004.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0005.tests.yaml
+  - test-docs/muse-spark-contributor-consent/task0006.tests.yaml
+  - tests/test_assumptions_reversible_criteria_version_bump.py
+  - tests/test_batch_codex_autonomous_decisions_version_bump.py
+  - tests/test_contributor_consent_skill.py
+  - tests/test_contributor_tier_criteria.py
+  - tests/test_failed_kind_version_bump.py
+  - tests/test_guardrail_hooks_migration.py
+  - tests/test_muse_consent_no_new_questions.py
+  - tests/test_muse_consent_version_bump.py
+  - tests/test_muse_guard.py
+  - tests/test_muse_guard_registration.py
+  - tests/test_verify_rework_lineage_cap_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: architecture#2
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 42f7a860a3dae1c4
+  severity: high
+  category: security
+  file: em-workflow/hooks/muse_guard.py
+  line: 469
+  title: Statement splitting runs before quote resolution, so the harness's own invocation form escapes
+    the deny
+  description: '_SEGMENT_SPLIT_RE.split at line 469 splits on `;` `&&` `|` newline before shlex.split
+    ever sees quoting, so a separator inside a quoted argument shatters the statement; the resulting fragments
+    raise ValueError on unbalanced quotes and are silently skipped at lines 475-476. Verified no-decision
+    cases: `codex exec -m muse-spark-contributor "review this; check auth"` and a prompt containing a
+    newline. Decisive rather than theoretical: the provider''s own harness documents the invocation as
+    `codex exec -p litellm -m <model> "<prompt>"` (vertex-review 0.9.0 litellm-harness/SKILL.md) and a
+    review prompt is a multi-line block, so the single form the guard exists to intercept is exactly the
+    form it fails to classify. SPEC FR4 and FR5''s invocation clause are both unmet. tests/test_muse_guard.py
+    passes only because every spelling fixture uses the single-line, separator-free prompt "review this".
+    Both plugin copies are affected.'
+  suggestion: Split into statements on the same quote-aware pass that _quote_aware_scan already performs,
+    emitting separators only when they occur outside quoted/escaped regions, instead of regex-splitting
+    the raw text. Add regression fixtures using a multi-line prompt and a prompt containing `;`, in the
+    `-p litellm -m <tier> "<prompt>"` shape the harness actually emits.
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: d1cc66c461a2901b
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/muse_guard.py
+  line: 469
+  title: Quoted mentions of the tier produce a false deny, violating FR5's no-misfire floor
+  description: 'The same pre-shlex split at line 469 also fires in the opposite direction. Reproduced:
+    `printf ''%s\n'' ''example; codex exec -m muse-spark-contributor; done''` yields a deny decision although
+    the shell only prints text. SPEC FR5 names this case explicitly - a command that merely mentions muse-spark-contributor
+    inside single or double quotes must produce no decision - so this is a direct spec violation. The
+    cost is asymmetric in this repository: .claude/rules/hook-tests.md records that a guard misfire stops
+    an unattended run on the spot, because ask/deny cannot be answered under claude-batch. Documentation
+    commands, commit messages and review prompts that quote the tier name are all blocked, in both plugin
+    copies.'
+  suggestion: 'Fix jointly with the quote-aware splitting change: a separator inside a quoted region is
+    not a statement boundary, so the quoted text never becomes a candidate segment. Add negative fixtures
+    for a quoted semicolon and a quoted multi-line example alongside the positive invocation fixtures.'
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: c8548e54cab6a9b7
+  severity: high
+  category: spec
+  file: em-workflow/hooks/muse_guard.py
+  line: 469
+  title: FR4 and FR5 are both unmet, contradicting this round's spec-perspective result
+  description: 'Evaluator-originated: the evaluator''s own inspection of the diff contradicts the spec
+    run''s empty findings set, which asserted that the no-misfire classifier matches the SPEC passages.
+    Two mandated behaviours fail on the shipped code, both reproduced: FR5 requires no decision for a
+    command that only mentions the tier inside single or double quotes, yet a quoted mention denies; and
+    FR5''s invocation clause requires recognition of every spelling the harness uses, yet the harness''s
+    documented form with a multi-line prompt is not recognized, so FR4''s deny never fires for it. The
+    spec run reported prose-level agreement between the diff and the SPEC passages without exercising
+    the classifier.'
+  suggestion: 'Treat FR4/FR5 as unsatisfied for this round and re-verify them with executed fixtures rather
+    than prose comparison: at minimum a quoted-mention negative and a multi-line-prompt positive in the
+    exact `codex exec -p litellm -m <tier> "<prompt>"` shape, run against both plugin copies.'
+  sources:
+  - claude:evaluator
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: fd9eb309cfa267e7
+  severity: high
+  category: security
+  file: em-workflow/hooks/muse_guard.py
+  line: 372
+  title: Here-document stripping hides two executable invocation paths
+  description: Both variants reproduced as no-decision. (a) `cat <<EOF` + `$(codex exec -m muse-spark-contributor
+    review)` + `EOF` - the delimiter is unquoted, so a real shell expands the body and runs Codex, but
+    lines 372-386 jump the scan index past the body before the $(...) extractor at lines 356-361 can see
+    it. The round-1 fix correctly kept a quoted-region header from being honored and the suite pins the
+    quoted-delimiter case, but the unquoted-delimiter case where the body is live code was not covered.
+    (b) a `#`-commented `<<true` header is honored as a here-document header, deleting the invocation
+    line that follows as body text; a real shell treats line 1 as a comment and executes line 2.
+  suggestion: Recognize `#` comment regions in _quote_aware_scan so a header inside a comment is not honored,
+    and classify command substitutions found inside an unquoted-delimiter here-document body before removing
+    that body (a quoted delimiter still suppresses expansion and may keep the current stripping).
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 3264f5325cf0117e
+  severity: high
+  category: security
+  file: em-workflow/hooks/muse_guard.py
+  line: 411
+  title: Wrapper option operands are resolved as the command word
+  description: 'Reproduced as no-decision: `printf review | xargs -n 1 codex exec -m muse-spark-contributor`
+    and `nice -n 1 codex exec -m muse-spark-contributor review`. In _resolve_command, lines 413-414 skip
+    tokens beginning with `-` but not the separated operand that follows them, so `1` is returned as the
+    command word and Codex''s own arguments are never scanned. The special case immediately below (lines
+    415-417) shows the authors knew separated operands exist - it is applied to `timeout` alone, while
+    `xargs -n`, `nice -n`, `ionice -c/-n`, `env -u` and `timeout -k` have the same shape. Adding xargs
+    to _WRAPPER_WORDS this round therefore closed only its option-free spelling.'
+  suggestion: Give each wrapper word a small table of options that take a separate operand, and consume
+    that operand when stepping past the option, rather than special-casing timeout only. Add fixtures
+    with a separated option value for every wrapper in _WRAPPER_WORDS.
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 2c46224117eeda94
+  severity: high
+  category: security
+  file: em-workflow/hooks/muse_guard.py
+  line: 447
+  title: Combined shell options defeat nested-invocation recognition
+  description: 'Reproduced as no-decision: `bash -lc ''codex exec -m muse-spark-contributor review''`,
+    which a real shell executes normally. _shell_dash_c_argument matches only a token exactly equal to
+    `-c` (line 449), so any clustered short-option spelling - `-lc`, `-ec`, `-xc` - walks past it. The
+    round-1 nested-invocation gap therefore remains open for a one-character variation of the very spelling
+    the new test_shell_command_string_argument_carries_an_invocation pins.'
+  suggestion: 'Parse clustered short options for the shell words: treat a token matching `-[a-z]*c` as
+    carrying the command string in the following token, and keep handling `-c` with an attached value
+    where the shells accept it. Add `-lc` and `-ec` fixtures.'
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 1050e4ec25fac48a
+  severity: high
+  category: security
+  file: em-workflow/hooks/muse_guard.py
+  line: 558
+  title: The consent CLI is reachable from the agent's own Bash tool and is guarded only by prose
+  description: 'Reproduced both halves. First, the hook does not classify its own CLI: `python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py
+    --record --project-dir "$PWD"` resolves to command word python3 and yields no decision. Second, cli_record
+    (lines 558-569) writes the consent entry with no evidence that a user answered anything - the only
+    thing standing between an agent and self-granted consent is prose: DENY_CONTEXT''s sentence at lines
+    71-72 and contributor-consent/SKILL.md''s interactive-sessions-only constraint. SPEC states as a security
+    property that the gate is decided in code and therefore cannot be talked around (Prompt-injection
+    Resistance), and FR7 states the CLI is out-of-band and never invoked by the workflow; neither is enforced,
+    so a single injected instruction converts a deny into permanent consent for the repository. This is
+    the one finding whose consequence is irreversible from the user''s point of view.'
+  suggestion: Have the guard classify invocations of its own CLI mutation modes (--record / --remove)
+    in the PreToolUse path and deny them, which is coherent with FR7's out-of-band contract - the user
+    runs this in a terminal, never through the agent's Bash tool. Keep the prose, but stop relying on
+    it as the control.
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: e4d8030072b17204
+  severity: medium
+  category: security
+  file: em-workflow/hooks/muse_guard.py
+  line: 528
+  title: Consent is evaluated against the payload's cwd rather than the invocation's effective directory
+  description: Line 528 takes the key from the payload cwd only, while the classifier does detect the
+    invocation across an && boundary (`cd /repo-b && codex exec -m muse-spark-contributor review` classifies
+    as an invocation). With consent recorded for repository A, an invocation whose effective working directory
+    is repository B is permitted on A's consent. Because consent here is a licensing decision made per
+    repository, this lets a repository's contents reach the contributor tier without that repository's
+    own consent.
+  suggestion: Derive the effective directory per detected invocation, accounting for a preceding cd in
+    the same statement chain and for directory-selecting options, and require consent for every repository
+    an invocation can read from. Where the effective directory cannot be determined, the existing fail-open
+    posture applies.
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate requires critical/high)'
+- stable_id: b03398ea71ed96a5
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/muse_guard.py
+  line: 356
+  title: The substitution scanner treats comment text as executable, producing a false deny
+  description: 'Reproduced: a `#`-commented `$(codex exec -m muse-spark-contributor)` line followed by
+    `printf ok`, and a trailing-comment backtick form, both yield a deny decision although a shell executes
+    neither substitution. _quote_aware_scan tracks quote state but has no comment state, so the extractors
+    at lines 356-371 harvest substitution bodies out of commented-out text. This is the same missing comment
+    awareness that produces the here-document false negative at line 372, reached from the other direction,
+    and it is an FR5 misfire.'
+  suggestion: Add comment recognition to the single scan (a `#` beginning a word outside quotes starts
+    a comment that runs to the newline), and use it for both substitution extraction and here-document
+    header recognition. Add full-line and trailing-comment negative fixtures.
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate requires critical/high)'
+- stable_id: f612821e62f070e6
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/muse_guard.py
+  line: 561
+  title: Unlocked read-modify-write in the CLI can resurrect a revoked consent, and the temp file name
+    is shared
+  description: 'cli_record and cli_remove both read the store (line 561 / 575), build a dict in memory,
+    and replace the whole file (line 567 / 584) with no interprocess lock, while write_store uses the
+    fixed name path + ''.tmp'' (line 141) shared by both plugin copies and every concurrent process. Interleaved
+    record and remove therefore lose one update - a removed repository reappears with consent - and two
+    concurrent writers can interleave on the same temp path, which os.replace atomicity does not protect
+    against. The evaluator demoted the reviewer''s high to medium on likelihood, not on mechanism: contributor-consent/SKILL.md
+    restricts the CLI to interactive user sessions. The failure direction still matters, because the update
+    that gets lost is the revocation.'
+  suggestion: Wrap each mutation in a lock held across the whole read-modify-replace (an O_CREAT|O_EXCL
+    lock file or fcntl.flock on the store), and give the temp file a unique per-process suffix. Cover
+    interleaved record/remove for both copies.
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate requires critical/high)'
+- stable_id: b017f97423286092
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 163
+  title: The contributor-tier exception contradicts the provider plugin's own harness skill
+  description: 'Verified against the installed provider: vertex-review/0.9.0/skills/litellm-harness/SKILL.md
+    lines 40-41 state without qualification that reviews send private code and must use muse-spark (Standard),
+    and that muse-spark-contributor must not be used for review. That version lists muse-spark-contributor
+    in its model table, so it passes this protocol''s allow-list check and is dispatchable. A consented
+    dispatch therefore hands the vertex-reviewer subagent two contradictory instructions from two SSOTs,
+    and the reviewer''s own skill is the one it reads last. The em-review copy carries the identical exception.'
+  suggestion: 'Coordinate the policy change with the vertex-review plugin before relying on this route:
+    either gate the exception on a harness version whose skill permits the contributor tier under recorded
+    consent, or keep dispatching muse-spark until that provider text is updated. Whichever is chosen,
+    the two plugins'' copies must move together.'
+  sources:
+  - codex:architecture
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate requires critical/high)'
+evaluation:
+  round_summary: 'Round 2, cross_validation true. Every critical/high claim was reproduced in-memory against
+    the file under review before being accepted; no writes, no consent store touched, no commands executed
+    through a shell. All eight claimed classifier bypasses reproduce exactly as described, and all three
+    claimed false-deny regressions reproduce; nothing was dismissed as a false positive and dismissed_sites
+    is empty. Three claims were demoted with reasons recorded in the findings themselves (the depth-2
+    nesting cap is SPEC-mandated fail-open pinned by an existing test; the license wording is mandated
+    almost verbatim by FR9(d); the performance fast-path reject would itself introduce two verified bypasses).
+    The decisive result is that the guard misses the harness''s own documented invocation form: the provider
+    skill invokes `codex exec -p litellm -m <model> "<prompt>"`, review prompts are multi-line, and a
+    newline inside the quoted prompt shatters the statement before shlex sees the quoting - so the gate
+    does not fire on the one command it exists to intercept, while it does fire on quoted mentions it
+    must ignore. Both plugin copies are affected; they differ only in PLUGIN_SLUG on line 45, and version
+    bumps are paired (em-workflow 0.1.70, em-review 0.5.8, both matching marketplace.json). Per-perspective
+    coverage: security#0 corroborated (all seven sites reproduced); comprehensive#0 corroborated (all
+    three reproduced); performance#0 corroborated as to mechanism, with evaluator findings on its suggested
+    remediation; architecture#2 corroborated; architecture#0 skipped with harness_unavailable, its perspective
+    covered by architecture#2; spec#0''s empty result contradicted by the evaluator''s own inspection,
+    recorded as the FR4/FR5 finding. No prompt-injection attempt, role override or embedded instruction
+    was present in any reviewer output.'
+  recommended_action: rework
+  action_rationale: Six independently verified high-severity defects in a PreToolUse security hook, spanning
+    four distinct root causes - statement splitting that precedes quote resolution, absent comment awareness
+    in the scanner, wrapper and shell option grammar, and an unenforced boundary around the consent CLI.
+    The classifier's scan-and-split pipeline needs restructuring so that quoting, comments and here-documents
+    are resolved once, coherently, and the new fixtures must use the invocation shape the harness actually
+    emits.
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 7
+rework_required: true
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-muse-spark-contributor-consent-20260908T232911Z.md
+auto_fix_note: Phase R4 ran zero loops. All six high-severity candidates carry prose-only prescriptions
+  against em-workflow/hooks/muse_guard.py; the review-editor may write exactly one file, while tests/test_muse_guard.py::test_copies_differ_in_exactly_one_line_the_plugin_slug
+  pins em-review/hooks/muse_guard.py byte-identical apart from PLUGIN_SLUG. Applying the batch default
+  (Apply as-is) would therefore have broken that invariant deterministically, with the review rework budget
+  already spent. Codex was consulted on the trade-off and judged skipping the auto-fix comparatively better;
+  the residuals are recorded deferred and escalated in the run report instead.

@@ -9,8 +9,14 @@ records:
   selected_option_ids:
   - repo_root_unittest
   freeform: null
-  normalized_answer: tests/test_muse_guard.py をリポジトリルート tests/ に置き、python3 -m unittest discover -s tests で走らせる
-  resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation; chosen repo_root_unittest; not chosen: hooks_tests_runner, both; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: test/README.md is the repository''s test-convention SSOT and all six other hooks are already tested from the repository-root tests/ directory, so hooks/tests/ placement alone would never run under the standard entry point, and the ''both'' wrapper adds indirection with no benefit; recorded as an assumption per batch policy record_as_assumption'
+  normalized_answer: tests/test_muse_guard.py をリポジトリルート tests/ に置き、python3 -m unittest discover -s tests
+    で走らせる
+  resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation; chosen
+    repo_root_unittest; not chosen: hooks_tests_runner, both; codex_consulted: true; fallback provider
+    answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: test/README.md is the repository''s
+    test-convention SSOT and all six other hooks are already tested from the repository-root tests/ directory,
+    so hooks/tests/ placement alone would never run under the standard entry point, and the ''both'' wrapper
+    adds indirection with no benefit; recorded as an assumption per batch policy record_as_assumption'
 - question_id: acceptance.develop-smoke-verification
   packet_id: create-spec-q0001
   answered_at: '2026-09-08T21:54:03+09:00'
@@ -20,7 +26,13 @@ records:
   - static_equivalent_tests
   freeform: null
   normalized_answer: develop の実走行ではなく、静的等価テストで受け入れ条件を満たす
-  resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation; chosen static_equivalent_tests; not chosen: manual_verify_step, both_static_and_manual; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: this specification is produced inside an unattended batch run of the same develop workflow, so a manual verify step requiring a human to run develop and paste output can never be discharged; the repository has no e2e harness; the static equivalents capture the criterion''s intent and run under the standard entry point; recorded as an assumption per batch policy record_as_assumption'
+  resolution_note: 'gate: create-spec.requirement-clarification; policy action codex_consultation; chosen
+    static_equivalent_tests; not chosen: manual_verify_step, both_static_and_manual; codex_consulted:
+    true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: this
+    specification is produced inside an unattended batch run of the same develop workflow, so a manual
+    verify step requiring a human to run develop and paste output can never be discharged; the repository
+    has no e2e harness; the static equivalents capture the criterion''s intent and run under the standard
+    entry point; recorded as an assumption per batch policy record_as_assumption'
 - question_id: security.out-of-scope-enforcement
   packet_id: create-spec-q0001
   answered_at: '2026-09-08T21:54:03+09:00'
@@ -29,8 +41,20 @@ records:
   selected_option_ids:
   - documented_only
   freeform: null
-  normalized_answer: 「同意の範囲外」3 項目は reviewers.yaml / review-phase.md の dispatch 前判定基準として書き、muse_guard.py は同意の有無だけを見る
-  resolution_note: 'gate: create-spec.requirement-clarification; relaxed route (category: security, batch relaxation per references/question-resolution.md); chosen documented_only; not chosen: record_facts_and_recheck, guard_denies_on_drift; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: guard_denies_on_drift would put a network fetch inside a PreToolUse(Bash) hook that fires on every Bash call under a 15s timeout, where a transient failure false-positives and halts an unattended run, breaking the deterministic no-network guard precedent; record_facts_and_recheck widens the store schema the task description pinned and adds fragile sole-contributor tracking, while the drift conditions reduce to a check of the CURRENT visibility and license at dispatch time because consent implies the consent-time state, and secrets-in-diff and third-party content are inherently per-diff judgements that cannot be captured at consent time; the orchestrator adopted the mapping and requires the written criteria to state the current-visibility / current-license check explicitly so condition (c) stays enforceable'
+  normalized_answer: 「同意の範囲外」3 項目は reviewers.yaml / review-phase.md の dispatch 前判定基準として書き、muse_guard.py
+    は同意の有無だけを見る
+  resolution_note: 'gate: create-spec.requirement-clarification; relaxed route (category: security, batch
+    relaxation per references/question-resolution.md); chosen documented_only; not chosen: record_facts_and_recheck,
+    guard_denies_on_drift; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2);
+    opus escalation: not run; key points: guard_denies_on_drift would put a network fetch inside a PreToolUse(Bash)
+    hook that fires on every Bash call under a 15s timeout, where a transient failure false-positives
+    and halts an unattended run, breaking the deterministic no-network guard precedent; record_facts_and_recheck
+    widens the store schema the task description pinned and adds fragile sole-contributor tracking, while
+    the drift conditions reduce to a check of the CURRENT visibility and license at dispatch time because
+    consent implies the consent-time state, and secrets-in-diff and third-party content are inherently
+    per-diff judgements that cannot be captured at consent time; the orchestrator adopted the mapping
+    and requires the written criteria to state the current-visibility / current-license check explicitly
+    so condition (c) stays enforceable'
 - question_id: create-spec.em-review-hook-parity
   packet_id: null
   answered_at: '2026-09-08T22:02:55+09:00'
@@ -39,8 +63,19 @@ records:
   selected_option_ids:
   - both_plugins_ship_the_hook
   freeform: null
-  normalized_answer: muse_guard.py と hooks.json は em-workflow / em-review の双方に入れる（em-review は初の hooks.json を新設）
-  resolution_note: 'gate: create-spec.em-review-hook-parity (orchestrator-opened, no worker packet); chosen both_plugins_ship_the_hook; not chosen: em_workflow_only; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: requirements-analyst proposed shipping muse_guard.py only in em-workflow because em-review has no hooks surface today, which contradicts the task description''s explicit acceptance criterion that the same change land in both plugins and its stated constraint that duplicating the hook is idempotent; em-review''s own review phase dispatches the same `codex exec -p litellm -m <model>` invocation, so a user who installs em-review without em-workflow would have no mechanical enforcement at all - an environment-dependent security gap; the hook is a silent no-op (exit 0, empty stdout) for every non-contributor command, so adding a hooks surface to em-review changes nothing observable in ordinary use; orchestrator adopted the mapping and amended FR1/FR8/NFR9/AC-6/TS-12 and assumption a6 accordingly'
+  normalized_answer: muse_guard.py と hooks.json は em-workflow / em-review の双方に入れる（em-review は初の hooks.json
+    を新設）
+  resolution_note: 'gate: create-spec.em-review-hook-parity (orchestrator-opened, no worker packet); chosen
+    both_plugins_ship_the_hook; not chosen: em_workflow_only; codex_consulted: true; fallback provider
+    answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: requirements-analyst proposed
+    shipping muse_guard.py only in em-workflow because em-review has no hooks surface today, which contradicts
+    the task description''s explicit acceptance criterion that the same change land in both plugins and
+    its stated constraint that duplicating the hook is idempotent; em-review''s own review phase dispatches
+    the same `codex exec -p litellm -m <model>` invocation, so a user who installs em-review without em-workflow
+    would have no mechanical enforcement at all - an environment-dependent security gap; the hook is a
+    silent no-op (exit 0, empty stdout) for every non-contributor command, so adding a hooks surface to
+    em-review changes nothing observable in ordinary use; orchestrator adopted the mapping and amended
+    FR1/FR8/NFR9/AC-6/TS-12 and assumption a6 accordingly'
 - question_id: review.once-boundary-review-sourced-rework
   packet_id: null
   answered_at: '2026-09-08T23:35:00+09:00'
@@ -50,7 +85,19 @@ records:
   - end_turn_at_rework_commit
   freeform: null
   normalized_answer: review 由来の rework をコミットした時点で --once のフェーズ境界として扱い、ターンを終える
-  resolution_note: 'gate: review.once-boundary-review-sourced-rework (orchestrator-opened, no worker packet, unlisted-gate fallback); chosen end_turn_at_rework_commit; not chosen: continue_into_implement; codex_consulted: true but the primary Codex CLI returned a usage-limit error (quota reset 2026-09-09) and the litellm/vertex-glm-5.2 route returned HTTP 429 after retry exhaustion; fallback provider answered (litellm/muse-spark, Standard tier — no contributor consent recorded for this project so the registry read-mapping did not apply); opus escalation: not run (the fallback provider answered); key points: the four-row --once boundary table is a taxonomy of safely-resumable state transitions rather than an exhaustive whitelist, and row 3 (verify 失敗時の rework) establishes the principle that a committed rework-routing patch returning control to implement is a boundary; review-sourced rework produces the structurally identical post-state (patch committed, implement and review both pending, next launch resumes at implement); continuing into implement would execute a second phase in the same turn against --once''s stated purpose and stop condition 7, only to end moments later on the explicitly non-terminal implement launch turn, having already fanned out background implementers a --once turn is not designed to abandon mid-flight'
+  resolution_note: 'gate: review.once-boundary-review-sourced-rework (orchestrator-opened, no worker packet,
+    unlisted-gate fallback); chosen end_turn_at_rework_commit; not chosen: continue_into_implement; codex_consulted:
+    true but the primary Codex CLI returned a usage-limit error (quota reset 2026-09-09) and the litellm/vertex-glm-5.2
+    route returned HTTP 429 after retry exhaustion; fallback provider answered (litellm/muse-spark, Standard
+    tier — no contributor consent recorded for this project so the registry read-mapping did not apply);
+    opus escalation: not run (the fallback provider answered); key points: the four-row --once boundary
+    table is a taxonomy of safely-resumable state transitions rather than an exhaustive whitelist, and
+    row 3 (verify 失敗時の rework) establishes the principle that a committed rework-routing patch returning
+    control to implement is a boundary; review-sourced rework produces the structurally identical post-state
+    (patch committed, implement and review both pending, next launch resumes at implement); continuing
+    into implement would execute a second phase in the same turn against --once''s stated purpose and
+    stop condition 7, only to end moments later on the explicitly non-terminal implement launch turn,
+    having already fanned out background implementers a --once turn is not designed to abandon mid-flight'
 - question_id: review.evaluator-confidence-string-mapping
   packet_id: null
   answered_at: '2026-09-08T23:35:00+09:00'
@@ -60,4 +107,38 @@ records:
   - normalize_to_integer_90_60_30
   freeform: null
   normalized_answer: 評価者が返した confidence の文字列を high=90 / medium=60 / low=30 の整数に正規化してから R3b step 7 の補正を適用する
-  resolution_note: 'gate: review.evaluator-confidence-string-mapping (orchestrator-opened, no worker packet, unlisted-gate fallback); chosen normalize_to_integer_90_60_30; not chosen: persist_the_string_verbatim; codex_consulted: true but the primary Codex CLI returned a usage-limit error and the litellm/vertex-glm-5.2 route returned HTTP 429; fallback provider answered (litellm/muse-spark, Standard tier); opus escalation: not run; key points: the round-record example shows an integer 0-100 and R3b step 7''s two corrections (+15 capped at 100, hard cap 50) are arithmetic, so the field is an integer; the mapping is gate-neutral because the R4 candidate gate reads severity/category/stable_id/suggestion/file/sources and the R5 completion gate reads only residual_critical_high, so neither reads confidence; applied as 90 for the merged high finding and 60 for the here-doc medium finding'
+  resolution_note: 'gate: review.evaluator-confidence-string-mapping (orchestrator-opened, no worker packet,
+    unlisted-gate fallback); chosen normalize_to_integer_90_60_30; not chosen: persist_the_string_verbatim;
+    codex_consulted: true but the primary Codex CLI returned a usage-limit error and the litellm/vertex-glm-5.2
+    route returned HTTP 429; fallback provider answered (litellm/muse-spark, Standard tier); opus escalation:
+    not run; key points: the round-record example shows an integer 0-100 and R3b step 7''s two corrections
+    (+15 capped at 100, hard cap 50) are arithmetic, so the field is an integer; the mapping is gate-neutral
+    because the R4 candidate gate reads severity/category/stable_id/suggestion/file/sources and the R5
+    completion gate reads only residual_critical_high, so neither reads confidence; applied as 90 for
+    the merged high finding and 60 for the here-doc medium finding'
+- question_id: review.auto-fix-judgment
+  packet_id: null
+  answered_at: '2026-09-09T08:30:55+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - skip_auto_fix_defer_residuals
+  freeform: null
+  normalized_answer: review round 2 の Phase R4 auto-fix を実行せず、high 6 件を deferred として記録し、run report で明示的にエスカレーションする
+  resolution_note: 'gate: review.auto-fix-judgment (round 2, 6 high-severity prose findings, all targeting
+    em-workflow/hooks/muse_guard.py); batch-mode.md''s stated default for this gate is ''Apply as-is (editor
+    interprets)'', departed from under the invocation''s explicit instruction to consult Codex and adopt
+    the comparatively better option; not chosen: apply_as_is_batch_default; codex_consulted: true (codex-harness
+    second-opinion, codex source, success); fallback provider answered: no; opus escalation: not run;
+    key points: (1) the review-editor may write exactly one file, while tests/test_muse_guard.py::test_copies_differ_in_exactly_one_line_the_plugin_slug
+    pins em-review/hooks/muse_guard.py byte-identical to the em-workflow copy apart from PLUGIN_SLUG,
+    so applying the default breaks that invariant deterministically and leaves two divergent copies of
+    an authorization guard; (2) five sequential editors interpreting six prose findings are unlikely to
+    converge on one coherent restructuring of the scan-and-split pipeline, and the review rework budget
+    (cap 1) is already spent, so a bad auto-fix could not be repaired in this phase; (3) preserving a
+    known reviewable baseline and handing the human evaluator complete evidence beats presenting an unreviewed
+    parity-broken partial fix as progress; (4) Codex''s caveat, adopted: deferral is only defensible as
+    an explicit escalation, so the six residuals are surfaced prominently in the run report rather than
+    silently completed; (5) Codex''s preferred third path, recorded for the human: one coherent manually-reviewed
+    patch applied to both copies together outside the auto-fix dispatcher, before the independent verify-phase
+    budget is spent'
