@@ -152,12 +152,12 @@ tasks:
   task0004:
     title: "version bump for both plugins"
     plan: tasks/task0004.md
-    files: [em-workflow/.claude-plugin/plugin.json, em-review/.claude-plugin/plugin.json, .claude-plugin/marketplace.json, tests/test_muse_consent_version_bump.py]
+    files: [em-workflow/.claude-plugin/plugin.json, em-review/.claude-plugin/plugin.json, .claude-plugin/marketplace.json, tests/test_muse_consent_version_bump.py, tests/test_assumptions_reversible_criteria_version_bump.py, tests/test_batch_codex_autonomous_decisions_version_bump.py, tests/test_failed_kind_version_bump.py, tests/test_verify_rework_lineage_cap_version_bump.py]
     skills: [infra-impl]
     domains: [config-infra]
     complexity: low
     requirements: [FR12, NFR6]
-    status: in_progress
+    status: merged
     branch: em-workflow/muse-spark-contributor-consent/task0004
     notes: null
   task0005:
