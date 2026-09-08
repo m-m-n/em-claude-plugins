@@ -31,3 +31,13 @@ records:
   freeform: null
   normalized_answer: 「同意の範囲外」3 項目は reviewers.yaml / review-phase.md の dispatch 前判定基準として書き、muse_guard.py は同意の有無だけを見る
   resolution_note: 'gate: create-spec.requirement-clarification; relaxed route (category: security, batch relaxation per references/question-resolution.md); chosen documented_only; not chosen: record_facts_and_recheck, guard_denies_on_drift; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: guard_denies_on_drift would put a network fetch inside a PreToolUse(Bash) hook that fires on every Bash call under a 15s timeout, where a transient failure false-positives and halts an unattended run, breaking the deterministic no-network guard precedent; record_facts_and_recheck widens the store schema the task description pinned and adds fragile sole-contributor tracking, while the drift conditions reduce to a check of the CURRENT visibility and license at dispatch time because consent implies the consent-time state, and secrets-in-diff and third-party content are inherently per-diff judgements that cannot be captured at consent time; the orchestrator adopted the mapping and requires the written criteria to state the current-visibility / current-license check explicitly so condition (c) stays enforceable'
+- question_id: create-spec.em-review-hook-parity
+  packet_id: null
+  answered_at: '2026-09-08T22:02:55+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - both_plugins_ship_the_hook
+  freeform: null
+  normalized_answer: muse_guard.py と hooks.json は em-workflow / em-review の双方に入れる（em-review は初の hooks.json を新設）
+  resolution_note: 'gate: create-spec.em-review-hook-parity (orchestrator-opened, no worker packet); chosen both_plugins_ship_the_hook; not chosen: em_workflow_only; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: requirements-analyst proposed shipping muse_guard.py only in em-workflow because em-review has no hooks surface today, which contradicts the task description''s explicit acceptance criterion that the same change land in both plugins and its stated constraint that duplicating the hook is idempotent; em-review''s own review phase dispatches the same `codex exec -p litellm -m <model>` invocation, so a user who installs em-review without em-workflow would have no mechanical enforcement at all - an environment-dependent security gap; the hook is a silent no-op (exit 0, empty stdout) for every non-contributor command, so adding a hooks surface to em-review changes nothing observable in ordinary use; orchestrator adopted the mapping and amended FR1/FR8/NFR9/AC-6/TS-12 and assumption a6 accordingly'

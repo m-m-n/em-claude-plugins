@@ -1,10 +1,10 @@
 schema_version: 1
 feature: muse-spark-contributor-consent
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
-base_revision: bbcbf0601881165721f84def103bf21f9034ec94
-last_input_digest: sha256:924c9f548e7fe5b13fc13771a09ba70d2754c203e221aaa269966e395726624b
+base_revision: 5e1ab64b8dae9fabeb42e2734ec707d36934eb90
+last_input_digest: sha256:4ffb8057b976b6e48afaf3f4c9807881282eae9d798da810620e1ac149e832d1
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -60,10 +60,24 @@ answers:
     freeform: null
     normalized_answer: analyst の推奨（design ステップを実施する）をそのまま採用
     resolution_note: 'gate: create-spec.design-step; resolved by references/batch-policies.yaml entry option_id decide_autonomously; codex_consulted: false'
+  create-spec.em-review-hook-parity:
+    packet_id: null
+    answered_at: '2026-09-08T22:02:55+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - both_plugins_ship_the_hook
+    freeform: null
+    normalized_answer: muse_guard.py と hooks.json は em-workflow / em-review の双方に入れる（em-review は初の hooks.json を新設）
+    resolution_note: 'gate: create-spec.em-review-hook-parity (orchestrator-opened, no worker packet); chosen both_plugins_ship_the_hook; not chosen: em_workflow_only; codex_consulted: true; fallback provider answered (litellm/vertex-glm-5.2); opus escalation: not run; key points: requirements-analyst proposed shipping muse_guard.py only in em-workflow because em-review has no hooks surface today, which contradicts the task description''s explicit acceptance criterion that the same change land in both plugins and its stated constraint that duplicating the hook is idempotent; em-review''s own review phase dispatches the same `codex exec -p litellm -m <model>` invocation, so a user who installs em-review without em-workflow would have no mechanical enforcement at all - an environment-dependent security gap; the hook is a silent no-op (exit 0, empty stdout) for every non-contributor command, so adding a hooks surface to em-review changes nothing observable in ordinary use; orchestrator adopted the mapping and amended FR1/FR8/NFR9/AC-6/TS-12 and assumption a6 accordingly'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:924c9f548e7fe5b13fc13771a09ba70d2754c203e221aaa269966e395726624b
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:4ffb8057b976b6e48afaf3f4c9807881282eae9d798da810620e1ac149e832d1
   output_digest: null
 artifacts: []
 patches: []
