@@ -29,3 +29,42 @@ records:
       validated separately by the verify phase's test run rather than by
       re-reviewing all of main.
       Chosen: B. Recorded here and in the round record's scope block.
+  - question_id: verify.ts9-stale-scenario-wording
+    packet_id: null
+    answered_at: "2026-09-08T21:30:00+09:00"
+    source: codex
+    answer_mode: select
+    selected_option_ids: [pass-and-fix-verification-doc]
+    freeform: ""
+    normalized_answer: "Record TS9 as PASS against the revised NFR1, and in the same change correct TS9's wording in VERIFICATION.md so the verification document and SPEC.md agree."
+    resolution_note: >-
+      gate: verify-phase TS9 verdict (unlisted-gate fallback; no gate_id at the
+      originating site). Context: VERIFICATION.md's TS9 was written against the
+      pre-revision NFR1 and demands that all six commit-docs.sh call sites share
+      one `{NAME}_TIP` capture idiom. SPEC.md's NFR1 was later narrowed (commit
+      e102727) to require parity only across the two call sites this feature
+      adds, declaring the four pre-existing sites explicitly out of scope and
+      assigning their conversion to the separate feature
+      `tip-capture-idiom-unification`. implement-phase.md satisfies the revised
+      NFR1: Step I.2.a (`LAUNCH_TIP`) and Step I.3 (`COMPLETION_TIP`) match each
+      other in shape, capture-first idiom and exit-4 cross-reference phrasing,
+      and the `Idiom split is transitional (NFR1)` paragraph declares the split,
+      names the four old sites and points at the follow-up feature.
+      Options - A: record PASS and leave TS9's stale text alone;
+      B: record FAIL on the literal TS9 text (triggers a rework round);
+      C: record PASS and correct TS9's wording to match the revised NFR1.
+      codex_consulted: true. The primary Codex CLI returned a usage-limit error
+      (no answer); the litellm fallback provider (muse-spark) answered and chose
+      C. No Opus escalation was needed.
+      Codex rationale: SPEC.md is authoritative and VERIFICATION.md is derived,
+      so judging the product by stale derived text inverts that hierarchy. B is
+      worst - it logs a product FAIL for documentation drift, forces a spurious
+      rework round and pressures scope creep into the four out-of-scope sites,
+      which the revised NFR1 forbids. A gets the verdict right but leaves the
+      verification document contradicting its own SPEC, a latent trap for the
+      next reader. C fixes both. Codex flagged that C can look like fitting the
+      test to the code, and advised framing the edit explicitly as traceability
+      maintenance citing the NFR1-narrowing commit and the follow-up feature.
+      Chosen: C. TS9's table row, its manual checklist item and a traceability
+      note in VERIFICATION.md were rewritten accordingly; the verdict recorded
+      in workflow.yaml is pass.

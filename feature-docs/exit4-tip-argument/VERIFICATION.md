@@ -43,7 +43,15 @@ numbering and the `tests` arrays already recorded in workflow.yaml
 | TS6 | Manual/review: read the exit-4 recovery bullet's six-site enumeration against the per-step text | One-to-one correspondence for all six sites; Step I.2.c's route-back is the only carve-out | Manual |
 | TS7 | New: both version registries parse as JSON, report the same version string, and that version is on the `0.1.x` line with patch strictly greater than 44; the `em-review` entry is untouched | Passes; the baseline and equality matchers each fail against their forged samples | Unit (new) |
 | TS8 | Manual/verify: inspect the feature diff for out-of-scope files | `em-workflow/scripts/commit-docs.sh` is absent; every pre-existing `tests/*.py` is absent; the only `tests/` entries are the two new modules | Manual |
-| TS9 | Manual/review: read the six call sites' wording side by side | All six use the same shape, the same variable-capture idiom and the same exit-4 cross-reference phrasing — one mechanism, not per-step variants | Manual |
+| TS9 | Manual/review: read the two call sites this feature adds (Step I.2.a, Step I.3) side by side, then read the `Idiom split is transitional (NFR1)` paragraph | The two new sites use the same four-part shape, the same capture-first `{NAME}_TIP` idiom and the same exit-4 cross-reference phrasing as each other; the document declares the split from the four pre-existing sites transitional and names the separate feature that converts them | Manual |
+
+TS9's scope follows the narrowed NFR1 in SPEC.md: wording parity is required
+across the two call sites this feature adds, and parity with the four sites
+that already passed a tip (Step I.1 `BASE_COMMIT`, Step I.2.b `RECONCILE_TIP`,
+Step I.2.c's two `TERMINAL_TIP` sites) is explicitly out of scope, being
+carried by the separate feature `tip-capture-idiom-unification`. This entry
+was rewritten to match that narrowing — traceability maintenance, not a change
+to what the product must do.
 
 ## Code Quality Verification
 
@@ -105,10 +113,12 @@ bump.
       `em-workflow/scripts/commit-docs.sh` and every pre-existing
       `tests/*.py` (notably `tests/test_rework_synthesis_contract.py`) are
       absent from it.
-- [ ] TS9: read Step I.1, Step I.2.a, Step I.2.b, both Step I.2.c terminal
-      commits and Step I.3 in sequence and confirm the six call sites read as
-      one mechanism: same four-part shape, same `{NAME}_TIP` capture idiom,
-      same exit-4 cross-reference phrasing.
+- [ ] TS9: read Step I.2.a and Step I.3 in sequence and confirm the two call
+      sites this feature adds read as one mechanism: same four-part shape,
+      same capture-first `{NAME}_TIP` idiom, same exit-4 cross-reference
+      phrasing. Then confirm the `Idiom split is transitional (NFR1)`
+      paragraph names the four pre-existing sites, declares converting them
+      out of scope here and points at `tip-capture-idiom-unification`.
 - [ ] Read Step I.2.b step 5's refill path into Step I.2.a as a reader would
       and confirm it is impossible to conclude that the already-captured
       `$RECONCILE_TIP` may be reused.
