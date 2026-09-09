@@ -79,7 +79,8 @@ workflow:
     skipped_reason: "変更対象は PreToolUse フックの Python 関数と JSON のケース表で、ユーザーに見える画面・視覚要素・デザイントークンを持たない。design-system 候補も 0 件。"
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 502aa4a33fd821b89fa6bab1d74d440e5a6c487f
   - id: implement
     status: pending
     base_commit: null
@@ -92,7 +93,33 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "Component-wise safe-delete judgement and case-table realignment"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills: [backend-impl]
+    domains: [auth, input-handling]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR10, NFR1, NFR2, NFR3, NFR4, NFR5]
+    status: pending
+    branch: null
+    notes: null
+  task0002:
+    title: "Raise the em-workflow plugin version"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+    skills: [infra-impl]
+    domains: [config-infra]
+    complexity: low
+    requirements: [FR9]
+    status: pending
+    branch: null
+    notes: null
 
 review:
   status: pending
@@ -106,106 +133,106 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-2, TS-4]
   FR2:
     title: "正規化後も残る親参照を安全としない"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-2, TS-6]
   FR3:
     title: "コンポーネント境界で包含を判定する"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-3]
   FR4:
     title: "絶対スクラッチルートは真の子孫のみ安全"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-4, TS-5]
   FR5:
     title: "相対安全名の 2 クラスを維持する"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-4, TS-5]
   FR6:
     title: "未解決の展開は安全例外より先に判定する"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-6, TS-7]
   FR7:
     title: "安全ルート配下の純グロブは allow を維持する"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-5]
   FR8:
     title: "ケース表を実挙動に合わせる"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-1, TS-2, TS-3, TS-4]
   FR9:
     title: "プラグインの version を上げる"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-9]
   FR10:
     title: "スイートが全件通る"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-8]
   NFR1:
     title: "判定はファイルシステムに触れない（決定性）"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-10]
   NFR2:
     title: "誤爆コストは見逃しコストと同じ桁に扱う"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-5]
   NFR3:
     title: "同期実行のため正規化は文字列処理のみ"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-10]
   NFR4:
     title: "シンボリックリンク経由の脱出は残存制約としてコード内に明記する"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-11]
   NFR5:
     title: "SAFE_DELETE 定数のコメントを新しい判定規則に更新する"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0001]
+    tests: [TS-11]
 
 batch:
   review_rework_count: 0
