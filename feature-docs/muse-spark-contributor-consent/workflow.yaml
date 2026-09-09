@@ -111,7 +111,7 @@ workflow:
     status: completed
     completed_at_commit: 57a66854aadc8f0913165a268f4f9f7f7e5ffc2e
   - id: verify
-    status: pending
+    status: in_progress
     result: fail
     failed_items:
       - id: SC-8
