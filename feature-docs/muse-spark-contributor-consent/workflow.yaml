@@ -92,8 +92,8 @@ project:
 workflow:
   - id: create-spec
     artifacts: [REQUIREMENTS.md, SPEC.md]
-    status: needs_update
-    completed_at_commit: b5610f2bfcfea56b9375c587f26b1c9675ade932
+    status: completed
+    completed_at_commit: 0b0cb0c34497650365cedb91a6138be5a1491adb
   - id: design
     artifacts: [DESIGN.md, design/]
     status: completed

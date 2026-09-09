@@ -1,7 +1,7 @@
 schema_version: 1
 feature: muse-spark-contributor-consent
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
 base_revision: 0653c1bfaec3e7a161f3c81de904f0c7e48cabb4
 last_input_digest: sha256:10e4b9f3ae3a604f33669806f448348c300d81b442cc82263d8b61985b54ba5c
