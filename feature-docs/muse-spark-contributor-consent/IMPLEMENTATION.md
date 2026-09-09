@@ -3,23 +3,22 @@
 ## Overview
 
 Ship a code-enforced, per-repository consent gate for the `muse-spark-contributor`
-tier. The gate has **two enforcement surfaces**: a PreToolUse(Bash) guard that denies
-contributor-tier invocations in repositories whose consent was never recorded, and a
-consent-write CLI that refuses to touch the store unless its standard input is an
-interactive terminal. Consent is granted or revoked only out of band — an interactive
-skill presents the command and the user runs it in their own terminal. The judgment
+tier. The gate is enforced in code at one surface: a PreToolUse(Bash) guard that denies
+contributor-tier invocations in repositories whose consent was never recorded. Consent is
+granted or revoked only out of band — an interactive skill the user launches runs the
+consent-write CLI after an AskUserQuestion answer. The judgment
 that cannot be mechanized is written into both plugins' review registry / protocol
 documents as pre-dispatch criteria.
 
 This is the second planning pass. Tasks task0001–task0006 are merged; task0007–task0009
-carry the work the amended SPEC added (the consent-write provenance boundary, FR7 / FR13)
-and the work verify found still open (quote-unaware command splitting, FR4 / FR5).
+carry the work the amended SPEC added (the consent-write path, FR7 / FR13) and the work
+verify found still open (quote-unaware command splitting, FR4 / FR5).
 
 ## Technology Stack
 
 - **Language**: Python 3, standard library only — the guard script (hook path and
-  CLI path) and every test module. The shell-lexing, terminal-detection and
-  pseudo-terminal facilities the new tasks need are all standard library.
+  CLI path) and every test module. The shell-lexing facilities the new tasks need are
+  all standard library.
 - **Documents**: Markdown and YAML inside both plugin trees (`skills/`,
   `references/`, `.claude-plugin/`).
 - **New third-party dependencies**: none. No package is added by this feature, so
@@ -58,8 +57,8 @@ across the two plugins** — the two script copies are duplicated deliberately (
 |-----------|----------------|------------------------------|---------------|
 | Consent store file | Records, as presence only, which repositories consented | Path `~/.claude/em-workflow/muse-consent.json`, overridable by the `EM_WORKFLOW_MUSE_CONSENT` environment variable (test use). Shape: a mapping with a `version` field whose value is the string `1` and a `projects` mapping; each project key maps to an object whose **only** field is `updated_at`, an RFC 3339 timestamp with an explicit UTC offset at seconds precision. Presence of a project key *is* the consent. **Reader precondition**: none — missing, unreadable, invalid-JSON, or wrong-shaped (not a mapping, or `projects` not a mapping) all mean "no consent for any project", with no repair and no write. **Writer postcondition**: the file is replaced atomically (write a temporary file in the same directory, then replace), parent directories are created when absent, serialization is 2-space indented with sorted keys, non-ASCII left unescaped, and a trailing newline; no field other than `updated_at` is ever written under a project key. | task0001 (implements both sides), task0008 (adds the write-path precondition below, changes nothing else), task0002 / task0009 (document it; never touch it directly) |
 | Project key derivation | Maps a directory to the repository-level consent key | Identical in rule to the existing `bash_guard` project-key routine: the git common directory of the caller's directory in absolute form; when git is unavailable or the directory is not inside a repository, the fully symlink-resolved absolute path of the directory. Consequence, and part of the contract: every worktree of one repository resolves to one key, and a non-repository directory referenced through a symlink resolves to the same key as its real path. | task0001 (implements), task0002 / task0009 (show the resolved subject of consent to the user) |
-| Guard CLI | The out-of-band grant / revoke / inspect interface | Exactly one of `--record`, `--remove`, `--list` is required and they are mutually exclusive; `--project-dir DIR` is required for all three. `--list`: prints the project key **alone on one line** when consent exists and prints nothing when it does not; exit 0 either way — this is the only machine-parsed output in the feature, so it carries no label, prefix or timestamp. `--record`: idempotent; refreshes `updated_at`, prints one line naming the recorded key, and has no "already recorded" variant. `--remove`: removes the key entirely (never leaves an empty object) and prints one line; when the key was absent it says so and exits 0 with the store untouched and not created. Results go to stdout, errors to stderr. Exit 0 on success, 1 on runtime failure (store malformed on a mutating command, write failure), 2 on argument misuse. On a malformed store a mutating command writes nothing and fails loudly rather than rewriting the file. | task0001 (implements), task0008 (adds the provenance precondition below), task0002 / task0009 (invoke the read-only command and document all three) |
-| **Consent-write provenance boundary** | Restricts which invocations of the CLI may change the store | Precondition on `--record` and `--remove` only: the process's **standard input is an interactive terminal**. When it is not, the command changes nothing and exits non-zero, printing to stderr one Japanese line stating that it must be run from an interactive terminal. The refusal is evaluated **before** project-key derivation and before any store access, so the refusing run creates no store file, repairs none, and leaves an existing store byte-identical. `--list` is explicitly **outside** this precondition: it works regardless of the standard-input kind and remains callable by an agent. The interactive-terminal test is a provenance proxy, not proof of human operation (SPEC a12) — the boundary it establishes is "an agent's ordinary Bash call path cannot record consent", not unbypassability. | task0008 (implements and tests both sides), task0009 (relies on it: the skill presents the mutating command instead of running it) |
+| Guard CLI | The out-of-band grant / revoke / inspect interface | Exactly one of `--record`, `--remove`, `--list` is required and they are mutually exclusive; `--project-dir DIR` is required for all three. `--list`: prints the project key **alone on one line** when consent exists and prints nothing when it does not; exit 0 either way — this is the only machine-parsed output in the feature, so it carries no label, prefix or timestamp. `--record`: idempotent; refreshes `updated_at`, prints one line naming the recorded key, and has no "already recorded" variant. `--remove`: removes the key entirely (never leaves an empty object) and prints one line; when the key was absent it says so and exits 0 with the store untouched and not created. Results go to stdout, errors to stderr. Exit 0 on success, 1 on runtime failure (store malformed on a mutating command, write failure), 2 on argument misuse. On a malformed store a mutating command writes nothing and fails loudly rather than rewriting the file. | task0001 (implements), task0002 / task0009 (invoke the commands and document all three) |
+| **Consent-write provenance boundary** | Bounds which invocations of the CLI may change the store | No precondition inside the CLI: `--record`, `--remove` and `--list` all work regardless of the standard-input kind. The boundary is the `contributor-consent` skill — a slash command the user launches, which runs a mutating command only after an AskUserQuestion answer. This is an instruction-level gate, not a mechanical one (SPEC a12): what is enforced in code is the hook's deny, i.e. "a repository with no recorded consent cannot invoke the contributor tier". | task0009 (the skill runs the mutating command and reports the outcome) |
 | **Command recognition** | Decides whether a Bash command string invokes the contributor tier | Input: the raw command string. Output: exactly one of "invokes the contributor tier" or "does not / cannot be classified". **Splitting into commands must happen only after shell quoting has been honoured**: a separator character (statement separator, pipe, background, boolean operators, newline) inside a single- or double-quoted region is ordinary text, never a boundary. A quoted region is a single argument token, and is re-examined as command text **only** in the two roles where a shell would execute it: the argument that follows a nested shell's command-string flag, and the body of a command substitution. Recognition of a model-selection argument compares its value to the tier name by exact equality after quote removal, in both directions (the plain tier never matches the contributor tier and vice versa). Anything the recognizer cannot classify with confidence produces "does not", never an exception and never a decision. The whole contract is a pure function of the command string: no subprocess, no file access, no network. | task0007 (owns it), task0008 (must not change it) |
 | Deny payload | What the enforcement layer returns when consent is absent | One JSON object on stdout carrying exactly four inner fields under `hookSpecificOutput`: the event name, the decision `deny`, a human-facing reason, and an agent-facing additional context. No further diagnostic fields. Every one of those strings is a **single-line** string containing no newline. On every non-deny path stdout receives **zero bytes** (not an empty object, not a newline) and the process exits 0. The two strings are module-level constants; nothing from the input — the command, the working directory, the derived project key, the store path or any store content — is interpolated into them. | task0001 (owns the text); task0007 / task0008 must leave it unchanged |
 | Hook registration form | How the script is wired into each plugin | Registered under the `PreToolUse` event with matcher `Bash`; the command entry is exactly `python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py` with `timeout` 15; positioned **before** the destructive-guard entry so that guard's blanket allow cannot terminate the decision first. Identical verbatim form and timeout in both plugins. | task0001 |
@@ -90,19 +89,16 @@ across the two plugins** — the two script copies are duplicated deliberately (
 - **Error-handling policy (grant layer)**: fail loud. A malformed store aborts a
   mutating command with a stderr message and a non-zero exit rather than being
   repaired, because repairing it would silently discard other repositories'
-  consent entries. The provenance refusal (non-interactive standard input) is the
-  one refusal that precedes even reading the store.
+  consent entries.
 - **Tests**: every test module in this feature lives in the repository-root
   `tests/` directory and is picked up by `python3 -m unittest discover -s tests`.
   Standard library only. No test reads or writes the real `~/.claude` state — the
   store path override is set to a path under a temporary directory in every case.
   **No file is added under either plugin's `hooks/tests/`** for this feature; the
   case-runner style used by the destructive guard is deliberately not replicated.
-- **Interactive-terminal tests**: any test that must exercise a successful
-  `--record` / `--remove` allocates a pseudo-terminal for the child's standard
-  input with the standard library facility for that purpose; any test that must
-  exercise the refusal gives the child an ordinary pipe. Both shapes are standard
-  library only (NFR6).
+- **CLI tests**: every test that exercises `--record` / `--remove` / `--list` runs the
+  child with an ordinary pipe for standard input; the CLI has no terminal precondition,
+  so no other shape is needed (NFR6).
 - **Fixed new test module names** (so parallel tasks cannot collide):
   `tests/test_muse_guard.py`, `tests/test_muse_guard_registration.py`,
   `tests/test_contributor_consent_skill.py`,
@@ -201,20 +197,17 @@ resolution must step over a wrapper option that takes its value in a separate
 token, and shell nesting must be recognized when the command-string flag is bundled
 with other short options. Affected: task0007 owns it; task0008 must not touch it.
 
-### D-I: Consent-write provenance is a CLI precondition, and the skill only presents the command
+### D-I: Consent-write provenance rests on the skill, and the skill runs the command
 
-The second enforcement surface lives entirely on the CLI's two mutating commands:
-they refuse to change the store unless standard input is an interactive terminal,
-and the refusal precedes every store access. The skill is therefore rewritten to
-**present** the command line for the user to run in their own terminal rather than
-running it — an agent-run invocation would be refused anyway, and presenting it
-keeps the skill honest about who performs the write. The read-only command stays
-outside the precondition so the skill can still report the current state. The hook
-classification surface (FR4 / FR5) is untouched by this decision. The
-interactive-terminal test is a provenance proxy, not proof of human operation
-(SPEC a12); the residual is accepted and stated in the SPEC. Affected: task0008
-(CLI side) and task0009 (skill side); they meet only at the CLI contract above and
-share no file.
+The CLI imposes no precondition of its own: `--record`, `--remove` and `--list` all
+work from any process. What bounds a write is the `contributor-consent` skill — a
+slash command the user launches, which records only after an AskUserQuestion answer.
+The skill therefore **runs** the mutating command itself and reports the outcome in
+one line, rather than handing the user a command line to run elsewhere. The hook
+classification surface (FR4 / FR5) is untouched by this decision. This is an
+instruction-level gate, not a mechanical one (SPEC a12); the residual is accepted and
+stated in the SPEC. Affected: task0008 (CLI side) and task0009 (skill side); they meet
+only at the CLI contract above and share no file.
 
 ### D-J: Merge boundary inside the two files task0007 and task0008 share
 
@@ -243,9 +236,7 @@ implementer's parent-side-adoption protocol. Affected: task0007, task0008.
 | The rebuilt recognizer widens what counts as an invocation and denies a mention, stalling an unattended run | Medium | High | Every widening in task0007 is paired with the mention that must stay undecided; quoted text is inert unless it occupies one of two executable roles; the fail-open default covers anything unclassifiable |
 | The rebuilt recognizer still misses an invocation shape the harness emits | Medium | High | The four verify reproductions are acceptance criteria verbatim, and the recognition contract fixes the *mechanism* rather than an enumeration, so a new spelling is covered by tokenization rather than by a new row |
 | task0007 and task0008 collide in the two files they share | Medium | Medium | D-J's region split plus distinct test group names; conflicts fall back to the parent-side-adoption protocol |
-| The provenance refusal breaks the existing tests that record consent | High | Medium | task0008 owns updating every existing case that calls a mutating command to use a pseudo-terminal standard input; that update is one of its acceptance criteria |
-| The provenance refusal is read as a claim of unbypassability | Medium | Medium | SPEC a12 states the residual; the refusal message and the task plans state the boundary as "an agent's ordinary Bash call path", never as "impossible" |
-| The skill's presented command is copied into an agent-run Bash call and silently fails | Medium | Low | The presented text states that the user runs it in their own terminal, and the CLI's refusal message repeats the reason on stderr |
+| The consent-write boundary is read as a mechanical guarantee | Medium | Medium | SPEC a12 states the residual: the skill route is a convention, and only the hook's deny is enforced in code |
 | The two script copies drift apart across three tasks that edit them | Medium | Medium | D-A keeps the permitted divergence to one constant and the copy-comparison test runs in every task that edits either copy |
 | An added sentence in a skill document trips the interactive-question budget test | Medium | Low | The skill documents are the pinned set's documented exclusion; task0009 adds no occurrence to any develop-phase or review-phase document |
 
@@ -257,7 +248,7 @@ implementer's parent-side-adoption protocol. Affected: task0007, task0008.
       guard already emit; if they use 敬体, match them and adjust this feature's
       user-facing strings accordingly. Consistency with the existing family
       outranks the plain-form default; only the register changes. Applies to the
-      guard messages (task0001), the provenance refusal line (task0008) and the
+      guard messages (task0001), the CLI's result lines (task0008) and the
       skill's lines (task0009).
 - [ ] **O2 — Exact invocation of the LiteLLM availability probe.** The probe is
       already defined in each plugin's review-phase document, which was not an

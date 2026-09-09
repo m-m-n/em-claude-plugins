@@ -23,12 +23,11 @@ path and never invoked by the workflow itself:
   muse_guard.py --remove --project-dir DIR
   muse_guard.py --list   --project-dir DIR
 
-`--record` and `--remove` additionally require that the process's standard
-input is an interactive terminal (the consent-write provenance boundary,
-IMPLEMENTATION.md Shared Components) -- a provenance proxy, not proof of
-human operation, that keeps an agent's ordinary Bash call path from
-recording consent. The check is evaluated before project-key derivation and
-before any store access. `--list` is outside this precondition.
+All three commands are callable from any process. The consent-write
+provenance boundary is the `contributor-consent` skill itself (a slash
+command the user launches) plus the AskUserQuestion answer inside it
+(IMPLEMENTATION.md Shared Components) -- an instruction-level gate, not a
+mechanical one.
 
 Consent store: ~/.claude/em-workflow/muse-consent.json -- a single,
 presence-only record of which repositories have consented, shared by both
@@ -646,26 +645,6 @@ def hook_main():
 
 _CLI_MODES = ("--record", "--remove", "--list")
 
-# Consent-write provenance boundary (IMPLEMENTATION.md Shared Components):
-# the two mutating commands refuse to touch the store unless standard input
-# is an interactive terminal. This is a provenance proxy, not proof of human
-# operation (SPEC a12) -- it establishes that an agent's ordinary Bash call
-# path cannot record consent, never that the store is unbypassable by other
-# means. The refusal message states the requirement only; it carries no
-# path, no project key and no store content.
-PROVENANCE_REFUSAL = "対話的な端末からの実行でなければ、同意の記録や削除はできない。"
-
-
-def _stdin_is_interactive():
-    """True when the process's standard input is an interactive terminal.
-    Never raises: a stdin lacking isatty() entirely is treated as
-    non-interactive rather than propagating an exception."""
-    try:
-        return sys.stdin.isatty()
-    except (AttributeError, ValueError, OSError):
-        return False
-
-
 def parse_cli_args(argv):
     """Returns (mode, project_dir) or None on argument misuse: exactly one
     of --record/--remove/--list, --project-dir DIR required alongside it,
@@ -721,13 +700,6 @@ def cli_list(project_dir):
 
 
 def cli_main(mode, project_dir):
-    # The provenance check precedes project-key derivation and any store
-    # access for both mutating commands -- a refused run launches no git
-    # subprocess and touches no file (IMPLEMENTATION.md Shared Components,
-    # "Consent-write provenance boundary").
-    if mode in ("--record", "--remove") and not _stdin_is_interactive():
-        print(PROVENANCE_REFUSAL, file=sys.stderr)
-        return 1
     if mode == "--record":
         return cli_record(project_dir)
     if mode == "--remove":
