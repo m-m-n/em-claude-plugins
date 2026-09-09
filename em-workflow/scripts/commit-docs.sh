@@ -10,15 +10,17 @@
 # Usage:
 #   ${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh <worktree-path> <message> [expected_base_tip]
 #
-#   expected_base_tip (optional): the branch tip the caller's worktree state
-#   was actually built on, captured at the caller's last refresh (e.g. right
-#   after its `git reset --hard`). When provided, this is the authoritative
-#   staleness check: after acquiring the lock, the current branch tip MUST
-#   equal expected_base_tip, or exit 4 fires. Callers SHOULD pass this
-#   argument — it closes the window between the caller's refresh+edit and
-#   this script's own BEFORE_TIP read, which the start-vs-under-lock check
-#   below cannot see. When omitted, only the secondary start-vs-under-lock
-#   check runs (kept for backwards compatibility).
+#   expected_base_tip (optional): the branch tip the caller captured from
+#   the integration branch ref BEFORE, and independently of, its own
+#   refresh (e.g. `git rev-parse <branch>`, captured strictly before the
+#   `git reset --hard` that follows it). When provided, this is the
+#   authoritative staleness check: after acquiring the lock, the current
+#   branch tip MUST equal expected_base_tip, or exit 4 fires. Callers
+#   SHOULD pass this argument — it closes the window between the caller's
+#   refresh+edit and this script's own BEFORE_TIP read, which the
+#   start-vs-under-lock check below cannot see. When omitted, only the
+#   secondary start-vs-under-lock check runs (kept for backwards
+#   compatibility).
 #
 # Exit codes (semantic — callers branch on these):
 #   0 = committed, or nothing to commit (no-op success; ref unchanged)
@@ -41,13 +43,15 @@
 #       a defined terminal for an unexpected non-zero exit — today exactly
 #       one such site: `em-workflow/references/implement-phase.md` Step
 #       I.2.c's route-back commit): on exit 4 the caller
-#       MUST (1) refresh this worktree to the new branch tip (e.g. `git
-#       reset --hard` to the current branch ref — safe per NFR2, this
-#       worktree never carries uncommitted state across turns), (2)
-#       re-apply the artifact edits this invocation was trying to commit,
-#       and (3) retry this script once. The protocol-side implementation of
-#       that loop (which caller performs steps 1-2, at which point in the
-#       orchestrator flow) is out of this script's scope.
+#       MUST (1) re-capture the tip from the branch ref (e.g. `git
+#       rev-parse` against the branch — never the worktree's own `HEAD`),
+#       (2) refresh this worktree to that branch tip (e.g. `git reset
+#       --hard` to the branch name — safe per NFR2, this worktree never
+#       carries uncommitted state across turns), (3) re-apply the artifact
+#       edits this invocation was trying to commit, and (4) retry this
+#       script once. The protocol-side implementation of that loop (which
+#       caller performs steps 1-3, at which point in the orchestrator
+#       flow) is out of this script's scope.
 #
 # Non-artifact untracked/modified files (verify/build/test/format
 # byproducts) never cause exit 4 by themselves — staleness is decided
