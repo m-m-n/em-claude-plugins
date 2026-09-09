@@ -108,8 +108,8 @@ workflow:
     completed_at_commit: 5295fafb2eb3e27ca2df0985fb3b6207c8d35a7c
     base_commit: 7430b672cbb36f6776a8514355c550ff5984ae52
   - id: review
-    status: in_progress
-    completed_at_commit: 6a0d0d097c9e7d73f5651dc0396745afd5e6f4bf
+    status: completed
+    completed_at_commit: 57a66854aadc8f0913165a268f4f9f7f7e5ffc2e
   - id: verify
     status: pending
     result: fail
@@ -239,8 +239,8 @@ tasks:
     notes: null
 
 review:
-  status: in_progress
-  rounds_completed: 2
+  status: completed
+  rounds_completed: 3
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
@@ -249,9 +249,9 @@ review:
     security: {run_id: "security#0", source: codex, status: completed}
     comprehensive: {run_id: "comprehensive#0", source: codex, status: completed}
     performance: {run_id: "performance#0", source: litellm, model: muse-spark, status: completed}
-    architecture: {run_id: "architecture#2", source: codex, status: completed}
+    architecture: {run_id: "architecture#fallback", source: claude, status: completed}
     spec: {run_id: "spec#0", source: litellm, model: muse-spark, status: completed}
-  residual_critical_high: 7
+  residual_critical_high: 2
   needs_rework: false
 
 requirements:

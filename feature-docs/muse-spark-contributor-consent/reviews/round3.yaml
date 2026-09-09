@@ -1,0 +1,235 @@
+round: 3
+executed_at: "2026-09-09T11:05:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 7430b672cbb36f6776a8514355c550ff5984ae52
+  head_commit: d3c9427a88f902107ab1f0fae9c6238a7d1694b3
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-review/.claude-plugin/plugin.json
+    - em-review/hooks/hooks.json
+    - em-review/hooks/muse_guard.py
+    - em-review/references/review-phase.md
+    - em-review/references/reviewers.yaml
+    - em-review/skills/contributor-consent/SKILL.md
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/hooks.json
+    - em-workflow/hooks/muse_guard.py
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/reviewers.yaml
+    - em-workflow/skills/contributor-consent/SKILL.md
+    - test-docs/muse-spark-contributor-consent/task0001.tests.yaml
+    - test-docs/muse-spark-contributor-consent/task0002.tests.yaml
+    - test-docs/muse-spark-contributor-consent/task0003.tests.yaml
+    - test-docs/muse-spark-contributor-consent/task0004.tests.yaml
+    - test-docs/muse-spark-contributor-consent/task0005.tests.yaml
+    - test-docs/muse-spark-contributor-consent/task0006.tests.yaml
+    - test-docs/muse-spark-contributor-consent/task0007.tests.yaml
+    - test-docs/muse-spark-contributor-consent/task0008.tests.yaml
+    - test-docs/muse-spark-contributor-consent/task0009.tests.yaml
+    - tests/test_assumptions_reversible_criteria_version_bump.py
+    - tests/test_batch_codex_autonomous_decisions_version_bump.py
+    - tests/test_contributor_consent_skill.py
+    - tests/test_contributor_tier_criteria.py
+    - tests/test_failed_kind_version_bump.py
+    - tests/test_guardrail_hooks_migration.py
+    - tests/test_muse_consent_no_new_questions.py
+    - tests/test_muse_consent_version_bump.py
+    - tests/test_muse_guard.py
+    - tests/test_muse_guard_registration.py
+    - tests/test_verify_rework_lineage_cap_version_bump.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: failed}
+  - {run_id: "architecture#fallback", perspective: architecture, role: fallback, source: claude, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: d23f182330cc695e
+    severity: high
+    category: architecture
+    file: em-workflow/hooks/muse_guard.py
+    line: 73
+    title: "DENY_CONTEXT がレビュアーにチェーン選択を指示し、deny 後の復帰経路がプロトコルに存在しない"
+    description: >-
+      DENY_CONTEXT（両プラグインの muse_guard.py:73-80、PLUGIN_SLUG 以外バイト一致）は
+      「reviewers.yaml の chain にある非 contributor の muse-spark エントリ、または他の
+      chain エントリでレビューを続行する」と指示する。この additionalContext を受け取るのは
+      deny された Bash を発行した主体、すなわち codex exec -p litellm -m <model> を実行する
+      レビュアーサブエージェントである。ところが em-workflow/references/review-protocol.md:25 は
+      『never chooses one itself — WHICH model each perspective gets is decided by the
+      orchestrator』と定めており、reviewers.yaml はレビュアーの入力ですらない。指示どおり
+      動けば、レビュアーはオーケストレーターが選んでいないモデルで自走し、R2 が記録した
+      chain INDEX・R2b の再開位置・litellm:<model>:<perspective> の source identity が
+      すべて実行実体とずれる。どのレビューをどのティアへ送ったかの追跡可能性がこの機能の
+      目的そのものなので、記録が実行と食い違うのは具体的なコスト。加えて、この deny を表す
+      skip_reason が review-protocol.md の retryable 集合（rate_limited / budget_exhausted /
+      harness_unavailable）に無く、レビュアーには層に沿った報告手段が無い。
+    suggestion: >-
+      DENY_CONTEXT からチェーン選択の指示を外し、レビュアーには「このハーネス呼び出しは
+      実行できない」ことと同意の代行記録禁止だけを伝える。チェーン継続の判断はオーケスト
+      レーターに戻す — (a) この deny に対応する skip_reason を review-protocol.md の
+      retryable 集合に追加して R2b の表に行を足すか、(b) deny を非 retryable 失敗として
+      扱い R2b のチェーン歩進に載せるか、どちらかに寄せる。em-review 側のコピーも同じ
+      1 行修正で揃える（PLUGIN_SLUG 以外バイト一致の制約を維持）。
+    sources: [claude:architecture]
+    confidence: 80
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: ec05dc7aa23bc46f
+    severity: high
+    category: comprehensive
+    file: em-workflow/skills/contributor-consent/SKILL.md
+    line: 97
+    title: "ユーザーが自分の端末で実行するコマンドに ${CLAUDE_PLUGIN_ROOT} が入っており、そのままでは動かない"
+    description: >-
+      スキルは同意の記録・撤回コマンドを python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py
+      --project-dir "$(pwd)" --record（97 行、撤回は 103 行、em-review 側のコピーも同一）と
+      して『そのまま提示する』と定め、108 行で「コマンドは自分の端末で実行する」と指示する。
+      CLAUDE_PLUGIN_ROOT は Claude Code がフック／スキル実行時に与える環境変数であり、
+      ユーザーのログインシェルには存在しない。提示されたまま貼り付けると空文字に展開され
+      python3 /hooks/muse_guard.py になって即座に失敗する。FR7 の provenance 境界により
+      記録経路はこの「ユーザー自身の端末」しかないため、US5（同意の付与と撤回をスキルの
+      提示するコマンドで行える）と AC-1 の唯一の実行経路が塞がる。SPEC FR13 はコマンド行を
+      python3 <plugin>/hooks/muse_guard.py --record --project-dir <dir> と具体パス前提で
+      書いており、SKILL.md の実装形はそこからも乖離している。
+      tests/test_contributor_consent_skill.py:123,127 はリテラル
+      "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py の存在を検査しているため、この形は
+      固定されておりテストでは検出されない。--project-dir "$(pwd)" も、ユーザーの端末の
+      cwd 次第で別のキーを記録しうる同種の問題を持つ。
+    suggestion: >-
+      提示するコマンドは展開済みの絶対パスにする — スキル自身がステップ 2 で解決した
+      スクリプトの実パスと対象ディレクトリを埋め込んだ 1 行を出力し、${CLAUDE_PLUGIN_ROOT}
+      と $(pwd) をユーザー側のシェルに評価させない。テスト側の期待文字列も、リテラル一致
+      ではなく「提示行に環境変数への依存が残っていないこと」を検査する形に合わせる。
+      em-review 側のコピーも同じ修正を入れる。
+    sources: [claude:evaluator]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 42c502f438b26e5d
+    severity: medium
+    category: architecture
+    file: em-workflow/references/review-phase.md
+    line: 246
+    title: "同意の「機械的チェック」を実行する手段がオーケストレーター向けに定義されていない"
+    description: >-
+      新設の Contributor-tier pre-dispatch criteria（em-workflow は 244-268 行、em-review は
+      199-223 行、両 reviewers.yaml のコメントにも同文）は、read-mapping の前提として
+      「consent for this project is recorded — mechanical, decided by the consent store,
+      not by prose」の通過を要求する。しかしオーケストレーターが読む文書のどこにも、
+      ストアの問い合わせ手段・プロジェクトキーの導出規則が書かれていない。R0 の probe 群
+      （codex / litellm / ntd）にも同意 probe は無い。ストアへの読み取り経路は
+      skills/contributor-consent/SKILL.md:40 の --list だけで、その SKILL.md 自身が
+      『develop フローや review フローの自動処理から呼び出されることはなく、どのフェーズ
+      ドキュメントもこのスキルを参照しない』（11-13、122-123 行）と宣言している。結果、
+      R2 のオーケストレーターは機械的チェックを実行できず、実質 LLM 判断だけで dispatch
+      して hook の deny を待つ運用になる（設計上の二段チェックが一段に退化し、前掲の deny
+      復帰経路の欠落と直結する）。自前でキー導出を再実装する回避も、muse_guard.py が単独
+      所有する git common-dir 規則の二重化になる。
+    suggestion: >-
+      どちらかに明示的に寄せる。(a) R0 の probe 群に 1 ステップ足し、
+      python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py --project-dir {project_root} --list
+      の出力有無で contributor_consent を決めると書き、criteria 側は「機械的チェック =
+      R0 で得た contributor_consent」と参照するだけにする（キー導出は muse_guard.py の
+      単独所有のまま）。(b) 機械的チェックは hook が実行時に行うものと明記し、criteria
+      からは dispatch 前の前提条件という位置づけを外したうえで、deny された場合の
+      オーケストレーター側の扱いを定義する。em-review 側の review-phase.md と両
+      reviewers.yaml のコメントにも同じ結論を反映する。
+    sources: [claude:architecture]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: null
+  - stable_id: 45b7ef83b371dccb
+    severity: medium
+    category: architecture
+    file: em-workflow/references/review-phase.md
+    line: 203
+    title: "read-mapping 後の source identity litellm:<model>:<perspective> にどちらのモデル名を書くか未規定"
+    description: >-
+      read-mapping は「レジストリのエントリ値（muse-spark）」と「実際に dispatch される
+      モデル（muse-spark-contributor）」が初めて食い違う経路を作る。一方 source identity の
+      語彙は em-workflow/references/review-phase.md:201-203 で litellm:<model>:<perspective>
+      と定義されるだけで、read-mapping 後にどちらを書くかが書かれていない（em-review 側
+      276-277 行の『the model is the one THIS phase dispatched, never the one the reviewer
+      claims』は自己申告の否定であって、レジストリ値と dispatch 値の食い違いを想定した文
+      ではない）。レジストリ値を書けば contributor ティアへ送った run が通常の muse-spark
+      run と記録上区別できず、dispatch 値を書けば reviewers.yaml に存在しない文字列が
+      run 識別子に現れる。同意ゲートの本質が「どのレビューを外部ティアへ送ったか」の
+      追跡可能性である以上、記録側で判別できないのは具体的なコスト。
+    suggestion: >-
+      criteria セクションに 1 文足す。推奨は dispatch した実値を記録する形
+      （litellm:muse-spark-contributor:<perspective>）で、あわせて「この値はレジストリの
+      chain エントリ名ではなく、read-mapping 適用後に実際に渡した model である」と明記
+      する。em-workflow:201-203 と em-review:274-277 の双方に同じ但し書きを入れる。
+    sources: [claude:architecture]
+    confidence: 65
+    resolution: unresolved
+    resolution_reason: null
+evaluation:
+  round_summary: >-
+    ラウンド 3（cross_validation あり、6 run 中 5 completed / 1 failed）。architecture#0
+    （vertex-glm-5.2）は出力ゼロで失敗し、architecture#fallback（claude）が代替した。
+    injection の試みは reviewer_outputs のどこにも見当たらない。carry: architecture 3 件
+    （1 件を high に引き上げ、1 件を high から medium に引き下げ）＋ 評価者自身の inspection
+    で見つけた comprehensive 1 件（high）。performance の 3 件はすべて demote した。
+    観点別カバレッジ — security: corroborated（両プラグインの muse_guard.py を突き合わせて
+    PLUGIN_SLUG 1 行以外バイト一致を確認、deny/no-decision のみで ask/allow を出さないこと、
+    isatty チェックがキー導出とストアアクセスより前に来ること、malformed ストアの修復なしを
+    確認。残余として codex -c model=<tier> 形の config 上書きは stage 4 の 3 形状に含まれず
+    fail open になるが、これは設計が明示的に受け入れた未モデル化形状のクラスで、実際の
+    dispatch 形 -m は捕捉される — 所見として記録のみ、finding には上げない）。
+    comprehensive: findings（SKILL.md の ${CLAUDE_PLUGIN_ROOT} コマンド、high）。
+    performance: corroborated（3 件の指摘はコード形状としては実在するが、いずれも NFR4 の
+    timeout: 15 に対して桁違いに内側 — heredoc の re.compile は CPython の re._cache に載り、
+    終端子探索とバックティック探索の O(h*n)/O(k*n) は C 実装のスキャンで、Bash ツールが渡す
+    長さの文字列ではミリ秒に届かない。substitution の二重分類も _MAX_NEST_DEPTH = 2 で
+    高々 3 パスに有界）。architecture: findings（3 件を carry、うち deny 後の復帰経路欠落を
+    high に）。spec: corroborated（FR7 の isatty 先行、FR11 の chain 不変、FR12 の両
+    plugin.json + marketplace.json 同値バンプ、FR13 の --record/--remove 提示と自己実行禁止を
+    diff 上で確認。FR13 のコマンド行形との乖離だけは comprehensive の finding に含めた）。
+    読み取り予算 10 ファイルを使い切ったため、tests/ 配下の新規テスト 9 本の中身と
+    scripts/run_codex_exec.sh は未検証。
+  recommended_action: "rework"
+  action_rationale: >-
+    high 2 件が残り、どちらも 1 行では閉じない。deny 後の復帰経路は review-protocol.md の
+    skip_reason 語彙と R2b のチェーン歩進のどちらに載せるかという設計判断を要し、両プラグ
+    インの muse_guard.py・review-phase.md・review-protocol.md にまたがる。SKILL.md の
+    ${CLAUDE_PLUGIN_ROOT} は同意付与の唯一の経路（US5 / AC-1）を塞いでおり、SPEC FR13 の
+    記述形との整合も含めて直す必要があるうえ、既存テストがその形を固定しているためテスト側の
+    修正も伴う。加えてラウンド 1-2 の 6 件が unresolved のまま残っている。bounded auto_fix の
+    射程を越えるため rework を推す。
+dismissed_sites:
+  - file: em-review/hooks/muse_guard.py
+    line: 453
+    run_id: "performance#0"
+    reason: "demoted"
+  - file: em-review/hooks/muse_guard.py
+    line: 577
+    run_id: "performance#0"
+    reason: "demoted"
+  - file: em-review/hooks/muse_guard.py
+    line: 436
+    run_id: "performance#0"
+    reason: "demoted"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 2
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: "/home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-muse-spark-contributor-consent-20260909T020037Z.md"

@@ -217,3 +217,68 @@ records:
     follow-up rather than acted on here: if preserve_and_reuse is meant to be exceptionless, the
     "verified in-workflow provenance may use replace_authorized" rule belongs in batch-policies.yaml
     rather than in a per-run judgement. Orchestrator: em-workflow develop, batch run 2026-09-09.'
+
+- question_id: review.architecture-empty-harness-output
+  packet_id: null
+  answered_at: "2026-09-09T10:52:00+09:00"
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - treat_as_harness_failure_and_fallback
+  freeform: null
+  normalized_answer: architecture#0 を status failed として記録し、architecture 観点に Claude fallback を 1 回だけ dispatch する。
+  resolution_note: 'gate: review.architecture-empty-harness-output (round 3, orchestrator-opened,
+    no worker packet, unlisted-gate fallback). The vertex-reviewer subagent for architecture
+    returned a schema-valid envelope {"findings": [], "skipped": false, "skip_reason": null}
+    but disclosed that the underlying CLI exited 0 with `tokens used 0` and an EMPTY final
+    message, and stated itself "per protocol this is not a skip - it is a truncated/empty
+    model output". Not chosen: treat_as_completed_run -- review-phase.md R2b says schema
+    validity is the only test, but that rule exists to stop the orchestrator second-guessing
+    a genuine empty review, not to launder a zero-token harness non-result; recording the
+    perspective as reviewed would have been irreversible and would have dropped architecture
+    coverage on an authorization guard. codex_consulted: true but the primary Codex CLI
+    returned exit 1 "You have hit your usage limit ... try again at 1:03 PM"; fallback
+    provider answered: no; opus escalation: not run. No decision reached from consultation,
+    so batch-mode.md''s unlisted-gate fallback applied: take the smallest / most reversible
+    side effect -- one extra Claude fallback dispatch. Outcome validates the choice: the
+    fallback returned 1 high + 2 medium architecture findings that Option A would have
+    silently dropped. Anomaly flagged by the consulting agent and recorded here for the
+    human: the codex CLI log showed session/state bleed-through (an unrelated
+    "comprehensive-perspective code review round 3" transcript against this same worktree
+    appeared in the log before the consultation prompt).'
+
+- question_id: review.auto-fix-judgment
+  packet_id: null
+  answered_at: "2026-09-09T11:00:00+09:00"
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - skip_auto_fix_defer_residuals
+  freeform: null
+  normalized_answer: review round 3 の Phase R4 auto-fix を実行せず、high 2 件を deferred として記録し、run report で明示的にエスカレーションする。
+  resolution_note: 'gate: review.auto-fix-judgment (round 3). One candidate reached the
+    needs-judgment path: d23f182330cc695e (high, architecture, em-workflow/hooks/muse_guard.py:73,
+    prose prescription). The other high, ec05dc7aa23bc46f, has sources == ["claude:evaluator"]
+    and is therefore skipped unconditionally in batch mode by review-phase.md R4''s own
+    candidate-gate rule -- not by this gate. batch-mode.md''s stated default for this gate is
+    "Apply as-is (editor interprets)", departed from under the invocation''s explicit
+    instruction to consult Codex and adopt the comparatively better option. Not chosen:
+    apply_as_is_batch_default. codex_consulted: true (codex-harness second-opinion; the
+    primary Codex CLI provider was at its usage limit, so the litellm/muse-spark route
+    answered -- Standard tier, no contributor consent is recorded for this project so the
+    registry read-mapping did not apply); fallback provider answered: yes (litellm/muse-spark);
+    opus escalation: not run. Codex chose B (skip) on three grounds the orchestrator adopted:
+    (1) the review-editor may write exactly one file, while
+    tests/test_muse_guard.py::test_copies_differ_in_exactly_one_line_the_plugin_slug pins
+    em-review/hooks/muse_guard.py byte-identical to the em-workflow copy apart from
+    PLUGIN_SLUG, so applying the default breaks that invariant deterministically and leaves
+    two divergent copies of an authorization guard; (2) the finding''s own suggestion leaves
+    an open design choice -- add a new retryable skip_reason to review-protocol.md''s closed
+    vocabulary and a row to R2b''s table, or treat the deny as non-retryable -- spanning three
+    documents in two plugins beyond the single editable file, which a single-file editor
+    cannot decide; (3) the batch review rework budget is already spent (cap 1, count 1), so a
+    bad auto-fix could not be repaired inside this phase and whatever this round leaves is what
+    the human evaluator receives. Codex''s stated risk of B, adopted as an obligation: deferral
+    is only defensible as an explicit escalation, so both residual highs are surfaced
+    prominently in the run report rather than silently completed. Consistent with the round-2
+    resolution of the identical gate under the identical constraints.'
