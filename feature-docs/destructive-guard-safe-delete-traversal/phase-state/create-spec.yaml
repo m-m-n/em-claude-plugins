@@ -1,15 +1,29 @@
 schema_version: 1
 feature: destructive-guard-safe-delete-traversal
 phase: create-spec
-status: initialized
+status: completed
 generation: 1
-base_revision: ce6d3fd7fdc9874e6ea127d81769ca50f1f4975c
-last_input_digest: null
+base_revision: 1d5ac364a4dd9b05ea87fa68d93e7067a5b4ac37
+last_input_digest: sha256:9ce975db212c97811dbe46172e2729d43e709451439c940575bf8caf20ad36a0
 active_request_id: null
 packets: {}
 answers: {}
-worker_runs: []
-artifacts: []
+worker_runs:
+  - request_id: create-spec-analyst-0001
+    status: completed
+    input_digest: sha256:36785495e7249570697f181f1067591feab8a1b89852f46972acdf2ecece5869
+    output_digest: null
+  - request_id: create-spec-specwriter-0001
+    status: completed
+    input_digest: sha256:9ce975db212c97811dbe46172e2729d43e709451439c940575bf8caf20ad36a0
+    output_digest: null
+artifacts:
+  - path: feature-docs/destructive-guard-safe-delete-traversal/REQUIREMENTS.md
+    sha256: sha256:e100077783c9a761c540a4c178ed432c1fa370c78d1eedc345c818a3325c944f
+    produced_by: create-spec-specwriter-0001
+  - path: feature-docs/destructive-guard-safe-delete-traversal/SPEC.md
+    sha256: sha256:12a78b3b4e8d075dd9d4113f34c46b1b662b4ad4f3113c1635119b8b557e3a2a
+    produced_by: create-spec-specwriter-0001
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
