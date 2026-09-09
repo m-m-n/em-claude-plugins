@@ -1,0 +1,124 @@
+task_id: task0001
+baseline_failures: []          # 156/156 passed before any edit (4a)
+final_failures: []             # 164/164 passed after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - "スクラッチ外(rm-recursive): `/tmp/../home/sakura/valuable` は正規化後 `/home/sakura/valuable` になりスクラッチルートの外に出るため deny — 親参照でスクラッチ領域から脱出する経路"
+      - "スクラッチ外(rm-recursive): 正規化後は `src` になり safe ルート名と一致しないため deny — 親参照混じりの経路は正規化後の実体で判定される"
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `target` と完全一致しない無関係な `targets` は safe 例外の対象外（コンポーネント単位一致）"
+      - "本物(rm-recursive): 親参照を伴わない対照 `/home/sakura/valuable` も同じ理由IDで deny"
+    red_confirmed: true
+    red_reason: >-
+      The 2 existing entries (build/../src, targets) were flipped from
+      allow to deny, and the new /tmp/../home/sakura/valuable entry was
+      added as deny; all three failed (got allow, want deny) when the
+      suite ran against the unmodified guard, before the logic change.
+      The control entry (/home/sakura/valuable, no traversal) already
+      passed under the unmodified guard, since the old prefix regex never
+      matched an absolute /home path either — carried as confirmatory
+      coverage rather than a red case.
+  AC-2:
+    tests:
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `build` と完全一致しない `build-debug` は safe 例外の対象外（コンポーネント単位一致）"
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `dist` と完全一致しない `dist-ssr` は safe 例外の対象外（コンポーネント単位一致）"
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `target` と完全一致しない `target-old` は safe 例外の対象外（コンポーネント単位一致）"
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `coverage` と完全一致しない `coverage.old` は safe 例外の対象外（コンポーネント単位一致）"
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `build` と完全一致しない `build-artifacts` は safe 例外の対象外（コンポーネント単位一致）"
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `dist` と完全一致しない `dist-newstyle` は safe 例外の対象外（コンポーネント単位一致）"
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `coverage` と完全一致しない `coverage-old` は safe 例外の対象外（コンポーネント単位一致）"
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `node_modules` と完全一致しない `node_modules_bak` は safe 例外の対象外（コンポーネント単位一致）"
+      - "スクラッチ外(rm-recursive): 絶対パス `/build` はビルド成果物クラスの対象外（相対パスのみ）で deny"
+      - "スクラッチ外(rm-recursive): 先頭コンポーネントが `foo` で `build` と一致しないためネストした `foo/build` は safe 例外の対象外"
+    red_confirmed: true
+    red_reason: >-
+      The 8 build-artifact-typo entries were flipped from allow to deny
+      against the unmodified guard and failed (got allow, want deny); the
+      /build and foo/build entries were added new and already passed under
+      the old code (never matched the old prefix regex either), so they
+      were red only in the sense of not yet existing — the flip set's
+      failures are the observed red for this criterion's core claim.
+  AC-3:
+    tests:
+      - "スクラッチ外(rm-recursive): 正規化後 `/tmp` はルート自身で直下に要素が無く safe 例外の対象外 — 末尾スラッシュ無しの `/tmp` と同じ deny"
+      - "スクラッチ外(rm-recursive): 正規化後 `tmp` はルート自身で直下に要素が無く safe 例外の対象外 — 末尾スラッシュ無しの `tmp` と同じ deny"
+      - "スクラッチ外(rm-recursive): 正規化後 `.cache` はルート自身で直下に要素が無く safe 例外の対象外 — 末尾スラッシュ無しの `.cache` と同じ deny"
+      - "スクラッチ外(rm-recursive): 正規化後 `/var/tmp` はルート自身で直下に要素が無く safe 例外の対象外 — 末尾スラッシュ無しの `/var/tmp` と同じ deny"
+      - "スクラッチ外(rm-recursive): 末尾スラッシュ無し `/tmp` は deny — 正規化で末尾スラッシュが畳まれるため `/tmp/` と同じ扱いになった"
+      - "スクラッチ外(rm-recursive): 末尾スラッシュ無し `tmp` は deny — 正規化で末尾スラッシュが畳まれるため `tmp/` と同じ扱いになった"
+      - "スクラッチ外(rm-recursive): 末尾スラッシュ無し `.cache` は deny — 正規化で末尾スラッシュが畳まれるため `.cache/` と同じ扱いになった"
+      - "スクラッチ外(rm-recursive): 末尾スラッシュ無し `/var/tmp` は deny — 正規化で末尾スラッシュが畳まれるため `/var/tmp/` と同じ扱いになった"
+    red_confirmed: true
+    red_reason: >-
+      The 4 trailing-slash entries flipped from allow to deny and failed
+      (got allow, want deny) against the unmodified guard; their
+      no-trailing-slash counterparts were already deny before this task
+      (unaffected, relabeled only to drop the stale asymmetry wording).
+  AC-4:
+    tests:
+      - "本物: rm 安全先 + リダイレクト (rm -rf /tmp/x > /dev/null)"
+      - "本物: rm 安全先 + 2>&1 (node_modules)"
+      - "本物: rm 安全先のみ (/tmp/x)"
+      - "本物: スクラッチ領域配下のグロブ削除は allow (dist/*)"
+      - "本物: 先頭の `./` は正規化で畳まれ `build` と完全一致するため allow"
+      - "既知の穴(未修正): 裸のコマンド置換 `$(mktemp -d)` は対象ゼロで早期returnし allow"
+      - "既知の穴(未修正): 裸のコマンド置換 `$(cat list)` は対象ゼロで早期returnし allow"
+    red_confirmed: false
+    red_reason: >-
+      This criterion pins the UNCHANGED allow side. None of these entries'
+      expected decisions were flipped — they already passed before the
+      logic change (the ./build entry is new but already passed under the
+      unmodified guard, since the old prefix regex also matched it). Their
+      purpose is to prove the fix does not regress this side, so a red
+      state was never expected here; verified instead by the full-suite
+      re-run showing them unchanged at ok both before and after.
+  AC-5:
+    tests:
+      - "動的目標(rm-unresolvable): スクラッチルート配下でも `$X` を含む `tmp/$X` は safe 例外に達する前に ask"
+      - "動的目標(rm-unresolvable): 親参照混じりでも $DIR が残るため ask のまま(参照形)"
+      - "動的目標(rm-unresolvable): 親参照混じりでもグロブが残るため ask のまま(グロブ形)"
+      - "動的目標(rm-unresolvable): 親参照混じりでも $DIR が残るため ask のまま(チルダ形)"
+      - "スクラッチ外(rm-recursive): コマンド置換の後にパスが続く形は deny のまま"
+      - "動的目標(rm-unresolvable): スクラッチルート直下のドット始まりグロブ `tmp/.*` は `..` にも一致し得るため safe 例外の対象外"
+    red_confirmed: true
+    red_reason: >-
+      `tmp/$X` and `tmp/.*` are new entries that failed against the
+      unmodified guard (old code's SAFE_DELETE prefix-matched `tmp/` before
+      ever reaching the dynamic/glob check, so both were allow; expected
+      ask). The three existing parent-ref+dynamic entries and the
+      command-substitution-then-path entry were already ask/deny before
+      this task and are carried forward unchanged as the "did not lose
+      detection power" half of this criterion.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Verified by the full suite run, not a single test: before the logic
+      change, running the suite against the flipped/augmented case table
+      showed exactly 18 FAIL entries (the 14 flips + 4 new logic-dependent
+      entries); after the change, `python3
+      em-workflow/hooks/tests/run-destructive-guard.py` reports 164/164
+      passed, including the trailing batch-demotion assertion. Re-run twice
+      and diffed identical output (determinism). No pre-existing deny/ask
+      entry was removed (diff is additive plus label rewrites plus the 18
+      decision flips).
+  AC-7:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Not test-observable as a red/green pair; verified by inspection and
+      by the suite's outcome instead: grepped the new code region for
+      realpath/os.stat/subprocess — none present (safe_delete_target() and
+      its helpers are pure string/set operations on the already-computed
+      normalize_candidate() output). The SAFE_DELETE_* constants' comment
+      states the two-class component rule; check_rm()'s docstring and the
+      SAFE_DELETE_* comment both state the residual symlink-escape
+      constraint (D5) explicitly. Determinism confirmed by running the
+      suite twice and diffing identical output.
+notes: >-
+  AC-1/AC-2/AC-3/AC-5's red_confirmed is anchored to the case-table-level
+  red state observed by running the suite against the flipped/augmented
+  table with the UNMODIFIED guard (18 FAIL, listed in the implementer's
+  transcript) rather than to each test individually re-run in isolation —
+  the suite has no per-case run mode, so "red" was confirmed at the
+  suite-run granularity the harness actually offers.

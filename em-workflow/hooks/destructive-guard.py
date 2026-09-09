@@ -133,6 +133,18 @@ WRAPPER_VALUE_FLAGS = {
 # A token whose value cannot be resolved by reading the command alone.
 DYNAMIC = re.compile(r"\$\(|`|\$\{|\$[A-Za-z_]|\*|\?|\[")
 
+# Glob wildcard characters, on their own. Kept separate from
+# UNRESOLVED_EXPANSION below: a pure glob still reaches the safe-root
+# exception in check_rm() (no variable/substitution involved), so its
+# presence alone must not short-circuit the check the way an unresolved
+# expansion does.
+GLOB_CHARS = re.compile(r"[*?\[]")
+
+# Variable expansion / command substitution — the subset of DYNAMIC above
+# that makes a target's real destination unknowable no matter how it looks
+# lexically. Glob characters are deliberately excluded; see GLOB_CHARS.
+UNRESOLVED_EXPANSION = re.compile(r"\$\(|`|\$\{|\$[A-Za-z_]")
+
 # Env-var and flag names whose spelling is the author's own warning label.
 BYPASS_TOKEN = re.compile(
     r"(?i)(^|[^A-Z0-9_])(DANGEROUSLY_\w+|BREAKGLASS\w*|\w*_BYPASS_\w*|\w*_UNSAFE\w*"
@@ -147,12 +159,42 @@ BYPASS_FLAGS = {
     "--disable-web-security",
 }
 
-# Deletion targets safe enough to wave through even under `rm -rf`: the
-# scratch roots and build output that get recreated as a matter of course.
-SAFE_DELETE = re.compile(
-    r"^(?:\./)?(?:/tmp/|/var/tmp/|node_modules|dist|build|target|\.next|coverage|"
-    r"tmp/|\.cache/)"
+# Deletion targets safe enough to wave through even under `rm -rf`, split
+# into the two classes check_rm()'s containment predicate (safe_delete_
+# target(), defined next to check_rm()) judges against:
+#
+#   - build artifacts (relative targets only): safe when the target's
+#     LEADING path component equals one of these exactly, either as the
+#     whole target or with further components below it. An absolute path
+#     spelled with the same name, or a component that merely starts with
+#     the name (`build-debug`), is never safe — matching is on whole path
+#     components only, never a text prefix.
+#   - scratch roots: safe only for a proper descendant of the root; the
+#     root itself, in any spelling that normalizes to it (`/tmp`, `/tmp/`),
+#     is never safe. `/tmp`/`/var/tmp` match as absolute paths, `tmp`/
+#     `.cache` as the leading relative path component.
+#
+# Matching runs on the target AFTER normalize_candidate() has folded it —
+# home forms expanded, `.`/`..`/duplicate separators collapsed lexically —
+# so a target that merely LOOKS like it starts with a safe root, but
+# actually escapes it through a parent reference (`/tmp/../home/x`), is
+# judged on where it lexically lands, not on its raw spelling. A path
+# component below a matching root that both starts with `.` and carries a
+# glob wildcard is excluded from the exception even then, because such a
+# component can itself expand to `..` (a bare `*` cannot — shell globbing
+# skips dotfiles, so it can never match `.` or `..`).
+#
+# Residual gap, left in place rather than silently accepted (D5, out of
+# scope for this module): a symlink can make the REAL filesystem location
+# of a normalized target differ from its lexical one. Closing that would
+# require os.path.realpath, which both breaks the determinism this module
+# promises and would touch the filesystem on every decision — this module
+# never does either.
+SAFE_DELETE_BUILD_ARTIFACTS = frozenset(
+    {"node_modules", "dist", "build", "target", ".next", "coverage"}
 )
+SAFE_DELETE_SCRATCH_ROOTS_ABS = ("/tmp", "/var/tmp")
+SAFE_DELETE_SCRATCH_ROOTS_REL = frozenset({"tmp", ".cache"})
 
 # Claude Code's own configuration. A write here changes how the agent itself
 # is permitted to act, so it needs the user in the loop.
@@ -766,7 +808,81 @@ def deletion_alternative(target):
     )
 
 
+def _is_dotglob_component(component):
+    """Whether COMPONENT both starts with `.` and carries a glob wildcard —
+    the one shape a glob component can use to reach a parent reference
+    (`.*` matches `..`; a bare `*` cannot, since shell globbing skips
+    dotfiles). Excluded from the safe-root exception wherever it appears
+    below a matching root — see safe_delete_target().
+    """
+    return component.startswith(".") and bool(GLOB_CHARS.search(component))
+
+
+def _has_parent_ref_component(token):
+    """Whether TOKEN's path, split on `/`, contains a literal `..` segment.
+
+    Checked on the RAW token, before normalize_candidate() folds `..` away —
+    folding a parent reference past an unresolved glob component is not
+    trustworthy (the glob's actual match is unknown at check time), so
+    check_rm() judges this combination unresolvable instead of trusting the
+    fold.
+    """
+    return ".." in token.split("/")
+
+
+def safe_delete_target(normalized):
+    """Whether NORMALIZED — already home-expanded and lexically folded by
+    normalize_candidate() — is contained in a safe root, per the two-class
+    vocabulary in SAFE_DELETE_BUILD_ARTIFACTS / SAFE_DELETE_SCRATCH_ROOTS_*.
+    Pure string comparison; the filesystem is never consulted.
+    """
+    if normalized.startswith("/"):
+        for root in SAFE_DELETE_SCRATCH_ROOTS_ABS:
+            if normalized == root:
+                return False  # the root itself is never safe
+            if normalized.startswith(root + "/"):
+                rest = normalized[len(root) + 1 :].split("/")
+                return not any(_is_dotglob_component(c) for c in rest)
+        return False
+    parts = normalized.split("/")
+    head, rest = parts[0], parts[1:]
+    if head in SAFE_DELETE_BUILD_ARTIFACTS:
+        return not any(_is_dotglob_component(c) for c in rest)
+    if head in SAFE_DELETE_SCRATCH_ROOTS_REL:
+        if not rest:
+            return False  # the root itself is never safe
+        return not any(_is_dotglob_component(c) for c in rest)
+    return False
+
+
 def check_rm(args):
+    """Decide allow (fall-through) / ask / deny for one `rm` invocation.
+
+    Per target of a recursive delete, in this order (IMPLEMENTATION.md
+    "Recursive-delete check"):
+
+    1. Zero targets — early return, unchanged.
+    2. Root/home target — judged on the RAW token, before anything below;
+       reused unchanged so its `rm-root` reason id survives.
+    3. Unresolved — a variable expansion or command substitution
+       (UNRESOLVED_EXPANSION) is unresolvable regardless of how it looks,
+       and never reaches the safe exception. A glob mixed with a literal
+       `..` component is unresolvable for the same reason folding cannot
+       be trusted there (_has_parent_ref_component()) — a PURE glob is not
+       caught here; see step 6.
+    4. Lexical normalization (normalize_candidate()) — filesystem-free.
+    5. A relative target still starting with `..` after normalization has
+       nowhere left to fold and is not safe; it falls straight through to
+       step 7 exactly as containment failure would, so no separate branch
+       is needed for it.
+    6. Component-wise containment (safe_delete_target()) against the
+       normalized target. A pure glob (no expansion, no parent reference)
+       still reaches this step and can still land in the safe exception
+       (e.g. `dist/*`).
+    7. Otherwise: a glob remaining in the RAW token is still unresolved
+       (ask); anything else is a genuine recursive delete outside any safe
+       root (deny).
+    """
     flags = short_flags(args)
     recursive = "r" in flags or "R" in flags or has(args, "--recursive")
     targets = [a for a in args if not a.startswith("-")]
@@ -779,13 +895,29 @@ def check_rm(args):
     if not recursive:
         return
     for t in targets:
-        if SAFE_DELETE.match(t):
-            continue
-        if DYNAMIC.search(t):
+        if UNRESOLVED_EXPANSION.search(t):
             decide(
                 "ask",
                 "rm-unresolvable",
-                f"再帰削除の対象 `{t}` が変数/グロブで、影響範囲を静的に確定できない。"
+                f"再帰削除の対象 `{t}` が変数/コマンド置換で、影響範囲を静的に確定できない。"
+                f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+            )
+        if GLOB_CHARS.search(t) and _has_parent_ref_component(t):
+            decide(
+                "ask",
+                "rm-unresolvable",
+                f"再帰削除の対象 `{t}` はグロブと親参照(`..`)が混在し、"
+                f"グロブの展開結果によって実際の削除範囲が変わるため静的に確定できない。"
+                f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+            )
+        normalized = normalize_candidate(t)
+        if safe_delete_target(normalized):
+            continue
+        if GLOB_CHARS.search(t):
+            decide(
+                "ask",
+                "rm-unresolvable",
+                f"再帰削除の対象 `{t}` がグロブで、影響範囲を静的に確定できない。"
                 f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
             )
         decide(
