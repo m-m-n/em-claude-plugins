@@ -21,6 +21,7 @@ import contextlib
 import io
 import json
 import os
+import pty
 import re
 import shlex
 import shutil
@@ -82,6 +83,38 @@ def run_guard(guard_path, env, payload=None, argv=None, stdin_text=None):
         env=env,
         timeout=15,
     )
+
+
+def run_guard_with_pty_stdin(guard_path, env, argv, timeout=15):
+    """Runs the guard with `argv` as a subprocess whose standard input is a
+    real pseudo-terminal (`os.isatty()` true), allocated with the standard
+    library's `pty` facility -- the shape the consent-write provenance
+    boundary's success side requires (task0008.md Test Notes). Guarded with
+    a timeout so a hung child fails the test rather than hanging the run.
+    """
+    master_fd, slave_fd = pty.openpty()
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, str(guard_path), *argv],
+            stdin=slave_fd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            text=True,
+        )
+        os.close(slave_fd)
+        slave_fd = -1
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+            raise
+        return subprocess.CompletedProcess(proc.args, proc.returncode, stdout, stderr)
+    finally:
+        if slave_fd != -1:
+            os.close(slave_fd)
+        os.close(master_fd)
 
 
 def assert_no_decision(test, result):
@@ -153,13 +186,23 @@ class MuseGuardTestCase(unittest.TestCase, GitEnvMixin):
         return repo
 
     def record(self, guard_path, project_dir):
-        return run_guard(guard_path, self.git_env, argv=["--record", "--project-dir", str(project_dir)])
+        # --record is a mutating command: driven with a pseudo-terminal
+        # stdin so the consent-write provenance boundary lets it through
+        # (task0008.md Design, "Effect on the existing CLI test cases").
+        return run_guard_with_pty_stdin(
+            guard_path, self.git_env, ["--record", "--project-dir", str(project_dir)]
+        )
 
     def list_(self, guard_path, project_dir):
+        # --list is outside the provenance boundary; an ordinary pipe stays
+        # correct and is itself part of what AC-4 asserts.
         return run_guard(guard_path, self.git_env, argv=["--list", "--project-dir", str(project_dir)])
 
     def remove(self, guard_path, project_dir):
-        return run_guard(guard_path, self.git_env, argv=["--remove", "--project-dir", str(project_dir)])
+        # --remove is a mutating command: see record() above.
+        return run_guard_with_pty_stdin(
+            guard_path, self.git_env, ["--remove", "--project-dir", str(project_dir)]
+        )
 
     def _assert_no_decision_for(self, command, cwd, tool_name="Bash"):
         for name, guard_path in GUARD_PATHS.items():
@@ -479,7 +522,7 @@ class TestProjectKeyDerivation(MuseGuardTestCase):
                 fresh_store = self.tmp_path / f"store-{name}-a.json"
                 env = dict(self.git_env)
                 env["EM_WORKFLOW_MUSE_CONSENT"] = str(fresh_store)
-                rec = run_guard(guard_path, env, argv=["--record", "--project-dir", str(main_repo)])
+                rec = run_guard_with_pty_stdin(guard_path, env, ["--record", "--project-dir", str(main_repo)])
                 self.assertEqual(rec.returncode, 0, rec.stderr)
                 listed_from_wt = run_guard(
                     guard_path, env, argv=["--list", "--project-dir", str(wt_path)]
@@ -491,8 +534,8 @@ class TestProjectKeyDerivation(MuseGuardTestCase):
                 fresh_store = self.tmp_path / f"store-{name}-b.json"
                 env = dict(self.git_env)
                 env["EM_WORKFLOW_MUSE_CONSENT"] = str(fresh_store)
-                run_guard(guard_path, env, argv=["--record", "--project-dir", str(main_repo)])
-                removed = run_guard(guard_path, env, argv=["--remove", "--project-dir", str(wt_path)])
+                run_guard_with_pty_stdin(guard_path, env, ["--record", "--project-dir", str(main_repo)])
+                removed = run_guard_with_pty_stdin(guard_path, env, ["--remove", "--project-dir", str(wt_path)])
                 self.assertIn("同意を削除した", removed.stdout)
                 listed_from_main = run_guard(
                     guard_path, env, argv=["--list", "--project-dir", str(main_repo)]
@@ -510,7 +553,7 @@ class TestProjectKeyDerivation(MuseGuardTestCase):
                 fresh_store = self.tmp_path / f"store-symlink-{name}.json"
                 env = dict(self.git_env)
                 env["EM_WORKFLOW_MUSE_CONSENT"] = str(fresh_store)
-                rec = run_guard(guard_path, env, argv=["--record", "--project-dir", str(link_dir)])
+                rec = run_guard_with_pty_stdin(guard_path, env, ["--record", "--project-dir", str(link_dir)])
                 self.assertEqual(rec.returncode, 0, rec.stderr)
                 listed = run_guard(guard_path, env, argv=["--list", "--project-dir", str(real_dir)])
                 self.assertEqual(listed.stdout.strip(), os.path.realpath(str(real_dir)))
@@ -599,10 +642,13 @@ class TestMalformedStoreOnCliPath(MuseGuardTestCase):
                 before_bytes = None if before_is_dir else self.store_path.read_bytes()
                 for name, guard_path in GUARD_PATHS.items():
                     with self.subTest(row=label, mode=mode, copy=name):
-                        result = run_guard(
+                        # A pseudo-terminal stdin so this exercises the
+                        # malformed-store check itself, not the provenance
+                        # boundary in front of it (task0008.md Design).
+                        result = run_guard_with_pty_stdin(
                             guard_path,
                             self.git_env,
-                            argv=[mode, "--project-dir", str(repo)],
+                            [mode, "--project-dir", str(repo)],
                         )
                         self.assertEqual(result.returncode, 1)
                         self.assertEqual(result.stdout, "")
@@ -634,6 +680,135 @@ class TestMalformedStoreOnCliPath(MuseGuardTestCase):
                 self.store_path.unlink()
 
 
+# --- task0008 AC-1..AC-4: consent-write provenance boundary on the CLI ----
+# Distinctly named/grouped per task0008.md Test Notes so the parallel
+# recognition task's (task0007) additions cannot collide with these in the
+# same region (IMPLEMENTATION.md D-J).
+
+
+class TestConsentWriteProvenanceBoundary(MuseGuardTestCase):
+    """`--record` and `--remove` refuse to touch the store unless standard
+    input is an interactive terminal; `--list` is unaffected
+    (IMPLEMENTATION.md Shared Components, "Consent-write provenance
+    boundary"; task0008.md Acceptance Criteria)."""
+
+    def test_record_and_remove_refuse_a_non_interactive_stdin_against_an_absent_store(self):
+        # AC-1 (TS-29): store path under a temporary directory that does not
+        # exist yet, a temporary repository as the project directory, an
+        # ordinary pipe for stdin.
+        repo = self.init_repo()
+        nested_store = self.tmp_path / "nested" / "store.json"
+        env = dict(self.git_env)
+        env["EM_WORKFLOW_MUSE_CONSENT"] = str(nested_store)
+        for mode in ("--record", "--remove"):
+            for name, guard_path in GUARD_PATHS.items():
+                with self.subTest(mode=mode, copy=name):
+                    result = run_guard(guard_path, env, argv=[mode, "--project-dir", str(repo)])
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertEqual(result.stdout, "")
+                    self.assertIn("対話的な端末", result.stderr)
+                    self.assertFalse(nested_store.exists())
+                    self.assertFalse(nested_store.parent.exists())
+
+    def test_record_and_remove_leave_an_existing_store_byte_identical_when_stdin_is_non_interactive(self):
+        # AC-2 (TS-29): an existing store containing an unrelated project
+        # key, a non-interactive stdin -- the file must stay byte-identical.
+        repo = self.init_repo()
+        self.store_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "version": "1",
+            "projects": {"an-unrelated-project-key": {"updated_at": "2020-01-01T00:00:00+00:00"}},
+        }
+        self.store_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        before_bytes = self.store_path.read_bytes()
+        for mode in ("--record", "--remove"):
+            for name, guard_path in GUARD_PATHS.items():
+                with self.subTest(mode=mode, copy=name):
+                    result = run_guard(
+                        guard_path, self.git_env, argv=[mode, "--project-dir", str(repo)]
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertEqual(result.stdout, "")
+                    self.assertIn("対話的な端末", result.stderr)
+                    self.assertEqual(self.store_path.read_bytes(), before_bytes)
+
+    def test_refusal_precedes_project_key_derivation_so_a_non_repository_directory_behaves_identically(self):
+        # AC-1 / AC-2 ordering (TS-29): the refusal must behave identically
+        # whether the project directory is a repository or not -- which can
+        # only hold if project-key derivation (and the git subprocess it
+        # would launch) never ran. Asserted behaviorally, not by inspecting
+        # source (task0008.md Test Notes).
+        repo = self.init_repo()
+        non_repo_dir = self.tmp_path / "not-a-repo"
+        non_repo_dir.mkdir()
+        for mode in ("--record", "--remove"):
+            for name, guard_path in GUARD_PATHS.items():
+                with self.subTest(mode=mode, copy=name):
+                    in_repo = run_guard(
+                        guard_path, self.git_env, argv=[mode, "--project-dir", str(repo)]
+                    )
+                    not_repo = run_guard(
+                        guard_path, self.git_env, argv=[mode, "--project-dir", str(non_repo_dir)]
+                    )
+                    self.assertNotEqual(in_repo.returncode, 0)
+                    self.assertEqual(in_repo.returncode, not_repo.returncode)
+                    self.assertEqual(in_repo.stdout, not_repo.stdout)
+                    self.assertEqual(in_repo.stderr, not_repo.stderr)
+        self.assertFalse(self.store_path.exists())
+
+    def test_record_and_remove_succeed_unchanged_with_a_pseudo_terminal_stdin(self):
+        # AC-3 (TS-30, TS-11): the precondition satisfied leaves the
+        # pre-existing behavior, output lines and exit codes unchanged.
+        repo = self.init_repo()
+        for name, guard_path in GUARD_PATHS.items():
+            with self.subTest(copy=name):
+                record_result = run_guard_with_pty_stdin(
+                    guard_path, self.git_env, ["--record", "--project-dir", str(repo)]
+                )
+                self.assertEqual(record_result.returncode, 0, record_result.stderr)
+                self.assertTrue(record_result.stdout.startswith("同意を記録した: "))
+                key = record_result.stdout.split(": ", 1)[1].strip()
+                stored = json.loads(self.store_path.read_text())
+                self.assertEqual(set(stored["projects"][key].keys()), {"updated_at"})
+
+                remove_result = run_guard_with_pty_stdin(
+                    guard_path, self.git_env, ["--remove", "--project-dir", str(repo)]
+                )
+                self.assertEqual(remove_result.returncode, 0, remove_result.stderr)
+                self.assertTrue(remove_result.stdout.startswith("同意を削除した: "))
+                stored_after = json.loads(self.store_path.read_text())
+                self.assertNotIn(key, stored_after["projects"])
+                self.store_path.unlink()
+
+    def test_list_is_unaffected_by_the_precondition_across_a_record_sequence(self):
+        # AC-4 (TS-30): --list stays outside the precondition and reflects
+        # state changes -- list (non-terminal) -> record (pseudo-terminal)
+        # -> list (non-terminal) yields nothing, then a record, then the key.
+        repo = self.init_repo()
+        for name, guard_path in GUARD_PATHS.items():
+            with self.subTest(copy=name):
+                before = self.list_(guard_path, repo)
+                self.assertEqual(before.returncode, 0)
+                self.assertEqual(before.stdout, "")
+
+                record_result = run_guard_with_pty_stdin(
+                    guard_path, self.git_env, ["--record", "--project-dir", str(repo)]
+                )
+                self.assertEqual(record_result.returncode, 0, record_result.stderr)
+                key = record_result.stdout.split(": ", 1)[1].strip()
+
+                after = self.list_(guard_path, repo)
+                self.assertEqual(after.returncode, 0)
+                self.assertEqual(after.stdout, key + "\n")
+
+                run_guard_with_pty_stdin(
+                    guard_path, self.git_env, ["--remove", "--project-dir", str(repo)]
+                )
+
+
 # --- AC-6: CLI round trip ---------------------------------------------------
 
 TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$")
@@ -657,7 +832,7 @@ class TestCliRoundTrip(MuseGuardTestCase):
         self.assertEqual(before.stdout, "")
 
         # --record: prints one line naming the key, exit 0.
-        first_record = run_guard(guard_path, env, argv=["--record", "--project-dir", str(repo)])
+        first_record = run_guard_with_pty_stdin(guard_path, env, ["--record", "--project-dir", str(repo)])
         self.assertEqual(first_record.returncode, 0, first_record.stderr)
         self.assertTrue(first_record.stdout.startswith("同意を記録した: "))
         key = first_record.stdout.split(": ", 1)[1].strip()
@@ -672,7 +847,7 @@ class TestCliRoundTrip(MuseGuardTestCase):
         # --record again: idempotent, refreshes the timestamp, same message
         # shape (no "already recorded" variant).
         time.sleep(1.01)
-        second_record = run_guard(guard_path, env, argv=["--record", "--project-dir", str(repo)])
+        second_record = run_guard_with_pty_stdin(guard_path, env, ["--record", "--project-dir", str(repo)])
         self.assertEqual(second_record.returncode, 0)
         self.assertEqual(second_record.stdout, first_record.stdout)
         second_store = json.loads(store.read_text())
@@ -688,7 +863,7 @@ class TestCliRoundTrip(MuseGuardTestCase):
         self.assertEqual(listed.stdout, key + "\n")
 
         # --remove: deletes the key entirely, prints one line, exit 0.
-        removed = run_guard(guard_path, env, argv=["--remove", "--project-dir", str(repo)])
+        removed = run_guard_with_pty_stdin(guard_path, env, ["--remove", "--project-dir", str(repo)])
         self.assertEqual(removed.returncode, 0)
         self.assertTrue(removed.stdout.startswith("同意を削除した: "))
         after_remove_store = json.loads(store.read_text())
@@ -696,7 +871,7 @@ class TestCliRoundTrip(MuseGuardTestCase):
 
         # A second --remove: reports the absence, exit 0, store untouched.
         bytes_before_second_remove = store.read_bytes()
-        removed_again = run_guard(guard_path, env, argv=["--remove", "--project-dir", str(repo)])
+        removed_again = run_guard_with_pty_stdin(guard_path, env, ["--remove", "--project-dir", str(repo)])
         self.assertEqual(removed_again.returncode, 0)
         self.assertTrue(removed_again.stdout.startswith("同意は記録されていない: "))
         self.assertEqual(store.read_bytes(), bytes_before_second_remove)
@@ -709,7 +884,7 @@ class TestCliRoundTrip(MuseGuardTestCase):
         for name, guard_path in GUARD_PATHS.items():
             with self.subTest(copy=name):
                 self.assertFalse(nested_store.parent.exists())
-                result = run_guard(guard_path, env, argv=["--record", "--project-dir", str(repo)])
+                result = run_guard_with_pty_stdin(guard_path, env, ["--record", "--project-dir", str(repo)])
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertTrue(nested_store.is_file())
                 nested_store.unlink()
