@@ -117,7 +117,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR9]
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-safe-delete-traversal/task0002
     notes: null
 
