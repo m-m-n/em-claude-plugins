@@ -223,7 +223,7 @@ tasks:
     domains: [auth, input-handling, data-persistence, external-io]
     complexity: high
     requirements: [FR1, FR7, FR10, NFR5, NFR6]
-    status: in_progress
+    status: merged
     branch: em-workflow/muse-spark-contributor-consent/task0008
     notes: null
   task0009:
