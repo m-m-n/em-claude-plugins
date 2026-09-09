@@ -1,0 +1,154 @@
+task_id: task0007
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_ts5_a_contributor_invocation_followed_by_a_double_quoted_prompt_containing_a_semicolon_denies
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_ts5_a_contributor_invocation_followed_by_a_double_quoted_prompt_containing_a_newline_denies
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_every_widened_deny_shape_denies_from_both_copies
+    red_confirmed: true
+    red_reason: >
+      Before implementation, both ts5 tests errored: the old quote-blind
+      `_SEGMENT_SPLIT_RE` split the raw string on the semicolon/newline INSIDE
+      the double-quoted prompt argument, breaking the single real invocation
+      into fragments none of which still resolved to a codex invocation, so
+      the hook produced no decision (empty stdout) instead of the required
+      deny -- assert_deny's json.loads then raised
+      "JSONDecodeError: Expecting value: line 1 column 1 (char 0)" on the
+      empty string for both em-workflow and em-review. The corresponding rows
+      of the widened deny table (quoted-prompt-contains-a-semicolon,
+      quoted-prompt-contains-a-newline) failed the same way.
+  AC-2:
+    tests:
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_ts6_a_text_printing_commands_single_quoted_separator_delimited_invocation_looking_argument_is_undecided
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_every_widened_no_misfire_shape_is_undecided_from_both_copies
+    red_confirmed: true
+    red_reason: >
+      Before implementation, `echo 'before; codex exec -m
+      muse-spark-contributor; after'` failed assert_no_decision: the same
+      quote-blind split cut the single-quoted mention apart at its embedded
+      separators, carving out the fragment `codex exec -m
+      muse-spark-contributor` as a standalone segment that the old
+      classifier read as a genuine invocation, producing a deny payload
+      (`AssertionError: '{"hookSpecificOutput": ...}' != ''`) for both
+      copies instead of the required zero bytes.
+  AC-3:
+    tests:
+      - tests.test_muse_guard.TestInvocationSpellingsDenyWithNoConsent.test_every_spelling_denies_from_both_copies_and_store_stays_absent
+      - tests.test_muse_guard.TestNoDecisionCases.test_plain_tier_in_every_spelling_is_never_denied
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_every_widened_deny_shape_denies_from_both_copies
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_widened_deny_shapes_with_the_plain_tier_are_never_denied
+    red_confirmed: true
+    red_reason: >
+      The 15 pre-existing quoting-shape templates (TS-3/TS-4) and the
+      plain-tier exact-equality check already passed before this task --
+      they are carried forward as an unmoved floor, not independently
+      red-confirmed here. The NEW row
+      "quoted-value-and-quoted-prompt-both-carry-a-quote-delimiter"
+      (`codex exec -m '{tier}' "it's here; and more"`, the TS-26
+      reproduction: both the model value and the surrounding prompt argument
+      carry a quote delimiter alongside a statement separator) errored
+      before implementation with the same empty-stdout-instead-of-deny
+      failure as AC-1, confirming the old splitter's premise broke on this
+      combined shape specifically.
+  AC-4:
+    tests:
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_shell_command_string_flag_bundled_with_other_short_options_carries_an_invocation
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_shell_command_string_flag_bundled_with_other_short_options_carrying_only_a_mention_is_undecided
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_shell_bundle_not_ending_in_the_command_string_flag_is_not_recognized_as_nested
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_argument_list_expanding_wrapper_with_a_separate_value_option_carries_an_invocation
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_argument_list_expanding_wrapper_with_a_separate_value_option_carrying_only_a_mention_is_undecided
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_scheduling_priority_wrapper_with_a_separate_value_option_carries_an_invocation
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_scheduling_priority_wrapper_with_a_separate_value_option_carrying_only_a_mention_is_undecided
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_wrapper_option_unknown_to_the_wrapper_table_stops_resolution
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_parenthesized_command_substitution_carries_an_invocation
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_backtick_command_substitution_carries_an_invocation
+      - tests.test_muse_guard.TestNestedInvocationRecognition.test_recursion_bound_is_two_levels_and_a_third_level_yields_no_decision
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_ts27_a_shell_invoked_with_a_bundled_short_option_cluster_ending_in_the_command_string_flag_denies
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_ts27_the_argument_list_and_scheduling_priority_wrappers_each_with_a_separate_value_numeric_option_deny
+    red_confirmed: true
+    red_reason: >
+      Two distinct pre-implementation failure modes were observed. Under-
+      recognition (ERROR, empty stdout instead of deny): the old
+      `_shell_dash_c_argument` matched only the literal token `-c`, so
+      `bash -xc '...'` never resolved its nested text (bundled-cluster
+      cases); the old `_resolve_command` skipped ANY dash-prefixed token as
+      boolean, so `nice -n 10 codex ...` and `xargs -n 1 codex ...`
+      resolved their command word to the option's VALUE ("10"/"1") instead
+      of stepping past it to "codex", also producing no decision instead of
+      the required deny. Over-recognition (FAIL, false deny): for
+      `nice --unknown-flag codex exec -m muse-spark-contributor`, the same
+      blind flag-skip logic resolved past `--unknown-flag` and reached
+      "codex" anyway, producing a deny where the new per-wrapper table
+      (unknown option stops resolution) must instead yield no decision.
+      The mention counterparts, the "not ending in the flag" bundle case,
+      the pre-existing parenthesized/backtick substitution tests, and the
+      two-level (at-bound) branch of the recursion test already passed
+      before this task (fail-open is the starting state for anything
+      unrecognized) -- carried here as the paired-construct coverage Test
+      Notes calls for, not independently red-confirmed for those rows.
+  AC-5:
+    tests:
+      - tests.test_muse_guard.TestNoDecisionCases.test_commit_message_argument_is_not_an_invocation
+      - tests.test_muse_guard.TestNoDecisionCases.test_search_pattern_argument_is_not_an_invocation
+      - tests.test_muse_guard.TestNoDecisionCases.test_mention_inside_a_quoted_string_is_not_an_invocation
+      - tests.test_muse_guard.TestNoDecisionCases.test_heredoc_body_is_not_an_invocation
+      - tests.test_muse_guard.TestNoDecisionCases.test_plain_tier_in_every_spelling_is_never_denied
+      - tests.test_muse_guard.TestNoDecisionCases.test_unrelated_command_is_not_an_invocation
+      - tests.test_muse_guard.TestNoDecisionCases.test_payload_whose_tool_is_not_bash_is_undecided
+      - tests.test_muse_guard.TestNoDecisionCases.test_empty_command_is_undecided
+      - tests.test_muse_guard.TestNoDecisionCases.test_unparseable_stdin_is_undecided
+      - tests.test_muse_guard.TestNoDecisionCases.test_heredoc_header_look_alike_inside_a_quoted_string_does_not_hide_a_real_invocation
+      - tests.test_muse_guard.TestNoDecisionCases.test_invocation_after_a_genuine_heredocs_terminator_still_denies
+    red_confirmed: false
+    red_reason: >
+      This criterion states the no-misfire floor is UNCHANGED. All of these
+      are pre-existing tests from earlier tasks that already passed before
+      this task's edit; none was expected to go red, and none did --
+      verified by construction (baseline_failures is empty, and the full
+      suite, including this class, stays green after the rebuild).
+  AC-6:
+    tests:
+      - tests.test_muse_guard.TestSourceHygiene.test_no_ask_decision_literal
+      - tests.test_muse_guard.TestSourceHygiene.test_no_allow_decision_literal
+      - tests.test_muse_guard.TestSourceHygiene.test_the_only_subprocess_launched_is_the_git_call
+      - tests.test_muse_guard.TestNonInvocationShortCircuit.test_non_invocation_never_derives_a_project_key_or_touches_the_store
+      - tests.test_muse_guard.TestNonInvocationShortCircuit.test_an_invocation_does_derive_a_project_key_and_read_the_store
+      - tests.test_muse_guard.TestLatencyStaysWellUnderTheRegisteredTimeout.test_a_representative_sample_of_hook_calls_completes_quickly
+      - tests.test_muse_guard.TestVerifyReproductionsAndWideningTables.test_unterminated_quote_is_undecided_not_an_exception
+    red_confirmed: false
+    red_reason: >
+      The hygiene/envelope invariants (no ask/allow literal, one subprocess
+      call site, the pre-store-read short circuit, the latency budget) are
+      pre-existing and this task must not change them; they were already
+      green and stayed green. The unterminated-quote case was manually
+      checked against the pre-edit implementation and ALSO already produced
+      no decision there, but via a different, incidental mechanism (the old
+      per-statement `shlex.split` raised ValueError on the unbalanced quote
+      and that one segment was silently skipped) rather than the explicit,
+      whole-string tolerance clause the rebuilt `_scan_statements` now
+      raises for directly. The observable behavior did not change; the
+      mechanism guaranteeing it now matches NFR2's wording precisely, so
+      this test pins that behavior going forward rather than proving a red
+      state.
+  AC-7:
+    tests:
+      - tests.test_muse_guard.TestBothCopiesShape.test_both_copies_exist
+      - tests.test_muse_guard.TestBothCopiesShape.test_both_copies_are_executable
+      - tests.test_muse_guard.TestBothCopiesShape.test_copies_differ_in_exactly_one_line_the_plugin_slug
+      - tests.test_muse_guard.TestSourceHygiene.test_neither_plugins_hooks_tests_directory_gained_a_file
+      - tests.test_muse_guard.TestSourceHygiene.test_no_third_party_imports
+      - tests.test_muse_guard.TestSourceHygiene.test_no_network_capable_imports
+    red_confirmed: false
+    red_reason: >
+      Structural/hygiene checks pre-existing from task0001 that this task
+      must not break, not new behavior it introduces -- there is no
+      informative red state to observe short of deliberately breaking copy
+      parity. Parity was instead verified by construction, exactly as
+      task0006 did: em-review/hooks/muse_guard.py was produced by `cp` from
+      the updated em-workflow copy followed by a single `sed` edit of the
+      PLUGIN_SLUG line, `diff` was inspected to confirm exactly one
+      differing line, and `python3 -m unittest discover -s tests` was run
+      directly and passed in full (see baseline_failures / final_failures
+      above).

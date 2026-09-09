@@ -69,6 +69,43 @@ INVOCATION_COMMAND_TEMPLATES = {
 }
 
 
+# The widening this task adds (IMPLEMENTATION.md D-H): a shape that must
+# still deny once statement-splitting honours quoting, paired with its
+# no-misfire counterpart carrying only a mention (task0007.md Test Notes --
+# "two paired tables so a future shape is one row on each side").
+WIDENED_DENY_SHAPES = {
+    "quoted-prompt-contains-a-semicolon": 'codex exec -m {tier} "before;after"',
+    "quoted-prompt-contains-a-newline": 'codex exec -m {tier} "before\nafter"',
+    "quoted-value-and-quoted-prompt-both-carry-a-quote-delimiter": (
+        "codex exec -m '{tier}' \"it's here; and more\""
+    ),
+    "shell-bundled-short-options-ending-in-the-command-string-flag": (
+        "bash -xc 'codex exec -m {tier}'"
+    ),
+    "argument-list-expanding-wrapper-with-a-separate-value-option": (
+        "xargs -n 1 codex exec -m {tier}"
+    ),
+    "scheduling-priority-wrapper-with-a-separate-value-option": (
+        "nice -n 10 codex exec -m {tier}"
+    ),
+}
+
+WIDENED_NO_MISFIRE_SHAPES = {
+    "single-quoted-argument-carves-no-standalone-invocation": (
+        "echo 'before; codex exec -m {tier}; after'"
+    ),
+    "shell-bundled-short-options-carrying-only-a-mention": (
+        "bash -xc 'git commit -m {tier}'"
+    ),
+    "argument-list-expanding-wrapper-with-a-separate-value-option-and-a-mention": (
+        "xargs -n 1 grep -m {tier}"
+    ),
+    "scheduling-priority-wrapper-with-a-separate-value-option-and-a-mention": (
+        "nice -n 10 grep -m {tier}"
+    ),
+}
+
+
 def run_guard(guard_path, env, payload=None, argv=None, stdin_text=None):
     cmd = [sys.executable, str(guard_path)]
     if argv:
@@ -492,6 +529,55 @@ class TestNestedInvocationRecognition(MuseGuardTestCase):
         repo = str(self.init_repo())
         self._assert_no_decision_for(f"xargs grep -m {CONTRIBUTOR_TIER}", repo)
 
+    def test_shell_command_string_flag_bundled_with_other_short_options_carries_an_invocation(self):
+        # TS-27: the command-string flag must be recognized when bundled
+        # with other short options in one token (`-xc`), not only standalone.
+        repo = str(self.init_repo())
+        self._assert_denies_for(f"bash -xc 'codex exec -m {CONTRIBUTOR_TIER}'", repo)
+
+    def test_shell_command_string_flag_bundled_with_other_short_options_carrying_only_a_mention_is_undecided(self):
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(f"bash -xc 'git commit -m {CONTRIBUTOR_TIER}'", repo)
+
+    def test_shell_bundle_not_ending_in_the_command_string_flag_is_not_recognized_as_nested(self):
+        # task0007.md Design, Stage 3: a cluster that does not contain the
+        # flag AS ITS LAST LETTER does not select the next token as nested
+        # command text -- `-cx` is `-c` with an ATTACHED value in real
+        # getopt bundling, a different, unmodelled shape, so this must stay
+        # unclassified rather than guessing.
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(f"bash -cx 'codex exec -m {CONTRIBUTOR_TIER}'", repo)
+
+    def test_argument_list_expanding_wrapper_with_a_separate_value_option_carries_an_invocation(self):
+        # TS-27: `xargs -n 1 codex ...` -- the numeric value of `-n` must
+        # be stepped over instead of being mistaken for the command word.
+        repo = str(self.init_repo())
+        self._assert_denies_for(f"xargs -n 1 codex exec -m {CONTRIBUTOR_TIER}", repo)
+
+    def test_argument_list_expanding_wrapper_with_a_separate_value_option_carrying_only_a_mention_is_undecided(self):
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(f"xargs -n 1 grep -m {CONTRIBUTOR_TIER}", repo)
+
+    def test_scheduling_priority_wrapper_with_a_separate_value_option_carries_an_invocation(self):
+        # TS-27: `nice -n 10 codex ...` -- same shape as xargs above, for
+        # the scheduling-priority wrapper.
+        repo = str(self.init_repo())
+        self._assert_denies_for(f"nice -n 10 codex exec -m {CONTRIBUTOR_TIER}", repo)
+
+    def test_scheduling_priority_wrapper_with_a_separate_value_option_carrying_only_a_mention_is_undecided(self):
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(f"nice -n 10 grep -m {CONTRIBUTOR_TIER}", repo)
+
+    def test_wrapper_option_unknown_to_the_wrapper_table_stops_resolution(self):
+        # Design, Stage 3: an option a wrapper's table does not describe
+        # stops resolution and leaves the statement unclassified (fail
+        # open) rather than guessing whether it takes a value -- a
+        # documented residual, not modelled shell semantics in general.
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(
+            f"nice --unknown-flag codex exec -m {CONTRIBUTOR_TIER}", repo
+        )
+
     def test_recursion_bound_is_two_levels_and_a_third_level_yields_no_decision(self):
         # The recursion bound is asserted behaviorally (task0006.md Test
         # Notes): two levels of shell `-c` nesting around a real invocation
@@ -505,6 +591,81 @@ class TestNestedInvocationRecognition(MuseGuardTestCase):
         self._assert_denies_for(one_level, repo)
         self._assert_denies_for(two_levels, repo)
         self._assert_no_decision_for(three_levels, repo)
+
+
+# --- Verify reproductions + widening tables (task0007, IMPLEMENTATION.md
+# D-H): the four scenarios verify found failing under the pre-task0007,
+# quote-blind splitter (Provenance: TS-5, TS-6, TS-26, TS-27), written
+# first per Test Notes, plus the paired deny / no-misfire tables so a
+# future shape is one row on each side. ---
+
+
+class TestVerifyReproductionsAndWideningTables(MuseGuardTestCase):
+    # --- the four verify reproductions, by exact shape (Test Notes) ------
+
+    def test_ts5_a_contributor_invocation_followed_by_a_double_quoted_prompt_containing_a_semicolon_denies(
+        self,
+    ):
+        repo = str(self.init_repo())
+        self._assert_denies_for(f'codex exec -m {CONTRIBUTOR_TIER} "before;after"', repo)
+
+    def test_ts5_a_contributor_invocation_followed_by_a_double_quoted_prompt_containing_a_newline_denies(
+        self,
+    ):
+        repo = str(self.init_repo())
+        self._assert_denies_for(f'codex exec -m {CONTRIBUTOR_TIER} "before\nafter"', repo)
+
+    def test_ts6_a_text_printing_commands_single_quoted_separator_delimited_invocation_looking_argument_is_undecided(
+        self,
+    ):
+        repo = str(self.init_repo())
+        self._assert_no_decision_for(
+            f"echo 'before; codex exec -m {CONTRIBUTOR_TIER}; after'", repo
+        )
+
+    def test_ts27_a_shell_invoked_with_a_bundled_short_option_cluster_ending_in_the_command_string_flag_denies(
+        self,
+    ):
+        repo = str(self.init_repo())
+        self._assert_denies_for(f"bash -xc 'codex exec -m {CONTRIBUTOR_TIER}'", repo)
+
+    def test_ts27_the_argument_list_and_scheduling_priority_wrappers_each_with_a_separate_value_numeric_option_deny(
+        self,
+    ):
+        repo = str(self.init_repo())
+        self._assert_denies_for(f"xargs -n 1 codex exec -m {CONTRIBUTOR_TIER}", repo)
+        self._assert_denies_for(f"nice -n 10 codex exec -m {CONTRIBUTOR_TIER}", repo)
+
+    # --- widening tables: every row paired on both sides (Test Notes) ----
+
+    def test_every_widened_deny_shape_denies_from_both_copies(self):
+        repo = str(self.init_repo())
+        for shape, template in WIDENED_DENY_SHAPES.items():
+            with self.subTest(shape=shape):
+                self._assert_denies_for(template.format(tier=CONTRIBUTOR_TIER), repo)
+
+    def test_every_widened_no_misfire_shape_is_undecided_from_both_copies(self):
+        repo = str(self.init_repo())
+        for shape, template in WIDENED_NO_MISFIRE_SHAPES.items():
+            with self.subTest(shape=shape):
+                self._assert_no_decision_for(template.format(tier=CONTRIBUTOR_TIER), repo)
+
+    def test_widened_deny_shapes_with_the_plain_tier_are_never_denied(self):
+        # AC-3 / NFR2: exact equality in both directions -- the widened
+        # deny shapes must never fire for the plain tier either.
+        repo = str(self.init_repo())
+        for shape, template in WIDENED_DENY_SHAPES.items():
+            with self.subTest(shape=shape):
+                self._assert_no_decision_for(template.format(tier=PLAIN_TIER), repo)
+
+    def test_unterminated_quote_is_undecided_not_an_exception(self):
+        # Test Notes: at least one tokenizer-hostile case, asserting no
+        # decision and a zero exit, pinning the tolerance clause (NFR2).
+        repo = str(self.init_repo())
+        self._assert_no_decision_for('echo "unterminated', repo)
+        self._assert_no_decision_for(
+            f"codex exec -m {CONTRIBUTOR_TIER} 'still open", repo
+        )
 
 
 # --- AC-4: project-key derivation matches the bash guard's own rule -------
