@@ -212,8 +212,8 @@ tasks:
     domains: [auth, input-handling]
     complexity: high
     requirements: [FR1, FR4, FR5, FR10, NFR2, NFR4, NFR6]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/muse-spark-contributor-consent/task0007
     notes: null
   task0008:
     title: "consent-write provenance boundary on the guard CLI"
@@ -223,8 +223,8 @@ tasks:
     domains: [auth, input-handling, data-persistence, external-io]
     complexity: high
     requirements: [FR1, FR7, FR10, NFR5, NFR6]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/muse-spark-contributor-consent/task0008
     notes: null
   task0009:
     title: "contributor-consent skill presents the command instead of running it"
@@ -234,8 +234,8 @@ tasks:
     domains: [ui, auth, external-io]
     complexity: medium
     requirements: [FR13, NFR3, NFR6]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/muse-spark-contributor-consent/task0009
     notes: null
 
 review:
