@@ -234,7 +234,7 @@ tasks:
     domains: [ui, auth, external-io]
     complexity: medium
     requirements: [FR13, NFR3, NFR6]
-    status: in_progress
+    status: merged
     branch: em-workflow/muse-spark-contributor-consent/task0009
     notes: null
 
