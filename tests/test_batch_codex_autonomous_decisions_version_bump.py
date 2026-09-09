@@ -44,7 +44,7 @@ BASELINE_PATCH = 63
 
 # Pre-task snapshot of the em-review marketplace entry's version (AC-3: this
 # task must not move it).
-EM_REVIEW_VERSION_SNAPSHOT = "0.5.8"
+EM_REVIEW_VERSION_SNAPSHOT = "0.5.9"
 
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 

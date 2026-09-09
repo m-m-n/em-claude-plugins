@@ -3,9 +3,9 @@
 ## Overview
 
 `muse-spark` の contributor ティア（`muse-spark-contributor`）を、ユーザーが明示的に同意した
-リポジトリでのみ使用可能にする。ゲートは指示文ではなくコードで強制し、強制面は 2 つ
-（両プラグインに同梱する PreToolUse(Bash) フック `muse_guard.py` の deny と、同意書き込み CLI が
-要求する対話端末）ある。機械化できない判断（ある同意のスコープ外に contributor ティアが出る
+リポジトリでのみ使用可能にする。contributor ティアの起動判定は指示文ではなくコードで強制し、
+両プラグインに同梱する PreToolUse(Bash) フック `muse_guard.py` が deny する。同意の記録は
+`contributor-consent` スキル経由で行う。機械化できない判断（ある同意のスコープ外に contributor ティアが出る
 場合）は、両プラグインのレビューレジストリ／プロトコル文書に dispatch 前の判定基準として
 記述する。
 
@@ -16,12 +16,10 @@
 
 - contributor ティアを、ユーザーが明示的に同意したリポジトリでのみ使用可能にし、無人の
   develop / review 実行がプロジェクトの diff を contributor ティアへ偶発的に送ることを無くす。
-- そのゲートを指示文ではなくコードで強制する。強制面は 2 つある。(1) PreToolUse(Bash) フックが、
-  同意の無いプロジェクトでの contributor ティア起動を deny する。(2) 同意の書き込み CLI
-  （`--record` / `--remove`）が、標準入力が対話端末でない限りストアを変更しない。この 2 つが
-  確立する境界は「エージェントの通常の Bash 呼び出し経路からは、contributor ティアの起動も
-  同意の記録もできない」という点までであり、あらゆる手段による回避が不可能であることまでは
-  主張しない（a12）。
+- contributor ティアの起動判定を指示文ではなくコードで強制する。PreToolUse(Bash) フックが、
+  同意の無いプロジェクトでの contributor ティア起動を deny する。この強制が確立する境界は
+  「同意の記録がないプロジェクトでは contributor ティアを起動できない」という点までであり、
+  同意の記録側に機械的な強制は無い（a12）。
 - 同意していないプロジェクトの develop / review 実行を現状とまったく同じ挙動に保つ
   — contributor ティアが利用不能になるだけで、新たな問い合わせも停止も発生しない。
 - 機械化できない判断（contributor ティアがある同意のスコープ外となる場合）を、両プラグインの
@@ -60,11 +58,9 @@
       `destructive-guard.py` より前に登録している。`EXPECTED_BASH_GUARD_ORDER` がまさにその位置に
       含む。`em-review/hooks/hooks.json` が存在し、同じ verbatim 形・同じ timeout で同じ
       スクリプトを登録している。既存のフック登録不変条件が両ファイルで通る。
-- [ ] AC-13: `muse_guard.py --record` および `--remove` は、標準入力が対話端末でないとき、
-      ストアを作成・変更・削除せずに非ゼロ終了し、対話端末から実行する必要があることを stderr に
-      述べる。標準入力が対話端末のとき（擬似端末を割り当てた場合を含む）は従来どおり記録・削除
-      する。`--list` は標準入力が端末でなくても動作し、ストアを変更しない。両プラグインの
-      スクリプトのコピーで成立する。
+- [ ] AC-13: `muse_guard.py` の `--record` / `--remove` / `--list` は、標準入力が対話端末で
+      あるかによらず動作する。`--record` はキーを記録し、`--remove` は削除し、`--list` は
+      ストアを変更しない。両プラグインのスクリプトのコピーで成立する。
 - [ ] AC-11: `tests/test_muse_guard.py` が存在する状態で `python3 -m unittest discover -s tests`
       が通る。本フィーチャーのためにどちらのプラグインの `hooks/tests/` にもファイルが作られていない。
 
@@ -176,12 +172,9 @@
   （一時ファイル + `os.replace`）で、必要に応じて親ディレクトリを作成する。`bash_guard` の CLI に
   倣う。
 
-  書き込み経路には provenance 制約を課す。`--record` と `--remove` は、標準入力が対話端末
-  （`isatty`）でない限りストアを一切変更せず、非ゼロの終了コードと、対話端末から実行する
-  必要があることを述べる短い日本語メッセージを stderr に出して終了する。この拒否は
-  プロジェクトキー導出やストア読み取りより前に置き、ストアファイルの作成・更新・削除・修復を
-  一切伴わない。`--list` はこの制約の対象外であり、標準入力が端末であるかによらず従来どおり
-  動作する（読み取りのみ、ストアを変更しない）ため、エージェントから呼び出してよい。
+  書き込み経路に標準入力の種別による制約は課さない。`--record` / `--remove` / `--list` は
+  いずれも標準入力が対話端末であるかによらず動作する。書き込みの provenance は、ユーザーが
+  起動する `contributor-consent` スキルと、その中の `AskUserQuestion` の回答が担う（FR13）。
 
   ストアを Write / Edit で直接編集することは禁止で、すべての変更はこの CLI を通す。
   この CLI はフック経路からもワークフロー自身からも呼ばれない。
@@ -215,7 +208,7 @@
 - **FR10 - Guard tests under the repository-root tests/ directory:** ガードテストは
   `tests/test_muse_guard.py` に置き、既存のエントリポイント
   `python3 -m unittest discover -s tests` で実行する。deny 側と誤爆なし側の両方、および FR7 の
-  provenance 制約の両側（非対話 stdin での拒否、対話端末での成功）を網羅し、両プラグインの
+  `--record` / `--remove` / `--list` が標準入力の種別によらず動作することを網羅し、両プラグインの
   スクリプトのコピーを検証する。`hooks/tests/muse-guard-cases.json` と
   `hooks/tests/run-muse-guard.py` は作成しない — destructive-guard のケースランナー方式は
   このフックには複製しない。
@@ -237,16 +230,14 @@
   から呼ばれることはない。まず各プラグインの review-phase.md に既に定義されている
   `litellm_available` プローブで vertex-review LiteLLM ハーネスの有無を確認し、false のときは
   平文の「未インストール」メッセージを出して終了する。そうでなければ、現在の同意状態を
-  `--list` で確認し（FR7 の provenance 制約の対象外なのでスキル自身が実行してよい）、リモートの
+  `--list` で確認し、リモートの
   可視性（`gh repo view --json visibility` または同等の手段）、ライセンス、ユーザーが唯一の
   コントリビューターかどうか、のちょうど 3 つの事実を機械的に収集して提示し、単一の
   `AskUserQuestion` ラウンドで同意を取る。
 
-  スキル自身は `--record` / `--remove` を実行しない。回答に応じて、ユーザーが自分の端末で実行する
-  コマンド行（`python3 <plugin>/hooks/muse_guard.py --record --project-dir <dir>` / 同 `--remove`）を
-  そのまま提示し、実行はユーザーに委ねて終了する。FR7 の provenance 制約により、エージェントの
-  Bash ツールから実行しても書き込みは拒否されるためである。未 push のコミットの有無は提示しない。
-  撤回も同じスキルが扱う（`--remove` のコマンド提示）。判断材料を会話的に収集することは
+  スキル自身が回答に応じて `--record` / `--remove` を実行し、終了コードを確認して結果を 1 行で
+  伝える。ストアに触れる経路はこの 2 コマンドだけで、Write / Edit による直接編集は行わない。
+  未 push のコミットの有無は提示しない。撤回も同じスキルが扱う（`--remove` の実行）。判断材料を会話的に収集することは
   しない。`.claude/rules/slash-commands-as-skills.md` に従い、スキルとして置き、`commands/`
   ファイルにはしない。
 
@@ -272,8 +263,7 @@
   しない。`$EM_WORKFLOW_MUSE_CONSENT` を `tempfile.TemporaryDirectory()` 配下のパスに設定し、
   `test/README.md` に従って stdin に JSON を与えるサブプロセスとしてフックを起動する。
 - **NFR6 - No third-party test dependencies:** テストコードは Python 標準ライブラリのみを使う
-  （`unittest`、`json`、`subprocess`、`tempfile`、および FR7 の対話端末経路を検証するための
-  `pty`）。`test/README.md` のテストにおける外部依存禁止ルールに従う。
+  （`unittest`、`json`、`subprocess`、`tempfile`）。`test/README.md` のテストにおける外部依存禁止ルールに従う。
 - **NFR7 - Consent store records nothing but presence:** ストアのプロジェクトごとの値は
   `updated_at` のみを持つ。リポジトリの可視性、ライセンス識別子、コントリビューター一覧、
   diff の内容、パスのいずれもストアに書かれることはない。
@@ -316,11 +306,11 @@
 │ 対話セッション: contributor-consent スキル (FR13)        │
 │   litellm_available プローブ → --list で状態確認 →       │
 │   3 つの事実 → 単一 AskUserQuestion →                    │
-│   ユーザーが自分の端末で実行するコマンドの提示            │
+│   --record / --remove の実行                              │
 ├─────────────────────────────────────────────────────────┤
 │ muse_guard.py CLI (FR7)                                  │
-│   --record / --remove（アトミック書き込み・対話端末必須） │
-│   --list（読み取りのみ・provenance 制約の対象外）         │
+│   --record / --remove（アトミック書き込み）               │
+│   --list（読み取りのみ）                                  │
 ├─────────────────────────────────────────────────────────┤
 │ 同意ストア (FR2/NFR7)                                    │
 │   ~/.claude/em-workflow/muse-consent.json                │
@@ -348,11 +338,11 @@ muse_guard.py（両プラグインに verbatim で 2 コピー、共有モジュ
   │    ├─ project_key (FR3)      : bash_guard.project_key と同一
   │    └─ store reader (FR2/FR6) : 読み取り専用、破損は「同意なし」
   └─ cli path       : --record / --remove / --list (FR7)、フックからは呼ばれない
-       ├─ --record / --remove : stdin が対話端末でなければ何も書かずに非ゼロ終了
-       └─ --list             : provenance 制約の対象外（読み取りのみ）
+       ├─ --record / --remove : ストアの唯一の書き込み経路
+       └─ --list             : 読み取りのみ
 
-skills/contributor-consent/SKILL.md（両プラグイン: FR13）→ --list のみ実行、
-                                     --record / --remove はコマンドとして提示
+skills/contributor-consent/SKILL.md（両プラグイン: FR13）
+                                   → --list / --record / --remove を実行
 references/reviewers.yaml / review-phase.md（両プラグイン: FR9/FR11）
 tests/test_muse_guard.py（リポジトリルート: FR10/NFR5/NFR6）
 ```
@@ -374,10 +364,8 @@ Bash コマンド → PreToolUse → muse_guard.py
                               └ true ──→ --list で現在の同意状態を確認 (FR7)
                                           → 3 つの事実を提示
                                           → 単一 AskUserQuestion
-                                          → --record / --remove のコマンド行を提示して終了
-利用者の端末 → python3 <plugin>/hooks/muse_guard.py --record --project-dir <dir>
-  → stdin が対話端末か? ─ No ─→ 何も書かずに非ゼロ終了 + stderr メッセージ … FR7
-                        └ Yes ─→ 同意ストアにキー + updated_at (NFR7)
+                                          → --record / --remove を実行 (FR7)
+                                            → 同意ストアにキー + updated_at (NFR7)
 
 [dispatch 経路]
 レビュー dispatch → muse-spark が chain エントリ
@@ -418,18 +406,17 @@ PreToolUse JSON
 #### Interface 2: 同意記録 CLI（FR7）
 
 ```
-python3 muse_guard.py --record --project-dir DIR   # 対話端末の stdin を要求
-python3 muse_guard.py --remove --project-dir DIR   # 対話端末の stdin を要求
-python3 muse_guard.py --list   --project-dir DIR   # provenance 制約の対象外
+python3 muse_guard.py --record --project-dir DIR
+python3 muse_guard.py --remove --project-dir DIR
+python3 muse_guard.py --list   --project-dir DIR
 ```
 
 - `--record`: 導出したプロジェクトキーに `{updated_at}` を書く（冪等、`updated_at` を更新）。
 - `--remove`: キーを完全に削除する（空オブジェクトを残さない）。
 - 書き込みはアトミック（一時ファイル + `os.replace`）、親ディレクトリは必要に応じて作成。
-- `--record` / `--remove` は、標準入力が対話端末（`isatty`）でなければ、プロジェクトキー導出や
-  ストア読み取りより前に非ゼロ終了する。ストアファイルの作成・更新・削除・修復は一切行わず、
-  対話端末から実行する必要があることを stderr に日本語で述べる。
-- `--list` は標準入力の種別によらず動作し、ストアを変更しない。エージェントから呼び出してよい。
+- `--record` / `--remove` / `--list` は標準入力の種別によらず動作する。書き込みの provenance は
+  FR13 のスキル経路が担う。
+- `--list` はストアを変更しない。
 
 ### Database Schema
 
@@ -476,7 +463,7 @@ erDiagram
 
 **External Dependencies:**
 
-- Python 標準ライブラリのみ（`unittest`、`json`、`subprocess`、`tempfile`、`pty` ほか）— NFR6。
+- Python 標準ライブラリのみ（`unittest`、`json`、`subprocess`、`tempfile` ほか）— NFR6。
 - `git`: プロジェクトキー導出に用いる（FR3、5 秒タイムアウト、NFR4）。
 - `gh`（または同等の手段）: スキルがリモート可視性を取得する（FR13）。
 - vertex-review LiteLLM ハーネス: スキルの存在プローブ対象（FR13）。
@@ -576,8 +563,7 @@ path that never materializes is not a violation.
       Then: contributor 起動はすべて deny、素の起動はすべて判定なし、ストアファイルは
       書き換えも修復もされない。
 - [ ] TS-11 (FR7, NFR7): 同意 CLI の往復（`--list` / `--record` / `--list` / `--record` /
-      `--remove` / `--list`）。`--record` / `--remove` は擬似端末 stdin で、`--list` は通常の
-      パイプ stdin で実行する。期待値は従来どおり: `--record` は冪等（キーは 1 つ、
+      `--remove` / `--list`）。期待値は従来どおり: `--record` は冪等（キーは 1 つ、
       `updated_at` が更新される）、`--list` は同意済みならプロジェクトキーを表示し未同意なら
       何も表示しない、`--remove` は空オブジェクトを残さずキーを完全に削除する、書かれた JSON は
       `version`、`projects`、キー、`updated_at` 以外のフィールドを持たない。
@@ -586,16 +572,16 @@ path that never materializes is not a violation.
 - [ ] TS-27 (FR4, FR5): ネスト・ラッパー認識。`bash -lc '...'`（結合短オプション）、
       `xargs -n 1 codex ...`、`nice -n 1 codex ...` のいずれも contributor ティア起動として
       deny される。FR5 (b)(c) が前提。
-- [ ] TS-29 (FR7): 非対話 stdin での書き込み拒否。
+- [ ] TS-29 (FR7): 非対話 stdin でも書き込みが成立する。
       Given: `$EM_WORKFLOW_MUSE_CONSENT` が一時ディレクトリ内の存在しないパスを指し、
       一時 git リポジトリがある。When: `--record --project-dir <repo>` と
       `--remove --project-dir <repo>` を、パイプで与えた非端末 stdin のサブプロセスとして実行する。
-      Then: いずれも非ゼロ終了。stderr が対話端末の要求を述べる。ストアファイルは作成されず、
-      既存ストアがある場合はバイト単位で不変。両プラグインのスクリプトのコピーで検証する。
-- [ ] TS-30 (FR7, FR13): `--list` は provenance 制約の対象外で、対話端末では書き込みが成立する。
-      Given: 一時ストアと一時 git リポジトリ。When: (1) 非端末 stdin で `--list` を実行、
-      (2) 擬似端末 stdin で `--record` を実行、(3) 再び非端末 stdin で `--list` を実行。
-      Then: (1) は exit 0 でストアを変更しない、(2) は exit 0 でキーを記録する、
+      Then: いずれも exit 0。`--record` はキーを記録し、`--remove` は削除する。
+      両プラグインのスクリプトのコピーで検証する。
+- [ ] TS-30 (FR7, FR13): `--list` は読み取りのみで、記録の前後で出力が変わる。
+      Given: 一時ストアと一時 git リポジトリ。When: (1) `--list` を実行、
+      (2) `--record` を実行、(3) 再び `--list` を実行。
+      Then: (1) は exit 0 で出力が空、(2) は exit 0 でキーを記録する、
       (3) は exit 0 でプロジェクトキーを出力する。
 
 ### Integration Tests
@@ -609,20 +595,16 @@ path that never materializes is not a violation.
       `PreToolUse`、`permissionDecision` が `deny`。`permissionDecisionReason` は同意の欠如を
       示し、`additionalContext` は非 contributor エントリへ誘導する。実行後もストアパスは
       存在しない。両プラグインのスクリプトのコピーに対して検証する。
-- [ ] TS-2 (FR2, FR7): 同意記録後は素通しになる。記録ステップは FR7 の provenance 制約を
-      満たす必要があるため、`--record` は標準ライブラリ `pty` で割り当てた擬似端末を stdin として
-      起動する。Given: 同じ一時リポジトリで `muse_guard.py --record --project-dir <repo>` により
+- [ ] TS-2 (FR2, FR7): 同意記録後は素通しになる。Given: 同じ一時リポジトリで `muse_guard.py --record --project-dir <repo>` により
       同意を記録。When: TS-1 と同一のペイロードを再投入。Then: 判定なし（exit 0、stdout 空）。
       ストアはちょうど 1 つのプロジェクトキーを持ち、その値は `updated_at` フィールドのみを持つ。
       片方のプラグインのコピーで記録した同意が、もう片方のコピーでも有効である。
-- [ ] TS-9 (FR3, FR7): 非 git の realpath フォールバック。従来どおりだが、`--record` の呼び出しは
-      擬似端末 stdin で行う。Given: どの git リポジトリにも属さない一時ディレクトリを、
+- [ ] TS-9 (FR3, FR7): 非 git の realpath フォールバック。Given: どの git リポジトリにも属さない一時ディレクトリを、
       シンボリックリンク経由で参照。When: `muse_guard.py --record --project-dir <シンボリック
       リンクのパス>` を実行し、その後 cwd を実パス（および別途シンボリックリンクのパス）にして
       contributor ティア起動を投入。Then: 記録されたキーは `os.path.realpath(dir)` と等しく、
       両方の起動が同じキーに解決される（記録後は判定なし、記録前は deny）。
-- [ ] TS-10 (FR3, FR7): worktree のキー同一性。従来どおりだが、`--record` / `--remove` の呼び出しは
-      擬似端末 stdin で行う。Given: 一時 git リポジトリと、`git worktree add` で作った 2 つ目の
+- [ ] TS-10 (FR3, FR7): worktree のキー同一性。Given: 一時 git リポジトリと、`git worktree add` で作った 2 つ目の
       worktree。When: メイン worktree から同意を記録し、リンク先 worktree を cwd にして
       contributor ティア起動を投入。次に同意を削除し、両 worktree から同じ起動を再投入。
       Then: 両 worktree が 1 つの同意エントリを共有する（記録後は両方で判定なし、`--remove`
@@ -653,7 +635,7 @@ path that never materializes is not a violation.
 - [ ] ストアが不在／不正 JSON／構造想定外／ディレクトリ（TS-8）。
 - [ ] 非 git ディレクトリ、およびシンボリックリンク経由の参照（TS-9）。
 - [ ] 同一リポジトリの複数 worktree（TS-10）。
-- [ ] `--record` / `--remove` の stdin が対話端末でない（TS-29）。`--list` は端末でなくても動く（TS-30）。
+- [ ] `--record` / `--remove` / `--list` が stdin の種別によらず動作する（TS-29、TS-30）。
 - [ ] 両プラグイン導入時の二重発火（NFR9 — 同一ストア・同一判定により no-op）。
 
 ### Structural / Configuration Tests
@@ -729,16 +711,15 @@ path that never materializes is not a violation.
 - **Unattended-run Safety:** フックは `ask` を出さない。`ask` は `claude-batch` 下で `deny` に
   降格され、答える者のいない無人実行を止めるため（NFR2）。develop / review 経路に新たな
   `AskUserQuestion` の箇所を導入しない（NFR3）。
-- **Consent-write Provenance:** `--record` / `--remove` は標準入力が対話端末でなければ、
-  ストアを一切変更せずに非ゼロ終了する（FR7、AC-13）。`contributor-consent` スキルは
-  これらを自ら実行せず、ユーザーが自分の端末で実行するコマンドとして提示する（FR13）。
-- **Prompt-injection Resistance:** ゲートは指示文ではなくコードで判定する。強制面は 2 つ
-  — フックの deny（FR1、FR4）と、書き込み CLI の対話端末要求（FR7）。この 2 つが確立する境界は
-  「エージェントの通常の Bash 呼び出し経路からは、contributor ティアの起動も同意の記録も
-  できない」という点までである。`isatty()` は provenance の代理指標であって、人間が操作した
-  証明ではない。十分な能力を持つエージェントは擬似端末を割り当てる（`script`、Python の `pty`）
-  か、別のプログラムを介してストアを書き換えうる（a12）。あらゆる手段による回避が不可能である
-  ことは主張しない。学習提供は取り消せないため、この残余は仕様に明記したうえで受け入れる。
+- **Consent-write Provenance:** ストアを変更できるのは `--record` / `--remove` だけで
+  （FR7、AC-13）、これらを呼ぶのは `contributor-consent` スキルに限る。スキルはユーザーが
+  起動するスラッシュコマンドであり、`AskUserQuestion` の回答を得てから実行する（FR13）。
+  これは指示レベルのゲートであって、機械的な強制ではない。
+- **Prompt-injection Resistance:** contributor ティアの起動判定は指示文ではなくコードで行う。
+  機械的な強制はフックの deny（FR1、FR4）の 1 つで、これが確立する境界は「同意の記録がない
+  プロジェクトでは contributor ティアを起動できない」という点までである。同意の記録側に機械的な
+  強制は無く、`contributor-consent` スキルを経ることは指示レベルの規約である（a12）。
+  学習提供は取り消せないため、この残余は仕様に明記したうえで受け入れる。
 - **Out-of-scope Conditions:** diff 中の秘密情報、第三者の著作物、リポジトリが現在 private で
   ある／ライセンスが変更されたこと — この 3 条件は記述された dispatch 前基準として適用する
   （FR9）。3 つ目は dispatch 時点の現在状態のチェックとして書き、同意時に記録した値との比較には
@@ -760,7 +741,6 @@ path that never materializes is not a violation.
 | コマンドが空 | 判定なし | FR5 |
 | 分類に確信が持てない | 判定なし（通常のパーミッションフローへ fail open） | NFR2 |
 | `git` が使えない／リポジトリでない | `os.path.realpath(directory)` にフォールバック | FR3 |
-| `--record` / `--remove` の stdin が対話端末でない | 何も書かずに非ゼロ終了。stderr に対話端末が必要である旨を出す | FR7 |
 
 ### Error Flow
 
@@ -775,9 +755,7 @@ path that never materializes is not a violation.
 常に exit 0
 
 [CLI 書き込み経路]
---record / --remove → stdin が対話端末か?
-  ├ No  → 非ゼロ終了（stderr にメッセージ、ストアに触れない）
-  └ Yes → キー導出 → ストア読み取り → アトミック書き込み
+--record / --remove → キー導出 → ストア読み取り → アトミック書き込み
 ```
 
 ## Performance Optimization
@@ -840,7 +818,7 @@ path that never materializes is not a violation.
 | a9 | 「同意していないプロジェクトで develop を実行する」基準は、実際の develop 実行ではなく自動の静的等価テストで満たす | gate:create-spec.requirement-clarification |
 | a10 | 「同意のスコープ外」3 条件は `references/reviewers.yaml` と `references/review-phase.md` の記述された dispatch 前基準に留め、LLM が dispatch 前に適用する。`muse_guard.py` は同意の presence のみを見る。ストアは presence-only の形を保ち、可視性／ライセンス／コントリビューターの事実は記録せず、ガードはネットワークアクセスを行わない。記述された基準はドリフト条件を dispatch 時点の現在状態のチェックとして述べる | gate:create-spec.requirement-clarification |
 | a11 | 本フィーチャーでは `design` ステップを実行する（現在 `status: completed`） | gate:create-spec.design-step |
-| a12 | FR7 の `isatty()` チェックは provenance の代理指標であって、人間が操作した証明ではない。十分な能力を持つエージェントは擬似端末を割り当てる（`script`、Python の `pty`）か、別のプログラムを介してストアを書き換えうる。この境界が保証するのは「エージェントの通常の Bash 呼び出し経路からは同意を記録できない」という点までであり、あらゆる手段による回避の不可能性ではない。学習提供は取り消せないため、この残余は仕様に明記して受け入れる | gate:rework.muse-guard-cli-consent-provenance |
+| a12 | 同意の記録側に機械的な強制は置かない。`--record` / `--remove` はどのプロセスからも呼べるため、この境界は `contributor-consent` スキルを経るという指示レベルの規約に依存する。機械的に保証されるのはフックの deny、すなわち「同意の記録がないプロジェクトでは contributor ティアを起動できない」という点までである。学習提供は取り消せないため、この残余は仕様に明記して受け入れる | 人間との相談による最終決定 |
 
 ## References
 
