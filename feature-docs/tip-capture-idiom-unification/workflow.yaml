@@ -1,7 +1,7 @@
 schema_version: 1
 feature: tip-capture-idiom-unification
 created: 2026-08-23
-base_branch: em-workflow/exit4-tip-argument/integration
+base_branch: main
 parent_branch: em-workflow/tip-capture-idiom-unification/integration
 
 project:

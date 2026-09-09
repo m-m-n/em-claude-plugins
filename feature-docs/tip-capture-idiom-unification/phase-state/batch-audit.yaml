@@ -1,0 +1,45 @@
+schema_version: 1
+feature: tip-capture-idiom-unification
+records:
+  - question_id: develop.pr-base-branch
+    packet_id: null
+    answered_at: "2026-09-09T21:15:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "main を PR の base にする"
+    normalized_answer: "main"
+    resolution_note: >-
+      gate: workflow.yaml の base_branch が em-workflow/exit4-tip-argument/integration
+      を指しているが、その作業は PR #17 として main にマージ済みでブランチはローカル・
+      リモート双方に存在しない。ユーザー指示は base_branch に対する PR 作成。
+      options: (A) main を base にする / (B) 消えたブランチを remote に復元して base にする /
+      (C) PR を作らず人間に委ねる。
+      codex_consulted: true。Codex は (A) を推奨 — 旧 base の作業は main に統合済みなので
+      main を後続 PR の宛先とするのが合理的、理由を PR に明記し integration は
+      ローカル・リモート双方に残して auto-merge しない。
+      choice: (A)。workflow.yaml の base_branch を main に更新した。
+  - question_id: review.contributor-tier-read-mapping
+    packet_id: null
+    answered_at: "2026-09-09T21:16:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "litellm-harness スキル側に例外を書き足す（follow-up として起票）"
+    normalized_answer: "amend-litellm-harness-skill"
+    resolution_note: >-
+      gate: reviewers.yaml / review-phase.md の contributor-tier read-mapping
+      （consent 記録済み + per-dispatch 判断が通れば muse-spark を contributor tier
+      として読んでよい）と、vertex-review の litellm-harness スキルの
+      「muse-spark-contributor をレビューに使ってはいけない」が矛盾している。
+      実際に spec 観点の reviewer は後者を根拠に skip_reason: model_forbidden_for_review
+      で拒否し、performance 観点の reviewer は contributor tier のまま完走した。
+      options: (A) litellm-harness に「public + consent 記録済みなら可」の例外を追加 /
+      (B) em-workflow 側の read-mapping を撤回しレビューでは常に Standard を使う /
+      (C) 両方残して優先順位だけ明記。
+      codex_consulted: true。Codex は (A) を推奨 — 同意と都度判断に基づく利用という
+      既存設計を維持できるため、litellm-harness の全面禁止を改め例外条件は
+      em-workflow の判定基準全体を参照させる。
+      choice: (A)。ただし vertex-review プラグイン側の変更であり本 feature のスコープ外の
+      ため、この run では適用せず follow-up タスクとして起票した。
+      本 run の spec 観点はレジストリの verbatim 値 muse-spark で再 dispatch して解決済み。
