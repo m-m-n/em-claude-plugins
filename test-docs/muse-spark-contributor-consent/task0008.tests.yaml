@@ -1,0 +1,105 @@
+task_id: task0008
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_record_and_remove_refuse_a_non_interactive_stdin_against_an_absent_store
+    red_confirmed: true
+    red_reason: >-
+      Before the precondition existed, --record/--remove against the
+      non-existent nested store path succeeded (returncode 0) instead of
+      refusing; assertNotEqual(result.returncode, 0) raised "AssertionError:
+      0 == 0" for both modes and both plugin copies.
+  AC-2:
+    tests:
+      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_record_and_remove_leave_an_existing_store_byte_identical_when_stdin_is_non_interactive
+      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_refusal_precedes_project_key_derivation_so_a_non_repository_directory_behaves_identically
+    red_confirmed: true
+    red_reason: >-
+      Before the precondition existed, the byte-identical test's
+      assertNotEqual(result.returncode, 0) raised "AssertionError: 0 == 0"
+      for both modes/copies (the old code proceeded to mutate the store
+      regardless of stdin kind); the ordering test failed the same way and
+      additionally failed self.assertFalse(self.store_path.exists()) with
+      "AssertionError: True is not false" since the old --record actually
+      created the store.
+  AC-3:
+    tests:
+      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_record_and_remove_succeed_unchanged_with_a_pseudo_terminal_stdin
+      - tests.test_muse_guard.TestCliRoundTrip.test_full_round_trip_for_both_copies
+      - tests.test_muse_guard.TestCliRoundTrip.test_record_creates_parent_directories_that_do_not_exist_yet
+    red_confirmed: true
+    red_reason: >-
+      This criterion has no distinguishing red state on its own (a
+      pseudo-terminal satisfies the precondition, so the direct new test
+      passes both before and after the precondition exists). Its red was
+      instead confirmed via the pre-existing cases it must keep green:
+      after the precondition was implemented, a temporary copy of
+      TestCliRoundTrip with its --record/--remove calls left on the old
+      ordinary-pipe form failed with "AssertionError: 1 != 0 :
+      対話的な端末からの実行でなければ、同意の記録や削除はできない。" for
+      both plugin copies, in both test_full_round_trip_for_both_copies and
+      test_record_creates_parent_directories_that_do_not_exist_yet -- proof
+      that only the pseudo-terminal update (not incidental green) is what
+      keeps them passing.
+  AC-4:
+    tests:
+      - tests.test_muse_guard.TestConsentWriteProvenanceBoundary.test_list_is_unaffected_by_the_precondition_across_a_record_sequence
+    red_confirmed: false
+    red_reason: >-
+      --list was never gated by the precondition (task0008.md Design
+      explicitly excludes it), so this test asserts behavior that already
+      held before this task's implementation; there is no code path here
+      that could have failed before the change. Carried forward honestly
+      rather than fabricating a red state.
+  AC-5:
+    tests:
+      - tests.test_muse_guard.TestCliRoundTrip.test_full_round_trip_for_both_copies
+      - tests.test_muse_guard.TestCliRoundTrip.test_record_creates_parent_directories_that_do_not_exist_yet
+      - tests.test_muse_guard.TestProjectKeyDerivation.test_two_worktrees_of_one_repository_share_one_consent_entry
+      - tests.test_muse_guard.TestProjectKeyDerivation.test_a_non_repository_directory_reached_through_a_symlink_resolves_to_its_real_path
+      - tests.test_muse_guard.TestMalformedStoreOnCliPath.test_a_mutating_command_against_a_malformed_store_fails_loudly_and_writes_nothing
+      - tests.test_muse_guard.TestNoDecisionCases.test_after_consent_is_recorded_the_same_invocation_is_undecided
+      - tests.test_muse_guard.TestNoDecisionCases.test_after_consent_recorded_through_the_other_plugins_copy_is_also_undecided
+    red_confirmed: true
+    red_reason: >-
+      Every pre-existing case above invokes --record and/or --remove and
+      was updated to drive them through run_guard_with_pty_stdin (or the
+      record()/remove() helper, itself updated to use it). Confirmed via
+      the same temporary-revert experiment as AC-3: with the precondition
+      implemented and a case's mutating call left on the old ordinary-pipe
+      form, the case fails with the provenance refusal message instead of
+      its expected success output; with the pseudo-terminal form restored,
+      the full `python3 -m unittest discover -s tests` run is green (4281
+      tests, 0 failures).
+  AC-6:
+    tests:
+      - tests.test_muse_guard.TestBothCopiesShape.test_copies_differ_in_exactly_one_line_the_plugin_slug
+      - tests.test_muse_guard.TestSourceHygiene.test_neither_plugins_hooks_tests_directory_gained_a_file
+      - tests.test_muse_guard.TestSourceHygiene.test_no_third_party_imports
+    red_confirmed: false
+    red_reason: >-
+      Structural/hygiene properties (copy divergence limited to
+      PLUGIN_SLUG, no new hooks/tests/ file, standard-library-only
+      imports, new cases parameterized over both copies via subTest, new
+      cases living only in tests/test_muse_guard.py) rather than a single
+      behavior with an observable red state; these pre-existing tests
+      already passed and continue to pass, verified by inspection of the
+      diff (git diff --stat: only em-workflow/hooks/muse_guard.py,
+      em-review/hooks/muse_guard.py, tests/test_muse_guard.py changed) and
+      by test_copies_differ_in_exactly_one_line_the_plugin_slug staying
+      green after the edit.
+  AC-7:
+    tests:
+      - tests.test_muse_guard.TestDenyPayloadContent.test_deny_payload_has_exactly_four_fields_and_names_the_missing_consent
+      - tests.test_muse_guard.TestInvocationSpellingsDenyWithNoConsent.test_every_spelling_denies_from_both_copies_and_store_stays_absent
+      - tests.test_muse_guard.TestNoDecisionCases.test_unrelated_command_is_not_an_invocation
+      - tests.test_muse_guard.TestNonInvocationShortCircuit.test_non_invocation_never_derives_a_project_key_or_touches_the_store
+    red_confirmed: false
+    red_reason: >-
+      This task's change is scoped to the CLI region only (cli_main); the
+      hook path (hook_main, is_contributor_invocation, emit_deny) is
+      untouched, so these pre-existing hook-path tests were already green
+      and stayed green -- there is no red state to observe for "the hook
+      path is unaffected" since nothing on that path changed.
