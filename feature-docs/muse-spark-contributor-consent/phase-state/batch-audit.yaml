@@ -151,21 +151,20 @@ records:
   - rework_to_implement
   freeform: null
   normalized_answer: verify を fail として記録し、implement への自動 rework を 1 ラウンド回す
-  resolution_note: 'gate: verify.failed; policy action auto_rework (batch-mode.md Non-packet gates);
-    lineage cap and hard cap both unreached (verify_rework.rounds 0 -> 1, all failed ids first
-    occurrence); chosen rework_to_implement; not chosen: rework_to_review, abort, pass-verify-because-
-    findings-were-deferred; codex_consulted: true (user instruction: consult Codex on unclear points);
-    fallback provider answered: no; opus escalation: not run; key points: the unclear point was whether
-    review''s formal ''deferred'' disposition of 7 residual high findings satisfies SC-8. Codex imported
-    muse_guard.py and probed is_contributor_invocation directly, reproducing findings 1, 2, 4, 5, 6 and 7;
-    the orchestrator independently reproduced 4 of them through the hook''s own stdin protocol. Deferral is
-    procedural risk-acceptance that let the review step finish at its cap, not evidence the code meets SC-8
-    (VERIFICATION.md SC-8 requires zero residual critical/high). develop/SKILL.md''s verify section refuses
-    to grant deferred to verify failed_items precisely because that would be verification disguise. The
-    passing suite does not contradict the findings: its fixtures are narrower than the scenarios
-    (separator-free prompts, exact `bash -c`, option-free `xargs`). Codex excluded TS-3 (still holds) and
-    TS-28 (its three enumerated cases still pass; here-document finding 4 belongs in a new scenario), and
-    the orchestrator adopted that narrowing.'
+  resolution_note: 'gate: verify.failed; policy action auto_rework (batch-mode.md Non-packet gates); lineage
+    cap and hard cap both unreached (verify_rework.rounds 0 -> 1, all failed ids first occurrence); chosen
+    rework_to_implement; not chosen: rework_to_review, abort, pass-verify-because- findings-were-deferred;
+    codex_consulted: true (user instruction: consult Codex on unclear points); fallback provider answered:
+    no; opus escalation: not run; key points: the unclear point was whether review''s formal ''deferred''
+    disposition of 7 residual high findings satisfies SC-8. Codex imported muse_guard.py and probed is_contributor_invocation
+    directly, reproducing findings 1, 2, 4, 5, 6 and 7; the orchestrator independently reproduced 4 of
+    them through the hook''s own stdin protocol. Deferral is procedural risk-acceptance that let the review
+    step finish at its cap, not evidence the code meets SC-8 (VERIFICATION.md SC-8 requires zero residual
+    critical/high). develop/SKILL.md''s verify section refuses to grant deferred to verify failed_items
+    precisely because that would be verification disguise. The passing suite does not contradict the findings:
+    its fixtures are narrower than the scenarios (separator-free prompts, exact `bash -c`, option-free
+    `xargs`). Codex excluded TS-3 (still holds) and TS-28 (its three enumerated cases still pass; here-document
+    finding 4 belongs in a new scenario), and the orchestrator adopted that narrowing.'
 - question_id: rework.muse-guard-cli-consent-provenance
   packet_id: muse-spark-contributor-consent-q0001
   answered_at: '2026-09-09T08:52:00+09:00'
@@ -178,153 +177,158 @@ records:
   resolution_note: 'gate: rework.spec-change; route: relaxed route (assumption a3 names this question
     with reversible: false, so question-resolution.md''s Precedence reservation removes the routed arm
     and the question joins the packet''s batched Codex consultation instead of the Classification gate);
-    chosen cli-requires-terminal; not chosen: hook-denies-own-cli, no-spec-change-accept-residual;
-    codex_consulted: true; fallback provider answered: no; opus escalation: not run; key points: option 1
-    rebuilds the same string-classifier fragility the six other findings are, so it guards enumerated
-    spellings rather than being an independent boundary; option 3 leaves an irreversible hole (the
-    repository''s code becomes training data) that contradicts SPEC''s own prompt-injection-resistance
-    claim and makes SC-8 permanently unsatisfiable; option 2 puts the check at the mutation sink, where
-    quoting, wrappers, shell nesting and here-documents all converge, and keeps --list agent-callable.
-    Carried caveat for the create-spec re-entry: isatty() is a provenance proxy, not proof of human
-    action (an agent may allocate a pseudo-terminal or write the store through another program), and
-    Codex separately judged the goal as literally worded unachievable by all three options, so SPEC''s
-    Prompt-injection Resistance claim and SC-8 must be reworded to the boundary this option actually
-    establishes.'
-
+    chosen cli-requires-terminal; not chosen: hook-denies-own-cli, no-spec-change-accept-residual; codex_consulted:
+    true; fallback provider answered: no; opus escalation: not run; key points: option 1 rebuilds the
+    same string-classifier fragility the six other findings are, so it guards enumerated spellings rather
+    than being an independent boundary; option 3 leaves an irreversible hole (the repository''s code becomes
+    training data) that contradicts SPEC''s own prompt-injection-resistance claim and makes SC-8 permanently
+    unsatisfiable; option 2 puts the check at the mutation sink, where quoting, wrappers, shell nesting
+    and here-documents all converge, and keeps --list agent-callable. Carried caveat for the create-spec
+    re-entry: isatty() is a provenance proxy, not proof of human action (an agent may allocate a pseudo-terminal
+    or write the store through another program), and Codex separately judged the goal as literally worded
+    unachievable by all three options, so SPEC''s Prompt-injection Resistance claim and SC-8 must be reworded
+    to the boundary this option actually establishes.'
 - question_id: create-plan.artifact-overwrite
   packet_id: null
-  answered_at: "2026-09-09T10:05:00+09:00"
+  answered_at: '2026-09-09T10:05:00+09:00'
   source: batch-codex-consultation
   answer_mode: single_select
   selected_option_ids:
   - overwrite
   freeform: null
-  normalized_answer: VERIFICATION.md の write_policy action を replace_authorized にし、expect_digest に現在値を置いて planner に書き直させる。
+  normalized_answer: VERIFICATION.md の write_policy action を replace_authorized にし、expect_digest に現在値を置いて
+    planner に書き直させる。
   resolution_note: 'gate: create-plan.artifact-overwrite (orchestrator-opened, no worker packet), target
-    feature-docs/muse-spark-contributor-consent/VERIFICATION.md. Digest mismatch: phase-state
-    create-plan.yaml generation 1 recorded
-    sha256:d3331f080403925c0bd27845d478f5aa4f07311fe378e57f7ad71af740fe1e48, on-disk value is
-    sha256:3cdce86da566f04012f984cbf4c0aa1610c293b9b45a06743272c8c18ff3607b. Provenance of the current
-    version: commit f6f4991 "apply review rework patch (task0006, implement -> pending)" -- the only two
-    writers in git log for this path are the previous create-plan patch (5f04f74) and that rework patch,
-    i.e. an in-workflow rework-phase update, not an unexplained external edit. codex_consulted: true;
-    fallback provider answered: no; opus escalation: not run. Chosen: overwrite (action
-    replace_authorized, expect_digest pinned to the current value so a concurrent write still fails
-    closed). Not chosen: preserve_and_reuse -- batch-policies.yaml states it as this gate''s default,
-    but the amended SPEC.md now carries TS-29 / TS-30 while VERIFICATION.md still stops at TS-28, so
-    preserving it would fail the planner''s cross-artifact postconditions and abort the phase on a
-    known-failing path with no gain in safety. Not chosen: abort. Codex reservation, recorded as a
-    follow-up rather than acted on here: if preserve_and_reuse is meant to be exceptionless, the
-    "verified in-workflow provenance may use replace_authorized" rule belongs in batch-policies.yaml
-    rather than in a per-run judgement. Orchestrator: em-workflow develop, batch run 2026-09-09.'
-
+    feature-docs/muse-spark-contributor-consent/VERIFICATION.md. Digest mismatch: phase-state create-plan.yaml
+    generation 1 recorded sha256:d3331f080403925c0bd27845d478f5aa4f07311fe378e57f7ad71af740fe1e48, on-disk
+    value is sha256:3cdce86da566f04012f984cbf4c0aa1610c293b9b45a06743272c8c18ff3607b. Provenance of the
+    current version: commit f6f4991 "apply review rework patch (task0006, implement -> pending)" -- the
+    only two writers in git log for this path are the previous create-plan patch (5f04f74) and that rework
+    patch, i.e. an in-workflow rework-phase update, not an unexplained external edit. codex_consulted:
+    true; fallback provider answered: no; opus escalation: not run. Chosen: overwrite (action replace_authorized,
+    expect_digest pinned to the current value so a concurrent write still fails closed). Not chosen: preserve_and_reuse
+    -- batch-policies.yaml states it as this gate''s default, but the amended SPEC.md now carries TS-29
+    / TS-30 while VERIFICATION.md still stops at TS-28, so preserving it would fail the planner''s cross-artifact
+    postconditions and abort the phase on a known-failing path with no gain in safety. Not chosen: abort.
+    Codex reservation, recorded as a follow-up rather than acted on here: if preserve_and_reuse is meant
+    to be exceptionless, the "verified in-workflow provenance may use replace_authorized" rule belongs
+    in batch-policies.yaml rather than in a per-run judgement. Orchestrator: em-workflow develop, batch
+    run 2026-09-09.'
 - question_id: review.architecture-empty-harness-output
   packet_id: null
-  answered_at: "2026-09-09T10:52:00+09:00"
+  answered_at: '2026-09-09T10:52:00+09:00'
   source: batch-codex-consultation
   answer_mode: single_select
   selected_option_ids:
   - treat_as_harness_failure_and_fallback
   freeform: null
-  normalized_answer: architecture#0 を status failed として記録し、architecture 観点に Claude fallback を 1 回だけ dispatch する。
-  resolution_note: 'gate: review.architecture-empty-harness-output (round 3, orchestrator-opened,
-    no worker packet, unlisted-gate fallback). The vertex-reviewer subagent for architecture
-    returned a schema-valid envelope {"findings": [], "skipped": false, "skip_reason": null}
-    but disclosed that the underlying CLI exited 0 with `tokens used 0` and an EMPTY final
-    message, and stated itself "per protocol this is not a skip - it is a truncated/empty
-    model output". Not chosen: treat_as_completed_run -- review-phase.md R2b says schema
-    validity is the only test, but that rule exists to stop the orchestrator second-guessing
-    a genuine empty review, not to launder a zero-token harness non-result; recording the
-    perspective as reviewed would have been irreversible and would have dropped architecture
-    coverage on an authorization guard. codex_consulted: true but the primary Codex CLI
-    returned exit 1 "You have hit your usage limit ... try again at 1:03 PM"; fallback
-    provider answered: no; opus escalation: not run. No decision reached from consultation,
-    so batch-mode.md''s unlisted-gate fallback applied: take the smallest / most reversible
-    side effect -- one extra Claude fallback dispatch. Outcome validates the choice: the
-    fallback returned 1 high + 2 medium architecture findings that Option A would have
-    silently dropped. Anomaly flagged by the consulting agent and recorded here for the
-    human: the codex CLI log showed session/state bleed-through (an unrelated
-    "comprehensive-perspective code review round 3" transcript against this same worktree
+  normalized_answer: architecture#0 を status failed として記録し、architecture 観点に Claude fallback を 1 回だけ dispatch
+    する。
+  resolution_note: 'gate: review.architecture-empty-harness-output (round 3, orchestrator-opened, no worker
+    packet, unlisted-gate fallback). The vertex-reviewer subagent for architecture returned a schema-valid
+    envelope {"findings": [], "skipped": false, "skip_reason": null} but disclosed that the underlying
+    CLI exited 0 with `tokens used 0` and an EMPTY final message, and stated itself "per protocol this
+    is not a skip - it is a truncated/empty model output". Not chosen: treat_as_completed_run -- review-phase.md
+    R2b says schema validity is the only test, but that rule exists to stop the orchestrator second-guessing
+    a genuine empty review, not to launder a zero-token harness non-result; recording the perspective
+    as reviewed would have been irreversible and would have dropped architecture coverage on an authorization
+    guard. codex_consulted: true but the primary Codex CLI returned exit 1 "You have hit your usage limit
+    ... try again at 1:03 PM"; fallback provider answered: no; opus escalation: not run. No decision reached
+    from consultation, so batch-mode.md''s unlisted-gate fallback applied: take the smallest / most reversible
+    side effect -- one extra Claude fallback dispatch. Outcome validates the choice: the fallback returned
+    1 high + 2 medium architecture findings that Option A would have silently dropped. Anomaly flagged
+    by the consulting agent and recorded here for the human: the codex CLI log showed session/state bleed-through
+    (an unrelated "comprehensive-perspective code review round 3" transcript against this same worktree
     appeared in the log before the consultation prompt).'
-
 - question_id: review.auto-fix-judgment
   packet_id: null
-  answered_at: "2026-09-09T11:00:00+09:00"
+  answered_at: '2026-09-09T11:00:00+09:00'
   source: batch-codex-consultation
   answer_mode: single_select
   selected_option_ids:
   - skip_auto_fix_defer_residuals
   freeform: null
   normalized_answer: review round 3 の Phase R4 auto-fix を実行せず、high 2 件を deferred として記録し、run report で明示的にエスカレーションする。
-  resolution_note: 'gate: review.auto-fix-judgment (round 3). One candidate reached the
-    needs-judgment path: d23f182330cc695e (high, architecture, em-workflow/hooks/muse_guard.py:73,
-    prose prescription). The other high, ec05dc7aa23bc46f, has sources == ["claude:evaluator"]
-    and is therefore skipped unconditionally in batch mode by review-phase.md R4''s own
-    candidate-gate rule -- not by this gate. batch-mode.md''s stated default for this gate is
-    "Apply as-is (editor interprets)", departed from under the invocation''s explicit
-    instruction to consult Codex and adopt the comparatively better option. Not chosen:
-    apply_as_is_batch_default. codex_consulted: true (codex-harness second-opinion; the
-    primary Codex CLI provider was at its usage limit, so the litellm/muse-spark route
-    answered -- Standard tier, no contributor consent is recorded for this project so the
-    registry read-mapping did not apply); fallback provider answered: yes (litellm/muse-spark);
-    opus escalation: not run. Codex chose B (skip) on three grounds the orchestrator adopted:
-    (1) the review-editor may write exactly one file, while
-    tests/test_muse_guard.py::test_copies_differ_in_exactly_one_line_the_plugin_slug pins
-    em-review/hooks/muse_guard.py byte-identical to the em-workflow copy apart from
-    PLUGIN_SLUG, so applying the default breaks that invariant deterministically and leaves
-    two divergent copies of an authorization guard; (2) the finding''s own suggestion leaves
-    an open design choice -- add a new retryable skip_reason to review-protocol.md''s closed
-    vocabulary and a row to R2b''s table, or treat the deny as non-retryable -- spanning three
-    documents in two plugins beyond the single editable file, which a single-file editor
-    cannot decide; (3) the batch review rework budget is already spent (cap 1, count 1), so a
-    bad auto-fix could not be repaired inside this phase and whatever this round leaves is what
-    the human evaluator receives. Codex''s stated risk of B, adopted as an obligation: deferral
-    is only defensible as an explicit escalation, so both residual highs are surfaced
-    prominently in the run report rather than silently completed. Consistent with the round-2
-    resolution of the identical gate under the identical constraints.'
-
+  resolution_note: 'gate: review.auto-fix-judgment (round 3). One candidate reached the needs-judgment
+    path: d23f182330cc695e (high, architecture, em-workflow/hooks/muse_guard.py:73, prose prescription).
+    The other high, ec05dc7aa23bc46f, has sources == ["claude:evaluator"] and is therefore skipped unconditionally
+    in batch mode by review-phase.md R4''s own candidate-gate rule -- not by this gate. batch-mode.md''s
+    stated default for this gate is "Apply as-is (editor interprets)", departed from under the invocation''s
+    explicit instruction to consult Codex and adopt the comparatively better option. Not chosen: apply_as_is_batch_default.
+    codex_consulted: true (codex-harness second-opinion; the primary Codex CLI provider was at its usage
+    limit, so the litellm/muse-spark route answered -- Standard tier, no contributor consent is recorded
+    for this project so the registry read-mapping did not apply); fallback provider answered: yes (litellm/muse-spark);
+    opus escalation: not run. Codex chose B (skip) on three grounds the orchestrator adopted: (1) the
+    review-editor may write exactly one file, while tests/test_muse_guard.py::test_copies_differ_in_exactly_one_line_the_plugin_slug
+    pins em-review/hooks/muse_guard.py byte-identical to the em-workflow copy apart from PLUGIN_SLUG,
+    so applying the default breaks that invariant deterministically and leaves two divergent copies of
+    an authorization guard; (2) the finding''s own suggestion leaves an open design choice -- add a new
+    retryable skip_reason to review-protocol.md''s closed vocabulary and a row to R2b''s table, or treat
+    the deny as non-retryable -- spanning three documents in two plugins beyond the single editable file,
+    which a single-file editor cannot decide; (3) the batch review rework budget is already spent (cap
+    1, count 1), so a bad auto-fix could not be repaired inside this phase and whatever this round leaves
+    is what the human evaluator receives. Codex''s stated risk of B, adopted as an obligation: deferral
+    is only defensible as an explicit escalation, so both residual highs are surfaced prominently in the
+    run report rather than silently completed. Consistent with the round-2 resolution of the identical
+    gate under the identical constraints.'
 - question_id: verify.evaluation-judgment
   packet_id: null
-  answered_at: "2026-09-09T11:20:00+09:00"
+  answered_at: '2026-09-09T11:20:00+09:00'
   source: batch-codex-consultation
   answer_mode: single_select
   selected_option_ids:
   - pass_round2
   freeform: null
-  normalized_answer: verify round 2 を pass と判定する。SC-8 は改訂後の定義どおり満たされ、TS-23 は実体を検証して pass とするが、自動テスト化されていない事実を note と retrospect に残す。
-  resolution_note: 'gate: verify.evaluation-judgment (verify round 2). Two judgment calls
-    had to be settled before writing the round-2 verdict. (1) SC-8 -- VERIFICATION.md defines
-    it as "review is complete AND the FR7 provenance boundary is verified by automated tests",
-    explicitly stating that driving residual critical/high to zero is NOT part of it. review is
-    completed with rounds_completed 3; TS-29 and TS-30 pass. Marked MET. Not chosen:
-    fail_on_residual_highs -- that would re-litigate the spec-change decision already recorded
-    in phase-state/rework.yaml (answer cli-requires-terminal), which deliberately reworded SC-8
-    to the boundary the TTY check actually establishes. (2) TS-23 (isolation audit of the guard
-    test module) -- no collected test performs the audit as an assertion, which is in tension
-    with VERIFICATION.md''s stated substitute coverage gate ("every scenario is realized by at
-    least one collected test"). All three clauses of its expected result were confirmed by the
-    verify phase directly: MuseGuardTestCase.setUp points EM_WORKFLOW_MUSE_CONSENT at a
-    per-test tmpdir for every store-touching case; the three classes that do not derive from it
-    (TestBothCopiesShape, TestSourceHygiene, TestNonInvocationShortCircuit) either never reach
-    the store or mock read_store_for_hook; no case resolves the real store path; and an
-    empirical before/after check showed ~/.claude/em-workflow/muse-consent.json absent both
-    before and after a full run. Marked PASS, consistent with round 1''s treatment of the same
-    scenario on the same evidence. Not chosen: fail_ts23_to_add_an_audit_test -- it would spend
-    a verify rework round on a test-hygiene assertion whose substance is already confirmed; the
-    automation gap is instead recorded in the verify note and carried into retrospect.
-    codex_consulted: true (codex-harness second-opinion-agent); the Codex CLI returned its
-    usage-limit error (retry at 1:03 PM) and produced no opinion; fallback provider answered:
-    no; opus escalation: not run. No decision reached from consultation, so batch-mode.md''s
-    unlisted-gate fallback applied. Under that fallback the orchestrator verified the one
-    materially load-bearing claim itself rather than deferring it: review finding
-    ec05dc7aa23bc46f (high, deferred at the review rework cap) asserts that
-    skills/contributor-consent/SKILL.md step 5 presents
-    python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py ... as a line the user runs in their own
-    terminal, where CLAUDE_PLUGIN_ROOT is unset. Reading lines 88-110 of both plugin copies
-    confirms the claim is factually true: the variable is presented verbatim and the
-    accompanying line directs the user to run it in their own shell, so the pasted command
-    expands to python3 /hooks/muse_guard.py and fails. This breaks the only consent-recording
-    path in practice, but it fails no TS scenario and no SC as VERIFICATION.md and the amended
-    SPEC define them (AC-12 and TS-18 are document-structure criteria, both met), so it does
-    not turn the round-2 verdict to fail. It is escalated in the run report as the single most
-    important residual for the human evaluator.'
+  normalized_answer: verify round 2 を pass と判定する。SC-8 は改訂後の定義どおり満たされ、TS-23 は実体を検証して pass とするが、自動テスト化されていない事実を
+    note と retrospect に残す。
+  resolution_note: 'gate: verify.evaluation-judgment (verify round 2). Two judgment calls had to be settled
+    before writing the round-2 verdict. (1) SC-8 -- VERIFICATION.md defines it as "review is complete
+    AND the FR7 provenance boundary is verified by automated tests", explicitly stating that driving residual
+    critical/high to zero is NOT part of it. review is completed with rounds_completed 3; TS-29 and TS-30
+    pass. Marked MET. Not chosen: fail_on_residual_highs -- that would re-litigate the spec-change decision
+    already recorded in phase-state/rework.yaml (answer cli-requires-terminal), which deliberately reworded
+    SC-8 to the boundary the TTY check actually establishes. (2) TS-23 (isolation audit of the guard test
+    module) -- no collected test performs the audit as an assertion, which is in tension with VERIFICATION.md''s
+    stated substitute coverage gate ("every scenario is realized by at least one collected test"). All
+    three clauses of its expected result were confirmed by the verify phase directly: MuseGuardTestCase.setUp
+    points EM_WORKFLOW_MUSE_CONSENT at a per-test tmpdir for every store-touching case; the three classes
+    that do not derive from it (TestBothCopiesShape, TestSourceHygiene, TestNonInvocationShortCircuit)
+    either never reach the store or mock read_store_for_hook; no case resolves the real store path; and
+    an empirical before/after check showed ~/.claude/em-workflow/muse-consent.json absent both before
+    and after a full run. Marked PASS, consistent with round 1''s treatment of the same scenario on the
+    same evidence. Not chosen: fail_ts23_to_add_an_audit_test -- it would spend a verify rework round
+    on a test-hygiene assertion whose substance is already confirmed; the automation gap is instead recorded
+    in the verify note and carried into retrospect. codex_consulted: true (codex-harness second-opinion-agent);
+    the Codex CLI returned its usage-limit error (retry at 1:03 PM) and produced no opinion; fallback
+    provider answered: no; opus escalation: not run. No decision reached from consultation, so batch-mode.md''s
+    unlisted-gate fallback applied. Under that fallback the orchestrator verified the one materially load-bearing
+    claim itself rather than deferring it: review finding ec05dc7aa23bc46f (high, deferred at the review
+    rework cap) asserts that skills/contributor-consent/SKILL.md step 5 presents python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py
+    ... as a line the user runs in their own terminal, where CLAUDE_PLUGIN_ROOT is unset. Reading lines
+    88-110 of both plugin copies confirms the claim is factually true: the variable is presented verbatim
+    and the accompanying line directs the user to run it in their own shell, so the pasted command expands
+    to python3 /hooks/muse_guard.py and fails. This breaks the only consent-recording path in practice,
+    but it fails no TS scenario and no SC as VERIFICATION.md and the amended SPEC define them (AC-12 and
+    TS-18 are document-structure criteria, both met), so it does not turn the round-2 verdict to fail.
+    It is escalated in the run report as the single most important residual for the human evaluator.'
+- question_id: retrospect.verification-failures-source
+  packet_id: null
+  answered_at: '2026-09-09T11:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - prior_result_items
+  freeform: null
+  normalized_answer: signals.verification_failures には最終 round の空の failed_items ではなく、prior_result.failed_items
+    の round 1 の 5 件を写す
+  resolution_note: 'gate: unlisted-gate fallback (retrospect signal collection). policy action codex_consultation;
+    chosen prior_result_items; not chosen: current_failed_items_empty. codex_consulted: true but Codex
+    CLI returned "usage limit reached" with no answer; fallback provider answered (litellm/vertex-glm-5.2);
+    opus escalation: not run. key points: retrospect.yaml exists to surface run signals for later human
+    analysis, so an empty list would make a caught-and-repaired run indistinguishable from a clean first-pass
+    run; under the empty reading verification_failures would always equal follow_up_drafts, collapsing
+    two fields into one, whereas the prior_result reading keeps them distinct (everything verify ever
+    flagged vs. only the unresolved-at-cap subset). Caveat raised by the fallback provider and carried
+    forward: the SSOT wording "failed_items をそのまま写す" literally points at the current top-level field,
+    so develop/SKILL.md should be amended to name prior_result.failed_items as a source; recorded as a
+    follow-up rather than acted on in this run.'
