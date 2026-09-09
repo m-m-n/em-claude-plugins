@@ -1,0 +1,106 @@
+feature: muse-spark-contributor-consent
+collected_at: "2026-09-09T11:20:00+09:00"
+session_ids: ["01a083ef-5800-7488-9c55-52b5361dfe73"]
+signals:
+  review_critical_high:
+    - stable_id: 1170516129413bc5
+      category: security
+      file: em-workflow/hooks/muse_guard.py
+      title: "Contributor-tier guard misses `--model <value>` and `-m=<value>` spellings"
+      resolution: unresolved
+    - stable_id: 42f7a860a3dae1c4
+      category: security
+      file: em-workflow/hooks/muse_guard.py
+      title: "Statement splitting runs before quote resolution, so the harness's own invocation is lost"
+      resolution: deferred
+    - stable_id: d1cc66c461a2901b
+      category: comprehensive
+      file: em-workflow/hooks/muse_guard.py
+      title: "Quoted mentions of the tier produce a false deny, violating FR5's no-misfire floor"
+      resolution: deferred
+    - stable_id: c8548e54cab6a9b7
+      category: spec
+      file: em-workflow/hooks/muse_guard.py
+      title: "FR4 and FR5 are both unmet, contradicting this round's spec-perspective result"
+      resolution: deferred
+    - stable_id: fd9eb309cfa267e7
+      category: security
+      file: em-workflow/hooks/muse_guard.py
+      title: "Here-document stripping hides two executable invocation paths"
+      resolution: deferred
+    - stable_id: 3264f5325cf0117e
+      category: security
+      file: em-workflow/hooks/muse_guard.py
+      title: "Wrapper option operands are resolved as the command word"
+      resolution: deferred
+    - stable_id: 2c46224117eeda94
+      category: security
+      file: em-workflow/hooks/muse_guard.py
+      title: "Combined shell options defeat nested-invocation recognition"
+      resolution: deferred
+    - stable_id: 1050e4ec25fac48a
+      category: security
+      file: em-workflow/hooks/muse_guard.py
+      title: "The consent CLI is reachable from the agent's own Bash tool"
+      resolution: deferred
+    - stable_id: d23f182330cc695e
+      category: architecture
+      file: em-workflow/hooks/muse_guard.py
+      title: "DENY_CONTEXT がレビュアーにチェーン選択を指示し、deny 後の復帰経路がプロトコルに存在しない"
+      resolution: deferred
+    - stable_id: ec05dc7aa23bc46f
+      category: comprehensive
+      file: em-workflow/skills/contributor-consent/SKILL.md
+      title: "ユーザーが自分の端末で実行するコマンドに ${CLAUDE_PLUGIN_ROOT} が入っており、そのままでは動かない"
+      resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - id: SC-8
+      category: spec
+      note: >-
+        residual_critical_high was 7 and SC-8 was then read as requiring zero.
+        Repaired by the spec-change re-entry that rewrote SC-8 to the boundary
+        the TTY check establishes, plus task0008 / task0009.
+    - id: TS-5
+      category: security
+      note: >-
+        A quoted prompt argument containing a statement separator or a newline
+        was split before quoting was resolved, so the invocation was lost.
+        Repaired by task0007.
+    - id: TS-6
+      category: comprehensive
+      note: >-
+        A quoted separator carved a standalone invocation out of a mention and
+        produced a misfiring deny. Repaired by task0007.
+    - id: TS-26
+      category: comprehensive
+      note: >-
+        Spellings whose value or surrounding argument carries a quote
+        delimiter were mis-split. Repaired by task0007.
+    - id: TS-27
+      category: security
+      note: >-
+        Bundled short-option shell nesting and the wrappers taking a
+        separate-value option were not recognized. Repaired by task0006.
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - >-
+    verify の failed_items は round 1 のものが prior_result に退避され、最終 round の
+    failed_items は空になる。retrospect の verification_failures を最終 round だけから
+    引くと「一度落ちた事実」が消える。今回は prior_result 側を写した。
+  - >-
+    review の high 指摘 9 件のうち 8 件が muse_guard.py のシェルコマンド文字列解析に
+    集中した。静的なコマンド文字列分類は、クォート・ヒアドキュメント・ラッパー・
+    オプション束ねの組み合わせで繰り返し破れる。destructive-guard と同じ失敗様式。
+  - >-
+    ec05dc7aa23bc46f（deferred / high）: contributor-consent スキルが提示する
+    記録コマンドに ${CLAUDE_PLUGIN_ROOT} が入っており、ユーザーの端末では未定義。
+    同意を記録する唯一の経路が実際には動かない。review rework cap で未修正のまま。
+  - >-
+    TS-23（テストモジュールの分離監査）は自動テスト化されておらず、verify フェーズが
+    実体を直接確認して pass とした。検証シナリオの自動化ギャップ。
+  - >-
+    VERIFICATION.md の手動チェック 5 件は無人実行では実施不能のまま残る。

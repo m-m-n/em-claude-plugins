@@ -199,7 +199,8 @@ workflow:
             separate-value option were not recognized. Repaired by task0006.
 
   - id: retrospect
-    status: in_progress
+    status: completed
+    completed_at_commit: eaf4d9ce5e392fda91d937686913957b5d41537d
 
 tasks:
   task0001:
