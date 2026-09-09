@@ -282,3 +282,49 @@ records:
     is only defensible as an explicit escalation, so both residual highs are surfaced
     prominently in the run report rather than silently completed. Consistent with the round-2
     resolution of the identical gate under the identical constraints.'
+
+- question_id: verify.evaluation-judgment
+  packet_id: null
+  answered_at: "2026-09-09T11:20:00+09:00"
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - pass_round2
+  freeform: null
+  normalized_answer: verify round 2 を pass と判定する。SC-8 は改訂後の定義どおり満たされ、TS-23 は実体を検証して pass とするが、自動テスト化されていない事実を note と retrospect に残す。
+  resolution_note: 'gate: verify.evaluation-judgment (verify round 2). Two judgment calls
+    had to be settled before writing the round-2 verdict. (1) SC-8 -- VERIFICATION.md defines
+    it as "review is complete AND the FR7 provenance boundary is verified by automated tests",
+    explicitly stating that driving residual critical/high to zero is NOT part of it. review is
+    completed with rounds_completed 3; TS-29 and TS-30 pass. Marked MET. Not chosen:
+    fail_on_residual_highs -- that would re-litigate the spec-change decision already recorded
+    in phase-state/rework.yaml (answer cli-requires-terminal), which deliberately reworded SC-8
+    to the boundary the TTY check actually establishes. (2) TS-23 (isolation audit of the guard
+    test module) -- no collected test performs the audit as an assertion, which is in tension
+    with VERIFICATION.md''s stated substitute coverage gate ("every scenario is realized by at
+    least one collected test"). All three clauses of its expected result were confirmed by the
+    verify phase directly: MuseGuardTestCase.setUp points EM_WORKFLOW_MUSE_CONSENT at a
+    per-test tmpdir for every store-touching case; the three classes that do not derive from it
+    (TestBothCopiesShape, TestSourceHygiene, TestNonInvocationShortCircuit) either never reach
+    the store or mock read_store_for_hook; no case resolves the real store path; and an
+    empirical before/after check showed ~/.claude/em-workflow/muse-consent.json absent both
+    before and after a full run. Marked PASS, consistent with round 1''s treatment of the same
+    scenario on the same evidence. Not chosen: fail_ts23_to_add_an_audit_test -- it would spend
+    a verify rework round on a test-hygiene assertion whose substance is already confirmed; the
+    automation gap is instead recorded in the verify note and carried into retrospect.
+    codex_consulted: true (codex-harness second-opinion-agent); the Codex CLI returned its
+    usage-limit error (retry at 1:03 PM) and produced no opinion; fallback provider answered:
+    no; opus escalation: not run. No decision reached from consultation, so batch-mode.md''s
+    unlisted-gate fallback applied. Under that fallback the orchestrator verified the one
+    materially load-bearing claim itself rather than deferring it: review finding
+    ec05dc7aa23bc46f (high, deferred at the review rework cap) asserts that
+    skills/contributor-consent/SKILL.md step 5 presents
+    python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py ... as a line the user runs in their own
+    terminal, where CLAUDE_PLUGIN_ROOT is unset. Reading lines 88-110 of both plugin copies
+    confirms the claim is factually true: the variable is presented verbatim and the
+    accompanying line directs the user to run it in their own shell, so the pasted command
+    expands to python3 /hooks/muse_guard.py and fails. This breaks the only consent-recording
+    path in practice, but it fails no TS scenario and no SC as VERIFICATION.md and the amended
+    SPEC define them (AC-12 and TS-18 are document-structure criteria, both met), so it does
+    not turn the round-2 verdict to fail. It is escalated in the run report as the single most
+    important residual for the human evaluator.'
