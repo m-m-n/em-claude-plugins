@@ -101,8 +101,8 @@ workflow:
     skipped_reason: null
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
-    completed_at_commit: 5f04f74a1fb1177847f27ac8452ae845696da3d6
+    status: completed
+    completed_at_commit: 038548237b9194e0ae0fd155ca4b26cf02e597ae
   - id: implement
     status: pending
     completed_at_commit: 5012c68862f843a0dc20ff6531c09446ed3f44cc
@@ -204,6 +204,39 @@ tasks:
       source: review
       source_ids: [1170516129413bc5, 98df40b6ce96c809, e0fb5715d50c4b74]
       review_round: 1
+  task0007:
+    title: "quote-aware command recognition in the muse_guard classifier"
+    plan: tasks/task0007.md
+    files: [em-workflow/hooks/muse_guard.py, em-review/hooks/muse_guard.py, tests/test_muse_guard.py]
+    skills: [backend-impl]
+    domains: [auth, input-handling]
+    complexity: high
+    requirements: [FR1, FR4, FR5, FR10, NFR2, NFR4, NFR6]
+    status: pending
+    branch: null
+    notes: null
+  task0008:
+    title: "consent-write provenance boundary on the guard CLI"
+    plan: tasks/task0008.md
+    files: [em-workflow/hooks/muse_guard.py, em-review/hooks/muse_guard.py, tests/test_muse_guard.py]
+    skills: [backend-impl]
+    domains: [auth, input-handling, data-persistence, external-io]
+    complexity: high
+    requirements: [FR1, FR7, FR10, NFR5, NFR6]
+    status: pending
+    branch: null
+    notes: null
+  task0009:
+    title: "contributor-consent skill presents the command instead of running it"
+    plan: tasks/task0009.md
+    files: [em-workflow/skills/contributor-consent/SKILL.md, em-review/skills/contributor-consent/SKILL.md, tests/test_contributor_consent_skill.py]
+    skills: []
+    domains: [ui, auth, external-io]
+    complexity: medium
+    requirements: [FR13, NFR3, NFR6]
+    status: pending
+    branch: null
+    notes: null
 
 review:
   status: completed
@@ -227,7 +260,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0006]
+    tasks: [task0001, task0006, task0007, task0008]
     tests: [TS-1, TS-12, TS-19]
   FR2:
     title: "Presence-only consent store"
@@ -248,14 +281,14 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0006]
+    tasks: [task0001, task0006, task0007]
     tests: [TS-1, TS-4, TS-5, TS-26, TS-27, TS-28]
   FR5:
     title: "No misfire outside contributor-tier invocations"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0006]
+    tasks: [task0001, task0006, task0007]
     tests: [TS-3, TS-4, TS-5, TS-6, TS-7, TS-26, TS-27, TS-28]
   FR6:
     title: "Store-absence and malformed-store handling"
@@ -269,8 +302,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-2, TS-11]
+    tasks: [task0001, task0008]
+    tests: [TS-2, TS-11, TS-29, TS-30]
   FR8:
     title: "Hook registration in both plugins"
     status: ok
@@ -290,7 +323,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0006]
+    tasks: [task0001, task0006, task0007, task0008]
     tests: [TS-17]
   FR11:
     title: "reviewers.yaml chain immutability"
@@ -311,8 +344,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002]
-    tests: [TS-18]
+    tasks: [task0002, task0009]
+    tests: [TS-18, TS-30]
   NFR1:
     title: "Deterministic, offline decision"
     status: ok
@@ -325,35 +358,35 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0006]
+    tasks: [task0001, task0006, task0007]
     tests: [TS-7, TS-21]
   NFR3:
     title: "Unattended-run safety"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0002, task0003, task0005]
+    tasks: [task0002, task0003, task0005, task0009]
     tests: [TS-15]
   NFR4:
     title: "Latency within the registered timeout"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0006]
+    tasks: [task0001, task0006, task0007]
     tests: [TS-22]
   NFR5:
     title: "Test isolation from real user state"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0008]
     tests: [TS-23]
   NFR6:
     title: "No third-party test dependencies"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001, task0002, task0003, task0004, task0005, task0006]
+    tasks: [task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008, task0009]
     tests: [TS-17, TS-24]
   NFR7:
     title: "Consent store records nothing but presence"

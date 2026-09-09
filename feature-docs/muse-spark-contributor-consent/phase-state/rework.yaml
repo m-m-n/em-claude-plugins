@@ -77,5 +77,5 @@ spec_change:
   origin_id: SC-8
   recorded_at_commit: 73f983950917f624cfe01aea098f8f9b8946a7e0
   consumed: true
-  replan_authorized: true
+  replan_authorized: false
 classification: []
