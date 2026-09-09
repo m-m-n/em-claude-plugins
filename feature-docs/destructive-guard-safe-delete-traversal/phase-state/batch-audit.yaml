@@ -1,0 +1,12 @@
+schema_version: 1
+feature: destructive-guard-safe-delete-traversal
+records:
+  - question_id: codex.design-consultation.safe-delete
+    packet_id: null
+    answered_at: "2026-09-09T22:35:51+09:00"
+    source: codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "normalize before the safe exception; component-wise containment; keep the class A / class B asymmetry; split DYNAMIC by escape capability so variable/command-substitution targets never take the safe exception while pure globs still do"
+    normalized_answer: "FR1-FR7 の設計を確定。Codex の Q4 回答（SAFE_DELETE を DYNAMIC より先に維持）はケース表 110/112 行を ask から allow へ退行させるため却下し、requirements-analyst の 2 分割案を採用した。"
+    resolution_note: "gate: none (user-instructed design consultation, not a gate); codex_consulted: true; wrapper: em-workflow/scripts/run_codex_exec.sh readonly; provider: fallback entry 2 (litellm / vertex-glm-5.2) after entry 1 timed out at 600s; full record: feature-docs/destructive-guard-safe-delete-traversal/codex-consultation.md"
