@@ -104,8 +104,8 @@ tasks:
     domains: [auth, input-handling]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR10, NFR1, NFR2, NFR3, NFR4, NFR5]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-safe-delete-traversal/task0001
     notes: null
   task0002:
     title: "Raise the em-workflow plugin version"
@@ -117,8 +117,8 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR9]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-safe-delete-traversal/task0002
     notes: null
 
 review:
