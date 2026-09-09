@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-safe-delete-traversal
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 0644976f9642981b6eef4f94ffb4de2154c8cb60
+last_input_digest: sha256:c1fe7db01b94fcc8a8d6368213e7dab7d3436c6949a77995b52a6daec545a998
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:c1fe7db01b94fcc8a8d6368213e7dab7d3436c6949a77995b52a6daec545a998
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
