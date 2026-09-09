@@ -191,3 +191,29 @@ records:
     Prompt-injection Resistance claim and SC-8 must be reworded to the boundary this option actually
     establishes.'
 
+- question_id: create-plan.artifact-overwrite
+  packet_id: null
+  answered_at: "2026-09-09T10:05:00+09:00"
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - overwrite
+  freeform: null
+  normalized_answer: VERIFICATION.md の write_policy action を replace_authorized にし、expect_digest に現在値を置いて planner に書き直させる。
+  resolution_note: 'gate: create-plan.artifact-overwrite (orchestrator-opened, no worker packet), target
+    feature-docs/muse-spark-contributor-consent/VERIFICATION.md. Digest mismatch: phase-state
+    create-plan.yaml generation 1 recorded
+    sha256:d3331f080403925c0bd27845d478f5aa4f07311fe378e57f7ad71af740fe1e48, on-disk value is
+    sha256:3cdce86da566f04012f984cbf4c0aa1610c293b9b45a06743272c8c18ff3607b. Provenance of the current
+    version: commit f6f4991 "apply review rework patch (task0006, implement -> pending)" -- the only two
+    writers in git log for this path are the previous create-plan patch (5f04f74) and that rework patch,
+    i.e. an in-workflow rework-phase update, not an unexplained external edit. codex_consulted: true;
+    fallback provider answered: no; opus escalation: not run. Chosen: overwrite (action
+    replace_authorized, expect_digest pinned to the current value so a concurrent write still fails
+    closed). Not chosen: preserve_and_reuse -- batch-policies.yaml states it as this gate''s default,
+    but the amended SPEC.md now carries TS-29 / TS-30 while VERIFICATION.md still stops at TS-28, so
+    preserving it would fail the planner''s cross-artifact postconditions and abort the phase on a
+    known-failing path with no gain in safety. Not chosen: abort. Codex reservation, recorded as a
+    follow-up rather than acted on here: if preserve_and_reuse is meant to be exceptionless, the
+    "verified in-workflow provenance may use replace_authorized" rule belongs in batch-policies.yaml
+    rather than in a per-run judgement. Orchestrator: em-workflow develop, batch run 2026-09-09.'
