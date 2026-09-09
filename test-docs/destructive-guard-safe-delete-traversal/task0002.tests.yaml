@@ -1,0 +1,37 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Read em-workflow/.claude-plugin/plugin.json before editing; the version
+      field read 0.1.72, not the pinned 0.1.73. Outcome verified by parsing
+      the file with python3's json module and asserting version == "0.1.73"
+      after the edit.
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Read .claude-plugin/marketplace.json before editing; the em-workflow
+      plugin entry's version read 0.1.72, not the pinned 0.1.73. Outcome
+      verified by parsing the file and asserting the em-workflow entry's
+      version equals the same literal as AC-1 after the edit.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Invariant, not a change: em-review's version (0.5.9) and every other
+      field in both files were already untouched by this task before the
+      edit and remain so after — there is no pre-edit failing state to
+      observe. Verified post-edit via `git diff`, which shows exactly the
+      two version-field lines changed, and by parsing marketplace.json to
+      confirm the em-review entry's version is still 0.5.9.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Both files were already valid JSON before this task's edit (unmodified
+      baseline), so the parse check could not fail pre-edit. Verified
+      post-edit that both files still parse via python3 json.load().
