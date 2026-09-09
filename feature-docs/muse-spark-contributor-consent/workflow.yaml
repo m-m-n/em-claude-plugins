@@ -111,24 +111,92 @@ workflow:
     status: completed
     completed_at_commit: 57a66854aadc8f0913165a268f4f9f7f7e5ffc2e
   - id: verify
-    status: in_progress
-    result: fail
-    failed_items:
-      - id: SC-8
-        category: spec
-        note: "review.residual_critical_high が 7 のまま。SC-8 は残存 critical/high ゼロを要求するが、round2 の 7 件は batch の rework cap 到達により deferred されただけで未修正。"
-      - id: TS-5
-        category: security
-        note: "ハーネス自身の呼び出し形（引用符内に ; や改行を含むプロンプト）が _SEGMENT_SPLIT_RE の引用前分割で壊れ、deny が発火しない。`codex exec -m muse-spark-contributor \"review this; check auth\"` を no-decision と再現。"
-      - id: TS-6
-        category: comprehensive
-        note: "引用符内の言及が誤爆 deny になる。`printf %s\\n 'example; codex exec -m muse-spark-contributor; done'` が deny を返すのを再現。FR5 の no-misfire 違反。"
-      - id: TS-26
-        category: comprehensive
-        note: "引用区切り文字を含む綴りで、言及が独立した呼び出しとして切り出される／呼び出しが分割で失われる。TS-26 の綴り網羅は分割前提が崩れた時点で成立していない。"
-      - id: TS-27
-        category: security
-        note: "ネスト・ラッパー認識が抜ける。`bash -lc '...'`（結合短オプション）、`xargs -n 1 codex ...`、`nice -n 1 codex ...` をいずれも no-decision と再現。"
+    status: completed
+    result: pass
+    failed_items: []
+    completed_at_commit: 3914593d10cbf3ac01a56422e4b41c97431af8e2
+    note: >-
+      Round 2 of verify, after the round-1 failures were repaired by the
+      verify-sourced rework (task0006 .. task0009).
+      `python3 -m unittest discover -s tests` -> 4302 tests, 0 failures, exit 0.
+      Build and format are not applicable (`build_command` / `format_command` are
+      empty); no E2E command is configured. No requirement carries
+      `status: excluded`, so no scenario was excluded from evaluation.
+      All four round-1 recognition failures were reproduced independently against
+      the current guard with the store override pointed at a temporary path, and
+      all four are repaired: TS-5 (a quoted prompt argument carrying a statement
+      separator, and one carrying a newline) denies; TS-6 (a single-quoted
+      separator-delimited mention passed to a non-shell command, and a
+      commit-message argument) is undecided; TS-26 (`-m=`, `--model=`, the
+      attached-value short flag, and quoted values) denies while the paired plain
+      -tier shapes stay undecided; TS-27 (`bash -lc` with a bundled short-option
+      cluster, `xargs -n 1`, `nice -n 1`, `$( )` and backtick substitution)
+      denies, while a mention inside `$( )` and nesting past the resolution bound
+      stay undecided. TS-28 was re-checked at the same time: a here-document body
+      that only names the tier is undecided, and an invocation placed after the
+      terminator denies.
+      SC-1 holds -- every FR/NFR row of the coverage table has a non-empty task
+      list and a non-empty test list, and every requirement is `status: ok`.
+      SC-2 holds -- the suite passes and every scenario TS-1 .. TS-30 is realized
+      by a collected test, with one recorded qualification: TS-23 has no test that
+      performs the isolation audit as an assertion. Its expected result was
+      confirmed by the verify phase directly (MuseGuardTestCase.setUp sets
+      EM_WORKFLOW_MUSE_CONSENT under a per-test temporary directory for every
+      store-touching case; TestBothCopiesShape, TestSourceHygiene and
+      TestNonInvocationShortCircuit either never reach the store or mock
+      `read_store_for_hook`; no case resolves the real store path; and
+      `~/.claude/em-workflow/muse-consent.json` was absent both before and after a
+      full run). Carried into retrospect as an automation gap, not as a failure.
+      SC-3 holds -- AC-1 .. AC-13 map onto coverage-table rows, AC-13 onto FR7's.
+      SC-4 holds via TS-15 and TS-19 .. TS-25 plus the deny/no-decision scenarios.
+      SC-5 and SC-7 hold via TS-11 / TS-2 and TS-16 (em-workflow 0.1.70 > 0.1.69,
+      em-review 0.5.8 > 0.5.7, both matching their marketplace entries).
+      SC-6 holds via TS-13. SC-8 holds under its amended definition: review is
+      `completed` with `rounds_completed: 3`, and TS-29 plus TS-30 pass; driving
+      `residual_critical_high` to zero is explicitly not part of this criterion.
+      Escalated rather than failed: the two residual high findings deferred at the
+      review rework cap remain unfixed, and the verify phase independently
+      confirmed that one of them is factually correct --
+      ec05dc7aa23bc46f, `skills/contributor-consent/SKILL.md` step 5 presents
+      `python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py ...` verbatim as a line
+      the user runs in their own terminal, where that variable is unset, so the
+      pasted command fails and the only consent-recording path does not work in
+      practice. It fails no TS scenario and no SC (AC-12 and TS-18 are
+      document-structure criteria and both pass), so the round-2 verdict stays
+      pass, but it is the single most important item for the human evaluator.
+      The five manual checks in VERIFICATION.md remain unperformed -- an
+      unattended run cannot drive an interactive session or a real terminal.
+    prior_result:
+      round: 1
+      result: fail
+      failed_items:
+        - id: SC-8
+          category: spec
+          note: >-
+            residual_critical_high was 7 and SC-8 was then read as requiring zero.
+            Repaired by the spec-change re-entry that rewrote SC-8 to the boundary
+            the TTY check establishes, plus task0008 / task0009.
+        - id: TS-5
+          category: security
+          note: >-
+            A quoted prompt argument containing a statement separator or a newline
+            was split before quoting was resolved, so the invocation was lost.
+            Repaired by task0007.
+        - id: TS-6
+          category: comprehensive
+          note: >-
+            A quoted separator carved a standalone invocation out of a mention and
+            produced a misfiring deny. Repaired by task0007.
+        - id: TS-26
+          category: comprehensive
+          note: >-
+            Spellings whose value or surrounding argument carries a quote
+            delimiter were mis-split. Repaired by task0007.
+        - id: TS-27
+          category: security
+          note: >-
+            Bundled short-option shell nesting and the wrappers taking a
+            separate-value option were not recognized. Repaired by task0006.
 
   - id: retrospect
     status: pending
