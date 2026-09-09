@@ -1,0 +1,108 @@
+round: 1
+executed_at: "2026-09-09T21:19:07+09:00"
+scope:
+  review_mode: diff
+  base_commit: 119eb894b232185e1a7eab63ad97b298056ec8c2
+  head_commit: f155dc8061a9ca6a5a8070ea3309556d54d9f89e
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/references/implement-phase.md
+    - em-workflow/scripts/commit-docs.sh
+    - test-docs/tip-capture-idiom-unification/task0001.tests.yaml
+    - test-docs/tip-capture-idiom-unification/task0002.tests.yaml
+    - tests/test_implement_routeback_gate.py
+    - tests/test_tip_capture_idiom_uniformity.py
+plan:
+  floor: [comprehensive, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+orchestrator_notes:
+  - |
+    spec / performance の初回 dispatch は model を muse-spark-contributor で渡した。
+    spec の reviewer は vertex-review の litellm-harness スキルの
+    「muse-spark-contributor をレビューに使ってはいけない」を根拠に
+    skip_reason: model_forbidden_for_review で拒否したため、レジストリの
+    verbatim 値 muse-spark で再 dispatch して spec#0 の結果を得た。
+    performance の reviewer は同じ contributor tier のまま完走した。
+    reviewers.yaml / review-phase.md の contributor-tier read-mapping と
+    litellm-harness スキルの全面禁止が矛盾している。follow-up として起票済み。
+findings:
+  - stable_id: 58f19eb9f6c13bc3
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 160
+    title: "Step I.1's newly added reset --hard runs without the merge lock, so a merge landing mid-reset can be rewound without exit-4 detection"
+    description: >-
+      FR5/a5 が Step I.1 に追加した refresh は、reset のターゲットをブランチ名に
+      している点で NFR5 の不変条件は満たすが、並行する merge-task.sh に対して
+      atomic ではない。git は reset のターゲット (A) をコマンド開始時に解決し、
+      index/worktree を更新したあとで ref を更新するため、checkout 実行中に
+      ブランチが A->B へ進むと、その ref 更新は B から A への compare-and-swap
+      として通ってしまう。BASE_COMMIT は A として先に捕捉済みなので
+      commit-docs.sh の等値チェックも通り、マージが exit 4 を出さずに
+      integration の履歴から消える。評価者が high から medium に下げた理由は 4 つ:
+      (1) destructive-guard hook が reset --hard を拒否するため経験的な再現が
+      できておらず、根拠は git の ref 更新順序というメカニズムのみ。
+      (2) ロック無しの `reset --hard <branch name>` は PR 17 の 2 サイトと
+      Branch & Worktree Model の exit-4 recovery bullet が既に規範化している
+      既存の idiom で、この diff はそれらを変更していない。Step I.1 は既存の
+      系全体の性質の 7 番目のサイトであって新しい種類の危険ではない。
+      (3) Step I.2.b step 1 が次の wake で申告済みマージを integration の履歴に
+      対して再検証するため、消えたマージは下流で検出される。
+      (4) 成果物はプロトコルの散文で、この diff に実行行の変更は無い。
+    suggestion: >-
+      この feature を作り直して対処しない。refresh をロックするなら 7 サイト
+      全部と exit-4 recovery bullet に適用する必要があり、FR1 の単一 idiom と
+      NFR6 の変更集合宣言に反する。Branch & Worktree Model 自体に対する
+      follow-up として記録する — orchestrator 側の refresh を全て
+      merge-task.sh と同じ em-workflow-merge.lock で直列化するか、
+      exit-4 bullet に「refresh は best-effort であり、権威ある検出は
+      commit-docs.sh のロック下 expected_base_tip チェックと
+      Step I.2.b step 1 のマージ再検証である」と明記する。
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "medium severity: auto-fix の候補ゲート (critical/high) に届かない。プロトコル全体のロック設計の話であり FR1/NFR6 と衝突するため follow-up として起票した"
+evaluation:
+  round_summary: >-
+    Round 1, cross_validation=true, diff mode over 8 changed files; 4 primary runs
+    dispatched (comprehensive, performance, architecture, spec), all completed, no
+    unreviewed perspectives, no round_context. One reviewer-reported high finding
+    (comprehensive#0, implement-phase.md Step I.1's newly added refresh) is carried
+    forward demoted to medium. No injection attempts were present in any reviewer
+    output. Independent inspection coverage per dispatched perspective: comprehensive
+    = findings; performance = corroborated; architecture = corroborated (comment-stripped
+    commit-docs.sh byte-identical to base 119eb894); spec = corroborated (AC1-AC6 checked
+    independently, both manifests at 0.1.46, `python3 -m unittest discover -s tests`
+    green at 1535 tests). All inspection stayed within the 10-file read budget and was
+    read-only; no perspective was left 'not verified'.
+  recommended_action: complete
+  action_rationale: >-
+    No critical or high finding survives evaluation. Every acceptance criterion checked
+    independently holds, and the new uniformity module carries genuine negative/mutation
+    proofs rather than trivially passing. The single remaining medium is a protocol-wide
+    locking question that predates this diff and whose fix would contradict FR1/NFR6.
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-tip-capture-idiom-unification-20260909T121859Z.md
