@@ -43,3 +43,37 @@ records:
       choice: (A)。ただし vertex-review プラグイン側の変更であり本 feature のスコープ外の
       ため、この run では適用せず follow-up タスクとして起票した。
       本 run の spec 観点はレジストリの verbatim 値 muse-spark で再 dispatch して解決済み。
+  - question_id: verify.d5-residual-disposition
+    packet_id: null
+    answered_at: "2026-09-09T21:31:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "D5 の据え置きを受理して verify を pass にし、残差は follow-up として起票する"
+    normalized_answer: "accept-d5-pass"
+    resolution_note: >-
+      gate: VERIFICATION.md の手動チェック項目「IMPLEMENTATION.md D5 に記録された残差
+      （Step I.2.c の batch-mode 段落を byte-identical のまま残した件）が、見落としでは
+      なく受理された処置であることを verify 時点で確認する」。
+      当該段落は abort 経路を「refresh してから tip を捕捉する」という変更前の順序で
+      言い換えており、数百行上の規範的な Step I.2.c 本文（新 idiom: ブランチ ref から
+      捕捉してから refresh）と同一文書内で食い違う。
+      options: (A) D5 を受理して verify を pass、残差は follow-up 起票 /
+      (B) verify を fail にして implement へ差し戻し、いま段落を揃える /
+      (C) pass にするが TS-8 の「> 0.1.45」判定用に自動テストを新規追加する。
+      codex_consulted: true。Codex は (A) を推奨。理由は 3 点:
+      (1) feature の宣言境界（7 サイト + 規範的本文）は完全に満たされ、負の drift 証明
+      を含む全シナリオが通っている。いま差し戻すと NFR2 が名指しで凍結した
+      tests/test_routeback_reset_scope_consistency.py の編集が必要になり、修正ではなく
+      スコープ違反になる。段落と 2 つの byte-pin を原子的に更新する専用 feature の方が
+      綺麗。
+      (2) 危険性は「潜在的な保守リスク」であって稼働中の欠陥ではない。当該段落は
+      refresh→capture と叙述するだけで、本 feature が直した 5 サイトと違い
+      `rev-parse HEAD` も SHA を対象にした `reset --hard` も書いていない。よって
+      文書内のどの規範的手順も現時点で危険な操作を指示していない。将来の実装者が
+      この散文を禁止機構で具体化しうる、という追跡すべき潜在リスクにとどまる。
+      (3) TS-8 の手動 diff は SPEC が明示的に manual と指定しており、等値の半分は既存
+      モジュールが機械検査済み。verify 時点で「> 0.1.45」用の新テストを足すことこそ
+      NFR6 の「新規テストモジュールは 1 本」という上限に反する逆向きのスコープ拡大に
+      なる。
+      choice: (A)。verify を pass とし、D5 の残差は follow-up タスクとして起票する。
