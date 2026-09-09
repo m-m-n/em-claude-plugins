@@ -132,17 +132,11 @@ PRESENTED_REMOVE_CMD = (
 # one physical source line, so no Japanese no-space line-wrap can silently
 # insert a token into the middle of the checked text -- _normalize_ws only
 # recovers word-for-word text across a wrap for space-delimited prose).
-# CONTEXT_REQUIREMENT_LINE states the interactive-terminal requirement;
-# CONTEXT_NOT_IMPOSSIBLE_LINE explicitly disclaims that this is the only way
-# the store could ever be changed (SPEC a12 -- the boundary is a provenance
-# proxy, not unbypassability).
-CONTEXT_REQUIREMENT_LINE = (
-    "コマンドは自分の端末で実行する。エージェント経由の実行は、"
-    "書き込み経路が対話的な端末を要求するため拒否される。"
-)
-CONTEXT_NOT_IMPOSSIBLE_LINE = (
-    "これは、エージェントの通常の呼び出し経路からは記録・撤回できないという"
-    "意味であり、あらゆる手段による変更が不可能という意味ではない。"
+# CLI_ONLY_LINE states that the skill reaches the consent store only through
+# the guard CLI. There is no mechanical enforcement behind it: recording is
+# gated by this skill being a user-launched slash command (SPEC a12).
+CLI_ONLY_LINE = (
+    "ストアに触れる経路はこの CLI だけで、ファイルを直接書き換える手段は取らない。"
 )
 
 HEADING_RE = re.compile(r"^#{1,6}\s")
@@ -442,14 +436,11 @@ class ContributorConsentSkillTest(unittest.TestCase):
                     self.assertNotIn(wording, body)
 
     # task0009 AC-3
-    def test_task0009_ac3_context_line_states_requirement_not_impossibility(
-        self,
-    ):
+    def test_task0009_ac3_store_is_reached_only_through_the_cli(self):
         for plugin, info in PLUGINS.items():
             with self.subTest(plugin=plugin):
                 _fm, body = self._load(plugin)
-                self.assertIn(CONTEXT_REQUIREMENT_LINE, body)
-                self.assertIn(CONTEXT_NOT_IMPOSSIBLE_LINE, body)
+                self.assertIn(CLI_ONLY_LINE, body)
 
     # task0009 AC-5
     def test_task0009_ac5_valid_frontmatter_and_only_plugin_naming_differs(
