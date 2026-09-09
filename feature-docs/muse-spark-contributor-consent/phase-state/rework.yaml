@@ -76,6 +76,6 @@ spec_change:
   origin_kind: verify
   origin_id: SC-8
   recorded_at_commit: 73f983950917f624cfe01aea098f8f9b8946a7e0
-  consumed: false
+  consumed: true
   replan_authorized: true
 classification: []
