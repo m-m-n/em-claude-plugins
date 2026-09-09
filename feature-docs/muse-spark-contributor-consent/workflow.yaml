@@ -199,7 +199,7 @@ workflow:
             separate-value option were not recognized. Repaired by task0006.
 
   - id: retrospect
-    status: pending
+    status: in_progress
 
 tasks:
   task0001:
