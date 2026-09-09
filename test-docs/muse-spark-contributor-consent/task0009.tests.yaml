@@ -1,0 +1,78 @@
+task_id: task0009
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac1_presents_mutating_commands_never_executes_them
+    red_confirmed: true
+    red_reason: >-
+      Ran against the pre-task0009 SKILL.md content (both plugins):
+      AssertionError: 0 != 1 on step5.count(PRESENTED_RECORD_CMD) -- the old
+      document described "ガード CLI を --record で呼び出す" (the skill
+      invoking the mutating command itself) and contained no presented,
+      ready-to-copy command line at all.
+  AC-2:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac2_all_six_steps_present_in_order
+    red_confirmed: false
+    red_reason: >-
+      Ran against the pre-task0009 content: passed unchanged. This
+      criterion pins step ordering (1-6) and the absence of unpushed-commit
+      state, both of which task0009 leaves untouched -- it only rewords
+      content inside steps 4 and 5, never reorders or removes a step. A
+      genuine refactor-with-no-observable-change case for this specific
+      test; the step-4/5 content changes it IS observable for are covered
+      by AC-1 and AC-3 above, which did confirm red.
+  AC-3:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac3_context_line_states_requirement_not_impossibility
+    red_confirmed: true
+    red_reason: >-
+      Ran against the pre-task0009 SKILL.md content (both plugins):
+      AssertionError -- CONTEXT_REQUIREMENT_LINE / CONTEXT_NOT_IMPOSSIBLE_LINE
+      not found. The old document never accompanied the mutating branches
+      with any interactive-terminal-requirement context line, because it
+      described the skill running the command itself.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No new test added for this criterion in this module. It asserts an
+      invariant task0009 does not disturb: the skill documents' own
+      AskUserQuestion count stays at exactly 1 (unchanged, verified by the
+      pre-existing, unmodified test_ac4_exactly_one_question_round_with_two_options_each
+      from task0002) and neither document is referenced by any
+      develop-phase document (unchanged, verified by the pre-existing,
+      unmodified test_ac6_no_develop_phase_document_references_the_skill).
+      task0009's file scope touches only the two SKILL.md files and this
+      test module, so no other develop-phase or review-phase document
+      gained an occurrence -- a structural guarantee of scope rather than
+      an assertion this module can make about files it never reads for
+      that purpose. The repository-wide "no increase relative to the
+      pinned base-revision table" half of this property belongs to
+      tests/test_muse_consent_no_new_questions.py (task0005's module,
+      out of this task's scope).
+  AC-5:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac5_valid_frontmatter_and_only_plugin_naming_differs
+    red_confirmed: false
+    red_reason: >-
+      Ran against the pre-task0009 content: passed unchanged. Frontmatter
+      validity, the absence of a commands/ file, and the two documents
+      differing only in their own plugin name and review-phase step number
+      were already true before this task -- task0009's edits landed inside
+      the shared body text identically in both copies, so the structural
+      cross-plugin equality this test pins was never broken and therefore
+      never red. Written to guard against a future edit introducing drift.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      This criterion is about the test module itself (mechanically asserts
+      AC-1 through AC-3 and AC-5, stdlib-only imports, suite passes under
+      `python3 -m unittest discover -s tests`). The module already existed
+      (task0002) and already satisfied stdlib-only imports and a passing
+      discover run before task0009's edits; verified here by running the
+      full suite (4280 tests, 0 failures) rather than by a dedicated test
+      asserting the module's own import list.
