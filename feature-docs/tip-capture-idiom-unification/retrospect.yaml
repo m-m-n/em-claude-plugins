@@ -1,0 +1,31 @@
+feature: tip-capture-idiom-unification
+collected_at: "2026-09-09T22:05:00+09:00"
+session_ids: ["01a08626-bb85-71d3-8f10-feccf15463d5"]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - |
+    review round 1 で spec 観点の reviewer が muse-spark-contributor を
+    skip_reason: model_forbidden_for_review で拒否した。reviewers.yaml /
+    review-phase.md の contributor-tier read-mapping と vertex-review の
+    litellm-harness スキルの全面禁止が矛盾している。performance 観点は
+    同じ tier のまま完走したため、挙動が観点ごとに割れている。
+    follow-up として起票済み。
+  - |
+    IMPLEMENTATION.md D5 の残差（Step I.2.c の batch-mode 段落が
+    refresh→capture の旧順序のまま）は、NFR2 が凍結した 2 モジュールの
+    byte-pin を跨ぐため本 feature のスコープ外として受理した。
+    同一文書内に規範的手順と食い違う言い換えが残っている状態は、
+    専用 feature で段落と 2 つの byte-pin を原子的に更新する必要がある。
+  - |
+    comprehensive 観点の medium finding（ロック無し reset --hard は
+    並行 merge-task.sh のマージを exit-4 を出さずに巻き戻しうる）は
+    本 diff が持ち込んだものではなく、PR 17 と Branch & Worktree Model が
+    既に規範化している系全体の性質。7 サイト全部に及ぶ設計変更になるため
+    deferred とした。
