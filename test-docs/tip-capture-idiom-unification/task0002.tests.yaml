@@ -1,0 +1,63 @@
+task_id: task0002
+baseline_failures: []          # 1511 tests, all green before this task's edit
+final_failures: []             # 1511 tests, all green after this task's edit
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests/test_exit4_tip_argument_version_bump.py::TestPluginManifestVersion::test_version_is_past_baseline
+      - tests/test_exit4_tip_argument_version_bump.py::TestPluginManifestVersion::test_name_field_unchanged
+      - tests/test_spec_file_set_completeness_version_bump.py::TestPluginManifestVersion::test_key_set_unchanged
+      - tests/test_spec_file_set_completeness_version_bump.py::TestPluginManifestVersion::test_author_field_unchanged
+      - tests/test_spec_file_set_completeness_version_bump.py::TestPluginManifestVersion::test_description_field_retains_stable_anchor
+    red_confirmed: false
+    red_reason: >
+      No pre-existing test pins the exact literal "0.1.46", and the pre-task
+      value 0.1.45 already exceeded every recorded baseline patch (highest is
+      44), so these tests already passed before this task's edit -- they
+      cannot be observed red for this criterion. Per the task plan's Test
+      Notes and IMPLEMENTATION.md open question TS-8, the exact bumped value
+      and the "no other field changed" claim are confirmed by directly
+      reading em-workflow/.claude-plugin/plugin.json after the edit and
+      diffing it against its pre-edit content (git diff shows only the
+      version line changed), not by a red-then-green test.
+  AC-2:
+    tests:
+      - tests/test_exit4_tip_argument_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_is_past_baseline
+      - tests/test_exit4_tip_argument_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_version_matches_plugin_manifest
+      - tests/test_exit4_tip_argument_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_source_unchanged
+      - tests/test_exit4_tip_argument_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_has_no_version_key
+      - tests/test_spec_file_set_completeness_version_bump.py::TestMarketplaceEntryVersion::test_top_level_key_set_unchanged
+      - tests/test_spec_file_set_completeness_version_bump.py::TestMarketplaceEntryVersion::test_em_workflow_entry_key_set_unchanged
+      - tests/test_spec_file_set_completeness_version_bump.py::TestMarketplaceEntryVersion::test_em_review_entry_unchanged
+    red_confirmed: false
+    red_reason: >
+      Same reasoning as AC-1: the marketplace em-workflow entry's pre-task
+      value 0.1.45 already exceeded every recorded baseline patch, and the
+      equality-with-manifest / em-review-untouched checks were already
+      satisfied before this task touched anything, so none of these tests
+      could go red for this criterion. The exact literal 0.1.46 and
+      untouched-field claim are confirmed by diffing
+      .claude-plugin/marketplace.json before/after the edit (git diff shows
+      only the version line changed) per TS-8.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Verifiable outcome is "the full discovered suite passes", not a single
+      test. `python3 -m unittest discover -s tests` was run before any edit
+      (baseline: 1511 tests, 0 failures) and again after the version bump
+      (1511 tests, 0 failures, same count). The suite was already green at
+      0.1.45, so this criterion has no red-before-green transition to
+      observe; it is a durable invariant that is checked to remain true, per
+      the task plan's explicit "TDD-awkward by design" framing.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Structural constraint on this task's own diff, not a test outcome:
+      confirmed via `git diff` (shows exactly the two `version` lines
+      changed in em-workflow/.claude-plugin/plugin.json and
+      .claude-plugin/marketplace.json, nothing else) and `git status`
+      (no untracked files besides this test record). There is no
+      pre-implementation state to observe as red for a constraint about the
+      diff that does not exist until the implementation is made.

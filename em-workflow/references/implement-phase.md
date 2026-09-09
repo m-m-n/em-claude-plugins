@@ -173,7 +173,8 @@ user's choice; the develop completion merge tolerates exactly this diff. A
 
 ```bash
 WT_ROOT="$(git rev-parse --show-toplevel)/.claude/worktrees/em-workflow/{feature}"
-BASE_COMMIT=$(git -C "$WT_ROOT/integration" rev-parse HEAD)
+BASE_COMMIT=$(git -C "$WT_ROOT/integration" rev-parse em-workflow/{feature}/integration)
+git -C "$WT_ROOT/integration" reset --hard em-workflow/{feature}/integration
 ```
 
 `$BASE_COMMIT` is the integration branch's HEAD at implement start —
@@ -594,9 +595,10 @@ Triggered whenever a launched implementer's `Task()` call returns.
      gates, not by this bullet: I.2.c narrows this case further, because
      the task's raw journal last event is still `merged` here even though
      the reconciled state is `failed`.
-2. **Refresh the integration worktree FIRST** (Branch & Worktree Model):
-   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`,
-   then capture `RECONCILE_TIP=$(git -C {integration_worktree} rev-parse HEAD)`.
+2. Capture `RECONCILE_TIP=$(git -C {integration_worktree} rev-parse
+   em-workflow/{feature}/integration)`. **Refresh the integration worktree FIRST**
+   (Branch & Worktree Model):
+   `git -C {integration_worktree} reset --hard em-workflow/{feature}/integration`.
    Any reconcile that observed a ref advance means a concurrent
    `merge-task.sh` moved the branch tip via `update-ref` without touching
    this worktree — refreshing before step 3's edit is what keeps that edit
@@ -806,10 +808,11 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   by an automated path; the gap is confined to this single case and is
   not a precedent for any other `failed` task. A task the journal
   reports in-flight whose worktree and branch are both gone is decided
-  elsewhere — Step I.2.b step 1's recovery, cited there, not here. Refresh
-  the integration worktree first (`git -C "$WT_ROOT/integration"
-  reset --hard em-workflow/{feature}/integration`), then capture
-  `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse HEAD)`,
+  elsewhere — Step I.2.b step 1's recovery, cited there, not here. Capture
+  `ROUTEBACK_TIP=$(git -C "$WT_ROOT/integration" rev-parse
+  em-workflow/{feature}/integration)`, refresh the integration worktree
+  (`git -C "$WT_ROOT/integration" reset --hard
+  em-workflow/{feature}/integration`),
   then make one ordered workflow.yaml write set over the reset target
   set — every task whose Step I.2.b step 1 reconciled state is
   `failed`: set `create-plan` to `needs_update`, set the `implement`
@@ -858,11 +861,11 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   as `merged` though Step I.2.b step 1's reconciled state does not
   verify it — this automatic
   re-entry does not apply:
-  `create-plan` is NOT set to `needs_update`. The phase instead refreshes
-  the integration worktree first (the same `reset --hard` as above),
-  captures `TERMINAL_TIP=$(git -C "$WT_ROOT/integration" rev-parse
-  HEAD)`, sets the `implement` step's `status` to `failed` in
-  workflow.yaml, together with `failed_kind` valued `decision`
+  `create-plan` is NOT set to `needs_update`. The phase instead captures
+  `TERMINAL_TIP=$(git -C "$WT_ROOT/integration" rev-parse
+  em-workflow/{feature}/integration)`, refreshes the integration worktree
+  (the same `reset --hard` as above), sets the `implement` step's `status`
+  to `failed` in workflow.yaml, together with `failed_kind` valued `decision`
   unconditionally — the blocker is a planning-side state (a `merged` or
   in-flight task), so an automatic resume would meet the same gate again
   — the single write this path makes — and commits exactly
@@ -875,11 +878,11 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   iteration reading `implement: failed` — the same terminal as the
   "abort phase" option below. No retry loop, no alternative recovery
   route, and no degraded route back is offered for this path.
-- **abort phase** — refresh the integration worktree first (the same
-  `reset --hard em-workflow/{feature}/integration` the rejected path
-  above uses), capture `ABORT_TIP=$(git -C "$WT_ROOT/integration"
-  rev-parse HEAD)`, set the `implement` step's `status` to `failed` in
-  workflow.yaml, together with `failed_kind` in that same single write —
+- **abort phase** — capture `ABORT_TIP=$(git -C "$WT_ROOT/integration"
+  rev-parse em-workflow/{feature}/integration)`, refresh the integration
+  worktree (the same `reset --hard em-workflow/{feature}/integration` the
+  rejected path above uses), set the `implement` step's `status` to
+  `failed` in workflow.yaml, together with `failed_kind` in that same single write —
   `infra` when the failing task's failure originates from a journal
   `failed` event whose reason is `orphaned` (the orphaned-`launched`
   convergence paragraph above already establishes this), `decision`

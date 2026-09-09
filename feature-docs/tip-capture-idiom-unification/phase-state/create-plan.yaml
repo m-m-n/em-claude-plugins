@@ -1,0 +1,37 @@
+schema_version: 1
+feature: tip-capture-idiom-unification
+phase: create-plan
+status: completed
+generation: 1
+base_revision: ce47d95e15e5c335b48ad702f74e314b6e05cdc1
+last_input_digest: sha256:3922b6d9182da199e70d014611de4b7848c3d4409391887fa3c4e2b646b96fc6
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: completed
+    input_digest: sha256:3922b6d9182da199e70d014611de4b7848c3d4409391887fa3c4e2b646b96fc6
+    output_digest: sha256:planner-run-0001-completed
+artifacts:
+  - path: feature-docs/tip-capture-idiom-unification/IMPLEMENTATION.md
+    sha256: sha256:3afd8f60beebf6dfcfefb0817216e786bc53d2a1530477388f3af71ff30f1b09
+    produced_by: create-plan-run-0001
+  - path: feature-docs/tip-capture-idiom-unification/VERIFICATION.md
+    sha256: sha256:a57d4815d5486f26b8e03fb571fd514475270079455a8af073c265d33078c7d9
+    produced_by: create-plan-run-0001
+  - path: feature-docs/tip-capture-idiom-unification/tasks/task0001.md
+    sha256: sha256:2fd9dce581c03b7a4813c37fc4c0f05fbb747236e6a674111b32da54ce7392d0
+    produced_by: create-plan-run-0001
+  - path: feature-docs/tip-capture-idiom-unification/tasks/task0002.md
+    sha256: sha256:d807cd733e18ce4cde74dc349f151c8dc782a11cef458974a19c95bfabae6f91
+    produced_by: create-plan-run-0001
+patches:
+  - patch_id: tip-capture-idiom-unification-p0001
+    status: applied
+    base_input_digest: sha256:3922b6d9182da199e70d014611de4b7848c3d4409391887fa3c4e2b646b96fc6
+    base_workflow_blob: 0738483ba6205964dde0f199ca1a297b5febde1c
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
