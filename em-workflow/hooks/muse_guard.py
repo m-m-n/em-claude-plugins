@@ -185,43 +185,75 @@ def project_key(directory):
 
 
 # --- Command classification ----------------------------------------------
-# The recognition pipeline, restated as four stages
-# (feature-docs/muse-spark-contributor-consent/tasks/task0006.md Design):
+# The recognition pipeline, restated as five stages
+# (feature-docs/muse-spark-contributor-consent/tasks/task0007.md Design,
+# IMPLEMENTATION.md decision D-H):
 #
-# 1. Pre-classification text handling: here-document bodies are removed
-#    from the raw command text before anything is split into statements or
-#    segments. A `<<WORD` sequence starts a here-document only when it
-#    occurs OUTSIDE any quoted region -- a header-looking sequence inside a
-#    quoted region is left alone. Stripping only ever removes text, so it
-#    can never cause a false deny.
-# 2. Statement / segment splitting: the remaining text is split into the
-#    individual commands a shell would run. The bodies of command
-#    substitutions -- both the parenthesized `$(...)` form and the
-#    backtick form -- are additionally extracted and classified as
-#    statements in their own right, in addition to the surrounding
-#    statement. Extraction happens on the same quote-aware scan as stage 1.
-# 3. Command-word resolution: each segment's own command word decides
-#    whether its arguments are even examined. A wrapper word (the existing
-#    wrapper set, extended with `xargs`) is stepped through to the wrapped
-#    command word; when the command word is a shell, the argument
-#    following its `-c` flag is classified as its own command text,
-#    recursively, bounded at depth 2 -- anything nested deeper is not
-#    classified and therefore yields no decision (fail open). No new
-#    subprocess and no new file access is introduced by any stage.
-# 4. Model-selection matching: only for a segment whose resolved command
-#    word is `codex` is the argument list scanned for a model-selection
-#    argument whose value is the contributor tier, across three shapes --
-#    the flag as its own token with the value in the FOLLOWING token; a
-#    single token whose head up to the first `=` is the flag and whose
-#    tail is the value; and the short-form flag with the value attached
-#    directly to it. shlex resolves bare/single-quoted/double-quoted
-#    spellings to the identical token text, so no further per-quoting-style
-#    logic is needed. Every comparison against CONTRIBUTOR_TIER is EXACT
-#    string equality, never a prefix/suffix/substring test.
+# Stage 0 -- one quote-aware scan, first: `_scan_statements` walks the raw
+#   command text once, tracking single-/double-quote state and backslash
+#   escaping character by character, exactly as a POSIX shell would. A
+#   statement separator (`;`, `|`, `&`, `&&`, `||`, or a newline) is a
+#   boundary ONLY when it occurs outside any quoted region and is not
+#   itself escaped -- inside a quote, or immediately after a backslash, it
+#   is ordinary text. This is the fix for the root cause the verify phase
+#   found (D-H): the previous pipeline split the raw string into segments
+#   with a quote-blind regular expression BEFORE anything honoured
+#   quoting, so a quoted separator both broke a real invocation apart and
+#   carved a mere mention into a standalone one. An unterminated quote
+#   makes the scan's result untrustworthy -- `_scan_statements` raises
+#   `ValueError` rather than returning a partial split, and the caller
+#   treats that as "cannot classify" (fail open, NFR2).
+# Stage 1 -- here-document handling, on the same scan: a `<<WORD` sequence
+#   starts a here-document only when the scan sees it OUTSIDE any quoted
+#   region; its body and terminator line are removed before anything is
+#   split into statements, so a body that merely names the tier still
+#   produces no decision. A header-looking sequence inside a quoted region
+#   is left untouched, so text that follows it stays visible.
+# Stage 2 -- statements and substitutions, from the same scan: a statement
+#   is the text between two unquoted, unescaped separators. Command
+#   substitutions -- both the parenthesized `$(...)` form and the backtick
+#   form -- are additionally extracted as their own statements, in
+#   addition to the statement that contains them, but ONLY from unquoted
+#   or double-quoted regions (a substitution-looking sequence inside a
+#   single-quoted region is inert text and is never extracted, matching
+#   real shell semantics). Each statement's WORD-level tokenization --
+#   quote removal, backslash unescaping, joining adjacent quoted/unquoted
+#   parts of one argument -- is delegated to the standard library's own
+#   shell tokenizer (`shlex.split`), since stages 0-2 already guarantee a
+#   statement's quoting is balanced by the time it gets there.
+# Stage 3 -- command-word resolution: `_resolve_command` walks a
+#   statement's tokens, stepping over `VAR=value` assignment prefixes and
+#   known wrapper words to find the statement's real command word --
+#   mirroring destructive-guard.py's own head(). A wrapper's own options
+#   are known per wrapper (`_WRAPPER_VALUE_OPTIONS`): an option that takes
+#   a separate value has that value stepped over too, so a wrapper invoked
+#   with a value option (`nice -n 10 codex ...`, `xargs -n 1 codex ...`)
+#   still resolves to the wrapped command. An option NOT in that wrapper's
+#   table stops resolution outright -- the statement is left unclassified
+#   rather than guessing whether it takes a value (fail open, a documented
+#   residual: this does not model shell option parsing in general). When
+#   the resolved command word is a shell, the argument following its
+#   command-string flag (`-c`, standalone OR bundled with other short
+#   options in one token, e.g. `-xc`) is classified as its own command
+#   text, recursively, bounded at `_MAX_NEST_DEPTH` -- anything nested
+#   deeper is not classified at all (fail open) rather than scanned
+#   indefinitely.
+# Stage 4 -- model-selection matching: only for a statement whose resolved
+#   command word is `codex` is the argument list scanned for a
+#   model-selection argument whose value is the contributor tier, across
+#   the three shapes in `_extract_model_flag_values` -- the flag as its
+#   own token with the value in the FOLLOWING token; a single token whose
+#   head up to the first `=` is the flag and whose tail is the value; and
+#   the short-form flag with the value attached directly to it. Because
+#   quoting was already consumed by stage 2's `shlex.split`, no separate
+#   per-quoting-style row is needed -- bare, single-quoted and
+#   double-quoted spellings all arrive as the identical token text. Every
+#   comparison against CONTRIBUTOR_TIER is EXACT string equality, never a
+#   prefix/suffix/substring test.
 #
-# This restriction to a resolved `codex` command word is what keeps a
-# commit-message argument or a search-pattern argument from being read as a
-# model selection (`git commit -m muse-spark-contributor` and
+# The restriction to a resolved `codex` command word (stage 3) is what
+# keeps a commit-message argument or a search-pattern argument from being
+# read as a model selection (`git commit -m muse-spark-contributor` and
 # `grep -m muse-spark-contributor` are never invocations under this rule),
 # and it is load-bearing for the no-misfire floor.
 #
@@ -229,8 +261,6 @@ def project_key(directory):
 # (fail open).
 
 _HEREDOC_HEADER_RE = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1")
-
-_SEGMENT_SPLIT_RE = re.compile(r"(?:\|\||&&|[;|&\n])")
 
 _ASSIGNMENT_RE = re.compile(r"^[A-Za-z_]\w*=")
 
@@ -249,16 +279,41 @@ _WRAPPER_WORDS = frozenset(
     }
 )
 
+# Wrapper options that consume the FOLLOWING token as their own value,
+# keyed by wrapper word (Design, Stage 3). An option token for a
+# recognized wrapper that is not in that wrapper's set here -- and is not
+# the wrapper's own bare positional handled separately (`timeout`'s
+# duration) -- stops resolution outright: the statement is left
+# unclassified rather than guessing whether the flag takes a value. This
+# is a deliberately small, closed table, not a model of each wrapper's
+# full option grammar (Out of Scope).
+_WRAPPER_VALUE_OPTIONS = {
+    "nice": {"-n"},
+    "ionice": {"-c", "-n", "-p"},
+    "xargs": {"-n", "-P", "-I", "-L", "-l", "-s", "-a", "-d", "-E"},
+    "timeout": {"-s", "--signal", "-k", "--kill-after"},
+    "env": {"-u", "-C", "-S"},
+    "sudo": {"-u", "-g", "-h", "-p", "-C", "-U"},
+    "doas": {"-u", "-C"},
+}
+
 _DURATION_RE = re.compile(r"^\d+[smhd]?$")
 
 _SHELL_WORDS = frozenset({"bash", "sh", "zsh", "dash", "ksh"})
 
+# The command-string flag, standalone (`-c`) or bundled as the LAST letter
+# of a cluster of short options in one token (`-xc`, `-vxc`) -- a cluster
+# that carries the letter anywhere but last (`-cv`) is a different,
+# unmodelled shape (the value would be attached, not the next token) and
+# is deliberately left unrecognized rather than guessed (Design, Stage 3).
+_SHELL_DASH_C_RE = re.compile(r"^-[A-Za-z]*c$")
+
 _MODEL_FLAG_NAMES = ("-m", "--model")
 
-# A command is nested at most this many levels deep -- a shell's `-c`
-# argument, or a command-substitution body, each add one level. Anything
-# nested past this bound is not classified at all (fail open) rather than
-# being scanned indefinitely.
+# A command is nested at most this many levels deep -- a shell's
+# command-string argument, or a command-substitution body, each add one
+# level. Anything nested past this bound is not classified at all (fail
+# open) rather than being scanned indefinitely.
 _MAX_NEST_DEPTH = 2
 
 
@@ -283,97 +338,109 @@ def _extract_balanced(text, start, close_ch):
     return text[start:], n
 
 
-def _quote_aware_scan(text):
-    """One left-to-right pass over `text` tracking single-/double-quote
-    state, doing stage 1's here-document stripping and stage 2's
-    command-substitution extraction in the same scan (Design, "Stage 1"
-    / "Stage 2" share this scan since both need quote state).
+def _scan_statements(text):
+    """Stages 0-2 in one left-to-right pass over `text`, tracking single-
+    and double-quote state and backslash escaping exactly as a POSIX shell
+    would (see the stage commentary above `_HEREDOC_HEADER_RE`).
 
-    Returns (stripped_text, substitutions):
-      - stripped_text has every here-document's body and terminator line
-        removed (its header line is kept) -- but ONLY for a `<<WORD`
-        sequence recognized OUTSIDE any quoted region; a header-looking
-        sequence inside a quoted string is left alone, untouched, so text
-        that follows it stays available to classification.
-      - substitutions is the list of raw text found inside `$(...)` and
+    Returns (statements, substitutions):
+      - `statements` is the list of raw statement strings the text splits
+        into at an unquoted, unescaped separator (`;`, `|`, `&`, `&&`,
+        `||`, or a newline); a genuine here-document's header line is kept
+        in its own statement, and its body and terminator line are
+        removed entirely, before any splitting happens.
+      - `substitutions` is the list of raw text found inside `$(...)` and
         backtick command-substitution bodies, found outside single quotes
-        (real shell semantics: single quotes suppress all expansion,
+        only (real shell semantics: single quotes suppress all expansion,
         double quotes still allow substitution). Each body is left in
-        place in stripped_text too -- the surrounding statement is still
+        place in its enclosing statement too -- the statement is still
         classified as before; substitutions are classified IN ADDITION.
+
+    Raises ValueError when the text ends with an unterminated single- or
+    double-quoted region: the tolerance clause (NFR2) requires that this
+    be reported as "cannot classify", never papered over with whatever was
+    scanned so far.
     """
-    out = []
     substitutions = []
+    statements = []
+    current = []
     i = 0
     n = len(text)
     in_single = False
     in_double = False
+
+    def flush():
+        segment = "".join(current).strip()
+        if segment:
+            statements.append(segment)
+        current.clear()
+
     while i < n:
         c = text[i]
         if in_single:
-            out.append(c)
+            current.append(c)
             if c == "'":
                 in_single = False
             i += 1
             continue
         if in_double:
             if c == "\\" and i + 1 < n:
-                out.append(text[i : i + 2])
+                current.append(text[i : i + 2])
                 i += 2
                 continue
             if c == '"':
                 in_double = False
-                out.append(c)
+                current.append(c)
                 i += 1
                 continue
             if c == "$" and text.startswith("$(", i):
                 body, end = _extract_balanced(text, i + 2, ")")
                 substitutions.append(body)
-                out.append(text[i:end])
+                current.append(text[i:end])
                 i = end
                 continue
             if c == "`":
                 end = text.find("`", i + 1)
                 if end == -1:
-                    out.append(c)
+                    current.append(c)
                     i += 1
                     continue
                 substitutions.append(text[i + 1 : end])
-                out.append(text[i : end + 1])
+                current.append(text[i : end + 1])
                 i = end + 1
                 continue
-            out.append(c)
+            current.append(c)
             i += 1
             continue
         # unquoted
         if c == "\\" and i + 1 < n:
-            out.append(text[i : i + 2])
+            current.append(text[i : i + 2])
             i += 2
             continue
         if c == "'":
             in_single = True
-            out.append(c)
+            current.append(c)
             i += 1
             continue
         if c == '"':
             in_double = True
-            out.append(c)
+            current.append(c)
             i += 1
             continue
         if c == "$" and text.startswith("$(", i):
             body, end = _extract_balanced(text, i + 2, ")")
             substitutions.append(body)
-            out.append(text[i:end])
+            current.append(text[i:end])
             i = end
             continue
         if c == "`":
             end = text.find("`", i + 1)
             if end == -1:
-                out.append(c)
+                current.append(c)
                 i += 1
                 continue
             substitutions.append(text[i + 1 : end])
-            out.append(text[i : end + 1])
+            current.append(text[i : end + 1])
             i = end + 1
             continue
         if c == "<" and text.startswith("<<", i):
@@ -387,25 +454,52 @@ def _quote_aware_scan(text):
                         r"^[ \t]*" + re.escape(word) + r"[ \t]*$", re.M
                     ).search(text, body_start)
                     if terminator:
-                        out.append(text[i:body_start])
+                        current.append(text[i:body_start])
+                        # The header line ends its own statement -- the
+                        # heredoc's body and terminator are skipped below,
+                        # and whatever follows the terminator is a fresh
+                        # statement, exactly as a real newline there would
+                        # produce (it must not be glued onto "cat ...").
+                        flush()
                         term_end = text.find("\n", terminator.end())
                         i = len(text) if term_end == -1 else term_end + 1
                         continue
-        out.append(c)
+        if c in "|&;":
+            # Pipe / background / statement separator, unquoted and
+            # unescaped: cut the statement here. `&&` / `||` are
+            # two-character operators; consume both characters as one
+            # boundary so neither leaks into the next statement.
+            flush()
+            if c in "|&" and i + 1 < n and text[i + 1] == c:
+                i += 2
+            else:
+                i += 1
+            continue
+        if c == "\n":
+            flush()
+            i += 1
+            continue
+        current.append(c)
         i += 1
-    return "".join(out), substitutions
+
+    if in_single or in_double:
+        raise ValueError("unterminated quote")
+    flush()
+    return statements, substitutions
 
 
 def _resolve_command(tokens):
-    """Walks `tokens`, skipping `VAR=value` assignment prefixes and wrapper
-    words (with their own leading flags), to find the segment's real
-    command word -- mirroring destructive-guard.py's own head(), so
-    `timeout 600 codex ...` and `env FOO=bar codex ...` are still
-    recognized as codex invocations. Returns (command_word, rest): `rest`
-    is exactly the token list that follows the resolved command word,
-    which is what both stage 4's flag scan and stage 3's `-c` resolution
-    operate on. Returns (None, []) when the segment resolves to nothing
-    (assignments only, or empty).
+    """Walks `tokens`, skipping `VAR=value` assignment prefixes and
+    wrapper words (with their own known options, per
+    `_WRAPPER_VALUE_OPTIONS`), to find the segment's real command word --
+    mirroring destructive-guard.py's own head(), so `timeout 600 codex ...`
+    and `env FOO=bar codex ...` are still recognized as codex invocations.
+    Returns (command_word, rest): `rest` is exactly the token list that
+    follows the resolved command word, which is what both stage 4's flag
+    scan and stage 3's command-string resolution operate on. Returns
+    (None, []) when the segment resolves to nothing -- assignments only,
+    an empty statement, or a wrapper option this function does not
+    recognize (fail open rather than guessing, Design Stage 3).
     """
     i = 0
     n = len(tokens)
@@ -417,7 +511,14 @@ def _resolve_command(tokens):
         base = os.path.basename(tok)
         if base in _WRAPPER_WORDS:
             i += 1
-            while i < n and tokens[i].startswith("-"):
+            value_options = _WRAPPER_VALUE_OPTIONS.get(base, frozenset())
+            while i < n and tokens[i].startswith("-") and tokens[i] not in ("-", "--"):
+                opt = tokens[i]
+                if opt not in value_options:
+                    return None, []  # unrecognized option: fail open
+                i += 1
+                if i >= n:
+                    return None, []  # the option's value is missing
                 i += 1
             if base == "timeout" and i < n and _DURATION_RE.match(tokens[i]):
                 i += 1
@@ -432,9 +533,9 @@ def _extract_model_flag_values(tokens):
     the flag as its own token with the value in the FOLLOWING token; a
     single token whose head up to the first `=` is the flag and whose tail
     is the value; and the short-form flag with the value attached directly
-    to it. shlex has already resolved bare/single-/double-quoted spellings
-    to the identical token text by the time these tokens are seen, so no
-    further per-quoting-style logic is needed here.
+    to it. `shlex.split` has already resolved bare/single-/double-quoted
+    spellings to the identical token text by the time these tokens are
+    seen, so no further per-quoting-style logic is needed here.
     """
     n = len(tokens)
     for i, tok in enumerate(tokens):
@@ -451,36 +552,36 @@ def _has_contributor_model_flag(tokens):
     return any(value == CONTRIBUTOR_TIER for value in _extract_model_flag_values(tokens))
 
 
-def _shell_dash_c_argument(tokens):
+def _shell_command_string_argument(tokens):
     for i, tok in enumerate(tokens):
-        if tok == "-c" and i + 1 < len(tokens):
+        if _SHELL_DASH_C_RE.match(tok) and i + 1 < len(tokens):
             return tokens[i + 1]
     return None
 
 
 def _classify_text(text, depth):
     """True when `text` -- the raw command, a command-substitution body, or
-    a shell's `-c` argument -- carries an invocation of the contributor
-    tier at or within `depth` levels of nesting. `depth` 0 is the top-level
-    command text; it increases by one for each level of command-
-    substitution or shell `-c` nesting resolved. Nesting past
-    `_MAX_NEST_DEPTH` is not classified at all (fail open) rather than
-    raising or scanning indefinitely.
+    a shell's command-string argument -- carries an invocation of the
+    contributor tier at or within `depth` levels of nesting. `depth` 0 is
+    the top-level command text; it increases by one for each level of
+    command-substitution or shell command-string nesting resolved. Nesting
+    past `_MAX_NEST_DEPTH` is not classified at all (fail open) rather
+    than raising or scanning indefinitely.
     """
     if depth > _MAX_NEST_DEPTH:
         return False
-    stripped, substitutions = _quote_aware_scan(text)
+    try:
+        statements, substitutions = _scan_statements(text)
+    except ValueError:
+        return False  # the tokenizer refuses (e.g. an unterminated quote)
     for sub in substitutions:
         if _classify_text(sub, depth + 1):
             return True
-    for segment in _SEGMENT_SPLIT_RE.split(stripped):
-        segment = segment.strip()
-        if not segment:
-            continue
+    for segment in statements:
         try:
             tokens = shlex.split(segment)
         except ValueError:
-            continue  # unbalanced quoting: cannot parse with confidence
+            continue  # unbalanced quoting within an otherwise-parsed statement
         if not tokens:
             continue
         command_word, rest = _resolve_command(tokens)
@@ -488,7 +589,7 @@ def _classify_text(text, depth):
             if _has_contributor_model_flag(rest):
                 return True
         elif command_word in _SHELL_WORDS:
-            nested = _shell_dash_c_argument(rest)
+            nested = _shell_command_string_argument(rest)
             if nested is not None and _classify_text(nested, depth + 1):
                 return True
     return False
