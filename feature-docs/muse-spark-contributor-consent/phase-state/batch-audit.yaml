@@ -332,3 +332,21 @@ records:
     forward: the SSOT wording "failed_items をそのまま写す" literally points at the current top-level field,
     so develop/SKILL.md should be amended to name prior_result.failed_items as a source; recorded as a
     follow-up rather than acted on in this run.'
+- question_id: develop.completion
+  packet_id: null
+  answered_at: '2026-09-09T12:00:00+09:00'
+  source: explicit-user-instruction
+  answer_mode: single_select
+  selected_option_ids:
+  - open_pr
+  freeform: null
+  normalized_answer: integration ブランチを remote に push し、base_branch (main) への PR を作成する。ローカル・リモート双方にブランチを残し、自動マージはしない。
+  resolution_note: 'gate: develop.completion (Step C). batch-mode.md''s Non-packet gates table states
+    the batch default as "keep branch -- no merge, no push, no PR created", departed from under the
+    invocation''s explicit instruction: "push the integration branch to the remote and create a Pull
+    Request against base_branch with gh pr create. Keep the integration branch both locally and on the
+    remote (do not auto-merge it into base_branch)." Not chosen: keep_branch (the batch default),
+    merge_into_base (explicitly forbidden by the instruction). codex_consulted: false -- the option was
+    named verbatim by the user, so no point was unclear. Result: pushed to origin, PR #28 opened against
+    main; the branch is kept locally and on the remote and was not merged. The two deferred residual
+    high findings are escalated in the PR body as blocking items for the human reviewer.'
