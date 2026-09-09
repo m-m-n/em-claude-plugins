@@ -123,10 +123,16 @@ tasks:
     notes: null
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary:
+      - perspective: performance
+        reason: "判定関数は PreToolUse フックとして毎回の Bash 呼び出しで同期実行され、NFR3 が文字列処理のみ・NFR1 がファイルシステム非接触を要求するため、正規化ロジックの計算量と I/O 混入を確認する"
+    cross_validation: true
 
 requirements:
   FR1:
