@@ -1,5 +1,5 @@
-"""Tests for task0002: the `contributor-consent` skill shipped identically
-in em-workflow and em-review.
+"""Tests for the `contributor-consent` skill shipped identically in
+em-workflow and em-review.
 
 Covers task0002 Acceptance Criteria (feature-docs/muse-spark-contributor-
 consent/tasks/task0002.md):
@@ -18,9 +18,10 @@ consent/tasks/task0002.md):
 - AC-4: each document specifies exactly one interactive question round,
   with both state-dependent wordings and two options each, and states that
   dismissal takes the non-mutating branch and writes nothing.
-- AC-5: each document records consent through the guard CLI's `--record`
-  and revokes it through `--remove`, and neither document reads or writes
-  the store file directly.
+- AC-5: each document queries state through the guard CLI's `--list`, and
+  neither document reads or writes the store file directly. (Narrowed by
+  task0009 below: recording/revoking is no longer described as an action
+  the skill performs -- see task0009 AC-1.)
 - AC-6: neither document is referenced from any develop-phase document in
   either plugin (this task never edits an existing file, so it also adds
   no occurrence of the interactive-question tool name to any develop-phase
@@ -29,6 +30,33 @@ consent/tasks/task0002.md):
 - AC-7: this module itself -- imports no third-party package and passes
   under `python3 -m unittest discover -s tests` (verified by running the
   suite, not by a test within this module).
+
+Covers task0009 Acceptance Criteria (feature-docs/muse-spark-contributor-
+consent/tasks/task0009.md) -- the amended FR13, under which the skill
+presents the mutating command instead of running it:
+
+- AC-1: both documents describe presenting the recording command and the
+  removal command as command lines the user runs in their own terminal,
+  each naming that plugin's own guard script path and the project-directory
+  option, and neither document contains any step, fallback or retry in
+  which the skill itself runs a mutating command.
+- AC-2: both documents still describe, in order, the same six steps as
+  task0002 (probe/exit, read-only check, three facts, one question round,
+  command presentation, no-write line on dismissal); neither presents
+  unpushed-commit state.
+- AC-3: the accompanying context line states that the write path requires
+  an interactive terminal, and asserts no impossibility of writing the
+  store by other means.
+- AC-4: neither document gains an occurrence of the interactive-question
+  tool name relative to task0002 (still exactly one `AskUserQuestion` per
+  document) and neither is referenced by any develop-phase document (reuses
+  the AC-6 check above).
+- AC-5: both documents keep valid skill frontmatter, no `commands/` file
+  was added for either plugin, and the two documents differ only where
+  they name their own plugin (asserted structurally).
+- AC-6: this module asserts AC-1 through AC-3 and AC-5 mechanically for
+  both documents, imports the standard library only, and
+  `python3 -m unittest discover -s tests` passes.
 
 Frontmatter is parsed with a hand-rolled scalar `key: value` splitter (no
 PyYAML), the same dependency-free convention `tests/test_new_worker_agents.py`
@@ -88,6 +116,34 @@ OPTIONS_ALREADY_CONSENTED = ["維持する", "撤回する"]
 UNPUSHED_WORDINGS = ["未push", "未プッシュ", "unpushed", "un-pushed"]
 
 STORE_INTERNALS = ["muse-consent.json", "EM_WORKFLOW_MUSE_CONSENT"]
+
+# task0009: the two mutating commands are PRESENTED to the user, never
+# executed by the skill. These are the exact, ready-to-copy command lines.
+PRESENTED_RECORD_CMD = (
+    'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py'
+    ' --project-dir "$(pwd)" --record'
+)
+PRESENTED_REMOVE_CMD = (
+    'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py'
+    ' --project-dir "$(pwd)" --remove'
+)
+
+# task0009 AC-3: two exact, single-line sentences (each authored to fit on
+# one physical source line, so no Japanese no-space line-wrap can silently
+# insert a token into the middle of the checked text -- _normalize_ws only
+# recovers word-for-word text across a wrap for space-delimited prose).
+# CONTEXT_REQUIREMENT_LINE states the interactive-terminal requirement;
+# CONTEXT_NOT_IMPOSSIBLE_LINE explicitly disclaims that this is the only way
+# the store could ever be changed (SPEC a12 -- the boundary is a provenance
+# proxy, not unbypassability).
+CONTEXT_REQUIREMENT_LINE = (
+    "コマンドは自分の端末で実行する。エージェント経由の実行は、"
+    "書き込み経路が対話的な端末を要求するため拒否される。"
+)
+CONTEXT_NOT_IMPOSSIBLE_LINE = (
+    "これは、エージェントの通常の呼び出し経路からは記録・撤回できないという"
+    "意味であり、あらゆる手段による変更が不可能という意味ではない。"
+)
 
 HEADING_RE = re.compile(r"^#{1,6}\s")
 
@@ -321,6 +377,112 @@ class ContributorConsentSkillTest(unittest.TestCase):
                         text,
                         f"{md_path} unexpectedly references the skill",
                     )
+
+    # task0009 AC-1
+    def test_task0009_ac1_presents_mutating_commands_never_executes_them(self):
+        for plugin, info in PLUGINS.items():
+            with self.subTest(plugin=plugin):
+                _fm, body = self._load(plugin)
+
+                step5 = _extract_section(body, r"^### 5\.")
+                constraints = _extract_section(
+                    body, r"^## このスキルの制約"
+                )
+
+                # exactly one presented, ready-to-copy command line per
+                # mutating branch, and nowhere else in the document
+                self.assertEqual(step5.count(PRESENTED_RECORD_CMD), 1)
+                self.assertEqual(body.count(PRESENTED_RECORD_CMD), 1)
+                self.assertEqual(step5.count(PRESENTED_REMOVE_CMD), 1)
+                self.assertEqual(body.count(PRESENTED_REMOVE_CMD), 1)
+
+                # each mutating flag occurs only in a presented-command
+                # context: the command line itself (step 5), and the
+                # constraints sentence that introduces "presented, not
+                # executed" -- never anywhere the skill would be described
+                # as performing the write itself
+                self.assertEqual(step5.count("--record"), 1)
+                self.assertEqual(constraints.count("--record"), 1)
+                self.assertEqual(body.count("--record"), 2)
+                self.assertEqual(step5.count("--remove"), 1)
+                self.assertEqual(constraints.count("--remove"), 1)
+                self.assertEqual(body.count("--remove"), 2)
+
+                # no step, fallback or retry in which the skill itself
+                # invokes a mutating command (the old "呼び出す" phrasing
+                # for --record/--remove must be gone)
+                self.assertNotIn("呼び出す", step5)
+                self.assertNotIn("--record` で呼び出", body)
+                self.assertNotIn("--remove` で呼び出", body)
+
+                # the presented commands name this plugin's own guard
+                # script path (via the shared ${CLAUDE_PLUGIN_ROOT}
+                # convention already used by the read-only --list call)
+                # and the project-directory option
+                self.assertIn(
+                    '"${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py', step5
+                )
+                self.assertIn('--project-dir "$(pwd)"', step5)
+
+                # the read-only command is still described as run by the
+                # skill itself -- the negative assertions above are not
+                # satisfied by removing CLI use altogether
+                step2 = _extract_section(body, r"^### 2\.")
+                self.assertIn("--list", step2)
+                self.assertIn("呼び出し", step2)
+
+    # task0009 AC-2
+    def test_task0009_ac2_all_six_steps_present_in_order(self):
+        for plugin, info in PLUGINS.items():
+            with self.subTest(plugin=plugin):
+                _fm, body = self._load(plugin)
+                positions = [body.index(f"### {n}.") for n in range(1, 7)]
+                self.assertEqual(positions, sorted(positions))
+                for wording in UNPUSHED_WORDINGS:
+                    self.assertNotIn(wording, body)
+
+    # task0009 AC-3
+    def test_task0009_ac3_context_line_states_requirement_not_impossibility(
+        self,
+    ):
+        for plugin, info in PLUGINS.items():
+            with self.subTest(plugin=plugin):
+                _fm, body = self._load(plugin)
+                self.assertIn(CONTEXT_REQUIREMENT_LINE, body)
+                self.assertIn(CONTEXT_NOT_IMPOSSIBLE_LINE, body)
+
+    # task0009 AC-5
+    def test_task0009_ac5_valid_frontmatter_and_only_plugin_naming_differs(
+        self,
+    ):
+        for plugin, info in PLUGINS.items():
+            with self.subTest(plugin=plugin):
+                fm, _body = self._load(plugin)
+                self.assertEqual(fm.get("name"), "contributor-consent")
+                self.assertTrue(fm.get("description"))
+
+                commands_dir = info["plugin_root"] / "commands"
+                if commands_dir.is_dir():
+                    for f in commands_dir.rglob("*"):
+                        self.assertNotIn(
+                            "contributor-consent",
+                            f.name,
+                            f"unexpected commands/ file for this feature: {f}",
+                        )
+
+        # structural cross-plugin equality: normalize the two known,
+        # documented divergences (own plugin name; own review-phase step
+        # number) and assert the two documents are then identical, so any
+        # other drift between them fails this test
+        workflow_info = PLUGINS["em-workflow"]
+        review_info = PLUGINS["em-review"]
+        workflow_text = _read(workflow_info["skill_path"]).replace(
+            "em-workflow", "<PLUGIN>"
+        ).replace(f"手順 {workflow_info['probe_step']}", "手順 <N>")
+        review_text = _read(review_info["skill_path"]).replace(
+            "em-review", "<PLUGIN>"
+        ).replace(f"手順 {review_info['probe_step']}", "手順 <N>")
+        self.assertEqual(workflow_text, review_text)
 
 
 if __name__ == "__main__":
