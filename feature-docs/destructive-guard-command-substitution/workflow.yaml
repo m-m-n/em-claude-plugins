@@ -121,7 +121,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR8]
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-command-substitution/task0002
     notes: null
 
