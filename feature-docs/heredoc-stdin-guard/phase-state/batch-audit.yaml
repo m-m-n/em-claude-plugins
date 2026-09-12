@@ -214,3 +214,31 @@ records:
       {hookEventName, updatedInput}・hookEventName == "PreToolUse"・updatedInput
       の内容を assert する形にする。実機バイナリに依存せず決定的に回る。
       orchestrator の独立判断も同じ結論に達したため、そのまま採用した。
+  - question_id: implement.task-branch-delete-blocked
+    packet_id: null
+    answered_at: "2026-09-13T01:02:00+09:00"
+    source: batch-safe-default
+    answer_mode: single_select
+    selected_option_ids: [delete_from_integration_worktree]
+    freeform: null
+    normalized_answer: >-
+      implement-phase.md I.2.b step 4 が指示するタスクブランチの強制削除
+      （force-delete フラグ付きの branch 削除）が、em-workflow 自身の
+      destructive-guard（ルール git-branch-force-delete）に阻まれた。
+      代わりに integration worktree 内から通常削除フラグで
+      em-workflow/heredoc-stdin-guard/task0002 を削除した。
+    resolution_note: >-
+      gate: gate_id 無し（AskUserQuestion ゲートではなく PreToolUse hook の
+      拒否）。codex_consulted: false — 等価で副作用のより小さい代替手段が
+      自明だったため。マージ済みであることは
+      `git merge-base --is-ancestor` で検証済みで、integration worktree の
+      HEAD は当該ブランチを含む integration ブランチなので通常削除が成功する。
+      強制削除ではないため到達不能コミットは生じない。
+      選ばれなかった選択肢: メイン作業ツリーから強制削除を再試行（guard に
+      再度阻まれる）、ブランチを残す（I.2.b step 4 の掃除が未完のまま残る）。
+      retrospect 向けの観察 2 件 — (1) implement-phase.md I.2.b step 4 の
+      強制削除指示が、本リポジトリ同梱の destructive-guard と正面衝突する。
+      (2) destructive-guard は heredoc 本文に書かれた文字列リテラルを実行
+      コマンドとして誤認した（この監査記録を書き込む python heredoc の中の
+      引用文にマッチして拒否した）。.claude/rules/hook-tests.md が allow 側
+      ケースとして挙げている誤爆の類型そのもの。
