@@ -1,14 +1,18 @@
 schema_version: 1
 feature: destructive-guard-command-substitution
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 901fabf8d770dfd01a49580c6bc436a2f77b355f
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:c472ce8b81dcf56ae29d6a9db195bd7e3eeb6e11f67dde0063b143032346ec95
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:c472ce8b81dcf56ae29d6a9db195bd7e3eeb6e11f67dde0063b143032346ec95
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
