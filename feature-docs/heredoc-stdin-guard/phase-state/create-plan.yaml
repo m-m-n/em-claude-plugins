@@ -1,11 +1,11 @@
 schema_version: 1
 feature: heredoc-stdin-guard
 phase: create-plan
-status: completed
-generation: 1
-base_revision: 6c256f8
-last_input_digest: "sha256:00703a95f296aa208fc63cc73b10899bb2fe2548d5a96ab28a8ad26cb121470b"
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: 79471ac
+last_input_digest: "sha256:76dcf87ecd6541628a42abd55344841172023ebb8a0b0bd15a72a77d18ff8f34"
+active_request_id: create-plan-run-0003
 packets: {}
 answers:
   create-plan.version-bump-task-split:
@@ -40,6 +40,10 @@ worker_runs:
     status: completed
     input_digest: "sha256:00703a95f296aa208fc63cc73b10899bb2fe2548d5a96ab28a8ad26cb121470b"
     output_digest: "sha256:planner-completed-0002"
+  - request_id: create-plan-run-0003
+    status: dispatching
+    input_digest: "sha256:76dcf87ecd6541628a42abd55344841172023ebb8a0b0bd15a72a77d18ff8f34"
+    output_digest: null
 artifacts:
   - path: feature-docs/heredoc-stdin-guard/IMPLEMENTATION.md
     sha256: "sha256:ac322e5ef0ca4302d13d0859a2418a2ec067fd7e92b0e56cb086969f7c5b945c"
