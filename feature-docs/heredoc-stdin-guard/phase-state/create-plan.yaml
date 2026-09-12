@@ -1,7 +1,7 @@
 schema_version: 1
 feature: heredoc-stdin-guard
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 2
 base_revision: 79471ac
 last_input_digest: "sha256:76dcf87ecd6541628a42abd55344841172023ebb8a0b0bd15a72a77d18ff8f34"
@@ -84,7 +84,7 @@ patches:
     operation: replace_planning
     base_input_digest: "sha256:76dcf87ecd6541628a42abd55344841172023ebb8a0b0bd15a72a77d18ff8f34"
     base_workflow_blob: bbc0dddbab237c87a160fd2bdf6a34f7c97132e1
-    applied_at_commit: null
+    applied_at_commit: 303fb61d7e5a5ce96714e71bfca515fbf9f2a6a8
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
