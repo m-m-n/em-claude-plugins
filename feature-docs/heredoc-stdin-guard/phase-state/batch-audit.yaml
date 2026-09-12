@@ -1,0 +1,64 @@
+schema_version: 1
+feature: heredoc-stdin-guard
+records:
+  - question_id: create-plan.version-bump-task-split
+    packet_id: null
+    answered_at: "2026-09-12T23:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [fold_into_task0001]
+    freeform: null
+    normalized_answer: >-
+      FR9（plugin.json / marketplace.json の version bump）を task0002 として
+      分離せず、task0001 に畳み込む。フィーチャーのタスクは task0001 の 1 本に
+      なる。
+    resolution_note: >-
+      gate: create-plan の IMPLEMENTATION.md Open Question（gate_id 無しの
+      non-packet gate。references/batch-mode.md の「Any other non-packet
+      AskUserQuestion site」フォールバックに従い Codex 相談を先に行った）;
+      codex_consulted: true; 1 回目の run_codex_exec.sh readonly は entry 1 が
+      600 秒でタイムアウトし、fallback provider（litellm / vertex-glm-5.2）が
+      調査中に打ち切られて構造化回答に到達しなかった。2 回目は確定済みの事実
+      5 件を添えて codex exec -p litellm -m vertex-glm-5.2 を直接呼び、回答を
+      得た。Opus escalation: 実行せず（2 回目で option_id に写像したため）。
+      選ばれなかった選択肢: keep_separate。
+      Codex の論拠: (1) .claude/rules/core-plugin-version-bump.md の
+      「same change」は、version と中身が 1 コミットに載るときに最も強く満たさ
+      れる。(2) task0002 が先にマージされ task0001 が失敗・rework された場合、
+      integration ブランチは「フックが無いのに 0.1.73」という version/content
+      ドリフトを抱える。これはこのルールが防ごうとしている状態そのもの。
+      (3) 2 つのファイル集合は互いに素なので、畳み込んでもコンフリクトは増え
+      ない。(4) FR9 はマニフェスト 2 本の version 文字列 2 行だけで、
+      complexity high の task0001 に追加してもセッション負荷はほぼ増えず、
+      分離して得られる並列性はゼロに近い（trivial な bump が律速になることは
+      無い）。
+  - question_id: create-plan.version-bump-test
+    packet_id: null
+    answered_at: "2026-09-12T23:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [add_version_test]
+    freeform: null
+    normalized_answer: >-
+      tests/test_heredoc_stdin_guard_version_bump.py を追加し、baseline patch を
+      72 に引き上げて未 bump の tree で赤くなるようにする。SPEC.md の File
+      Structure には無いが、Declared Change Set は workflow.yaml の tasks.files
+      から導出される superset guard なので、計画時点で files に宣言すれば許容
+      される。
+    resolution_note: >-
+      gate: create-plan の IMPLEMENTATION.md Open Question（gate_id 無しの
+      non-packet gate。同上のフォールバック経路）; codex_consulted: true;
+      fallback provider answered（litellm / vertex-glm-5.2）; Opus escalation:
+      実行せず。選ばれなかった選択肢: no_new_test。
+      Codex の論拠と、こちらで裏取りした事実: (1) 汎用の
+      tests/test_plugin_version_parity.py は plugin.json と marketplace.json の
+      version 一致を見るが、baseline は BASELINE_VERSION = "0.1.50" で固定され
+      ており、未 bump の 0.1.72 でも 0.1.50 を超えるため緑のまま通る。
+      (2) 直近の per-feature モジュール（tests/test_muse_consent_version_bump.py）
+      の baseline は patch > 71 で、これも 0.1.72 で通る。つまり新規モジュールを
+      足さない限り「bump し忘れ」を赤くする仕掛けが 1 つも無い。
+      (3) このリポジトリには test_<feature>_version_bump.py が 16 本あり、
+      baseline を自フィーチャーの直前値まで引き上げて未 bump の tree を赤に
+      する、という確立した慣習になっている。
+      (4) em-workflow/scripts/check-plugin-invariants.py に version チェックは
+      無い（Codex が確認、こちらでも再確認）。
