@@ -1,11 +1,11 @@
 schema_version: 1
 feature: heredoc-stdin-guard
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
-base_revision: 08229aa569d4f680b7d5492a2fdac0a2986e4386
-last_input_digest: "sha256:9ac37ffcb0261ec66582d8a0a169f52a0a07a1bbb536fab17bc654c809d76ce2"
-active_request_id: null
+base_revision: 86928b5261bef822a0ee84998ebbd6b547592788
+last_input_digest: "sha256:555ee58b8c2d1ff670669f7a34ae687743449749ae9a97faffb516cf1ea2d3ed"
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -89,6 +89,10 @@ worker_runs:
     status: needs_user_input
     input_digest: "sha256:9ac37ffcb0261ec66582d8a0a169f52a0a07a1bbb536fab17bc654c809d76ce2"
     output_digest: "sha256:packet-create-spec-q0001"
+  - request_id: create-spec-run-0002
+    status: dispatched
+    input_digest: "sha256:555ee58b8c2d1ff670669f7a34ae687743449749ae9a97faffb516cf1ea2d3ed"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
