@@ -184,11 +184,37 @@ flowchart TD
 
 **説明**: 書き換え対象と判定した場合、`hookSpecificOutput.updatedInput` で
 コマンド先頭に `exec < /dev/null` を挿入した command を返す。
-`permissionDecision: "deny"` は決して返さない。
+`hookSpecificOutput` オブジェクトは `updatedInput` と併せて
+`"hookEventName": "PreToolUse"` を必ず持つ。Claude Code は `hookEventName` を
+欠いた `hookSpecificOutput` を拒否し、拒否された出力では `updatedInput` が
+適用されないため、フックが無言の no-op になるからである。`permissionDecision`
+メンバーは出力しない。`permissionDecision: "deny"` は決して返さない。
 
 **出力**:
 
+- `hookSpecificOutput.hookEventName`: `"PreToolUse"`
 - `hookSpecificOutput.updatedInput.command`: `exec < /dev/null` で始まる command 文字列
+
+書き換え対象のときの stdout の正規形は次のとおり:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "updatedInput": {
+      "command": "exec < /dev/null\ncat > /tmp/f.txt <<'EOF'\n...\nEOF\n",
+      "description": "...",
+      "timeout": 120000
+    }
+  }
+}
+```
+
+SPEC.md でこの stdout 形を描いている箇所——API Design の出力ブロック
+（"Output (stdout) when the command is a rewrite target"）、Component Diagram の
+`em-workflow/hooks/heredoc-stdin-guard.py` の `stdout :` 行、Data Flow の
+`yes -> updatedInput on stdout, exit 0` 行——は、いずれも `hookEventName` を
+示す。
 
 #### FR4: 冪等性
 
@@ -341,7 +367,7 @@ patch 単位で更新する（0.1.72 → 0.1.73）。
 ### 11.1 受け入れ基準
 
 - [ ] AC1: task_description の再現手順（heredoc で /tmp のプロンプトファイルを作り、続けて `codex exec --sandbox read-only "$(cat ...)"` を同一 Bash 呼び出しで実行する）を、既存フックが有効なまま実環境の Bash 呼び出しとして走らせると、codex exec が stdin 待ちにならず完了する。
-- [ ] AC2: AC1 の実行で、codex プロセスの CPU 時間が `00:00:00` のまま停止する事象が起きない（`updatedInput` が実際に適用されていることが実環境で確認できる）。適用されない場合は、フックの出力形（permissionDecision の併記有無）や matcher 配列内の位置を実装フェーズで調整する。
+- [ ] AC2: AC1 の実行で、codex プロセスの CPU 時間が `00:00:00` のまま停止する事象が起きない（`updatedInput` が実際に適用されていることが実環境で確認できる）。フックの出力形は前提ではなく、Claude Code の実際の PreToolUse フック出力スキーマに対して検証済みである。Claude Code 2.1.269 での実環境 A/B 確認において、同一の `updatedInput` を (A) `hookEventName` 無し、(B) `"hookEventName": "PreToolUse"` 付きかつ `permissionDecision` 無し の 2 つの形で返し、実際に実行されたコマンドから (B) だけが書き換えを適用し、(A) は元のコマンドを実行したと判定した。インストール済みランタイムの出力バリデータは `hookEventName` を欠く `hookSpecificOutput` を拒否し、そのサニタイザは `hookEventName !== "PreToolUse"` のとき `hookSpecificOutput` 全体を破棄する。したがって `hookSpecificOutput` は `"hookEventName": "PreToolUse"` を持ち（FR3）、これは以前に前提として置いていた選択肢（`permissionDecision` を併記するか否か、matcher 配列内のフックの位置）ではなく、検証済みの事実である。
 - [ ] AC3: heredoc を含み stdin リダイレクトの無いコマンドを渡すと、フックは `hookSpecificOutput.updatedInput.command` が `exec < /dev/null` で始まる JSON を stdout に出力し、exit code 0 で終了する。
 - [ ] AC4: 書き換え後のコマンドを実際にシェルで実行しても、heredoc 本文が 1 バイトも欠けずに書き出される（heredoc の内容・改行・終端が壊れない）。
 - [ ] AC5: heredoc を含まないコマンド、既に先頭で stdin をリダイレクト済みのコマンド、`tool_name` が Bash でないペイロード——いずれも stdout が空で exit code 0。
@@ -361,7 +387,7 @@ patch 単位で更新する（0.1.72 → 0.1.73）。
 
 ### 12.1 テスト観点
 
-- [ ] 正常系（TS1）: `cat > /tmp/f.txt <<'EOF'` … `EOF` を含むコマンドを PreToolUse JSON で渡し、updatedInput.command が `exec < /dev/null` 挿入済みであることを検証する。
+- [ ] 正常系（TS1）: `cat > /tmp/f.txt <<'EOF'` … `EOF` を含むコマンドを PreToolUse JSON で渡し、updatedInput.command が `exec < /dev/null` 挿入済みであること、および出力された `hookSpecificOutput` が `"hookEventName": "PreToolUse"` を持つことを検証する。
 - [ ] 正常系（TS2）: heredoc と、stdin を読む後続コマンド（`codex exec …` を模した `cat` などのプレースホルダ）が同居するコマンドで、同じく書き換えが起きる。
 - [ ] 正常系（TS3）: heredoc 無しのコマンド（`ls -l`、`git status` 等）で stdout が空。
 - [ ] 境界値（TS4）: here-string `<<<` のみを含むコマンドを heredoc と誤認しない。
