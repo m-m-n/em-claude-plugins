@@ -166,7 +166,8 @@ workflow:
     completed_at_commit: fec1e6f4e2ca51112072c3a8fe64b5447f751ead
     base_commit: 8c9b6f5db3c780206450a13c8dd4442d3a361fa9
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: 2ef0590e442c80be604461cb3024950241ff5166
   - id: verify
     status: pending
     result: null
@@ -215,10 +216,10 @@ tasks:
     branch: em-workflow/heredoc-stdin-guard/task0002
 
 review:
-  status: in_progress
-  rounds_completed: 1
-  residual_critical_high: 3
-  needs_rework: true
+  status: completed
+  rounds_completed: 2
+  residual_critical_high: 0
+  needs_rework: false
   perspectives: [comprehensive, security, architecture, spec, performance]
   plan:
     floor: [comprehensive, security, architecture, spec]
