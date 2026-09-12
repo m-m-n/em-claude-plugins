@@ -1,0 +1,169 @@
+round: 2
+executed_at: '2026-09-13T01:19:32+09:00'
+scope:
+  review_mode: diff
+  base_commit: 8c9b6f5db3c780206450a13c8dd4442d3a361fa9
+  head_commit: c091650c0661360fbb05a7e3744113eb06b3d44d
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/hooks/heredoc-stdin-guard.py
+  - em-workflow/hooks/hooks.json
+  - test-docs/heredoc-stdin-guard/task0001.tests.yaml
+  - test-docs/heredoc-stdin-guard/task0002.tests.yaml
+  - tests/test_guardrail_hooks_migration.py
+  - tests/test_heredoc_stdin_guard.py
+  - tests/test_heredoc_stdin_guard_version_bump.py
+  - tests/test_hooks_registration.py
+  - tests/test_muse_guard_registration.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: PreToolUse:Bash として全 Bash 呼び出しに同期実行され、任意長のコマンド文字列を走査する。NFR3 が 10 秒の hooks.json タイムアウト内に収まることを要求しているため。
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+  skip_reason: null
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 8285b1db5b16af80
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/heredoc-stdin-guard.py
+  line: 202
+  title: コメント中のアポストロフィーで解析が引用状態に入り、ガードが無効化される
+  description: '_analyze は `#` 以降のコメントを読み飛ばさないため、コメント内の `''` が in_squote を立てる。評価者が実機で再現: `# don''t wait
+    for input` に続けて `cat <<''EOF''` / `hello` / `EOF` / `cat` を与えると、`don''t` の `''` で引用状態に入り、続く `<<''EOF''`
+    の `''` が閉じ、最後の `''` が開いたまま終端して _Undecidable となり、出力は空（書き換えなし）。有効な bash スクリプトであり、末尾の `cat` は stdin を待ち続ける
+    — このフックが防ぐはずの状態がそのまま残る。説明コメントを 1 行足しただけで保護が外れるため、発火条件が広い。comprehensive#0 の報告を評価者が独立に再現済み。'
+  suggestion: トークン先頭位置の `#` からその行末までをコメントとして読み飛ばし、その範囲では引用符・リダイレクトを解析しない。コメント付き heredoc が書き換えられることを回帰テストに追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート（severity ∈ {critical, high}）に載らない
+- stable_id: 96affa7233d4eed2
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/heredoc-stdin-guard.py
+  line: 118
+  title: 未引用の終端語を空白まで読むため、隣接する `;` / `|` を取り込んで heredoc を見逃す
+  description: '_parse_heredoc_word の未引用パスは空白・タブ・改行のみを区切りとするが、bash は終端語をシェルのメタ文字でも区切る。評価者が実機で再現: `cat
+    <<EOF; cat` と `cat <<EOF|cat` はいずれも出力が空。終端語が `EOF;` / `EOF|cat` と解釈され、_skip_heredoc_body が終端行を見つけられず
+    _Undecidable になるため。どちらも有効な bash で、後続の `cat` は stdin を待ち続ける。comprehensive#0 の報告を評価者が独立に再現済み。'
+  suggestion: 未引用の終端語の読み取りを `;` `|` `&` `<` `>` `(` `)` などのメタ文字でも停止させ、区切り文字自体は外側の走査に戻して処理する。隣接区切りのケースを回帰テストに追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート（severity ∈ {critical, high}）に載らない
+- stable_id: c9c7c5272690d5a9
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/heredoc-stdin-guard.py
+  line: 225
+  title: プロセス置換 `<(...)` と `[[ a < b ]]` を先頭コマンドの標準入力リダイレクトと誤認する
+  description: 'run_len == 1 の分岐は直後の文字を見ずに head_has_redirect を立てるため、標準入力を変更しない構文まで「既にリダイレクト済み」と判定する。評価者が実機で再現:
+    `cat <(printf hello)` に heredoc と `cat` を続けた入力、および `[[ a < b ]]` に同様に続けた入力はいずれも出力が空。has_heredoc は
+    true なのに冪等性判定（D5）が誤って成立し、書き換えが省略される。comprehensive#0 の報告を評価者が独立に再現済み。他 2 件と根本原因（静的読みと bash のトークン化の乖離）は共通だが、修正箇所は独立。'
+  suggestion: '`<` の直後が `(` の場合はプロセス置換として標準入力リダイレクトから除外し、`[[ ... ]]` 内の比較演算子も同様に扱う。両ケースの後に heredoc が続く入力を回帰テストに追加する。'
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート（severity ∈ {critical, high}）に載らない
+- stable_id: 3ec942f70e8b25b4
+  severity: medium
+  category: spec
+  file: .claude-plugin/marketplace.json
+  line: null
+  title: SPEC の版番号リテラル（0.1.73）が実装（0.1.74）と乖離し、AC10 が字義どおりには成立しない
+  description: '評価者が両マニフェストを直接確認: em-workflow/.claude-plugin/plugin.json と .claude-plugin/marketplace.json
+    はともに 0.1.74。一方 SPEC.md は FR9 (129-132 行)、File Structure (267 / 269 行)、AC10 (426-427 行)、A5 (458-459
+    行)、480 行のいずれも 0.1.73 と書いており、spec#0 の指摘どおりリテラルが一致しない。ただし実装側が正しい: task0001 が 0.1.72 → 0.1.73、レビュー round
+    1 起因の rework task0002 が hook を再度変更したため 0.1.73 → 0.1.74 と、プロジェクト規則 core-plugin-version-bump.md に従って
+    2 段上がった。tests/test_heredoc_stdin_guard_version_bump.py もベースラインを 0.1.73 に再アンカーして 0.1.74 を要求しており、2 マニフェストの一致も検証している。実害は機能面には無いが、SPEC
+    が誤った SSOT として残る。spec#0 は severity high としたが、外部から観測可能な誤動作を生まないため評価者が medium に降格した。'
+  suggestion: 'マニフェストは触らず、SPEC.md 側を 0.1.74 に改める: FR9 (129-132)、File Structure (267 / 269)、AC10 (426-427)、A5
+    (458-459)、480 行。あわせて「rework で hook を再変更したため patch を 1 段追加した」旨を A5 に 1 行残す。'
+  sources:
+  - litellm:muse-spark:spec
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'category: spec は auto-fix の候補ゲートから除外される'
+evaluation:
+  round_summary: 'Round 2、cross_validation=true、5 run を dispatch、skip 0、unreviewed_perspectives なし。round
+    1 の critical (91c38ea9a5c98a26) は解消済みであることを評価者が直接確認した: _emit_rewrite (heredoc-stdin-guard.py:294-305)
+    は hookEventName="PreToolUse" を出力し、実機実行で正しい形の JSON を返す。関連する round 1 の派生項目も解消: SPEC.md の規範的出力例は訂正済み
+    (24c27cd42dbcc8fe)、tests/test_heredoc_stdin_guard.py の HOOK_OUTPUT_SCHEMA は更新済み (d4666a94e704dcd5)、task0002.tests.yaml
+    が AC-1/AC-2/AC-3 の red→green を記録 (c8e6158bfdc449bc)。新規の critical/high は無い。観点別カバレッジ: security — corroborated（フックはファイル書き込み・プロセス起動・ネットワーク・stderr
+    出力をいずれも持たず、常に exit 0、deny を出す経路が無い）。performance — corroborated（_analyze は index が単調前進する単一走査、正規表現なし、標準ライブラリのみ）。architecture
+    — 評価者の独立検査は architecture#0 の high を裏付けず、反証した（dismissed_sites 参照）。spec — corroborated（版番号リテラルの不一致を直接確認、severity
+    は medium に降格）。comprehensive — corroborated（3 件の medium をすべて実機で再現）。プロンプトインジェクション・role override・埋め込み指示は、5
+    件の reviewer 出力にも検査した 10 ファイルにも見当たらなかった。'
+  recommended_action: complete
+  action_rationale: round 1 の critical は修正され、task0002.tests.yaml に red→green として記録され、評価者の再実行でも正しい出力を確認した。今
+    round に critical/high は無い（architecture#0 の high は反証して却下、spec#0 の high は実害の無いリテラル乖離として medium に降格）。残る
+    4 件はすべて medium で、うち 3 件は SPEC NFR5 が明示的に許容する fail-open 側の精度ギャップ（誤検出は deny せず stdin を閉じるだけ、検出漏れは本機能導入前の状態に戻るだけ）であり、本機能の出荷は現状に対して厳密に改善。
+dismissed_sites:
+- file: em-workflow/hooks/heredoc-stdin-guard.py
+  line: 294
+  run_id: architecture#0
+  reason: 'false positive — 評価者が反証。さらに orchestrator が Claude Code 2.1.269 の実セッションで end-to-end 検証した: permissionDecision
+    を持たない裸の hookSpecificOutput.updatedInput だけを返すローカルの command 型 PreToolUse フックで、Bash の command 書き換えが実際に適用された。updatedInput
+    を捨てる sanitizer (ego/uje) の呼び出し元は cloud / device / untrusted-interpreter 経由のフック転送のみで、ローカルの command
+    フックはその経路を通らない。'
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null

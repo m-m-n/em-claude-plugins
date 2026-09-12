@@ -1,0 +1,119 @@
+schema_version: 1
+feature: heredoc-stdin-guard
+phase: create-spec
+status: completed
+generation: 2
+base_revision: cf7f8077658ac9209d5bd186abdbea8ff081682d
+last_input_digest: "sha256:a63bbf40c1616acbd995bf000fc19157ec994b3ffb78991b1de67e6a82d57805"
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-09-12T23:14:00+09:00"
+    questions:
+      - question_id: design.step-decision
+        status: answered
+      - question_id: testing.harness-placement
+        status: answered
+      - question_id: technical.updated-input-effectiveness
+        status: answered
+answers:
+  design.step-decision:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-12T23:16:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: >-
+      requirements-analyst の推奨どおり design ステップを skip する。
+      skipped_reason: UI も視覚的成果物も無く、追加するのは Python フック 1 本・
+      hooks.json のエントリ 1 つ・テスト・version 更新のみのため。
+    resolution_note: >-
+      gate: create-spec.design-step; references/batch-policies.yaml の
+      action: select / option_id: decide_autonomously をそのまま適用した。
+  testing.harness-placement:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-12T23:16:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [repo_root_unittest]
+    freeform: null
+    normalized_answer: >-
+      リポジトリルート tests/test_heredoc_stdin_guard.py に unittest として置く。
+      フックを subprocess で起動し stdin に PreToolUse JSON を渡して、
+      stdout の updatedInput と exit code を検証する契約テスト形式。
+      検出条件のテストと「書き換え後も heredoc 本文が壊れない」実行テストの
+      両方を同一ファイルに置く。
+    resolution_note: >-
+      gate: create-spec.requirement-clarification (action: codex_consultation);
+      codex_consulted: true; fallback provider answered (entry 2,
+      litellm/vertex-glm-5.2); Opus escalation: 実行せず（1 回の相談で全問が
+      option_id に写像したため）。選ばれなかった選択肢: hook_cases_harness / both。
+      Codex の論拠: (1) .claude/rules/hook-tests.md のケーステーブル式ハーネスは
+      destructive-guard.py 専用と明記されており、その [verdict, label, command]
+      形式は allow/deny/ask 判定専用で、updatedInput によるコマンド書き換えとは
+      出力形状が合わない。(2) muse_guard / failed-run-cleanup-guard /
+      queue_launch_guard など他の全フックは tests/test_*.py でテストされており、
+      test/README.md が subprocess + JSON stdin の契約テストを標準と定めている。
+      (3) 検出条件テストも heredoc 非破壊の実行テストも 1 ファイルで賄えるため、
+      both は保守コストを増やすだけ。
+  technical.updated-input-effectiveness:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-12T23:16:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [e2e_required]
+    freeform: null
+    normalized_answer: >-
+      既存フックが有効なまま実環境の Bash 呼び出しで再現手順を走らせ、
+      codex exec が stdin 待ちにならず完了することを受入基準に含める。
+      updatedInput が適用されない場合は、フックの出力形
+      （permissionDecision の併記有無）や matcher 配列内の位置を実装フェーズで
+      調整する。
+    resolution_note: >-
+      gate: create-spec.requirement-clarification (action: codex_consultation);
+      codex_consulted: true; fallback provider answered (entry 2,
+      litellm/vertex-glm-5.2); Opus escalation: 実行せず。
+      選ばれなかった選択肢: unit_only。
+      Codex の論拠: (1) このリポジトリに updatedInput を返す既存フックは 1 つも
+      無く（`rg 'updatedInput' em-workflow/hooks/` が空）、同じ matcher 配列の
+      destructive-guard.py は非破壊コマンドへ毎回 allow を返すため、7 本目の
+      updatedInput が実際に適用されるかの前例が無い。(2) unit_only では
+      「正しい JSON を stdout に出す」だけで緑になり、適用されなければハングは
+      解消しないので false-green が最も致命的な失敗モードになる。
+      (3) 実装フェーズで 1 回 codex exec の完走を確認するだけなら保守コストは
+      低く、未知のリスクを機械的に排除できる。
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:9ac37ffcb0261ec66582d8a0a169f52a0a07a1bbb536fab17bc654c809d76ce2"
+    output_digest: "sha256:packet-create-spec-q0001"
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: "sha256:555ee58b8c2d1ff670669f7a34ae687743449749ae9a97faffb516cf1ea2d3ed"
+    output_digest: "sha256:analyst-completed-0002"
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:aba1bcf322f843eb5d3d2e72749bb87e9352be13421a276f00514da0337c73ae"
+    output_digest: "sha256:spec-writer-completed-0003"
+  - request_id: create-spec-run-0004
+    status: completed
+    input_digest: "sha256:b78b26c76e04f9d54bb2ba8374154b9b9deabbf4e9771e91949f2f3b890ff9ee"
+    output_digest: "sha256:analyst-completed-0004"
+  - request_id: create-spec-run-0005
+    status: completed
+    input_digest: "sha256:a63bbf40c1616acbd995bf000fc19157ec994b3ffb78991b1de67e6a82d57805"
+    output_digest: "sha256:spec-writer-completed-0005"
+artifacts:
+  - path: feature-docs/heredoc-stdin-guard/REQUIREMENTS.md
+    sha256: "sha256:ae733da842f3fedf096a3f4d6d2aa72234233c4bab03ba726b0b386c90798b58"
+    produced_by: create-spec-run-0005
+  - path: feature-docs/heredoc-stdin-guard/SPEC.md
+    sha256: "sha256:d49d35be3acaa704ce04f0c7731df8f27b64e080d930331b8c7baeeafa1f2546"
+    produced_by: create-spec-run-0005
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

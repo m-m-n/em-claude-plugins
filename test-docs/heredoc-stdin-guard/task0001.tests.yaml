@@ -1,0 +1,161 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestRewritesBareHeredocWrite.test_rewrites_command_and_preserves_other_fields
+      - tests.test_heredoc_stdin_guard.TestRewritesHeredocFollowedByStdinReader.test_rewrites_command
+    red_confirmed: true
+    red_reason: >-
+      Written before em-workflow/hooks/heredoc-stdin-guard.py existed;
+      subprocess.run failed with returncode 2 and stderr
+      "/usr/bin/python3: can't open file
+      .../em-workflow/hooks/heredoc-stdin-guard.py: [Errno 2] No such file
+      or directory" for both variants.
+  AC-2:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWithoutHeredoc.test_plain_command_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWithoutHeredoc.test_here_string_alone_is_not_mistaken_for_a_heredoc
+    red_confirmed: true
+    red_reason: >-
+      Same missing-guard-file failure (returncode 2, "No such file or
+      directory") observed before implementation for both the no-heredoc
+      and here-string-only cases.
+  AC-3:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWhenAlreadyRedirected.test_command_already_starting_with_the_cutoff_token_is_not_rewritten
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWhenAlreadyRedirected.test_command_closed_from_the_head_with_a_plain_redirect_is_not_rewritten
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWhenAlreadyRedirected.test_feeding_the_guards_own_output_back_never_doubles_the_token
+    red_confirmed: true
+    red_reason: >-
+      Same missing-guard-file failure observed before implementation for
+      all three idempotency cases (the guard did not exist to produce
+      either the first or the second invocation's output).
+  AC-4:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_malformed_json_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_missing_command_field_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_empty_command_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_non_string_command_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_non_bash_tool_name_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_unterminated_quote_is_undecidable_and_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_empty_stdin_produces_no_rewrite
+    red_confirmed: true
+    red_reason: >-
+      Same missing-guard-file failure (returncode 2) observed before
+      implementation across all five fail-open payload variants named in
+      the task plan (malformed JSON, missing/empty/non-string command,
+      non-Bash tool name) plus the two additional cases added during
+      writing (unterminated quote, empty stdin).
+  AC-5:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestExecutedRewriteWritesTheOriginalHeredocBodyExactly.test_body_is_preserved_byte_for_byte_within_a_temp_directory
+    red_confirmed: true
+    red_reason: >-
+      Failed at the rewrite step (assert_rewrite -> returncode 2, "No such
+      file or directory") before the guard existed, so the subsequent
+      subprocess execution and byte-for-byte file comparison were never
+      reached.
+  AC-6:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestOutputNeverCarriesAPermissionDecision.test_no_case_ever_emits_a_permission_decision_and_exit_is_always_zero
+    red_confirmed: true
+    red_reason: >-
+      Failed on the exit-status assertion (returncode 2 != 0, "No such
+      file or directory") for every case in the corpus before the guard
+      existed.
+  AC-7:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestGuardImportsOnlyTheStandardLibrary.test_only_standard_library_imports
+    red_confirmed: true
+    red_reason: >-
+      Errored with FileNotFoundError reading
+      em-workflow/hooks/heredoc-stdin-guard.py before the guard file
+      existed, so the stdlib-only import check could not even run.
+  AC-8:
+    tests:
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheSevenEntryOrderedShape.test_exactly_seven_entries
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheSevenEntryOrderedShape.test_seventh_entry_invokes_the_heredoc_guard_in_the_pinned_form
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheSevenEntryOrderedShape.test_first_six_entries_are_unchanged_verbatim
+      - tests.test_hooks_registration.TestPreToolUseBashArrayHasTheSevenEntryOrderedShape.test_reordering_the_first_six_would_be_caught
+      - tests.test_hooks_registration.TestEveryRegisteredHookIsWellFormed.test_every_registered_hook_command_is_well_formed
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_bash_guards_are_declared_in_the_required_order
+      - tests.test_guardrail_hooks_migration.TestPreToolUseBashGuardOrder.test_destructive_guard_is_last_among_decision_capable_guards
+      - tests.test_muse_guard_registration.TestEmWorkflowOrderingAgainstDestructiveGuard.test_destructive_guard_remains_last_among_decision_capable_guards
+    red_confirmed: true
+    red_reason: >-
+      test_exactly_seven_entries and test_seventh_entry_invokes_the_heredoc_guard_in_the_pinned_form
+      were written against the already-edited hooks.json, so redness was
+      confirmed retroactively by stashing the hooks.json edit and
+      re-running: with the pre-edit 6-entry array, test_exactly_seven_entries
+      failed "AssertionError: 6 != 7" and
+      test_seventh_entry_invokes_the_heredoc_guard_in_the_pinned_form
+      failed "AssertionError: None != 'command'" (the stash was then
+      popped to restore the edit; test_first_six_entries_are_unchanged_verbatim
+      and test_reordering_the_first_six_would_be_caught were already true
+      under the pre-edit array too, since they only assert over the first
+      six elements -- they are retention/non-vacuity guards, not proof of
+      the new behavior, so their own significance rests on the two tests
+      that did discriminate). test_every_registered_hook_command_is_well_formed
+      (pre-existing test) was observed to fail directly, before
+      NONSTANDARD_HOOK_TIMEOUTS gained the "heredoc-stdin-guard.py": 10
+      entry, with "timeout is not the expected 15: 10". The three
+      pre-existing pinned-order tests
+      (test_bash_guards_are_declared_in_the_required_order,
+      test_destructive_guard_is_last_among_decision_capable_guards,
+      test_destructive_guard_remains_last_among_decision_capable_guards)
+      were observed to fail directly against the post-hooks.json-edit,
+      pre-test-update state: the first with a list-length/element diff
+      naming the extra "heredoc-stdin-guard.py" entry, the other two with
+      "AssertionError: 'heredoc-stdin-guard.py' != 'destructive-guard.py'".
+  AC-9:
+    tests:
+      - tests.test_heredoc_stdin_guard_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_heredoc_stdin_guard_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_heredoc_stdin_guard_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_heredoc_stdin_guard_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - tests.test_heredoc_stdin_guard_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_heredoc_stdin_guard_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_version_not_dragged_along
+    red_confirmed: true
+    red_reason: >-
+      Written and run before editing either manifest: both baseline-patch
+      assertions failed with "AssertionError: 72 not greater than 72"
+      against the pre-bump 0.1.72 in both files. The four
+      retention/non-vacuity checks (name field, em-review entry source and
+      version) were already true pre-bump -- they guard against this
+      change disturbing untouched fields, not against a missing behavior.
+  AC-10:
+    tests:
+      - tests.test_heredoc_stdin_guard_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_heredoc_stdin_guard_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_heredoc_stdin_guard_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_heredoc_stdin_guard_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+    red_confirmed: false
+    red_reason: >-
+      These are the negative-proof and non-vacuity-guard tests themselves
+      (they assert that the matcher helpers correctly REJECT forged
+      pre-bump/differing values) -- they pass by construction as soon as
+      written, independent of the real manifests' state, so there is no
+      "before the fix" red state to observe for them. Module discovery,
+      JSON parsing and the reversion property named in AC-10 ("reverting
+      only the two manifest edits makes this module fail") are covered by
+      AC-9's red observation above (test_version_is_past_baseline /
+      test_em_workflow_entry_version_is_past_baseline going red on the
+      pre-bump manifests IS that reversion failing).
+  AC-11:
+    tests: []
+    red_reason: >-
+      Verified by running the full suite
+      (python3 -m unittest discover -s tests, 4357 tests, all pass,
+      including both new test files) and
+      python3 em-workflow/hooks/tests/run-destructive-guard.py (156/156
+      passed) after implementation; not itself a test to write.
+  AC-12:
+    tests: []
+    red_reason: >-
+      Verified by reading the task's own diff (git status/diff): every
+      changed path is under em-workflow/, .claude-plugin/marketplace.json
+      or tests/; no reference to any SPEC-named undocumented feature flag
+      was introduced. Per the task plan, no test is invented to police
+      this.
