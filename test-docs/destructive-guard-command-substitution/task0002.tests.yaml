@@ -1,0 +1,36 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_destructive_guard_command_substitution_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_destructive_guard_command_substitution_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: "AssertionError: 74 not greater than 74 (both manifests still read 0.1.74 before the edit)"
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - tests.test_destructive_guard_command_substitution_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_destructive_guard_command_substitution_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_version_not_dragged_along
+    red_confirmed: false
+    red_reason: "These are pure regression guards over fields the task never touches (plugin name, sibling plugin's source/version) -- they were already green before the manifest edit and stay green after. No behavior change to prove red first; the plan's Design explicitly excuses fields with no new wording from a negative proof."
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution_version_bump (module discovery)
+    red_confirmed: false
+    red_reason: "Discoverability and JSON-parsing/name-lookup structure are properties of the module's own code, not something that can go red/green via a manifest edit; verified by running python3 -m unittest discover -s tests and inspecting the module source (json.loads + _marketplace_entry lookup by name, no text pattern-matching)."
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_destructive_guard_command_substitution_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_destructive_guard_command_substitution_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_destructive_guard_command_substitution_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_destructive_guard_command_substitution_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_destructive_guard_command_substitution_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+    red_confirmed: true
+    red_reason: "Negative-proof tests assert AssertionError is raised on forged pre-bump/differing values (always true by construction, confirmed passing). The 'reverting the manifest edits fails the module' half was confirmed via the same red run as AC-1: on the unedited tree (0.1.74/0.1.74) test_version_is_past_baseline and test_em_workflow_entry_version_is_past_baseline failed with 'AssertionError: 74 not greater than 74' -- the version comparison itself, not a parse error."
+  AC-5:
+    tests: []
+    red_reason: "Verifiable as a whole-suite run and a CLI exit code, not a single test. Confirmed by actually running both commands after the edits: 'python3 -m unittest discover -s tests' -> Ran 4368 tests, OK (4358 baseline + 10 new, no regressions); 'python3 em-workflow/scripts/check-plugin-invariants.py .' -> all 7 checks PASS, exit 0."
