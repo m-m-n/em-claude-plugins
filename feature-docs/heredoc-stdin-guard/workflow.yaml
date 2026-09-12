@@ -194,7 +194,8 @@ workflow:
       （エンジン管理情報である feature-docs/ と test-docs/ が許可範囲の列挙に
       入っていない）。文書修正の follow-up として retrospect に送る。
   - id: retrospect
-    status: in_progress
+    status: completed
+    completed_at_commit: 299c2ac6c33d7f66aa2a9224aa9f1caa1b72b106
 
 tasks:
   task0001:
