@@ -41,6 +41,21 @@ GUARD_PATH = REPO_ROOT / "em-workflow" / "hooks" / "heredoc-stdin-guard.py"
 
 CUTOFF = "exec < /dev/null"
 
+# The hook-output schema fixture (IMPLEMENTATION.md "Hook-output schema
+# fixture", D10, D11): a literal in-repo declaration of the shape the
+# runtime requires, derived from the runtime's documented PreToolUse
+# hook-output schema and the SPEC AC2 A/B measurement -- NEVER read from an
+# installed Claude Code build, its binary, its bundled documentation, or
+# anything under the user's home directory (D11). Declared exactly once;
+# both `assert_rewrite` and the dedicated schema-conformance case below are
+# the only consumers -- no member list for the hook-specific output is
+# written out a second time anywhere in this file.
+HOOK_OUTPUT_SCHEMA = {
+    "top_level_member": "hookSpecificOutput",
+    "hook_specific_output_members": frozenset({"hookEventName", "updatedInput"}),
+    "event_name": "PreToolUse",
+}
+
 
 def run_guard(payload=None, stdin_text=None):
     if payload is not None:
@@ -64,13 +79,51 @@ def assert_rewrite(test, result, original_command):
     test.assertEqual(result.returncode, 0, result.stderr)
     test.assertEqual(result.stderr, "")
     data = json.loads(result.stdout)
-    test.assertEqual(set(data.keys()), {"hookSpecificOutput"})
-    out = data["hookSpecificOutput"]
-    test.assertEqual(set(out.keys()), {"updatedInput"})
+    test.assertEqual(set(data.keys()), {HOOK_OUTPUT_SCHEMA["top_level_member"]})
+    out = data[HOOK_OUTPUT_SCHEMA["top_level_member"]]
+    test.assertEqual(set(out.keys()), HOOK_OUTPUT_SCHEMA["hook_specific_output_members"])
     test.assertNotIn("permissionDecision", out)
+    test.assertEqual(out["hookEventName"], HOOK_OUTPUT_SCHEMA["event_name"])
     updated = out["updatedInput"]
     test.assertEqual(updated["command"], f"{CUTOFF}\n{original_command}")
     return updated
+
+
+# --- AC-3: dedicated schema-conformance case ---------------------------
+
+
+class TestRewriteOutputConformsToHookOutputSchema(unittest.TestCase):
+    """AC-3: a rewrite-target output, checked against the hook-output
+    schema fixture as a whole -- the required top-level member is present,
+    the hook-specific output's member set is exactly the required set, the
+    event-name member holds the required event name, and the updated-input
+    member is present with the expected command. Each of the four is
+    checked independently, so this case fails if any one of them is
+    violated -- this is the case that would have caught the original
+    defect (IMPLEMENTATION.md D10/D11), where the event-name member was
+    missing and every other case still passed because it only checked
+    `updatedInput`."""
+
+    COMMAND = "cat > /tmp/heredoc-guard-schema-check.txt <<'EOF'\nhi\nEOF\n"
+
+    def test_conforms_to_the_hook_output_schema_fixture(self):
+        result = run_guard({"tool_name": "Bash", "tool_input": {"command": self.COMMAND}})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+
+        # (a) required top-level member is present.
+        self.assertIn(HOOK_OUTPUT_SCHEMA["top_level_member"], data)
+        out = data[HOOK_OUTPUT_SCHEMA["top_level_member"]]
+
+        # (b) hook-specific output's member set is exactly the required set.
+        self.assertEqual(set(out.keys()), HOOK_OUTPUT_SCHEMA["hook_specific_output_members"])
+
+        # (c) event-name member holds the required event name.
+        self.assertEqual(out["hookEventName"], HOOK_OUTPUT_SCHEMA["event_name"])
+
+        # (d) updated-input member is present with the expected command.
+        self.assertIn("updatedInput", out)
+        self.assertEqual(out["updatedInput"]["command"], f"{CUTOFF}\n{self.COMMAND}")
 
 
 # --- AC-1: rewrite target, two payload variants -----------------------
