@@ -38,9 +38,19 @@ so that the run does not stall with the child process at zero CPU time.
       instead of waiting on stdin.
 - [ ] AC2: In the AC1 run, the codex process does not stall with CPU time at
       `00:00:00` (`updatedInput` is observably applied in the real environment).
-      If it is not applied, the hook's output shape (whether `permissionDecision`
-      is emitted alongside) or its position in the matcher array is adjusted in
-      the implementation phase.
+      The hook's output shape is not an assumption: it was verified against
+      Claude Code's actual PreToolUse hook output schema. A real-environment A/B
+      check on Claude Code 2.1.269 returned the same `updatedInput` in two
+      shapes — (A) without `hookEventName`, (B) with
+      `"hookEventName": "PreToolUse"` and no `permissionDecision` — and
+      determined from the command actually executed that only (B) applied the
+      rewrite; (A) ran the original command. The installed runtime's own output
+      validator rejects a `hookSpecificOutput` that is missing `hookEventName`,
+      and its sanitizer discards the whole `hookSpecificOutput` when
+      `hookEventName !== "PreToolUse"`. `hookSpecificOutput` therefore carries
+      `"hookEventName": "PreToolUse"` (FR3), and this is a verified fact rather
+      than the earlier assumed alternatives (whether `permissionDecision` is
+      emitted alongside, or the hook's position in the matcher array).
 
 ### US2: The hook never blocks a tool call it cannot classify
 As an em-workflow user, I want the hook to stay out of the way for commands it
@@ -83,8 +93,15 @@ closing stdin.
   redirected at the head of the command.
 - **FR3 — stdin cut-off inserted at the head of the command via updatedInput:**
   For a rewrite target, return a command with `exec < /dev/null` inserted at the
-  head via `hookSpecificOutput.updatedInput`. `permissionDecision: "deny"` is
-  never returned.
+  head via `hookSpecificOutput.updatedInput`. The `hookSpecificOutput` object
+  MUST carry `"hookEventName": "PreToolUse"` alongside `updatedInput`: Claude
+  Code rejects a `hookSpecificOutput` that omits `hookEventName`, and a rejected
+  output means `updatedInput` is never applied, leaving the hook a silent no-op.
+  No `permissionDecision` member is emitted; `permissionDecision: "deny"` is
+  never returned. The normative stdout shape for a rewrite target is the one
+  given under API Design, and every depiction of that shape in this document —
+  the API Design output block, the Component Diagram's `stdout :` line, and the
+  Data Flow's rewrite-target line — shows `hookEventName`.
 - **FR4 — Idempotency:** When stdin is already redirected to `/dev/null` (or
   equivalent) at the head of the command — including the result of a previous
   rewrite — perform no rewrite and emit nothing. `exec < /dev/null` is never
@@ -162,7 +179,8 @@ em-workflow/hooks/heredoc-stdin-guard.py
              command is a non-empty string?  (FR2/FR6)
              heredoc operator present, here-string excluded?  (FR2)
              stdin already redirected at the head?  (FR2/FR4)
-  - stdout : hookSpecificOutput.updatedInput, or nothing  (FR3/FR6)
+  - stdout : hookSpecificOutput { hookEventName: "PreToolUse", updatedInput },
+             or nothing  (FR3/FR6)
   - exit   : always 0  (FR1/FR6)
 
 em-workflow/hooks/hooks.json
@@ -179,7 +197,8 @@ Bash tool call
   → PreToolUse JSON on the hook's stdin
   → static analysis of tool_input.command      (NFR2)
   → rewrite target?  no  → nothing on stdout, exit 0      (FR4/FR6)
-                     yes → updatedInput on stdout, exit 0 (FR3/FR5)
+                     yes → hookSpecificOutput with hookEventName "PreToolUse"
+                           and updatedInput on stdout, exit 0  (FR3/FR5)
   → shell runs the command with stdin at /dev/null
 ```
 
@@ -205,6 +224,7 @@ The hook's interface is the PreToolUse stdin/stdout contract, not an HTTP API.
 ```json
 {
   "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
     "updatedInput": {
       "command": "exec < /dev/null\ncat > /tmp/f.txt <<'EOF'\n...\nEOF\n",
       "description": "...",
@@ -292,7 +312,8 @@ path that never materializes is not a violation.
 
 - [ ] TS1 (FR2, FR3): Pass a command containing `cat > /tmp/f.txt <<'EOF'` … `EOF`
       as PreToolUse JSON and assert that `updatedInput.command` has
-      `exec < /dev/null` inserted.
+      `exec < /dev/null` inserted, and that the emitted `hookSpecificOutput`
+      carries `"hookEventName": "PreToolUse"`.
 - [ ] TS2 (FR2, FR3): A command where a heredoc and a following stdin-reading
       command coexist (a `cat`-style placeholder standing in for `codex exec …`)
       is rewritten the same way.
@@ -320,7 +341,8 @@ path that never materializes is not a violation.
 
 - [ ] TS8 (FR1, FR2, FR3, FR7): With the existing hooks active in the real
       environment, run the reproduction procedure's Bash call once and confirm
-      `codex exec` completes instead of waiting on stdin (AC1 / AC2).
+      `codex exec` completes instead of waiting on stdin, and that the command
+      actually executed carries the `exec < /dev/null` cut-off (AC1 / AC2).
 
 ### Edge Cases
 
