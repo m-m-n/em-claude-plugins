@@ -101,3 +101,76 @@ records:
       heredoc-stdin-guard.py made no test-covered claim newly false, and
       the task plan conditions the README update on it otherwise becoming
       incomplete. Recorded for the run report; no files change.
+  - question_id: review.security-skip-routing
+    packet_id: null
+    answered_at: "2026-09-13T01:05:00+09:00"
+    source: batch-orchestrator-judgment
+    answer_mode: single_select
+    selected_option_ids: [dispatch_claude_fallback]
+    freeform: null
+    normalized_answer: >-
+      security 観点の primary（codex）が skipped: true / skip_reason
+      "codex_declined_to_fetch_diff" を返した。R2b の retryable 表に無い
+      skip_reason なので chain は進めず、代わりに Claude fallback
+      （security#fallback）を 1 本だけ dispatch した。
+    resolution_note: >-
+      gate: gate_id 無しの non-packet gate（references/batch-mode.md の
+      「Any other non-packet AskUserQuestion site」フォールバック）;
+      codex_consulted: false（Codex 自身が当該 skip の当事者であり、
+      同じ枯渇状態の可能性が高いため相談先として不適）。
+      当該 run に診断を返させた結果は model_refusal — ハーネスは正常に動作し、
+      モデルが diff 取得を行わずに skipped を自己申告していた。summary 自体が
+      "Security review not completed — no diff content analyzed." と述べている
+      ため、完了した run として扱えない。R2b は「no completed run かつ次の
+      chain entry が無い」状態の救済として Claude fallback 1 本を定めており、
+      これが最小副作用（カバレッジを足すだけで何も取り除かない）の選択肢。
+      選ばれなかった選択肢: keep_skip（security 観点が丸ごと未レビューのまま
+      残る。シェルコマンドを書き換えるフックの変更で security floor を空に
+      するのは受け入れ難い）、advance_chain_to_muse（retryable 表に無い
+      skip_reason で chain hop を消費するのは表の規定に反する）。
+  - question_id: review.architecture-harness-unavailable
+    packet_id: null
+    answered_at: "2026-09-13T01:05:00+09:00"
+    source: batch-protocol-rule
+    answer_mode: single_select
+    selected_option_ids: [advance_to_codex]
+    freeform: null
+    normalized_answer: >-
+      architecture#0（litellm / vertex-glm-5.2）が harness_unavailable で
+      skip したため、R2b の表に従い別ハーネスの次エントリ chain index 2
+      （codex）へ進めた。architecture#2 は完了。
+    resolution_note: >-
+      gate ではなくプロトコル規定（review-phase.md Phase R2b の retryable
+      表）。budget/reachability はハーネスの性質なので同一ハーネスの
+      muse-spark（index 1）は飛ばした。codex_consulted: false。
+  - question_id: review.updated-input-output-shape
+    packet_id: null
+    answered_at: "2026-09-13T01:20:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [option_b_add_hook_event_name]
+    freeform: null
+    normalized_answer: >-
+      heredoc-stdin-guard.py が stdout に出す
+      hookSpecificOutput には "hookEventName": "PreToolUse" を足す。
+      permissionDecision は足さない（option B）。
+    resolution_note: >-
+      gate: gate_id 無しの non-packet gate。ユーザー指示「不明点は Codex に
+      相談し、比較して優れていると判断した方を採用する」に基づく相談。
+      codex_consulted: true（3 回目で成功）。1 回目 = 既定 provider が
+      ChatGPT plan の usage limit で失敗。2 回目 = litellm / vertex-glm-5.2 が
+      プロンプト中の「バイナリを調べてよい」という記述を真に受けて無制限の
+      ファイルシステム探索に入り 600 秒でタイムアウト。3 回目 = 調査禁止を
+      明記した bounded プロンプトで litellm / muse-spark に投げて成功。
+      fallback provider が回答: true。Opus escalation: 実行せず。
+      Codex（muse-spark）の結論は option B。論拠: (1) 公式ドキュメントの
+      PreToolUse の例はすべて hookEventName を持つ。(2) 同一プラグイン内の
+      既存フック 6 本すべてが hookEventName を出している。(3) バイナリ内の
+      文字列は updatedInput の「object か」「空でないか」の検証を述べている
+      だけで、permissionDecision が無いと無視される根拠にはならない。
+      (4) option C は動くが permissionDecision "allow" が heredoc を含む
+      全コマンドを自動承認し、先行する 5 本のガードの判定を上書きするため
+      代償が大きすぎる。
+      選ばれなかった選択肢: option_a_keep_as_is、option_c_add_permission_decision。
+      検証: Codex の推奨を鵜呑みにせず、実機 Claude Code 2.1.269 で A/B を
+      実測した。詳細は同フェーズの review finding を参照。

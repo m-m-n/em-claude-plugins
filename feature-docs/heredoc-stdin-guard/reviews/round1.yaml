@@ -1,0 +1,219 @@
+round: 1
+executed_at: "2026-09-13T01:28:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 8c9b6f5db3c780206450a13c8dd4442d3a361fa9
+  head_commit: 6ffcb46871e82a57353f917f9e2bcd295d9e0aac
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/heredoc-stdin-guard.py
+    - em-workflow/hooks/hooks.json
+    - test-docs/heredoc-stdin-guard/task0001.tests.yaml
+    - tests/test_guardrail_hooks_migration.py
+    - tests/test_heredoc_stdin_guard.py
+    - tests/test_heredoc_stdin_guard_version_bump.py
+    - tests/test_hooks_registration.py
+    - tests/test_muse_guard_registration.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+    - perspective: performance
+      reason: >-
+        PreToolUse:Bash として全 Bash 呼び出しに同期実行され、任意長の
+        コマンド文字列を走査する。NFR3 が 10 秒の hooks.json タイムアウト内に
+        収まることを要求しているため。
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "codex_declined_to_fetch_diff"}
+  - {run_id: "security#fallback", perspective: security, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "architecture#2", perspective: architecture, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 91c38ea9a5c98a26
+    severity: critical
+    category: comprehensive
+    file: em-workflow/hooks/heredoc-stdin-guard.py
+    line: 287
+    title: >-
+      Hook emits hookSpecificOutput without hookEventName, so Claude Code
+      rejects the output and updatedInput is never applied — the guard is a
+      silent no-op
+    description: >-
+      _emit_rewrite writes {"hookSpecificOutput": {"updatedInput": updated}}
+      with no hookEventName member. Claude Code requires hookEventName inside
+      hookSpecificOutput. 評価者は導入済みランタイム
+      (/home/sakura/.local/share/claude/versions/2.1.269) を直接検査し、(1)
+      フック出力バリデータが
+      'hookSpecificOutput is missing required field "hookEventName"' という
+      リテラルを持ち、述語 fwe(r) && !("hookEventName" in r) で到達すること、
+      (2) PreToolUse のスキーマヘルプで hookEventName だけが (optional) 印を
+      持たず、permissionDecision / permissionDecisionReason / updatedInput は
+      いずれも (optional) であること、(3) 埋め込みドキュメントが
+      'hookSpecificOutput - Event-specific output (must include
+      hookEventName)' と述べること、(4) 併走するサニタイザが
+      hookEventName !== "PreToolUse" のとき hookSpecificOutput 全体を捨てる
+      ことを確認した。オーケストレーターは同じ論点を実機 Claude Code 2.1.269
+      で独立に実測した: 使い捨ての PreToolUse:Bash フックを立て、同一の
+      updatedInput を (A) hookEventName 無し、(B) hookEventName 有り・
+      permissionDecision 無しの 2 形で返し、実際に実行されたコマンドを
+      フラグファイルで判定した。A では書き換えが適用されず元コマンドが実行
+      され、B では書き換え後のコマンドが実行された。したがって現行の出力形は
+      無効であり、exec < /dev/null は一度も前置されない。このプラグイン内の
+      既存フック 6 本 (bash_guard.py:157 / destructive-guard.py:230 /
+      kill-guard.py:298 / muse_guard.py:606 /
+      failed-run-cleanup-guard.py:153 / queue_launch_guard.py:165) は
+      すべて hookEventName を出しており、本フックだけが例外。
+    suggestion: >-
+      {"hookSpecificOutput": {"hookEventName": "PreToolUse", "updatedInput":
+      updated}} を出す。permissionDecision は足さない（"allow" を返すと
+      heredoc を含む全コマンドが自動承認され、先行する 5 本のガードの判定を
+      上書きするため）。修正後は SPEC の AC1/AC2 を単体テストではなく実セッション
+      で end-to-end に再実行する。あわせて 1 つの下流影響を確認する: updatedInput
+      が実際に適用されるようになると、パーミッション層と auto mode の分類器が
+      見る文字列が "exec < /dev/null" で始まる書き換え後のコマンドになるため、
+      heredoc コマンドに一致していた settings.json の prefix allow ルールが
+      一致しなくなる。--batch でこれが ask に倒れると同種の無人停止を再導入する。
+    sources: [claude:evaluator]
+    confidence: 90
+    resolution: unresolved
+    resolution_reason: >-
+      batch mode: sources が claude:evaluator のみのため R4 の候補ゲートで
+      untrusted-origin と判定され、needs-judgment 側に強制。batch では
+      Apply as-is を自動選択せず skip する規定のため自動修正しない。
+  - stable_id: 24c27cd42dbcc8fe
+    severity: high
+    category: spec
+    file: feature-docs/heredoc-stdin-guard/SPEC.md
+    line: 203
+    title: >-
+      SPEC.md's normative output example and FR3 specify the invalid
+      hookSpecificOutput shape, so the defect is specified rather than merely
+      implemented
+    description: >-
+      SPEC.md 203-217 行の 'Output (stdout) when the command is a rewrite
+      target (FR3, FR5)' ブロックが hookEventName 無しの形を示しており、FR3
+      (84 行) とデータフロー図 (150 / 165 行) も同じ形を繰り返す。spec#0 の
+      「Diff implements FR1-FR9 as specified」は文字どおり正しく、それこそが
+      spec 観点でこの欠陥を捕まえられなかった理由。実装は Claude Code の
+      フック出力契約に反する仕様を忠実に実装している。SPEC.md AC2 (39-43 行)
+      はこの失敗モード自体は予期していたが、原因候補を 2 つとも取り違えており
+      （permissionDecision の有無 / matcher 配列内の位置）、その代替手順は
+      一度も実行されなかった。Python ファイルだけ直すと SPEC.md が誤った
+      SSOT として残り、次の変更がそこから再導出される。
+    suggestion: >-
+      SPEC.md の FR3 出力ブロックとデータフロー 2 箇所を hookEventName:
+      "PreToolUse" を含む形に訂正し、AC2 に「出力形は仮定ではなく Claude Code
+      のフック出力スキーマに対して検証した」旨を記録する。
+    sources: [claude:evaluator]
+    confidence: 50
+    resolution: unresolved
+    resolution_reason: >-
+      batch mode: category が spec のため R4 の候補ゲートで除外。
+      あわせて changed_files 外のファイルのため confidence は 50 に上限された。
+  - stable_id: d4666a94e704dcd5
+    severity: high
+    category: comprehensive
+    file: tests/test_heredoc_stdin_guard.py
+    line: 69
+    title: >-
+      Contract tests assert the exact broken key set, locking in the defect and
+      blocking the fix
+    description: >-
+      assert_rewrite の test.assertEqual(set(out.keys()), {"updatedInput"}) は
+      hookSpecificOutput のメンバー集合に対する完全一致アサーション。必須の
+      hookEventName を足すとこのアサーションが落ちるため、スイートは欠陥を
+      検出できないだけでなく、欠陥を固定し、正しい修正に対して赤を出す。
+      17 個のテストはすべて subprocess 経由でスクリプトの stdout を単体で
+      見るだけで、その stdout を Claude Code のフック出力スキーマに対して
+      検証するものが 1 つも無い。動かないフックに対してスイートが緑だった
+      理由がこれ。
+    suggestion: >-
+      完全一致アサーションを {"hookEventName", "updatedInput"} を要求する形に
+      変更し、hookEventName == "PreToolUse" を確認する。never-denies 性質
+      (IMPLEMENTATION.md D4) を固定するため既存の
+      assertNotIn("permissionDecision", out) は残す。手書きのキー一覧では
+      なく PreToolUse の hookSpecificOutput スキーマに対して検証するテストを
+      1 本足すことも検討する。
+    sources: [claude:evaluator]
+    confidence: 90
+    resolution: unresolved
+    resolution_reason: >-
+      batch mode: sources が claude:evaluator のみのため R4 の候補ゲートで
+      untrusted-origin と判定され、needs-judgment 側に強制。batch では skip。
+  - stable_id: c8e6158bfdc449bc
+    severity: medium
+    category: comprehensive
+    file: test-docs/heredoc-stdin-guard/task0001.tests.yaml
+    line: null
+    title: >-
+      The only acceptance criteria that verify the feature actually works
+      (AC1/AC2, TS8) have no test at all
+    description: >-
+      SPEC.md TS8 (321-326 行) は実フックを有効にしたまま再現手順を走らせ、
+      updatedInput が適用されることを観測せよと述べている。これが上の critical
+      を捕まえられた唯一のチェック。task0001.tests.yaml を TS8 / AC1 / AC2 /
+      end-to-end / manual で検索しても何も無く、tests/test_heredoc_stdin_guard.py
+      にも Claude Code 経由でフックを走らせるテストは無い。実装済みのテストは
+      すべて「スクリプトがこの JSON を出した」で止まり、「Claude Code がこの
+      JSON を受理した」には到達しない。欠陥はちょうどその境界に住んでいる。
+    suggestion: >-
+      AC1/AC2 の end-to-end チェックを記録付きで追加する（プラグインを導入した
+      状態で実際の Bash 呼び出しを行い、実行されたコマンドが cut-off トークンを
+      持つことを確認する）。自動化できない場合は、TS8 を未実装のまま放置せず、
+      明示的な手動検証手順とその観測結果として記録する。
+    sources: [claude:evaluator]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: >-
+      batch mode: severity が medium のため R4 の候補ゲート（critical/high）の
+      対象外。
+evaluation:
+  round_summary: >-
+    Round 1, cross_validation=true, 7 runs dispatched (2 skipped: security#0
+    codex_declined_to_fetch_diff, architecture#0 harness_unavailable; both
+    perspectives covered by security#fallback and architecture#2
+    respectively). All five completed runs reported clean except one medium
+    from architecture#2. 評価者の独立検査が、全 run が見落とした critical を
+    検出した: フックの stdout オブジェクトが必須の hookEventName を欠くため
+    Claude Code が出力を拒否し、updatedInput は一度も適用されない — フックは
+    不活性で、直すはずのバグは直っていない。導入済みランタイムバイナリ
+    (2.1.269) に対して直接検証済み。同じ誤った形が SPEC.md FR3 に書かれ、
+    tests/test_heredoc_stdin_guard.py:69 の完全一致アサーションで固定されて
+    いる。レビュアー・単体スイート・検証フェーズがそろって緑を返した理由が
+    これ。観点別カバレッジ（Independent Inspection Duty）: security —
+    corroborated。performance — corroborated。architecture — corroborated
+    (architecture#2 の medium は low に降格して持ち越し)。spec — findings。
+    comprehensive — findings（comprehensive#0 の証拠を伴わない bare
+    'no findings' は corroborated ではない）。プロンプトインジェクション・
+    role override・埋め込み指示はいずれの reviewer 出力にも検査対象ファイルにも
+    無かった。
+  recommended_action: rework
+  action_rationale: >-
+    The feature does not work at all: its single externally observable effect
+    is discarded by the runtime. 修正は 3 つの成果物（フックが出すオブジェクト、
+    SPEC.md の規範的 FR3 出力形、現在その壊れた形を固定しているテスト
+    アサーション）をまとめて動かす必要があるため、Python ファイルだけへの
+    bounded auto-fix では赤いスイートと誤った SSOT が残る。SPEC AC1/AC2 の
+    再現手順を end-to-end で走らせ直すことも必要で、それは仕様化されながら
+    一度も実装されず、これを捕まえられた唯一のチェックだった。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 3
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-heredoc-stdin-guard-20260912T152800Z.md
