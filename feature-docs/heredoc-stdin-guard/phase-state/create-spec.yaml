@@ -3,9 +3,9 @@ feature: heredoc-stdin-guard
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 9da364bf46c7580e21821a5904e1ef5bc2ca4aeb
+base_revision: 61275ca976d2481cc32dead4ccd0f9cd454da80f
 last_input_digest: "sha256:aba1bcf322f843eb5d3d2e72749bb87e9352be13421a276f00514da0337c73ae"
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -94,10 +94,16 @@ worker_runs:
     input_digest: "sha256:555ee58b8c2d1ff670669f7a34ae687743449749ae9a97faffb516cf1ea2d3ed"
     output_digest: "sha256:analyst-completed-0002"
   - request_id: create-spec-run-0003
-    status: dispatched
+    status: completed
     input_digest: "sha256:aba1bcf322f843eb5d3d2e72749bb87e9352be13421a276f00514da0337c73ae"
-    output_digest: null
-artifacts: []
+    output_digest: "sha256:spec-writer-completed-0003"
+artifacts:
+  - path: feature-docs/heredoc-stdin-guard/REQUIREMENTS.md
+    sha256: "sha256:00fa4f8b95bfea57606e758129be9818ae8a42363d903fc5a8d31064d297264c"
+    produced_by: create-spec-run-0003
+  - path: feature-docs/heredoc-stdin-guard/SPEC.md
+    sha256: "sha256:e70e3f2e73917ddbcaea1b67085fe0e8da656dad93e39d095bb8f32da34e325d"
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
