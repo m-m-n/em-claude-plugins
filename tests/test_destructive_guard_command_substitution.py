@@ -1,6 +1,7 @@
 """Contract tests for the command-substitution delete-target fix in
 `em-workflow/hooks/destructive-guard.py`
-(feature-docs/destructive-guard-command-substitution/tasks/task0001.md).
+(feature-docs/destructive-guard-command-substitution/tasks/task0001.md and
+tasks/task0003.md).
 
 Every case drives the guard as a subprocess with PreToolUse JSON on standard
 input -- the same contract Claude Code uses (test/README.md) -- and asserts
@@ -32,6 +33,24 @@ Covers task0001 Acceptance Criteria:
   library and gains no filesystem-resolution, stat or subprocess call; the
   same command re-run yields the identical verdict and reason text; the
   existing shell-payload expansion cap is left in place.
+
+Also covers task0003 Acceptance Criteria whose test notes assign them to this
+unit module rather than the case table (TS-2/TS-11 per its VERIFICATION.md):
+
+- AC-1 (task0003): a payload-carried substitution-only target reaches the
+  SAME rule id and rendered target as the identical delete written directly
+  (equality, not a hard-coded string), for each of the `-c`/`eval`/
+  here-string shapes in both spellings, and demotes to `deny` unattended --
+  the case table (TS-1) already pins the tier for these same commands.
+- AC-3 (task0003, TS-11): for a target mixing a scratch-root path with a
+  command substitution at a quote boundary, the reason text never claims the
+  target lies outside the scratch area, states the substitution fact, and
+  closes with an instruction actionable for that input.
+- AC-4 (task0003): a target with no unresolved evidence gets byte-identical
+  reason text to the pre-task wording.
+- AC-6 (task0003): the payload scenario's regression evidence is a
+  substitution-carrying case (fails pre-task, passes post-task); the
+  literal-path payload case from task0001 is retained separately.
 """
 
 import ast
@@ -59,6 +78,26 @@ CAT_LIST_HOLE = "rm -rf $(cat list)"
 AC1_COMMANDS = [DOLLAR_PAREN, BACKTICK, MKTEMP_HOLE, CAT_LIST_HOLE]
 
 QUOTED_CAT_LIST = 'rm -rf "$(cat list)"'
+
+# task0003 AC-1/AC-6: each payload shape (`-c`, `eval`, here-string) in both
+# spellings, paired with the direct-form command it must match exactly in
+# tier, rule id and rendered target.
+PAYLOAD_FORMS = [
+    ("-c $()", "bash -c 'rm -rf $(printf /home/sakura/valuable)'", DOLLAR_PAREN),
+    ("-c backtick", "bash -c 'rm -rf `printf /home/sakura/valuable`'", BACKTICK),
+    ("eval $()", 'eval "rm -rf $(printf /home/sakura/valuable)"', DOLLAR_PAREN),
+    ("eval backtick", 'eval "rm -rf `printf /home/sakura/valuable`"', BACKTICK),
+    ("here-string $()", "bash <<< 'rm -rf $(printf /home/sakura/valuable)'", DOLLAR_PAREN),
+    ("here-string backtick", "bash <<< 'rm -rf `printf /home/sakura/valuable`'", BACKTICK),
+]
+
+# task0003 AC-3/TS-11: a delete target mixing a scratch-root path with a
+# command substitution at a quote boundary, and the variant with a further
+# segment appended after the substitution. Both are pinned `deny` in the
+# case table too (task0001 already moved them there); this module owns the
+# reason-text content the case table cannot express.
+SAFE_ROOT_BOUNDARY = 'rm -rf "/tmp/sub/"$(cat list)'
+SAFE_ROOT_BOUNDARY_WITH_SUFFIX = 'rm -rf "/tmp/sub/"$(cat list)/extra'
 
 NON_DELETE_ALLOW_CASES = [
     "$(echo ls) -la",
@@ -428,7 +467,21 @@ class TestNonDeletePositionsUnaffected(unittest.TestCase):
         tier, _ = decision("rm -rf $(echo $(rm -rf /home/sakura/x))")
         self.assertEqual(tier, "deny")
 
-    def test_dash_c_payload_reaches_same_verdict_as_direct(self):
+    def test_dash_c_payload_carrying_substitution_reaches_same_verdict_as_direct(self):
+        """task0003 AC-6: the payload scenario's primary evidence is a
+        substitution-carrying case -- this assertion fails against the tree
+        as it stood before task0003 (the payload used to lose the target
+        entirely at the lexing boundary and reach `allow`)."""
+        direct_tier, _ = decision(DOLLAR_PAREN)
+        wrapped_tier, _ = decision("bash -c 'rm -rf $(printf /home/sakura/valuable)'")
+        self.assertEqual(direct_tier, "ask")
+        self.assertEqual(wrapped_tier, direct_tier)
+
+    def test_dash_c_payload_carrying_literal_path_reaches_same_verdict_as_direct(self):
+        """task0001's original payload assertion, retained as a separate
+        regression case per task0003's Design Part 4 -- it already passed
+        against the pre-task0003 tree, so it proves nothing about the
+        ordering fix on its own, but it must keep passing."""
         direct_tier, _ = decision("rm -rf /home/sakura/x")
         wrapped_tier, _ = decision('bash -c "rm -rf /home/sakura/x"')
         self.assertEqual(direct_tier, "deny")
@@ -544,6 +597,119 @@ class TestSourceHygieneAndDeterminism(unittest.TestCase):
     def test_shell_payload_expansion_cap_left_in_place(self):
         source = GUARD_PATH.read_text(encoding="utf-8")
         self.assertIn("MAX_SHELL_PAYLOAD_EXPANSIONS = 25", source)
+
+
+# --- task0003 AC-1: payload evidence reaches the same decision as direct ---
+
+
+class TestPayloadCarriedSubstitutionMatchesDirectForm(unittest.TestCase):
+    """task0003 AC-1 (FR1, FR2): a substitution-only delete target carried
+    inside a `-c`/`eval`/here-string payload reaches the same tier, rule id
+    and rendered target as the identical delete written directly -- by
+    equality, not a hard-coded literal, per the task plan's Test Notes
+    ("Equality, not literals"). The case table (TS-1) already pins the tier
+    for each of these command strings; this module owns what the table
+    cannot express (rule id / target equality) plus the unattended
+    demotion for these specific shapes.
+
+    This class fails against the tree as it stood before task0003: every
+    payload form used to lose its target entirely at the lexing boundary
+    and reach `allow`.
+    """
+
+    def test_payload_forms_match_direct_form_attended(self):
+        for shape, wrapped, direct in PAYLOAD_FORMS:
+            with self.subTest(shape=shape, wrapped=wrapped):
+                direct_tier, direct_reason = decision(direct)
+                wrapped_tier, wrapped_reason = decision(wrapped)
+                self.assertEqual(direct_tier, "ask")
+                self.assertEqual(wrapped_tier, direct_tier)
+                direct_rule = re.search(r"\[destructive-guard/([\w-]+)\]", direct_reason)
+                wrapped_rule = re.search(r"\[destructive-guard/([\w-]+)\]", wrapped_reason)
+                self.assertEqual(wrapped_rule.group(1), direct_rule.group(1))
+                self.assertEqual(
+                    re.search(r"対象 `([^`]*)`", wrapped_reason).group(1),
+                    re.search(r"対象 `([^`]*)`", direct_reason).group(1),
+                )
+
+    def test_payload_forms_demote_to_deny_when_unattended(self):
+        for shape, wrapped, _ in PAYLOAD_FORMS:
+            with self.subTest(shape=shape, wrapped=wrapped):
+                tier, _ = decision(wrapped, batch=True)
+                self.assertEqual(tier, "deny")
+
+    def test_payload_forms_never_allow_in_either_mode(self):
+        for shape, wrapped, _ in PAYLOAD_FORMS:
+            for batch in (False, True):
+                with self.subTest(shape=shape, wrapped=wrapped, batch=batch):
+                    tier, _ = decision(wrapped, batch=batch)
+                    self.assertNotEqual(tier, "allow")
+
+
+# --- task0003 AC-3: safe-root boundary reason text is truthful -------------
+
+
+class TestSafeRootBoundaryReasonTextIsTruthful(unittest.TestCase):
+    """task0003 AC-3 (FR3, NFR5, NFR6), TS-11: a target mixing a path under
+    a scratch root with a command substitution at a quote boundary is still
+    `deny` (the tier does not move -- task0001 already put it there), but
+    the reason must state the fact that holds instead of a false claim
+    about the target's position. Pinned as the ABSENCE of the specific
+    claim the pre-task text made, per the task plan's Test Notes
+    ("TDD-awkward" negative assertion over prose), together with the
+    PRESENCE of the unresolved-substitution statement.
+    """
+
+    def test_verdict_unchanged_from_current_tree(self):
+        for command in (SAFE_ROOT_BOUNDARY, SAFE_ROOT_BOUNDARY_WITH_SUFFIX):
+            with self.subTest(command=command):
+                tier, _ = decision(command)
+                self.assertEqual(tier, "deny")
+
+    def test_reason_does_not_claim_target_is_outside_scratch_area(self):
+        for command in (SAFE_ROOT_BOUNDARY, SAFE_ROOT_BOUNDARY_WITH_SUFFIX):
+            with self.subTest(command=command):
+                _, reason = decision(command)
+                self.assertNotIn("スクラッチ領域の外", reason)
+
+    def test_reason_states_the_substitution_fact(self):
+        for command in (SAFE_ROOT_BOUNDARY, SAFE_ROOT_BOUNDARY_WITH_SUFFIX):
+            with self.subTest(command=command):
+                _, reason = decision(command)
+                self.assertIn("コマンド置換", reason)
+                self.assertIn("静的に確定できない", reason)
+
+    def test_reason_ends_with_an_actionable_instruction(self):
+        for command in (SAFE_ROOT_BOUNDARY, SAFE_ROOT_BOUNDARY_WITH_SUFFIX):
+            with self.subTest(command=command):
+                _, reason = decision(command)
+                self.assertIn("実パスをコマンドに直接書いて撃ち直す", reason)
+
+    def test_no_control_characters_in_output(self):
+        for command in (SAFE_ROOT_BOUNDARY, SAFE_ROOT_BOUNDARY_WITH_SUFFIX):
+            for batch in (False, True):
+                with self.subTest(command=command, batch=batch):
+                    result = run_guard(command, batch=batch)
+                    self.assertIsNone(CONTROL_CHAR.search(result.stdout))
+
+
+# --- task0003 AC-4: unflagged target reason text is byte-identical --------
+
+
+class TestUnflaggedTargetReasonTextUnchanged(unittest.TestCase):
+    """task0003 AC-4 (FR3, FR5): the reason-text wording change in
+    check_rm()'s deny branch reaches only a target carrying lost
+    substitution evidence; a target with none of that gets the exact
+    pre-task0003 wording, byte for byte."""
+
+    def test_reason_text_byte_identical_to_pre_task_wording(self):
+        _, reason = decision("rm -rf /home/sakura/valuable")
+        self.assertEqual(
+            reason,
+            "[destructive-guard/rm-recursive] `rm -r` の対象 `/home/sakura/valuable` "
+            "はスクラッチ領域の外。`gio trash -- /home/sakura/valuable` に書き換える"
+            "（復元情報が残り、ゴミ箱から戻せる）。",
+        )
 
 
 if __name__ == "__main__":

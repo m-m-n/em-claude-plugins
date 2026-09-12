@@ -1,0 +1,135 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests: 4392/4392 green (verified on a clean stash of the source-only edit before touching any file); python3 em-workflow/hooks/tests/run-destructive-guard.py: 187/187 green (before any edit)
+final_failures: []             # python3 -m unittest discover -s tests: 4402/4402 green (4392 + 10 new test methods); run-destructive-guard.py: 195/195 green (187 pre-existing + 8 new entries), both re-run twice with byte-identical output
+acceptance_tests:
+  AC-1:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestPayloadCarriedSubstitutionMatchesDirectForm.test_payload_forms_match_direct_form_attended"
+      - "tests.test_destructive_guard_command_substitution.TestPayloadCarriedSubstitutionMatchesDirectForm.test_payload_forms_demote_to_deny_when_unattended"
+      - "tests.test_destructive_guard_command_substitution.TestPayloadCarriedSubstitutionMatchesDirectForm.test_payload_forms_never_allow_in_either_mode"
+      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): bash -c ペイロード内の $() のみの対象は直接書いた場合と同じ ask"
+      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): bash -c ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）"
+      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): eval ペイロード内の $() のみの対象は直接書いた場合と同じ ask"
+      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): eval ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）"
+      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): here-string ペイロード内の $() のみの対象は直接書いた場合と同じ ask"
+      - "destructive-guard-cases.json: ペイロード内評価(rm-unresolvable): here-string ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）"
+    red_confirmed: true
+    red_reason: >-
+      Added the six case-table entries and the new
+      TestPayloadCarriedSubstitutionMatchesDirectForm class first, then ran
+      both against the pre-Part1 source (`git stash` of only
+      destructive-guard.py, keeping the new test/table content): the case
+      table reported 189/195 (6 FAIL, exactly the six new payload entries,
+      each got=allow instead of the expected ask); the unit class failed on
+      test_payload_forms_match_direct_form_attended
+      (AssertionError: 'allow' != 'ask' for every one of the six shapes) and
+      on the never-allow / unattended-demotion methods likewise. Root cause:
+      extract_shell_payload() was reading the ALREADY flag-converted tokens,
+      so a `-c`/`eval`/here-string payload whose whole argument mixed real
+      text ("rm -rf ") with a substitution lost the substitution's marker
+      before the payload string was captured, and the re-scanned payload
+      became a targetless `rm -rf` (zero-target early return -> allow).
+      After swapping statements() to extract from the marked-but-unstripped
+      tokens, all six shapes reach ask/rm-unresolvable attended and
+      deny unattended, matching the direct form exactly.
+  AC-2:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes"
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+      - "tests.test_destructive_guard_command_substitution.TestFR5PinnedVerdictsUnchanged.test_fr5_pinned_verdicts"
+      - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_non_delete_positions_stay_allow"
+    red_confirmed: false
+    red_reason: >-
+      AC-2 pins an invariant the ordering fix must NOT disturb (the whole
+      `allow` half, the variable-expansion payload verdict, the literal-path
+      payload deny); the task plan's own Test Notes list only AC-1, AC-3 and
+      AC-6 as expected to fail before the change. These tests were green
+      before Part 1 landed (nothing in scope for AC-2 was ever broken) and
+      remain green after -- their job is to catch a regression the reorder
+      could have caused (e.g. routing every marked token through the payload
+      path, not just shell-invocation ones), not to prove a bug fix.
+  AC-3:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestSafeRootBoundaryReasonTextIsTruthful.test_verdict_unchanged_from_current_tree"
+      - "tests.test_destructive_guard_command_substitution.TestSafeRootBoundaryReasonTextIsTruthful.test_reason_does_not_claim_target_is_outside_scratch_area"
+      - "tests.test_destructive_guard_command_substitution.TestSafeRootBoundaryReasonTextIsTruthful.test_reason_states_the_substitution_fact"
+      - "tests.test_destructive_guard_command_substitution.TestSafeRootBoundaryReasonTextIsTruthful.test_reason_ends_with_an_actionable_instruction"
+      - "tests.test_destructive_guard_command_substitution.TestSafeRootBoundaryReasonTextIsTruthful.test_no_control_characters_in_output"
+      - "destructive-guard-cases.json: 評価境界(rm-recursive): スクラッチルート配下パスの直後にクォート境界でコマンド置換が続いても evidence lost により deny"
+      - "destructive-guard-cases.json: 評価境界(rm-recursive): 置換の後にさらにセグメントが続く形も同じ理由で deny"
+    red_confirmed: true
+    red_reason: >-
+      Ran the new TestSafeRootBoundaryReasonTextIsTruthful class against the
+      pre-Part2 source (stash of only destructive-guard.py):
+      test_reason_does_not_claim_target_is_outside_scratch_area failed for
+      both commands (AssertionError: 'スクラッチ領域の外' unexpectedly found
+      in the reason -- the exact false claim this AC removes),
+      test_reason_states_the_substitution_fact failed for both ('コマンド置換'
+      not found in the pre-fix reason), and
+      test_reason_ends_with_an_actionable_instruction failed for both (the
+      pre-fix text closed with a `gio trash`/`mv` suggestion instead of the
+      "rewrite with the substitution expanded" instruction). tier-only
+      tests (test_verdict_unchanged_from_current_tree,
+      test_no_control_characters_in_output, and the two case-table entries)
+      were already green pre-fix, since task0001 already put both commands
+      at `deny` -- AC-3 changes the reason text, not the tier.
+  AC-4:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestUnflaggedTargetReasonTextUnchanged.test_reason_text_byte_identical_to_pre_task_wording"
+    red_confirmed: false
+    red_reason: >-
+      AC-4 pins that the wording change is confined to the flagged branch;
+      the unflagged branch (`rm -rf /home/sakura/valuable`, no lost
+      evidence) was never touched by the Part 2 edit, so this assertion was
+      already true before the change and stays true after it. Verified by
+      running the same test against the pre-Part2 source (stash) -- green
+      both before and after, confirming the wording split in check_rm() did
+      not leak into the unflagged branch.
+  AC-5:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+      - "run-destructive-guard.py direct run: 195/195 passed (187 pre-existing + 8 new entries + trailing unattended-demotion case)"
+    red_confirmed: true
+    red_reason: >-
+      Covered by the same case-table run cited under AC-1: against the
+      pre-Part1 source, 6 of the 8 new entries (the payload-carried forms)
+      failed (189/195); the 2 safe-root boundary entries already passed
+      pre-fix since their TIER was already `deny` from task0001 (only the
+      reason text, which the case table does not check, was wrong -- see
+      AC-3). After Part 1+2, all 195 entries pass, including all 8 new ones
+      and the trailing unattended-demotion case.
+  AC-6:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_dash_c_payload_carrying_substitution_reaches_same_verdict_as_direct"
+      - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_dash_c_payload_carrying_literal_path_reaches_same_verdict_as_direct"
+    red_confirmed: true
+    red_reason: >-
+      test_dash_c_payload_carrying_substitution_reaches_same_verdict_as_direct
+      failed against the pre-Part1 source (stash-based run):
+      AssertionError: 'allow' != 'ask' (wrapped_tier was 'allow', direct_tier
+      was 'ask') -- exactly the bug this task closes. The retained literal-
+      path sibling (test_dash_c_payload_carrying_literal_path_reaches_same_verdict_as_direct,
+      task0001's original assertion) was already green pre-fix, confirming
+      the task plan's own diagnosis that it "passes against the pre-feature
+      guard as well" and is therefore evidence of nothing on its own -- kept
+      only as a regression guard per Design Part 4.
+  AC-7:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library"
+      - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls"
+      - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_determinism_across_repeated_runs"
+      - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_shell_payload_expansion_cap_left_in_place"
+      - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_unbalanced_quoting_raises_no_exception_and_exits_zero"
+      - "python3 -m unittest discover -s tests: full repository suite, 4402/4402 green"
+    red_confirmed: false
+    red_reason: >-
+      AC-7 is a hygiene/non-regression criterion (no new filesystem/stat/
+      subprocess call, unchanged expansion cap, determinism, fail-open on
+      malformed input, full suite green) rather than a bug the task closes;
+      none of it was ever expected to be red. Confirmed unaffected by
+      diffing MAX_SHELL_PAYLOAD_EXPANSIONS (still 25) and by the two full
+      `python3 -m unittest discover -s tests` runs (clean pre-edit baseline:
+      4392/4392 green in 294.082s; post-implementation: 4402/4402 green in
+      364.207s) plus two independent runs of
+      em-workflow/hooks/tests/run-destructive-guard.py and
+      em-workflow/scripts/check-plugin-invariants.py ., both exit 0.
