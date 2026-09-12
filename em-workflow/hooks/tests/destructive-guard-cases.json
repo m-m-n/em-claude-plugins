@@ -161,5 +161,19 @@
   ["deny", "複合(integration 形状): 先頭が S1(integration 形状)でも後続の rm 再帰は deny のまま — 留保は末尾の allow だけを止める", "git worktree remove /home/sakura/.claude/worktrees/em-workflow/some-feature/integration; rm -rf /home/sakura/unrelated-target"],
   ["(silent)", "複合(integration 形状)の対照: 後続が無害なら deny は出ず留保のみ", "git worktree remove /home/sakura/.claude/worktrees/em-workflow/some-feature/integration; echo done"],
   ["(silent)", "S1 解決不能(角カッコ形式のグロブ): 判定対象は allow を留保し無出力", "git worktree remove /home/sakura/wt/inte[gr]ation"],
-  ["allow", "S1 解決不能の対照: 角カッコを含むクォート内言及は allow のまま", "echo \"worktree remove target: inte[gr]ation\""]
+  ["allow", "S1 解決不能の対照: 角カッコを含むクォート内言及は allow のまま", "echo \"worktree remove target: inte[gr]ation\""],
+  ["deny", "評価境界(rm-recursive): $(pwd) の直後に親参照付きパスが続く残存テキストは safe 例外に達する前に deny", "rm -rf $(pwd)/../tmp/scratch"],
+  ["deny", "評価境界(rm-recursive): printf 置換の直後に親参照付きパスが続く形も同じ理由で deny", "rm -rf $(printf %s pwd)/../../tmp/scratch"],
+  ["deny", "評価境界(rm-recursive): バッククォート置換の直後に親参照付きパスが続く形も同じ理由で deny", "rm -rf `pwd`/../tmp/scratch"],
+  ["deny", "評価境界(rm-recursive): 置換が対象の右側(末尾)に隣接する形でも safe ルート名一致に届かず deny", "rm -rf tmp/scratch$(pwd)"],
+  ["ask", "評価境界(rm-unresolvable): 位置パラメータ代入の後で $@ を使った目標は正規化前に ask", "set -- x y; rm -rf \"$@/../build\""],
+  ["ask", "評価境界(rm-unresolvable): 裸の $1 を使った目標も正規化前に ask", "rm -rf $1/../build"],
+  ["ask", "評価境界(rm-unresolvable): ~+ は normalizer が展開しない形のため ask", "rm -rf ~+/../build"],
+  ["ask", "評価境界(rm-unresolvable): ~- も同様に ask", "rm -rf ~-/../build"],
+  ["ask", "評価境界(rm-unresolvable): ~someone も normalizer が展開しない形のため ask", "rm -rf ~someone/../build"],
+  ["deny", "評価境界の対照(rm-root): 裸の ~ は従来どおり rm-root で deny — AC-3 の誤検出でないことの確認", "rm -rf ~"],
+  ["deny", "評価境界の対照(rm-recursive): ~/ 始まりは従来どおり展開されスクラッチ外で deny — AC-3 の誤検出でないことの確認", "rm -rf ~/build"],
+  ["deny", "決定優先度(D6): tmp/$X の ask より後の /home/sakura/valuable の deny が勝つ", "rm -rf tmp/$X /home/sakura/valuable"],
+  ["deny", "決定優先度(D6): 対象の順序を入れ替えても同じ deny が勝つ", "rm -rf /home/sakura/valuable tmp/$X"],
+  ["deny", "決定優先度(D6): 先頭セグメントが ask 形でも後続セグメントの rm の deny が勝つ", "rm -rf tmp/$X; rm -rf /home/sakura/valuable"]
 ]
