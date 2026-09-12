@@ -1,0 +1,312 @@
+schema_version: 1
+feature: heredoc-stdin-guard
+created: 2026-09-12
+base_branch: main
+parent_branch: em-workflow/heredoc-stdin-guard/integration
+goal: |
+  # heredoc 同居の Bash 呼び出しで codex exec が stdin 待ちハングし無人 batch が停止する
+
+  種別: バグ
+  Notion: https://www.notion.so/3d53509ec8ee8128a5fde962e3a7a570
+
+  指示メモ: PreToolUse:Bash の 6 本目として heredoc-stdin-guard.py を追加する方針まで合意済み。
+  deny せず updatedInput でコマンド先頭に `exec < /dev/null` を挿入する。
+
+  ## 現象
+
+  `/em-workflow:develop --batch` の無人実行が create-spec フェーズで無限停止する。
+  `EM_WORKFLOW_PROGRESS: phase=create-spec point=wait` を出したまま 2 時間 12 分無反応。
+  親の claude プロセスは生存しており、クラッシュではない。
+
+  ハングしているのは判断相談のために起動した `codex exec`:
+
+  - CPU 時間 `00:00:00`（起動から一度も動いていない）
+  - TCP 接続ゼロ（Codex API を一度も叩いていない）
+  - `codex-main` スレッドが `unix_stream_read_generic` でブロック
+  - 出力ファイルは 0 バイトのまま
+  - 完了を待つ `until` ループも道連れで永久待機
+
+  同一現象を loop-develop プロジェクトのセッションでも同時刻帯に観測した。
+
+  ## 原因
+
+  3 つの要素が噛み合って発生する。
+
+  1. **auto mode が heredoc を使うよう指示している**
+     auto mode 有効時、システムプロンプトに「make file changes with sed, heredocs, or
+     short scripts, rather than using the dedicated Read, Edit, or Write tools」が入る。
+     停止したセッションの jsonl には `permissionMode: auto` が 6 回記録されている。
+     このプロンプトはフィーチャーフラグ `CLAUDE_CODE_THRIFTY_SONIC` で制御されている
+     (Claude Code 2.1.263 のバイナリで確認)。環境変数が最優先で、未設定だと `forced` か
+     `cohort`（A/B 割り当て）で決まる。
+
+  2. **Bash ツールは heredoc 含みのコマンドに `< /dev/null` を付けない**
+     実測: heredoc 無しのコマンドの子プロセスの fd 0 は `/dev/null`、heredoc 有り
+     (`<<'EOF'`) では `socket:[...]` = Claude Code 本体との Unix ソケット。
+     ハングした codex の fd 0 は `socket:[54661540]` で、その対向は claude プロセスの fd 33。
+
+  3. **codex exec は stdin が非 TTY なら EOF まで読む**
+     `codex exec --help` より: 「If not provided as an argument (or if `-` is used),
+     instructions are read from stdin. If stdin is piped and a prompt is also provided,
+     stdin is appended as a `<stdin>` block」。
+     プロンプトを引数で渡していても stdin を読む。Claude Code 側はソケットを閉じないので
+     EOF が来ず、永久にブロックする。
+
+  ## 重要な検証結果
+
+  **heredoc は stdin を使わない。** `-c` で渡された文字列内の heredoc はスクリプトソース
+  から読まれるため、`< /dev/null` を付けても壊れない。先頭に `exec < /dev/null` を挿入
+  しても同様に heredoc は無傷だった。つまり Bash ツール側の「heredoc があるから stdin を
+  塞がない」判断は不要な保守。
+
+  **PreToolUse hook はコマンドを書き換えられる。** Claude Code 2.1.263 のスキーマに
+  `updatedInput` がある（`hookEventName:"PreToolUse", permissionDecision,
+  permissionDecisionReason, updatedInput, additionalContext`）。
+
+  ## 再現手順
+
+  1. `permissionMode: auto` のセッションを用意する（`CLAUDE_CODE_THRIFTY_SONIC` が有効な割り当て）
+  2. 1 回の Bash 呼び出しに heredoc と stdin を読むコマンドを同居させる:
+     `cat > /tmp/prompt.txt <<'EOF'` ... `EOF` に続けて
+     `codex exec --sandbox read-only "$(cat /tmp/prompt.txt)"`
+  3. `codex exec` が stdin 待ちで返らない
+  4. `ps -o pid,etime,time -p <codex pid>` の CPU 時間が `00:00:00` のまま伸びない
+
+  ## 期待する挙動
+
+  heredoc を含む Bash 呼び出しでも、後続コマンドの stdin が `/dev/null` に塞がれ、
+  `codex exec` が正常に完了する。無人 batch が停止しない。
+
+  ## 完了の定義
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] hook 適用後も heredoc 本体が壊れないことをテストで確認している
+  - [ ] hook は deny せず `updatedInput` で書き換える（無人 batch を止めない）
+
+  ## 該当箇所
+
+  - 追加先: `em-workflow/hooks/hooks.json` の `PreToolUse` / matcher `Bash`
+  - 新規: `em-workflow/hooks/heredoc-stdin-guard.py`
+
+  既存の PreToolUse:Bash hook は 5 本（gitleaks-precommit / kill-guard / bash_guard /
+  failed-run-cleanup-guard / destructive-guard）。他の guard が元のコマンドを見てから
+  書き換わるよう、**6 本目として既存の後ろに置く**。
+
+  ### 設計案
+
+  - 判定: `command` に `<<` があり、かつ先頭に stdin リダイレクトが無い
+  - 動作: `updatedInput` でコマンド先頭に `exec < /dev/null` を挿入する。deny しない
+
+  ## 実害・発生条件
+
+  **実害**: 無人 batch が無限停止する。今回は 2 時間 12 分の時点で人間が気づいて発覚したが、
+  気づかなければ無限に止まり続ける。em-workflow の `develop --batch` は人間が張り付いて
+  いない前提の実行形態なので、影響が大きい。
+
+  **発生条件**: auto mode の Bash 優先プロンプトが有効なセッションで、1 回の Bash 呼び出しに
+  heredoc と stdin を読むコマンドを同居させたとき。`codex exec` 以外でも stdin を読む CLI
+  なら同様に起きる。
+
+  ### 置き場所を em-workflow にする理由
+
+  グローバル hook（`~/.claude/hooks/`）ではなく em-workflow プラグイン配下に置く。
+  `develop --batch` で止まると人間が介入できないことが問題の本質であり、人間が介入できる
+  通常セッションなら気づいて対処できるため。
+
+  ### 環境変数による対処を採らない理由
+
+  `CLAUDE_CODE_THRIFTY_SONIC=false` を設定すれば根本から消えるが、未文書のフィーチャー
+  フラグに依存するため、フラグ名の変更や削除で黙って元に戻る。auto mode のトークン節約の
+  利点も失う。
+
+  ### 関連する既知の報告（いずれも今回の対処範囲外）
+
+  - heredoc 本文が長いと切り詰められ `unexpected EOF` で失敗する（閾値 7,200 文字前後）
+  - path 付き Rules / Read の Hooks / サブディレクトリの CLAUDE.md がバイパスされる
+
+  ## ユーザーからの追加指示
+
+  - 実装完了後、integration ブランチをリモートに push し、`gh pr create` で base_branch
+    に対する Pull Request を作成する。integration ブランチはローカル・リモートとも残す
+    （base_branch への自動マージはしない）。
+  - 不明点は Codex に相談し、比較して優れていると判断した方を採用する。
+  - その相談内容を Notion に記録する。
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 79764f2eec75057cff9ec9e86a6b79fe62b6291f
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      UI も視覚的成果物も無く、追加するのは Python フック 1 本・hooks.json の
+      エントリ 1 つ・テスト 1 ファイル・version 更新 2 箇所のみのため。
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
+
+requirements:
+  FR1:
+    title: heredoc-stdin-guard hook (new file)
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Rewrite detection condition
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: stdin cut-off inserted at the head of the command via updatedInput
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Idempotency
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Preservation of the other tool_input fields
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Fail open
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Registration position in hooks.json
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: Test placement and form
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: Plugin version bump
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Dependencies — Python 3 standard library only
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Security — static analysis only, no process/network/file write
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Performance — well within the 10s hooks.json timeout
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Compatibility — existing six hooks' verdicts unchanged
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Availability — a false positive never denies
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: Scope containment — inside the em-workflow plugin only
+
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
