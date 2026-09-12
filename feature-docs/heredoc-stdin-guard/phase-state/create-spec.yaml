@@ -1,7 +1,7 @@
 schema_version: 1
 feature: heredoc-stdin-guard
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
 base_revision: cf7f8077658ac9209d5bd186abdbea8ff081682d
 last_input_digest: "sha256:a63bbf40c1616acbd995bf000fc19157ec994b3ffb78991b1de67e6a82d57805"
