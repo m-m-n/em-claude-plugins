@@ -198,10 +198,20 @@ tasks:
     branch: em-workflow/heredoc-stdin-guard/task0001
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary:
+      - perspective: performance
+        reason: >-
+          追加するフックは PreToolUse:Bash として全 Bash 呼び出しに同期実行され、
+          任意長のコマンド文字列を正規表現で走査する。NFR3 が 10 秒の hooks.json
+          タイムアウト内に収まることを要求しているため、ホットパスの計算量と
+          病的な入力に対する振る舞いを観点として追加する。
+    cross_validation: true
 
 batch:
   review_rework_count: 0
