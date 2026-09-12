@@ -1,0 +1,303 @@
+round: 2
+executed_at: "2026-09-12T22:55:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 7b10eb66ec44a171c2454ddda753a80190ce4766
+  head_commit: 417010a0815573134a8f82845941b78dddd12706
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-safe-delete-traversal/task0001.tests.yaml
+    - test-docs/destructive-guard-safe-delete-traversal/task0002.tests.yaml
+    - test-docs/destructive-guard-safe-delete-traversal/task0003.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+    - perspective: performance
+      reason: "判定関数は PreToolUse フックとして毎回の Bash 呼び出しで同期実行され、NFR3 が文字列処理のみ・NFR1 がファイルシステム非接触を要求するため、正規化ロジックの計算量と I/O 混入を確認する"
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "comprehensive#1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed, degraded: true}
+findings:
+  - stable_id: f00270f6f04523c0
+    severity: critical
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 93
+    title: "Fail-open: クォートしたコマンド置換は D7 の unresolved マーキングを完全に迂回し、main が deny を返す形が allow になる（SPEC FR6 違反）"
+    description: |
+      WORD_BOUNDARY_CHARS（93 行）が引用符 2 種を含むため、_mark_substitutions() は
+      両隣が引用符であるコマンド置換を「語全体を占める置換」と分類し、UNRESOLVED_MARK
+      ではなく空白に置き換える。その結果 `.unresolved` の証跡が立たず、後続の `..` が
+      その空白ごと畳み、対象が safe スクラッチルートに着地して check_rm() の安全例外に
+      到達する。
+
+      main 版とブランチ版に同一コマンド列を通した実測（CLAUDE_BATCH 未設定）:
+
+        裸形のコマンド置換 + 親参照 + safe ルート    main=deny   branch=deny  （ケース表 165 行で固定済み）
+        同じ形を二重引用符で囲んだもの               main=deny   branch=ALLOW <-- fail-open
+        同じ形を単一引用符で囲んだもの               main=deny   branch=ALLOW
+        同じ形をバッククォート + 二重引用符で書いたもの main=deny   branch=ALLOW
+        着地先を dist / node_modules / .cache に変えた形 main=deny   branch=ALLOW
+        置換の前後に文字を密着させた形               main=deny   branch=ALLOW
+
+      引用符を付ける方がむしろ慣用的な綴りであり、ケース表は語全体を占める引用符付き
+      置換（133 行）を deny として固定している。にもかかわらず末尾にパスが続く形は
+      allow になる。allow は CLAUDE_BATCH でも降格されないため、無人実行ではゲート無しで
+      削除が実行される。実際の削除先は置換が実行時に決める場所の親配下であり、
+      ファイルシステム上の任意の位置になりうる。
+
+      SPEC FR6（変数展開・コマンド置換を含む対象は safe 例外に到達せず
+      ask(rm-unresolvable) に落ちる）に正面から違反する。変数展開は shlex が文字列として
+      残すため UNRESOLVED_EXPANSION が拾えており影響を受けない。証跡を失うのは
+      _mark_substitutions() が実際に取り除くコマンド置換だけ。
+
+      round 1 の項目 4318c9f53a9d2ca3 は閉じていない。comprehensive#1 は新ケース表が
+      カバーする裸形 3 種だけを確認して「閉じた」と報告したが、引用符付きの形は
+      ケース表に無く、そのため 178/178 が通ったまま穴が開いている。
+    suggestion: |
+      WORD_BOUNDARY_CHARS から引用符を外すか、境界判定を生の隣接文字ではなく解決後の
+      語に対して行う。引用符が語境界になるのは、引用区間の反対側が本物の空白・演算子で
+      閉じているときだけ。最小限正しい述語は「その置換がシェル語全体を占めるか」であり、
+      隣接 1 文字ではなく引用符の連なりを越えて次の空白・PUNCTUATION まで見る必要がある。
+      引用符付きの各形（二重引用符・単一引用符・バッククォート・前後密着）を、裸形の
+      双子が 165-168 行で既に持っているのと同じ deny としてケース表に追加し、
+      引用符有無の非対称が二度と開かないようにする。
+    sources: [claude:evaluator]
+    confidence: 85
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: c4e8db6735e86e22
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1840
+    title: "D6 の遅延発火により、後続セグメントの非 rm ask が先行する rm deny を飲み込む — 対話では deny が ask に落ち、batch でも理由が誤る"
+    description: |
+      check_rm() だけが発火を遅延するようになった（判定タプルを返し、main() がループ後に
+      strongest_rm_decision() で 1 度だけ発火する）。他の check — check_git /
+      check_external / check_permissions / check_file_destruction — は従来どおりループ内で
+      decide() → sys.exit(0) する。そのため後続セグメントの非 rm の ask が、
+      プールされた rm の deny が発火する前にプロセスを終了させる。
+
+      main 版とブランチ版での実測（CLAUDE_BATCH 未設定）:
+
+        rm -r 系の deny 対象 ; git commit --amend                main=deny branch=ask (git-amend)
+        rm -r 系の deny 対象 ; chmod -R 777 /etc                 main=deny branch=ask (chmod-broad)
+        rm -r 系の deny 対象 && terraform destroy                main=deny branch=ask (terraform)
+        rm -r 系の deny 対象 ; kubectl delete pod x              main=deny branch=ask (kubectl-destructive)
+        rm -r 系の deny 対象 ; gcloud projects add-iam-policy-binding  main=deny branch=ask (cloud-iam)
+
+      CLAUDE_BATCH 下では ask が deny に降格されるため判定段は一致するが、発火する理由は
+      依然 git-amend / chmod-broad などであり、再帰削除の対象とその書き換え案は、
+      無人エージェントが自己修正のために読む判定文から消えている。1834-1839 行の
+      コメントは「先行する非 rm の deny が先に exit する」場合しか説明しておらず、
+      「後続の非 rm の ask が先行する rm deny を飲み込む」場合を説明していない。
+      非対称は順序依存で、非 rm を先に置いた形は main でも ask のため退行しない。
+      ケース表の D6 ケース（173-175 行）はすべて rm + rm であり、rm と非 rm を混ぜた
+      ケースが 1 件も無い。
+    suggestion: |
+      D6 を一般化し、すべての check の (判定段, 規則, 文言) を 1 つのプールに集めて
+      ループ後に最強段を 1 度だけ発火させる。それが大きすぎるなら、少なくとも非 rm の
+      check が exit する前に収集済みの rm 判定と段を比較し、強い方を発火させる。
+      両方のセグメント順序について「rm の deny 対象 ; 非 rm の ask コマンド」の
+      ケースをケース表に追加し、判定段と理由 ID を固定する。
+    sources: [litellm:vertex-glm-5.2:comprehensive]
+    confidence: 85
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached"
+  - stable_id: 8330e432c5c1600b
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1802
+    title: "D6 deferred rm emission lets a later-segment non-rm ask silently swallow an earlier rm deny (verified: reason and, in interactive mode, tier are both wrong)"
+    description: |
+      （evaluator accountability floor による lift。comprehensive#1 が報告した
+      critical/high サイトが、evaluator の findings / dismissed_sites のいずれにも
+      same_site で一致しなかったため、reviewer 自身の本文のまま単独の finding として
+      持ち上げた。)
+
+      D6 は rm の判定をプールして発火をループ後（strongest_rm_decision、1840 行）へ
+      遅延させるが、非 rm の check（check_git は 762 行、check_file_destruction /
+      check_external / check_permissions）は依然としてループ内（1802-1832 行）で
+      decide() → sys.exit(0) する。そのため、先行セグメントに rm の deny 対象があり
+      後続セグメントに非 rm の ask がある複合コマンドでは、後続の ask が
+      プールされた rm の deny より先にプロセスを終了させる。実機で再現済み:
+      `rm -r` 系の deny 対象に `git commit --amend` を続けた形は CLAUDE_BATCH 未設定で
+      permissionDecision "ask"、理由は "git-amend" となり、単独なら deny になる
+      再帰削除の判定が出力から完全に消える。batch では ask が deny に降格されるため
+      段は隠れるが、理由文は依然 "git-amend" で、実際の再帰削除の危険を読み手から隠す。
+      D6 以前は最初の rm セグメントで decide('deny') してから 2 つ目のセグメントに
+      到達しなかったため、これは D6 が持ち込んだ退行である。同じ露出を持つ他の
+      非 rm ask 源: git-worktree-force-remove、terraform destroy、kubectl delete/drain/cordon、
+      chmod -R 777、sed -i archive-overwrite、gcloud IAM bindings。
+    suggestion: |
+      rm だけでなく ask/deny を出しうるすべての check をループ全体でプールしてから
+      発火させる。最低でも、プールされた rm 判定の段を各非 rm 判定と比較し、
+      常に強い段とその理由が勝つようにする。「rm の deny 対象 ; 非 rm の ask コマンド」
+      （およびセグメント順序を逆にした形）をケース表に追加し、期待する段を固定して
+      退行を検知できるようにする。
+    sources: [litellm:vertex-glm-5.2:comprehensive]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "batch mode: rework cap reached。c4e8db6735e86e22 と同一の欠陥。evaluator が報告行を 1840 に置いたのに対し reviewer は 1802 に置いており、same_site の 5 行窓を越えるため accountability floor が機械的に別項目として持ち上げた。次ラウンドでは 1 件に統合して修正する"
+  - stable_id: ba811ffa83ec0ca7
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 171
+    title: "新設の UNRESOLVED_PARAM / UNRESOLVED_TILDE により、位置・特殊パラメータと `~/` 以外のチルダ対象が deny から ask に弱まる"
+    description: |
+      UNRESOLVED_PARAM（171 行）と UNRESOLVED_TILDE（178 行）はこのブランチで新設され、
+      main が deny(rm-recursive) と判定していた対象を ask(rm-unresolvable) へ回す。
+      main の DYNAMIC 正規表現はこれらの綴りに一致せず、deny 分岐に落ちていた。
+
+      実測（CLAUDE_BATCH 未設定）: 位置パラメータ・`$@`・`~user/...`・`~+/...`・`~-/...`
+      の 5 形がいずれも main=deny → branch=ask。CLAUDE_BATCH 下では 5 形とも deny に
+      降格されるため無人実行は影響を受けない。対話ではゲート自体は残るが利用者が承認
+      できる段になり、`permissions.defaultMode: auto` では ask が auto モードの分類器に
+      渡る。新しい段の方が実態（静的に解決不能）には忠実で SPEC FR6 の向きとも一致する
+      ため、明確な欠陥というより判断の記録漏れ。SPEC の要件もケース表もこの 5 形の
+      期待段をどちらにも固定していない。
+    suggestion: |
+      意図する段を明示して固定する。ask が意図なら 5 形をケース表に追加して選択を記録し、
+      黙って揺れないようにする。deny が意図（main と同じ）なら、通常の safe でない
+      リテラル対象と同じく deny 分岐に落とす。
+    sources: [claude:evaluator]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix の候補ゲートに掛からない。rework 予算が尽きているため次の走行に持ち越す"
+  - stable_id: 109d7dbc2ff1f989
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1091
+    title: "strongest_rm_decision は最強段に複数の対象が並んだとき、対象ごとの deletion_alternative 案をすべて捨てる"
+    description: |
+      strongest_rm_decision() は winners が 1 件のときだけ対象自身の文言を返す
+      （1108-1109 行）。同じ段に 2 件以上並ぶと、1110-1120 行の分岐が対象名だけを並べた
+      汎用の文言で各文言を置き換える。check_rm() が組み立てる対象ごとの文言は
+      deletion_alternative(t) を埋め込んでおり、その対象に対する具体的な安全経路への
+      書き換えコマンドを含む。それが丸ごと落ちる。判定段は正しいままなので、安全性の
+      劣化ではなく実行可能性（無人エージェントの自己修正手段）の劣化。
+    suggestion: |
+      最強段に複数の対象が並んだときは、汎用の要約を置き換えるのではなく、各対象自身の
+      文言（deletion_alternative を含む）をその後ろに連結する。
+    sources: [litellm:vertex-glm-5.2:comprehensive]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix の候補ゲートに掛からない。rework 予算が尽きているため次の走行に持ち越す"
+evaluation:
+  round_summary: |
+    round 2 / cross_validation=true / review_mode=diff。round 1 のグラウンディング手法を
+    再現した — 同一のコマンド文字列を `git show main:em-workflow/hooks/destructive-guard.py`
+    のコピーとブランチのコピーの双方に通し、CLAUDE_BATCH の有無それぞれで
+    hookSpecificOutput.permissionDecision を比較する方法で、置換由来の対象（裸形・
+    引用符付き・バッククォート・前後密着）、各 safe ルートへの `..` の畳み込み、
+    位置・特殊パラメータ、チルダの全綴り、グロブ／ドットグロブ、rm と非 rm を混ぜた
+    複合コマンドの両順序を含む約 100 本を実測した。
+
+    feature の狙いは効いている: safe ルートからの脱出形はすべて main の allow から
+    deny / ask に移り、スイートは 178/178 通る。
+
+    その一方で、このラウンドのレビュアーが見落とした fail-open を発見した:
+    コマンド置換を引用符で囲むと D7 の unresolved マーキングが丸ごと迂回され、
+    main の deny が allow になる。裸形の双子はケース表 165 行で deny に固定されている
+    のに、引用符を付けた形は allow。原因は 93 行の WORD_BOUNDARY_CHARS が引用符を
+    含むこと。allow は CLAUDE_BATCH で降格されないため無人実行ではゲート無しで走り、
+    SPEC FR6 に正面から違反する。round 1 の項目 4318c9f53a9d2ca3 は
+    comprehensive#1 の評価に反して閉じていない。
+
+    このラウンドの high 1 件（D6 の遅延発火が後続セグメントの非 rm ask に飲まれる）も
+    独立に実測で確認した（5 形、対話で deny→ask、batch では理由文が誤る）。
+
+    `foo/../dist` などが main の deny から allow になる結果は finding ではない:
+    SPEC の判定表（正規化後に safe ルートの真の子孫になる対象）が FR1 の対称的な
+    帰結としてその向きを意図しており、symlink 残存リスクは NFR4 で受容済み。
+
+    injection: reviewer_outputs にインジェクション試行は無し。comprehensive#0 が
+    「codex フォールバックがファイルに存在しない関数名を引用して review を捏造した」と
+    報告した件は grep で裏取り済みで、モデル品質の失敗であってインジェクションではない。
+    UNRESOLVED_MARK の NUL バイトが出力 JSON に漏れないことも確認した。
+
+    観点別の独立検査: comprehensive#1 = findings（high は裏取りして採用、medium 2 件も
+    裏取り。ただし round-1 項目 4318c9f53a9d2ca3 を「閉じた」とした評価は引用符付きの
+    実測で否定された）/ comprehensive#0 = corroborated（捏造された関数名がファイルに
+    存在しないことを確認、破棄は正しい）/ security#0 = findings（NOT corroborated。
+    空の結果は弱い証拠でしかなく、独立検査で critical の fail-open と medium の段の
+    弱化が出た）/ architecture#0 = corroborated（非対称な発火契約という診断は再現結果と
+    一致。high に統合）/ spec#0 = findings（NOT corroborated。引用符付き経路で FR6 に
+    違反）/ performance#0 = corroborated。
+  recommended_action: "rework"
+  action_rationale: |
+    round 2 の修正は当初のトラバーサル穴を塞いだが、main に対する退行を 2 件持ち込んだ。
+    1 件は critical な fail-open（deny → allow）で SPEC FR6 に違反し batch の降格でも
+    救われない。もう 1 件は high（deny → ask、理由文も誤る）で D6 の発火改修に由来する。
+    いずれもフックの判定中核にあり、コード修正とケース表の追加の両方を要する。
+    どちらも前ラウンドの修正が持ち込んだものであり、さらなる bounded auto-fix や
+    追加ラウンドではなく rework が適切。対象は (1) WORD_BOUNDARY_CHARS の引用符分類、
+    (2) check_rm だけでなく全 check への判定プールの一般化、(3) 引用符付き置換形・
+    rm と非 rm の複合順序・位置/チルダの段に対するケース表の追加。
+dismissed_sites:
+  - file: em-workflow/hooks/destructive-guard.py
+    line: 1830
+    run_id: "architecture#0"
+    reason: "duplicate of another finding"
+  - file: em-workflow/hooks/destructive-guard.py
+    line: 537
+    run_id: "comprehensive#1"
+    reason: "demoted"
+  - file: em-workflow/hooks/destructive-guard.py
+    line: 1091
+    run_id: "comprehensive#1"
+    reason: "demoted"
+  - file: em-workflow/hooks/destructive-guard.py
+    line: 531
+    run_id: "comprehensive#1"
+    reason: "demoted"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+  aborted_stable_ids: []
+  note: |
+    critical の f00270f6f04523c0 は sources が evaluator 単独のため、候補ゲート
+    （sources != ["claude:evaluator"]）により batch では常に skip され、auto-fix の
+    対象にならない。
+
+    high 2 件（c4e8db6735e86e22 / 8330e432c5c1600b）は prose のため needs-judgment に
+    分類され、batch 既定では "Apply as-is" になる。ユーザー指示「不明点は Codex に
+    相談し、比較して優れた方を採用する」に従って相談した。Codex CLI 本体は使用量上限
+    （2026-09-13 01:02 頃まで）で応答不能。フォールバックの分析が実ファイルとケース表を
+    読んだうえで 3 択（(a) 両方に editor を出す / (b) 片方だけ出す / (c) 両方 skip して
+    deferred にする）を比較し、(c) を推奨した。その判断を採用して auto-fix を行わなかった。
+
+    採否の根拠: 指示は具体的な diff ではなく「全 check の判定をループ全体でプールする」
+    という散文で、check_git の十数箇所を含む判定中核の広範な書き換えを無人で行うことに
+    なる。現在どの非 rm check も allow を出さないため、プール化の実装を誤ると
+    「正しい deny」が「実際の allow」に変わりうる — 監査文言のバグが本物の fail-open に
+    格上げされる。ケース表には rm と非 rm を混ぜたケースが 1 件も無いため、悪い適用でも
+    178/178 が緑のまま通りうる（実測で確認）。同一ファイルで round 1 に同じパターン
+    （batch の Apply as-is × prose）が 164/164 → 160/164 と SPEC 固定行 2 件の違反を
+    起こして巻き戻した前例がある。batch における F2/F3 の現実の最悪ケースは、
+    既に正しい deny に付く理由名が誤ることであってゲート自体は効いている。
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-safe-delete-traversal-20260912T135102Z.md
+residual_critical_high: 3
+rework_required: false
