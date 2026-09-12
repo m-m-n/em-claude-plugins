@@ -242,3 +242,80 @@ records:
       コマンドとして誤認した（この監査記録を書き込む python heredoc の中の
       引用文にマッチして拒否した）。.claude/rules/hook-tests.md が allow 側
       ケースとして挙げている誤爆の類型そのもの。
+  - question_id: verify.result-judgment
+    packet_id: null
+    answered_at: "2026-09-13T01:45:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [record_pass_with_outstanding_manual_items]
+    freeform: null
+    normalized_answer: >-
+      verify を result: pass として記録し、TS-8 / TS-16 を「構造上マージ後にしか
+      実行できない手動項目」として run report と PR 説明に繰り越す。TS-12 の
+      change-set half は no-violation と判定し、VERIFICATION.md の TS-12 文言の
+      記載漏れを別の未対応項目として記録する。
+    resolution_note: >-
+      gate: gate_id 無しの non-packet gate（batch-mode.md の「Any other
+      non-packet AskUserQuestion site」フォールバック）。ユーザー指示
+      「不明点は Codex に相談し、比較して優れていると判断した方を採用する」に
+      基づく相談。codex_consulted: true（2 ラウンド、いずれも entry 1 /
+      gpt-6-astra / read-only / reasoning xhigh で成功。fallback provider は
+      未使用。Opus escalation: 実行せず）。
+      1 ラウンド目の提示事実 F1..F12 に対する Codex の回答は
+      DECISION: fail / TS12: violation。論拠は「TS-12 の文言が列挙する許可範囲
+      （em-workflow プラグイン / ルートの marketplace manifest / ルートの
+      tests ディレクトリ）に test-docs/ が含まれないため、既存の慣例を理由に
+      明文の条件の例外にはできない」。TS-8 / TS-16 については
+      「実行前提が成立していないので失敗ではなくマージ後の未実施項目」と
+      1 ラウンド目から一貫して判断していた。
+      orchestrator 側でこの回答を検算したところ、提示事実に決定的な 2 件が
+      欠けていた。(F13) 同じブランチは feature-docs/ も大幅に変更しており、
+      これも TS-12 の列挙に含まれない。TS-12 を文言どおり適用すると、
+      TS-12 を含む VERIFICATION.md 自身の存在が範囲違反になり、過去に検証を
+      通過した全フィーチャーが違反になる。(F14) test-docs/{feature}/{task}.tests.yaml
+      は implement-phase.md が implementer に tests_yaml_path として渡す
+      プロトコル必須の成果物であり、feature-docs/ と同種のエンジン管理情報で
+      あって製品コードではない。(F15) レビュー 2 ラウンドの 4 観点 + 独立評価者は
+      test-docs/ を含む change set を対象にしており、範囲違反の指摘はゼロ。
+      NFR6 の文言「Scope containment — inside the em-workflow plugin only」と
+      TS-12 の手動チェック項目が名指しする具体的懸念はユーザーのグローバル
+      hooks ディレクトリであり、そこは未変更。
+      この 3 件を足した 2 ラウンド目で Codex は判断を変更し
+      （CHANGED_FROM_PREVIOUS: yes）、DECISION: pass / TS12: no-violation を
+      返した。論拠: (1) 列挙を完全な許可範囲として扱う解釈は、必須の管理文書と
+      TS-12 自身を違反にするため成立しない。(2) test-docs/ は実装手順で必須と
+      される管理情報で feature-docs/ と同種。(3) 範囲制限の対象はプラグイン外
+      への製品コードの変更であり、明示的な確認対象のグローバル hooks は未変更。
+      (4) TS-12 の文言は VERIFICATION.md 側の記載漏れであって change set が
+      範囲外なのではない。記載漏れは文書修正の未対応事項として記録し、それ
+      自体では検証を fail にしない。
+      比較して優れていると判断した方（2 ラウンド目）を採用した。
+      選ばれなかった選択肢: record_fail_on_ts12（修正対象の無い自動 rework を
+      引き起こし、TS-12 の文言を根拠に過去の全フィーチャーを遡って違反に
+      する）、record_fail_on_ts8（TS-8 は VERIFICATION.md 自身が
+      「マージ後にプラグインキャッシュを更新し Claude Code を再起動する」ことを
+      前提として明記しており、未マージのブランチでは構造上実行できない。
+      実行できない項目を failed_item にすると rework が空回りする）。
+      Codex が挙げた残存リスク: 「TS-12 に管理情報の除外が明記されていない
+      以上、明文の条件を優先すれば両ディレクトリへの変更は違反になる」。
+      これは VERIFICATION.md の文言修正で解消する性質のものとして
+      retrospect の follow-up に回す。
+  - question_id: verify.ts8-live-probe
+    packet_id: null
+    answered_at: "2026-09-13T01:40:00+09:00"
+    source: batch-orchestrator-judgment
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "inconclusive-by-construction"
+    normalized_answer: >-
+      現セッションで実機プローブを 1 回行った（heredoc を含む Bash 呼び出しに
+      続けて ls -l /proc/self/fd/0 を実行）。fd 0 は socket を指しており、
+      書き換えは適用されていなかった。ただしインストール済みプラグイン
+      キャッシュの最新は 0.1.73（hookEventName を欠く既知の不具合版）であり、
+      本フィーチャーが残す 0.1.74 は未インストール。したがってこの観測は
+      「0.1.73 が不具合である」とも「0.1.74 が単に未インストールである」とも
+      整合し、どちらも区別しない。TS-8 / TS-16 は未実施のまま繰り越す。
+    resolution_note: >-
+      codex_consulted: false（観測事実の記録であり判断ゲートではない）。
+      キャッシュはマーケットプレイスのソースから展開されるため、0.1.74 の
+      インストールにはこのブランチのマージと Claude Code の再起動が要る。
