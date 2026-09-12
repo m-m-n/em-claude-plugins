@@ -82,7 +82,7 @@ workflow:
     status: completed
     completed_at_commit: 502aa4a33fd821b89fa6bab1d74d440e5a6c487f
   - id: implement
-    status: completed
+    status: pending
     completed_at_commit: 8b4148a1c12119a07dd237d370d7cb96d1fc308a
     base_commit: 7b10eb66ec44a171c2454ddda753a80190ce4766
   - id: review
@@ -121,6 +121,23 @@ tasks:
     status: merged
     branch: em-workflow/destructive-guard-safe-delete-traversal/task0002
     notes: null
+  task0003:
+    title: "Unresolvable evidence and decision precedence in the recursive-delete check"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills: [backend-impl]
+    domains: [auth, input-handling]
+    complexity: high
+    requirements: [FR1, FR2, FR6, FR8, FR10, NFR1, NFR2, NFR3]
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids: [4318c9f53a9d2ca3, c9d5805f9d786c12, 07836a231fc04d10]
+      review_round: 1
 
 review:
   status: pending
@@ -140,15 +157,15 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-2, TS-4]
+    tasks: [task0001, task0003]
+    tests: [TS-1, TS-2, TS-4, TS-13]
   FR2:
     title: "正規化後も残る親参照を安全としない"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-2, TS-6]
+    tasks: [task0001, task0003]
+    tests: [TS-1, TS-2, TS-6, TS-12, TS-13, TS-14]
   FR3:
     title: "コンポーネント境界で包含を判定する"
     status: ok
@@ -175,8 +192,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-6, TS-7]
+    tasks: [task0001, task0003]
+    tests: [TS-6, TS-7, TS-12, TS-13, TS-14]
   FR7:
     title: "安全ルート配下の純グロブは allow を維持する"
     status: ok
@@ -189,8 +206,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-2, TS-3, TS-4]
+    tasks: [task0001, task0003]
+    tests: [TS-1, TS-2, TS-3, TS-4, TS-12, TS-13, TS-14]
   FR9:
     title: "プラグインの version を上げる"
     status: ok
@@ -203,28 +220,28 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-8]
   NFR1:
     title: "判定はファイルシステムに触れない（決定性）"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-10]
   NFR2:
     title: "誤爆コストは見逃しコストと同じ桁に扱う"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-5]
   NFR3:
     title: "同期実行のため正規化は文字列処理のみ"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-10]
   NFR4:
     title: "シンボリックリンク経由の脱出は残存制約としてコード内に明記する"
@@ -242,7 +259,7 @@ requirements:
     tests: [TS-11]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
