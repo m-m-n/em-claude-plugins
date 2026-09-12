@@ -131,8 +131,8 @@ tasks:
     domains: [auth, input-handling]
     complexity: high
     requirements: [FR1, FR2, FR6, FR8, FR10, NFR1, NFR2, NFR3]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/destructive-guard-safe-delete-traversal/task0003
     notes: null
     provenance:
       source: review
