@@ -1,28 +1,35 @@
-"""Tests for task0001 (heredoc-stdin-guard): the em-workflow plugin version
-bump to a patch strictly greater than 72 in both registries.
+"""Tests for heredoc-stdin-guard: the em-workflow plugin version bump to a
+patch strictly greater than 73 in both registries.
 
-Covers task0001 Acceptance Criteria
-(feature-docs/heredoc-stdin-guard/tasks/task0001.md):
+Covers task0002 Acceptance Criteria
+(feature-docs/heredoc-stdin-guard/tasks/task0002.md), re-anchoring the
+task0001 baseline (IMPLEMENTATION.md D12):
 
-- AC-9: both manifests carry em-workflow version `0.1.73`; the plugin
+- AC-8: both manifests carry em-workflow version `0.1.74`; the plugin
   manifest's `name` field and every other field of both files are
   unchanged, and no other plugin's version in the marketplace manifest
   moves.
+- AC-9: this module's baseline rejects the version the tree held before
+  task0002 (`0.1.73`), and its forged pre-bump sample is re-anchored to
+  that same now-rejected value; reverting only the two manifest edits
+  makes this module fail. Its equality matcher, both negative proofs, both
+  non-vacuity guards and its untouched-neighbour guards are all still
+  present and still pass.
 - AC-10: this module is discovered by
   `python3 -m unittest discover -s tests`, parses both manifests as JSON,
   asserts in each that the version is `0.1.<patch>` with patch strictly
-  greater than 72, asserts the two version strings are identical, and
+  greater than 73, asserts the two version strings are identical, and
   carries a negative proof plus a non-vacuity guard for each of those two
-  matchers. Reverting only the two manifest edits makes this module fail.
+  matchers.
 
 This module follows the shape of the repository's established per-feature
 version-bump modules -- mirrored here from
 `tests/test_exit4_tip_argument_version_bump.py` -- raising the baseline
-patch to 72 per IMPLEMENTATION.md D8 (this feature's own version-bump
-module must go red on the un-bumped `0.1.72` tree, which the
-repository-wide parity check's floor of `0.1.50` and the newest
-pre-existing per-feature module's floor of 71 both fail to catch). JSON
-files are parsed, never pattern-matched.
+patch to 73 per IMPLEMENTATION.md D12 (this feature's own version-bump
+module must go red on the tree that skipped the second bump and stayed at
+`0.1.73`, which the repository-wide parity check's floor of `0.1.50` and
+the newest pre-existing per-feature module's floor both fail to catch).
+JSON files are parsed, never pattern-matched.
 
 Matcher -> negative-proof inventory (AC-10):
 
@@ -48,8 +55,8 @@ PLUGIN_ROOT = REPO_ROOT / "em-workflow"
 PLUGIN_MANIFEST_PATH = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
 MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 
-# Pre-change baseline: both registries read 0.1.72 before this task's edit.
-BASELINE_PATCH = 72
+# Pre-change baseline: both registries read 0.1.73 before this task's edit.
+BASELINE_PATCH = 73
 
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
@@ -147,7 +154,7 @@ class TestValidationDetectsRegressions(unittest.TestCase):
     matcher showing the forged sample is itself well-formed, so the proof
     exercises the comparison rather than a parse failure."""
 
-    FORGED_PRE_BUMP_VERSION = "0.1.72"
+    FORGED_PRE_BUMP_VERSION = "0.1.73"
     FORGED_VERSION_A = "0.1.73"
     FORGED_VERSION_B = "0.1.74"
 
