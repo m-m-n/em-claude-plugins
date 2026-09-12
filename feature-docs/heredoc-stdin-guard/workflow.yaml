@@ -169,9 +169,30 @@ workflow:
     status: completed
     completed_at_commit: 2ef0590e442c80be604461cb3024950241ff5166
   - id: verify
-    status: in_progress
-    result: null
+    status: completed
+    completed_at_commit: 7ab838462c7e5f13e08162d48df1e99ab578abf3
+    result: pass
     failed_items: []
+    notes: >-
+      自動シナリオ TS-1..TS-7 / TS-9..TS-15 はすべて green。
+      python3 -m unittest discover -s tests は 4358 tests OK、補助の
+      run-destructive-guard.py は 156/156 passed。PreToolUse:Bash は 7 本で
+      7 本目が heredoc-stdin-guard.py（timeout 10）、先行 6 本は不変（TS-12）。
+      plugin.json と marketplace.json はいずれも 0.1.74 で一致（TS-14）。
+      build / format / e2e コマンドは workflow.yaml で空のため対象外。
+      excluded 要件は無し。
+      未実施のまま繰り越す手動項目が 2 件ある。TS-8（実機での書き換え適用確認）
+      と TS-16（書き換え後のコマンドに対する permission 前方一致の観測）は、
+      VERIFICATION.md 自身が「マージ後にプラグインキャッシュが 0.1.74 へ
+      更新され、Claude Code を再起動していること」を前提として明記しており、
+      未マージのブランチでは構造上実行できない。現セッションのキャッシュ最新は
+      0.1.73。failed_item としては記録しない（実行不能であって失敗ではなく、
+      rework しても修正対象が無いため）。判断の経緯は
+      phase-state/batch-audit.yaml の verify.result-judgment /
+      verify.ts8-live-probe を参照。
+      あわせて VERIFICATION.md TS-12 の文言に記載漏れがある
+      （エンジン管理情報である feature-docs/ と test-docs/ が許可範囲の列挙に
+      入っていない）。文書修正の follow-up として retrospect に送る。
   - id: retrospect
     status: pending
 
