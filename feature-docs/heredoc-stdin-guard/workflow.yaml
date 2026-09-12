@@ -210,8 +210,9 @@ tasks:
     domains: [input-handling, api-contract, config-infra]
     complexity: high
     requirements: [FR1, FR3, FR5, FR8, FR9, NFR5, NFR6]
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/heredoc-stdin-guard/task0002
 
 review:
   status: pending
