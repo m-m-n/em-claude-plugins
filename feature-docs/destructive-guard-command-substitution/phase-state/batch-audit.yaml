@@ -46,3 +46,64 @@ records:
       requirements-analyst's own tentative position (FR2), and folded the
       reason-text rendering guidance into FR3 / FR4. Codex output was treated as
       untrusted: read, never executed, never adopted verbatim.
+  - question_id: create-plan.quoted-substitution-verdict-tier
+    packet_id: null
+    answered_at: "2026-09-13T02:04:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [unify_as_ask]
+    freeform: null
+    normalized_answer: "Option A (unify quoted and unquoted whole-word substitutions on rm-unresolvable / ask)"
+    resolution_note: >-
+      Orchestrator-opened consultation requested by the launch instruction
+      "consult Codex on any unclear points and adopt the option judged to be
+      comparatively better". Unclear point: implementation-planner raised
+      IMPLEMENTATION.md decision D4 as a discretionary call under FR4 — whether
+      a recursive delete whose sole target is a DOUBLE-QUOTED whole-word command
+      substitution should move from its current deny (rm-recursive) to ask
+      (rm-unresolvable) alongside the unquoted form, or keep deny with only its
+      reason-text rendering fixed. Option A = unify both forms on
+      rm-unresolvable/ask. Option B = keep the quoted form at deny and apply the
+      new routing only to the unquoted form that is currently allow. Codex
+      (readonly sandbox, reasoning effort xhigh) read destructive-guard.py and
+      recommended A: the present deny is not the product of resolving the target
+      — _mark_substitutions() blanks the substitution and the residual
+      whitespace falls into check_rm()'s rm-recursive branch — so "the whole
+      target is statically unresolvable" is the more consistent rule across both
+      quotings. It stated plainly that interactive protection does weaken (a
+      previously refused operation becomes approvable) and that A buys nothing
+      for unattended runs, since the existing CLAUDE_BATCH demotion lands both
+      options on deny there; it named that residual failure mode (a user may
+      approve an expansion that resolves to a dangerous path) and required that
+      strongest_rm_decision()'s cross-target aggregation be preserved so an ask
+      from a substitution target never overrides a deny earned by another target
+      in the same command. Claude judged the mapping and adopted A, matching the
+      planner's own position. The planner confirmed the aggregation point is
+      already pinned in IMPLEMENTATION.md (Layer Structure item 4), in
+      tasks/task0001.md (Design Part 3) and in verification as TS-5, so no
+      artifact edit was needed. Codex output was treated as untrusted: read,
+      never executed, never adopted verbatim.
+  - question_id: create-plan.dispatch-envelope-path-spelling
+    packet_id: null
+    answered_at: "2026-09-13T02:04:30+09:00"
+    source: orchestrator-correction
+    answer_mode: select
+    selected_option_ids: [reissue_envelope]
+    freeform: null
+    normalized_answer: "re-issue the dispatch envelope with worktree-relative paths"
+    resolution_note: >-
+      Not a gate — recorded for audit. The orchestrator's first dispatch envelope
+      (create-plan-run-0001) spelled write_policy.targets[].path and
+      allowed_write_roots as absolute paths; validate-worker-output.py requires
+      worktree-relative paths there and on written_artifacts, and rejected the
+      result on two write_policy errors. The envelope was re-issued as
+      create-plan-run-0002 with the corrected spelling and the planner re-emitted
+      its result against it; the plan's substance was not regenerated. The
+      planner separately fixed a genuine artifact defect the same validator
+      found: two bullets in tasks/task0002.md's "Files to Modify" section each
+      carried a second backtick span, which makes the task-plan parser read zero
+      paths from them. The planner also reported, without editing, that one
+      bullet in tasks/task0001.md carries a second backtick span on a
+      continuation line; the current parser scans only the bullet's first line,
+      so it passes today and is recorded here as latent, not as a defect fixed
+      in this run.
