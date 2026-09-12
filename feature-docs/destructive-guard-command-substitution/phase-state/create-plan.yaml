@@ -1,20 +1,47 @@
 schema_version: 1
 feature: destructive-guard-command-substitution
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
-base_revision: c311047
-last_input_digest: sha256:7833fcd6d1d9b20d622951bafb9c5b1182978762aacf3ae3e8d4b00a0610ae88
-active_request_id: create-plan-run-0001
+base_revision: 9f2ee24e23e513c0adc1abab63d6395e39dbba96
+last_input_digest: sha256:f782247f66223a54810047bd0428a7323dbe18684ddafeea86ffa68655d9f85f
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
   - request_id: create-plan-run-0001
-    status: dispatching
+    status: superseded
     input_digest: sha256:7833fcd6d1d9b20d622951bafb9c5b1182978762aacf3ae3e8d4b00a0610ae88
     output_digest: null
-artifacts: []
-patches: []
+    note: >-
+      Dispatch envelope was malformed by the orchestrator: write_policy.targets
+      and allowed_write_roots were spelled as absolute paths, which the
+      worker-result validator rejects (it requires worktree-relative paths on
+      both, and on written_artifacts). Re-issued as create-plan-run-0002 with
+      the corrected spelling. The planner's artifacts were not re-generated.
+  - request_id: create-plan-run-0002
+    status: completed
+    input_digest: sha256:f782247f66223a54810047bd0428a7323dbe18684ddafeea86ffa68655d9f85f
+    output_digest: null
+artifacts:
+  - path: feature-docs/destructive-guard-command-substitution/IMPLEMENTATION.md
+    sha256: sha256:da3800f5a0e39d7eda52229d45f8aeb40e4310b90d07d880d53558597de1f1c0
+    produced_by: create-plan-run-0002
+  - path: feature-docs/destructive-guard-command-substitution/VERIFICATION.md
+    sha256: sha256:5eec728600ba6a268e2e3ea1194291d4aca4aa018546815188e59fd60b6f2a13
+    produced_by: create-plan-run-0002
+  - path: feature-docs/destructive-guard-command-substitution/tasks/task0001.md
+    sha256: sha256:cf42fdcae67fe3c82369d4d4df7cbbabd68c900d21cd6e8529b4a0fe3fabe037
+    produced_by: create-plan-run-0002
+  - path: feature-docs/destructive-guard-command-substitution/tasks/task0002.md
+    sha256: sha256:8a47d0346b1fd7a6b32c6b874c121abac9885b7f4ebb7ef10403f91f8a47c18e
+    produced_by: create-plan-run-0002
+patches:
+  - patch_id: destructive-guard-command-substitution-p0002
+    status: proposed
+    operation: replace_planning
+    base_input_digest: sha256:f782247f66223a54810047bd0428a7323dbe18684ddafeea86ffa68655d9f85f
+    base_workflow_blob: e0d51dfec95ee6ffea56edfd9900216493614e4b
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
