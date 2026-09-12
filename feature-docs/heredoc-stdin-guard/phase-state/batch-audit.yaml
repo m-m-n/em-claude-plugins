@@ -174,3 +174,43 @@ records:
       選ばれなかった選択肢: option_a_keep_as_is、option_c_add_permission_decision。
       検証: Codex の推奨を鵜呑みにせず、実機 Claude Code 2.1.269 で A/B を
       実測した。詳細は同フェーズの review finding を参照。
+  - question_id: create-plan.replan-task-split
+    packet_id: null
+    answered_at: "2026-09-13T00:58:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [single_task]
+    freeform: null
+    normalized_answer: >-
+      案 A（単一タスクに畳み込む）を採用。TS8 相当の end-to-end 検証は
+      VERIFICATION.md の手動シナリオに留める。スキーマ準拠テストは実機バイナリ
+      非依存の固定 fixture として書く。
+    resolution_note: >-
+      gate: create-plan re-plan decomposition（gate_id 無しの裁量ゲート。
+      batch-mode.md の unlisted-gate fallback に従い Codex 相談を先に行った）。
+      codex_consulted: true / 1 回目は 600 秒タイムアウト、2 回目は
+      run_codex_exec.sh の fallback entry 2（litellm / vertex-glm-5.2）が応答。
+      opus_escalation: なし。
+      提示した選択肢: 案 A = 単一タスクに畳み込む / 案 B = 実装修正タスクと
+      契約テスト追加タスクの 2 本に分ける。
+      採用: 案 A。
+      Codex の論拠 3 点 — (1) 案 B は両タスクとも
+      tests/test_heredoc_stdin_guard.py を files に宣言するため worktree 並列
+      マージで確実にコンフリクトし、親側採用 + 再実装という高コストのプロトコル
+      に入る。(2) 契約テスト側は hookEventName 修正の完了に依存するが実行順が
+      保証されないため、先に走ると壊れた出力を対象にテストを書くことになる。
+      (3) 4 つの変更は「出力形を正す→その形を検証する」という 1 つの結合単位で、
+      分割しても並列化の短縮効果がゼロのため分割の目的を満たさない。
+      却下した案 B の理由: 同一ファイル衝突が確定し、順序依存を並列実行モデルが
+      扱えない。em-workflow の規約が「順序が要るなら 1 タスクにまとめる」を
+      指示する状況そのもの。
+      付随の 2 点 — (1) TS8 相当の実機検証は自動テスト化しない。フックは Claude
+      Code 本体が駆動する経路で動くため、テストプロセスから実機のフック実行経路
+      を再現するのは本質的に困難。「スクリプトが正しい JSON を出す」は自動化でき
+      るが「Claude Code がそれを受理した」は実機が要るため、境界の手前を自動
+      テスト、向こう側を手動シナリオに分ける。(2) スキーマ準拠テストは PreToolUse
+      フック出力スキーマをリポジトリ内の固定 fixture として定義し、stdout を
+      JSON parse した結果に対して hookSpecificOutput の存在・必須キー集合
+      {hookEventName, updatedInput}・hookEventName == "PreToolUse"・updatedInput
+      の内容を assert する形にする。実機バイナリに依存せず決定的に回る。
+      orchestrator の独立判断も同じ結論に達したため、そのまま採用した。
