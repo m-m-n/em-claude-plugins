@@ -198,10 +198,11 @@ tasks:
     branch: em-workflow/heredoc-stdin-guard/task0001
 
 review:
-  status: in_progress
-  rounds_completed: 0
-  residual_critical_high: 0
-  needs_rework: false
+  status: pending
+  rounds_completed: 1
+  residual_critical_high: 3
+  needs_rework: true
+  perspectives: [comprehensive, security, architecture, spec, performance]
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary:
