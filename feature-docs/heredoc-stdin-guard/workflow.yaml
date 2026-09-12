@@ -197,6 +197,22 @@ tasks:
     notes: null
     branch: em-workflow/heredoc-stdin-guard/task0001
 
+  task0002:
+    title: "heredoc stdin guard: correct emitted hook output shape, its assertions, and the version baseline"
+    plan: tasks/task0002.md
+    files:
+      - .claude-plugin/marketplace.json
+      - em-workflow/.claude-plugin/plugin.json
+      - em-workflow/hooks/heredoc-stdin-guard.py
+      - tests/test_heredoc_stdin_guard.py
+      - tests/test_heredoc_stdin_guard_version_bump.py
+    skills: [infra-impl]
+    domains: [input-handling, api-contract, config-infra]
+    complexity: high
+    requirements: [FR1, FR3, FR5, FR8, FR9, NFR5, NFR6]
+    status: pending
+    notes: null
+
 review:
   status: pending
   rounds_completed: 1
@@ -230,8 +246,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-6, TS-8]
+    tasks: [task0001, task0002]
+    tests: [TS-1, TS-6, TS-8, TS-15]
   FR2:
     title: Rewrite detection condition
 
@@ -246,8 +262,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-2, TS-7, TS-8]
+    tasks: [task0001, task0002]
+    tests: [TS-1, TS-2, TS-7, TS-8, TS-15]
   FR4:
     title: Idempotency
 
@@ -262,7 +278,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-1]
   FR6:
     title: Fail open
@@ -286,7 +302,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-9]
   FR9:
     title: Plugin version bump
@@ -294,7 +310,7 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-9, TS-14]
   NFR1:
     title: Dependencies — Python 3 standard library only
@@ -334,13 +350,13 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-13]
+    tasks: [task0001, task0002]
+    tests: [TS-13, TS-16]
   NFR6:
     title: Scope containment — inside the em-workflow plugin only
 
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-12]
