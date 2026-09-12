@@ -1,0 +1,42 @@
+feature: destructive-guard-safe-delete-traversal
+collected_at: "2026-09-12T22:54:00+09:00"
+session_ids: ["01a095e5-0769-7259-b5c6-da9cbfb81661"]
+signals:
+  review_critical_high:
+    - stable_id: 4318c9f53a9d2ca3
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "コマンド置換が剥がされた残骸と `..` の組み合わせで safe ルート判定を通過する（main では deny）"
+      resolution: unresolved
+    - stable_id: c9d5805f9d786c12
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "展開できない先頭トークンが `..` と相殺され、末尾の safe 名だけで allow になる（main では deny）"
+      resolution: unresolved
+    - stable_id: f00270f6f04523c0
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "Fail-open: クォートしたコマンド置換は D7 の unresolved マーキングを完全に迂回し、main が deny を返す形が allow になる"
+      resolution: deferred
+    - stable_id: c4e8db6735e86e22
+      category: comprehensive
+      file: em-workflow/hooks/destructive-guard.py
+      title: "D6 の遅延発火により、後続セグメントの非 rm ask が先行する rm deny を飲み込む"
+      resolution: deferred
+    - stable_id: 8330e432c5c1600b
+      category: comprehensive
+      file: em-workflow/hooks/destructive-guard.py
+      title: "D6 deferred rm emission lets a later-segment non-rm ask silently swallow an earlier rm deny"
+      resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: "判定関数は PreToolUse フックとして毎回の Bash 呼び出しで同期実行され、NFR3 が文字列処理のみ・NFR1 がファイルシステム非接触を要求するため、正規化ロジックの計算量と I/O 混入を確認する"
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 2 の critical/high 3 件が rework cap（review_rework_count: 1）到達により deferred のまま残った。verify は 178/178 で pass しているが、ケース表に rm と非 rm を混在させたケースが 0 件のため、D6 の欠陥はスイートでは検出できない。"
+  - "round 1 の auto-fix が SPEC 固定のケース表行に違反してロールバックされた。同一ファイルへの複数修正をまとめて巻き戻したため、単独ではスイートを落とさない c9d5805f9d786c12 も一緒に失われた。"
+  - "codex exec が usage limit で到達不能になり、フォールバックプロバイダで判断した。ゲート解決の相談経路に単一障害点がある。"
