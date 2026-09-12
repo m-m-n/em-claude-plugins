@@ -62,3 +62,42 @@ records:
       する、という確立した慣習になっている。
       (4) em-workflow/scripts/check-plugin-invariants.py に version チェックは
       無い（Codex が確認、こちらでも再確認）。
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-13T00:15:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined"
+    normalized_answer: "declined"
+    resolution_note: >-
+      task_id: task0001; declined files deviation:
+      tests/test_muse_guard_registration.py. Missing evidence part: the
+      dropped-criterion identifier. The report names IMPLEMENTATION.md D6,
+      which is a design-decision id, not an AC-n of task0001's own plan and
+      not a requirement id registered in workflow.yaml. The path itself
+      passes the shape check and is not under a workflow control path, and
+      the failure mode is stated observably (the existing
+      test_destructive_guard_remains_last pins destructive-guard.py as the
+      literal last PreToolUse(Bash) entry and goes red once
+      heredoc-stdin-guard.py is appended), but the identifier part is
+      unresolved, so the path is NOT auto-added to tasks.task0001.files.
+      It stands as an ordinary deviation for the containment check.
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-13T00:15:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined"
+    normalized_answer: "declined"
+    resolution_note: >-
+      task_id: task0001; declined files deviation: em-workflow/README.md
+      left untouched though declared in tasks.task0001.files. Missing
+      evidence part: the path being added — this deviation adds no path,
+      it reports a declared path that was not written, so the auto-addition
+      rule does not apply to it at all. Reported rationale: README.md
+      already omitted muse_guard.py before this task, so omitting
+      heredoc-stdin-guard.py made no test-covered claim newly false, and
+      the task plan conditions the README update on it otherwise becoming
+      incomplete. Recorded for the run report; no files change.
