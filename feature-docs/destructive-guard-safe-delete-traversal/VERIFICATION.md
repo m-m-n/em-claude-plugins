@@ -44,6 +44,9 @@ acceptance criteria live in `tasks/task0001.md` and `tasks/task0002.md`.
 | TS-9 | Version consistency: the `em-workflow` version in `em-workflow/.claude-plugin/plugin.json` and in `.claude-plugin/marketplace.json` | Both read the identical raised value `0.1.73`; the `em-review` entry is unchanged; both files parse as JSON | Static |
 | TS-10 | Determinism: the changed decision paths introduce no real-path resolution, file-status inspection or subprocess call, and two consecutive suite runs produce identical results | No such call present; identical output on both runs | Static + Integration |
 | TS-11 | Self-description: the safe-root constant's comment states the two-class component rule, and the residual symlink-escape constraint is stated in the code | Both statements present in the changed file | Static |
+| TS-12 | Substitution residue: recursive delete of a target where a command substitution is adjacent to other text and a parent reference follows it (`$(pwd)/../tmp/scratch`, a `printf`-substitution spelling with `/../../tmp/scratch`, and a backtick spelling of the same shape) | Never `allow` — `ask` or `deny`, with and without the batch environment variable; the counterpart whose only targets are command substitutions still decides `allow` | Unit |
+| TS-13 | Unresolvable spellings judged before normalization: recursive delete of `"$@/../build"` after a positional-parameter assignment, of `$1/../build`, of `~+/../build`, `~-/../build` and `~someone/../build` | `ask` with the unresolvable reason id (`deny` under batch demotion); a bare `~` target and a `~/`-leading target keep their current decisions | Unit |
+| TS-14 | Decision precedence: recursive delete of `tmp/$X` together with `/home/sakura/valuable`, the target-order-swapped spelling, and a compound command whose first segment is the ask form and whose later segment is destructive | `deny` for all three, with the reason text naming every contributing target; a command whose unresolvable target is its only target still decides `ask` | Unit |
 
 ## Code Quality Verification
 
@@ -70,19 +73,19 @@ acceptance criteria live in `tasks/task0001.md` and `tasks/task0002.md`.
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-1, TS-2, TS-4 |
-| FR2 | task0001 | TS-1, TS-2, TS-6 |
+| FR1 | task0001, task0003 | TS-1, TS-2, TS-4, TS-13 |
+| FR2 | task0001, task0003 | TS-1, TS-2, TS-6, TS-12, TS-13, TS-14 |
 | FR3 | task0001 | TS-3 |
 | FR4 | task0001 | TS-1, TS-4, TS-5 |
 | FR5 | task0001 | TS-4, TS-5 |
-| FR6 | task0001 | TS-6, TS-7 |
+| FR6 | task0001, task0003 | TS-6, TS-7, TS-12, TS-13, TS-14 |
 | FR7 | task0001 | TS-5 |
-| FR8 | task0001 | TS-1, TS-2, TS-3, TS-4 |
+| FR8 | task0001, task0003 | TS-1, TS-2, TS-3, TS-4, TS-12, TS-13, TS-14 |
 | FR9 | task0002 | TS-9 |
-| FR10 | task0001 | TS-8 |
-| NFR1 | task0001 | TS-10 |
-| NFR2 | task0001 | TS-5 |
-| NFR3 | task0001 | TS-10 |
+| FR10 | task0001, task0003 | TS-8 |
+| NFR1 | task0001, task0003 | TS-10 |
+| NFR2 | task0001, task0003 | TS-5 |
+| NFR3 | task0001, task0003 | TS-10 |
 | NFR4 | task0001 | TS-11 |
 | NFR5 | task0001 | TS-11 |
 
@@ -111,6 +114,10 @@ subprocess and reads the decision back, so no separate E2E layer is added.
   goal — `/tmp/../home/sakura/valuable`, `build/../src`, `targets` — no longer
   decide `allow` (TS-1, TS-2, TS-3), while the control target keeps deciding
   `deny` (TS-1).
+- Security (round-1 rework): the forms that reached the safe exception through
+  lost or unrecognized unresolvable evidence no longer decide `allow` (TS-12,
+  TS-13), and a warranted `deny` is no longer hidden behind an earlier `ask`
+  (TS-14), while the `allow` decisions the SPEC pins stay put (TS-5).
 - Security (residual): symlink-based escape remains possible by design and is
   documented in the code (TS-11); it is explicitly out of scope per the SPEC.
 - Performance: the hook runs synchronously on every Bash invocation, so the
@@ -122,7 +129,7 @@ subprocess and reads the decision back, so no separate E2E layer is added.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 11 | 8 (TS-1 to TS-8) | 0 | 3 (TS-9, TS-10, TS-11 static/read-back) |
+| Test scenarios | 14 | 11 (TS-1 to TS-8, TS-12 to TS-14) | 0 | 3 (TS-9, TS-10, TS-11 static/read-back) |
 | Success criteria | 6 | 3 (SC-2, SC-3, SC-6) | 0 | 3 (SC-1, SC-4, SC-5 by reading the diff) |
 | Requirements | 15 | 15 mapped | 0 | 0 unmapped |
 | Manual checks | 3 | 0 | 0 | 3 |
