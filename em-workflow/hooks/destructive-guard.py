@@ -74,6 +74,24 @@ SUBSTITUTION = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
 # as a separator — a newline ends a statement just as `;` does.
 PUNCTUATION = "();<>|&\n"
 
+# A transient, filesystem-free sentinel that stands in for a command
+# substitution removed adjacent to other text in the same word (D7). It is
+# introduced by _mark_substitutions() and consumed by _strip_unresolved_
+# marks() before any token reaches a check — no downstream code ever sees
+# it. NUL is chosen because it is not shlex whitespace, not a PUNCTUATION
+# operator character, and not a quote, so it survives tokenization as
+# ordinary word content without splitting or merging anything.
+UNRESOLVED_MARK = "\x00"
+
+# Characters that end a shell word under this module's shlex configuration:
+# its whitespace set, every PUNCTUATION operator character (already
+# includes `\n`), and the two quote characters — a quote does not itself
+# leave text behind once shlex resolves it, so a substitution sitting right
+# inside an otherwise-empty pair of quotes (`"$(cmd)"`) is still a
+# whole-word substitution, not text adjacent to other text. Used only by
+# _mark_substitutions() to classify a substitution match's neighbours.
+WORD_BOUNDARY_CHARS = frozenset(" \t\r'\"" + PUNCTUATION)
+
 # Redirection operators, matched against a whole token. A redirect and its
 # target are not arguments to the command and must be lifted out before the
 # checks run, or `>` and `/dev/null` read as two more paths to delete.
@@ -144,6 +162,20 @@ GLOB_CHARS = re.compile(r"[*?\[]")
 # that makes a target's real destination unknowable no matter how it looks
 # lexically. Glob characters are deliberately excluded; see GLOB_CHARS.
 UNRESOLVED_EXPANSION = re.compile(r"\$\(|`|\$\{|\$[A-Za-z_]")
+
+# Positional (`$1`-`$9`, bare — the `${10}`-style multi-digit spelling is
+# already covered by UNRESOLVED_EXPANSION's `\$\{` alternative) and special
+# (`$@ $* $# $? $$ $- $! $0`) parameter forms. Neither is a named variable
+# (`[A-Za-z_]`), so UNRESOLVED_EXPANSION does not see them; their value is
+# exactly as unknowable to a static reader as `$HOME` or `$(cmd)`.
+UNRESOLVED_PARAM = re.compile(r"\$(?:[1-9]|[@*#$?!0-])")
+
+# A leading `~` whose next character is neither `/` nor the end of the
+# token — `~+`, `~-`, `~user`. normalize_candidate() only expands a bare
+# `~` and a leading `~/`; every other tilde form passes through it
+# unresolved, so folding a parent reference against the rest of the token
+# is not trustworthy for these spellings either.
+UNRESOLVED_TILDE = re.compile(r"^~(?!/|$)")
 
 # Env-var and flag names whose spelling is the author's own warning label.
 BYPASS_TOKEN = re.compile(
@@ -287,16 +319,20 @@ def decide(decision, rule, reason):
 class Tok(str):
     """A token string that also remembers whether shlex read it from bare,
     unquoted operator syntax (`>`, `2>&1`, …) rather than from a word or
-    quoted span. Every consumer besides split_redirects() treats it as an
-    ordinary str; the attribute defaults to False so a plain str used where
-    a Tok is expected (there is no such caller today) fails closed.
+    quoted span, and whether the lexing layer removed a command substitution
+    adjacent to this token's own text (D7). Every consumer besides
+    split_redirects()/check_rm() treats it as an ordinary str; both
+    attributes default to False so a plain str used where a Tok is expected
+    fails closed.
     """
 
     is_operator = False
+    unresolved = False
 
-    def __new__(cls, value, is_operator=False):
+    def __new__(cls, value, is_operator=False, unresolved=False):
         obj = str.__new__(cls, value)
         obj.is_operator = is_operator
+        obj.unresolved = unresolved
         return obj
 
 
@@ -495,6 +531,59 @@ def strip_heredocs(chunk):
     return HEREDOC.sub(take, chunk), bodies
 
 
+def _mark_substitutions(chunk):
+    """Blank every command-substitution match in CHUNK, choosing the
+    replacement so the word it sat in survives lexing distinguishable by
+    shape (D7, "Evidence lost at the lexing boundary"):
+
+    - A match bounded on BOTH sides by a word boundary (whitespace, a
+      PUNCTUATION operator, a quote, or the start/end of CHUNK) is replaced
+      by a single space, exactly as this module always blanked it — the
+      word it filled disappears entirely once lexing collapses the
+      whitespace, and the zero-target early return this produces is
+      unchanged (D7 shape (b), the SPEC-pinned `allow` for a
+      substitution-only target).
+    - A match adjacent to real text on either side is replaced by
+      UNRESOLVED_MARK instead. Gluing it to its neighbour — no space
+      introduced — keeps every OTHER word boundary in CHUNK exactly where
+      it was in the source; the only change is that the neighbour's token
+      now carries the marker, which _strip_unresolved_marks() turns into a
+      `.unresolved` flag before any check ever sees the text (D7 shape (c)).
+    """
+
+    def repl(m):
+        left = m.start() - 1
+        right = m.end()
+        left_boundary = left < 0 or chunk[left] in WORD_BOUNDARY_CHARS
+        right_boundary = right >= len(chunk) or chunk[right] in WORD_BOUNDARY_CHARS
+        return " " if (left_boundary and right_boundary) else UNRESOLVED_MARK
+
+    return SUBSTITUTION.sub(repl, chunk)
+
+
+def _strip_unresolved_marks(toks):
+    """Peel UNRESOLVED_MARK back out of TOKS, turning its presence into the
+    `.unresolved` flag on the token it sat in (D7). A token made ENTIRELY of
+    marker characters — one substitution that filled the whole word, or
+    several with nothing else between them — contributed no real text and is
+    dropped outright, same as it always disappeared under plain blanking; a
+    token mixing marker characters with real text keeps that text, with
+    `.unresolved` set so check_rm() can tell this target's value was never
+    fully present. Tokens without the marker pass through untouched — this
+    changes nothing for a command with no substitution in it (AC-6).
+    """
+    out = []
+    for t in toks:
+        if UNRESOLVED_MARK not in t:
+            out.append(t)
+            continue
+        cleaned = t.replace(UNRESOLVED_MARK, "")
+        if cleaned == "":
+            continue
+        out.append(Tok(cleaned, getattr(t, "is_operator", False), unresolved=True))
+    return out
+
+
 def statements(command):
     """Yield (text, tokens, lexed) per command segment, substitution bodies
     included.
@@ -516,7 +605,8 @@ def statements(command):
             body = m.group(1) or m.group(2) or ""
             if body.strip():
                 pending.append(body)
-        for toks, lexed in lex_segments(SUBSTITUTION.sub(" ", chunk)):
+        for toks, lexed in lex_segments(_mark_substitutions(chunk)):
+            toks = _strip_unresolved_marks(toks)
             if toks:
                 yield " ".join(toks), toks, lexed
                 if budget[0] > 0:
@@ -855,76 +945,179 @@ def safe_delete_target(normalized):
     return False
 
 
+# Tier ranking for D6's cross-target/cross-segment selection: `deny` outranks
+# `ask`, `ask` outranks the implicit `allow` of no decision at all.
+DECISION_RANK = {"allow": 0, "ask": 1, "deny": 2}
+
+# The root/home shape check_rm() denies outright, matched against the RAW
+# token before anything else — see check_rm()'s docstring, step 2.
+RM_ROOT_SHAPE = re.compile(r"/+|/\*|~|~/|\$HOME/?")
+
+
 def check_rm(args):
-    """Decide allow (fall-through) / ask / deny for one `rm` invocation.
+    """Return the decision every target of one `rm` invocation warrants, as
+    a list of (tier, rule, target, message) tuples — never emits and never
+    exits. A check that emitted the first decision it reached let an `ask`
+    on an early target end the scan, so a later target — or, once the
+    caller folds multiple calls together, a later segment — that warranted
+    `deny` was approved along with it (D6). Collecting every target's
+    decision here, uncollapsed, is what lets the caller (main()) evaluate
+    every target of every segment before picking the strongest one and
+    emitting once.
 
-    Per target of a recursive delete, in this order (IMPLEMENTATION.md
-    "Recursive-delete check"):
+    Per target, in this order (IMPLEMENTATION.md "Recursive-delete check"),
+    unchanged from before D6 except that each step now APPENDS instead of
+    deciding:
 
-    1. Zero targets — early return, unchanged.
-    2. Root/home target — judged on the RAW token, before anything below;
-       reused unchanged so its `rm-root` reason id survives.
-    3. Unresolved — a variable expansion or command substitution
-       (UNRESOLVED_EXPANSION) is unresolvable regardless of how it looks,
-       and never reaches the safe exception. A glob mixed with a literal
-       `..` component is unresolvable for the same reason folding cannot
-       be trusted there (_has_parent_ref_component()) — a PURE glob is not
-       caught here; see step 6.
+    1. Zero targets — empty list, unchanged.
+    2. Root/home target (RM_ROOT_SHAPE) — judged on the RAW token, before
+       anything below; reused unchanged so its `rm-root` reason id
+       survives. A target already decided here is skipped by the
+       remaining steps, matching the priority a single early decide() call
+       used to give it.
+    3. Unresolved — a variable expansion or command substitution still
+       present in the token (UNRESOLVED_EXPANSION), a positional/special
+       parameter form (UNRESOLVED_PARAM), or a tilde form the normalizer
+       does not expand (UNRESOLVED_TILDE) is unresolvable regardless of how
+       it looks, and never reaches the safe exception. A glob mixed with a
+       literal `..` component is unresolvable for the same reason folding
+       cannot be trusted there (_has_parent_ref_component()) — a PURE glob
+       is not caught here; see step 6.
     4. Lexical normalization (normalize_candidate()) — filesystem-free.
     5. A relative target still starting with `..` after normalization has
        nowhere left to fold and is not safe; it falls straight through to
        step 7 exactly as containment failure would, so no separate branch
        is needed for it.
     6. Component-wise containment (safe_delete_target()) against the
-       normalized target. A pure glob (no expansion, no parent reference)
-       still reaches this step and can still land in the safe exception
-       (e.g. `dist/*`).
+       normalized target — SKIPPED when the lexing layer marked this
+       token's text as evidence it lost to a substitution adjacent to other
+       text in the same word (`.unresolved`, D7): folding a parent
+       reference past that residue is not trustworthy, so it must not be
+       allowed to land in the safe exception. A pure glob (no expansion, no
+       parent reference, no lost evidence) still reaches this step and can
+       still land in the safe exception (e.g. `dist/*`).
     7. Otherwise: a glob remaining in the RAW token is still unresolved
        (ask); anything else is a genuine recursive delete outside any safe
-       root (deny).
+       root (deny) — this is also where a `.unresolved` target that carries
+       no glob lands, the same outcome an ordinary non-safe literal target
+       reaches, and it is what keeps a pre-existing pinned `deny` for a
+       substitution-adjacent shape (task0001's `$(pwd)/build`) unchanged.
     """
     flags = short_flags(args)
     recursive = "r" in flags or "R" in flags or has(args, "--recursive")
-    targets = [a for a in args if not a.startswith("-")]
+    # A bare, unquoted grouping token (a subshell's trailing `)`, say, in
+    # `(rm -rf $X)` with nothing after it) tokenizes as its own word and
+    # lands in ARGS with no leading `-`, same shape as a real target —
+    # `.is_operator` (Tok, set by the tracking lexer) is what tells the two
+    # apart; a quoted `")"` is a real word and never carries it. Evaluating
+    # every target now that D6 no longer exits on the first decision would
+    # otherwise let this artifact outvote a real target under it.
+    targets = [
+        a
+        for a in args
+        if not a.startswith("-") and not getattr(a, "is_operator", False)
+    ]
 
     if not targets:
-        return
+        return []
+
+    decisions = []
+    root_hit = set()
     for t in targets:
-        if re.fullmatch(r"/+|/\*|~|~/|\$HOME/?", t):
-            decide("deny", "rm-root", f"削除対象が `{t}` — ホーム/ルート全体に届く。")
+        if RM_ROOT_SHAPE.fullmatch(t):
+            decisions.append(
+                ("deny", "rm-root", t, f"削除対象が `{t}` — ホーム/ルート全体に届く。")
+            )
+            root_hit.add(t)
     if not recursive:
-        return
+        return decisions
+
     for t in targets:
-        if UNRESOLVED_EXPANSION.search(t):
-            decide(
-                "ask",
-                "rm-unresolvable",
-                f"再帰削除の対象 `{t}` が変数/コマンド置換で、影響範囲を静的に確定できない。"
-                f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+        if t in root_hit:
+            continue
+        unresolved = getattr(t, "unresolved", False)
+        if (
+            UNRESOLVED_EXPANSION.search(t)
+            or UNRESOLVED_PARAM.search(t)
+            or UNRESOLVED_TILDE.search(t)
+        ):
+            decisions.append(
+                (
+                    "ask",
+                    "rm-unresolvable",
+                    t,
+                    f"再帰削除の対象 `{t}` が変数/コマンド置換で、影響範囲を静的に確定できない。"
+                    f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+                )
             )
+            continue
         if GLOB_CHARS.search(t) and _has_parent_ref_component(t):
-            decide(
-                "ask",
-                "rm-unresolvable",
-                f"再帰削除の対象 `{t}` はグロブと親参照(`..`)が混在し、"
-                f"グロブの展開結果によって実際の削除範囲が変わるため静的に確定できない。"
-                f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+            decisions.append(
+                (
+                    "ask",
+                    "rm-unresolvable",
+                    t,
+                    f"再帰削除の対象 `{t}` はグロブと親参照(`..`)が混在し、"
+                    f"グロブの展開結果によって実際の削除範囲が変わるため静的に確定できない。"
+                    f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+                )
             )
+            continue
         normalized = normalize_candidate(t)
-        if safe_delete_target(normalized):
+        if not unresolved and safe_delete_target(normalized):
             continue
         if GLOB_CHARS.search(t):
-            decide(
-                "ask",
-                "rm-unresolvable",
-                f"再帰削除の対象 `{t}` がグロブで、影響範囲を静的に確定できない。"
-                f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+            decisions.append(
+                (
+                    "ask",
+                    "rm-unresolvable",
+                    t,
+                    f"再帰削除の対象 `{t}` がグロブで、影響範囲を静的に確定できない。"
+                    f"展開後の実パスをコマンドに直接書いて撃ち直すと確認不要になる。",
+                )
             )
-        decide(
-            "deny",
-            "rm-recursive",
-            f"`rm -r` の対象 `{t}` はスクラッチ領域の外。{deletion_alternative(t)}",
+            continue
+        decisions.append(
+            (
+                "deny",
+                "rm-recursive",
+                t,
+                f"`rm -r` の対象 `{t}` はスクラッチ領域の外。{deletion_alternative(t)}",
+            )
         )
+    return decisions
+
+
+def strongest_rm_decision(decisions):
+    """Pick the strongest decision across every (tier, rule, target,
+    message) tuple check_rm() returned — possibly pooled across several
+    `rm` invocations in different segments of one compound command — and
+    return (tier, rule, message) for main() to emit, or None when nothing
+    was collected (D6). Every target that reached the winning tier is named
+    in the combined reason text. When more than one reason id shares that
+    tier (`rm-root` alongside `rm-recursive`, both `deny`), `rm-root` is
+    reported — the same priority a single target used to get from being
+    checked first, before D6 separated evaluation from emission.
+    """
+    if not decisions:
+        return None
+    top_rank = max(DECISION_RANK[tier] for tier, _, _, _ in decisions)
+    winners = [d for d in decisions if DECISION_RANK[d[0]] == top_rank]
+    tier = winners[0][0]
+    rule = next((r for _, r, _, _ in winners if r == "rm-root"), winners[0][1])
+    if len(winners) == 1:
+        return tier, rule, winners[0][3]
+    names = []
+    for _, _, target, _ in winners:
+        if target not in names:
+            names.append(target)
+    joined = "、".join(f"`{n}`" for n in names)
+    return (
+        tier,
+        rule,
+        f"再帰削除の複数対象が同じ強さの判定に達した: {joined}。"
+        f"それぞれ個別に安全な経路へ書き換えて撃ち直すと確認不要になる。",
+    )
 
 
 def check_file_destruction(word, args, segment):
@@ -1600,6 +1793,14 @@ def main():
     # loop below and the check would never fire.
     check_pipe_to_shell(command)
 
+    # Every rm target of every segment, pooled across possibly several `rm`
+    # invocations in one compound command (D6). check_rm() no longer decides
+    # for itself — an `ask` on an early target must not end the scan before a
+    # later target, or a later segment's own `rm`, gets to contribute a
+    # `deny` — so this loop only collects, and the strongest decision found
+    # is emitted once, after every segment has been examined.
+    rm_decisions = []
+
     for segment, toks, lexed in statements(command):
         check_bypass(segment, toks)
 
@@ -1626,11 +1827,20 @@ def main():
         if word == "git":
             check_git(args, segment)
         elif word == "rm":
-            check_rm(args)
+            rm_decisions.extend(check_rm(args))
         else:
             check_file_destruction(word, args, segment)
             check_external(word, args, segment)
             check_permissions(word, args)
+
+    # Emission happens once, after every segment's rm targets have been
+    # collected (D6) — an earlier deny from check_git()/check_file_
+    # destruction()/etc. already exited the process before this line, so
+    # reaching it means no OTHER check decided first.
+    top = strongest_rm_decision(rm_decisions)
+    if top is not None:
+        tier, rule, message = top
+        decide(tier, rule, message)
 
     if ALLOW_NON_DESTRUCTIVE and not defer_to_kill_guard and not defer_to_new_guard:
         decide("allow", None, "破壊的なパターンに一致しない。")

@@ -1,0 +1,115 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - "評価境界(rm-recursive): $(pwd) の直後に親参照付きパスが続く残存テキストは safe 例外に達する前に deny"
+      - "評価境界(rm-recursive): printf 置換の直後に親参照付きパスが続く形も同じ理由で deny"
+      - "評価境界(rm-recursive): バッククォート置換の直後に親参照付きパスが続く形も同じ理由で deny"
+      - "評価境界(rm-recursive): 置換が対象の右側(末尾)に隣接する形でも safe ルート名一致に届かず deny"
+    red_confirmed: true
+    red_reason: >-
+      Ran these 4 entries against the pre-fix destructive-guard.py (git HEAD
+      copy): all 4 got "allow" ("破壊的なパターンに一致しない。") instead of
+      "deny". Confirms the exact bug AC-1 targets — space-blanking a
+      substitution adjacent to other text left indistinguishable literal
+      residue (e.g. "$(pwd)/../tmp/scratch" -> residue "/../tmp/scratch"),
+      which normalize_candidate() then folded into a safe-root match. The 4th
+      entry ("residue on the right instead of the left") is the Test Notes
+      edge case confirming the boundary check catches adjacency on either
+      side of the substitution, not just the AC-1-example side.
+  AC-2:
+    tests:
+      - "rm 安全先のみ"
+      - "rm 安全先 + リダイレクト"
+      - "rm 安全先 + 2>&1"
+      - "本物: スクラッチ領域配下のグロブ削除は allow"
+      - "本物: 先頭の `./` は正規化で畳まれ `build` と完全一致するため allow"
+      - "既知の穴(未修正): 裸のコマンド置換 `$(mktemp -d)` は対象ゼロで早期returnし allow"
+      - "既知の穴(未修正): 裸のコマンド置換 `$(cat list)` は対象ゼロで早期returnし allow"
+    red_confirmed: false
+    red_reason: >-
+      AC-2 is the regression half, not new behavior — these pre-existing
+      allow-side entries (task0001's pinned cases named in the task plan)
+      were already green before this task and must stay green after it.
+      Verified by running the FULL suite before touching any file (164/164
+      passed, 0 failures — recorded as this task's baseline) and again after
+      the fix (178/178 passed: the same 164 entries plus 14 new ones added by
+      this task, 0 removed, 0 changed). No entry in this list, or any other
+      pre-existing deny/ask entry, changed its expectation.
+  AC-3:
+    tests:
+      - "評価境界(rm-unresolvable): 位置パラメータ代入の後で $@ を使った目標は正規化前に ask"
+      - "評価境界(rm-unresolvable): 裸の $1 を使った目標も正規化前に ask"
+      - "評価境界(rm-unresolvable): ~+ は normalizer が展開しない形のため ask"
+      - "評価境界(rm-unresolvable): ~- も同様に ask"
+      - "評価境界(rm-unresolvable): ~someone も normalizer が展開しない形のため ask"
+      - "評価境界の対照(rm-root): 裸の ~ は従来どおり rm-root で deny — AC-3 の誤検出でないことの確認"
+      - "評価境界の対照(rm-recursive): ~/ 始まりは従来どおり展開されスクラッチ外で deny — AC-3 の誤検出でないことの確認"
+    red_confirmed: true
+    red_reason: >-
+      Ran the first 5 entries against the pre-fix guard: all 5 got "allow"
+      instead of "ask" — positional ($1), special ($@), and un-expanded
+      tilde forms (~+, ~-, ~user) were not in the unresolvable vocabulary, so
+      a following parent reference folded past them and the residue matched
+      a safe root. Additionally ran each of these 5 commands directly with
+      CLAUDE_BATCH=1 against the FIXED guard and confirmed all 5 demote from
+      ask to deny (never allow) under batch, satisfying the "both modes"
+      note — a dedicated batch-mode case-table entry was not added because
+      the runner always clears CLAUDE_BATCH for array-based cases and there
+      is no existing precedent for a per-case batch entry to follow (Test
+      Notes: "worth its own entry where the existing table has a precedent
+      for one"). The 2 "対照" (control) entries are the negative half named
+      in Test Notes ("~/-leading and bare ~ targets, the false positive AC-3
+      must not create") — both already passed before this task's change
+      (bare ~ via the pre-existing rm-root check, ~/-leading via the
+      pre-existing normalize+safe-root path) and still pass after; they are
+      regression guards, not new-behavior tests, so red_confirmed does not
+      apply to them individually — folded under this AC's true value since
+      the AC's positive half (the 5 ask cases) is genuinely red-confirmed.
+  AC-4:
+    tests:
+      - "決定優先度(D6): tmp/$X の ask より後の /home/sakura/valuable の deny が勝つ"
+      - "決定優先度(D6): 対象の順序を入れ替えても同じ deny が勝つ"
+      - "決定優先度(D6): 先頭セグメントが ask 形でも後続セグメントの rm の deny が勝つ"
+      - "動的目標(rm-unresolvable): スクラッチルート配下でも `$X` を含む `tmp/$X` は safe 例外に達する前に ask"
+    red_confirmed: true
+    red_reason: >-
+      Ran the first and third entries against the pre-fix guard: both got
+      "ask" (reason rm-unresolvable, naming only `tmp/$X`) instead of "deny"
+      — the pre-fix check_rm() called decide() and exited on the first
+      target's ask, so the second target/segment's deny on
+      `/home/sakura/valuable` was never reached. This is the exact bug AC-4
+      targets. The negative half ("a command whose unresolvable target is
+      its only target still decides ask") is the pre-existing, unmodified
+      entry `rm -rf tmp/$X` (line kept as-is in the case table) — already
+      passing before and after, confirming D6 does not turn a lone ask into
+      a deny.
+  AC-5:
+    tests: []
+    red_reason: >-
+      Not independently testable by a single case — it is a property of the
+      case table plus the suite run as a whole. Verified directly: `git
+      diff` on destructive-guard-cases.json shows only additions (14 new
+      entries appended after the pre-existing 164; `git diff --stat`
+      confirms 16 insertions/deletions total, all additions with 2 trivial
+      context-line touches at the array boundary, 0 pre-existing lines
+      removed or altered), and
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` reports
+      178/178 passing, including the trailing batch-demotion assertion.
+  AC-6:
+    tests:
+      - "本物: rm 再帰"
+      - "rm 安全先のみ"
+    red_reason: >-
+      Build/determinism outcome, not a single test. Verified: (1) no decision
+      path in the diff calls os.path.realpath/os.stat/subprocess or any other
+      filesystem/process API — the only additions are regex matching, string
+      replacement, and pure comparisons; (2) ran the full suite twice back to
+      back and diffed stdout byte-for-byte — identical; (3) the two listed
+      pre-existing no-substitution entries (already in the 164-entry
+      baseline, untouched by this task) still decide exactly as before,
+      spot-checking the "commands without a substitution or expansion are
+      unaffected" half directly, backed by the full 178/178 pass covering
+      every other pre-existing entry too.
