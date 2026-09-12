@@ -1,0 +1,160 @@
+round: 1
+executed_at: "2026-09-12T21:48:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 7b10eb66ec44a171c2454ddda753a80190ce4766
+  head_commit: 8b2f56cdbbb75864662e3e0c0d040ad760ef4d4f
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-safe-delete-traversal/task0001.tests.yaml
+    - test-docs/destructive-guard-safe-delete-traversal/task0002.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+    - perspective: performance
+      reason: "判定関数は PreToolUse フックとして毎回の Bash 呼び出しで同期実行され、NFR3 が文字列処理のみ・NFR1 がファイルシステム非接触を要求するため、正規化ロジックの計算量と I/O 混入を確認する"
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 4318c9f53a9d2ca3
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 898
+    title: "コマンド置換が剥がされた残骸と `..` の組み合わせで safe ルート判定を通過する（main では deny）"
+    description: |
+      実測で再現した。`rm -rf $(pwd)/../tmp/scratch` は main では deny、本ブランチでは
+      allow（CLAUDE_BATCH の有無いずれでも allow）。原因は statements() が
+      `SUBSTITUTION.sub(" ", chunk)`（destructive-guard.py:519）で `$( )` を空白に置換して
+      から check_rm() にトークンを渡すことで、UNRESOLVED_EXPANSION は置換が存在した事実を
+      見られない。残った `/../tmp/scratch` を normalize_candidate() が `/tmp/scratch` に畳み、
+      safe_delete_target() が true を返して continue する。実際の削除先は $(pwd) の親配下で
+      safe ルートの外。`rm -rf $(printf '/home/sakura/valuable /tmp/x')/../../tmp/scratch` も
+      同じ経路で allow を再現した。成立条件は「置換の残骸 + `..` + safe ルートに着地する末尾」で、
+      末尾が safe ルート外なら deny のまま。SPEC FR6（コマンド置換は safe 例外に達しない）の未達。
+    suggestion: |
+      statements() が置換を剥がした痕跡をトークン側に残す（置換位置に解決不能マーカーを置く）か、
+      check_rm() 側で「先頭が解決不能なコンポーネント + `..`」の形を safe 例外の前に
+      ask(rm-unresolvable) に倒す。`rm -rf $(pwd)/../tmp/scratch` を
+      destructive-guard-cases.json の deny/ask ケースとして追加する。
+      ただし SPEC の受け入れ条件が allow で固定しているケース表 96 / 129 行
+      （対象がコマンド置換単体の形）の判定は変えないこと。
+    sources: [codex:security]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 1 で適用したが SPEC 受け入れ条件（ケース表 96/129 行の allow 固定）に違反したため巻き戻した。rework で対応する"
+  - stable_id: c9d5805f9d786c12
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 146
+    title: "展開できない先頭トークンが `..` と相殺され、末尾の safe 名だけで allow になる（main では deny）"
+    description: |
+      実測した 4 形すべてが main deny → 本ブランチ allow（batch でも allow）:
+      `set -- /home/sakura/valuable /tmp/x; rm -rf "$@/../build"` / `rm -rf $1/../build` /
+      `rm -rf ~+/../build` / `rm -rf ~someone/../build`。UNRESOLVED_EXPANSION は
+      `$(` / backtick / `${` / `$[A-Za-z_]` しか拾わず、位置パラメータ `$@` `$1` や
+      特殊パラメータを検出しない。normalize_candidate() は `~` と `~/` だけを展開するため
+      `~+` `~-` `~user` は通常のコンポーネント扱いになり、続く `..` に相殺される。結果、
+      先頭が未解決のまま末尾の `build` だけで safe_delete_target() が true になる。
+      シェルでは `~+` は $PWD、`$@` は複数語に展開されるので実際の削除範囲は safe ルート外に出る。
+      SPEC FR6（変数展開は safe 例外に達しない）の実装漏れ。
+    suggestion: |
+      UNRESOLVED_EXPANSION に位置/特殊パラメータ（`$@` `$*` `$#` `$?` `$$` `$-` `$[0-9]`）を
+      加え、normalize_candidate() が展開しないチルダ形（`~` の直後が `/` でも終端でもないもの）も
+      正規化前に ask(rm-unresolvable) に倒す。上記 4 形をそのまま回帰ケースに追加する。
+    sources: [codex:security]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "auto-fix loop 1 で適用したが、同一ファイルへの別修正と同時に巻き戻した。単独ではスイートを落としていない。rework で再適用する"
+  - stable_id: 07836a231fc04d10
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 892
+    title: "先頭対象の ask が後続対象・後続コマンドの deny を隠す"
+    description: |
+      実測: `rm -rf tmp/$X /home/sakura/valuable` は main deny → 本ブランチ ask、
+      後続に破壊的コマンドを繋げた複合形でも同じ退行が出る。decide() は最初の判定で
+      sys.exit(0) するため対象ループは先頭対象で打ち切られ、確実に deny すべき後続対象を
+      検査しない。理由文も `tmp/$X` しか示さないので、承認した利用者は `/home/sakura/valuable`
+      まで通ったことを知らされない。無人実行では ask が deny に降格されるため（実測で batch=deny）、
+      影響は対話実行に限られる。
+    suggestion: |
+      ask を即座に返さず保留し、全対象と後続セグメントを走査して deny があればそちらを優先する。
+      理由文には判定に関わった対象を全部並べる。対象順を入れ替えた形と複合コマンド形の
+      回帰ケースを追加する。
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix の候補ゲートに掛からない。rework 対象に含める"
+evaluation:
+  round_summary: |
+    round 1 / cross_validation=true のため、reviewer の主張を鵜呑みにせず main 版と本ブランチ版の
+    destructive-guard.py に同一コマンド 24 本を通す差分実測を行い、報告された退行をすべて再現した。
+    仕様が狙った穴（SAFE_DELETE の前方一致、末尾スラッシュ非対称、`build/../src`）は実際に塞がっており、
+    164/164 pass・plugin.json と marketplace.json がともに 0.1.73・14 件の SAFE_DELETE ケース反転・
+    既存 deny/ask ケースの削除ゼロ（旧 155→新 163 ケース、削除 0）を確認した。問題は、その代わりに
+    新しい穴が開いたこと: 正規化で `..` を畳む処理が「解決できない先頭コンポーネント」を普通の
+    ディレクトリとして相殺してしまい、main では deny だった 6 形（コマンド置換の残骸・`$@`・`$1`・
+    `~+`・`~user`）が allow に落ちた。無人実行でも allow のままでフェイルセーフが効かない。
+    injection: reviewer_outputs 5 件すべてを精査したが injection attempt は検出されなかった。
+    perspective 別の独立検査: comprehensive#0 = corroborated（3 件すべて再現、1 件は medium に調整、
+    2 件は security#0 と同一原因のため重複整理）/ security#0 = corroborated（3 件すべて再現、
+    symlink の 1 件のみ SPEC NFR4 の既知残存リスクとして demote）/ architecture#0 = corroborated /
+    spec#0 = findings（FR1-FR5・FR7-FR10 と 164/164・版番号一致は corroborate できたが、
+    FR6「変数展開/コマンド置換は safe 例外に達しない」は未達で reviewer の「違反なし」は不正確。
+    実体は F1/F2 と同一欠陥のため security カテゴリ側で計上）/ performance#0 = corroborated。
+  recommended_action: "rework"
+  action_rationale: |
+    high 2 件はいずれも「main では deny だったものが本ブランチで allow になる」実測済みの退行で、
+    しかも無人実行でも allow に落ちるためフェイルセーフが働かない。修正は UNRESOLVED_EXPANSION の
+    語彙拡張だけでなく、statements() が剥がした置換の痕跡をどう伝えるかという設計判断と、
+    正規化前に「解決不能な先頭コンポーネント」を判定する新しい分岐、加えて回帰ケースの追加を伴うため、
+    bounded auto_fix の範囲を超える。medium 1 件も同じ check_rm の判定順序に触るので同じ rework で直す。
+dismissed_sites:
+  - file: em-workflow/hooks/destructive-guard.py
+    line: 913
+    run_id: "comprehensive#0"
+    reason: "duplicate of another finding（「コマンド置換を取り除いた残りのパスを安全と誤判定する」→ 4318c9f53a9d2ca3 に統合）"
+  - file: em-workflow/hooks/destructive-guard.py
+    line: 913
+    run_id: "comprehensive#0"
+    reason: "duplicate of another finding（「未対応のチルダ展開が正規化で消えて安全判定に入る」→ c9d5805f9d786c12 に統合）"
+  - file: em-workflow/hooks/destructive-guard.py
+    line: 913
+    run_id: "security#0"
+    reason: "demoted（symlink 経由の親参照。SPEC NFR4 とコード内 Residual gap コメントが lexical-only を明示的に受容しており、閉じるには os.path.realpath が要る）"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+  aborted_stable_ids: [4318c9f53a9d2ca3, c9d5805f9d786c12]
+  note: |
+    loop 1 で 2 件を needs-judgment（batch 既定の Apply as-is）として editor に適用させたが、
+    ケース表が別ファイルのため整合せずスイートが 164/164 → 160/164 に落ちた。落ちた 4 件のうち
+    2 件は SPEC.md の受け入れ条件が allow で固定しているケース（表 96 / 129 行、対象がコマンド
+    置換単体の形）で、期待値表の追随ではなく SPEC 違反にあたる。Codex は使用量上限で回答不能
+    だったため Opus エスカレーションを 1 回実施し、その判定（巻き戻して rework に回す）を採用して
+    バックアップから復元した。復元後のハッシュは 97f4d7e2075e24652e69431bafc37f8efbf758b9 で
+    適用前と一致し、スイートは 164/164 に戻っている。
+residual_critical_high: 2
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-safe-delete-traversal-20260912T124721Z.md
