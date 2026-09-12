@@ -45,6 +45,7 @@ the task.
 | TS-8 | A delete whose substitution sits inside a `-c` / eval / here-string payload | Reaches the same verdict as the same delete written directly | Integration |
 | TS-9 | Parse-failure fallback: a command with unbalanced quoting containing a substitution | No exception; exit 0; fail-open behaviour intact | Unit |
 | TS-10 | Regression over the whole `allow` half of the case table (quoted delete string, here-doc body, commit message, `python3 -c`, redirect to the bit bucket, delete under a safe root) | Every one stays `allow` | Integration |
+| TS-11 | A recursive delete whose target mixes a path under a scratch root with a command substitution at a quote boundary | Verdict pinned in the case table and unchanged from the merged tree; the reason text makes no claim about the target's position relative to a safe root, states that part of the target comes from a command substitution, and closes with an instruction actionable for that input | Integration + Unit |
 
 ## Code Quality Verification
 
@@ -63,7 +64,7 @@ the task.
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
 | SC-1 | All functional requirements FR1-FR8 implemented and tested | The coverage table below has a task and at least one scenario for every ID |
-| SC-2 | All test scenarios TS-1 - TS-10 pass | Run the three component commands above; TS-3 … TS-8 and TS-10 are entries of the case table exercised by TS-1 |
+| SC-2 | All test scenarios TS-1 - TS-11 pass | Run the three component commands above; TS-3 … TS-8, TS-10 and the case-table half of TS-11 are entries of the case table exercised by TS-1 |
 | SC-3 | `python3 em-workflow/hooks/tests/run-destructive-guard.py` passes in full, including the unattended-demotion case | Command exits 0 and its final line reports every case passing |
 | SC-4 | `python3 -m unittest discover -s tests` passes | Command exits 0 |
 | SC-5 | Non-functional requirements NFR1-NFR7 satisfied | The coverage table below |
@@ -74,21 +75,21 @@ the task.
 
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-1 (both spellings as case-table entries), TS-2 (reason-text and demotion assertions), TS-3, TS-8 |
-| FR2 | task0001 | TS-1 (verdict tier), TS-2 (rule id in the reason prefix), TS-5 |
-| FR3 | task0001 | TS-1, TS-2 (rendered target is non-empty, not whitespace, identical across spellings) |
+| FR1 | task0001, task0003 | TS-1 (both spellings as case-table entries), TS-2 (reason-text and demotion assertions), TS-3, TS-8 (task0003: the payload evidence now carries a substitution) |
+| FR2 | task0001, task0003 | TS-1 (verdict tier), TS-2 (rule id in the reason prefix), TS-5, TS-8 (payload form reaches the same rule id as the direct form) |
+| FR3 | task0001, task0003 | TS-1, TS-2 (rendered target is non-empty, not whitespace, identical across spellings), TS-11 (the flagged-target reason text asserts only what holds of its input) |
 | FR4 | task0001 | TS-1 (quoted whole-word entry), TS-2 (its rendered target), TS-7 |
-| FR5 | task0001 | TS-1, TS-3, TS-5, TS-6, TS-7, TS-10 |
-| FR6 | task0001 | TS-2, TS-4, TS-6, TS-8, TS-9, TS-10 |
-| FR7 | task0001 | TS-1 (the runner consumes the updated table; entry count and retained command strings checked there) |
+| FR5 | task0001, task0003 | TS-1, TS-3, TS-5, TS-6, TS-7, TS-10, TS-11 (the safe-root boundary forms pinned at their current verdict) |
+| FR6 | task0001, task0003 | TS-2, TS-4, TS-6, TS-8, TS-9, TS-10 |
+| FR7 | task0001, task0003 | TS-1 (the runner consumes the updated table; entry count and retained command strings checked there), TS-11 (case-table half) |
 | FR8 | task0002 | TS-2 (the version-bump module, the repository-wide parity check), plus the invariants script |
-| NFR1 | task0001 | TS-1, TS-2 (the same command re-run yields the identical verdict and reason text) |
-| NFR2 | task0001 | TS-2 (source-level check that no filesystem-resolution, stat or subprocess call was introduced) |
-| NFR3 | task0001 | TS-1 (the kilobyte-scale assignment entry completes; the shell-payload expansion cap is untouched) |
-| NFR4 | task0001 | TS-1 (trailing unattended-demotion case), TS-2 (malformed payload fails open, exit 0), TS-9 |
-| NFR5 | task0001 | TS-2 (the reason text keeps the Japanese style and the closing rewrite instruction), plus the manual read below |
-| NFR6 | task0001 | TS-2 (no NUL or other control character anywhere in the emitted output) |
-| NFR7 | task0001 | TS-1 + TS-10 (every pre-existing `allow` entry retained and still `allow`) |
+| NFR1 | task0001, task0003 | TS-1, TS-2 (the same command re-run yields the identical verdict and reason text) |
+| NFR2 | task0001, task0003 | TS-2 (source-level check that no filesystem-resolution, stat or subprocess call was introduced) |
+| NFR3 | task0001, task0003 | TS-1 (the kilobyte-scale assignment entry completes; the shell-payload expansion cap is untouched by the ordering change) |
+| NFR4 | task0001, task0003 | TS-1 (trailing unattended-demotion case), TS-2 (malformed payload fails open, exit 0), TS-9 |
+| NFR5 | task0001, task0003 | TS-2 (the reason text keeps the Japanese style and the closing rewrite instruction), TS-11 (the instruction is actionable for the flagged input), plus the manual read below |
+| NFR6 | task0001, task0003 | TS-2 (no NUL or other control character anywhere in the emitted output) |
+| NFR7 | task0001, task0003 | TS-1 + TS-10 (every pre-existing `allow` entry retained and still `allow`), TS-11 (a verdict this feature moved is pinned rather than left unrecorded) |
 
 ## E2E Testing
 
@@ -127,7 +128,7 @@ has no visual surface.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1 - TS-10) | 10 | 10 | 0 | 0 |
+| Test scenarios (TS-1 - TS-11) | 11 | 11 | 0 | 0 |
 | Success criteria (SC-1 - SC-7) | 7 | 5 | 0 | 2 (SC-7 review, plus the reason-text read) |
 | Functional requirements (FR1 - FR8) | 8 | 8 | 0 | 0 |
 | Non-functional requirements (NFR1 - NFR7) | 7 | 7 | 0 | 1 (NFR5 usability, in addition to its automated bound) |
