@@ -194,7 +194,7 @@ workflow:
       （エンジン管理情報である feature-docs/ と test-docs/ が許可範囲の列挙に
       入っていない）。文書修正の follow-up として retrospect に送る。
   - id: retrospect
-    status: pending
+    status: in_progress
 
 tasks:
   task0001:
@@ -383,12 +383,3 @@ requirements:
     excluded_reason: null
     tasks: [task0001, task0002]
     tests: [TS-12]
-
-batch:
-  review_rework_count: 0
-  verify_rework:
-    rounds: 0
-    failed_id_counts: {}
-  infra_resume:
-    rounds: 0
-    cap: 2
