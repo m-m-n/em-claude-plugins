@@ -83,14 +83,22 @@ PUNCTUATION = "();<>|&\n"
 # ordinary word content without splitting or merging anything.
 UNRESOLVED_MARK = "\x00"
 
-# Characters that end a shell word under this module's shlex configuration:
-# its whitespace set, every PUNCTUATION operator character (already
-# includes `\n`), and the two quote characters — a quote does not itself
-# leave text behind once shlex resolves it, so a substitution sitting right
-# inside an otherwise-empty pair of quotes (`"$(cmd)"`) is still a
-# whole-word substitution, not text adjacent to other text. Used only by
-# _mark_substitutions() to classify a substitution match's neighbours.
-WORD_BOUNDARY_CHARS = frozenset(" \t\r'\"" + PUNCTUATION)
+# Stand-in text for a token whose ENTIRE value was one or more command
+# substitutions with nothing else in the word — the whole-word case
+# (destructive-guard-command-substitution task0001 Design Part 1/2). Once
+# _strip_unresolved_marks() finds nothing but marker residue left in a
+# token, this is what it renders in place of the value that was never
+# present, and what the reason text names as the offending delete target.
+#
+# Deliberately shaped like a command substitution so a reader recognizes it
+# as one, and inert everywhere else a word can occupy: no leading `-` (never
+# read as a flag), no match against REDIRECT's operator shape, no equal-to
+# or leading match against any name in SAFE_DELETE_BUILD_ARTIFACTS/
+# SAFE_DELETE_SCRATCH_ROOTS_*, no match against SELF_CONFIG or TRANSCRIPT,
+# and no control character. check_rm() also judges the `.substitution_only`
+# flag itself before this text is ever pattern-matched, so the token cannot
+# reach the safe-root exception even if this text's own shape changed later.
+SUBSTITUTION_STANDIN = "$(...)"
 
 # Redirection operators, matched against a whole token. A redirect and its
 # target are not arguments to the command and must be lifted out before the
@@ -319,20 +327,25 @@ def decide(decision, rule, reason):
 class Tok(str):
     """A token string that also remembers whether shlex read it from bare,
     unquoted operator syntax (`>`, `2>&1`, …) rather than from a word or
-    quoted span, and whether the lexing layer removed a command substitution
-    adjacent to this token's own text (D7). Every consumer besides
-    split_redirects()/check_rm() treats it as an ordinary str; both
+    quoted span; whether the lexing layer removed a command substitution
+    adjacent to this token's own text (D7); and whether this token's own
+    text is fabricated because the word it stands in for was built solely
+    from one or more command substitutions with nothing else in it
+    (`.substitution_only`, task0001 Design Part 1). Every consumer besides
+    split_redirects()/check_rm() treats it as an ordinary str; all three
     attributes default to False so a plain str used where a Tok is expected
     fails closed.
     """
 
     is_operator = False
     unresolved = False
+    substitution_only = False
 
-    def __new__(cls, value, is_operator=False, unresolved=False):
+    def __new__(cls, value, is_operator=False, unresolved=False, substitution_only=False):
         obj = str.__new__(cls, value)
         obj.is_operator = is_operator
         obj.unresolved = unresolved
+        obj.substitution_only = substitution_only
         return obj
 
 
@@ -532,45 +545,50 @@ def strip_heredocs(chunk):
 
 
 def _mark_substitutions(chunk):
-    """Blank every command-substitution match in CHUNK, choosing the
-    replacement so the word it sat in survives lexing distinguishable by
-    shape (D7, "Evidence lost at the lexing boundary"):
+    """Blank every command-substitution match in CHUNK by replacing it with
+    UNRESOLVED_MARK, so the word it sat in survives lexing as a token no
+    matter whether the match filled the whole word or sat beside real text
+    (destructive-guard-command-substitution task0001 Design Part 1, "evidence
+    survives the lexing boundary").
 
-    - A match bounded on BOTH sides by a word boundary (whitespace, a
-      PUNCTUATION operator, a quote, or the start/end of CHUNK) is replaced
-      by a single space, exactly as this module always blanked it — the
-      word it filled disappears entirely once lexing collapses the
-      whitespace, and the zero-target early return this produces is
-      unchanged (D7 shape (b), the SPEC-pinned `allow` for a
-      substitution-only target).
-    - A match adjacent to real text on either side is replaced by
-      UNRESOLVED_MARK instead. Gluing it to its neighbour — no space
-      introduced — keeps every OTHER word boundary in CHUNK exactly where
-      it was in the source; the only change is that the neighbour's token
-      now carries the marker, which _strip_unresolved_marks() turns into a
-      `.unresolved` flag before any check ever sees the text (D7 shape (c)).
+    Unlike before this task, there is no boundary test here and no separate
+    "blank to a space" branch: every match becomes marker residue, and
+    _strip_unresolved_marks() is what tells the two shapes apart, by whether
+    any real text is left once the residue is peeled back out —
+
+    - A word whose ENTIRE text was one or more command substitutions and
+      nothing else collapses, once every match in it is replaced, into a
+      token made purely of marker characters. _strip_unresolved_marks()
+      turns that into exactly one token carrying SUBSTITUTION_STANDIN and
+      `.substitution_only` — never zero tokens, which was the hole this
+      closes: a bare `rm -rf $(mktemp -d)` used to blank straight to
+      whitespace here, vanish at tokenization, and reach the recursive-delete
+      check with no target at all.
+    - A match beside real text keeps that text once the marker is peeled
+      back out; `.unresolved` is set on it exactly as before.
+
+    A substitution sitting inside an otherwise-empty pair of quotes
+    (`"$(cmd)"`) reaches the same one-token-of-marker-only result as the
+    unquoted form, because quoting is resolved by the lexer before this
+    function's output is ever tokenized — no special case is needed for it
+    here.
     """
-
-    def repl(m):
-        left = m.start() - 1
-        right = m.end()
-        left_boundary = left < 0 or chunk[left] in WORD_BOUNDARY_CHARS
-        right_boundary = right >= len(chunk) or chunk[right] in WORD_BOUNDARY_CHARS
-        return " " if (left_boundary and right_boundary) else UNRESOLVED_MARK
-
-    return SUBSTITUTION.sub(repl, chunk)
+    return SUBSTITUTION.sub(UNRESOLVED_MARK, chunk)
 
 
 def _strip_unresolved_marks(toks):
-    """Peel UNRESOLVED_MARK back out of TOKS, turning its presence into the
-    `.unresolved` flag on the token it sat in (D7). A token made ENTIRELY of
-    marker characters — one substitution that filled the whole word, or
-    several with nothing else between them — contributed no real text and is
-    dropped outright, same as it always disappeared under plain blanking; a
-    token mixing marker characters with real text keeps that text, with
-    `.unresolved` set so check_rm() can tell this target's value was never
-    fully present. Tokens without the marker pass through untouched — this
-    changes nothing for a command with no substitution in it (AC-6).
+    """Peel UNRESOLVED_MARK back out of TOKS (task0001 Design Part 1).
+
+    A token made ENTIRELY of marker characters — one command substitution
+    that filled the whole word, or several with nothing else between them —
+    contributed no real text at all; it is replaced by SUBSTITUTION_STANDIN
+    and carries `.substitution_only`, so check_rm() can judge it as a target
+    whose value was never present, rather than dropping it (the hole this
+    feature closes — AC-1). A token mixing marker characters with real text
+    keeps that text, with `.unresolved` set so check_rm() can tell this
+    target's value was never fully present — unchanged from before this
+    task. Tokens without the marker pass through untouched — a command with
+    no substitution in it is unaffected, byte for byte (AC-6).
     """
     out = []
     for t in toks:
@@ -579,6 +597,13 @@ def _strip_unresolved_marks(toks):
             continue
         cleaned = t.replace(UNRESOLVED_MARK, "")
         if cleaned == "":
+            out.append(
+                Tok(
+                    SUBSTITUTION_STANDIN,
+                    getattr(t, "is_operator", False),
+                    substitution_only=True,
+                )
+            )
             continue
         out.append(Tok(cleaned, getattr(t, "is_operator", False), unresolved=True))
     return out
@@ -977,12 +1002,20 @@ def check_rm(args):
        used to give it.
     3. Unresolved — a variable expansion or command substitution still
        present in the token (UNRESOLVED_EXPANSION), a positional/special
-       parameter form (UNRESOLVED_PARAM), or a tilde form the normalizer
-       does not expand (UNRESOLVED_TILDE) is unresolvable regardless of how
-       it looks, and never reaches the safe exception. A glob mixed with a
-       literal `..` component is unresolvable for the same reason folding
-       cannot be trusted there (_has_parent_ref_component()) — a PURE glob
-       is not caught here; see step 6.
+       parameter form (UNRESOLVED_PARAM), a tilde form the normalizer does
+       not expand (UNRESOLVED_TILDE), or a token whose value is entirely
+       fabricated because the word it stands in for was built solely from
+       one or more command substitutions with nothing else in it
+       (`.substitution_only`, task0001 Design Part 1/3) — is unresolvable
+       regardless of how it looks, and never reaches the safe exception.
+       There is no path text to normalize for a `.substitution_only` target,
+       so it is judged here, before step 4, on the same footing as the
+       other three shapes; it shares their sentence because the sentence
+       already covers both a variable expansion and a command substitution.
+       A glob mixed with a literal `..` component is unresolvable for the
+       same reason folding cannot be trusted there
+       (_has_parent_ref_component()) — a PURE glob is not caught here; see
+       step 6.
     4. Lexical normalization (normalize_candidate()) — filesystem-free.
     5. A relative target still starting with `..` after normalization has
        nowhere left to fold and is not safe; it falls straight through to
@@ -1037,7 +1070,8 @@ def check_rm(args):
             continue
         unresolved = getattr(t, "unresolved", False)
         if (
-            UNRESOLVED_EXPANSION.search(t)
+            getattr(t, "substitution_only", False)
+            or UNRESOLVED_EXPANSION.search(t)
             or UNRESOLVED_PARAM.search(t)
             or UNRESOLVED_TILDE.search(t)
         ):

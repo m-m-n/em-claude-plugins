@@ -1,0 +1,154 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: 4358/4358 green; python3 em-workflow/hooks/tests/run-destructive-guard.py: 178/178 green (before any edit)
+final_failures: []             # python3 -m unittest discover -s tests: 4382/4382 green (4358 + 24 new); run-destructive-guard.py: 187/187 green (177 pre-existing + 9 new + 1 unattended-demotion), both re-run twice with byte-identical output
+acceptance_tests:
+  AC-1:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestWholeWordSubstitutionReachesDecision.test_each_ac1_command_is_ask_with_rm_unresolvable"
+      - "tests.test_destructive_guard_command_substitution.TestWholeWordSubstitutionReachesDecision.test_each_ac1_command_demotes_to_deny_when_unattended"
+      - "tests.test_destructive_guard_command_substitution.TestWholeWordSubstitutionReachesDecision.test_none_of_the_four_is_allow_in_either_mode"
+      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): 裸のコマンド置換のみの対象 `$(mktemp -d)` は 1 トークンとして残り ask"
+      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): 裸のコマンド置換のみの対象 `$(cat list)` は 1 トークンとして残り ask"
+      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): $() スペルの裸のコマンド置換のみの対象は ask（両スペル対称性の $() 側）"
+      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): バッククォートスペルの裸のコマンド置換のみの対象は ask（両スペル対称性のバッククォート側）"
+    red_confirmed: true
+    red_reason: >-
+      Added the four case-table entries first (all four flipped/added to
+      `ask`) and ran run-destructive-guard.py against the pre-implementation
+      guard (git HEAD): 181/187 passed, 6 FAIL, all four AC-1 shapes among
+      them, each reported got=allow (the pre-existing hole — the whole-word
+      substitution vanished at tokenization, producing a zero-target early
+      return). Independently, running the new unit module's
+      TestWholeWordSubstitutionReachesDecision class against the same
+      pre-implementation guard (via `git stash` of only destructive-guard.py)
+      gave 12 failures across its three test methods, each asserting
+      tier=="ask" or tier!="allow" against an actual tier of "allow". After
+      implementation both runs are green with tier=ask/rule=rm-unresolvable
+      in the default run and tier=deny under CLAUDE_BATCH.
+  AC-2:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestReasonTextNamesTheTarget.test_reason_names_target_with_standin_rendering"
+      - "tests.test_destructive_guard_command_substitution.TestReasonTextNamesTheTarget.test_rendering_identical_across_both_spellings"
+      - "tests.test_destructive_guard_command_substitution.TestReasonTextNamesTheTarget.test_closing_rewrite_instruction_present"
+      - "tests.test_destructive_guard_command_substitution.TestReasonTextNamesTheTarget.test_no_control_characters_in_stdout_across_module_cases"
+    red_confirmed: true
+    red_reason: >-
+      test_reason_names_target_with_standin_rendering,
+      test_closing_rewrite_instruction_present (both parametrized over the
+      four AC-1 commands) and test_rendering_identical_across_both_spellings
+      (an AttributeError/ERROR, not just a failure: re.search() on the
+      generic "破壊的なパターンに一致しない。" allow-reason found no `対象
+      \`...\`` group at all) all failed against the pre-implementation
+      guard, confirmed via the same stash-based run as AC-1 — the target was
+      never named because no reason naming a delete target was ever emitted
+      for these commands pre-fix. test_no_control_characters_in_stdout_across_module_cases
+      is a regression guard and was already green pre-fix (the hole emitted
+      a generic allow reason with no marker residue to leak); it is included
+      here because it shares AC-2's "no control character" clause, not
+      because it flips.
+  AC-3:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestQuotedWholeWordSubstitutionNeverAllows.test_tier_matches_d4_ask"
+      - "tests.test_destructive_guard_command_substitution.TestQuotedWholeWordSubstitutionNeverAllows.test_target_rendering_not_whitespace_only"
+      - "tests.test_destructive_guard_command_substitution.TestQuotedWholeWordSubstitutionNeverAllows.test_never_allow_in_either_mode"
+      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): クォート付きコマンド置換のみの対象は裸形と同じ経路で ask"
+    red_confirmed: true
+    red_reason: >-
+      test_tier_matches_d4_ask and test_target_rendering_not_whitespace_only
+      both failed against the pre-implementation guard (stash-based run):
+      the pre-fix tier for `rm -rf "$(cat list)"` was `deny`/`rm-recursive`
+      with the target rendered as a literal single space (the quoted
+      substitution collapsed to a one-space quoted word, not a proper
+      target), not `ask`/`rm-unresolvable`. test_never_allow_in_either_mode
+      is a regression guard that was already true pre-fix for a different
+      reason (the pre-fix verdict was `deny`, which also satisfies
+      "not allow") — included for AC-3's completeness, not as a red→green
+      demonstration; the case-table entry for this exact command DID flip
+      (deny -> ask), confirmed by run-destructive-guard.py's pre-fix FAIL
+      list.
+  AC-4:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestFR5PinnedVerdictsUnchanged.test_fr5_pinned_verdicts"
+    red_confirmed: false
+    red_reason: >-
+      Pure regression-guard criterion: every FR5-pinned command (both
+      case-table entries, already present before this task, and this
+      unit-module cross-check) was already correct pre-implementation and
+      stays correct post-implementation — confirmed via the stash-based run
+      (none of these commands/labels appear in either the pre-fix
+      run-destructive-guard.py FAIL list or the pre-fix unittest FAIL list).
+      Part1's marking change only alters the treatment of a token with NO
+      real text left after the substitution marker is stripped; every FR5
+      shape here either has real text adjacent to its substitution (already
+      `.unresolved`, unaffected) or no substitution at all, so there is no
+      observable delta to demonstrate red-to-green for.
+  AC-5:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_non_delete_positions_stay_allow"
+      - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_nested_substitution_stays_deny"
+      - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_dash_c_payload_reaches_same_verdict_as_direct"
+      - "tests.test_destructive_guard_command_substitution.TestNonDeletePositionsUnaffected.test_unbalanced_quoting_raises_no_exception_and_exits_zero"
+      - "destructive-guard-cases.json: 本物: ネストしたコマンド置換でも内側の rm は本文の再走査で検知され deny のまま"
+      - "destructive-guard-cases.json: 対象外(判定なし): リダイレクト先に置かれた裸のコマンド置換は削除対象ではないため allow"
+      - "destructive-guard-cases.json: 対象外(判定なし): 再帰フラグ無しの delete はコマンド置換のみの対象があっても allow のまま"
+      - "destructive-guard-cases.json: スクラッチ外(rm-recursive): ダブルクォート内で実テキストに隣接するコマンド置換は従来どおり deny"
+      - "destructive-guard-cases.json: 本物: bash -c ペイロード内の実パス rm は直接書いた場合と同じ deny"
+    red_confirmed: false
+    red_reason: >-
+      Every sub-scenario here is a regression guard by construction: none of
+      these positions/shapes inspect "is this argument present vs vanished"
+      as part of their own verdict, so Part1's fix (a vanished whole-word
+      substitution now surviving as one token) changes nothing observable
+      for them. Confirmed empirically — none of these labels/tests appear
+      in either the pre-fix run-destructive-guard.py FAIL list (181/187,
+      the 6 failures were all substitution-only `ask` targets) or the
+      stash-based pre-fix unittest run (27 failures + 1 error, none from
+      this class). The unbalanced-quoting case specifically asserts
+      exit-status/no-exception, which held before this task too since
+      `_mark_substitutions()` is a plain regex substitution regardless of
+      quote balance.
+  AC-6:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_both_spellings_have_a_substitution_only_ask_entry"
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_known_hole_wording_removed_and_verdict_is_ask"
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes"
+      - "tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing"
+    red_confirmed: true
+    red_reason: >-
+      test_runner_reports_every_case_passing failed against the
+      pre-implementation guard (stash-based run): run-destructive-guard.py
+      exited 1 with 6 FAIL lines instead of "187/187 passed". The three
+      JSON-content checks (both-spellings, known-hole wording, every
+      pre-task command preserved) assert against the case-table file
+      content itself, which this task edits before any source change per
+      the Test Notes ("write the failing expectations first") — against the
+      pre-task table (git HEAD, no substitution-only entries, "既知の穴
+      (未修正)" wording present) these three would also fail by
+      construction (verified by inspection of the HEAD blob via `git show
+      HEAD:em-workflow/hooks/tests/destructive-guard-cases.json`, which
+      lacks the `rm -rf $(printf /home/sakura/valuable)`/backtick commands
+      entirely and carries the "既知の穴(未修正)" label on both known-hole
+      entries).
+  AC-7:
+    tests:
+      - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library"
+      - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls"
+      - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_determinism_across_repeated_runs"
+      - "tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_shell_payload_expansion_cap_left_in_place"
+    red_confirmed: false
+    red_reason: >-
+      All four are invariants that already held before this task and are
+      guarded, not newly created, by this change: the guard imported only
+      `json`/`os`/`re`/`shlex`/`shutil`/`sys` before this task and still
+      does; it introduced no filesystem-resolution/stat/subprocess call
+      before and introduces none now (Part1's fix is pure string/regex
+      manipulation); the guard's decisions were already deterministic
+      (pure functions of the command string plus the CLAUDE_BATCH env var);
+      and MAX_SHELL_PAYLOAD_EXPANSIONS = 25 is untouched by this task's
+      diff. Confirmed via the same stash-based pre-fix run: none of these
+      four methods appear in that run's failure list. `python3 -m unittest
+      discover -s tests passes with the new module present` (the other
+      clause of AC-7) is a structural/build fact rather than a
+      red-to-green behavioural demonstration — the module did not exist
+      before this task, so there is no meaningful "red" state for its mere
+      presence to transition from.
