@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-command-substitution
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 9f2ee24e23e513c0adc1abab63d6395e39dbba96
 last_input_digest: sha256:f782247f66223a54810047bd0428a7323dbe18684ddafeea86ffa68655d9f85f
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -38,10 +38,11 @@ artifacts:
     produced_by: create-plan-run-0002
 patches:
   - patch_id: destructive-guard-command-substitution-p0002
-    status: proposed
+    status: applied
     operation: replace_planning
     base_input_digest: sha256:f782247f66223a54810047bd0428a7323dbe18684ddafeea86ffa68655d9f85f
     base_workflow_blob: e0d51dfec95ee6ffea56edfd9900216493614e4b
+    applied_at_commit: 6be8588bf4442f72f112a66466015c6f5859a71d
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
