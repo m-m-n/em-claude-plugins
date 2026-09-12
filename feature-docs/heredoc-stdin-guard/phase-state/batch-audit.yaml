@@ -1,0 +1,321 @@
+schema_version: 1
+feature: heredoc-stdin-guard
+records:
+  - question_id: create-plan.version-bump-task-split
+    packet_id: null
+    answered_at: "2026-09-12T23:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [fold_into_task0001]
+    freeform: null
+    normalized_answer: >-
+      FR9（plugin.json / marketplace.json の version bump）を task0002 として
+      分離せず、task0001 に畳み込む。フィーチャーのタスクは task0001 の 1 本に
+      なる。
+    resolution_note: >-
+      gate: create-plan の IMPLEMENTATION.md Open Question（gate_id 無しの
+      non-packet gate。references/batch-mode.md の「Any other non-packet
+      AskUserQuestion site」フォールバックに従い Codex 相談を先に行った）;
+      codex_consulted: true; 1 回目の run_codex_exec.sh readonly は entry 1 が
+      600 秒でタイムアウトし、fallback provider（litellm / vertex-glm-5.2）が
+      調査中に打ち切られて構造化回答に到達しなかった。2 回目は確定済みの事実
+      5 件を添えて codex exec -p litellm -m vertex-glm-5.2 を直接呼び、回答を
+      得た。Opus escalation: 実行せず（2 回目で option_id に写像したため）。
+      選ばれなかった選択肢: keep_separate。
+      Codex の論拠: (1) .claude/rules/core-plugin-version-bump.md の
+      「same change」は、version と中身が 1 コミットに載るときに最も強く満たさ
+      れる。(2) task0002 が先にマージされ task0001 が失敗・rework された場合、
+      integration ブランチは「フックが無いのに 0.1.73」という version/content
+      ドリフトを抱える。これはこのルールが防ごうとしている状態そのもの。
+      (3) 2 つのファイル集合は互いに素なので、畳み込んでもコンフリクトは増え
+      ない。(4) FR9 はマニフェスト 2 本の version 文字列 2 行だけで、
+      complexity high の task0001 に追加してもセッション負荷はほぼ増えず、
+      分離して得られる並列性はゼロに近い（trivial な bump が律速になることは
+      無い）。
+  - question_id: create-plan.version-bump-test
+    packet_id: null
+    answered_at: "2026-09-12T23:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [add_version_test]
+    freeform: null
+    normalized_answer: >-
+      tests/test_heredoc_stdin_guard_version_bump.py を追加し、baseline patch を
+      72 に引き上げて未 bump の tree で赤くなるようにする。SPEC.md の File
+      Structure には無いが、Declared Change Set は workflow.yaml の tasks.files
+      から導出される superset guard なので、計画時点で files に宣言すれば許容
+      される。
+    resolution_note: >-
+      gate: create-plan の IMPLEMENTATION.md Open Question（gate_id 無しの
+      non-packet gate。同上のフォールバック経路）; codex_consulted: true;
+      fallback provider answered（litellm / vertex-glm-5.2）; Opus escalation:
+      実行せず。選ばれなかった選択肢: no_new_test。
+      Codex の論拠と、こちらで裏取りした事実: (1) 汎用の
+      tests/test_plugin_version_parity.py は plugin.json と marketplace.json の
+      version 一致を見るが、baseline は BASELINE_VERSION = "0.1.50" で固定され
+      ており、未 bump の 0.1.72 でも 0.1.50 を超えるため緑のまま通る。
+      (2) 直近の per-feature モジュール（tests/test_muse_consent_version_bump.py）
+      の baseline は patch > 71 で、これも 0.1.72 で通る。つまり新規モジュールを
+      足さない限り「bump し忘れ」を赤くする仕掛けが 1 つも無い。
+      (3) このリポジトリには test_<feature>_version_bump.py が 16 本あり、
+      baseline を自フィーチャーの直前値まで引き上げて未 bump の tree を赤に
+      する、という確立した慣習になっている。
+      (4) em-workflow/scripts/check-plugin-invariants.py に version チェックは
+      無い（Codex が確認、こちらでも再確認）。
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-13T00:15:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined"
+    normalized_answer: "declined"
+    resolution_note: >-
+      task_id: task0001; declined files deviation:
+      tests/test_muse_guard_registration.py. Missing evidence part: the
+      dropped-criterion identifier. The report names IMPLEMENTATION.md D6,
+      which is a design-decision id, not an AC-n of task0001's own plan and
+      not a requirement id registered in workflow.yaml. The path itself
+      passes the shape check and is not under a workflow control path, and
+      the failure mode is stated observably (the existing
+      test_destructive_guard_remains_last pins destructive-guard.py as the
+      literal last PreToolUse(Bash) entry and goes red once
+      heredoc-stdin-guard.py is appended), but the identifier part is
+      unresolved, so the path is NOT auto-added to tasks.task0001.files.
+      It stands as an ordinary deviation for the containment check.
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-13T00:15:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined"
+    normalized_answer: "declined"
+    resolution_note: >-
+      task_id: task0001; declined files deviation: em-workflow/README.md
+      left untouched though declared in tasks.task0001.files. Missing
+      evidence part: the path being added — this deviation adds no path,
+      it reports a declared path that was not written, so the auto-addition
+      rule does not apply to it at all. Reported rationale: README.md
+      already omitted muse_guard.py before this task, so omitting
+      heredoc-stdin-guard.py made no test-covered claim newly false, and
+      the task plan conditions the README update on it otherwise becoming
+      incomplete. Recorded for the run report; no files change.
+  - question_id: review.security-skip-routing
+    packet_id: null
+    answered_at: "2026-09-13T01:05:00+09:00"
+    source: batch-orchestrator-judgment
+    answer_mode: single_select
+    selected_option_ids: [dispatch_claude_fallback]
+    freeform: null
+    normalized_answer: >-
+      security 観点の primary（codex）が skipped: true / skip_reason
+      "codex_declined_to_fetch_diff" を返した。R2b の retryable 表に無い
+      skip_reason なので chain は進めず、代わりに Claude fallback
+      （security#fallback）を 1 本だけ dispatch した。
+    resolution_note: >-
+      gate: gate_id 無しの non-packet gate（references/batch-mode.md の
+      「Any other non-packet AskUserQuestion site」フォールバック）;
+      codex_consulted: false（Codex 自身が当該 skip の当事者であり、
+      同じ枯渇状態の可能性が高いため相談先として不適）。
+      当該 run に診断を返させた結果は model_refusal — ハーネスは正常に動作し、
+      モデルが diff 取得を行わずに skipped を自己申告していた。summary 自体が
+      "Security review not completed — no diff content analyzed." と述べている
+      ため、完了した run として扱えない。R2b は「no completed run かつ次の
+      chain entry が無い」状態の救済として Claude fallback 1 本を定めており、
+      これが最小副作用（カバレッジを足すだけで何も取り除かない）の選択肢。
+      選ばれなかった選択肢: keep_skip（security 観点が丸ごと未レビューのまま
+      残る。シェルコマンドを書き換えるフックの変更で security floor を空に
+      するのは受け入れ難い）、advance_chain_to_muse（retryable 表に無い
+      skip_reason で chain hop を消費するのは表の規定に反する）。
+  - question_id: review.architecture-harness-unavailable
+    packet_id: null
+    answered_at: "2026-09-13T01:05:00+09:00"
+    source: batch-protocol-rule
+    answer_mode: single_select
+    selected_option_ids: [advance_to_codex]
+    freeform: null
+    normalized_answer: >-
+      architecture#0（litellm / vertex-glm-5.2）が harness_unavailable で
+      skip したため、R2b の表に従い別ハーネスの次エントリ chain index 2
+      （codex）へ進めた。architecture#2 は完了。
+    resolution_note: >-
+      gate ではなくプロトコル規定（review-phase.md Phase R2b の retryable
+      表）。budget/reachability はハーネスの性質なので同一ハーネスの
+      muse-spark（index 1）は飛ばした。codex_consulted: false。
+  - question_id: review.updated-input-output-shape
+    packet_id: null
+    answered_at: "2026-09-13T01:20:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [option_b_add_hook_event_name]
+    freeform: null
+    normalized_answer: >-
+      heredoc-stdin-guard.py が stdout に出す
+      hookSpecificOutput には "hookEventName": "PreToolUse" を足す。
+      permissionDecision は足さない（option B）。
+    resolution_note: >-
+      gate: gate_id 無しの non-packet gate。ユーザー指示「不明点は Codex に
+      相談し、比較して優れていると判断した方を採用する」に基づく相談。
+      codex_consulted: true（3 回目で成功）。1 回目 = 既定 provider が
+      ChatGPT plan の usage limit で失敗。2 回目 = litellm / vertex-glm-5.2 が
+      プロンプト中の「バイナリを調べてよい」という記述を真に受けて無制限の
+      ファイルシステム探索に入り 600 秒でタイムアウト。3 回目 = 調査禁止を
+      明記した bounded プロンプトで litellm / muse-spark に投げて成功。
+      fallback provider が回答: true。Opus escalation: 実行せず。
+      Codex（muse-spark）の結論は option B。論拠: (1) 公式ドキュメントの
+      PreToolUse の例はすべて hookEventName を持つ。(2) 同一プラグイン内の
+      既存フック 6 本すべてが hookEventName を出している。(3) バイナリ内の
+      文字列は updatedInput の「object か」「空でないか」の検証を述べている
+      だけで、permissionDecision が無いと無視される根拠にはならない。
+      (4) option C は動くが permissionDecision "allow" が heredoc を含む
+      全コマンドを自動承認し、先行する 5 本のガードの判定を上書きするため
+      代償が大きすぎる。
+      選ばれなかった選択肢: option_a_keep_as_is、option_c_add_permission_decision。
+      検証: Codex の推奨を鵜呑みにせず、実機 Claude Code 2.1.269 で A/B を
+      実測した。詳細は同フェーズの review finding を参照。
+  - question_id: create-plan.replan-task-split
+    packet_id: null
+    answered_at: "2026-09-13T00:58:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [single_task]
+    freeform: null
+    normalized_answer: >-
+      案 A（単一タスクに畳み込む）を採用。TS8 相当の end-to-end 検証は
+      VERIFICATION.md の手動シナリオに留める。スキーマ準拠テストは実機バイナリ
+      非依存の固定 fixture として書く。
+    resolution_note: >-
+      gate: create-plan re-plan decomposition（gate_id 無しの裁量ゲート。
+      batch-mode.md の unlisted-gate fallback に従い Codex 相談を先に行った）。
+      codex_consulted: true / 1 回目は 600 秒タイムアウト、2 回目は
+      run_codex_exec.sh の fallback entry 2（litellm / vertex-glm-5.2）が応答。
+      opus_escalation: なし。
+      提示した選択肢: 案 A = 単一タスクに畳み込む / 案 B = 実装修正タスクと
+      契約テスト追加タスクの 2 本に分ける。
+      採用: 案 A。
+      Codex の論拠 3 点 — (1) 案 B は両タスクとも
+      tests/test_heredoc_stdin_guard.py を files に宣言するため worktree 並列
+      マージで確実にコンフリクトし、親側採用 + 再実装という高コストのプロトコル
+      に入る。(2) 契約テスト側は hookEventName 修正の完了に依存するが実行順が
+      保証されないため、先に走ると壊れた出力を対象にテストを書くことになる。
+      (3) 4 つの変更は「出力形を正す→その形を検証する」という 1 つの結合単位で、
+      分割しても並列化の短縮効果がゼロのため分割の目的を満たさない。
+      却下した案 B の理由: 同一ファイル衝突が確定し、順序依存を並列実行モデルが
+      扱えない。em-workflow の規約が「順序が要るなら 1 タスクにまとめる」を
+      指示する状況そのもの。
+      付随の 2 点 — (1) TS8 相当の実機検証は自動テスト化しない。フックは Claude
+      Code 本体が駆動する経路で動くため、テストプロセスから実機のフック実行経路
+      を再現するのは本質的に困難。「スクリプトが正しい JSON を出す」は自動化でき
+      るが「Claude Code がそれを受理した」は実機が要るため、境界の手前を自動
+      テスト、向こう側を手動シナリオに分ける。(2) スキーマ準拠テストは PreToolUse
+      フック出力スキーマをリポジトリ内の固定 fixture として定義し、stdout を
+      JSON parse した結果に対して hookSpecificOutput の存在・必須キー集合
+      {hookEventName, updatedInput}・hookEventName == "PreToolUse"・updatedInput
+      の内容を assert する形にする。実機バイナリに依存せず決定的に回る。
+      orchestrator の独立判断も同じ結論に達したため、そのまま採用した。
+  - question_id: implement.task-branch-delete-blocked
+    packet_id: null
+    answered_at: "2026-09-13T01:02:00+09:00"
+    source: batch-safe-default
+    answer_mode: single_select
+    selected_option_ids: [delete_from_integration_worktree]
+    freeform: null
+    normalized_answer: >-
+      implement-phase.md I.2.b step 4 が指示するタスクブランチの強制削除
+      （force-delete フラグ付きの branch 削除）が、em-workflow 自身の
+      destructive-guard（ルール git-branch-force-delete）に阻まれた。
+      代わりに integration worktree 内から通常削除フラグで
+      em-workflow/heredoc-stdin-guard/task0002 を削除した。
+    resolution_note: >-
+      gate: gate_id 無し（AskUserQuestion ゲートではなく PreToolUse hook の
+      拒否）。codex_consulted: false — 等価で副作用のより小さい代替手段が
+      自明だったため。マージ済みであることは
+      `git merge-base --is-ancestor` で検証済みで、integration worktree の
+      HEAD は当該ブランチを含む integration ブランチなので通常削除が成功する。
+      強制削除ではないため到達不能コミットは生じない。
+      選ばれなかった選択肢: メイン作業ツリーから強制削除を再試行（guard に
+      再度阻まれる）、ブランチを残す（I.2.b step 4 の掃除が未完のまま残る）。
+      retrospect 向けの観察 2 件 — (1) implement-phase.md I.2.b step 4 の
+      強制削除指示が、本リポジトリ同梱の destructive-guard と正面衝突する。
+      (2) destructive-guard は heredoc 本文に書かれた文字列リテラルを実行
+      コマンドとして誤認した（この監査記録を書き込む python heredoc の中の
+      引用文にマッチして拒否した）。.claude/rules/hook-tests.md が allow 側
+      ケースとして挙げている誤爆の類型そのもの。
+  - question_id: verify.result-judgment
+    packet_id: null
+    answered_at: "2026-09-13T01:45:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [record_pass_with_outstanding_manual_items]
+    freeform: null
+    normalized_answer: >-
+      verify を result: pass として記録し、TS-8 / TS-16 を「構造上マージ後にしか
+      実行できない手動項目」として run report と PR 説明に繰り越す。TS-12 の
+      change-set half は no-violation と判定し、VERIFICATION.md の TS-12 文言の
+      記載漏れを別の未対応項目として記録する。
+    resolution_note: >-
+      gate: gate_id 無しの non-packet gate（batch-mode.md の「Any other
+      non-packet AskUserQuestion site」フォールバック）。ユーザー指示
+      「不明点は Codex に相談し、比較して優れていると判断した方を採用する」に
+      基づく相談。codex_consulted: true（2 ラウンド、いずれも entry 1 /
+      gpt-6-astra / read-only / reasoning xhigh で成功。fallback provider は
+      未使用。Opus escalation: 実行せず）。
+      1 ラウンド目の提示事実 F1..F12 に対する Codex の回答は
+      DECISION: fail / TS12: violation。論拠は「TS-12 の文言が列挙する許可範囲
+      （em-workflow プラグイン / ルートの marketplace manifest / ルートの
+      tests ディレクトリ）に test-docs/ が含まれないため、既存の慣例を理由に
+      明文の条件の例外にはできない」。TS-8 / TS-16 については
+      「実行前提が成立していないので失敗ではなくマージ後の未実施項目」と
+      1 ラウンド目から一貫して判断していた。
+      orchestrator 側でこの回答を検算したところ、提示事実に決定的な 2 件が
+      欠けていた。(F13) 同じブランチは feature-docs/ も大幅に変更しており、
+      これも TS-12 の列挙に含まれない。TS-12 を文言どおり適用すると、
+      TS-12 を含む VERIFICATION.md 自身の存在が範囲違反になり、過去に検証を
+      通過した全フィーチャーが違反になる。(F14) test-docs/{feature}/{task}.tests.yaml
+      は implement-phase.md が implementer に tests_yaml_path として渡す
+      プロトコル必須の成果物であり、feature-docs/ と同種のエンジン管理情報で
+      あって製品コードではない。(F15) レビュー 2 ラウンドの 4 観点 + 独立評価者は
+      test-docs/ を含む change set を対象にしており、範囲違反の指摘はゼロ。
+      NFR6 の文言「Scope containment — inside the em-workflow plugin only」と
+      TS-12 の手動チェック項目が名指しする具体的懸念はユーザーのグローバル
+      hooks ディレクトリであり、そこは未変更。
+      この 3 件を足した 2 ラウンド目で Codex は判断を変更し
+      （CHANGED_FROM_PREVIOUS: yes）、DECISION: pass / TS12: no-violation を
+      返した。論拠: (1) 列挙を完全な許可範囲として扱う解釈は、必須の管理文書と
+      TS-12 自身を違反にするため成立しない。(2) test-docs/ は実装手順で必須と
+      される管理情報で feature-docs/ と同種。(3) 範囲制限の対象はプラグイン外
+      への製品コードの変更であり、明示的な確認対象のグローバル hooks は未変更。
+      (4) TS-12 の文言は VERIFICATION.md 側の記載漏れであって change set が
+      範囲外なのではない。記載漏れは文書修正の未対応事項として記録し、それ
+      自体では検証を fail にしない。
+      比較して優れていると判断した方（2 ラウンド目）を採用した。
+      選ばれなかった選択肢: record_fail_on_ts12（修正対象の無い自動 rework を
+      引き起こし、TS-12 の文言を根拠に過去の全フィーチャーを遡って違反に
+      する）、record_fail_on_ts8（TS-8 は VERIFICATION.md 自身が
+      「マージ後にプラグインキャッシュを更新し Claude Code を再起動する」ことを
+      前提として明記しており、未マージのブランチでは構造上実行できない。
+      実行できない項目を failed_item にすると rework が空回りする）。
+      Codex が挙げた残存リスク: 「TS-12 に管理情報の除外が明記されていない
+      以上、明文の条件を優先すれば両ディレクトリへの変更は違反になる」。
+      これは VERIFICATION.md の文言修正で解消する性質のものとして
+      retrospect の follow-up に回す。
+  - question_id: verify.ts8-live-probe
+    packet_id: null
+    answered_at: "2026-09-13T01:40:00+09:00"
+    source: batch-orchestrator-judgment
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "inconclusive-by-construction"
+    normalized_answer: >-
+      現セッションで実機プローブを 1 回行った（heredoc を含む Bash 呼び出しに
+      続けて ls -l /proc/self/fd/0 を実行）。fd 0 は socket を指しており、
+      書き換えは適用されていなかった。ただしインストール済みプラグイン
+      キャッシュの最新は 0.1.73（hookEventName を欠く既知の不具合版）であり、
+      本フィーチャーが残す 0.1.74 は未インストール。したがってこの観測は
+      「0.1.73 が不具合である」とも「0.1.74 が単に未インストールである」とも
+      整合し、どちらも区別しない。TS-8 / TS-16 は未実施のまま繰り越す。
+    resolution_note: >-
+      codex_consulted: false（観測事実の記録であり判断ゲートではない）。
+      キャッシュはマーケットプレイスのソースから展開されるため、0.1.74 の
+      インストールにはこのブランチのマージと Claude Code の再起動が要る。

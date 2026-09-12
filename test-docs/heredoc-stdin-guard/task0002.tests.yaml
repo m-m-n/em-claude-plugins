@@ -1,0 +1,142 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 4357 passed, 0 failed
+final_failures: []             # same suite after implementation: 4358 passed (net +1 test), 0 failed
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestRewritesBareHeredocWrite.test_rewrites_command_and_preserves_other_fields
+      - tests.test_heredoc_stdin_guard.TestRewritesHeredocFollowedByStdinReader.test_rewrites_command
+      - tests.test_heredoc_stdin_guard.TestRewriteOutputConformsToHookOutputSchema.test_conforms_to_the_hook_output_schema_fixture
+    red_confirmed: true
+    red_reason: >-
+      assert_rewrite raised AssertionError: {'updatedInput'} !=
+      frozenset({'updatedInput', 'hookEventName'}) -- the parsed
+      hookSpecificOutput carried only updatedInput, not the required
+      two-member set, before the guard was corrected.
+  AC-2:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestRewritesBareHeredocWrite.test_rewrites_command_and_preserves_other_fields
+      - tests.test_heredoc_stdin_guard.TestRewriteOutputConformsToHookOutputSchema.test_conforms_to_the_hook_output_schema_fixture
+    red_confirmed: true
+    red_reason: >-
+      Same run as AC-1: the guard emitted no hookEventName member at all
+      (KeyError-equivalent -- the member-set assertion failed before the
+      event-name value could even be checked), so the value assertion
+      could not be reached until the member was added.
+  AC-3:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestRewriteOutputConformsToHookOutputSchema.test_conforms_to_the_hook_output_schema_fixture
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: {'updatedInput'} != frozenset({'updatedInput',
+      'hookEventName'}) at the member-set check -- this is the dedicated
+      case that would have caught the original defect; it failed against
+      the unmodified task0001 guard and passed once hookEventName was
+      added.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Structural criterion (single fixture declaration reused by two call
+      sites), not expressible as a red/green test run. Verified by
+      inspection: HOOK_OUTPUT_SCHEMA is declared exactly once at module
+      level in tests/test_heredoc_stdin_guard.py and is the only source
+      both assert_rewrite and TestRewriteOutputConformsToHookOutputSchema
+      read the hook-specific-output member set from; no second
+      hand-written member list for that object exists in the file.
+  AC-5:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestRewritesBareHeredocWrite.test_rewrites_command_and_preserves_other_fields
+      - tests.test_heredoc_stdin_guard.TestExecutedRewriteWritesTheOriginalHeredocBodyExactly.test_body_is_preserved_byte_for_byte_within_a_temp_directory
+    red_confirmed: true
+    red_reason: >-
+      Both tests failed in the same red run as AC-1 (assert_rewrite's
+      member-set assertion raised before reaching the command-equality
+      check); once the guard emitted hookEventName, the same tests passed
+      and their command/field equality assertions (unchanged by this
+      task) were exercised and held.
+  AC-6:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestOutputNeverCarriesAPermissionDecision.test_no_case_ever_emits_a_permission_decision_and_exit_is_always_zero
+    red_confirmed: false
+    red_reason: >-
+      Regression criterion: this task does not touch permission-decision
+      emission or exit-status handling, so this test was already green in
+      the baseline and stayed green throughout -- it never went red,
+      because the defect being corrected (a missing member) is orthogonal
+      to what this test checks.
+  AC-7:
+    tests:
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWithoutHeredoc.test_plain_command_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWithoutHeredoc.test_here_string_alone_is_not_mistaken_for_a_heredoc
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWhenAlreadyRedirected.test_command_already_starting_with_the_cutoff_token_is_not_rewritten
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWhenAlreadyRedirected.test_command_closed_from_the_head_with_a_plain_redirect_is_not_rewritten
+      - tests.test_heredoc_stdin_guard.TestNoRewriteWhenAlreadyRedirected.test_feeding_the_guards_own_output_back_never_doubles_the_token
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_malformed_json_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_missing_command_field_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_empty_command_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_non_string_command_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_non_bash_tool_name_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_unterminated_quote_is_undecidable_and_produces_no_rewrite
+      - tests.test_heredoc_stdin_guard.TestFailsOpen.test_empty_stdin_produces_no_rewrite
+    red_confirmed: false
+    red_reason: >-
+      Regression criterion per Test Notes ("AC-7 is a regression
+      criterion, not new coverage"). These no-rewrite / fail-open cases
+      kept their original payloads and expectations, were already green in
+      the baseline, and were unaffected by the envelope correction (all
+      of them assert empty stdout, never assert_rewrite), so they never
+      went red.
+  AC-8:
+    tests:
+      - tests.test_heredoc_stdin_guard_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_heredoc_stdin_guard_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - tests.test_heredoc_stdin_guard_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_heredoc_stdin_guard_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_heredoc_stdin_guard_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_source_unchanged
+      - tests.test_heredoc_stdin_guard_version_bump.TestMarketplaceEntryVersion.test_em_review_entry_version_not_dragged_along
+    red_confirmed: true
+    red_reason: >-
+      AssertionError: 73 not greater than 73, observed for both
+      test_version_is_past_baseline and
+      test_em_workflow_entry_version_is_past_baseline after raising
+      BASELINE_PATCH to 73 but before bumping either manifest; both
+      passed once both manifests moved to 0.1.74.
+  AC-9:
+    tests:
+      - tests.test_heredoc_stdin_guard_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - tests.test_heredoc_stdin_guard_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - tests.test_heredoc_stdin_guard_version_bump.TestValidationDetectsRegressions.test_baseline_matcher_rejects_forged_pre_bump_version
+      - tests.test_heredoc_stdin_guard_version_bump.TestValidationDetectsRegressions.test_forged_pre_bump_version_is_well_formed
+      - tests.test_heredoc_stdin_guard_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_heredoc_stdin_guard_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+    red_confirmed: true
+    red_reason: >-
+      Baseline re-anchored to BASELINE_PATCH=73 and FORGED_PRE_BUMP_VERSION
+      re-anchored to "0.1.73" BEFORE editing either manifest; the module
+      went red (73 not greater than 73) against the un-bumped 0.1.73 tree,
+      then green only after both manifests moved to 0.1.74. The equality
+      matcher's negative proof and non-vacuity guard were left untouched
+      per the plan and were green throughout.
+  AC-10:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Whole-suite verification criterion, not a single red/green test:
+      `python3 -m unittest discover -s tests` ran 4358 tests, 0 failures;
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` reported
+      156/156 passed. The individual defects these commands would have
+      caught are already covered red-to-green under AC-1/AC-3/AC-8/AC-9
+      above.
+  AC-11:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      File-scope criterion, verified by inspection rather than a test:
+      `git diff --stat` shows exactly the five expected files
+      (.claude-plugin/marketplace.json, em-workflow/.claude-plugin/plugin.json,
+      em-workflow/hooks/heredoc-stdin-guard.py,
+      tests/test_heredoc_stdin_guard.py,
+      tests/test_heredoc_stdin_guard_version_bump.py); em-workflow/hooks/hooks.json
+      (the registration file) has no diff; no feature-flag reference was
+      introduced anywhere in the diff.
