@@ -55,6 +55,19 @@ for `.py`, `bash` for `.sh`) and the timeout follows a per-script table
 migrated guards carry the timeouts their original global registration used.
 The ordering requirement among the PreToolUse(Bash) guards is a separate
 concern, pinned in tests/test_guardrail_hooks_migration.py.
+
+Extended again by heredoc-stdin-guard task0001 (AC-8): this file did not
+yet pin the PreToolUse(Bash) matcher's array as a whole (only
+`bash_guard.py`'s presence, plus the manifest-driven per-entry shape
+checks above, which say nothing about count or order).
+`TestPreToolUseBashArrayHasTheSevenEntryOrderedShape` below fills that gap:
+it asserts the array holds exactly seven entries, pins the first six
+verbatim (command, timeout, status message) so a later reordering or edit
+to any of them fails here, and pins the seventh's invocation form for the
+new `heredoc-stdin-guard.py` hook. The relative ordering invariant
+("`destructive-guard.py`'s blanket allow must run last among the ORIGINAL
+six") stays the sole concern of
+tests/test_guardrail_hooks_migration.py -- not duplicated here.
 """
 
 import importlib.util
@@ -156,6 +169,7 @@ NONSTANDARD_HOOK_TIMEOUTS = {
     "gitleaks-write-guard.sh": 30,
     "kill-guard.py": 10,
     "destructive-guard.py": 10,
+    "heredoc-stdin-guard.py": 10,
 }
 
 _PLUGIN_ROOT_COMMAND_RE = re.compile(
@@ -298,6 +312,100 @@ class TestReferencedScriptFilesExist(unittest.TestCase):
         errors = validate_hooks_config(self.config, PLUGIN_ROOT)
         missing = [e for e in errors if e.startswith("referenced script file")]
         self.assertEqual(missing, [], "\n".join(missing))
+
+
+# heredoc-stdin-guard task0001 AC-8: the PreToolUse(Bash) matcher's full
+# seven-entry ordered shape. The first six are pinned verbatim (command,
+# timeout, status message) as they stood before this task's edit -- a
+# later reordering or an edit to any of them fails here even though
+# nothing else in this module asserts array count or order.
+EXPECTED_PRETOOLUSE_BASH_FIRST_SIX = [
+    {
+        "type": "command",
+        "command": 'bash "${CLAUDE_PLUGIN_ROOT}"/hooks/gitleaks-precommit.sh',
+        "timeout": 30,
+        "statusMessage": "gitleaksでシークレットをスキャン中...",
+    },
+    {
+        "type": "command",
+        "command": 'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/kill-guard.py',
+        "timeout": 10,
+        "statusMessage": "kill対象のプロセス木を検証中...",
+    },
+    {
+        "type": "command",
+        "command": 'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/bash_guard.py',
+        "timeout": 15,
+    },
+    {
+        "type": "command",
+        "command": 'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/failed-run-cleanup-guard.py',
+        "timeout": 15,
+        "statusMessage": "失敗した実行のクリーンアップでないか検証中...",
+    },
+    {
+        "type": "command",
+        "command": 'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py',
+        "timeout": 15,
+        "statusMessage": "muse-spark-contributor の同意を検証中...",
+    },
+    {
+        "type": "command",
+        "command": 'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/destructive-guard.py',
+        "timeout": 10,
+        "statusMessage": "破壊的コマンドを検証中...",
+    },
+]
+
+# The invocation form pinned in IMPLEMENTATION.md Shared Components
+# ("Guard invocation form"): plugin-root-relative python3, 10-second
+# timeout, matching the neighbouring Python guards' style.
+EXPECTED_HEREDOC_GUARD_COMMAND = (
+    'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/heredoc-stdin-guard.py'
+)
+EXPECTED_HEREDOC_GUARD_TIMEOUT = 10
+
+
+class TestPreToolUseBashArrayHasTheSevenEntryOrderedShape(unittest.TestCase):
+    """AC-8 (FR7, NFR3, NFR4): the PreToolUse(Bash) matcher holds exactly
+    seven entries; the seventh invokes heredoc-stdin-guard.py in the
+    pinned invocation form with a 10-second timeout; the first six are
+    unchanged in order, command, timeout and status message."""
+
+    @classmethod
+    def setUpClass(cls):
+        config = json.loads(HOOKS_JSON_PATH.read_text())
+        groups = [
+            g
+            for g in config.get("hooks", {}).get("PreToolUse", [])
+            if g.get("matcher") == "Bash"
+        ]
+        assert len(groups) == 1, (
+            f"expected exactly one PreToolUse(Bash) matcher group, found {len(groups)}"
+        )
+        cls.entries = groups[0].get("hooks", [])
+
+    def test_exactly_seven_entries(self):
+        self.assertEqual(len(self.entries), 7, self.entries)
+
+    def test_first_six_entries_are_unchanged_verbatim(self):
+        self.assertEqual(self.entries[:6], EXPECTED_PRETOOLUSE_BASH_FIRST_SIX)
+
+    def test_seventh_entry_invokes_the_heredoc_guard_in_the_pinned_form(self):
+        seventh = self.entries[6] if len(self.entries) >= 7 else {}
+        self.assertEqual(seventh.get("type"), "command")
+        self.assertEqual(seventh.get("command"), EXPECTED_HEREDOC_GUARD_COMMAND)
+        self.assertEqual(seventh.get("timeout"), EXPECTED_HEREDOC_GUARD_TIMEOUT)
+
+    def test_reordering_the_first_six_would_be_caught(self):
+        # Non-vacuity guard: a config with the first six entries reordered
+        # (destructive-guard.py moved ahead of muse_guard.py) must NOT
+        # equal the pinned expectation.
+        reordered = (
+            EXPECTED_PRETOOLUSE_BASH_FIRST_SIX[:4]
+            + [EXPECTED_PRETOOLUSE_BASH_FIRST_SIX[5], EXPECTED_PRETOOLUSE_BASH_FIRST_SIX[4]]
+        )
+        self.assertNotEqual(reordered, EXPECTED_PRETOOLUSE_BASH_FIRST_SIX)
 
 
 class TestEveryRegisteredHookIsWellFormed(unittest.TestCase):

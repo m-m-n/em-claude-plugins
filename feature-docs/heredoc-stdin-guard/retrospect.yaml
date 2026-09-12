@@ -1,0 +1,84 @@
+feature: heredoc-stdin-guard
+collected_at: "2026-09-13T01:34:23+09:00"
+session_ids: ["01a09677-7deb-7478-9f59-065602893375"]
+signals:
+  review_critical_high:
+    - stable_id: 91c38ea9a5c98a26
+      category: comprehensive
+      file: em-workflow/hooks/heredoc-stdin-guard.py
+      title: >-
+        Hook emits hookSpecificOutput without hookEventName, so Claude Code
+        rejects the output and updatedInput is never applied — the guard is a
+        silent no-op
+      resolution: unresolved
+    - stable_id: 24c27cd42dbcc8fe
+      category: spec
+      file: feature-docs/heredoc-stdin-guard/SPEC.md
+      title: >-
+        SPEC.md's normative output example and FR3 specify the invalid
+        hookSpecificOutput shape, so the defect is specified rather than merely
+        implemented
+      resolution: unresolved
+    - stable_id: d4666a94e704dcd5
+      category: comprehensive
+      file: tests/test_heredoc_stdin_guard.py
+      title: >-
+        Contract tests assert the exact broken key set, locking in the defect
+        and blocking the fix
+      resolution: unresolved
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0001
+      files:
+        - tests/test_muse_guard_registration.py
+    - task: task0001
+      files:
+        - em-workflow/README.md
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: >-
+        追加するフックは PreToolUse:Bash として全 Bash 呼び出しに同期実行され、
+        任意長のコマンド文字列を正規表現で走査する。NFR3 が 10 秒の hooks.json
+        タイムアウト内に収まることを要求しているため、ホットパスの計算量と
+        病的な入力に対する振る舞いを観点として追加した。
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - >-
+    review round 1 の critical / high 3 件はいずれも同一の根本原因
+    （hookSpecificOutput に hookEventName を欠く出力形）から派生していた。
+    仕様・実装・契約テストの 3 層が同じ誤った形を相互に固定していたため、
+    テストが緑でも機能が無効という状態が成立した。実機の受理側を模したテスト
+    fixture が無い限り、契約テストは「自分の間違いを再確認する」形になり得る。
+  - >-
+    TS-8 / TS-16 は VERIFICATION.md 自身が「マージ後にプラグインキャッシュが
+    更新され Claude Code を再起動していること」を前提に書かれており、未マージの
+    ブランチでは構造上実行できない。verify フェーズで実行不能な検証シナリオを
+    計画段階で許容すると、verify の判定が毎回グレーになる。マージ後にしか
+    確認できない項目は、シナリオ表とは別の「マージ後チェック」区画に分ける
+    余地がある。
+  - >-
+    VERIFICATION.md TS-12 の許可範囲の列挙に、エンジン管理情報である
+    feature-docs/ と test-docs/ が入っていない。文言どおり適用すると TS-12 を
+    含む VERIFICATION.md 自身の存在が範囲違反になる。文書修正の follow-up。
+  - >-
+    implement-phase.md I.2.b step 4 が指示するタスクブランチの強制削除が、
+    同じリポジトリが同梱する destructive-guard（git-branch-force-delete）と
+    正面衝突した。マージ済み検証を済ませた通常削除で代替できたが、プロトコルと
+    同梱ガードの整合を取る余地がある。
+  - >-
+    destructive-guard が heredoc 本文の文字列リテラルを実行コマンドとして
+    誤認し、監査記録の書き込みを拒否した。.claude/rules/hook-tests.md が
+    allow 側ケースとして挙げている誤爆の類型そのものなので、ケース追加の候補。
+  - >-
+    batch 実行で Codex 相談が 600 秒タイムアウトした事例が 2 件あった。いずれも
+    プロンプトが探索範囲を制限しておらず、モデルが無制限のファイルシステム調査に
+    入ったことが原因。確定済みの事実を添えて調査を禁止した bounded プロンプトに
+    切り替えると 1 回で回答に到達した。batch の相談プロンプトは既定で bounded に
+    する余地がある。
+  - >-
+    workflow.yaml に top-level の `batch:` ブロックが 2 つ存在していた。
+    yaml.safe_load は後勝ちで読むためエラーにならず、review_rework_count: 1 が
+    黙って 0 に見えていた。retrospect 開始時に重複を解消した。ドキュメント
+    コミット時の重複キー検査があると同種の事故を防げる。

@@ -32,6 +32,18 @@ Registration *shape* (interpreter/extension pairing, per-script timeouts,
 referenced files existing) is the manifest-driven job of
 tests/test_hooks_registration.py and is deliberately not duplicated here.
 
+Extended by heredoc-stdin-guard task0001 (D6, AC-8): a seventh
+PreToolUse(Bash) entry, `heredoc-stdin-guard.py`, is appended after
+`destructive-guard.py`. It never returns a permission decision -- only
+`updatedInput` or nothing (heredoc-stdin-guard IMPLEMENTATION.md D4) -- so
+it cannot reopen the "blanket allow ends the decision" gate `destructive-
+guard.py`'s tail position exists to protect; `EXPECTED_BASH_GUARD_ORDER`
+and `test_destructive_guard_is_last_among_decision_capable_guards` are
+both updated accordingly. The full seven-entry ordered shape (exact
+command/timeout/status-message pinning) is the separate, more detailed
+job of tests/test_hooks_registration.py's
+`TestPreToolUseBashArrayHasTheSevenEntryOrderedShape`.
+
 Standard library only, per test/README.md.
 """
 
@@ -65,6 +77,10 @@ MIGRATED_HOOK_FILES = (
 # blanket allow must not be able to terminate the decision before the
 # contributor-tier consent check has had a chance to deny
 # (muse-spark-contributor-consent task0001.md Design, "Registration").
+# `heredoc-stdin-guard.py` runs LAST of all seven (heredoc-stdin-guard
+# task0001.md D3): it only ever rewrites `command`, never denies, so
+# placing it after every other Bash guard means none of them ever sees a
+# rewritten command in place of the original.
 EXPECTED_BASH_GUARD_ORDER = [
     "gitleaks-precommit.sh",
     "kill-guard.py",
@@ -72,6 +88,7 @@ EXPECTED_BASH_GUARD_ORDER = [
     "failed-run-cleanup-guard.py",
     "muse_guard.py",
     "destructive-guard.py",
+    "heredoc-stdin-guard.py",
 ]
 
 MIGRATED_RULE_FILES = (
@@ -244,7 +261,8 @@ class TestMigratedHookFilesArePresentAndExecutable(unittest.TestCase):
 
 
 class TestPreToolUseBashGuardOrder(unittest.TestCase):
-    """The blanket-allow guard runs last -- see this module's docstring."""
+    """The blanket-allow guard runs last among the guards that can return a
+    permission decision -- see this module's docstring."""
 
     @classmethod
     def setUpClass(cls):
@@ -254,14 +272,21 @@ class TestPreToolUseBashGuardOrder(unittest.TestCase):
         group = _pretooluse_group(self.config, "Bash")
         self.assertEqual(_script_filenames_in(group), EXPECTED_BASH_GUARD_ORDER)
 
-    def test_destructive_guard_is_last(self):
+    def test_destructive_guard_is_last_among_decision_capable_guards(self):
+        # heredoc-stdin-guard.py runs after destructive-guard.py too, but
+        # it never returns a permission decision -- only `updatedInput` or
+        # nothing (heredoc-stdin-guard IMPLEMENTATION.md D4) -- so its
+        # position does not reopen the gate this test protects.
+        # destructive-guard.py must still be the last entry able to
+        # return a decision at all.
         group = _pretooluse_group(self.config, "Bash")
         names = _script_filenames_in(group)
+        decision_capable = [n for n in names if n != "heredoc-stdin-guard.py"]
         self.assertEqual(
-            names[-1],
+            decision_capable[-1],
             "destructive-guard.py",
             "destructive-guard.py returns a blanket allow and must run after "
-            f"every other Bash guard; order is {names}",
+            f"every other decision-capable Bash guard; order is {names}",
         )
 
     def test_bash_guard_still_precedes_the_blanket_allow(self):

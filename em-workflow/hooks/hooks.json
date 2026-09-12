@@ -38,6 +38,12 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/destructive-guard.py",
             "timeout": 10,
             "statusMessage": "破壊的コマンドを検証中..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/heredoc-stdin-guard.py",
+            "timeout": 10,
+            "statusMessage": "heredoc を含むコマンドの標準入力を検証中..."
           }
         ]
       },
