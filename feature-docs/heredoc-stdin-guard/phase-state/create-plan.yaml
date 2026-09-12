@@ -3,12 +3,39 @@ feature: heredoc-stdin-guard
 phase: create-plan
 status: dispatching
 generation: 1
-base_revision: 30102e3
-last_input_digest: "sha256:b676bcb664c6846e7357b5bf130adaa4178264b911dd54d2a6a15069a3de6c40"
-active_request_id: create-plan-run-0001
+base_revision: 6c256f8
+last_input_digest: "sha256:00703a95f296aa208fc63cc73b10899bb2fe2548d5a96ab28a8ad26cb121470b"
+active_request_id: create-plan-run-0002
 packets: {}
-answers: {}
-worker_runs: []
+answers:
+  create-plan.version-bump-task-split:
+    packet_id: null
+    answered_at: "2026-09-12T23:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [fold_into_task0001]
+    freeform: null
+    normalized_answer: >-
+      FR9 を task0002 として分離せず task0001 に畳み込む。タスクは task0001 の 1 本。
+    resolution_note: >-
+      詳細は phase-state/batch-audit.yaml の同 question_id のレコードを参照。
+  create-plan.version-bump-test:
+    packet_id: null
+    answered_at: "2026-09-12T23:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [add_version_test]
+    freeform: null
+    normalized_answer: >-
+      tests/test_heredoc_stdin_guard_version_bump.py を task0001 の files に追加し、
+      baseline patch を 72 に引き上げる。
+    resolution_note: >-
+      詳細は phase-state/batch-audit.yaml の同 question_id のレコードを参照。
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: completed
+    input_digest: "sha256:b676bcb664c6846e7357b5bf130adaa4178264b911dd54d2a6a15069a3de6c40"
+    output_digest: "sha256:planner-completed-0001"
 artifacts: []
 patches: []
 progress_fingerprint: null
