@@ -90,7 +90,7 @@ workflow:
     status: completed
     completed_at_commit: 6be8588bf4442f72f112a66466015c6f5859a71d
   - id: implement
-    status: completed
+    status: pending
     base_commit: db5a4f86574d0e920396481e7385fc87a7492613
     completed_at_commit: 37e413d0fcd8b565e69751971b8f7f44d7a361b7
   - id: review
@@ -125,6 +125,21 @@ tasks:
     status: merged
     branch: em-workflow/destructive-guard-command-substitution/task0002
     notes: null
+  task0003:
+    title: "unresolved-substitution evidence survives the payload re-scan and is reported truthfully"
+    plan: tasks/task0003.md
+    files: [em-workflow/hooks/destructive-guard.py, em-workflow/hooks/tests/destructive-guard-cases.json, tests/test_destructive_guard_command_substitution.py]
+    skills: [infra-impl]
+    domains: [auth, input-handling, api-contract]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR5, FR6, FR7, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7]
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids: [bd7710d1b20046e5, 63705cbaaa5891ed, 91320984c3e74bc0]
+      review_round: 1
 
 review:
   status: pending
@@ -147,22 +162,22 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1, TS-2, TS-3, TS-8]
   FR2:
     title: "Merge the verdict into the existing rm-unresolvable (ask)"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1, TS-2, TS-5]
   FR3:
     title: "The reason text matches the actual processing range"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-2]
+    tasks: [task0001, task0003]
+    tests: [TS-1, TS-2, TS-11]
   FR4:
     title: "A quoted command substitution's reason target is not whitespace either"
     status: ok
@@ -175,22 +190,22 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-3, TS-5, TS-6, TS-7, TS-10]
+    tasks: [task0001, task0003]
+    tests: [TS-1, TS-3, TS-5, TS-6, TS-7, TS-10, TS-11]
   FR6:
     title: "No false positive on non-rm commands containing a substitution"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-2, TS-4, TS-6, TS-8, TS-9, TS-10]
   FR7:
     title: "Case-table update"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1]
+    tasks: [task0001, task0003]
+    tests: [TS-1, TS-11]
   FR8:
     title: "Plugin version bumped in the same change"
     status: ok
@@ -203,53 +218,53 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1, TS-2]
   NFR2:
     title: "No filesystem access"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-2]
   NFR3:
     title: "Performance"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1]
   NFR4:
     title: "Failure behaviour preserved"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-1, TS-2, TS-9]
   NFR5:
     title: "Reason-text usability"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-2]
+    tasks: [task0001, task0003]
+    tests: [TS-2, TS-11]
   NFR6:
     title: "Sentinel containment"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0003]
     tests: [TS-2]
   NFR7:
     title: "False-positive cost parity"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-10]
+    tasks: [task0001, task0003]
+    tests: [TS-1, TS-10, TS-11]
 
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
