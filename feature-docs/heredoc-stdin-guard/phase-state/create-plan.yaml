@@ -8,6 +8,21 @@ last_input_digest: "sha256:76dcf87ecd6541628a42abd55344841172023ebb8a0b0bd15a72a
 active_request_id: create-plan-run-0003
 packets: {}
 answers:
+  create-plan.replan-task-split:
+    packet_id: null
+    answered_at: "2026-09-13T00:58:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [single_task]
+    freeform: null
+    normalized_answer: >-
+      再計画の修正内容（hookEventName 追加 / 既存アサーション訂正 / スキーマ準拠の
+      契約テスト追加 / version bump）を 2 タスクに分割せず、単一の新規タスクに
+      畳み込む。あわせて、TS8 相当の実機 end-to-end 検証は自動テストにせず
+      VERIFICATION.md の手動シナリオに留め、スキーマ準拠テストは実機バイナリに
+      依存しない固定 fixture として書く。
+    resolution_note: >-
+      詳細は phase-state/batch-audit.yaml の同 question_id のレコードを参照。
   create-plan.version-bump-task-split:
     packet_id: null
     answered_at: "2026-09-12T23:52:00+09:00"
