@@ -1,0 +1,74 @@
+schema_version: 1
+feature: heredoc-stdin-guard
+phase: rework
+status: completed
+generation: 1
+base_revision: 9fa7689ba19bd7623b37e1c8cd0f301fe4c696c7
+last_input_digest: null
+active_request_id: null
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: "2026-09-13T01:40:00+09:00"
+    questions:
+      - question_id: rework.spec-change.hook-output-shape
+        status: answered
+answers:
+  rework.spec-change.hook-output-shape:
+    packet_id: rework-q0001
+    answered_at: "2026-09-13T01:45:00+09:00"
+    source: batch-classification-gate
+    answer_mode: single_select
+    selected_option_ids: [spec-correct]
+    freeform: null
+    normalized_answer: >-
+      SPEC.md を訂正する（specification-change transition を取る）。FR3 の出力
+      ブロックとデータフロー 2 箇所に "hookEventName": "PreToolUse" を加え、AC2
+      に「出力形は仮定ではなく Claude Code のフック出力スキーマに対して検証した」
+      旨を記録する。create-spec は needs_update、create-plan / implement / review
+      は pending に戻し、implement.base_commit は保存する。
+    resolution_note: >-
+      verdict: spec_gap（classification[0]）。question-resolution.md の
+      Classification gate を通した結果。origin_kind: review、bound set は
+      reviews/round1.yaml の findings 4 件で、パケットが名指しした
+      origin_id 4 件はすべてその member。direction 2 の category 検査は
+      bound set 全件（comprehensive / spec / comprehensive / comprehensive）で
+      security も license も sentinel も無く、reversible: false の assumption も
+      無いため、relaxed route には入らず素通しした。
+worker_runs:
+  - request_id: rework-run-0001
+    status: needs_user_input
+    input_digest: null
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+spec_change:
+  reason: >-
+    レビュー round 1 の finding 24c27cd42dbcc8fe — SPEC.md の規範的な出力例
+    (203-217 行) と FR3 (84 行) およびデータフロー 2 箇所 (150 / 165 行) が、
+    Claude Code が拒否する hookSpecificOutput の形（hookEventName を欠く）を
+    規定している。rework-planner は SPEC.md を書けないため task を合成せず、
+    specification-change transition を取った。
+  origin_kind: review
+  origin_id: 24c27cd42dbcc8fe
+  recorded_at_commit: 9fa7689ba19bd7623b37e1c8cd0f301fe4c696c7
+  consumed: false
+  replan_authorized: true
+classification:
+  - classifier: codex
+    verdict: spec_gap
+    evidence_ids: [FR3, AC1, AC2, A1]
+    decision: proceed
+    reason: >-
+      実装の中身（検出ロジックと書き換え文字列）は正しく、欠けているのは出力
+      オブジェクトの外形だけ。実機 Claude Code 2.1.269 での A/B 実測で、
+      hookEventName を足した形では書き換え後のコマンドが実行されることを確認
+      済みなので、goal は到達可能。FR3 の要件文（updatedInput で書き換え、deny
+      は返さない）は 1 メンバー追加で変わらない。AC2 は「適用されない場合は
+      実装フェーズで出力形を調整する」と既に定めており、今回がその場合。A1 は
+      出力形の不確かさを AC1 / AC2 の実環境確認に委ねているため、この訂正は
+      想定内。Claude 側も同じ結論に達しており、verdict (b) を採用した。
