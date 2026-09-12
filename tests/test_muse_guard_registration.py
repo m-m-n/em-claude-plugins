@@ -117,8 +117,14 @@ class TestEmWorkflowOrderingAgainstDestructiveGuard(unittest.TestCase):
             f"muse_guard.py must run before destructive-guard.py's blanket allow; order={self.order}",
         )
 
-    def test_destructive_guard_remains_last(self):
-        self.assertEqual(self.order[-1], "destructive-guard.py")
+    def test_destructive_guard_remains_last_among_decision_capable_guards(self):
+        # heredoc-stdin-guard.py (heredoc-stdin-guard task0001) runs after
+        # destructive-guard.py too, but it never returns a permission
+        # decision -- only `updatedInput` or nothing (heredoc-stdin-guard
+        # IMPLEMENTATION.md D4) -- so its tail position does not reopen
+        # the "blanket allow ends the decision" gate this test protects.
+        decision_capable = [n for n in self.order if n != "heredoc-stdin-guard.py"]
+        self.assertEqual(decision_capable[-1], "destructive-guard.py")
 
     def test_extracted_order_matches_the_pinned_ordered_guard_constant(self):
         # Imports the sibling module's own EXPECTED_BASH_GUARD_ORDER
