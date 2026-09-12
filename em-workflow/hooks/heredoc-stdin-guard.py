@@ -60,6 +60,16 @@ import sys
 
 BASH_TOOL_NAME = "Bash"
 
+# The PreToolUse event name, carried on every emitted output's hook-specific
+# output as `hookEventName` (IMPLEMENTATION.md D10). The runtime's
+# hook-output validator rejects a hook-specific output missing this member,
+# and its sanitizer discards the whole hook-specific output when the
+# member's value is not the event name of the event being handled -- so
+# omitting it, or misnaming its value, silently turns every rewrite below
+# into a no-op even though the guard's own tests still see the JSON it
+# printed.
+HOOK_EVENT_NAME = "PreToolUse"
+
 # The exact token this guard inserts. Also the recognition signal for
 # idempotency (IMPLEMENTATION.md D5): a command that already begins with a
 # plain stdin redirect -- including this one, fed back in -- is never
@@ -284,7 +294,15 @@ def _should_rewrite(command):
 def _emit_rewrite(tool_input):
     updated = dict(tool_input)
     updated["command"] = f"{STDIN_CUTOFF}\n{tool_input['command']}"
-    json.dump({"hookSpecificOutput": {"updatedInput": updated}}, sys.stdout)
+    json.dump(
+        {
+            "hookSpecificOutput": {
+                "hookEventName": HOOK_EVENT_NAME,
+                "updatedInput": updated,
+            }
+        },
+        sys.stdout,
+    )
 
 
 def main():
