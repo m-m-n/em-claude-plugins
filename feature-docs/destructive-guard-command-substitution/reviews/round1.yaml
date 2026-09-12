@@ -1,0 +1,180 @@
+round: 1
+executed_at: '2026-09-13T03:10:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: db5a4f86574d0e920396481e7385fc87a7492613
+  head_commit: feeeaf9080f485f2b268e4b4510d3be6e24e5bc2
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-command-substitution/task0001.tests.yaml
+  - test-docs/destructive-guard-command-substitution/task0002.tests.yaml
+  - tests/test_destructive_guard_command_substitution.py
+  - tests/test_destructive_guard_command_substitution_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+  note: 'schema-valid だが summary がプレースホルダ（「テスト実行前」）。ハーネスログは CODEX_FALLBACK: entry 2 (litellm/vertex-glm-5.2)
+    answered を示す。review-phase.md R2b「schema validity is the only test」に従い completed として記録した。'
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: pending review
+  note: 'schema-valid だが summary がプレースホルダ（「pending review」）。skipped: false と非 null の skip_reason が併存するがスキーマ上は妥当。ハーネスログは
+    CODEX_FALLBACK: entry 2 (litellm/vertex-glm-5.2) answered を示す。review-phase.md R2b に従い completed として記録した。'
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: architecture#2
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: bd7710d1b20046e5
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 638
+  title: bash -c / sh -c / eval / here-string のペイロード内では、コマンド置換のみの削除対象が今も allow のまま（FR1 の穴が接頭辞 1 つで回避できる）
+  description: "本フィーチャの目的は「削除対象がコマンド置換だけで構成された再帰削除を allow で素通しさせない」ことだが、シェルペイロード経由では閉じていない。実測（本ワークツリーのフックを\
+    \ PreToolUse JSON で直接駆動）:\n\n  bash -c \"<recursive delete> $(cat list)\"                     -> allow（CLAUDE_BATCH\
+    \ 有無を問わず allow）\n  bash -c \"<recursive delete> $(printf /home/sakura/valuable)\" -> allow（AC-1 のコマンドそのものを包んだ形）\n\
+    \  sh -c '<recursive delete> `cat list`'                        -> allow\n  eval \"<recursive delete>\
+    \ $(cat list)\"                        -> allow\n  bash <<< \"<recursive delete> $(cat list)\"   \
+    \                 -> allow\n\n（上の <recursive delete> は再帰削除コマンドのプレースホルダ。実際の形は AC-1 と同じ。）\n\n対照として、置換以外の未解決形は同じ経路で正しく判定される:\
+    \ bash -c で変数展開を渡した形は ask（無人時 deny）、実パスを渡した形は deny。つまりペイロード再走査自体は生きていて、コマンド置換の形だけが証拠を失う。\n\n原因は statements()\
+    \ の順序。634 行で toks = _strip_unresolved_marks(toks) を先に適用するため、ペイロードトークンは末尾空白のみに縮退する（.unresolved はトークン属性として立つが文字列には残らない）。638\
+    \ 行の extract_shell_payload() はその縮退後の文字列を返し、再走査される文は削除対象を持たない形になって check_rm() が targets 空で早期 return\
+    \ する。今回 _strip_unresolved_marks() に入れた SUBSTITUTION_STANDIN の生成は「トークン全体がマーカーのみ」の場合だけで、ペイロードのように実テキストと混在するトークンでは置換の痕跡が文字列から消えるため、再走査先に何も渡らない。\n\
+    \nこれは本 diff が新たに壊したものではない（変更前も同じく allow）。ただし SPEC の Objectives / FR1 / AC-1 / AC-3 が閉じたと宣言している穴と同一クラスであり、bash\
+    \ -c を前置するだけで回避できる。無人実行では allow がそのまま自動承認になるため、回復不能な削除が確認なしで通る。"
+  suggestion: 'statements() で、ペイロードの取り出しをマーカー除去の前に行う（例: marked_toks を保持し extract_shell_payload() には除去前のトークン列を渡す、あるいは
+    .unresolved なペイロードトークンを pending に戻す際にマーカー付きの原文を積む）。マーカー付き文字列を再走査に回せば、再走査側の _strip_unresolved_marks()
+    が SUBSTITUTION_STANDIN を生成し、既存の rm-unresolvable 分岐にそのまま合流する（NUL は SUBSTITUTION に再マッチしないので二重マークにはならない）。併せて
+    destructive-guard-cases.json に bash -c / sh -c / eval でペイロード内にコマンド置換を置いた 3 形を ask で追加し、既存の allow ケース（クォート内の削除コマンド文字列・here-doc
+    本文など）が落ちないことを同時に確認する。'
+  sources:
+  - claude:evaluator
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch mode: sources == [claude:evaluator] のため auto-fix 対象外（review-phase.md Phase
+    R4 candidate gate）。rework へ回送'
+- stable_id: 63705cbaaa5891ed
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 1101
+  title: safe root 配下でクォート境界に置換がある形が allow から deny に変わり、理由文が「スクラッチ領域の外」と事実に反する
+  description: '_mark_substitutions() が境界判定をやめて全マッチを UNRESOLVED_MARK にしたため、これまで空白に潰れていた「クォートに挟まれた置換」も隣接扱いになり、実テキスト側トークンに
+    .unresolved が立つようになった。その結果 1101 行の `if not unresolved and safe_delete_target(normalized)` が safe 例外を塞ぎ、スクラッチ領域配下のパスにクォート境界の置換を続けた
+    2 形（/tmp/x に $(date) を続ける形、/tmp/build に $(date) を続けて /out を足す形）が、旧 allow から新 deny (rm-recursive) に反転する。
+
+
+    方向としては妥当な強化（置換結果に `..` が入りうる）だが、2 点問題がある。(1) 出力される理由文が「対象 /tmp/x はスクラッチ領域の外。mv で退避する」となり、対象は実際にはスクラッチ領域の中であり、提示された書き換え手順もこの入力に対して意味をなさない（NFR5「エージェントが読んで書き換えられる具体的な指示」を満たさない）。同じ未解決性を持つ変数展開の形が
+    ask(rm-unresolvable) に落ちるのと非対称で、FR2 の「未解決の削除対象は rm-unresolvable に合流させる」方針とも食い違う。(2) allow が deny に反転する形が
+    case table に 1 件も固定されていない。.claude/rules/hook-tests.md は誤爆 1 件を見逃し 1 件と同じコストとして扱い、変化を見つけたらケースを足すよう定めているが、この形は
+    table にも unit test の ORIGINAL_VERDICT_BY_COMMAND にも無いため、次に誰かが境界判定を触っても気づけない。'
+  suggestion: check_rm() で `.unresolved` が立っているトークンは（実テキストが残っていても）rm-unresolvable の ask 分岐に寄せ、deny/rm-recursive
+    の理由文が safe root 配下のパスを「スクラッチ領域の外」と述べないようにする。加えてスクラッチ領域配下にクォート境界の置換を続けた形を期待判定つきで destructive-guard-cases.json
+    に追加し、この反転を明示的に固定する。
+  sources:
+  - claude:evaluator
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch mode: sources == [claude:evaluator] のため auto-fix 対象外（review-phase.md Phase
+    R4 candidate gate）。rework へ回送'
+- stable_id: 91320984c3e74bc0
+  severity: medium
+  category: spec
+  file: tests/test_destructive_guard_command_substitution.py
+  line: 431
+  title: SPEC TS-8（ペイロード内のコマンド置換）を担保するとされたテストが、置換ではなく実パスを検査していて変更前から素通りする
+  description: 'SPEC の TS-8 は「bash -c / eval / here-string のペイロード内に置換が入った削除が statements() の再走査経路で同じ判定に達すること」と定義されている。これに対応付けられた
+    test_dash_c_payload_reaches_same_verdict_as_direct は bash -c のペイロードに実パスを置いた形しか検査しておらず、case table に追加された
+    TS-8 相当エントリ（「本物: bash -c ペイロード内の実パス削除は直接書いた場合と同じ deny」）も同じく実パス。どちらも変更前のフックでも deny で通るため、赤→緑の証拠にならず、TS-8
+    が閉じたという記録だけが残る。test-docs/destructive-guard-command-substitution/task0001.tests.yaml の AC-5 も同じテスト名を根拠に挙げている。
+
+
+    実際に TS-8 の形（置換をペイロード内に置く）を流すと allow で、上位の security 指摘と同じ事実を指している。テストが仕様の主張を検証していない点が独立した問題なので分けて報告する。'
+  suggestion: TS-8 のテストを置換入りの形に置き換える（ペイロード内に $(cat list) を置いた形が、同じコマンドを直接書いた場合と同じ tier に達することを assert
+    する）。実パス版は回帰ガードとして残してよいが、TS-8 の根拠としては扱わない。SPEC 側で TS-8 を今回のスコープ外と決めるなら、SPEC と test-docs の両方から該当の主張を落として未閉鎖の穴として明記する（どちらを選ぶかは実装側の判断）。
+  sources:
+  - claude:evaluator
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch mode: sources == [claude:evaluator] のため auto-fix 対象外（review-phase.md Phase
+    R4 candidate gate）。rework へ回送'
+evaluation:
+  round_summary: 'round 1、review_mode=diff、cross_validation=true。dispatch された 5 run はいずれも findings 0 件で返っており、うち
+    security#0（summary「テスト実行前」）と comprehensive#0（summary「pending review」）は実体のあるレビュー内容を持たないプレースホルダ、architecture#0
+    は harness_unavailable でスキップ。したがって reviewer 由来の critical/high サイトは 1 件も無く、dismissed_sites は空。findings
+    はすべて評価者自身の独立検査で出したもの（sources 空 = claude:evaluator 帰属）。
+
+
+    独立検査の内容: changed_files 8 件のうち SPEC.md / destructive-guard.py / destructive-guard-cases.json / plugin.json
+    / marketplace.json / 新規 unit test 2 本 / run-destructive-guard.py を読み、フックを PreToolUse JSON で直接駆動して旧版と新版の判定を
+    60 形以上で突き合わせた。case table は 187/187 passed、新規 unit test 2 モジュールは 34 tests OK、作業ツリーは clean のまま。NUL の
+    stdout 漏れ無し（NFR6）、判定時間は最悪 0.07s で旧版と同等（NFR3）、不均衡クォートでも例外なし exit 0（NFR4）。FR1/FR2/FR4/FR7/FR8 は満たされており、副次的に
+    git -C に $(pwd) を渡す push --force が allow から deny に強化される検知向上も確認した。
+
+
+    perspective 別カバレッジ: security = findings / comprehensive = findings / architecture = corroborated（architecture#2
+    の空結果を独立検査で裏づけ。architecture#0 は skipped で裏づけ対象の出力が存在しない）/ spec = findings。
+
+
+    reviewer_outputs 内にプロンプトインジェクションの試みは観測されなかった。'
+  recommended_action: rework
+  action_rationale: high 1 件は、本フィーチャが閉じたと宣言している穴そのものが bash -c を前置するだけで残っているというもので、statements()/extract_shell_payload()
+    の順序変更と case table への追加を伴う。auto_fix の機械的な範囲を超えるため rework 相当。medium 2 件も同じ実装単位で扱えるので 1 タスクに束ねるのが妥当。評価者が挙げた
+    low 2 件は R3b step 2 の severity フロアで drop した。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+  note: 全 finding の sources が [claude:evaluator] のみ。review-phase.md Phase R4 の candidate gate により auto-applicable
+    にならず、batch モードでは needs-judgment も常に skip されるため、auto-fix は 1 ループも起動していない。
+residual_critical_high: 1
+rework_required: true
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-command-substitution-20260912T180103Z.md

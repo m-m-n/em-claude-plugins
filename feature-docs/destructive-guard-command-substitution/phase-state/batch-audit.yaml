@@ -107,3 +107,48 @@ records:
       continuation line; the current parser scans only the bullet's first line,
       so it passes today and is recorded here as latent, not as a defect fixed
       in this run.
+  - question_id: review.finding-file-path-form
+    packet_id: null
+    answered_at: "2026-09-13T03:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "B: realpath が project_root 配下に収まり実在する通常ファイル（非 symlink）であることを確認したうえで project_root 相対に正規化し、残りのチェックを適用する"
+    normalized_answer: "normalize-to-project-root-relative-after-containment-check"
+    resolution_note: >-
+      gate: review-phase.md Phase R3b step 1 の「絶対パス拒否」と、Phase R2/R3a が要求する
+      「project_root ベースの絶対パスで渡す」正規化の衝突。評価者は findings の file を
+      絶対パス 5 件で返した。選択肢 A（字義どおり全件 drop / high 1 件を含む）、
+      B（containment 確認のうえ相対化）、C（絶対パスのまま永続化）。
+      codex_consulted: true; codex_default_provider: usage-limit エラーで判断到達せず;
+      fallback_provider_answered: true (codex exec -p litellm -m muse-spark);
+      opus_escalation: なし。Codex の判断は B。理由は「R2/R3a は送信側の正規化、R3b は
+      受信側の混入防止が目的。project_root 配下収まり・実在・非 symlink を確認して相対化すれば
+      step 1 が守る安全性（パストラバーサル防止）を保ったまま有効な指摘を捨てずに済む」。
+      orchestrator はこれを採用し、3 件（severity floor 通過分）を相対パスに正規化して
+      round1.yaml に永続化した。project_root 外に出るパスは 0 件だったため drop は発生していない。
+  - question_id: review.degenerate-reviewer-result
+    packet_id: null
+    answered_at: "2026-09-13T03:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "A: security#0 / comprehensive#0 のいずれも status: completed として記録し、実体が無いことは run report と round record で開示する"
+    normalized_answer: "record-both-as-completed-and-disclose"
+    resolution_note: >-
+      gate: スキーマ妥当だが実体の無い（プレースホルダ summary の）レビュアー結果の扱い。
+      security#0 は summary「テスト実行前」、comprehensive#0 は summary「pending review」で
+      skipped: false のまま非 null の skip_reason を併記。ハーネスログは
+      CODEX_FALLBACK: entry 2 (litellm/vertex-glm-5.2) answered を示し、意図したモデルでは
+      なくフォールバック先が答えている。選択肢 A（両方 completed + 開示）、
+      B（comprehensive#0 のみ malformed 扱いで Claude fallback を 1 回 dispatch）、
+      C（両方 malformed 扱い）。
+      codex_consulted: true; codex_default_provider: usage-limit エラーで判断到達せず;
+      fallback_provider_answered: true (codex exec -p litellm -m muse-spark);
+      opus_escalation: なし。Codex の判断は A。理由は「Phase R2b は schema validity のみを
+      判定基準とし、実際に diff を読んだかを追加で判断するなと明記している。
+      skipped/skip_reason の組み合わせはスキーマ上禁止されていないため型違反ではなく、
+      実体の薄さは開示で足りる」。orchestrator はこれを採用し、両 run を completed として
+      perspective_runs に記録したうえで、各 run の note とこの記録および run report で
+      プレースホルダである事実を開示した。実効カバレッジは単一 Opus 評価者の
+      Independent Inspection Duty が担保し、そこで high 1 件 / medium 2 件を検出している。
