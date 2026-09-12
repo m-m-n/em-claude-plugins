@@ -159,8 +159,8 @@ workflow:
       エントリ 1 つ・テスト 1 ファイル・version 更新 2 箇所のみのため。
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
-    completed_at_commit: 3fda2ea04565da32bf4e7ea2a8e5cbe430d1be93
+    status: completed
+    completed_at_commit: 303fb61d7e5a5ce96714e71bfca515fbf9f2a6a8
   - id: implement
     status: pending
     completed_at_commit: 6a673cfa1bc9d3ed85986dc0b611a7ab58fbf6e8
