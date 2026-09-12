@@ -10,3 +10,12 @@ records:
     freeform: "normalize before the safe exception; component-wise containment; keep the class A / class B asymmetry; split DYNAMIC by escape capability so variable/command-substitution targets never take the safe exception while pure globs still do"
     normalized_answer: "FR1-FR7 の設計を確定。Codex の Q4 回答（SAFE_DELETE を DYNAMIC より先に維持）はケース表 110/112 行を ask から allow へ退行させるため却下し、requirements-analyst の 2 分割案を採用した。"
     resolution_note: "gate: none (user-instructed design consultation, not a gate); codex_consulted: true; wrapper: em-workflow/scripts/run_codex_exec.sh readonly; provider: fallback entry 2 (litellm / vertex-glm-5.2) after entry 1 timed out at 600s; full record: feature-docs/destructive-guard-safe-delete-traversal/codex-consultation.md"
+  - question_id: implement.task-branch-cleanup-denied
+    packet_id: null
+    answered_at: "2026-09-12T22:17:00+09:00"
+    source: unlisted-gate-fallback
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "use git branch -d instead of git branch -D"
+    normalized_answer: "task0003 のブランチ掃除で destructive-guard が `git branch -D` を拒否した（理由: 未マージブランチの強制削除）。マージは merge-base --is-ancestor で検証済みのため、副作用がより小さく未マージなら自動で拒否する `git branch -d` を integration worktree（HEAD = integration ブランチ）から実行して掃除を完了した。"
+    resolution_note: "gate: none (PreToolUse hook denial, no gate_id); codex_consulted: false; rationale: minimum-side-effect option per references/batch-mode.md unlisted-gate fallback; the non-forcing form refuses when unmerged, so it is strictly safer; implement-phase.md's note that the non-forcing form would REFUSE here assumes the main working tree, not the integration worktree"
