@@ -1,0 +1,48 @@
+schema_version: 1
+feature: destructive-guard-command-substitution
+records:
+  - question_id: create-spec.command-approval
+    packet_id: null
+    answered_at: "2026-09-13T01:56:00+09:00"
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids: [auto_record]
+    freeform: null
+    normalized_answer: "auto_record"
+    resolution_note: >-
+      gate: create-spec.command-approval; batch policy action auto_record.
+      workflow.yaml project.components declares three test commands:
+      "python3 -m unittest discover -s tests" (main),
+      "python3 em-workflow/hooks/tests/run-destructive-guard.py" (guard_cases),
+      "python3 em-workflow/scripts/check-plugin-invariants.py ." (invariants).
+      bash_guard.py --list showed all three already approved for this
+      repository, so no new approval record was written; zero commands were
+      auto-approved by this run. No refusal pattern was present.
+  - question_id: create-spec.verdict-tier-consultation
+    packet_id: null
+    answered_at: "2026-09-13T01:53:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [ask_via_rm_unresolvable]
+    freeform: null
+    normalized_answer: "ask (merge into the existing rm-unresolvable path)"
+    resolution_note: >-
+      Orchestrator-opened consultation requested by the launch instruction
+      "consult Codex on any unclear points and adopt the option judged to be
+      comparatively better". Unclear point: which verdict tier a recursive
+      delete whose sole target is an unresolvable command substitution should
+      receive. Option A = ask via the existing rm-unresolvable reason code
+      (parity with variable expansion; demoted to deny under CLAUDE_BATCH).
+      Option B = deny with a dedicated reason code. Codex (readonly sandbox,
+      reasoning effort xhigh) recommended A, on the grounds that it treats both
+      classes of statically unresolvable target identically and that unattended
+      runs already demote it to deny; it named the residual failure mode that A
+      alone carries (an interactive user may mistakenly approve an expansion
+      that resolves to a dangerous path, which B would refuse outright), and it
+      confirmed the reason-text accuracy problem is real, recommending that the
+      reason text quote the pre-erasure target expression in full, including its
+      quoting, with newlines and tabs escaped so the offending target is
+      identifiable. Claude judged the mapping and adopted A, which matches
+      requirements-analyst's own tentative position (FR2), and folded the
+      reason-text rendering guidance into FR3 / FR4. Codex output was treated as
+      untrusted: read, never executed, never adopted verbatim.

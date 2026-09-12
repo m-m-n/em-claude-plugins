@@ -1,0 +1,227 @@
+schema_version: 1
+feature: destructive-guard-command-substitution
+created: 2026-09-13
+base_branch: main
+goal: |
+  # destructive-guard: コマンド置換でターゲットが消えて allow になる
+
+  Notion: https://www.notion.so/3d63509ec8ee81a38674ce7ee3cf68b8
+  種別: セキュリティ / 優先度: 高
+
+  ## 脆弱性の概要 (必須)
+  `destructive-guard.py` の `statements()` がコマンド置換の中身を切り出して親コマンドから空白に置換するため、`rm -rf $(...)` が「削除対象を持たない rm」として分類器に届き、削除ガードが `allow` を返す。
+  ## 参照 (必須)
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: high
+  - 該当パッケージ: 該当なし
+  - 現在のバージョン: em-workflow 0.1.72
+  - 修正済みバージョン: 無し
+  ## 攻撃シナリオ (必須)
+  削除対象をコマンド置換で組み立てた `rm` が素通りする。2026-09-09 時点の main（`ce6d3fd`）の hook に判定させた実測値:
+  | コマンド | 判定 |
+  | --- | --- |
+  | `rm -rf $(printf /home/sakura/valuable)` | allow |
+  | \``rm -rf `printf /home/sakura/valuable` `\` | allow |
+  | 対照: `rm -rf $TARGET` | ask |
+  | 対照: `rm -rf /home/sakura/valuable` | deny |
+  処理の流れ:
+  1. `statements()` がコマンド置換の中身（`printf /home/sakura/valuable`）を別セグメントとして切り出し、親コマンド側では空白に置き換える
+  2. 親コマンドは実質 `rm -rf` としてターゲット無しで `check_rm()` に届き、削除対象が無いので通る
+  3. 切り出された `printf ...` は単体では無害なので通る
+  4. どちらも引っかからないため最終的な包括 allow が通常の分類を上書きする
+  hook が `allow` を返した後、シェルが置換を展開して該当パスを再帰削除する。
+  同じ「静的に確定できない削除対象」でも、変数展開 `$TARGET` は `rm-unresolvable` で `ask` に倒れる。コマンド置換だけが扱いを外れている。
+  ## 影響範囲 (必須)
+  コマンド置換で組み立てられる、実行ユーザーが書き込み可能な任意のパス。`$(...)` とバッククォートの両形式が対象。`rm` はゴミ箱を経由しないため復元手段が無い。
+  さらに `rm-unresolvable` の理由文はコマンド置換を処理済みであるかのように書かれているため、フックの出力を読んだ人間・エージェントに誤った安心を与える。
+  ## 完了の定義 (必須)
+  - [ ] 攻撃シナリオが成立しない（`$(...)` とバッククォートの両形式が deny または ask になる）
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+  - [ ] `em-workflow/hooks/tests/destructive-guard-cases.json` に両形式の deny ケースを追加
+  - [ ] `rm-unresolvable` の理由文が実際の処理範囲と一致している
+  - [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る
+  ## 該当箇所 (任意)
+  `em-workflow/hooks/destructive-guard.py:456`（`statements()`）と `em-workflow/hooks/destructive-guard.py:70`（`SUBSTITUTION`）。
+  修正の方向としては、置換を除去するときに親トークン列へ明示的な動的プレースホルダーを残し、`check_rm()` が `ask` / `deny` を返せるようにする。ターゲットがコマンド置換を含むか、そこから導出される場合は、具体的な展開結果を安全に解決できない限り再帰削除を許可しない。変数展開が既に `rm-unresolvable` で `ask` に倒れているので、そこへ合流させるのが素直。
+  ## 暫定緩和策 (任意)
+  現状 `em-workflow/hooks/tests/destructive-guard-cases.json` はクォート無しの対応形式を既知の穴として明示している。修正時はケース表の同時更新が必要。
+  ## 補足
+  feature `destructive-guard-trash-rewrite` の review round 1 で codex:security が指摘（finding stable_id: `a370a41125211623`）。同 feature は変更範囲を理由文と補助処理に閉じる制約を持っていたため中では修正できず、feature ごと破棄した。上表は破棄後に main で取り直した実測値。
+  クォート付きの `rm -rf "$(...)"` は deny になるが、理由文のターゲットが空白1文字として表示される。これは同じ置換除去が表層に出たもので、別タスク「destructive-guard: クォート付きコマンド置換で理由文のターゲットが空白になる」として起票している。本件を直すとそちらも解消する可能性が高い。
+parent_branch: em-workflow/destructive-guard-command-substitution/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+    guard_cases:
+      language: python
+      build_command: ""
+      test_command: "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      format_command: ""
+      e2e_test_command: ""
+    invariants:
+      language: python
+      build_command: ""
+      test_command: "python3 em-workflow/scripts/check-plugin-invariants.py ."
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: ded1ab6f456ba9d0ea24a6e6953a333c320da852
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "PreToolUse フック内部の静的判定ロジックと理由文の修正であり、UI・画面・視覚要素を一切持たない。デザインシステム候補も存在しない。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "Put a whole-word command-substitution delete target on the decision path"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: "Merge the verdict into the existing rm-unresolvable (ask)"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: "The reason text matches the actual processing range"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: "A quoted command substitution's reason target is not whitespace either"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: "Existing deny / ask verdicts are unchanged"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: "No false positive on non-rm commands containing a substitution"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: "Case-table update"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: "Plugin version bumped in the same change"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "Determinism"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "No filesystem access"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "Performance"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "Failure behaviour preserved"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "Reason-text usability"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: "Sentinel containment"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: "False-positive cost parity"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
