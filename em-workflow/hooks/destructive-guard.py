@@ -617,6 +617,29 @@ def statements(command):
     time the regex-based checks see it. LEXED is lex_segments()'s per-segment
     parse-success flag — False only on the parse-failure fallback, where
     token provenance is unavailable.
+
+    The shell-payload extraction below runs on MARKED tokens — the direct
+    output of lex_segments(), still carrying raw UNRESOLVED_MARK residue —
+    rather than on the flag-converted ones (destructive-guard-command-
+    substitution task0003 Design Part 1). Converting residue into the
+    per-token `.unresolved`/`.substitution_only` flags erases the
+    substitution's textual trace from the token TEXT (the whole point of
+    _strip_unresolved_marks()); extracting a `-c`/`eval`/here-string payload
+    AFTER that conversion means the string pushed back onto PENDING for
+    re-scanning no longer contains any trace of the substitution that used
+    to sit in it, so the re-scanned statement's own marking pass has nothing
+    left to find — a bare `bash -c 'rm -rf $(mktemp -d)'` used to re-scan as
+    a targetless `rm -rf`, the exact zero-target hole this closes. Extracting
+    from the marked-but-unstripped tokens instead means the marker character
+    itself survives into the payload string, so the re-scan's OWN
+    _mark_substitutions()/_strip_unresolved_marks() pass (run fresh, once,
+    when that string is popped off PENDING) reproduces the same flag it
+    would for the identical text written directly — the marker is plain,
+    inert token content until then, so this cannot double-convert or nest
+    (idempotent: each pass converts what it introduces, not what a previous
+    pass already resolved). The tokens handed to the checks below (via
+    `yield`) are still the flag-converted ones, unchanged from before this
+    task.
     """
     pending = [command]
     budget = [MAX_SHELL_PAYLOAD_EXPANSIONS]
@@ -630,12 +653,12 @@ def statements(command):
             body = m.group(1) or m.group(2) or ""
             if body.strip():
                 pending.append(body)
-        for toks, lexed in lex_segments(_mark_substitutions(chunk)):
-            toks = _strip_unresolved_marks(toks)
+        for marked, lexed in lex_segments(_mark_substitutions(chunk)):
+            toks = _strip_unresolved_marks(marked)
             if toks:
                 yield " ".join(toks), toks, lexed
                 if budget[0] > 0:
-                    payload = extract_shell_payload(toks, lexed)
+                    payload = extract_shell_payload(marked, lexed)
                     if payload and payload.strip():
                         budget[0] -= 1
                         pending.append(payload)
@@ -1030,11 +1053,19 @@ def check_rm(args):
        parent reference, no lost evidence) still reaches this step and can
        still land in the safe exception (e.g. `dist/*`).
     7. Otherwise: a glob remaining in the RAW token is still unresolved
-       (ask); anything else is a genuine recursive delete outside any safe
-       root (deny) — this is also where a `.unresolved` target that carries
-       no glob lands, the same outcome an ordinary non-safe literal target
-       reaches, and it is what keeps a pre-existing pinned `deny` for a
-       substitution-adjacent shape (task0001's `$(pwd)/build`) unchanged.
+       (ask); anything else is a genuine recursive delete (deny) — the same
+       tier a `.unresolved` target with no glob has always reached here,
+       including the pre-existing pinned `deny` for a substitution-adjacent
+       shape (task0001's `$(pwd)/build`); task0003 leaves this tier alone.
+       The REASON differs for a `.unresolved` target, though (task0003
+       Design Part 2): step 6 already established that its safe-root
+       exception was suppressed because evidence was LOST, not because its
+       real text actually sits outside every safe root, so the message
+       states the substitution fact — part of the target comes from a
+       command substitution and its range cannot be confirmed statically —
+       instead of an assertion about position that may not hold for this
+       input. A target with no lost evidence keeps the original wording,
+       verbatim.
     """
     flags = short_flags(args)
     recursive = "r" in flags or "R" in flags or has(args, "--recursive")
@@ -1111,14 +1142,20 @@ def check_rm(args):
                 )
             )
             continue
-        decisions.append(
-            (
-                "deny",
-                "rm-recursive",
-                t,
-                f"`rm -r` の対象 `{t}` はスクラッチ領域の外。{deletion_alternative(t)}",
+        if unresolved:
+            # task0003 Design Part 2: this target reached `deny` because its
+            # safe-root exception was suppressed by lost evidence (step 6),
+            # not because its real text is actually outside every safe root
+            # — that may or may not be true, and the old wording below
+            # asserted it regardless. State the fact that IS true instead.
+            message = (
+                f"`rm -r` の対象 `{t}` は一部がコマンド置換によるもので、"
+                f"実際の削除範囲を静的に確定できない。置換を展開した実パスを"
+                f"コマンドに直接書いて撃ち直す。"
             )
-        )
+        else:
+            message = f"`rm -r` の対象 `{t}` はスクラッチ領域の外。{deletion_alternative(t)}"
+        decisions.append(("deny", "rm-recursive", t, message))
     return decisions
 
 

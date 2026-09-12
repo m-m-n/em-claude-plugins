@@ -184,5 +184,13 @@
   ["deny", "本物: 明確に危険な対象とコマンド置換のみの対象が混在すると deny が勝つ", "rm -rf /home/sakura/valuable $(cat list)"],
   ["allow", "対象外(判定なし): 再帰フラグ無しの delete はコマンド置換のみの対象があっても allow のまま", "rm $(cat list)"],
   ["deny", "スクラッチ外(rm-recursive): ダブルクォート内で実テキストに隣接するコマンド置換は従来どおり deny", "rm -rf \"prefix$(cat list)\""],
-  ["deny", "本物: bash -c ペイロード内の実パス rm は直接書いた場合と同じ deny", "bash -c \"rm -rf /home/sakura/x\""]
+  ["deny", "本物: bash -c ペイロード内の実パス rm は直接書いた場合と同じ deny", "bash -c \"rm -rf /home/sakura/x\""],
+  ["ask", "ペイロード内評価(rm-unresolvable): bash -c ペイロード内の $() のみの対象は直接書いた場合と同じ ask", "bash -c 'rm -rf $(printf /home/sakura/valuable)'"],
+  ["ask", "ペイロード内評価(rm-unresolvable): bash -c ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）", "bash -c 'rm -rf `printf /home/sakura/valuable`'"],
+  ["ask", "ペイロード内評価(rm-unresolvable): eval ペイロード内の $() のみの対象は直接書いた場合と同じ ask", "eval \"rm -rf $(printf /home/sakura/valuable)\""],
+  ["ask", "ペイロード内評価(rm-unresolvable): eval ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）", "eval \"rm -rf `printf /home/sakura/valuable`\""],
+  ["ask", "ペイロード内評価(rm-unresolvable): here-string ペイロード内の $() のみの対象は直接書いた場合と同じ ask", "bash <<< 'rm -rf $(printf /home/sakura/valuable)'"],
+  ["ask", "ペイロード内評価(rm-unresolvable): here-string ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）", "bash <<< 'rm -rf `printf /home/sakura/valuable`'"],
+  ["deny", "評価境界(rm-recursive): スクラッチルート配下パスの直後にクォート境界でコマンド置換が続いても evidence lost により deny", "rm -rf \"/tmp/sub/\"$(cat list)"],
+  ["deny", "評価境界(rm-recursive): 置換の後にさらにセグメントが続く形も同じ理由で deny", "rm -rf \"/tmp/sub/\"$(cat list)/extra"]
 ]
