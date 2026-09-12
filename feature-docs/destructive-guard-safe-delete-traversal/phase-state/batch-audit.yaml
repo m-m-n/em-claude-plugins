@@ -19,3 +19,12 @@ records:
     freeform: "use git branch -d instead of git branch -D"
     normalized_answer: "task0003 のブランチ掃除で destructive-guard が `git branch -D` を拒否した（理由: 未マージブランチの強制削除）。マージは merge-base --is-ancestor で検証済みのため、副作用がより小さく未マージなら自動で拒否する `git branch -d` を integration worktree（HEAD = integration ブランチ）から実行して掃除を完了した。"
     resolution_note: "gate: none (PreToolUse hook denial, no gate_id); codex_consulted: false; rationale: minimum-side-effect option per references/batch-mode.md unlisted-gate fallback; the non-forcing form refuses when unmerged, so it is strictly safer; implement-phase.md's note that the non-forcing form would REFUSE here assumes the main working tree, not the integration worktree"
+  - question_id: review.auto-fix-judgment
+    packet_id: null
+    answered_at: "2026-09-12T22:52:00+09:00"
+    source: user-instructed-consultation
+    answer_mode: single
+    selected_option_ids: [skip-both]
+    freeform: null
+    normalized_answer: "round 2 の high 2 件（c4e8db6735e86e22 / 8330e432c5c1600b）は prose のため needs-judgment に分類され、batch 既定では Apply as-is になる。ユーザー指示に従って相談し、(a) 両方に editor を出す / (b) 片方だけ出す / (c) 両方 skip して deferred にする の 3 択から (c) を採用した。auto-fix は実行していない。"
+    resolution_note: "gate: review.auto-fix-judgment (batch default is Apply as-is); overridden by the invocation's explicit instruction to consult Codex and adopt the comparatively better option; codex_consulted: attempted, NOT reached (codex exec returned a usage-limit error, reset ~2026-09-13 01:02); fallback provider answered after reading destructive-guard.py and destructive-guard-cases.json; opus_escalation: not run; option chosen: (c) skip both, record as deferred; options not chosen: (a) dispatch editors for both, (b) dispatch an editor for one; key points: the prescription is prose requiring a broad rewrite of the decision core (check_git alone has ~15 decide() call sites), no non-rm check currently emits allow so a faulty pooling refactor could turn a correct deny into a real allow, the case table has zero rm-plus-non-rm cases so 178/178 can stay green after a bad application (verified), round 1 on this same file with the same batch Apply-as-is path broke 4 tests and 2 SPEC-pinned rows and was rolled back, and F2/F3's worst case under batch is a wrong rule name on an already-correct deny; also judged F2 and F3 to be the same defect split only by the 5-line same_site window"
