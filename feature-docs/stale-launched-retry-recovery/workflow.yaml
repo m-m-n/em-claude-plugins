@@ -87,7 +87,7 @@ tasks:
     domains: [input-handling, external-io, concurrency, api-contract]
     complexity: high
     requirements: [FR3, FR6, FR7, FR9, FR13, NFR1, NFR2, NFR3, NFR5, NFR6]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/stale-launched-retry-recovery/task0001
   task0002:
