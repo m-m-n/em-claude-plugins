@@ -133,7 +133,7 @@ tasks:
     domains: [config-infra, external-io]
     complexity: low
     requirements: [FR8, FR11, FR13, NFR4, NFR6]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/stale-launched-retry-recovery/task0004
 
