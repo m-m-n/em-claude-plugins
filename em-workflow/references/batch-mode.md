@@ -127,7 +127,7 @@ deferred findings with their stable_ids, every unlisted-gate fallback
 resolution (gate / options / choice / Codex consulted or not), every
 autonomous fail-closed-route resolution (gate / option chosen / options not
 chosen / the discussion's key points / whether Codex was consulted / whether
-a fallback provider answered / whether the Opus escalation ran, with its
+the Opus escalation ran, with its
 reasoning), and the kept integration branch name
 with the take-over guidance (batch never merges — the human switches to the
 branch in the main working tree and merges locally or pushes + opens a PR).
