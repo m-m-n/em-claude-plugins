@@ -48,7 +48,7 @@ PLUGIN_SPECS = {
     "em-workflow": {
         "manifest_path": REPO_ROOT / "em-workflow" / ".claude-plugin" / "plugin.json",
         "baseline": (0, 1, 76),
-        "expected": "0.1.77",
+        "expected": "0.1.78",
     },
     "em-review": {
         "manifest_path": REPO_ROOT / "em-review" / ".claude-plugin" / "plugin.json",
@@ -147,12 +147,12 @@ class TestPluginVersionBumps(unittest.TestCase):
 class TestSpecificVersionValues(unittest.TestCase):
     """AC-1/AC-2: the concrete values this task writes."""
 
-    def test_em_workflow_reads_0_1_77(self):
+    def test_em_workflow_reads_0_1_78(self):
         manifest = _load_json(PLUGIN_SPECS["em-workflow"]["manifest_path"])
         marketplace = _load_json(MARKETPLACE_PATH)
         entry = _marketplace_entry(marketplace, "em-workflow")
-        self.assertEqual(manifest.get("version"), "0.1.77")
-        self.assertEqual(entry.get("version"), "0.1.77")
+        self.assertEqual(manifest.get("version"), "0.1.78")
+        self.assertEqual(entry.get("version"), "0.1.78")
 
     def test_em_review_reads_0_5_10(self):
         manifest = _load_json(PLUGIN_SPECS["em-review"]["manifest_path"])
