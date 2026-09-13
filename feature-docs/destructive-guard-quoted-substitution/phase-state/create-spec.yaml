@@ -1,13 +1,62 @@
 schema_version: 1
 feature: destructive-guard-quoted-substitution
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 1e49c251f5e4e5ddd613c11d38b638b4fb169c0b
 last_input_digest: sha256:6c8603207ad591c7e0e339571a1eab334cc139509f88e10fd1262f181b810d5f
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-09-13T13:02:12+09:00"
+    questions:
+      - question_id: scope.remaining-work
+        status: answered
+      - question_id: testing.expected-verdict
+        status: answered
+      - question_id: design-step.decision
+        status: answered
+answers:
+  scope.remaining-work:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T13:02:12+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: [regression_cases_including_backtick]
+    freeform: null
+    normalized_answer: |
+      create-spec.requirement-clarification の batch policy は codex_consultation。
+      run_codex_exec.sh(readonly) を 1 ターン実行し、フォールバックプロバイダ
+      (litellm/vertex-glm-5.2) が回答した。結論は regression_cases_including_backtick。
+      理由: 症状は姉妹チケットの修正で解消済みのためフック本体の変更は不要。
+      チケットの再現形（クォート付き + printf 綴り）とそのバッククォート版は
+      どちらも既存 226 ケースに無く、hook-tests.md の「見逃しを見つけたら
+      直す前にケースを足す」に従い両方を足すのが最小かつ規則に忠実。
+      独立した二次相談（vertex-glm-5）も同じ結論に至った。
+      orchestrator の採否判断: 採用（自前の実測とも整合）。
+  testing.expected-verdict:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T13:02:12+09:00"
+    source: batch-decision-table
+    answer_mode: select_or_freeform
+    selected_option_ids: [match_sibling_ask]
+    freeform: null
+    normalized_answer: |
+      同じ codex_consultation の結論は match_sibling_ask。
+      理由: 再現手順で観測された deny は無人実行(CLAUDE_BATCH)下の ask→deny 降格。
+      同じ rm-unresolvable 経路の既存ケースは ask を期待値として 226/226 通過している。
+      orchestrator の採否判断: 採用。
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T13:02:12+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: |
+      batch policy create-spec.design-step は select decide_autonomously。
+      requirements-analyst の推奨（design step は skip）をそのまま採用する。
 worker_runs:
   - request_id: create-spec-run-0001
     status: dispatched
@@ -19,3 +68,16 @@ progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+assumptions_recorded:
+  - assumption_id: a1
+    statement: destructive-guard.py 本体の変更は不要で、作業は回帰ケース追加と version bump に限られる。
+    source: create-spec.requirement-clarification / codex_consultation
+  - assumption_id: a2
+    statement: 追加する回帰ケースの期待判定は ask。再現手順で観測される deny は無人実行時の降格。
+    source: create-spec.requirement-clarification / codex_consultation
+  - assumption_id: a3
+    statement: em-workflow/hooks/tests/ 配下のみの変更でも plugin version bump の対象になる。
+    source: requirements-analyst assumption (carried forward)
+  - assumption_id: a4
+    statement: UI・視覚要素を持たないため design step は skip。
+    source: create-spec.design-step / batch policy
