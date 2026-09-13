@@ -17,3 +17,32 @@ records:
       (llm-led-review/task0004) as the origin of the stale hash pin. The path shape check
       and the workflow-control-path check both pass, but a missing identifier alone is
       sufficient to decline, so the path is not auto-added to tasks.task0002.files.
+  - question_id: review.change-set-declaration-gap
+    packet_id: null
+    answered_at: "2026-09-13T17:26:00+09:00"
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids: ["B"]
+    freeform: null
+    normalized_answer: "leave unresolved; let verify's containment check route it through the formal rework path"
+    resolution_note: >-
+      Unlisted non-packet gate raised by review round 1's single medium finding
+      (stable_id 12d69dc2dfa55081): tests/test_reviewer_roles_protocol.py is in the
+      observed change set but in no task's `files`, so VERIFICATION.md's change-set
+      containment check will flag it. Options put to Codex — (A) add the path to
+      tasks.task0002.files now, during review; (B) leave the finding unresolved and let
+      the verify phase detect the containment violation and route it through the normal
+      verify-failure rework path; (C) revert the pin edit. Codex recommended B, on the
+      ground that the same fact pattern was already adjudicated formally during the
+      implement phase's wake reconcile (this file's question_id implement.wake-decline
+      record) and declined for a stated reason — no AC-n of task0002's own plan and no
+      requirement id registered in workflow.yaml was named as what the edit protects.
+      Amending the declared set from the review phase with no newly named identifier
+      would overturn that decision without new evidence, which is gate laundering; the
+      containment-check failure at verify is the designed detection of exactly this
+      under-declaration. Codex rejected C as deliberately breaking a test whose pinned
+      region genuinely changed, and added a forward-looking suggestion (out of scope
+      here, not applied): have create-plan auto-include hash/snapshot-pin invariant tests
+      in the declared change set, as a separate improvement that must not be used to
+      justify task0002 retroactively. Adopted: B. Fallback provider not needed (codex
+      answered); no Opus escalation.
