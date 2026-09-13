@@ -503,24 +503,58 @@ def extract_shell_payload(toks, lexed):
     to be present. On the parse-failure fallback (LEXED False) this returns
     None, same as any other feature here that depends on tokenization; the
     fallback's own whole-segment matching still sees the raw text.
+
+    Structural decisions (which word is the command, which args are `-c`/
+    redirects) are made on marker-stripped spellings, so residual
+    UNRESOLVED_MARK characters in TOKS cannot desync those comparisons; the
+    payload text itself is still pulled from the corresponding marked token,
+    so its substitution evidence survives into the re-scanned statement.
+
+    When the argument sitting right after `-c` is itself a whole-word
+    substitution (`.substitution_only`), an unquoted, unresolved expansion
+    that resolves to nothing disappears along with its entire word in a real
+    shell, so the word AFTER it is what `-c` actually runs — this walks past
+    any run of such placeholders to find that word before falling back to
+    the placeholder itself when nothing follows it.
     """
     if not lexed:
         return None
-    words, redirects = split_redirects(toks, lexed)
+
+    # Structural decisions use marker-stripped spellings. The parallel
+    # marked lists retain the evidence that must be copied into a payload
+    # before statements() scans it again.
+    comparison_toks = _strip_unresolved_marks(toks)
+    words, redirects = split_redirects(comparison_toks, lexed)
+    marked_words, marked_redirects = split_redirects(toks, lexed)
+    if len(words) != len(marked_words) or len(redirects) != len(marked_redirects):
+        return None
+
     word, args = head(words)
+    marked_args = marked_words[-len(args):] if args else []
+
     if word == "eval":
-        return " ".join(args) if args else None
+        return " ".join(marked_args) if marked_args else None
     if word in SHELL_WORDS:
         if "-c" in args:
             idx = args.index("-c")
+            # An unquoted substitution that expands to nothing disappears
+            # along with its whole word, so the NEXT argument becomes the
+            # script `-c` runs. Step past substitution-only placeholders to
+            # find the word that can actually carry a payload; fall back to
+            # the placeholder itself when nothing follows it.
+            j = idx + 1
+            while j < len(args) and getattr(args[j], "substitution_only", False):
+                j += 1
+            if j < len(args):
+                return marked_args[j]
             if idx + 1 < len(args):
-                return args[idx + 1]
+                return marked_args[idx + 1]
         i = 0
         while i < len(redirects):
             t = redirects[i]
             if REDIRECT.fullmatch(t):
                 if t == "<<<" and i + 1 < len(redirects):
-                    return redirects[i + 1]
+                    return marked_redirects[i + 1]
                 i += 2
             else:
                 i += 1
@@ -676,10 +710,22 @@ def head(toks):
     """Return (command word, remaining args), skipping assignments/wrappers.
 
     Mirrored in failed-run-cleanup-guard.py's own head() — keep both in sync.
+    That mirror does not know about `Tok.substitution_only`; the skip added
+    here for it is local to this file and does not change the shape of the
+    return value, which stays the 2-tuple both files already agree on.
+
+    A token flagged `.substitution_only` (an argument built entirely from a
+    command substitution, task0001 Design Part 1) sits where a command name
+    or wrapper token would be, but its real text is unknown statically — it
+    can expand to nothing. Skipping it here lets a real command word that
+    follows it still be found and checked.
     """
     i = 0
     while i < len(toks):
         t = toks[i]
+        if getattr(t, "substitution_only", False):
+            i += 1
+            continue
         if re.match(r"^[A-Za-z_]\w*=", t):  # VAR=value prefix
             i += 1
             continue
@@ -776,11 +822,21 @@ def git_subcommand(args):
     """Strip git's global options and return (subcommand, its args).
 
     Mirrored in failed-run-cleanup-guard.py's own git_subcommand() (used
-    inside its classify()) — keep both in sync.
+    inside its classify()) — keep both in sync. That mirror does not know
+    about `Tok.substitution_only`; the skip added here for it is local to
+    this file and does not change the shape of the return value, which
+    stays the 2-tuple both files already agree on.
+
+    A token flagged `.substitution_only` sitting where a global option or
+    the subcommand itself would be is skipped, the same reasoning head()
+    applies to a command-position substitution.
     """
     i = 0
     while i < len(args):
         a = args[i]
+        if getattr(a, "substitution_only", False):
+            i += 1
+            continue
         if a in ("-C", "-c", "--git-dir", "--work-tree", "--namespace"):
             i += 2
             continue
