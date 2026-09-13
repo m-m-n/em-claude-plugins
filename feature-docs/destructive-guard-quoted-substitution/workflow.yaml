@@ -49,7 +49,7 @@ workflow:
   base_commit: c67105d5751ec3201633eb03e1898bcee6a704be
   completed_at_commit: afad515faf58d54e839c246c4415638270f1fbf7
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -87,11 +87,18 @@ tasks:
     branch: em-workflow/destructive-guard-quoted-substitution/task0001
     notes: null
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 再現形の回帰ケース追加
