@@ -1,0 +1,168 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: Ran 4402 tests, OK (before any edit)
+final_failures: []             # python3 -m unittest discover -s tests: Ran 4401 tests, OK (net -1: the old 27-method module removed, the new 26-method module added); python3 em-workflow/hooks/tests/run-destructive-guard.py: 228/228 passed (destructive-guard.py is untouched by this task's diff, so this is a preservation check, not a red-to-green one)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestUsageLimitNoLongerSwitches.test_usage_limit_diagnostic_is_a_single_launch_passthrough
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousLaunchCountMatcher.test_matcher_accepts_a_single_record
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousLaunchCountMatcher.test_matcher_rejects_a_forged_two_launch_log
+      - tests.test_codex_wrapper_single_invocation.TestNonVacuousLaunchCountMatcher.test_matcher_rejects_an_empty_log
+    red_confirmed: true
+    red_reason: >-
+      Run against the still-chain-carrying script (before the rewrite):
+      test_usage_limit_diagnostic_is_a_single_launch_passthrough failed with
+      "expected exactly one launch, got 2 records" -- the stub's usage-limit
+      diagnostic on stderr made the old chain advance from entry 1 to entry
+      2 (recognizable in the second record's argv: `-p litellm -m
+      vertex-glm-5.2`). After the rewrite the same run produces exactly one
+      record and returncode 1 with the stub's stderr text as the sole
+      stdout content. The three TestNonVacuousLaunchCountMatcher tests are
+      the non-vacuity proof for the shared `_assert_exactly_one_launch`
+      matcher (IMPLEMENTATION.md Conventions) -- they exercise the matcher
+      function directly against forged logs, so they were green from the
+      moment they were written; the AC's red-to-green evidence is the first
+      test above.
+  AC-2:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestProviderErrorAndPrerequisitesNoLongerMatter.test_provider_error_diagnostic_is_a_single_launch_passthrough
+      - tests.test_codex_wrapper_single_invocation.TestProviderErrorAndPrerequisitesNoLongerMatter.test_usage_limit_with_former_prerequisites_present_is_unaffected
+      - tests.test_codex_wrapper_single_invocation.TestProviderErrorAndPrerequisitesNoLongerMatter.test_configuring_the_former_prerequisites_changes_nothing
+    red_confirmed: true
+    red_reason: >-
+      test_usage_limit_with_former_prerequisites_present_is_unaffected and
+      test_configuring_the_former_prerequisites_changes_nothing both failed
+      pre-rewrite: with LITELLM_API_KEY and the litellm profile file
+      present under the isolated HOME, the old chain still advanced past
+      entry 1 on the usage-limit diagnostic (2 records logged, and the
+      with/without-prerequisites runs disagreed: the "without" run carried
+      one extra CODEX_FALLBACK_UNCONFIGURED stderr line the "with" run
+      lacked). Post-rewrite both runs produce exactly one launch and are
+      byte-identical to each other. test_provider_error_diagnostic_is_a_single_launch_passthrough
+      was already green pre-rewrite: a provider-error diagnostic at entry 1
+      was never one of the old chain's switch conditions (only a
+      usage-limit diagnostic at entry 1 advances it), so this sub-case
+      exercises unaffected pre-existing behaviour rather than the removal
+      itself.
+  AC-3:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestNoFallbackMarkerSurvives.test_no_behavior_emits_a_fallback_marker_line
+      - tests.test_codex_wrapper_single_invocation.TestNoFallbackMarkerSurvives.test_script_text_contains_neither_marker_prefix
+      - tests.test_codex_wrapper_single_invocation.TestNoFallbackMarkerSurvives.test_switch_shaped_stdout_only_text_matches_the_unrelated_error_outcome
+      - tests.test_codex_wrapper_single_invocation.TestNoFallbackMarkerSurvives.test_marker_line_matcher_catches_a_forged_marker_line
+    red_confirmed: true
+    red_reason: >-
+      Pre-rewrite: test_no_behavior_emits_a_fallback_marker_line failed on
+      the usage_limit subTest (2 launches, same as AC-1/AC-2) and
+      test_script_text_contains_neither_marker_prefix failed because the
+      old script's header comment and body still contained both
+      `CODEX_FALLBACK:` and `CODEX_FALLBACK_UNCONFIGURED:` verbatim.
+      Post-rewrite both pass: zero fallback-marker lines in any behaviour's
+      output, and neither prefix string appears anywhere in the script's
+      text. test_switch_shaped_stdout_only_text_matches_the_unrelated_error_outcome
+      was already green pre-rewrite -- the old chain's recognizers matched
+      only against $ERRFILE, never $OUTFILE, so a switch-shaped phrase
+      placed only on stdout never advanced the old chain either; this
+      sub-case pins a protection that pre-existed the removal.
+      test_marker_line_matcher_catches_a_forged_marker_line is the
+      non-vacuity proof for the `_lines_starting_with_marker` matcher
+      itself (a pure string-manipulation unit test), green from the moment
+      it was written.
+  AC-4:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestStreamOrderingPreserved.test_stdout_content_precedes_stderr_content_in_combined_output
+      - tests.test_codex_wrapper_single_invocation.TestStreamOrderingPreserved.test_script_never_redirects_the_launch_to_a_combined_stream
+    red_confirmed: true
+    red_reason: >-
+      test_script_never_redirects_the_launch_to_a_combined_stream failed
+      pre-rewrite: the old script's rationale comment for `run_attempt`
+      contained the literal substring `2>&1` ("Kept separate (rather than
+      2>&1 into one file)"), even though no actual redirection used it;
+      after the rewrite the equivalent rationale comment is reworded and
+      the substring no longer occurs anywhere in the script's text.
+      test_stdout_content_precedes_stderr_content_in_combined_output was
+      already green pre-rewrite: D3 (IMPLEMENTATION.md) states the split
+      capture and stdout-first concatenation are preserved, unmodified
+      behaviour, and the old script already produced that ordering for
+      entry 1 before any chain logic could run -- this sub-case pins a
+      behaviour this task does not change, per tdd-testing's "genuinely
+      pre-existed" exception.
+  AC-5:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestTimeoutPath.test_run_outliving_the_configured_timeout_exits_124_naming_it
+      - tests.test_codex_wrapper_single_invocation.TestTimeoutPath.test_production_script_diagnostic_wording_matches
+      - tests.test_codex_wrapper_single_invocation.TestTimeoutPath.test_unrelated_non_zero_exit_surfaces_with_own_code_and_no_diagnostic
+    red_confirmed: false
+    red_reason: >-
+      All three were already green against the still-chain-carrying script:
+      entry 1's timeout and unrelated-error handling ran unconditionally,
+      before any switch-condition logic, in both the old and the new
+      script -- the chain only ever affected what happens AFTER a
+      recognized diagnostic at entry 1 or entry 2, never the timeout path
+      or an unrelated non-zero exit at entry 1. This criterion pins
+      behaviour explicitly called out as "Preserved, behaviour-for-behaviour"
+      in the task plan's Design section; there is no observable difference
+      for this task's change to prove via red-to-green, per tdd-testing's
+      "the behavior genuinely pre-existed" exception. Carried into the
+      report's unconfirmed_reds.
+  AC-6:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_missing_all_arguments_produces_usage_message
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_mode_only_with_no_further_args_produces_usage_message
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_invalid_mode_produces_existing_message
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_unknown_flag_produces_existing_message
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_dash_c_missing_argument_produces_existing_message
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_output_schema_missing_argument_produces_existing_message
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_no_prompt_message_text_is_preserved_verbatim
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_accepted_flag_set_on_the_launch_is_unchanged
+    red_confirmed: false
+    red_reason: >-
+      All eight were already green against the still-chain-carrying script:
+      the argument parser (mode validation, -C / --output-schema handling,
+      unknown-flag and missing-prompt messages) is byte-identical before
+      and after this task -- the chain removal touches only the code after
+      argument parsing completes. The Design section explicitly forbids
+      "a rewrite of the argument parser" and the Out of Scope list
+      excludes "restructuring the argument parser... or any other
+      improvement not required by the removal", so there is no
+      removal-driven change for these tests to prove via red-to-green.
+      One test (test_no_prompt_message_text_is_preserved_verbatim) started
+      as a behavioural attempt to invoke the "ERROR: No prompt provided"
+      message directly; tracing the parser showed that path is actually
+      unreachable through any input (every valid flag consumption requires,
+      and therefore leaves, at least one token for the eventual prompt), so
+      it was rewritten as a structural text-presence check instead of a
+      fabricated red state. Carried into the report's unconfirmed_reds.
+  AC-7:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestSupersededModuleRemoved.test_provider_fallback_test_module_no_longer_exists
+    red_confirmed: true
+    red_reason: >-
+      Before deleting the old module: the test failed with "True is not
+      false : .../tests/test_codex_wrapper_provider_fallback.py should
+      have been deleted" (the file still existed). After `rm
+      tests/test_codex_wrapper_provider_fallback.py`, the test passes.
+      "covers AC-1 through AC-5" is satisfied by this module's own
+      TestUsageLimitNoLongerSwitches / TestProviderErrorAndPrerequisitesNoLongerMatter
+      / TestNoFallbackMarkerSurvives / TestStreamOrderingPreserved /
+      TestTimeoutPath classes above.
+  AC-8:
+    tests:
+      - tests.test_codex_wrapper_single_invocation.TestHermeticAndStdlibOnly.test_module_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: >-
+      This is a static self-check of the test module's own AST (only
+      standard-library imports), true from the moment the module was
+      written -- there is no "before" state where it could have failed,
+      since it does not exercise production code. "Touches no network, no
+      real provider, and no location outside its own temporary
+      directories" is enforced by construction across every subprocess test
+      in this module (stubbed `codex` first on PATH, isolated HOME,
+      `tempfile.TemporaryDirectory()` throughout) rather than by a separate
+      red-proven test. "Both project test commands pass in this worktree"
+      is verified by the full command runs recorded in baseline_failures /
+      final_failures above (`python3 -m unittest discover -s tests`: Ran
+      4401 tests, OK) plus `python3 em-workflow/hooks/tests/run-destructive-guard.py`:
+      228/228 passed -- the latter is a preservation check, since
+      destructive-guard.py is untouched by this task's diff. Carried into
+      the report's unconfirmed_reds.
