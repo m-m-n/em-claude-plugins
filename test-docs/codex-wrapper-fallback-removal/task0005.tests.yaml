@@ -1,0 +1,135 @@
+task_id: task0005
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestTierARemovedPhraseSweep.test_no_removed_phrase_under_plugin_trees
+    red_confirmed: false
+    red_reason: >-
+      Passes the moment it is written: the four documents this feature
+      edited are already clean, so this real-file assertion holds before and
+      after this task with no observable change. Per Test Notes ("AC-1 and
+      AC-2 pass the moment they are written -- their value is as regression
+      guards"), the confirmed red for this criterion is carried by AC-3's
+      Tier A matcher negative-proof test instead (see AC-3 below).
+  AC-2:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestTierBChangeSetContainmentSweep.test_tracked_occurrences_are_contained_in_allowed_areas
+    red_confirmed: false
+    red_reason: >-
+      Same situation as AC-1: every current git-tracked occurrence already
+      lies inside feature-docs/test-docs/tests, so this real-file assertion
+      passes trivially. The confirmed red for this criterion is carried by
+      AC-3's Tier B matcher negative-proof test instead (see AC-3 below).
+  AC-3:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestTierAMatcherNegativeProof.test_forged_content_with_phrase_is_rejected
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestTierAMatcherNegativeProof.test_forged_clean_content_is_accepted
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestTierBMatcherNegativeProof.test_forged_list_with_outside_occurrence_is_rejected
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestTierBMatcherNegativeProof.test_forged_list_all_inside_is_accepted
+    red_confirmed: true
+    red_reason: >-
+      Ran both `_assert_removed_phrases_absent` (Tier A) and
+      `_assert_occurrences_contained` (Tier B) as temporary no-op stubs
+      (`return` before the raise) and re-ran their "rejects forged bad
+      input" test methods: both failed with "AssertionError: AssertionError
+      not raised" (test_forged_content_with_phrase_is_rejected and
+      test_forged_list_with_outside_occurrence_is_rejected). Restored the
+      raising bodies immediately after observing this, then re-ran -- both
+      negative-proof tests and both non-vacuity/accept tests passed. The
+      accept-side tests (test_forged_clean_content_is_accepted,
+      test_forged_list_all_inside_is_accepted) never fail under the no-op
+      either, by construction (a no-op that never raises accepts everything
+      trivially); their role is the non-vacuity half, not the red-confirmed
+      half.
+  AC-4:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestDigestSourceDeclarationPresentInProtocolModule.test_declaration_and_rule_sentence_present
+    red_confirmed: true
+    red_reason: >-
+      Wrote the new module's real-file test before adding
+      DIGEST_SOURCE_DOCUMENTS to tests/test_reviewer_roles_protocol.py: it
+      failed with "AssertionError: DIGEST_SOURCE_DOCUMENTS declaration not
+      found". Added the constant, its rule-sentence constant
+      (DIGEST_SOURCE_DOCUMENTS_RULE) and the accompanying comment naming all
+      four source documents to test_reviewer_roles_protocol.py; re-ran and
+      it passed. One intermediate red also surfaced and was fixed before
+      green: the rule sentence's first attempt line-wrapped "must" and
+      "also declare this module" across two separate comment lines, so the
+      contiguous-substring check failed with "rule sentence phrase 'must
+      also declare this module' missing" even though the words were present
+      nearby; rewrapped so both required phrases stay within a single
+      source line/string-literal segment, then it passed.
+  AC-5:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestDigestSourceDeclarationPresentInProtocolModule.test_declaration_and_rule_sentence_present
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestDigestSourceDeclarationMatcherNegativeProof.test_forged_text_without_declaration_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Same real-file red as AC-4 above (this module reads
+      tests/test_reviewer_roles_protocol.py as text, never imports it, and
+      the same test method proves both criteria). The matcher's own negative
+      proof (test_forged_text_without_declaration_is_rejected) was confirmed
+      by running `_assert_digest_source_declaration_present` as a temporary
+      no-op stub: the reject test failed with "AssertionError not raised";
+      restored the raising body and it passed.
+  AC-6:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestBaselineClassesAndDigestsPreservedInProtocolModule.test_no_baseline_class_or_digest_removed
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestNoWeakeningMatcherNegativeProof.test_synthetic_text_missing_a_class_is_rejected
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestNoWeakeningMatcherNegativeProof.test_synthetic_text_missing_a_digest_is_rejected
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestNoWeakeningMatcherNegativeProof.test_synthetic_complete_text_is_accepted
+    red_confirmed: true
+    red_reason: >-
+      The real-file check (test_no_baseline_class_or_digest_removed) passes
+      trivially throughout this task -- nothing is removed from
+      tests/test_reviewer_roles_protocol.py, only added -- so, per the same
+      "preservation criterion" reasoning as AC-1/AC-2, its confirmed red is
+      carried by the matcher's own negative proof instead. Ran
+      `_assert_no_class_or_digest_removed` as a temporary no-op stub against
+      the synthetic (not real-file) fixtures: both
+      test_synthetic_text_missing_a_class_is_rejected and
+      test_synthetic_text_missing_a_digest_is_rejected failed with
+      "AssertionError not raised". Restored the raising body; all four tests
+      (both reject tests plus the accept/well-formed non-vacuity tests)
+      passed. Synthetic fixtures were used instead of mutating the real
+      (large) protocol module so the negative proof is deterministic and
+      independent of that file's actual current content.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not independently automatable as its own red/green cycle: it is a
+      diff-purity claim about the shape of the edit to
+      tests/test_reviewer_roles_protocol.py ("adds only the declaration and
+      its comment -- no existing assertion, digest constant, helper or test
+      class is changed or removed"). Its structural half is mechanically
+      covered by AC-6's regression guard (which would reject any such
+      removal), and "the module's own tests still pass" is covered by
+      running tests.test_reviewer_roles_protocol directly (61/61 passed,
+      the same 42 pre-existing tests plus the 19 new ones in this task's own
+      module, none removed or altered) and by the whole-suite run in AC-8.
+      The diff itself (only additive: DIGEST_SOURCE_DOCUMENTS,
+      DIGEST_SOURCE_DOCUMENTS_RULE, and their comments, inserted after the
+      existing *_PATH constants) was confirmed by inspection at commit time,
+      not by an automated test in this module.
+  AC-8:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_integrated_checks.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: >-
+      The stdlib-only import check is a structural property of the file
+      that holds by construction as soon as it is written with only stdlib
+      imports (ast/os/re/subprocess/sys/unittest/pathlib) -- there is no
+      partially-implemented state in which this specific check could
+      fail-then-pass, so recording a fabricated red would not be honest.
+      The network/real-provider half is trivially true by inspection (the
+      module touches only local files and `git ls-files`, no HTTP/socket
+      APIs). "Both project test commands exit 0" is observationally
+      confirmed directly rather than via a unit test: `python3 -m unittest
+      discover -s tests` (4498/4498, no regressions vs the 4479-test
+      baseline recorded before this task) and `python3
+      em-workflow/hooks/tests/run-destructive-guard.py` (228/228, matching
+      its own pre-task baseline) were both run and both exited 0 after this
+      task's changes.
