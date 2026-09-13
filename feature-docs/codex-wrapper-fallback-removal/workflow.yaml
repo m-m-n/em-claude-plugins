@@ -1,0 +1,275 @@
+schema_version: 1
+feature: codex-wrapper-fallback-removal
+created: 2026-09-13
+base_branch: main
+goal: |
+  # codex レビューのラッパー内フォールバックが 600 秒の無駄待ちと rate_limited 誤分類を生む
+
+  種別: バグ
+  指示メモ: 方針候補はページ本文の「方針の候補」節。ラッパー内 entry2/3 を削り、フォールバックは reviewers.yaml の chain walk に一本化する案。
+  出典: https://www.notion.so/3da3509ec8ee811c97ebea785917459f
+
+  ## 現象 (必須)
+  codex をチェーン先頭に置く観点（comprehensive / security / license）のレビューで、
+  codex アカウントが usage limit のとき 600 秒の無駄待ちが発生する。さらにその失敗が
+  `rate_limited` として分類されず、レビュー結果も誤ったソース名で報告される。
+  実測（tauri-emterm の develop 走行、2026-09-13 13:52-14:13 JST）:
+  - comprehensive 観点だけで 04:52:51Z 〜 05:13:45Z の約 21 分を消費、うち約 18 分が無駄
+  - 内訳: ラッパー内 entry2 が 600 秒 timeout（exit 124、出力なし）→ オーケストレーターの
+  chain walk で glm-5.2 が 442 秒かけて `rate_limited` → muse-spark が 129 秒で成功
+  ラッパーが最終的に出したのは次の 1 行だけで、usage limit だったことは残らない。
+  ```plain text
+  CODEX_TIMEOUT: Codex did not respond within 600 seconds
+  ```
+  その結果、レビュアーは「rate-limit の兆候なし。genuine timeout」と報告した。実際には
+  同時刻に codex CLI は次を返していた（別エージェントの実行で確認）。
+  ```plain text
+  ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro),
+  visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 4:08 PM.
+  ```
+  ## 再現手順 (必須)
+  1. codex CLI のアカウントを usage limit 状態にする
+  2. `LITELLM_API_KEY` と `~/.codex/litellm.config.toml` を設定済みにする（フォールバック前提条件）
+  3. `/em-workflow:review` または `/em-workflow:develop` を走らせ、comprehensive 観点を
+  ディスパッチさせる
+  4. `em-workflow:codex-reviewer` が 600 秒後に exit 124 で返り、出力に usage limit の
+  文言が一切含まれないことを確認する
+  ## 期待する挙動 (必須)
+  - codex が usage limit のとき、600 秒待たずにその場で `rate_limited` として返る
+  - entry1 の診断（usage limit、リセット時刻）が失われない
+  - フォールバック先のハーネスには、そのハーネスで成立する形のプロンプトと引数が渡る
+  - レビュー結果の `source` が、実際に応答したモデルを指す
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  ## 該当箇所 (任意)
+  - `em-workflow/scripts/run_codex_exec.sh` — ラッパー内フォールバックチェーン全体
+  	- `run_attempt()` — `OUTFILE` / `ERRFILE` を毎回上書きするため entry1 の診断が消える
+  	- `emit_timeout_and_exit()` — 最後の attempt の出力しか `cat` しない
+  	- `is_usage_limit_response()` — `usage limit` しか grep せず、Vertex の
+  `RateLimitError` / `429` を拾わない
+  - `SANDBOX_FLAG` / `EFFORT_FLAG` / `SCHEMA_FLAG` を entry2/3 へ無変換で転送
+  - `timeout "$TIMEOUT"` が attempt ごとなので最悪 600 x 3 = 1800 秒
+  - `em-workflow/references/reviewers.yaml` — `primary_chain` がラッパー内チェーンと
+  同一エントリを並べており、429 時に同じモデルを二重に叩く
+  - `em-workflow/agents/codex-reviewer.md:106` — Bash ツールの `timeout` 指定が無い
+  - `em-review/scripts/run_codex_exec.sh` — フォールバックは無いが 600 秒固定は同じ
+  ## 実害・発生条件 (任意)
+  発生条件は「codex アカウントが usage limit」または「Vertex 共有プールが 429」。
+  どちらも日常的に起きる。
+  実害:
+  1. **無駄待ち** — 1 観点あたり最大 1800 秒（ラッパー内 3 エントリ）＋ オーケストレーターの
+  chain walk 分。無人実行（`--batch`）では誰も気づかないまま走行時間だけ伸びる
+  2. **誤分類** — timeout の exit 124 には情報が無いため、`rate_limited` に倒せない。
+  protocol の「retryable かどうか」の判定が実態と食い違う
+  3. **能力ミスマッチ** — ラッパーはプロンプトの中身を知らないまま `--output-schema` と
+  `model_reasoning_effort="xhigh"` を Vertex 経路へ転送する。litellm-harness スキルは
+  「Vertex 経路で `--output-schema` を付けるとモデルがツールを一切呼ばず、ファイル内容を
+  捏造した JSON を返す」と明記している。一方 codex-reviewer のプロンプトは
+  「この `git diff` を verbatim で実行して差分を取れ」というツール前提の書き方で、
+  `<review_data>` ブロックを持たない（4,561 バイト）。対する vertex-reviewer は diff と
+  周辺ソースを埋め込み済み（18,366 バイト）でツール実行ゼロ。entry2/3 に落ちた瞬間、
+  ツールを呼べないモデルにツール前提のプロンプトが渡る
+  4. **ソースの詐称** — プロンプトが `"source": "codex"` を固定で要求するため、entry2/3 が
+  答えてもレビュー結果は codex を名乗る。`CODEX_FALLBACK:` マーカーは exit 0 のときしか
+  出ないので、失敗時はどのエントリが走ったかも追えない
+  ### 方針の候補
+  ラッパー内フォールバック（entry2/3）を削り、フォールバックはオーケストレーター側の
+  chain walk（`reviewers.yaml` → `vertex-review:vertex-reviewer` 再ディスパッチ）に一本化する。
+  そちらは既に存在し、今回も動いて muse-spark で成功している。プロンプト形はハーネスの
+  能力と対になっている（ツールあり = fetch 型 / ツールなし = 埋め込み型）ため、プロンプトの
+  中身を知らないラッパー層でプロバイダだけ差し替える設計自体が誤り。
+  これに伴い次も解ける。
+  - 1 回の実行が 600 秒を超えなくなるので、Bash ツールの既定 120 秒との不整合を
+  `codex-reviewer.md` の `timeout` 指定で閉じられる（現状は最悪 1800 秒で、Bash ツールの
+  上限 600 秒では原理的に足りない）
+  - entry1 の stderr がそのまま残るので、usage limit を `rate_limited` に正しく分類できる
+  ### 補足: 切り分け済みの誤診
+  別セッションで「エージェントが `run_in_background` で投げてポーリングした規約違反」と
+  診断されたが、ログ上 `run_in_background` は未指定で、定義どおり同期実行している。
+  Bash ツールの既定 120 秒を超えてハーネスが自動でバックグラウンドへ移し、foreground の
+  結果を失ったので `until` ループで回収した、が実際の経過。600 秒はラッパーの entry2 が
+  全部消費しており、ポーリングが足した時間はほぼゼロ（ラッパー終了 05:03:36.9Z → 報告
+  05:03:55Z）。ポーリングを禁じるガードを足しても待ち時間は減らない。
+  `implement-phase.md:423` の「End the turn immediately after launching — no polling」は
+  オーケストレーターが implementer を Task 起動した後の規則で、reviewer が CLI を叩く
+  場面には適用されない。
+
+  ## 起動時の追加指示（ユーザー）
+  - 実装が終わったら integration ブランチをリモートへ push し、gh pr create で base_branch に対する Pull Request を作成する。integration ブランチはローカル・リモートともに残す（base_branch へ自動マージしない）。
+  - 不明点は Codex に相談し、比較的良いと判断された選択肢を採用する。
+  - その議論の内容を Notion に記録する。
+
+parent_branch: em-workflow/codex-wrapper-fallback-removal/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+    hooks:
+      language: python
+      build_command: ""
+      test_command: "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: dc10f3955bb4470fb1b3a315a2595ebdca8c6c11
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      UI・スタイリング・デザインシステムのいずれも存在しない変更のため。bash ラッパー 1 本、
+      YAML の timeout 値 2 箇所、プロトコル文書 4 本、エージェント定義 2 本、テスト 5 本、
+      version 文字列 3 箇所のみを編集する。design_system_candidates は空。
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: null
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "in-wrapper provider fallback chain の削除"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: "stdout/stderr の分離捕捉と JSON 優先の出力順の維持"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: "チェーン以外のラッパー挙動の保全"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: "ラッパーが必ず先に時間切れになる timeout の入れ子"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: "em-review は timeout の整合のみを対象とする"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: "失効したラッパーテストモジュールの置き換え"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: "ドキュメント整合: ラッパー内フォールバックの記述を削除し R2b / Opus の記述は保全"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: "失効した SPEC エントリを履歴として残す"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: "両プラグインの version を 2 箇所で patch bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "ラッパー 1 回あたりの最悪実行時間の上限"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "診断の保全"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: "信頼できないストリームに対する規律"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: "プロトコル文書にプロバイダ名を書かない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "標準ライブラリのみの hermetic なテスト"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: "Step 5 の起動行を byte 単位で不変に保つ"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
