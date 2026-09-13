@@ -21,6 +21,15 @@ Follows the negative-proof style of tests/test_plugin_version_parity.py
 (task0004 of develop-once-option), the repository's existing version-bump
 test module referenced by task0003.md's Test Notes; that module is not
 modified by this task (IMPLEMENTATION.md C6).
+
+Note (task0004, codex-wrapper-fallback-removal): AC-4 above was originally a
+string-equality pin against em-review's pre-task version (the docstring's
+"0.5.7" is itself a stale echo of an even earlier em-review value; the
+constant actually pinned was 0.5.9). Either way, an equality pin breaks the
+moment a later feature legitimately bumps em-review -- exactly what
+task0004 does -- so this module now asserts the em-review entry's version is
+not below that baseline, compared on parsed numeric components rather than
+the raw string.
 """
 
 import ast
@@ -39,7 +48,12 @@ MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 # (IMPLEMENTATION.md C5).
 BASELINE_VERSION = "0.1.64"
 NEW_VERSION = "0.1.65"
-EM_REVIEW_VERSION = "0.5.9"
+
+# Baseline em-review marketplace version captured before this task's own
+# bump (AC-4 repaired per task0004 of codex-wrapper-fallback-removal: the
+# property that survives a later, legitimate em-review bump is "not below
+# this baseline", not string equality to it).
+EM_REVIEW_BASELINE_VERSION = "0.5.9"
 
 # Exactly major.minor.patch -- the AC-3 comparison operates on parsed
 # numeric components, never on the raw string.
@@ -98,14 +112,23 @@ def _assert_patch_bump_over_baseline(test, version, baseline=BASELINE_VERSION):
     )
 
 
-def _assert_em_review_unchanged(test, entry, expected_version=EM_REVIEW_VERSION):
-    """Property 3 (AC-4): the em-review entry's version reads its current
-    pinned value -- the bump did not spill into the neighbouring plugin."""
+def _assert_em_review_not_below_baseline(
+    test, entry, baseline=EM_REVIEW_BASELINE_VERSION
+):
+    """Property 3 repaired (task0004): the em-review entry's version must
+    not regress below the baseline this module captured before its own
+    bump -- equality to that baseline breaks the moment a later feature
+    legitimately bumps em-review, which is exactly the failure this
+    comparison avoids. Comparison is on parsed numeric components, never
+    the raw string."""
     test.assertEqual(entry.get("name"), "em-review")
-    test.assertEqual(
-        entry.get("version"),
-        expected_version,
-        f"em-review version drifted: {entry.get('version')!r} != {expected_version!r}",
+    version = entry.get("version")
+    version_parts = _version_tuple(version)
+    baseline_parts = _version_tuple(baseline)
+    test.assertGreaterEqual(
+        version_parts,
+        baseline_parts,
+        f"em-review version regressed below baseline: {version!r} < {baseline!r}",
     )
 
 
@@ -145,12 +168,15 @@ class TestMarketplaceEntryVersion(unittest.TestCase):
 
 
 class TestEmReviewEntryUnchanged(unittest.TestCase):
-    """AC-4: the em-review entry's version is unchanged at 0.5.7."""
+    """AC-4 repaired (task0004): the em-review entry's version must not
+    regress below the baseline this module captured -- a string-equality
+    pin would break the moment a later feature legitimately bumps em-review,
+    which is exactly the failure this repair fixes."""
 
-    def test_em_review_entry_unchanged(self):
+    def test_em_review_entry_not_below_baseline(self):
         data = _load_json(MARKETPLACE_PATH)
         entry = _marketplace_entry(data, "em-review")
-        _assert_em_review_unchanged(self, entry)
+        _assert_em_review_not_below_baseline(self, entry)
 
 
 class TestVersionsAgreeMatcherNegativeProof(unittest.TestCase):
@@ -203,26 +229,38 @@ class TestPatchBumpMatcherNegativeProof(unittest.TestCase):
         _assert_patch_bump_over_baseline(self, "0.1.100")  # must not raise
 
 
-class TestEmReviewUnchangedMatcherNegativeProof(unittest.TestCase):
-    """AC-5 property 3: `_assert_em_review_unchanged` negative proof plus
-    non-vacuity companion."""
+class TestEmReviewNotBelowBaselineMatcherNegativeProof(unittest.TestCase):
+    """AC-5 property 3 repaired (task0004): `_assert_em_review_not_below_baseline`
+    negative proof plus non-vacuity companion. The forged drifted sample is
+    one patch component below the baseline, so it stays outside the
+    accepted range after the repair -- the negative proof remains
+    meaningful rather than becoming vacuous."""
+
+    FORGED_DRIFTED_VERSION = "0.5.8"
+
+    def test_forged_drifted_version_is_well_formed(self):
+        """Non-vacuity guard: the forged sample itself parses."""
+        self.assertEqual(_version_tuple(self.FORGED_DRIFTED_VERSION), (0, 5, 8))
 
     def test_rejects_drifted_version(self):
-        # Derived from the snapshot rather than written as a literal: a
-        # literal turns into a false negative the moment em-review is bumped
-        # to that very version by a later feature.
-        forged = {"name": "em-review", "version": EM_REVIEW_VERSION + ".1"}
+        forged = {"name": "em-review", "version": self.FORGED_DRIFTED_VERSION}
         with self.assertRaises(AssertionError):
-            _assert_em_review_unchanged(self, forged)
+            _assert_em_review_not_below_baseline(self, forged)
 
     def test_rejects_wrong_name(self):
-        forged = {"name": "em-review-forked", "version": EM_REVIEW_VERSION}
+        forged = {"name": "em-review-forked", "version": EM_REVIEW_BASELINE_VERSION}
         with self.assertRaises(AssertionError):
-            _assert_em_review_unchanged(self, forged)
+            _assert_em_review_not_below_baseline(self, forged)
 
-    def test_accepts_unchanged_entry(self):
-        forged = {"name": "em-review", "version": EM_REVIEW_VERSION}
-        _assert_em_review_unchanged(self, forged)  # must not raise
+    def test_accepts_version_at_baseline(self):
+        forged = {"name": "em-review", "version": EM_REVIEW_BASELINE_VERSION}
+        _assert_em_review_not_below_baseline(self, forged)  # must not raise
+
+    def test_accepts_version_above_baseline(self):
+        # This is the actual bump this task performs: em-review moves from
+        # 0.5.9 to 0.5.10, strictly above the baseline.
+        forged = {"name": "em-review", "version": "0.5.10"}
+        _assert_em_review_not_below_baseline(self, forged)  # must not raise
 
 
 class TestOwnModuleStdlibOnly(unittest.TestCase):

@@ -1,0 +1,92 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_77
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestPluginVersionBumps.test_manifest_version_is_a_patch_bump_over_its_own_baseline
+    red_confirmed: true
+    red_reason: >-
+      Ran the new module against the un-bumped tree (em-workflow manifest
+      still 0.1.76): AssertionError: '0.1.76' != '0.1.77' in
+      test_em_workflow_reads_0_1_77, and "76 not greater than 76" in the
+      patch-bump matcher for the em-workflow subTest.
+  AC-2:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_reads_0_5_10
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestPluginVersionBumps.test_manifest_version_is_a_patch_bump_over_its_own_baseline
+    red_confirmed: true
+    red_reason: >-
+      Ran the new module against the un-bumped tree (em-review manifest
+      still 0.5.9): AssertionError: '0.5.9' != '0.5.10' in
+      test_em_review_reads_0_5_10, and "9 not greater than 9" in the
+      patch-bump matcher for the em-review subTest.
+  AC-3:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestPluginVersionBumps.test_manifest_version_is_a_patch_bump_over_its_own_baseline
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestPluginVersionBumps.test_marketplace_entry_version_is_a_patch_bump_over_its_own_baseline
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestPluginVersionBumps.test_manifest_and_marketplace_agree_per_plugin
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_fails_on_a_missing_entry_name
+    red_confirmed: true
+    red_reason: >-
+      Same run as AC-1/AC-2, pre-bump: both plugins' patch-bump subTests
+      failed with "<patch> not greater than <patch>" (76/76 and 9/9) since
+      neither manifest had moved yet. The equal-to-each-other assertion and
+      the missing-entry lookup guard are matcher self-tests independent of
+      the bump and were green throughout; they are included here as part of
+      AC-3's full assertion set, not as separately-observed reds.
+  AC-4:
+    tests:
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_is_not_below_baseline
+      - tests.test_failed_kind_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_is_not_below_baseline
+      - tests.test_verify_rework_lineage_cap_version_bump.TestOtherMarketplaceEntriesUnchanged.test_em_review_entry_version_is_not_below_baseline
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_not_below_baseline
+    red_confirmed: true
+    red_reason: >-
+      Before writing the repair, temporarily bumped only the JSON files
+      (em-workflow 0.1.76->0.1.77, em-review 0.5.9->0.5.10) and ran the four
+      modules AS THEY EXISTED before this task: all four failed identically
+      with AssertionError: '0.5.10' != '0.5.9' (one failure per module, in
+      each module's then-named test_em_review_entry_version_unchanged /
+      test_em_review_entry_unchanged). Reverted the JSON files immediately
+      after observing this, then implemented the repair. Re-ran the same
+      temp-bump experiment after the repair: all four now pass, and they
+      also pass against the un-bumped tree -- confirming the repair
+      generalizes rather than re-pinning.
+  AC-5:
+    tests:
+      - tests.test_batch_codex_autonomous_decisions_version_bump.TestValidationDetectsRegressions.test_em_review_baseline_matcher_rejects_drifted_version
+      - tests.test_failed_kind_version_bump.TestValidationDetectsRegressions.test_em_review_baseline_matcher_rejects_drifted_version
+      - tests.test_verify_rework_lineage_cap_version_bump.TestValidationDetectsRegressions.test_em_review_baseline_matcher_rejects_drifted_version
+      - tests.test_assumptions_reversible_criteria_version_bump.TestEmReviewNotBelowBaselineMatcherNegativeProof.test_rejects_drifted_version
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestValidationDetectsRegressions.test_patch_bump_matcher_rejects_forged_pre_bump_version
+    red_confirmed: true
+    red_reason: >-
+      These new negative-proof tests were written alongside their matcher in
+      the same edit, so no natural pre-implementation run existed to watch
+      fail. Instead ran an in-memory mutation check: for each of the five
+      matcher functions, monkeypatched it to a no-op (never raises,
+      simulating a broken "accepts everything" matcher), re-ran the
+      corresponding negative-proof test method via unittest.TestLoader
+      against the live module object, and confirmed every one failed as
+      expected (fails-as-expected = True for all five), then restored the
+      real function immediately. This is a genuine observation that the
+      test catches the property it claims to guard, not an assumption.
+  AC-6:
+    tests:
+      - tests.test_codex_wrapper_fallback_removal_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: true
+    red_reason: >-
+      "Both project test commands pass" was observably red before the bump:
+      running `python3 -m unittest discover -s tests` against the un-bumped
+      tree failed (the new module's AC-1/AC-2/AC-3 assertions above), and
+      passed (4431/4431, no regressions vs the 4402-test baseline) after the
+      bump. The stdlib-only import check itself (ast-parsing this module's
+      own import statements) has no meaningful pre-implementation red -- it
+      is a structural property of the file that holds by construction as
+      soon as the file is written with only stdlib imports; there is no
+      partially-implemented state in which this specific check could
+      fail-then-pass. Recorded honestly rather than fabricating a red for
+      this sub-check; the AC as a whole is red_confirmed via the test-suite
+      evidence above.
