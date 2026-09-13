@@ -490,6 +490,21 @@ def split_redirects(toks, lexed=True):
     return words, redirects
 
 
+def _payload_index(seq, start):
+    """Return the index in SEQ of the first token at/after START that is not
+    a `.substitution_only` placeholder — an unquoted, unresolved expansion
+    that resolves to nothing disappears along with its whole word in a real
+    shell, so the word after it is what actually carries a payload. Falls
+    back to START itself when nothing past it qualifies (or START is already
+    out of range), so a caller can always index SEQ with the result when
+    START itself was in range.
+    """
+    j = start
+    while j < len(seq) and getattr(seq[j], "substitution_only", False):
+        j += 1
+    return j if j < len(seq) else start
+
+
 def extract_shell_payload(toks, lexed):
     """Return the literal script a shell-invocation segment (TOKS) will
     execute via `-c`, `eval`, or a here-string (`<<<`) redirect aimed at a
@@ -527,7 +542,13 @@ def extract_shell_payload(toks, lexed):
     words, redirects = split_redirects(comparison_toks, lexed)
     marked_words, marked_redirects = split_redirects(toks, lexed)
     if len(words) != len(marked_words) or len(redirects) != len(marked_redirects):
-        return None
+        # A mismatch means the marker's presence made split_redirects() draw
+        # the word/redirect boundary differently between the two passes.
+        # Falling back to `return None` here would skip re-scanning the
+        # payload entirely (fail-open); instead fall back to judging and
+        # extracting from the marked side alone, same as before this mismatch
+        # check existed.
+        words, redirects = marked_words, marked_redirects
 
     word, args = head(words)
     marked_args = marked_words[-len(args):] if args else []
@@ -537,23 +558,25 @@ def extract_shell_payload(toks, lexed):
     if word in SHELL_WORDS:
         if "-c" in args:
             idx = args.index("-c")
-            # An unquoted substitution that expands to nothing disappears
-            # along with its whole word, so the NEXT argument becomes the
-            # script `-c` runs. Step past substitution-only placeholders to
-            # find the word that can actually carry a payload; fall back to
-            # the placeholder itself when nothing follows it.
-            j = idx + 1
-            while j < len(args) and getattr(args[j], "substitution_only", False):
-                j += 1
-            if j < len(args):
-                return marked_args[j]
             if idx + 1 < len(args):
-                return marked_args[idx + 1]
+                return marked_args[_payload_index(args, idx + 1)]
         i = 0
         while i < len(redirects):
             t = redirects[i]
             if REDIRECT.fullmatch(t):
                 if t == "<<<" and i + 1 < len(redirects):
+                    # split_redirects() puts only the `<<<` operator and the
+                    # ONE token right after it into `redirects`; every other
+                    # word of the statement lands in `words`. So when that
+                    # one token is a `.substitution_only` placeholder, the
+                    # next candidate is not further along in `redirects` —
+                    # it is the first non-placeholder word in `words[1:]`,
+                    # the actual here-string body a real shell would run.
+                    if not getattr(redirects[i + 1], "substitution_only", False):
+                        return marked_redirects[i + 1]
+                    j = _payload_index(words, 1)
+                    if j > 0 and not getattr(words[j], "substitution_only", False):
+                        return marked_words[j]
                     return marked_redirects[i + 1]
                 i += 2
             else:
