@@ -90,6 +90,18 @@ line-level tolerant (MANUAL-D2):
 - AC-8: no new test module -- tests/test_plugin_version_parity.py already
   asserts parity and baseline advancement over both manifests.
 - AC-9: verified by running the project test command itself.
+
+Covers task0002 Acceptance Criteria (feature-docs/stale-launched-retry-recovery/
+tasks/task0002.md) AC-5's regression half: every test above uses the
+no-evidence invocation form (the seven new evidence parameters are never
+passed), so their continuing to pass IS the proof that omitting them
+reproduces today's behaviour exactly (D-A, FR5/NFR5) -- including the
+`same-session` case (test_ac2b_*) and the payload-shape assertion
+(test_ac1_*). TestInvokeJournalHelperReasonParameter directly covers the
+`invoke_journal_helper` signature change this task made (`reason` and
+`launch_at` are now parameters of the call, not a hardcoded module
+constant); the new opt-in chain itself is covered by
+tests/test_stale_launched_recovery_chain.py.
 """
 
 import importlib.util
@@ -726,6 +738,54 @@ class TestDefaultJournalHelperPath(unittest.TestCase):
             self.assertIsNone(outcome)
             after = Path(fx["journal_path"]).read_bytes()
             self.assertEqual(before, after)
+
+
+class TestInvokeJournalHelperReasonParameter(unittest.TestCase):
+    """task0002: `invoke_journal_helper` gained `reason` and `launch_at`
+    parameters (D-E) -- the reason is now chosen by the CALLER of the
+    helper (a parameter of the invocation), never inferred inside
+    `invoke_journal_helper` itself. Exercises the function directly,
+    independent of `decide()`."""
+
+    def test_explicit_reason_is_forwarded_to_the_helper_verbatim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            journal_path = os.path.join(tmp, "journal.jsonl")
+            write_jsonl(journal_path, [
+                {"event": "launched", "task": TASK_ID, "at": "2026-01-01T00:00:00+00:00"},
+            ])
+            record_path = os.path.join(tmp, "calls.jsonl")
+            helper_path = write_stub_helper(tmp, record_path, outcome="appended")
+
+            outcome, exit_code = ROT.invoke_journal_helper(
+                helper_path, journal_path, TASK_ID, reason="stale-launched"
+            )
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(outcome, {"outcome": "recovered", "task": TASK_ID, "reason": ""})
+            calls = read_stub_calls(record_path)
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0]["reason"], "stale-launched")
+
+    def test_omitted_launch_at_never_adds_the_flag(self):
+        # The pre-existing STUB_HELPER_TEMPLATE's argparse does not declare
+        # --launch-at at all: if invoke_journal_helper always added the
+        # flag (rather than only when launch_at is not None), this stub
+        # would fail to parse and report a non-zero exit instead of
+        # `recovered`.
+        with tempfile.TemporaryDirectory() as tmp:
+            journal_path = os.path.join(tmp, "journal.jsonl")
+            write_jsonl(journal_path, [
+                {"event": "launched", "task": TASK_ID, "at": "2026-01-01T00:00:00+00:00"},
+            ])
+            record_path = os.path.join(tmp, "calls.jsonl")
+            helper_path = write_stub_helper(tmp, record_path, outcome="appended")
+
+            outcome, exit_code = ROT.invoke_journal_helper(
+                helper_path, journal_path, TASK_ID, reason="orphaned", launch_at=None
+            )
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(outcome["outcome"], "recovered")
 
 
 class TestEndToEndDecide(unittest.TestCase):

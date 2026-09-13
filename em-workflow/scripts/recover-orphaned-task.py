@@ -1,20 +1,31 @@
 #!/usr/bin/env python3
-"""recover-orphaned-task.py -- SC3 decision entry point for the
-orphaned-implementer-recovery feature.
+"""recover-orphaned-task.py -- SC3' decision entry point for the
+orphaned-implementer-recovery feature, extended by
+stale-launched-retry-recovery.
 
 Normative source: feature-docs/orphaned-implementer-recovery/IMPLEMENTATION.md
 (Shared Components SC3, SC5, SC6; Cross-task Design Decisions D1, D2, D3, D7)
 and feature-docs/orphaned-implementer-recovery/tasks/task0003.md,
-task0006.md.
+task0006.md; extended by
+feature-docs/stale-launched-retry-recovery/IMPLEMENTATION.md (Shared
+Components SC3', SC6, the Evidence inputs table, the Agent-identity binding
+rule; Cross-task Design Decisions D-A through D-F) and
+feature-docs/stale-launched-retry-recovery/tasks/task0002.md.
 
 Decides, for ONE candidate task, whether the session that launched its
 implementer is provably gone. Called by the orchestrator's I.2.b reconcile
 step after it has already established the candidate conditions it owns: the
 task worktree and task branch exist, and the Agent index resolves no live
-agent. This script never re-checks those two conditions.
+agent. This script never re-derives those two conditions itself -- the new
+chain below instead accepts the caller's own observations of them as
+evidence inputs (D-B).
 
-Evidence pipeline (fixed order -- each step's failure ends the run as
-`residual` with its SC6 reason code; no write, no helper invocation):
+Two chains, selected by whether the caller supplies at least one of seven
+new, optional evidence inputs (D-A):
+
+LEGACY CHAIN (no evidence input supplied) -- unchanged, fixed order, each
+step's failure ending the run as `residual` with its SC6 reason code (no
+write, no helper invocation):
 
   1. an `agents.jsonl` entry for the task exists            -> no-agent-entry
   2. that entry is bound to the launch under recovery (D7): its own `at`
@@ -35,12 +46,49 @@ Only once all eight steps pass does the journal pre-check run (the task's
 final journal event must be `launched`; an already-terminal event is
 `noop_terminal`, anything else is the SC6 `journal-not-launched` residual).
 This pre-check exists solely to avoid a pointless invocation of the journal
-helper -- SC2's own in-lock replay remains the authoritative check.
+helper -- SC2's own in-lock replay remains the authoritative check. On
+proof, the journal helper is invoked exactly once with reason `orphaned`
+and no launch identity.
 
-On proof, the journal helper (SC2, `journal-append-failed.py` by default,
-`--journal-helper` for testing) is invoked exactly once with the task
-identifier and reason `orphaned`; its outcome is propagated. This script
-NEVER writes the journal itself (Layer Structure, IMPLEMENTATION.md).
+NEW CHAIN (at least one of the seven evidence inputs supplied) -- entered
+ONLY from step 6's same-session branch above (the recorded identity equals
+the current one), so it structurally never runs for a different session's
+launch (D-A). Its own fixed order (`evaluate_stale_launched_chain`,
+self-contained and independently callable):
+
+  1. both `--worktree-present` and `--branch-present` read `yes`, decided
+     before any agent index read, any path assembly and any file open
+     -> task-artifacts-missing; then the task's last journal event: a
+     terminal event is `noop_terminal`, any event other than `launched` is
+     -> journal-not-launched
+  2. an `agents.jsonl` entry for the task exists and is D7-bound (reusing
+     the legacy functions, not restating them)
+     -> no-agent-entry / stale-agent-entry
+  3. the entry carries a `session_id` passing SC5's format rule, and the
+     current session's identity + start resolve (D2)
+     -> no-session-id / invalid-session-id / current-session-unknown
+  4. the agent-identity binding rule holds: the entry names exactly one
+     distinct candidate, its recorded worktree matches `--task-worktree`,
+     and `--stop-target` equals that candidate; `session_id` is never a
+     candidate and never becomes the stop target on any path
+     -> agent-identity-unproven
+  5. `--launch-termination` is `terminated` (`running` is distinguished;
+     every other value, including an absent input, is unproven)
+     -> agent-still-live / agent-termination-unproven
+  6. `--stop-result` is `not-running` for the SAME bound target
+     -> stop-result-unproven
+  7. the journal helper is invoked exactly once with reason `stale-launched`
+     and the last `launched` event's raw `at` as the launch identity (D-C);
+     its outcomes map: `appended` -> `recovered`, `noop_terminal` ->
+     `noop_terminal`, `launch_changed` -> `residual`/`launch-changed` (D-D)
+
+No elapsed-time threshold and no idle-interval input exists anywhere in the
+new chain; doubt at any step is a residual, never a pass (NFR1).
+
+On proof (either chain), the journal helper (SC2', `journal-append-failed.py`
+by default, `--journal-helper` for testing) is invoked exactly once; its
+outcome is propagated. This script NEVER writes the journal itself (Layer
+Structure, IMPLEMENTATION.md).
 
 Outcome: one line of JSON on stdout with keys `outcome`
 (`recovered` | `noop_terminal` | `residual`), `task`, `reason` (an SC6 code
@@ -50,6 +98,12 @@ like `recovered` does). Exit 0 for every decided outcome. A non-zero exit
 means usage or internal error (including a journal-helper failure), is
 never accompanied by a journal write, and the caller treats it as Residual.
 Diagnostics go to stderr, never stdout.
+
+Full closed set of `residual` reason codes (SC6, sixteen values): the ten
+pre-existing values above, plus six added by the new chain:
+`task-artifacts-missing`, `agent-identity-unproven`,
+`agent-termination-unproven`, `agent-still-live`, `stop-result-unproven`,
+`launch-changed`.
 """
 
 import argparse
@@ -75,10 +129,20 @@ REASON_TRANSCRIPT_UNREADABLE = "transcript-unreadable"
 REASON_TRANSCRIPT_ACTIVE = "transcript-active"
 REASON_JOURNAL_NOT_LAUNCHED = "journal-not-launched"
 
+# New (stale-launched-retry-recovery task0002): the opt-in evidence chain's
+# six additional reason codes (SC6).
+REASON_TASK_ARTIFACTS_MISSING = "task-artifacts-missing"
+REASON_AGENT_IDENTITY_UNPROVEN = "agent-identity-unproven"
+REASON_AGENT_TERMINATION_UNPROVEN = "agent-termination-unproven"
+REASON_AGENT_STILL_LIVE = "agent-still-live"
+REASON_STOP_RESULT_UNPROVEN = "stop-result-unproven"
+REASON_LAUNCH_CHANGED = "launch-changed"
+
 TERMINAL_JOURNAL_EVENTS = ("merged", "failed")
 
 DEFAULT_JOURNAL_HELPER_NAME = "journal-append-failed.py"
 ORPHANED_REASON = "orphaned"
+STALE_LAUNCHED_REASON = "stale-launched"
 
 # D7 -- the agent index entry's own `at` must not be earlier than the last
 # `launched` journal event's `at` for the task by more than this tolerance.
@@ -388,6 +452,38 @@ def agent_entry_is_bound(entry_at, last_launched_at):
 
 
 # ---------------------------------------------------------------------------
+# Agent-identity binding rule (IMPLEMENTATION.md, new chain step 4).
+# ---------------------------------------------------------------------------
+
+
+def resolve_bound_stop_target(entry, task_worktree, stop_target):
+    """The stop target's identity is uniquely bound when ALL hold against
+    the given (already D7-bound) agent index entry: its candidate list
+    (`agent_ids`) names exactly one distinct value; its recorded
+    `worktree_path` equals `task_worktree`; and `stop_target` equals that
+    one candidate. Returns the bound identity string on success, else None
+    (-> agent-identity-unproven) -- no candidate, two or more distinct
+    candidates, a worktree mismatch, a stop-target mismatch, and an absent
+    or non-string `stop_target` are all a binding failure.
+
+    Only `agent_ids` is ever read as a candidate source: no OTHER entry
+    field is consulted as a fallback identity, even when it happens to be
+    byte-equal to a genuine candidate."""
+    candidates = entry.get("agent_ids")
+    if not isinstance(candidates, list) or not candidates:
+        return None
+    distinct = set(candidates)
+    if len(distinct) != 1:
+        return None
+    (only_candidate,) = distinct
+    if entry.get("worktree_path") != task_worktree:
+        return None
+    if not isinstance(stop_target, str) or stop_target != only_candidate:
+        return None
+    return only_candidate
+
+
+# ---------------------------------------------------------------------------
 # Journal pre-check (non-authoritative; SC2's in-lock replay is the SSOT).
 # ---------------------------------------------------------------------------
 
@@ -430,12 +526,16 @@ def default_journal_helper_path():
     return os.path.join(_SCRIPT_DIR, DEFAULT_JOURNAL_HELPER_NAME)
 
 
-def invoke_journal_helper(helper_path, journal_path, task_id):
-    """Invoke the journal helper exactly once (SC2 contract:
-    `--journal PATH --task TASKID --reason orphaned`) and propagate its
-    outcome. Returns (outcome_dict, exit_code); outcome_dict is None when the
-    helper failed (non-zero exit, unparsable stdout, or an unrecognized
-    outcome value) -- a helper failure is NEVER reported as `recovered`."""
+def invoke_journal_helper(helper_path, journal_path, task_id, reason=ORPHANED_REASON, launch_at=None):
+    """Invoke the journal helper exactly once (SC2' contract:
+    `--journal PATH --task TASKID --reason REASON`, plus `--launch-at VALUE`
+    when `launch_at` is supplied -- D-E: the reason and the launch-identity
+    argument are parameters of the invocation, chosen by the caller of this
+    function, never inferred here) and propagate its outcome. Returns
+    (outcome_dict, exit_code); outcome_dict is None when the helper failed
+    (non-zero exit, unparsable stdout, or an unrecognized outcome value) --
+    a helper failure is NEVER reported as `recovered`. The helper's
+    `launch_changed` outcome (D-D) maps to `residual`/`launch-changed`."""
     cmd = [
         sys.executable,
         helper_path,
@@ -444,8 +544,10 @@ def invoke_journal_helper(helper_path, journal_path, task_id):
         "--task",
         task_id,
         "--reason",
-        ORPHANED_REASON,
+        reason,
     ]
+    if launch_at is not None:
+        cmd += ["--launch-at", launch_at]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True)
     except OSError as exc:
@@ -483,6 +585,8 @@ def invoke_journal_helper(helper_path, journal_path, task_id):
         return {"outcome": "recovered", "task": task_id, "reason": ""}, 0
     if helper_outcome == "noop_terminal":
         return {"outcome": "noop_terminal", "task": task_id, "reason": ""}, 0
+    if helper_outcome == "launch_changed":
+        return _residual(task_id, REASON_LAUNCH_CHANGED)
 
     print(
         "recover-orphaned-task: unexpected journal helper outcome: "
@@ -506,6 +610,98 @@ def _noop_terminal(task_id):
 
 
 # ---------------------------------------------------------------------------
+# Opt-in evidence chain (FR3, D-A through D-F): self-contained and
+# independently callable, so its own step order can be proven directly
+# (AC-6) as well as via decide()'s same-session dispatch below.
+# ---------------------------------------------------------------------------
+
+
+def evaluate_stale_launched_chain(
+    task_id,
+    journal_path,
+    agents_index_path,
+    current_session_id=None,
+    current_session_start=None,
+    marker=None,
+    transcripts_dir=None,
+    worktree_present=None,
+    branch_present=None,
+    task_worktree=None,
+    stop_target=None,
+    launch_termination=None,
+    stop_result=None,
+    stop_result_target=None,
+    journal_helper=None,
+):
+    """FR3's seven-step evidence chain. Every step's failure ends the run as
+    `residual` with its SC6 reason code and reads/opens nothing further.
+    Reuses the legacy pipeline's own functions for the agent-index,
+    binding, session-identity and current-session sub-checks rather than
+    restating them; adds the artifact/journal precheck (step 1), the
+    agent-identity binding rule (step 4), the termination and stop-result
+    checks (steps 5-6), and the reason/launch-identity-parameterised helper
+    invocation (step 7)."""
+    resolved_transcripts_dir = (
+        transcripts_dir if transcripts_dir is not None else default_transcripts_dir()
+    )
+
+    # 1. Artifacts, then journal state -- decided before any agent index
+    # read, any path assembly and any file open (AC-6).
+    if worktree_present != "yes" or branch_present != "yes":
+        return _residual(task_id, REASON_TASK_ARTIFACTS_MISSING)
+    final_event = replay_final_event(journal_path, task_id)
+    if final_event in TERMINAL_JOURNAL_EVENTS:
+        return _noop_terminal(task_id)
+    if final_event != "launched":
+        return _residual(task_id, REASON_JOURNAL_NOT_LAUNCHED)
+
+    # 2. Agent index entry, D7-bound (reused, not restated).
+    entry = find_agent_entry(agents_index_path, task_id)
+    if entry is None:
+        return _residual(task_id, REASON_NO_AGENT_ENTRY)
+    has_launched_event, last_launched_at = find_last_launched_at(journal_path, task_id)
+    if not (has_launched_event and agent_entry_is_bound(entry.get("at"), last_launched_at)):
+        return _residual(task_id, REASON_STALE_AGENT_ENTRY)
+
+    # 3. Session identity present, valid, and the current session resolves.
+    recorded_session_id = entry.get("session_id")
+    if not isinstance(recorded_session_id, str) or recorded_session_id == "":
+        return _residual(task_id, REASON_NO_SESSION_ID)
+    if not is_valid_session_id(recorded_session_id):
+        return _residual(task_id, REASON_INVALID_SESSION_ID)
+    current = resolve_current_session(
+        current_session_id, current_session_start, marker, resolved_transcripts_dir
+    )
+    if current is None:
+        return _residual(task_id, REASON_CURRENT_SESSION_UNKNOWN)
+
+    # 4. Bound stop target (agent-identity binding rule).
+    bound_identity = resolve_bound_stop_target(entry, task_worktree, stop_target)
+    if bound_identity is None:
+        return _residual(task_id, REASON_AGENT_IDENTITY_UNPROVEN)
+
+    # 5. Harness termination of THIS launch -- no elapsed-time proxy.
+    if launch_termination == "running":
+        return _residual(task_id, REASON_AGENT_STILL_LIVE)
+    if launch_termination != "terminated":
+        return _residual(task_id, REASON_AGENT_TERMINATION_UNPROVEN)
+
+    # 6. Stop result for the SAME bound target.
+    if stop_result != "not-running" or stop_result_target != bound_identity:
+        return _residual(task_id, REASON_STOP_RESULT_UNPROVEN)
+
+    # 7. In-lock launch identity: invoke the helper exactly once.
+    helper_path = journal_helper if journal_helper else default_journal_helper_path()
+    return invoke_journal_helper(
+        helper_path,
+        journal_path,
+        task_id,
+        reason=STALE_LAUNCHED_REASON,
+        launch_at=last_launched_at,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Decision entry point.
 # ---------------------------------------------------------------------------
 
@@ -519,12 +715,36 @@ def decide(
     current_session_start=None,
     marker=None,
     journal_helper=None,
+    worktree_present=None,
+    branch_present=None,
+    task_worktree=None,
+    stop_target=None,
+    launch_termination=None,
+    stop_result=None,
+    stop_result_target=None,
 ):
     """Run the evidence pipeline in fixed order for one task, then (on proof)
     the journal pre-check and helper invocation. Returns
     (outcome_dict_or_None, exit_code); outcome_dict is None only when
     exit_code is non-zero (usage/internal error -- never accompanied by a
-    journal write)."""
+    journal write).
+
+    The seven trailing parameters are the new chain's evidence inputs
+    (D-A): supplying at least one of them opts into
+    `evaluate_stale_launched_chain` from the same-session branch below;
+    supplying none reproduces today's behaviour exactly (FR5/NFR5)."""
+    evidence_supplied = any(
+        value is not None
+        for value in (
+            worktree_present,
+            branch_present,
+            task_worktree,
+            stop_target,
+            launch_termination,
+            stop_result,
+            stop_result_target,
+        )
+    )
     using_default_dir = transcripts_dir is None
     resolved_transcripts_dir = transcripts_dir if transcripts_dir is not None else default_transcripts_dir()
 
@@ -560,8 +780,31 @@ def decide(
         return _residual(task_id, REASON_CURRENT_SESSION_UNKNOWN)
     current_id, current_start = current
 
-    # 6. Recorded identity differs from current.
+    # 6. Recorded identity differs from current -- OR, when the caller has
+    # supplied at least one of the new evidence inputs, the opt-in chain
+    # (D-A). This dispatch is placed HERE, on the same-session branch
+    # itself, so the new chain structurally never runs for a task launched
+    # by a different session (Out of Scope: do not lift it to an earlier
+    # point in the pipeline).
     if recorded_session_id == current_id:
+        if evidence_supplied:
+            return evaluate_stale_launched_chain(
+                task_id=task_id,
+                journal_path=journal_path,
+                agents_index_path=agents_index_path,
+                current_session_id=current_session_id,
+                current_session_start=current_session_start,
+                marker=marker,
+                transcripts_dir=resolved_transcripts_dir,
+                worktree_present=worktree_present,
+                branch_present=branch_present,
+                task_worktree=task_worktree,
+                stop_target=stop_target,
+                launch_termination=launch_termination,
+                stop_result=stop_result,
+                stop_result_target=stop_result_target,
+                journal_helper=journal_helper,
+            )
         return _residual(task_id, REASON_SAME_SESSION)
 
     # 7. Transcripts directory resolves and exists; path containment.
@@ -596,9 +839,10 @@ def decide(
     if final_event != "launched":
         return _residual(task_id, REASON_JOURNAL_NOT_LAUNCHED)
 
-    # On proof: invoke the journal helper exactly once.
+    # On proof: invoke the journal helper exactly once (D-E: the legacy
+    # chain always uses reason `orphaned` and no launch identity).
     helper_path = journal_helper if journal_helper else default_journal_helper_path()
-    return invoke_journal_helper(helper_path, journal_path, task_id)
+    return invoke_journal_helper(helper_path, journal_path, task_id, reason=ORPHANED_REASON)
 
 
 # ---------------------------------------------------------------------------
@@ -634,6 +878,47 @@ def build_arg_parser():
         default=None,
         help="Overrides the default sibling journal-append-failed.py",
     )
+    parser.add_argument(
+        "--worktree-present",
+        default=None,
+        help="Opt-in evidence chain (step 1): yes|no -- caller's observation "
+        "of the task worktree",
+    )
+    parser.add_argument(
+        "--branch-present",
+        default=None,
+        help="Opt-in evidence chain (step 1): yes|no -- caller's observation "
+        "of the task branch",
+    )
+    parser.add_argument(
+        "--task-worktree",
+        default=None,
+        help="Opt-in evidence chain (step 4): the task worktree path the "
+        "bound agent index entry must name",
+    )
+    parser.add_argument(
+        "--stop-target",
+        default=None,
+        help="Opt-in evidence chain (step 4): the agent identity the I.2.b "
+        "Recovery stop call was made against",
+    )
+    parser.add_argument(
+        "--launch-termination",
+        default=None,
+        help="Opt-in evidence chain (step 5): terminated|running|"
+        "launch-accepted|error|output-idle",
+    )
+    parser.add_argument(
+        "--stop-result",
+        default=None,
+        help="Opt-in evidence chain (step 6): not-running|error",
+    )
+    parser.add_argument(
+        "--stop-result-target",
+        default=None,
+        help="Opt-in evidence chain (step 6): which target the stop result "
+        "is about",
+    )
     return parser
 
 
@@ -648,6 +933,13 @@ def main(argv=None):
         current_session_start=args.current_session_start,
         marker=args.marker,
         journal_helper=args.journal_helper,
+        worktree_present=args.worktree_present,
+        branch_present=args.branch_present,
+        task_worktree=args.task_worktree,
+        stop_target=args.stop_target,
+        launch_termination=args.launch_termination,
+        stop_result=args.stop_result,
+        stop_result_target=args.stop_result_target,
     )
     if outcome is not None:
         print(json.dumps(outcome, ensure_ascii=False))
