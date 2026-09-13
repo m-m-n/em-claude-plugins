@@ -146,6 +146,22 @@ integration by VERIFICATION.md.
 | both `plugin.json`, root `marketplace.json` | task0004 |
 | the four existing modules that pin the em-review version | task0004 |
 | the version-consistency test module | task0004 |
+| `tests/test_reviewer_roles_protocol.py` | task0005 |
+| the integrated-checks test module | task0005 |
+
+**Derived pins have an owner too (added by task0005).** A file that no task
+edits by intention, but that a declared edit mechanically forces to change, is
+still a file in the change set and still needs exactly one owning task. The
+case in this feature: `tests/test_reviewer_roles_protocol.py` holds a digest
+over `em-workflow/agents/codex-reviewer.md` from `## Step 0` to EOF, so
+task0002's one-sentence addition to Step 5 of that document forced the digest
+to be recomputed. The document belongs to task0002 and the module belongs to
+task0005; the coupling between them is declared inside the module itself, as
+the set of source documents its digests are derived from, so the next task that
+declares one of those documents can see that this module comes with it. The
+finer-grained byte-level pin of the Step 5 invocation line stays where it is,
+in `tests/test_codex_reviewer_temp_file_isolation.py`, which no task declares
+and no task may touch (NFR6, AC14).
 
 ### D5 — The em-review version bump has a test ripple
 
