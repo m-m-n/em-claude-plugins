@@ -620,7 +620,13 @@ Triggered whenever a launched implementer's `Task()` call returns.
      evidence inputs — `--worktree-present yes|no`,
      `--branch-present yes|no`, `--task-worktree <observed task
      worktree path>`, `--stop-target <the agent identity the stop call
-     was made against>`, `--launch-termination terminated|running`,
+     was made against>`,
+     `--launch-termination terminated|running|launch-accepted|error|output-idle`
+     (only `terminated` proves the step; `running` yields
+     agent-still-live; `launch-accepted`, `error`, `output-idle`, any
+     unrecognized token and an absent input all yield
+     agent-termination-unproven — never round one of them up to
+     `terminated`),
      `--stop-result not-running|error`, and `--stop-result-target <the
      identity the stop result is about>`. Supplying one or more of
      them is what opts into this extended chain; supplying none
