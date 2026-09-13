@@ -12,8 +12,15 @@ documented hook interface (subprocess, stdin JSON) to prove the
 downstream-convergence outcome: a `failed`/`orphaned` line this helper wrote
 does not block a subsequent launch. It does not re-test the guard's own
 rules (Test Notes).
+
+`TestTask0001*` classes cover task0001's own Acceptance Criteria (see
+feature-docs/stale-launched-retry-recovery/tasks/task0001.md): the widened
+reason set, the in-lock launch-identity comparison, the `launch_changed`
+outcome and its concurrency property. Their AC numbers are task0001's own
+and are unrelated to the `TestAC*` numbering above, which stays task0002's.
 """
 
+import ast
 import importlib.util
 import json
 import os
@@ -67,6 +74,17 @@ def read_journal_lines(path):
         return []
     with open(path, encoding="utf-8") as fh:
         return [line for line in fh if line.strip()]
+
+
+def read_journal_bytes(path):
+    """Raw byte content of `path`, or None if it does not exist. Used for
+    the AC-5-style byte-identity assertions (task0001): a line-count or
+    parsed-line comparison does not prove byte-for-byte equality, only a
+    raw read does."""
+    if not os.path.isfile(path):
+        return None
+    with open(path, "rb") as fh:
+        return fh.read()
 
 
 class JournalAppendFailedTestCase(unittest.TestCase):
@@ -394,6 +412,293 @@ class TestAC7LaunchGuardConvergence(JournalAppendFailedTestCase):
         self.assertEqual(last_event_for_task, "launched")
 
 
+class TestTask0001AC1WidenedReasonSet(JournalAppendFailedTestCase):
+    """task0001 AC-1: the closed reason set accepts exactly `orphaned` and
+    `stale-launched`; `manual`, the empty string (TestAC3ReasonValidation,
+    unchanged) and a wholly MISSING `--reason` are each rejected with a
+    non-zero exit, no stdout outcome line, and a byte-identical journal."""
+
+    def test_missing_reason_value_rejected_without_write(self):
+        task_id = "task0030"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": "2026-01-01T00:00:00+00:00"}])
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(["--journal", self.journal_path, "--task", task_id])  # --reason omitted entirely
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+
+class TestTask0001AC2StaleLaunchedAppends(JournalAppendFailedTestCase):
+    """task0001 AC-2: invoking with reason `stale-launched` against a
+    journal whose last event for the task is `launched` appends exactly one
+    line whose fields are `event`, `task`, `at`, `reason` in that order,
+    with `event` = `failed` and `reason` = `stale-launched`, and reports
+    outcome `appended`."""
+
+    def test_stale_launched_appends_failed_line_with_correct_fields(self):
+        task_id = "task0031"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": "2026-01-01T00:00:00+00:00"}])
+        before_lines = read_journal_lines(self.journal_path)
+
+        result = run_cli(["--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched"])
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = read_journal_lines(self.journal_path)
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[:1], before_lines)
+        appended_raw = lines[-1]
+        self.assertEqual(list(json.loads(appended_raw).keys()), ["event", "task", "at", "reason"])
+        appended = json.loads(appended_raw)
+        self.assertEqual(appended["event"], "failed")
+        self.assertEqual(appended["reason"], "stale-launched")
+        payload = json.loads(result.stdout.strip())
+        self.assertEqual(payload, {"outcome": "appended", "task": task_id, "reason": "stale-launched"})
+
+
+class TestTask0001AC3LaunchIdentityComparison(JournalAppendFailedTestCase):
+    """task0001 AC-3 (and TS5's edge cases): with `--launch-at` supplied and
+    matching the last `launched` event's `at`, the append happens and
+    outcome is `appended`; with it supplied and NOT matching (different
+    value, absent `at`, or non-string `at`), nothing is appended, the
+    journal is byte-identical to its pre-call content, outcome is
+    `launch_changed`, and the exit code is 0."""
+
+    def test_matching_launch_at_appends(self):
+        task_id = "task0032"
+        launch_at = "2026-02-02T10:00:00+00:00"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": launch_at}])
+
+        result = run_cli(
+            ["--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched", "--launch-at", launch_at]
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout.strip())["outcome"], "appended")
+        self.assertEqual(len(read_journal_lines(self.journal_path)), 2)
+
+    def test_mismatched_launch_at_does_not_append(self):
+        task_id = "task0033"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": "2026-02-02T10:00:00+00:00"}])
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(
+            [
+                "--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched",
+                "--launch-at", "2026-02-02T11:00:00+00:00",
+            ]
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            json.loads(result.stdout.strip()),
+            {"outcome": "launch_changed", "task": task_id, "reason": "stale-launched"},
+        )
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+    def test_absent_at_on_last_launched_event_does_not_append(self):
+        task_id = "task0034"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id}])  # no `at` field at all
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(
+            [
+                "--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched",
+                "--launch-at", "2026-02-02T10:00:00+00:00",
+            ]
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout.strip())["outcome"], "launch_changed")
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+    def test_non_string_at_on_last_launched_event_does_not_append(self):
+        task_id = "task0035"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": 20260202100000}])
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(
+            [
+                "--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched",
+                "--launch-at", "20260202100000",
+            ]
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout.strip())["outcome"], "launch_changed")
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+    def test_interleaved_other_task_events_do_not_affect_comparison(self):
+        """Test Notes edge case: interleaved events for OTHER task ids
+        around the launch under recovery must not affect the replay."""
+        task_id = "task0036"
+        write_journal(
+            self.journal_path,
+            [
+                {"event": "launched", "task": "task0999", "at": "2026-01-01T00:00:00+00:00"},
+                {"event": "launched", "task": task_id, "at": "2026-03-03T09:00:00+00:00"},
+                {"event": "failed", "task": "task0999", "at": "2026-01-01T00:05:00+00:00", "reason": "orphaned"},
+            ],
+        )
+
+        result = run_cli(
+            [
+                "--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched",
+                "--launch-at", "2026-03-03T09:00:00+00:00",
+            ]
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout.strip())["outcome"], "appended")
+
+    def test_relaunch_overtakes_before_invocation_yields_launch_changed(self):
+        """TS5: build a journal whose last event for the task is `launched`
+        with one `at` value, then rewrite the file so the last event is a
+        `launched` with a DIFFERENT `at`, then invoke with the first value:
+        no append, mismatch outcome."""
+        task_id = "task0037"
+        first_at = "2026-04-04T08:00:00+00:00"
+        second_at = "2026-04-04T09:00:00+00:00"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": first_at}])
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": second_at}])
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(
+            ["--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched", "--launch-at", first_at]
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout.strip())["outcome"], "launch_changed")
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+
+class TestTask0001AC4LaunchAtOmittedPreservesLegacyBehavior(JournalAppendFailedTestCase):
+    """task0001 AC-4 (NFR5): with `--launch-at` omitted entirely, every
+    pre-existing case keeps its current outcome. This class adds no new
+    coverage beyond what TestAC1LaunchedAppendsFailed / TestAC2TerminalIsNoop
+    already assert (those tests never pass `--launch-at`) -- it exists so
+    the mapping from this task's AC-4 to that pre-existing coverage is
+    explicit, per the task plan's own note that AC-4 is proven by those
+    tests continuing to pass rather than by new tests."""
+
+
+class TestTask0001AC5ByteIdentityAcrossNonAppendingOutcomes(JournalAppendFailedTestCase):
+    """task0001 AC-5 (FR9): every non-appending outcome (`noop_terminal`,
+    `launch_changed`, reason rejection, precondition failure) leaves the
+    journal byte-for-byte identical and creates neither the file nor its
+    parent directory."""
+
+    def test_launch_changed_leaves_journal_byte_identical(self):
+        task_id = "task0038"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": "2026-05-05T05:00:00+00:00"}])
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(
+            [
+                "--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched",
+                "--launch-at", "2026-05-05T06:00:00+00:00",
+            ]
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout.strip())["outcome"], "launch_changed")
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+    def test_reason_rejection_leaves_journal_byte_identical(self):
+        task_id = "task0039"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": "2026-05-05T05:00:00+00:00"}])
+        before_bytes = read_journal_bytes(self.journal_path)
+
+        result = run_cli(["--journal", self.journal_path, "--task", task_id, "--reason", "manual"])
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(read_journal_bytes(self.journal_path), before_bytes)
+
+    def test_precondition_failure_creates_neither_file_nor_parent(self):
+        task_id = "task0040"
+        self.assertFalse(os.path.isdir(self.feature_dir))
+
+        result = run_cli(["--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched"])
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(os.path.isdir(self.feature_dir))
+        self.assertFalse(os.path.exists(self.journal_path))
+
+
+class TestTask0001AC6ConcurrentSameLaunchIdentity(JournalAppendFailedTestCase):
+    """task0001 AC-6 (NFR2): N concurrent invocations carrying the SAME
+    launch identity against the same journal append at most one `failed`
+    line in total."""
+
+    def test_concurrent_invocations_with_same_launch_identity_append_at_most_one(self):
+        task_id = "task0041"
+        launch_at = "2026-06-06T06:00:00+00:00"
+        write_journal(self.journal_path, [{"event": "launched", "task": task_id, "at": launch_at}])
+
+        n = 5
+        results = [None] * n
+
+        def invoke(index):
+            results[index] = run_cli(
+                [
+                    "--journal", self.journal_path, "--task", task_id, "--reason", "stale-launched",
+                    "--launch-at", launch_at,
+                ]
+            )
+
+        threads = [threading.Thread(target=invoke, args=(i,)) for i in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+
+        for result in results:
+            self.assertIsNotNone(result)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+        lines = read_journal_lines(self.journal_path)
+        for line in lines:
+            json.loads(line)  # every line must parse -- no torn/partial writes
+        failed_lines = [
+            l for l in lines if json.loads(l).get("event") == "failed" and json.loads(l).get("task") == task_id
+        ]
+        self.assertEqual(len(failed_lines), 1)
+
+        outcomes = sorted(json.loads(r.stdout.strip())["outcome"] for r in results)
+        self.assertEqual(outcomes, ["appended"] + ["noop_terminal"] * (n - 1))
+
+
+class TestTask0001AC7StdlibOnly(unittest.TestCase):
+    """task0001 AC-7 (NFR6): the module imports only the standard library,
+    and the test module imports no third-party package."""
+
+    @staticmethod
+    def _top_level_imports(source):
+        tree = ast.parse(source)
+        names = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    names.add(alias.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                if node.module is not None and node.level == 0:
+                    names.add(node.module.split(".")[0])
+        return names
+
+    def test_helper_module_imports_only_stdlib(self):
+        stdlib = set(sys.stdlib_module_names)
+        imported = self._top_level_imports(SCRIPT_PATH.read_text(encoding="utf-8"))
+        non_stdlib = imported - stdlib
+        self.assertEqual(non_stdlib, set(), f"non-stdlib imports found: {non_stdlib}")
+
+    def test_test_module_imports_only_stdlib(self):
+        stdlib = set(sys.stdlib_module_names)
+        imported = self._top_level_imports(Path(__file__).read_text(encoding="utf-8"))
+        non_stdlib = imported - stdlib
+        self.assertEqual(non_stdlib, set(), f"non-stdlib imports found: {non_stdlib}")
+
+
 class TestFunctionLevelDecisionLogic(JournalAppendFailedTestCase):
     """Function-level coverage (Design "Structure for testability"): the
     replay decision and the append are reachable as functions independent of
@@ -405,9 +710,36 @@ class TestFunctionLevelDecisionLogic(JournalAppendFailedTestCase):
 
     def test_valid_reason_accepts_only_the_closed_set(self):
         self.assertTrue(self.module.valid_reason("orphaned"))
+        self.assertTrue(self.module.valid_reason("stale-launched"))
         self.assertFalse(self.module.valid_reason("manual"))
         self.assertFalse(self.module.valid_reason(""))
         self.assertFalse(self.module.valid_reason(None))
+
+    def test_last_entry_for_task_returns_full_dict_of_last_event(self):
+        content = "\n".join(
+            json.dumps(e)
+            for e in [
+                {"event": "launched", "task": "task0001", "at": "t1"},
+                {"event": "launched", "task": "task0001", "at": "t2"},
+            ]
+        )
+        self.assertEqual(
+            self.module.last_entry_for_task(content, "task0001"),
+            {"event": "launched", "task": "task0001", "at": "t2"},
+        )
+
+    def test_last_entry_for_task_returns_none_when_no_event(self):
+        self.assertIsNone(self.module.last_entry_for_task("", "task0099"))
+
+    def test_decide_and_append_with_matching_launch_at_appends(self):
+        write_journal(self.journal_path, [{"event": "launched", "task": "task0042", "at": "t1"}])
+        outcome = self.module.decide_and_append(self.journal_path, "task0042", "stale-launched", launch_at="t1")
+        self.assertEqual(outcome, "appended")
+
+    def test_decide_and_append_with_mismatched_launch_at_returns_launch_changed(self):
+        write_journal(self.journal_path, [{"event": "launched", "task": "task0043", "at": "t1"}])
+        outcome = self.module.decide_and_append(self.journal_path, "task0043", "stale-launched", launch_at="t2")
+        self.assertEqual(outcome, "launch_changed")
 
     def test_last_event_for_task_replays_last_by_file_order(self):
         content = "\n".join(
