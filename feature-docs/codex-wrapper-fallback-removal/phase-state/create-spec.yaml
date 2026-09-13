@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-wrapper-fallback-removal
 phase: create-spec
-status: awaiting_answers
+status: completed
 generation: 1
 base_revision: 8cf43952aa190558cff0741e4285afec31bb9902
-last_input_digest: "sha256:78ce9e4c28dc2068f0f4a5b03c36b277c1231d7a85febdfc28b355bad2406b48"
-active_request_id: create-spec-run-0001
+last_input_digest: "sha256:1c2ce53f8d2b7db0ed2cf4903693a069534e30ea19f319cf5d881e35999f3523"
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -130,7 +130,21 @@ worker_runs:
     status: needs_user_input
     input_digest: "sha256:78ce9e4c28dc2068f0f4a5b03c36b277c1231d7a85febdfc28b355bad2406b48"
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: "sha256:feeeb36c1361341b6aa7e377c91f78dc81154f11662019a9824560fe60a061b3"
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:1c2ce53f8d2b7db0ed2cf4903693a069534e30ea19f319cf5d881e35999f3523"
+    output_digest: null
+artifacts:
+  - path: feature-docs/codex-wrapper-fallback-removal/REQUIREMENTS.md
+    sha256: "sha256:d562251f5d0b241d0627efe7b42e532ee631e7b8d2a18a6541f0abf3e517af4f"
+    produced_by: create-spec-run-0003
+  - path: feature-docs/codex-wrapper-fallback-removal/SPEC.md
+    sha256: "sha256:f9e4d27434f72e605e3ba230810d241340c45d4d93175ce1c48099b9bf8f01cb"
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
