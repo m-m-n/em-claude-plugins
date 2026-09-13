@@ -1,0 +1,90 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_wrapper_fallback_doc_realignment.TestAC1RemovedClauseAbsentFromOwnedDocs.test_batch_mode_reporting_section_lacks_removed_clause
+      - tests.test_wrapper_fallback_doc_realignment.TestAC1RemovedClauseAbsentFromOwnedDocs.test_phase_state_batch_audit_section_lacks_removed_clause
+    red_confirmed: true
+    red_reason: >-
+      Both tests failed with "'whether a fallback provider answered'
+      unexpectedly found in ..." against the pre-edit text of
+      em-workflow/references/batch-mode.md's Reporting section and
+      em-workflow/references/phase-state.md's Batch audit record file
+      section, before either document was edited.
+  AC-2:
+    tests:
+      - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_batch_mode_surviving_clauses_each_present
+      - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_phase_state_surviving_clauses_each_present
+      - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_reporting_list_still_ends_the_same_way_once
+      - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_batch_quiet_output_source_map_still_has_seven_rows
+    red_confirmed: false
+    red_reason: >-
+      Preservation criterion (Test Notes): the surviving clauses, the
+      reporting list's item count and the audit-item source map row count
+      were already true before this task's edit and stay true after it, by
+      construction -- there is no pre-edit state in which they were absent.
+      The negative proof for the underlying matchers
+      (`_assert_clauses_present`) is instead exercised by
+      `TestClausesPresentMatcherNegativeProof` against forged text.
+  AC-3:
+    tests:
+      - tests.test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_reporting_item_list_unchanged
+      - tests.test_batch_quiet_output_audit_record_contract.TestFourthWriterRelaxedRoute.test_resolution_note_contents_named
+    red_confirmed: true
+    red_reason: >-
+      test_reporting_item_list_unchanged failed against the pre-edit
+      batch-mode.md with "... not found in ..." once REPORTING_ITEM_LIST_SENTENCE
+      was updated to the post-edit wording -- confirmed red before the doc
+      edit, green after. test_resolution_note_contents_named's own update
+      (dropping "whether a fallback provider answered" from an already-passing
+      required-phrase tuple) is a pure narrowing of an existing assertion and
+      could not be driven red by construction: removing a required substring
+      from a tuple can only make a passing assertion continue to pass, never
+      fail. That half is carried as an unconfirmed red in the task report.
+  AC-4:
+    tests:
+      - tests.test_wrapper_fallback_doc_realignment.TestAC4ChainWalkAndRoutingTableUnchanged.test_review_phase_chain_walk_and_routing_table_present
+    red_confirmed: false
+    red_reason: >-
+      Preservation criterion (Test Notes): em-workflow/references/review-phase.md
+      is out of this task's scope and is never edited by it, so the chain-walk
+      description and the routing table are present before this task starts
+      and remain present after. The negative proof for
+      `_assert_routing_table_and_chain_walk_present` is exercised by
+      `TestRoutingTableMatcherNegativeProof` against a forged, incomplete table.
+  AC-5:
+    tests:
+      - tests.test_wrapper_fallback_doc_realignment.TestAC5SupersededSpecUntouched.test_superseded_spec_keeps_its_entries_and_names_no_feature
+    red_confirmed: false
+    red_reason: >-
+      feature-docs/batch-codex-autonomous-decisions/SPEC.md is asserted
+      untouched by construction -- this task's Out of Scope forbids editing
+      it, so the required FR13/FR14/TS-7/TS-8/TS-11 entries and the absence
+      of this feature's name are already true before this task starts. The
+      negative proof for `_assert_superseded_spec_untouched` is exercised by
+      `TestSupersededSpecMatcherNegativeProof` against forged SPEC text.
+  AC-6:
+    tests:
+      - tests.test_wrapper_fallback_doc_realignment.TestAC6NoProviderOrUsageLimitLanguage.test_batch_mode_has_no_provider_or_usage_limit_language
+      - tests.test_wrapper_fallback_doc_realignment.TestAC6NoProviderOrUsageLimitLanguage.test_phase_state_has_no_provider_or_usage_limit_language
+    red_confirmed: false
+    red_reason: >-
+      Preservation criterion: both owned documents were already free of
+      provider/model naming and usage-limit-detection language before this
+      task's edit (pre-existing NFR4 compliance); this task's edit only
+      removes a clause, it never introduces such language, so the check
+      passes before and after by construction. The negative proof for
+      `_assert_no_provider_or_usage_limit_language` is exercised by
+      `TestNoProviderLanguageMatcherNegativeProof` against forged text
+      naming a provider and describing usage-limit detection.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by the whole-suite run (`python3 -m unittest discover -s
+      tests`): 4426/4426 tests pass after this task's edits (baseline before
+      any edit: 4402/4402). `tests/test_wrapper_fallback_doc_realignment.py`
+      imports only `re`, `unittest` and `pathlib` (standard library). No
+      dedicated red/green cycle applies to a whole-suite pass/fail count.

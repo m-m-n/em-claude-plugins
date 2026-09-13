@@ -126,8 +126,15 @@ Covers task0002 Acceptance Criteria
   pre-existing `_step7_citation_scope_ok` matcher above, unmodified), never
   restates the relaxation rule's trigger conditions, and never names a
   provider (`Codex` and `Opus` are the document's own pre-established
-  terms, not the wrapper's hidden fallback-provider chain NFR4 forbids
-  naming).
+  terms, not a provider or model identifier this document's own NFR4
+  forbids naming).
+
+Updated for task0003 (codex-wrapper-fallback-removal;
+feature-docs/codex-wrapper-fallback-removal/tasks/task0003.md AC-3):
+`test_resolution_note_contents_named`'s required phrase tuple drops
+"whether a fallback provider answered" -- the wrapper launches one process,
+so there is no fallback provider left to have answered. No other phrase in
+the tuple changes.
 """
 
 import re
@@ -706,7 +713,6 @@ class TestFourthWriterRelaxedRoute(unittest.TestCase):
             "the options not chosen",
             "the discussion's key points",
             "whether Codex was consulted",
-            "whether a fallback provider answered",
             "whether the Opus escalation ran",
         ):
             with self.subTest(phrase=phrase):

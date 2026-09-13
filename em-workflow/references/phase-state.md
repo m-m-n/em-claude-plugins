@@ -470,7 +470,7 @@ Four writers append to this file, each at resolution time:
   itself was consulted — and `batch-safe-default` when the
   minimum-side-effect branch was taken. `resolution_note` names the gate,
   the option chosen, the options not chosen, the discussion's key points,
-  whether Codex was consulted, whether a fallback provider answered, and
+  whether Codex was consulted, and
   whether the Opus escalation ran, together with its reasoning. Committed
   by the enclosing phase step's next existing `commit-docs.sh` call, the
   same reach-point the writers above use — no new commit is created for it.
