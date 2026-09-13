@@ -214,7 +214,7 @@ tasks:
     domains: ["config-infra"]
     complexity: low
     requirements: ["FR9", "NFR5"]
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-wrapper-fallback-removal/task0004
     notes: null
 
