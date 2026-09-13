@@ -612,6 +612,25 @@ Triggered whenever a launched implementer's `Task()` call returns.
      with the task id and reason `stale-launched`, and it leaves the
      journal unchanged on any residual outcome exactly as the branch
      above does.
+
+     Invocation contract for this branch: the orchestrator re-invokes
+     `em-workflow/scripts/recover-orphaned-task.py` for the same
+     candidate task, with the same journal, Agent-index and identity
+     inputs the call above already passes, plus at least one of seven
+     evidence inputs — `--worktree-present yes|no`,
+     `--branch-present yes|no`, `--task-worktree <observed task
+     worktree path>`, `--stop-target <the agent identity the stop call
+     was made against>`, `--launch-termination terminated|running`,
+     `--stop-result not-running|error`, and `--stop-result-target <the
+     identity the stop result is about>`. Supplying one or more of
+     them is what opts into this extended chain; supplying none
+     reproduces the terminal `same-session` outcome of the branch
+     above unchanged. On full proof that script — never the
+     orchestrator — invokes
+     `em-workflow/scripts/journal-append-failed.py` itself, passing
+     `--launch-at` set to the launch identity observed when this
+     chain started, which is what lets the helper compare launch
+     identity rather than merely the event name inside its own lock.
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
