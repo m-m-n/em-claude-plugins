@@ -1,0 +1,67 @@
+feature: stale-launched-retry-recovery
+collected_at: "2026-09-14T01:47:00+09:00"
+session_ids:
+  - "01a09b6f-412b-7327-a6e9-b572192beff5.jsonl"
+  - "01a09ba6-6777-73b3-aa87-02e6c86365bf.jsonl"
+  - "01a09ba8-824f-7496-8d34-1cfafe4ad689.jsonl"
+signals:
+  review_critical_high:
+    - stable_id: 32e95d5d28ab40ae
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: >-
+        Same-session extension 段落に呼び出し契約が無く、新チェーンが実行時経路から到達不能
+      resolution: fixed
+    - stable_id: a62fab0c8d106536
+      category: comprehensive
+      file: em-workflow/references/implement-phase.md
+      title: >-
+        loop 1 の追記が --launch-termination の閉じた語彙を 5 値から 2 値に狭め、
+        fail-open 方向のドリフトを作った
+      resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - >-
+    review round 1 の high 2 件はどちらも実装コードではなく
+    em-workflow/references/implement-phase.md、つまりオーケストレーター LLM が
+    実行時に読むプロンプト本体の欠落だった。scripts 側の argparse と docstring には
+    7 つの証拠入力が揃っていたが、references 側に呼び出し契約が無いため新チェーンが
+    本番経路から到達不能になっていた。実装が正しくても「呼ばれ方」が references に
+    書かれていなければ機能は存在しないのと同じ、という構図。
+  - >-
+    2 件目の high (a62fab0c8d106536) は loop 1 の auto-fix 自身が持ち込んだ退行で、
+    --launch-termination の閉集合を 5 値から 2 値に狭めていた。loop 2 の再レビューが
+    検出して修正している。auto-fix ループを複数回まわす設計が、文書修正による
+    fail-open 方向のドリフトを実際に捕まえた事例。
+  - >-
+    review round 1 は 10 run 中 5 run が skip (codex rate_limited x3、
+    litellm harness_unavailable x2)。comprehensive と architecture は claude
+    fallback が担当した。chain walk は設計どおり機能しているが、
+    無人実行の時間帯によっては primary ハーネスがほぼ全滅しうる。
+  - >-
+    auto-fix が em-workflow/ 配下を触ったため core-plugin-version-bump.md に従って
+    0.1.79 への bump を試みたが、本 feature 自身のテストが 0.1.78 を pin しており
+    revert した (tests/test_codex_wrapper_fallback_removal_version_bump.py が
+    0.1.78 との一致を、tests/test_stale_launched_version_bump.py が baseline
+    0.1.77 からの patch bump を要求する)。未マージの 1 変更としては 0.1.77 -> 0.1.78 の
+    bump を 1 回だけ持つのが正しい状態。version を pin するテストを feature 自身が
+    持つと、同じ feature 内の後続修正が bump 規則と衝突する。
+  - >-
+    task0003 は files に tests/test_implement_routeback_gate.py と
+    tests/test_failed_kind_write_paths.py を宣言したが、実際には触っていない
+    (over-declaration)。宣言漏れではないので implement の deviation としては
+    現れず、宣言 change set の過剰側を検知する経路が無い。
+  - >-
+    medium 2 件が未修正で残っている。auto-fix の候補ゲートが critical/high 限定の
+    ため、このラウンドでは対象外だった。
+    (1) 8181ab42a021818a - recover-orphaned-task.py の resolve_bound_stop_target で
+    worktree_path と --task-worktree が両方 None のとき None != None が False となり
+    agent-identity 束縛の照合が素通りする。doubt は常に residual という NFR1 と食い違う。
+    (2) 8d2b8d5fe5b88eca - 7 つの証拠入力が個別のプリミティブ引数として decide() と
+    evaluate_stale_launched_chain() に渡されており、evidence_supplied の手動列挙への
+    追加漏れが silent dispatch failure になる。
