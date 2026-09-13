@@ -1,0 +1,96 @@
+task_id: task0001
+baseline_failures: []          # full suite (4498 tests) was green before any change
+final_failures: []             # full suite (4516 tests) is green after implementation
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_journal_append_failed.TestFunctionLevelDecisionLogic.test_valid_reason_accepts_only_the_closed_set
+      - tests.test_journal_append_failed.TestTask0001AC2StaleLaunchedAppends.test_stale_launched_appends_failed_line_with_correct_fields
+      - tests.test_journal_append_failed.TestAC3ReasonValidation.test_unknown_reason_rejected_without_write
+      - tests.test_journal_append_failed.TestAC3ReasonValidation.test_empty_reason_rejected_without_write
+      - tests.test_journal_append_failed.TestTask0001AC1WidenedReasonSet.test_missing_reason_value_rejected_without_write
+    red_confirmed: true
+    red_reason: >
+      The widening assertion went red: valid_reason('stale-launched') was
+      False, and the CLI invocation with --reason stale-launched exited 2
+      with "must be one of ['orphaned']" before the implementation change
+      (confirmed via a temporary git stash of the implementation file only,
+      tests kept). AC-1 also names three rejection sub-clauses (manual,
+      empty, missing value) that are pre-existing, UNCHANGED behavior --
+      those covering tests (two pre-existing from task0002, one new for the
+      missing-value case) were already green before this task's change and
+      stayed green after; they were not expected to go red since the
+      criterion does not change their behavior, only reconfirms it holds
+      alongside the widened set.
+  AC-2:
+    tests:
+      - tests.test_journal_append_failed.TestTask0001AC2StaleLaunchedAppends.test_stale_launched_appends_failed_line_with_correct_fields
+    red_confirmed: true
+    red_reason: "exit 2, 'journal-append-failed: --reason must be one of [''orphaned''], got ''stale-launched'''"
+  AC-3:
+    tests:
+      - tests.test_journal_append_failed.TestTask0001AC3LaunchIdentityComparison.test_matching_launch_at_appends
+      - tests.test_journal_append_failed.TestTask0001AC3LaunchIdentityComparison.test_mismatched_launch_at_does_not_append
+      - tests.test_journal_append_failed.TestTask0001AC3LaunchIdentityComparison.test_absent_at_on_last_launched_event_does_not_append
+      - tests.test_journal_append_failed.TestTask0001AC3LaunchIdentityComparison.test_non_string_at_on_last_launched_event_does_not_append
+      - tests.test_journal_append_failed.TestTask0001AC3LaunchIdentityComparison.test_interleaved_other_task_events_do_not_affect_comparison
+      - tests.test_journal_append_failed.TestTask0001AC3LaunchIdentityComparison.test_relaunch_overtakes_before_invocation_yields_launch_changed
+      - tests.test_journal_append_failed.TestFunctionLevelDecisionLogic.test_decide_and_append_with_matching_launch_at_appends
+      - tests.test_journal_append_failed.TestFunctionLevelDecisionLogic.test_decide_and_append_with_mismatched_launch_at_returns_launch_changed
+    red_confirmed: true
+    red_reason: >
+      Before the implementation change, --launch-at was an unrecognized CLI
+      argument ("unrecognized arguments: --launch-at ...", exit 2) for the
+      subprocess-level tests, and decide_and_append() raised
+      TypeError("got an unexpected keyword argument 'launch_at'") for the
+      function-level tests.
+  AC-4:
+    tests:
+      - tests.test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_appends_exactly_one_failed_line_with_reason_orphaned
+      - tests.test_journal_append_failed.TestAC1LaunchedAppendsFailed.test_stdout_outcome_is_appended
+      - tests.test_journal_append_failed.TestAC2TerminalIsNoop.test_second_invocation_after_failed_is_noop
+      - tests.test_journal_append_failed.TestAC2TerminalIsNoop.test_final_event_merged_is_noop
+      - tests.test_journal_append_failed.TestAC2TerminalIsNoop.test_final_event_failed_is_noop
+    red_confirmed: false
+    red_reason: >
+      AC-4 asserts PRESERVED behavior (NFR5): every pre-existing invocation
+      form, with --launch-at omitted, must keep its current outcome. These
+      are task0002's pre-existing tests, already green before this task's
+      change (they never pass --launch-at), and they remain green after --
+      by design there is no observable delta to force red first. Proven by
+      continuity (still green, unmodified), not by a red-to-green
+      transition. No new test was added for this AC per the task plan's own
+      note that it is "proven by the pre-existing tests in this module
+      continuing to pass."
+  AC-5:
+    tests:
+      - tests.test_journal_append_failed.TestTask0001AC5ByteIdentityAcrossNonAppendingOutcomes.test_launch_changed_leaves_journal_byte_identical
+      - tests.test_journal_append_failed.TestTask0001AC5ByteIdentityAcrossNonAppendingOutcomes.test_reason_rejection_leaves_journal_byte_identical
+      - tests.test_journal_append_failed.TestTask0001AC5ByteIdentityAcrossNonAppendingOutcomes.test_precondition_failure_creates_neither_file_nor_parent
+    red_confirmed: true
+    red_reason: >
+      test_launch_changed_leaves_journal_byte_identical went red (exit 2,
+      unrecognized --launch-at) since the launch_changed outcome did not
+      exist before this task's change. test_reason_rejection_... and
+      test_precondition_failure_... assert pre-existing, unchanged
+      byte-identity guarantees (reason rejection, absent journal/parent)
+      that were already true and stayed true -- not expected to go red,
+      included here because AC-5 names them explicitly as outcomes that
+      must never touch the journal.
+  AC-6:
+    tests:
+      - tests.test_journal_append_failed.TestTask0001AC6ConcurrentSameLaunchIdentity.test_concurrent_invocations_with_same_launch_identity_append_at_most_one
+    red_confirmed: true
+    red_reason: "exit 2 for every one of the 5 concurrent invocations: 'unrecognized arguments: --launch-at ...'"
+  AC-7:
+    tests:
+      - tests.test_journal_append_failed.TestTask0001AC7StdlibOnly.test_helper_module_imports_only_stdlib
+      - tests.test_journal_append_failed.TestTask0001AC7StdlibOnly.test_test_module_imports_only_stdlib
+    red_confirmed: false
+    red_reason: >
+      AC-7 is a static property (stdlib-only imports) that held before this
+      task's change and continues to hold after -- there is no behavior
+      change to force red first; the module gained no new import in
+      widening the reason set or adding --launch-at. The test is a genuine
+      regression guard (it would fail if a future edit added a third-party
+      import) rather than a proof of new behavior.

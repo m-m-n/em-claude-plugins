@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """journal-append-failed.py -- the sole new journal writer authorized to
-record a terminal `failed` event with reason `orphaned` (SC2,
-feature-docs/orphaned-implementer-recovery/IMPLEMENTATION.md).
+record a terminal `failed` event with reason `orphaned` or `stale-launched`
+(SC2', feature-docs/stale-launched-retry-recovery/IMPLEMENTATION.md; formerly
+SC2, feature-docs/orphaned-implementer-recovery/IMPLEMENTATION.md).
 
 This is a narrow write authority, not a general-purpose journal tool: the
-`--reason` value is checked against a closed set whose only member is
-`orphaned` (D5) before the journal is even opened. Widening the set is a
-deliberate, reviewable change to that constant, never a side effect of
-adding a generic writer.
+`--reason` value is checked against a closed set -- `orphaned` and
+`stale-launched` (D5, widened) -- before the journal is even opened.
+Widening the set is a deliberate, reviewable change to that constant, never
+a side effect of adding a generic writer.
 
 Usage:
   journal-append-failed.py --journal PATH --task TASKID --reason orphaned
+  journal-append-failed.py --journal PATH --task TASKID --reason stale-launched \\
+      --launch-at RAW_AT_VALUE
 
 Preconditions (never relaxed, never silently repaired):
   - The journal file must already exist. This helper never creates it and
@@ -26,18 +29,26 @@ current final event and the append -- so a concurrent writer (this helper,
 or one of the existing `failed`/`launched` writers) can never interleave
 with this one (NFR2).
 
-Decision (re-checked independently of the caller, never trusted blindly):
-appends exactly one `failed` line ONLY when the task's OWN final event is
-`launched`. Every other observed state -- `merged`, `failed`, or no event
-at all for this task -- is a no-op. This is the fail-safe direction (NFR1):
-doubt about the task's real state never produces a write; the only
-documented positive precondition is the one this helper re-verifies itself.
+Decision (re-checked independently of the caller, never trusted blindly),
+made INSIDE the same lock as the replay:
+  - the task's OWN final event is `launched` and no `--launch-at` was
+    supplied -> append (today's behaviour, unchanged);
+  - the task's OWN final event is `launched`, `--launch-at` was supplied,
+    and that event's `at` equals the supplied value (exact string compare,
+    never parsed/normalised) -> append;
+  - the task's OWN final event is `launched`, `--launch-at` was supplied,
+    and that event's `at` differs, is absent, or is not a string -> no
+    append; the caller's launch identity no longer matches the journal's;
+  - anything else (`merged`, `failed`, no event at all for this task, any
+    other event name) -> no append.
+This is the fail-safe direction (NFR1): doubt about the task's real state,
+or about which launch is being terminated, never produces a write.
 
 Outcome: one line of JSON on stdout with keys `outcome`
-(`appended` | `noop_terminal`), `task`, `reason`. Exit 0 for both decided
-outcomes. Exit non-zero (and no write) for a usage error (argparse) or an
-internal error (this module's own diagnostics); diagnostics go to stderr,
-never stdout, in either case.
+(`appended` | `noop_terminal` | `launch_changed`), `task`, `reason`. Exit 0
+for all three decided outcomes. Exit non-zero (and no write) for a usage
+error (argparse) or an internal error (this module's own diagnostics);
+diagnostics go to stderr, never stdout, in either case.
 """
 
 import argparse
@@ -51,7 +62,7 @@ from datetime import datetime
 # D5: the closed set of `--reason` values this helper accepts. Widening this
 # is a deliberate, reviewable change (IMPLEMENTATION.md D5) -- never a
 # consequence of the helper being made more generic.
-VALID_REASONS = {"orphaned"}
+VALID_REASONS = {"orphaned", "stale-launched"}
 
 
 class JournalAccessError(Exception):
@@ -114,8 +125,21 @@ def last_event_for_task(content, task_id):
     """Replays `content` (journal file text) for the LAST event recorded
     for `task_id`, by file order. None means no event recorded for this
     task. Malformed lines are skipped, never raised -- matching the
-    replay discipline of the existing journal writers/readers."""
-    last_event = None
+    replay discipline of the existing journal writers/readers. Thin
+    wrapper over `last_entry_for_task`, kept for callers that only need
+    the event name."""
+    entry = last_entry_for_task(content, task_id)
+    return entry.get("event") if entry is not None else None
+
+
+def last_entry_for_task(content, task_id):
+    """Replays `content` (journal file text) for the LAST full JSON entry
+    recorded for `task_id`, by file order -- same replay discipline as
+    `last_event_for_task` (malformed lines skipped, never raised), but
+    returns the whole entry dict rather than just the event name, so a
+    caller can inspect additional fields (e.g. `at`) of that last event.
+    None means no event recorded for this task."""
+    last_entry = None
     for line in content.splitlines():
         line = line.strip()
         if not line:
@@ -128,15 +152,15 @@ def last_event_for_task(content, task_id):
             continue
         event = entry.get("event")
         if isinstance(event, str):
-            last_event = event
-    return last_event
+            last_entry = entry
+    return last_entry
 
 
 def build_failed_line(task_id, reason):
     """SC4: field names and ORDER are taken from the existing `failed`
     writers (queue_failure_net.py, queue_taskstop_net.py), not invented.
-    The change is additive: a new value (`orphaned`) of the existing
-    `reason` field."""
+    The change is additive: new values (`orphaned`, `stale-launched`) of
+    the existing `reason` field."""
     entry = {
         "event": "failed",
         "task": task_id,
@@ -152,26 +176,37 @@ def append_failed_fd(fd, task_id, reason):
     os.fsync(fd)
 
 
-def decide_and_append(journal_path, task_id, reason):
+def decide_and_append(journal_path, task_id, reason, launch_at=None):
     """The full critical section (NFR2): open (no create, no symlink
     follow), take an exclusive lock, replay the task's OWN final event
     under that lock, and append the `failed` line ONLY when that final
-    event is `launched`. Every other observed state -- `merged`, `failed`,
-    or no event at all -- is a no-op (NFR1 fail-safe direction: doubt never
-    produces a write). Returns the outcome string
-    (`appended` | `noop_terminal`). Raises JournalAccessError for a
-    precondition failure on the journal path itself -- the journal is left
-    untouched in that case."""
+    event is `launched` AND (no `launch_at` was supplied, OR that event's
+    own `at` equals `launch_at` as an exact string). `launch_at` is never
+    parsed or normalised (D-C) -- an absent, differing, or non-string `at`
+    on the last `launched` event yields `launch_changed` instead of an
+    append. Every other observed state -- `merged`, `failed`, or no event
+    at all -- is a no-op (NFR1 fail-safe direction: doubt never produces a
+    write). Returns the outcome string
+    (`appended` | `noop_terminal` | `launch_changed`). Raises
+    JournalAccessError for a precondition failure on the journal path
+    itself -- the journal is left untouched in that case."""
     fd = open_journal_for_append(journal_path)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
         try:
             content = read_all_fd(fd)
-            last_event = last_event_for_task(content, task_id)
-            if last_event == "launched":
+            entry = last_entry_for_task(content, task_id)
+            last_event = entry.get("event") if entry is not None else None
+            if last_event != "launched":
+                return "noop_terminal"
+            if launch_at is None:
                 append_failed_fd(fd, task_id, reason)
                 return "appended"
-            return "noop_terminal"
+            current_at = entry.get("at")
+            if isinstance(current_at, str) and current_at == launch_at:
+                append_failed_fd(fd, task_id, reason)
+                return "appended"
+            return "launch_changed"
         finally:
             fcntl.flock(fd, fcntl.LOCK_UN)
     finally:
@@ -181,7 +216,7 @@ def decide_and_append(journal_path, task_id, reason):
 def build_arg_parser():
     parser = argparse.ArgumentParser(
         prog="journal-append-failed.py",
-        description="Append one terminal `failed` journal event for an orphaned implementer task (SC2).",
+        description="Append one terminal `failed` journal event for an orphaned or stale-launched implementer task (SC2').",
     )
     parser.add_argument("--journal", required=True, metavar="PATH", help="path to the feature's journal.jsonl")
     parser.add_argument("--task", required=True, metavar="TASKID", help="task id, e.g. task0007")
@@ -190,6 +225,17 @@ def build_arg_parser():
         required=True,
         metavar="NAME",
         help=f"closed set: {sorted(VALID_REASONS)}",
+    )
+    parser.add_argument(
+        "--launch-at",
+        required=False,
+        default=None,
+        metavar="VALUE",
+        help=(
+            "raw `at` value of the `launched` event this decision was made "
+            "against; compared as an exact string against the task's last "
+            "event inside the lock, never parsed or normalised (D-C)"
+        ),
     )
     return parser
 
@@ -206,7 +252,7 @@ def main(argv=None):
         return 2
 
     try:
-        outcome = decide_and_append(args.journal, args.task, args.reason)
+        outcome = decide_and_append(args.journal, args.task, args.reason, launch_at=args.launch_at)
     except JournalAccessError as exc:
         print(f"journal-append-failed: {exc}", file=sys.stderr)
         return 2
