@@ -1,14 +1,135 @@
 schema_version: 1
 feature: codex-wrapper-fallback-removal
 phase: create-spec
-status: initialized
+status: awaiting_answers
 generation: 1
-base_revision: 707e03cabde0e5b50ae9c2c2dc8c90f735df6b0c
-last_input_digest: null
-active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+base_revision: 8cf43952aa190558cff0741e4285afec31bb9902
+last_input_digest: "sha256:78ce9e4c28dc2068f0f4a5b03c36b277c1231d7a85febdfc28b355bad2406b48"
+active_request_id: create-spec-run-0001
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-09-13T16:40:51+09:00"
+    questions:
+      - question_id: requirement.em-review-scope
+        status: answered
+      - question_id: requirement.timeout-nesting
+        status: answered
+      - question_id: requirement.doc-vocabulary-scope
+        status: answered
+      - question_id: requirement.superseded-test-and-spec
+        status: answered
+      - question_id: requirement.wrapper-output-stream
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  requirement.em-review-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T16:40:51+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [timeout_alignment_only]
+    freeform: null
+    normalized_answer: "em-review は timeout の入れ子調整のみ対象。wrapper スクリプトは触らない。em-review 側も plugin.json + marketplace.json の patch bump が要る"
+    resolution_note: >-
+      gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1/2); mapped to an existing option_id.
+      Codex の理由: em-review のラッパーは既に単発実行なので削除対象が無い。一方
+      timeout: 600 と Bash ツール timeout 未指定は両プラグイン共通の欠陥なので、この
+      2 点だけ揃えるのが妥当。採らなかった選択肢: em_workflow_only（共通の欠陥を
+      片側に残す）、full_parity（ヘッダコメントまで寄せるのは今回の不具合と無関係に
+      差分を広げる）。Codex の指摘したリスク: em-review 利用者の実行時間も変わるため
+      検証範囲が広がる。
+  requirement.timeout-nesting:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T16:40:51+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [shrink_wrapper_timeout]
+    freeform: null
+    normalized_answer: "codex-cli.yaml の timeout を 540 に下げ、Bash ツール側の timeout を 600000 ms にする。ラッパーが必ず先に時間切れになり、診断が呼び出し元へ届く"
+    resolution_note: >-
+      gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1); mapped to an existing option_id.
+      Codex の理由: 540/600000 なら終了処理と CODEX_TIMEOUT 出力に 60 秒の余裕ができる。
+      equal_timeouts と bash_timeout_only は実質同じ設定で同時失効の競合が残る。
+      Codex の追加指摘: この timeout 指定はレビュアーの Step 5 だけでなく
+      question-resolution.md のラッパー直接呼び出し側にも要る。
+      Codex の指摘したリスク: 従来 540-600 秒で成功していた実行が打ち切られる。
+      timeout に kill-after の猶予が無いため、終了シグナルへの応答が遅い場合は
+      「必ず先に診断を出せる」とまでは保証できない。
+  requirement.doc-vocabulary-scope:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T16:40:51+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [remove_all_fallback_vocabulary]
+    freeform: null
+    normalized_answer: "ラッパー内フォールバックを前提とした記述を 4 文書から削除し、pin している 4 テストを更新する。R2b chain walk と Opus escalation の記述は残す"
+    resolution_note: >-
+      gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1); mapped to an existing option_id.
+      Codex の理由: question-resolution.md の該当箇所はラッパーを直接呼ぶ経路であり、
+      R2b へ言い換えると実際には通らない経路の説明になる。削除後の usage limit は
+      Opus escalation へ落ちるので、「フォールバック提供元が答えることがある」文と
+      resolution_note への記載義務を消すのが整合的。採らなかった選択肢:
+      restate_as_orchestrator_chain（直接呼び出し経路に chain walk は無い）、
+      leave_docs_untouched（偽ではなく空虚になるだけだが、文書が実装と食い違う）。
+      Codex の指摘したリスク: fallback 語を機械的に全削除すると、残すべき R2b /
+      Opus escalation の説明まで壊す。
+  requirement.superseded-test-and-spec:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T16:40:51+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [replace_module_keep_spec_history]
+    freeform: null
+    normalized_answer: "tests/test_codex_wrapper_provider_fallback.py を削除し、no-fallback 契約を検証する新規モジュールを追加する。batch-codex-autonomous-decisions/SPEC.md FR13 は当時の記録として残す"
+    resolution_note: >-
+      gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1); mapped to an existing option_id.
+      Codex の理由: 既存モジュールはチェーンの実現そのものを契約にしているため、
+      単発実行を保証する別名モジュールへ置き換えるのが明確。usage limit / provider
+      error でも呼び出しが 1 回で終わり、診断と終了コードが届き、切り替えマーカーが
+      出ないことを検証すべき。採らなかった選択肢: rewrite_module_and_amend_spec、
+      keep_negative_tests_only。Codex の指摘したリスク: FR13 に失効の注記が付かない
+      ため、現行要件と誤読される可能性がある。
+  requirement.wrapper-output-stream:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T16:40:51+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [keep_split_capture]
+    freeform: null
+    normalized_answer: "stdout/stderr の分離捕捉と cat OUTFILE ERRFILE の出力順は残す。削除するのはチェーン専用の分岐・状態管理のみ"
+    resolution_note: >-
+      gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1 と turn 2); mapped to an existing option_id.
+      turn 1 で Codex は revert_to_combined を推したが、自らリスクとして
+      「stderr の診断が JSON に混ざると Step 6 の抽出が難しくなる」を挙げた。turn 2 で
+      新証拠（codex exec は毎回 stderr に巨大なバナーを出す。8 KB のプロンプトで約
+      240 KB。レビュアーは --output-schema 付きで呼ぶ。現行は cat OUTFILE ERRFILE
+      なので JSON が先頭に来て混入しない）を提示したところ、Codex は
+      keep_split_capture へ結論を変更した。Codex の理由: 2>&1 では大量のバナーが JSON
+      に先行し途中にも混ざり得る。em-review の本番稼働実績だけでは問題が起きないとは
+      判断できない。簡素化はチェーン専用の分岐・状態管理の削除で足り、分離捕捉と
+      JSON 優先の出力順は残すべき。Codex の指摘したリスク: 分離しても JSON の後ろに
+      stderr が付くため、出力全体を単一 JSON として解析する実装なら失敗する。
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T16:40:51+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "design ステップは skipped。requirements-analyst の推奨をそのまま採用"
+    resolution_note: "gate: create-spec.design-step; references/batch-policies.yaml -> option_id: decide_autonomously"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:78ce9e4c28dc2068f0f4a5b03c36b277c1231d7a85febdfc28b355bad2406b48"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
