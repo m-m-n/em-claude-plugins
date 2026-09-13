@@ -82,7 +82,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-quoted-substitution/task0001
     notes: null
 review:
