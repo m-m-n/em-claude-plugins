@@ -1,0 +1,42 @@
+feature: codex-wrapper-fallback-removal
+collected_at: "2026-09-13T17:54:00+09:00"
+session_ids: ["01a099f8-d6ea-73ad-9ece-4da3e4c0acb7.jsonl"]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0002
+      files:
+        - tests/test_reviewer_roles_protocol.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - >-
+    review round 1 の唯一の finding (stable_id 12d69dc2dfa55081, severity medium,
+    category spec) は shipped code の欠陥ではなく、宣言済み change set の欠落だった。
+    実体は tests/test_reviewer_roles_protocol.py の sha256 pin 再計算で、task0002 の
+    Step 5 への加筆が pin 領域 (Step 0..EOF) に入ったことによる必然の随伴編集。
+    同じ事実は implement の wake reconcile で先に deviation として現れ、AC / 要件 ID を
+    名指しできないという理由で declined になっている
+    (phase-state/batch-audit.yaml, question_id implement.wake-decline)。
+  - >-
+    その declined を review フェーズ側で覆さず、verify の change-set containment check に
+    検出させて正規の rework 経路 (task0005) に載せた
+    (question_id review.change-set-declaration-gap, Codex 推奨 option B)。
+    結果として verify は 1 ラウンドの rework を消費したが、ゲートの迂回は起きていない。
+    Codex はこの場で forward-looking な改善案も出している: create-plan が hash /
+    snapshot pin 系の invariant テストを宣言 change set に自動で含めるようにする。
+    今回の適用範囲外として採用していない。
+  - >-
+    verify の failed_items IC1 は「VERIFICATION.md の phrase sweep の除外節が
+    feature-docs/ しか挙げておらず、negative assertion のリテラルを置く tests/ と
+    test-docs/ が hit する」というもの。検証条件そのものの記述漏れであり、実装の欠陥では
+    ない。フォールバック語彙の全削除を要求する FR と、その削除を検知するための
+    negative assertion が同じリポジトリに同居する構図では毎回起きうる。
+  - >-
+    review round 1 の 6 run 中 1 run (architecture#0, litellm / vertex-glm-5.2) が
+    harness_unavailable で skip し、chain walk で codex に再ディスパッチされて完走した。
+    本 feature が削ったのはラッパー内フォールバックであり、オーケストレーター側の
+    chain walk は設計どおり機能している。
