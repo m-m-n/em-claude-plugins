@@ -395,8 +395,11 @@ the orchestrator's I.2.b orphan-recovery attempt
 (`em-workflow/references/implement-phase.md`'s I.2.b Recovery / Residual
 block — cited here as the owning section, not restated), it appends
 `failed` with reason `orphaned`, an additive value of the existing `failed`
-reason field (no existing event name or reason is renamed or removed). No
-other hook, and never the orchestrator directly, appends to `journal.jsonl`
+reason field (no existing event name or reason is renamed or removed). The
+same helper, invoked only by that same block's extended same-session
+branch, also appends `failed` with reason `stale-launched`, a second
+additive value of the existing `failed` reason field, adding no writer.
+No other hook, and never the orchestrator directly, appends to `journal.jsonl`
 outside this one exception; in particular the Stop hook
 (`queue_stop_guard.py`) only reads it and the agent index writer
 (`queue_agent_index.py`, next paragraph) never touches it at all.

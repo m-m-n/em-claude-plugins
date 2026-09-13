@@ -583,6 +583,35 @@ Triggered whenever a launched implementer's `Task()` call returns.
      candidate's outcome. Full contract: IMPLEMENTATION.md's SC2
      (`journal-append-failed.py`), SC3 (`recover-orphaned-task.py`), SC6
      (the reason-code set) and D7 (the launch-binding rule).
+
+     Same-session extension: the `same-session` condition above is no
+     longer necessarily terminal. When the orchestrator can supply
+     explicit evidence beyond what the fixed order above already gathers,
+     it makes one further attempt before treating `same-session` as
+     final. Same-session death is proven ONLY by both of the following
+     conjuncts together: explicit harness evidence that THIS launch's
+     execution terminated, and an explicit not-running (or absent)
+     stop-tool result for the SAME bound agent identity; no elapsed-time
+     threshold and no transcript or output-file idle interval
+     substitutes for either conjunct. This extended chain gathers
+     evidence in this fixed order, stopping at the first unmet condition
+     with the named residual reason code and invoking nothing further:
+     the task worktree and the task branch are both observed present
+     (else `task-artifacts-missing`); the stop target's identity is
+     uniquely bound to the selected Agent index entry (else
+     `agent-identity-unproven`); the harness reports THIS launch's
+     execution as terminated (else `agent-termination-unproven`, or
+     `agent-still-live` when the harness instead reports it still
+     running); the stop call reports the bound identity not running
+     (else `stop-result-unproven`); and the launch identity observed
+     when this chain started still matches the launch identity at
+     append time (else `launch-changed`). The recorded session identity
+     is never used as the stop target on this branch, exactly as on the
+     branch above. Only when every condition holds does this branch
+     invoke `em-workflow/scripts/journal-append-failed.py` exactly once,
+     with the task id and reason `stale-launched`, and it leaves the
+     journal unchanged on any residual outcome exactly as the branch
+     above does.
    - `git merge-base --is-ancestor <task branch> em-workflow/{feature}/integration`
      for tasks the journal (or the implementer's own report) claims are
      `merged` — a claim that fails this check is NOT merged; never mark a
@@ -884,8 +913,9 @@ to the user with the implementer's notes and offer, via AskUserQuestion:
   rejected path above uses), set the `implement` step's `status` to
   `failed` in workflow.yaml, together with `failed_kind` in that same single write —
   `infra` when the failing task's failure originates from a journal
-  `failed` event whose reason is `orphaned` (the orphaned-`launched`
-  convergence paragraph above already establishes this), `decision`
+  `failed` event whose reason is `orphaned` or `stale-launched` (the
+  orphaned-`launched` convergence paragraph above already establishes
+  this), `decision`
   otherwise — the single write this path makes — and commit exactly
   that write: `commit-docs.sh "$WT_ROOT/integration" "docs({feature}):
   implement phase aborted" "$ABORT_TIP"` (no `create-plan`
@@ -1058,7 +1088,11 @@ closing the gap before a reconcile pass is even needed. A fourth mechanism
 closes the gap for exactly the case where the launching session itself is
 gone: I.2.b step 1's orphan-recovery attempt (cited there, not restated
 here) is the sole exception to the Journal bullet's rule that the
-orchestrator never writes the journal directly.
+orchestrator never writes the journal directly. A fifth mechanism closes
+the gap for exactly a stop that delivers neither a subagent-stop nor a
+stop-tool event: the same I.2.b step 1 orphan-recovery attempt's extended
+same-session branch (cited there, not restated here) closes it too,
+still inside that one narrowly-scoped writer exception, adding no writer.
 
 **Resume**: a `/em-workflow:develop` re-entry mid-implement rebuilds state
 from four sources, never from memory: workflow.yaml (`tasks.*.status`), the
