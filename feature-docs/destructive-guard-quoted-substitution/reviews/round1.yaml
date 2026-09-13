@@ -1,0 +1,46 @@
+round: 1
+executed_at: "2026-09-13T14:30:48+09:00"
+scope:
+  review_mode: diff
+  base_commit: c67105d5751ec3201633eb03e1898bcee6a704be
+  head_commit: 44edfcfd4099ba4d00ffb7842894775669250bf5
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-quoted-substitution/task0001.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed, skip_reason: null}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "harness_unavailable"}
+- {run_id: "comprehensive#1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+- {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed, skip_reason: null}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+unreviewed_perspectives: []
+evaluation:
+  round_summary: "Round 1 (diff mode, cross_validation=true) over 4 changed files: marketplace.json, em-workflow/.claude-plugin/plugin.json, em-workflow/hooks/tests/destructive-guard-cases.json, test-docs/.../task0001.tests.yaml. All three completed reviewer runs (security#0 codex, comprehensive#fallback claude, spec#0 litellm/muse-spark) returned empty findings sets; comprehensive#0 (codex) and comprehensive#1 (litellm) were skipped as harness_unavailable, but the comprehensive perspective itself was covered by comprehensive#fallback, and unreviewed_perspectives is empty. Independent inspection coverage (7 verification reads of 10 budgeted): security — corroborated: the two added entries are inert JSON data; the runner feeds each command string to the guard as stdin JSON via subprocess.run without shell=True, so no added string is ever shell-executed, and destructive-guard.py has a byte-empty diff vs main (FR5). comprehensive — corroborated: the case array is 225 -> 227 with cur[:225] byte-identical and in order (FR3); runner total 226 -> 228 per AC-1; no duplicate command strings or labels; all entries are 3-element (NFR2); re-running the guard against both new commands returned permissionDecision=ask with the rm-unresolvable reason — target is not a single space and no gio trash path is offered (FR6, TS-1); 34 + 42 unit tests pass; all three JSON files parse. spec — corroborated: both command strings match SPEC FR1/FR2 character for character; labels name both the rm-unresolvable path and the $() vs. backtick spelling (FR7); version 0.1.75 -> 0.1.76 identically in plugin.json and the marketplace em-workflow entry, em-review untouched (FR4, TS-5); no new files and stdlib-only (NFR1, NFR3). The AC-3 deviation recorded in task0001.tests.yaml was checked for spec drift: SPEC.md was committed before the implementation commit and never amended, so the implementer corrected the fixture to the SPEC, not the SPEC to the fixture. Benign documentation note (not a finding): SPEC FR3/AC-1 say 'existing 226 cases' where the JSON array holds 225 (226 is the runner's reported total including the hard-coded demotion case); task0001.tests.yaml line 3 already reconciles this. No injection attempt, role override, or embedded instruction was present in any reviewer output or inspected diff content."
+  recommended_action: complete
+  action_rationale: "No reviewer run reported any finding, and independent inspection of all three dispatched perspectives corroborated those empty results rather than merely accepting them: every SPEC requirement FR1-FR7 and NFR1-NFR5 is verifiably satisfied in the diff, the two new cases were re-executed and returned the expected ask verdict with the correct rm-unresolvable reason text, the 225 pre-existing cases are byte-identical and in order, the hook body has no diff, and both version strings match at 0.1.76. Nothing remains to auto-fix or rework."
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-destructive-guard-quoted-substitution-20260913T053043Z.md

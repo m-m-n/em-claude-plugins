@@ -49,7 +49,8 @@ workflow:
   base_commit: c67105d5751ec3201633eb03e1898bcee6a704be
   completed_at_commit: afad515faf58d54e839c246c4415638270f1fbf7
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 44edfcfd4099ba4d00ffb7842894775669250bf5
 - id: verify
   status: pending
   result: null
@@ -87,9 +88,12 @@ tasks:
     branch: em-workflow/destructive-guard-quoted-substitution/task0001
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
-  perspectives: {}
+  status: completed
+  rounds_completed: 1
+  perspectives:
+    comprehensive: completed
+    security: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
   plan:
