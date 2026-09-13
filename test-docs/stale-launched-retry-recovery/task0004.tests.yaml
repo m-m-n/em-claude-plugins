@@ -1,0 +1,125 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_stale_launched_retry_reachability.TestRetryAfterStaleLaunchedFailure.test_allows_relaunch_and_appends_one_launched_line
+      - tests.test_stale_launched_retry_reachability.TestRetryAfterStaleLaunchedFailure.test_per_task_replay_is_not_confused_by_a_second_tasks_events
+    red_confirmed: true
+    red_reason: >-
+      queue_launch_guard.py is out of scope for this feature (AC-3) and is
+      never edited, so there is no implementation-red state to watch for
+      this criterion in the ordinary red-green sense; the plan's own Test
+      Notes call AC-1/AC-2 "observable before the bump", not red-before-it.
+      To still ground the claim in an observation rather than an assumption,
+      ran both tests against a MUTATED COPY of the real script (never the
+      real file, confirmed byte-identical afterward) with the retry branch
+      broken to deny on a last event of "failed": both tests failed as
+      expected (permissionDecision "deny" instead of an empty stdout /
+      allow). Reverted to the real, unmodified hook path and both tests
+      passed again -- the same result they gave before this observation.
+  AC-2:
+    tests:
+      - tests.test_stale_launched_retry_reachability.TestDoubleLaunchPreventionUndiminished.test_last_event_launched_denies_and_appends_nothing
+      - tests.test_stale_launched_retry_reachability.TestDoubleLaunchPreventionUndiminished.test_last_event_merged_denies_and_appends_nothing
+    red_confirmed: true
+    red_reason: >-
+      Same situation as AC-1 (guard untouched, out of scope). Ran both
+      tests against a mutated copy of the real script with both deny
+      branches (launched, merged) removed: both tests failed (no deny
+      decision was emitted; the mutated guard allowed and appended instead).
+      Reverted to the real hook path and both passed again, matching their
+      pre-observation result. The real hook file's bytes were confirmed
+      unchanged throughout.
+  AC-3:
+    tests:
+      - tests.test_stale_launched_retry_reachability.TestGuardSourceUntouched.test_module_never_imports_the_guard
+      - tests.test_stale_launched_retry_reachability.TestGuardSourceUntouched.test_guard_source_bytes_unchanged_after_invocation
+    red_confirmed: true
+    red_reason: >-
+      Both checks are structural/regression guards written alongside the
+      constraint they enforce, so there is no pre-existing violation in this
+      repository to observe red against. Instead, proved detection power
+      directly: ran the import-check's ast logic against a forged source
+      string containing "import queue_launch_guard" and it correctly failed
+      (module name found where it must not be); ran the byte-comparison
+      logic against a scratch file that was actually mutated between the
+      before/after reads and it correctly failed (before != after). Both
+      checks pass against this module's real, unmodified content.
+  AC-4:
+    tests:
+      - tests.test_stale_launched_version_bump.TestEmWorkflowVersionBump.test_manifest_and_marketplace_agree
+      - tests.test_stale_launched_version_bump.TestEmWorkflowVersionBump.test_manifest_version_is_a_patch_bump_over_baseline
+      - tests.test_stale_launched_version_bump.TestEmWorkflowVersionBump.test_marketplace_entry_version_is_a_patch_bump_over_baseline
+      - tests.test_stale_launched_version_bump.TestEmWorkflowVersionBump.test_entry_lookup_is_non_vacuous
+    red_confirmed: true
+    red_reason: >-
+      Ran the new module against the un-bumped tree (both registries still
+      0.1.77): test_manifest_version_is_a_patch_bump_over_baseline and
+      test_marketplace_entry_version_is_a_patch_bump_over_baseline both
+      failed with "AssertionError: 77 not greater than 77". The other two
+      subtests in this class were already true before the bump (both files
+      already agreed with each other and the lookup was already
+      non-vacuous) and stayed true after it.
+  AC-5:
+    tests:
+      - tests.test_stale_launched_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_fails_on_a_missing_entry_name
+      - tests.test_stale_launched_version_bump.TestMarketplaceEntryLookupGuard.test_lookup_succeeds_on_a_present_entry_name
+      - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_forged_baseline_version_is_well_formed
+      - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_patch_bump_matcher_rejects_forged_baseline_version
+      - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_patch_bump_matcher_rejects_minor_or_major_drift
+      - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_patch_bump_matcher_rejects_malformed_version_shape
+      - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_equality_matcher_rejects_forged_differing_versions
+      - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_forged_differing_versions_are_both_well_formed
+      - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_matched_name_with_malformed_version_fails_the_parse_assertion
+      - tests.test_stale_launched_version_bump.TestValidationDetectsRegressions.test_parse_version_distinguishes_parse_failure_from_none
+    red_confirmed: true
+    red_reason: >-
+      These are matcher self-tests written alongside the matchers in the
+      same new file, so no natural pre-implementation run existed. Ran an
+      in-memory mutation check instead: monkeypatched _marketplace_entry to
+      a no-op that never raises and re-ran
+      test_lookup_fails_on_a_missing_entry_name via unittest against the
+      live module object -- it failed ("AssertionError not raised").
+      Repeated for _assert_patch_bump_over_baseline (no-op) against its
+      three negative-proof tests, for _assert_versions_equal (no-op)
+      against its negative-proof test, and for _parse_version (mutated to
+      always return a tuple) against
+      test_parse_version_distinguishes_parse_failure_from_none -- every one
+      failed as expected. Restored the real functions immediately; all ten
+      tests passed again afterward.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not a dedicated new assertion in either new module. Verified by
+      running `python3 -m unittest discover -s tests` after the bump:
+      4520/4520 passed, including
+      tests/test_codex_wrapper_fallback_removal_version_bump.py (its
+      re-anchored test_em_workflow_reads_0_1_78 and every other assertion
+      in that module) and every other pre-existing version-pinning module
+      listed in IMPLEMENTATION.md as needing no edit.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/suite-level outcome, not a unit test. `python3 -m unittest
+      discover -s tests` was run from the repository root in this worktree:
+      4520 tests, all passed (baseline was 4498/4498 before this task's
+      changes). em-workflow/hooks/queue_launch_guard.py and every
+      hook-classification / status-read pin module were not touched by this
+      task's diff (git diff confirms the change set is exactly
+      expected_files).
+  AC-8:
+    tests:
+      - tests.test_stale_launched_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_stale_launched_retry_reachability.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: true
+    red_reason: >-
+      Both modules were written stdlib-only from the start, so there is no
+      pre-existing violation in this repository to observe red against.
+      Proved detection power directly instead: ran the same ast-based
+      stdlib-only check against a forged source string containing "import
+      yaml" and it correctly flagged ["yaml"] as non-stdlib. Both real
+      modules pass the check against their actual (stdlib-only) imports.
