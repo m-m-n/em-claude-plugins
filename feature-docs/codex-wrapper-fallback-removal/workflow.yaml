@@ -161,8 +161,8 @@ tasks:
     domains: ["external-io", "input-handling", "config-infra"]
     complexity: high
     requirements: ["FR1", "FR2", "FR3", "FR6", "FR7", "NFR1", "NFR2", "NFR3", "NFR5"]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-wrapper-fallback-removal/task0001
     notes: null
   task0002:
     title: "Timeout nesting and caller-side doc alignment"
@@ -179,8 +179,8 @@ tasks:
     domains: ["config-infra", "external-io"]
     complexity: medium
     requirements: ["FR4", "FR5", "FR7", "NFR1", "NFR4", "NFR5", "NFR6"]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-wrapper-fallback-removal/task0002
     notes: null
   task0003:
     title: "Batch protocol docs: drop the fallback-provider audit item"
@@ -195,8 +195,8 @@ tasks:
     domains: ["config-infra"]
     complexity: medium
     requirements: ["FR7", "FR8", "NFR4", "NFR5"]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-wrapper-fallback-removal/task0003
     notes: null
   task0004:
     title: "Patch-bump both plugins in both registries"
@@ -214,8 +214,8 @@ tasks:
     domains: ["config-infra"]
     complexity: low
     requirements: ["FR9", "NFR5"]
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-wrapper-fallback-removal/task0004
     notes: null
 
 review:
