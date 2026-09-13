@@ -2,7 +2,9 @@ schema_version: 1
 feature: destructive-guard-quoted-substitution
 created: '2026-09-13'
 base_branch: main
-goal: "# destructive-guard: クォート付きコマンド置換で理由文のターゲットが空白になる\n\n種別: バグ / 優先度: 中\nNotion: https://www.notion.so/3d63509ec8ee815d8337cc340757a824\n\n## 現象 (必須)\n`destructive-guard.py` がクォート付きコマンド置換を含む `rm` を deny するとき、理由文に表示されるターゲットが空白1文字になり、代替として提示される `gio trash` のパスも実在しないものになる。\n2026-09-09 時点の main（`ce6d3fd`）での出力:\n\n```\n判定: deny\n理由: [destructive-guard/rm-recursive] `rm -r` の対象 ` ` はスクラッチ領域の外。\n      `gio trash -- '/home/sakura/src/my_projects/em-claude-plugins/ '` に書き換える（復元情報が残り、ゴミ箱から戻せる）。\n```\n\n- ターゲットが空白1文字（` `）として表示される\n- 提示される退避先が `<リポジトリルート>/' '`（末尾が空白1文字のパス）になる。実在しないので、提示どおり撃ち直しても失敗するだけ\n\n判定自体は deny なので削除は止まる。壊れているのは理由文の内容。\n\n## 再現手順 (必須)\n1. リポジトリルートで次を実行する。\n\n```\npython3 -c \"\nimport json,subprocess,sys\ncmd='rm -rf \\\"\\$(printf /home/sakura/valuable)\\\"'\np=subprocess.run([sys.executable,'em-workflow/hooks/destructive-guard.py'],input=json.dumps({'tool_name':'Bash','tool_input':{'command':cmd}}),capture_output=True,text=True)\no=json.loads(p.stdout)['hookSpecificOutput']\nprint(o['permissionDecision'])\nprint(o['permissionDecisionReason'])\n\"\n```\n\n2. 出力される理由文のターゲットが ` `（空白1文字）になっていることを確認する。\n\n## 期待する挙動 (必須)\n理由文のターゲットが、実際に削除されるパスか、少なくとも「コマンド置換なので静的に確定できない」と分かる表現になっている。変数展開 `rm -rf $TARGET` が返す `rm-unresolvable` と同じ扱いが望ましい。\n\n```\n[destructive-guard/rm-unresolvable] 再帰削除の対象 `$TARGET` が変数/グロブで、影響範囲を静的に確定できない。\n```\n\n## 完了の定義 (必須)\n- [ ] 再現手順で現象が起きない（理由文のターゲットが空白1文字にならない）\n- [ ] 再発を検出するテストがある（`em-workflow/hooks/tests/destructive-guard-cases.json` にケース追加）\n- [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る\n\n## 該当箇所 (任意)\n`em-workflow/hooks/destructive-guard.py:456`（`statements()`）と `em-workflow/hooks/destructive-guard.py:70`（`SUBSTITUTION`）。\n`statements()` がコマンド置換の中身を切り出して親コマンドから空白に置換するため、クォートで囲まれた置換は「空白1文字のターゲット」として `check_rm()` に届く。クォートが無い場合はトークンごと消えてターゲットが無くなり、そちらは allow に落ちる。\n\n## 実害・発生条件 (任意)\n削除は deny で止まるため、データ損失は発生しない。実害は理由文の正確さに限られる。\nただし destructive-guard の理由文は「そのまま実行できる代替」を示す設計なので、エージェントがこれに従って撃ち直すと無意味なコマンドを実行して混乱する。\n発生条件は、`rm` の削除対象がクォートで囲まれたコマンド置換であること。\n\n## 補足\n同じ置換除去に起因する、より重大な問題として「destructive-guard: コマンド置換でターゲットが消えて allow になる」を別途起票している。クォート無しの `rm -rf $(...)` は allow で素通りする。本件はその表層症状なので、あちらを直すと同時に解消する可能性が高い。先にあちらを見るのが良い。\n"
+goal: "# destructive-guard: クォート付きコマンド置換で理由文のターゲットが空白になる\n\n種別: バグ / 優先度: 中\nNotion: https://www.notion.so/3d63509ec8ee815d8337cc340757a824\n\n## 現象 (必須)\n`destructive-guard.py` がクォート付きコマンド置換を含む `rm` を deny するとき、理由文に表示されるターゲットが空白1文字になり、代替として提示される `gio trash` のパスも実在しないものになる。\n2026-09-09 時点の main（`ce6d3fd`）での出力:\n\n```\n判定: deny\n理由: [destructive-guard/rm-recursive] `rm -r` の対象 ` ` はスクラッチ領域の外。\n      `gio trash -- '/home/sakura/src/my_projects/em-claude-plugins/ '` に書き換える（復元情報が残り、ゴミ箱から戻せる）。\n```\n\n- ターゲットが空白1文字（` `）として表示される\n- 提示される退避先が `<リポジトリルート>/' '`（末尾が空白1文字のパス）になる。実在しないので、提示どおり撃ち直しても失敗するだけ\n\n判定自体は deny なので削除は止まる。壊れているのは理由文の内容。\n\n## 再現手順 (必須)\n1. リポジトリルートで次を実行する。\n\n```\npython3 -c \"\nimport json,subprocess,sys\ncmd='rm -rf \\\"\\$(printf /home/sakura/valuable)\\\"'\np=subprocess.run([sys.executable,'em-workflow/hooks/destructive-guard.py'],input=json.dumps({'tool_name':'Bash','tool_input':{'command':cmd}}),capture_output=True,text=True)\no=json.loads(p.stdout)['hookSpecificOutput']\n\
+  print(o['permissionDecision'])\nprint(o['permissionDecisionReason'])\n\"\n```\n\n2. 出力される理由文のターゲットが ` `（空白1文字）になっていることを確認する。\n\n## 期待する挙動 (必須)\n理由文のターゲットが、実際に削除されるパスか、少なくとも「コマンド置換なので静的に確定できない」と分かる表現になっている。変数展開 `rm -rf $TARGET` が返す `rm-unresolvable` と同じ扱いが望ましい。\n\n```\n[destructive-guard/rm-unresolvable] 再帰削除の対象 `$TARGET` が変数/グロブで、影響範囲を静的に確定できない。\n```\n\n## 完了の定義 (必須)\n- [ ] 再現手順で現象が起きない（理由文のターゲットが空白1文字にならない）\n- [ ] 再発を検出するテストがある（`em-workflow/hooks/tests/destructive-guard-cases.json` にケース追加）\n- [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る\n\n## 該当箇所 (任意)\n`em-workflow/hooks/destructive-guard.py:456`（`statements()`）と `em-workflow/hooks/destructive-guard.py:70`（`SUBSTITUTION`）。\n`statements()` がコマンド置換の中身を切り出して親コマンドから空白に置換するため、クォートで囲まれた置換は「空白1文字のターゲット」として `check_rm()` に届く。クォートが無い場合はトークンごと消えてターゲットが無くなり、そちらは allow に落ちる。\n\n## 実害・発生条件 (任意)\n削除は deny で止まるため、データ損失は発生しない。実害は理由文の正確さに限られる。\nただし destructive-guard の理由文は「そのまま実行できる代替」を示す設計なので、エージェントがこれに従って撃ち直すと無意味なコマンドを実行して混乱する。\n\
+  発生条件は、`rm` の削除対象がクォートで囲まれたコマンド置換であること。\n\n## 補足\n同じ置換除去に起因する、より重大な問題として「destructive-guard: コマンド置換でターゲットが消えて allow になる」を別途起票している。クォート無しの `rm -rf $(...)` は allow で素通りする。本件はその表層症状なので、あちらを直すと同時に解消する可能性が高い。先にあちらを見るのが良い。\n"
 parent_branch: em-workflow/destructive-guard-quoted-substitution/integration
 project:
   license: none
@@ -40,7 +42,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: c2d1be03baaaf08b540c966df182234895388877
 - id: implement
   status: pending
   base_commit: null
@@ -52,7 +55,36 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: quoted command-substitution regression records + em-workflow version bump
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    branch: null
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -65,7 +97,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
     - TS-4
@@ -74,7 +107,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
     - TS-4
@@ -83,7 +117,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   FR4:
@@ -91,7 +126,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
   FR5:
@@ -99,7 +135,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-6
@@ -108,7 +145,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
     - TS-3
@@ -117,21 +155,24 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
   NFR1:
     title: 標準ライブラリのみ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
   NFR2:
     title: ケース形式の遵守
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
     - TS-3
@@ -140,21 +181,24 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
   NFR4:
     title: 配布物としての妥当性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
   NFR5:
     title: 誤爆を招かない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
 batch:
