@@ -64,7 +64,8 @@ workflow:
       デザインシステムの候補ファイルも存在しない。
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: de2e680194ff133496fea857dde72c7c2f9bf6e7
   - id: implement
     status: pending
   - id: review
@@ -74,7 +75,66 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: "journal helper: in-lock launch-identity check and the widened reason set"
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/scripts/journal-append-failed.py
+      - tests/test_journal_append_failed.py
+    skills: [backend-impl]
+    domains: [input-handling, external-io, concurrency, api-contract]
+    complexity: high
+    requirements: [FR3, FR6, FR7, FR9, FR13, NFR1, NFR2, NFR3, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: "decision layer: the evidence-gated same-session recovery chain"
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/scripts/recover-orphaned-task.py
+      - tests/test_recover_orphaned_task.py
+      - tests/test_stale_launched_recovery_chain.py
+    skills: [backend-impl]
+    domains: [input-handling, external-io, concurrency, api-contract]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR9, FR13, NFR1, NFR3, NFR5, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: "documentation SSOTs carry the extension"
+    plan: tasks/task0003.md
+    files:
+      - em-workflow/references/implement-phase.md
+      - em-workflow/references/workflow-schema.md
+      - tests/test_stale_launched_doc_contract.py
+      - tests/test_implement_routeback_gate.py
+      - tests/test_failed_kind_write_paths.py
+    skills: []
+    domains: [api-contract]
+    complexity: medium
+    requirements: [FR10, FR12, FR13, NFR6]
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: "retry reachability proof and the plugin version bump"
+    plan: tasks/task0004.md
+    files:
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_codex_wrapper_fallback_removal_version_bump.py
+      - tests/test_stale_launched_version_bump.py
+      - tests/test_stale_launched_retry_reachability.py
+    skills: [infra-impl]
+    domains: [config-infra, external-io]
+    complexity: low
+    requirements: [FR8, FR11, FR13, NFR4, NFR6]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -93,133 +153,133 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS1, TS2, TS3, TS4, TS5, TS6, TS7, TS8, TS9, TS10]
   FR2:
     title: "Same-session death is proven only by harness-termination evidence plus an explicit stop-tool not-running result"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS1, TS3, TS4]
   FR3:
     title: "Fixed evidence order with one residual reason code per unmet condition"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS1, TS2, TS3, TS4]
   FR4:
     title: "The residual reason-code set is widened additively"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS2]
   FR5:
     title: "`same-session` stays emitted for callers that supply no same-session evidence"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0002]
     tests: [TS2]
   FR6:
     title: "journal-append-failed.py's in-lock check compares the launch, not merely the event name"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS5]
   FR7:
     title: "VALID_REASONS is widened by exactly one additive value"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS1, TS6]
   FR8:
     title: "queue_launch_guard.py is not modified"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests: [TS7, TS9]
   FR9:
     title: "The journal stays byte-identical in every residual case"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS2, TS5, TS6]
   FR10:
     title: "Documentation SSOTs are updated in the same change"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS8]
   FR11:
     title: "Plugin version bump in the same change"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests: [TS10]
   FR12:
     title: "The new reason value is attributed `failed_kind: infra` exactly like `orphaned`"
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0003]
     tests: [TS8]
   FR13:
     title: "Contract tests are added under tests/"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003, task0004]
     tests: [TS1, TS2, TS3, TS4, TS5, TS6, TS7, TS8, TS9, TS10]
   NFR1:
     title: "Fail-safe direction preserved"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS2, TS3]
   NFR2:
     title: "One critical section, unchanged"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001]
     tests: [TS5]
   NFR3:
     title: "Layer separation preserved"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS1]
   NFR4:
     title: "Hook fail-open convention untouched"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0004]
     tests: [TS9]
   NFR5:
     title: "Backwards compatibility of both CLIs"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002]
     tests: [TS2]
   NFR6:
     title: "No new runtime dependency"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks: [task0001, task0002, task0003, task0004]
     tests: [TS1]
 
 batch:
