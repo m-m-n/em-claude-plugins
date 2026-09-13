@@ -93,7 +93,9 @@ document is written; this phase never creates them itself.
   merging the integration branch into `base_branch` (a normal `git merge` in
   the main working tree after a cleanliness check, then `git branch -d`),
   keeping the branch (the batch default — no merge, no push, no PR), or
-  pushing it and opening a PR via `gh pr create`. In every variant the
+  pushing it and opening a PR via `gh pr create`. A `--pr` flag on the
+  develop launch fixes the choice to opening a PR and skips the question
+  entirely, in interactive and batch alike. In every variant the
   integration worktree is removed first, freeing the branch for checkout from
   the main working tree; only the merge variant deletes the branch.
 

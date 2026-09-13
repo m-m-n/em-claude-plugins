@@ -1,7 +1,7 @@
 ---
 name: develop
 description: em-workflow の統合開発エントリポイント。SDD（spec → plan + タスク分割）から worktree 並列実装、動的レビュー、統合検証、retrospect 収集までを workflow.yaml の状態だけを根拠に自走させるステートマシン。軽い変更もタスク1個として同じフローを通します
-argument-hint: "[feature-path] [--report-only] [--batch] [--once] [task-description]"
+argument-hint: "[feature-path] [--report-only] [--batch] [--once] [--pr] [task-description]"
 disable-model-invocation: true
 model: opus
 effort: medium
@@ -97,6 +97,11 @@ batch: 停止条件 5 の待機ターンは、(a)(b) いずれの形でも最後
 - `--once`: 起動ごとの設定であり、`workflow.yaml` にも `phase-state/` にも
   一切記録しない。指定時は 1 フェーズを実行してターンを終える（フェーズ
   境界の定義は下記「`--once` のフェーズ境界」参照）。`--batch` と併用できる
+- `--pr`: 完了処理で PR を作成するフラグ。起動ごとの設定であり、
+  `workflow.yaml` にも `phase-state/` にも一切記録しない。指定時は Step C の
+  完了方式を「PR を作成」に固定し、AskUserQuestion を出さない（対話 / batch
+  を問わず）。未指定時は従来どおり — 対話は三択を出し、batch は「ブランチを
+  残す」を自動選択する
 - パス引数（存在するディレクトリ、または feature 名の文字列）: 末尾要素を
   feature 名として扱う。main 作業ツリーのディレクトリとして中身を読むこと
   はしない — Step A でその feature 名に対応する
@@ -650,16 +655,18 @@ workflow.yaml・レビュー記録・retrospect.yaml は Step B / verify /
 retrospect の各更新でその都度 integration worktree に commit-docs.sh
 コミット済み。最終同期ステップは無い。
 
-1. **完了方式の決定**: AskUserQuestion —
+1. **完了方式の決定**: `--pr` 指定時は問い合わせず「PR を作成」に固定する
+   （対話 / batch を問わず、`verify.status` の値によらない）。`--pr` 未指定
+   時は AskUserQuestion —
    「integration ブランチ `em-workflow/{feature}/integration` をどうする？」
    の三択。デフォルト（推奨表示）は `verify.status` に応じて切り替える:
    `verify.status` が `failed` 以外なら「`{base_branch}` にマージ」、
    `verify.status` が `failed` なら「ブランチを残す」。`verify.status` が
    `failed` のときは、質問文に verify が failed である事実と
    `failed_items` の件数を明記する
-   （batch: 質問せず自動で「ブランチを残す」を選ぶ。マージ・push・
-   PR 作成のいずれも行わない — `batch-mode.md` の Non-packet gates 表、
-   `develop.completion`）
+   （batch: `--pr` 未指定なら質問せず自動で「ブランチを残す」を選ぶ。
+   マージ・push・PR 作成のいずれも行わない — `batch-mode.md` の
+   Non-packet gates 表、`develop.completion`）
    - **`{base_branch}` にマージ**: メイン作業ツリーがクリーンか確認する。
      workflow.yaml も feature-docs/ 配下のドキュメントも worktree にのみ
      コミットされ、main 作業ツリーには存在しない（Step A/B 参照）ため、
