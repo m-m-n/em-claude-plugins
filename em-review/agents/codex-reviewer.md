@@ -110,7 +110,8 @@ If `mktemp` allocation fails, return the standard skip object —
 ```
 
 Always `readonly` mode. `-C {project_root}` so `git diff` resolves against
-the right tree. The wrapper redirects stdin and enforces the timeout.
+the right tree. The wrapper redirects stdin and enforces the timeout. Run
+this Bash tool call with a timeout of 600000 milliseconds.
 
 ## Step 6: Parse and return
 

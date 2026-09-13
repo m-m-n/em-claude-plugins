@@ -9,4 +9,4 @@
 # Run `codex --help` or check Codex docs for the current model list.
 
 # Timeout in seconds (default; for open-ended investigations)
-timeout: 600
+timeout: 540

@@ -434,8 +434,7 @@ per-command approval fallback):
 2. **Wrapper invocation.** Each turn calls the wrapper directly — never a
    Task-dispatched agent — in read-only mode with the project root:
    `"${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly -C "{project_root}" "$PROMPT"`.
-   The wrapper's reply may come from a fallback provider instead of the
-   primary one, with no provider name or detection mechanism named here.
+   Run this Bash tool call with a timeout of 600000 milliseconds.
 3. **One turn per call.** The wrapper holds no conversation state across
    invocations — each call is a single request/response. To let Codex's
    suggestion improve across turns, the orchestrator includes a summary of
