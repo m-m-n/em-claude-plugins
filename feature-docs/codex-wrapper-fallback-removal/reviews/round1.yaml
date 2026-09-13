@@ -1,0 +1,140 @@
+round: 1
+executed_at: "2026-09-13T17:28:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 748c8d8049eea7a5c5584e452566448628a98219
+  head_commit: b4d5508deeff315415d34bbced9c0d90254693e0
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-review/.claude-plugin/plugin.json
+    - em-review/agents/codex-reviewer.md
+    - em-review/references/codex-cli.yaml
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/agents/codex-reviewer.md
+    - em-workflow/references/batch-mode.md
+    - em-workflow/references/codex-cli.yaml
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/question-resolution.md
+    - em-workflow/scripts/run_codex_exec.sh
+    - test-docs/codex-wrapper-fallback-removal/task0001.tests.yaml
+    - test-docs/codex-wrapper-fallback-removal/task0002.tests.yaml
+    - test-docs/codex-wrapper-fallback-removal/task0003.tests.yaml
+    - test-docs/codex-wrapper-fallback-removal/task0004.tests.yaml
+    - tests/test_assumptions_reversible_criteria_version_bump.py
+    - tests/test_batch_codex_autonomous_decisions_version_bump.py
+    - tests/test_batch_quiet_output_audit_record_contract.py
+    - tests/test_batch_quiet_output_discipline.py
+    - tests/test_codex_wrapper_fallback_removal_version_bump.py
+    - tests/test_codex_wrapper_single_invocation.py
+    - tests/test_codex_wrapper_timeout_alignment.py
+    - tests/test_failed_kind_version_bump.py
+    - tests/test_question_resolution_doc.py
+    - tests/test_reviewer_roles_protocol.py
+    - tests/test_verify_rework_lineage_cap_version_bump.py
+    - tests/test_wrapper_fallback_doc_realignment.py
+  changed_files_note: >-
+    tests/test_codex_wrapper_provider_fallback.py was deleted by this change and
+    therefore carries no reviewable content; it is excluded from changed_files
+    (Phase R0 step 3 requires each reviewed path to be an existing regular file).
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "architecture#2", perspective: architecture, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 12d69dc2dfa55081
+    severity: medium
+    category: spec
+    file: tests/test_reviewer_roles_protocol.py
+    line: null
+    title: "Edited file is outside the SPEC's Declared Change Set (no task declares it)"
+    description: >-
+      SPEC.md's Declared Change Set states the observed change set must be CONTAINED IN
+      the set derived from every task's `files` entries in workflow.yaml. This file was
+      edited by the change (CODEX_REVIEWER_STEPS_SHA256 re-pinned from 3a90a4d3... to
+      788b25fe..., plus comment updates) but appears in no task's `files` list. The edit
+      itself is correct and necessary — task0002 added prose inside Step 5, which is
+      inside the pinned "Step 0 through EOF" region, so the frozen-section hash had to be
+      recomputed; the evaluator recomputed sha256 over em-workflow/agents/codex-reviewer.md
+      from "## Step 0: Read the protocol (strict fail-closed resolution)" to EOF and it
+      equals the new pinned value exactly. The defect is the missing declaration, not the
+      code: VERIFICATION.md's change-set containment check compares the observed change
+      set against the declared one, so this file is an undeclared entry at that gate.
+    suggestion: >-
+      Add "tests/test_reviewer_roles_protocol.py" to the `files` list of the task that
+      caused the re-pin (task0002), so the observed change set is contained in the
+      declared set at verification time. Do not revert the hash value — it is correct.
+    sources: [claude:evaluator]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: >-
+      Not an auto-fix candidate (severity medium, category spec). Routed through the
+      unlisted-gate Codex consultation instead of an orchestrator-side declaration edit;
+      Codex recommended option B — leave the finding unresolved and let the verify
+      phase's change-set containment check detect it and route it through the formal
+      verify-failure rework path. The implement phase already declined adding this path
+      to tasks.task0002.files for a recorded reason (phase-state/batch-audit.yaml,
+      question_id implement.wake-decline), and amending the declared set from the review
+      phase with no newly named AC / requirement id would overturn that decision without
+      new evidence. See phase-state/batch-audit.yaml, question_id
+      review.change-set-declaration-gap.
+evaluation:
+  round_summary: >-
+    Round 1, cross_validation=true, diff mode, 27 changed files; all five completed
+    reviewer runs returned empty findings, so this round rests on the evaluator's
+    independent inspection. No injection attempt was present in any reviewer output.
+    Per-perspective independent inspection corroborated each empty result: comprehensive —
+    the wrapper now has exactly one `timeout "$TIMEOUT" codex exec ... --ignore-user-config`
+    launch, the 124 branch cats both capture files, emits CODEX_TIMEOUT and exits before
+    the tail `cat`, and `exit $exit_code` passes the launch's own code through; every chain
+    symbol named by FR1 is gone repo-wide except inside the new negative assertions.
+    security — no grep/match against $OUTFILE or $ERRFILE survives, so NFR3's
+    attacker-influenceable-stdout decision point is removed rather than rescoped;
+    --ignore-rules, --ignore-user-config, -s read-only, the </dev/null stdin redirect and
+    the trap cleanup are intact; no provider or model name was introduced under
+    em-workflow/references/ (NFR4). performance — one external call instead of up to three,
+    both codex-cli.yaml files read timeout 540, and all three call sites state the 600000 ms
+    Bash-tool timeout, giving strict 540s-inside-600s nesting with no polling. architecture —
+    em-review/scripts/run_codex_exec.sh is byte-unchanged per FR5, in-wrapper fallback lives
+    nowhere, Phase R2b chain-walk prose and the README chain tables are untouched, and both
+    plugins are patch-bumped in plugin.json and marketplace.json (0.1.76->0.1.77,
+    0.5.9->0.5.10). spec — one medium finding, the undeclared-change-set entry above; every
+    other FR/NFR checkable statically holds. Two non-findings recorded: the batch-mode.md and
+    phase-state.md edits leave short, under-filled lines (cosmetic reflow only; the pinning
+    tests normalize whitespace); and four version-bump modules relax an em-review
+    string-equality pin to a not-below-baseline numeric comparison, judged a deliberate and
+    documented loss of drift-detection strength rather than a finding. The evaluator did not
+    execute the test suites (read-only), so NFR5/AC13 rests on the comprehensive run's report.
+  recommended_action: "complete"
+  action_rationale: >-
+    No critical or high finding was reported by any reviewer or surfaced by independent
+    inspection, and the shipped wrapper matches every behavioural requirement verifiable
+    statically. The single medium finding is a declaration gap in workflow.yaml, not a defect
+    in shipped code.
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: "tmp/sca-triage-codex-wrapper-fallback-removal-20260913T082751Z.md"
+  note: >-
+    The vulnerability perspective was not selected this round (no dependency manifest or
+    lockfile in the diff), so axis 2 did not run and the filing input was empty. The script
+    reported degraded=true with degraded_reason=listing_exit_nonzero; nothing was filed.
