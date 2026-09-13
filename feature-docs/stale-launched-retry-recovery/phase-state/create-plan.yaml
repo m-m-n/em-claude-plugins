@@ -1,0 +1,43 @@
+schema_version: 1
+feature: stale-launched-retry-recovery
+phase: create-plan
+status: applying_patch
+generation: 1
+base_revision: bfcd8cffc22d943b05767565a225d0b6e4804079
+last_input_digest: "sha256:ca6540b06f4a34aed82048dac470a2e7460d09b09a16fae8551fc741bbd0ca88"
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-stale-launched-retry-recovery-001
+    status: completed
+    input_digest: "sha256:ca6540b06f4a34aed82048dac470a2e7460d09b09a16fae8551fc741bbd0ca88"
+    output_digest: null
+artifacts:
+  - path: feature-docs/stale-launched-retry-recovery/IMPLEMENTATION.md
+    sha256: "sha256:6dafbdcff7b3b44c52ae066cd4ec548dca7574238dd6487ecf3c6dc7901cf5b1"
+    produced_by: create-plan-stale-launched-retry-recovery-001
+  - path: feature-docs/stale-launched-retry-recovery/VERIFICATION.md
+    sha256: "sha256:8df2085ec217d8bfa1fd55a90e76307478c0c8c03b7cfcf1d6f862eedd47b25f"
+    produced_by: create-plan-stale-launched-retry-recovery-001
+  - path: feature-docs/stale-launched-retry-recovery/tasks/task0001.md
+    sha256: "sha256:a4dd1590ba2519705cf16e77ebaaf6cd0ad7d530c20e98c18d0ad57b629370bf"
+    produced_by: create-plan-stale-launched-retry-recovery-001
+  - path: feature-docs/stale-launched-retry-recovery/tasks/task0002.md
+    sha256: "sha256:ccd605f7246cca1565382b312af8ded9be2141716a4bf25312d3212e685477f9"
+    produced_by: create-plan-stale-launched-retry-recovery-001
+  - path: feature-docs/stale-launched-retry-recovery/tasks/task0003.md
+    sha256: "sha256:3c23564dcba262505889ed6d8ba4c7a472cf2ad23be7ee0c655069367798f474"
+    produced_by: create-plan-stale-launched-retry-recovery-001
+  - path: feature-docs/stale-launched-retry-recovery/tasks/task0004.md
+    sha256: "sha256:c949492cf0d25ea3d22430b531b11017fa98e233a9b8ac16389c22e0092ca092"
+    produced_by: create-plan-stale-launched-retry-recovery-001
+patches:
+  - patch_id: create-plan-p0001
+    status: validated
+    base_input_digest: "sha256:ca6540b06f4a34aed82048dac470a2e7460d09b09a16fae8551fc741bbd0ca88"
+    base_workflow_blob: 4bea4529799a16618fba1b07ba4258c32e869970
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
