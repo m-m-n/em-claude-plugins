@@ -71,7 +71,7 @@ workflow:
     base_commit: e465bb3ff4624c732666b7f2fac6a6f8b980b64e
     completed_at_commit: 32716ca22d6d01c76f7b01277a729683ce45d4a9
   - id: review
-    status: pending
+    status: in_progress
   - id: verify
     status: pending
   - id: retrospect
@@ -139,10 +139,10 @@ tasks:
     branch: em-workflow/stale-launched-retry-recovery/task0004
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   plan:
-    floor: []
+    floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
     cross_validation: true
   perspectives: {}
