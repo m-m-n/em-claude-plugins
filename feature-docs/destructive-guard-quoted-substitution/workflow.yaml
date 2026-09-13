@@ -57,7 +57,7 @@ workflow:
   failed_items: []
   completed_at_commit: 4032007b85b458385958ad367e9a9b061103bf09
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: quoted command-substitution regression records + em-workflow version bump
