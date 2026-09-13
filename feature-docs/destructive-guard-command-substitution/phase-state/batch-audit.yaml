@@ -152,3 +152,52 @@ records:
       perspective_runs に記録したうえで、各 run の note とこの記録および run report で
       プレースホルダである事実を開示した。実効カバレッジは単一 Opus 評価者の
       Independent Inspection Duty が担保し、そこで high 1 件 / medium 2 件を検出している。
+  - question_id: review.auto-fix-judgment
+    packet_id: null
+    answered_at: "2026-09-13T11:35:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [apply_as_is_with_codex_approach]
+    freeform: null
+    normalized_answer: "A-1 (extract_shell_payload の判定用/抽出用トークン列を分離) + B-3 (substitution_only を読み飛ばし、確定できなければ ask)"
+    resolution_note: >-
+      gate: review.auto-fix-judgment（round 2 の high 2 件。いずれも prose 形の
+      needs-judgment で、batch の既定は Apply as-is）。起動指示「不明点は Codex に相談して
+      比較的良い方を採用する」に従い、素の Apply as-is ではなく Codex に修正方針を相談し、
+      その結論を user_chosen_approach として review-editor に渡した。
+      退行 A の選択肢: A-1（extract_shell_payload 内で「判定用＝マーカー除去済み」と
+      「抽出用＝マーカー保持」の 2 列を並行保持）/ A-2（比較箇所ごとに正規化ヘルパーを差し込む）。
+      退行 B の選択肢: B-1（substitution_only を読み飛ばして後続語を検査）/
+      B-2（コマンド位置に来た時点で ask）/ B-3（読み飛ばし + 確定できなければ ask）。
+      codex_consulted: true; fallback_provider_answered: false; opus_escalation: なし。
+      Codex の判断は A-1 と B-3。A-2 を退けた理由は「head() 内の代入接頭辞・WRAPPERS・
+      値取りオプション・mise/asdf/exec・コマンド名と extract_shell_payload() 内の
+      eval/SHELL_WORDS/-c/リダイレクトに漏れなく適用する必要があり、1 箇所でも漏れると
+      同型の退行が再発する」。B-1 単独を退けた理由は「置換は常に空という仮定に依存し
+      見逃しになる」、B-2 単独を退けた理由は「後続に明白な危険操作があっても ask で止まり、
+      deny を ask より優先する既存方針と合わない」。orchestrator はこれを採用し loop 1 で適用した。
+  - question_id: review.auto-fix-judgment
+    packet_id: null
+    answered_at: "2026-09-13T11:52:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [b1_plus_narrow_dash_c_fix]
+    freeform: null
+    normalized_answer: "B-1 + extract_shell_payload の -c 繰り上がり対応（B-3 は不採用）"
+    resolution_note: >-
+      gate: review.auto-fix-judgment（同じ 2 件に対する方針の再判断）。loop 1 で入れた B-3 が
+      SPEC の FR6（置換を含む非 rm コマンドは allow のまま）と NFR7（allow 側のケースを
+      1 件も落とさない）と衝突し、既存テスト
+      TestNonDeletePositionsUnaffected.test_non_delete_positions_stay_allow のケース
+      `$(echo ls) -la` が allow から ask に変わって失敗した。この新証拠を添えて Codex へ再相談した。
+      選択肢: (a) B-1 へ切り替える / (b) B-3 を維持し SPEC の FR6・NFR7 とテストを改訂する。
+      codex_consulted: true; fallback_provider_answered: false; opus_escalation: なし。
+      Codex の判断は (a) B-1、ただし狭い追加修正が条件。理由は「B-3 の ask は
+      eval "$(ssh-agent -s)" / eval "$(direnv export bash)" / eval "$(mise activate zsh)" /
+      bash -c "$(cat generated-script.sh)" のような正常系で発火し、無人実行では ask が deny に
+      降格するため低頻度でも作業が確実に止まる」「動的に決まるコマンド名の検査は基準版からの
+      既知の穴で、今回の退行修正とは別スコープ」。条件として指摘された
+      `bash -c $(printf %s) '...'` 系（未引用の空展開で引数が消え後続語が -c の本文に繰り上がる形）
+      への狭い対応も併せて採用し、loop 2 で適用した。
+      orchestrator は採用前にこの 3 形を基準版 db5a4f86 と実測比較し、いずれも
+      基準版 deny → 当時 allow であることを確認している。
