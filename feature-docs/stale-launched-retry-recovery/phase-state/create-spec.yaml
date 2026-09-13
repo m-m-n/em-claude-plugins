@@ -1,14 +1,66 @@
 schema_version: 1
 feature: stale-launched-retry-recovery
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
-base_revision: a9d70a2
-last_input_digest: null
+base_revision: d38ddcd1873e59e6816d644a5115cf4b7b241ac6
+last_input_digest: sha256:9a0f6a01a0ff5cc6ec74e27c6e73610e39ec1639b3ce3ef8902f9efa90a5864b
 active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-09-13T23:29:04+09:00"
+    questions:
+      - question_id: requirement.scope-vs-existing-orphan-recovery
+        status: answered
+      - question_id: requirement.same-session-liveness-proof
+        status: answered
+      - question_id: requirement.launch-guard-journal-only
+        status: answered
+      - question_id: design.step-decision
+        status: answered
+answers:
+  requirement.scope-vs-existing-orphan-recovery:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T23:29:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [same_session_residual_only]
+    freeform: null
+    normalized_answer: "Scope the feature to the same-session residual only. The existing I.2.b orphan-recovery machinery is extended, not duplicated; every other residual reason code keeps its current behaviour."
+    resolution_note: "gate: create-spec.requirement-clarification (batch-policies.yaml action: codex_consultation). Codex consulted once (run_codex_exec.sh readonly, gpt-6-astra, xhigh). Codex chose option (d) of the ticket's own list -- extend the existing orchestrator-side recovery rather than add a writer or widen the launch guard -- which maps onto same_session_residual_only. Recorded as an assumption per record_as_assumption: true."
+  requirement.same-session-liveness-proof:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T23:29:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [stop_tool_result_only]
+    freeform: "Codex's proposed evidence chain: (1) journal last event is launched with worktree+branch present; (2) the task's newest agents.jsonl entry exists and satisfies the existing D7 launch-binding rule; (3) recorded session_id present/valid and the current session identity resolves; (4) the stop target's agent identity is uniquely bound from the index + worktree + this launch's response, and session_id is never reused as the stop target; (5) the harness reports that THIS launch's execution has terminated -- a launch-acceptance response, a generic is_error, or an output-idle interval are all rejected; (6) the existing Recovery TaskStop call reports that same target explicitly not-running/absent -- a generic error or a different candidate's absence is rejected; (7) inside journal-append-failed.py's lock, the same launch is still the last event; (8) only then one failed line is appended."
+    normalized_answer: "Same-session death is proven only by explicit harness termination evidence for the specific launch plus an explicit not-running stop-tool result for the same bound agent identity. No elapsed-time threshold, and no transcript/output-file idle interval, may substitute for either. Residual reason codes are added for each unmet condition, and the journal stays unchanged in every residual case."
+    resolution_note: "gate: create-spec.requirement-clarification (action: codex_consultation). Codex explicitly rejected every time-based proxy: a legitimately quiet long-running implementer (e.g. a 20-minute test run) must keep its launched event. It also raised a concurrency hazard -- journal-append-failed.py currently compares only the last event NAME inside its lock, so a launched -> failed -> launched sequence during evidence gathering could fail the wrong launch -- hence condition 7. Recorded as an assumption per record_as_assumption: true."
+  requirement.launch-guard-journal-only:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T23:29:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [keep_journal_only]
+    freeform: null
+    normalized_answer: "queue_launch_guard.py keeps reading only the journal's last event. Recovery stays orchestrator-driven and lands a failed event in the journal before any relaunch, so the guard needs no new input and the I.2.a failed-only carve-out rationale is untouched."
+    resolution_note: "gate: create-spec.requirement-clarification (action: codex_consultation). Codex rejected ticket options (a) and (c): (a) leaves the reconciled state at launched so I.2.a never selects the task for retry even if the guard would allow the launch; (c) either changes nothing (the guard still denies) or, if the guard is changed too, drops in-flight protection for a live implementer based on workflow.yaml status. Recorded as an assumption per record_as_assumption: true."
+  design.step-decision:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-13T23:29:04+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [decide_autonomously]
+    freeform: null
+    normalized_answer: "Accept the analyst's recommendation to skip the design step."
+    resolution_note: "gate: create-spec.design-step; batch-policies.yaml -> option_id: decide_autonomously. No UI surface, no design-system candidates."
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: sha256:9a0f6a01a0ff5cc6ec74e27c6e73610e39ec1639b3ce3ef8902f9efa90a5864b
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
