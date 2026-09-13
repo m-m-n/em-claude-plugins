@@ -51,6 +51,31 @@ SCHEMA_PATH = REPO_ROOT / "em-workflow" / "references" / "review-output-schema.j
 REVIEWER_AGENT_PATH = REPO_ROOT / "em-workflow" / "agents" / "reviewer.md"
 CODEX_REVIEWER_AGENT_PATH = REPO_ROOT / "em-workflow" / "agents" / "codex-reviewer.md"
 
+# task0005 (codex-wrapper-fallback-removal, TS14): this module's frozen
+# digests above (PROTOCOL_BULLETS_SHA256, FROZEN_SECTIONS,
+# REVIEWER_STEPS_SHA256, CODEX_REVIEWER_STEPS_SHA256) and its schema
+# equality pins (FROZEN_SCHEMA_ROOT, FROZEN_FINDING_REQUIRED,
+# FROZEN_SEVERITY_ENUM, FROZEN_SOURCE_ENUM) are derived from the byte
+# content of these source documents -- the review protocol
+# (em-workflow/references/review-protocol.md), the review output schema
+# (em-workflow/references/review-output-schema.json), the reviewer agent
+# (em-workflow/agents/reviewer.md) and the codex-reviewer agent
+# (em-workflow/agents/codex-reviewer.md) -- built from this module's own
+# *_PATH constants above so no path string is duplicated.
+DIGEST_SOURCE_DOCUMENTS = (
+    PROTOCOL_PATH,
+    SCHEMA_PATH,
+    REVIEWER_AGENT_PATH,
+    CODEX_REVIEWER_AGENT_PATH,
+)
+
+# The coupling rule this declaration exists to record.
+DIGEST_SOURCE_DOCUMENTS_RULE = (
+    "a task that declares one of these documents in its `files` "
+    "must also declare this module, because editing the document "
+    "forces this module's digest to be recomputed"
+)
+
 
 def _read(path):
     return path.read_text(encoding="utf-8")
