@@ -1,0 +1,17 @@
+schema_version: 1
+feature: codex-wrapper-fallback-removal
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 707e03cabde0e5b50ae9c2c2dc8c90f735df6b0c
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
