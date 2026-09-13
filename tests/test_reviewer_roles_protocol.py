@@ -588,13 +588,21 @@ CODEX_REVIEWER_FROZEN_FRONTMATTER_LINES = [
 # Everything from "## Step 0" through EOF -- including the availability
 # probe, the wrapper-script delegation, the skip objects, and critically the
 # scratchpad temp-file discipline section -- must stay byte-identical; this
-# task only edits the description and the opening body sentence before this
-# anchor.
+# task (llm-led-review/task0004) only edits the description and the opening
+# body sentence before this anchor.
+#
+# Updated by feature-docs/codex-wrapper-fallback-removal/task0002: Step 5
+# gained one sentence of prose stating the caller's Bash-tool timeout
+# (600000 milliseconds), outside the fenced wrapper-invocation command,
+# which that task's own byte-level pin
+# (tests/test_codex_reviewer_temp_file_isolation.py) keeps unchanged. This
+# hash is recomputed from the post-task0002 file; it is not this file's own
+# task that changed, so no further edit here is expected from that feature.
 CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "3a90a4d3197b507caa036ea70cc7211f0f4115bd133077c41a696567bbec0dee"
+    "788b25fe90332f2ccd80903381dc1a22a9d6bfd7a46ecee164cfb5edb2939187"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"
