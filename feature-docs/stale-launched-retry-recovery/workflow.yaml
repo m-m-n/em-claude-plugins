@@ -87,9 +87,9 @@ tasks:
     domains: [input-handling, external-io, concurrency, api-contract]
     complexity: high
     requirements: [FR3, FR6, FR7, FR9, FR13, NFR1, NFR2, NFR3, NFR5, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/stale-launched-retry-recovery/task0001
   task0002:
     title: "decision layer: the evidence-gated same-session recovery chain"
     plan: tasks/task0002.md
@@ -101,9 +101,9 @@ tasks:
     domains: [input-handling, external-io, concurrency, api-contract]
     complexity: high
     requirements: [FR1, FR2, FR3, FR4, FR5, FR9, FR13, NFR1, NFR3, NFR5, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/stale-launched-retry-recovery/task0002
   task0003:
     title: "documentation SSOTs carry the extension"
     plan: tasks/task0003.md
@@ -117,9 +117,9 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR10, FR12, FR13, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/stale-launched-retry-recovery/task0003
   task0004:
     title: "retry reachability proof and the plugin version bump"
     plan: tasks/task0004.md
@@ -133,9 +133,9 @@ tasks:
     domains: [config-infra, external-io]
     complexity: low
     requirements: [FR8, FR11, FR13, NFR4, NFR6]
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/stale-launched-retry-recovery/task0004
 
 review:
   status: pending
