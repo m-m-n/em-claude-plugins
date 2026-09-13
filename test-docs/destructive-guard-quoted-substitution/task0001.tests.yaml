@@ -1,0 +1,102 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py: 226/226 passed; python3 -m unittest discover -s tests: Ran 4402 tests, OK (both before any edit)
+final_failures: []             # python3 em-workflow/hooks/tests/run-destructive-guard.py: 228/228 passed (227 array elements + 1 hard-coded unattended-demotion case); python3 -m unittest discover -s tests: Ran 4402 tests, OK
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Before any edit: json.load(...) on the case file returned len() == 225.
+      After the edit: len() == 227. `git diff -- em-workflow/hooks/tests/destructive-guard-cases.json`
+      confirms the only change to pre-existing text is the trailing comma
+      added after what was the final line; every one of the 225 pre-existing
+      lines is otherwise byte-identical and in the same order.
+  AC-2:
+    tests:
+      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): クォート付き $() スペルでのチケット再現コマンドを固定する（両スペル対称性の $() 側）"
+    red_confirmed: true
+    red_reason: >-
+      Before the edit, no record's JSON-decoded command equaled
+      `rm -rf "$(printf /home/sakura/valuable)"` (0 matches by direct search
+      over the loaded array), and run-destructive-guard.py reported
+      226/226 with no case exercising this exact string. After adding the
+      record, exactly one match exists, its first element is `ask`, and
+      run-destructive-guard.py's output includes `ok ask` for this label.
+  AC-3:
+    tests:
+      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): クォート付きバッククォートスペルでのチケット再現コマンドを固定する（両スペル対称性のバッククォート側）"
+    red_confirmed: true
+    red_reason: >-
+      Deviation discovered and resolved during implementation (see report
+      `deviations`/`notes`): the command fixed character-for-character by
+      the task plan's Design section for this record
+      (`rm -rf `printf /home/sakura/valuable`` with no wrapping quotes) is
+      byte-identical to a pre-existing record (index 178, label "動的目標
+      (rm-unresolvable): バッククォートスペルの裸のコマンド置換のみの対象は
+      ask（両スペル対称性のバッククォート側）") added by the already-merged
+      sibling feature destructive-guard-command-substitution/task0001.
+      Adding it verbatim as a second record made
+      `python3 -m unittest discover -s tests` fail
+      (`tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes`:
+      "AssertionError: 226 != 227 : duplicate command in current table") --
+      a failure absent from the 4a baseline (Ran 4402 tests, OK), confirmed
+      by an actual run showing exactly this single failure before the
+      substitution below and no other change. Per tdd-testing's "fix your
+      change, never the test" rule, the record's command was changed to a
+      genuinely double-quote-wrapped backtick spelling,
+      `rm -rf "`printf /home/sakura/valuable`"`, symmetric with AC-2's
+      wrapped `"$(...)"` form and confirmed to match 0 pre-existing records
+      before this edit. After the substitution, exactly one record matches
+      this corrected command, its first element is `ask`, and the full
+      repository suite is green again (Ran 4402 tests, OK, no failure
+      outside the 4a baseline).
+  AC-4:
+    tests:
+      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): クォート付き $() スペルでのチケット再現コマンドを固定する（両スペル対称性の $() 側）"
+      - "destructive-guard-cases.json: 動的目標(rm-unresolvable): クォート付きバッククォートスペルでのチケット再現コマンドを固定する（両スペル対称性のバッククォート側）"
+    red_confirmed: true
+    red_reason: >-
+      Neither label existed in the file before the edit (0 matches by direct
+      text search). After the edit both are present as 3-element records
+      carrying the `動的目標(rm-unresolvable):` family prefix (satisfying C3
+      and FR7), one naming the `$()` spelling and the other the backtick
+      spelling, distinguishing them from each other and from the
+      pre-existing bare-form pair (labels "...の裸のコマンド置換のみの対象
+      は ask（両スペル対称性の$()側/バッククォート側）").
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Baseline (step 4a, before any edit):
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` -> 226/226
+      passed, 0 failures; `python3 -m unittest discover -s tests` -> Ran
+      4402 tests, OK, 0 failures. Final run (after the implementation,
+      including the AC-3 fixture correction):
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py` -> 228/228
+      passed, 0 failures (227 array elements + the one hard-coded unattended
+      demotion case, per IMPLEMENTATION.md C1); `python3 -m unittest
+      discover -s tests` -> Ran 4402 tests, OK, 0 failures -- the transient
+      duplicate-command failure introduced by the literal FR2 backtick
+      fixture (see AC-3) is not present in this final run.
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Before the edit: `em-workflow/.claude-plugin/plugin.json`'s `version`
+      == "0.1.75"; the `em-workflow` entry's `version` in
+      `.claude-plugin/marketplace.json` == "0.1.75"; the `em-review` entry's
+      `version` == "0.5.9" (all verified via json.load). After the edit:
+      both em-workflow versions read "0.1.76" identically; the em-review
+      entry is unchanged at "0.5.9" (re-verified via json.load post-edit).
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Preservation criterion, per the task plan's own Test Notes table:
+      "true before and required to stay true" -- not a red-to-green
+      transition. Verified via `git diff --stat --
+      em-workflow/hooks/destructive-guard.py` (empty output, no diff) and
+      `git status --porcelain` / `git diff --stat` showing only the three
+      Scope files modified: `.claude-plugin/marketplace.json`,
+      `em-workflow/.claude-plugin/plugin.json`,
+      `em-workflow/hooks/tests/destructive-guard-cases.json`.

@@ -228,5 +228,8 @@
   ["deny", "退行防止(A): リダイレクトに置換が付いても -c ペイロードの検査は続く", "bash -c 'rm -rf /home/sakura/valuable' 2>$(true)"],
   ["deny", "退行防止(A): 置換がリダイレクト演算子の左に付く形でも -c ペイロードの検査は続く", "bash -c 'rm -rf /home/sakura/valuable' $(true)>out"],
   ["deny", "fail-closed の代償: -c の引数が置換のみなら、クォートの有無を静的に区別できないため次の語を本文として検査する（この形は実シェルでは $0 にしかならないが deny に倒す）", "bash -c \"$(cat script.sh)\" 'rm -rf /home/sakura/valuable'"],
-  ["allow", "既知の限界(基準版と同じ): 置換の展開結果そのものがスクリプト本文になる形は静的に見えない", "bash -c \"$(echo 'rm -rf /home/sakura/valuable')\" 'echo safe'"]
+  ["allow", "既知の限界(基準版と同じ): 置換の展開結果そのものがスクリプト本文になる形は静的に見えない", "bash -c \"$(echo 'rm -rf /home/sakura/valuable')\" 'echo safe'"],
+
+  ["ask", "動的目標(rm-unresolvable): クォート付き $() スペルでのチケット再現コマンドを固定する（両スペル対称性の $() 側）", "rm -rf \"$(printf /home/sakura/valuable)\""],
+  ["ask", "動的目標(rm-unresolvable): クォート付きバッククォートスペルでのチケット再現コマンドを固定する（両スペル対称性のバッククォート側）", "rm -rf \"`printf /home/sakura/valuable`\""]
 ]
