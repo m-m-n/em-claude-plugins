@@ -1,0 +1,232 @@
+schema_version: 1
+feature: stale-launched-retry-recovery
+created: 2026-09-13
+base_branch: main
+goal: |
+  em-workflow: ウォッチドッグ kill で journal が launched のまま固着し、当該タスクの retry が恒久的に deny される
+
+  ## やりたいこと（必須）
+  ハーネスのウォッチドッグ kill で implementer が落ちたとき、`journal.jsonl` の最終イベントが `launched` のまま固着して当該 task id の retry が恒久的に deny される穴を塞ぐ。
+
+  ## 背景・なぜ（必須）
+  PR https://github.com/m-m-n/em-claude-plugins/pull/7 （feature: routeback-reset-scope-consistency）の無人実行中に実際に発生し、implement フェーズが復旧不能になって停止した。
+  - task0003 の implementer が「no progress for 600s」でハーネスのストリームウォッチドッグに停止させられた
+  - この kill は `SubagentStop` も `TaskStop` も配送しないため、failure net の 2 つの writer（`em-workflow/hooks/queue_failure_net.py` = SubagentStop、`em-workflow/hooks/queue_taskstop_net.py` = PostToolUse(TaskStop)）がどちらも発火せず、`failed` が追記されなかった
+  - 結果 `journal.jsonl` の task0003 最終イベントは `launched` のまま
+  - `em-workflow/hooks/queue_launch_guard.py` は journal の最終イベントだけで判定し、`launched` を「実行中」として deny する（`deny_in_flight`）。workflow.yaml は一切参照しない
+  - orchestrator は `journal.jsonl` に追記できない（`em-workflow/references/workflow-schema.md` が「never the orchestrator」と明記）
+  - よってこの task id には復旧経路が存在しない。batch の `implement.failed-task` が定める retry は dispatch 自体が成立せず、phase を abort するしかなかった
+  `em-workflow/references/implement-phase.md` の I.2.a は recycled-task-id の carve-out として「journal 最終イベントが `failed` かつ workflow.yaml `status` が `pending` なら unlaunched」を定めているが、carve-out が `failed` 限定なのでこのケース（`launched` 固着）は救えない。同ドキュメントは「A task whose journal last event is `launched` is always in-flight, regardless of workflow.yaml `status`」とも明記しており、意図的にこの穴が開いている。
+
+  ## 受け入れ条件 / 完了の定義（必須）
+  - [ ] ハーネスのウォッチドッグ kill（SubagentStop も TaskStop も配送されない停止）で implementer が落ちても、当該タスクが retry 可能な状態に到達できる
+  - [ ] その復旧が `journal.jsonl` の append-only 性と「orchestrator は journal に書かない」規則を壊さずに成立する
+  - [ ] 二重起動防止（本当に in-flight なタスクの再起動 deny）が弱まっていない
+  - [ ] 対応するドキュメント契約テスト / hook テストが `tests/` に追加されている
+  - [ ] `python3 -m unittest discover -s tests` が通る
+
+  ## スコープ外（任意）
+  ウォッチドッグそのもののチューニング（無進捗判定の閾値）。ハーネス側の挙動であり本プラグインの管轄外。
+
+  ## 制約・前提（任意）
+  - 検討の切り口として少なくとも次がある。どれを採るかは設計判断:
+  	- (a) `queue_launch_guard.py` に stale-launched 判定を足す（`launched` イベントの経過時間 + 当該 worktree に対応する生きたエージェントの不在で「もう飛んでいない」と判断する）
+  	- (b) journal の `failed` writer をもう一系統増やす（Stop hook / 別イベント経由で、対応するエージェントが消えている `launched` に対して `failed` を追記する。既存 writer と同じく replay 後に冪等追記する）
+  	- (c) I.2.a の recycled-task-id carve-out を `launched` にも拡張する（ただし現行ドキュメントが明示的に禁じている根拠 — launch guard との整合 — を先に解く必要がある）
+  - `journal.jsonl` の writer 集合は `em-workflow/references/workflow-schema.md` が SSOT。増やす場合はそちらも同時に更新する
+  - プラグイン配下を変更するので、同じ変更に含めて `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の version を bump する
+parent_branch: em-workflow/stale-launched-retry-recovery/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 0b2d3b4c180496478820649e2ecc8bcfd403b6dd
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      変更対象は Python の CLI ヘルパ 2 本、参照ドキュメント 2 本、tests/ のみで、
+      ユーザーに見える UI 面・画面遷移・視覚表現を一切持たない。プロジェクトに
+      デザインシステムの候補ファイルも存在しない。
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan:
+    floor: []
+    discretionary: []
+    cross_validation: true
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "Scope is the same-session residual only"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS2, TS3, TS4, TS5, TS6, TS7, TS8, TS9, TS10]
+  FR2:
+    title: "Same-session death is proven only by harness-termination evidence plus an explicit stop-tool not-running result"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS3, TS4]
+  FR3:
+    title: "Fixed evidence order with one residual reason code per unmet condition"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS2, TS3, TS4]
+  FR4:
+    title: "The residual reason-code set is widened additively"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2]
+  FR5:
+    title: "`same-session` stays emitted for callers that supply no same-session evidence"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2]
+  FR6:
+    title: "journal-append-failed.py's in-lock check compares the launch, not merely the event name"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS5]
+  FR7:
+    title: "VALID_REASONS is widened by exactly one additive value"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS6]
+  FR8:
+    title: "queue_launch_guard.py is not modified"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS7, TS9]
+  FR9:
+    title: "The journal stays byte-identical in every residual case"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2, TS5, TS6]
+  FR10:
+    title: "Documentation SSOTs are updated in the same change"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS8]
+  FR11:
+    title: "Plugin version bump in the same change"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS10]
+  FR12:
+    title: "The new reason value is attributed `failed_kind: infra` exactly like `orphaned`"
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS8]
+  FR13:
+    title: "Contract tests are added under tests/"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1, TS2, TS3, TS4, TS5, TS6, TS7, TS8, TS9, TS10]
+  NFR1:
+    title: "Fail-safe direction preserved"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2, TS3]
+  NFR2:
+    title: "One critical section, unchanged"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS5]
+  NFR3:
+    title: "Layer separation preserved"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1]
+  NFR4:
+    title: "Hook fail-open convention untouched"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS9]
+  NFR5:
+    title: "Backwards compatibility of both CLIs"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS2]
+  NFR6:
+    title: "No new runtime dependency"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS1]
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
