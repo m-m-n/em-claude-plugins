@@ -1,0 +1,54 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_wrapper_timeout_alignment.TestConfigTimeoutIsWrapperValue.test_em_workflow_config_timeout_is_540
+      - tests.test_codex_wrapper_timeout_alignment.TestConfigTimeoutIsWrapperValue.test_em_review_config_timeout_is_540
+    red_confirmed: true
+    red_reason: "AssertionError: 600 != 540 (both codex-cli.yaml files still read 600 before the edit)"
+  AC-2:
+    tests:
+      - tests.test_codex_wrapper_timeout_alignment.TestBashToolTimeoutDeclaredAtEachInvocationSite.test_em_workflow_step5_declares_600000ms
+      - tests.test_codex_wrapper_timeout_alignment.TestBashToolTimeoutDeclaredAtEachInvocationSite.test_em_review_step5_declares_600000ms
+      - tests.test_codex_wrapper_timeout_alignment.TestBashToolTimeoutDeclaredAtEachInvocationSite.test_question_resolution_wrapper_invocation_declares_600000ms
+    red_confirmed: true
+    red_reason: "AssertionError: no Bash-tool timeout declared as 'timeout of <N> milliseconds' in its own section (none of the three sites stated it before this task)"
+  AC-3:
+    tests:
+      - tests.test_codex_wrapper_timeout_alignment.TestTimeoutNestingRelation.test_em_workflow_nesting_holds
+      - tests.test_codex_wrapper_timeout_alignment.TestTimeoutNestingRelation.test_em_review_nesting_holds
+      - tests.test_codex_wrapper_timeout_alignment.TestTimeoutNestingRelation.test_question_resolution_wrapper_invocation_nesting_holds
+    red_confirmed: true
+    red_reason: "AssertionError: no Bash-tool timeout declared (dependent on AC-2's sites, which were absent pre-task, so the nesting relation could not yet be evaluated)"
+  AC-4:
+    tests:
+      - tests.test_codex_wrapper_timeout_alignment.TestFencedInvocationLinesUnchanged.test_em_workflow_invocation_line_present
+      - tests.test_codex_wrapper_timeout_alignment.TestFencedInvocationLinesUnchanged.test_em_review_invocation_line_present
+      - tests.test_codex_reviewer_temp_file_isolation.TestWrapperInvocationUnchanged.test_wrapper_invocation_line_is_unchanged_in_both_files
+    red_confirmed: false
+    red_reason: "AC-4 is a 'nothing changed' criterion (Test Notes): the fenced invocation line was already present, byte-identical, before this task touched the surrounding prose, and stays that way after. There is no implementation step that turns this red then green -- the task's obligation is to not edit the fenced line, which the diff shows was honored (only the prose after the fence, outside it, changed). test_codex_reviewer_temp_file_isolation.py's WRAPPER_INVOCATION_LINE pin is run unmodified and passes throughout, which IS the assertion per the task's own Test Notes."
+  AC-5:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_wrapper_fallback_provider_claim_is_absent
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_wrapper_fallback_provider_claim_absence_non_vacuity
+    red_confirmed: true
+    red_reason: "AssertionError: \"The wrapper's reply may come from a fallback provider instead of the primary one\" unexpectedly found in <section> -- the sentence was still present in the Wrapper invocation step before the deletion edit"
+  AC-6:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_fallback_provider_name_leaked
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_rate_limit_detection_description
+      - tests.test_question_resolution_doc.TestClassificationTrustBoundaryFix.test_ac4_all_three_abort_arms_and_precedence_reservation_survive
+    red_confirmed: false
+    red_reason: "AC-6 is a retention criterion: these pre-existing pins on the Opus escalation prose, the Unlisted-gate fallback section, routing-outcome references, and the no-provider-name/no-rate-limit-description guards were already green before this task's edit (this task only deletes one sentence and adds one Bash-tool-timeout sentence, both confined to the Wrapper invocation step) and remain green after. Verified by full-suite diff: these tests are absent from both baseline_failures and final_failures."
+  AC-7:
+    tests:
+      - tests.test_codex_wrapper_timeout_alignment.TestEmReviewWrapperUntouched.test_single_external_launch_no_fallback_markers_no_proxy_profile
+    red_confirmed: false
+    red_reason: "AC-7 asserts em-review/scripts/run_codex_exec.sh is untouched by this task (out of scope; owned by nobody per IMPLEMENTATION.md D4). The property this test checks (single external launch, no fallback marker, no proxy-profile selection) was already true before this task and stays true after, since this task never edits that file. Confirmed by running the new module against the pre-implementation tree (via git stash of only the implementation-file changes): this specific test passed even then, once the helper's initial comment-counting bug (see AC-8 note) was fixed -- there is no implementation step in THIS task that turns it red then green."
+  AC-8:
+    tests:
+      - tests.test_codex_wrapper_timeout_alignment
+    red_confirmed: true
+    red_reason: "Outcome checked by running `python3 -m unittest discover -s tests`, which both discovers and imports the new module (proving no non-stdlib import) and runs it to completion. During development the module's own single-external-launch helper was first written naively (counting the substring 'codex exec' anywhere in the file) and produced a false failure against the untouched em-review wrapper script (3 matches: 2 inside prose comments, 1 real launch) when checked against the pre-implementation tree -- fixed by scoping the count to non-comment lines, with a dedicated regression test (test_single_launch_check_ignores_comment_only_mentions) added for it."
