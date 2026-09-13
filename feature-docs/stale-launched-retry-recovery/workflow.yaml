@@ -117,7 +117,7 @@ tasks:
     domains: [api-contract]
     complexity: medium
     requirements: [FR10, FR12, FR13, NFR6]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/stale-launched-retry-recovery/task0003
   task0004:
