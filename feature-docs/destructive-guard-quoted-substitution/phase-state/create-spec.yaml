@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-quoted-substitution
 phase: create-spec
-status: awaiting_answers
+status: completed
 generation: 1
 base_revision: 1e49c251f5e4e5ddd613c11d38b638b4fb169c0b
 last_input_digest: sha256:6c8603207ad591c7e0e339571a1eab334cc139509f88e10fd1262f181b810d5f
-active_request_id: create-spec-run-0001
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -59,12 +59,26 @@ answers:
       requirements-analyst の推奨（design step は skip）をそのまま採用する。
 worker_runs:
   - request_id: create-spec-run-0001
-    status: dispatched
+    status: needs_user_input
     input_digest: sha256:6c8603207ad591c7e0e339571a1eab334cc139509f88e10fd1262f181b810d5f
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:4fe9640363082d0bf3e44999acb1a31f7c628aed2df664c383c3f645c0818df0
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:1aa7e325dc3e7a7b3e6ed2f35be7cfccd40da337de1a87c30a843a2878ad126e
+    output_digest: null
+artifacts:
+  - path: feature-docs/destructive-guard-quoted-substitution/REQUIREMENTS.md
+    sha256: sha256:13c24360ec0707f5930ebf3b2cf6650417f2918a384beb3f00bb2293a16dc012
+    produced_by: create-spec-run-0003
+  - path: feature-docs/destructive-guard-quoted-substitution/SPEC.md
+    sha256: sha256:6abfc1215ac3680ca77f9fce7ad6e5d99b113c0bc6b7b645425cc30aa1fbe686
+    produced_by: create-spec-run-0003
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:1067663ddb341509edd2f3052e78fc3127a08fe3c96251bbb17a78b4fa3bb0ad
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
