@@ -192,5 +192,35 @@
   ["ask", "ペイロード内評価(rm-unresolvable): here-string ペイロード内の $() のみの対象は直接書いた場合と同じ ask", "bash <<< 'rm -rf $(printf /home/sakura/valuable)'"],
   ["ask", "ペイロード内評価(rm-unresolvable): here-string ペイロード内のバッククォートのみの対象も同じ ask（両スペル対称性）", "bash <<< 'rm -rf `printf /home/sakura/valuable`'"],
   ["deny", "評価境界(rm-recursive): スクラッチルート配下パスの直後にクォート境界でコマンド置換が続いても evidence lost により deny", "rm -rf \"/tmp/sub/\"$(cat list)"],
-  ["deny", "評価境界(rm-recursive): 置換の後にさらにセグメントが続く形も同じ理由で deny", "rm -rf \"/tmp/sub/\"$(cat list)/extra"]
+  ["deny", "評価境界(rm-recursive): 置換の後にさらにセグメントが続く形も同じ理由で deny", "rm -rf \"/tmp/sub/\"$(cat list)/extra"],
+
+  ["deny", "退行防止(A): コマンド語末尾の置換を除いて bash -c を認識し、ペイロードを検査する", "bash$(:) -c 'rm -rf /home/sakura/valuable'"],
+  ["deny", "退行防止(A): -c 末尾の置換を除いて -c を認識する", "bash -c$(:) 'rm -rf /home/sakura/valuable'"],
+  ["deny", "退行防止(A): -c の内部にある置換を除いて -c を認識する", "bash -$(true)c 'rm -rf /home/sakura/valuable'"],
+  ["deny", "退行防止(A): コマンド語末尾のバッククォート置換を除いて bash -c を認識する（両スペル対称性）", "bash`:` -c 'rm -rf /home/sakura/valuable'"],
+  ["deny", "退行防止(A): eval 末尾の置換を除いて eval を認識する", "eval$(:) 'rm -rf /home/sakura/valuable'"],
+  ["deny", "退行防止(A): コマンド語末尾の置換を除いて here-string を認識する", "bash$(:) <<< 'rm -rf /home/sakura/valuable'"],
+  ["deny", "退行防止(A): -c の引数が置換のみのとき、空展開で繰り上がる次の語をペイロードとして検査する", "bash -c $(printf %s) 'rm -rf /home/sakura/valuable'"],
+  ["deny", "退行防止(A): 同じ繰り上がりのバッククォート形（両スペル対称性）", "bash -c `printf %s` 'rm -rf /home/sakura/valuable'"],
+  ["deny", "退行防止(A): 同じ繰り上がりを sh -c + git reset --hard で確認", "sh -c $(true) 'git reset --hard HEAD'"],
+
+  ["deny", "退行防止(B): コマンド位置の置換を読み飛ばして後続の rm を検査する", "$(true) rm -rf /home/sakura/valuable"],
+  ["deny", "退行防止(B): env の後のコマンド位置置換を読み飛ばして後続の rm を検査する", "env $(true) rm -rf /home/sakura/valuable"],
+  ["deny", "退行防止(B): git サブコマンド位置の置換を読み飛ばして reset --hard を検査する", "git $(true) reset --hard HEAD"],
+  ["deny", "退行防止(B): git のグローバルオプション位置が置換でも reset --hard を検査する", "git $(echo -C) reset --hard HEAD"],
+  ["deny", "退行防止(B): 置換本文の再走査でもコマンド位置の置換を読み飛ばして rm を検査する", "echo $(`true` rm -rf /home/sakura/valuable)"],
+
+  ["allow", "対象外(判定なし): コマンド位置の置換を読み飛ばした先が無害なら allow — 動的に決まるコマンド名そのものの検査は従来どおり対象外", "$(true) echo safe"],
+  ["allow", "対象外(判定なし): env の後のコマンド位置置換でも同じ", "env $(true) echo safe"],
+  ["allow", "対象外(判定なし): git サブコマンド位置の置換でも同じ", "git $(true) status"],
+
+  ["allow", "誤爆防止(A): コマンド語末尾に置換があっても bash -c の本文が無害なら allow", "bash$(:) -c 'printf safe'"],
+  ["allow", "誤爆防止(A): -c 末尾に置換があっても本文が無害なら allow", "bash -c$(:) 'printf safe'"],
+  ["allow", "誤爆防止(A): -c の内部に置換があっても本文が無害なら allow", "bash -$(true)c 'printf safe'"],
+  ["allow", "誤爆防止(A): eval 末尾に置換があっても本文が無害なら allow", "eval$(:) 'printf safe'"],
+  ["allow", "誤爆防止(A): コマンド語末尾に置換があっても here-string の本文が無害なら allow", "bash$(:) <<< 'printf safe'"],
+  ["allow", "誤爆防止(B): 通常の引数位置にある置換はコマンド位置として扱わない", "printf '%s\\n' \"$(date)\""],
+  ["allow", "誤爆防止(B): 実テキストに隣接する置換はコマンド位置として扱わない", "echo prefix$(true)"],
+  ["allow", "誤爆防止(B): 代入値の中の置換はコマンド位置として扱わない", "env NAME=$(printf x) echo safe"],
+  ["allow", "誤爆防止(B): git の通常引数にある置換はサブコマンド位置として扱わない", "git status $(true)"]
 ]
