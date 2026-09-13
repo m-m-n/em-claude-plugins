@@ -1,0 +1,45 @@
+feature: destructive-guard-quoted-substitution
+collected_at: "2026-09-13T15:35:00+09:00"
+session_ids:
+- 01a09979-dcf9-73cd-9df9-5edd9afd8bc5.jsonl
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+- note: >-
+    task0001 の implementer が completion report の deviations に
+    「SPEC FR2 の fixture がクォート無しのバッククォート綴りで既存レコード 178 と
+    重複するため差し替えた」と報告したが、SPEC.md FR2（c67105d 時点）も
+    task0001.md Design 節（c2d1be0 時点）もダブルクォート付きの綴りであり、
+    実装者が主張した literal fixture はどのコミットにも存在しなかった。
+    自分の途中経過の誤りを計画側の欠陥として誤帰属した false self-report。
+    その誤った根拠が test-docs/.../task0001.tests.yaml の AC-3 記述と
+    コミット da39fa5 のメッセージに残っている。
+  source: phase-state/batch-audit.yaml (implement.reported-deviation-assessment)
+- note: >-
+    SPEC.md FR3 / AC-1 が「既存 226 件」と書いているが、JSON 配列の実体は 225 件で、
+    226 はランナーがハードコードの demotion ケースを含めて報告する総数。
+    レビューでは finding ではなく documentation note として扱われた。
+    ケース数を仕様本文に書くときは「配列の要素数」か「ランナー報告値」かを
+    明示しないと同じ取り違えが再発する。
+  source: reviews/round1.yaml (evaluation.round_summary)
+- note: >-
+    review ラウンド 1 で codex ハーネスと litellm/vertex-glm-5.2 が
+    harness_unavailable で skip し、comprehensive 観点は claude fallback で
+    賄われた。implement / verify の Codex 相談も usage limit で回答不能だった。
+    外部ハーネスの可用性が低い時間帯に走ると、クロスバリデーションの実効的な
+    観点数が落ちる。
+  source: reviews/round1.yaml (perspective_runs), phase-state/batch-audit.yaml
+- note: >-
+    test-docs/{feature}/**.tests.yaml の新規追加が SPEC.md NFR3「新規ファイルを
+    増やさない」と形式上抵触して見え、verify で判断を要した。SPEC の
+    Declared Change Set 節が既定で feature-docs/ と test-docs/ を宣言済み集合に
+    含めるため out_of_scope_pass で解決したが、NFR3 系の要件を書くときは
+    射程が Files Touched 表の feature 固有パスに限られる旨を本文に書いた方が
+    同じ判断コストを繰り返さない。
+  source: phase-state/batch-audit.yaml (verify.new-file-vs-nfr3)
