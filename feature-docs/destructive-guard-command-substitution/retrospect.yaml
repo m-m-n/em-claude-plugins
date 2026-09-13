@@ -1,0 +1,47 @@
+feature: destructive-guard-command-substitution
+collected_at: "2026-09-13T12:24:25+09:00"
+session_ids: ["01a098ca-99c7-747c-b458-72c22196f160.jsonl"]
+signals:
+  review_critical_high:
+    - stable_id: bd7710d1b20046e5
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "bash -c / sh -c / eval / here-string のペイロード内では、コマンド置換のみの削除対象が今も allow のまま（FR1 の穴が接頭辞 1 つで回避できる）"
+      resolution: unresolved
+    - stable_id: 93bd46a1d082809a
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "置換マーカーを載せたトークンを extract_shell_payload() に渡したため、シェル呼び出しの認識が外れて本文が検査されない"
+      resolution: fixed
+    - stable_id: a68dda0b365cc7f4
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "置換のみのトークンに入れた SUBSTITUTION_STANDIN がコマンド名/サブコマンドの位置を占め、後続の危険な語が検査されない"
+      resolution: fixed
+    - stable_id: 5e4aaf498c0ea009
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "Guard bypass: marker/redirect desync fail-open suppresses payload scan"
+      resolution: fixed
+    - stable_id: 6fb75d01c48ee0af
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "Guard bypass: -c substitution walk-past inspects wrong word"
+      resolution: declined
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - stable_id: 6fb75d01c48ee0af
+      category: security
+      resolution_reason: "基準版 db5a4f86 と現行を同一入力で実行して検証した結果、指摘の代表ケースは基準版でも現行でも同じ判定に落ち、退行でも新規バイパスでもなかった。"
+    - stable_id: 8d7cdcf53f7becc0
+      category: comprehensive
+      resolution_reason: "再現条件が示されておらず（line は null、コマンド例なし）、検証できる主張になっていない。入れ子の置換は case table に既存ケースがある。"
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の high 1 件（bd7710d1b20046e5）は auto-fix 対象外のまま rework タスク task0003 に回り、round 2 で解消された。sources == [claude:evaluator] の finding が auto-fix を素通りする経路が 1 件あった。"
+  - "round 2 の high 3 件はいずれも task0003 が入れた SUBSTITUTION_STANDIN マーカーの副作用（トークン列を判定と抽出の両方に使い回したこと）に由来する。マーカーを載せたトークン列をそのまま下流の別用途に渡す設計が、同じ形の欠陥を 3 通りに分岐させた。"
+  - "review.auto-fix-judgment の Codex 相談を同じ 2 件に対して 2 回行っている（1 回目の B-3 が SPEC FR6 と衝突し、2 回目で B-1 + -c 繰り上がり対応に差し替え）。auto-fix の方針判断が SPEC の非退行要件と突き合わされるのは適用後だった。"
+  - "implement は 3 タスクすべてコンフリクト無し・files 予測のずれ無しで merge された。"
