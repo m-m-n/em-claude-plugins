@@ -16,3 +16,81 @@ records:
       'python3 -m unittest discover -s tests' の 2 本。bash_guard.py --list で
       両方とも既に承認済みであることを確認したため、この走行で新たに自動承認した
       コマンドは 0 本。refusal パターンの検出なし。
+  - question_id: create-plan.count-conflation
+    packet_id: null
+    answered_at: "2026-09-13T13:27:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [both_numbers]
+    freeform: ""
+    normalized_answer: "JSON 配列の要素数とスイート報告件数を別々の数として明記する"
+    resolution_note: >-
+      gate: create-plan.count-conflation (gate_id 無し。orchestrator が計画成果物の
+      検証中に発見)。destructive-guard-cases.json の実要素数は 225、
+      run-destructive-guard.py:74 が total = len(cases) + 1 として
+      ハードコードされた降格ケース 1 件を足すため、スイートは 226/226 と表示する。
+      計画文書（IMPLEMENTATION.md の Shared Components 行、tasks/task0001.md の AC-4）は
+      この 2 つを取り違えており、2 件追加後の配列要素数を 228 と書いていた（正しくは 227）。
+      AC-4 をそのまま満たそうとすると実装者が 3 件目のダミーケースを足しかねない。
+      options: both_numbers / suite_only / array_only / leave_alone。
+      codex_consulted: true (run_codex_exec.sh readonly, 2 ターン。1 ターン目は
+      600 秒タイムアウトで結論なし、2 ターン目でフォールバック経路の
+      vertex-glm-5.2 が回答)。fallback_provider: true (CODEX_FALLBACK 経路)。
+      opus_escalation: false。Codex の推奨は both_numbers で、既存の option_id に
+      写像できたため採用。採否の判断は orchestrator 側で行い、Codex の文面は
+      そのまま答えとして採用していない。
+  - question_id: create-plan.spec-correction-scope
+    packet_id: null
+    answered_at: "2026-09-13T13:27:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [this_phase_only]
+    freeform: ""
+    normalized_answer: "IMPLEMENTATION.md と tasks/task0001.md だけを直す"
+    resolution_note: >-
+      gate: create-plan.spec-correction-scope (gate_id 無し)。同じ取り違えは
+      SPEC.md / REQUIREMENTS.md にも存在するが、これらは completed 済みの
+      create-spec フェーズの成果物で、本フェーズでは write_policy action:
+      preserve（読み取り専用）。書き換えには review / verify の findings に
+      紐づく仕様変更遷移が必要で、それは今存在しない。
+      options: this_phase_only / correct_spec_too。
+      codex_consulted: true。fallback_provider: true。opus_escalation: false。
+      Codex の推奨 this_phase_only を採用。SPEC 側の数値は「スイート報告件数」
+      として読めば正しく、矛盾ではなく粒度の粗さに留まるため、
+      副作用の小さい this_phase_only を取っても要件の意味は変わらない。
+  - question_id: create-plan.task-split
+    packet_id: null
+    answered_at: "2026-09-13T13:27:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [merge_into_one]
+    freeform: ""
+    normalized_answer: "ケース追加と version 引き上げを 1 タスクに統合する"
+    resolution_note: >-
+      gate: create-plan.task-split (gate_id 無し)。planner の初回案は
+      task0001（destructive-guard-cases.json に 2 ケース追記）と
+      task0002（em-workflow の version を 0.1.75 -> 0.1.76）に分け、
+      別ワークツリーで並列実行し個別に integration へマージする計画だった。
+      options: keep_split / merge_into_one。
+      codex_consulted: true。fallback_provider: true。opus_escalation: false。
+      Codex の推奨は merge_into_one。根拠は core-plugin-version-bump.md の
+      「<plugin>/ 配下のファイルを変更したら、その変更に含めて version を上げる」。
+      task0001 は em-workflow/ 配下を変更するため、version 引き上げを別コミット・
+      別マージに切り出すと integration ブランチ上に規約違反の中間状態が生まれ、
+      片方だけが失敗した場合はその状態が残る。task0002 は complexity: low で
+      並列化の利得がほぼ無く、統合によるコストは小さいと判断して採用。
+  - question_id: create-plan.expected-verdict
+    packet_id: null
+    answered_at: "2026-09-13T13:27:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [ask]
+    freeform: ""
+    normalized_answer: "追加ケースの期待判定値は ask"
+    resolution_note: >-
+      gate: create-plan.expected-verdict (gate_id 無し)。CLAUDE_BATCH を外して
+      フックを直接叩くと、クォート付きコマンド置換・クォート無し・バッククォートの
+      3 綴りいずれも ask（reason id: destructive-guard/rm-unresolvable）を返すことを
+      orchestrator が実測で確認した。チケットが報告する deny は無人実行時の降格後の値。
+      options: ask / deny。codex_consulted: true。fallback_provider: true。
+      opus_escalation: false。Codex の推奨 ask を採用し、planner の当初案（ask）を追認した。
