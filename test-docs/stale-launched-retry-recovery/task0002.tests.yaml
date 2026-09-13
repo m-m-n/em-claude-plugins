@@ -1,0 +1,122 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainRecoveredPath.test_ac1_all_evidence_proving_reports_recovered_and_invokes_stub_once
+    red_confirmed: true
+    red_reason: >-
+      Before evaluate_stale_launched_chain existed and decide() accepted the
+      seven evidence kwargs, this test raised
+      "TypeError: decide() got an unexpected keyword argument
+      'worktree_present'" (confirmed by temporarily reverting
+      em-workflow/scripts/recover-orphaned-task.py to its pre-task0002 state
+      via `git stash` and re-running this test file).
+  AC-2:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_terminal_journal_event_reports_noop_terminal
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_non_launched_final_event_reports_journal_not_launched
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_worktree_absent_reports_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_branch_absent_reports_task_artifacts_missing
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_no_agent_entry_reports_no_agent_entry
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_entry_outside_binding_tolerance_reports_stale_agent_entry
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_absent_session_id_reports_no_session_id
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_malformed_session_id_reports_invalid_session_id
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_unresolvable_current_session_reports_current_session_unknown
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_stop_target_mismatch_reports_agent_identity_unproven
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_task_worktree_mismatch_reports_agent_identity_unproven
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_ambiguous_candidates_reports_agent_identity_unproven
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_termination_absent_reports_agent_termination_unproven
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_termination_running_reports_agent_still_live
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_stop_result_error_reports_stop_result_unproven
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_stop_result_target_mismatch_reports_stop_result_unproven
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_helper_reports_launch_changed
+    red_confirmed: true
+    red_reason: >-
+      Same revert-and-rerun check as AC-1: every case in this class calls
+      ROT.decide(...) with the new evidence kwargs (or, for the
+      helper-invocation case, relies on invoke_journal_helper's new
+      `reason`/`launch_at` parameters and the `launch_changed` mapping),
+      all of which raised TypeError against the pre-task0002 script.
+  AC-3:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainInsufficientEvidence.test_launch_accepted_token_is_insufficient
+      - tests.test_stale_launched_recovery_chain.TestChainInsufficientEvidence.test_error_token_is_insufficient
+      - tests.test_stale_launched_recovery_chain.TestChainInsufficientEvidence.test_output_idle_token_is_insufficient
+      - tests.test_stale_launched_recovery_chain.TestChainInsufficientEvidence.test_very_old_launched_timestamp_still_unproven_never_recovered
+    red_confirmed: true
+    red_reason: >-
+      Same revert-and-rerun check: "TypeError: decide() got an unexpected
+      keyword argument 'worktree_present'" against the pre-task0002 script,
+      since these cases also drive decide() through the new evidence kwargs.
+  AC-4:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainAgentIdentitySecurityPin.test_source_level_resolve_bound_stop_target_never_reads_session_id
+      - tests.test_stale_launched_recovery_chain.TestChainAgentIdentitySecurityPin.test_behaviour_level_coincidental_identity_equality_never_proves_binding
+    red_confirmed: true
+    red_reason: >-
+      Before this task, `resolve_bound_stop_target` did not exist:
+      inspect.getsource raised AttributeError for the source-level test,
+      and the behaviour-level test raised the same
+      "decide() got an unexpected keyword argument" TypeError as the other
+      cases (confirmed by the same revert-and-rerun check).
+  AC-5:
+    tests:
+      - tests.test_recover_orphaned_task (all pre-existing tests, e.g.
+        TestEndToEndDecide.test_ac2b_identity_equal_to_current_reports_same_session
+        and TestEndToEndDecide.test_ac1_proven_orphan_reports_recovered_and_invokes_helper_once)
+      - tests.test_stale_launched_recovery_chain.TestChainEntryGating.test_no_evidence_supplied_keeps_same_session_on_a_fully_proving_fixture
+    red_confirmed: false
+    red_reason: >-
+      This criterion is a no-regression guarantee for the UNCHANGED
+      no-evidence path: its correct observable behaviour genuinely
+      pre-existed this task (the pre-existing tests in
+      tests/test_recover_orphaned_task.py passed before this task's changes
+      and continue to pass unmodified after them -- 75/75, confirmed at the
+      4a baseline run and again after implementation). The one new test
+      added in this task for this criterion
+      (TestChainEntryGating.test_no_evidence_supplied_...) DID fail red
+      first ("TypeError: decide() got an unexpected keyword argument
+      'worktree_present'", confirmed via the same revert-and-rerun check)
+      because it exercises the new kwarg surface, but that failure proves
+      the kwargs exist, not that the no-evidence BEHAVIOUR is new -- so the
+      criterion as a whole is marked false per the skill's guidance for a
+      refactor-shaped AC with no observable behaviour change on its
+      pre-existing half.
+  AC-6:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainStepOrderDirect.test_artifact_check_precedes_any_agent_index_read_or_file_open
+    red_confirmed: true
+    red_reason: >-
+      Before this task, `evaluate_stale_launched_chain` did not exist:
+      "AttributeError: module 'recover_orphaned_task_chain' has no
+      attribute 'evaluate_stale_launched_chain'" (confirmed via the same
+      revert-and-rerun check).
+  AC-7:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestChainByteIdentityAndNoCreation.test_residual_creates_neither_journal_file_nor_parent_directory
+      - tests.test_stale_launched_recovery_chain (every TestChainOrderedUnmetConditions
+        and TestChainInsufficientEvidence case asserts byte-identical journal
+        content and zero helper invocations via the shared _assert_residual
+        / _assert_noop_terminal helpers)
+    red_confirmed: true
+    red_reason: >-
+      The dedicated test raised the same AttributeError as AC-6 (calls
+      evaluate_stale_launched_chain directly); the embedded byte-identity
+      assertions in the AC-2/AC-3 cases raised the same TypeError as those
+      cases before this task's decide()/evaluate_stale_launched_chain
+      existed (confirmed via the same revert-and-rerun check).
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not a test outcome but a static import-surface check: `grep -n
+      "^import\|^from"` over em-workflow/scripts/recover-orphaned-task.py,
+      tests/test_stale_launched_recovery_chain.py and
+      tests/test_recover_orphaned_task.py confirms every top-level import
+      (including inside the generated stub-helper template strings) is
+      from the Python standard library (argparse, json, os, re, subprocess,
+      sys, datetime, importlib.util, inspect, tempfile, unittest, pathlib)
+      -- no third-party package. This check has no meaningful red state to
+      confirm (there was never a third-party import to remove).
