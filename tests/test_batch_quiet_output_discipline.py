@@ -173,9 +173,8 @@ REPORTING_ITEM_LIST_SENTENCE = (
     "fallback resolution (gate / options / choice / Codex consulted or "
     "not), every autonomous fail-closed-route resolution (gate / option "
     "chosen / options not chosen / the discussion's key points / whether "
-    "Codex was consulted / whether a fallback provider answered / whether "
-    "the Opus escalation ran, with its reasoning), and the kept "
-    "integration branch name"
+    "Codex was consulted / whether the Opus escalation ran, with its "
+    "reasoning), and the kept integration branch name"
 )
 
 # IMPLEMENTATION.md D4: audit item -> the phrase its source-map row must
