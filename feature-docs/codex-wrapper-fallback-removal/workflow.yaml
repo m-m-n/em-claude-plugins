@@ -161,7 +161,7 @@ tasks:
     domains: ["external-io", "input-handling", "config-infra"]
     complexity: high
     requirements: ["FR1", "FR2", "FR3", "FR6", "FR7", "NFR1", "NFR2", "NFR3", "NFR5"]
-    status: in_progress
+    status: merged
     branch: em-workflow/codex-wrapper-fallback-removal/task0001
     notes: null
   task0002:
