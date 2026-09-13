@@ -32,6 +32,13 @@ entry already has one (`0.5.7`) on the tree this task started from. That
 failure predates this task's changes and is out of this task's scope (it
 concerns the em-review entry, not the em-workflow version bump this task
 performs); this module does not touch it or attempt to fix it.
+
+Note (task0004, codex-wrapper-fallback-removal): AC-3 above was originally a
+string-equality pin against em-review's pre-task version. That form breaks
+the moment a later feature legitimately bumps em-review -- exactly what
+task0004 does -- so this module now asserts the em-review entry's version is
+not below that same baseline, compared on parsed numeric components rather
+than the raw string.
 """
 
 import ast
@@ -50,9 +57,11 @@ MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 BASELINE_MAJOR_MINOR = (0, 1)
 BASELINE_PATCH = 61
 
-# Pre-task snapshot of the em-review marketplace entry's version (AC-3: this
-# task must not move it).
-EM_REVIEW_VERSION_SNAPSHOT = "0.5.9"
+# Baseline em-review marketplace version captured before this task's own
+# bump (AC-3 repaired per task0004 of codex-wrapper-fallback-removal: the
+# property that survives a later, legitimate em-review bump is "not below
+# this baseline", not string equality to it).
+EM_REVIEW_BASELINE_VERSION = "0.5.9"
 
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
@@ -103,6 +112,22 @@ def _assert_versions_equal(test, version_a, version_b):
     test.assertEqual(version_a, version_b)
 
 
+def _assert_version_not_below_baseline(test, version, baseline):
+    """The neighbouring plugin's matcher (repaired, task0004): it only needs
+    to not regress below the baseline this module captured before its own
+    bump -- equality to that baseline breaks the moment a later feature
+    legitimately bumps the neighbouring plugin, which is exactly the failure
+    this comparison avoids. Comparison is on parsed numeric components,
+    never the raw string."""
+    parts = _parse_version(version)
+    test.assertIsNotNone(parts, f"version {version!r} is not of the form X.Y.Z")
+    baseline_parts = _parse_version(baseline)
+    test.assertIsNotNone(
+        baseline_parts, f"baseline {baseline!r} is not of the form X.Y.Z"
+    )
+    test.assertGreaterEqual(parts, baseline_parts)
+
+
 class TestPluginManifestVersion(unittest.TestCase):
     """AC-1/AC-2: the plugin manifest's version is past baseline and its
     name field is unchanged."""
@@ -143,13 +168,18 @@ class TestMarketplaceEntryVersion(unittest.TestCase):
 
 
 class TestOtherMarketplaceEntriesUnchanged(unittest.TestCase):
-    """AC-3: this task bumps only the em-workflow entry; the em-review
-    entry's version stays at its pre-task snapshot."""
+    """AC-3 repaired (task0004): this task bumps only the em-workflow entry;
+    the em-review entry's version must not regress below the baseline this
+    module captured -- a string-equality pin would break the moment a later
+    feature legitimately bumps em-review, which is exactly the failure this
+    repair fixes."""
 
-    def test_em_review_entry_version_unchanged(self):
+    def test_em_review_entry_version_is_not_below_baseline(self):
         data = _load_json(MARKETPLACE_PATH)
         entry = _marketplace_entry(data, "em-review")
-        self.assertEqual(entry.get("version"), EM_REVIEW_VERSION_SNAPSHOT)
+        _assert_version_not_below_baseline(
+            self, entry.get("version"), EM_REVIEW_BASELINE_VERSION
+        )
 
 
 class TestValidationDetectsRegressions(unittest.TestCase):
@@ -186,6 +216,28 @@ class TestValidationDetectsRegressions(unittest.TestCase):
     def test_baseline_matcher_rejects_malformed_version_shape(self):
         with self.assertRaises(AssertionError):
             _assert_version_past_baseline(self, "abc")
+
+    FORGED_EM_REVIEW_DRIFTED_VERSION = "0.5.8"
+
+    def test_forged_em_review_drifted_version_is_well_formed(self):
+        """Non-vacuity guard for the repaired em-review baseline matcher."""
+        self.assertIsNotNone(_parse_version(self.FORGED_EM_REVIEW_DRIFTED_VERSION))
+
+    def test_em_review_baseline_matcher_rejects_drifted_version(self):
+        with self.assertRaises(AssertionError):
+            _assert_version_not_below_baseline(
+                self,
+                self.FORGED_EM_REVIEW_DRIFTED_VERSION,
+                EM_REVIEW_BASELINE_VERSION,
+            )
+
+    def test_em_review_baseline_matcher_accepts_version_at_or_above_baseline(self):
+        _assert_version_not_below_baseline(
+            self, EM_REVIEW_BASELINE_VERSION, EM_REVIEW_BASELINE_VERSION
+        )  # must not raise: equal to baseline is acceptable
+        _assert_version_not_below_baseline(
+            self, "0.5.10", EM_REVIEW_BASELINE_VERSION
+        )  # must not raise: this is the actual bump this task performs
 
 
 class TestOwnModuleStdlibOnly(unittest.TestCase):
