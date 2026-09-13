@@ -1,0 +1,255 @@
+round: 2
+executed_at: "2026-09-13T12:20:33+09:00"
+scope:
+  review_mode: diff
+  base_commit: db5a4f86574d0e920396481e7385fc87a7492613
+  head_commit: fa9ffc128b22738be871abbc1167f4d8f880230f
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-command-substitution/task0001.tests.yaml
+    - test-docs/destructive-guard-command-substitution/task0002.tests.yaml
+    - test-docs/destructive-guard-command-substitution/task0003.tests.yaml
+    - tests/test_destructive_guard_command_substitution.py
+    - tests/test_destructive_guard_command_substitution_version_bump.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "architecture#2", perspective: architecture, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+  - {run_id: "security#loop2", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "codex_self_reported_sandbox_block",
+     note: "リトライ可能な skip_reason ではないが、ハーネス側の自己申告による実行不能であり完了実行が 1 つも無い状態だったため、chain の次エントリ (litellm/muse-spark) へ進めた。"}
+  - {run_id: "security#loop2b", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "comprehensive#loop2", perspective: comprehensive, role: primary, source: codex, status: completed, skip_reason: null,
+     note: "codex が 2 回とも『diff を取得できていない』と自己申告しながら行番号つきの findings を出したため、レビュアー側が grounding_rules 違反として棄却し findings 空で返した。棄却された 2 件はオーケストレーター側でも該当行がドキュストリング本文であることを確認済み。"}
+  - {run_id: "architecture#loop2", perspective: architecture, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "spec#loop2", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "security#loop3", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "comprehensive#loop3", perspective: comprehensive, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "architecture#loop3", perspective: architecture, role: primary, source: codex, status: completed, skip_reason: null}
+  - {run_id: "spec#loop3", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+findings:
+  - stable_id: 93bd46a1d082809a
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 661
+    title: "置換マーカーを載せたトークンを extract_shell_payload() に渡したため、シェル呼び出しの認識が外れて本文が検査されない"
+    description: >-
+      task0003 が statements() から marked トークン（UNRESOLVED_MARK 残留つき）を
+      extract_shell_payload() に渡すようにした結果、コマンド語やオプションの完全一致判定
+      （head()、SHELL_WORDS、`"-c" in args`）にマーカー入りトークンが流れ込み、`bash\x00` や
+      `-c\x00` が一致しなくなる。ペイロードは再走査されず、破壊的な本文がそのまま allow になる。
+      基準版 db5a4f86 と現行を同一入力で実行して確認した回帰（いずれも基準版 deny → 現行 allow、
+      有人・無人の両方で allow）: `bash$(:) -c 'rm -rf ...'`、`bash -c$(:) '...'`、
+      `bash -$(true)c '...'`、バッククォート形 `` bash`:` -c '...' ``、`eval$(:) '...'`、
+      `bash -c $(printf %s) '...'`。実際の bash では空置換が消えて通常の `bash -c` として
+      削除が実行される。SPEC の FR5/AC-5（既存 deny/ask verdict 不変）に反する。
+    suggestion: >-
+      シェル名・`-c`・ラッパー・リダイレクト演算子の照合はマーカー除去済みトークンで行い、
+      再走査のために push する本文だけを対応する marked トークンから取り出す
+      （判定用と抽出用でトークン列を分ける）。
+    sources: [codex:security]
+    confidence: 100
+    resolution: fixed
+    resolution_reason: >-
+      auto-fix loop 1-3 で修正（コミット f459973 / fa9ffc1）。extract_shell_payload() を
+      「判定用＝マーカー除去済み / 抽出用＝マーカー保持」の 2 列構成にし、-c の引数が
+      置換のみのときは空展開で繰り上がる次の語をペイロードとして検査するようにした。
+      here-string 側も同じ読み飛ばしを `_payload_index()` 経由で適用した。
+      退行 6 形を destructive-guard-cases.json の deny ケースとして固定し、
+      誤爆検知用の allow ケースも併せて追加した。
+  - stable_id: a68dda0b365cc7f4
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 600
+    title: "置換のみのトークンに入れた SUBSTITUTION_STANDIN がコマンド名/サブコマンドの位置を占め、後続の危険な語が検査されない"
+    description: >-
+      task0001 で _strip_unresolved_marks() が置換のみの語を消さず SUBSTITUTION_STANDIN
+      （`$(...)`）1 トークンとして残すようにした。削除対象の位置では狙いどおりだが、
+      コマンド名やサブコマンドの位置でも head() / git_subcommand() がこの代替トークンを
+      実際のコマンド語として扱ってしまい、後続の本当のコマンドが検査されない。
+      基準版 db5a4f86 との比較で確認した回帰（基準版 deny → 現行 allow、有人・無人を問わず）:
+      `$(true) rm -rf ...`、`env $(true) rm -rf ...`、`git $(true) reset --hard HEAD`、
+      `git $(echo -C) reset --hard HEAD`、``echo $(`true` rm -rf ...)``。
+      未引用の空展開はシェルでは消えるため、削除や `reset --hard` はそのまま実行される。
+      SPEC の FR5/AC-5 に反する。
+    suggestion: >-
+      SUBSTITUTION_STANDIN を削除対象の位置に限って有効にするか、head() / git_subcommand()
+      側で substitution_only トークンを『中身が空になり得る語』として読み飛ばす経路を用意する。
+    sources: [codex:security]
+    confidence: 100
+    resolution: fixed
+    resolution_reason: >-
+      auto-fix loop 2 で修正（コミット f459973）。head() / git_subcommand() が
+      `.substitution_only` トークンを読み飛ばし、後続の実コマンド語・サブコマンドを
+      検査対象に戻すようにした。退行 5 形を case table の deny ケースとして固定した。
+      なお loop 1 ではコマンド位置の置換に対して `ask("command-substitution-dispatch")` へ
+      倒す案（Codex 初回推奨の B-3）を実装したが、SPEC の FR6 / NFR7（置換を含む非 rm コマンドは
+      allow のまま／allow 側のケースを 1 件も落とさない）と衝突して既存テスト
+      TestNonDeletePositionsUnaffected（ケース `$(echo ls) -la`）が失敗したため、
+      Codex へ再相談のうえ B-1（読み飛ばしのみ）へ切り替えた。
+  - stable_id: 5e4aaf498c0ea009
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 515
+    title: "Guard bypass: marker/redirect desync fail-open suppresses payload scan"
+    description: >-
+      loop 1-2 で入れた extract_shell_payload() の 2 列構成が、マーカー除去済み側と
+      マーカー保持側で split_redirects() の語／リダイレクト分割が食い違ったときに
+      `return None` を返していた。これは「ペイロードを一切再走査しない」＝ fail-open で、
+      入れ子のペイロードに破壊的コマンドがあっても素通りする。
+      security#loop2b（litellm/muse-spark）の指摘。
+    suggestion: >-
+      desync 時に None を返さず、マーカー保持側だけで処理を続けるフォールバックにする。
+    sources: [litellm:muse-spark:security]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: >-
+      auto-fix loop 3 で修正（コミット fa9ffc1）。`return None` をやめ、マーカー保持側だけで
+      判定と抽出を行うフォールバック（task0003 時点の挙動）に変えた。
+      指摘された desync を起こす具体的な入力はオーケストレーター側の実測では再現できなかったが、
+      fail-open 自体が誤りなので防御的に閉じた。
+      この検証の過程で、指摘とは別の実退行 `bash <<<$(true) 'rm -rf ...'`
+      （基準版 deny → allow）を発見し、同じコミットで塞いだ。
+  - stable_id: 6fb75d01c48ee0af
+    severity: critical
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 530
+    title: "Guard bypass: -c substitution walk-past inspects wrong word"
+    description: >-
+      extract_shell_payload() が `-c` の後ろの `.substitution_only` トークンを
+      「未引用の空展開は語ごと消える」という前提で読み飛ばすが、クォート付きの
+      `"$(...)"` は空に展開されても語が消えない。したがって
+      `bash -c "$(echo 'rm -rf ...')" 'echo safe'` では実際に実行されるスクリプトと
+      検査される語がずれる、という指摘。security#loop2b（litellm/muse-spark）。
+    suggestion: >-
+      `-c` の後ろの substitution_only を読み飛ばさず、解決不能なペイロードとして
+      ask / deny に倒すか、プレースホルダ自体を返して再走査に載せる。
+    sources: [litellm:muse-spark:security]
+    confidence: 75
+    resolution: declined
+    resolution_reason: >-
+      基準版 db5a4f86 と現行を同一入力で実行して検証した結果、指摘の代表ケース
+      `bash -c "$(echo 'rm -rf /home/sakura/valuable')" 'echo safe'` は
+      基準版でも allow であり、この変更が持ち込んだ退行ではなかった
+      （置換の展開結果そのものがスクリプト本文になる形は元から検査対象外）。
+      クォートの有無はトークン列から復元できない — _mark_substitutions() が字句解析前に
+      `"$(...)"` と `$(...)` を同じマーカーへ潰すため — ので、読み飛ばしを止めると
+      `bash -c $(printf %s) 'rm -rf ...'`（基準版 deny）の検知をまた落とす。
+      fail-closed 側に倒す判断をし、その代償（`bash -c "$(cat script.sh)" '<破壊的に見える文字列>'`
+      が基準版 allow → 現行 deny になる。実シェルではこの語は $0 にしかならない）を
+      destructive-guard-cases.json に明示したケースとして固定した。
+      残る「動的に決まるコマンド名・スクリプト本文そのものの検査」は基準版からの既知の穴として
+      別タスクに切り出した:
+      https://app.notion.com/p/destructive-guard-3da3509ec8ee81c3b79dd0f6a8bb872f
+      Codex への相談でも「今回のバグ修正には含めず別タスクに切り出すべき」との判断だった。
+  - stable_id: 9d6a8885aa4e62ec
+    severity: medium
+    category: comprehensive
+    file: tests/test_destructive_guard_command_substitution.py
+    line: 705
+    title: "理由文を丸ごと固定したテストが gio の有無と HOME=/home/sakura に結合している"
+    description: >-
+      task0003 で追加された
+      TestUnflaggedTargetReasonTextUnchanged.test_reason_text_byte_identical_to_pre_task_wording
+      が、deletion_alternative() の分岐のうち『gio が使えて対象が $HOME 配下』の文面だけを
+      byte 一致で固定している。gio が PATH に無い環境、または HOME が /home/sakura でない
+      環境では、実装が正しくても `mv -- ... /tmp/` の文面を返してこのテストだけが落ちる。
+      comprehensive#0 / architecture#2 が独立に同一箇所を報告。
+    suggestion: >-
+      テスト側で gio の有無と HOME をコントロールするか、gio あり/なし・HOME 内/外の
+      各条件に対応する期待文面を分けて検証する。
+    sources: [codex:comprehensive]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: >-
+      severity が medium のため Phase R4 の candidate gate（critical/high のみ）に入らず、
+      自動修正の対象外。別タスクとして起票した:
+      https://app.notion.com/p/destructive-guard-gio-HOME-3da3509ec8ee813f855ad593cf9cabe9
+  - stable_id: 8d7cdcf53f7becc0
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: null
+    title: "Command substitution bypass via nested $() with unusual whitespace"
+    description: >-
+      comprehensive#loop3 の指摘。「extract_shell_payload() の置換検出正規表現が
+      一部のエッジケースで失敗し、入れ子のコマンド置換に隠された破壊的コマンドを
+      見逃す可能性がある」という内容。行番号・具体的な再現コマンドは示されていない。
+    suggestion: >-
+      入れ子の置換と特殊なシェルメタ文字を正しく扱えているか、正規表現を見直す。
+    sources: [codex:comprehensive]
+    confidence: 60
+    resolution: declined
+    resolution_reason: >-
+      再現条件が示されておらず（line は null、コマンド例なし）、検証できる主張になっていない。
+      入れ子の置換については case table に
+      `rm -rf $(echo $(rm -rf /home/sakura/x))` と ``echo $(`true` rm -rf /home/sakura/valuable)``
+      の deny ケースがあり、226/226 通過している。同じ observation は同ラウンドの
+      security#loop3 でも否定されている（deny/ask から allow への後退なし）。
+evaluation:
+  round_summary: >-
+    round 2 / diff / cross_validation=true。injection 試行は reviewer_outputs 5 件のいずれにも
+    検出されなかった。round_context の 3 件（bd7710d1b20046e5 / 63705cbaaa5891ed /
+    91320984c3e74bc0）は、基準版 634c7b4 との比較実行で修正済みを確認した。一方でこの変更が
+    持ち込んだ高深刻度の検知退行を 2 件確認した。案件全体の検証: 対象テスト 44 件 OK、
+    run-destructive-guard.py 195/195 通過、version は plugin.json / marketplace.json とも
+    0.1.75 で一致（AC-8/AC-9/AC-10 は満たす）。ただし退行 2 件に対応するケースが case table に
+    1 件も無いため、緑のまま素通りしている。独立検査のカバレッジ: security = corroborated /
+    comprehensive = corroborated / architecture = corroborated / spec = findings（spec#0 は
+    findings 空で「FR1-FR8 と NFR は成立」と報告したが、私の検査では FR5 および AC-5 が現に
+    破れており、その内容は findings 1・2 として carry 済み）。reviewer が報告した critical/high
+    サイトはすべて findings に carry したため dismissed_sites は空。
+  recommended_action: "rework"
+  action_rationale: >-
+    この変更が守るべき対象そのもの（破壊的コマンドの検知）に high の退行が 2 件入っている。
+    どちらもトークン列の扱い方に起因する設計上の分岐で、判定用トークンと抽出用トークンの分離、
+    および substitution_only トークンのコマンド語位置での扱いを決め直す必要があるため、
+    bounded auto-fix の範囲を超える。加えて .claude/rules/hook-tests.md により、直す前に
+    見逃しケースを destructive-guard-cases.json に追加する作業が伴う。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 3
+  applied_total: 4
+  termination: loop-cap
+  note: >-
+    すべての candidate が prose 形の needs-judgment だったため、batch モードの既定
+    （Apply as-is）で dispatch した。ただし素の Apply as-is ではなく、ユーザー指示
+    「不明点は Codex に相談して比較的良い方を採用する」に従って Codex へ 2 回相談し、
+    その結論を user_chosen_approach として editor に渡した。
+    loop 1: extract_shell_payload() の 2 列化（A-1）と、コマンド位置 substitution_only の
+    ask 化（B-3）。loop 2: B-3 が SPEC の FR6 / NFR7 と衝突したため B-1 へ切り替え、
+    併せて -c の繰り上がり対応を追加。loop 3: here-string の繰り上がり対応と
+    length mismatch の fail-open 解消。
+    review-editor は 1 ファイルしか触れないため、.claude/rules/hook-tests.md が要求する
+    ケース表の同時更新（em-workflow/hooks/tests/destructive-guard-cases.json）は
+    オーケストレーターが行い、同じ locked section でコミットした。
+    ループ上限到達後に全観点を再レビューし、security（litellm/muse-spark）が
+    「deny/ask から allow への後退なし」、architecture / spec が findings 空で完了した。
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-destructive-guard-command-substitution-20260913T032029Z.md
+  note: >-
+    vulnerability 観点は Layer 2 の依存マニフェスト条件に当たらず今ラウンドでは選択されていない
+    ため、未解決の vulnerability findings は 0 件。entry-point は渡したが、
+    一覧取得が非ゼロ終了したため report ブランチに degrade した（filed 対象が無いので影響なし）。
