@@ -1,0 +1,46 @@
+schema_version: 1
+feature: stale-launched-retry-recovery
+records:
+- question_id: review.auto-fix-judgment
+  packet_id: null
+  answered_at: '2026-09-14T01:42:11.570875+09:00'
+  source: batch-safe-default
+  answer_mode: select
+  selected_option_ids:
+  - apply-as-is
+  freeform: null
+  normalized_answer: Apply as-is (editor interprets)
+  resolution_note: 'gate: review phase R4 loop 1 needs-judgment finding 32e95d5d28ab40ae (implement-phase.md:587);
+    batch default per references/batch-mode.md Non-packet gates table; codex_consulted: true — Codex CLI
+    (routed to litellm muse-spark after the codex default was rate limited and vertex-glm-5.2 timed out)
+    compared three fix options and recommended the doc-only append (option 1) because removing the script-side
+    opt-in gate would flip the no-flags-supplied outcome from same-session to task-artifacts-missing and
+    break two pinned tests (test_no_evidence_supplied_keeps_same_session_on_a_fully_proving_fixture, test_ac2b_identity_equal_to_current_reports_same_session);
+    its draft wording was passed to the editor as user_chosen_approach'
+- question_id: review.auto-fix-judgment
+  packet_id: null
+  answered_at: '2026-09-14T01:42:11.570875+09:00'
+  source: batch-safe-default
+  answer_mode: select
+  selected_option_ids:
+  - apply-as-is
+  freeform: null
+  normalized_answer: Apply as-is (editor interprets)
+  resolution_note: 'gate: review phase R4 loop 2 needs-judgment finding a62fab0c8d106536 (implement-phase.md:623,
+    regression introduced by loop 1''s fix); batch default per references/batch-mode.md Non-packet gates
+    table; codex_consulted: false — the accepted-value set was read directly from IMPLEMENTATION.md''s
+    Evidence inputs table and recover-orphaned-task.py''s argparse help'
+- question_id: review.plugin-version-bump-decision
+  packet_id: null
+  answered_at: '2026-09-14T01:42:11.570875+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: keep 0.1.78
+  normalized_answer: keep 0.1.78 (no second bump for the review auto-fix)
+  resolution_note: 'orchestrator decision, not a gate: the auto-fix touched em-workflow/references/implement-phase.md,
+    which the project rule core-plugin-version-bump.md covers. A bump to 0.1.79 was attempted and reverted:
+    this feature''s own tests pin 0.1.78 as the target (tests/test_codex_wrapper_fallback_removal_version_bump.py
+    asserts equality with 0.1.78; tests/test_stale_launched_version_bump.py requires a patch bump over
+    baseline 0.1.77), i.e. the feature branch as one unmerged change already carries its single 0.1.77
+    -> 0.1.78 bump. python3 -m unittest discover -s tests passes (4596 tests) at 0.1.78 and fails at 0.1.79'

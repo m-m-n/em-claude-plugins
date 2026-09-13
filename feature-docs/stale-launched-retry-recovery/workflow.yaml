@@ -71,7 +71,8 @@ workflow:
     base_commit: e465bb3ff4624c732666b7f2fac6a6f8b980b64e
     completed_at_commit: 32716ca22d6d01c76f7b01277a729683ce45d4a9
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: 363b47747298ba76870b58abd1d5beb0999b350d
   - id: verify
     status: pending
   - id: retrospect
@@ -139,13 +140,18 @@ tasks:
     branch: em-workflow/stale-launched-retry-recovery/task0004
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    comprehensive: {status: completed, source: claude, role: fallback, findings: 2}
+    security: {status: completed, source: litellm, model: muse-spark, role: primary, findings: 0}
+    performance: {status: completed, source: litellm, model: muse-spark, role: primary, findings: 0}
+    architecture: {status: completed, source: claude, role: fallback, findings: 1}
+    spec: {status: completed, source: litellm, model: muse-spark, role: primary, findings: 0}
   residual_critical_high: 0
   needs_rework: false
 

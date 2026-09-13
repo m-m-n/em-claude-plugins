@@ -1,0 +1,302 @@
+round: 1
+executed_at: '2026-09-14T01:41:58.523721+09:00'
+scope:
+  review_mode: diff
+  base_commit: e465bb3ff4624c732666b7f2fac6a6f8b980b64e
+  head_commit: 363b47747298ba76870b58abd1d5beb0999b350d
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/scripts/journal-append-failed.py
+  - em-workflow/scripts/recover-orphaned-task.py
+  - test-docs/stale-launched-retry-recovery/task0001.tests.yaml
+  - test-docs/stale-launched-retry-recovery/task0002.tests.yaml
+  - test-docs/stale-launched-retry-recovery/task0003.tests.yaml
+  - test-docs/stale-launched-retry-recovery/task0004.tests.yaml
+  - tests/test_codex_wrapper_fallback_removal_version_bump.py
+  - tests/test_journal_append_failed.py
+  - tests/test_recover_orphaned_task.py
+  - tests/test_stale_launched_doc_contract.py
+  - tests/test_stale_launched_recovery_chain.py
+  - tests/test_stale_launched_retry_reachability.py
+  - tests/test_stale_launched_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+  skip_reason: null
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: architecture#2
+  perspective: architecture
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: architecture#fallback
+  perspective: architecture
+  role: fallback
+  source: claude
+  status: completed
+  skip_reason: null
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+  skip_reason: null
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#loop1-fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+  skip_reason: null
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#loop1-1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+  skip_reason: null
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: comprehensive#loop2-fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+  skip_reason: null
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: performance#loop2
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+  skip_reason: null
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+findings:
+- stable_id: 32e95d5d28ab40ae
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/implement-phase.md
+  line: 587
+  title: Same-session extension 段落に呼び出し契約が無く、新チェーンが実行時経路から到達不能
+  description: 新チェーン evaluate_stale_launched_chain は opt-in で、7 つの証拠入力 (--worktree-present / --branch-present
+    / --task-worktree / --stop-target / --launch-termination / --stop-result / --stop-result-target) を
+    1 つ以上渡したときだけ decide の step 6 same-session 分岐から入る。ところが implement-phase.md の Same-session extension
+    段落は (a) recover-orphaned-task.py を呼ぶこと自体、(b) 7 つの入力の名前と受理リテラル、(c) --launch-at の由来、のいずれにも触れておらず、唯一名指しするスクリプトが書き込みヘルパー
+    journal-append-failed.py だった。結果、marker だけ渡す従来形で呼ぶと evidence_supplied が False のままで same-session 残余に終わり機能が到達不能になる。字義どおり書き込みヘルパーを直叩きする読み方も残り、その場合は証拠チェーンと
+    --launch-at による launch 同一性検査 (TOCTOU 対策) を迂回する。comprehensive#fallback と architecture#fallback が独立に同一サイトを
+    high で報告した。
+  suggestion: Same-session extension 段落に、直前の Orphan recovery 段落と同じ粒度で呼び出し契約 (recover-orphaned-task.py
+    + 7 証拠入力 + opt-in 規則 + --launch-at の由来) を追記する。
+  sources:
+  - claude:comprehensive
+  - claude:architecture
+  confidence: 100
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 (needs-judgment, batch auto-select Apply as-is; 方針は Codex 相談で案
+    1 = 文書追記を採用)
+- stable_id: a62fab0c8d106536
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/implement-phase.md
+  line: 623
+  title: loop 1 の追記が --launch-termination の閉じた語彙を 5 値から 2 値に狭め、fail-open 方向のドリフトを作った
+  description: loop 1 で追記した Invocation contract 段落が --launch-termination の受理値を terminated|running の 2
+    値と列挙していた。SSOT である IMPLEMENTATION.md の Evidence inputs 表は terminated | running | launch-accepted |
+    error | output-idle の 5 値と定め、terminated だけが step 5 を証明し、running は agent-still-live、それ以外はすべて agent-termination-unproven
+    になると規定している。implement-phase.md はオーケストレーター LLM が実行時に読むプロンプト本体なので、2 値しか書かれていないと residual に倒すべき 3 ケースを表現する語彙が無く、terminated
+    に丸める誘因が生まれる。生存中の implementer を terminal にしうる fail-open の退行。loop 1 の修正が持ち込んだ退行を loop 2 の再レビューが検出した。
+  suggestion: 同段落の --launch-termination の列挙を SSOT の 5 値に戻し、どの値がどの残余に落ちるかを同じ箇所に明記する。
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (needs-judgment, batch auto-select Apply as-is)
+- stable_id: 8181ab42a021818a
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/recover-orphaned-task.py
+  line: 479
+  title: agent-identity 束縛の worktree 照合が「両方欠損」で素通りし、連言が未証明のまま proven に倒れる
+  description: resolve_bound_stop_target の照合は素の entry.get("worktree_path") != task_worktree で、エントリに worktree_path
+    が無く (None)、かつ --task-worktree も渡されていない (None) とき None != None は False となりチェックを通過する。--task-worktree
+    は必須ではなく他の 6 入力のいずれかで evidence_supplied が True になるため到達可能。docstring は worktree mismatch を binding failure
+    と書いており、doubt は常に residual という NFR1 とも食い違う。現行 writer の queue_agent_index.py は必ず絶対パスを書くので正規エントリでは起きず、旧版が書いた行・壊れた行に限られるため
+    medium。tests/test_stale_launched_recovery_chain.py もミスマッチのケースしか持たず両方欠損は未カバー。
+  suggestion: recorded_worktree を取り出し、recorded_worktree と task_worktree のどちらかが str でなければ None を返す (= agent-identity-unproven)
+    ようにしてから等値比較する。合わせて両方欠損のテストケースを 1 本足す。
+  sources:
+  - claude:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート (critical/high) に乗らず、このラウンドでは未修正
+- stable_id: 8d2b8d5fe5b88eca
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/recover-orphaned-task.py
+  line: 736
+  title: 7 つの証拠入力が個別のプリミティブ引数として decide() と evaluate_stale_launched_chain() に渡され、shotgun surgery と silent
+    dispatch failure のリスクがある
+  description: 7 つの証拠入力は 1 つの領域概念を成すが、decide() (15 引数) と evaluate_stale_launched_chain() (16 引数) に個別のプリミティブとして渡されている。evidence_supplied
+    の判定は 7 つを手で列挙した any() チェックで導出される。新しい証拠入力を足すには 5 箇所 (decide() のシグネチャ、evidence_supplied の列挙、evaluate_stale_launched_chain()
+    のシグネチャ、build_arg_parser()、main()) の同期編集が要り、evidence_supplied のタプルへの追加を忘れると呼び出し側が証拠を渡しても evidence_supplied
+    が False のままになり新チェーンに入らない silent dispatch failure になる。
+  suggestion: 7 つの証拠入力を 1 つのデータ構造 (dataclass / namedtuple) にまとめて decide() と evaluate_stale_launched_chain()
+    に 1 引数として渡す。evidence_supplied の判定は手の列挙ではなくそのオブジェクトのメソッドにする。
+  sources:
+  - litellm:vertex-glm-5.2:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート (critical/high) に乗らず、このラウンドでは未修正
+evaluation:
+  round_summary: 'Round 1 (cross_validation: true)。10 run 中 5 つが skip (codex rate_limited 3、litellm harness_unavailable
+    2) で、comprehensive と architecture は claude fallback が担当した。注入の試みは reviewer_outputs のどこにも見当たらなかった。ラウンドの核心は
+    1 件の high: implement-phase.md の Same-session extension 段落に呼び出し契約 (recover-orphaned-task.py + 7 証拠入力
+    + --launch-at) が無く、実行時にオーケストレーターが読む references 配下のどこにも書かれていないため、新チェーンが本番経路から到達不能になるか、文面どおり書き込みヘルパーを直叩きして
+    launch 同一性検査を迂回する。comprehensive#fallback と architecture#fallback が独立に同一サイトを high で報告しており、クロス確認として一致している
+    (ただし comprehensive#fallback の「フラグ名がプラグイン配下に存在しない」という根拠は事実誤認で、スクリプトの docstring と argparse には存在する。欠落しているのはオーケストレーター向け文書のみ)。scripts
+    側のロジック (閉集合の追加的拡張、in-lock の launch identity 比較、opt-in の証拠チェーン、subprocess は argv リストで shell 不使用、O_NOFOLLOW
+    + 存在必須の前提条件) はフェイルセーフ方向に揃っており堅い。version bump は plugin.json / marketplace.json とも 0.1.78 で一致を確認した。reviewer
+    が報告した critical/high は 2 件で、いずれも 1 件の high に統合して findings に繰り上げたため dismissed_sites は空。medium 3 件のうち
+    1 件は medium 維持、2 件は根拠を確認のうえ low に降格し、いずれも findings に残した (取り下げゼロ)。
+
+
+    観点別カバレッジ (独立検査): comprehensive = findings。architecture = findings。spec = findings。security = corroborated。performance
+    = corroborated。読み取り予算 10 ファイルはほぼ使い切っており、test-docs の 4 yaml と一部テストモジュールはテスト名の列挙のみで全文は読んでいない。'
+  recommended_action: auto_fix
+  action_rationale: 残った作業は局所的で、再計画も設計変更も要らない。high は implement-phase.md への文書追記で、既存の doc-contract テストが pin
+    する文面は追記では壊れない。medium は resolve_bound_stop_target の型チェックとテスト 1 本。em-workflow/ 配下を触るので version bump
+    を同じ変更に含めること。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 2
+  applied_total: 2
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-stale-launched-retry-recovery-20260913T164128Z.md
