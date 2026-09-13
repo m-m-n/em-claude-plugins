@@ -126,3 +126,39 @@ records:
       残件（後続フェーズ向けの注意）: task0001.tests.yaml の AC-3 記述と
       コミット da39fa5 のメッセージが「計画の欠陥」を主張しており、
       この根拠は誤り。retrospect の入力として信用しないこと。
+  - question_id: verify.new-file-vs-nfr3
+    packet_id: null
+    answered_at: "2026-09-13T15:40:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [out_of_scope_pass]
+    freeform: ""
+    normalized_answer: "test-docs/{feature}/**.tests.yaml は NFR3 の射程外。verify は pass"
+    resolution_note: >-
+      gate: verify.new-file-vs-nfr3 (gate_id 無し。orchestrator が verify の
+      diff 検査中に発見)。base_branch main に対する integration の diff は
+      feature-docs/ を除くと 4 ファイルで、うち
+      test-docs/destructive-guard-quoted-substitution/task0001.tests.yaml が
+      新規追加。SPEC.md NFR3「Add no new file」と VERIFICATION.md の手動項目
+      M-3「Exactly three files are modified」に形式上抵触して見える。
+      options: out_of_scope_pass / fail_as_nfr3_violation。
+      codex_consulted: true（codex exec が usage limit で回答不能。
+      リトライは no-retry 規則により行わず）。fallback_provider: false。
+      opus_escalation: false。
+      orchestrator による機械検証の結果: SPEC.md の Declared Change Set 節が
+      「Every SPEC declares, by default, the following two workflow-generated
+      entries in addition to the feature-specific paths above」として
+      feature-docs/{feature}/** と test-docs/{feature}/** を明示的に列挙し、
+      「These two default entries are part of the declaration unless the SPEC
+      author explicitly removes them」と定めている。本 SPEC はこの既定を
+      narrow していない。また同節は「the actual change set observed at
+      verification time must be CONTAINED IN the declared set, not equal to
+      it」と SUPERSET 宣言であることを明記する。よって当該ファイルは宣言済み
+      変更集合に含まれ、NFR3 が統べるのは Files Touched 表の feature 固有
+      パス（case file + 2 マニフェスト）に限られる。M-3 の「3 ファイル」も
+      同じ射程で読む。
+      独立した裏付け: review ラウンド 1 の spec 観点（litellm/muse-spark）は
+      同じ 4 ファイルの diff を scope.changed_files として受け取ったうえで
+      「no new files and stdlib-only (NFR1, NFR3)」と判定しており、
+      findings は空・residual critical/high は 0 だった。
+      out_of_scope_pass を採用。
