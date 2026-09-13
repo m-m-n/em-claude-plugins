@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-quoted-substitution
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 1e49c251f5e4e5ddd613c11d38b638b4fb169c0b
+last_input_digest: sha256:6c8603207ad591c7e0e339571a1eab334cc139509f88e10fd1262f181b810d5f
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:6c8603207ad591c7e0e339571a1eab334cc139509f88e10fd1262f181b810d5f
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
