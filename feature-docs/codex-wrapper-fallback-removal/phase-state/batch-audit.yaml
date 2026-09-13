@@ -1,0 +1,19 @@
+schema_version: 1
+feature: codex-wrapper-fallback-removal
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-13T17:05:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline"
+    normalized_answer: "decline"
+    resolution_note: >-
+      task_id: task0002; declined deviation path tests/test_reviewer_roles_protocol.py;
+      missing evidence part: the identifier of the acceptance criterion or requirement
+      that would otherwise be dropped. The report names no AC-n of task0002's own plan
+      and no requirement id registered in workflow.yaml; it cites another feature's task
+      (llm-led-review/task0004) as the origin of the stale hash pin. The path shape check
+      and the workflow-control-path check both pass, but a missing identifier alone is
+      sufficient to decline, so the path is not auto-added to tasks.task0002.files.
