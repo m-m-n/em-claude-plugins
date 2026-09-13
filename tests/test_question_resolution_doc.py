@@ -1169,17 +1169,39 @@ class TestQuestionResolutionDoc(unittest.TestCase):
             norm_section,
         )
 
-    def test_wrapper_fallback_provider_fact_stated_once_no_name(self):
+    def test_wrapper_fallback_provider_claim_is_absent(self):
+        # task0002 AC-5: the claim that the wrapper's own reply may come
+        # from a fallback provider instead of the primary one is removed
+        # from the consultation procedure's wrapper-invocation step.
         section = self._codex_procedure_section()
         norm_section = re.sub(r"\s+", " ", section)
-        self.assertIn(
+        self.assertNotIn(
             "The wrapper's reply may come from a fallback provider "
             "instead of the primary one",
             norm_section,
         )
-        self.assertIn(
+        self.assertNotIn(
             "with no provider name or detection mechanism named here",
             norm_section,
+        )
+
+    def test_wrapper_fallback_provider_claim_absence_non_vacuity(self):
+        # Non-vacuity guard: proves the matcher above would have caught the
+        # withdrawn sentence had it still been present in the section.
+        fake_section = (
+            "2. Wrapper invocation. Each turn calls the wrapper directly. "
+            "The wrapper's reply may come from a fallback provider instead "
+            "of the primary one, with no provider name or detection "
+            "mechanism named here."
+        )
+        self.assertIn(
+            "The wrapper's reply may come from a fallback provider "
+            "instead of the primary one",
+            fake_section,
+        )
+        self.assertIn(
+            "with no provider name or detection mechanism named here",
+            fake_section,
         )
 
     # --- task0001 AC-5: the Opus escalation subsection itself --------------
