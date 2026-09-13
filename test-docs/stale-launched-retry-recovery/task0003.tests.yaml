@@ -1,0 +1,135 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_all_six_codes_present
+      - test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_codes_appear_in_fixed_relative_order
+      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_termination_conjunct_present
+      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_stop_result_conjunct_present
+      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_insufficiency_statement_present
+    red_confirmed: true
+    red_reason: >-
+      Verified directly against the pre-edit snapshot (git show HEAD for
+      em-workflow/references/implement-phase.md, before this task's own
+      edit): none of the six codes' backtick-wrapped literals
+      (`task-artifacts-missing`, `agent-identity-unproven`,
+      `agent-termination-unproven`, `agent-still-live`,
+      `stop-result-unproven`, `launch-changed`) occurred anywhere in the
+      normalized I.2.b section, and neither conjunct phrase nor the
+      insufficiency sentence occurred either -- each `assertIn` would have
+      raised AssertionError. Confirmed green only after the I.2.b
+      same-session-extension paragraph was written.
+  AC-2:
+    tests:
+      - test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_recorded_identity_never_stop_target
+      - test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_stale_launched_invocation_named
+    red_confirmed: true
+    red_reason: >-
+      Verified against the same pre-edit snapshot: "The recorded session
+      identity is never used as the stop target on this branch" and "with
+      the task id and reason `stale-launched`" were both absent from the
+      normalized I.2.b section (the pre-edit block only invokes the helper
+      with reason `orphaned`). Both assertions failed before the new
+      paragraph existed, passed after.
+  AC-3:
+    tests:
+      - test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_covers_neither_event_stop
+      - test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_names_extended_same_session_branch
+    red_confirmed: true
+    red_reason: >-
+      Verified against the pre-edit snapshot: the Stale-`launched` caveat
+      enumerated only four mechanisms and never mentioned "a stop that
+      delivers neither a subagent-stop nor a stop-tool event" nor an
+      "extended same-session branch" -- both assertions failed pre-edit,
+      passed once the fifth-mechanism sentence was appended.
+  AC-4:
+    tests:
+      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_states_stale_launched_additive_value
+      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_writer_set_enumeration_unchanged
+    red_confirmed: true
+    red_reason: >-
+      The additive-value half is genuinely new: the pre-edit
+      workflow-schema.md writer-set paragraph named only `orphaned` as an
+      additive reason value; the `stale-launched` sentence was absent, so
+      test_states_stale_launched_additive_value failed pre-edit and passed
+      after the edit. The unchanged-enumeration half is an invariant
+      rather than new behavior (its whole point is that nothing in the set
+      of five writer names moved) and holds both before and after this
+      task's edit by construction -- verified by `git diff` on
+      workflow-schema.md, which shows only prose sentences added, no
+      backtick-wrapped `.py`/`.sh` filename added or removed; the
+      negative-proof tests
+      (test_negative_proof_added_writer_is_detected,
+      test_negative_proof_removed_writer_is_detected) demonstrate the
+      matcher does reject a forged addition/removal.
+  AC-5:
+    tests:
+      - test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_abort_bullet_attributes_orphaned_or_stale_launched
+      - test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_batch_paragraph_byte_identical_to_pre_change_text
+    red_confirmed: true
+    red_reason: >-
+      The attribution half is genuinely new: pre-edit, the abort-phase
+      bullet attributed `infra` only for reason `orphaned`, with no
+      `stale-launched` disjunct -- test_abort_bullet_attributes_orphaned_or_stale_launched
+      failed against the pre-edit snapshot and passed after the bullet was
+      edited to add "or `stale-launched`". The batch-paragraph
+      byte-identity half is an unchanged-invariant check (this task's Out
+      of Scope explicitly excludes touching that paragraph) and holds both
+      before and after by construction; `git diff` on implement-phase.md
+      confirms the batch-mode second-failure paragraph (lines under
+      "Batch mode (`references/batch-mode.md`") has zero changed lines.
+  AC-6:
+    tests:
+      - test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_negative_proof_missing_code_is_detected
+      - test_stale_launched_doc_contract.TestI2bSixNewResidualCodesInFixedOrder.test_negative_proof_out_of_order_codes_detected
+      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_negative_proof_termination_conjunct_absent_when_removed
+      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_negative_proof_stop_result_conjunct_absent_when_removed
+      - test_stale_launched_doc_contract.TestI2bConjunctsAndInsufficiencyStated.test_negative_proof_insufficiency_absent_when_removed
+      - test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_negative_proof_identity_statement_absent_when_removed
+      - test_stale_launched_doc_contract.TestI2bRecordedIdentityAndStaleLaunchedReason.test_negative_proof_invocation_absent_when_removed
+      - test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_negative_proof_neither_event_phrase_absent_when_removed
+      - test_stale_launched_doc_contract.TestCaveatCoversFifthMechanism.test_negative_proof_extended_branch_absent_when_removed
+      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_negative_proof_additive_phrase_absent_when_removed
+      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_negative_proof_added_writer_is_detected
+      - test_stale_launched_doc_contract.TestWorkflowSchemaWriterSetAdditiveAndUnchanged.test_negative_proof_removed_writer_is_detected
+      - test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_negative_proof_stale_launched_disjunct_absent_when_removed
+      - test_stale_launched_doc_contract.TestAbortBulletAttributesBothReasons.test_negative_proof_batch_paragraph_mismatch_detected
+    red_confirmed: false
+    red_reason: >-
+      Structural property of the new module itself (every positive
+      matcher for AC-1 through AC-5 is paired with its own negative-proof
+      test against a forged/mutated sample), not a document-content
+      assertion with a prior "red" state to observe -- the module did not
+      exist before this task. Verified by inspection (each positive test
+      class above has a sibling test_negative_proof_* method operating on
+      a locally forged string, never on the real file) and by all 14
+      negative-proof tests passing, i.e. each matcher does reject its
+      forged counter-example.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Not a document-content assertion but a non-regression check: `git
+      status --porcelain` after all edits shows only
+      em-workflow/references/implement-phase.md and
+      em-workflow/references/workflow-schema.md modified (plus the new
+      test module and this tests.yaml) -- neither
+      tests/test_implement_routeback_gate.py nor
+      tests/test_failed_kind_write_paths.py was touched. Both modules run
+      standalone (`python3 -m unittest tests.test_implement_routeback_gate
+      tests.test_failed_kind_write_paths -v`): "Ran 246 tests ... OK", 0
+      failures, 0 errors -- including the pins for the I.2.b invocation
+      sentence, the caveat's exception sentence, the writer-set phrases
+      and the abort-phase bullet's phrase.
+  AC-8:
+    tests:
+      - test_stale_launched_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      The module was authored with only `ast`, `re`, `unittest` and
+      `pathlib` imports from its first version; there is no prior state in
+      which it imported a third-party package for this test to have
+      caught. Verified structurally by the AST-walk test itself passing
+      and by manual review of the module's import block.
