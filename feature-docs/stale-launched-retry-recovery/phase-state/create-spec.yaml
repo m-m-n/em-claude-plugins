@@ -1,10 +1,10 @@
 schema_version: 1
 feature: stale-launched-retry-recovery
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: d38ddcd1873e59e6816d644a5115cf4b7b241ac6
-last_input_digest: sha256:9a0f6a01a0ff5cc6ec74e27c6e73610e39ec1639b3ce3ef8902f9efa90a5864b
+last_input_digest: sha256:3093747ebfd8611607f707bdf83b53c12d33cfc80bde028ce622591fb7578606
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -61,7 +61,21 @@ worker_runs:
     status: needs_user_input
     input_digest: sha256:9a0f6a01a0ff5cc6ec74e27c6e73610e39ec1639b3ce3ef8902f9efa90a5864b
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:3093747ebfd8611607f707bdf83b53c12d33cfc80bde028ce622591fb7578606
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:3093747ebfd8611607f707bdf83b53c12d33cfc80bde028ce622591fb7578606
+    output_digest: null
+artifacts:
+  - path: feature-docs/stale-launched-retry-recovery/REQUIREMENTS.md
+    sha256: sha256:31929a1849ba1a43fd2218a398e7fde99cf67a92f134e2f755735b8a746b6662
+    produced_by: create-spec-run-0003
+  - path: feature-docs/stale-launched-retry-recovery/SPEC.md
+    sha256: sha256:6f42f4eed4f5c230d743801075d555fe372488fac6d15adc427e9fb36b8d0cd2
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
