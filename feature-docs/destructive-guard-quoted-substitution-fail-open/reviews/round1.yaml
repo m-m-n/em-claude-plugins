@@ -1,0 +1,104 @@
+round: 1
+executed_at: '2026-09-14T21:50:42+09:00'
+scope:
+  review_mode: diff
+  base_commit: dbeb7fb2ee0e950bd72c9b0f52ae7b8d720bd15f
+  head_commit: bfff663acfb032d567066122934459fe6bc5b66e
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-quoted-substitution-fail-open/task0001.tests.yaml
+  - test-docs/destructive-guard-quoted-substitution-fail-open/task0002.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: vertex-glm-5.2
+  status: completed
+  skip_reason: null
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings: []
+gated_out:
+- source_run_id: comprehensive#1
+  file: test-docs/destructive-guard-quoted-substitution-fail-open/task0002.tests.yaml
+  line: 2
+  title: task0002.tests.yaml のインラインコメントの件数が統合後スイート (236/236) と一致しない
+  evaluator_severity: low
+  dropped_at: R3b step 2 (severity not in {critical, high, medium})
+  note: comprehensive#1 は medium で報告。評価者が独立検証の結果、228/228 は task0002 が単独で走った時点の実測値として正しく（コミット順は task0002
+    merge -> task0001 merge）、事実上の矛盾ではないとして low に降格。出荷物の正しさには影響しない。
+evaluation:
+  round_summary: 'Round 1 (cross_validation=true, diff mode)。5 run dispatch のうち 2 run (comprehensive#0
+    / security#0) は codex rate_limited でスキップ、3 run が完了。critical/high の報告はゼロ、medium 1 件のみで、独立検証の結果それは low
+    相当のドキュメント注記だった。独立検証（読み取り専用）: (1) git diff で出荷対象 3 ファイルの差分は +8 行 / -0 行 + version 2 行のみ、destructive-guard.py
+    と run-destructive-guard.py に差分なし (FR4/AC7/NFR2 充足)。(2) python3 em-workflow/hooks/tests/run-destructive-guard.py
+    を実行し exit 0 / ok 236 行 / FAIL 0 行 / 236/236 passed を確認 (FR7/AC8、および追加 8 件が全て実測 deny であること = FR2/AC5
+    を充足)。(3) json.load でケース表 235 件・全件 3 要素配列を確認 (NFR3)。(4) 追加 8 件が SPEC の TS1-TS8（二重引用符 / 単一引用符 / バッククォート+二重引用符
+    / dist / node_modules / .cache / 前方密着 / 後方密着）に 1:1 対応し、ラベルが既存の日本語+カテゴリ接頭辞様式で「裸形と同じ判定」を明記していることを確認
+    (FR1/FR5/AC1-AC4)。(5) marketplace.json の em-workflow と plugin.json がともに 0.1.80、em-review は 0.5.10
+    で不接触 (FR6/AC10)。(6) 既存の裸形 deny ケースは無改変で残存 (FR3/AC6/TS9)。Per-perspective coverage: comprehensive =
+    corroborated、security = corroborated（run-destructive-guard.py は subprocess.run に shell=True を使わずフック本体を
+    argv に取り、ケースのコマンド文字列は stdin の JSON として渡されるだけで一度も実行されないことを独立に確認）、spec = corroborated。unreviewed_perspectives
+    は空。Untrusted-input: reviewer_outputs 3 件および changed_files の内容を精査したが、指示注入・役割上書き型のパターンは検出されなかった。Read
+    budget: 5 ファイル読了（上限 10 の範囲内）、budget exhausted による not verified なし。'
+  recommended_action: complete
+  action_rationale: critical/high の指摘ゼロ。唯一の medium は独立検証の結果ドキュメント可読性の low 注記に降格され、出荷物の正しさに影響しない。SPEC の
+    FR1-FR7 / AC1-AC10 のうち diff から検証可能な項目を全て独立に確認し、スイートは exit 0 / 236/236 / FAIL 0 でグリーン。rate_limited
+    による 2 run のスキップは comprehensive / security 双方とも litellm 側の完了 run が埋めており、さらに evaluator 自身が同じ changed_files
+    を独立検査して両観点を corroborated としているため、未検証観点は残っていない。another_round を回す材料がない。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-destructive-guard-quoted-substitution-fail-open-20260914T125042Z.md
+  note: vulnerability 観点は未選択（diff に依存マニフェスト/ロックファイル/vendored コードなし）のため findings は空。ntd の listing が非ゼロ終了のため
+    report ブランチに degrade。
