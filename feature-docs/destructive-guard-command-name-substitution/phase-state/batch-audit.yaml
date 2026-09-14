@@ -78,3 +78,84 @@ records:
       codex_consulted: true (Codex CLI が使用上限に到達したため
       `codex exec -p litellm -m muse-spark --sandbox read-only` 経由で実施、
       muse-spark は Standard tier)。opus_escalation: false.
+  - question_id: review.evaluator-absolute-file-paths
+    packet_id: null
+    answered_at: "2026-09-14T22:20:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [relativize_then_gate]
+    freeform: null
+    normalized_answer: 評価者出力の絶対パスを project_root 相対へ正規化してから R3b step 1 を適用する
+    resolution_note: >-
+      gate: review.evaluator-absolute-file-paths (gate_id を持たない裁量判断。
+      ユーザー指示「不明点は Codex に相談し、比較的良い方を採用」による相談)。
+      options: A=絶対パスなので全 findings を drop /
+      B=project_root 相対へ正規化し、project_root 配下に解決しないものだけ拒否。
+      chosen: B。not chosen: A。
+      key points: R3b step 1 の目的はパス逸脱の防止であり、返ってきた絶対パスは
+      すべて project_root 配下に解決される (逸脱なし); A は high 2 件と
+      評価者独自の最重要指摘を、オーケストレーター自身が入力を絶対パスに
+      正規化したことに起因する書式アーティファクトだけで黙って捨てる;
+      「abort on violation, never sanitize」は R0 のレビュアー入力パス検証の
+      記述であり評価者出力には及ばない。
+      codex_consulted: true (Codex CLI が使用上限に到達したため
+      `codex exec -p litellm -m vertex-glm-5.2 --sandbox read-only` 経由)。
+      opus_escalation: false.
+  - question_id: develop.once-boundary-review-rework
+    packet_id: null
+    answered_at: "2026-09-14T22:20:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [treat_as_boundary]
+    freeform: null
+    normalized_answer: review 由来の rework もフェーズ境界として扱い、コミット後にターンを終える
+    resolution_note: >-
+      gate: develop.once-boundary-review-rework (gate_id を持たない裁量判断)。
+      SKILL.md の --once 境界表は 4 行で、review 由来の rework を明示していない
+      (review は completed に達さない)。
+      options: A=境界として扱いターンを終える / B=4 行に無いのでそのまま implement へ続行。
+      chosen: A。not chosen: B。
+      key points: 表の row 3「verify 失敗時の rework」は構造的に同一の操作
+      (rework パッチ適用 -> implement を pending に戻す -> コミット) で、
+      違いは findings を出したフェーズだけ; --once は長い無人実行を再開可能な
+      独立コミット単位に分割するために存在する。
+      codex_consulted: true (litellm 経由、vertex-glm-5.2)。opus_escalation: false.
+  - question_id: review.accountability-floor-lift-grouping
+    packet_id: null
+    answered_at: "2026-09-14T22:22:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [lift_but_group_as_same_site]
+    freeform: null
+    normalized_answer: floor は文字どおり lift し、Phase R4 の grouping では評価者の 1048 と同一サイト扱いにして site skip させる
+    resolution_note: >-
+      gate: review.accountability-floor-lift-grouping (gate_id を持たない裁量判断)。
+      security#1 の high サイト (line 1033, line_end 1052) は評価者が line 1048 へ
+      再アンカーし high -> medium へ降格したため |1048-1033|=15 > 5 で same_site が偽になり、
+      floor が文字どおりなら別個の high として lift される。
+      options: A=文字どおり lift し batch auto-fix にレビュアーの処方箋を無人適用させる /
+      B=lift はするが Phase R4 の grouping で 1048 と同一サイト扱いし、処方箋対立で site skip /
+      C=評価者が reviewer 自身の line span 内で扱っているので floor は履行済みとみなし lift しない。
+      chosen: B。not chosen: A, C。
+      key points: floor の目的は開示であって無人適用ではない;
+      A は評価者が実行検証で反証済みの処方箋 (再帰のみでゲート) を無人適用し、
+      pinned allow ケース TS-7 "$(which grep) -r pattern src" を誤 deny に変える回帰を入れる;
+      C は floor が禁じる judgment call そのものを持ち込む。
+      B なら機械的 floor の完全性と検証済みの安全結論が両立し、両エントリが
+      rework planner の記録に残る。
+      codex_consulted: true (litellm 経由、vertex-glm-5.2)。opus_escalation: false.
+  - question_id: review.auto-fix-conflict
+    packet_id: null
+    answered_at: "2026-09-14T22:23:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: [skip_this_site]
+    freeform: null
+    normalized_answer: 対立サイトは skip（グループ全員を abort）
+    resolution_note: >-
+      gate: review.auto-fix-conflict (batch-mode.md Non-packet gates 表)。
+      2 サイトで発火。site line 2158 は b49dbfaab151cdf1 (経路を広げる処方箋) と
+      1b0f63526ad22582 (経路を狭める処方箋) が逆向きで対立。
+      site line 1033/1048 は 02afd5e6762ce196 (再帰のみでゲート) と
+      a4165b97f2492d1e (再帰 + home/root 形状の第 2 の腕) が対立。
+      いずれも機械的に解決不能のため skip。auto-fix の適用は 0 件。
