@@ -113,7 +113,8 @@ workflow:
     result: pass
     failed_items: []
   - id: retrospect
-    status: in_progress
+    status: completed
+    completed_at_commit: e5300e1d65365ae76d8d81e1c91881ffaf296abe
 
 tasks:
   task0001:

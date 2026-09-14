@@ -1,0 +1,91 @@
+feature: destructive-guard-command-name-substitution
+collected_at: "2026-09-15T01:39:57+09:00"
+session_ids:
+  - 01a0a0c9-4357-7086-8539-26a0d0e16adc
+signals:
+  review_critical_high:
+    - stable_id: b49dbfaab151cdf1
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "Operand-first spelling keeps blanket allow on the substitution-headed rm route"
+      resolution: unresolved
+    - stable_id: 1b0f63526ad22582
+      category: comprehensive
+      file: em-workflow/hooks/destructive-guard.py
+      title: "New route infers this is rm/git from flag shape alone, flipping benign substitution-headed commands from allow to deny"
+      resolution: unresolved
+    - stable_id: 02afd5e6762ce196
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "Substitution-headed rm bypass via recursion-without-force"
+      resolution: unresolved
+    - stable_id: 726729f3a090f72a
+      category: comprehensive
+      file: em-workflow/hooks/destructive-guard.py
+      title: "-c ペイロード再走査が、本文内のどこかにクォート付き置換があるだけで丸ごと無効化される（deny から allow への退行）"
+      resolution: unresolved
+    - stable_id: 94dae1210461958d
+      category: comprehensive
+      file: em-workflow/hooks/destructive-guard.py
+      title: "コメントで落ちたマーカーが chunk_subs の順序対応をずらし、誤爆と見逃しの両方を起こす"
+      resolution: fixed
+    - stable_id: 6a2a3405f41169a7
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "先頭の置換トークンを複数読み飛ばすとき最後の 1 つだけを evidence にする"
+      resolution: declined
+    - stable_id: 99415dbe470481e9
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "1 語に連結された複数置換は unreadable 扱いになり allow に倒れる"
+      resolution: declined
+    - stable_id: 77a1fd0c93acce4d
+      category: security
+      file: em-workflow/hooks/destructive-guard.py
+      title: "最終語 evidence が語分割と複数コマンド本文を無視する"
+      resolution: declined
+    - stable_id: ad538d9244bd8417
+      category: comprehensive
+      file: em-workflow/hooks/destructive-guard.py
+      title: "chunk ローカルな索引がペイロード再走査を越えて漏れ、見逃しと誤爆の両方を起こす"
+      resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - perspective: performance
+      reason: >-
+        diff は PreToolUse フックの字句解析器に走査パスを追加する。フックは
+        全 Bash 呼び出しで同期実行されるため、追加された走査の入力長に対する
+        コストが操作感に直結する。
+  declined_findings:
+    - stable_id: 6a2a3405f41169a7
+      category: security
+      resolution_reason: >-
+        実測で HEAD・基準版 a722550 ともに allow。本 feature が持ち込んだ露出ではなく、
+        FR3 が「証拠が無い残りは allow を維持する」と宣言している範囲の見逃し。提案されて
+        いる fail-closed 化は NFR3 が禁じている。loop2 の security 再レビュー
+        （muse-spark）でも再報告されなかった
+    - stable_id: 99415dbe470481e9
+      category: security
+      resolution_reason: >-
+        実測で HEAD・基準版 a722550 ともに allow。FR3 が宣言する対象外範囲の見逃しであり、
+        本 feature の退行ではない。loop2 の security 再レビューでも再報告されなかった
+    - stable_id: 77a1fd0c93acce4d
+      category: security
+      resolution_reason: >-
+        実測で HEAD・基準版 a722550 ともに allow。round 2 の評価者が同一サイト
+        （line 1183）を dismissed_sites に false positive として記録した内容と同じ論点で、
+        FR3/FR7/AC-6/TS-12/TS-33 が allow に固定している設計。誤爆側の論点は
+        a72830f884d1215a に unresolved として残してある
+follow_up_drafts: []
+lessons_candidates:
+  - "round 1 は critical 1 / high 3 を出し review rework を 1 回消費した。いずれも
+     destructive-guard.py の同一ファイル・同一の新規経路に集中しており、字句マーカーの
+     索引付けとコマンド名 evidence の読み取り範囲という 2 点が原因の中心だった"
+  - "round 2 の security 高 3 件は、いずれも基準版 a722550 でも allow である既存の
+     検査範囲外として declined。FR3/FR7 が「証拠が無い残りは allow」と明文化していた
+     ことが、退行と対象外の切り分けを機械的に可能にした"
+  - "medium の unresolved が 4 件残っている（a72830f884d1215a / eb8698f42f58d611 /
+     e6c63091a7bdb3db / b6d9f6437cce801e）。最終語 evidence の読み取り範囲、
+     シングルクォート版の非対称、コマンド語解決の二重化、マーカー生産者の分裂"
