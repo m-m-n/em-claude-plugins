@@ -1,0 +1,75 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - "引用符(rm-recursive): 対象全体を二重引用符で囲んだ $(pwd) 直後に親参照付きパスが続く形は、裸形と同じ deny — 引用符の有無は判定を変えない"
+      - "引用符(rm-recursive): 同じ並び(置換直後に親参照付きパスが続く形)を単一引用符で囲んでも裸形と同じ deny — クォート種別で判定は変わらない"
+      - "引用符(rm-recursive): バッククォート置換を二重引用符で囲み直後に親参照付きパスが続く形も裸形と同じ deny — 両スペル対称性のバッククォート側"
+      - "引用符(rm-recursive): 二重引用符で囲み着地先を `dist` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
+      - "引用符(rm-recursive): 二重引用符で囲み着地先を `node_modules` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
+      - "引用符(rm-recursive): 二重引用符で囲み着地先を `.cache` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
+      - "引用符(rm-recursive): 二重引用符の内側で置換の前に実テキストが空白なしで密着し、直後に親参照付きパスが続く形も deny — 裸形の隣接方向バリエーション(前方密着)"
+      - "引用符(rm-recursive): 二重引用符の内側で置換の後ろに実テキストが空白なしで密着する形(置換が対象の末尾に隣接する裸形の引用符付き双子)も同じ理由で deny — 隣接方向バリエーション(後方密着)"
+    red_confirmed: false
+    red_reason: >
+      このタスクの「テスト」は destructive-guard-cases.json への行追加そのもので、
+      run-destructive-guard.py は各行を字句どおりに実行して観測値と期待値を突き合わせる
+      characterization test。FR2 の手順（観測 → 記録 → スイート実行）に従い、8 形それぞれを
+      destructive-guard.py に個別に通して実測値（全形 deny）を先に確認してから、その観測値を
+      そのまま期待値として書いた。行が存在しない状態では該当ケース自体がスイートに存在しない
+      ため、「間違った期待値を書いて赤を見る」意図的な失敗フェーズは経由していない
+      （経由すると FR2 の「推測で書かない」を破る）。書いた直後にスイートを実行し、8 件全て
+      ok であることを確認済み。
+  AC-2:
+    tests:
+      - "引用符(rm-recursive): 対象全体を二重引用符で囲んだ $(pwd) 直後に親参照付きパスが続く形は、裸形と同じ deny — 引用符の有無は判定を変えない"
+      - "引用符(rm-recursive): 同じ並び(置換直後に親参照付きパスが続く形)を単一引用符で囲んでも裸形と同じ deny — クォート種別で判定は変わらない"
+      - "引用符(rm-recursive): バッククォート置換を二重引用符で囲み直後に親参照付きパスが続く形も裸形と同じ deny — 両スペル対称性のバッククォート側"
+    red_confirmed: false
+    red_reason: "AC-1 と同じ characterization test。二重引用符/単一引用符/バッククォート+二重引用符の3種を1件ずつ含むことを目視でも確認した。"
+  AC-3:
+    tests:
+      - "引用符(rm-recursive): 二重引用符で囲み着地先を `dist` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
+      - "引用符(rm-recursive): 二重引用符で囲み着地先を `node_modules` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
+      - "引用符(rm-recursive): 二重引用符で囲み着地先を `.cache` に変えた形も、置換直後に親参照付きパスが続く裸形と同じ理由で deny — safe ルート名のバリエーション"
+    red_confirmed: false
+    red_reason: "AC-1 と同じ characterization test。dist/node_modules/.cache の3バリエーションを1件ずつ含む。"
+  AC-4:
+    tests:
+      - "引用符(rm-recursive): 二重引用符の内側で置換の前に実テキストが空白なしで密着し、直後に親参照付きパスが続く形も deny — 裸形の隣接方向バリエーション(前方密着)"
+      - "引用符(rm-recursive): 二重引用符の内側で置換の後ろに実テキストが空白なしで密着する形(置換が対象の末尾に隣接する裸形の引用符付き双子)も同じ理由で deny — 隣接方向バリエーション(後方密着)"
+    red_confirmed: false
+    red_reason: "AC-1 と同じ characterization test。置換の前密着(prefix$(pwd)/../tmp/scratch)と後密着(tmp/scratch$(pwd))の両方を含む。"
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      観測可能な結果はテスト関数ではなく diff の形。編集前後でケース数を数え
+      227 -> 235 (追加8件のみ)であることを確認し、`git diff` が追加8行のみで
+      既存行の削除・改変が0であることを確認した。テストとして表現できる性質ではないため
+      tests は空、red は該当しない。
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      ラベル様式（3要素配列・「カテゴリ(判定カテゴリ): 説明」形式・引用符付きでも裸形と
+      同じ判定になることを検証している旨と裸形の性質への言及）は目視でのレビュー観点であり、
+      run-destructive-guard.py はラベル文字列の中身までは検査しない。自動テストの対象では
+      ないため tests は空。
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      検証可能な結果は `python3 em-workflow/hooks/tests/run-destructive-guard.py` の
+      終了コードと出力。実行して exit 0 / "236/236 passed"（235ケース + 無人実行降格の
+      固定チェック1件）で FAIL 行が無いことを確認した。ケース表自体も json.load で
+      パースできることを確認済み（同スクリプトの先頭でパースしている）。
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      `git diff --stat` で em-workflow/hooks/destructive-guard.py と
+      em-workflow/hooks/tests/run-destructive-guard.py のいずれにも差分が無いことを確認した
+      （変更ファイルは destructive-guard-cases.json の1件のみ）。

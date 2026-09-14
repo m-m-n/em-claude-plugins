@@ -1,0 +1,24 @@
+task_id: task0002
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py -> 228/228 passed before any edit
+final_failures: []             # same suite after the version bump -> 228/228 passed
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: true
+    red_reason: "Pre-edit Read of em-workflow/.claude-plugin/plugin.json showed version=0.1.79 (not the patch successor); verified post-edit the field reads 0.1.80."
+  AC-2:
+    tests: []
+    red_confirmed: true
+    red_reason: "Pre-edit Read of .claude-plugin/marketplace.json showed the em-workflow entry version=0.1.79, differing from plugin.json's post-edit value; verified post-edit both read 0.1.80."
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: "This AC constrains the shape of the diff this task itself produces (version-only, valid JSON); no diff existed before implementation so there is no pre-existing red state to observe. Verified post-hoc: `git diff` on both files shows exactly one changed line each (the version value), and `json.load()` succeeds for both files."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "Postcondition on this task's own diff (em-review entry must stay untouched); nothing had changed yet before implementation, so there is no failing state to capture. Verified post-hoc: the em-review plugins[] entry version remains 0.5.10 after the edit."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "check-plugin-invariants.py does not inspect the version field (per task plan Test Notes), so this AC only confirms the bump did not break unrelated structural invariants -- it was never expected to be red. Ran `python3 em-workflow/scripts/check-plugin-invariants.py .` after the edit: exit code 0, all invariant checks PASS."
