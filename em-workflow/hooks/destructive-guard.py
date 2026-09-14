@@ -345,18 +345,24 @@ class Tok(str):
     """A token string that also remembers whether shlex read it from bare,
     unquoted operator syntax (`>`, `2>&1`, …) rather than from a word or
     quoted span; whether the lexing layer removed a command substitution
-    adjacent to this token's own text (D7); and whether this token's own
+    adjacent to this token's own text (D7); whether this token's own
     text is fabricated because the word it stands in for was built solely
     from one or more command substitutions with nothing else in it
-    (`.substitution_only`, task0001 Design Part 1). Every consumer besides
-    split_redirects()/check_rm() treats it as an ordinary str; all three
-    attributes default to False so a plain str used where a Tok is expected
-    fails closed.
+    (`.substitution_only`, task0001 Design Part 1); and, only for a
+    `.substitution_only` token, the raw text of the single substitution it
+    came from (`.raw_substitution_body`, task0002 FR11) — set after
+    construction by _strip_unresolved_marks() via its occurrence-order
+    mapping (see that function's docstring), never via this constructor.
+    Every consumer besides split_redirects()/check_rm()/
+    read_command_name_evidence() treats it as an ordinary str; all four
+    attributes default to a closed-fail value (False / None) so a plain str
+    used where a Tok is expected fails closed.
     """
 
     is_operator = False
     unresolved = False
     substitution_only = False
+    raw_substitution_body = None
 
     def __new__(cls, value, is_operator=False, unresolved=False, substitution_only=False):
         obj = str.__new__(cls, value)
@@ -531,6 +537,18 @@ def extract_shell_payload(toks, lexed, quoted_toks=None):
     FR7) the payload argument position is a substitution enclosed in
     quotes.
 
+    Out-of-scope declaration (FR7, task0002; stated identically in the case
+    labels for the two forms it covers and here — a divergence in scope
+    between the two is a defect): this hook's static analysis deliberately
+    does not decide two forms, both left `allow` by design rather than by
+    oversight. First, the form returning None here — a substitution enclosed
+    in quotes at the payload position — because deciding it would require
+    evaluating the substitution's own expanded output as the script body,
+    and this module never evaluates anything (NFR1). Second, unrelated to
+    this function — read_command_name_evidence()'s "unreadable" result — a
+    substitution-headed statement whose command name cannot be read
+    statically out of the substitution's own text.
+
     Only lexed (LEXED True) segments are examined: token provenance is what
     tells split_redirects() a real `<<<` apart from a quoted word that merely
     looks like one, and head()/split_redirects() both expect that provenance
@@ -571,9 +589,25 @@ def extract_shell_payload(toks, lexed, quoted_toks=None):
       The substitution's own expanded output is what a real shell would
       actually run there, but resolving that requires evaluating the
       substitution, which this module never does (NFR1) — out of scope, by
-      design (FR7): a form whose substitution's expanded output itself
-      becomes the script body is outside this hook's static analysis. This
+      design (FR7, same declared range as read_command_name_evidence()'s
+      "unreadable": a form whose substitution's expanded output itself
+      becomes the script body is outside this hook's static analysis). This
       function returns None for that position rather than guess at it.
+
+    Both bullets above apply ONLY when the payload-position word is a
+    substitution IN ITS ENTIRETY (`.substitution_only`) — checked first, on
+    both the `-c` side and the here-string side alike (task0002 FR4/FR5/
+    FR12: the two are now symmetric). Anything else at that position —
+    including a word that merely CONTAINS a quoted substitution somewhere
+    inside it, mixed with other text — always falls to the plain, always-
+    re-scan return below, regardless of quoting. Before task0002 the `-c`
+    side tested containment (`QUOTED_MARK` present ANYWHERE in the word)
+    without checking whole-word-ness first, which silently cancelled the
+    rescan of an ordinary mixed body — `bash -c 'cd "$(dirname /a/b)" &&
+    rm -rf ~'` interpolates a directory name next to a destructive command,
+    and the quoted substitution nested inside that word was enough to stop
+    the rescan of the whole argument. The here-string side already tested
+    whole-word-ness first; the `-c` side now matches it.
 
     Only stage 3 (this function and its helpers) ever reads quote
     information; the marker structure (UNRESOLVED_MARK / SUBSTITUTION_STANDIN
@@ -622,6 +656,15 @@ def extract_shell_payload(toks, lexed, quoted_toks=None):
         if "-c" in args:
             idx = args.index("-c")
             if idx + 1 < len(args):
+                # task0002 FR4/FR5: symmetric with the here-string branch
+                # below — whole-word-ness is checked FIRST. A word that is
+                # not a substitution in its entirety always falls straight
+                # through to the plain return, regardless of quoting; only
+                # a whole-word substitution's OWN quoting decides between
+                # "this is the payload boundary" (quoted) and "promote to
+                # the next word" (unquoted).
+                if not getattr(args[idx + 1], "substitution_only", False):
+                    return marked_args[idx + 1]
                 if idx + 1 < len(quoted_args) and QUOTED_MARK in quoted_args[idx + 1]:
                     return None
                 return marked_args[_payload_index(args, idx + 1)]
@@ -729,7 +772,7 @@ def _mark_quoted_substitutions(chunk):
     return SUBSTITUTION.sub(replace, chunk)
 
 
-def _strip_unresolved_marks(toks):
+def _strip_unresolved_marks(toks, chunk_subs=None, cursor=None):
     """Peel UNRESOLVED_MARK back out of TOKS (task0001 Design Part 1).
 
     A token made ENTIRELY of marker characters — one command substitution
@@ -742,21 +785,57 @@ def _strip_unresolved_marks(toks):
     target's value was never fully present — unchanged from before this
     task. Tokens without the marker pass through untouched — a command with
     no substitution in it is unaffected, byte for byte (AC-6).
+
+    CHUNK_SUBS and CURSOR (task0002 FR11, R1/D5) let this pass additionally
+    recover, for a token that collapses entirely into marker residue, the
+    RAW text of the substitution it came from — attached as
+    `.raw_substitution_body` on the resulting `.substitution_only` Tok, for
+    read_command_name_evidence() to read later. CHUNK_SUBS is the ordered
+    list of every substitution match's body text in the CURRENT chunk
+    (statements()'s own enumeration via SUBSTITUTION.finditer(chunk),
+    reused rather than re-scanned); CURSOR is a one-element list shared
+    across every segment of that SAME chunk, so the Nth marker character
+    encountered — in left-to-right token order across all of a chunk's
+    segments, the same order statements() yields them in — is matched to
+    the Nth entry of CHUNK_SUBS. This holds regardless of where statement
+    boundaries fall: _mark_substitutions() replaces each match with exactly
+    one marker character at the match's own position, and neither that
+    substitution pass nor lexing ever reorders characters, so the order
+    correspondence is exact. A token whose marker count is not exactly
+    one — several substitutions concatenated into the same whole word, so
+    there is no single raw occurrence to attribute the token to — gets no
+    evidence (`.raw_substitution_body` stays None, the constructor default):
+    deliberately left unreadable rather than guessing which body applies
+    (task0002 Design "Command-name evidence", "the token position cannot be
+    mapped back to a raw occurrence"). The cursor still advances by the
+    full marker count either way, so later tokens in the same chunk keep
+    reading the correct entries of CHUNK_SUBS. Both arguments default to
+    None, which reproduces this function's pre-FR11 behaviour exactly (no
+    attribute set) — the extract_shell_payload() comparison call elsewhere
+    in this file passes neither, since it never needs this evidence.
     """
     out = []
     for t in toks:
         if UNRESOLVED_MARK not in t:
             out.append(t)
             continue
+        marker_count = t.count(UNRESOLVED_MARK)
+        raw_body = None
+        if chunk_subs is not None and cursor is not None:
+            start = cursor[0]
+            end = start + marker_count
+            cursor[0] = end
+            if marker_count == 1 and end <= len(chunk_subs):
+                raw_body = chunk_subs[start]
         cleaned = t.replace(UNRESOLVED_MARK, "")
         if cleaned == "":
-            out.append(
-                Tok(
-                    SUBSTITUTION_STANDIN,
-                    getattr(t, "is_operator", False),
-                    substitution_only=True,
-                )
+            new_tok = Tok(
+                SUBSTITUTION_STANDIN,
+                getattr(t, "is_operator", False),
+                substitution_only=True,
             )
+            new_tok.raw_substitution_body = raw_body
+            out.append(new_tok)
             continue
         out.append(Tok(cleaned, getattr(t, "is_operator", False), unresolved=True))
     return out
@@ -804,6 +883,16 @@ def statements(command):
     underlying text on the same non-marker characters); a caller-side
     length check in extract_shell_payload() itself covers the case where
     they do not.
+
+    task0002 FR11: CHUNK_SUBS below is the ordered list of every
+    substitution match's raw body text in this CHUNK — the same
+    finditer() pass that already feeds PENDING, its results kept instead of
+    discarded. CURSOR is shared across every segment of this chunk (reset
+    per chunk, at the top of this loop body) so _strip_unresolved_marks()
+    can map each `.substitution_only` token back to the one raw body it
+    came from, in occurrence order (see that function's docstring). Neither
+    is a new read of the raw command string beyond what this loop already
+    performs; both are string processing over CHUNK alone.
     """
     pending = [command]
     budget = [MAX_SHELL_PAYLOAD_EXPANSIONS]
@@ -813,15 +902,16 @@ def statements(command):
         if bodies and SHELL_SINK.search(chunk):
             # `bash <<EOF` does execute its body, so put it back in the queue.
             pending.extend(b for b in bodies if b.strip())
-        for m in SUBSTITUTION.finditer(chunk):
-            body = m.group(1) or m.group(2) or ""
+        chunk_subs = [m.group(1) or m.group(2) or "" for m in SUBSTITUTION.finditer(chunk)]
+        for body in chunk_subs:
             if body.strip():
                 pending.append(body)
         quoted_segments = lex_segments(_mark_quoted_substitutions(chunk))
+        cursor = [0]
         for seg_index, (marked, lexed) in enumerate(
             lex_segments(_mark_substitutions(chunk))
         ):
-            toks = _strip_unresolved_marks(marked)
+            toks = _strip_unresolved_marks(marked, chunk_subs, cursor)
             if toks:
                 yield " ".join(toks), toks, lexed
                 if budget[0] > 0:
@@ -851,20 +941,26 @@ def _skip_to_command_word(toks):
     token (an argument built entirely from a command substitution) was
     skipped along the way (task0001 FR1/FR2/FR3, AS-2).
 
-    Returns (index, saw_substitution). INDEX is where the scan stops: either
-    a real candidate token, or len(TOKS) when none remains — head() turns
-    this into its own (word, args) return unchanged. SAW_SUBSTITUTION feeds
-    the "statically unknown command word" classification in main(); head()
-    itself ignores it, so its own return shape and behaviour are unchanged
-    by this refactor.
+    Returns (index, saw_substitution, last_substitution_tok). INDEX is where
+    the scan stops: either a real candidate token, or len(TOKS) when none
+    remains — head() turns this into its own (word, args) return unchanged.
+    SAW_SUBSTITUTION and LAST_SUBSTITUTION_TOK feed the "statically unknown
+    command word" classification in main() (task0002 FR11:
+    LAST_SUBSTITUTION_TOK is the `.substitution_only` token closest to the
+    stop index, whose `.raw_substitution_body` route_substitution_headed_
+    statement() reads as evidence; None when no such token was skipped).
+    head() itself ignores both, so its own return shape and behaviour are
+    unchanged by this refactor.
     """
     i = 0
     n = len(toks)
     saw_substitution = False
+    last_substitution_tok = None
     while i < n:
         t = toks[i]
         if getattr(t, "substitution_only", False):
             saw_substitution = True
+            last_substitution_tok = t
             i += 1
             continue
         if re.match(r"^[A-Za-z_]\w*=", t):  # VAR=value prefix
@@ -891,7 +987,7 @@ def _skip_to_command_word(toks):
             i += 1  # step past the `--`
             continue
         break
-    return i, saw_substitution
+    return i, saw_substitution, last_substitution_tok
 
 
 def head(toks):
@@ -900,10 +996,11 @@ def head(toks):
     Mirrored in failed-run-cleanup-guard.py's own head() — keep both in sync.
     That mirror does not know about `Tok.substitution_only`; the skip added
     here for it, AND the "statically unknown command word" classification
-    and its two routes into check_rm()/check_git() built on top of it in
-    main() (task0001 FR1/FR2), are local to this file and do not change the
-    shape of this function's return value, which stays the 2-tuple both
-    files already agree on.
+    and its route into route_substitution_headed_statement() built on top
+    of it in main() (task0001 FR1/FR2/FR3; task0002 FR11/FR13 rebuilt that
+    routing around read command-name evidence rather than remainder shape),
+    are local to this file and do not change the shape of this function's
+    return value, which stays the 2-tuple both files already agree on.
 
     A token flagged `.substitution_only` (an argument built entirely from a
     command substitution, task0001 Design Part 1) sits where a command name
@@ -911,7 +1008,7 @@ def head(toks):
     can expand to nothing. Skipping it here lets a real command word that
     follows it still be found and checked.
     """
-    i, _ = _skip_to_command_word(toks)
+    i, _, _ = _skip_to_command_word(toks)
     if i >= len(toks):
         return None, []
     return os.path.basename(toks[i]), toks[i + 1 :]
@@ -987,12 +1084,17 @@ def git_subcommand(args):
     inside its classify()) — keep both in sync. That mirror does not know
     about `Tok.substitution_only`; the skip added here for it is local to
     this file and does not change the shape of the return value, which
-    stays the 2-tuple both files already agree on. The same holds for
-    task0001's "git route" (FR2, main()): offering an ARGS list that starts
-    beyond a statically-unknown command word — rather than always starting
-    right after a literal `git` token — is a caller-side change in main(),
-    not a change to this function's own signature or behaviour, and is
-    equally local to this file.
+    stays the 2-tuple both files already agree on. The same holds for the
+    git route (FR2, main(), route_substitution_headed_statement()): offering
+    an ARGS list that starts beyond a statically-unknown command word —
+    rather than always starting right after a literal `git` token — is a
+    caller-side change in main(), not a change to this function's own
+    signature or behaviour. task0001 first built that route on the
+    remainder's own shape; task0002 rebuilt it around statically read
+    command-name evidence (read_command_name_evidence(),
+    route_substitution_headed_statement()) and folded the dispatch into one
+    function. Both the routing logic and the evidence reader it calls are
+    equally local to this file — the mirror carries neither.
 
     A token flagged `.substitution_only` sitting where a global option or
     the subcommand itself would be is skipped, the same reasoning head()
@@ -1030,27 +1132,92 @@ def short_flags(args):
     return out
 
 
-def _rm_route_candidate(remainder):
-    """Whether REMAINDER — the tokens from a statically-unknown command
-    word's position onward (task0001 FR1, AS-3) — carries a recursion flag
-    (`-r`/`-R`/`--recursive`) AND a force flag (`-f`/`--force`) AND at least
-    one non-flag operand: the minimum shape that justifies offering it to
-    check_rm() at all. Short and long spellings count, including both
-    flags bundled into one token (`-rf`). A recursion-only remainder
-    (`$(which grep) -r pattern src`) or an operand-less one stays outside
-    this gate and keeps its blanket allow — narrower than check_rm()'s own
-    recursion-only threshold, deliberately, since this gate is what stands
-    between an ordinary substitution-headed command and a false deny.
+def read_command_name_evidence(raw_body):
+    """Read a command name out of RAW_BODY, or return None ("unreadable")
+    when it cannot be read (task0002 FR11).
+
+    RAW_BODY is the raw text of the substitution that sat at a statement's
+    command-word position — recovered by _strip_unresolved_marks()'s
+    occurrence-order mapping (see that function's docstring) and carried on
+    the skipped token as `.raw_substitution_body` — or None when that
+    mapping could not attribute a single raw occurrence to the token (no
+    substitution reachable, several concatenated into one whole word, or
+    nesting left the raw extent indeterminable; see that docstring for each
+    case).
+
+    String processing only: no substitution is evaluated, no subprocess is
+    launched, no path is resolved or stat-ed, nothing is read from the
+    filesystem (R1, NFR1). Evidence is never taken from any word of the
+    body other than the last one — a body in which an rm/git word appears
+    as some other command's own argument must not produce a route entry.
+
+    Reading, in order:
+    1. RAW_BODY is None, or empty/whitespace-only once stripped: unreadable.
+    2. Split on whitespace; take the LAST word.
+    3. That word begins with `-`: unreadable — a real shell could never use
+       an option spelling as a command name.
+    4. Otherwise, the basename of that last word (`os.path.basename`) — an
+       absolute or relative path (`/usr/bin/rm`) reads the same as the bare
+       name, matching how a real shell would resolve it. A basename that
+       comes out empty (the word was a bare trailing path separator, naming
+       no file) is unreadable too.
     """
-    flags = short_flags(remainder)
-    recursive = "r" in flags or "R" in flags or has(remainder, "--recursive")
-    force = "f" in flags or has(remainder, "--force")
-    if not (recursive and force):
-        return False
-    return any(
-        not a.startswith("-") and not getattr(a, "is_operator", False)
-        for a in remainder
-    )
+    if raw_body is None:
+        return None
+    body = raw_body.strip()
+    if not body:
+        return None
+    last = body.split()[-1]
+    if last.startswith("-"):
+        return None
+    name = os.path.basename(last)
+    return name or None
+
+
+def route_substitution_headed_statement(remainder, raw_body, segment):
+    """The single entry point for a statement whose command-word position
+    held a substitution token that _skip_to_command_word() skipped
+    (task0002 FR1/FR2/FR3/FR11/FR13 — supersedes task0001's shape-based
+    pre-gates, both removed: the dash-leading pre-gate and the recursion-
+    AND-force-AND-operand pre-screen _rm_route_candidate() used to apply).
+
+    REMAINDER is the statement's own tokens from that skip point onward —
+    exactly what would be `args` for the plain spelling of the read command
+    name (task0001 FR1/FR2, AS-3). RAW_BODY is the raw text of the
+    substitution that sat there (see read_command_name_evidence()). SEGMENT
+    is passed through to check_git() unchanged, matching its existing
+    signature.
+
+    Returns the rm shape matcher's own list of (tier, rule, target,
+    message) decisions for main() to pool (D6) when evidence reads as
+    "rm"; calls check_git() (which decide()s and exits directly, or returns
+    None) when evidence reads as "git"; returns [] — no route entered, no
+    decision — when evidence reads as anything else, or is unreadable (R4:
+    falls open, never `ask`; a fallback `ask` would demote to `deny`
+    unattended and halt normal operation, NFR3). Two forms are therefore
+    left `allow` by design and declared as this hook's out-of-scope range
+    rather than treated as an oversight (FR7): a substitution-headed form
+    whose command name cannot be read this way, and (unrelated to this
+    function — see extract_shell_payload()) a form whose substitution
+    *result* becomes the script body.
+
+    R2/R3: the command name read here is the ONLY entry condition — the
+    remaining tokens' flag shape is never consulted to decide whether to
+    enter a route. Once entered, REMAINDER is handed to the existing shape
+    matcher completely unfiltered; no route-side floor is added, so the
+    matcher's own threshold and its own safe-route exceptions decide
+    exactly as they do for the plain spelling of the same command (R6,
+    NFR7) — this is what makes the substitution-headed spelling never
+    stricter than the plain one hold by construction rather than by
+    inspection. R5: no new tier, no new reason id — whatever the matcher
+    returns is what is returned or decided.
+    """
+    name = read_command_name_evidence(raw_body)
+    if name == "rm":
+        return check_rm(remainder)
+    if name == "git":
+        check_git(remainder, segment)
+    return []
 
 
 def check_git(args, segment):
@@ -2127,37 +2294,32 @@ def main():
         # 文も対象を切り詰める。word が無くても redirects だけで判定する。
         check_self_modification(word or "", args, redirects, segment, lexed)
 
-        # task0001 FR1/FR2/FR3 (AS-2): a statement whose command word is a
-        # `.substitution_only` token — skipped by head() above to reach
-        # WORD/ARGS — has a command name that is statically unknown. Two
-        # independent routes offer the remaining tokens (from that skip
-        # point on) to the EXISTING rm/git shape matchers, reusing their own
-        # verdict tier and reason id verbatim — no new stage, no new reason
-        # id, no verdict produced by the classification itself:
-        #   - rm route (FR1): only when the immediate next token cannot be a
-        #     real command name (dash-leading — a real shell could never use
-        #     it as one) AND the remainder itself carries a recursion flag,
-        #     a force flag, and at least one non-flag operand (AS-3). This
-        #     double gate is why `$(which grep) -r pattern src` (recursion
-        #     only) and `$(which ls) -la` (neither) stay allow.
-        #   - git route (FR2): offered unconditionally whenever a
-        #     substitution-only token was skipped, because git subcommands
-        #     are bare words and would never satisfy the rm route's dash
-        #     test above — check_git() is self-gating on its own subcommand
-        #     recognition; a remainder it does not recognize (`echo safe`,
-        #     `status`) yields no verdict, same as calling it on any other
-        #     unrecognized `git` invocation.
-        # WORD/ARGS themselves are untouched by this classification — a
-        # statement whose command word was found directly (no substitution
-        # skip at all) never reaches either route, leaving the WORD == "git"
-        # / "rm" dispatch below, and every substitution-free command's
-        # verdict, unchanged (AC-12).
-        skip_index, saw_substitution = _skip_to_command_word(words)
+        # task0001 FR1/FR2/FR3 (AS-2), rebuilt by task0002 FR1/FR2/FR3/FR11/
+        # FR13: a statement whose command word is a `.substitution_only`
+        # token — skipped by head() above to reach WORD/ARGS — has a
+        # command name that is statically unknown. WORD/ARGS themselves are
+        # untouched by this classification — a statement whose command word
+        # was found directly (no substitution skip at all) never reaches
+        # route_substitution_headed_statement(), leaving the WORD == "git" /
+        # "rm" dispatch below, and every substitution-free command's
+        # verdict, unchanged (AC-12). The single entry point below reads a
+        # command name statically out of the skipped substitution's own raw
+        # text and hands the remaining tokens to the EXISTING rm/git shape
+        # matchers on that evidence alone — never on the remainder's flag
+        # shape (D2, superseding task0001's dash pre-gate and recursion-AND-
+        # force-AND-operand pre-screen, both removed) — reusing the
+        # matchers' own verdict tier and reason id verbatim (R5: no new
+        # stage, no new reason id, no verdict produced by the
+        # classification itself).
+        skip_index, saw_substitution, substitution_tok = _skip_to_command_word(words)
         if saw_substitution:
-            remainder = words[skip_index:]
-            if remainder and remainder[0].startswith("-") and _rm_route_candidate(remainder):
-                rm_decisions.extend(check_rm(remainder))
-            check_git(remainder, segment)
+            rm_decisions.extend(
+                route_substitution_headed_statement(
+                    words[skip_index:],
+                    getattr(substitution_tok, "raw_substitution_body", None),
+                    segment,
+                )
+            )
 
         # The deferral is judged on the statement's REAL head — leading
         # grouping tokens (subshell `(`, brace group `{`, a function
