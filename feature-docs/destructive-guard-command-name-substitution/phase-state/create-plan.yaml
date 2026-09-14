@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-command-name-substitution
 phase: create-plan
-status: completed
-generation: 1
-base_revision: d97d63b903ab5f10c7e6a011f21535918018a9f6
-last_input_digest: sha256:8a29dfcd22469c626cb304bdb65917ac1665ceb7a4f6564671c739c973c96d4c
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: 45c8112f0925049c83da85779b2b520818092e41
+last_input_digest: sha256:79e8f09b5ce5e7777d17c21b1ecc95215b4a30a1ca701328f0d95937f84ec2f3
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
@@ -13,6 +13,10 @@ worker_runs:
     status: completed
     input_digest: sha256:8a29dfcd22469c626cb304bdb65917ac1665ceb7a4f6564671c739c973c96d4c
     output_digest: sha256:143be745389654105ea735af1e67719f705ef2091f40d5826a2bde39ef3e21b5
+  - request_id: create-plan-run-0002
+    status: dispatched
+    input_digest: sha256:79e8f09b5ce5e7777d17c21b1ecc95215b4a30a1ca701328f0d95937f84ec2f3
+    output_digest: null
 artifacts:
   - path: feature-docs/destructive-guard-command-name-substitution/IMPLEMENTATION.md
     sha256: sha256:144eb5424aae4bd58d025a8c1b2942ce044e0cd270686cbfe9c3521f3d35bde5
