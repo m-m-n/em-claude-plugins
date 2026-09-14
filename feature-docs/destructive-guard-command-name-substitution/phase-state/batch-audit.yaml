@@ -48,3 +48,33 @@ records:
       (designer-contract.md の kind x token 表、kind: none かつトークン不在 -> create/create)。
       chosen: design_skipped. not chosen: design_required.
       codex_consulted: true. opus_escalation: false.
+  - question_id: create-plan.task-decomposition
+    packet_id: null
+    answered_at: "2026-09-14T21:35:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [single_task_fr1_fr10]
+    freeform: null
+    normalized_answer: FR1-FR10 を task0001 の 1 タスクにまとめる
+    resolution_note: >-
+      gate: create-plan.task-decomposition (gate_id を持たない裁量判断。
+      ユーザー指示「不明点は Codex に相談し、比較的良い方を採用」による相談)。
+      options: A=FR1-FR10 の単一タスク / B=関心ごとに 2 分割
+      (コマンド語位置 vs ペイロード位置、同一 2 ファイルを共有) /
+      C=その他 (version bump を独立タスク化する等)。
+      chosen: A。not chosen: B, C。
+      planner の初回提案は C 相当 (task0001=FR1-FR9, task0002=FR10) だった。
+      key points: B は destructive-guard.py と destructive-guard-cases.json の
+      両方で必ず衝突し、ハンクもケース追記位置も近接するため自動マージに頼れない;
+      敗者側の再実装コストが関心分割の可読性メリットを上回る;
+      2 つの字句変更は独立 (FR4 が head() / git_subcommand() への波及を禁じている)
+      ため分割する正当性が無い; FR10 は 2 行のパッチで、独立タスク化は
+      worktree/merge のオーバーヘッドに見合わず、rework で別タスクが追加された際の
+      二重 bump 危険を生み、さらに task0001 のブランチ単体では
+      .claude/rules/core-plugin-version-bump.md の「同じ変更の中で上げる」に
+      タスクコミット単位で違反する。
+      caveats adopted: 単一タスク内でコミットを関心ごとに 3 分割する;
+      ケース番号とラベル文言・docstring 文言は 1 人が 1 パスで書いて一致させる。
+      codex_consulted: true (Codex CLI が使用上限に到達したため
+      `codex exec -p litellm -m muse-spark --sandbox read-only` 経由で実施、
+      muse-spark は Standard tier)。opus_escalation: false.
