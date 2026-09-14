@@ -83,6 +83,22 @@ PUNCTUATION = "();<>|&\n"
 # ordinary word content without splitting or merging anything.
 UNRESOLVED_MARK = "\x00"
 
+# UNRESOLVED_MARK is followed by the decimal index of the CHUNK_SUBS entry
+# the marker was produced from, then this terminator — e.g. `\x00 12 \x02`
+# (spaces added only for legibility) for the 13th substitution in the
+# current chunk. All three characters are, like UNRESOLVED_MARK itself, not
+# shlex whitespace, not a PUNCTUATION operator, and not a quote, so the
+# whole marker survives tokenization as ordinary word content. Carrying the
+# index INSIDE the marker (destructive-guard-command-name-substitution) lets
+# _strip_unresolved_marks() recover which CHUNK_SUBS entry produced a given
+# surviving token by direct lookup, rather than by counting markers
+# left-to-right across the token stream — a count that a lexer-dropped
+# comment (`# $(cmd)`, consumed whole by shlex's `comments=True` and never
+# reaching the token stream) silently desynchronizes from CHUNK_SUBS's own
+# enumeration.
+_MARK_TERMINATOR = "\x02"
+_MARK_RE = re.compile(re.escape(UNRESOLVED_MARK) + r"(\d+)" + re.escape(_MARK_TERMINATOR))
+
 # A second, distinct marker character used ONLY by extract_shell_payload()'s
 # own quote-detection pass (_mark_quoted_substitutions(), task0001 FR4) — it
 # never reaches head()/git_subcommand()/check_rm() or any other consumer of
@@ -739,8 +755,25 @@ def _mark_substitutions(chunk):
     unquoted form, because quoting is resolved by the lexer before this
     function's output is ever tokenized — no special case is needed for it
     here.
+
+    Each match is replaced with a marker carrying that match's own ordinal
+    position among SUBSTITUTION.finditer(chunk) — the same enumeration
+    order statements() itself uses to build CHUNK_SUBS from an identical
+    finditer() pass over the same chunk — encoded as digits between
+    UNRESOLVED_MARK and _MARK_TERMINATOR (destructive-guard-command-name-
+    substitution). This lets _strip_unresolved_marks() recover the right
+    CHUNK_SUBS entry for a surviving marker by direct index lookup even
+    when some other match in the same chunk never reaches the token stream
+    at all (dropped whole by a lexer-level comment).
     """
-    return SUBSTITUTION.sub(UNRESOLVED_MARK, chunk)
+    counter = [0]
+
+    def replace(_match):
+        index = counter[0]
+        counter[0] += 1
+        return f"{UNRESOLVED_MARK}{index}{_MARK_TERMINATOR}"
+
+    return SUBSTITUTION.sub(replace, chunk)
 
 
 def _mark_quoted_substitutions(chunk):
@@ -772,7 +805,7 @@ def _mark_quoted_substitutions(chunk):
     return SUBSTITUTION.sub(replace, chunk)
 
 
-def _strip_unresolved_marks(toks, chunk_subs=None, cursor=None):
+def _strip_unresolved_marks(toks, chunk_subs=None):
     """Peel UNRESOLVED_MARK back out of TOKS (task0001 Design Part 1).
 
     A token made ENTIRELY of marker characters — one command substitution
@@ -786,48 +819,59 @@ def _strip_unresolved_marks(toks, chunk_subs=None, cursor=None):
     task. Tokens without the marker pass through untouched — a command with
     no substitution in it is unaffected, byte for byte (AC-6).
 
-    CHUNK_SUBS and CURSOR (task0002 FR11, R1/D5) let this pass additionally
+    CHUNK_SUBS (task0002 FR11, R1/D5; positional lookup added by
+    destructive-guard-command-name-substitution) lets this pass additionally
     recover, for a token that collapses entirely into marker residue, the
     RAW text of the substitution it came from — attached as
     `.raw_substitution_body` on the resulting `.substitution_only` Tok, for
     read_command_name_evidence() to read later. CHUNK_SUBS is the ordered
     list of every substitution match's body text in the CURRENT chunk
-    (statements()'s own enumeration via SUBSTITUTION.finditer(chunk),
-    reused rather than re-scanned); CURSOR is a one-element list shared
-    across every segment of that SAME chunk, so the Nth marker character
-    encountered — in left-to-right token order across all of a chunk's
-    segments, the same order statements() yields them in — is matched to
-    the Nth entry of CHUNK_SUBS. This holds regardless of where statement
-    boundaries fall: _mark_substitutions() replaces each match with exactly
-    one marker character at the match's own position, and neither that
-    substitution pass nor lexing ever reorders characters, so the order
-    correspondence is exact. A token whose marker count is not exactly
-    one — several substitutions concatenated into the same whole word, so
-    there is no single raw occurrence to attribute the token to — gets no
-    evidence (`.raw_substitution_body` stays None, the constructor default):
+    (statements()'s own enumeration via SUBSTITUTION.finditer(chunk), reused
+    rather than re-scanned). Each surviving marker already carries, encoded
+    in its own text, the index into CHUNK_SUBS it was produced from (see
+    _mark_substitutions()); this pass reads that index back out and looks
+    CHUNK_SUBS up directly, rather than counting markers left-to-right
+    across the token stream. A left-to-right ordinal count would desync the
+    moment any match in the chunk never reaches the token stream at all —
+    which happens when shlex's own `comments=True` consumes a `#` comment,
+    and any `$(...)`/`` `...` `` written inside it, whole, before lexing
+    ever produces a marker token for it; CHUNK_SUBS still counts that match,
+    but no token carries its marker, so a plain left-to-right count silently
+    attributes every later marker to the WRONG entry. Reading the index out
+    of the marker itself is immune to that: a dropped match's marker is
+    dropped along with it, and every surviving marker still names its own,
+    correct CHUNK_SUBS entry regardless of what else in the chunk was
+    dropped. A token whose marker count is not exactly one — several
+    substitutions concatenated into the same whole word, so there is no
+    single raw occurrence to attribute the token to — gets no evidence
+    (`.raw_substitution_body` stays None, the constructor default):
     deliberately left unreadable rather than guessing which body applies
     (task0002 Design "Command-name evidence", "the token position cannot be
-    mapped back to a raw occurrence"). The cursor still advances by the
-    full marker count either way, so later tokens in the same chunk keep
-    reading the correct entries of CHUNK_SUBS. Both arguments default to
-    None, which reproduces this function's pre-FR11 behaviour exactly (no
-    attribute set) — the extract_shell_payload() comparison call elsewhere
-    in this file passes neither, since it never needs this evidence.
+    mapped back to a raw occurrence"). The same applies, as a defence-in-
+    depth backstop, when a marker's encoded index is out of range for
+    CHUNK_SUBS or otherwise fails to parse: rather than guess, or raise,
+    the token is left unreadable and read_command_name_evidence() falls
+    back to `allow`. CHUNK_SUBS defaults to None, which reproduces this
+    function's pre-FR11 behaviour exactly (no attribute set) — the
+    extract_shell_payload() comparison call elsewhere in this file omits
+    it, since it never needs this evidence.
     """
     out = []
     for t in toks:
         if UNRESOLVED_MARK not in t:
             out.append(t)
             continue
-        marker_count = t.count(UNRESOLVED_MARK)
+        matches = list(_MARK_RE.finditer(t))
+        marker_count = len(matches)
         raw_body = None
-        if chunk_subs is not None and cursor is not None:
-            start = cursor[0]
-            end = start + marker_count
-            cursor[0] = end
-            if marker_count == 1 and end <= len(chunk_subs):
-                raw_body = chunk_subs[start]
-        cleaned = t.replace(UNRESOLVED_MARK, "")
+        if chunk_subs is not None and marker_count == 1:
+            try:
+                index = int(matches[0].group(1))
+            except ValueError:
+                index = None
+            if index is not None and 0 <= index < len(chunk_subs):
+                raw_body = chunk_subs[index]
+        cleaned = _MARK_RE.sub("", t)
         if cleaned == "":
             new_tok = Tok(
                 SUBSTITUTION_STANDIN,
@@ -887,12 +931,12 @@ def statements(command):
     task0002 FR11: CHUNK_SUBS below is the ordered list of every
     substitution match's raw body text in this CHUNK — the same
     finditer() pass that already feeds PENDING, its results kept instead of
-    discarded. CURSOR is shared across every segment of this chunk (reset
-    per chunk, at the top of this loop body) so _strip_unresolved_marks()
-    can map each `.substitution_only` token back to the one raw body it
-    came from, in occurrence order (see that function's docstring). Neither
-    is a new read of the raw command string beyond what this loop already
-    performs; both are string processing over CHUNK alone.
+    discarded. _strip_unresolved_marks() maps each `.substitution_only`
+    token back to the one raw body it came from by the index encoded into
+    its own surviving marker (see that function's and _mark_substitutions()'s
+    docstrings), not by a shared position counter — so this is not a new
+    read of the raw command string beyond what this loop already performs,
+    just string processing over CHUNK alone.
     """
     pending = [command]
     budget = [MAX_SHELL_PAYLOAD_EXPANSIONS]
@@ -907,11 +951,10 @@ def statements(command):
             if body.strip():
                 pending.append(body)
         quoted_segments = lex_segments(_mark_quoted_substitutions(chunk))
-        cursor = [0]
         for seg_index, (marked, lexed) in enumerate(
             lex_segments(_mark_substitutions(chunk))
         ):
-            toks = _strip_unresolved_marks(marked, chunk_subs, cursor)
+            toks = _strip_unresolved_marks(marked, chunk_subs)
             if toks:
                 yield " ".join(toks), toks, lexed
                 if budget[0] > 0:
