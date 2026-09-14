@@ -1,0 +1,29 @@
+schema_version: 1
+feature: destructive-guard-quoted-substitution-fail-open
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: fba3d7ed694c3a7ea6591f8abffa8a3623cdcd1c
+last_input_digest: sha256:87f7e63b2e4888cdac02ff3a2262f5529273c91baed0400cb0d7834db48d3fd7
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:87f7e63b2e4888cdac02ff3a2262f5529273c91baed0400cb0d7834db48d3fd7
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:19367268053f26f6fdbf623a036847755388c1c6765896386e2abb78d3859f1a
+    resolved_at_generation: 1
+    paths:
+      - em-workflow/references/templates/design-tokens.yaml
+    digests:
+      em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    truncated: false
+last_error: null
