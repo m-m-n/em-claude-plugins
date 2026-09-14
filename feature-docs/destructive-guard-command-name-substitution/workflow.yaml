@@ -105,7 +105,7 @@ workflow:
     completed_at_commit: 89b37384953d3ccdd02fbe1760392efba5ef51c1
     base_commit: a722550dc4b2c3c5b205f6fe13123f70d603902f
   - id: review
-    status: in_progress
+    status: pending
   - id: verify
     status: pending
     result: null
@@ -131,8 +131,8 @@ tasks:
     branch: em-workflow/destructive-guard-command-name-substitution/task0001
 
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary:
@@ -142,9 +142,14 @@ review:
           全 Bash 呼び出しで同期実行されるため、追加された走査の入力長に対する
           コストが操作感に直結する。
     cross_validation: true
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+    security: {runs: ["security#0", "security#1"], status: completed}
+    comprehensive: {runs: ["comprehensive#0", "comprehensive#1"], status: completed}
+    performance: {runs: ["performance#0"], status: completed}
+    architecture: {runs: ["architecture#0"], status: completed}
+    spec: {runs: ["spec#0"], status: completed}
+  residual_critical_high: 3
+  needs_rework: true
 
 requirements:
   FR1:

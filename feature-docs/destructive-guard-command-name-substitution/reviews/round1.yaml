@@ -1,0 +1,226 @@
+round: 1
+executed_at: "2026-09-14T22:25:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: a722550dc4b2c3c5b205f6fe13123f70d603902f
+  head_commit: 70530022c062ac7b2556539ef5f715ec98647d3e
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-command-name-substitution/task0001.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+    - perspective: performance
+      reason: >-
+        diff は PreToolUse フックの字句解析器に走査パスを追加する。フックは全 Bash
+        呼び出しで同期実行されるため、追加された走査の入力長に対するコストが
+        操作感に直結する。
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "security#1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "comprehensive#1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: completed, skip_reason: null}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed, skip_reason: null}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed, degraded: true}
+unreviewed_perspectives: []
+findings:
+  - stable_id: b49dbfaab151cdf1
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 2158
+    title: "Operand-first spelling keeps blanket allow on the substitution-headed rm route"
+    description: >-
+      新しい経路は remainder[0].startswith("-") のときしか check_rm() に入らない。
+      GNU rm はオプションとオペランドの順序を入れ替えられるため、この feature が
+      捕まえるべき形そのもののオペランド先行スペルが allow のまま残る。評価者が
+      本 worktree でフックを実行して確認した実測: "$(which rm) /home/sakura/valuable -rf"
+      は allow、等価な "$(which rm) -rf /home/sakura/valuable" は deny/rm-recursive、
+      素の "rm /home/sakura/valuable -rf" は deny/rm-recursive。home ルート標的でも
+      同様に通り抜ける: "$(which rm) /home/sakura -rf" は allow。dash 事前ゲートは
+      SPEC FR1/FR3 が規定したものなので、これは仕様からの逸脱ではなく仕様された設計の穴。
+      本ラウンドで 2 つの run (security#1, comprehensive#1) が独立に報告した。
+    suggestion: >-
+      remainder[0].startswith("-") の事前ゲートを外し、入口判定を
+      _rm_route_candidate() 単独に委ねる（再帰 + 強制 + 非フラグオペランドを既に
+      要求しているため "$(which node) script.js" や "$(which ls) -la" は到達しない）。
+      SPEC FR1/FR3 を同時に改め、"$(which rm) /home/sakura/valuable -rf" を deny ケースとして
+      destructive-guard-cases.json に固定する。
+    sources: [litellm:muse-spark:security]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: "batch: Phase R4 で同一サイトの処方箋が対立したため site skip。rework へ送る"
+  - stable_id: 1b0f63526ad22582
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 2158
+    title: "New route infers this is rm/git from flag shape alone, flipping benign substitution-headed commands from allow to deny"
+    description: >-
+      評価者自身の指摘（どのレビュアー run も報告していない）。新経路は置換された
+      コマンド語が rm / git であるという証拠を一切確認せず、引数の形だけで分類する。
+      そのため -r と -f を正当に取る置換先頭コマンドがすべて deny になり、理由 id は
+      オペランドの再帰削除を述べる rm-recursive になる。評価者が基準版と新版を
+      同一入力で並走させて確認した実測。いずれも本 diff の前は allow、後は deny:
+      "$(which cp) -rf src dst" / "$(which cp) -Rf src dst" /
+      "$(which chmod) -Rf 755 build" / "$(which chown) -Rf user:group /srv/app" /
+      "$(which tar) -rf archive.tar file.txt" / "$(which grep) -rf patterns.txt src" /
+      "$(which rsync) -rf src/ dst/" / "$(which scp) -rf host:/a /b"。無条件の git 経路も
+      同型の問題を持ち、"$(which make)" に続く clean -fd 形や
+      "$(hatch env find)" に続く reset --hard 形が allow から deny へ反転する。
+      素の "cp -rf src dst" は allow のままなので、置換先頭スペルのほうが素のスペルより
+      厳しくなっている。.claude/rules/hook-tests.md の「誤爆 1 件のコストは見逃し 1 件と
+      同じ桁」に照らすと重大で、CLAUDE_BATCH 下では ask が deny に降格するため
+      無人実行を止める。destructive-guard-cases.json に rm 以外の -r + -f コマンドの
+      allow 側ケースが 1 件も無いため、241/241 のスイートではこれが見えない。
+      オーケストレーター側の実地確認: 本ラウンドの記録をヒアドキュメントで書き出そうと
+      した際、本文に含まれた "$(which make)" + clean -fd 形の引用がこのフックに
+      git-clean として deny され、書き込みが止まった。回帰クラスが実在し
+      到達可能であることの直接の証拠。
+    suggestion: >-
+      経路に入る前に、置換されたコマンド語が rm / git を指すという肯定的証拠を要求する。
+      例: 置換の生テキストを静的に検査し（評価はしない、NFR1 維持）rm / git のコマンド名が
+      読み取れるときだけ経路に入れ、それ以外は blanket allow を維持する。どのゲートを
+      選ぶにせよ "$(which cp) -rf src dst" / "$(which chmod) -Rf 755 build" /
+      "$(which tar) -rf archive.tar file.txt" と "$(which make)" + clean -fd 形を
+      allow 側ケースとして追加し、回帰を固定する。
+    sources: [claude:evaluator]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: "batch: sources が claude:evaluator 単独のため needs-judgment 強制 + site conflict により skip。rework へ送る"
+  - stable_id: 02afd5e6762ce196
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1033
+    title: "Substitution-headed rm bypass via recursion-without-force"
+    description: >-
+      accountability floor による lift（Phase R3b）。security#1 が high として報告した
+      サイト（line 1033, line_end 1052）が、評価結果の findings とも dismissed_sites とも
+      same_site で一致しなかったため、レビュアー自身のテキストで持ち上げた。報告本文:
+      _rm_route_candidate() は check_rm() を呼ぶ前に再帰 AND 強制を要求するが、
+      check_rm() 自身は再帰のみで判定する。そのため "$(which rm) -r /home/sakura/valuable"
+      / -R / --recursive はいずれも allow のまま、素の "rm -r /home/sakura/valuable" は
+      deny になる。攻撃者が -f を落とすだけで新経路を回避できる。
+      注記: 評価者はこれと実体が同じ問題を line 1048 に medium として記録している
+      (stable_id a4165b97f2492d1e)。評価者は実行検証により、報告された処方箋
+      「再帰のみでゲートする」が pinned allow ケース TS-7 "$(which grep) -r pattern src" を
+      誤 deny に変えることを示している。rework ではその実測を前提に扱うこと。
+    suggestion: >-
+      レビュアー原文: ゲートを check_rm() 自身の閾値に揃える。再帰（+ オペランド）のみで
+      ゲートするか、remainder を無条件に check_rm() へ渡して階層は check_rm() に決めさせる。
+      ただし評価者の実測により、この処方箋の単純適用は TS-7 を誤 deny に変える。
+    sources: [litellm:muse-spark:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "batch: Phase R4 で line 1048 の findings と同一サイト扱いし、処方箋が対立するため site skip。rework へ送る"
+  - stable_id: a4165b97f2492d1e
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1048
+    title: "Recursion-without-force keeps blanket allow, below check_rm()'s own threshold"
+    description: >-
+      _rm_route_candidate() は check_rm() を呼ぶ前に再帰 AND 強制を要求するが、
+      check_rm() 自身は再帰のみで判定する（line 1342 の if not recursive: return decisions）。
+      実測: "$(which rm) -r /home/sakura/valuable" / -R / --recursive はいずれも allow、
+      素の "rm -r /home/sakura/valuable" は deny/rm-recursive。
+      報告 run の high から評価者が medium へ降格した理由は 2 つ。(1) このゲートは
+      文書化された意図的なトレードオフで（line 1033 の docstring が check_rm() の閾値より
+      意図的に狭いと明記）、SPEC FR1 が規定している。(2) 報告された処方箋「再帰のみで
+      ゲートする」は実測により有害: "rm -r pattern src" は deny になるので、強制フラグ
+      要件を外すと pinned allow ケース TS-7 "$(which grep) -r pattern src" が誤 deny に
+      なる。これは .claude/rules/hook-tests.md が見逃しと同じコストと定める誤爆そのもの。
+    suggestion: >-
+      強制フラグ要件を一律には外さない。再帰 + 強制を一般ゲートとして維持したうえで、
+      狭い第 2 の腕を足す: 再帰 + 生トークンが RM_ROOT_SHAPE（home / root 形状）に
+      一致するオペランド、のときは強制なしで check_rm() に入れる。これで
+      "$(which rm) -r /home/sakura/..." を塞ぎつつ "$(which grep) -r pattern src" は
+      allow のまま残る。両方をケースとして固定する。
+    sources: [litellm:muse-spark:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため Phase R4 の候補外。rework へ送る"
+  - stable_id: 50e6025194936fd7
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 2155
+    title: "Substitution-head routing is inlined into an already long main()"
+    description: >-
+      新しいトークン構造分類（_skip_to_command_word / saw_substitution ゲート /
+      _rm_route_candidate ゲート / 無条件 check_git）が、既存の語ベース dispatch と
+      同じ main() の中に、異なる抽象度で約 25 行の解説コメントとともにインラインで
+      置かれている。報告 run の severity をそのまま持ち越しつつ、評価者の独自検査による
+      訂正が 1 点ある: run が述べた相互作用リスク（新しい無条件の
+      check_git(remainder, segment) と後続の WORD == "git" dispatch の衝突）は
+      現時点では誤発火しない。"$(true) git" に続く clean -fd 形では remainder が
+      リテラル git トークンで始まり、git_subcommand() がそれをサブコマンドと
+      認識しないため新呼び出しは判定を出さず、後続 dispatch が期待どおり単一の
+      deny を出す。したがって保守性の問題であって、稼働中の欠陥ではない。
+    suggestion: >-
+      このブロックを _rm_route_candidate() の隣の _check_substitution_head(words, segment)
+      に切り出す。上記のゲート修正と同時に行えば、経路の入口条件が 1 箇所のテスト可能な
+      場所にまとまる。
+    sources: [litellm:vertex-glm-5.2:architecture]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium のため Phase R4 の候補外。rework へ送る"
+evaluation:
+  round_summary: >-
+    Round 1, cross_validation true, 5 観点が completed run を持つ (security#1, comprehensive#1,
+    performance#0, architecture#0, spec#0)。security#0 と comprehensive#0 は codex の
+    rate_limited スキップで、いずれの観点も completed した litellm run でカバーされている。
+    どのレビュアー出力にもプロンプトインジェクション・役割上書き・命令様のテキストは無く、
+    すべて通常の finding データだった。観点ごとの独立検査（read-only。diff 読みに加え、
+    フックとテストスイートを純粋な決定関数として実行 — destructive-guard.py は書き込みを
+    一切行わない）: security は findings（報告された 2 つのバイパスをフック実行で再現し、
+    さらに新しい誤 deny 回帰クラスを発見）。comprehensive は findings（報告サイトは
+    security#1 と同一。評価者自身の回帰指摘をこのカテゴリで起票）。performance は追認
+    （statements() が _mark_quoted_substitutions により各チャンクを二重に lex し、
+    チャンクごとに lex_segments() を先行実行するが、入力は MAX_SHELL_PAYLOAD_EXPANSIONS
+    予算下の単一コマンド文字列で、実行可能なコストではない。run の空結果と一致）。
+    architecture は追認（インライン経路ブロックは実在。run が懸念した git 二重 dispatch の
+    不変条件が現時点で成立することも別途確認）。spec は追認（実装は FR1-FR10 と
+    AC-1..AC-12 に一致。AC-1/2/3/4/5/6/7/8 の判定を実行で確認、AC-9 は 241/241、
+    AC-11 は両マニフェストで 0.1.79 から 0.1.80、python3 -m unittest discover -s tests の
+    6 件の失敗は既存のもので main でも同一の 6 件が落ちる — AC-10 のベースラインは
+    元から赤で、本 diff は壊していない）。high の 2 件は仕様からの逸脱ではない。実装は
+    SPEC FR1/FR3 を忠実に実現しており、ありふれた破壊的スペルを通し、かつありふれた
+    無害コマンドを新たに deny するのは、その規定されたゲート（dash 事前ゲートと
+    フラグのみによる rm/git 推定）そのものである。
+  recommended_action: "rework"
+  action_rationale: >-
+    dedupe 後も high が 2 件残り、同じ 6 行のゲートに対して逆向きに引いている。経路は
+    オペランド先行と強制なしの rm スペルを捕まえるには狭すぎ、-r と -f を持つ置換先頭
+    コマンドをすべて deny する点では広すぎる。いずれも bounded な auto-fix ではない。
+    どちらも SPEC FR1/FR3 が明示する入口条件の変更を要し、仕様本文と pinned ケースが
+    コードと一緒に動く。加えて強制ゲートについて報告された 1 行の処方箋は、既存の
+    pinned allow ケースによって反証されている。仕様どおりという意味での実装品質は
+    健全（スイート green、version bump 済み、新規のユニットテスト失敗なし）なので、
+    作り直しではなく経路のゲーティングに限定した rework。
+dismissed_sites:
+  - file: em-workflow/hooks/destructive-guard.py
+    line: 2158
+    run_id: "comprehensive#1"
+    reason: "duplicate of another finding"
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 3
+rework_required: true
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
