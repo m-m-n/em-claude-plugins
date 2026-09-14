@@ -98,7 +98,8 @@ workflow:
       誤爆許容範囲は create-plan の IMPLEMENTATION.md が担う。
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
-    status: pending
+    status: completed
+    completed_at_commit: 90c0191377f2ec72a04c3f41154bc1f0c08fbfa5
   - id: implement
     status: pending
     base_commit: a722550dc4b2c3c5b205f6fe13123f70d603902f
@@ -127,6 +128,21 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/destructive-guard-command-name-substitution/task0001
+  task0002:
+    title: evidence-gated substitution-head routing, whole-word payload quote judgement, and the case-table delta
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+    skills: [backend-impl, infra-impl]
+    domains: [input-handling, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR13, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7]
+    status: pending
+    notes: null
+    branch: null
 
 review:
   status: pending
@@ -155,141 +171,141 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-1, TS-2, TS-6, TS-7, TS-8, TS-9]
+    tasks: [task0001, task0002]
+    tests: [TS-1, TS-2, TS-8, TS-9, TS-13, TS-14, TS-15, TS-16, TS-17]
   FR2:
     title: "コマンド語位置の置換 + git 経路（コマンド名証拠でゲートする）"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-3, TS-4]
+    tasks: [task0001, task0002]
+    tests: [TS-3, TS-4, TS-26, TS-27]
   FR3:
     title: "証拠が無い残りの allow 維持"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-5, TS-6]
+    tasks: [task0001, task0002]
+    tests: [TS-5, TS-6, TS-7, TS-18, TS-19, TS-20, TS-21, TS-22, TS-23, TS-24, TS-25, TS-33]
   FR4:
     title: "ペイロード引数位置のクォート判定（語全体が置換のときに限る）"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-10, TS-11]
+    tasks: [task0001, task0002]
+    tests: [TS-10, TS-11, TS-28, TS-29, TS-30, TS-31]
   FR5:
     title: "未引用置換の繰り上げ挙動の保存"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-13]
+    tasks: [task0001, task0002]
+    tests: [TS-32, TS-38]
   FR6:
     title: "クォート付き `-c` ペイロードケースの期待値反転とラベル書き換え"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
+    tasks: [task0001, task0002]
     tests: [TS-10]
   FR7:
     title: "対象外宣言の明文化"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-12]
+    tasks: [task0001, task0002]
+    tests: [TS-12, TS-33]
   FR8:
     title: "ケース追加"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-14]
+    tasks: [task0001, task0002]
+    tests: [TS-34]
   FR9:
     title: "ミラー差分注記の更新"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-15]
+    tasks: [task0001, task0002]
+    tests: [TS-35]
   FR10:
     title: "プラグイン version の引き上げ"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-16]
+    tasks: [task0001, task0002]
+    tests: [TS-36]
   FR11:
     title: "コマンド位置置換からのコマンド名の静的読み取り"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-1, TS-3, TS-33, TS-37]
   FR12:
     title: "クォート付き here-string 分岐の判定反転の明示"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-31]
   FR13:
     title: "置換先頭ルーティングの関数抽出"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-39]
   NFR1:
     title: "判定の決定性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-17]
+    tasks: [task0001, task0002]
+    tests: [TS-37]
   NFR2:
     title: "既存期待値の保存"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-18]
+    tasks: [task0001, task0002]
+    tests: [TS-38, TS-41]
   NFR3:
     title: "誤爆コスト"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-18]
+    tasks: [task0001, task0002]
+    tests: [TS-38]
   NFR4:
     title: "降格経路の不変"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-18]
+    tasks: [task0001, task0002]
+    tests: [TS-38]
   NFR5:
     title: "変更範囲"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-16]
+    tasks: [task0001, task0002]
+    tests: [TS-36]
   NFR6:
     title: "テストの独立性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: [task0001]
-    tests: [TS-14]
+    tasks: [task0001, task0002]
+    tests: [TS-34]
   NFR7:
     title: "素スペルとの同値性"
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: [task0002]
+    tests: [TS-40]
 
 batch:
   review_rework_count: 1
