@@ -23,7 +23,8 @@ perspective_runs:
   - {run_id: "security#0", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
   - {run_id: "security#1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
   - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
-  - {run_id: "comprehensive#1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: completed, skip_reason: null}
+  - {run_id: "comprehensive#1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed, skip_reason: null}
   - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
   - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed, skip_reason: null}
   - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
@@ -52,7 +53,7 @@ findings:
       要求しているため "$(which node) script.js" や "$(which ls) -la" は到達しない）。
       SPEC FR1/FR3 を同時に改め、"$(which rm) /home/sakura/valuable -rf" を deny ケースとして
       destructive-guard-cases.json に固定する。
-    sources: [litellm:muse-spark:security]
+    sources: [litellm:muse-spark:security, claude:comprehensive]
     confidence: 100
     resolution: unresolved
     resolution_reason: "batch: Phase R4 で同一サイトの処方箋が対立したため site skip。rework へ送る"
@@ -79,10 +80,18 @@ findings:
       同じ桁」に照らすと重大で、CLAUDE_BATCH 下では ask が deny に降格するため
       無人実行を止める。destructive-guard-cases.json に rm 以外の -r + -f コマンドの
       allow 側ケースが 1 件も無いため、241/241 のスイートではこれが見えない。
-      オーケストレーター側の実地確認: 本ラウンドの記録をヒアドキュメントで書き出そうと
-      した際、本文に含まれた "$(which make)" + clean -fd 形の引用がこのフックに
-      git-clean として deny され、書き込みが止まった。回帰クラスが実在し
-      到達可能であることの直接の証拠。
+      comprehensive#fallback が独立に同じ回帰を報告し、オーケストレーターも
+      基準版と本ブランチ版を並走させて確認した: 素のコマンドとして
+      "$(which make)" + clean -fd を渡すと、基準版は allow、本ブランチ版は
+      deny/git-clean。
+      訂正: 本ラウンドの記録を書き出す際にオーケストレーター自身の書き込みが
+      destructive-guard に deny された事象があったが、稼働中のフック
+      (~/.claude/plugins/cache 配下の 0.1.80) には本 feature のコードが入っておらず
+      (_rm_route_candidate が 0 件)、この回帰が原因ではない。既存ロジックによる
+      別の誤爆であり、本 feature の範囲外。
+      マージ注記: comprehensive#fallback は同じ実体を line 1033 に別アンカーで
+      報告した。カテゴリが同じで実体も同一のため、アンカーをまたいで本 finding に
+      統合し sources を union した。
     suggestion: >-
       経路に入る前に、置換されたコマンド語が rm / git を指すという肯定的証拠を要求する。
       例: 置換の生テキストを静的に検査し（評価はしない、NFR1 維持）rm / git のコマンド名が
@@ -90,10 +99,14 @@ findings:
       選ぶにせよ "$(which cp) -rf src dst" / "$(which chmod) -Rf 755 build" /
       "$(which tar) -rf archive.tar file.txt" と "$(which make)" + clean -fd 形を
       allow 側ケースとして追加し、回帰を固定する。
-    sources: [claude:evaluator]
+    sources: [claude:evaluator, claude:comprehensive]
     confidence: 100
     resolution: unresolved
-    resolution_reason: "batch: sources が claude:evaluator 単独のため needs-judgment 強制 + site conflict により skip。rework へ送る"
+    resolution_reason: >-
+      batch: Phase R4 で同一サイトの処方箋が対立したため site skip。rework へ送る。
+      当初は sources が claude:evaluator 単独だったが、comprehensive#fallback が
+      独立に報告したため union した（needs-judgment 強制の条件は外れたが、
+      site conflict による skip は変わらない）。
   - stable_id: 02afd5e6762ce196
     severity: high
     category: security
@@ -172,6 +185,67 @@ findings:
     confidence: 75
     resolution: unresolved
     resolution_reason: "medium のため Phase R4 の候補外。rework へ送る"
+  - stable_id: 726729f3a090f72a
+    severity: critical
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 625
+    title: "-c ペイロード再走査が、本文内のどこかにクォート付き置換があるだけで丸ごと無効化される（deny から allow への退行）"
+    description: >-
+      FR4 の意図は「ペイロード位置の語そのものがクォート付き置換のとき繰り上げない」
+      だが、実装は QUOTED_MARK in quoted_args[idx + 1] という語全体に対する部分一致で、
+      .substitution_only の前提条件が無い。結果、-c の本文トークン内の任意の位置に
+      クォート付き置換が 1 個でもあると return None となり、本文が statements() に
+      押し戻されず、中の破壊的コマンドが一切検査されない。
+      オーケストレーターが基準版 a722550 と本ブランチ版を並走させて独立に再現した実測:
+      bash -c でスクリプト本文が cd "(dirname 展開) からの rm -rf /home/sakura/valuable
+      の形 → deny から allow;
+      sh -c で echo "(date 展開)" && rm -rf /home/sakura/valuable の形 → deny から allow;
+      bash -c で echo "(pwd 展開)" のあとに git reset --hard HEAD が続く形 → deny から allow。
+      対照として置換を含まない bash -c の rm -rf 本文は deny のまま。
+      クォート付きの (pwd) / (date) / (dirname ...) はスクリプト本文にごく普通に
+      現れるため、ガードの中核機能が広い範囲で沈黙する。新規ケース TS-10/TS-11/TS-12 は
+      いずれも「ペイロードが置換のみ」の形しか固定しておらず、この混在形が 1 件も
+      無いため 241/241 green のまま退行が素通りしている。
+      here-string 側（642 行）は直前の 640 行で .substitution_only を先に判定して
+      いるため同じ穴は無く、-c 側だけが非対称に抜けている。
+    suggestion: >-
+      ペイロード語が丸ごと置換のときだけクォート判定を効かせる
+      （args[idx + 1] の .substitution_only を前提条件に加える）。here-string 側
+      （640 行）と docstring の記述にも揃う。報告 run は、この修正を当てた複製で
+      run-destructive-guard.py が 241/241 green のまま上記 3 形が deny に戻ることを
+      確認したと報告している。あわせて「-c 本文にクォート付き置換と破壊的コマンドが
+      混在する形」を deny ケースとして destructive-guard-cases.json に追加する。
+    sources: [claude:comprehensive]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: >-
+      batch: rework へ送る。specification-change transition により implement が
+      pending へ戻り、この経路は再実装の対象になるため、この round では
+      auto-fix を適用しない（再設計されるコードへのパッチ当ては churn になる）。
+  - stable_id: 94ab309a37e2d298
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 642
+    title: "クォート付き here-string の新分岐が未宣言かつケーステーブル未カバーで、deny から allow への判定反転を起こしている"
+    description: >-
+      642-643 行の分岐により、bash の here-string の対象がクォート付き置換で
+      後続引数に rm -rf /home/sakura/valuable が続く形が deny から allow に反転する
+      （報告 run の実測）。実シェル意味論としては正しい（here-string 本文が実行され、
+      後続引数は $0）が、この反転は task0001.tests.yaml のどの AC にも記録されていない。
+      AC-4 が列挙するのは -c 3 件と eval 3 件のみ、AC-5 は非クォート here-string を
+      「変更なし」として扱っている。さらに destructive-guard-cases.json に
+      クォート付き here-string のエントリが 1 件も無いため、この分岐は実行される
+      テストケースがゼロ。近い形の非クォート版だけが deny として固定されている。
+      .claude/rules/hook-tests.md の「判定が変わる形はケースとして残す」運用からも外れる。
+    suggestion: >-
+      クォート付き here-string の allow ケースを destructive-guard-cases.json に追加し、
+      task0001.tests.yaml の AC-4 にもこの反転を明記する。
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: "medium のため Phase R4 の候補外。rework へ送る"
 evaluation:
   round_summary: >-
     Round 1, cross_validation true, 5 観点が completed run を持つ (security#1, comprehensive#1,
@@ -215,7 +289,12 @@ auto_fix:
   loops_run: 1
   applied_total: 0
   termination: no-progress
-residual_critical_high: 3
+  note: >-
+    2 サイトが conflict で skip（review.auto-fix-conflict）。critical 726729f3a090f72a は
+    R4 のループ終了後に comprehensive#fallback の再通知で判明したため、この round の
+    auto-fix には掛けていない。specification-change transition により implement が
+    pending へ戻り、この経路は再実装の対象になる。
+residual_critical_high: 4
 rework_required: true
 triage_filing:
   executed: false

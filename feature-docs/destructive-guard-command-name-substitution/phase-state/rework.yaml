@@ -1,0 +1,91 @@
+schema_version: 1
+feature: destructive-guard-command-name-substitution
+phase: rework
+status: completed
+generation: 1
+base_revision: 553901cf99787c7155935d799d97464d64b7a0eb
+last_input_digest: "sha256:96722a215229178a151b8c7773a2c5ee39702177b52f3f46e7fe46133fbee2eb"
+active_request_id: null
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: "2026-09-14T22:30:00+09:00"
+    questions:
+      - question_id: rework.spec-change.substitution-head-entry-condition
+        status: answered
+answers:
+  rework.spec-change.substitution-head-entry-condition:
+    packet_id: rework-q0001
+    answered_at: "2026-09-14T22:42:00+09:00"
+    source: batch-classification-gate
+    answer_mode: single_select
+    selected_option_ids: [change-spec]
+    freeform: null
+    normalized_answer: SPEC を改めて経路の入口条件を再設計する
+    resolution_note: >-
+      classification gate の verdict は spec_gap (decision: proceed)。監査記録は
+      本ファイルの classification[0]。Codex CLI は使用上限で到達不能だったため、
+      question-resolution.md の Codex consultation procedure step 1 に従い
+      Opus escalation が Codex の代わりに分類を行った。
+worker_runs:
+  - request_id: rework-review-r1-001
+    status: completed
+    input_digest: "sha256:96722a215229178a151b8c7773a2c5ee39702177b52f3f46e7fe46133fbee2eb"
+    output_digest: "sha256:needs-user-input-spec-change-transition"
+artifacts: []
+patches: []
+progress_fingerprint: "sha256:rework-r1-spec-change-transition"
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+spec_change:
+  reason: >-
+    review round 1 が critical 1 件 + high 3 件を残した。いずれも SPEC が明示的に
+    規定した「置換先頭文が検査経路に入る条件」および「ペイロード位置のクォート判定」
+    そのものの変更を要する。rework-planner は SPEC.md を更新できないため
+    タスクを 1 件も合成せず specification-change transition を返し、classification
+    gate が spec_gap / proceed と判定した。
+    origin の全体集合（round1.yaml の 7 findings）:
+    726729f3a090f72a (critical, -c ペイロード再走査がクォート付き置換の部分一致で
+    丸ごと無効化される。FR4 の「その位置の置換」という限定と、NFR2 の既存期待値
+    保存の双方に反する実装の逸脱),
+    b49dbfaab151cdf1 (high, オペランド先行スペルが allow のまま。FR3 の判別子),
+    1b0f63526ad22582 (high, 形状のみの推定で非 rm/git の -r + -f コマンドが
+    allow から deny へ反転。OBJ-4 / NFR3 に反する),
+    02afd5e6762ce196 (high, 強制フラグなし再帰が allow のまま。FR1 / AS-3 の下限),
+    a4165b97f2492d1e / 50e6025194936fd7 / 94ab309a37e2d298 (medium)。
+    再入した create-spec が満たすべき点: オペランド先行形の deny、
+    強制フラグなし再帰の扱い、非 rm/git の -r + -f コマンドの allow 側ケース、
+    そして -c 本文にクォート付き置換と破壊的コマンドが混在する形の deny。
+  origin_kind: review
+  origin_id: 1b0f63526ad22582
+  recorded_at_commit: 553901cf99787c7155935d799d97464d64b7a0eb
+  consumed: false
+  replan_authorized: true
+classification:
+  - classifier: claude
+    verdict: spec_gap
+    evidence_ids: [OBJ-4, NFR3, FR4, NFR2]
+    decision: proceed
+    reason: >-
+      Applicability: workflow.yaml は goal ブロックを持つため適用可能。
+      Origin verification: packet の evidence[] 5 件はいずれも origin_id を持ち、
+      origin_kind = review の bound set（reviews/round1.yaml の findings）の
+      メンバーであることを確認した。
+      Category check: bound set に category = security のメンバーがあるため、
+      interactive なら abort する条件に当たるが、batch では relaxed route を取り
+      Codex consultation に回した。assumptions[] の 3 件はいずれも reversible: true。
+      Classifier: Codex CLI は使用上限（9/19 まで）で到達不能だったため
+      Opus escalation が Codex の代わりに実行。参考として LiteLLM 経由
+      (vertex-glm-5.2) にも同じ分類を投げたところ verdict (a) goal_not_met を
+      返したが、その根拠は「現行 SPEC が H2 の修正を構造的に禁じている」という
+      もので、まさに変更対象の SPEC を所与としており、目標が達成不能である
+      ことの論証になっていない。Opus escalation は反証として、置換の生テキストを
+      静的に読む実装は filesystem access も subprocess も展開も伴わず NFR1 の
+      決定性を保つため IMPLEMENTATION.md の方向規則は改定可能な設計判断であり
+      障害ではないことを示した。より良く論証された (b) を採用した。
+      Evidence criterion: 逸脱先として OBJ-4（誤爆を増やさない）、
+      NFR3（正常系を止める変更は allow 側ケースで先に固定してから入れる）、
+      FR4（クォート判定は「その位置の置換」に限る）、
+      NFR2（既存期待値は FR6 の 1 件を除いて不変）を具体的に指名した。
+      いずれも SPEC.md に実在することをオーケストレーターが確認済み。
