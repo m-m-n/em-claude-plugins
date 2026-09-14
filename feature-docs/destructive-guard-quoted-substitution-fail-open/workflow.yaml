@@ -121,7 +121,7 @@ tasks:
     domains: [config-infra]
     complexity: low
     requirements: [FR4, FR6]
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/destructive-guard-quoted-substitution-fail-open/task0002
 
