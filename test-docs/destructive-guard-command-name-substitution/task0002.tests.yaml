@@ -1,0 +1,201 @@
+task_id: task0002
+
+# Two components, two commands (workflow.yaml project.components):
+#   hooks: python3 em-workflow/hooks/tests/run-destructive-guard.py
+#   main:  python3 -m unittest discover -s tests
+#
+# baseline_failures / final_failures below are for the `main` component
+# (python3 -m unittest discover -s tests) — the only one with a non-empty
+# baseline. The `hooks` case-suite runner had zero failures at baseline
+# (241/241) and zero at the end (261/261); see red_reason entries for the
+# per-scenario red/green evidence gathered from that runner instead.
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+
+acceptance_tests:
+  AC-1:
+    tests:
+      - "hooks:TS-1"
+      - "hooks:TS-2"
+      - "hooks:TS-13"
+      - "hooks:TS-14"
+      - "hooks:TS-15"
+      - "hooks:TS-16"
+      - "hooks:TS-17"
+    red_confirmed: true
+    red_reason: >
+      TS-13 through TS-17 (new case-table entries) FAILed (got allow,
+      wanted deny) when run against the case-table-only commit, before the
+      evidence-gated rm route existed (only the dash pre-gate +
+      recursion/force/operand pre-screen existed, which the operand-first
+      and force-less spellings never satisfied). TS-1/TS-2 were pre-existing
+      entries that already passed under the old shape-based gate (this
+      criterion's continuity requirement, not a new red).
+
+  AC-2:
+    tests:
+      - "hooks:TS-3"
+      - "hooks:TS-4"
+    red_confirmed: false
+    red_reason: >
+      TS-3/TS-4 already passed before this task's implementation: the prior
+      code called check_git() unconditionally whenever a substitution was
+      skipped, and for these two commands the remainder happened to be a
+      real git subcommand shape, so the verdict was already deny/git-*
+      by coincidence. This task rebuilt the route to require evidence="git"
+      first, but the observable outcome for these two specific commands was
+      unchanged, so no red state was observed for them. Verified instead by
+      reading route_substitution_headed_statement() and by TS-26/TS-27
+      (which DO exercise the removal of the unconditional call — see AC-3).
+
+  AC-3:
+    tests:
+      - "hooks:TS-5"
+      - "hooks:TS-6"
+      - "hooks:TS-7"
+      - "hooks:TS-18"
+      - "hooks:TS-19"
+      - "hooks:TS-20"
+      - "hooks:TS-21"
+      - "hooks:TS-22"
+      - "hooks:TS-23"
+      - "hooks:TS-24"
+      - "hooks:TS-25"
+      - "hooks:TS-26"
+      - "hooks:TS-27"
+      - "hooks:TS-33"
+    red_confirmed: true
+    red_reason: >
+      TS-18 through TS-27 and TS-33 (11 new case-table entries) FAILed (got
+      deny, wanted allow) when run against the case-table-only commit: the
+      old dash-leading + recursion/force/operand pre-screen entered the rm
+      route purely on flag shape regardless of what the substitution's
+      command name actually was, and the old git route was called
+      unconditionally on any skipped substitution. TS-5/TS-6/TS-7 were
+      pre-existing entries already allow (continuity; TS-6/TS-7 got a label
+      rewrite only, no verdict change).
+
+  AC-4:
+    tests:
+      - "hooks:TS-8"
+      - "hooks:TS-9"
+    red_confirmed: false
+    red_reason: >
+      TS-8/TS-9 were already allow under the old code (the old rm route's
+      shape gate also happened to admit these two commands, and check_rm()'s
+      own safe-route exceptions already produced allow), so no red was
+      observed for the case-table entries themselves. The plain-vs-
+      substitution tier/reason-id equivalence (TS-40) was verified
+      post-implementation with an ad-hoc comparison script (11 pairs, tier
+      and reason id both matched in every pair) rather than watched red
+      beforehand — it is not a persisted case-table entry, and reasoning
+      about the old dash-pre-gate suggests at least the operand-first
+      spellings (TS-13/TS-14 shapes) would have diverged from their plain
+      spelling under the old code, but that divergence was not directly
+      executed and observed before implementing.
+
+  AC-5:
+    tests:
+      - "hooks:TS-10"
+      - "hooks:TS-11"
+      - "hooks:TS-12"
+      - "hooks:TS-28"
+      - "hooks:TS-29"
+      - "hooks:TS-30"
+      - "hooks:TS-31"
+      - "hooks:TS-32"
+    red_confirmed: true
+    red_reason: >
+      TS-28/TS-29/TS-30 (new mixed -c body entries) FAILed (got allow,
+      wanted deny) when run against the case-table-only commit: the old
+      `-c` payload extraction returned None (skipping the re-scan) whenever
+      a quoted substitution appeared ANYWHERE inside the payload word, even
+      when most of the word was real script text. TS-10/TS-11/TS-12 were
+      pre-existing entries already allow; TS-31/TS-32 both already passed
+      under the old code too (the here-string branch already tested
+      whole-word-ness before quoting, unlike the `-c` branch) — TS-32's
+      command text was found to byte-for-byte duplicate a pre-existing
+      "退行防止(A)" entry, so it was pinned by relabelling that entry
+      (adding the TS-32 reference) rather than by adding a duplicate row,
+      to satisfy tests/test_destructive_guard_command_substitution.py's
+      no-duplicate-command invariant.
+
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Structural criterion with no case-table representation (VERIFICATION.md
+      TS-39, Inspection). Verified by reading the diff: the old inline
+      routing block plus its pre-screen helper (_rm_route_candidate) is
+      gone; grep confirms _rm_route_candidate has no remaining def and no
+      call site, route_substitution_headed_statement() is defined exactly
+      once, and main()'s dispatch loop contains exactly one call to it. No
+      red state existed to observe (there was no failing check for "is this
+      extracted into one function" before the extraction).
+
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Documentation/scope criterion (VERIFICATION.md TS-34/TS-35, Inspection;
+      manual items M-1/M-3). Verified by reading: the out-of-scope
+      declaration (extract_shell_payload()'s docstring) states both
+      undecidable forms in the same wording used in the TS-12/TS-33 case
+      labels; the mirror-divergence notes in head() and git_subcommand()
+      were extended to name route_substitution_headed_statement() and
+      read_command_name_evidence() as equally local to this file; `git diff
+      --stat` against failed-run-cleanup-guard.py and kill-guard.py is empty
+      (byte-identical, no code change); `git status --short` shows exactly
+      the four files declared in scope (plus this test-docs file, which is
+      exempt). No red state applies to documentation wording.
+
+  AC-8:
+    tests:
+      - "hooks:full-suite"
+      - "main:full-suite"
+    red_confirmed: true
+    red_reason: >
+      The case-suite runner (python3 em-workflow/hooks/tests/run-destructive-guard.py)
+      went 241/241 (baseline: 240 cases + 1 demotion check) -> 243/262
+      after the case-table-only commit (240 original + 21 new TS-13..33
+      entries = 261 cases + 1 demotion; 19 new FAILs, exactly the scenarios
+      this task's analyzer change was required to turn green) -> 261/261
+      after the analyzer commit and the TS-32 dedup (240 original + 20 new
+      unique entries, TS-32 merged into a pre-existing byte-identical
+      command rather than duplicated = 260 cases + 1 demotion, all green).
+      `python3 -m unittest discover -s tests` stayed at
+      exactly the same 6 failing test IDs (see baseline_failures /
+      final_failures above) before and after every commit in this task —
+      verified by diffing the FAIL/ERROR line sets of the baseline run
+      against the final run. `git diff` over destructive-guard.py contains
+      no `os.stat(`, `subprocess.*`, `os.system(`, or substitution
+      evaluation in the changed judgement path (read_command_name_evidence()
+      and route_substitution_headed_statement() are both pure string
+      processing over already-collected text/attributes).
+
+  AC-9:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Version-bump criterion (VERIFICATION.md TS-36, Inspection); no
+      assertion fails before the bump and passes after, so there is no red
+      state to observe (per tdd-testing's guidance for criteria whose
+      verifiable outcome is a build/consistency check rather than a test).
+      Verified instead by reading both files before the edit (plugin.json
+      "0.1.80", marketplace.json em-workflow entry "0.1.80" — equal) and
+      after (both "0.1.81" — equal, patch advanced by exactly 1, major/minor
+      unchanged), and running `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      after the edit (exit 0, all 7 checks PASS). `git diff` over both
+      files touches only the version line each.
