@@ -1,0 +1,389 @@
+round: 2
+executed_at: "2026-09-15T01:26:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: a722550dc4b2c3c5b205f6fe13123f70d603902f
+  head_commit: da3599d2d6c0d1e77b1bad860e945b3b13fd961c
+  changed_files:
+    - .claude-plugin/marketplace.json
+    - em-workflow/.claude-plugin/plugin.json
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - test-docs/destructive-guard-command-name-substitution/task0001.tests.yaml
+    - test-docs/destructive-guard-command-name-substitution/task0002.tests.yaml
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+    - perspective: performance
+      reason: >-
+        diff は PreToolUse フックの字句解析器に走査パスを追加する。フックは
+        全 Bash 呼び出しで同期実行されるため、追加された走査の入力長に対する
+        コストが操作感に直結する。
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "security#1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "comprehensive#1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "comprehensive#fallback", perspective: comprehensive, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: completed, skip_reason: null}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+  - {run_id: "security#loop1", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "security#loop1-1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "comprehensive#loop1", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "comprehensive#loop1-1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "comprehensive#loop1-fallback", perspective: comprehensive, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "performance#loop1", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "architecture#loop1", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "architecture#loop1-2", perspective: architecture, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "architecture#loop1-fallback", perspective: architecture, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "spec#loop1", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "security#loop2", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "security#loop2-1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "comprehensive#loop2", perspective: comprehensive, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "comprehensive#loop2-1", perspective: comprehensive, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "comprehensive#loop2-fallback", perspective: comprehensive, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "performance#loop2", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+  - {run_id: "architecture#loop2", perspective: architecture, role: primary, source: litellm, model: vertex-glm-5.2, status: skipped, skip_reason: "harness_unavailable"}
+  - {run_id: "architecture#loop2-2", perspective: architecture, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "architecture#loop2-fallback", perspective: architecture, role: fallback, source: claude, status: completed, skip_reason: null}
+  - {run_id: "spec#loop2", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+findings:
+  - stable_id: 94dae1210461958d
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 905
+    title: "コメントで落ちたマーカーが chunk_subs の順序対応をずらし、誤爆と見逃しの両方を起こす"
+    description: >-
+      statements() は SUBSTITUTION.finditer(chunk) の順序と、トークン列に残った
+      UNRESOLVED_MARK の出現順が 1 対 1 で対応する前提で raw_substitution_body を
+      割り当てていた。shlex はコメント行を丸ごと捨てるため、コメント内の置換の
+      マーカーはトークン列に到達せず、以降の置換トークンが 1 つ手前の本文に紐づく。
+      実測（基準版 a722550 との比較）: コメント行 + 改行 + `$(which node) -rf <path>`
+      が deny（基準版 allow、実行されるのは node）、コメント行 + 改行 +
+      `$(which make) clean -fd` が deny（SPEC が AC-16 で allow に固定している形）、
+      逆にコメント行 + 改行 + `$(which rm) -rf <path>` は allow。
+    suggestion: >-
+      マーカーに CHUNK_SUBS の索引を埋め込み、順序カウントではなく索引で直接引く。
+      索引が範囲外・不正なら raw_substitution_body を None にして従来どおり allow へ倒す。
+    sources: [claude:comprehensive]
+    confidence: 85
+    resolution: fixed
+    resolution_reason: "auto-applied loop 1（順序カウント → マーカー内索引方式）。実測で 3 形すべて期待どおりに反転"
+  - stable_id: c7dafee6937fc44b
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 923
+    title: "再走査ペイロード内ではコマンド名 evidence が常に読めず、-c ペイロードの置換頭部が素通りする"
+    description: >-
+      extract_shell_payload() が返すペイロードは marked トークン由来で、置換は既に
+      マーカーに置き換わっている。再走査時の SUBSTITUTION.finditer() は 0 件になり、
+      evidence は常に unreadable。実測: `bash -c 'rm -rf <path>'` は deny だが
+      `bash -c '$(which rm) -rf <path>'` は allow、`eval` も同じ。
+    suggestion: "ペイロード再走査でも置換本文に到達できるよう、索引の有効範囲を statements() 実行全体に広げる"
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2（索引を chunk ローカルから run-global へ）。当該形が deny に反転"
+  - stable_id: 30b621f9a06fcbc1
+    severity: medium
+    category: spec
+    file: em-workflow/hooks/destructive-guard.py
+    line: 2314
+    title: "FR13/AC-20 未達: main() が呼び出し以外の分類ロジックを保持している"
+    description: >-
+      FR13/AC-20 は置換頭部のルーティングを 1 つの名前付き関数に抽出し、main() には
+      呼び出しだけを残すことを求めるが、main() が _skip_to_command_word() を直接呼び、
+      saw_substitution で分岐していた。
+    suggestion: "_skip_to_command_word() の呼び出しと saw_substitution 分岐を抽出先の関数へ移す"
+    sources: [litellm:muse-spark:spec]
+    confidence: 85
+    resolution: fixed
+    resolution_reason: "loop 1 のリファクタで解消。spec 観点が loop1 / loop2 の両再レビューで FR13/AC-20 充足を確認"
+  - stable_id: a72830f884d1215a
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1135
+    title: "read_command_name_evidence() が本文の最終語だけを読むため、見逃しと誤爆の双方が残る"
+    description: >-
+      body.split()[-1] + os.path.basename() で、シェル演算子の分割もクォート除去も
+      行わない。見逃し側（本文に区切り演算子やパイプを含む形、クォートでコマンド名を
+      包んだ形）はいずれも基準版 a722550 でも allow で、本 feature が露出を
+      増やしたものではなく、FR3 が対象外と宣言している範囲にあたる。誤爆側は本 feature が
+      持ち込んだもので、実測で `$(dirname /opt/rm) -rf <path>` / `$(ls -d /usr/bin/rm) -rf <path>` /
+      `$(readlink -f ./rm) -rf <path>` / `$(basename /a/b git) clean -fd` の 4 形が
+      HEAD で deny、基準版で allow。FR11 が除外しようとした「本文中の任意の語が
+      rm/git に一致しても evidence にしない」条件が、その語が最終語のときだけ通ってしまう。
+    suggestion: >-
+      本文をシェル演算子で分割したうえで先頭のコマンド語を読み、その語にクォート除去を
+      適用する。ただし正規形が `$(which rm)` / `$(command -v rm)` である以上、先頭語を
+      そのまま採ると本来の検知が壊れるため、リゾルバ系ラッパーを認識してその引数を読む
+      形にし、それ以外の複数語・演算子入りの本文は unreadable（= allow）として扱う必要が
+      ある。fail-closed な ask への転換は NFR3 が禁じている（無人実行で ask は deny に
+      降格するため）。
+    sources: [litellm:muse-spark:security]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      誤爆 4 形は実測で確認済みだが severity medium のため auto-fix の候補ゲート
+      （critical/high のみ）に入らず、残差 critical/high が 0 になった時点でループが
+      clean 終了した。batch.review_rework_count は既に cap 1 に達しているため rework も
+      回せない。修正には FR11 の evidence 読み取り規則そのものの再設計（リゾルバ
+      ラッパー認識）が要るため、別タスクとして起票するのが適切
+  - stable_id: 6a2a3405f41169a7
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 993
+    title: "先頭の置換トークンを複数読み飛ばすとき最後の 1 つだけを evidence にする"
+    description: >-
+      _skip_to_command_word() は先頭の substitution_only トークンをすべて読み飛ばし、
+      最後の 1 つだけを evidence に使う。実シェルは未クォート展開のうち最初の非空語を
+      コマンド語にするため、`$(which rm) $(true) -rf <path>` は実際には rm が走る。
+    suggestion: "読み飛ばした substitution_only が複数あるときは evidence を採らない、もしくは先頭を採る"
+    sources: [litellm:muse-spark:security]
+    confidence: 60
+    resolution: declined
+    resolution_reason: >-
+      実測で HEAD・基準版 a722550 ともに allow。本 feature が持ち込んだ露出ではなく、
+      FR3 が「証拠が無い残りは allow を維持する」と宣言している範囲の見逃し。提案されている
+      fail-closed 化は NFR3 が禁じている。loop2 の security 再レビュー（muse-spark）でも
+      再報告されなかった
+  - stable_id: 99415dbe470481e9
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 830
+    title: "1 語に連結された複数置換は unreadable 扱いになり allow に倒れる"
+    description: >-
+      `$(which rm)$(true) -rf <path>` のように 1 語へ連結された置換はマーカーが 2 つに
+      なるため evidence を採らず allow になる。実シェルは展開結果を連結して 1 つの
+      コマンド語にする。
+    suggestion: "マーカーが複数の語を command word 位置で unreadable-allow にしない"
+    sources: [litellm:muse-spark:security]
+    confidence: 60
+    resolution: declined
+    resolution_reason: >-
+      実測で HEAD・基準版 a722550 ともに allow。FR3 が宣言する対象外範囲の見逃しであり、
+      本 feature の退行ではない。loop2 の security 再レビューでも再報告されなかった
+  - stable_id: 77a1fd0c93acce4d
+    severity: high
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 1178
+    title: "最終語 evidence が語分割と複数コマンド本文を無視する"
+    description: >-
+      本文に区切り演算子を含む形では、実シェルの argv[0] は先頭の出力語になるが、
+      最終語を読むため allow になる。
+    suggestion: "本文に区切り演算子があるときは最終語 evidence でルーティングしない"
+    sources: [litellm:muse-spark:security]
+    confidence: 60
+    resolution: declined
+    resolution_reason: >-
+      実測で HEAD・基準版 a722550 ともに allow。round 2 の評価者が同一サイト
+      （line 1183）を dismissed_sites に false positive として記録した内容と同じ論点で、
+      FR3/FR7/AC-6/TS-12/TS-33 が allow に固定している設計。誤爆側の論点は
+      a72830f884d1215a に unresolved として残してある
+  - stable_id: aa8116266373725f
+    severity: medium
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    line: 95
+    title: "in-band のマーカーバイトが未信頼のコマンド文字列から偽装され得る"
+    description: >-
+      マーカーは制御文字による in-band のバイト列で、コマンド文字列に元から
+      含まれる同じバイトをエスケープも拒否もしない。
+    suggestion: "marking 前に既存のマーカーバイトをエスケープまたは拒否する"
+    sources: [litellm:muse-spark:security]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: >-
+      loop 2 で整形式でないマーカー文字をトークン本文から除去する処理を復活させた。
+      loop2 の security 再レビュー（muse-spark）が「NUL は execve を越えられず、
+      QUOTED_MARK 偽装は実シェルが実行するスクリプトも壊すため、medium 以上の
+      fail-open 経路は無い」と明示して再報告しなかった
+  - stable_id: ad538d9244bd8417
+    severity: high
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 949
+    title: "chunk ローカルな索引がペイロード再走査を越えて漏れ、見逃しと誤爆の両方を起こす"
+    description: >-
+      マーカーに埋めた索引はその chunk の CHUNK_SUBS にしか意味を持たないのに、
+      マーカー入りテキストは extract_shell_payload() 経由で別チャンクとして再走査される。
+      実測: `bash -c '$(which rm) -rf <path>'` が allow（素のスペルは deny）、
+      `bash -c '$(foo) -rf <path> ; echo $(a $(b) rm)'` が deny（基準版 allow）。
+    suggestion: "索引の有効範囲を statements() 実行全体に広げ、all_subs への通し番号にする"
+    sources: [claude:comprehensive, claude:architecture]
+    confidence: 75
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2（run-global 索引）。両形とも実測で期待どおりに反転し、ケース表に固定"
+  - stable_id: 9bb705092bdb7871
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 874
+    title: "マーカー剥がしの正規表現化で、生の NUL を含むコマンド語が全チェックをすり抜ける"
+    description: >-
+      loop 1 の修正がマーカー除去を単純な文字列置換から正規表現置換に変えた結果、
+      整形式でないマーカー文字がトークンに残る。実測: コマンド語に NUL を挟んだ rm /
+      git の 2 形が allow（基準版・loop1 直前の版はいずれも deny）。
+    suggestion: "正規表現置換の後に残ったマーカー文字を明示的に除去する"
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2。両形とも deny に復帰し、ケース表に固定（loop 1 の修正が持ち込んだ退行の修復）"
+  - stable_id: eb8698f42f58d611
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    line: 801
+    title: "クォート判定がダブルクォートのみで、シングルクォート版の同義スペルが非対称に残る"
+    description: >-
+      _mark_quoted_substitutions() はダブルクォートで囲まれた置換だけを QUOTED_MARK に
+      するため、シングルクォート版はクォート無し扱いになる。実測: ダブルクォート版は
+      allow、シングルクォート版は deny。
+    suggestion: "シングルクォート版も QUOTED_MARK として扱う"
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため auto-fix の候補ゲートに入らない。実測でシングルクォート版は
+      HEAD・基準版ともに deny であり、本 feature はダブルクォート版を FR6 の意図どおり
+      allow へ緩めただけで、シングルクォート側の判定を変えていない。非対称の解消は
+      FR4/FR6 の適用範囲に関する仕様判断を伴うため、別タスク向け
+  - stable_id: f201764ce08971b4
+    severity: medium
+    category: comprehensive
+    file: em-workflow/hooks/tests/destructive-guard-cases.json
+    line: 217
+    title: "マーカー索引化で判定が変わった形にケース表のピンが無い"
+    description: "loop 1 の修正が挙動を変えたコメント desync 形に対応するケースがケース表に 1 件も無かった"
+    suggestion: "索引方式が直した形を固定するケースを追加する"
+    sources: [claude:comprehensive]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "loop 2 でケース表に 7 件のピンを追加（コメント desync 3 形・NUL 2 形・ペイロード再走査 2 形）。268/268 通過"
+  - stable_id: fc3c81b358657e37
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 966
+    title: "マーカーに埋めた索引は chunk ローカルなのに、marked テキストは chunk 境界を越えて再走査に回る"
+    description: "索引の有効範囲（1 chunk）より、それを埋め込んだ文字列の寿命（世代をまたぐ）の方が長い"
+    suggestion: "置換本文の表を statements() 呼び出し単位の 1 本にし、マーカーには通し番号を入れる"
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: fixed
+    resolution_reason: "auto-applied loop 2。architecture 観点が loop2 再レビューで解消を確認（15 通りの実行で誤帰属は再現せず）"
+  - stable_id: e6c63091a7bdb3db
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 2401
+    title: "文のコマンド語解決が二重化し、ディスパッチ表が 2 か所に分裂した"
+    description: >-
+      main() のループが同じ words に対して head()（_skip_to_command_word）と
+      route_substitution_headed_statement() の 2 つの独立したコマンド語解決を走らせ、
+      その両方が同じ文の判定を駆動している。前者は git / rm / else に振り分け、後者は
+      rm と git の 2 つだけに振り分けるため、dispatch 表が手で同期するしかない。実測:
+      パーミッションの広い再帰変更を置換頭部で書いた形は allow だが、素のスペルは deny。
+    suggestion: >-
+      コマンド語の解決を 1 か所に集約する。_skip_to_command_word() が evidence 読み取り
+      結果を返し、head() が「置換頭部なら evidence 名を word として返す」形にすれば、
+      既存の word ディスパッチ 1 本で両スペルを扱え、他のチェックも同じ被覆になる。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため auto-fix の候補ゲートに入らない。指摘された非対称は実測で
+      基準版 a722550 でも同じであり、本 feature の退行ではなく被覆範囲が rm/git に
+      限られている設計上の帰結。被覆拡大は SPEC の対象範囲そのものの変更になるため、
+      別タスク向け
+  - stable_id: b6d9f6437cce801e
+    severity: medium
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    line: 806
+    title: "マーカー形式の生産者が 2 つに分かれ、片方だけが索引付き形式に更新された"
+    description: >-
+      _mark_substitutions() のマーカーは可変長の索引付き形式になったが、並行パスの
+      _mark_quoted_substitutions() は 1 文字のままで索引も終端子も付けない。QUOTED_MARK の
+      定義コメントと _mark_quoted_substitutions() の docstring が主張する「同じ長さ」
+      「byte for byte 同一」という不変条件が、本変更後は成立しない。
+    suggestion: >-
+      両生産者を索引付き形式に統一して正規表現を両マーカー対応にするか、非対称を残すなら
+      QUOTED_MARK と _mark_quoted_substitutions() の記述を実際の不変条件
+      （保証されるのはトークン数の一致だけ）に書き換える。
+    sources: [claude:architecture]
+    confidence: 60
+    resolution: unresolved
+    resolution_reason: >-
+      severity medium のため auto-fix の候補ゲートに入らない。現時点で観測できる誤判定は無く
+      （quoted 側のトークンは pending に積まれない）、指摘の実質はドキュメントされた不変条件と
+      実装のドリフト。ドキュメント修正として別タスク向け
+evaluation:
+  round_summary: >-
+    Round 2、diff モード、cross_validation 有効。5 観点を dispatch し全観点が completed run を
+    得た（security#1 / comprehensive#fallback / performance#0 / architecture#0 / spec#0）。3 run が
+    上流都合でスキップ（rate_limited / harness_unavailable）、unreviewed_perspectives は空。
+    この diff が持ち込んだ新規の誤爆 deny を、両リビジョンのフックを実行して再現したのが決め手。
+    コメント内の置換を shlex が捨てることで chunk_subs のカーソルがずれ、後続の置換頭部が
+    直前の本文をコマンド名として読む。SPEC 自身が allow に固定している AC-16 の形まで
+    deny に倒れ、同時にコメントが 1 行あるだけでチケット本来の形が隠れる。
+    独立に検証した clean な事実: ケース表 261/261 通過、バージョン整合 0.1.79 から 0.1.81 が
+    plugin.json と marketplace.json の双方で一致（AC-9 / AC-11）。プロンプトインジェクション、
+    ロール上書き、埋め込み指示はどのレビュアー出力にも無し。観点別カバレッジ（Independent
+    Inspection Duty）: security = 裏取り済み（security#1 が挙げたバイパス形をすべて再現し、
+    見落としていた誤爆方向も追加で発見。2 件のうち 1 件は severity 降格、1 件は dismiss）、
+    comprehensive = 裏取り済み（2 件とも再現、high は基準版との差分で退行と確認）、
+    performance = 裏取り済み（statements() を実測し基準比 1.9 倍・1 コマンドあたり約 40us で、
+    インタプリタ起動コストに対して無視できる）、architecture = 裏取り済み、
+    spec = findings（FR13/AC-20 の逸脱を SPEC 本文に対して確認）。
+  recommended_action: "rework"
+  action_rationale: >-
+    この diff が持ち込んだ high の退行が、基準版では allow だったコマンドを deny に倒す。
+    SPEC が allow に固定している形（AC-16/TS-26/TS-27）を 2 つ含み、無人実行では deny が
+    その場で走行を止める。修正は機械的ではなく、statements()/_strip_unresolved_marks() の
+    対応付けの作り直し、docstring の訂正、誤爆側と見逃し側の両方のケース追加を要するため、
+    bounded auto-fix の範囲を超える。
+dismissed_sites:
+  - file: em-workflow/hooks/destructive-guard.py
+    line: 1183
+    run_id: "security#1"
+    reason: "false positive — SPEC が明示的に宣言した設計（FR3 / FR7 / AC-6 / TS-12 / TS-33 が当該 2 形を allow に固定）であり、提案された fail-closed な ask は NFR3 が禁じている。基準版でも両形とも allow で、この diff が露出を増やしてはいない"
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 2
+  applied_total: 2
+  termination: clean
+  notes: >-
+    loop 1 は評価者が確定した high 1 件（94dae1210461958d）を needs-judgment 経路で適用。
+    batch の既定は Apply as-is だが、ユーザー指示により Codex ハーネスへ方針を相談し、
+    件数照合のみの案ではなく位置対応（索引方式）＋件数照合を fail-open の
+    バックストップとして残す形を採った。loop 2 は loop 1 の再レビューが見つけた high 1 件
+    （ad538d9244bd8417）に加え、loop 1 自身が持ち込んだ退行 9bb705092bdb7871（medium）を
+    同一 dispatch で修復した。自ループが持ち込んだ退行の修復をゲートの severity で
+    見送らない判断であり、記録として明示する。ケース表への 7 件のピン追加と
+    plugin version の 0.1.81 から 0.1.82 への引き上げはオーケストレーター自身が行った
+    （.claude/rules/hook-tests.md「直す前にケースを足す」および
+    .claude/rules/core-plugin-version-bump.md に従う）。
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: "tmp/sca-triage-destructive-guard-command-name-substitution-20260914T162626Z.md"
+  notes: >-
+    vulnerability 観点は Layer 2 の依存マニフェスト条件に当たらず未選択のため、未解決の
+    vulnerability findings は 0 件。notion-task-dispatch のエントリポイントは検出できたが、
+    プロジェクト一覧の取得が非ゼロ終了したため degraded で report ブランチに倒れた。
