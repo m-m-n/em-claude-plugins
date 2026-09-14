@@ -1,0 +1,21 @@
+schema_version: 1
+feature: destructive-guard-command-name-substitution
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: feaa10e5717abbdff20eb9edeb4a4be570d3fc01
+last_input_digest: sha256:8a29dfcd22469c626cb304bdb65917ac1665ceb7a4f6564671c739c973c96d4c
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-run-0001
+    status: dispatched
+    input_digest: sha256:8a29dfcd22469c626cb304bdb65917ac1665ceb7a4f6564671c739c973c96d4c
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
