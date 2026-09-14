@@ -105,7 +105,8 @@ workflow:
     base_commit: a722550dc4b2c3c5b205f6fe13123f70d603902f
     completed_at_commit: 2e7f8e78499f5feba31a6567af2203abfb75e922
   - id: review
-    status: pending
+    status: completed
+    completed_at_commit: da3599d2d6c0d1e77b1bad860e945b3b13fd961c
   - id: verify
     status: pending
     result: null
@@ -146,8 +147,8 @@ tasks:
     branch: em-workflow/destructive-guard-command-name-substitution/task0002
 
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary:
@@ -158,13 +159,13 @@ review:
           コストが操作感に直結する。
     cross_validation: true
   perspectives:
-    security: {runs: ["security#0", "security#1"], status: completed}
-    comprehensive: {runs: ["comprehensive#0", "comprehensive#1"], status: completed}
-    performance: {runs: ["performance#0"], status: completed}
-    architecture: {runs: ["architecture#0"], status: completed}
-    spec: {runs: ["spec#0"], status: completed}
-  residual_critical_high: 4
-  needs_rework: true
+    security: {runs: ["security#0", "security#1", "security#loop1", "security#loop1-1", "security#loop2", "security#loop2-1"], status: completed}
+    comprehensive: {runs: ["comprehensive#0", "comprehensive#1", "comprehensive#fallback", "comprehensive#loop1", "comprehensive#loop1-1", "comprehensive#loop1-fallback", "comprehensive#loop2", "comprehensive#loop2-1", "comprehensive#loop2-fallback"], status: completed}
+    performance: {runs: ["performance#0", "performance#loop1", "performance#loop2"], status: completed}
+    architecture: {runs: ["architecture#0", "architecture#loop1", "architecture#loop1-2", "architecture#loop1-fallback", "architecture#loop2", "architecture#loop2-2", "architecture#loop2-fallback"], status: completed}
+    spec: {runs: ["spec#0", "spec#loop1", "spec#loop2"], status: completed}
+  residual_critical_high: 0
+  needs_rework: false
 
 requirements:
   FR1:
