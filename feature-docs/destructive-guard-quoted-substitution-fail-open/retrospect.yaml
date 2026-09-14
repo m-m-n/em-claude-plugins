@@ -1,0 +1,16 @@
+feature: destructive-guard-quoted-substitution-fail-open
+collected_at: "2026-09-14T21:57:00+09:00"
+session_ids: ["01a09ffe-0e6e-7250-997c-d715218a010b"]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - "起票された脆弱性が main の現行実装では再現しなかった（報告元は CLOSED の PR 30 のブランチ実装）。起票内容の『現在のバージョン』欄がブランチを指すとき、main 実測との突き合わせを create-spec の最初に行う価値がある。"
+  - "review round 1 で codex 由来の primary run 2 件が rate_limited でスキップされ、litellm 側の run が観点を埋めた。ハーネスのレート制限は常態化しており、フォールバック経路の健全性が結果を左右した。"
+  - "verify で VERIFICATION.md の Expected（終了コード 0）と実際の判定基準（base 比較で回帰ゼロ）がズレた。既存失敗を抱えるリポジトリでは、Expected を base 比較で書く方が実態に合う。"
+  - "スコープ相談のプロンプトを Bash のヒアドキュメント本文に置いたところ、destructive-guard が本文を実コマンドと誤認して deny を返した（別タスクとして起票済み）。"
