@@ -156,3 +156,32 @@ records:
     each passes only its own worktree''s suite; the whole-table invariants (every pre-existing verdict
     preserved, full suite green) can only be checked by whoever holds the complete file. The size guideline
     is soft and yields to that.'
+- question_id: verify.m5-version-bump-commit-separation
+  packet_id: null
+  answered_at: '2026-09-15T01:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - pass_ssot_wins
+  freeform: null
+  normalized_answer: M-5 の「独立コミット」条項は SSOT を超えた過剰仕様とみなし、verify を pass にする
+  resolution_note: 'gate: verify.m5-version-bump-commit-separation (gate_id を持たない裁量判断。
+    ユーザー指示「不明点は Codex に相談し、比較的良い方を採用」による相談)。
+    VERIFICATION.md の手動項目 M-5 は「version bump が挙動変更に混ざらず独立した
+    コミットとして現れていること」を要求するが、review フェーズの auto-fix コミット
+    da3599d が destructive-guard.py の挙動変更 + ケース追加と一緒に 0.1.81 -> 0.1.82 の
+    bump を含んでいる。task0001 の 3b72790 と task0002 の 3360fa8 はいずれも独立コミット。
+    options: A=pass (M-5 の当該条項は SSOT を超えた過剰仕様) / B=fail にして rework し
+    da3599d を分割する。 chosen: A。not chosen: B。
+    key points: SPEC.md FR10 の文言は「同じ変更の中で」であり独立コミットを要求していない;
+    プロジェクトルール .claude/rules/core-plugin-version-bump.md も「その変更に含めて
+    version を上げる」でありむしろバンドルを支持する; NFR5 は「変更範囲は 4 ファイル」
+    のみを要求し、実測は宣言どおり 4 ファイルで M-5 の実質的な狙いである変更範囲の
+    封じ込めは満たされている; M-5 の独立コミット規律は implementer のタスクコミットを
+    想定した文言と読め、ワークフローが生成する review auto-fix コミットは単一の論理的
+    修正単位である; マージ済み履歴の書き換えは純粋な手続き遵守のためのコストとして
+    見合わない。 follow-up: M-5 の条項に SSOT の裏付けを持たせたいなら FR10 か
+    プロジェクトルール側を明示改訂する (別タスクへ切り出し)。
+    codex_consulted: true (Codex CLI が使用上限 2026-09-19 に到達したため
+    `codex exec -p litellm -m vertex-glm-5 --sandbox read-only` 経由)。
+    opus_escalation: false.'
