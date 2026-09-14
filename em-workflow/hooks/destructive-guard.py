@@ -727,7 +727,7 @@ def strip_heredocs(chunk):
     return HEREDOC.sub(take, chunk), bodies
 
 
-def _mark_substitutions(chunk):
+def _mark_substitutions(chunk, offset_=0):
     """Blank every command-substitution match in CHUNK by replacing it with
     UNRESOLVED_MARK, so the word it sat in survives lexing as a token no
     matter whether the match filled the whole word or sat beside real text
@@ -757,16 +757,23 @@ def _mark_substitutions(chunk):
     here.
 
     Each match is replaced with a marker carrying that match's own ordinal
-    position among SUBSTITUTION.finditer(chunk) — the same enumeration
-    order statements() itself uses to build CHUNK_SUBS from an identical
-    finditer() pass over the same chunk — encoded as digits between
-    UNRESOLVED_MARK and _MARK_TERMINATOR (destructive-guard-command-name-
-    substitution). This lets _strip_unresolved_marks() recover the right
-    CHUNK_SUBS entry for a surviving marker by direct index lookup even
-    when some other match in the same chunk never reaches the token stream
-    at all (dropped whole by a lexer-level comment).
+    position among SUBSTITUTION.finditer(chunk), OFFSET by OFFSET_ —
+    statements() passes the number of entries already accumulated in its
+    run-global ALL_SUBS list before this chunk's own matches are appended,
+    so the index baked into each marker names a position in that run-global
+    list rather than in this chunk's own local enumeration (destructive-
+    guard-command-name-substitution). A marker's index therefore stays
+    meaningful even if the marked token text later leaks into a re-scanned
+    chunk (e.g. via a `bash -c '...'` payload pushed back onto PENDING),
+    where a fresh, differently-numbered local list would otherwise either
+    miss the entry (index out of range) or, worse, resolve to an unrelated
+    entry that merely happens to be in range. This lets _strip_unresolved_
+    marks() recover the right ALL_SUBS entry for a surviving marker by
+    direct index lookup even when some other match in the same chunk never
+    reaches the token stream at all (dropped whole by a lexer-level
+    comment).
     """
-    counter = [0]
+    counter = [offset_]
 
     def replace(_match):
         index = counter[0]
@@ -824,35 +831,45 @@ def _strip_unresolved_marks(toks, chunk_subs=None):
     recover, for a token that collapses entirely into marker residue, the
     RAW text of the substitution it came from — attached as
     `.raw_substitution_body` on the resulting `.substitution_only` Tok, for
-    read_command_name_evidence() to read later. CHUNK_SUBS is the ordered
-    list of every substitution match's body text in the CURRENT chunk
-    (statements()'s own enumeration via SUBSTITUTION.finditer(chunk), reused
-    rather than re-scanned). Each surviving marker already carries, encoded
-    in its own text, the index into CHUNK_SUBS it was produced from (see
-    _mark_substitutions()); this pass reads that index back out and looks
-    CHUNK_SUBS up directly, rather than counting markers left-to-right
-    across the token stream. A left-to-right ordinal count would desync the
-    moment any match in the chunk never reaches the token stream at all —
-    which happens when shlex's own `comments=True` consumes a `#` comment,
-    and any `$(...)`/`` `...` `` written inside it, whole, before lexing
-    ever produces a marker token for it; CHUNK_SUBS still counts that match,
-    but no token carries its marker, so a plain left-to-right count silently
-    attributes every later marker to the WRONG entry. Reading the index out
-    of the marker itself is immune to that: a dropped match's marker is
-    dropped along with it, and every surviving marker still names its own,
-    correct CHUNK_SUBS entry regardless of what else in the chunk was
-    dropped. A token whose marker count is not exactly one — several
-    substitutions concatenated into the same whole word, so there is no
-    single raw occurrence to attribute the token to — gets no evidence
-    (`.raw_substitution_body` stays None, the constructor default):
-    deliberately left unreadable rather than guessing which body applies
-    (task0002 Design "Command-name evidence", "the token position cannot be
-    mapped back to a raw occurrence"). The same applies, as a defence-in-
-    depth backstop, when a marker's encoded index is out of range for
-    CHUNK_SUBS or otherwise fails to parse: rather than guess, or raise,
-    the token is left unreadable and read_command_name_evidence() falls
-    back to `allow`. CHUNK_SUBS defaults to None, which reproduces this
-    function's pre-FR11 behaviour exactly (no attribute set) — the
+    read_command_name_evidence() to read later. Despite its name (kept for
+    continuity with earlier tasks), CHUNK_SUBS is, as of destructive-guard-
+    command-name-substitution's index-leak fix, the RUN-GLOBAL list
+    (`all_subs` in statements()) accumulated across every chunk processed
+    so far in the current statements() call, not just the current chunk —
+    each surviving marker's encoded index names its position in that
+    run-global list. Each surviving marker already carries, encoded in its
+    own text, the index into CHUNK_SUBS it was produced from (see
+    _mark_substitutions()'s OFFSET_ parameter); this pass reads that index
+    back out and looks CHUNK_SUBS up directly, rather than counting markers
+    left-to-right across the token stream. A left-to-right ordinal count
+    would desync the moment any match in the chunk never reaches the token
+    stream at all — which happens when shlex's own `comments=True` consumes
+    a `#` comment, and any `$(...)`/`` `...` `` written inside it, whole,
+    before lexing ever produces a marker token for it; CHUNK_SUBS still
+    counts that match, but no token carries its marker, so a plain
+    left-to-right count silently attributes every later marker to the WRONG
+    entry. Reading the index out of the marker itself is immune to that: a
+    dropped match's marker is dropped along with it, and every surviving
+    marker still names its own, correct CHUNK_SUBS entry regardless of what
+    else in the chunk was dropped. Using a run-global index instead of a
+    chunk-local one additionally makes this immune to a marked token's TEXT
+    leaking into a re-scanned chunk (a `bash -c '...'` payload pushed back
+    onto PENDING carries its marker's text verbatim into a fresh
+    statements() iteration with its OWN chunk-local matches); a chunk-local
+    index would either fall out of range there (evidence silently lost) or,
+    worse, collide with an unrelated entry that happens to be in range
+    (wrong evidence). A token whose marker count is not exactly one —
+    several substitutions concatenated into the same whole word, so there
+    is no single raw occurrence to attribute the token to — gets no
+    evidence (`.raw_substitution_body` stays None, the constructor
+    default): deliberately left unreadable rather than guessing which body
+    applies (task0002 Design "Command-name evidence", "the token position
+    cannot be mapped back to a raw occurrence"). The same applies, as a
+    defence-in-depth backstop, when a marker's encoded index is out of
+    range for CHUNK_SUBS or otherwise fails to parse: rather than guess, or
+    raise, the token is left unreadable and read_command_name_evidence()
+    falls back to `allow`. CHUNK_SUBS defaults to None, which reproduces
+    this function's pre-FR11 behaviour exactly (no attribute set) — the
     extract_shell_payload() comparison call elsewhere in this file omits
     it, since it never needs this evidence.
     """
@@ -872,6 +889,18 @@ def _strip_unresolved_marks(toks, chunk_subs=None):
             if index is not None and 0 <= index < len(chunk_subs):
                 raw_body = chunk_subs[index]
         cleaned = _MARK_RE.sub("", t)
+        # A marker character that survived the well-formed-sequence
+        # substitution above (UNRESOLVED_MARK/QUOTED_MARK/_MARK_TERMINATOR
+        # not part of a full `UNRESOLVED_MARK + digits + _MARK_TERMINATOR`
+        # run) came from the user's own command string, not from this
+        # module's marking pass — strip it too, so head()'s basename() read
+        # of the command word cannot land on residue mixed into the token
+        # (destructive-guard-command-name-substitution: a NUL byte inside
+        # e.g. `rm` would otherwise make the token match neither `rm` nor
+        # anything else, and the destructive check would silently never run).
+        cleaned = cleaned.replace(UNRESOLVED_MARK, "").replace(QUOTED_MARK, "").replace(
+            _MARK_TERMINATOR, ""
+        )
         if cleaned == "":
             new_tok = Tok(
                 SUBSTITUTION_STANDIN,
@@ -929,17 +958,30 @@ def statements(command):
     they do not.
 
     task0002 FR11: CHUNK_SUBS below is the ordered list of every
-    substitution match's raw body text in this CHUNK — the same
-    finditer() pass that already feeds PENDING, its results kept instead of
-    discarded. _strip_unresolved_marks() maps each `.substitution_only`
-    token back to the one raw body it came from by the index encoded into
-    its own surviving marker (see that function's and _mark_substitutions()'s
-    docstrings), not by a shared position counter — so this is not a new
-    read of the raw command string beyond what this loop already performs,
-    just string processing over CHUNK alone.
+    substitution match's raw body text seen so far across THIS statements()
+    call — ALL_SUBS, appended to (never rebuilt) once per chunk from the
+    same finditer() pass that already feeds PENDING, its results kept
+    instead of discarded. _mark_substitutions() is given that chunk's
+    OFFSET into ALL_SUBS so the index it bakes into each marker names a
+    position in ALL_SUBS rather than in a per-chunk list (destructive-
+    guard-command-name-substitution index-leak fix — see that function's
+    docstring for why a chunk-local list is unsafe once marked text can
+    leak into a re-scanned chunk). _strip_unresolved_marks() maps each
+    `.substitution_only` token back to the one raw body it came from by
+    that index encoded into its own surviving marker, not by a shared
+    position counter — so this is not a new read of the raw command string
+    beyond what this loop already performs, just string processing over
+    CHUNK alone plus one running list.
     """
     pending = [command]
     budget = [MAX_SHELL_PAYLOAD_EXPANSIONS]
+    # Run-global: one list for the whole statements() call, appended to as
+    # each chunk is processed, never rebuilt per chunk. A marker's encoded
+    # index (see _mark_substitutions()) names a position in THIS list, so
+    # it stays valid even if the marked token text leaks into a re-scanned
+    # chunk pushed back onto PENDING (destructive-guard-command-name-
+    # substitution index-leak fix) — a chunk-local list would desync there.
+    all_subs = []
     while pending:
         chunk = pending.pop()
         chunk, bodies = strip_heredocs(chunk)
@@ -950,11 +992,13 @@ def statements(command):
         for body in chunk_subs:
             if body.strip():
                 pending.append(body)
+        offset = len(all_subs)
+        all_subs.extend(chunk_subs)
         quoted_segments = lex_segments(_mark_quoted_substitutions(chunk))
         for seg_index, (marked, lexed) in enumerate(
-            lex_segments(_mark_substitutions(chunk))
+            lex_segments(_mark_substitutions(chunk, offset))
         ):
-            toks = _strip_unresolved_marks(marked, chunk_subs)
+            toks = _strip_unresolved_marks(marked, all_subs)
             if toks:
                 yield " ".join(toks), toks, lexed
                 if budget[0] > 0:

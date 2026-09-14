@@ -265,6 +265,14 @@
   ["allow", "クォート判定(quote-aware, TS-11): -c のペイロードがクォート付き置換のみで後続引数が無い形も allow のまま", "bash -c \"$(cat script.sh)\""],
   ["allow", "対象外宣言(out-of-scope, TS-12): 置換の展開結果（=置換本文の出力）そのものがスクリプト本文になる形は、評価を要するためこのフックの静的解析の対象外", "bash -c \"$(echo 'rm -rf /home/sakura/valuable')\" 'echo safe'"],
 
+  ["deny", "コマンド語静的不明(rm-recursive): 字句解析がコメントごと捨てた置換があっても、後続の置換頭部は自分自身の本文に対応づく", "# $(true)\n$(which rm) -rf /home/sakura/valuable"],
+  ["allow", "誤爆防止: コメント内の置換で対応がずれても、実行されるコマンド名が rm でない置換頭部を rm 経路に入れない", "# $(which rm)\n$(which node) -rf /home/sakura/valuable"],
+  ["allow", "誤爆防止(AC-16): コメント内の置換があっても、git 以外の置換頭部を git 経路に入れない", "# see $(which git)\n$(which make) clean -fd"],
+  ["deny", "退行防止: マーカー剥がしでコマンド由来の生の NUL がトークンに残り、コマンド名比較をすり抜けない（rm 側）", "rm\u0000 -rf /home/sakura/valuable"],
+  ["deny", "退行防止: 同上の git 側", "git\u0000 reset --hard HEAD"],
+  ["allow", "誤爆防止: -c ペイロード再走査で、外側チャンクのマーカーが再走査側の別の置換本文に誤って解決されない", "bash -c '$(foo) -rf /home/sakura/valuable ; echo $(a $(b) rm)'"],
+  ["deny", "コマンド語静的不明(rm-recursive): -c ペイロード内の置換頭部でも、素のスペルと同じく rm 破壊形状に照合する", "bash -c '$(which rm) -rf /home/sakura/valuable'"],
+
   ["ask", "動的目標(rm-unresolvable): クォート付き $() スペルでのチケット再現コマンドを固定する（両スペル対称性の $() 側）", "rm -rf \"$(printf /home/sakura/valuable)\""],
   ["ask", "動的目標(rm-unresolvable): クォート付きバッククォートスペルでのチケット再現コマンドを固定する（両スペル対称性のバッククォート側）", "rm -rf \"`printf /home/sakura/valuable`\""]
 ]
