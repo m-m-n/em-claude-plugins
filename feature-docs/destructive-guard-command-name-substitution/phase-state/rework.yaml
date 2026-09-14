@@ -60,7 +60,7 @@ spec_change:
   origin_kind: review
   origin_id: 1b0f63526ad22582
   recorded_at_commit: 553901cf99787c7155935d799d97464d64b7a0eb
-  consumed: false
+  consumed: true
   replan_authorized: true
 classification:
   - classifier: claude
