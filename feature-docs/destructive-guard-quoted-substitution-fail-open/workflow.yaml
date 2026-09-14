@@ -91,7 +91,7 @@ workflow:
     completed_at_commit: 3c429d11dfdb222bd4a4e9d69788c1061b72d2a1
     base_commit: dbeb7fb2ee0e950bd72c9b0f52ae7b8d720bd15f
   - id: review
-    status: pending
+    status: in_progress
   - id: verify
     status: pending
     result: null
@@ -127,10 +127,14 @@ tasks:
     branch: em-workflow/destructive-guard-quoted-substitution-fail-open/task0002
 
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor: [comprehensive, security, spec]
+    discretionary: []
+    cross_validation: true
 
 requirements:
   FR1:
