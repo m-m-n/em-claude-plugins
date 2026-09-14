@@ -1,0 +1,50 @@
+schema_version: 1
+feature: destructive-guard-command-name-substitution
+records:
+  - question_id: security.command-position-substitution-verdict
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-14T21:24:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [narrow_destructive_shape]
+    freeform: null
+    normalized_answer: コマンド語位置の置換は、残りのトークンが破壊的形状のときだけ deny/ask に倒す
+    resolution_note: >-
+      gate: create-spec.requirement-clarification (category: security -> batch relaxed route).
+      chosen: narrow_destructive_shape. not chosen: uniform_ask / document_out_of_scope.
+      key points: 無人実行では ask が deny に降格するため一律 ask は正常系を確実に止める;
+      allow のままは「安全宣言」であり確定的な rm -rf 形の見逃しになる; 破壊形状に絞れば
+      cases.json:213-215 の allow 固定は維持され誤爆増分が最小。
+      codex_consulted: true. opus_escalation: false.
+  - question_id: technical.quote-aware-marker
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-14T21:24:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [payload_position_only]
+    freeform: null
+    normalized_answer: ペイロード引数位置に限ってクォートの有無を見る
+    resolution_note: >-
+      gate: create-spec.requirement-clarification.
+      chosen: payload_position_only (worker 推奨の quote_aware_marker を採らなかった).
+      not chosen: quote_aware_marker / keep_conflation.
+      key points: マーカー全体をクォート対応にすると head() / git_subcommand() / check_rm() の
+      読み飛ばしまで変わり新しい見逃しが開く; 変更を extract_shell_payload() に閉じれば
+      影響は cases.json:230 / :231 の 2 件のみ。
+      codex_consulted: true. opus_escalation: false.
+  - question_id: design-step.recommendation
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-14T21:24:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [design_skipped]
+    freeform: null
+    normalized_answer: design ステップは skipped
+    resolution_note: >-
+      gate: create-spec.design-step. batch-policies.yaml の decide_autonomously は
+      worker 推奨の採用を定めるが、その推奨理由がビジュアルデザインではなく
+      ソフトウェア設計の話であり、採用すると UI の無いリポジトリに
+      design-system/tokens.yaml と tokens.html が新規作成される
+      (designer-contract.md の kind x token 表、kind: none かつトークン不在 -> create/create)。
+      chosen: design_skipped. not chosen: design_required.
+      codex_consulted: true. opus_escalation: false.
