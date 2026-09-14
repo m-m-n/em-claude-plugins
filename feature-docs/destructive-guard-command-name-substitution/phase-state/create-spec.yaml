@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-command-name-substitution
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 2
-base_revision: acac21434841603777369427863f53d9eb8850e5
-last_input_digest: "sha256:1d35c7c9146f284c886fcbe66bc9a99e77e863c9d7a8d150158fbdf5a9f68ded"
-active_request_id: null
+base_revision: a21ef04c0bfe3f838bb9d4e8e272c76db5b9c7d1
+last_input_digest: "sha256:e9541d522a0e910c3151ea9436550d07f1976af31c706dd15aea5540f5ec0b1b"
+active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
     status: answered
@@ -91,6 +91,10 @@ worker_runs:
   - request_id: create-spec-run-0003
     status: completed
     input_digest: "sha256:1d35c7c9146f284c886fcbe66bc9a99e77e863c9d7a8d150158fbdf5a9f68ded"
+    output_digest: null
+  - request_id: create-spec-run-0004
+    status: dispatched
+    input_digest: "sha256:e9541d522a0e910c3151ea9436550d07f1976af31c706dd15aea5540f5ec0b1b"
     output_digest: null
 artifacts:
   - path: feature-docs/destructive-guard-command-name-substitution/REQUIREMENTS.md
