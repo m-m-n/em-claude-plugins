@@ -3,9 +3,9 @@ feature: destructive-guard-command-name-substitution
 phase: create-spec
 status: dispatching
 generation: 2
-base_revision: 4fba569e5a3a60f4d75b2510f7b4443ca2bcae26
+base_revision: fe55b31ba1956f63001df50fa7e2fdcada9465d2
 last_input_digest: "sha256:83526df5ffeaea3c7e825c89df19e07a45c8bac4cbb9c0b401f2f3c29c9147de"
-active_request_id: create-spec-specwriter-0001
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -127,16 +127,16 @@ worker_runs:
     input_digest: "sha256:e9541d522a0e910c3151ea9436550d07f1976af31c706dd15aea5540f5ec0b1b"
     output_digest: null
   - request_id: create-spec-specwriter-0001
-    status: dispatched
+    status: completed
     input_digest: "sha256:83526df5ffeaea3c7e825c89df19e07a45c8bac4cbb9c0b401f2f3c29c9147de"
     output_digest: null
 artifacts:
   - path: feature-docs/destructive-guard-command-name-substitution/REQUIREMENTS.md
-    sha256: "sha256:97f97c963548c1738e260e4e33f9ff8b1b586c6556d781c597f3fdead657921b"
-    produced_by: create-spec-run-0003
+    sha256: "sha256:068e28f9ef76d88b21b689d79bb05a66c341495fc717696d1228e5b74fa2ffab"
+    produced_by: create-spec-specwriter-0001
   - path: feature-docs/destructive-guard-command-name-substitution/SPEC.md
-    sha256: "sha256:b14a9e29cad590e68ca0bc7e93145400373a3f3713e5965a71bc1add68f901a8"
-    produced_by: create-spec-run-0003
+    sha256: "sha256:12cffaf747876c181927e33be8d5a0781c157f2254e6eda2f873a6451a0ae163"
+    produced_by: create-spec-specwriter-0001
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
