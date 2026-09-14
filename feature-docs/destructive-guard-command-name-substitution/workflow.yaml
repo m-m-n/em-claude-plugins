@@ -85,8 +85,8 @@ project:
 workflow:
   - id: create-spec
     artifacts: [REQUIREMENTS.md, SPEC.md]
-    status: in_progress
-    completed_at_commit: ff1e3a2bb19ac7c730cf429f92d030a2d5a4af97
+    status: completed
+    completed_at_commit: 44374bb6e0370e1b5c378440b78bed81b3111e38
   - id: design
     artifacts: [DESIGN.md, design/]
     status: skipped
@@ -151,133 +151,145 @@ review:
 
 requirements:
   FR1:
-    title: コマンド語位置の置換 + rm 破壊形状の検査
-
+    title: "コマンド語位置の置換 + rm 経路（コマンド名証拠でゲートする）"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-1, TS-2, TS-6, TS-7, TS-8, TS-9]
   FR2:
-    title: コマンド語位置の置換 + git 破壊形状の検査
-
+    title: "コマンド語位置の置換 + git 経路（コマンド名証拠でゲートする）"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-3, TS-4]
   FR3:
-    title: 無害な残りの allow 維持
-
+    title: "証拠が無い残りの allow 維持"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-5, TS-6]
   FR4:
-    title: ペイロード引数位置のクォート判定
-
+    title: "ペイロード引数位置のクォート判定（語全体が置換のときに限る）"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-10, TS-11]
   FR5:
-    title: 未引用置換の繰り上げ挙動の保存
-
+    title: "未引用置換の繰り上げ挙動の保存"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-13]
   FR6:
-    title: cases.json:230 の期待値反転とラベル書き換え
-
+    title: "クォート付き `-c` ペイロードケースの期待値反転とラベル書き換え"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-10]
   FR7:
-    title: cases.json:231 の対象外宣言の明文化
-
+    title: "対象外宣言の明文化"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-12]
   FR8:
-    title: ケース追加
-
+    title: "ケース追加"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-14]
   FR9:
-    title: ミラー差分注記の更新
-
+    title: "ミラー差分注記の更新"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-15]
   FR10:
-    title: プラグイン version の引き上げ
-
+    title: "プラグイン version の引き上げ"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-16]
+  FR11:
+    title: "コマンド位置置換からのコマンド名の静的読み取り"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR12:
+    title: "クォート付き here-string 分岐の判定反転の明示"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR13:
+    title: "置換先頭ルーティングの関数抽出"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
   NFR1:
-    title: 決定性
-
+    title: "判定の決定性"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-17]
   NFR2:
-    title: 既存期待値の保存
-
+    title: "既存期待値の保存"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-18]
   NFR3:
-    title: 誤爆コスト
-
+    title: "誤爆コスト"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-18]
   NFR4:
-    title: 降格経路の不変
-
+    title: "降格経路の不変"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-18]
   NFR5:
-    title: 変更範囲
-
+    title: "変更範囲"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-16]
   NFR6:
-    title: テストの独立性
-
+    title: "テストの独立性"
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: [task0001]
     tests: [TS-14]
+  NFR7:
+    title: "素スペルとの同値性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
 
 batch:
   review_rework_count: 1

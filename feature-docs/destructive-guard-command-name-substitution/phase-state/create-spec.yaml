@@ -1,9 +1,9 @@
 schema_version: 1
 feature: destructive-guard-command-name-substitution
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
-base_revision: fe55b31ba1956f63001df50fa7e2fdcada9465d2
+base_revision: 44374bb6e0370e1b5c378440b78bed81b3111e38
 last_input_digest: "sha256:83526df5ffeaea3c7e825c89df19e07a45c8bac4cbb9c0b401f2f3c29c9147de"
 active_request_id: null
 packets:
