@@ -1,14 +1,89 @@
 schema_version: 1
 feature: destructive-guard-command-name-substitution
 phase: create-spec
-status: initialized
+status: awaiting_answers
 generation: 1
-base_revision: null
-last_input_digest: null
-active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+base_revision: 70c24bc44418fb97068e1521f77adea94495726a
+last_input_digest: "sha256:86c64bb6a602a928d7e90a31bfef46ad469dd2deff0670087c5a636958a913a8"
+active_request_id: create-spec-run-0001
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-09-14T21:20:00+09:00"
+    questions:
+      - question_id: security.command-position-substitution-verdict
+        status: answered
+      - question_id: technical.quote-aware-marker
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  security.command-position-substitution-verdict:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-14T21:24:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [narrow_destructive_shape]
+    freeform: null
+    normalized_answer: >-
+      コマンド語の位置が置換のみのトークンで、かつ残りのトークンが既存の破壊的形状
+      （rm の -rf + パス、git reset --hard 等）に一致するときだけ deny/ask に倒す。
+      `$(true) echo safe` / `$(which node) script.js` のような無害形は allow のまま。
+    resolution_note: >-
+      gate: create-spec.requirement-clarification (category: security -> batch relaxed route).
+      options: narrow_destructive_shape / uniform_ask / document_out_of_scope.
+      chosen: narrow_destructive_shape. not chosen: uniform_ask (無人実行で ask が deny に降格し
+      `$(which node) script.js` 等の正常系が確実に停止する。hook-tests.md の誤爆コスト基準に反する)、
+      document_out_of_scope (確定的な `rm -rf <path>` 形を allow=安全宣言のまま残す見逃しになる)。
+      codex_consulted: true (codex exec -p litellm -m muse-spark, read-only, 1 turn).
+      opus_escalation: false. Codex はコード実測に基づき head() の substitution_only 読み飛ばしが
+      コマンド語を `-rf` にしている経路を特定し、誤爆増分が最小になるのは narrow_destructive_shape だと結論。
+      マッピング判定はオーケストレーターが行い、option_id は質問自身の options から選んだ。
+  technical.quote-aware-marker:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-14T21:24:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [payload_position_only]
+    freeform: null
+    normalized_answer: >-
+      マーカー全体の構造は変えず、`-c` / `eval` / `<<<` のペイロード引数位置に限って
+      字句解析前テキストからクォートの有無を見る。引用付き `"$(...)"` なら次の語へ繰り上げず、
+      置換本文をスクリプト本文として再走査する。変更は extract_shell_payload() に閉じる。
+    resolution_note: >-
+      gate: create-spec.requirement-clarification.
+      options: quote_aware_marker / payload_position_only / keep_conflation.
+      chosen: payload_position_only (worker の推奨 quote_aware_marker とは異なる).
+      not chosen: quote_aware_marker (head() / git_subcommand() / check_rm() の読み飛ばしまで変わり、
+      引用付きコマンド位置で空語がコマンド語になって後続の実コマンドを見失う新しい見逃しが生じる。
+      cases.json:233-234 の ask 期待値も揺らぐ)、keep_conflation (FR-2 を満たさない)。
+      codex_consulted: true (1 turn, 上と同一バッチ consultation). opus_escalation: false.
+      影響範囲は cases.json:230 と :231 の 2 件に限定され、203-205 / 207-210 / 227 / 233-234 は不変。
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-14T21:24:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [design_skipped]
+    freeform: null
+    normalized_answer: design ステップは skipped。設計上の判断は create-plan の IMPLEMENTATION.md が担う。
+    resolution_note: >-
+      gate: create-spec.design-step. batch-policies.yaml は decide_autonomously
+      （requirements-analyst の design_step_recommendation をそのまま採用）を定めるが、
+      worker の推奨 design_required の理由は字句層コントラクトの設計という
+      ソフトウェア設計の話であり、em-workflow の design ステップが担うビジュアルデザイン
+      （DESIGN.md / design-system/tokens.yaml / HTML モック）とは別物だった。
+      design_system_candidates が 0 件で kind: none となるため、design を走らせると
+      designer-contract.md の kind x token 表により targets が create / create になり、
+      UI を持たない本リポジトリに design-system/tokens.yaml と tokens.html が新規作成される。
+      options: design_required / design_skipped. chosen: design_skipped.
+      codex_consulted: true (turn 2). opus_escalation: false.
+      設計根拠の置き場所は create-plan の IMPLEMENTATION.md とする。
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:86c64bb6a602a928d7e90a31bfef46ad469dd2deff0670087c5a636958a913a8"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
