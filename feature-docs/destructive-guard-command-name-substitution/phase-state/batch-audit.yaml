@@ -1,0 +1,187 @@
+schema_version: 1
+feature: destructive-guard-command-name-substitution
+records:
+- question_id: security.command-position-substitution-verdict
+  packet_id: create-spec-q0001
+  answered_at: '2026-09-14T21:24:04+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - narrow_destructive_shape
+  freeform: null
+  normalized_answer: コマンド語位置の置換は、残りのトークンが破壊的形状のときだけ deny/ask に倒す
+  resolution_note: 'gate: create-spec.requirement-clarification (category: security -> batch relaxed route).
+    chosen: narrow_destructive_shape. not chosen: uniform_ask / document_out_of_scope. key points: 無人実行では
+    ask が deny に降格するため一律 ask は正常系を確実に止める; allow のままは「安全宣言」であり確定的な rm -rf 形の見逃しになる; 破壊形状に絞れば cases.json:213-215
+    の allow 固定は維持され誤爆増分が最小。 codex_consulted: true. opus_escalation: false.'
+- question_id: technical.quote-aware-marker
+  packet_id: create-spec-q0001
+  answered_at: '2026-09-14T21:24:04+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - payload_position_only
+  freeform: null
+  normalized_answer: ペイロード引数位置に限ってクォートの有無を見る
+  resolution_note: 'gate: create-spec.requirement-clarification. chosen: payload_position_only (worker
+    推奨の quote_aware_marker を採らなかった). not chosen: quote_aware_marker / keep_conflation. key points: マーカー全体をクォート対応にすると
+    head() / git_subcommand() / check_rm() の 読み飛ばしまで変わり新しい見逃しが開く; 変更を extract_shell_payload() に閉じれば 影響は
+    cases.json:230 / :231 の 2 件のみ。 codex_consulted: true. opus_escalation: false.'
+- question_id: design-step.recommendation
+  packet_id: create-spec-q0001
+  answered_at: '2026-09-14T21:24:04+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - design_skipped
+  freeform: null
+  normalized_answer: design ステップは skipped
+  resolution_note: 'gate: create-spec.design-step. batch-policies.yaml の decide_autonomously は worker
+    推奨の採用を定めるが、その推奨理由がビジュアルデザインではなく ソフトウェア設計の話であり、採用すると UI の無いリポジトリに design-system/tokens.yaml と tokens.html
+    が新規作成される (designer-contract.md の kind x token 表、kind: none かつトークン不在 -> create/create)。 chosen: design_skipped.
+    not chosen: design_required. codex_consulted: true. opus_escalation: false.'
+- question_id: create-plan.task-decomposition
+  packet_id: null
+  answered_at: '2026-09-14T21:35:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - single_task_fr1_fr10
+  freeform: null
+  normalized_answer: FR1-FR10 を task0001 の 1 タスクにまとめる
+  resolution_note: 'gate: create-plan.task-decomposition (gate_id を持たない裁量判断。 ユーザー指示「不明点は Codex に相談し、比較的良い方を採用」による相談)。
+    options: A=FR1-FR10 の単一タスク / B=関心ごとに 2 分割 (コマンド語位置 vs ペイロード位置、同一 2 ファイルを共有) / C=その他 (version bump
+    を独立タスク化する等)。 chosen: A。not chosen: B, C。 planner の初回提案は C 相当 (task0001=FR1-FR9, task0002=FR10) だった。
+    key points: B は destructive-guard.py と destructive-guard-cases.json の 両方で必ず衝突し、ハンクもケース追記位置も近接するため自動マージに頼れない;
+    敗者側の再実装コストが関心分割の可読性メリットを上回る; 2 つの字句変更は独立 (FR4 が head() / git_subcommand() への波及を禁じている) ため分割する正当性が無い;
+    FR10 は 2 行のパッチで、独立タスク化は worktree/merge のオーバーヘッドに見合わず、rework で別タスクが追加された際の 二重 bump 危険を生み、さらに task0001
+    のブランチ単体では .claude/rules/core-plugin-version-bump.md の「同じ変更の中で上げる」に タスクコミット単位で違反する。 caveats adopted:
+    単一タスク内でコミットを関心ごとに 3 分割する; ケース番号とラベル文言・docstring 文言は 1 人が 1 パスで書いて一致させる。 codex_consulted: true (Codex
+    CLI が使用上限に到達したため `codex exec -p litellm -m muse-spark --sandbox read-only` 経由で実施、 muse-spark は Standard
+    tier)。opus_escalation: false.'
+- question_id: review.evaluator-absolute-file-paths
+  packet_id: null
+  answered_at: '2026-09-14T22:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - relativize_then_gate
+  freeform: null
+  normalized_answer: 評価者出力の絶対パスを project_root 相対へ正規化してから R3b step 1 を適用する
+  resolution_note: 'gate: review.evaluator-absolute-file-paths (gate_id を持たない裁量判断。 ユーザー指示「不明点は Codex に相談し、比較的良い方を採用」による相談)。
+    options: A=絶対パスなので全 findings を drop / B=project_root 相対へ正規化し、project_root 配下に解決しないものだけ拒否。 chosen:
+    B。not chosen: A。 key points: R3b step 1 の目的はパス逸脱の防止であり、返ってきた絶対パスは すべて project_root 配下に解決される (逸脱なし);
+    A は high 2 件と 評価者独自の最重要指摘を、オーケストレーター自身が入力を絶対パスに 正規化したことに起因する書式アーティファクトだけで黙って捨てる; 「abort on violation,
+    never sanitize」は R0 のレビュアー入力パス検証の 記述であり評価者出力には及ばない。 codex_consulted: true (Codex CLI が使用上限に到達したため
+    `codex exec -p litellm -m vertex-glm-5.2 --sandbox read-only` 経由)。 opus_escalation: false.'
+- question_id: develop.once-boundary-review-rework
+  packet_id: null
+  answered_at: '2026-09-14T22:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - treat_as_boundary
+  freeform: null
+  normalized_answer: review 由来の rework もフェーズ境界として扱い、コミット後にターンを終える
+  resolution_note: 'gate: develop.once-boundary-review-rework (gate_id を持たない裁量判断)。 SKILL.md の --once 境界表は
+    4 行で、review 由来の rework を明示していない (review は completed に達さない)。 options: A=境界として扱いターンを終える / B=4 行に無いのでそのまま
+    implement へ続行。 chosen: A。not chosen: B。 key points: 表の row 3「verify 失敗時の rework」は構造的に同一の操作 (rework
+    パッチ適用 -> implement を pending に戻す -> コミット) で、 違いは findings を出したフェーズだけ; --once は長い無人実行を再開可能な 独立コミット単位に分割するために存在する。
+    codex_consulted: true (litellm 経由、vertex-glm-5.2)。opus_escalation: false.'
+- question_id: review.accountability-floor-lift-grouping
+  packet_id: null
+  answered_at: '2026-09-14T22:22:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - lift_but_group_as_same_site
+  freeform: null
+  normalized_answer: floor は文字どおり lift し、Phase R4 の grouping では評価者の 1048 と同一サイト扱いにして site skip させる
+  resolution_note: 'gate: review.accountability-floor-lift-grouping (gate_id を持たない裁量判断)。 security#1 の
+    high サイト (line 1033, line_end 1052) は評価者が line 1048 へ 再アンカーし high -> medium へ降格したため |1048-1033|=15
+    > 5 で same_site が偽になり、 floor が文字どおりなら別個の high として lift される。 options: A=文字どおり lift し batch auto-fix
+    にレビュアーの処方箋を無人適用させる / B=lift はするが Phase R4 の grouping で 1048 と同一サイト扱いし、処方箋対立で site skip / C=評価者が reviewer
+    自身の line span 内で扱っているので floor は履行済みとみなし lift しない。 chosen: B。not chosen: A, C。 key points: floor の目的は開示であって無人適用ではない;
+    A は評価者が実行検証で反証済みの処方箋 (再帰のみでゲート) を無人適用し、 pinned allow ケース TS-7 "$(which grep) -r pattern src" を誤 deny
+    に変える回帰を入れる; C は floor が禁じる judgment call そのものを持ち込む。 B なら機械的 floor の完全性と検証済みの安全結論が両立し、両エントリが rework
+    planner の記録に残る。 codex_consulted: true (litellm 経由、vertex-glm-5.2)。opus_escalation: false.'
+- question_id: review.auto-fix-conflict
+  packet_id: null
+  answered_at: '2026-09-14T22:23:00+09:00'
+  source: batch-decision-table
+  answer_mode: single_select
+  selected_option_ids:
+  - skip_this_site
+  freeform: null
+  normalized_answer: 対立サイトは skip（グループ全員を abort）
+  resolution_note: 'gate: review.auto-fix-conflict (batch-mode.md Non-packet gates 表)。 2 サイトで発火。site line
+    2158 は b49dbfaab151cdf1 (経路を広げる処方箋) と 1b0f63526ad22582 (経路を狭める処方箋) が逆向きで対立。 site line 1033/1048 は
+    02afd5e6762ce196 (再帰のみでゲート) と a4165b97f2492d1e (再帰 + home/root 形状の第 2 の腕) が対立。 いずれも機械的に解決不能のため skip。auto-fix
+    の適用は 0 件。'
+- question_id: create-plan.replanning-traceability
+  packet_id: null
+  answered_at: '2026-09-14T23:03:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - replace_tests_mapping
+  freeform: null
+  normalized_answer: オーケストレーターが requirements.<ID>.tests を generation 2 の正しい対応表で置き換える
+  resolution_note: 'gate: create-plan re-planning patch application (orchestrator-side deviation from
+    the proposed patch). options: (A) apply as-is and leave the superseded TS ids that requirements_patch
+    cannot remove, treating VERIFICATION.md as authoritative; (B) replace each requirement''s tests list
+    with VERIFICATION.md''s generation-2 coverage table in the same single write. choice: B. codex_consulted:
+    yes, but the Codex CLI itself was unreachable (usage limit until 2026-09-19), so the consultation
+    ran through the LiteLLM harness (codex exec -p litellm -m muse-spark), the documented substitute.
+    reasoning: downstream review and verify read requirements.<ID>.tests mechanically; a stale id whose
+    meaning the revised SPEC reassigned corrupts coverage judgement, and a Markdown table cannot correct
+    an automated consumer. The orchestrator owns workflow.yaml, and this record keeps the deviation auditable.
+    affected ids dropped: FR5 TS-13, FR8/NFR6 TS-14, FR9 TS-15, FR10/NFR5 TS-16, NFR1 TS-17, NFR2/NFR3/NFR4
+    TS-18, plus FR1/FR3''s generation-1 TS-6/TS-7 pairing. tasks lists were left as the patch proposed
+    (append task0002).'
+- question_id: create-plan.task-granularity
+  packet_id: null
+  answered_at: '2026-09-14T23:03:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - single_task
+  freeform: null
+  normalized_answer: delta 全体を 1 タスク (task0002) のままにする
+  resolution_note: 'gate: whether to accept the planner''s single-task delta whose 9 acceptance criteria
+    exceed the plan-writing guideline of about 7. options: (A) keep one task; (B) split into two parallel
+    tasks sharing the case table. choice: A (agrees with the planner''s D1). codex_consulted: yes, via
+    the LiteLLM harness substitute (Codex CLI at its usage limit until 2026-09-19). reasoning: tasks run
+    in parallel worktrees with no ordering, so two owners of one case-table JSON conflict on merge and
+    each passes only its own worktree''s suite; the whole-table invariants (every pre-existing verdict
+    preserved, full suite green) can only be checked by whoever holds the complete file. The size guideline
+    is soft and yields to that.'
+- question_id: verify.m5-version-bump-commit-separation
+  packet_id: null
+  answered_at: '2026-09-15T01:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - pass_ssot_wins
+  freeform: null
+  normalized_answer: M-5 の「独立コミット」条項は SSOT を超えた過剰仕様とみなし、verify を pass にする
+  resolution_note: 'gate: verify.m5-version-bump-commit-separation (gate_id を持たない裁量判断。
+    ユーザー指示「不明点は Codex に相談し、比較的良い方を採用」による相談)。
+    VERIFICATION.md の手動項目 M-5 は「version bump が挙動変更に混ざらず独立した
+    コミットとして現れていること」を要求するが、review フェーズの auto-fix コミット
+    da3599d が destructive-guard.py の挙動変更 + ケース追加と一緒に 0.1.81 -> 0.1.82 の
+    bump を含んでいる。task0001 の 3b72790 と task0002 の 3360fa8 はいずれも独立コミット。
+    options: A=pass (M-5 の当該条項は SSOT を超えた過剰仕様) / B=fail にして rework し
+    da3599d を分割する。 chosen: A。not chosen: B。
+    key points: SPEC.md FR10 の文言は「同じ変更の中で」であり独立コミットを要求していない;
+    プロジェクトルール .claude/rules/core-plugin-version-bump.md も「その変更に含めて
+    version を上げる」でありむしろバンドルを支持する; NFR5 は「変更範囲は 4 ファイル」
+    のみを要求し、実測は宣言どおり 4 ファイルで M-5 の実質的な狙いである変更範囲の
+    封じ込めは満たされている; M-5 の独立コミット規律は implementer のタスクコミットを
+    想定した文言と読め、ワークフローが生成する review auto-fix コミットは単一の論理的
+    修正単位である; マージ済み履歴の書き換えは純粋な手続き遵守のためのコストとして
+    見合わない。 follow-up: M-5 の条項に SSOT の裏付けを持たせたいなら FR10 か
+    プロジェクトルール側を明示改訂する (別タスクへ切り出し)。
+    codex_consulted: true (Codex CLI が使用上限 2026-09-19 に到達したため
+    `codex exec -p litellm -m vertex-glm-5 --sandbox read-only` 経由)。
+    opus_escalation: false.'
