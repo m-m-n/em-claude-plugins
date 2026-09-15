@@ -1,0 +1,144 @@
+schema_version: 1
+feature: destructive-guard-command-name-substitution
+phase: create-spec
+status: completed
+generation: 2
+base_revision: 44374bb6e0370e1b5c378440b78bed81b3111e38
+last_input_digest: "sha256:83526df5ffeaea3c7e825c89df19e07a45c8bac4cbb9c0b401f2f3c29c9147de"
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: "2026-09-14T21:20:00+09:00"
+    questions:
+      - question_id: security.command-position-substitution-verdict
+        status: answered
+      - question_id: technical.quote-aware-marker
+        status: answered
+      - question_id: design-step.recommendation
+        status: answered
+answers:
+  security.command-position-substitution-verdict:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-14T21:24:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [narrow_destructive_shape]
+    freeform: null
+    normalized_answer: >-
+      コマンド語の位置が置換のみのトークンで、かつ残りのトークンが既存の破壊的形状
+      （rm の -rf + パス、git reset --hard 等）に一致するときだけ deny/ask に倒す。
+      `$(true) echo safe` / `$(which node) script.js` のような無害形は allow のまま。
+    resolution_note: >-
+      gate: create-spec.requirement-clarification (category: security -> batch relaxed route).
+      options: narrow_destructive_shape / uniform_ask / document_out_of_scope.
+      chosen: narrow_destructive_shape. not chosen: uniform_ask (無人実行で ask が deny に降格し
+      `$(which node) script.js` 等の正常系が確実に停止する。hook-tests.md の誤爆コスト基準に反する)、
+      document_out_of_scope (確定的な `rm -rf <path>` 形を allow=安全宣言のまま残す見逃しになる)。
+      codex_consulted: true (codex exec -p litellm -m muse-spark, read-only, 1 turn).
+      opus_escalation: false. Codex はコード実測に基づき head() の substitution_only 読み飛ばしが
+      コマンド語を `-rf` にしている経路を特定し、誤爆増分が最小になるのは narrow_destructive_shape だと結論。
+      マッピング判定はオーケストレーターが行い、option_id は質問自身の options から選んだ。
+  technical.quote-aware-marker:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-14T21:24:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [payload_position_only]
+    freeform: null
+    normalized_answer: >-
+      マーカー全体の構造は変えず、`-c` / `eval` / `<<<` のペイロード引数位置に限って
+      字句解析前テキストからクォートの有無を見る。引用付き `"$(...)"` なら次の語へ繰り上げず、
+      置換本文をスクリプト本文として再走査する。変更は extract_shell_payload() に閉じる。
+    resolution_note: >-
+      gate: create-spec.requirement-clarification.
+      options: quote_aware_marker / payload_position_only / keep_conflation.
+      chosen: payload_position_only (worker の推奨 quote_aware_marker とは異なる).
+      not chosen: quote_aware_marker (head() / git_subcommand() / check_rm() の読み飛ばしまで変わり、
+      引用付きコマンド位置で空語がコマンド語になって後続の実コマンドを見失う新しい見逃しが生じる。
+      cases.json:233-234 の ask 期待値も揺らぐ)、keep_conflation (FR-2 を満たさない)。
+      codex_consulted: true (1 turn, 上と同一バッチ consultation). opus_escalation: false.
+      影響範囲は cases.json:230 と :231 の 2 件に限定され、203-205 / 207-210 / 227 / 233-234 は不変。
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-14T21:24:04+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [design_skipped]
+    freeform: null
+    normalized_answer: design ステップは skipped。設計上の判断は create-plan の IMPLEMENTATION.md が担う。
+    resolution_note: >-
+      gate: create-spec.design-step. batch-policies.yaml は decide_autonomously
+      （requirements-analyst の design_step_recommendation をそのまま採用）を定めるが、
+      worker の推奨 design_required の理由は字句層コントラクトの設計という
+      ソフトウェア設計の話であり、em-workflow の design ステップが担うビジュアルデザイン
+      （DESIGN.md / design-system/tokens.yaml / HTML モック）とは別物だった。
+      design_system_candidates が 0 件で kind: none となるため、design を走らせると
+      designer-contract.md の kind x token 表により targets が create / create になり、
+      UI を持たない本リポジトリに design-system/tokens.yaml と tokens.html が新規作成される。
+      options: design_required / design_skipped. chosen: design_skipped.
+      codex_consulted: true (turn 2). opus_escalation: false.
+      設計根拠の置き場所は create-plan の IMPLEMENTATION.md とする。
+  acceptance.unittest-dod-parity:
+    packet_id: null
+    answered_at: "2026-09-14T22:45:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [parity_dod]
+    freeform: null
+    normalized_answer: >-
+      AC-10 は「`python3 -m unittest discover -s tests` が全件通る」ではなく、
+      「失敗テスト ID 集合が base revision と完全一致し、本変更による新規失敗が
+      1 件も無い」とする。base に既存する失敗は別タスクとして起票する。
+    resolution_note: >-
+      gate: create-spec.requirement-clarification（オーケストレーターが raise。
+      requirements-analyst の warning と assumption AS-10 が発端）。
+      options: literal_dod / parity_dod / block_feature. chosen: parity_dod.
+      not chosen: literal_dod（無関係な既存の赤 6 件の修復を本 feature に強いることになり、
+      自身の変更範囲 NFR5 を破る。帰属も曖昧になる）、
+      block_feature（無関係な赤で無人実行を止めるコストが重すぎる）。
+      codex_consulted: true だが Codex CLI は使用上限（9/19 まで）で到達不能だったため、
+      question-resolution.md の Codex consultation procedure step 1 に従い
+      LiteLLM 経由の Codex ハーネス（-p litellm -m muse-spark, read-only, 1 turn）で
+      同一の質問を投げた。結論は parity_dod で一致し、さらに「件数一致だけでは
+      本物の退行を隠しうるので、失敗テスト ID 単位で突き合わせること」という
+      強化点が返った。オーケストレーターはこの強化点を採用し、AC-10 の文言を
+      analyst 案（件数ベース）から ID 集合ベースへ強めた。
+      opus_escalation: false（consultation が option にマップしたため不要）。
+      実測根拠: integration worktree で `python3 -m unittest discover -s tests` を
+      実行し、Ran 4596 tests / FAILED (failures=6)。失敗は
+      tests/test_step_c_verify_failed_default.py の別ドキュメント文言アサートで、
+      本 feature の変更対象ファイルを 1 つも参照していない。
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: needs_user_input
+    input_digest: "sha256:86c64bb6a602a928d7e90a31bfef46ad469dd2deff0670087c5a636958a913a8"
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: "sha256:b68539281fdabb1d761ee8cce9b87333964955fd5ee0331ff3cbc6777aa4ae87"
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: "sha256:1d35c7c9146f284c886fcbe66bc9a99e77e863c9d7a8d150158fbdf5a9f68ded"
+    output_digest: null
+  - request_id: create-spec-run-0004
+    status: completed
+    input_digest: "sha256:e9541d522a0e910c3151ea9436550d07f1976af31c706dd15aea5540f5ec0b1b"
+    output_digest: null
+  - request_id: create-spec-specwriter-0001
+    status: completed
+    input_digest: "sha256:83526df5ffeaea3c7e825c89df19e07a45c8bac4cbb9c0b401f2f3c29c9147de"
+    output_digest: null
+artifacts:
+  - path: feature-docs/destructive-guard-command-name-substitution/REQUIREMENTS.md
+    sha256: "sha256:068e28f9ef76d88b21b689d79bb05a66c341495fc717696d1228e5b74fa2ffab"
+    produced_by: create-spec-specwriter-0001
+  - path: feature-docs/destructive-guard-command-name-substitution/SPEC.md
+    sha256: "sha256:12cffaf747876c181927e33be8d5a0781c157f2254e6eda2f873a6451a0ae163"
+    produced_by: create-spec-specwriter-0001
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

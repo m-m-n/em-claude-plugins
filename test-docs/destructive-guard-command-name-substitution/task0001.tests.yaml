@@ -1,0 +1,183 @@
+task_id: task0001
+baseline_failures:            # python3 -m unittest discover -s tests: 4596 tests, 6 pre-existing failures, all unrelated to this task (develop-skill wording / a prior manifest-hash version-bump check); python3 em-workflow/hooks/tests/run-destructive-guard.py: 228/228 green (before any edit)
+  - "test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78"
+  - "test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens"
+  - "test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget"
+  - "test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged"
+  - "test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present"
+  - "test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present"
+final_failures:                # Identical set after implementation (re-run twice, byte-identical); python3 em-workflow/hooks/tests/run-destructive-guard.py: 241/241 green (228 pre-existing + 13 new/added + 1 unattended-demotion, one pre-existing entry's verdict flipped as declared by FR6); python3 em-workflow/scripts/check-plugin-invariants.py .: exit 0
+  - "test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78"
+  - "test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens"
+  - "test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget"
+  - "test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged"
+  - "test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present"
+  - "test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present"
+acceptance_tests:
+  AC-1:
+    tests:
+      - "destructive-guard-cases.json: コマンド語静的不明(rm-recursive, TS-1): $(which rm) 形のコマンド名置換でも rm 破壊形状を残りトークンに照合する（チケット再現）"
+      - "destructive-guard-cases.json: コマンド語静的不明(rm-recursive, TS-2): バッククォート形でも同じ（両スペル対称性）"
+    red_confirmed: true
+    red_reason: >-
+      Added both case-table entries first and ran run-destructive-guard.py
+      against the pre-implementation guard (after the case-table commit,
+      before the analyzer commit): both FAILed with got=allow, reason
+      "[destructive-guard] 破壊的なパターンに一致しない。" — head() was
+      skipping the `.substitution_only` command-word token and landing on
+      `-rf` as the "command word", which matched nothing. After the
+      analyzer change both report got=deny with rule rm-recursive.
+  AC-2:
+    tests:
+      - "destructive-guard-cases.json: コマンド語静的不明(git-reset-hard, TS-3): $(which git) 形のコマンド名置換でも git のサブコマンド形状(reset --hard)に残りトークンを照合する"
+      - "destructive-guard-cases.json: コマンド語静的不明(git-clean, TS-4): $(which git) 形のコマンド名置換でも git のサブコマンド形状(clean -fd)に残りトークンを照合する"
+    red_confirmed: true
+    red_reason: >-
+      Same pre-implementation run as AC-1: both FAILed with got=allow
+      (the substitution-headed `git` invocation was never routed to
+      check_git() since head() landed on the bare subcommand word
+      `reset`/`clean`, not `git`). After the analyzer change both report
+      got=deny with rule git-reset-hard / git-clean respectively.
+  AC-3:
+    tests:
+      - "destructive-guard-cases.json: 対象外(判定なし): コマンド位置の置換を読み飛ばした先が無害なら allow — 動的に決まるコマンド名そのものの検査は従来どおり対象外"
+      - "destructive-guard-cases.json: 対象外(判定なし): env の後のコマンド位置置換でも同じ"
+      - "destructive-guard-cases.json: 対象外(判定なし): git サブコマンド位置の置換でも同じ"
+      - "destructive-guard-cases.json: コマンド語静的不明の誤爆防止(TS-5): 残りが既存の破壊形状に一致しないため allow のまま"
+      - "destructive-guard-cases.json: コマンド語静的不明の誤爆防止(TS-6): 次トークンがフラグ先頭でも rm 形状（再帰+強制+オペランド）に一致しない残りは allow"
+      - "destructive-guard-cases.json: コマンド語静的不明の誤爆防止(TS-7): 再帰フラグのみで強制フラグが無いため rm 経路の下限に届かない"
+      - "destructive-guard-cases.json: コマンド語静的不明 + セーフルート例外(build artifact)の継承(TS-8)"
+      - "destructive-guard-cases.json: コマンド語静的不明 + セーフルート例外(scratch root)の継承(TS-9)"
+    red_confirmed: false
+    red_reason: >-
+      All eight already reported got=allow against the pre-implementation
+      guard (none appear in its FAIL list — only TS-1..TS-4 and the FR6
+      entry, AC-4/AC-5 below, failed). $(true) echo safe / env $(true) echo
+      safe / git $(true) status were already correct pre-task (SPEC.md
+      OBJ-4 baseline, unaffected by this task since their command word is
+      found directly at position 0, no substitution skip). $(which ls) -la,
+      $(which grep) -r pattern src, $(which rm) -rf dist and $(which rm)
+      -rf /tmp/scratch/x are new command-word-substitution shapes, but they
+      were ALREADY allow before this task too — not because the new routes
+      ran and found nothing (they did not exist yet), but because the
+      pre-task head() picked the dash-leading token itself (`-la`, `-r`,
+      `-rf`) as a nonsensical "command word" that matched no existing check
+      either. FR3's job here is to keep these allow AFTER the new routes
+      exist (regression prevention, verified by the rm-route gate's
+      dash+recursion+force+operand condition correctly excluding the first
+      three, and check_rm()'s own pre-existing safe-route exception
+      handling the last two via a structurally different path to the same
+      verdict), not to flip them from red.
+  AC-4:
+    tests:
+      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-10): -c の引数がクォート付き置換なら空展開でも語が消えないため次の語へ繰り上げない — 第2引数は実シェルでは $0 であり、allow が実シェル意味論と一致する"
+      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-11): eval のペイロードがクォート付き置換でも空展開で消えず allow のまま"
+      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-11): eval のペイロード（direnv 形）でも同じ"
+      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-11): eval のペイロード（mise 形）でも同じ"
+      - "destructive-guard-cases.json: クォート判定(quote-aware, TS-11): -c のペイロードがクォート付き置換のみで後続引数が無い形も allow のまま"
+    red_confirmed: true
+    red_reason: >-
+      The first entry is the FR6 case-table flip (deny -> allow). Ran
+      against the pre-implementation guard (after the case-table commit,
+      before the analyzer commit): FAILed with
+      got=deny "[destructive-guard/rm-recursive] `rm -r` の対象
+      `/home/sakura/valuable` はスクラッチ領域の外。...". After the quote-aware
+      extract_shell_payload() change it reports got=allow — the quoted
+      `"$(cat script.sh)"` no longer promotes to the trailing
+      `'rm -rf /home/sakura/valuable'` argument. The other four
+      (eval x3, bash -c with no trailing argument) already reported
+      got=allow pre-implementation and stay allow — eval's
+      extract_shell_payload branch joins ALL of eval's own arguments
+      regardless of quoting (matching real eval semantics), so there was
+      no promotion bug for a single-argument eval payload, and a `-c`
+      payload with nothing after it has nothing to promote TO either way;
+      included here as regression-guard additions pinning "normal
+      quoted-payload usage stays allow" for the same AC, not as a
+      red->green demonstration in their own right — red_confirmed=true is
+      earned by the FR6 entry, which is the one this AC's "with a
+      rewritten label rather than being deleted" clause is actually about.
+  AC-5:
+    tests:
+      - "bash -c $(printf %s) 'rm -rf /home/sakura/valuable' (destructive-guard-cases.json line 203, pre-existing)"
+      - "bash -c `printf %s` 'rm -rf /home/sakura/valuable' (line 204, pre-existing)"
+      - "sh -c $(true) 'git reset --hard HEAD' (line 205, pre-existing)"
+      - "bash <<<$(true) 'rm -rf /home/sakura/valuable' (line 227, pre-existing)"
+    red_confirmed: false
+    red_reason: >-
+      All four are pre-existing deny entries (unquoted promotion), untouched
+      by this task per FR5's explicit "no behaviour change" requirement —
+      TS-13 of VERIFICATION.md names these same four commands, already
+      present verbatim before this task, so no new case-table entry was
+      added for them. Verified they stayed deny across both the case-table
+      commit and the analyzer commit (byte-identical got=deny both times),
+      which is FR5's actual acceptance evidence — a regression guard, not a
+      red->green test.
+  AC-6:
+    tests:
+      - "destructive-guard-cases.json: 対象外宣言(out-of-scope, TS-12): 置換の展開結果（=置換本文の出力）そのものがスクリプト本文になる形は、評価を要するためこのフックの静的解析の対象外"
+    red_confirmed: false
+    red_reason: >-
+      Verdict-only: the pre-existing entry's expected verdict (allow) never
+      changes — only its label is rewritten, and extract_shell_payload()'s
+      docstring gains the matching out-of-scope sentence ("a form whose
+      substitution's expanded output itself becomes the script body is
+      outside this hook's static analysis"). Confirmed by reading both
+      changed locations side by side and confirming they state the same
+      scope (not merely similar phrasing) — the Japanese label and the
+      English docstring necessarily differ in wording, per VERIFICATION.md's
+      own manual item M-1 ("a difference in scope, not merely in phrasing,
+      is a failure"). Confirmed both mirror scripts
+      (failed-run-cleanup-guard.py, muse_guard.py) are absent from `git
+      status`/`git diff --stat` across every commit of this task, and that
+      their own divergence-note docstrings were extended (head()'s and
+      git_subcommand()'s "Mirrored in..." paragraphs) to name the new
+      FR1/FR2 branches as equally local to this file. No test expresses
+      "these two locations agree" or "the mirror scripts are byte-identical
+      to their pre-change content" — a manual-inspection criterion per the
+      task plan's Test Notes, not a red->green demonstration.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Whole-suite/whole-table outcome, not a single test: ran
+      `python3 em-workflow/hooks/tests/run-destructive-guard.py`
+      (241/241 green — 228 pre-existing + 12 new entries + the FR6 flip +
+      1 unattended-demotion) and `python3 -m unittest discover -s tests`
+      (4596 tests, the same 6 pre-existing baseline failures and no others)
+      after every commit of this task. Every pre-existing case keeps its
+      expected verdict except the single FR6 entry — confirmed by the
+      case-table diff (`git diff em-workflow/hooks/tests/destructive-guard-
+      cases.json`): exactly one verdict field changed (FR6), plus two
+      label-only rewrites (FR6's own label, and FR7's TS-12 label) with no
+      other verdict field touched. The unattended-demotion case at the
+      runner's tail ("無人実行では ask が deny に降格") still passes. Every
+      scenario TS-1 through TS-13 exists in the case table in the
+      three-element form (TS-1..TS-9, TS-11 newly added; TS-10/TS-12
+      pre-existing entries retained with rewritten labels; TS-13's four
+      commands already present verbatim, untouched) with no new runner file
+      and no new import added to destructive-guard.py (verified: still only
+      json/os/re/shlex/shutil/sys). `git diff --stat` across the whole task
+      names only the four files in Scope. No unit test asserts this
+      aggregate; verified by running both commands and reading their
+      output/exit codes plus `git status`/`git diff --stat` after each
+      commit.
+  AC-8:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Version-bump criterion (FR10/NFR5): ran
+      `python3 em-workflow/scripts/check-plugin-invariants.py .` before the
+      version-bump commit (exit 0, green on the unbumped 0.1.79 state) and
+      after (exit 0, still green) — the before/after pair the task plan's
+      Test Notes specify as this criterion's equivalent of red-then-green,
+      since the invariants script does not itself assert a specific version
+      value. Compared the two version strings as parsed JSON values (not by
+      trusting the edit): em-workflow/.claude-plugin/plugin.json and the
+      em-workflow entry of .claude-plugin/marketplace.json both read equal
+      values before the edit ("0.1.79" — no pre-existing mismatch to
+      report) and both read "0.1.80" after, major/minor unchanged.
+      em-review's marketplace entry stays "0.5.10", untouched. `git diff`
+      for both files shows exactly the one version line each, no
+      reformatting, no other field touched. No unit test exists for this
+      criterion (none is added, per the task plan's own Test Notes: "AC-8
+      has no unit test of its own and none is added").

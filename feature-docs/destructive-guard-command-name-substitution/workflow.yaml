@@ -1,0 +1,321 @@
+schema_version: 1
+feature: destructive-guard-command-name-substitution
+created: 2026-09-14
+base_branch: main
+goal: |
+  destructive-guard: コマンド名そのものがコマンド置換で決まる形は検査対象外
+
+  ## 脆弱性の概要 (必須)
+  `destructive-guard.py` は、コマンド名そのものがコマンド置換で決まる形を検査対象にしていない。
+  `$(which rm) -rf <path>` のように、置換の展開結果が実行されるコマンドになるケースは、
+  展開結果を静的に確定できないため `allow` になる。
+
+  ## 参照 (必須)
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: medium
+  - 該当パッケージ: 該当なし
+  - 現在のバージョン: em-workflow 0.1.75
+  - 修正済みバージョン: 無し
+
+  ## 攻撃シナリオ (必須)
+  削除コマンドの「名前」を置換で組み立てると素通りする。実測値（feature
+  `destructive-guard-command-substitution` 適用後の状態）:
+
+  | コマンド | 判定 |
+  | --- | --- |
+  | `$(which rm) -rf /home/sakura/valuable` | allow |
+  | `bash -c "$(echo 'rm -rf /home/sakura/valuable')" 'echo safe'` | allow |
+  | 対照: `rm -rf /home/sakura/valuable` | deny |
+
+  いずれも feature `destructive-guard-command-substitution` の基準版（`db5a4f86`）でも `allow` で、
+  同 feature が持ち込んだ退行ではない。元からある検査範囲の外側。
+  なお `$(true) rm -rf /home/sakura/valuable` のように「置換の後ろに実コマンド語が続く」形は
+  同 feature で `deny` に戻してある。残っているのは「置換の展開結果そのものがコマンド／
+  スクリプト本文になる」形だけ。
+
+  ## 影響範囲 (必須)
+  コマンド名またはシェルのスクリプト本文を置換で組み立てられる、実行ユーザーが書き込み可能な
+  任意のパス。`$(...)` とバッククォートの両形式が対象。
+
+  ## 完了の定義 (必須)
+  - [ ] 上表の `allow` が `deny` または `ask` になる、または「検査対象外である」ことが
+  設計判断として明文化され、理由文・ドキュメントがその範囲と一致している
+  - [ ] `em-workflow/hooks/tests/destructive-guard-cases.json` に該当形のケースが入っている
+  - [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る
+  - [ ] `python3 -m unittest discover -s tests` が全件通る
+
+  ## 該当箇所 (任意)
+  `em-workflow/hooks/destructive-guard.py` の `head()` / `extract_shell_payload()`。
+  判断が必要な点: コマンド位置の置換に対して `ask` へ倒すと、`eval "$(ssh-agent -s)"` /
+  `eval "$(direnv export bash)"` / `eval "$(mise activate zsh)"` / `bash -c "$(cat script.sh)"`
+  のような正常系が止まる。無人実行では `ask` が `deny` に降格するため、低頻度でも作業が確実に
+  止まる。`.claude/rules/hook-tests.md` の「誤爆 1 件のコストは見逃し 1 件と同じ桁」を踏まえると、
+  一律 `ask` は採れない。許容できる誤爆頻度を先に決める必要がある。
+  また、クォート付きの `"$(...)"` は空に展開されても語が消えないのに対し、未引用の `$(...)` は
+  語ごと消える。この差はトークン列からは復元できない（`_mark_substitutions()` が字句解析前に
+  両方を同じマーカーへ潰すため）。区別が必要なら、マーカーにクォート情報を持たせる設計変更が要る。
+
+  ## 由来 (任意)
+  feature `destructive-guard-command-substitution` の review round 2 で security 観点
+  （litellm/muse-spark）が指摘。基準版との実測比較で退行ではないことを確認したため、
+  同 feature では `declined` として扱い、別タスクへ切り出した。
+  Codex への相談でも「今回のバグ修正には含めず別タスクに切り出すべき」との判断だった。
+parent_branch: em-workflow/destructive-guard-command-name-substitution/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Python 3
+      build_command: "python3 em-workflow/scripts/check-plugin-invariants.py ."
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+    hooks:
+      language: Python 3
+      build_command: ""
+      test_command: "python3 em-workflow/hooks/tests/run-destructive-guard.py"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 44374bb6e0370e1b5c378440b78bed81b3111e38
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: >-
+      em-workflow の design ステップはビジュアルデザイン (DESIGN.md /
+      design-system/tokens.yaml / HTML モック) を対象とするが、本 feature は
+      PreToolUse フックの字句解析ロジックであり UI を一切持たない。
+      design_system_candidates も 0 件。字句層コントラクトの設計判断と
+      誤爆許容範囲は create-plan の IMPLEMENTATION.md が担う。
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: completed
+    completed_at_commit: 90c0191377f2ec72a04c3f41154bc1f0c08fbfa5
+  - id: implement
+    status: completed
+    base_commit: a722550dc4b2c3c5b205f6fe13123f70d603902f
+    completed_at_commit: 2e7f8e78499f5feba31a6567af2203abfb75e922
+  - id: review
+    status: completed
+    completed_at_commit: da3599d2d6c0d1e77b1bad860e945b3b13fd961c
+  - id: verify
+    status: completed
+    completed_at_commit: 53a503e087ca6b7a53eecfe28a699aab9c2b369c
+    result: pass
+    failed_items: []
+  - id: retrospect
+    status: completed
+    completed_at_commit: e5300e1d65365ae76d8d81e1c91881ffaf296abe
+
+tasks:
+  task0001:
+    title: statically-unknown command word, quote-aware payload extraction, and the published version bump
+    plan: tasks/task0001.md
+    files:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+    skills: [backend-impl, infra-impl]
+    domains: [input-handling, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
+    status: merged
+    notes: null
+    branch: em-workflow/destructive-guard-command-name-substitution/task0001
+  task0002:
+    title: evidence-gated substitution-head routing, whole-word payload quote judgement, and the case-table delta
+    plan: tasks/task0002.md
+    files:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+    skills: [backend-impl, infra-impl]
+    domains: [input-handling, config-infra]
+    complexity: high
+    requirements: [FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR13, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6, NFR7]
+    status: merged
+    notes: null
+    branch: em-workflow/destructive-guard-command-name-substitution/task0002
+
+review:
+  status: completed
+  rounds_completed: 2
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary:
+      - perspective: performance
+        reason: >-
+          diff は PreToolUse フックの字句解析器に走査パスを追加する。フックは
+          全 Bash 呼び出しで同期実行されるため、追加された走査の入力長に対する
+          コストが操作感に直結する。
+    cross_validation: true
+  perspectives:
+    security: {runs: ["security#0", "security#1", "security#loop1", "security#loop1-1", "security#loop2", "security#loop2-1"], status: completed}
+    comprehensive: {runs: ["comprehensive#0", "comprehensive#1", "comprehensive#fallback", "comprehensive#loop1", "comprehensive#loop1-1", "comprehensive#loop1-fallback", "comprehensive#loop2", "comprehensive#loop2-1", "comprehensive#loop2-fallback"], status: completed}
+    performance: {runs: ["performance#0", "performance#loop1", "performance#loop2"], status: completed}
+    architecture: {runs: ["architecture#0", "architecture#loop1", "architecture#loop1-2", "architecture#loop1-fallback", "architecture#loop2", "architecture#loop2-2", "architecture#loop2-fallback"], status: completed}
+    spec: {runs: ["spec#0", "spec#loop1", "spec#loop2"], status: completed}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "コマンド語位置の置換 + rm 経路（コマンド名証拠でゲートする）"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-1, TS-2, TS-8, TS-9, TS-13, TS-14, TS-15, TS-16, TS-17]
+  FR2:
+    title: "コマンド語位置の置換 + git 経路（コマンド名証拠でゲートする）"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-3, TS-4, TS-26, TS-27]
+  FR3:
+    title: "証拠が無い残りの allow 維持"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-5, TS-6, TS-7, TS-18, TS-19, TS-20, TS-21, TS-22, TS-23, TS-24, TS-25, TS-33]
+  FR4:
+    title: "ペイロード引数位置のクォート判定（語全体が置換のときに限る）"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-10, TS-11, TS-28, TS-29, TS-30, TS-31]
+  FR5:
+    title: "未引用置換の繰り上げ挙動の保存"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-32, TS-38]
+  FR6:
+    title: "クォート付き `-c` ペイロードケースの期待値反転とラベル書き換え"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-10]
+  FR7:
+    title: "対象外宣言の明文化"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-12, TS-33]
+  FR8:
+    title: "ケース追加"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-34]
+  FR9:
+    title: "ミラー差分注記の更新"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-35]
+  FR10:
+    title: "プラグイン version の引き上げ"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-36]
+  FR11:
+    title: "コマンド位置置換からのコマンド名の静的読み取り"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS-1, TS-3, TS-33, TS-37]
+  FR12:
+    title: "クォート付き here-string 分岐の判定反転の明示"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS-31]
+  FR13:
+    title: "置換先頭ルーティングの関数抽出"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS-39]
+  NFR1:
+    title: "判定の決定性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-37]
+  NFR2:
+    title: "既存期待値の保存"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-38, TS-41]
+  NFR3:
+    title: "誤爆コスト"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-38]
+  NFR4:
+    title: "降格経路の不変"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-38]
+  NFR5:
+    title: "変更範囲"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-36]
+  NFR6:
+    title: "テストの独立性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS-34]
+  NFR7:
+    title: "素スペルとの同値性"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS-40]
+
+batch:
+  review_rework_count: 1
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
