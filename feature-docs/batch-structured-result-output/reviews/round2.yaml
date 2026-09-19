@@ -1,0 +1,271 @@
+round: 2
+executed_at: '2026-09-20T05:09:18.423030+09:00'
+scope:
+  review_mode: diff
+  base_commit: 95c23ed1e9d9cf8db8ddbb89d946295bf6aa4716
+  head_commit: 49962c0cb81c71998bbaf2804d1cf03d4dfbb6cf
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/batch-mode.md
+  - em-workflow/references/batch-terminal-line.md
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/batch-structured-result-output/task0001.tests.yaml
+  - test-docs/batch-structured-result-output/task0002.tests.yaml
+  - test-docs/batch-structured-result-output/task0003.tests.yaml
+  - test-docs/batch-structured-result-output/task0004.tests.yaml
+  - test-docs/batch-structured-result-output/task0005.tests.yaml
+  - test-docs/batch-structured-result-output/task0006.tests.yaml
+  - test-docs/batch-structured-result-output/task0007.tests.yaml
+  - test-docs/batch-structured-result-output/task0008.tests.yaml
+  - test-docs/batch-structured-result-output/task0009.tests.yaml
+  - tests/test_assumptions_reversible_criterion.py
+  - tests/test_batch_quiet_output_audit_persistence.py
+  - tests/test_batch_quiet_output_discipline.py
+  - tests/test_batch_quiet_output_phase_wiring.py
+  - tests/test_batch_quiet_output_skill_wiring.py
+  - tests/test_batch_stop_contract.py
+  - tests/test_batch_stop_contract_skill_wiring.py
+  - tests/test_batch_structured_result_output_version_bump.py
+  - tests/test_develop_once_option.py
+  - tests/test_failed_kind_batch_docs.py
+  - tests/test_failed_kind_stop_condition.py
+  - tests/test_structured_result_conformance.py
+  - tests/test_structured_result_consumer_constraints.py
+  - tests/test_structured_result_derivation.py
+  - tests/test_structured_result_reporting_containment.py
+  - tests/test_verify_cap_run_continuation.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  status: skipped
+  skip_reason: rate_limited
+  model: vertex-glm-5.2
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+  skip_reason: null
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: rate_limited
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  status: skipped
+  skip_reason: rate_limited
+  model: muse-spark
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+  skip_reason: null
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: skipped
+  skip_reason: rate_limited
+  model: vertex-glm-5.2
+- run_id: architecture#1
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: skipped
+  skip_reason: rate_limited
+  model: muse-spark
+- run_id: architecture#fallback
+  perspective: architecture
+  role: fallback
+  source: claude
+  status: completed
+  skip_reason: null
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  skip_reason: rate_limited
+  model: muse-spark
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: litellm
+  status: skipped
+  skip_reason: rate_limited
+  model: vertex-glm-5.2
+- run_id: spec#fallback
+  perspective: spec
+  role: fallback
+  source: claude
+  status: completed
+  skip_reason: null
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 527e10173b2e8e66
+  severity: high
+  category: spec
+  file: em-workflow/references/batch-terminal-line.md
+  line: 247
+  title: '`## Consumer constraints` の自前拒否規則が `resume_conditions` の改行保持（FR8 / AC-4）と正面衝突し、停止結果の通常形が出力不能になる'
+  description: '247-251 行の em-workflow 自身の拒否規則は「`detail` と `resume_conditions` は decode 後の line terminator
+    / terminal-control code point を拒否する。`## Escaping` はここでも助けにならず、エスケープ済みの制御文字も生のものと同じく拒否される」と定める。一方、同文書
+    126-130 行は `resume_conditions` について「`detail` の正規化は適用せず、Markdown の改行・インデント・末尾空白は `## Escaping` のエスケープとして生き残る」と定め、SPEC
+    FR8 / AC-4 も同じことを要求している。`\n` は decode すれば line terminator なので、複数行のリカバリ手順を持つ `state: "stopped"` の結果は必ずどちらかの規則を破る。停止は
+    batch で最も頻度の高い終端経路であり、(a) FR8 に従えば自前規則で拒否され、(b) 自前規則に従えば結果を出せず NFR6 の「結果なし＝異常終了」信号が正常な停止に対して誤って立つ。242-245
+    行の「Each of the four cannot fire while `## Escaping` is honoured」という前提文も、247-251 行自身がエスケープ済みを拒否すると明言しているためこの経路では偽。矛盾の両側をテストが緑のまま固定している（tests/test_structured_result_conformance.py
+    の TestResumeConditionsEscapingOnly と tests/test_batch_stop_contract.py の _assert_own_hardening_rules_stated）ため、スイートでは検出できない。この拒否規則は
+    round 1 の finding 945001897c8ae4b6 への rework（task0008）で追加されたもので、SPEC FR14 の文字種制約は `branch` と `pr_url`
+    のみを対象としている。4 パースペクティブすべてが同一サイトを独立に報告（spec / architecture / comprehensive が high、security が medium）。'
+  suggestion: '拒否規則を `detail` と `resume_conditions` で分ける。1 案: 当該 bullet を「`detail` は decode 後の line terminator
+    / terminal-control code point を拒否する（`## Field values` の正規化が CR/LF/TAB を除去済みなので、残存は正規化の飛ばしを意味する）。`resume_conditions`
+    は CR / LF / TAB 以外の terminal-control code point のみを拒否する — FR8 により Markdown の改行は `\n` エスケープとして残ることが期待される正常形であり、違反ではない」に書き換える。あわせて
+    242-245 行の「Each of the four cannot fire while `## Escaping` is honoured」を実態に合わせて書き直す。同じ変更で tests/test_batch_stop_contract.py
+    の `_assert_own_hardening_rules_stated`（702-733 行）の期待文字列と FORGED_OWN_RULES_PARTIAL（1941-1952 行）を更新し、「改行入り
+    `resume_conditions` は拒否されない」ことを示す positive ケースを 1 本足す。'
+  sources:
+  - claude:spec
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 35582da1154be9aa
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/batch-terminal-line.md
+  line: 242
+  title: 自前 4 規則が発火したときの出力が未定義で、`detail` には CR/LF/TAB 以外の制御文字を落とす合法な手段が無い
+  description: 99-107 行の `detail` 正規化が空白へ置換するのは CR / LF / TAB の 3 種のみ。ESC (U+001B) をはじめとする他の C0 / C1 制御文字は正規化を素通りし、61-64
+    行の residual 規則で `\u001b` にエスケープされて decode 時に terminal-control code point として復活する。247-251 行はエスケープ済みでも拒否すると明言しているため、`detail`
+    の出所（自動承認コマンド文字列など、`## Reporting` の監査項目）に ANSI 制御列が 1 つ混じった時点でこの規則が発火する。131-141 行の in-full 規則は secret
+    の redaction を「One named exception, and only one」と明示しているので、emitter が制御文字だけを落とす合法な手段も文書内に存在しない。さらに 64
+    KiB 衝突（227-236 行）には発火時の出力を明記した段落があるのに、この 4 規則には対応する段落が無く、拒否が起きたとき何を出すのかがどこにも定義されていない。
+  suggestion: いずれかで閉じる。(a) `detail` の正規化規則を「U+0000-U+001F / U+007F-U+009F / U+2028 / U+2029 を単一スペースに置換する」まで広げ、これは内容の削除ではなく制御文字の正規化であって
+    131-141 行の in-full 規則の例外にはあたらない旨を明記する。そのうえで 247 行の `detail` 部分を「正規化後に残ることは無い」二重防壁として据える。(b) 拒否対象を「エスケープを逃れて生のまま出力に残った」制御文字だけに限定する。いずれの場合も、それでも拒否が起きたときの出力を
+    64 KiB 段落と同じ形（結果を出さない／reason code は追加しない）で 1 段落明記する。
+  sources:
+  - claude:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: c8687c20208f16bc
+  severity: medium
+  category: spec
+  file: em-workflow/references/batch-terminal-line.md
+  line: 229
+  title: 64 KiB 衝突時に「結果を出さない」経路が SPEC FR2 / AC-1 と Error Handling に存在せず、NFR6 の異常終了信号を薄める
+  description: 227-236 行が「a run that cannot satisfy both this bound and `batch-mode.md`'s `## Reporting`
+    "in full" requirement emits no result for that run, and `## Purpose`'s absence signal applies to it」と定める。SPEC
+    FR2 は「終端 batch ターンの最終 assistant メッセージは 1 つの YAML mapping」と無条件に書き、AC-1 も 8 キー mapping を合格条件にしている。SPEC
+    の Error Handling / Absence of a Result は結果不在の原因を「A crash or truncated turn」に限定しており、正常に終端へ達したターンが結果を出さない経路は
+    SPEC のどこにも無い。実害は、監査項目全文が 64 KiB を超えた長い走行で正常完了が「結果不在＝異常終了」と読まれ、NFR6 が crash 専用に持たせていた信号の意味が薄まること。round
+    1 の finding（batch-terminal-line.md:232）への rework で追加された段落であり、衝突の解決自体は妥当だが SPEC 側に反映されていない。
+  suggestion: SSOT と SPEC のどちらか一方に寄せる。(a) SPEC を正とするなら、衝突時も 8 キーの結果は必ず出す形にし、`detail` に「監査項目は 64 KiB 制約により結果に収まらず、audit-item
+    source map が示す永続先に全文が残る」旨を載せたうえで、`## Reporting` の in-full 要求に対する明示的な例外を FR17 に 1 つ加える。(b) SSOT を正とするなら、SPEC.md
+    の FR2 / AC-1 に例外を明記し、Error Handling の「Absence of a Result」にこのケースを追記して、AC-1 の文言を「結果を出す終端ターンでは」に限定する。
+  sources:
+  - claude:spec
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 81ad8833683dbde7
+  severity: medium
+  category: architecture
+  file: em-workflow/references/batch-mode.md
+  line: 140
+  title: '`resume_conditions` に入れるべき「stop-recovery guidance」の定義元が batch-mode.md 側に無く、指示語 `above` が宙に浮いている'
+  description: '`## Reporting` の 140-146 行が「the stop-recovery guidance above is carried in full inside
+    the result''s stop-recovery value」と書くが、この `above` に対応する記述が `## Reporting`（125-138 行）にもそれより上の節にも存在しない。`##
+    Reporting` が列挙するのは 7 項目の監査項目で、7 番目は「the kept integration branch name with the take-over guidance」であり
+    take-over guidance は stop-recovery guidance とは別物。SSOT 側（batch-terminal-line.md:131-136）は内容の所有を batch-mode.md
+    に委譲しているため、`resume_conditions` が全文で運ぶべき内容の定義元がどの文書にも確定していない。`resume_conditions` は `state: "stopped"`
+    のすべての結果で非空白が必須だが、skills/develop/SKILL.md の「停止時の報告」が文面を定めているのは停止条件 2-4 の 3 件のみで、gate_fail_closed /
+    docs_commit_conflict_aborted / step-c-abort / step-a-abort / implement-second-failure / verify-rework-cap
+    といった残りの停止点には定義された内容が無い。'
+  suggestion: 所有権を 1 箇所に確定させる。(a) batch-mode.md の `## Reporting` に stop-recovery guidance の項目を明示的に足す（tests/test_batch_quiet_output_audit_persistence.py
+    のキー名リテラル禁止と衝突しない書き方で）。(b) それが難しければ batch-terminal-line.md の `resume_conditions` bullet 側で所有権を引き取り、定義元を名指しする。いずれの場合も
+    `above` という宙に浮いた指示語は残さず、停止点ごとに何を載せるかが Stop point coverage の 11 行と 1:1 で辿れる状態にする。
+  sources:
+  - claude:architecture
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: c9a94808ac5bd7e5
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/batch-terminal-line.md
+  line: 131
+  title: 監査項目の in-full 搭載規則が `state` を問わず無条件で、`## Reporting` の完了報告スコープと食い違う
+  description: 131-136 行は「Every audit item `batch-mode.md`'s `## Reporting` enumerates is carried in full
+    inside `detail`」と `state` の条件なしに定める。参照先の `## Reporting`（batch-mode.md:125）は「The final report of a
+    batch run MUST include, beyond the normal completion report:」と、走行の最終報告を前提に 7 項目を列挙している。無条件に読むと `--once`
+    のフェーズ境界で出る `phase_done` の結果や create-spec 段階の停止でも、その時点で存在しない項目まで `detail` に全文必須になる。tests/test_structured_result_reporting_containment.py
+    の containment_checker は `state` を問わず 7 項目すべてを要求し、`phase_done` / `completed` にも同じ判定を当てており、この無条件の読みを
+    pin している。`--once` 走行は境界ごとに結果を出すため、毎回 7 項目全文を 1 物理行・64 KiB 以内に収める要求となり、64 KiB 衝突経路の発火確率も押し上げる。付随して
+    containment 側の fixture が項目を改行で連結している点も、SSOT 105-107 行の「区切りは ` | `、`detail` は 1 物理行」と食い違う。
+  suggestion: 131-136 行に `state` ごとのスコープを明記する。例:「`state` が `completed` の結果では全項目を全文で運ぶ。`stopped` / `phase_done`
+    では、その時点までに発生した項目のみを同じ規則で運ぶ」。あわせて tests/test_structured_result_reporting_containment.py の containment_checker
+    を `state` で分岐させ、`_assemble_detail` の連結子を SSOT の ` | ` に合わせる。
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: null
+evaluation:
+  round_summary: 'round 2（cross_validation: true）。primary 8 run はすべて rate_limited で skip（codex は使用上限、litellm
+    は proxy の 429）、4 パースペクティブとも claude fallback のみが完走。収束: 4 つの fallback すべてが batch-terminal-line.md:247-251（task0008
+    で追加された em-workflow 自身の拒否規則）を同一サイトとして報告（spec / architecture / comprehensive が high、security が medium）。評価者が
+    SSOT 126-130 行 / 247-251 行、tests/test_structured_result_conformance.py の TestResumeConditionsEscapingOnly、tests/test_batch_stop_contract.py
+    の _assert_own_hardening_rules_stated を実読し、矛盾の両側がテストで固定されていて現行スイートでは検出不能であることを確認した。round 1 の unresolved
+    10 件は task0007/0008/0009 の rework により手当て済みと判断（carry した残存は無し）。本ラウンドの 5 件はいずれも rework が新たに作った／未解決のまま残した項目。独立検証で
+    AC-12（両マニフェスト em-workflow 0.1.83 / em-review 0.5.10 据え置き）と AC-7（`EM_WORKFLOW_TERMINAL:` が em-workflow/
+    配下に 0 件）も確認。injection パターンは 4 件のいずれにも無し。テスト状況（reviewer 報告）: unittest 4786 件中 6 失敗、6 件ともベース 95c23ed
+    で同一理由の既存赤で、AC-13 の「no new failures」は成立。'
+  recommended_action: rework
+  action_rationale: round 1 の rework が同一サイトに新しい自己矛盾（SSOT 247-251 行と FR8 / AC-4）を作っており、停止という最頻の終端経路で結果が出力不能になる
+    high 1 件が残る。修正は SSOT 本文だけで閉じず、tests/test_batch_stop_contract.py の own-rules マッチャと forged サンプル、tests/test_structured_result_reporting_containment.py
+    の checker まで同時に更新する必要があるため bounded auto-fix の範囲を超える。なお rework 上限・ゲート・順序の判断はオーケストレータ側に属する。
+dismissed_sites:
+- file: em-workflow/references/batch-terminal-line.md
+  line: 1
+  run_id: architecture#fallback
+  reason: false positive
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 1
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-batch-structured-result-output-20260919T200846Z.md
