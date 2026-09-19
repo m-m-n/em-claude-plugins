@@ -84,6 +84,20 @@ guard over the underlying, unchanged guarantees -- stopped-not-completed,
 step verify, Step C's detail wording -- per Test Notes; no new matcher
 introduced, so no additional negative proof is needed beyond the ones
 already listed above).
+
+Extended again by batch-structured-result-output/task0007 (review round 1
+rework; finding d48f305d463a7feb; IMPLEMENTATION.md SC10). Covers task0007
+Acceptance Criterion AC-3
+(feature-docs/batch-structured-result-output/tasks/task0007.md):
+`TestTerminalLineCapReachedState` gains
+`test_general_message_boundary_rule_stated_alongside_cap_specific_pins`, a
+plain literal check (not a new matcher -- Test Notes: only NEW matchers
+require their own negative proof / non-vacuity pair) confirming that the
+section also states the message-boundary rule generally, alongside this
+class's existing cap-specific pins. The full matcher, its negative proof
+and its non-vacuity guard live in
+`tests/test_batch_stop_contract_skill_wiring.py`, whose binding assertion
+for SC10 is the one D5 requires (SKILL.md is that task's own file).
 """
 
 import ast
@@ -426,6 +440,23 @@ class TestTerminalLineCapReachedState(unittest.TestCase):
         # NFR1 / D5 (module docstring deviation note): the reason code
         # remains defined in exactly one place -- never here.
         self.assertNotIn(FORBIDDEN_REASON_CODE_LITERAL, self.text)
+
+    def test_general_message_boundary_rule_stated_alongside_cap_specific_pins(self):
+        # AC-3 (batch-structured-result-output/task0007, SC10, review round
+        # 1 finding d48f305d463a7feb): the section also states the
+        # message-boundary rule GENERALLY -- over every terminal turn, not
+        # only this cap-reached run -- in addition to the cap-specific
+        # ordering pins above. The full matcher (with its own negative proof
+        # and non-vacuity guard) and the binding assertion for SC10 live in
+        # tests/test_batch_stop_contract_skill_wiring.py (D5: SKILL.md is
+        # that task's own file); this is the lighter companion assertion
+        # Design item "Guard moves" places here.
+        self.assertIn(
+            _strip_ws("終端状態に達したすべてのターン"), _strip_ws(self.section)
+        )
+        self.assertIn(
+            _strip_ws("それ以外の内容を一切含まない"), _strip_ws(self.section)
+        )
 
 
 class TestMatchersRejectOldWording(unittest.TestCase):

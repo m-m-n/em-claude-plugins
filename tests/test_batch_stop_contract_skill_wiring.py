@@ -239,6 +239,34 @@ Matcher -> negative-proof inventory (task0003 additions):
 - `TestImplementPhaseCitationUnchanged` is a pure regression guard (Test
   Notes) and is exempt from a negative proof, per the module's own
   established convention (e.g. TestStepCCompletionReportNonRegression).
+
+Extended again by batch-structured-result-output/task0007 (review round 1
+rework; finding d48f305d463a7feb; IMPLEMENTATION.md SC10). Covers task0007
+Acceptance Criteria
+(feature-docs/batch-structured-result-output/tasks/task0007.md):
+
+- AC-1/AC-5: 「## バッチ構造化結果」 gains a general statement of the
+  terminal-turn message-boundary rule -- the last assistant message of
+  EVERY terminal turn carries the structured result and nothing else, and
+  every prose report the turn owes is emitted in the message(s) before it
+  -- rather than the rule being carried only by the cap-reached run's own
+  paragraph. This module carries the binding assertion (D5: SKILL.md is
+  this task's own file) via
+  `TestBatchTerminalLineSubsectionWiring.test_subsection_states_general_message_boundary_rule`.
+- AC-3: `tests/test_verify_cap_run_continuation.py` (a different module,
+  not edited here) gains its own lighter assertion for the same general
+  rule, keeping its existing cap-specific assertions; this module's binding
+  assertion above is the one D5 requires for SKILL.md.
+
+Matcher -> negative-proof inventory (task0007 addition):
+
+- `_states_terminal_turn_message_boundary_general_rule` (SC10 general-rule
+  matcher): negative proof is
+  TestGeneralRuleMatcherCanFail.test_matcher_rejects_cap_reached_paragraph_alone
+  (a forged section carrying the heading, the Read-before-emit instruction
+  and the cap-reached run's own pinned sentences, but not the general
+  rule's every-terminal-turn subject statement), non-vacuity guard is
+  TestGeneralRuleMatcherCanFail.test_forged_cap_only_section_is_well_formed_and_found.
 """
 
 import ast
@@ -504,6 +532,29 @@ def _batch_mode_states_definition_condition_correctly(text):
     )
 
 
+def _states_terminal_turn_message_boundary_general_rule(section):
+    """SC10 general-rule matcher (batch-structured-result-output/task0007;
+    IMPLEMENTATION.md Shared Components SC10, review round 1 finding
+    d48f305d463a7feb): true iff `section` states the message-boundary rule
+    as a rule whose SUBJECT is the set of every terminal turn -- not the
+    cap-reached run's own paragraph alone -- covering (a) that the last
+    assistant message carries the structured result and nothing else, and
+    (b) that every prose report the turn owes is emitted in the message(s)
+    before it. Anchored on the general-subject phrase so a section stating
+    the rule only inside the cap-reached run's own paragraph does not
+    satisfy it (Test Notes edge case: "it must not be satisfied by the
+    cap-reached paragraph alone"). Checked via `_strip_ws` (not a bare
+    substring check): this document hard-wraps Japanese prose without a
+    space at the break point, and the third phrase below straddles one in
+    the real file."""
+    stripped = _strip_ws(section)
+    return (
+        _strip_ws("終端状態に達したすべてのターン") in stripped
+        and _strip_ws("それ以外の内容を一切含まない") in stripped
+        and _strip_ws("この最後のメッセージより前のメッセージで出力する") in stripped
+    )
+
+
 class TestBatchTerminalLineSubsectionWiring(unittest.TestCase):
     """AC-1, AC-2, and Design item 4 (Step C pointer line)."""
 
@@ -588,6 +639,18 @@ class TestBatchTerminalLineSubsectionWiring(unittest.TestCase):
             "implement's launch turn and wake turn alongside 停止条件 5",
         )
 
+    def test_subsection_states_general_message_boundary_rule(self):
+        # AC-1/AC-5 (batch-structured-result-output/task0007, SC10, D5's
+        # binding assertion -- SKILL.md is this task's own file): the
+        # message-boundary rule is stated as a rule over EVERY terminal
+        # turn, not only the cap-reached run's own paragraph.
+        self.assertTrue(
+            _states_terminal_turn_message_boundary_general_rule(self.section),
+            "expected the general SC10 rule -- subject: every terminal "
+            "turn -- stated in addition to the cap-reached run's own "
+            "paragraph",
+        )
+
     def test_subsection_instructs_reading_the_contract_doc_before_emitting(self):
         # AC-3 (task0005, finding 6a1c9f2d84be3057).
         self.assertTrue(
@@ -620,6 +683,52 @@ class TestBatchTerminalLineSubsectionWiring(unittest.TestCase):
         self.assertIn(
             _strip_ws("`--once` のフェーズ境界で終わるターン"),
             _strip_ws(self.section),
+        )
+
+
+# Forged sample for AC-5 (SC10, batch-structured-result-output/task0007):
+# carries the subsection heading, the Read-before-emit instruction and the
+# cap-reached run's own pinned sentences (Test Notes non-vacuity: "the
+# forged section is otherwise well formed -- it carries the heading, the
+# Read-before-emit instruction and the cap-specific sentences"), WITHOUT the
+# general rule's every-terminal-turn subject statement (Test Notes edge
+# case: "it must not be satisfied by the cap-reached paragraph alone").
+FORGED_CAP_REACHED_ONLY_SECTION = (
+    f"{NEW_SUBSECTION_HEADING}\n\n"
+    "出力の直前に `${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md` "
+    "を Read し、そこに定義されたキーの集合・順序・値の集合をそのまま使う。\n\n"
+    "cap 到達走行（stop point `verify-rework-cap`）は、Step C の完了処理まで"
+    "到達し worktree 掃除と終了報告を完了させたうえで、通常完了ではなく"
+    "停止として構造化結果を出す。cap 到達走行の実行した step は verify で"
+    "ある。構造化結果は 1 走行につき 1 件出力し、cap 到達走行では Step C の"
+    "完了報告を先に出力してから、その直後の最後の assistant メッセージとして"
+    "構造化結果を出す。"
+)
+
+
+class TestGeneralRuleMatcherCanFail(unittest.TestCase):
+    """AC-5 (SC10, batch-structured-result-output/task0007): negative proof
+    + non-vacuity guard for
+    `_states_terminal_turn_message_boundary_general_rule`."""
+
+    def test_matcher_rejects_cap_reached_paragraph_alone(self):
+        self.assertFalse(
+            _states_terminal_turn_message_boundary_general_rule(
+                FORGED_CAP_REACHED_ONLY_SECTION
+            )
+        )
+
+    def test_forged_cap_only_section_is_well_formed_and_found(self):
+        self.assertIn(NEW_SUBSECTION_HEADING, FORGED_CAP_REACHED_ONLY_SECTION)
+        self.assertTrue(
+            _has_read_instruction_for_contract_doc(
+                FORGED_CAP_REACHED_ONLY_SECTION, CONTRACT_DOC_PLUGIN_ROOT_REFERENCE
+            ),
+            "forged sample must carry the Read-before-emit instruction",
+        )
+        self.assertIn(
+            _strip_ws("構造化結果は 1 走行につき 1 件出力し"),
+            _strip_ws(FORGED_CAP_REACHED_ONLY_SECTION),
         )
 
 
