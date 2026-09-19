@@ -1,0 +1,37 @@
+feature: batch-structured-result-output
+collected_at: "2026-09-20T05:35:00+09:00"
+session_ids:
+  - 01a0bb5f-226d-707b-b041-0611e273004e
+signals:
+  review_critical_high:
+    - stable_id: d48f305d463a7feb
+      category: architecture
+      file: em-workflow/references/batch-mode.md
+      title: "`## Batch quiet output` の Exceptions が旧「終端行を末尾に追記」の文言のまま残り、新 SSOT の規定と食い違う"
+      resolution: unresolved
+    - stable_id: 527e10173b2e8e66
+      category: spec
+      file: em-workflow/references/batch-terminal-line.md
+      title: "`## Consumer constraints` の自前拒否規則が `resume_conditions` の改行保持（FR8 / AC-）と衝突する"
+      resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0001
+      files:
+        - tests/test_failed_kind_batch_docs.py
+        - tests/test_batch_quiet_output_discipline.py
+    - task: task0002
+      files:
+        - tests/test_batch_stop_contract_skill_wiring.py
+    - task: task0004
+      files:
+        - tests/test_assumptions_reversible_criterion.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - "自身の終端出力契約そのものを書き換える feature では、走行中のオーケストレーターがどちらの版に従うかが未定義になる。今回は batch-audit の unlisted-gate fallback で 2 度（develop.terminal-output-contract-selection / develop.terminal-output-contract-version）同じ判断を繰り返した。"
+  - "file_prediction_misses が 3 タスクで発生し、いずれも他タスク所有のテストモジュールへの波及だった。ドキュメント見出しのリネームがテスト側の定数・スライス端に写るため、planner の files 予測が構造的に外れやすい。"
+  - "review round 1/2 の findings が medium に集中し（10 件中 9 件）、auto-fix ゲート（critical/high）にも spec 除外にも掛からず rework 経由になった。ドキュメント SSOT 系 feature での severity 分布の偏り。"
+  - "Codex 相談が 2 回とも OpenAI usage limit で応答を得られず、minimum-side-effect fallback に倒れた。無人走行で Codex を前提にしたゲート解決は代替プロバイダ経路が無いと空振りする。"
