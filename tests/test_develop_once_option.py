@@ -37,6 +37,17 @@ assertions over SKILL.md's raw text; no runtime behaviour changes, NFR2),
 following the pattern established by tests/test_develop_skill_rewiring.py --
 same target file, self-contained helpers, no cross-module import
 (Cross-module isolation convention, IMPLEMENTATION.md Conventions).
+
+Extended by batch-structured-result-output/task0003 (AC-6): the SKILL.md
+state-literal absence guard is retargeted/widened from the narrower
+`_restates_state_value_literal` (state-value shape only) to
+`_find_sc5_literal_violations`, covering the full IMPLEMENTATION.md SC5
+forbidden-literal set (the eight field-name tokens as a group, all twelve
+`reason` codes, the `no-step` sentinel, the removed SC6 prefix, and the
+ordinary word "none" checked by `reason={value}` shape). The narrower
+function and its existing forged-sample negative proof / false-positive
+proof over ordinary step-status vocabulary are kept unchanged and reused by
+the wider one.
 """
 
 import ast
@@ -66,6 +77,44 @@ BOUNDARY_KIND_LABELS = ("通常の step", "`retrospect`", "verify 失敗時の r
 # module never asserts that any document DEFINES it; task0003 owns that.
 PHASE_DONE_VALUE = "phase_done"
 STATE_VALUE_DOMAIN = ("completed", "stopped", PHASE_DONE_VALUE)
+
+# batch-structured-result-output/task0003 (IMPLEMENTATION.md SC5): this
+# module's state-literal guard is retargeted from the narrower "third
+# terminal-line state value" scope above to SC5's full forbidden-literal
+# set -- declared locally, absence checks only, same cross-task/cross-
+# module safety rationale as `tests/test_batch_stop_contract_skill_wiring.py`
+# and `tests/test_batch_quiet_output_skill_wiring.py`'s identical (and
+# independently-declared, never imported) copies of this same set.
+SC5_PREFIX_LITERAL = "EM_WORKFLOW_TERMINAL:"
+SC5_FIELD_NAME_TOKENS = (
+    "`state`",
+    "`step`",
+    "`reason`",
+    "`detail`",
+    "`feature`",
+    "`branch`",
+    "`pr_url`",
+    "`resume_conditions`",
+)
+SC5_REASON_CODES = (
+    "step_stuck",
+    "step_needs_intervention",
+    "workflow_yaml_unparseable",
+    "git_setup_aborted",
+    "gate_fail_closed",
+    "gate_option_unavailable",
+    "implement_task_failed",
+    "verify_rework_cap_reached",
+    "completion_aborted",
+    "feature_resolution_aborted",
+    "docs_commit_conflict_aborted",
+    "context_budget_reached",
+)
+SC5_SENTINEL_VALUE = "no-step"
+# SC5's `reason` domain also includes the ordinary English word "none" --
+# checked by the `reason={value}` shape only (same false-positive rationale
+# as `state`), never as a bare word.
+SC5_ORDINARY_REASON_VALUE = "none"
 
 # The interactive `--once` closing line, SPEC.md FR12's exact wording
 # (feature-docs/develop-once-option/SPEC.md).
@@ -156,6 +205,34 @@ def _restates_state_value_literal(text):
     if PHASE_DONE_VALUE in text:
         return True
     return False
+
+
+def _find_sc5_literal_violations(text):
+    """AC-6 (task0003, IMPLEMENTATION.md SC5): returns a list of human-
+    readable violation descriptions if `text` restates any SC5 forbidden
+    literal, empty when none is restated. Widens this module's state-value-
+    only guard above to the full SC5 set (SC1's eight field-name tokens,
+    checked as a GROUP for the same false-positive reason as the four-field
+    predecessor in the sibling wiring modules; every `reason` code
+    including the twelfth, `context_budget_reached`; the `no-step`
+    sentinel; the removed SC6 prefix; and the ordinary word "none", checked
+    by `reason={value}` shape only since it is common English prose)."""
+    violations = []
+    if SC5_PREFIX_LITERAL in text:
+        violations.append(f"prefix literal {SC5_PREFIX_LITERAL!r} restated")
+    if all(token in text for token in SC5_FIELD_NAME_TOKENS):
+        violations.append("all eight field-name tokens restated together")
+    for code in SC5_REASON_CODES:
+        if code in text:
+            violations.append(f"reason code {code!r} restated")
+    if SC5_SENTINEL_VALUE in text:
+        violations.append(f"sentinel value {SC5_SENTINEL_VALUE!r} restated")
+    if _restates_state_value_literal(text):
+        violations.append("state-value shape restated")
+    reason_none_shape = f"reason={SC5_ORDINARY_REASON_VALUE}"
+    if reason_none_shape in text:
+        violations.append(f"reason-value shape {reason_none_shape!r} restated")
+    return violations
 
 
 class TestArgumentProcessingOnceOption(unittest.TestCase):
@@ -397,6 +474,16 @@ class TestPlacementInvariantsD3(unittest.TestCase):
         self.assertNotIn("gate_id", new_content)
         self.assertNotIn("gate ID", new_content)
 
+    def test_no_sc5_literal_anywhere_in_skill_md(self):
+        # batch-structured-result-output/task0003 (AC-6): the state-literal
+        # guard above is retargeted/widened to IMPLEMENTATION.md's full SC5
+        # forbidden-literal set.
+        self.assertEqual(
+            _find_sc5_literal_violations(self.text),
+            [],
+            "SKILL.md must restate no SC5 member anywhere",
+        )
+
 
 class TestStateValueLiteralMatcherCanFail(unittest.TestCase):
     """AC-6 / NFR3: negative proof plus non-vacuity guard for
@@ -426,6 +513,56 @@ class TestStateValueLiteralMatcherCanFail(unittest.TestCase):
         # real SKILL.md uses `completed` extensively for step statuses.
         ordinary_prose = "step の `status` が `completed` になり、コミット済み"
         self.assertFalse(_restates_state_value_literal(ordinary_prose))
+
+
+class TestSc5LiteralMatcherCanFail(unittest.TestCase):
+    """AC-6 (task0003): negative proof plus non-vacuity guard for
+    `_find_sc5_literal_violations` -- forged excerpts each restating one
+    dimension SC5 adds beyond the state-value shape already covered above
+    (the eight-field group, a reason code, the sentinel, the prefix, and
+    the `reason=none` shape)."""
+
+    FORGED_FIELD_GROUP_TEXT = (
+        "構造化結果は `state` / `step` / `reason` / `detail` / `feature` / "
+        "`branch` / `pr_url` / `resume_conditions` の 8 キーを持つ。"
+    )
+    FORGED_REASON_CODE_TEXT = "reason は step_stuck を含む。"
+    FORGED_SENTINEL_TEXT = "step が no-step のとき。"
+    FORGED_PREFIX_TEXT = "行は EM_WORKFLOW_TERMINAL: で始まる。"
+    FORGED_REASON_NONE_TEXT = "通常完了では reason=none。"
+
+    def test_forged_samples_are_well_formed(self):
+        # Non-vacuity guard: each forged sample genuinely carries the
+        # literal it targets.
+        self.assertTrue(
+            all(t in self.FORGED_FIELD_GROUP_TEXT for t in SC5_FIELD_NAME_TOKENS)
+        )
+        self.assertIn("step_stuck", self.FORGED_REASON_CODE_TEXT)
+        self.assertIn("no-step", self.FORGED_SENTINEL_TEXT)
+        self.assertIn(SC5_PREFIX_LITERAL, self.FORGED_PREFIX_TEXT)
+        self.assertIn("reason=none", self.FORGED_REASON_NONE_TEXT)
+
+    def test_matcher_rejects_each_forged_dimension(self):
+        for sample in (
+            self.FORGED_FIELD_GROUP_TEXT,
+            self.FORGED_REASON_CODE_TEXT,
+            self.FORGED_SENTINEL_TEXT,
+            self.FORGED_PREFIX_TEXT,
+            self.FORGED_REASON_NONE_TEXT,
+        ):
+            self.assertTrue(
+                _find_sc5_literal_violations(sample),
+                f"matcher failed to detect a violation in {sample!r}",
+            )
+
+    def test_matcher_passes_ordinary_prose_including_the_word_none(self):
+        # False-positive guard: "none" as ordinary prose (never in the
+        # `reason=none` shape) must not be flagged.
+        ordinary_prose = (
+            "None of the gates below carries a marker; the step completed, "
+            "another was skipped, and the run stopped cleanly afterward."
+        )
+        self.assertEqual(_find_sc5_literal_violations(ordinary_prose), [])
 
 
 class TestOwnModuleStdlibOnly(unittest.TestCase):
