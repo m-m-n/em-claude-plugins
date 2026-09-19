@@ -106,17 +106,19 @@ Structure and per-key meaning are defined in `references/workflow-schema.md`'s
 Never used to decide whether batch mode is active (that is the `--batch`
 flag's job, per-invocation).
 
-## Terminal line
+## Structured result
 
-A batch turn carries a machine-readable terminal line as the last line of
-the final assistant message whenever it reaches one of the terminal states
-`references/batch-terminal-line.md` defines. Normal completion, every
-terminating stop, and a turn that ends at a `--once` phase boundary are
-occasions on which that condition holds, not additional limits on it.
-`references/batch-terminal-line.md` is the sole owner of that line's
-format and is referenced here rather than restated. Immediately before
-emitting that line, Read `references/batch-terminal-line.md` and use the
-prefix, field grammar and value sets it defines as-is.
+A batch turn's final assistant message carries the structured result
+`references/batch-terminal-line.md` defines whenever the turn
+reaches one of the terminal states that document defines. Normal
+completion, every terminating stop, and a turn that ends at
+a `--once` phase boundary are occasions on which that condition
+holds, not additional limits on it.
+`references/batch-terminal-line.md` is the sole owner of the
+result's format and is referenced here rather than restated.
+Immediately before emitting it, Read
+`references/batch-terminal-line.md` and use the format it defines
+as-is.
 
 ## Reporting
 
@@ -134,6 +136,14 @@ branch in the main working tree and merges locally or pushes + opens a PR).
 The external service relays this to the human evaluator — it is the only
 confirmation surface batch mode has. See `## Batch quiet output`'s
 audit-item source map for where each of these items is persisted.
+
+Per `references/batch-terminal-line.md`, every item above is carried in
+full inside the result's human-facing description value, and the
+stop-recovery guidance above is carried in full inside the result's
+stop-recovery value, present only when the result reports a stop. A count
+alone, or a pointer alone, satisfies neither requirement. No new
+aggregated report artifact is written: the audit-item source map above
+already binds every required item to an already-persisted location.
 
 ## Batch quiet output
 
@@ -174,20 +184,23 @@ and the message consists of this line and nothing else.
   owned by `references/workflow-schema.md`).
 - `point` — one of the closed set `wait`, `launch`, `wake`.
 
-Neither this marker's prefix nor the prefix
-references/batch-terminal-line.md defines is a prefix of the other, so a
-consumer matching that document's prefix never matches this marker line —
-the terminal-line contract's "no line = abnormal outcome" signal for a
-genuine terminal state is preserved.
+A non-terminal turn's whole message is one line beginning with the prefix
+literal `EM_WORKFLOW_PROGRESS:`; a terminal turn's whole message is
+instead the structured result `references/batch-terminal-line.md`
+defines. The two message shapes are disjoint, so a consumer that applies
+that document's parse to a non-terminal turn's output does not obtain a
+result. A turn that reaches no terminal state therefore produces no
+result, and a consumer that sees no result at the end of a RUN reads that
+absence as an abnormal outcome.
 
 **Exceptions.**
 
-- A turn that reaches any stop point in the terminal-line contract's
+- A turn that reaches any stop point in the structured-result contract's
   stop-point coverage table keeps its full output — cause, affected
   paths, recovery hints — unsuppressed.
 - Step C's completion processing emits its final report in full, with the
-  terminal line appended after it.
-- A `--once` phase-boundary turn emits the terminal line and withholds
+  result following it.
+- A `--once` phase-boundary turn emits the result and withholds
   all other narration.
 
 **Audit-item source map.** Every audit item `## Reporting` requires
