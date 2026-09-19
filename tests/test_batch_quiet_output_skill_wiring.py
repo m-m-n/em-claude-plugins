@@ -92,6 +92,18 @@ altered" and "no `gate_id` mention is added" and AC-6's "the 停止時の報告
 section's current three bullets are unchanged" are pure regression guards
 over retained pre-change wording (Test Notes) and are exempt from a
 negative proof.
+
+Extended again by batch-structured-result-output/task0003: the terminal-
+prefix / field-name / reason-code / sentinel forbidden-literal set is
+widened to IMPLEMENTATION.md SC5 (SC1's eight keys, the twelfth reason code
+`context_budget_reached`, and the ordinary word "none" checked by the
+`reason={value}` shape rather than as a bare word -- the retired terminal
+prefix, `EM_WORKFLOW_TERMINAL:`, is unaffected: it was already forbidden
+here and stays forbidden under SC6). The バッチ終端行 heading and its
+「終端行」/「終端行を出力しない」 wording pins are restated to バッチ構造化結果
+/「構造化結果」/「構造化結果を出力しない」 (the underlying guarantees -- whole-
+message result, no-result-on-non-terminal-turn, exclusivity at the `--once`
+boundary -- are unchanged; only the noun naming the removed shape changed).
 """
 
 import ast
@@ -122,7 +134,7 @@ STEP_C_HEADING = (
 )
 ONCE_BOUNDARY_HEADING = "## `--once` のフェーズ境界"
 STOP_REPORT_HEADING = "## 停止時の報告（停止条件 2-4 のみ）"
-TERMINAL_LINE_HEADING = "## バッチ終端行"
+TERMINAL_LINE_HEADING = "## バッチ構造化結果"
 
 STOP_CONDITION_5_MARKER = (
     "5. implement フェーズでバックグラウンド implementer の完了通知を待つとき"
@@ -130,13 +142,18 @@ STOP_CONDITION_5_MARKER = (
 STOP_CONDITION_6_MARKER = "6. Step 0 の git-setup ゲートが中断を報告したとき"
 TURN_END_ANCHOR = "これらに該当しない限り"
 
-# IMPLEMENTATION.md D6(b)'s forbidden literals, re-declared locally for
-# ABSENCE checks only (this module never asserts that batch-mode.md defines
-# any of these, since that file's discipline section may not have merged
-# into this worktree yet -- Test Notes cross-task safety). Extends the
-# eleven-reason-code / field-name / sentinel set with this feature's own
-# marker prefix literal (IMPLEMENTATION.md D1), which this task must never
-# write either.
+# IMPLEMENTATION.md (batch-structured-result-output) SC5's forbidden
+# literals, re-declared locally for ABSENCE checks only (this module never
+# asserts that batch-mode.md or batch-terminal-line.md defines any of
+# these, since those files' sections may not have merged into this
+# worktree yet -- Test Notes cross-task safety). SC5 is the union of SC1's
+# eight field-name tokens (checked as a GROUP, same false-positive
+# rationale as the pre-existing four-field group check), every `reason`
+# code (the eleven from batch-stop-contract plus the twelfth,
+# `context_budget_reached`, D8), the `no-step` step-value sentinel, every
+# `state` value (by shape), and this feature's own retired terminal-line
+# prefix (SC6) plus batch-mode's own marker prefix literal (unaffected by
+# this feature, kept for regression).
 TERMINAL_PREFIX_LITERAL = "EM_WORKFLOW_TERMINAL:"
 MARKER_PREFIX_LITERAL = "EM_WORKFLOW_PROGRESS:"
 REASON_CODES = (
@@ -151,10 +168,25 @@ REASON_CODES = (
     "completion_aborted",
     "feature_resolution_aborted",
     "docs_commit_conflict_aborted",
+    "context_budget_reached",
 )
-FIELD_NAME_TOKENS = ("`state`", "`step`", "`reason`", "`detail`")
+FIELD_NAME_TOKENS = (
+    "`state`",
+    "`step`",
+    "`reason`",
+    "`detail`",
+    "`feature`",
+    "`branch`",
+    "`pr_url`",
+    "`resume_conditions`",
+)
 SENTINEL_VALUE = "no-step"
 STATE_DOMAIN = ("completed", "stopped", "phase_done")
+# SC5's `reason` domain also includes the ordinary English word "none" --
+# checked by the `reason={value}` shape only (same false-positive rationale
+# as `state`), never as a bare word (see test_batch_stop_contract_skill_
+# wiring.py's identical convention).
+ORDINARY_REASON_VALUE = "none"
 
 
 def _read(path):
@@ -207,8 +239,8 @@ def _extract_batch_clause(section, end_marker):
 
 
 def _find_forbidden_literal_violations(text):
-    """Whole-file literal-absence guard (AC-2, IMPLEMENTATION.md D6(b) +
-    this feature's own marker prefix, D1): returns a list of human-readable
+    """Whole-file literal-absence guard (AC-2, IMPLEMENTATION.md SC5 +
+    this feature's own marker prefix): returns a list of human-readable
     violation descriptions if `text` restates any contract/marker literal,
     empty when none is restated."""
     violations = []
@@ -217,7 +249,7 @@ def _find_forbidden_literal_violations(text):
     if MARKER_PREFIX_LITERAL in text:
         violations.append(f"marker prefix literal {MARKER_PREFIX_LITERAL!r} restated")
     if all(token in text for token in FIELD_NAME_TOKENS):
-        violations.append("all four field-name tokens restated together")
+        violations.append("all eight field-name tokens restated together")
     for code in REASON_CODES:
         if code in text:
             violations.append(f"reason code {code!r} restated")
@@ -227,6 +259,9 @@ def _find_forbidden_literal_violations(text):
         shape = f"state={value}"
         if shape in text:
             violations.append(f"state-value shape {shape!r} restated")
+    reason_none_shape = f"reason={ORDINARY_REASON_VALUE}"
+    if reason_none_shape in text:
+        violations.append(f"reason-value shape {reason_none_shape!r} restated")
     return violations
 
 
@@ -251,11 +286,13 @@ def _states_turn_ends_with_marker_line_only(section):
 
 def _states_batch_once_boundary_terminal_line_only(section):
     """`--once` phase-boundary matcher for batch mode (AC-2, Design item
-    7): true iff `section` names batch mode, names the terminal line, and
-    states that no narration other than the terminal line is emitted."""
+    7): true iff `section` names batch mode, names the structured result
+    (restated by batch-structured-result-output/task0003 from the retired
+    "終端行" term), and states that no narration other than the structured
+    result is emitted."""
     return (
         "batch" in section
-        and "終端行" in section
+        and "構造化結果" in section
         and "以外" in section
         and "ナラティブ" in section
     )
@@ -596,10 +633,16 @@ class TestStopAbortExceptionStatedOnce(unittest.TestCase):
 
 
 class TestTerminalLineSectionNonRegression(unittest.TestCase):
-    """AC-7, Design item 8: the バッチ終端行 section keeps every guarantee it
-    already had (pure regression guard, Test Notes -- exempt from a
-    negative proof), and gains exactly one sentence distinguishing the
-    terminal line from the non-terminal marker line."""
+    """AC-7, Design item 8: the バッチ構造化結果 section (renamed by
+    batch-structured-result-output/task0003 from バッチ終端行) keeps every
+    guarantee it already had (pure regression guard, Test Notes -- exempt
+    from a negative proof), and gains exactly one sentence distinguishing
+    the structured result from the non-terminal marker line. The two
+    wording pins retired by task0003 (the last-line rule and the
+    終端行を出力しない no-line phrasing) are restated here in the new
+    terminology (構造化結果 replaces 終端行) rather than dropped, since the
+    underlying guarantee (whole-message result; no-result-on-non-terminal-
+    turn) is unchanged -- only the noun naming the removed shape changed."""
 
     @classmethod
     def setUpClass(cls):
@@ -624,11 +667,14 @@ class TestTerminalLineSectionNonRegression(unittest.TestCase):
             self.section,
         )
 
-    def test_last_line_rule_present(self):
-        self.assertIn("最後の assistant メッセージの末尾に終端行を 1 行出力する", self.section)
+    def test_result_is_whole_final_message_rule_present(self):
+        self.assertIn(
+            _strip_ws("最後の assistant メッセージの全体を構造化結果とする"),
+            _strip_ws(self.section),
+        )
 
     def test_generalized_no_line_rule_present(self):
-        self.assertIn("終端行を出力しない", self.section)
+        self.assertIn("構造化結果を出力しない", self.section)
         self.assertIn("停止条件 5", self.section)
         self.assertIn("launch ターン", self.section)
         self.assertIn("wake ターン", self.section)
@@ -723,11 +769,11 @@ class TestBatchOnceTerminalOnlyMatcherCanFail(unittest.TestCase):
     that names batch and the terminal line but omits the exclusivity
     clause naming narration."""
 
-    FORGED_SECTION = "batch モードでターンが終わるとき、終端行を出力する。"
+    FORGED_SECTION = "batch モードでターンが終わるとき、構造化結果を出力する。"
 
     def test_forged_section_is_well_formed_and_found(self):
         self.assertIn("batch", self.FORGED_SECTION)
-        self.assertIn("終端行", self.FORGED_SECTION)
+        self.assertIn("構造化結果", self.FORGED_SECTION)
         self.assertNotIn("以外", self.FORGED_SECTION)
         self.assertNotIn("ナラティブ", self.FORGED_SECTION)
 
@@ -737,7 +783,7 @@ class TestBatchOnceTerminalOnlyMatcherCanFail(unittest.TestCase):
         )
 
     def test_matcher_accepts_section_with_exclusivity_clause(self):
-        extended = self.FORGED_SECTION + "終端行以外のナラティブは一切出さない。"
+        extended = self.FORGED_SECTION + "構造化結果以外のナラティブは一切出さない。"
         self.assertTrue(_states_batch_once_boundary_terminal_line_only(extended))
 
 

@@ -143,8 +143,8 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
-    branch: null
+    status: merged
+    branch: em-workflow/batch-structured-result-output/task0001
     notes: null
   task0002:
     title: Restate batch-mode.md for the structured result
@@ -167,8 +167,8 @@ tasks:
     - NFR1
     - NFR6
     - NFR7
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-structured-result-output/task0002
     notes: null
   task0003:
     title: Restate the develop skill and implement-phase citations
@@ -191,8 +191,8 @@ tasks:
     - FR22
     - NFR1
     - NFR7
-    status: pending
-    branch: null
+    status: merged
+    branch: em-workflow/batch-structured-result-output/task0003
     notes: null
   task0004:
     title: Conformance suite for the structured result's shape and escaping
@@ -218,8 +218,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
-    branch: null
+    status: merged
+    branch: em-workflow/batch-structured-result-output/task0004
     notes: null
   task0005:
     title: Derivation-site and audit-containment guards
@@ -239,8 +239,8 @@ tasks:
     - FR17
     - FR22
     - NFR4
-    status: pending
-    branch: null
+    status: merged
+    branch: em-workflow/batch-structured-result-output/task0005
     notes: null
   task0006:
     title: Bump the em-workflow plugin version in both manifests
@@ -258,8 +258,8 @@ tasks:
     - FR21
     - FR22
     - NFR7
-    status: pending
-    branch: null
+    status: merged
+    branch: em-workflow/batch-structured-result-output/task0006
     notes: null
 review:
   status: pending
