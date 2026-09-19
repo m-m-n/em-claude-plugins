@@ -1,0 +1,354 @@
+schema_version: 1
+feature: batch-structured-result-output
+created: '2026-09-20'
+base_branch: main
+goal: |
+  --batch --once --pr https://www.notion.so/3e03509ec8ee81ad844ce7ad361eb564
+
+  Once the implementation is finished, push the integration branch to the remote and create a Pull Request against base_branch with gh pr create. Keep the integration branch both locally and on the remote (do not auto-merge it into base_branch).
+  Consult Codex on any unclear points and adopt the option judged to be comparatively better.
+  Record the content of that discussion in Notion.
+
+  --- Resolved Notion task (title + body), fetched at launch ---
+
+  # batch 終端行が claude-batch の要求スキーマと不一致で run が exit 1 になる
+
+  種別: バグ
+
+  ## 現象 (必須)
+  `claude-batch` 経由の `--batch` 実行で、オーケストレーターが終端行を出した時点で
+  スキーマ検証に弾かれ、run が exit 1 で終わる。
+
+      claude-batch: response does not conform to schema (attempt 1/5): output_schema: missing key "branch"
+
+  em-workflow は `references/batch-terminal-line.md` を SSOT として、4 フィールドの
+  マーカー行を出すよう指示している。
+
+      EM_WORKFLOW_TERMINAL: state=phase_done step=create-spec reason=none detail=...
+
+  一方 claude-batch は 8 キーの構造化出力を要求する（`branch` / `detail` / `feature` /
+  `pr_url` / `reason` / `resume_conditions` / `state` / `step`）。loop-develop 側は
+  2026-08-17 の `refactor(yaml-result-sole-path): drop legacy path` で
+  `EM_WORKFLOW_TERMINAL:` マーカー行のパーサを削除済み。em-workflow 側がこの移行に
+  追従していない。
+
+  ## 再現手順 (必須)
+  1. `claude-batch` 経由で `/em-workflow:develop --batch --once <タスク>` を実行する
+  2. いずれかのフェーズ境界でターンが終端状態に達し、`references/batch-terminal-line.md`
+     のとおり `EM_WORKFLOW_TERMINAL:` 行が出力される
+  3. claude-batch が `output_schema: missing key "branch"` で拒否し、run が exit 1 になる
+
+  ## 期待する挙動 (必須)
+  em-workflow が claude-batch の要求する 8 キーの構造化出力を出し、終端状態が正しく
+  受け取られて run が成功扱いで終わる。
+
+  ## 完了の定義 (必須)
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+  - `em-workflow/references/batch-terminal-line.md` — 終端行の SSOT。`Line format` 節が
+    「exactly four `key=value` fields」を定義している
+  - `em-workflow/skills/develop/SKILL.md` — 「バッチ終端行」節（上記 SSOT を参照）
+  - 相手側の契約: loop-develop `src/local/terminal-line.ts`（8 キーを列挙する
+    `STRUCTURED_RESULT_FIELDS`、legacy マーカー行パーサは削除済み）
+
+  ## 実害・発生条件 (任意)
+  無人 batch 実行が終端で必ず失敗扱いになり、Notion タスクが「中断」に落ちる。
+  フェーズの成果物自体は integration ブランチにコミット済みで残るため、再起動すれば
+  続行はできる。
+  実例: emterm の feature `wheel-report-notch-clamp`（2026-09-20 01:34 JST、exit 1、
+  所要 10m38s、session_id `01a0ba7b-88ce-7386-820f-5cd666da2d27`）。create-spec は
+  完了していたが、終端行の拒否で run 全体が失敗になった。
+  なお、このとき claude-batch は 5 回までの再出力リトライを持つが、1 回目の block 応答が
+  `hook_listener: reply window closed before the reply could be delivered` で配送に失敗し、
+  リトライが成立しないまま interrupt されて exit 1 になった。こちらは claude-batch 側の
+  挙動で、本タスクのスコープ外。
+parent_branch: em-workflow/batch-structured-result-output/integration
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown-yaml-python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: cda33b8ec27dea497dd958a9aea7197b550d5ef4
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: ドキュメントとテストのみの変更。3 つの reference SSOT markdown、1 つの skill markdown、10 個の Python テストモジュール、2 つの JSON バージョンマニフェストが対象で、UI・描画面・視覚的入力を伴わない。design-system 候補も 0 件。batch policy create-spec.design-step（decide_autonomously）により analyst の skip 推奨がそのまま採用された。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: null
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: SSOT ownership of the structured result
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Bare eight-key mapping as the whole final message
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS12
+  FR3:
+    title: Fixed key set and key order
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS12
+  FR4:
+    title: Every value a double-quoted scalar
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR5:
+    title: Escaping rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+  FR6:
+    title: Eight-physical-line invariant
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+  FR7:
+    title: '`detail` normalization retained, then escaped'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+  FR8:
+    title: '`resume_conditions` is not detail-normalized'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+  FR9:
+    title: '`feature` derivation'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+  FR10:
+    title: '`branch` derivation'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+  FR11:
+    title: '`pr_url` derivation'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+  FR12:
+    title: '`resume_conditions` presence rule'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+  FR13:
+    title: '`state` and `step` domains unchanged'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR14:
+    title: Constraints carried over from the consumer
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS5
+    - TS12
+  FR15:
+    title: '`context_budget_reached` documented as never emitted'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  FR16:
+    title: Legacy marker line removed entirely
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  FR17:
+    title: '"## Reporting" audit items carried in full inside the values'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS9
+  FR18:
+    title: Prefix-disjointness paragraph restated
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS8
+  FR19:
+    title: Progress marker line unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR20:
+    title: Pointer documents updated without restating literals
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS8
+  FR21:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS10
+  FR22:
+    title: Test-side contract updated in the same change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: SSOT discipline preserved
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS8
+  NFR2:
+    title: No external tool, LLM-writable
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Conformance verified against a real parser
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS2
+  NFR4:
+    title: Test authoring convention
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS11
+  NFR5:
+    title: Confidentiality boundary extended to the new fields
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: Absence remains the abnormal-outcome signal
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS8
+  NFR7:
+    title: Bundled-file awareness
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
