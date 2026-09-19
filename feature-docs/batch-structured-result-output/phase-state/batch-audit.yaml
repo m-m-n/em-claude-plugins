@@ -66,3 +66,45 @@ records:
       is backed by the negative-proof / non-vacuity convention plus the
       post-merge whole-suite run. Chosen: keep D5 unchanged. Not chosen:
       per-task real-file assertions.
+  - question_id: implement.deviation-declined.task0004
+    packet_id: null
+    answered_at: "2026-09-20T02:52:00+09:00"
+    source: batch-deviation-auto-addition
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined"
+    normalized_answer: "declined"
+    resolution_note: >-
+      task_id: task0004. Reported deviation: tests/test_assumptions_reversible_criterion.py
+      was edited to allowlist the two PyYAML-importing conformance modules that
+      D6 names as NFR4's single exception. Declined for auto-addition to
+      tasks.task0004.files: the Deviation auto-addition rule's second evidence
+      part is missing — the report names no AC-n of task0004's own plan and no
+      requirement id registered in workflow.yaml that would otherwise be
+      dropped. The other two parts were present (the path, and an observable
+      failure: TestStandardLibraryOnlyImports.test_every_test_module_imports_only_stdlib
+      goes red without the change). The edit is merged in the integration
+      branch's history and is left to the review phase's containment check
+      rather than being retroactively declared in scope.
+  - question_id: implement.deviation-declined.task0001
+    packet_id: null
+    answered_at: "2026-09-20T03:05:00+09:00"
+    source: batch-deviation-auto-addition
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "declined (2 paths)"
+    normalized_answer: "declined (2 paths)"
+    resolution_note: >-
+      task_id: task0001. Two reported deviations, both declined for auto-addition
+      to tasks.task0001.files because the Deviation auto-addition rule's second
+      evidence part is missing — each names an IMPLEMENTATION.md contract
+      identifier (SC2 / SC6) or another feature's AC-7, none of which is an AC-n
+      of task0001's own plan nor a requirement id registered in workflow.yaml.
+      (1) tests/test_failed_kind_batch_docs.py — one hardcoded section-slice
+      end-marker updated for the '## No line on a wait turn' -> '## No result on
+      a wait turn' heading rename. (2) tests/test_batch_quiet_output_discipline.py
+      — CONTRACT_HEADINGS count, an inverted prefix assertion and two section
+      lookups updated for the same rewrite; this file is task0002-owned per
+      IMPLEMENTATION.md D3. Both edits are merged in the integration branch's
+      history and are left to the review phase's containment check.
+
