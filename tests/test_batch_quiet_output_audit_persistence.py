@@ -93,6 +93,20 @@ IMPLEMENTATION.md C5). `batch-mode.md`'s audit-item source map gains one
 row for "Every autonomous fail-closed-route resolution", pinned by the new
 `TestAutonomousFailClosedRouteSourceMapRow`, mirroring
 `TestAC1SourceMapRowPointsAtPhaseStateDoc` above for the pre-existing row.
+
+Extended for task0002 (batch-structured-result-output; see
+feature-docs/batch-structured-result-output/tasks/task0002.md): the
+prefixed terminal line this file's `FORGED_THREE_BULLET_EXCEPTIONS` fixture
+quoted is retired -- its forged bullet now reads "emits the result" rather
+than "emits the terminal line" (the fixture's own wording only; the
+bullet-count matcher it exercises does not depend on this text). This task
+also adds the SC7 value-assignment binding assertion
+(`TestSC7ValueAssignmentStatedInReporting`, IMPLEMENTATION.md D5): the real
+`batch-mode.md`'s `## Reporting` section states, per SC7, that every audit
+item is carried in full inside the result's human-facing description
+value and the stop-recovery guidance in full inside its stop-recovery
+value -- named indirectly, per SC5, to avoid restating SC1's `detail` /
+`resume_conditions` key tokens.
 """
 
 import re
@@ -235,7 +249,7 @@ def _unlisted_gate_unsuppressed_phrase_present(text):
 FORGED_THREE_BULLET_EXCEPTIONS = (
     "- A turn that reaches any stop point keeps its full output.\n"
     "- Step C's completion processing emits its final report in full.\n"
-    "- A `--once` phase-boundary turn emits the terminal line and withholds\n"
+    "- A `--once` phase-boundary turn emits the result and withholds\n"
     "  all other narration.\n"
 )
 
@@ -397,6 +411,71 @@ class TestDeclinePersistenceMatcherNegativeProof(unittest.TestCase):
         self.assertFalse(
             _decline_persisted_under_phase_state(FORGED_DECLINE_SAMPLE_MISSING_PATH)
         )
+
+
+# ---------------------------------------------------------------------------
+# Matcher: SC7 value-assignment (batch-structured-result-output task0002)
+#
+# feature-docs/batch-structured-result-output/tasks/task0002.md ("##
+# Reporting" (FR17, D7)): the section states which of the structured
+# result's values carries each audit item, in full, per IMPLEMENTATION.md
+# SC7. Naming `detail` / `resume_conditions` literally would restate two of
+# SC1's own key tokens, which SC5 forbids a pointer document from doing --
+# so the assignment is stated indirectly, citing the SSOT for the values'
+# real names.
+# ---------------------------------------------------------------------------
+
+
+def _value_assignment_stated(text):
+    """True when the text states IMPLEMENTATION.md SC7's value assignment:
+    every audit item carried in full inside the result's human-facing
+    description value, the stop-recovery guidance carried in full inside
+    its stop-recovery value, that a count alone or a pointer alone
+    satisfies neither, and that no new aggregated report artifact is
+    written."""
+    normalized = _normalize_ws(text).lower()
+    return (
+        "references/batch-terminal-line.md" in normalized
+        and "human-facing description value" in normalized
+        and "stop-recovery value" in normalized
+        and "in full" in normalized
+        and "count alone" in normalized
+        and "pointer alone" in normalized
+        and "no new aggregated report artifact" in normalized
+    )
+
+
+FORGED_VALUE_ASSIGNMENT_WELL_FORMED = (
+    "Per references/batch-terminal-line.md, every item above is carried "
+    "in full inside the result's human-facing description value, and the "
+    "stop-recovery guidance above is carried in full inside the result's "
+    "stop-recovery value. A count alone, or a pointer alone, satisfies "
+    "neither. No new aggregated report artifact is written."
+)
+
+FORGED_VALUE_ASSIGNMENT_INCOMPLETE = (
+    "Per references/batch-terminal-line.md, the items above are recorded "
+    "inside the result's human-facing description value, and the "
+    "stop-recovery guidance is recorded inside its stop-recovery value."
+)
+
+
+class TestValueAssignmentMatcherNegativeProof(unittest.TestCase):
+    """Negative proof + non-vacuity guard for `_value_assignment_stated`."""
+
+    def test_forged_well_formed_sample_is_well_formed_and_found(self):
+        self.assertIn(
+            "human-facing description value", FORGED_VALUE_ASSIGNMENT_WELL_FORMED
+        )
+        self.assertIn("stop-recovery value", FORGED_VALUE_ASSIGNMENT_WELL_FORMED)
+        self.assertTrue(_value_assignment_stated(FORGED_VALUE_ASSIGNMENT_WELL_FORMED))
+
+    def test_rejects_incomplete_sample_missing_in_full_and_count_pointer_rule(self):
+        self.assertIn(
+            "human-facing description value", FORGED_VALUE_ASSIGNMENT_INCOMPLETE
+        )
+        self.assertIn("stop-recovery value", FORGED_VALUE_ASSIGNMENT_INCOMPLETE)
+        self.assertFalse(_value_assignment_stated(FORGED_VALUE_ASSIGNMENT_INCOMPLETE))
 
 
 # ---------------------------------------------------------------------------
@@ -748,6 +827,44 @@ class TestAC7DocumentsPointAtEachOther(unittest.TestCase):
         # gates`' prose, none of which this task touches).
         self.assertEqual(_read(BATCH_MODE_PATH).count("gate_id"), 8)
         self.assertEqual(_read(IMPLEMENT_PATH).count("gate_id"), 0)
+
+
+# ---------------------------------------------------------------------------
+# batch-structured-result-output task0002: SC7 value assignment binding
+# assertion. IMPLEMENTATION.md D5: task0002 owns `batch-mode.md`, so this
+# module (which task0002 also owns) is where the real file is bound against
+# SC7's canonical value assignment.
+# ---------------------------------------------------------------------------
+
+
+class TestSC7ValueAssignmentStatedInReporting(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # End marker is the heading's own line (blank line then `## `),
+        # not the bare substring "## Batch quiet output" -- that substring
+        # also occurs earlier, inline, inside `## Reporting`'s own pointer
+        # sentence ("`## Batch quiet output`'s audit-item source map"),
+        # which would truncate the slice before this task's new paragraph.
+        cls.reporting_section = _slice(
+            _read(BATCH_MODE_PATH), "## Reporting", "\n\n## Batch quiet output"
+        )
+
+    def test_reporting_states_sc7_value_assignment(self):
+        self.assertTrue(_value_assignment_stated(self.reporting_section))
+
+    def test_reporting_item_list_precedes_the_value_assignment(self):
+        # Regression guard: the pre-existing item list this assignment
+        # refers to as "every item above" is not reordered or removed.
+        idx_list = self.reporting_section.index("every auto-approved command string")
+        idx_assignment = self.reporting_section.index("human-facing description value")
+        self.assertLess(idx_list, idx_assignment)
+
+    def test_reporting_does_not_restate_sc1_key_tokens_for_the_two_values(self):
+        # SC5: naming `detail` / `resume_conditions` literally would restate
+        # two of SC1's own key tokens; the section refers to them
+        # indirectly instead (design resolution, task0002's plan).
+        self.assertNotIn("`detail`", self.reporting_section)
+        self.assertNotIn("`resume_conditions`", self.reporting_section)
 
 
 # ---------------------------------------------------------------------------

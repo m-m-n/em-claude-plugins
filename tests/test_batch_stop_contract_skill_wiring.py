@@ -206,7 +206,15 @@ STEP_C_HEADING = (
 )
 STOP_REPORT_HEADING = "## 停止時の報告（停止条件 2-4 のみ）"
 
-TERMINAL_LINE_HEADING = "## Terminal line"
+# batch-structured-result-output task0002 (out-of-scope minimal fix; see
+# feature-docs/batch-structured-result-output/tasks/task0002.md deviations):
+# `batch-mode.md`'s "## Terminal line" heading is renamed "## Structured
+# result" by that task (A2: the retired term "terminal line" no longer
+# names any section). This is a slice-boundary constant only -- every
+# content assertion below (contract-doc reference, Read instruction,
+# literal absence, once-boundary occasion, opening-definition wording) is
+# unaffected and continues to hold against the renamed section's real text.
+TERMINAL_LINE_HEADING = "## Structured result"
 REPORTING_HEADING = "## Reporting"
 NON_PACKET_GATES_HEADING = "## Non-packet gates"
 BATCH_BLOCK_HEADING = "## workflow.yaml `batch` block"
