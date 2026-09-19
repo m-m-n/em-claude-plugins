@@ -228,3 +228,50 @@ records:
       change in the same change, which a single-file editor cannot do, so
       TestExceptions::test_step_c_exception_stated is now red and the finding
       is recorded `unresolved` rather than `fixed`.
+  - question_id: develop.terminal-output-contract-version
+    packet_id: null
+    answered_at: "2026-09-20T04:45:00+09:00"
+    source: unlisted-gate-fallback
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "Option B — emit the NEW eight-key structured YAML result"
+    normalized_answer: "Option B — emit the NEW eight-key structured YAML result"
+    resolution_note: >-
+      gate: develop.terminal-output-contract-version (no gate_id at its
+      originating site; resolved per references/batch-mode.md's unlisted-gate
+      fallback — Codex consultation first, minimum-side-effect option when no
+      decision is reached).
+      Question: this run reached a --once phase boundary (implement completed)
+      under CLAUDE_BATCH=1 and had to emit its own terminal output while the
+      feature it just implemented rewrites that very contract. Which version
+      governs this run's own final message?
+      Options: (A) the OLD contract still checked out on main — the single
+      `EM_WORKFLOW_TERMINAL:` marker line with four key=value fields, which the
+      loaded skill's path reference resolves to; (B) the NEW contract committed
+      on this integration branch — one bare eight-key YAML mapping
+      (state/step/reason/detail/feature/branch/pr_url/resume_conditions).
+      Codex consulted: yes, and it returned no decision — the Codex CLI hit its
+      OpenAI usage limit ("try again at 6:23 AM") and produced no response, so
+      no second opinion was obtained. The fallback's minimum-side-effect rule
+      therefore decided it, with one direct verification added: the consumer's
+      own source was read at
+      /home/sakura/src/my_projects/ai-driven/loop-develop/src/local/terminal-line.ts.
+      Its module docstring states the legacy `EM_WORKFLOW_TERMINAL:` marker-line
+      parser "is gone: the structured YAML result is the sole exit-0 reporting
+      path", and `STRUCTURED_RESULT_FIELDS` enumerates exactly the eight keys in
+      the order the new SSOT fixes. `parseStructuredResult` returns null — the
+      no-valid-result verdict — for any document missing one of those eight.
+      Chosen: (B). Both options write nothing to the repository, so they are
+      equally reversible; they differ only in the side effect on the external
+      service. (A) is now known-unparseable by the migrated consumer, so it
+      would end the run at exit 1 and drop the Notion task to 中断 despite every
+      phase artifact being committed — the exact failure this feature exists to
+      fix, and the failure the bug report records against emterm's
+      wheel-report-notch-clamp run. (B) is accepted by the consumer as verified
+      above. (B) is therefore the smaller adverse side effect.
+      Not chosen: (A), for the reason above. No hybrid was considered viable —
+      the new contract requires the final message to be the bare mapping and
+      nothing else, so a marker line emitted alongside it would itself break
+      parsing.
+      Opus escalation: not run — the consumer-source verification settled the
+      question directly.
