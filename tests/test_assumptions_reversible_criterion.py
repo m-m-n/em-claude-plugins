@@ -547,17 +547,38 @@ class TestNoFeatureAttribution(unittest.TestCase):
                 self.assertFalse(_has_feature_attribution(_read(path)))
 
 
+# batch-structured-result-output IMPLEMENTATION.md D6: PyYAML is the single
+# named exception to NFR4/AC-7, scoped to exactly task0004's two conformance
+# modules (never to any other module, including this one).
+_YAML_EXCEPTION_MODULES = frozenset(
+    {
+        "test_structured_result_conformance.py",
+        "test_structured_result_consumer_constraints.py",
+    }
+)
+
+
 class TestStandardLibraryOnlyImports(unittest.TestCase):
     """AC-7 / NFR4: every test module under `tests/` imports only
-    standard-library names."""
+    standard-library names, except D6's single named PyYAML exception for
+    task0004's two conformance modules."""
 
     def test_every_test_module_imports_only_stdlib(self):
         violations = {}
         for path in sorted(TESTS_DIR.glob("*.py")):
             non_std = _non_stdlib_imports(_read(path), filename=str(path))
+            if path.name in _YAML_EXCEPTION_MODULES:
+                non_std = non_std - {"yaml"}
             if non_std:
                 violations[path.name] = non_std
         self.assertEqual(violations, {}, f"non-stdlib imports found: {violations}")
+
+    def test_yaml_exception_does_not_widen_to_an_unrelated_module(self):
+        # Negative proof: the carve-out is keyed on the exact module name,
+        # so a `yaml` import anywhere else is still flagged.
+        non_std = _non_stdlib_imports("import yaml\n", filename="<forged>")
+        self.assertNotIn("<forged>", _YAML_EXCEPTION_MODULES)
+        self.assertEqual(non_std, {"yaml"})
 
 
 if __name__ == "__main__":
