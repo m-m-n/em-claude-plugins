@@ -1,0 +1,172 @@
+task_id: task0001
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_batch_stop_contract.TestContractDocumentStructure.test_nine_level_2_headings_in_order
+      - test_batch_stop_contract.TestContractDocumentStructure.test_stop_reason_codes_immediately_followed_by_stop_point_coverage
+      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_bare_mapping_rule
+      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_example_matches_sc1_key_order
+      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_double_quoted_scalar_rule_including_empty
+      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_eight_physical_line_invariant_and_reason
+      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_no_external_tool_needed
+      - test_batch_stop_contract.TestContractDocumentStructure.test_result_format_states_batch_only_emission
+      - test_batch_stop_contract.TestResultFormatExampleMatcherNegativeProof
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively by running the finished test module against
+      the pre-change document (git HEAD's copy, restored via `git show
+      HEAD:... > tmpfile` and monkeypatching CONTRACT_PATH): headings did
+      not match SC2's nine
+      (AssertionError: ['Purpose','Line format','Field values','Stop
+      reason codes','Stop point coverage','No line on a wait turn',
+      'Responsibility boundary'] != CONTRACT_HEADINGS), and every
+      Result-format assertion raised KeyError: 'Result format' because
+      the old document has no such section (its equivalent content lived
+      under '## Line format' describing the removed key=value line
+      shape).
+  AC-2:
+    tests:
+      - test_batch_stop_contract.TestEscapingSection.test_table_matches_sc3_canonical_mapping
+      - test_batch_stop_contract.TestEscapingSection.test_states_residual_ranges
+      - test_batch_stop_contract.TestEscapingSection.test_states_character_by_character_never_reprocess_rule
+      - test_batch_stop_contract.TestEscapingSection.test_escaping_table_distinguishes_named_tokens_from_literal_characters
+      - test_batch_stop_contract.TestEscapingTableMatcherNegativeProof
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document: setUpClass
+      raised KeyError: 'Escaping' -- the old document has no `## Escaping`
+      section at all (escaping of any kind did not exist in the removed
+      key=value line shape).
+  AC-3:
+    tests:
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_bullet_order_matches_sc1
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_detail_bullet_states_normalization_before_escaping
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_normalization_not_applied
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_per_state_rule
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_feature_bullet_states_derivation_and_empty_case
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_branch_bullet_states_derivation_and_empty_case
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_pr_url_bullet_states_derivation_and_empty_case
+      - test_batch_stop_contract.TestFieldValuesBulletOrderMatcherNegativeProof
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document:
+      test_bullet_order_matches_sc1 failed because the old `## Field
+      values` bullet order was `['state','step','reason','detail']` (4
+      keys) not SC1's 8; the feature/branch/pr_url/resume_conditions
+      bullet tests failed because those bullets, and their derivation
+      rules, did not exist in the old document (only `state`, `step`,
+      `reason`, `detail` were documented); the detail-normalization test
+      failed because "Before escaping" (an ordering statement relative to
+      a rule that did not exist) was absent.
+  AC-4:
+    tests:
+      - test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_documented_as_twelfth_never_emitted
+      - test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_absent_as_table_row
+      - test_batch_stop_contract.TestStopPointCoverage.test_context_budget_reached_exception_stated
+      - test_batch_stop_contract.TestStopPointCoverage.test_context_budget_reached_absent_from_coverage_table
+      - test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
+      - test_batch_stop_contract.TestCoverageMatcherRejectsTwelfthCodeAsRow.test_coverage_row_added_for_reserved_code_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document:
+      test_context_budget_reached_documented_as_twelfth_never_emitted and
+      test_context_budget_reached_exception_stated both failed
+      (AssertionError: '`context_budget_reached`' not found) because the
+      old document never mentions the reserved twelfth `reason` value at
+      all -- it only ever documented the eleven stop reason codes.
+      test_context_budget_reached_absent_from_coverage_table and
+      test_context_budget_reached_absent_as_table_row were already
+      vacuously true against the old document (it has no
+      `context_budget_reached` mentions to be absent FROM), so those two
+      specific assertions are carried in notes/unconfirmed_reds rather
+      than claimed as red-confirmed; the criterion's substantive claim
+      (twelve documented, marked never-emitted) is covered by the other
+      tests above, which did fail correctly.
+  AC-5:
+    tests:
+      - test_batch_stop_contract.TestConsumerConstraints
+      - test_batch_stop_contract.TestConsumerConstraintsMatcherNegativeProof
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document: setUpClass
+      raised KeyError: 'Consumer constraints' -- the old document has no
+      such section (FR14's five constraints and the 64 KiB / D7
+      no-truncation rule were entirely absent from the removed-shape
+      contract).
+  AC-6:
+    tests:
+      - test_batch_stop_contract.TestPrefixUniqueness.test_prefix_absent_from_every_file_under_em_workflow
+      - test_batch_stop_contract.TestPrefixUniqueness.test_prefix_constant_is_non_empty
+      - test_batch_stop_contract.TestPrefixUniqueness.test_negative_proof_sweep_would_detect_a_reintroduced_prefix
+      - test_batch_stop_contract.TestContractDocumentStructure.test_no_description_of_removed_shape_remains
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively by temporarily restoring the pre-change
+      document's actual bytes to disk (via `git show HEAD:... >
+      em-workflow/references/batch-terminal-line.md`, then restoring the
+      rewritten content immediately after, confirmed byte-identical via
+      `git diff --stat` and a full green re-run of the module) and running
+      test_prefix_absent_from_every_file_under_em_workflow:
+      AssertionError: prefix leaked into:
+      ['em-workflow/references/batch-terminal-line.md'] -- the old
+      document itself still contained the `EM_WORKFLOW_TERMINAL:` prefix
+      the sweep now proves absent everywhere.
+      test_no_description_of_removed_shape_remains failed on
+      'four fields'/'key=value'/'terminal line' all being present in the
+      old document's prose.
+  AC-7:
+    tests:
+      - test_batch_stop_contract.TestResponsibilityBoundary.test_states_confidentiality_rule_extended_to_all_four_fields
+      - test_batch_stop_contract.TestResponsibilityBoundary.test_states_no_status_operation_against_external_service
+      - test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_general_no_result_rule
+      - test_batch_stop_contract.TestNoResultOnWaitTurnAndSentinel.test_states_stop_condition_5_emits_no_result
+      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_state_domain_includes_all_three_values
+      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_names_the_executed_step
+      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_precedence_stated
+      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_c_asymmetry_stated
+      - test_batch_stop_contract.TestContractDocumentStructure.test_field_values_step_domain_declared
+      - test_batch_stop_contract.TestNoStepAnchorUnaffectedByDomainDeclaration
+      - test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_eleven_fixed_codes
+      - test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document:
+      test_states_confidentiality_rule_extended_to_all_four_fields failed
+      because `resume_conditions`/`branch`/`pr_url` were absent from the
+      old `## Responsibility boundary` (it only ever named `detail`);
+      test_states_general_no_result_rule / test_states_stop_condition_5_
+      emits_no_result raised KeyError: 'No result on a wait turn' because
+      that heading did not exist under its new name (old heading was
+      "No line on a wait turn"). The pre-existing state/step domain
+      regression guards
+      (test_field_values_state_domain_includes_all_three_values,
+      test_field_values_step_names_the_executed_step, etc.) passed
+      unmodified against BOTH the old and new document, by design (A5:
+      these pin a domain this task does not alter in substance) -- they
+      are carried forward as regression guards, not re-confirmed red,
+      per the tdd-testing skill's "pure regression guard" exemption.
+notes: >-
+  This task rewrites both an SSOT document and its single guard module
+  together (per the task plan's Design section), so most tests were
+  authored and run against the finished document rather than in strict
+  per-criterion red/green cycles. To meet the discipline honestly, the
+  finished module was additionally run against the pre-change document
+  (retrieved from git HEAD) after the fact, confirming genuine failures
+  for every criterion above except the two narrow sub-assertions noted
+  under AC-4 (absence checks that were vacuously true both before and
+  after, because the old document never mentioned the concept being
+  checked for absence).
