@@ -95,7 +95,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 47dfede3fc91476a3bde3706144773ea3774498c
 - id: implement
   status: pending
   base_commit: null
@@ -107,7 +108,159 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Rewrite the structured-result SSOT and its structural guards
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/batch-terminal-line.md
+    - tests/test_batch_stop_contract.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - FR12
+    - FR13
+    - FR14
+    - FR15
+    - FR16
+    - FR22
+    - NFR1
+    - NFR2
+    - NFR5
+    - NFR6
+    - NFR7
+    status: pending
+    branch: null
+    notes: null
+  task0002:
+    title: Restate batch-mode.md for the structured result
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/batch-mode.md
+    - tests/test_batch_quiet_output_discipline.py
+    - tests/test_batch_quiet_output_phase_wiring.py
+    - tests/test_batch_quiet_output_audit_persistence.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR17
+    - FR18
+    - FR19
+    - FR20
+    - FR22
+    - NFR1
+    - NFR6
+    - NFR7
+    status: pending
+    branch: null
+    notes: null
+  task0003:
+    title: Restate the develop skill and implement-phase citations
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/implement-phase.md
+    - tests/test_batch_stop_contract_skill_wiring.py
+    - tests/test_batch_quiet_output_skill_wiring.py
+    - tests/test_verify_cap_run_continuation.py
+    - tests/test_failed_kind_stop_condition.py
+    - tests/test_develop_once_option.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR17
+    - FR20
+    - FR22
+    - NFR1
+    - NFR7
+    status: pending
+    branch: null
+    notes: null
+  task0004:
+    title: Conformance suite for the structured result's shape and escaping
+    plan: tasks/task0004.md
+    files:
+    - tests/test_structured_result_conformance.py
+    - tests/test_structured_result_consumer_constraints.py
+    skills: []
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR14
+    - FR22
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    branch: null
+    notes: null
+  task0005:
+    title: Derivation-site and audit-containment guards
+    plan: tasks/task0005.md
+    files:
+    - tests/test_structured_result_derivation.py
+    - tests/test_structured_result_reporting_containment.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR9
+    - FR10
+    - FR11
+    - FR12
+    - FR17
+    - FR22
+    - NFR4
+    status: pending
+    branch: null
+    notes: null
+  task0006:
+    title: Bump the em-workflow plugin version in both manifests
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_batch_structured_result_output_version_bump.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR21
+    - FR22
+    - NFR7
+    status: pending
+    branch: null
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -121,14 +274,19 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS7
+    - TS6
   FR2:
     title: Bare eight-key mapping as the whole final message
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0004
     tests:
     - TS1
     - TS12
@@ -137,7 +295,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0004
     tests:
     - TS1
     - TS12
@@ -146,7 +306,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0004
     tests:
     - TS1
   FR5:
@@ -154,7 +316,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0004
     tests:
     - TS2
   FR6:
@@ -162,7 +326,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0004
     tests:
     - TS1
   FR7:
@@ -170,7 +336,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0004
     tests:
     - TS3
   FR8:
@@ -178,7 +346,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0004
     tests:
     - TS3
   FR9:
@@ -186,7 +356,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0005
     tests:
     - TS4
   FR10:
@@ -194,7 +366,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0005
     tests:
     - TS4
   FR11:
@@ -202,7 +376,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0005
     tests:
     - TS4
   FR12:
@@ -210,7 +386,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0005
     tests:
     - TS4
   FR13:
@@ -218,14 +396,18 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS7
   FR14:
     title: Constraints carried over from the consumer
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0004
     tests:
     - TS5
     - TS12
@@ -234,7 +416,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS7
   FR16:
@@ -242,7 +425,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS6
   FR17:
@@ -250,7 +434,10 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
+    - task0003
+    - task0005
     tests:
     - TS9
   FR18:
@@ -258,7 +445,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS8
   FR19:
@@ -266,14 +454,18 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS8
   FR20:
     title: Pointer documents updated without restating literals
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
+    - task0003
     tests:
     - TS8
   FR21:
@@ -281,7 +473,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0006
     tests:
     - TS10
   FR22:
@@ -289,14 +482,24 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS11
   NFR1:
     title: SSOT discipline preserved
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
     tests:
     - TS8
   NFR2:
@@ -304,14 +507,17 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS2
   NFR3:
     title: Conformance verified against a real parser
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0004
     tests:
     - TS2
   NFR4:
@@ -319,7 +525,13 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
     tests:
     - TS11
   NFR5:
@@ -327,14 +539,18 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS7
   NFR6:
     title: Absence remains the abnormal-outcome signal
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS8
   NFR7:
@@ -342,8 +558,15 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0006
+    tests:
+    - TS9
+    - TS11
+
 batch:
   review_rework_count: 0
   verify_rework:
