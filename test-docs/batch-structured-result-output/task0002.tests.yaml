@@ -1,0 +1,143 @@
+task_id: task0002
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_quiet_output_discipline.TestBatchModeSectionStructure.test_structured_result_and_reporting_headings_present
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_terminal_prefix
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_reason_codes
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_no_step_sentinel
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_eight_key_names_as_group
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_state_value_shape
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_bare_phase_done_literal
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_step_value_shape
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_reserved_reason_value_shape
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_names_the_contract_document
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchModeTerminalLineWiring.test_section_restates_no_contract_literal
+    red_confirmed: true
+    red_reason: >-
+      test_structured_result_and_reporting_headings_present: watched it fail
+      with `AssertionError: 'Terminal line' not found in {...}` right after
+      renaming batch-mode.md's heading and before updating this assertion's
+      expected string. The eight whole-file SC5-absence tests and the two
+      test_batch_stop_contract_skill_wiring tests are preventive/retained
+      guards over literals that were never present in batch-mode.md before
+      or after this task's edit (no observable red state for those; carried
+      here for completeness of AC-1 coverage -- see unconfirmed_reds in the
+      implementer report for the honest per-test breakdown).
+  AC-2:
+    tests:
+      - tests.test_batch_quiet_output_discipline.TestMessageShapeDisjointnessMatcherNegativeProof.test_forged_disjointness_text_otherwise_well_formed
+      - tests.test_batch_quiet_output_discipline.TestMessageShapeDisjointnessMatcherNegativeProof.test_missing_absence_signal_is_rejected
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_message_shape_disjointness_stated
+    red_confirmed: false
+    red_reason: >-
+      batch-mode.md's disjointness paragraph and this module's matcher/tests
+      were authored in the same pass rather than test-first; by the time
+      the suite was first run, the document already satisfied the matcher,
+      so no failing state was observed here. The matcher's discriminating
+      power is nonetheless demonstrated by its negative-proof test passing
+      (rejects a forged sample lacking the absence signal) and its
+      non-vacuity guard confirming that same forged sample is otherwise
+      well formed.
+  AC-3:
+    tests:
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_marker_line_format_stated
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard over retained pre-change wording (the marker
+      line's own prefix/fields/domains are unchanged by this task's diff,
+      per the task plan's Test authoring convention exemption). Verified by
+      diff review that only the disjointness paragraph inside "## Batch
+      quiet output" changed; the preceding "**The marker line.**" paragraph
+      and its two bullets are byte-identical to their pre-change text.
+  AC-4:
+    tests:
+      - tests.test_batch_quiet_output_audit_persistence.TestValueAssignmentMatcherNegativeProof.test_forged_well_formed_sample_is_well_formed_and_found
+      - tests.test_batch_quiet_output_audit_persistence.TestValueAssignmentMatcherNegativeProof.test_rejects_incomplete_sample_missing_in_full_and_count_pointer_rule
+      - tests.test_batch_quiet_output_audit_persistence.TestSC7ValueAssignmentStatedInReporting.test_reporting_states_sc7_value_assignment
+      - tests.test_batch_quiet_output_audit_persistence.TestSC7ValueAssignmentStatedInReporting.test_reporting_item_list_precedes_the_value_assignment
+      - tests.test_batch_quiet_output_audit_persistence.TestSC7ValueAssignmentStatedInReporting.test_reporting_does_not_restate_sc1_key_tokens_for_the_two_values
+    red_confirmed: true
+    red_reason: >-
+      test_forged_well_formed_sample_is_well_formed_and_found and
+      test_reporting_states_sc7_value_assignment: watched both fail with
+      `AssertionError: False is not true` -- the matcher lowercased nothing
+      while the "No new aggregated report artifact..." sentence starts
+      capitalized, so the case-sensitive "no new aggregated report
+      artifact" substring check missed it; fixed by lowercasing before
+      comparison. test_reporting_item_list_precedes_the_value_assignment:
+      watched it fail with `ValueError: substring not found` -- the
+      "## Reporting"..."## Batch quiet output" slice truncated early
+      because "## Reporting" also cites `## Batch quiet output` inline (in
+      backticks) before the real heading; fixed by slicing to the heading's
+      own "\n\n## Batch quiet output" line instead of the bare substring.
+      test_rejects_incomplete_sample_missing_in_full_and_count_pointer_rule
+      and test_reporting_does_not_restate_sc1_key_tokens_for_the_two_values
+      were green from creation (the incomplete forged sample and the real
+      section both lacked the checked pattern from the start).
+  AC-5:
+    tests:
+      - tests.test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_source_map_has_one_row_per_audit_item
+      - tests.test_batch_quiet_output_discipline.TestAuditItemSourceMap.test_source_map_row_count_matches_reporting_item_count
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard: the Audit-item source map table itself is
+      untouched by this task (AC-5 requires the row set to stay unchanged),
+      so these pre-existing tests were already green and remain green.
+  AC-6:
+    tests:
+      - tests.test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_terminal_prefix
+      - tests.test_batch_quiet_output_audit_persistence.TestAC2ExceptionsAreExactlyThree.test_stop_abort_step_c_once_boundary_exceptions_retained
+    red_confirmed: false
+    red_reason: >-
+      test_step_c_exception_stated's expected substring was updated to
+      "result following it" in the same edit that changed batch-mode.md's
+      wording, so the suite was never run against the old
+      assertion/old-wording mismatch; the change was verified by direct
+      text inspection instead of a run-time red. The other two are
+      unaffected regression guards.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Meta-criterion verified by the three modules' full runs going green
+      (this task's execution: test_batch_quiet_output_discipline.py 47
+      tests, test_batch_quiet_output_phase_wiring.py 51 tests,
+      test_batch_quiet_output_audit_persistence.py 53 tests, all OK) plus
+      manual review that each new matcher
+      (`_assert_message_shape_disjointness_stated` in discipline.py,
+      `_value_assignment_stated` in audit_persistence.py) carries a
+      negative-proof test and a non-vacuity-guard test, and that all three
+      modules import the Python standard library only (verified by
+      `grep -n "^import\|^from" <file>` showing only `re`, `unittest`,
+      `pathlib`).
+notes: >-
+  Baseline was reconstructed AFTER edits had already begun (a process
+  error: step 4a should have run before touching any file). Reconstruction
+  method: `git stash push -u` on the four modified files, full-suite run,
+  `git stash apply <sha>` to restore (not `git stash pop`, per the shared
+  multi-worktree stash rule), stash entry left in place because `git stash
+  drop` is blocked by this repository's destructive-guard hook (shared
+  stash stack across worktrees) -- entry
+  `stash@{0}: On em-workflow/batch-structured-result-output/task0002:
+  task0002-baseline-check-20260920` is inert and can be dropped later by a
+  human. baseline_failures/final_failures are therefore reconstructed, not
+  the true from-the-start baseline, but they were captured on the correct
+  branch/worktree before vs. after every substantive edit and their
+  identical 6-item sets give high confidence the diff attribution is
+  correct.

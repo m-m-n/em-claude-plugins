@@ -67,6 +67,18 @@ over retained pre-change wording are exempt):
 - `_decline_channel_stated` (decline-channel matcher): negative proof is
   `test_rejects_sample_missing_evidence_part`; non-vacuity guard is
   `test_accepts_well_formed_forged_sample`.
+
+Extended for task0002 (batch-structured-result-output; see
+feature-docs/batch-structured-result-output/tasks/task0002.md): retargets
+this module's terminal-prefix constant so the absence assertion means
+"this file names no literal the new structured-result SSOT owns", not "this
+file does not contain the old prefix" -- `TERMINAL_PREFIX_LITERAL` is
+renamed `REMOVED_PREFIX_LITERAL` (same value, `EM_WORKFLOW_TERMINAL:`,
+still forbidden per SC6) and `ELEVEN_REASON_CODES` is renamed
+`REASON_CODE_LITERALS`, extended with the twelfth SC5 domain value
+`context_budget_reached`. No assertion against the four documents'
+CONTENT changes (they remain task0003's, out of scope here); only the
+constants' names, comments and the twelfth reason-code addition change.
 """
 
 import re
@@ -89,9 +101,22 @@ POINTER_LITERAL = "references/batch-mode.md"
 # never imported from another test module or from batch-mode.md, per the
 # task's Test Notes (task0001's file may not have merged into this
 # worktree yet).
+#
+# Retargeted for batch-structured-result-output task0002
+# (feature-docs/batch-structured-result-output/tasks/task0002.md): these
+# four documents (task0003's, out of scope for task0002 to edit) must name
+# no literal the new structured-result SSOT owns, not merely avoid the old
+# terminal line's now-removed prefix. `REMOVED_PREFIX_LITERAL`'s value is
+# unchanged (`EM_WORKFLOW_TERMINAL:` is still forbidden -- it is IMPLEMENTATION.md
+# SC6's literal, part of SC5's union) but its role changes: it is no longer
+# "the current contract's own prefix", since the new structured result has
+# no prefix at all -- it is now the permanently-removed legacy literal.
+# `REASON_CODE_LITERALS` grows by one, the twelfth SC5 domain value
+# `context_budget_reached` (SC1's `reason` domain, D8), which no document
+# under `em-workflow/` may ever restate either.
 MARKER_PREFIX_LITERAL = "EM_WORKFLOW_PROGRESS:"
-TERMINAL_PREFIX_LITERAL = "EM_WORKFLOW_TERMINAL:"
-ELEVEN_REASON_CODES = [
+REMOVED_PREFIX_LITERAL = "EM_WORKFLOW_TERMINAL:"
+REASON_CODE_LITERALS = [
     "step_stuck",
     "step_needs_intervention",
     "workflow_yaml_unparseable",
@@ -103,12 +128,13 @@ ELEVEN_REASON_CODES = [
     "completion_aborted",
     "feature_resolution_aborted",
     "docs_commit_conflict_aborted",
+    "context_budget_reached",
 ]
 NO_STEP_SENTINEL_LITERAL = "no-step"
 PHASE_DONE_LITERAL = "phase_done"
 FORBIDDEN_LITERALS = (
-    [MARKER_PREFIX_LITERAL, TERMINAL_PREFIX_LITERAL]
-    + ELEVEN_REASON_CODES
+    [MARKER_PREFIX_LITERAL, REMOVED_PREFIX_LITERAL]
+    + REASON_CODE_LITERALS
     + [NO_STEP_SENTINEL_LITERAL, PHASE_DONE_LITERAL]
 )
 
@@ -615,14 +641,18 @@ class TestAC6ForbiddenLiteralsAbsentAndGateIdUnchanged(unittest.TestCase):
         for path in FOUR_DOC_PATHS:
             self.assertNotIn(MARKER_PREFIX_LITERAL, _read(path), path)
 
-    def test_terminal_prefix_literal_absent_from_all_four_documents(self):
+    def test_removed_prefix_literal_absent_from_all_four_documents(self):
+        # batch-structured-result-output task0002: this file names no
+        # literal the SSOT owns -- the removed line's prefix (SC6) is one
+        # such literal, still forbidden though the SSOT itself no longer
+        # emits it.
         for path in FOUR_DOC_PATHS:
-            self.assertNotIn(TERMINAL_PREFIX_LITERAL, _read(path), path)
+            self.assertNotIn(REMOVED_PREFIX_LITERAL, _read(path), path)
 
-    def test_d6b_reason_codes_absent_from_all_four_documents(self):
+    def test_reason_code_literals_absent_from_all_four_documents(self):
         for path in FOUR_DOC_PATHS:
             text = _read(path)
-            for code in ELEVEN_REASON_CODES:
+            for code in REASON_CODE_LITERALS:
                 self.assertNotIn(code, text, f"{code} found in {path}")
 
     def test_no_step_sentinel_absent_from_all_four_documents(self):
