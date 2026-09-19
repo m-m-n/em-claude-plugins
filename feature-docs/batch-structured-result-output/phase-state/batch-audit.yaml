@@ -157,3 +157,74 @@ records:
       whole final message). Side effects are identical either way on the branch
       state; only the run's own outcome signal differs.
 
+  - question_id: review.r2b-no-successful-chain-entry
+    packet_id: null
+    answered_at: "2026-09-20T03:55:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "dispatch the single Claude fallback for each of the four perspectives"
+    normalized_answer: "dispatch the single Claude fallback for each of the four perspectives"
+    resolution_note: >-
+      gate: unlisted, no gate_id — review phase R2b, how to treat a schema-valid
+      but non-retryable `review_data_too_large` skip, and a retryable
+      `rate_limited` skip whose remaining chain entries are all harness
+      reviewers bound by the same data budget. Round 1 facts: comprehensive#0
+      (codex) and security#0 (codex) skipped `rate_limited`; architecture#0
+      (litellm vertex-glm-5.2) and spec#0 (litellm muse-spark) skipped
+      `review_data_too_large` — the integrated diff is ~370,000 characters
+      against review-protocol.md's 300,000-character budget.
+      codex_consulted: attempted, no decision obtained. The Codex CLI returned
+      a usage-limit error ("try again at 6:23 AM"), and both LiteLLM routes
+      (vertex-glm-5.2 and muse-spark) returned 429 after exhausting their retry
+      limit, so no second opinion was available through any provider.
+      Options considered. (1) Strict literal reading of R2b: a non-retryable
+      skip means keep the skip and dispatch nothing further — architecture and
+      spec would end the round with zero completed runs and would not even be
+      listed in `unreviewed_perspectives`, since that list requires a
+      dispatched fallback. Round 1 would review 0 of 4 perspectives.
+      (2) Purposive reading: treat "no completed run and no further chain entry
+      that could succeed" as the chain-exhaustion case and dispatch the one
+      Claude fallback per perspective. (3) Re-scope the review target by
+      splitting the diff into batches and re-dispatching harness reviewers.
+      Chosen: (2). Reasons, per references/batch-mode.md's unlisted-gate
+      fallback (minimum side effect once no decision is reached): the protocol's
+      own rationale for non-retryability is that "the next entry in the chain
+      would be handed the same oversized data" — a statement about chain
+      entries, not about the Claude fallback, which references/review-phase.md
+      places outside the chain and outside the 2-hop budget; review-protocol.md
+      scopes `review_data_too_large` to the litellm reviewer's model context,
+      which the Claude fallback does not share; and R2b's stated design intent
+      is that the fallback dispatch "structurally closes" the case of a
+      perspective ending with zero completed runs. For comprehensive and
+      security the `rate_limited` walk was not continued because every
+      remaining entry is a harness reviewer under the same 300,000-character
+      budget that two models had already failed on, and both harnesses were
+      verified unreachable at that moment.
+      Not chosen: (1), which silently drops all four perspectives from round 1
+      with no disclosure surface; (3), which redefines the review target and is
+      a larger, less reversible side effect than one extra fallback dispatch.
+      Outcome: 4 Claude fallback dispatches, all completed, 17 raw findings.
+      No chain hop was consumed.
+  - question_id: review.auto-fix-judgment
+    packet_id: null
+    answered_at: "2026-09-20T04:03:00+09:00"
+    source: batch-decision-table
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "Apply as-is (editor interprets)"
+    normalized_answer: "Apply as-is (editor interprets)"
+    resolution_note: >-
+      gate: review.auto-fix-judgment (references/batch-mode.md Non-packet gates
+      table). Finding d48f305d463a7feb (high, architecture,
+      em-workflow/references/batch-mode.md) was the round's only R4 candidate;
+      its suggestion is prose, so it classified needs-judgment, and batch mode
+      auto-selects "Apply as-is". The finding does not meet the
+      `sources == ["claude:evaluator"]` exclusion, so the auto-selection applied
+      rather than the forced skip. review-editor rewrote the two Exceptions
+      bullets; scope verification passed (only finding.file changed, no new
+      untracked file); committed as b870d83. The fix is partial: FR22 requires
+      the pinned assertion in tests/test_batch_quiet_output_discipline.py to
+      change in the same change, which a single-file editor cannot do, so
+      TestExceptions::test_step_c_exception_stated is now red and the finding
+      is recorded `unresolved` rather than `fixed`.
