@@ -1,0 +1,110 @@
+task_id: task0009
+baseline_failures:
+  - test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_structured_result_conformance.TestBannedReasonLiteralAbsent.test_banned_reason_literal_is_absent_from_this_module
+      - test_structured_result_conformance.TestRepresentativeSamplesConformToSSOTDomains.test_each_representative_sample_conforms_to_ssot_domains
+      - test_structured_result_consumer_constraints.TestBannedReasonLiteralAbsent.test_banned_reason_literal_is_absent_from_this_module
+      - test_structured_result_consumer_constraints.TestBaselineConformsToSSOTDomains.test_baseline_conforms_to_ssot_domains
+    red_confirmed: true
+    red_reason: >-
+      Before the fix, test_structured_result_conformance._representative_values
+      ("stopped")["reason"] was the literal "awaiting_user" + "_input", which
+      is not in the SSOT's `## Stop reason codes` table.
+      test_each_representative_sample_conforms_to_ssot_domains failed with
+      "AssertionError: 'awaiting_user_input' not found in {'step_stuck',
+      'step_needs_intervention', ..., 'none'}" -- confirmed by temporarily
+      reintroducing the literal (via string concatenation, to avoid the
+      module's own banned-literal self-check tripping on the test file) and
+      re-running just that test class.
+  AC-2:
+    tests:
+      - test_structured_result_consumer_constraints.TestBaselineConformsToSSOTDomains.test_baseline_conforms_to_ssot_domains
+    red_confirmed: true
+    red_reason: >-
+      Before the fix, _baseline_source_values()["step"] was "no-step" while
+      "state" was "completed". test_baseline_conforms_to_ssot_domains failed
+      with "AssertionError: 'no-step' != 'retrospect'" (FR13's `completed` ->
+      `retrospect` rule, read from the SSOT's `## Field values` bullet) --
+      confirmed by temporarily reverting the baseline's step to "no-step" and
+      re-running.
+  AC-3:
+    tests:
+      - test_structured_result_conformance.TestRepresentativeSamplesConformToSSOTDomains.test_forged_sample_with_out_of_domain_reason_is_rejected
+      - test_structured_result_consumer_constraints.TestBaselineConformsToSSOTDomains.test_forged_baseline_with_out_of_domain_reason_is_rejected
+      - test_structured_result_consumer_constraints.TestBaselineConformsToSSOTDomains.test_forged_baseline_with_completed_state_and_wrong_step_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      `_assert_sample_conforms_to_ssot_domains` did not exist before this
+      task. Each negative-proof test wraps the call in
+      `assertRaises(AssertionError)` around a forged, otherwise-valid sample
+      (out-of-domain `reason`, or `state: completed` with the wrong `step`);
+      a no-op or missing guard would leave "AssertionError not raised",
+      failing the test itself. The reverse-direction checks recorded under
+      AC-1/AC-2 (the same guard rejecting the ORIGINAL unfixed samples)
+      confirm the guard fires on genuine drift, not only on the constructed
+      forgeries.
+  AC-4:
+    tests:
+      - test_structured_result_conformance.TestEscapingCopyBoundToSSOT.test_direct_escapes_and_residual_ranges_match_ssot
+      - test_structured_result_conformance.TestEscapingCopyBoundToSSOT.test_forged_copy_missing_a_direct_escape_row_is_rejected
+      - test_structured_result_conformance.TestEscapingCopyBoundToSSOT.test_forged_copy_missing_a_residual_range_is_rejected
+      - test_structured_result_consumer_constraints.TestEscapingCopyBoundToSSOT.test_direct_escapes_and_residual_ranges_match_ssot
+      - test_structured_result_consumer_constraints.TestEscapingCopyBoundToSSOT.test_forged_copy_missing_a_direct_escape_row_is_rejected
+      - test_structured_result_consumer_constraints.TestEscapingCopyBoundToSSOT.test_forged_copy_missing_a_residual_range_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      `_assert_escaping_copy_bound_to_ssot` did not exist before this task --
+      this is exactly review finding c370b1ae54e2e93c/a6d04e162096915e: each
+      module's `_DIRECT_ESCAPES` copy was applied to produce the documents
+      PyYAML parses but was never checked against the SSOT's `## Escaping`
+      table. Each negative-proof test drops one direct-escape row or one
+      residual range from the copy passed to the binding assertion and
+      confirms (via assertRaises(AssertionError)) that the mismatch is
+      rejected; the positive test confirms the real, unforged copy is
+      accepted (extracted pairs/ranges are non-empty and equal the copy).
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Scope/worktree-independence constraint, not a single red/green
+      assertion. Verified by code inspection: the SSOT-reading helpers added
+      to both modules access only sections["Escaping"], sections["Stop
+      reason codes"] and sections["Field values"] (never `## Purpose`,
+      `## Consumer constraints`, `## Responsibility boundary`, or any other
+      section) -- exactly the sections task0008's plan leaves byte-identical
+      or unrewritten this round. Verified empirically by running both
+      modules standalone inside this task's own worktree (51/51 pass, 0
+      skipped) where task0008's own rework has not merged.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Build/verification outcome, not a single test. PyYAML is installed
+      (6.0.3) and both modules run with zero skipped tests (`python3 -m
+      unittest tests.test_structured_result_conformance
+      tests.test_structured_result_consumer_constraints -v` reports 0 "skip"
+      occurrences across 51 tests). The suite-wide comparison is recorded in
+      this file's top-level baseline_failures/final_failures rather than
+      here: this task's own measured baseline at 4a (7 pre-existing
+      failures, none in either of this task's two modules) does not
+      literally match AC-6's wording ("no failure beyond the six that
+      already fail at the implement base commit 95c23ed") -- see the
+      implementer report's notes for the discrepancy and why the empirically
+      measured baseline is used instead.
