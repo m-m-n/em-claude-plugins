@@ -67,7 +67,8 @@ workflow:
   base_commit: 95c23ed1e9d9cf8db8ddbb89d946295bf6aa4716
   completed_at_commit: 52641934960f98857f53d061748f004e6e17e8a6
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 49962c0cb81c71998bbaf2804d1cf03d4dfbb6cf
 - id: verify
   status: pending
   result: null
@@ -318,8 +319,8 @@ tasks:
       - c370b1ae54e2e93c
       review_round: 1
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -334,7 +335,7 @@ review:
     architecture: completed
     spec: completed
   residual_critical_high: 1
-  needs_rework: true
+  needs_rework: false
 requirements:
   FR1:
     title: SSOT ownership of the structured result
