@@ -101,24 +101,44 @@ character, including non-BMP characters, is emitted unchanged.
   single space, runs of spaces are then collapsed to one, and the result
   is trimmed; if the normalized value would be empty, a fixed non-empty
   placeholder is substituted instead, so the non-empty guarantee always
-  holds. `## Escaping`'s rule is then applied to whatever remains.
+  holds. `## Escaping`'s rule is then applied to whatever remains. Items
+  carried in `detail` are separated by a fixed textual delimiter — a
+  space, a vertical bar (`|`), and a space — that survives normalization,
+  so their boundaries remain readable in the single collapsed line.
+  `detail` is not a byte-verbatim record: whitespace inside a carried
+  command string is normalized by the rule above. The verbatim record
+  stays in the persisted audit source that `batch-mode.md`'s
+  `## Batch quiet output` audit-item source map already names for that
+  item; stating this is a disclosure, not a licence to replace an item
+  with that pointer.
 - `feature` — the feature slug: the confirmed slug once the feature is
   resolved; empty before resolution, except at Step 0's git-setup abort
-  when a supplied name matches the slug pattern, in which case `feature`
-  carries that supplied name. A supplied name that fails the slug pattern
-  is never used, and no value is ever guessed from a task description or
-  from an existing branch — those cases, and Step A's feature-resolution
-  abort, leave `feature` empty.
+  when a supplied name matches the slug pattern `^[a-z0-9][a-z0-9-]*$`,
+  in which case `feature` carries that supplied name. A supplied name
+  that fails the slug pattern is never used, and no value is ever guessed
+  from a task description or from an existing branch — those cases, and
+  Step A's feature-resolution abort, leave `feature` empty.
 - `branch` — the integration branch name: empty until this run has
   created or confirmed an integration branch; from that point on, the
   branch name, including at every later abort or stop in the same run.
 - `pr_url` — the created pull request's bare URL once this run has
   created one; empty otherwise, for the remainder of the run once set.
-- `resume_conditions` — the stop-recovery guidance: non-empty whenever
-  `state` is `stopped`, empty for every other `state`. Its value is NOT
-  put through `detail`'s normalization: any Markdown newlines,
-  indentation and trailing spaces it carries survive as `## Escaping`'s
-  escapes rather than being collapsed.
+- `resume_conditions` — the stop-recovery guidance: non-whitespace
+  whenever `state` is `stopped` — never empty and never whitespace-only —
+  empty for every other `state`. Its value is NOT put through `detail`'s
+  normalization: any Markdown newlines, indentation and trailing spaces it
+  carries survive as `## Escaping`'s escapes rather than being collapsed.
+- Every audit item `batch-mode.md`'s `## Reporting` enumerates is carried
+  in full inside `detail`; the stop-recovery guidance above is carried in
+  full inside `resume_conditions`. A count alone, or a pointer alone,
+  satisfies neither. The item list stays `batch-mode.md`'s `## Reporting`
+  to own and is not reproduced here — this document names the section,
+  not its contents.
+- One named exception, and only one: where an item's text carries a
+  secret, exactly that portion is replaced by a fixed placeholder. This is
+  the confidentiality rule of `## Responsibility boundary` taking
+  precedence over the in-full rule above; it is a redaction, never a count
+  or a pointer substitution, and it never applies to a path.
 
 ## Stop reason codes
 
@@ -205,10 +225,38 @@ rejects the value after parsing it, so an escaped control character
 inside `branch` or `pr_url` is rejected exactly like a bare one.
 
 Nothing may be dropped, summarized, replaced by a count, or replaced by a
-pointer in order to satisfy the 64 KiB bound. An emitter that cannot
-satisfy both this bound and `batch-mode.md`'s `## Reporting` "in full"
-requirement has a reportable condition for the run — never a license to
-truncate.
+pointer in order to satisfy the 64 KiB bound. The bound is hard: an
+oversize result is never emitted, never truncated to fit. Therefore a run
+that cannot satisfy both this bound and `batch-mode.md`'s `## Reporting`
+"in full" requirement emits no result for that run, and `## Purpose`'s
+absence signal applies to it: a consumer that sees no result reads an
+abnormal outcome. This is a chosen fail-closed behaviour, not an emitter
+improvising, and it adds no reason code and no `## Stop point coverage`
+row. The assembled content is not lost: it remains in the persisted audit
+sources.
+
+**em-workflow's OWN emitter obligations and rejection rules.** The rules
+below are em-workflow's own hardening obligations, stated here as defense
+in depth alongside the five carried-over constraints above — they are NOT
+carried-over consumer behaviour, and this repository can verify nothing
+about how (or whether) the external consumer enforces them. Each of the
+four cannot fire while `## Escaping` is honoured: they are defense in
+depth for the case an unescaped newline inside a value is followed by a
+line that looks like another key.
+
+- `detail` and `resume_conditions` each reject a line terminator or a
+  terminal-control code point after decoding, in the same form as
+  constraints 3 and 4 above. `## Escaping` does not help here either: an
+  escaped control character inside either value is rejected exactly like
+  a bare one.
+- The top-level mapping's key sequence is exactly the eight keys of
+  `## Result format`, in that order: a result with a missing, extra or
+  reordered key is rejected.
+- A key appearing more than once is rejected before any parser's
+  last-wins resolution; equivalently, a result that is not exactly eight
+  physical lines is rejected on shape alone.
+- A `state`, `step` or `reason` value outside its documented domain is
+  rejected.
 
 ## No result on a wait turn
 
@@ -230,5 +278,5 @@ not edit that service's task page body or status property. The relay
 from this structured result to a human reviewer happens through that
 external service, in one direction only (outbound). This is also why
 `detail`, `resume_conditions`, `branch` and `pr_url` carry no confidential
-information: once emitted, the result's content is relayed outside of
-em-workflow's own process boundary.
+information beyond paths: once emitted, the result's content is relayed
+outside of em-workflow's own process boundary.

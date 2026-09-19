@@ -107,6 +107,43 @@ extracted by two different extractors, so AC-4's asymmetry stays testable;
 the prefix sweep walks every file under `em-workflow/` via `os.walk`, never
 a hand-maintained allowlist, and no longer carves out this document itself
 (the prefix must now be absent everywhere, including here).
+
+--- task0008 additions (review round 1 rework, IMPLEMENTATION.md SC11) ---
+
+This module also carries task0008's binding guards for the SSOT
+value-rule hardening set closed by
+`feature-docs/batch-structured-result-output/tasks/task0008.md`:
+
+- `_assert_confidentiality_beyond_paths_stated` (AC-1, SC11 (a)): the
+  "no confidential information beyond paths" wording, restored in
+  `## Responsibility boundary`.
+- `_assert_in_full_loading_rule_stated` (AC-2, SC11 (b)): the in-full
+  loading rule's owner sentence and the single secret-portion redaction
+  exception, in `## Field values`.
+- `_assert_detail_delimiter_and_byte_verbatim_disclosure_stated` (AC-3,
+  SC11 (c)): the `detail` bullet's item delimiter and its
+  not-byte-verbatim disclosure.
+- `_assert_size_collision_outcome_stated` (AC-4, SC11 (d)): the 64 KiB /
+  in-full collision's single defined outcome in `## Consumer
+  constraints`.
+- `_assert_feature_bullet_states_slug_pattern_literal` (AC-6, SC11 (e)):
+  the `feature` bullet's slug pattern literal.
+- `_assert_resume_conditions_presence_rule_stated` (AC-7, SC11 (f)):
+  replaces the old `non-empty whenever` pin with the new non-whitespace
+  wording (FR22).
+- `_assert_own_hardening_rules_stated` (AC-8, SC11 (g)+(h)): the
+  control-code-point rejection for `detail`/`resume_conditions` plus the
+  three shape defenses, anchored on the `OWN_RULES_LABEL` separator so the
+  matcher cannot be satisfied by FR14's carried-over list alone (proved by
+  `TestOwnHardeningRulesMatcherNegativeProof.test_carried_over_text_alone_does_not_satisfy_the_matcher`).
+
+Every one of these matchers has a negative proof and a non-vacuity guard,
+several built from the real pre-change wording (itself "otherwise well
+formed" on every point except the one under test). AC-9 (`## Escaping`
+and `## Result format` stay byte-identical) is a pure regression guard
+and is exempt from a negative proof per NFR4 -- it is proved by this
+module's own `git diff` never touching those two sections, not by a new
+test.
 """
 
 import os
@@ -558,6 +595,144 @@ def _assert_field_values_bullet_order_matches_sc1(test, section_text):
     test.assertEqual(_extract_field_values_bullet_order(section_text), SC1_KEYS)
 
 
+# -- task0008 (SC11) matchers -------------------------------------------------
+
+
+def _assert_confidentiality_beyond_paths_stated(test, section_text):
+    """AC-1/SC11 (a): the confidentiality rule is "no confidential
+    information beyond paths" -- SPEC NFR5's exact words -- restored after
+    review round 1 found the field scope widened without them."""
+    normalized = _normalize(section_text)
+    test.assertIn("carry no confidential information beyond paths", normalized)
+
+
+def _assert_in_full_loading_rule_stated(test, section_text):
+    """AC-2/SC11 (b): the in-full loading rule is stated on the owning
+    side (`## Field values`), naming `batch-mode.md`'s `## Reporting` as
+    the item list's owner without reproducing it, plus the single
+    secret-portion redaction exception."""
+    normalized = _normalize(section_text)
+    test.assertIn("carried in full inside `detail`", normalized)
+    test.assertIn("carried in full inside `resume_conditions`", normalized)
+    test.assertIn(
+        "A count alone, or a pointer alone, satisfies neither", normalized
+    )
+    test.assertIn("batch-mode.md`'s `## Reporting`", normalized)
+    test.assertIn("not reproduced here", normalized)
+    test.assertIn("secret", normalized)
+    test.assertIn("fixed placeholder", normalized)
+    test.assertIn("a redaction", normalized)
+    test.assertIn("never a count or a pointer substitution", normalized)
+    test.assertIn("never applies to a path", normalized)
+
+
+def _assert_detail_delimiter_and_byte_verbatim_disclosure_stated(test, section_text):
+    """AC-3/SC11 (c): the `detail` bullet states the fixed item delimiter
+    and discloses that `detail` is not a byte-verbatim record, naming
+    where the verbatim record lives. FR7's normalization sentence itself
+    is unchanged (checked separately, regression-style, by
+    `test_detail_bullet_states_normalization_before_escaping`)."""
+    normalized = _normalize(section_text)
+    test.assertIn("separated by a fixed textual delimiter", normalized)
+    test.assertIn("survives normalization", normalized)
+    test.assertIn("not a byte-verbatim record", normalized)
+    test.assertIn(
+        "whitespace inside a carried command string is normalized", normalized
+    )
+    test.assertIn("audit-item source map", normalized)
+
+
+SLUG_PATTERN_LITERAL = r"^[a-z0-9][a-z0-9-]*$"
+
+
+def _assert_feature_bullet_states_slug_pattern_literal(test, section_text):
+    """AC-6/SC11 (e): the `feature` bullet carries the slug pattern
+    literal (this document takes the literal branch of the task plan's
+    "literal, or a named reference" choice)."""
+    test.assertIn(f"`{SLUG_PATTERN_LITERAL}`", section_text)
+    test.assertIn("slug pattern", _normalize(section_text))
+
+
+def _assert_resume_conditions_presence_rule_stated(test, section_text):
+    """AC-7/SC11 (f): `resume_conditions` is non-whitespace -- never empty
+    AND never whitespace-only -- whenever `state` is `stopped`, matching
+    FR12/AC-5 and the presence rule
+    `tests/test_structured_result_derivation.py` already verifies (FR22:
+    replaces the old `non-empty whenever` pin)."""
+    normalized = _normalize(section_text)
+    test.assertIn("non-whitespace whenever `state` is `stopped`", normalized)
+    test.assertIn("never empty and never whitespace-only", normalized)
+    test.assertIn("empty for every other `state`", normalized)
+
+
+def _assert_size_collision_outcome_stated(test, section_text):
+    """AC-4/SC11 (d): the 64 KiB / in-full collision has exactly one
+    defined outcome: no result is emitted, `## Purpose`'s absence signal
+    applies, and the assembled content remains in its persisted sources --
+    never truncation, summarization, a count or a pointer instead."""
+    normalized = _normalize(section_text)
+    lowered = normalized.lower()
+    test.assertIn("64 KiB", normalized)
+    test.assertIn("dropped", lowered)
+    test.assertIn("summarized", lowered)
+    test.assertIn("replaced by a count", lowered)
+    test.assertIn("replaced by a pointer", lowered)
+    test.assertIn("never emitted", lowered)
+    test.assertIn("emits no result", lowered)
+    test.assertIn("abnormal outcome", lowered)
+    test.assertIn("persisted", lowered)
+    test.assertIn("no reason code", lowered)
+
+
+OWN_RULES_LABEL = "em-workflow's OWN emitter obligations and rejection rules"
+
+
+def _split_consumer_constraints_own_rules(section_text):
+    """AC-8 (NEW): splits `## Consumer constraints` at OWN_RULES_LABEL into
+    (carried_over_text, own_rules_text). Returns (section_text, "") when
+    the label is absent, so a caller's assertions against the (empty)
+    second half fail cleanly rather than silently matching the
+    carried-over list alone."""
+    idx = section_text.find(OWN_RULES_LABEL)
+    if idx == -1:
+        return section_text, ""
+    return section_text[:idx], section_text[idx:]
+
+
+def _assert_own_hardening_rules_stated(test, section_text):
+    """AC-8/SC11 (g)+(h): em-workflow's own control-code-point rejection
+    for `detail`/`resume_conditions`, plus the three shape defenses, all
+    stated under a label identifying them as em-workflow's own rules
+    rather than carried-over consumer behaviour (FR14's five numbered
+    constraints, unchanged). Anchored on OWN_RULES_LABEL so the matcher
+    cannot be satisfied by the carried-over list alone (non-vacuity proof:
+    TestOwnHardeningRulesMatcherNegativeProof)."""
+    _carried_over, own_rules = _split_consumer_constraints_own_rules(section_text)
+    test.assertTrue(own_rules, f"label {OWN_RULES_LABEL!r} not found")
+    normalized = _normalize(own_rules)
+    # (g) control code points for detail/resume_conditions
+    test.assertIn("`detail`", own_rules)
+    test.assertIn("`resume_conditions`", own_rules)
+    test.assertIn("line terminator", normalized)
+    test.assertIn("terminal-control", normalized)
+    test.assertIn("does not help here either", normalized)
+    # (h)(1) exact eight keys in order
+    test.assertIn("exactly the eight keys", normalized)
+    test.assertIn("in that order", normalized)
+    test.assertIn("missing, extra or reordered", normalized)
+    # (h)(2) duplicate key / eight physical lines
+    test.assertIn("more than once", normalized)
+    test.assertIn("last-wins", normalized)
+    test.assertIn("exactly eight physical lines", normalized)
+    # (h)(3) closed domain check for state/step/reason
+    test.assertIn("`state`", own_rules)
+    test.assertIn("`step`", own_rules)
+    test.assertIn("`reason`", own_rules)
+    test.assertIn("documented domain", normalized)
+    # labelled as em-workflow's own, not carried-over
+    test.assertIn("carried-over consumer behaviour", normalized)
+
+
 def _iter_em_workflow_files(plugin_root):
     for dirpath, _dirnames, filenames in os.walk(plugin_root):
         for filename in filenames:
@@ -687,6 +862,33 @@ class TestContractDocumentStructure(unittest.TestCase):
         self.assertLess(declaration_index, anchor_index)
 
 
+# -- AC-9 (task0008): `## Escaping` and `## Result format` stay byte-identical
+# to their pre-change text -- task0009 binds its executable escaping copies
+# to `## Escaping` and depends on that invariance (IMPLEMENTATION.md SC12).
+# A pure regression guard over deliberately retained wording (NFR4): exempt
+# from a negative proof. The two literals below are these same sections'
+# exact text captured from the implement-base commit (`git show HEAD:...`
+# before this task's edit); this task's diff never touches either section.
+
+RESULT_FORMAT_TEXT = '\nThe final assistant message of a terminal batch turn is exactly one bare\nYAML mapping and nothing else: no code fence, no surrounding prose, no\ndocument separator (`---`), no comments, and no key beyond the eight\nbelow. The mapping carries exactly these eight keys, each written once,\nin this fixed order:\n\n```yaml\nstate: "stopped"\nstep: "implement"\nreason: "step_stuck"\ndetail: "implementer task0004 stuck after 3 conflict cycles"\nfeature: "batch-structured-result-output"\nbranch: "em-workflow/batch-structured-result-output/integration"\npr_url: ""\nresume_conditions: "Resolve the conflict manually and re-run implement for task0004."\n```\n\nEvery value is a double-quoted scalar; an empty value is written as an\nempty pair of double quotes (`""`), never omitted and never left\nunquoted. Each key sits at the start of its own physical line, so the\nresult is always exactly eight physical lines: no value may contain a\nliteral, unescaped newline (see `## Escaping`). Emitting the result needs\nno external tool: it is eight lines of text written as the final\nassistant message. The result is emitted only in a batch-mode run — an\ninteractive run emits nothing here.\n\n'
+
+ESCAPING_TEXT = '\nThe rule below is applied to every one of the eight values, character by\ncharacter, left to right, and never re-processes a character the rule has\njust generated.\n\n| Source character | Emitted |\n|---|---|\n| `\\` | `\\\\` |\n| `"` | `\\"` |\n| CR (U+000D) | `\\r` |\n| LF (U+000A) | `\\n` |\n| TAB (U+0009) | `\\t` |\n\nAny character not covered above that falls in U+0000-U+001F,\nU+007F-U+009F, U+2028, U+2029, U+FFFE or U+FFFF becomes a backslash, `u`,\nand exactly four lower-case hex digits. Every other valid Unicode\ncharacter, including non-BMP characters, is emitted unchanged.\n\n'
+
+
+class TestEscapingAndResultFormatByteIdentical(unittest.TestCase):
+    """AC-9."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sections = _sections(_read(CONTRACT_PATH))
+
+    def test_result_format_section_unchanged(self):
+        self.assertEqual(self.sections["Result format"], RESULT_FORMAT_TEXT)
+
+    def test_escaping_section_unchanged(self):
+        self.assertEqual(self.sections["Escaping"], ESCAPING_TEXT)
+
+
 # -- AC-3: Field values bullet order + detail/resume_conditions/derivation --
 
 
@@ -714,9 +916,9 @@ class TestFieldValuesBulletOrderAndDerivations(unittest.TestCase):
         self.assertIn("survive as", normalized)
 
     def test_resume_conditions_bullet_states_per_state_rule(self):
-        normalized = _normalize(self.section)
-        self.assertIn("non-empty whenever `state` is `stopped`", normalized)
-        self.assertIn("empty for every other `state`", normalized)
+        """AC-7/SC11 (f): non-whitespace wording, replacing the old
+        non-empty pin (FR22)."""
+        _assert_resume_conditions_presence_rule_stated(self, self.section)
 
     def test_feature_bullet_states_derivation_and_empty_case(self):
         normalized = _normalize(self.section)
@@ -724,6 +926,10 @@ class TestFieldValuesBulletOrderAndDerivations(unittest.TestCase):
         self.assertIn("empty before resolution", normalized)
         self.assertIn("slug pattern", normalized)
         self.assertIn("no value is ever guessed from a task description", normalized)
+
+    def test_feature_bullet_states_slug_pattern_literal(self):
+        """AC-6/SC11 (e)."""
+        _assert_feature_bullet_states_slug_pattern_literal(self, self.section)
 
     def test_branch_bullet_states_derivation_and_empty_case(self):
         normalized = _normalize(self.section)
@@ -737,6 +943,16 @@ class TestFieldValuesBulletOrderAndDerivations(unittest.TestCase):
         normalized = _normalize(self.section)
         self.assertIn("the created pull request's bare URL", normalized)
         self.assertIn("empty otherwise", normalized)
+
+    def test_detail_bullet_states_delimiter_and_byte_verbatim_disclosure(self):
+        """AC-3/SC11 (c)."""
+        _assert_detail_delimiter_and_byte_verbatim_disclosure_stated(
+            self, self.section
+        )
+
+    def test_in_full_loading_rule_and_redaction_exception_stated(self):
+        """AC-2/SC11 (b)."""
+        _assert_in_full_loading_rule_stated(self, self.section)
 
 
 # -- Negative proofs for the NEW matchers ------------------------------------
@@ -856,6 +1072,123 @@ class TestFieldValuesBulletOrderMatcherNegativeProof(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _assert_field_values_bullet_order_matches_sc1(
                 self, FORGED_FIELD_VALUES_WRONG_ORDER
+            )
+
+
+# -- AC-2 (task0008): in-full loading rule matcher negative proof ----------
+
+FORGED_FIELD_VALUES_MISSING_REDACTION_EXCEPTION = (
+    "- Every audit item `batch-mode.md`'s `## Reporting` enumerates is "
+    "carried in full inside `detail`; the stop-recovery guidance above is "
+    "carried in full inside `resume_conditions`. A count alone, or a "
+    "pointer alone, satisfies neither. The item list stays "
+    "`batch-mode.md`'s `## Reporting` to own and is not reproduced here."
+)
+
+
+class TestInFullLoadingRuleMatcherNegativeProof(unittest.TestCase):
+    def test_forged_missing_redaction_exception_is_otherwise_well_formed(self):
+        normalized = _normalize(FORGED_FIELD_VALUES_MISSING_REDACTION_EXCEPTION)
+        self.assertIn("carried in full inside `detail`", normalized)
+        self.assertIn("carried in full inside `resume_conditions`", normalized)
+        self.assertIn("batch-mode.md`'s `## Reporting`", normalized)
+        self.assertIn("not reproduced here", normalized)
+
+    def test_missing_redaction_exception_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_in_full_loading_rule_stated(
+                self, FORGED_FIELD_VALUES_MISSING_REDACTION_EXCEPTION
+            )
+
+
+# -- AC-3 (task0008): detail delimiter / byte-verbatim matcher negative proof
+
+FORGED_DETAIL_BULLET_OLD_WORDING = (
+    "- `detail` — a human-facing, non-empty description. Before escaping, "
+    "its value is normalized: every CR, LF and TAB in it is replaced with "
+    "a single space, runs of spaces are then collapsed to one, and the "
+    "result is trimmed; if the normalized value would be empty, a fixed "
+    "non-empty placeholder is substituted instead, so the non-empty "
+    "guarantee always holds. `## Escaping`'s rule is then applied to "
+    "whatever remains."
+)
+
+
+class TestDetailDelimiterMatcherNegativeProof(unittest.TestCase):
+    """The forged sample is the real pre-change `detail` bullet,
+    verbatim -- it already states the normalization rule, but neither the
+    item delimiter nor the byte-verbatim disclosure."""
+
+    def test_forged_old_bullet_is_otherwise_well_formed(self):
+        normalized = _normalize(FORGED_DETAIL_BULLET_OLD_WORDING)
+        self.assertIn("Before escaping", normalized)
+        self.assertIn("collapsed to one", normalized)
+        self.assertIn("non-empty guarantee", normalized)
+
+    def test_missing_delimiter_and_disclosure_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_detail_delimiter_and_byte_verbatim_disclosure_stated(
+                self, FORGED_DETAIL_BULLET_OLD_WORDING
+            )
+
+
+# -- AC-6 (task0008): feature slug pattern literal matcher negative proof --
+
+FORGED_FEATURE_BULLET_WITHOUT_PATTERN_LITERAL = (
+    "- `feature` — the feature slug: the confirmed slug once the feature "
+    "is resolved; empty before resolution, except at Step 0's git-setup "
+    "abort when a supplied name matches the slug pattern, in which case "
+    "`feature` carries that supplied name. A supplied name that fails the "
+    "slug pattern is never used, and no value is ever guessed from a task "
+    "description or from an existing branch — those cases, and Step A's "
+    "feature-resolution abort, leave `feature` empty."
+)
+
+
+class TestFeatureBulletSlugPatternMatcherNegativeProof(unittest.TestCase):
+    """The forged sample is the real pre-change `feature` bullet,
+    verbatim -- it already names "the slug pattern" twice, but never the
+    pattern literal."""
+
+    def test_forged_old_bullet_is_otherwise_well_formed(self):
+        self.assertIn("slug pattern", FORGED_FEATURE_BULLET_WITHOUT_PATTERN_LITERAL)
+        self.assertIn(
+            "the feature slug", FORGED_FEATURE_BULLET_WITHOUT_PATTERN_LITERAL
+        )
+
+    def test_missing_pattern_literal_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_feature_bullet_states_slug_pattern_literal(
+                self, FORGED_FEATURE_BULLET_WITHOUT_PATTERN_LITERAL
+            )
+
+
+# -- AC-7 (task0008): resume_conditions presence rule matcher negative proof
+
+FORGED_RESUME_CONDITIONS_OLD_WORDING = (
+    "- `resume_conditions` — the stop-recovery guidance: non-empty "
+    "whenever `state` is `stopped`, empty for every other `state`. Its "
+    "value is NOT put through `detail`'s normalization: any Markdown "
+    "newlines, indentation and trailing spaces it carries survive as "
+    "`## Escaping`'s escapes rather than being collapsed."
+)
+
+
+class TestResumeConditionsPresenceRuleMatcherNegativeProof(unittest.TestCase):
+    """The forged sample is the real pre-change `resume_conditions`
+    bullet, verbatim -- it states presence and the normalization
+    exemption, but with the old `non-empty whenever` wording FR22 retires."""
+
+    def test_forged_old_wording_is_otherwise_well_formed(self):
+        normalized = _normalize(FORGED_RESUME_CONDITIONS_OLD_WORDING)
+        self.assertIn("stop-recovery guidance", normalized)
+        self.assertIn("empty for every other `state`", normalized)
+        self.assertIn("NOT put through `detail`'s normalization", normalized)
+
+    def test_old_wording_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_resume_conditions_presence_rule_stated(
+                self, FORGED_RESUME_CONDITIONS_OLD_WORDING
             )
 
 
@@ -1516,7 +1849,24 @@ class TestConsumerConstraints(unittest.TestCase):
         self.assertIn("summarized", normalized)
         self.assertIn("replaced by a count", normalized)
         self.assertIn("replaced by a\n           pointer".replace("\n           ", " "), normalized)
-        self.assertIn("never a license to truncate", normalized)
+        self.assertIn("never truncated to fit", normalized)
+
+    def test_size_collision_outcome_stated(self):
+        """AC-4/SC11 (d): completes the old "reportable condition for the
+        run" wording with the single defined outcome."""
+        _assert_size_collision_outcome_stated(self, self.section)
+
+    def test_own_hardening_rules_stated(self):
+        """AC-8/SC11 (g)+(h)."""
+        _assert_own_hardening_rules_stated(self, self.section)
+
+    def test_five_carried_over_constraints_still_present_and_still_five(self):
+        """FR14's five numbered carried-over constraints are unchanged --
+        the new own-hardening-rules items use bullets, never renumbering
+        into this list."""
+        carried_over, _own = _split_consumer_constraints_own_rules(self.section)
+        numbered = re.findall(r"^\d+\.", carried_over, re.MULTILINE)
+        self.assertEqual(len(numbered), 5)
 
 
 FORGED_CONSUMER_CONSTRAINTS_MISSING_ONE = (
@@ -1554,6 +1904,79 @@ class TestConsumerConstraintsMatcherNegativeProof(unittest.TestCase):
             )
 
 
+# -- AC-4 (task0008): size-collision-outcome matcher negative proof --------
+
+FORGED_SIZE_COLLISION_NO_OUTCOME = (
+    "Nothing may be dropped, summarized, replaced by a count, or replaced "
+    "by a pointer in order to satisfy the 64 KiB bound. An emitter that "
+    "cannot satisfy both this bound and `batch-mode.md`'s `## Reporting` "
+    '"in full" requirement has a reportable condition for the run — never '
+    "a license to truncate."
+)
+
+
+class TestSizeCollisionOutcomeMatcherNegativeProof(unittest.TestCase):
+    """The forged sample is the real pre-change wording, verbatim -- it
+    already carries the bound, the no-truncation sentence and the in-full
+    reference, but never names an outcome."""
+
+    def test_forged_old_wording_is_otherwise_well_formed(self):
+        normalized = _normalize(FORGED_SIZE_COLLISION_NO_OUTCOME)
+        lowered = normalized.lower()
+        self.assertIn("64 KiB", normalized)
+        self.assertIn("dropped", lowered)
+        self.assertIn("summarized", lowered)
+        self.assertIn("replaced by a count", lowered)
+        self.assertIn("replaced by a pointer", lowered)
+
+    def test_missing_outcome_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_size_collision_outcome_stated(
+                self, FORGED_SIZE_COLLISION_NO_OUTCOME
+            )
+
+
+# -- AC-8 (task0008): own-hardening-rules matcher negative proof -----------
+
+FORGED_OWN_RULES_PARTIAL = (
+    OWN_RULES_LABEL + ". The rules below are em-workflow's own hardening "
+    "obligations, NOT carried-over consumer behaviour.\n\n"
+    "- `detail` and `resume_conditions` each reject a line terminator or a "
+    "terminal-control code point after decoding. `## Escaping` does not "
+    "help here either: an escaped control character inside either value "
+    "is rejected exactly like a bare one.\n"
+    "- The top-level mapping's key sequence is exactly the eight keys of "
+    "`## Result format`, in that order: a result with a missing, extra or "
+    "reordered key is rejected.\n"
+)
+
+
+class TestOwnHardeningRulesMatcherNegativeProof(unittest.TestCase):
+    def test_carried_over_text_alone_does_not_satisfy_the_matcher(self):
+        """Non-vacuity: FR14's five carried-over constraints legitimately
+        use the words 'reject' and 'constraint', so the matcher must not
+        be satisfiable by that text alone -- it must anchor on the
+        OWN_RULES_LABEL separator."""
+        section = _sections(_read(CONTRACT_PATH))["Consumer constraints"]
+        carried_over, _own = _split_consumer_constraints_own_rules(section)
+        self.assertIn("reject", carried_over.lower())
+        self.assertIn("constraint", carried_over.lower())
+        self.assertNotIn(OWN_RULES_LABEL, carried_over)
+        with self.assertRaises(AssertionError):
+            _assert_own_hardening_rules_stated(self, carried_over)
+
+    def test_forged_partial_rules_is_otherwise_well_formed(self):
+        self.assertIn(OWN_RULES_LABEL, FORGED_OWN_RULES_PARTIAL)
+        self.assertIn("`detail`", FORGED_OWN_RULES_PARTIAL)
+        self.assertIn("`resume_conditions`", FORGED_OWN_RULES_PARTIAL)
+        self.assertIn("line terminator", FORGED_OWN_RULES_PARTIAL)
+        self.assertIn("does not help here either", FORGED_OWN_RULES_PARTIAL)
+
+    def test_forged_partial_rules_missing_shape_checks_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_own_hardening_rules_stated(self, FORGED_OWN_RULES_PARTIAL)
+
+
 class TestResponsibilityBoundary(unittest.TestCase):
     """AC-7."""
 
@@ -1572,6 +1995,31 @@ class TestResponsibilityBoundary(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertIn(field, self.section)
         self.assertIn("carry no confidential", normalized)
+
+    def test_confidentiality_rule_states_beyond_paths(self):
+        """AC-1/SC11 (a)."""
+        _assert_confidentiality_beyond_paths_stated(self, self.section)
+
+
+FORGED_RESPONSIBILITY_BOUNDARY_MISSING_BEYOND_PATHS = (
+    "`detail`, `resume_conditions`, `branch` and `pr_url` carry no "
+    "confidential information: once emitted, the result's content is "
+    "relayed outside of em-workflow's own process boundary."
+)
+
+
+class TestConfidentialityBeyondPathsMatcherNegativeProof(unittest.TestCase):
+    def test_forged_old_wording_is_otherwise_well_formed(self):
+        self.assertIn(
+            "carry no confidential",
+            _normalize(FORGED_RESPONSIBILITY_BOUNDARY_MISSING_BEYOND_PATHS),
+        )
+
+    def test_missing_beyond_paths_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_confidentiality_beyond_paths_stated(
+                self, FORGED_RESPONSIBILITY_BOUNDARY_MISSING_BEYOND_PATHS
+            )
 
 
 class TestEscapingSection(unittest.TestCase):
