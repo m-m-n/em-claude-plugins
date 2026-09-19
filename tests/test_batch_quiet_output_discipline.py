@@ -124,13 +124,25 @@ TERMINAL_FIELD_NAME_TOKENS = ("`state`", "`step`", "`reason`", "`detail`")
 TERMINAL_STATE_VALUES = ("completed", "stopped", "phase_done")
 ONCE_BOUNDARY_STATE_VALUE = "phase_done"
 
+# Retargeted by batch-structured-result-output task0001 (deviation, outside
+# that task's own expected_files): that task rewrites
+# batch-terminal-line.md's section layout from these seven headings to
+# SC2's nine (renaming and splitting some, notably "Line format" -> "Result
+# format" / "Escaping" and "No line on a wait turn" -> "No result on a wait
+# turn"), and removes the `EM_WORKFLOW_TERMINAL:` prefix literal (SC6).
+# This module's own AC-7 concern -- that batch-terminal-line.md changes by
+# no more than this feature's one cross-reference sentence -- is unaffected
+# by that unrelated, later rewrite; only the pinned shape below and the
+# prefix-presence check just below track the rename/removal mechanically.
 CONTRACT_HEADINGS = [
     "Purpose",
-    "Line format",
+    "Result format",
+    "Escaping",
     "Field values",
     "Stop reason codes",
     "Stop point coverage",
-    "No line on a wait turn",
+    "Consumer constraints",
+    "No result on a wait turn",
     "Responsibility boundary",
 ]
 
@@ -704,7 +716,10 @@ class TestContractDocumentUnchangedExceptOneSentence(unittest.TestCase):
         self.assertEqual(list(self.sections.keys()), CONTRACT_HEADINGS)
 
     def test_prefix_literal_unchanged(self):
-        self.assertIn(TERMINAL_PREFIX, self.text)
+        # Retargeted by batch-structured-result-output task0001 (deviation):
+        # SC6 removes this literal from batch-terminal-line.md entirely, so
+        # "unchanged" now means "still absent", not "still present".
+        self.assertNotIn(TERMINAL_PREFIX, self.text)
 
     def test_reason_codes_unchanged(self):
         for code in TERMINAL_REASON_CODES:
@@ -719,7 +734,11 @@ class TestContractDocumentUnchangedExceptOneSentence(unittest.TestCase):
         self.assertNotIn(MARKER_PREFIX, self.text)
 
     def test_no_line_on_wait_turn_section_gains_cross_reference(self):
-        section = self.sections["No line on a wait turn"]
+        # Section name retargeted by batch-structured-result-output
+        # task0001 (deviation): "No line on a wait turn" -> "No result on a
+        # wait turn" (SC2). The content this test checks is otherwise
+        # untouched by that rename.
+        section = self.sections["No result on a wait turn"]
         normalized = _normalize(section)
         self.assertIn("references/batch-mode.md", section)
         # Pre-existing wording (regression guard, no negative proof needed):
@@ -727,7 +746,7 @@ class TestContractDocumentUnchangedExceptOneSentence(unittest.TestCase):
         self.assertIn("Implement's launch turn and wake turn", normalized)
 
     def test_new_sentence_does_not_restate_marker_prefix(self):
-        section = self.sections["No line on a wait turn"]
+        section = self.sections["No result on a wait turn"]
         self.assertNotIn(MARKER_PREFIX, section)
 
 
