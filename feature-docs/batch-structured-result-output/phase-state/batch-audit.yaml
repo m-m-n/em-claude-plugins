@@ -126,4 +126,34 @@ records:
       workflow.yaml that would otherwise be dropped. The edit is merged in the
       integration branch's history and is left to the review phase's containment
       check.
+  - question_id: develop.terminal-output-contract-selection
+    packet_id: null
+    answered_at: "2026-09-20T03:35:00+09:00"
+    source: batch-unlisted-gate-fallback
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "emit the new bare eight-key structured result"
+    normalized_answer: "emit the new bare eight-key structured result"
+    resolution_note: >-
+      gate: unlisted, no gate_id — which output contract this run's own --once
+      phase-boundary final message must follow. Option A: the legacy
+      EM_WORKFLOW_TERMINAL four-field marker line, which is what the main
+      working tree's em-workflow/references/batch-terminal-line.md (the literal
+      path develop's SKILL.md names) still contains and what the orchestrator's
+      loaded skill text describes. Option B: the bare eight-key YAML mapping
+      this feature just committed to that same file on the integration branch.
+      codex_consulted: attempted, no decision obtained — the Codex CLI returned
+      a usage-limit error (no second opinion; not retried through a substitute
+      provider). Falling back to the minimum-side-effect option per
+      references/batch-mode.md's unlisted-gate fallback. Chosen: Option B.
+      Reasons: the live consumer (loop-develop / claude-batch) dropped its
+      legacy marker-line parser on 2026-08-17 and requires the eight keys, so
+      Option A is a guaranteed rejection that ends the run at exit 1 — the exact
+      defect this feature exists to fix — while Option B matches the contract
+      the consumer actually enforces; and the contract this run owns is the one
+      committed on its own integration branch, which is the current SSOT for
+      this feature's work. Not chosen: Option A (reproduces the reported bug),
+      and emitting both formats (the new contract requires the mapping to be the
+      whole final message). Side effects are identical either way on the branch
+      state; only the run's own outcome signal differs.
 
