@@ -60,6 +60,9 @@ carries those canonical values (D5).
 | SC7 — Audit-item assignment | Which value carries which "## Reporting" item | `detail` carries, in full: every auto-approved command string; every assumption recorded during create-spec/planning; auto-rework rounds consumed (review / verify); every deferred finding with its `stable_id`; every unlisted-gate fallback resolution; every autonomous fail-closed-route resolution; the kept integration branch name together with the take-over guidance. `resume_conditions` carries, in full, the stop-recovery guidance, and only when `state` is `stopped`. A count alone or a pointer alone satisfies neither | task0002 (writes the assignment into `batch-mode.md`'s "## Reporting" and binds it), task0003 (SKILL.md's report instruction cites it), task0005 (applies the item list as canonical) |
 | SC8 — Version value | The single bumped em-workflow version | One value, written identically to `em-workflow/.claude-plugin/plugin.json` and to the `name: em-workflow` entry of `.claude-plugin/marketplace.json`. Both currently read `0.1.82`; the new value compares strictly greater under dot-separated numeric comparison. The `em-review` entry is not touched | task0006 only — no other task lists either manifest in its files |
 | SC9 — Test-module ownership | Which task edits which test module | Each test module is edited by exactly one task (each task plan's Scope is the register). A task that finds it needs a guard inside another task's module reports the need instead of editing the module | all tasks |
+| SC10 — Terminal-turn message boundary | How many assistant messages a terminal batch turn has, and which one carries what | On EVERY turn on which the run reaches one of the SSOT's terminal states — normal completion, a `--once` phase boundary, and every stop point the SSOT's coverage table binds — the LAST assistant message is the structured result and nothing else (SC1's shape). Every prose report that turn owes (a stop's cause / affected paths / recovery guidance, Step C's completion report, the audit items' human-readable narration) is emitted in the message(s) BEFORE that last one. The rule ranges over terminal turns, not over run kinds. The prose report is an ADDITION to the values SC7 assigns, never a substitute for them | task0007 (states it in `skills/develop/SKILL.md` and binds it); `references/batch-mode.md` already carries the same rule for its own two occasions |
+| SC11 — SSOT value-rule hardening set | The rules the SSOT must state about its own values, beyond SC1 / SC3 / SC4 | (a) confidentiality is "no confidential information BEYOND PATHS" over all four of `detail` / `resume_conditions` / `branch` / `pr_url` (SPEC NFR5's words); (b) the in-full loading rule of SC7 is stated on the owning side, naming `batch-mode.md`'s `## Reporting` as the owner of the ITEM LIST without reproducing it, with exactly one exception: a secret-bearing portion of an item is replaced by a fixed placeholder — a redaction, never a count or pointer substitution; (c) `detail` states the fixed delimiter that keeps carried items separable after normalization, and discloses that it is not a byte-verbatim record; (d) the 64 KiB / in-full collision has exactly one defined outcome — no result is emitted, `## Purpose`'s absence signal applies, the content stays in its persisted sources — and it adds NO reason code and NO coverage row; (e) the `feature` bullet carries the slug pattern literal `^[a-z0-9][a-z0-9-]*$` or names its defining document in the form the `step` bullet uses; (f) `resume_conditions` is non-whitespace (never empty, never whitespace-only) whenever `state` is `stopped`; (g) `detail` and `resume_conditions` reject a line terminator or a terminal-control code point after decoding, stated as em-workflow's OWN rule and not as carried-over consumer behaviour, leaving FR7's normalization and FR8's exemption untouched; (h) shape defences that cannot fire while `## Escaping` is honoured: exactly the eight keys in order, no duplicate key (equivalently, exactly eight physical lines), and `state` / `step` / `reason` inside their closed domains | task0008 (states them and binds them); task0009 (reads only what task0008 leaves invariant) |
+| SC12 — Executable escaping copies are bound | Where SC3's rule may exist in executable form | Any test-side executable copy of SC3's escaping rule carries an assertion binding it to the SSOT's `## Escaping` table and its residual-range sentence. Reading the SSOT from a module whose task does not own it is a named exception to D5, admissible only because task0008's plan fixes `## Escaping` and `## Result format` as byte-identical across this round | task0009 (both copies); task0008 (holds `## Escaping` invariant) |
 
 ### Canonical escaping rule (SC3)
 
@@ -300,13 +303,54 @@ allowlist.
 of past runs. *Affected tasks*: task0001 (sweep scope); all others leave other
 features' documents alone.
 
+### D11 — Review round 1 rework: file ownership and the excluded branches
+
+Review round 1's rework adds task0007, task0008 and task0009. SC9's
+one-module-one-task rule continues to hold across the round, with ownership
+re-declared for the modules the rework reopens:
+
+- task0007 — `skills/develop/SKILL.md`,
+  `tests/test_batch_quiet_output_discipline.py`,
+  `tests/test_verify_cap_run_continuation.py`,
+  `tests/test_batch_quiet_output_skill_wiring.py`,
+  `tests/test_batch_stop_contract_skill_wiring.py`.
+- task0008 — `references/batch-terminal-line.md`,
+  `tests/test_batch_stop_contract.py`,
+  `tests/test_structured_result_derivation.py`.
+- task0009 — `tests/test_structured_result_conformance.py`,
+  `tests/test_structured_result_consumer_constraints.py`.
+
+`references/batch-mode.md` is written by NO rework task: review round 1's
+auto-fix already corrected its Exceptions bullets on the integration branch,
+and its guard module belongs to task0007 this round, so reopening the
+document would put two tasks in one module.
+
+Two fix branches the review suggested are deliberately EXCLUDED, because each
+would change SPEC.md and a rework task may not:
+
+- Adding a stop reason code (e.g. for the 64 KiB overflow) plus its coverage
+  row — SPEC FR15 and AC-8 fix the domain at twelve documented values and
+  eleven coverage rows with one named exception. SC11 (d) resolves the
+  overflow inside those counts instead.
+- Relaxing `detail`'s normalization to preserve LF — SPEC FR7 pins that
+  normalization verbatim. SC11 (c) addresses the item-separation and
+  verbatim-record consequences by disclosure and a delimiter instead.
+
+Either branch remains open as a specification decision for a later round; it
+is recorded here so it is a choice on the record rather than an omission.
+
+*Rationale*: the rework's document-update scope forbids a SPEC change, so the
+branch chosen for each finding is the one that resolves it without one; which
+branch was dropped, and why, is what a reviewer needs in order to judge that.
+*Affected tasks*: task0007, task0008, task0009.
+
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | A conformance module silently skips because the YAML parser is absent, making NFR3 vacuous | medium | high | D6: the skip is labelled, and VERIFICATION.md treats a skipped conformance run as a failed item, not a pass |
 | A pointer document reintroduces a forbidden literal while being rewritten | medium | medium | SC5 plus whole-file absence guards in three separate modules; failures surface in the same suite run |
-| A conformance module's canonical copy of the escaping rule drifts from the SSOT's table | medium | high | D5: task0001's binding assertion compares the SSOT's extracted table against the same canonical set, so drift fails at exactly one place |
+| A conformance module's canonical copy of the escaping rule drifts from the SSOT's table | medium | high | D5's binding assertion covers the SSOT ↔ `tests/test_batch_stop_contract.py` pair only; review round 1 found the two EXECUTABLE copies (in the conformance and consumer-constraint modules) unbound, so drift there left the suite green. SC12 binds each executable copy as well, giving one binding assertion per copy |
 | `detail` assembled "in full" exceeds the 64 KiB document bound | low | medium | D7: the SSOT states the interaction explicitly and forbids silent truncation |
 | Two tasks edit the same JSON manifest and conflict | low | medium | D9 plus SC8: task0006 is the only task whose files contain either manifest |
 | A heading inserted between `Stop reason codes` and `Stop point coverage` breaks an existing, unrelated guard | low | medium | SC2 states the adjacency constraint as part of the heading contract |
@@ -317,10 +361,14 @@ features' documents alone.
 - [ ] Is PyYAML present in the environment where the verify phase runs the
       suite? If not, NFR3's conformance cannot be demonstrated and D6's
       verification item fails rather than passing by skip.
-- [ ] FR14's 64 KiB bound and FR17's "in full" rule can in principle conflict
-      for a run with an unusually large audit set. D7 fixes the precedence
-      (never truncate) but does not define what the run should do instead;
-      this is deliberately left to a follow-up if it is ever observed.
+- [x] FR14's 64 KiB bound and FR17's "in full" rule can in principle conflict
+      for a run with an unusually large audit set. D7 fixed the precedence
+      (never truncate) but not the outcome; review round 1 found that this
+      left the emitter with no legal output. SC11 (d) now defines the
+      outcome — no result is emitted and the absence signal applies — within
+      FR15's existing counts. Whether that condition deserves a reason code of
+      its own is a specification decision, recorded in D11 as excluded from
+      this feature.
 - [ ] FR15 requires the `reason` domain to document twelve values while the
       coverage table binds eleven. The twelfth value's spelling is taken from
       the consumer's documented domain (`context_budget_reached`); nothing in

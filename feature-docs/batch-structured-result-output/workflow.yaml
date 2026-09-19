@@ -2,68 +2,31 @@ schema_version: 1
 feature: batch-structured-result-output
 created: '2026-09-20'
 base_branch: main
-goal: |
-  --batch --once --pr https://www.notion.so/3e03509ec8ee81ad844ce7ad361eb564
-
-  Once the implementation is finished, push the integration branch to the remote and create a Pull Request against base_branch with gh pr create. Keep the integration branch both locally and on the remote (do not auto-merge it into base_branch).
-  Consult Codex on any unclear points and adopt the option judged to be comparatively better.
-  Record the content of that discussion in Notion.
-
-  --- Resolved Notion task (title + body), fetched at launch ---
-
-  # batch 終端行が claude-batch の要求スキーマと不一致で run が exit 1 になる
-
-  種別: バグ
-
-  ## 現象 (必須)
-  `claude-batch` 経由の `--batch` 実行で、オーケストレーターが終端行を出した時点で
-  スキーマ検証に弾かれ、run が exit 1 で終わる。
-
-      claude-batch: response does not conform to schema (attempt 1/5): output_schema: missing key "branch"
-
-  em-workflow は `references/batch-terminal-line.md` を SSOT として、4 フィールドの
-  マーカー行を出すよう指示している。
-
-      EM_WORKFLOW_TERMINAL: state=phase_done step=create-spec reason=none detail=...
-
-  一方 claude-batch は 8 キーの構造化出力を要求する（`branch` / `detail` / `feature` /
-  `pr_url` / `reason` / `resume_conditions` / `state` / `step`）。loop-develop 側は
-  2026-08-17 の `refactor(yaml-result-sole-path): drop legacy path` で
-  `EM_WORKFLOW_TERMINAL:` マーカー行のパーサを削除済み。em-workflow 側がこの移行に
-  追従していない。
-
-  ## 再現手順 (必須)
-  1. `claude-batch` 経由で `/em-workflow:develop --batch --once <タスク>` を実行する
-  2. いずれかのフェーズ境界でターンが終端状態に達し、`references/batch-terminal-line.md`
-     のとおり `EM_WORKFLOW_TERMINAL:` 行が出力される
-  3. claude-batch が `output_schema: missing key "branch"` で拒否し、run が exit 1 になる
-
-  ## 期待する挙動 (必須)
-  em-workflow が claude-batch の要求する 8 キーの構造化出力を出し、終端状態が正しく
-  受け取られて run が成功扱いで終わる。
-
-  ## 完了の定義 (必須)
-  - [ ] 再現手順で現象が起きない
-  - [ ] 再発を検出するテストがある
-
-  ## 該当箇所 (任意)
-  - `em-workflow/references/batch-terminal-line.md` — 終端行の SSOT。`Line format` 節が
-    「exactly four `key=value` fields」を定義している
-  - `em-workflow/skills/develop/SKILL.md` — 「バッチ終端行」節（上記 SSOT を参照）
-  - 相手側の契約: loop-develop `src/local/terminal-line.ts`（8 キーを列挙する
-    `STRUCTURED_RESULT_FIELDS`、legacy マーカー行パーサは削除済み）
-
-  ## 実害・発生条件 (任意)
-  無人 batch 実行が終端で必ず失敗扱いになり、Notion タスクが「中断」に落ちる。
-  フェーズの成果物自体は integration ブランチにコミット済みで残るため、再起動すれば
-  続行はできる。
-  実例: emterm の feature `wheel-report-notch-clamp`（2026-09-20 01:34 JST、exit 1、
-  所要 10m38s、session_id `01a0ba7b-88ce-7386-820f-5cd666da2d27`）。create-spec は
-  完了していたが、終端行の拒否で run 全体が失敗になった。
-  なお、このとき claude-batch は 5 回までの再出力リトライを持つが、1 回目の block 応答が
-  `hook_listener: reply window closed before the reply could be delivered` で配送に失敗し、
-  リトライが成立しないまま interrupt されて exit 1 になった。こちらは claude-batch 側の
-  挙動で、本タスクのスコープ外。
+goal: "--batch --once --pr https://www.notion.so/3e03509ec8ee81ad844ce7ad361eb564\n\nOnce the implementation\
+  \ is finished, push the integration branch to the remote and create a Pull Request against base_branch\
+  \ with gh pr create. Keep the integration branch both locally and on the remote (do not auto-merge it\
+  \ into base_branch).\nConsult Codex on any unclear points and adopt the option judged to be comparatively\
+  \ better.\nRecord the content of that discussion in Notion.\n\n--- Resolved Notion task (title + body),\
+  \ fetched at launch ---\n\n# batch 終端行が claude-batch の要求スキーマと不一致で run が exit 1 になる\n\n種別: バグ\n\n## 現象\
+  \ (必須)\n`claude-batch` 経由の `--batch` 実行で、オーケストレーターが終端行を出した時点で\nスキーマ検証に弾かれ、run が exit 1 で終わる。\n\n   \
+  \ claude-batch: response does not conform to schema (attempt 1/5): output_schema: missing key \"branch\"\
+  \n\nem-workflow は `references/batch-terminal-line.md` を SSOT として、4 フィールドの\nマーカー行を出すよう指示している。\n\n   \
+  \ EM_WORKFLOW_TERMINAL: state=phase_done step=create-spec reason=none detail=...\n\n一方 claude-batch\
+  \ は 8 キーの構造化出力を要求する（`branch` / `detail` / `feature` /\n`pr_url` / `reason` / `resume_conditions` / `state`\
+  \ / `step`）。loop-develop 側は\n2026-08-17 の `refactor(yaml-result-sole-path): drop legacy path` で\n`EM_WORKFLOW_TERMINAL:`\
+  \ マーカー行のパーサを削除済み。em-workflow 側がこの移行に\n追従していない。\n\n## 再現手順 (必須)\n1. `claude-batch` 経由で `/em-workflow:develop\
+  \ --batch --once <タスク>` を実行する\n2. いずれかのフェーズ境界でターンが終端状態に達し、`references/batch-terminal-line.md`\n   のとおり\
+  \ `EM_WORKFLOW_TERMINAL:` 行が出力される\n3. claude-batch が `output_schema: missing key \"branch\"` で拒否し、run\
+  \ が exit 1 になる\n\n## 期待する挙動 (必須)\nem-workflow が claude-batch の要求する 8 キーの構造化出力を出し、終端状態が正しく\n受け取られて run\
+  \ が成功扱いで終わる。\n\n## 完了の定義 (必須)\n- [ ] 再現手順で現象が起きない\n- [ ] 再発を検出するテストがある\n\n## 該当箇所 (任意)\n- `em-workflow/references/batch-terminal-line.md`\
+  \ — 終端行の SSOT。`Line format` 節が\n  「exactly four `key=value` fields」を定義している\n- `em-workflow/skills/develop/SKILL.md`\
+  \ — 「バッチ終端行」節（上記 SSOT を参照）\n- 相手側の契約: loop-develop `src/local/terminal-line.ts`（8 キーを列挙する\n  `STRUCTURED_RESULT_FIELDS`、legacy\
+  \ マーカー行パーサは削除済み）\n\n## 実害・発生条件 (任意)\n無人 batch 実行が終端で必ず失敗扱いになり、Notion タスクが「中断」に落ちる。\nフェーズの成果物自体は integration\
+  \ ブランチにコミット済みで残るため、再起動すれば\n続行はできる。\n実例: emterm の feature `wheel-report-notch-clamp`（2026-09-20 01:34\
+  \ JST、exit 1、\n所要 10m38s、session_id `01a0ba7b-88ce-7386-820f-5cd666da2d27`）。create-spec は\n完了していたが、終端行の拒否で\
+  \ run 全体が失敗になった。\nなお、このとき claude-batch は 5 回までの再出力リトライを持つが、1 回目の block 応答が\n`hook_listener: reply window\
+  \ closed before the reply could be delivered` で配送に失敗し、\nリトライが成立しないまま interrupt されて exit 1 になった。こちらは\
+  \ claude-batch 側の\n挙動で、本タスクのスコープ外。\n"
 parent_branch: em-workflow/batch-structured-result-output/integration
 project:
   license: none
@@ -89,7 +52,9 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: ドキュメントとテストのみの変更。3 つの reference SSOT markdown、1 つの skill markdown、10 個の Python テストモジュール、2 つの JSON バージョンマニフェストが対象で、UI・描画面・視覚的入力を伴わない。design-system 候補も 0 件。batch policy create-spec.design-step（decide_autonomously）により analyst の skip 推奨がそのまま採用された。
+  skipped_reason: ドキュメントとテストのみの変更。3 つの reference SSOT markdown、1 つの skill markdown、10 個の Python テストモジュール、2
+    つの JSON バージョンマニフェストが対象で、UI・描画面・視覚的入力を伴わない。design-system 候補も 0 件。batch policy create-spec.design-step（decide_autonomously）により
+    analyst の skip 推奨がそのまま採用された。
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -98,7 +63,7 @@ workflow:
   status: completed
   completed_at_commit: 47dfede3fc91476a3bde3706144773ea3774498c
 - id: implement
-  status: completed
+  status: pending
   base_commit: 95c23ed1e9d9cf8db8ddbb89d946295bf6aa4716
   completed_at_commit: a58b3bae97eedc333057c1c7a6cb2f23af3aaca5
 - id: review
@@ -262,6 +227,96 @@ tasks:
     status: merged
     branch: em-workflow/batch-structured-result-output/task0006
     notes: null
+  task0007:
+    title: Own the terminal batch turn's message boundary in the develop skill
+    plan: tasks/task0007.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_batch_quiet_output_discipline.py
+    - tests/test_verify_cap_run_continuation.py
+    - tests/test_batch_quiet_output_skill_wiring.py
+    - tests/test_batch_stop_contract_skill_wiring.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR2
+    - FR17
+    - FR20
+    - FR22
+    - NFR1
+    - NFR6
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - d48f305d463a7feb
+      review_round: 1
+  task0008:
+    title: Close the structured-result SSOT's value-rule gaps
+    plan: tasks/task0008.md
+    files:
+    - em-workflow/references/batch-terminal-line.md
+    - tests/test_batch_stop_contract.py
+    - tests/test_structured_result_derivation.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR9
+    - FR12
+    - FR14
+    - FR17
+    - FR22
+    - NFR1
+    - NFR5
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - d790c24d9d29f3e8
+      - aa806983e2dde5ac
+      - 6e738eeb10be06d5
+      - 15cef915894f6e83
+      - 6684af2e09a0c2b1
+      - 945001897c8ae4b6
+      - d0c6daaf5c1bc6b9
+      review_round: 1
+  task0009:
+    title: Re-bind the conformance guards to the contract
+    plan: tasks/task0009.md
+    files:
+    - tests/test_structured_result_conformance.py
+    - tests/test_structured_result_consumer_constraints.py
+    skills: []
+    domains:
+    - input-handling
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR5
+    - FR13
+    - FR15
+    - FR22
+    - NFR3
+    - NFR4
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - a6d04e162096915e
+      - c370b1ae54e2e93c
+      review_round: 1
 review:
   status: pending
   rounds_completed: 1
@@ -288,9 +343,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0008
     tests:
     - TS7
     - TS6
+    - TS14
   FR2:
     title: Bare eight-key mapping as the whole final message
     status: ok
@@ -299,9 +356,11 @@ requirements:
     tasks:
     - task0001
     - task0004
+    - task0007
     tests:
     - TS1
     - TS12
+    - TS13
   FR3:
     title: Fixed key set and key order
     status: ok
@@ -331,8 +390,10 @@ requirements:
     tasks:
     - task0001
     - task0004
+    - task0009
     tests:
     - TS2
+    - TS15
   FR6:
     title: Eight-physical-line invariant
     status: ok
@@ -371,8 +432,10 @@ requirements:
     tasks:
     - task0001
     - task0005
+    - task0008
     tests:
     - TS4
+    - TS14
   FR10:
     title: '`branch` derivation'
     status: ok
@@ -401,8 +464,10 @@ requirements:
     tasks:
     - task0001
     - task0005
+    - task0008
     tests:
     - TS4
+    - TS14
   FR13:
     title: '`state` and `step` domains unchanged'
     status: ok
@@ -410,8 +475,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0009
     tests:
     - TS7
+    - TS15
   FR14:
     title: Constraints carried over from the consumer
     status: ok
@@ -420,9 +487,11 @@ requirements:
     tasks:
     - task0001
     - task0004
+    - task0008
     tests:
     - TS5
     - TS12
+    - TS14
   FR15:
     title: '`context_budget_reached` documented as never emitted'
     status: ok
@@ -430,8 +499,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0009
     tests:
     - TS7
+    - TS15
   FR16:
     title: Legacy marker line removed entirely
     status: ok
@@ -450,8 +521,12 @@ requirements:
     - task0002
     - task0003
     - task0005
+    - task0007
+    - task0008
     tests:
     - TS9
+    - TS13
+    - TS14
   FR18:
     title: Prefix-disjointness paragraph restated
     status: ok
@@ -478,8 +553,10 @@ requirements:
     tasks:
     - task0002
     - task0003
+    - task0007
     tests:
     - TS8
+    - TS13
   FR21:
     title: Plugin version bump
     status: ok
@@ -501,8 +578,14 @@ requirements:
     - task0004
     - task0005
     - task0006
+    - task0007
+    - task0008
+    - task0009
     tests:
     - TS11
+    - TS13
+    - TS14
+    - TS15
   NFR1:
     title: SSOT discipline preserved
     status: ok
@@ -512,8 +595,12 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0007
+    - task0008
     tests:
     - TS8
+    - TS13
+    - TS14
   NFR2:
     title: No external tool, LLM-writable
     status: ok
@@ -530,8 +617,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0004
+    - task0009
     tests:
     - TS2
+    - TS15
   NFR4:
     title: Test authoring convention
     status: ok
@@ -544,8 +633,14 @@ requirements:
     - task0004
     - task0005
     - task0006
+    - task0007
+    - task0008
+    - task0009
     tests:
     - TS11
+    - TS13
+    - TS14
+    - TS15
   NFR5:
     title: Confidentiality boundary extended to the new fields
     status: ok
@@ -553,8 +648,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0008
     tests:
     - TS7
+    - TS14
   NFR6:
     title: Absence remains the abnormal-outcome signal
     status: ok
@@ -563,8 +660,10 @@ requirements:
     tasks:
     - task0001
     - task0002
+    - task0007
     tests:
     - TS8
+    - TS13
   NFR7:
     title: Bundled-file awareness
     status: ok
@@ -578,9 +677,8 @@ requirements:
     tests:
     - TS9
     - TS11
-
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
