@@ -1,0 +1,117 @@
+task_id: task0004
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_structured_result_conformance.TestDocumentShapePerState.test_each_state_produces_a_single_eight_key_string_mapping
+      - test_structured_result_conformance.TestWellFormedDocumentChecker.test_a_real_assembled_document_has_no_violations
+      - test_structured_result_conformance.TestWellFormedDocumentChecker.test_a_leading_blank_line_is_flagged
+      - test_structured_result_conformance.TestWellFormedDocumentChecker.test_an_extra_trailing_key_is_flagged
+      - test_structured_result_conformance.TestWellFormedDocumentChecker.test_a_reordered_key_pair_is_flagged
+    red_confirmed: true
+    red_reason: >-
+      Manually broke assemble() to drop the resume_conditions key: the
+      well-formed checker reported
+      ['expected-8-physical-lines-got-7', "key-order-mismatch:[...]"]
+      instead of [], and the state-shape test failed for all three state
+      values before the fix.
+  AC-2:
+    tests:
+      - test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_exactly_fourteen_adversarial_cases_are_declared
+      - test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_case_names_are_unique
+      - test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_each_case_round_trips_in_every_key_position
+      - test_structured_result_conformance.TestAdversarialEscapingRoundTrip.test_control_and_noncharacter_mix_round_trips_by_code_point
+      - test_structured_result_conformance.TestAlreadyEscapedSequenceIsNeverReprocessed.test_round_trips_unchanged
+      - test_structured_result_conformance.TestAlreadyEscapedSequenceIsNeverReprocessed.test_emitted_text_carries_a_doubled_backslash
+    red_confirmed: true
+    red_reason: >-
+      Manually broke escape_value() to stop escaping backslash: the
+      embedded_quotes_and_backslashes case failed round trip in all 8 key
+      positions -- "'say \"hi\" then  backslash' != 'say \"hi\" then \\
+      backslash'".
+  AC-3:
+    tests:
+      - test_structured_result_conformance.TestRoundTripIsNotVacuous.test_broken_lf_escaping_fails_the_round_trip
+      - test_structured_result_conformance.TestRoundTripIsNotVacuous.test_correct_escaping_of_the_same_source_does_round_trip
+    red_confirmed: true
+    red_reason: >-
+      This AC's test IS the red proof: the broken applier folds the literal
+      LF into a space via YAML line folding, so
+      loaded["detail"] == "line one line two" != "line one\nline two",
+      verified directly rather than via a separate red/green cycle of the
+      surrounding suite.
+  AC-4:
+    tests:
+      - test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_cr_lf_tab_and_space_runs_collapse_to_single_spaces
+      - test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_emitted_detail_carries_no_newline_escape
+      - test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_whitespace_only_source_normalizes_to_the_fixed_placeholder
+      - test_structured_result_conformance.TestDetailNormalizationThenEscaping.test_normalization_is_not_vacuous_against_an_identity_function
+    red_confirmed: true
+    red_reason: >-
+      Manually broke normalize_detail() to skip space-run collapsing:
+      assertNotIn("  ", normalized) failed -- "'  ' unexpectedly found in
+      'line one  line two tabbed   multiple   spaces'".
+  AC-5:
+    tests:
+      - test_structured_result_conformance.TestResumeConditionsEscapingOnly.test_emitted_value_carries_newline_escapes
+      - test_structured_result_conformance.TestResumeConditionsEscapingOnly.test_round_trips_with_indentation_and_trailing_spaces_intact
+    red_confirmed: true
+    red_reason: >-
+      Manually made assemble() apply detail's normalization to
+      resume_conditions too: the emitted line carried no "\n" escape, and
+      the round trip lost indentation/newlines ("- resolve the pending
+      question - re-run develop" != "  - resolve the pending question   \n
+      - re-run develop\n").
+  AC-6:
+    tests:
+      - test_structured_result_consumer_constraints.TestStoppedWithNoneReasonRejected.test_stopped_with_none_reason_is_rejected
+      - test_structured_result_consumer_constraints.TestStoppedWithNoneReasonRejected.test_stopped_with_a_non_none_reason_is_accepted
+      - test_structured_result_consumer_constraints.TestPhaseDoneRequiresNoneReason.test_phase_done_with_a_non_none_reason_is_rejected
+      - test_structured_result_consumer_constraints.TestPhaseDoneRequiresNoneReason.test_phase_done_with_none_reason_is_accepted
+      - test_structured_result_consumer_constraints.TestPhaseDoneRequiresEmptyResumeConditions.test_phase_done_with_nonempty_resume_conditions_is_rejected
+      - test_structured_result_consumer_constraints.TestPhaseDoneRequiresEmptyResumeConditions.test_phase_done_with_empty_resume_conditions_is_accepted
+      - test_structured_result_consumer_constraints.TestBranchAndPrUrlCharacterConstraint.test_clean_branch_and_pr_url_are_accepted
+      - test_structured_result_consumer_constraints.TestBranchAndPrUrlCharacterConstraint.test_a_terminal_control_code_point_is_rejected_after_parsing
+      - test_structured_result_consumer_constraints.TestBranchAndPrUrlCharacterConstraint.test_a_line_terminator_is_rejected_after_parsing
+      - test_structured_result_consumer_constraints.TestDocumentSizeBoundary.test_exactly_at_the_bound_is_accepted
+      - test_structured_result_consumer_constraints.TestDocumentSizeBoundary.test_just_below_the_bound_is_accepted
+      - test_structured_result_consumer_constraints.TestDocumentSizeBoundary.test_just_above_the_bound_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Manually removed each of the five constraint checks from
+      rejection_reasons() in turn; each corresponding rejecting test failed
+      with the expected reason code absent (e.g. "'stopped_with_none_reason'
+      not found in set()"). Also verified that a raw-text (pre-parse)
+      variant of the branch/pr_url check makes
+      test_a_terminal_control_code_point_is_rejected_after_parsing fail,
+      confirming the check must run on the PARSED value per AC-6.
+  AC-7:
+    tests:
+      - test_structured_result_conformance.TestStdlibOnlySelfCheckExceptYaml.test_this_modules_own_source_has_no_disallowed_import
+      - test_structured_result_conformance.TestStdlibOnlySelfCheckExceptYaml.test_checker_accepts_a_forged_stdlib_and_yaml_only_source
+      - test_structured_result_conformance.TestStdlibOnlySelfCheckExceptYaml.test_checker_rejects_a_forged_extra_third_party_import
+      - test_structured_result_consumer_constraints.TestStdlibOnlySelfCheckExceptYaml.test_this_modules_own_source_has_no_disallowed_import
+      - test_structured_result_consumer_constraints.TestStdlibOnlySelfCheckExceptYaml.test_checker_accepts_a_forged_stdlib_and_yaml_only_source
+      - test_structured_result_consumer_constraints.TestStdlibOnlySelfCheckExceptYaml.test_checker_rejects_a_forged_extra_third_party_import
+    red_confirmed: true
+    red_reason: >-
+      test_checker_rejects_a_forged_extra_third_party_import (per module)
+      directly demonstrates detection: a forged "import yaml\nimport
+      numpy\n" source is flagged as {"numpy"}, proving the self-check is
+      not vacuous. "Zero skipped tests when PyYAML is installed" and
+      "discovered by python3 -m unittest discover -s tests" are confirmed
+      by the full-suite run (4635 tests, no skips reported for either
+      module).
