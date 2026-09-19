@@ -1,11 +1,11 @@
 schema_version: 1
 feature: batch-structured-result-output
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 4fdb67b9174b1e3321f6677bd1be46a79dbd76f3
 last_input_digest: sha256:8fd15c83a5b1331aed3cbf2e3a03fed9d36839a19eb0346c83d722a11fb821b8
-active_request_id: create-plan-bcf61f69ba1f
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -40,7 +40,7 @@ artifacts:
     produced_by: create-plan-bcf61f69ba1f
 patches:
   - patch_id: batch-structured-result-output-p0001
-    status: validated
+    status: applied
     base_input_digest: sha256:8fd15c83a5b1331aed3cbf2e3a03fed9d36839a19eb0346c83d722a11fb821b8
     base_workflow_blob: d85b223cdd4ee8dca036e9a532fffc5835f46669
 progress_fingerprint: sha256:04ae91df85e9a4125b09461127ea7ebd6b010ef497041023f01d2c1c8202f349
