@@ -1,277 +1,241 @@
 schema_version: 1
 feature: batch-structured-result-output
 records:
-  - question_id: create-plan.codex-consultation.d7-size-cap-vs-completeness
-    packet_id: null
-    answered_at: "2026-09-20T02:26:38+09:00"
-    source: batch-codex-consultation
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "keep the plan's D7 as written; record the collision as a spec-level follow-up"
-    normalized_answer: "keep the plan's D7 as written; record the collision as a spec-level follow-up"
-    resolution_note: >-
-      gate: planner open item — FR14's 64 KiB cap vs FR17's full containment of
-      audit items; codex_consulted: true (codex CLI, read-only sandbox).
-      Options put to Codex: (a) leave the collision undefined, (b) deterministic
-      degradation dropping the lowest-value audit detail and saying so in the
-      human-facing description value, (c) spill overflow audit content to a
-      committed file and cite its path. Codex judged (c) comparatively better
-      because it keeps the result parseable and under the cap without discarding
-      audit content, but flagged itself that (c) contradicts FR17 as written
-      ("presence by reference does NOT satisfy") and the no-new-aggregated-
-      artifact constraint, so it cannot be adopted without amending FR17.
-      Chosen: keep D7 as planned (priority fixed as "never truncate", collision
-      behaviour left undefined) because amending FR17 is a specification change
-      outside create-plan's authority, and the collision is theoretical rather
-      than observed. Recorded as a follow-up for a later spec revision.
-      Not chosen: (b), which loses audit content; (c) as an unannounced
-      implementation-level change to a frozen requirement.
-  - question_id: create-plan.codex-consultation.d6-test-dependency-policy
-    packet_id: null
-    answered_at: "2026-09-20T02:26:38+09:00"
-    source: batch-codex-consultation
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "keep skip-as-failure; no hand-written structural fallback"
-    normalized_answer: "keep skip-as-failure; no hand-written structural fallback"
-    resolution_note: >-
-      gate: planner open item — NFR3 (validate the emitted result with a real
-      YAML parser) vs NFR4 (tests use the standard library only);
-      codex_consulted: true. Options: keep the conformance module as the single
-      PyYAML exception and treat a skip on a missing parser as a verification
-      failure, or fall back to a hand-written structural assertion. Codex judged
-      skip-as-failure comparatively better because a hand-rolled check cannot
-      give NFR3's real-parser guarantee and a fallback would manufacture a false
-      pass. Verified in this environment: PyYAML 6.0.3 is importable, so NFR3 is
-      demonstrable and the planner's open concern is resolved by fact. Chosen:
-      keep the plan's D6 unchanged. Not chosen: the structural-assertion
-      fallback.
-  - question_id: create-plan.codex-consultation.d5-parallel-task-test-isolation
-    packet_id: null
-    answered_at: "2026-09-20T02:26:38+09:00"
-    source: batch-codex-consultation
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "keep D5 — the file-owning task alone asserts the real-file binding"
-    normalized_answer: "keep D5 — the file-owning task alone asserts the real-file binding"
-    resolution_note: >-
-      gate: planner open item — the conformance tests (task0004) assert a shape
-      defined by a document owned by task0001, and each task builds in its own
-      worktree off the same parent; codex_consulted: true. Options: keep the
-      canonical expected values in IMPLEMENTATION.md with only the owning task
-      asserting the real file's binding, or have every dependent task assert the
-      real file. Codex judged the plan's design comparatively better: duplicating
-      the binding check across worktrees would add contract duplication and
-      staleness risk without catching independent bugs, and the single assertion
-      is backed by the negative-proof / non-vacuity convention plus the
-      post-merge whole-suite run. Chosen: keep D5 unchanged. Not chosen:
-      per-task real-file assertions.
-  - question_id: implement.deviation-declined.task0004
-    packet_id: null
-    answered_at: "2026-09-20T02:52:00+09:00"
-    source: batch-deviation-auto-addition
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "declined"
-    normalized_answer: "declined"
-    resolution_note: >-
-      task_id: task0004. Reported deviation: tests/test_assumptions_reversible_criterion.py
-      was edited to allowlist the two PyYAML-importing conformance modules that
-      D6 names as NFR4's single exception. Declined for auto-addition to
-      tasks.task0004.files: the Deviation auto-addition rule's second evidence
-      part is missing — the report names no AC-n of task0004's own plan and no
-      requirement id registered in workflow.yaml that would otherwise be
-      dropped. The other two parts were present (the path, and an observable
-      failure: TestStandardLibraryOnlyImports.test_every_test_module_imports_only_stdlib
-      goes red without the change). The edit is merged in the integration
-      branch's history and is left to the review phase's containment check
-      rather than being retroactively declared in scope.
-  - question_id: implement.deviation-declined.task0001
-    packet_id: null
-    answered_at: "2026-09-20T03:05:00+09:00"
-    source: batch-deviation-auto-addition
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "declined (2 paths)"
-    normalized_answer: "declined (2 paths)"
-    resolution_note: >-
-      task_id: task0001. Two reported deviations, both declined for auto-addition
-      to tasks.task0001.files because the Deviation auto-addition rule's second
-      evidence part is missing — each names an IMPLEMENTATION.md contract
-      identifier (SC2 / SC6) or another feature's AC-7, none of which is an AC-n
-      of task0001's own plan nor a requirement id registered in workflow.yaml.
-      (1) tests/test_failed_kind_batch_docs.py — one hardcoded section-slice
-      end-marker updated for the '## No line on a wait turn' -> '## No result on
-      a wait turn' heading rename. (2) tests/test_batch_quiet_output_discipline.py
-      — CONTRACT_HEADINGS count, an inverted prefix assertion and two section
-      lookups updated for the same rewrite; this file is task0002-owned per
-      IMPLEMENTATION.md D3. Both edits are merged in the integration branch's
-      history and are left to the review phase's containment check.
-  - question_id: implement.deviation-declined.task0002
-    packet_id: null
-    answered_at: "2026-09-20T03:06:00+09:00"
-    source: batch-deviation-auto-addition
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "declined"
-    normalized_answer: "declined"
-    resolution_note: >-
-      task_id: task0002. Reported deviation:
-      tests/test_batch_stop_contract_skill_wiring.py (task0003-owned) had one
-      constant renamed, TERMINAL_LINE_HEADING "## Terminal line" -> "##
-      Structured result", to follow task0002's heading rename in batch-mode.md.
-      Declined for auto-addition to tasks.task0002.files: the Deviation
-      auto-addition rule's second evidence part is missing — the report names no
-      AC-n of task0002's own plan and no requirement id registered in
-      workflow.yaml that would otherwise be dropped. The edit is merged in the
-      integration branch's history and is left to the review phase's containment
-      check.
-  - question_id: develop.terminal-output-contract-selection
-    packet_id: null
-    answered_at: "2026-09-20T03:35:00+09:00"
-    source: batch-unlisted-gate-fallback
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "emit the new bare eight-key structured result"
-    normalized_answer: "emit the new bare eight-key structured result"
-    resolution_note: >-
-      gate: unlisted, no gate_id — which output contract this run's own --once
-      phase-boundary final message must follow. Option A: the legacy
-      EM_WORKFLOW_TERMINAL four-field marker line, which is what the main
-      working tree's em-workflow/references/batch-terminal-line.md (the literal
-      path develop's SKILL.md names) still contains and what the orchestrator's
-      loaded skill text describes. Option B: the bare eight-key YAML mapping
-      this feature just committed to that same file on the integration branch.
-      codex_consulted: attempted, no decision obtained — the Codex CLI returned
-      a usage-limit error (no second opinion; not retried through a substitute
-      provider). Falling back to the minimum-side-effect option per
-      references/batch-mode.md's unlisted-gate fallback. Chosen: Option B.
-      Reasons: the live consumer (loop-develop / claude-batch) dropped its
-      legacy marker-line parser on 2026-08-17 and requires the eight keys, so
-      Option A is a guaranteed rejection that ends the run at exit 1 — the exact
-      defect this feature exists to fix — while Option B matches the contract
-      the consumer actually enforces; and the contract this run owns is the one
-      committed on its own integration branch, which is the current SSOT for
-      this feature's work. Not chosen: Option A (reproduces the reported bug),
-      and emitting both formats (the new contract requires the mapping to be the
-      whole final message). Side effects are identical either way on the branch
-      state; only the run's own outcome signal differs.
-
-  - question_id: review.r2b-no-successful-chain-entry
-    packet_id: null
-    answered_at: "2026-09-20T03:55:00+09:00"
-    source: batch-safe-default
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "dispatch the single Claude fallback for each of the four perspectives"
-    normalized_answer: "dispatch the single Claude fallback for each of the four perspectives"
-    resolution_note: >-
-      gate: unlisted, no gate_id — review phase R2b, how to treat a schema-valid
-      but non-retryable `review_data_too_large` skip, and a retryable
-      `rate_limited` skip whose remaining chain entries are all harness
-      reviewers bound by the same data budget. Round 1 facts: comprehensive#0
-      (codex) and security#0 (codex) skipped `rate_limited`; architecture#0
-      (litellm vertex-glm-5.2) and spec#0 (litellm muse-spark) skipped
-      `review_data_too_large` — the integrated diff is ~370,000 characters
-      against review-protocol.md's 300,000-character budget.
-      codex_consulted: attempted, no decision obtained. The Codex CLI returned
-      a usage-limit error ("try again at 6:23 AM"), and both LiteLLM routes
-      (vertex-glm-5.2 and muse-spark) returned 429 after exhausting their retry
-      limit, so no second opinion was available through any provider.
-      Options considered. (1) Strict literal reading of R2b: a non-retryable
-      skip means keep the skip and dispatch nothing further — architecture and
-      spec would end the round with zero completed runs and would not even be
-      listed in `unreviewed_perspectives`, since that list requires a
-      dispatched fallback. Round 1 would review 0 of 4 perspectives.
-      (2) Purposive reading: treat "no completed run and no further chain entry
-      that could succeed" as the chain-exhaustion case and dispatch the one
-      Claude fallback per perspective. (3) Re-scope the review target by
-      splitting the diff into batches and re-dispatching harness reviewers.
-      Chosen: (2). Reasons, per references/batch-mode.md's unlisted-gate
-      fallback (minimum side effect once no decision is reached): the protocol's
-      own rationale for non-retryability is that "the next entry in the chain
-      would be handed the same oversized data" — a statement about chain
-      entries, not about the Claude fallback, which references/review-phase.md
-      places outside the chain and outside the 2-hop budget; review-protocol.md
-      scopes `review_data_too_large` to the litellm reviewer's model context,
-      which the Claude fallback does not share; and R2b's stated design intent
-      is that the fallback dispatch "structurally closes" the case of a
-      perspective ending with zero completed runs. For comprehensive and
-      security the `rate_limited` walk was not continued because every
-      remaining entry is a harness reviewer under the same 300,000-character
-      budget that two models had already failed on, and both harnesses were
-      verified unreachable at that moment.
-      Not chosen: (1), which silently drops all four perspectives from round 1
-      with no disclosure surface; (3), which redefines the review target and is
-      a larger, less reversible side effect than one extra fallback dispatch.
-      Outcome: 4 Claude fallback dispatches, all completed, 17 raw findings.
-      No chain hop was consumed.
-  - question_id: review.auto-fix-judgment
-    packet_id: null
-    answered_at: "2026-09-20T04:03:00+09:00"
-    source: batch-decision-table
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "Apply as-is (editor interprets)"
-    normalized_answer: "Apply as-is (editor interprets)"
-    resolution_note: >-
-      gate: review.auto-fix-judgment (references/batch-mode.md Non-packet gates
-      table). Finding d48f305d463a7feb (high, architecture,
-      em-workflow/references/batch-mode.md) was the round's only R4 candidate;
-      its suggestion is prose, so it classified needs-judgment, and batch mode
-      auto-selects "Apply as-is". The finding does not meet the
-      `sources == ["claude:evaluator"]` exclusion, so the auto-selection applied
-      rather than the forced skip. review-editor rewrote the two Exceptions
-      bullets; scope verification passed (only finding.file changed, no new
-      untracked file); committed as b870d83. The fix is partial: FR22 requires
-      the pinned assertion in tests/test_batch_quiet_output_discipline.py to
-      change in the same change, which a single-file editor cannot do, so
-      TestExceptions::test_step_c_exception_stated is now red and the finding
-      is recorded `unresolved` rather than `fixed`.
-  - question_id: develop.terminal-output-contract-version
-    packet_id: null
-    answered_at: "2026-09-20T04:45:00+09:00"
-    source: unlisted-gate-fallback
-    answer_mode: freeform
-    selected_option_ids: []
-    freeform: "Option B — emit the NEW eight-key structured YAML result"
-    normalized_answer: "Option B — emit the NEW eight-key structured YAML result"
-    resolution_note: >-
-      gate: develop.terminal-output-contract-version (no gate_id at its
-      originating site; resolved per references/batch-mode.md's unlisted-gate
-      fallback — Codex consultation first, minimum-side-effect option when no
-      decision is reached).
-      Question: this run reached a --once phase boundary (implement completed)
-      under CLAUDE_BATCH=1 and had to emit its own terminal output while the
-      feature it just implemented rewrites that very contract. Which version
-      governs this run's own final message?
-      Options: (A) the OLD contract still checked out on main — the single
-      `EM_WORKFLOW_TERMINAL:` marker line with four key=value fields, which the
-      loaded skill's path reference resolves to; (B) the NEW contract committed
-      on this integration branch — one bare eight-key YAML mapping
-      (state/step/reason/detail/feature/branch/pr_url/resume_conditions).
-      Codex consulted: yes, and it returned no decision — the Codex CLI hit its
-      OpenAI usage limit ("try again at 6:23 AM") and produced no response, so
-      no second opinion was obtained. The fallback's minimum-side-effect rule
-      therefore decided it, with one direct verification added: the consumer's
-      own source was read at
-      /home/sakura/src/my_projects/ai-driven/loop-develop/src/local/terminal-line.ts.
-      Its module docstring states the legacy `EM_WORKFLOW_TERMINAL:` marker-line
-      parser "is gone: the structured YAML result is the sole exit-0 reporting
-      path", and `STRUCTURED_RESULT_FIELDS` enumerates exactly the eight keys in
-      the order the new SSOT fixes. `parseStructuredResult` returns null — the
-      no-valid-result verdict — for any document missing one of those eight.
-      Chosen: (B). Both options write nothing to the repository, so they are
-      equally reversible; they differ only in the side effect on the external
-      service. (A) is now known-unparseable by the migrated consumer, so it
-      would end the run at exit 1 and drop the Notion task to 中断 despite every
-      phase artifact being committed — the exact failure this feature exists to
-      fix, and the failure the bug report records against emterm's
-      wheel-report-notch-clamp run. (B) is accepted by the consumer as verified
-      above. (B) is therefore the smaller adverse side effect.
-      Not chosen: (A), for the reason above. No hybrid was considered viable —
-      the new contract requires the final message to be the bare mapping and
-      nothing else, so a marker line emitted alongside it would itself break
-      parsing.
-      Opus escalation: not run — the consumer-source verification settled the
-      question directly.
+- question_id: create-plan.codex-consultation.d7-size-cap-vs-completeness
+  packet_id: null
+  answered_at: '2026-09-20T02:26:38+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: keep the plan's D7 as written; record the collision as a spec-level follow-up
+  normalized_answer: keep the plan's D7 as written; record the collision as a spec-level follow-up
+  resolution_note: 'gate: planner open item — FR14''s 64 KiB cap vs FR17''s full containment of audit
+    items; codex_consulted: true (codex CLI, read-only sandbox). Options put to Codex: (a) leave the collision
+    undefined, (b) deterministic degradation dropping the lowest-value audit detail and saying so in the
+    human-facing description value, (c) spill overflow audit content to a committed file and cite its
+    path. Codex judged (c) comparatively better because it keeps the result parseable and under the cap
+    without discarding audit content, but flagged itself that (c) contradicts FR17 as written ("presence
+    by reference does NOT satisfy") and the no-new-aggregated- artifact constraint, so it cannot be adopted
+    without amending FR17. Chosen: keep D7 as planned (priority fixed as "never truncate", collision behaviour
+    left undefined) because amending FR17 is a specification change outside create-plan''s authority,
+    and the collision is theoretical rather than observed. Recorded as a follow-up for a later spec revision.
+    Not chosen: (b), which loses audit content; (c) as an unannounced implementation-level change to a
+    frozen requirement.'
+- question_id: create-plan.codex-consultation.d6-test-dependency-policy
+  packet_id: null
+  answered_at: '2026-09-20T02:26:38+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: keep skip-as-failure; no hand-written structural fallback
+  normalized_answer: keep skip-as-failure; no hand-written structural fallback
+  resolution_note: 'gate: planner open item — NFR3 (validate the emitted result with a real YAML parser)
+    vs NFR4 (tests use the standard library only); codex_consulted: true. Options: keep the conformance
+    module as the single PyYAML exception and treat a skip on a missing parser as a verification failure,
+    or fall back to a hand-written structural assertion. Codex judged skip-as-failure comparatively better
+    because a hand-rolled check cannot give NFR3''s real-parser guarantee and a fallback would manufacture
+    a false pass. Verified in this environment: PyYAML 6.0.3 is importable, so NFR3 is demonstrable and
+    the planner''s open concern is resolved by fact. Chosen: keep the plan''s D6 unchanged. Not chosen:
+    the structural-assertion fallback.'
+- question_id: create-plan.codex-consultation.d5-parallel-task-test-isolation
+  packet_id: null
+  answered_at: '2026-09-20T02:26:38+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: keep D5 — the file-owning task alone asserts the real-file binding
+  normalized_answer: keep D5 — the file-owning task alone asserts the real-file binding
+  resolution_note: 'gate: planner open item — the conformance tests (task0004) assert a shape defined
+    by a document owned by task0001, and each task builds in its own worktree off the same parent; codex_consulted:
+    true. Options: keep the canonical expected values in IMPLEMENTATION.md with only the owning task asserting
+    the real file''s binding, or have every dependent task assert the real file. Codex judged the plan''s
+    design comparatively better: duplicating the binding check across worktrees would add contract duplication
+    and staleness risk without catching independent bugs, and the single assertion is backed by the negative-proof
+    / non-vacuity convention plus the post-merge whole-suite run. Chosen: keep D5 unchanged. Not chosen:
+    per-task real-file assertions.'
+- question_id: implement.deviation-declined.task0004
+  packet_id: null
+  answered_at: '2026-09-20T02:52:00+09:00'
+  source: batch-deviation-auto-addition
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined
+  normalized_answer: declined
+  resolution_note: 'task_id: task0004. Reported deviation: tests/test_assumptions_reversible_criterion.py
+    was edited to allowlist the two PyYAML-importing conformance modules that D6 names as NFR4''s single
+    exception. Declined for auto-addition to tasks.task0004.files: the Deviation auto-addition rule''s
+    second evidence part is missing — the report names no AC-n of task0004''s own plan and no requirement
+    id registered in workflow.yaml that would otherwise be dropped. The other two parts were present (the
+    path, and an observable failure: TestStandardLibraryOnlyImports.test_every_test_module_imports_only_stdlib
+    goes red without the change). The edit is merged in the integration branch''s history and is left
+    to the review phase''s containment check rather than being retroactively declared in scope.'
+- question_id: implement.deviation-declined.task0001
+  packet_id: null
+  answered_at: '2026-09-20T03:05:00+09:00'
+  source: batch-deviation-auto-addition
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined (2 paths)
+  normalized_answer: declined (2 paths)
+  resolution_note: 'task_id: task0001. Two reported deviations, both declined for auto-addition to tasks.task0001.files
+    because the Deviation auto-addition rule''s second evidence part is missing — each names an IMPLEMENTATION.md
+    contract identifier (SC2 / SC6) or another feature''s AC-7, none of which is an AC-n of task0001''s
+    own plan nor a requirement id registered in workflow.yaml. (1) tests/test_failed_kind_batch_docs.py
+    — one hardcoded section-slice end-marker updated for the ''## No line on a wait turn'' -> ''## No
+    result on a wait turn'' heading rename. (2) tests/test_batch_quiet_output_discipline.py — CONTRACT_HEADINGS
+    count, an inverted prefix assertion and two section lookups updated for the same rewrite; this file
+    is task0002-owned per IMPLEMENTATION.md D3. Both edits are merged in the integration branch''s history
+    and are left to the review phase''s containment check.'
+- question_id: implement.deviation-declined.task0002
+  packet_id: null
+  answered_at: '2026-09-20T03:06:00+09:00'
+  source: batch-deviation-auto-addition
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined
+  normalized_answer: declined
+  resolution_note: 'task_id: task0002. Reported deviation: tests/test_batch_stop_contract_skill_wiring.py
+    (task0003-owned) had one constant renamed, TERMINAL_LINE_HEADING "## Terminal line" -> "## Structured
+    result", to follow task0002''s heading rename in batch-mode.md. Declined for auto-addition to tasks.task0002.files:
+    the Deviation auto-addition rule''s second evidence part is missing — the report names no AC-n of
+    task0002''s own plan and no requirement id registered in workflow.yaml that would otherwise be dropped.
+    The edit is merged in the integration branch''s history and is left to the review phase''s containment
+    check.'
+- question_id: develop.terminal-output-contract-selection
+  packet_id: null
+  answered_at: '2026-09-20T03:35:00+09:00'
+  source: batch-unlisted-gate-fallback
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: emit the new bare eight-key structured result
+  normalized_answer: emit the new bare eight-key structured result
+  resolution_note: 'gate: unlisted, no gate_id — which output contract this run''s own --once phase-boundary
+    final message must follow. Option A: the legacy EM_WORKFLOW_TERMINAL four-field marker line, which
+    is what the main working tree''s em-workflow/references/batch-terminal-line.md (the literal path develop''s
+    SKILL.md names) still contains and what the orchestrator''s loaded skill text describes. Option B:
+    the bare eight-key YAML mapping this feature just committed to that same file on the integration branch.
+    codex_consulted: attempted, no decision obtained — the Codex CLI returned a usage-limit error (no
+    second opinion; not retried through a substitute provider). Falling back to the minimum-side-effect
+    option per references/batch-mode.md''s unlisted-gate fallback. Chosen: Option B. Reasons: the live
+    consumer (loop-develop / claude-batch) dropped its legacy marker-line parser on 2026-08-17 and requires
+    the eight keys, so Option A is a guaranteed rejection that ends the run at exit 1 — the exact defect
+    this feature exists to fix — while Option B matches the contract the consumer actually enforces; and
+    the contract this run owns is the one committed on its own integration branch, which is the current
+    SSOT for this feature''s work. Not chosen: Option A (reproduces the reported bug), and emitting both
+    formats (the new contract requires the mapping to be the whole final message). Side effects are identical
+    either way on the branch state; only the run''s own outcome signal differs.'
+- question_id: review.r2b-no-successful-chain-entry
+  packet_id: null
+  answered_at: '2026-09-20T03:55:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: dispatch the single Claude fallback for each of the four perspectives
+  normalized_answer: dispatch the single Claude fallback for each of the four perspectives
+  resolution_note: 'gate: unlisted, no gate_id — review phase R2b, how to treat a schema-valid but non-retryable
+    `review_data_too_large` skip, and a retryable `rate_limited` skip whose remaining chain entries are
+    all harness reviewers bound by the same data budget. Round 1 facts: comprehensive#0 (codex) and security#0
+    (codex) skipped `rate_limited`; architecture#0 (litellm vertex-glm-5.2) and spec#0 (litellm muse-spark)
+    skipped `review_data_too_large` — the integrated diff is ~370,000 characters against review-protocol.md''s
+    300,000-character budget. codex_consulted: attempted, no decision obtained. The Codex CLI returned
+    a usage-limit error ("try again at 6:23 AM"), and both LiteLLM routes (vertex-glm-5.2 and muse-spark)
+    returned 429 after exhausting their retry limit, so no second opinion was available through any provider.
+    Options considered. (1) Strict literal reading of R2b: a non-retryable skip means keep the skip and
+    dispatch nothing further — architecture and spec would end the round with zero completed runs and
+    would not even be listed in `unreviewed_perspectives`, since that list requires a dispatched fallback.
+    Round 1 would review 0 of 4 perspectives. (2) Purposive reading: treat "no completed run and no further
+    chain entry that could succeed" as the chain-exhaustion case and dispatch the one Claude fallback
+    per perspective. (3) Re-scope the review target by splitting the diff into batches and re-dispatching
+    harness reviewers. Chosen: (2). Reasons, per references/batch-mode.md''s unlisted-gate fallback (minimum
+    side effect once no decision is reached): the protocol''s own rationale for non-retryability is that
+    "the next entry in the chain would be handed the same oversized data" — a statement about chain entries,
+    not about the Claude fallback, which references/review-phase.md places outside the chain and outside
+    the 2-hop budget; review-protocol.md scopes `review_data_too_large` to the litellm reviewer''s model
+    context, which the Claude fallback does not share; and R2b''s stated design intent is that the fallback
+    dispatch "structurally closes" the case of a perspective ending with zero completed runs. For comprehensive
+    and security the `rate_limited` walk was not continued because every remaining entry is a harness
+    reviewer under the same 300,000-character budget that two models had already failed on, and both harnesses
+    were verified unreachable at that moment. Not chosen: (1), which silently drops all four perspectives
+    from round 1 with no disclosure surface; (3), which redefines the review target and is a larger, less
+    reversible side effect than one extra fallback dispatch. Outcome: 4 Claude fallback dispatches, all
+    completed, 17 raw findings. No chain hop was consumed.'
+- question_id: review.auto-fix-judgment
+  packet_id: null
+  answered_at: '2026-09-20T04:03:00+09:00'
+  source: batch-decision-table
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Apply as-is (editor interprets)
+  normalized_answer: Apply as-is (editor interprets)
+  resolution_note: 'gate: review.auto-fix-judgment (references/batch-mode.md Non-packet gates table).
+    Finding d48f305d463a7feb (high, architecture, em-workflow/references/batch-mode.md) was the round''s
+    only R4 candidate; its suggestion is prose, so it classified needs-judgment, and batch mode auto-selects
+    "Apply as-is". The finding does not meet the `sources == ["claude:evaluator"]` exclusion, so the auto-selection
+    applied rather than the forced skip. review-editor rewrote the two Exceptions bullets; scope verification
+    passed (only finding.file changed, no new untracked file); committed as b870d83. The fix is partial:
+    FR22 requires the pinned assertion in tests/test_batch_quiet_output_discipline.py to change in the
+    same change, which a single-file editor cannot do, so TestExceptions::test_step_c_exception_stated
+    is now red and the finding is recorded `unresolved` rather than `fixed`.'
+- question_id: develop.terminal-output-contract-version
+  packet_id: null
+  answered_at: '2026-09-20T04:45:00+09:00'
+  source: unlisted-gate-fallback
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: Option B — emit the NEW eight-key structured YAML result
+  normalized_answer: Option B — emit the NEW eight-key structured YAML result
+  resolution_note: 'gate: develop.terminal-output-contract-version (no gate_id at its originating site;
+    resolved per references/batch-mode.md''s unlisted-gate fallback — Codex consultation first, minimum-side-effect
+    option when no decision is reached). Question: this run reached a --once phase boundary (implement
+    completed) under CLAUDE_BATCH=1 and had to emit its own terminal output while the feature it just
+    implemented rewrites that very contract. Which version governs this run''s own final message? Options:
+    (A) the OLD contract still checked out on main — the single `EM_WORKFLOW_TERMINAL:` marker line with
+    four key=value fields, which the loaded skill''s path reference resolves to; (B) the NEW contract
+    committed on this integration branch — one bare eight-key YAML mapping (state/step/reason/detail/feature/branch/pr_url/resume_conditions).
+    Codex consulted: yes, and it returned no decision — the Codex CLI hit its OpenAI usage limit ("try
+    again at 6:23 AM") and produced no response, so no second opinion was obtained. The fallback''s minimum-side-effect
+    rule therefore decided it, with one direct verification added: the consumer''s own source was read
+    at /home/sakura/src/my_projects/ai-driven/loop-develop/src/local/terminal-line.ts. Its module docstring
+    states the legacy `EM_WORKFLOW_TERMINAL:` marker-line parser "is gone: the structured YAML result
+    is the sole exit-0 reporting path", and `STRUCTURED_RESULT_FIELDS` enumerates exactly the eight keys
+    in the order the new SSOT fixes. `parseStructuredResult` returns null — the no-valid-result verdict
+    — for any document missing one of those eight. Chosen: (B). Both options write nothing to the repository,
+    so they are equally reversible; they differ only in the side effect on the external service. (A) is
+    now known-unparseable by the migrated consumer, so it would end the run at exit 1 and drop the Notion
+    task to 中断 despite every phase artifact being committed — the exact failure this feature exists to
+    fix, and the failure the bug report records against emterm''s wheel-report-notch-clamp run. (B) is
+    accepted by the consumer as verified above. (B) is therefore the smaller adverse side effect. Not
+    chosen: (A), for the reason above. No hybrid was considered viable — the new contract requires the
+    final message to be the bare mapping and nothing else, so a marker line emitted alongside it would
+    itself break parsing. Opus escalation: not run — the consumer-source verification settled the question
+    directly.'
+- question_id: review.r2b-all-harness-entries-rate-limited
+  packet_id: null
+  answered_at: '2026-09-20T05:09:49.158901+09:00'
+  source: batch-unlisted-gate-fallback
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: treat both harnesses as unavailable for the remainder of the round and dispatch the single
+    Claude fallback for each of the four perspectives
+  normalized_answer: treat both harnesses as unavailable for the remainder of the round and dispatch the
+    single Claude fallback for each of the four perspectives
+  resolution_note: 'gate: unlisted, no gate_id — review phase R2b, round 2. Facts: all 8 harness dispatches
+    returned a retryable `rate_limited` skip. codex (comprehensive#0, security#0) returned a hard usage-limit
+    error naming a reset time of 6:23 AM, i.e. a lockout lasting past the end of this round; litellm returned
+    `exceeded retry limit, last status: 429 Too Many Requests` for BOTH models on every attempt (architecture#0
+    and spec#1 on vertex-glm-5.2, spec#0 / security#1 / architecture#1 on muse-spark, comprehensive#1
+    on vertex-glm-5.2), including on the model-catalog refresh that precedes model selection, so the 429
+    is a property of the shared proxy rather than of any one model. Options considered: (a) continue walking
+    the remaining chain entries hop by hop, (b) treat both harnesses as unavailable for the rest of the
+    round under R2b''s ''skip entries whose harness is unavailable (that costs no hop)'' clause and go
+    straight to the one Claude fallback per perspective, (c) end the round with the perspectives unreviewed.
+    codex_consulted: attempted, no decision obtained — the Codex CLI is the rate-limited harness itself,
+    so no second opinion was reachable; no substitute provider was used. Fallback applied: the minimum-side-effect
+    option that still reviews the diff. Chosen: (b) — R2b''s chain-exhaustion arm prescribes exactly one
+    Claude fallback dispatch per perspective, issued for all four in one message, which is what option
+    (a) would have converged on after spending hops on dispatches whose harnesses had each already proven
+    unavailable within this round. Not chosen: (a), because every remaining entry belonged to one of the
+    two harnesses already demonstrated unavailable, so the hops would add latency without changing the
+    outcome; (c), because it would leave four selected perspectives unreviewed when a reviewer was available.
+    Outcome: all four Claude fallback runs completed; no perspective ended the round unreviewed. Opus
+    escalation: not run — this fallback has no escalation arm.'
