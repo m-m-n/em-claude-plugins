@@ -1,0 +1,137 @@
+schema_version: 1
+feature: batch-structured-result-output
+phase: create-spec
+status: awaiting_answers
+generation: 1
+base_revision: 81c616a0541e0f9d1fdb7fb6fde3d41fe0cb4c69
+last_input_digest: "sha256:4428396c167bcfdad3cb45a9e33cc40a9bc5f726c3796fcaefee7acea43769e1"
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: "2026-09-20T02:05:00+09:00"
+    questions:
+      - question_id: q.final-message-shape
+        status: answered
+      - question_id: q.legacy-marker-line
+        status: answered
+      - question_id: q.context-budget-reason-code
+        status: answered
+      - question_id: q.design-step
+        status: obsolete
+answers:
+  q.final-message-shape:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-20T02:05:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [yaml_only]
+    freeform: null
+    normalized_answer: >-
+      The terminal turn's final assistant message is the eight-key YAML
+      mapping and nothing else. No fence, no prose, no legacy prefix line.
+      Every audit item batch-mode.md's "## Reporting" requires is carried in
+      full inside the string values: the audit items and the take-over
+      guidance in detail, the stop-recovery guidance in resume_conditions.
+      No new aggregated report artifact is written.
+    resolution_note: >-
+      gate: create-spec.requirement-clarification (policy action
+      codex_consultation); codex_consulted: true (2 turns, converging).
+      Codex turn 1 recommended option (a) "replace the marker line
+      entirely", reasoning that the consumer parses the captured stdout as
+      YAML and requires a mapping at top level, so keeping the legacy line
+      or widening it to eight key=value fields cannot satisfy the schema.
+      Turn 2 settled yaml_only vs yaml_only_with_pointer: batch-mode.md's
+      "## Batch quiet output" Audit-item source map already binds every
+      required audit item to an already-persisted location
+      (phase-state/batch-audit.yaml, phase-state/*.yaml, workflow.yaml's
+      batch block, reviews/roundN.yaml), so a new aggregated report file
+      would only duplicate them; no obligation to persist an aggregated
+      report is stated anywhere. Codex also corrected its own turn-1
+      position that detail may carry only a short summary plus a pointer:
+      "## Reporting" requires every item to be present, so detail carries
+      them in full rather than by reference. Rejected: prose_then_yaml
+      (stray non-YAML text ahead of the mapping is not tolerated by a
+      whole-stdout YAML parse), yaml_only_with_pointer (redundant artifact).
+  q.legacy-marker-line:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-20T02:05:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [drop_marker_line]
+    freeform: null
+    normalized_answer: >-
+      The EM_WORKFLOW_TERMINAL: prefixed four-field line is removed
+      entirely. The structured YAML result becomes em-workflow's sole
+      terminal output shape.
+    resolution_note: >-
+      gate: create-spec.requirement-clarification (policy action
+      codex_consultation); codex_consulted: true. Codex: the consumer has
+      deleted its marker-line parser, so keeping the line buys no
+      compatibility, and an extra non-YAML line risks breaking the "one
+      YAML mapping document" requirement outright. Rejected: emit_both
+      (two shapes to keep in sync, and the extra line is itself a
+      conformance hazard). Consequence recorded for planning:
+      batch-mode.md's prefix-disjointness paragraph in "## Batch quiet
+      output", which argues the terminal and progress prefixes are not
+      prefixes of each other, no longer has a terminal prefix to compare
+      against and must be restated.
+  q.context-budget-reason-code:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-20T02:05:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids: [accept_unbound]
+    freeform: null
+    normalized_answer: >-
+      context_budget_reached is listed in the SSOT's documented reason value
+      domain and explicitly marked as a code em-workflow never emits
+      (reserved by the consumer). The Stop point coverage table keeps its
+      eleven rows, and the departure from the "every code has exactly one
+      stop point" symmetry is stated as an intentional, named exception.
+    resolution_note: >-
+      gate: create-spec.requirement-clarification (policy action
+      codex_consultation); codex_consulted: true. Codex's substantive
+      verdict was: never emit the twelfth code, and do not invent a stop
+      point for it, because em-workflow has no mechanism that detects
+      context-budget exhaustion and a fabricated binding would break the
+      bidirectional coverage invariant a test enforces. Both accept_unbound
+      and omit_code satisfy that verdict and are behaviourally identical
+      (eleven emittable codes, eleven bound stop points). accept_unbound
+      was adopted over omit_code because documenting the consumer's full
+      domain is what makes the next divergence visible in this repository
+      — silent divergence from the counterpart's domain is precisely the
+      bug class this feature exists to fix. Rejected: define_stop_point
+      (requires specifying and detecting a new stop condition, out of
+      scope); omit_code (leaves the documented domain silently diverged).
+  q.design-step:
+    packet_id: create-spec-q0001
+    answered_at: "2026-09-20T02:05:00+09:00"
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: >-
+      Not resolvable as issued. Policy batch-policies.yaml
+      create-spec.design-step requires option_id decide_autonomously, which
+      requirements-analyst's packet did not offer (it offered skip_design /
+      run_design). Per references/question-resolution.md batch resolution
+      sequence step 6, label matching is never substituted for the option
+      ID. The question is marked obsolete and the worker is re-dispatched to
+      reissue it under the declared vocabulary from
+      references/contracts/analyst-contract.md.
+    resolution_note: >-
+      gate: create-spec.design-step; codex_consulted: false. Worker
+      option-vocabulary deviation, resolved by re-dispatch rather than by
+      aborting the phase or by matching on labels.
+worker_runs:
+  - request_id: create-spec-batch-structured-result-output-r1
+    status: needs_user_input
+    input_digest: "sha256:4428396c167bcfdad3cb45a9e33cc40a9bc5f726c3796fcaefee7acea43769e1"
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
