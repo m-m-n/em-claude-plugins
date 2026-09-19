@@ -186,6 +186,59 @@ Matcher -> negative-proof inventory (Test Notes):
   literal assertions in TestExistingHeadingsAndForbiddenLiteralsUnchanged
   and the Non-packet gates row-count guard in
   TestBatchModeNonPacketGatesTableUnchanged.
+
+Extended again by batch-structured-result-output/task0003 (SKILL.md's own
+half of this contract is rewritten to describe the structured result
+instead of a terminal line; `references/batch-mode.md` is OUT of this
+task's scope and is asserted only for regression -- its own half of this
+contract is task0002's, in a different worktree, and stays on the retired
+"## Terminal line" / terminal-line wording throughout this task).
+Covers task0003 Acceptance Criteria
+(feature-docs/batch-structured-result-output/tasks/task0003.md):
+
+- AC-1/AC-2/AC-3/AC-4: `NEW_SUBSECTION_HEADING` is renamed to
+  「## バッチ構造化結果」; the subsection states the result is the WHOLE
+  final assistant message of a terminal turn (not a line appended to one),
+  restates the no-result rule with 「構造化結果を出力しない」 replacing the
+  retired 「終端行を出力しない」, and Step C's completion-report instruction
+  states the batch audit items are carried in full inside the structured
+  result's values (IMPLEMENTATION.md SC7) rather than appended as a line.
+- AC-5: a new class, `TestImplementPhaseCitationUnchanged`, covers
+  `implement-phase.md`'s single SSOT citation -- a pure regression guard,
+  since that sentence never named a "line" and so needed no wording change.
+- AC-6/AC-7: the forbidden-literal set (`REASON_CODES`, `FIELD_NAME_TOKENS`,
+  `ORDINARY_REASON_VALUE`) is widened to IMPLEMENTATION.md SC5 (SC1's eight
+  keys, the twelfth reason code `context_budget_reached`, and the ordinary
+  word "none" checked by `reason={value}` shape rather than as a bare word
+  -- the same false-positive rationale D2 already established for `state`).
+  This widened matcher is reused unchanged for `batch-mode.md`'s (task0002,
+  out of scope) sections, which continue to pass because that file's real
+  text contains none of the new literals either (verified by inspection:
+  no `state=`/`step=`/`reason=` shape, no `context_budget_reached`, no
+  eight-field-name group).
+
+Matcher -> negative-proof inventory (task0003 additions):
+
+- The `reason={value}` shape check for the ordinary word "none": negative
+  proof is
+  TestReasonNoneShapeMatcherCanFail.test_matcher_rejects_forged_reason_none_shape,
+  non-vacuity guard is
+  TestReasonNoneShapeMatcherCanFail.test_forged_excerpt_is_well_formed_and_found.
+  The whitelist behavior (bare "none" as ordinary prose never flagged) is
+  proven directly in
+  TestStateValueGuardWholeFileScope.test_guard_does_not_flag_the_ordinary_word_none,
+  with non-vacuity in
+  TestStateValueGuardWholeFileScope.test_ordinary_none_word_actually_occurs_in_the_real_files
+  (matching this module's pre-existing convention for `state`'s whitelist
+  proof).
+- `TestOwnReasonCodeTupleIsTwelve` and the eight-field forgery in
+  `TestContractLiteralMatcherCanFail` are pure updates to already
+  negative-proofed matchers (Test Notes: a matcher whose SHAPE is unchanged
+  and whose domain is merely widened does not need a second negative proof
+  beyond the existing one, now exercised against the widened domain).
+- `TestImplementPhaseCitationUnchanged` is a pure regression guard (Test
+  Notes) and is exempt from a negative proof, per the module's own
+  established convention (e.g. TestStepCCompletionReportNonRegression).
 """
 
 import ast
@@ -198,8 +251,10 @@ PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "em-workflow"
 SKILL_PATH = PLUGIN_ROOT / "skills" / "develop" / "SKILL.md"
 BATCH_MODE_PATH = PLUGIN_ROOT / "references" / "batch-mode.md"
 
-NEW_SUBSECTION_HEADING = "## バッチ終端行"
+NEW_SUBSECTION_HEADING = "## バッチ構造化結果"
 FILE_END_MARKER = "$ARGUMENTS"
+
+IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
 
 STEP_C_HEADING = (
     "## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、cap 到達により verify が `failed` のまま残る場合のみ）"
@@ -216,15 +271,18 @@ CONTRACT_DOC_PLUGIN_ROOT_REFERENCE = (
     "${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md"
 )
 
-# The contract's literals (IMPLEMENTATION.md Shared Components), which a
-# pointer document may name the *document* for but must never restate
-# itself (SSOT partition, IMPLEMENTATION.md Conventions). Extended to the
-# full ELEVEN-member set by task0005/D9 (rework round 1): the original nine
-# from task0001/task0002 plus the two closing the Step A / docs-commit-
-# conflict gap. This tuple is used for absence checks only -- it does not
-# assert that the contract document (task0004's file) defines all eleven,
-# since that file may or may not have merged yet in this worktree (D9 cross-
-# task safety).
+# The contract's literals (IMPLEMENTATION.md Shared Components SC5 --
+# batch-structured-result-output), which a pointer document may name the
+# *document* for but must never restate itself (SSOT partition,
+# IMPLEMENTATION.md Conventions). SC5 is the union of: SC1's eight field-
+# name tokens (checked as a GROUP below, same false-positive rationale as
+# the pre-existing four-field group check), every `reason` code (the
+# original eleven plus the twelfth, `context_budget_reached`, D8), the
+# `no-step` step-value sentinel, every `state` value (by shape), and the
+# removed SC6 prefix literal. This tuple is used for absence checks only --
+# it does not assert that the contract document (task0001's file) defines
+# all twelve, since that file may or may not have merged yet in this
+# worktree (D9/D5 cross-task safety).
 REASON_CODES = (
     "step_stuck",
     "step_needs_intervention",
@@ -237,10 +295,27 @@ REASON_CODES = (
     "completion_aborted",
     "feature_resolution_aborted",
     "docs_commit_conflict_aborted",
+    "context_budget_reached",
 )
-FIELD_NAME_TOKENS = ("`state`", "`step`", "`reason`", "`detail`")
+FIELD_NAME_TOKENS = (
+    "`state`",
+    "`step`",
+    "`reason`",
+    "`detail`",
+    "`feature`",
+    "`branch`",
+    "`pr_url`",
+    "`resume_conditions`",
+)
 PREFIX_LITERAL = "EM_WORKFLOW_TERMINAL:"
 SENTINEL_VALUE = "no-step"
+# SC5's `reason` domain also includes the ordinary English word "none" --
+# unlike the other eleven/twelve codes (unique snake_case tokens, safe as a
+# bare substring), "none" is common prose (it already occurs in both real
+# pointer documents outside any contract citation), so it is checked by the
+# same `key={value}` shape convention D2 established for `state` values
+# below, never as a bare word.
+ORDINARY_REASON_VALUE = "none"
 
 # IMPLEMENTATION.md (develop-once-option) D1/D2: the `state` domain once the
 # `--once` phase boundary adds a third value. Declared locally for absence
@@ -327,12 +402,21 @@ def _find_contract_literal_violations(text):
     it). Rule 2: the `--once` boundary value's bare literal, which is
     contract-only vocabulary appearing nowhere else, so without this a
     pointer document could restate the value while dodging rule 1 (e.g.
-    'the state becomes phase_done' with no `state=` prefix)."""
+    'the state becomes phase_done' with no `state=` prefix).
+
+    batch-structured-result-output/task0003 (SC5) extension: the
+    field-name-token group is widened from four to SC1's full eight keys
+    (still an ALL-of-group check, so an isolated ordinary word like
+    `` `feature` `` never trips it), the reason-code set gains the twelfth
+    code (`context_budget_reached`, a unique snake_case token safe as a
+    bare substring), and the ordinary word "none" -- also part of SC5's
+    `reason` domain -- is checked by the `reason={value}` shape only, for
+    the same false-positive reason as `state`."""
     violations = []
     if PREFIX_LITERAL in text:
         violations.append(f"prefix literal {PREFIX_LITERAL!r} restated")
     if all(token in text for token in FIELD_NAME_TOKENS):
-        violations.append("all four field-name tokens restated together")
+        violations.append("all eight field-name tokens restated together")
     for code in REASON_CODES:
         if code in text:
             violations.append(f"reason code {code!r} restated")
@@ -346,21 +430,26 @@ def _find_contract_literal_violations(text):
         violations.append(
             f"once-boundary state value {ONCE_BOUNDARY_STATE_VALUE!r} restated"
         )
+    reason_none_shape = f"reason={ORDINARY_REASON_VALUE}"
+    if reason_none_shape in text:
+        violations.append(f"reason-value shape {reason_none_shape!r} restated")
     return violations
 
 
 def _states_generalized_no_line_rule(text):
-    """AC-2's generalization matcher: true iff `text` states the no-line
-    rule generally -- keeping the 停止条件 5 / 終端行を出力しない anchors
-    that already proved the original (task0002) wait-turn guarantee -- AND
-    additionally names implement's launch turn and wake turn as further
-    instances of the same rule, rather than stopping at 停止条件 5 alone
-    (task0002's narrower wording, which is exactly what the negative proof
-    below forges). All four are required together."""
+    """AC-2's generalization matcher: true iff `text` states the no-result
+    rule generally -- keeping the 停止条件 5 / 構造化結果を出力しない anchors
+    that already proved the original (task0002) wait-turn guarantee, restated
+    by task0003 for the structured result (`構造化結果を出力しない` replaces
+    the retired `終端行を出力しない`) -- AND additionally names implement's
+    launch turn and wake turn as further instances of the same rule, rather
+    than stopping at 停止条件 5 alone (task0002's narrower wording, which is
+    exactly what the negative proof below forges). All four are required
+    together."""
     stripped = _strip_ws(text)
     return (
         "停止条件 5" in text
-        and "終端行を出力しない" in text
+        and "構造化結果を出力しない" in text
         and _strip_ws("launch ターン") in stripped
         and _strip_ws("wake ターン") in stripped
     )
@@ -439,9 +528,12 @@ class TestBatchTerminalLineSubsectionWiring(unittest.TestCase):
     def test_subsection_names_the_contract_document(self):
         self.assertIn(CONTRACT_DOC_REFERENCE, self.section)
 
-    def test_subsection_states_terminal_line_is_last_line_of_final_message(self):
+    def test_subsection_states_result_is_whole_final_message(self):
+        # FR2 (task0003): the structured result is the WHOLE final assistant
+        # message of the turn that reaches a terminal state -- not a line
+        # appended to it.
         self.assertIn(
-            _strip_ws("最後の assistant メッセージの末尾に終端行を 1 行出力する"),
+            _strip_ws("最後の assistant メッセージの全体を構造化結果とする"),
             _strip_ws(self.section),
         )
 
@@ -473,9 +565,9 @@ class TestBatchTerminalLineSubsectionWiring(unittest.TestCase):
             _strip_ws(self.section),
         )
 
-    def test_subsection_states_wait_turn_emits_no_terminal_line(self):
+    def test_subsection_states_wait_turn_emits_no_result(self):
         self.assertIn("停止条件 5", self.section)
-        self.assertIn("終端行を出力しない", self.section)
+        self.assertIn("構造化結果を出力しない", self.section)
 
     def test_no_line_rule_is_generalized_over_non_terminal_turn_ends(self):
         # AC-2 (task0005, finding 55903a56e01e5125): not just 停止条件 5 --
@@ -498,10 +590,17 @@ class TestBatchTerminalLineSubsectionWiring(unittest.TestCase):
             "contract document immediately before emitting the line",
         )
 
-    def test_step_c_report_item_points_at_terminal_line(self):
+    def test_step_c_report_item_points_at_structured_result(self):
+        # AC-4 (task0003): the audit items are carried IN FULL inside the
+        # structured result's values (IMPLEMENTATION.md SC7), not appended
+        # as a line after the report -- the report is emitted first, and
+        # the structured result is the message that follows it (FR2).
         self.assertIn(CONTRACT_DOC_REFERENCE, self.step_c_section)
         self.assertIn(
-            _strip_ws("この報告のあとに終端行を追記する"),
+            _strip_ws(
+                "これらの監査項目は、この報告に続けて出す構造化結果の値の"
+                "中に全文で運ぶ"
+            ),
             _strip_ws(self.step_c_section),
         )
 
@@ -606,13 +705,15 @@ class TestSkillMdNamesNoTerminalStateCount(unittest.TestCase):
 class TestNoLineGeneralizationMatcherCanFail(unittest.TestCase):
     """AC-2 / Test Notes (a): negative proof plus non-vacuity guard for
     `_states_generalized_no_line_rule` -- a forged subsection that names
-    only 停止条件 5, matching task0002's pre-rework wording verbatim."""
+    only 停止条件 5, matching task0002's pre-rework wording (restated here in
+    task0003's post-rename terminology, 構造化結果, since the rule under test
+    is the GENERALIZATION scope, not the retired term itself)."""
 
     FORGED_NO_LINE_ONLY_TEXT = (
         "...\n\n"
         f"{NEW_SUBSECTION_HEADING}\n\n"
         "停止条件 5（implementer の完了通知待ち）でターンを終える場合は、"
-        "ラン自体は継続しているため終端行を出力しない。\n\n"
+        "ラン自体は継続しているため構造化結果を出力しない。\n\n"
         f"{FILE_END_MARKER}\n"
     )
 
@@ -624,7 +725,7 @@ class TestNoLineGeneralizationMatcherCanFail(unittest.TestCase):
             self.FORGED_NO_LINE_ONLY_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER
         )
         self.assertIn("停止条件 5", section)
-        self.assertIn("終端行を出力しない", section)
+        self.assertIn("構造化結果を出力しない", section)
 
     def test_matcher_rejects_subsection_naming_stop_condition_5_only(self):
         section = _section(
@@ -668,18 +769,23 @@ class TestReadInstructionMatcherCanFail(unittest.TestCase):
         )
 
 
-class TestOwnReasonCodeTupleIsEleven(unittest.TestCase):
-    """AC-4 (task0005/D9): this module's own `REASON_CODES` tuple -- used
-    for absence checks only, never asserted against the contract document
-    itself (D9 cross-task safety) -- lists all eleven codes, the original
-    nine plus the two closing the Step A / docs-commit-conflict gap."""
+class TestOwnReasonCodeTupleIsTwelve(unittest.TestCase):
+    """AC-4/AC-6 (task0005/D9, extended by task0003/D8/SC5): this module's
+    own `REASON_CODES` tuple -- used for absence checks only, never asserted
+    against the contract document itself (D9/D5 cross-task safety) -- lists
+    all twelve codes: the original eleven plus the twelfth,
+    `context_budget_reached` (D8: reserved by the consumer, documented but
+    never emitted by em-workflow)."""
 
-    def test_reason_codes_tuple_has_eleven_members(self):
-        self.assertEqual(len(REASON_CODES), 11)
+    def test_reason_codes_tuple_has_twelve_members(self):
+        self.assertEqual(len(REASON_CODES), 12)
 
     def test_reason_codes_tuple_includes_the_two_rework_codes(self):
         self.assertIn("feature_resolution_aborted", REASON_CODES)
         self.assertIn("docs_commit_conflict_aborted", REASON_CODES)
+
+    def test_reason_codes_tuple_includes_context_budget_reached(self):
+        self.assertIn("context_budget_reached", REASON_CODES)
 
     def test_reason_codes_tuple_has_no_duplicates(self):
         self.assertEqual(len(REASON_CODES), len(set(REASON_CODES)))
@@ -707,24 +813,25 @@ class TestSubsectionRestatesNoContractLiteral(unittest.TestCase):
 
 class TestContractLiteralMatcherCanFail(unittest.TestCase):
     """AC-4 / Test Notes: negative proof plus non-vacuity guard for the
-    contract-literal absence matcher -- a forged subsection that restates a
-    field name, run through the same slicer used above."""
+    contract-literal absence matcher -- a forged subsection that restates
+    all eight field names (SC1), run through the same slicer used above."""
 
     FORGED_FULL_TEXT = (
         "...\n\n"
         f"{NEW_SUBSECTION_HEADING}\n\n"
-        "終端行は `state` / `step` / `reason` / `detail` の 4 フィールドを持つ。\n\n"
+        "構造化結果は `state` / `step` / `reason` / `detail` / `feature` / "
+        "`branch` / `pr_url` / `resume_conditions` の 8 キーを持つ。\n\n"
         f"{FILE_END_MARKER}\n"
     )
 
     def test_forged_restatement_is_a_well_formed_subsection_the_slicer_finds(self):
         # Non-vacuity guard: the slicer finds it, and the forged sentence
-        # genuinely carries all four field-name tokens -- so the rejection
+        # genuinely carries all eight field-name tokens -- so the rejection
         # below exercises the comparison, not a slicing or fixture defect.
         section = _section(
             self.FORGED_FULL_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER
         )
-        self.assertIn("4 フィールドを持つ", section)
+        self.assertIn("8 キーを持つ", section)
         self.assertTrue(all(token in section for token in FIELD_NAME_TOKENS))
 
     def test_matcher_rejects_the_forged_field_name_restatement(self):
@@ -958,6 +1065,32 @@ class TestOnceBoundaryBareLiteralMatcherCanFail(unittest.TestCase):
         )
 
 
+class TestReasonNoneShapeMatcherCanFail(unittest.TestCase):
+    """SC5 (task0003): negative proof plus non-vacuity guard for the
+    `reason={value}` shape check over the ordinary word "none" -- a forged
+    excerpt that restates the value in the contract-specific shape, built
+    the same way as the pre-existing state-value shape negative proof
+    above."""
+
+    FORGED_TEXT = (
+        "...\n\n"
+        f"{NEW_SUBSECTION_HEADING}\n\n"
+        "通常完了では `reason=none` を書く。\n\n"
+        f"{FILE_END_MARKER}\n"
+    )
+
+    def test_forged_excerpt_is_well_formed_and_found(self):
+        section = _section(self.FORGED_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER)
+        self.assertIn("reason=none", section)
+
+    def test_matcher_rejects_forged_reason_none_shape(self):
+        section = _section(self.FORGED_TEXT, NEW_SUBSECTION_HEADING, FILE_END_MARKER)
+        violations = _find_contract_literal_violations(section)
+        self.assertTrue(
+            violations, "matcher failed to detect the forged reason=none shape"
+        )
+
+
 class TestStateValueGuardWholeFileScope(unittest.TestCase):
     """AC-4 and AC-6 (whole-file guard scope, real-file guarantees) plus
     AC-5 (whitelist proof via synthetic sample) -- task0006 rework of
@@ -997,6 +1130,14 @@ class TestStateValueGuardWholeFileScope(unittest.TestCase):
                 "files for the false-positive proof below to mean anything",
             )
 
+    def test_ordinary_none_word_actually_occurs_in_the_real_files(self):
+        # Non-vacuity for SC5's "none" whitelist proof below (task0003):
+        # "none" occurs as ordinary English prose in these documents
+        # (e.g. batch-mode.md's Non-packet gates section), never as a
+        # `reason=none` citation.
+        combined = self.skill_text + self.batch_mode_text
+        self.assertIn("none", combined)
+
     def test_guard_does_not_flag_step_status_vocabulary_in_a_synthetic_sample(self):
         # AC-5 (task0006): whitelist behavior proven against a synthetic
         # sample containing `completed` / `skipped` / `stopped` as ordinary
@@ -1007,6 +1148,12 @@ class TestStateValueGuardWholeFileScope(unittest.TestCase):
             "The step completed, another step was skipped, and the run "
             "stopped cleanly afterward."
         )
+        self.assertEqual(_find_contract_literal_violations(sample), [])
+
+    def test_guard_does_not_flag_the_ordinary_word_none(self):
+        # SC5 (task0003): "none" used as ordinary prose (never in the
+        # `reason=none` shape) must not be flagged.
+        sample = "None of the gates below carries a marker; the answer is none."
         self.assertEqual(_find_contract_literal_violations(sample), [])
 
     def test_guard_raises_no_violation_over_whole_skill_md(self):
@@ -1137,6 +1284,48 @@ class TestExistingHeadingsAndForbiddenLiteralsUnchanged(unittest.TestCase):
         section = _section(self.text, NEW_SUBSECTION_HEADING, FILE_END_MARKER)
         self.assertNotIn("gate_id", section)
         self.assertNotIn("gate ID", section)
+
+
+class TestImplementPhaseCitationUnchanged(unittest.TestCase):
+    """AC-5 (task0003): `implement-phase.md`'s single citation of the SSOT
+    (the implement second-failure stop's precedence over the generic stop
+    condition) still gives that precedence, still names the SSOT by path,
+    restates no SC5 literal anywhere in the whole file, and still uses
+    `completed` / `skipped` / `stopped` as ordinary status words elsewhere
+    in the file.
+
+    Pure regression guard (Test Notes): the sentence itself never named a
+    "line" (it cites the SSOT only for the precedence RULE, not for the
+    result's format), so this task made no wording change to it -- verified
+    by asserting the sentence is present byte-for-byte, unchanged. Exempt
+    from a negative proof for that reason, matching this module's own
+    convention for pure regression guards elsewhere (e.g.
+    TestStepCCompletionReportNonRegression)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(IMPLEMENT_PHASE_PATH)
+
+    def test_precedence_sentence_present_unchanged(self):
+        self.assertIn(CONTRACT_DOC_REFERENCE, self.text)
+        self.assertIn(
+            _strip_ws(
+                "since `references/batch-terminal-line.md` already gives "
+                "`implement-second-failure` precedence over `stop-condition-3`"
+            ),
+            _strip_ws(self.text),
+        )
+
+    def test_restates_no_sc5_literal_over_the_whole_file(self):
+        self.assertEqual(_find_contract_literal_violations(self.text), [])
+
+    def test_ordinary_status_words_still_present(self):
+        # Non-vacuity for the whitelist claim scoped to THIS file (AC-5):
+        # `completed` / `skipped` / `stopped` occur here as ordinary status
+        # vocabulary, unrelated to the contract's `state` domain, and must
+        # never be flagged by the guard above.
+        for word in ("completed", "skipped", "stopped"):
+            self.assertIn(word, self.text)
 
 
 class TestOwnModuleStdlibOnly(unittest.TestCase):
