@@ -263,8 +263,8 @@ tasks:
     branch: em-workflow/batch-structured-result-output/task0006
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -273,9 +273,13 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+    comprehensive: completed
+    security: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 1
+  needs_rework: true
 requirements:
   FR1:
     title: SSOT ownership of the structured result
