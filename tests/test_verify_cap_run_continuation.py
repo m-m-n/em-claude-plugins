@@ -75,6 +75,15 @@ negative proof over a forged/synthetic sample plus a non-vacuity guard):
   TestMatchersRejectOldWording.test_continuation_matcher_rejects_old_stop_on_cap_wording,
   non-vacuity guard is
   TestMatchersRejectOldWording.test_continuation_matcher_accepts_the_real_clause.
+
+Extended again by batch-structured-result-output/task0003: `TERMINAL_LINE_
+HEADING` is retargeted from the retired "## バッチ終端行" to "## バッチ構造化
+結果", and `TestTerminalLineCapReachedState`'s pinned Japanese fragments
+that named 終端行 are restated in 構造化結果 terminology (a pure regression
+guard over the underlying, unchanged guarantees -- stopped-not-completed,
+step verify, Step C's detail wording -- per Test Notes; no new matcher
+introduced, so no additional negative proof is needed beyond the ones
+already listed above).
 """
 
 import ast
@@ -92,7 +101,12 @@ STEP_B_HEADING = "## Step B: 自走ループ"
 DESIGN_BRANCH_HEADING = "### design ステップ分岐"
 TURN_END_HEADING = "### ターンを終わらせていい唯一の条件"
 TURN_END_ANCHOR = "これらに該当しない限り"
-TERMINAL_LINE_HEADING = "## バッチ終端行"
+# batch-structured-result-output/task0003: renamed from "## バッチ終端行" --
+# the underlying section (occasions, no-result rule, cap-reached-run
+# asymmetry) is unchanged; only the noun naming the removed shape changed
+# (構造化結果 replaces 終端行, FR2: the result is now the WHOLE final
+# assistant message, not a line).
+TERMINAL_LINE_HEADING = "## バッチ構造化結果"
 FILE_END_MARKER = "$ARGUMENTS"
 
 # Verbatim, taken from tests/test_develop_skill_rewiring.py -- redeclared
@@ -348,11 +362,14 @@ class TestStepCHeadingExpressesCapContinuation(unittest.TestCase):
 
 
 class TestTerminalLineCapReachedState(unittest.TestCase):
-    """AC-6 (TS15): the バッチ終端行 section states the cap-reached run's
-    terminal outcome (stopped, not completed; step verify; detail names
-    Step C completion), citing the stop point rather than restating the
-    reason-code literal (module docstring deviation note), and retains the
-    section's pre-existing content."""
+    """AC-6 (TS15): the バッチ構造化結果 section (renamed by
+    batch-structured-result-output/task0003 from バッチ終端行) states the
+    cap-reached run's terminal outcome (stopped, not completed; step
+    verify; detail names Step C completion), citing the stop point rather
+    than restating the reason-code literal (module docstring deviation
+    note), and retains the section's pre-existing content -- restated in
+    task0003's 構造化結果 terminology where it names the removed 終端行
+    shape."""
 
     @classmethod
     def setUpClass(cls):
@@ -361,7 +378,7 @@ class TestTerminalLineCapReachedState(unittest.TestCase):
 
     def test_existing_section_content_is_retained(self):
         self.assertIn("対象は Step C の完了処理（通常完了）と", self.section)
-        self.assertIn("終端行を出力しない", self.section)
+        self.assertIn("構造化結果を出力しない", self.section)
         self.assertIn(
             "${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md` を Read し、",
             self.section,
@@ -372,7 +389,7 @@ class TestTerminalLineCapReachedState(unittest.TestCase):
 
     def test_terminal_state_is_stopped_not_completed(self):
         self.assertIn(
-            _strip_ws("通常完了ではなく停止として終端行を出す"),
+            _strip_ws("通常完了ではなく停止として構造化結果を出す"),
             _strip_ws(self.section),
         )
 
@@ -388,12 +405,21 @@ class TestTerminalLineCapReachedState(unittest.TestCase):
             _strip_ws(self.section),
         )
 
-    def test_one_line_per_run_emitted_right_after_step_c_report(self):
+    def test_one_result_per_run_emitted_right_after_step_c_report(self):
+        # FR2/AC-6 (task0003): the result is no longer counted in "lines" --
+        # it is the whole final assistant message -- so the cardinality is
+        # restated as "1 件" (one instance) per run, and the cap-reached
+        # run's ordering (Step C's completion report first, the structured
+        # result as the message that follows it) is stated explicitly.
         self.assertIn(
-            _strip_ws("1 走行につき 1 行"), _strip_ws(self.section)
+            _strip_ws("構造化結果は 1 走行につき 1 件出力し"), _strip_ws(self.section)
         )
         self.assertIn(
-            _strip_ws("Step C の完了報告の直後"), _strip_ws(self.section)
+            _strip_ws(
+                "cap 到達走行では Step C の完了報告を先に出力してから、"
+                "その直後の最後の assistant メッセージとして構造化結果を出す"
+            ),
+            _strip_ws(self.section),
         )
 
     def test_reason_code_literal_is_never_restated_anywhere_in_skill_md(self):

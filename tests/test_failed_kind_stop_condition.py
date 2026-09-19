@@ -48,6 +48,14 @@ Test isolation: every assertion below targets only
 `em-workflow/skills/develop/SKILL.md` -- the sole file this task owns
 (workflow-schema.md, batch-mode.md and batch-terminal-line.md are cited,
 never restated or asserted against here).
+
+Extended by batch-structured-result-output/task0003: AC-6's pinned
+自動再開 sentence is restated from 「バッチ終端行を出さず」 to 「バッチ構造化
+結果を出さず」 (FR2: the structured result is now the whole final assistant
+message rather than a terminal line; the guarantee this sentence states --
+no result emitted, no new stop reason code added -- is unchanged). A pure
+regression guard (Test Notes); no new matcher, so no additional negative
+proof beyond this module's pre-existing AC-10 detector coverage.
 """
 
 import ast
@@ -362,11 +370,16 @@ class TestAC5BatchOnlyInteractiveUnchanged(SkillDocTestCase):
 
 
 class TestAC6NotAStopNotABoundary(SkillDocTestCase):
-    def test_states_no_terminal_line_no_new_stop_reason_code(self):
+    def test_states_no_result_no_new_stop_reason_code(self):
+        # batch-structured-result-output/task0003: 「バッチ終端行を出さず」
+        # was restated as 「バッチ構造化結果を出さず」 (FR2: the structured
+        # result is now the whole final assistant message, not a line);
+        # the underlying guarantee this block states -- no result, no new
+        # stop reason code -- is unchanged.
         self.assertTrue(
             _contains(
                 self.new_block,
-                "自動再開は停止ではない: バッチ終端行を出さず、新しい "
+                "自動再開は停止ではない: バッチ構造化結果を出さず、新しい "
                 "stop reason code も追加しない",
             )
         )
