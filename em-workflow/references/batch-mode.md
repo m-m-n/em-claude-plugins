@@ -197,9 +197,11 @@ absence as an abnormal outcome.
 
 - A turn that reaches any stop point in the structured-result contract's
   stop-point coverage table keeps its full output — cause, affected
-  paths, recovery hints — unsuppressed.
-- Step C's completion processing emits its final report in full, with the
-  result following it.
+  paths, recovery hints — unsuppressed, in the messages preceding the
+  final one.
+- Step C's completion processing emits its final report in full in a
+  message preceding the final one; the final assistant message is the
+  result alone, per `references/batch-terminal-line.md`.
 - A `--once` phase-boundary turn emits the result and withholds
   all other narration.
 
