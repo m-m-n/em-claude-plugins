@@ -247,8 +247,8 @@ tasks:
     - FR22
     - NFR1
     - NFR6
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-structured-result-output/task0007
     notes: null
     provenance:
       source: review
@@ -276,8 +276,8 @@ tasks:
     - FR22
     - NFR1
     - NFR5
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-structured-result-output/task0008
     notes: null
     provenance:
       source: review
@@ -308,8 +308,8 @@ tasks:
     - FR22
     - NFR3
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/batch-structured-result-output/task0009
     notes: null
     provenance:
       source: review
