@@ -293,8 +293,13 @@ class TestStepNeedsInterventionMeaningNarrowed(TerminalLineDocTestCase):
 
 class TestPrecedenceParagraphStatesBothRestrictions(TerminalLineDocTestCase):
     def _paragraph(self):
+        # End marker retargeted by batch-structured-result-output task0001
+        # (deviation, outside that task's own expected_files): that task
+        # renames this heading "No line on a wait turn" -> "No result on a
+        # wait turn" (SC2). The "Precedence rule:" paragraph this slices is
+        # otherwise untouched by that rename.
         return _section(
-            self.text, "Precedence rule:", "\n\n## No line on a wait turn"
+            self.text, "Precedence rule:", "\n\n## No result on a wait turn"
         )
 
     def test_states_the_phase_specific_row_restriction(self):
