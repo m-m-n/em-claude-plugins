@@ -1,0 +1,116 @@
+task_id: task0006
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_batch_structured_result_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: false
+    red_reason: >
+      Both registries already read 0.1.82 before this edit, so equality
+      already held pre-bump -- this equality check has no red state of its
+      own. The criterion's genuine red state is carried jointly by AC-2's
+      past-baseline check (see below), which does fail pre-bump for the
+      same two values.
+  AC-2:
+    tests:
+      - test_batch_structured_result_output_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+      - test_batch_structured_result_output_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - test_batch_structured_result_output_version_bump.TestVersionComparisonIsDotSeparatedNumeric.test_naive_string_comparison_gets_two_digit_patch_backwards
+      - test_batch_structured_result_output_version_bump.TestVersionComparisonIsDotSeparatedNumeric.test_version_tuple_orders_two_digit_patch_correctly
+      - test_batch_structured_result_output_version_bump.TestVersionComparisonIsDotSeparatedNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
+    red_confirmed: true
+    red_reason: >
+      Before either manifest was edited, running
+      `python3 -m unittest tests.test_batch_structured_result_output_version_bump -v`
+      failed both real-file past-baseline checks with
+      "AssertionError: (0, 1, 82) not greater than (0, 1, 82)" for
+      test_version_is_past_baseline and
+      test_em_workflow_entry_version_is_past_baseline. The three
+      TestVersionComparisonIsDotSeparatedNumeric tests are hermetic
+      demonstrations against synthetic values (0.1.9 vs 0.1.10); they do not
+      depend on the manifests' state and passed from the first run, so they
+      prove the numeric-vs-string distinction by construction rather than by
+      a red/green transition.
+  AC-3:
+    tests:
+      - test_batch_structured_result_output_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_entry_lookup_fails_on_a_missing_entry_name
+    red_confirmed: false
+    red_reason: >
+      `_marketplace_entry` looks the entry up by its `name` field from the
+      first line written and is correct by construction; there is no prior
+      (buggy) implementation to have been red against. The negative proof
+      (a forged marketplace dict lacking the em-workflow entry) raises
+      AssertionError as designed, confirmed by
+      test_entry_lookup_fails_on_a_missing_entry_name passing.
+  AC-4:
+    tests:
+      - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+    red_confirmed: false
+    red_reason: >
+      This task never touches the em-review plugin or its marketplace
+      entry, so the guarded value has no observable change to go red
+      against -- a pure regression guard (tdd-testing skill's carve-out for
+      a criterion whose behavior genuinely pre-existed). The negative proof
+      (test_em_review_matcher_rejects_altered_identity_field) demonstrates
+      the matcher rejects each identity field, and the version, when forged.
+  AC-5:
+    tests:
+      - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_plugin_manifest_nonversion_content_unchanged
+      - test_batch_structured_result_output_version_bump.TestNoOtherFieldsChanged.test_marketplace_nonversion_content_unchanged
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_digest_check_rejects_a_mutated_nonversion_field
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_digest_check_ignores_only_the_version_field
+    red_confirmed: false
+    red_reason: >
+      The digest strips the `version` field by design, so it is
+      insensitive to this task's only edit and was already matching before
+      the bump -- there is no genuine red state for this task's own change.
+      test_digest_check_rejects_a_mutated_nonversion_field is the negative
+      proof: it forges a manifest with an altered `description` (version
+      untouched) and confirms the digest comparison would catch that.
+      Both manifests parsing as JSON is confirmed by `_load_json` succeeding
+      in every test above (a parse failure would raise before any
+      assertion ran).
+  AC-6:
+    tests:
+      - test_batch_structured_result_output_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_when_versions_differ
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_when_version_below_baseline
+      - test_batch_structured_result_output_version_bump.TestValidationDetectsRegressions.test_fails_for_malformed_version_shape
+    red_confirmed: false
+    red_reason: >
+      Discovery under `python3 -m unittest discover -s tests` and the
+      stdlib-only import check are structural properties confirmed once the
+      module exists, with no prior state to have been red against. The four
+      listed negative proofs are hermetic (they call the helper functions
+      directly against synthetic bad inputs) and passed on first run,
+      demonstrating the matchers reject each error condition named in the
+      criterion (versions disagreeing; at baseline; below baseline;
+      malformed shape) by construction.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Not unit-testable from inside this module (it is a scope constraint
+      on the diff, not a runtime property). Verified by inspection:
+      `git diff --stat` shows exactly one changed line in each of
+      `em-workflow/.claude-plugin/plugin.json` and
+      `.claude-plugin/marketplace.json` (the version value only), and
+      `git status --porcelain` shows the sole new file as
+      `tests/test_batch_structured_result_output_version_bump.py`, outside
+      `em-workflow/`.
