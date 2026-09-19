@@ -52,9 +52,11 @@ regression guards over retained pre-change wording are exempt):
 - `_assert_marker_line_format_stated` (marker-format matcher): negative
   proof `test_incomplete_marker_section_is_rejected`; non-vacuity guard
   `test_forged_marker_section_otherwise_well_formed`.
-- `_assert_non_collision_stated` (non-collision matcher): negative proof
-  `test_missing_non_collision_statement_is_rejected`; non-vacuity guard
-  `test_forged_non_collision_text_otherwise_well_formed`.
+- `_assert_message_shape_disjointness_stated` (message-shape disjointness
+  matcher; task0002/batch-structured-result-output replaces the original
+  `_assert_non_collision_stated` here -- see the "Extended for task0002"
+  note below): negative proof `test_missing_absence_signal_is_rejected`;
+  non-vacuity guard `test_forged_disjointness_text_otherwise_well_formed`.
 - `_assert_stop_abort_exception_is_set_level` (exception set-level-rule
   matcher): negative proofs `test_enumerated_stop_point_is_rejected` and
   `test_missing_table_reference_is_rejected`; non-vacuity guards
@@ -84,6 +86,31 @@ both are already generic over `SOURCE_MAP_EXPECTATIONS`'s length, so they
 exercise the new item without any test-code change, exactly as task0005's
 docstring (`tests/test_batch_quiet_output_audit_persistence.py`) already
 relied on for its own new row.
+
+Extended for task0002 (batch-structured-result-output; see
+feature-docs/batch-structured-result-output/tasks/task0002.md AC-1..AC-7):
+`## Terminal line` is renamed to `## Structured result` and now names
+`references/batch-terminal-line.md` as the sole owner of the new eight-key
+structured result, stating only WHEN it is emitted. The whole-file absence
+set is retargeted to IMPLEMENTATION.md SC5: the eight-key field-name token
+set (checked as `key=` / backtick-wrapped `key:` or `key=` / literal
+`key: "`-shaped citations -- never a bare `key:` form, since several key
+names, e.g. `detail`, `feature`, `branch`, `step`, are also ordinary
+vocabulary already followed by a colon elsewhere in this document's
+prose), the `state` and
+`step` value domains (checked as `state=value` / `step=value`-shaped
+citations, since several of those values -- `completed`, `stopped`,
+`implement`, `review`, `verify` -- are likewise ordinary vocabulary here),
+the `no-step` sentinel and the eleven-plus-one reason codes (checked bare,
+since these are unambiguous), the reserved `none` value (checked as a
+`reason=none`-shaped citation, since "none" alone is an ordinary word), and
+the removed prefix literal `EM_WORKFLOW_TERMINAL:` (checked bare, unchanged
+from before). `_assert_non_collision_stated` is replaced by
+`_assert_message_shape_disjointness_stated`, matching the rewritten
+"## Batch quiet output" paragraph that compares whole-message SHAPES now
+that there is no terminal prefix left to compare against. `## Reporting`
+gains the SC7 value-assignment paragraph; its own guard lives in
+`tests/test_batch_quiet_output_audit_persistence.py`, not here (D3).
 """
 
 import re
@@ -118,11 +145,51 @@ TERMINAL_REASON_CODES = (
     "completion_aborted",
     "feature_resolution_aborted",
     "docs_commit_conflict_aborted",
+    # Added for task0002 (batch-structured-result-output): IMPLEMENTATION.md
+    # SC5's reason-code member of the forbidden-literal set is now twelve
+    # values (D8) -- the eleven above plus this reserved, never-emitted one.
+    "context_budget_reached",
 )
 TERMINAL_SENTINEL = "no-step"
-TERMINAL_FIELD_NAME_TOKENS = ("`state`", "`step`", "`reason`", "`detail`")
 TERMINAL_STATE_VALUES = ("completed", "stopped", "phase_done")
 ONCE_BOUNDARY_STATE_VALUE = "phase_done"
+
+# Added for task0002 (batch-structured-result-output), retargeting the old
+# four-name TERMINAL_FIELD_NAME_TOKENS group check to IMPLEMENTATION.md SC5's
+# full eight-key set. SC5 defines the forbidden shape as each key appearing
+# as a `key:` or `key=`-shaped citation, never as a bare ordinary word --
+# several of these key names (`feature`, `branch`, `step`, `detail`,
+# `reason`) are themselves ordinary vocabulary used throughout batch-mode.md.
+RESULT_KEY_TOKENS = (
+    "state",
+    "step",
+    "reason",
+    "detail",
+    "feature",
+    "branch",
+    "pr_url",
+    "resume_conditions",
+)
+
+# batch-terminal-line.md's `step` value domain (`## Field values`): the seven
+# workflow.yaml step ids. Checked only in `step=value`-shaped form (never
+# bare), since most of these words -- `implement`, `review`, `verify` in
+# particular -- are ordinary phase-name vocabulary used throughout
+# batch-mode.md's own prose.
+RESULT_STEP_VALUES = (
+    "create-spec",
+    "design",
+    "create-plan",
+    "implement",
+    "review",
+    "verify",
+    "retrospect",
+)
+
+# batch-terminal-line.md's reserved `reason` value for the two non-stop
+# terminal states. Checked only in `reason=none`-shaped form, since "none"
+# alone is an ordinary word.
+RESERVED_REASON_VALUE = "none"
 
 # Retargeted by batch-structured-result-output task0001 (deviation, outside
 # that task's own expected_files): that task rewrites
@@ -152,7 +219,9 @@ PRE_EXISTING_BATCH_MODE_HEADINGS = [
     "Purpose & activation",
     "Non-packet gates",
     "workflow.yaml `batch` block",
-    "Terminal line",
+    # Renamed by task0002 (batch-structured-result-output), A2/IMPLEMENTATION.md
+    # Naming: "Terminal line" -> "Structured result".
+    "Structured result",
     "Reporting",
 ]
 
@@ -330,35 +399,57 @@ class TestMarkerFormatMatcherNegativeProof(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Matcher: non-collision statement
+# Matcher: message-shape disjointness statement
 # ---------------------------------------------------------------------------
+#
+# Replaces task0001's `_assert_non_collision_stated` (task0002,
+# batch-structured-result-output): the old matcher compared two PREFIXES
+# (the marker's and the terminal line's). There is no terminal prefix left
+# to compare against -- the structured result has no prefix at all -- so the
+# rewritten paragraph instead compares whole-message SHAPES. See task0002.md
+# AC-2, Design point 2.
 
 
-def _assert_non_collision_stated(test, section_text):
-    """Validates the discipline states the non-collision property (D2)
-    relationally -- naming `references/batch-terminal-line.md`, never
-    reproducing its prefix literal (AC-4)."""
+def _assert_message_shape_disjointness_stated(test, section_text):
+    """Validates the discipline states message-shape disjointness (AC-2):
+    names `EM_WORKFLOW_PROGRESS:`, names `references/batch-terminal-line.md`,
+    states the two message shapes are "disjoint", and preserves the
+    "no result = abnormal outcome" signal (NFR6) -- never reproducing the
+    removed terminal prefix literal."""
     normalized = _normalize(section_text)
+    test.assertIn(MARKER_PREFIX, section_text)
     test.assertIn("references/batch-terminal-line.md", section_text)
-    test.assertIn("prefix of the other", normalized)
+    test.assertIn("disjoint", normalized)
+    test.assertIn("no result", normalized)
+    test.assertIn("abnormal outcome", normalized)
     test.assertNotIn(TERMINAL_PREFIX, section_text)
 
 
-class TestNonCollisionMatcherNegativeProof(unittest.TestCase):
-    """Negative proof + non-vacuity guard for `_assert_non_collision_stated`."""
+class TestMessageShapeDisjointnessMatcherNegativeProof(unittest.TestCase):
+    """Negative proof + non-vacuity guard for
+    `_assert_message_shape_disjointness_stated`."""
 
-    FORGED_MISSING_STATEMENT = (
-        f"Prefix literal `{MARKER_PREFIX}` is used for a non-terminal turn. "
-        "See references/batch-terminal-line.md for the terminal line."
+    FORGED_DISJOINT_NO_ABSENCE_SIGNAL = (
+        f"A non-terminal turn's whole message begins with `{MARKER_PREFIX}`; "
+        "a terminal turn's whole message is instead the structured result "
+        "references/batch-terminal-line.md defines. The two message shapes "
+        "are disjoint."
     )
 
-    def test_forged_non_collision_text_otherwise_well_formed(self):
-        self.assertIn("references/batch-terminal-line.md", self.FORGED_MISSING_STATEMENT)
-        self.assertNotIn(TERMINAL_PREFIX, self.FORGED_MISSING_STATEMENT)
+    def test_forged_disjointness_text_otherwise_well_formed(self):
+        self.assertIn(MARKER_PREFIX, self.FORGED_DISJOINT_NO_ABSENCE_SIGNAL)
+        self.assertIn(
+            "references/batch-terminal-line.md",
+            self.FORGED_DISJOINT_NO_ABSENCE_SIGNAL,
+        )
+        self.assertIn("disjoint", self.FORGED_DISJOINT_NO_ABSENCE_SIGNAL)
+        self.assertNotIn(TERMINAL_PREFIX, self.FORGED_DISJOINT_NO_ABSENCE_SIGNAL)
 
-    def test_missing_non_collision_statement_is_rejected(self):
+    def test_missing_absence_signal_is_rejected(self):
         with self.assertRaises(AssertionError):
-            _assert_non_collision_stated(self, self.FORGED_MISSING_STATEMENT)
+            _assert_message_shape_disjointness_stated(
+                self, self.FORGED_DISJOINT_NO_ABSENCE_SIGNAL
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -494,8 +585,10 @@ class TestBatchModeSectionStructure(unittest.TestCase):
         no additional level-2 heading was introduced."""
         self.assertEqual(len(self.sections), len(PRE_EXISTING_BATCH_MODE_HEADINGS) + 1)
 
-    def test_terminal_line_and_reporting_headings_unchanged(self):
-        self.assertIn("Terminal line", self.sections)
+    def test_structured_result_and_reporting_headings_present(self):
+        # Renamed by task0002 (batch-structured-result-output): "Terminal
+        # line" -> "Structured result" (A2). "Reporting" is unchanged.
+        self.assertIn("Structured result", self.sections)
         self.assertIn("Reporting", self.sections)
 
     def test_non_packet_gates_table_still_has_ten_data_rows(self):
@@ -591,8 +684,8 @@ class TestNonTerminalTurnsAndMarkerLine(unittest.TestCase):
     def test_marker_line_format_stated(self):
         _assert_marker_line_format_stated(self, self.section)
 
-    def test_non_collision_stated(self):
-        _assert_non_collision_stated(self, self.section)
+    def test_message_shape_disjointness_stated(self):
+        _assert_message_shape_disjointness_stated(self, self.section)
 
     def test_whole_file_absence_of_terminal_prefix(self):
         self.assertNotIn(TERMINAL_PREFIX, self.text)
@@ -605,11 +698,22 @@ class TestNonTerminalTurnsAndMarkerLine(unittest.TestCase):
     def test_whole_file_absence_of_no_step_sentinel(self):
         self.assertNotIn(TERMINAL_SENTINEL, self.text)
 
-    def test_whole_file_absence_of_four_field_names_as_group(self):
-        self.assertFalse(
-            all(token in self.text for token in TERMINAL_FIELD_NAME_TOKENS),
-            "all four contract field names appear together in batch-mode.md",
-        )
+    def test_whole_file_absence_of_key_shaped_citations(self):
+        # Retargeted by task0002 (batch-structured-result-output) from the
+        # old four-name group-presence heuristic to IMPLEMENTATION.md SC5's
+        # full eight-key set, checked in shaped-citation forms only -- never
+        # a bare `key:` form, since several key names are also ordinary
+        # English words followed by a colon in unrelated prose already
+        # present in this document (e.g. "Full detail:", "reason ..." --
+        # see the docstring's Edge case note). `key=` alone is safe to check
+        # bare: unlike a trailing colon, "=" does not occur in this
+        # document's ordinary prose. `key: "` (colon, space, opening quote)
+        # is checked as the literal shape of the SSOT's own YAML citation
+        # (e.g. `state: "stopped"`), which IS unambiguous.
+        for key in RESULT_KEY_TOKENS:
+            for shape in (f"{key}=", f"`{key}:`", f"`{key}=`", f'{key}: "'):
+                with self.subTest(shape=shape):
+                    self.assertNotIn(shape, self.text)
 
     def test_whole_file_absence_of_state_value_shape(self):
         for value in TERMINAL_STATE_VALUES:
@@ -619,6 +723,30 @@ class TestNonTerminalTurnsAndMarkerLine(unittest.TestCase):
 
     def test_whole_file_absence_of_bare_phase_done_literal(self):
         self.assertNotIn(ONCE_BOUNDARY_STATE_VALUE, self.text)
+
+    def test_whole_file_absence_of_step_value_shape(self):
+        # Added by task0002 (batch-structured-result-output): the `step`
+        # value domain, checked shaped -- several of these words (`implement`,
+        # `review`, `verify`) are ordinary phase-name vocabulary used
+        # throughout batch-mode.md's own prose, so only the shaped citation
+        # is forbidden.
+        for value in RESULT_STEP_VALUES:
+            for spelling in (f"step={value}", f"`step={value}`", f'"step={value}"'):
+                with self.subTest(spelling=spelling):
+                    self.assertNotIn(spelling, self.text)
+
+    def test_whole_file_absence_of_reserved_reason_value_shape(self):
+        # Added by task0002 (batch-structured-result-output): the reserved
+        # `none` reason value, checked shaped since "none" alone is an
+        # ordinary word.
+        value = RESERVED_REASON_VALUE
+        for spelling in (
+            f"reason={value}",
+            f"`reason={value}`",
+            f'"reason={value}"',
+        ):
+            with self.subTest(spelling=spelling):
+                self.assertNotIn(spelling, self.text)
 
 
 # ---------------------------------------------------------------------------
@@ -653,7 +781,9 @@ class TestExceptions(unittest.TestCase):
             "Step C's completion processing emits its final report in full",
             self.normalized,
         )
-        self.assertIn("terminal line appended after it", self.normalized)
+        # Retargeted by task0002 (batch-structured-result-output): "the
+        # terminal line appended after it" -> "the result following it".
+        self.assertIn("result following it", self.normalized)
 
     def test_once_boundary_exception_stated(self):
         self.assertIn("`--once` phase-boundary turn", self.section)
