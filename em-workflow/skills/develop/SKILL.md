@@ -445,9 +445,9 @@ I.2.c、引用のみでここでは繰り返さない）を通じて扱う。
 この自動再開について、次の 3 点は変更しない:
 - 実行済み回数は feature ごとに単調増加し、リセットされない
   （workflow.yaml の同じブロックが持つ既存の rework カウンタと同様）。
-- 自動再開は停止ではない: バッチ終端行を出さず、新しい stop reason code
-  も追加しない（`references/batch-terminal-line.md` — 引用のみで繰り返
-  さない）。
+- 自動再開は停止ではない: バッチ構造化結果を出さず、新しい stop reason
+  code も追加しない（`references/batch-terminal-line.md` — 引用のみで
+  繰り返さない）。
 - 自動再開はそれ自体で `--once` のフェーズ境界にはならない。境界は
   implement フェーズ自身が定める位置のままである。
 
@@ -716,8 +716,9 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
    `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律が定める
    ソースマップから組み立てる（deviation の DECLINE のソースは
    `${CLAUDE_PLUGIN_ROOT}/references/implement-phase.md` が定める）。
-   batch はこの報告のあとに終端行を追記する
-   （`references/batch-terminal-line.md`、下記「バッチ終端行」参照）
+   これらの監査項目は、この報告に続けて出す構造化結果の値の中に全文で
+   運ぶ（`references/batch-terminal-line.md`、下記「バッチ構造化結果」
+   参照）
 
 ## `--once` のフェーズ境界
 
@@ -734,7 +735,7 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 **非境界**: `--once` は implement フェーズの途中ではターンを終えない
 （in-flight の実装者がプロセス終了で失われるため）。停止条件 5 の待機ターン、
 および implement の launch / wake ターンは非終端（batch: これらのターンは
-終端行の代わりに、`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の
+構造化結果の代わりに、`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の
 出力抑制規律が定めるマーカー行だけを最後の assistant メッセージとして
 出す）。
 
@@ -750,15 +751,15 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 
 **batch モードの終了行**: batch モードで `--once` 指定のターンが上記いずれ
 かの境界で終わるとき、`${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の
-出力抑制規律に従い、下記「バッチ終端行」が定める終端行以外のナラティブは
-一切出さない。
+出力抑制規律に従い、下記「バッチ構造化結果」が定める構造化結果以外の
+ナラティブは一切出さない。
 
 ## 停止時の報告（停止条件 2-4 のみ）
 
 batch: 下記 3 件に加えて、停止条件 6、フェーズ内のゲート中断、Step A の
 feature 解決失敗、commit-docs.sh の 2 回目の exit 4 によるフェーズ中断、
 Step C 内の中断、そして implement / verify フェーズが定める終端停止
-（下記「バッチ終端行」が列挙する停止点のすべてを含む）は、いずれも
+（下記「バッチ構造化結果」が列挙する停止点のすべてを含む）は、いずれも
 `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律が定める
 停止/中断の例外であり、対話時と同じ内容を全文報告する。
 
@@ -766,18 +767,18 @@ Step C 内の中断、そして implement / verify フェーズが定める終�
 - 中断: `{step} が {status} のため中断。再開するには /em-workflow:develop を実行してね`
 - YAML エラー: 内容と `git restore` 等のリカバリ案を報告
 
-## バッチ終端行
+## バッチ構造化結果
 
 `--batch` 実行では、そのターンでランが同 SSOT の定める終端状態に達した
-場合、最後の assistant メッセージの末尾に終端行を 1 行出力する。Step C
-の完了処理・`--once` のフェーズ境界・下記に列挙する終端の停止条件は、
-いずれもこの条件が成り立つ場合の列挙であり、条件に対する追加の制限では
-ない。行の書式・フィールドの意味・値の集合は
+場合、その終端状態に達したターンの最後の assistant メッセージの全体を
+構造化結果とする。Step C の完了処理・`--once` のフェーズ境界・下記に
+列挙する終端の停止条件は、いずれもこの条件が成り立つ場合の列挙であり、
+条件に対する追加の制限ではない。キーの集合・順序・エスケープ・値の集合は
 `references/batch-terminal-line.md` を唯一の SSOT とし、ここでは
 「いつ出すか」だけを定める。出力の直前に
 `${CLAUDE_PLUGIN_ROOT}/references/batch-terminal-line.md` を Read し、
-そこに定義された prefix・フィールド文法・値の集合をそのまま使う。この
-終端行は、ランが終端状態に達していないターンの最後の assistant メッセージ
+そこに定義されたキーの集合・順序・値の集合をそのまま使う。この構造化
+結果は、ランが終端状態に達していないターンの最後の assistant メッセージ
 として `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の出力抑制規律が
 定める非終端のマーカー行とは別物である。
 
@@ -791,7 +792,7 @@ exit 4 によるフェーズ中断、そして implement / verify フェーズ�
 終端停止 — 同 SSOT が列挙する停止点のすべてを含む。
 
 ターンが終わる時点でランが終端状態（同 SSOT が定める終端状態のいずれか）
-に達していない場合は、終端行を出力しない。停止条件 5
+に達していない場合は、構造化結果を出力しない。停止条件 5
 （implementer の完了通知待ち）はこの規則のインスタンスであり、implement
 フェーズの launch ターン（起動直後にターンを終える）と wake ターン
 （補充後にターンを終える）も同様である。
@@ -800,9 +801,11 @@ cap 到達走行（stop point `verify-rework-cap`。値そのものは
 `references/batch-terminal-line.md` の Stop point coverage 表が対応する
 reason code に既に束ねているためここでは書かない）は、Step C の完了処理
 まで到達し worktree 掃除と終了報告を完了させたうえで、通常完了ではなく
-停止として終端行を出す — 外部サービスが cap 到達走行を成功と誤判定しない
-ため。cap 到達走行の実行した step は verify である。detail には「Step C
-まで到達し、worktree 掃除と終了報告は完了した」旨を含める。終端行は 1
-走行につき 1 行であり、cap 到達走行では Step C の完了報告の直後に出力する。
+停止として構造化結果を出す — 外部サービスが cap 到達走行を成功と誤判定
+しないため。cap 到達走行の実行した step は verify である。`detail` には
+「Step C まで到達し、worktree 掃除と終了報告は完了した」旨を含める。
+構造化結果は 1 走行につき 1 件出力し、cap 到達走行では Step C の完了
+報告を先に出力してから、その直後の最後の assistant メッセージとして
+構造化結果を出す。
 
 $ARGUMENTS
