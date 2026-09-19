@@ -239,3 +239,43 @@ records:
     outcome; (c), because it would leave four selected perspectives unreviewed when a reviewer was available.
     Outcome: all four Claude fallback runs completed; no perspective ended the round unreviewed. Opus
     escalation: not run — this fallback has no escalation arm.'
+- question_id: verify.manual-scenario-not-performable
+  packet_id: null
+  answered_at: '2026-09-20T05:35:00+09:00'
+  source: batch-unlisted-gate-fallback
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: record verify as pass with the manual items carried forward as outstanding
+  normalized_answer: record verify as pass with the manual items carried forward as outstanding
+  resolution_note: 'gate: unlisted, no gate_id - how the verify phase records VERIFICATION.md test scenario
+    TS12 and manual checklist items M1/M2/M3, which are declared Manual and require observing a real batch
+    run governed by the NEW eight-key structured-result contract. Blocking fact established by inspection:
+    the orchestrator running this verify phase loads its instructions from the repository main checkout,
+    and the installed plugin cache at ~/.claude/plugins/cache/em-claude-plugins/em-workflow/ tops out at
+    0.1.82, while this feature bumps to 0.1.83 on the unmerged integration branch. The contract under test
+    is therefore not the contract governing this run, so M1/M2/M3 are not performable before merge and
+    plugin-cache pickup - strictly after the verify phase and outside this run. Options considered: (A)
+    verify.result pass with failed_items empty, recording M1-M3 as outstanding post-merge activation checks
+    in the run report and the retrospect signals; (B) verify.result fail with M1-M3 as failed_items; (C)
+    a third state recording pass-with-outstanding-manual-items in workflow.yaml. codex_consulted: attempted
+    through every available provider, no decision obtained - the Codex CLI returned "You have hit your usage
+    limit ... try again at 6:23 AM", and both LiteLLM routes (muse-spark and vertex-glm-5.2) returned
+    "exceeded retry limit, last status: 429 Too Many Requests". Fallback applied per references/batch-mode.md,
+    minimum-side-effect option. Chosen: (A). Reasons: (B) writes failed_items that no rework can act on,
+    because there is no defect - the items are blocked on merge and installation, not on code - so the
+    verify auto-rework would dispatch rework-planner and implementer tasks that churn the branch for up to
+    the hard cap of 3 rounds and still end with verify failed, which is a strictly larger and less
+    reversible side effect reaching the same terminal state; (C) is unavailable, because
+    references/workflow-schema.md gives the verify step only result (pass|fail) and failed_items, and
+    skills/develop/SKILL.md forbids marking verify failures deferred. Integrity is preserved without (B) or
+    (C) by carrying M1/M2/M3 verbatim into retrospect.yaml and into the run report as outstanding
+    post-merge activation checks, so no unperformed item is reported as performed. Not chosen: (B), for the
+    no-op rework cost above; (C), for schema unavailability. Opus escalation: not run - this fallback has
+    no escalation arm. Evidence recorded for the items that WERE performed: python3 -m unittest discover -s
+    tests ran 4786 tests with 6 failures, and the same 6 failures by exact test id occur at the declared
+    base commit 95c23ed (4596 tests, 6 failures), so zero new failures and about 190 added passing tests;
+    zero tests skipped, which satisfies M4 and IMPLEMENTATION.md D6; python3
+    em-workflow/hooks/tests/run-destructive-guard.py passed 276 of 276; python3
+    em-workflow/scripts/check-plugin-invariants.py . reported PASS on all seven checks; and the merged diff
+    against main adds no file under em-workflow/ and no runtime dependency there, which satisfies M5 and
+    SC-G.'
