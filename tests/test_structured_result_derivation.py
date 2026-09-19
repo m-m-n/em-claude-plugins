@@ -8,6 +8,16 @@ set and exercises a derivation checker against them; it never reads
 binding assertions that those SSOT/pointer documents state the same rules
 (Out of Scope).
 
+Named exception (task0008, review round 1 rework, IMPLEMENTATION.md SC11
+(e)): `TestSlugPatternBoundToContract` below DOES read
+`batch-terminal-line.md`, binding this module's local `SLUG_PATTERN`
+against the pattern literal the SSOT's `feature` bullet states. This is
+admissible because task0008 owns BOTH the SSOT and this module (D5: "A
+guard module owned by the same task as the file it reads asserts the real
+file against those canonical values -- that is the 'binding' assertion"),
+unlike every other class in this file, which stays independent of the
+SSOT per the paragraph above.
+
 Covers task0005 Acceptance Criteria
 (feature-docs/batch-structured-result-output/tasks/task0005.md):
 
@@ -35,6 +45,17 @@ Covers task0005 Acceptance Criteria
   module, test_structured_result_reporting_containment.py, covers its own
   half plus the workflow.yaml scan.
 
+Covers task0008 Acceptance Criteria
+(feature-docs/batch-structured-result-output/tasks/task0008.md):
+
+- AC-6 (the slug-pattern binding half; the SSOT-side half is
+  `tests/test_batch_stop_contract.py`'s
+  `test_feature_bullet_states_slug_pattern_literal`): `TestSlugPatternBoundToContract`
+  binds this module's local `SLUG_PATTERN` to the literal
+  `batch-terminal-line.md`'s `feature` bullet states, and proves that
+  binding would fail against a forged bullet carrying a different
+  pattern.
+
 Every site's expected values are declared inline in `CASES` rather than
 derived from a shared formula, so a copy-paste mistake in one row cannot
 silently propagate to another. TDD order (Test Notes): this module first
@@ -50,10 +71,15 @@ from collections import namedtuple
 from pathlib import Path
 
 # --- FR9's slug pattern and FR10's branch name template -- declared here
-# independently of the SSOT (D5); task0001 binds the real document against
-# the same literals.
+# independently of the SSOT (D5); `TestSlugPatternBoundToContract` below
+# binds SLUG_PATTERN against the real document (task0008, SC11 (e)).
 SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 INTEGRATION_BRANCH_TEMPLATE = "em-workflow/{feature}/integration"
+
+# task0008's binding target: batch-terminal-line.md's `## Field values`
+# section, where the `feature` bullet states the slug pattern literal.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+CONTRACT_PATH = REPO_ROOT / "em-workflow" / "references" / "batch-terminal-line.md"
 
 RESUME_GUIDANCE_TEXT = (
     "Resume by re-running the batch command once the blocking condition "
@@ -463,6 +489,86 @@ class TestResumeConditionsPresenceRule(unittest.TestCase):
 
     def test_non_whitespace_value_is_accepted_as_present(self):
         self.assertTrue(_is_present(RESUME_GUIDANCE_TEXT))
+
+
+# ---------------------------------------------------------------------------
+# task0008 (review round 1 rework, SC11 (e)): bind SLUG_PATTERN to the real
+# SSOT. Named exception to D5 -- see the module docstring.
+# ---------------------------------------------------------------------------
+
+_FEATURE_BULLET_SLUG_PATTERN_RE = re.compile(
+    r"- `feature`.*?slug pattern `([^`]+)`", re.DOTALL
+)
+
+
+def _field_values_section(contract_text):
+    """Minimal, module-local section slice: the `## Field values` section
+    body, up to the next level-2 heading (or end of text). Deliberately
+    not shared with `tests/test_batch_stop_contract.py`'s `_sections` --
+    this module's only use of the SSOT is this one binding assertion, and
+    duplicating four lines here keeps that use visibly minimal rather than
+    pulling in a cross-module dependency for it."""
+    marker = "## Field values"
+    start = contract_text.index(marker) + len(marker)
+    rest = contract_text[start:]
+    end_match = re.search(r"^## ", rest, re.MULTILINE)
+    return rest[: end_match.start()] if end_match else rest
+
+
+def _extract_feature_bullet_slug_pattern(field_values_section_text):
+    """Extracts the pattern literal from the `feature` bullet's "matches
+    the slug pattern `<literal>`" phrasing. Returns None when no such
+    literal is found."""
+    match = _FEATURE_BULLET_SLUG_PATTERN_RE.search(field_values_section_text)
+    return match.group(1) if match else None
+
+
+class TestSlugPatternBoundToContract(unittest.TestCase):
+    """AC-6 (task0008): this module's local SLUG_PATTERN is bound to the
+    literal the SSOT states in the `feature` bullet of `## Field values`."""
+
+    def test_local_slug_pattern_matches_the_contract_literal(self):
+        section = _field_values_section(CONTRACT_PATH.read_text(encoding="utf-8"))
+        literal = _extract_feature_bullet_slug_pattern(section)
+        self.assertIsNotNone(
+            literal, "no slug-pattern literal found in the `feature` bullet"
+        )
+        self.assertEqual(literal, SLUG_PATTERN.pattern)
+
+    def test_extractor_finds_the_literal_in_the_real_document(self):
+        """Non-vacuity: the real document's `feature` bullet is reached by
+        the extractor at all (a mis-anchored regex would silently return
+        None, which the previous test's assertIsNotNone would also catch,
+        but this pins the extracted value directly)."""
+        section = _field_values_section(CONTRACT_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(
+            _extract_feature_bullet_slug_pattern(section), r"^[a-z0-9][a-z0-9-]*$"
+        )
+
+    def test_binding_fails_against_a_forged_bullet_with_a_different_pattern(self):
+        """Negative proof: the assertion this class makes against the real
+        document would fail if the SSOT's literal ever drifted from
+        SLUG_PATTERN -- proved here against a forged bullet carrying a
+        different pattern, without touching the real file."""
+        forged_section = (
+            "- `state` — the run's terminal outcome.\n"
+            "- `feature` — the feature slug: ... when a supplied name "
+            "matches the slug pattern `^[a-z]+$`, in which case ...\n"
+        )
+        literal = _extract_feature_bullet_slug_pattern(forged_section)
+        self.assertEqual(literal, "^[a-z]+$")
+        with self.assertRaises(AssertionError):
+            self.assertEqual(literal, SLUG_PATTERN.pattern)
+
+    def test_extractor_returns_none_when_no_pattern_literal_is_present(self):
+        """Negative proof for the extractor itself: a bullet naming "the
+        slug pattern" only in prose, with no backticked literal, yields
+        None rather than a false match."""
+        forged_section = (
+            "- `feature` — the feature slug: ... when a supplied name "
+            "matches the slug pattern, in which case ...\n"
+        )
+        self.assertIsNone(_extract_feature_bullet_slug_pattern(forged_section))
 
 
 class TestModuleIsStdlibOnly(unittest.TestCase):
