@@ -111,6 +111,15 @@ from before). `_assert_non_collision_stated` is replaced by
 that there is no terminal prefix left to compare against. `## Reporting`
 gains the SC7 value-assignment paragraph; its own guard lives in
 `tests/test_batch_quiet_output_audit_persistence.py`, not here (D3).
+
+Extended by batch-structured-result-output/task0007 (review round 1 rework;
+finding d48f305d463a7feb): `test_step_c_exception_stated` was RED at HEAD --
+it pinned the literal `result following it`, wording that review round 1's
+auto-fix never actually wrote into `batch-mode.md`. The assertion is
+repaired to match the real text (`message preceding the final one` /
+`final assistant message is the result alone`); the literal
+`result following it` no longer occurs anywhere in this module. See
+feature-docs/batch-structured-result-output/tasks/task0007.md AC-4.
 """
 
 import re
@@ -781,9 +790,16 @@ class TestExceptions(unittest.TestCase):
             "Step C's completion processing emits its final report in full",
             self.normalized,
         )
-        # Retargeted by task0002 (batch-structured-result-output): "the
-        # terminal line appended after it" -> "the result following it".
-        self.assertIn("result following it", self.normalized)
+        # Repaired by task0007 (review round 1 rework, finding
+        # d48f305d463a7feb): the pre-round-1 wording this assertion used to
+        # pin -- "the terminal line appended after it" / "the result
+        # following it" -- never landed in `batch-mode.md`'s actual text.
+        # The real wording states WHICH message carries Step C's report
+        # (preceding the final one) and that the final assistant message is
+        # the result alone; this assertion is retargeted to that text
+        # instead of the never-shipped literal.
+        self.assertIn("message preceding the final one", self.normalized)
+        self.assertIn("final assistant message is the result alone", self.normalized)
 
     def test_once_boundary_exception_stated(self):
         self.assertIn("`--once` phase-boundary turn", self.section)

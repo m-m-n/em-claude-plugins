@@ -104,6 +104,27 @@ here and stays forbidden under SC6). The バッチ終端行 heading and its
 /「構造化結果」/「構造化結果を出力しない」 (the underlying guarantees -- whole-
 message result, no-result-on-non-terminal-turn, exclusivity at the `--once`
 boundary -- are unchanged; only the noun naming the removed shape changed).
+
+Extended again by batch-structured-result-output/task0007 (review round 1
+rework; finding d48f305d463a7feb; IMPLEMENTATION.md SC10). Covers task0007
+Acceptance Criterion AC-2
+(feature-docs/batch-structured-result-output/tasks/task0007.md):
+`TestStopAbortExceptionStatedOnce` gains
+`test_section_states_message_boundary_and_value_carriage`, asserting that
+「## 停止時の報告」's batch exception now states (a) WHICH message carries
+the report -- a message before the turn's final one -- and (b) that the
+report's cause/affected paths/recovery guidance are ALSO carried in full
+inside the structured result's own values (`detail` /
+`resume_conditions`), as an addition rather than a substitute. The three
+existing bullets stay unchanged (already guarded, unaffected).
+
+Matcher -> negative-proof inventory (task0007 addition):
+
+- `_states_stop_report_message_boundary_and_value_carriage` (AC-2
+  message-boundary/value-carriage matcher): negative proof is
+  TestStopReportMessageBoundaryMatcherCanFail.test_matcher_rejects_pre_task0007_wording
+  (the pre-task0007 section text, verbatim), non-vacuity guard is
+  TestStopReportMessageBoundaryMatcherCanFail.test_forged_old_section_is_well_formed_and_found.
 """
 
 import ast
@@ -322,6 +343,24 @@ def _states_step_c_sources_audit_items_from_persisted_map(section):
         and "ソースマップ" in section
         and "implement-phase.md" in section
         and "DECLINE" in section
+    )
+
+
+def _states_stop_report_message_boundary_and_value_carriage(section):
+    """AC-2 matcher (batch-structured-result-output/task0007; review round
+    1 finding d48f305d463a7feb; IMPLEMENTATION.md SC10): true iff `section`
+    states (a) WHICH message carries the batch stop/abort report -- a
+    message before the turn's final one, per the general SC10 rule -- and
+    (b) that the report's content is ALSO carried in full inside the
+    structured result's own values (cause/affected paths in `detail`,
+    recovery guidance in `resume_conditions`), as an ADDITION rather than a
+    substitute."""
+    stripped = _strip_ws(section)
+    return (
+        _strip_ws("より前のメッセージで出力する") in stripped
+        and "`detail`" in section
+        and "`resume_conditions`" in section
+        and _strip_ws("追加であり、置き換えではない") in stripped
     )
 
 
@@ -616,6 +655,19 @@ class TestStopAbortExceptionStatedOnce(unittest.TestCase):
     def test_exception_stated_exactly_once(self):
         self.assertEqual(self.section.count(BATCH_MODE_REFERENCE), 1)
 
+    def test_section_states_message_boundary_and_value_carriage(self):
+        # AC-2 (batch-structured-result-output/task0007, SC10): which
+        # message carries the report, and that the report's content is
+        # ALSO carried in full inside the result's own values.
+        self.assertTrue(
+            _states_stop_report_message_boundary_and_value_carriage(
+                self.section
+            ),
+            "expected the section to state which message carries the "
+            "stop/abort report and that its content is also carried in "
+            "full inside detail / resume_conditions",
+        )
+
     def test_three_existing_bullets_unchanged(self):
         self.assertIn(
             "- スタック: `{step} が {status} のままだよ。フェーズ出力を確認してね`",
@@ -710,6 +762,55 @@ class TestWholeFileForbiddenLiteralAbsence(unittest.TestCase):
 
     def test_terminal_prefix_literal_absent(self):
         self.assertNotIn(TERMINAL_PREFIX_LITERAL, self.text)
+
+
+# Forged sample for AC-2 (batch-structured-result-output/task0007): the
+# pre-task0007 「## 停止時の報告」 section text, verbatim -- well formed (the
+# discipline reference, all three bullets, the exception wording) but
+# WITHOUT the new message-boundary / value-carriage statements.
+FORGED_PRE_TASK0007_STOP_REPORT_SECTION = (
+    "\n\nbatch: 下記 3 件に加えて、停止条件 6、フェーズ内のゲート中断、"
+    "Step A の feature 解決失敗、commit-docs.sh の 2 回目の exit 4 による"
+    "フェーズ中断、Step C 内の中断、そして implement / verify フェーズが"
+    "定める終端停止（下記「バッチ構造化結果」が列挙する停止点のすべてを"
+    "含む）は、いずれも\n"
+    f"{BATCH_MODE_REFERENCE} の出力抑制規律が定める\n"
+    "停止/中断の例外であり、対話時と同じ内容を全文報告する。\n\n"
+    "- スタック: `{step} が {status} のままだよ。フェーズ出力を確認してね`\n"
+    "- 中断: `{step} が {status} のため中断。"
+    "再開するには /em-workflow:develop を実行してね`\n"
+    "- YAML エラー: 内容と `git restore` 等のリカバリ案を報告\n"
+)
+
+
+class TestStopReportMessageBoundaryMatcherCanFail(unittest.TestCase):
+    """AC-2 (batch-structured-result-output/task0007, SC10): negative
+    proof + non-vacuity guard for
+    `_states_stop_report_message_boundary_and_value_carriage`."""
+
+    def test_matcher_rejects_pre_task0007_wording(self):
+        self.assertFalse(
+            _states_stop_report_message_boundary_and_value_carriage(
+                FORGED_PRE_TASK0007_STOP_REPORT_SECTION
+            )
+        )
+
+    def test_forged_old_section_is_well_formed_and_found(self):
+        self.assertTrue(
+            _names_batch_mode_discipline(
+                FORGED_PRE_TASK0007_STOP_REPORT_SECTION
+            )
+        )
+        self.assertIn(
+            "対話時と同じ内容を全文報告する",
+            FORGED_PRE_TASK0007_STOP_REPORT_SECTION,
+        )
+        self.assertIn(
+            "- スタック:", FORGED_PRE_TASK0007_STOP_REPORT_SECTION
+        )
+        self.assertIn(
+            "- YAML エラー:", FORGED_PRE_TASK0007_STOP_REPORT_SECTION
+        )
 
 
 class TestPointerSiteMatcherCanFail(unittest.TestCase):

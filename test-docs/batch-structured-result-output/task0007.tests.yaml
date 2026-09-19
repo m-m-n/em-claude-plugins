@@ -1,0 +1,96 @@
+task_id: task0007
+baseline_failures:
+  - test_step_c_exception_stated (test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated)
+  - test_em_workflow_reads_0_1_78 (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78)
+  - test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)
+  - test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)
+final_failures:
+  - test_em_workflow_reads_0_1_78 (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78)
+  - test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)
+  - test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_general_message_boundary_rule
+    red_confirmed: true
+    red_reason: >
+      Matcher _states_terminal_turn_message_boundary_general_rule returned
+      False when run against the pre-edit SKILL.md text (extracted via
+      `git show HEAD:em-workflow/skills/develop/SKILL.md`, before the new
+      general-rule paragraph was written into the バッチ構造化結果 section);
+      it returns True against the post-edit file. Confirmed by direct
+      script comparison, not only by the unittest run, since the matcher
+      function itself was newly authored in this task.
+  AC-2:
+    tests:
+      - test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce.test_section_states_message_boundary_and_value_carriage
+    red_confirmed: true
+    red_reason: >
+      Matcher _states_stop_report_message_boundary_and_value_carriage
+      returned False against the pre-edit 停止時の報告 section text (same
+      git-show comparison method as AC-1) and True against the post-edit
+      section once the message-boundary / detail / resume_conditions
+      sentences were added.
+  AC-3:
+    tests:
+      - test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_general_message_boundary_rule_stated_alongside_cap_specific_pins
+      - test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_one_result_per_run_emitted_right_after_step_c_report
+      - test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_detail_names_step_c_completion
+    red_confirmed: true
+    red_reason: >
+      The new test_general_message_boundary_rule_stated_alongside_cap_specific_pins
+      asserted phrases absent from the pre-edit バッチ構造化結果 section text
+      (same underlying phrases as AC-1) and fails there; it passes against
+      the post-edit file. The other two listed tests are pre-existing
+      cap-specific pins (regression guards over retained wording, per Test
+      Notes) that were already green before this task and remain green
+      afterward -- listed here only because AC-3 requires both to still
+      pass alongside the new assertion, not because they were red.
+  AC-4:
+    tests:
+      - test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+    red_confirmed: true
+    red_reason: >
+      "AssertionError: 'result following it' not found in ...normalized" --
+      observed directly in the mandatory pre-implementation baseline run
+      (4a): this was one of 7 failures at HEAD. `references/batch-mode.md`'s
+      real text states "a message preceding the final one" / "the final
+      assistant message is the result alone" instead of the literal the
+      test used to pin. The assertion is retargeted to the real wording and
+      now passes; the literal `result following it` no longer occurs
+      anywhere in the module.
+  AC-5:
+    tests:
+      - test_batch_stop_contract_skill_wiring.TestGeneralRuleMatcherCanFail.test_matcher_rejects_cap_reached_paragraph_alone
+      - test_batch_stop_contract_skill_wiring.TestGeneralRuleMatcherCanFail.test_forged_cap_only_section_is_well_formed_and_found
+    red_confirmed: true
+    red_reason: >
+      The matcher and its forged cap-reached-only sample are new in this
+      task, so there is no pre-existing red/green history for the test
+      methods themselves; red was confirmed at the matcher-logic level
+      instead: the first implementation of
+      _states_terminal_turn_message_boundary_general_rule used bare
+      substring checks and returned False even against the post-edit real
+      SKILL.md text, because one of the three anchor phrases straddles a
+      hard-wrapped line break with no space at the break point. Rewriting
+      the matcher to compare against _strip_ws(section) (matching this
+      module's existing convention for wrapped Japanese prose) fixed it;
+      the negative-proof test (forged cap-reached-only sample) and the
+      non-vacuity guard both pass as designed once the matcher was correct.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Verified as a whole-suite outcome, not a single test with its own
+      red/green transition: `python3 -m unittest discover -s tests` was run
+      before any edit (4a baseline: 7 failures, including AC-4's RED
+      assertion) and again after implementation (final: 6 failures, the
+      same 6 pre-existing ones from the 95c23ed base, none of them
+      newly-caused, and no whole-file SC5 absence guard over SKILL.md
+      turned red).
