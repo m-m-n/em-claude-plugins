@@ -1,0 +1,155 @@
+task_id: task0003
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - tests.test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - tests.test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_heading_is_present
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_names_the_contract_document
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_instructs_reading_the_contract_doc_before_emitting
+      - tests.test_batch_stop_contract_skill_wiring.TestSubsectionRestatesNoContractLiteral.test_subsection_restates_no_contract_literal
+      - tests.test_batch_stop_contract_skill_wiring.TestSubsectionRestatesNoContractLiteral.test_prefix_literal_absent_from_whole_skill_md
+    red_confirmed: true
+    red_reason: >-
+      Verified by overlaying this task's updated test files onto the
+      pre-implementation SKILL.md (git commit f856596, the worktree's
+      branch point) in a disposable worktree: every class that slices the
+      document via NEW_SUBSECTION_HEADING = "## バッチ構造化結果"
+      (TestBatchTerminalLineSubsectionWiring, TestSubsectionRestatesNoContractLiteral,
+      and others) raised ValueError in setUpClass ("substring not found"),
+      because the pre-implementation heading was still "## バッチ終端行".
+  AC-2:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_result_is_whole_final_message
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_subsection_states_wait_turn_emits_no_result
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_no_line_rule_is_generalized_over_non_terminal_turn_ends
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_result_is_whole_final_message_rule_present
+      - tests.test_batch_quiet_output_skill_wiring.TestTerminalLineSectionNonRegression.test_generalized_no_line_rule_present
+      - tests.test_batch_quiet_output_skill_wiring.TestOnceBoundaryBatchWiring.test_batch_once_boundary_states_terminal_line_only
+    red_confirmed: true
+    red_reason: >-
+      Same overlay verification as AC-1. The first three tests errored via
+      the same setUpClass ValueError (heading rename). The quiet-output
+      module's TestTerminalLineSectionNonRegression class errored the same
+      way. TestOnceBoundaryBatchWiring.test_batch_once_boundary_states_terminal_line_only
+      FAILED explicitly (not just errored): `_states_batch_once_boundary_terminal_line_only`
+      requires the literal "構造化結果" in the section, but the
+      pre-implementation text said "終端行" there, so the assertion failed
+      for a content reason independent of the heading-lookup errors above.
+  AC-3:
+    tests:
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_existing_section_content_is_retained
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_terminal_state_is_stopped_not_completed
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_executed_step_is_verify
+      - tests.test_verify_cap_run_continuation.TestTerminalLineCapReachedState.test_one_result_per_run_emitted_right_after_step_c_report
+    red_confirmed: true
+    red_reason: >-
+      Same overlay verification: TestTerminalLineCapReachedState's
+      setUpClass slices `_section(text, TERMINAL_LINE_HEADING, FILE_END_MARKER)`
+      with TERMINAL_LINE_HEADING = "## バッチ構造化結果", which raised
+      ValueError against the pre-implementation heading "## バッチ終端行",
+      erroring every test in the class. The specific wording pins this task
+      changed (「通常完了ではなく停止として構造化結果を出す」,
+      「構造化結果は 1 走行につき 1 件出力し...」) also differ textually from
+      the pre-implementation 終端行 wording, confirmed by direct string
+      comparison against the pre-implementation file.
+  AC-4:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestBatchTerminalLineSubsectionWiring.test_step_c_report_item_points_at_structured_result
+    red_confirmed: true
+    red_reason: >-
+      Same overlay verification (class errors via the AC-1 setUpClass
+      ValueError). Independently: the pre-implementation Step C site read
+      "batch はこの報告のあとに終端行を追記する" while this test asserts
+      "これらの監査項目は、この報告に続けて出す構造化結果の値の中に全文で運ぶ"
+      -- confirmed absent from the pre-implementation text by direct
+      substring comparison.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestImplementPhaseCitationUnchanged.test_precedence_sentence_present_unchanged
+      - tests.test_batch_stop_contract_skill_wiring.TestImplementPhaseCitationUnchanged.test_restates_no_sc5_literal_over_the_whole_file
+      - tests.test_batch_stop_contract_skill_wiring.TestImplementPhaseCitationUnchanged.test_ordinary_status_words_still_present
+    red_confirmed: false
+    red_reason: >-
+      No wording change was needed in implement-phase.md. Its one citation
+      of the SSOT ("...since `references/batch-terminal-line.md` already
+      gives `implement-second-failure` precedence over `stop-condition-3`.")
+      never named a "line" or any SC5 literal -- it cites the SSOT only for
+      the stop-precedence RULE, which is unaffected by the terminal-line ->
+      structured-result format change. Per the task plan's own Design
+      section ("only wording that names a 'line' is restated"), there was
+      nothing to restate here, so implement-phase.md is byte-identical
+      before and after this task. This test class is a pure regression
+      guard confirming that pre-existing, already-compliant state, not a
+      red-to-green transition.
+  AC-6:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestSubsectionRestatesNoContractLiteral.test_subsection_restates_no_contract_literal
+      - tests.test_batch_stop_contract_skill_wiring.TestSubsectionRestatesNoContractLiteral.test_prefix_literal_absent_from_whole_skill_md
+      - tests.test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_skill_md
+      - tests.test_batch_quiet_output_skill_wiring.TestWholeFileForbiddenLiteralAbsence.test_no_violation_over_whole_file
+      - tests.test_develop_once_option.TestPlacementInvariantsD3.test_no_sc5_literal_anywhere_in_skill_md
+      - tests.test_batch_stop_contract_skill_wiring.TestImplementPhaseCitationUnchanged.test_restates_no_sc5_literal_over_the_whole_file
+    red_confirmed: true
+    red_reason: >-
+      The headline test (TestSubsectionRestatesNoContractLiteral, in the
+      same overlay run as AC-1) errored via the same setUpClass ValueError
+      -- the section this AC scopes the absence check to did not exist
+      under its new name in the pre-implementation file. The whole-file
+      0-violation checks in the other four listed tests were already
+      vacuously true before this task (SKILL.md never restated the OLD
+      4-field/11-code literal set, and the NEW SC5 dimensions this task
+      adds to the check -- the 8-field group, the 12th reason code,
+      "reason=none" shape -- are new CHECK categories with nothing to
+      detect in either the old or the new text, since this task never
+      writes them). Verified directly: applying a reconstruction of the
+      pre-task0003 matcher (11 codes, 4-field group, no reason=none/
+      context_budget_reached checks) to this task's own new forged samples
+      for "reason=none" and "context_budget_reached" returns no violation
+      (confirming those two specific detection RULES are new, in
+      TestReasonNoneShapeMatcherCanFail / TestOwnReasonCodeTupleIsTwelve
+      under AC-7 below), while the real-file whole-file checks remain a
+      non-vacuous regression guard rather than a red-to-green transition.
+  AC-7:
+    tests:
+      - tests.test_batch_stop_contract_skill_wiring.TestReasonNoneShapeMatcherCanFail.test_matcher_rejects_forged_reason_none_shape
+      - tests.test_batch_stop_contract_skill_wiring.TestReasonNoneShapeMatcherCanFail.test_forged_excerpt_is_well_formed_and_found
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsTwelve.test_reason_codes_tuple_has_twelve_members
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsTwelve.test_reason_codes_tuple_includes_context_budget_reached
+      - tests.test_develop_once_option.TestSc5LiteralMatcherCanFail.test_matcher_rejects_each_forged_dimension
+      - tests.test_develop_once_option.TestSc5LiteralMatcherCanFail.test_matcher_passes_ordinary_prose_including_the_word_none
+      - tests.test_batch_stop_contract_skill_wiring.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - tests.test_batch_quiet_output_skill_wiring.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - tests.test_verify_cap_run_continuation.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - tests.test_failed_kind_stop_condition.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - tests.test_develop_once_option.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+    red_confirmed: true
+    red_reason: >-
+      Verified by reconstructing the pre-task0003 `_find_contract_literal_violations`
+      (11 reason codes, 4-field group, no `reason={value}` shape rule) in a
+      standalone script and running it against this task's own new forged
+      samples: the "reason=none" sample and the "context_budget_reached"
+      sample both returned an EMPTY violations list under the old matcher
+      (`assertTrue(violations, ...)` would have failed), confirming these
+      two detection rules are genuinely new. `TestOwnReasonCodeTupleIsTwelve`
+      and the stdlib-only checks are scaffolding/process assertions with no
+      SKILL.md dependency (the tuple-length and import-set checks are
+      internal to the test module itself); they were written together with
+      the code they check and pass immediately once written, matching this
+      module's own established convention for that category (Test Notes).
+      "the five listed test modules pass" is verified directly by running
+      `python3 -m unittest discover -s tests`: 4608 tests ran, with exactly
+      the 6 pre-existing baseline failures (none introduced by this task)
+      and 0 errors.

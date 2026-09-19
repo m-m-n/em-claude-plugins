@@ -1,0 +1,135 @@
+task_id: task0005
+baseline_failures:
+  - test_em_workflow_reads_0_1_78 (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78)
+  - test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)
+  - test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)
+final_failures:
+  - test_em_workflow_reads_0_1_78 (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78)
+  - test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)
+  - test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_structured_result_derivation.TestCanonicalDerivationSites.test_each_site_yields_its_table_values
+      - tests.test_structured_result_derivation.TestCaseListCoversAllTenSites.test_exactly_ten_cases
+      - tests.test_structured_result_derivation.TestCaseListCoversAllTenSites.test_case_names_cover_every_canonical_site
+      - tests.test_structured_result_derivation.TestCaseListCoversAllTenSites.test_no_duplicate_site_names
+      - tests.test_structured_result_derivation.TestCaseListCoversAllTenSites.test_ten_distinct_canonical_names_declared
+    red_confirmed: true
+    red_reason: >
+      test_each_site_yields_its_table_values failed under two stubbed
+      versions of derive(): an all-empty stub
+      (AssertionError on 6 of 10 subTests, e.g. site='Integration branch
+      created by this run' expected feature/branch non-empty but got "")
+      and an all-"WRONG_*" stub (AssertionError on all 10 subTests, e.g.
+      site='Step 0 git-setup abort, no name supplied' expected empty but
+      got "WRONG_FEATURE"). The four TestCaseListCoversAllTenSites tests
+      check the case-list fixture itself (not derive()'s behavior) and
+      were true immediately upon being written -- no red was possible or
+      needed for them.
+  AC-2:
+    tests:
+      - tests.test_structured_result_derivation.TestNeitherValueIsGuessed.test_confirmed_slug_without_branch_confirmation_yields_empty_branch
+      - tests.test_structured_result_derivation.TestNeitherValueIsGuessed.test_branch_signal_without_confirmed_slug_yields_empty_feature
+      - tests.test_structured_result_derivation.TestNeitherValueIsGuessed.test_derive_accepts_no_task_description_or_branch_name_parameter
+    red_confirmed: true
+    red_reason: >
+      test_confirmed_slug_without_branch_confirmation_yields_empty_branch
+      failed under the all-empty stub (AssertionError: '' !=
+      'confirmed-feature', the stub also zeroed out `feature`).
+      test_branch_signal_without_confirmed_slug_yields_empty_feature failed
+      under the all-"WRONG_*" stub (AssertionError: 'WRONG_FEATURE' != '').
+      test_derive_accepts_no_task_description_or_branch_name_parameter is a
+      static signature check on derive() itself and was true immediately
+      (no red possible) -- it documents rather than exercises the
+      guessing-prevention property.
+  AC-3:
+    tests:
+      - tests.test_structured_result_derivation.TestCanonicalDerivationSites.test_each_site_yields_its_table_values
+      - tests.test_structured_result_derivation.TestStep0SuppliedNameRule.test_matching_supplied_name_is_used
+      - tests.test_structured_result_derivation.TestStep0SuppliedNameRule.test_non_matching_supplied_name_yields_empty
+      - tests.test_structured_result_derivation.TestStep0SuppliedNameRule.test_no_supplied_name_yields_empty
+      - tests.test_structured_result_derivation.TestStep0SuppliedNameRule.test_supplied_name_is_never_used_outside_a_step0_abort
+    red_confirmed: true
+    red_reason: >
+      All four TestStep0SuppliedNameRule tests failed under at least one of
+      the two derive() stubs (e.g. test_matching_supplied_name_is_used:
+      AssertionError '' != 'wheel-report-notch-clamp' under the all-empty
+      stub; test_supplied_name_is_never_used_outside_a_step0_abort:
+      AssertionError 'WRONG_FEATURE' != '' under the all-"WRONG_*" stub).
+  AC-4:
+    tests:
+      - tests.test_structured_result_derivation.TestPrUrlSurvivesAStop.test_pr_url_survives_cleanup_failure_after_pr_creation
+      - tests.test_structured_result_derivation.TestPrUrlSurvivesAStop.test_pr_url_survives_a_verify_cap_reached_stop_after_pr_creation
+      - tests.test_structured_result_derivation.TestPrUrlSurvivesAStop.test_pr_url_empty_for_every_site_where_no_pr_was_created
+    red_confirmed: true
+    red_reason: >
+      test_pr_url_survives_cleanup_failure_after_pr_creation and
+      test_pr_url_survives_a_verify_cap_reached_stop_after_pr_creation both
+      failed under both stubs (empty stub: '' != PR_URL_EXAMPLE; "WRONG_*"
+      stub: 'WRONG_PR' != PR_URL_EXAMPLE).
+      test_pr_url_empty_for_every_site_where_no_pr_was_created failed under
+      the "WRONG_*" stub (AssertionError 'WRONG_PR' != '' across 8
+      subTests).
+  AC-5:
+    tests:
+      - tests.test_structured_result_derivation.TestResumeConditionsPresenceRule.test_present_when_stopped
+      - tests.test_structured_result_derivation.TestResumeConditionsPresenceRule.test_absent_when_completed
+      - tests.test_structured_result_derivation.TestResumeConditionsPresenceRule.test_absent_when_phase_done
+      - tests.test_structured_result_derivation.TestResumeConditionsPresenceRule.test_whitespace_only_value_is_rejected_as_not_present
+      - tests.test_structured_result_derivation.TestResumeConditionsPresenceRule.test_non_whitespace_value_is_accepted_as_present
+    red_confirmed: true
+    red_reason: >
+      test_whitespace_only_value_is_rejected_as_not_present failed under
+      the all-empty stub (_is_present always returned True: AssertionError
+      True is not false). test_present_when_stopped, test_absent_when_completed,
+      test_absent_when_phase_done and test_non_whitespace_value_is_accepted_as_present
+      each failed under the "WRONG_*" stub (derive() always returned
+      "WRONG_RESUME" and _is_present always returned False).
+  AC-6:
+    tests:
+      - tests.test_structured_result_reporting_containment.TestItemListSize.test_seven_detail_items
+      - tests.test_structured_result_reporting_containment.TestContainmentCheckerAcceptsFullContent.test_accepts_full_content_when_stopped
+      - tests.test_structured_result_reporting_containment.TestContainmentCheckerAcceptsFullContent.test_accepts_detail_only_content_when_not_stopped
+      - tests.test_structured_result_reporting_containment.TestContainmentCheckerRejectsCountSubstitution.test_rejects_count_substituted_item
+      - tests.test_structured_result_reporting_containment.TestContainmentCheckerRejectsPointerOnlySubstitution.test_rejects_pointer_only_item
+      - tests.test_structured_result_reporting_containment.TestContainmentCheckerRejectsMisplacedStopRecovery.test_rejects_guidance_misplaced_in_detail
+    red_confirmed: true
+    red_reason: >
+      containment_checker was stubbed twice: an always-True stub, under
+      which test_rejects_count_substituted_item,
+      test_rejects_pointer_only_item and
+      test_rejects_guidance_misplaced_in_detail all failed (AssertionError
+      True is not false); and an always-False stub, under which
+      test_accepts_full_content_when_stopped and
+      test_accepts_detail_only_content_when_not_stopped both failed
+      (AssertionError False is not true). test_seven_detail_items checks
+      the fixture list length and was true immediately (no red possible).
+  AC-7:
+    tests:
+      - tests.test_structured_result_reporting_containment.TestNoAggregatedReportArtifactInTaskFiles.test_scan_is_non_vacuous
+      - tests.test_structured_result_reporting_containment.TestNoAggregatedReportArtifactInTaskFiles.test_no_unexpected_non_test_file_in_the_declared_change_set
+      - tests.test_structured_result_reporting_containment.TestTaskFilesScannerNegativeProof.test_scanner_extracts_a_synthetic_report_artifact_entry
+      - tests.test_structured_result_derivation.TestModuleIsStdlibOnly.test_module_filename
+      - tests.test_structured_result_derivation.TestModuleIsStdlibOnly.test_only_imports_standard_library_modules
+      - tests.test_structured_result_reporting_containment.TestModuleIsStdlibOnly.test_module_filename
+      - tests.test_structured_result_reporting_containment.TestModuleIsStdlibOnly.test_only_imports_standard_library_modules
+    red_confirmed: true
+    red_reason: >
+      test_scan_is_non_vacuous and
+      test_scanner_extracts_a_synthetic_report_artifact_entry failed under
+      a stubbed _task_files_entries() that always returned [] (e.g.
+      AssertionError: [] is not true; and a list-equality failure showing
+      the expected two-entry list against the actual empty list). The four
+      TestModuleIsStdlibOnly tests (one pair per module) are static
+      self-checks on each module's own import statements -- true
+      immediately since neither module ever imported anything beyond the
+      standard library, so no red was possible or needed for them; they
+      are lint-style checks per tdd-testing's "when TDD fits poorly"
+      guidance.
