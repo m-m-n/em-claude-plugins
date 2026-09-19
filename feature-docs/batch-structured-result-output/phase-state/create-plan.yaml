@@ -1,0 +1,49 @@
+schema_version: 1
+feature: batch-structured-result-output
+phase: create-plan
+status: applying_patch
+generation: 1
+base_revision: 4fdb67b9174b1e3321f6677bd1be46a79dbd76f3
+last_input_digest: sha256:8fd15c83a5b1331aed3cbf2e3a03fed9d36839a19eb0346c83d722a11fb821b8
+active_request_id: create-plan-bcf61f69ba1f
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-plan-bcf61f69ba1f
+    status: completed
+    input_digest: sha256:8fd15c83a5b1331aed3cbf2e3a03fed9d36839a19eb0346c83d722a11fb821b8
+    output_digest: sha256:841606d4275cc3bff65758f57596b59bd3011924b94a4da99508211cf7b47958
+artifacts:
+  - path: feature-docs/batch-structured-result-output/IMPLEMENTATION.md
+    sha256: sha256:2156e789d8ec3b8bfcb22c261513c575c928a15a4052bb12c5a30d23cccf5580
+    produced_by: create-plan-bcf61f69ba1f
+  - path: feature-docs/batch-structured-result-output/VERIFICATION.md
+    sha256: sha256:9b032efbbcc8af9d2f07e3e72136328d9b4602beb24e38d84f4f0b56fd284bbd
+    produced_by: create-plan-bcf61f69ba1f
+  - path: feature-docs/batch-structured-result-output/tasks/task0001.md
+    sha256: sha256:2ab7026cd798c81b8f2f101d51088b3dc3fafb63852a2af3f7fbcbaac6b5183c
+    produced_by: create-plan-bcf61f69ba1f
+  - path: feature-docs/batch-structured-result-output/tasks/task0002.md
+    sha256: sha256:65950366298d16d8ac597cfb17774b18cdb041ea749c1d3ef8ca08bdd15a6445
+    produced_by: create-plan-bcf61f69ba1f
+  - path: feature-docs/batch-structured-result-output/tasks/task0003.md
+    sha256: sha256:3a8d3c6dfeb49d7873b9d3f2af3c87f36df63308dc2ed73f82be0fc4c4bd2d4c
+    produced_by: create-plan-bcf61f69ba1f
+  - path: feature-docs/batch-structured-result-output/tasks/task0004.md
+    sha256: sha256:6d845a8243fe5dd6a6f802111d120296073a883809bb6e0cd14721e4465d8280
+    produced_by: create-plan-bcf61f69ba1f
+  - path: feature-docs/batch-structured-result-output/tasks/task0005.md
+    sha256: sha256:d05541c41e450ef33870a1192cd416afe98c69a9ddd4c0e981cb378a8a7aa0aa
+    produced_by: create-plan-bcf61f69ba1f
+  - path: feature-docs/batch-structured-result-output/tasks/task0006.md
+    sha256: sha256:80b7493ad8e6777dd69570c6dde876af9788575c273ec3ec8dc8df6340bd3578
+    produced_by: create-plan-bcf61f69ba1f
+patches:
+  - patch_id: batch-structured-result-output-p0001
+    status: validated
+    base_input_digest: sha256:8fd15c83a5b1331aed3cbf2e3a03fed9d36839a19eb0346c83d722a11fb821b8
+    base_workflow_blob: d85b223cdd4ee8dca036e9a532fffc5835f46669
+progress_fingerprint: sha256:04ae91df85e9a4125b09461127ea7ebd6b010ef497041023f01d2c1c8202f349
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

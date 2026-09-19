@@ -1,0 +1,68 @@
+schema_version: 1
+feature: batch-structured-result-output
+records:
+  - question_id: create-plan.codex-consultation.d7-size-cap-vs-completeness
+    packet_id: null
+    answered_at: "2026-09-20T02:26:38+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "keep the plan's D7 as written; record the collision as a spec-level follow-up"
+    normalized_answer: "keep the plan's D7 as written; record the collision as a spec-level follow-up"
+    resolution_note: >-
+      gate: planner open item — FR14's 64 KiB cap vs FR17's full containment of
+      audit items; codex_consulted: true (codex CLI, read-only sandbox).
+      Options put to Codex: (a) leave the collision undefined, (b) deterministic
+      degradation dropping the lowest-value audit detail and saying so in the
+      human-facing description value, (c) spill overflow audit content to a
+      committed file and cite its path. Codex judged (c) comparatively better
+      because it keeps the result parseable and under the cap without discarding
+      audit content, but flagged itself that (c) contradicts FR17 as written
+      ("presence by reference does NOT satisfy") and the no-new-aggregated-
+      artifact constraint, so it cannot be adopted without amending FR17.
+      Chosen: keep D7 as planned (priority fixed as "never truncate", collision
+      behaviour left undefined) because amending FR17 is a specification change
+      outside create-plan's authority, and the collision is theoretical rather
+      than observed. Recorded as a follow-up for a later spec revision.
+      Not chosen: (b), which loses audit content; (c) as an unannounced
+      implementation-level change to a frozen requirement.
+  - question_id: create-plan.codex-consultation.d6-test-dependency-policy
+    packet_id: null
+    answered_at: "2026-09-20T02:26:38+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "keep skip-as-failure; no hand-written structural fallback"
+    normalized_answer: "keep skip-as-failure; no hand-written structural fallback"
+    resolution_note: >-
+      gate: planner open item — NFR3 (validate the emitted result with a real
+      YAML parser) vs NFR4 (tests use the standard library only);
+      codex_consulted: true. Options: keep the conformance module as the single
+      PyYAML exception and treat a skip on a missing parser as a verification
+      failure, or fall back to a hand-written structural assertion. Codex judged
+      skip-as-failure comparatively better because a hand-rolled check cannot
+      give NFR3's real-parser guarantee and a fallback would manufacture a false
+      pass. Verified in this environment: PyYAML 6.0.3 is importable, so NFR3 is
+      demonstrable and the planner's open concern is resolved by fact. Chosen:
+      keep the plan's D6 unchanged. Not chosen: the structural-assertion
+      fallback.
+  - question_id: create-plan.codex-consultation.d5-parallel-task-test-isolation
+    packet_id: null
+    answered_at: "2026-09-20T02:26:38+09:00"
+    source: batch-codex-consultation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "keep D5 — the file-owning task alone asserts the real-file binding"
+    normalized_answer: "keep D5 — the file-owning task alone asserts the real-file binding"
+    resolution_note: >-
+      gate: planner open item — the conformance tests (task0004) assert a shape
+      defined by a document owned by task0001, and each task builds in its own
+      worktree off the same parent; codex_consulted: true. Options: keep the
+      canonical expected values in IMPLEMENTATION.md with only the owning task
+      asserting the real file's binding, or have every dependent task assert the
+      real file. Codex judged the plan's design comparatively better: duplicating
+      the binding check across worktrees would add contract duplication and
+      staleness risk without catching independent bugs, and the single assertion
+      is backed by the negative-proof / non-vacuity convention plus the
+      post-merge whole-suite run. Chosen: keep D5 unchanged. Not chosen:
+      per-task real-file assertions.
