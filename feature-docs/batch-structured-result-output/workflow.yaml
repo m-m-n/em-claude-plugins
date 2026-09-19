@@ -75,7 +75,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: d6bc7a1d389f1619f16c7ea553020e2fa27900ed
 tasks:
   task0001:
     title: Rewrite the structured-result SSOT and its structural guards
