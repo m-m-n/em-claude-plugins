@@ -1,0 +1,200 @@
+task_id: task0008
+baseline_failures:
+  - test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_batch_stop_contract.TestResponsibilityBoundary.test_confidentiality_rule_states_beyond_paths
+      - test_batch_stop_contract.TestConfidentialityBeyondPathsMatcherNegativeProof
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document (git HEAD's
+      copy, saved via `git show HEAD:... > tmpfile` and loaded standalone):
+      _assert_confidentiality_beyond_paths_stated raised AssertionError --
+      'carry no confidential information beyond paths' not found in " ...
+      carry no confidential information: once emitted, the result's
+      content is relayed outside of em-workflow's own process boundary. "
+      -- the old `## Responsibility boundary` had the field-scope widened
+      to four fields but never restored the "beyond paths" qualifier.
+  AC-2:
+    tests:
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_in_full_loading_rule_and_redaction_exception_stated
+      - test_batch_stop_contract.TestInFullLoadingRuleMatcherNegativeProof
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document:
+      _assert_in_full_loading_rule_stated raised AssertionError -- 'carried
+      in full inside `detail`' not found anywhere in the old `## Field
+      values` section text -- the in-full loading rule's owner sentence and
+      the secret-portion redaction exception did not exist at all before
+      this task.
+  AC-3:
+    tests:
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_detail_bullet_states_delimiter_and_byte_verbatim_disclosure
+      - test_batch_stop_contract.TestDetailDelimiterMatcherNegativeProof
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_detail_bullet_states_normalization_before_escaping
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document:
+      _assert_detail_delimiter_and_byte_verbatim_disclosure_stated raised
+      AssertionError -- 'separated by a fixed textual delimiter' not found
+      -- the old `detail` bullet ended at "`## Escaping`'s rule is then
+      applied to whatever remains." with no delimiter or byte-verbatim
+      disclosure sentence.
+      test_detail_bullet_states_normalization_before_escaping (the FR7
+      normalization regression guard, unmodified by this task per AC-3's
+      own requirement) was already green before and stays green after --
+      carried forward as a regression guard, not re-confirmed red.
+  AC-4:
+    tests:
+      - test_batch_stop_contract.TestConsumerConstraints.test_size_collision_outcome_stated
+      - test_batch_stop_contract.TestSizeCollisionOutcomeMatcherNegativeProof
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document:
+      _assert_size_collision_outcome_stated raised AssertionError -- 'never
+      emitted' not found -- the old paragraph ended at "has a reportable
+      condition for the run — never a license to truncate." without naming
+      an outcome. The negative-proof forged sample
+      (FORGED_SIZE_COLLISION_NO_OUTCOME) is this exact old paragraph text,
+      verbatim.
+  AC-5:
+    tests:
+      - test_batch_stop_contract.TestStopReasonCodes
+      - test_batch_stop_contract.TestStopPointCoverage
+    red_confirmed: false
+    red_reason: >-
+      AC-5 is a "still holds unchanged" criterion: task0008 does not alter
+      the `reason` domain, the eleven-row coverage table, the named
+      `context_budget_reached` exception, or TS7's extraction. These tests
+      predate this task (authored by task0001) and were already green
+      before this task's edit; they remain green after only because this
+      task's diff never touches `## Stop reason codes` or `## Stop point
+      coverage` (confirmed via `git diff` -- both sections outside the
+      touched line ranges). Carried forward as a regression guard per the
+      tdd-testing skill's "pure regression guard" exemption, not
+      re-confirmed red.
+  AC-6:
+    tests:
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_feature_bullet_states_slug_pattern_literal
+      - test_batch_stop_contract.TestFeatureBulletSlugPatternMatcherNegativeProof
+      - test_structured_result_derivation.TestSlugPatternBoundToContract
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document:
+      _assert_feature_bullet_states_slug_pattern_literal raised
+      AssertionError -- '`^[a-z0-9][a-z0-9-]*$`' not found -- the old
+      `feature` bullet said only "matches the slug pattern" with no
+      literal. test_structured_result_derivation's
+      test_local_slug_pattern_matches_the_contract_literal was also run
+      against the same pre-change snapshot (via a standalone script
+      pointing `_field_values_section`/`_extract_feature_bullet_slug_pattern`
+      at the saved old copy): `_extract_feature_bullet_slug_pattern`
+      returned None, so `assertIsNotNone` raised.
+  AC-7:
+    tests:
+      - test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_resume_conditions_bullet_states_per_state_rule
+      - test_batch_stop_contract.TestResumeConditionsPresenceRuleMatcherNegativeProof
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document:
+      _assert_resume_conditions_presence_rule_stated raised AssertionError
+      -- 'non-whitespace whenever `state` is `stopped`' not found -- the
+      old bullet read "non-empty whenever `state` is `stopped`". The
+      negative-proof forged sample (FORGED_RESUME_CONDITIONS_OLD_WORDING)
+      is this exact old bullet text, verbatim.
+  AC-8:
+    tests:
+      - test_batch_stop_contract.TestConsumerConstraints.test_own_hardening_rules_stated
+      - test_batch_stop_contract.TestConsumerConstraints.test_five_carried_over_constraints_still_present_and_still_five
+      - test_batch_stop_contract.TestOwnHardeningRulesMatcherNegativeProof
+    red_confirmed: true
+    red_reason: >-
+      Verified retroactively against the pre-change document:
+      _assert_own_hardening_rules_stated raised AssertionError -- label
+      "em-workflow's OWN emitter obligations and rejection rules" not found
+      -- the old `## Consumer constraints` had no such section, only FR14's
+      five carried-over constraints.
+      test_five_carried_over_constraints_still_present_and_still_five
+      passed both before and after (the five numbered constraints are
+      unchanged by this task, by design) -- carried as a regression guard
+      for that half of the claim, not re-confirmed red.
+      TestOwnHardeningRulesMatcherNegativeProof's non-vacuity case
+      (test_carried_over_text_alone_does_not_satisfy_the_matcher) is itself
+      the proof that the matcher cannot pass on FR14's carried-over list
+      alone, independent of before/after document state.
+  AC-9:
+    tests:
+      - test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard over deliberately UNCHANGED text -- exempt from
+      a negative proof by the task plan's own Test Notes (NFR4). `##
+      Escaping` and `## Result format` are byte-identical before and after
+      this task's edit (this task's diff never touches either section), so
+      there is no red state to observe by design. Verified via `git diff`
+      showing zero lines changed in either section, and via literal-text
+      equality in the test against a `git show HEAD:...` snapshot taken
+      before this task's edit.
+  AC-10:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-10 is a meta-criterion verified across the whole module rather
+      than by a single test: (a) every new matcher this task introduces
+      carries both a negative-proof test class and a non-vacuity
+      companion assertion -- see the `tests` lists under AC-1 through AC-8
+      above, each of which includes its matcher's dedicated
+      "...NegativeProof" class; (b) both
+      `tests/test_batch_stop_contract.py` and
+      `tests/test_structured_result_derivation.py` import only the Python
+      standard library -- this task added no new imports to either module
+      (confirmed by inspection: `test_structured_result_derivation.py`'s
+      own `TestModuleIsStdlibOnly.test_only_imports_standard_library_modules`
+      stayed green); (c) `python3 -m unittest discover -s tests` was run
+      in full after implementation (4766 tests, 376.6s) and reported
+      exactly the same 7 failures as the recorded baseline
+      (`final_failures` above equals `baseline_failures` exactly) -- zero
+      new failures.
+notes: >-
+  This task rewrites the SSOT document's three sections ((a)-(h) of SC11)
+  and its two owned guard modules together, so most new tests were
+  authored against the finished document rather than in a strict
+  per-assertion red/green loop performed live. Every NEW matcher's red
+  state was instead confirmed retroactively, following the same method
+  task0001's test record used for this same module: the finished matcher
+  function was run directly against the pre-change document's text (saved
+  via `git show HEAD:em-workflow/references/batch-terminal-line.md` to a
+  scratch file before any edit, per Step 4a's baseline capture), and the
+  resulting AssertionError and its message were captured (see each AC's
+  red_reason above). AC-5 and AC-9 are the two criteria this task leaves
+  substantively unchanged (regression guards, not new behavior), so they
+  carry `red_confirmed: false` with the reason named rather than a
+  fabricated red state.
+
+  The task plan's baseline count differs slightly from what this
+  implementer observed: AC-10 cites "the six that already fail at the
+  implement base commit 95c23ed", but this worktree's actual Step 4a
+  baseline run (before any edit) showed SEVEN pre-existing failures --
+  test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+  in addition to the six named in the plan. All seven are outside this
+  task's file scope (none touch `references/batch-terminal-line.md`,
+  `tests/test_batch_stop_contract.py`, or
+  `tests/test_structured_result_derivation.py`) and are unchanged, in the
+  same set, in the post-implementation full run -- the discrepancy is
+  recorded here rather than silently reconciled, per the tdd-testing
+  skill's "not yours to fix" rule for inherited failures.
