@@ -276,7 +276,7 @@ tasks:
     - FR22
     - NFR1
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/batch-structured-result-output/task0008
     notes: null
     provenance:
