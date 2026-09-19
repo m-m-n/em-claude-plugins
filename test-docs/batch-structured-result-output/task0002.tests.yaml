@@ -1,5 +1,14 @@
 task_id: task0002
+# Refreshed per the conflict-resolution protocol: task0001's merge into this
+# task's branch (parent-side adoption, commit 81927b2) brought in other
+# tasks' already-merged edits, so the suite re-run immediately after
+# adopting the parent side is the new inheritance baseline, replacing the
+# original pre-edit baseline recorded below it in this history. See `notes`.
 baseline_failures:
+  - test_batch_quiet_output_discipline.TestBatchModeSectionStructure.test_new_section_positioned_last
+  - test_batch_quiet_output_discipline.TestBatchModeSectionStructure.test_terminal_line_and_reporting_headings_unchanged
+  - test_batch_quiet_output_discipline.TestExceptions.test_step_c_exception_stated
+  - test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_non_collision_stated
   - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_reads_0_1_78
   - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
   - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
@@ -20,7 +29,7 @@ acceptance_tests:
       - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_terminal_prefix
       - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_reason_codes
       - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_no_step_sentinel
-      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_eight_key_names_as_group
+      - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_key_shaped_citations
       - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_state_value_shape
       - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_bare_phase_done_literal
       - tests.test_batch_quiet_output_discipline.TestNonTerminalTurnsAndMarkerLine.test_whole_file_absence_of_step_value_shape
@@ -32,7 +41,14 @@ acceptance_tests:
       test_structured_result_and_reporting_headings_present: watched it fail
       with `AssertionError: 'Terminal line' not found in {...}` right after
       renaming batch-mode.md's heading and before updating this assertion's
-      expected string. The eight whole-file SC5-absence tests and the two
+      expected string. test_whole_file_absence_of_key_shaped_citations:
+      watched it fail with `AssertionError: 'detail:' unexpectedly found in
+      ...` during the post-merge-conflict re-implementation pass -- the
+      shaped-citation check's bare `key:` form collided with the ordinary
+      English phrase "Full detail:" already present in batch-mode.md's
+      Non-packet gates table; fixed by requiring `key=`, a backtick-wrapped
+      `key:`/`key=`, or the literal `key: "` form instead of a bare `key:`.
+      The remaining whole-file SC5-absence tests and the two
       test_batch_stop_contract_skill_wiring tests are preventive/retained
       guards over literals that were never present in batch-mode.md before
       or after this task's edit (no observable red state for those; carried
@@ -136,8 +152,23 @@ notes: >-
   stash stack across worktrees) -- entry
   `stash@{0}: On em-workflow/batch-structured-result-output/task0002:
   task0002-baseline-check-20260920` is inert and can be dropped later by a
-  human. baseline_failures/final_failures are therefore reconstructed, not
-  the true from-the-start baseline, but they were captured on the correct
-  branch/worktree before vs. after every substantive edit and their
-  identical 6-item sets give high confidence the diff attribution is
-  correct.
+  human. That reconstructed 6-item set is preserved above as the tail of
+  `baseline_failures` (it is also exactly `final_failures`, unchanged
+  end-to-end). One merge conflict occurred on
+  `tests/test_batch_quiet_output_discipline.py` against task0001's own
+  deviation to the same file (task0001 had proactively retargeted
+  `TestContractDocumentUnchangedExceptOneSentence` to its SC2 heading
+  rewrite; this task's first pass had instead deleted that class, reasoning
+  -- incorrectly -- that it was a stale D5-violating binding assertion).
+  Resolved via the parent-side-adoption protocol: `git checkout --theirs`
+  adopted task0001's file wholesale (commit 81927b2), which correctly kept
+  `TestContractDocumentUnchangedExceptOneSentence` but also discarded this
+  task's own retargeting of the same file; the refreshed post-adoption
+  suite run (10 failures, the 4 conflict-induced ones now listed first in
+  `baseline_failures` above, plus the same 6 pre-existing ones) is recorded
+  as the new baseline per the protocol. This task's changes were then
+  re-implemented on top of the adopted content (commit e071d9a) -- not
+  diff-spliced back in -- discovering and fixing the `detail:` false
+  positive documented under AC-1. The post-re-implementation run returned to
+  exactly the same 6 pre-existing failures, a strict subset of the refreshed
+  10-item baseline. One conflict cycle total (of the 3 allowed).
