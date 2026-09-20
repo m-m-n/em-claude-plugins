@@ -51,7 +51,7 @@ PLUGIN_SPECS = {
     "em-workflow": {
         "manifest_path": REPO_ROOT / "em-workflow" / ".claude-plugin" / "plugin.json",
         "baseline": (0, 1, 76),
-        "expected": "0.1.84",
+        "expected": "0.1.85",
     },
     "em-review": {
         "manifest_path": REPO_ROOT / "em-review" / ".claude-plugin" / "plugin.json",
