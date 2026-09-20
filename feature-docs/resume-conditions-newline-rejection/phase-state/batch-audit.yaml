@@ -1,0 +1,64 @@
+schema_version: 1
+feature: resume-conditions-newline-rejection
+records:
+  - question_id: create-plan.planner-open-question.extra-test-file
+    packet_id: null
+    answered_at: "2026-09-20T18:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [accept_new_version_bump_module]
+    freeform: >-
+      Accept the planner's fifth file tests/test_resume_conditions_newline_rejection_version_bump.py,
+      which SPEC's File Structure block does not list.
+    normalized_answer: >-
+      Accept the plan as proposed; add the per-feature version-bump regression module pinning
+      BASELINE_VERSION 0.1.84.
+    resolution_note: >-
+      gate: no gate_id (planner advisory open question, raised in its completion report, not a
+      question packet); codex_consulted: true; opus_escalation: false.
+      Options offered to Codex: (A) accept the new per-feature version-bump module, (B) reject it
+      and instead raise the pinned BASELINE_VERSION of another feature's existing module
+      (test_batch_structured_result_output_version_bump.py, 0.1.82 -> 0.1.84), (C) reject it and
+      drop TS7's monotonicity half, relying on test_plugin_version_parity.py alone.
+      Codex chose A. Decisive point: SPEC's own "## Declared Change Set" states the
+      feature-specific paths are derived at create-plan from each task's files entries, so the
+      File Structure block's four entries are not a closed allow-list; the repository already
+      holds 21 sibling per-feature *_version_bump.py modules, each pinning its own baseline, and
+      both manifests currently read 0.1.84 while the highest existing baseline is 0.1.82 - so a
+      forgotten bump would turn no existing test red. Cost of the losing options: B introduces a
+      cross-feature dependency by rewriting another feature's historical baseline, and the module
+      it would edit is itself outside SPEC's four files, so it does not even achieve the
+      file-count goal; C loses the comparison against this feature's base revision entirely and
+      fails TS7.
+      Codex correction to the brief: test_plugin_version_parity.py does check monotonicity
+      (greater than 0.1.50), not equality alone as the consultation prompt had stated.
+  - question_id: create-plan.planner-open-question.extra-verification-scenarios
+    packet_id: null
+    answered_at: "2026-09-20T18:02:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: [accept_ts9_ts10]
+    freeform: >-
+      Accept TS9 and TS10 in VERIFICATION.md beyond SPEC's TS1-TS8, without amending SPEC.
+    normalized_answer: >-
+      Accept TS9/TS10; SPEC is left untouched and no create-spec round trip is taken.
+    resolution_note: >-
+      gate: no gate_id (planner advisory open question); codex_consulted: true;
+      opus_escalation: false.
+      Options offered to Codex: (D) accept TS9/TS10 in VERIFICATION.md with SPEC untouched,
+      (E) reject them and leave FR4 verified only by human reading, (F) route back to create-spec
+      to amend SPEC so FR4 gets a scenario there first.
+      Codex chose D. Decisive point: FR4 is an existing SPEC requirement and SPEC's Success
+      Criteria demand every functional requirement be implemented AND tested, while
+      "all test scenarios (TS1-TS8) pass" does not forbid additional scenarios - so D satisfies
+      both. Cost of the losing options: E loses FR4's automated regression check and its explicit
+      scenario mapping, leaving it to a human not overlooking it; F aligns the two lists but adds
+      a specification round trip and re-confirmation for a small fix that changes no requirement.
+      Codex risk note acted on: VERIFICATION.md's scenario heading was reworded from
+      "Test Scenarios from SPEC.md" to
+      "Test Scenarios (TS1-TS8 from SPEC.md; TS9-TS10 added at create-plan)" so the provenance of
+      TS9/TS10 is visible at the heading, not only in the prose beneath the table.
+      Remaining Codex risk notes, carried forward to implement/verify: the version comparison must
+      be per-component numeric and must catch a stand-still at 0.1.84, a decrease, and a mismatch
+      between the two manifests; and TS10 must be shown to fail on the old introductory sentence
+      itself, not incidentally on a missing OWN_RULES_LABEL anchor.
