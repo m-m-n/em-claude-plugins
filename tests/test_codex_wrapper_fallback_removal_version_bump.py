@@ -5,9 +5,9 @@ Covers task0004 Acceptance Criteria
 (feature-docs/codex-wrapper-fallback-removal/tasks/task0004.md):
 
 - AC-1 (FR9): the em-workflow manifest and the em-workflow marketplace entry
-  both read 0.1.77.
+  both read the same version.
 - AC-2 (FR9): the em-review manifest and the em-review marketplace entry
-  both read 0.5.10.
+  both read the same version.
 - AC-3 (FR9): for each plugin, the two values are asserted equal to each
   other and strictly greater than that plugin's pre-feature baseline at the
   patch component, with major and minor unchanged; the marketplace entry is
@@ -43,17 +43,20 @@ MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
 # Pre-feature baseline major.minor.patch per plugin (Design: both registries
-# read these values before this task's edit).
+# read these values before this task's edit). `expected` tracks the current
+# released value: the two registries must agree on it, and it must still be a
+# patch bump over the baseline. Later features that bump a plugin update it
+# here rather than leaving a rotting literal behind.
 PLUGIN_SPECS = {
     "em-workflow": {
         "manifest_path": REPO_ROOT / "em-workflow" / ".claude-plugin" / "plugin.json",
         "baseline": (0, 1, 76),
-        "expected": "0.1.78",
+        "expected": "0.1.84",
     },
     "em-review": {
         "manifest_path": REPO_ROOT / "em-review" / ".claude-plugin" / "plugin.json",
         "baseline": (0, 5, 9),
-        "expected": "0.5.10",
+        "expected": "0.5.11",
     },
 }
 
@@ -147,19 +150,21 @@ class TestPluginVersionBumps(unittest.TestCase):
 class TestSpecificVersionValues(unittest.TestCase):
     """AC-1/AC-2: the concrete values this task writes."""
 
-    def test_em_workflow_reads_0_1_78(self):
+    def test_em_workflow_manifest_and_entry_agree_on_the_current_version(self):
         manifest = _load_json(PLUGIN_SPECS["em-workflow"]["manifest_path"])
         marketplace = _load_json(MARKETPLACE_PATH)
         entry = _marketplace_entry(marketplace, "em-workflow")
-        self.assertEqual(manifest.get("version"), "0.1.78")
-        self.assertEqual(entry.get("version"), "0.1.78")
+        expected = PLUGIN_SPECS["em-workflow"]["expected"]
+        self.assertEqual(manifest.get("version"), expected)
+        self.assertEqual(entry.get("version"), expected)
 
-    def test_em_review_reads_0_5_10(self):
+    def test_em_review_manifest_and_entry_agree_on_the_current_version(self):
         manifest = _load_json(PLUGIN_SPECS["em-review"]["manifest_path"])
         marketplace = _load_json(MARKETPLACE_PATH)
         entry = _marketplace_entry(marketplace, "em-review")
-        self.assertEqual(manifest.get("version"), "0.5.10")
-        self.assertEqual(entry.get("version"), "0.5.10")
+        expected = PLUGIN_SPECS["em-review"]["expected"]
+        self.assertEqual(manifest.get("version"), expected)
+        self.assertEqual(entry.get("version"), expected)
 
 
 class TestMarketplaceEntryLookupGuard(unittest.TestCase):

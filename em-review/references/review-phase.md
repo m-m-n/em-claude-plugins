@@ -247,8 +247,8 @@ Walk rules:
 
 - Resume after the chain index R2 recorded; skip entries whose harness is
   unavailable (that costs no hop) and entries excluded by the table above.
-- **At most 2 fallback dispatches per perspective**, which walks a 3-entry
-  chain to its end. Exhausted chain, or no eligible entry → the perspective
+- **At most 2 fallback dispatches per perspective**. The walk also ends as
+  soon as the chain itself is exhausted, whichever comes first. Exhausted chain, or no eligible entry → the perspective
   keeps its last skip result and the Claude reviewer stands alone.
 - The LAST dispatched result is this perspective's cross-model result for R3,
   in place of the skips that preceded it.

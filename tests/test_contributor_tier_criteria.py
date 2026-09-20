@@ -377,8 +377,7 @@ class TestAC4PresentStateVisibilityLicenseCheck(unittest.TestCase):
 # AC-5: chain immutability across both registries.
 # ---------------------------------------------------------------------------
 
-# Literal pin of em-review's `cross_validation` chains, taken from the base
-# revision (this feature's task0003 never edits a chain). Not recomputed
+# Literal pin of em-review's `cross_validation` chains. Not recomputed
 # from the same file -- a self-referential comparison would pass no matter
 # what changed.
 EM_REVIEW_EXPECTED_CHAINS = {
@@ -388,17 +387,14 @@ EM_REVIEW_EXPECTED_CHAINS = {
     ],
     "performance": [
         {"harness": "litellm", "model": "muse-spark"},
-        {"harness": "litellm", "model": "vertex-glm-5.2"},
         {"harness": "codex"},
     ],
     "architecture": [
-        {"harness": "litellm", "model": "vertex-glm-5.2"},
         {"harness": "litellm", "model": "muse-spark"},
         {"harness": "codex"},
     ],
     "spec": [
         {"harness": "litellm", "model": "muse-spark"},
-        {"harness": "litellm", "model": "vertex-glm-5.2"},
         {"harness": "codex"},
     ],
     "comprehensive": [],

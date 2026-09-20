@@ -75,7 +75,7 @@ FALLBACK_MARKER_PREFIXES = ("CODEX_FALLBACK:", "CODEX_FALLBACK_UNCONFIGURED:")
 
 USAGE_MESSAGE = (
     'Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] '
-    '[--output-schema F] "prompt"'
+    '[--output-schema F] [--litellm MODEL] "prompt"'
 )
 
 STUB_SOURCE = """#!/usr/bin/env python3
