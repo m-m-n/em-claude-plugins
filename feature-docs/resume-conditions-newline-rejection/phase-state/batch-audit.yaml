@@ -84,3 +84,61 @@ records:
       satisfiable - the path passes the relative-path shape check and falls under no workflow
       control path, and the failure mode was stated as an observable red test - but a deviation
       failing any one part is not auto-added.
+  - question_id: review.layer2-manifest-trigger
+    packet_id: null
+    answered_at: "2026-09-20T17:26:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [do_not_add_license_vulnerability]
+    freeform: >-
+      Do the Claude Code plugin manifests touched by this diff
+      (em-workflow/.claude-plugin/plugin.json, .claude-plugin/marketplace.json) count as
+      "dependency manifests or lockfiles" for review-phase.md R1's mandatory Layer-2 trigger,
+      which would ADD the license and vulnerability perspectives?
+    normalized_answer: >-
+      No. Neither perspective is added; the selected set stays
+      comprehensive / security / architecture / spec.
+    resolution_note: >-
+      gate: no gate_id (review-phase.md Phase R1 Layer-2 discretionary judgment, not an
+      AskUserQuestion site); codex_consulted: true; opus_escalation: false.
+      Options offered to Codex: (A) No - do not add license/vulnerability, (B) Yes - add them.
+      Codex chose A. Decisive point: both files are plugin metadata declaring only name,
+      version and description, and declare no third-party dependency, so they do not match the
+      trigger's enumerated manifest/lockfile set (package.json, go.mod, Cargo.toml,
+      pyproject.toml/requirements.txt, composer.json, Gemfile, build.gradle/pom.xml and their
+      lockfiles) nor the vendored-third-party-source clause; A is the reading faithful to the
+      stated activation condition. Cost of the losing option: B would dispatch two perspectives
+      with no dependency surface to review, and axis 2's dependency scan has no ecosystem
+      manifest to scan in this repository at all.
+  - question_id: review.fr4-deletion-vs-rewrite
+    packet_id: null
+    answered_at: "2026-09-20T17:29:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [accept_no_finding]
+    freeform: >-
+      FR4 says to "Rewrite" the sentence "Each of the four cannot fire while `## Escaping` is
+      honoured: ...". The implementation deleted that sentence outright instead of replacing it.
+      Accept, or raise a spec finding?
+    normalized_answer: >-
+      Accept. No spec finding is raised for FR4.
+    resolution_note: >-
+      gate: no gate_id (orchestrator's own pre-evaluation judgment on a spec requirement);
+      codex_consulted: true; opus_escalation: false.
+      Options offered to Codex: (A) deletion satisfies FR4 - accept, no finding, (B) deletion
+      violates FR4 because FR4 said "rewrite" - raise a spec finding.
+      Two consultation rounds were run. Round 1 was given only the tail of the surviving
+      preamble and chose B, reasoning that FR4 also requires the block to be introduced as
+      em-workflow's own hardening rules and that deletion alone does not supply that
+      introduction. Round 2 was given the post-change block verbatim, which shows the bolded
+      label "em-workflow's OWN emitter obligations and rejection rules." and the sentence "The
+      rules below are em-workflow's own hardening obligations, stated here as defense in depth
+      ... they are NOT carried-over consumer behaviour" both surviving unchanged. On that
+      accurate premise Codex chose A: deleting only the "Each of the four cannot fire..."
+      sentence removes both the blanket cannot-fire claim and the stale count word while the
+      surviving label and preamble already perform FR4's required introduction. Codex also
+      confirmed that the remaining count word "the five carried-over constraints" does not go
+      stale, because it counts the separate, spec-pinned set of exactly five carried-over
+      consumer constraints (FR5), not the OWN rules. Round 1's verdict is superseded: it rested
+      on a factual premise about the document that round 2 corrected. This matches the spec
+      perspective reviewer's independent conclusion for FR4.

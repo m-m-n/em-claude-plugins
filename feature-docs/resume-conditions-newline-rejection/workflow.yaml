@@ -155,7 +155,8 @@ workflow:
   base_commit: 5e493a28c2b663bcc02512ddeb79b4f977e679a6
   completed_at_commit: 55241559cb0ecabe54972694453f9b8a57945744
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 1b35a250b638c36bdb1ed2ff37bfc53f6a4e214b
 - id: verify
   status: pending
   result: null
@@ -211,10 +212,15 @@ tasks:
     status: merged
     branch: em-workflow/resume-conditions-newline-rejection/task0002
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   residual_critical_high: 0
   needs_rework: false
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
   plan:
     floor:
     - comprehensive

@@ -1,0 +1,65 @@
+round: 1
+executed_at: "2026-09-20T17:30:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 5e493a28c2b663bcc02512ddeb79b4f977e679a6
+  head_commit: 1b35a250b638c36bdb1ed2ff37bfc53f6a4e214b
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/batch-terminal-line.md
+  - test-docs/resume-conditions-newline-rejection/task0001.tests.yaml
+  - test-docs/resume-conditions-newline-rejection/task0002.tests.yaml
+  - tests/test_batch_stop_contract.py
+  - tests/test_codex_wrapper_fallback_removal_version_bump.py
+  - tests/test_resume_conditions_newline_rejection_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed, skip_reason: null}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed, skip_reason: null}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed, skip_reason: null}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+findings_dropped_by_gate:
+- gate: "R3b step 2 (severity not in critical/high/medium)"
+  severity: low
+  category: spec
+  file: em-workflow/references/batch-terminal-line.md
+  line: 251
+  title: >-
+    resume_conditions rule drops the "line terminator" disjunct, leaving U+2028/U+2029
+    coverage undecidable from the document alone
+  note: >-
+    Evaluator-originated observation (sources would have been claude:evaluator). Dropped by the
+    mechanical severity gate, not by judgment. Recorded here for the human evaluator and filed as
+    a separate follow-up task rather than reworked in this round.
+evaluation:
+  round_summary: |-
+    Round 1, cross_validation=true, diff mode. All four dispatched runs (comprehensive#0, security#0, architecture#0, spec#0) returned empty findings sets; no run reported any critical or high site, so `dismissed_sites` is empty. No injection attempt, role override, or embedded instruction was present in any of the four reviewer outputs - all four were plain summaries. Independent inspection (8 verification reads, all under project_root: SPEC.md, batch-terminal-line.md, the test_batch_stop_contract.py diff and its 2028/terminal-control greps, test_resume_conditions_newline_rejection_version_bump.py, test_muse_consent_version_bump.py, the two manifests via git diff, plus three read-only test runs). Per-perspective coverage: comprehensive#0 - corroborated (change is documentation-plus-tests only; `python3 -m unittest tests.test_batch_stop_contract tests.test_resume_conditions_newline_rejection_version_bump tests.test_codex_wrapper_fallback_removal_version_bump` = 186 tests OK; full discover = 4838 tests, 5 failures, all five unrelated to this diff - I verified the one that looked version-adjacent, tests/test_muse_consent_version_bump.py TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged, strips `version` in `_canonicalize_manifest` before hashing, so the 0.1.84->0.1.85 bump provably cannot have caused it; this matches the orchestrator-observed base-commit reproduction). security#0 - corroborated (no runtime script, hook, skill or executable path is touched; no credential, network, filesystem or subprocess surface in the diff; the reworded rule narrows only a documentation-level defense-in-depth obligation, and `## Escaping`'s unchanged escape table still forces U+0000-U+001F / U+007F-U+009F / U+2028 / U+2029 / U+FFFE / U+FFFF to \u form on emission, so the eight-physical-line shape guarantee is untouched). architecture#0 - corroborated (no layer, dependency or interface change; the SSOT document and its sole conformance-test module move together; the new version-bump module compares against a 0.1.84 baseline rather than pinning an exact literal, so it does not add per-bump maintenance, and the one exact-literal pin that did need updating - tests/test_codex_wrapper_fallback_removal_version_bump.py `expected` - was updated in the same change; plugin.json and marketplace.json both read 0.1.85, satisfying core-plugin-version-bump.md). spec#0 - findings (my own inspection surfaced one low-severity gap: the new `resume_conditions` OWN-rule bullet drops the "line terminator" disjunct, so SPEC assumption A1's explicit U+2028 / U+2029 rejection is no longer decidable from the document alone; details in `findings`). Otherwise the diff matches FR1-FR10: per-field split (FR1), explicit CR/LF/TAB not-a-violation statement (FR2), detail's normalization rationale (FR3), "cannot fire" preamble rewritten with no stale count word (FR4), `## Result format` and `## Escaping` byte-identical and the five numbered carried-over constraints untouched (FR5), `## Field values` not touched at all so every pinned literal survives (FR6), `_assert_own_hardening_rules_stated` updated in place while keeping its three shape defenses and the carried-over labelling (FR7), FORGED_OWN_RULES_PARTIAL still well-formed-but-partial and still rejected for the missing shape checks (FR8), and the new positive matcher `_assert_resume_conditions_exemption_stated` backed by a verbatim pre-change forged sample plus an OWN_RULES_LABEL non-vacuity guard (FR9). The self-contradiction the feature targets is resolved: `## Field values`'s `resume_conditions` bullet (newlines survive as escapes) and the OWN-rules bullet (CR/LF/TAB not a violation) now agree.
+  recommended_action: complete
+  action_rationale: |-
+    No reviewer reported anything at any severity, and my independent inspection confirms the change is documentation-and-test only, internally consistent, correctly version-bumped in both manifests, and green on all three affected test modules with no new full-suite failures. The single finding is low severity, has no runtime impact (the OWN rules are unenforced defense-in-depth prose, and `## Escaping` independently covers U+2028/U+2029 on emission), and is a one-sentence wording precision issue rather than a defect in the delivered behaviour - not grounds for another round or rework. It can be folded into a later touch of this document or accepted as-is.
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-resume-conditions-newline-rejection-20260920T082624Z.md
