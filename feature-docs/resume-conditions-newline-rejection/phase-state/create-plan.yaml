@@ -1,7 +1,7 @@
 schema_version: 1
 feature: resume-conditions-newline-rejection
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 120b31f4b4fa9a8d0e7f44c0ba0da2a1bcbc0f95
 last_input_digest: sha256:efcb35a3ba57d780bfcf96bc7a7cbe795497dab0cb1bab7d73e0c41a9308ff76
@@ -28,7 +28,7 @@ artifacts:
     produced_by: cp-resume-conditions-newline-rejection-001
 patches:
   - patch_id: resume-conditions-newline-rejection-p0001
-    status: validated
+    status: applied
     base_input_digest: sha256:efcb35a3ba57d780bfcf96bc7a7cbe795497dab0cb1bab7d73e0c41a9308ff76
     base_workflow_blob: 3ffd5551ef7f2b8fe155537ab9cab8e4c3cd2341
 progress_fingerprint: null
