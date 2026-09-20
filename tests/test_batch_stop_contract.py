@@ -144,6 +144,33 @@ and `## Result format` stay byte-identical) is a pure regression guard
 and is exempt from a negative proof per NFR4 -- it is proved by this
 module's own `git diff` never touching those two sections, not by a new
 test.
+
+--- resume-conditions-newline-rejection task0001 additions ---
+
+This module also carries task0001's guards for splitting the shared
+own-rules bullet into per-field rules
+(`feature-docs/resume-conditions-newline-rejection/tasks/task0001.md`):
+
+- `_assert_own_rules_preamble_stated` (AC-1): the OWN-rules block's
+  introductory sentence states the own-hardening framing and the
+  carried-over-consumer-behaviour labelling, and drops the blanket
+  "cannot fire" claim and its rule-count word. Anchored on
+  `OWN_RULES_LABEL` (negative proof:
+  `TestOwnRulesPreambleMatcherNegativeProof`).
+- `_assert_resume_conditions_exemption_stated` (AC-3): `resume_conditions`
+  rejects only a terminal-control code point other than CR/LF/TAB, stated
+  as its own bullet with the three code-point literals and the explicit
+  not-a-violation statement. Anchored on `OWN_RULES_LABEL` so it cannot be
+  satisfied by the pre-change shared bullet or by the carried-over list
+  alone (negative proof:
+  `TestResumeConditionsExemptionMatcherNegativeProof`).
+
+`_assert_own_hardening_rules_stated` and its `FORGED_OWN_RULES_PARTIAL`
+sample are updated in place (not renamed) to the new two-bullet wording,
+per task0001's design: the matcher's assertions are unchanged, and the
+forged sample still omits the duplicate-key and documented-domain shape
+defenses so it is rejected for those, never for the control-code-point
+wording.
 """
 
 import os
@@ -731,6 +758,43 @@ def _assert_own_hardening_rules_stated(test, section_text):
     test.assertIn("documented domain", normalized)
     # labelled as em-workflow's own, not carried-over
     test.assertIn("carried-over consumer behaviour", normalized)
+
+
+def _assert_own_rules_preamble_stated(test, section_text):
+    """task0001 AC-1 (FR4): the OWN-rules block's introductory sentence
+    states the own-hardening framing and the carried-over-consumer-
+    behaviour labelling, and drops both the blanket "cannot fire" claim
+    and any count word for the number of OWN rules (assumption A8).
+    Anchored on OWN_RULES_LABEL like every other matcher over this block,
+    so it cannot be satisfied by the carried-over list alone (non-vacuity
+    proof: TestOwnRulesPreambleMatcherNegativeProof)."""
+    _carried_over, own_rules = _split_consumer_constraints_own_rules(section_text)
+    test.assertTrue(own_rules, f"label {OWN_RULES_LABEL!r} not found")
+    lowered = _normalize(own_rules).lower()
+    test.assertIn("own hardening obligations", lowered)
+    test.assertIn("defense in depth", lowered)
+    test.assertIn("carried-over consumer behaviour", lowered)
+    test.assertNotIn("cannot fire", lowered)
+    test.assertNotIn("the four", lowered)
+
+
+def _assert_resume_conditions_exemption_stated(test, section_text):
+    """task0001 AC-3 (FR1, FR2, FR9): the OWN-rules block states, as its
+    own bullet, that `resume_conditions` exempts a decoded CR, LF or TAB
+    from its terminal-control rejection -- naming the three exempted code
+    points by their literals and the "other than" restriction on what is
+    still rejected. Anchored on OWN_RULES_LABEL so it cannot be satisfied
+    by the pre-change shared bullet or by the carried-over list alone
+    (non-vacuity proof: TestResumeConditionsExemptionMatcherNegativeProof)."""
+    _carried_over, own_rules = _split_consumer_constraints_own_rules(section_text)
+    test.assertTrue(own_rules, f"label {OWN_RULES_LABEL!r} not found")
+    normalized = _normalize(own_rules)
+    test.assertIn("`resume_conditions`", own_rules)
+    test.assertIn("CR (U+000D)", normalized)
+    test.assertIn("LF (U+000A)", normalized)
+    test.assertIn("TAB (U+0009)", normalized)
+    test.assertIn("other than", normalized)
+    test.assertIn("NOT a violation", normalized)
 
 
 def _iter_em_workflow_files(plugin_root):
@@ -1860,6 +1924,27 @@ class TestConsumerConstraints(unittest.TestCase):
         """AC-8/SC11 (g)+(h)."""
         _assert_own_hardening_rules_stated(self, self.section)
 
+    def test_own_rules_preamble_stated(self):
+        """task0001 AC-1 (FR4)."""
+        _assert_own_rules_preamble_stated(self, self.section)
+
+    def test_detail_own_rule_states_line_terminator_and_normalization_reason(self):
+        """task0001 AC-2 (FR1, FR3): `detail` gets its own bullet, stating
+        the line-terminator/terminal-control rejection together with the
+        reason it is correct (## Field values already normalizes CR/LF/TAB
+        to a space before escaping, so a surviving one means normalization
+        was skipped)."""
+        _carried_over, own_rules = _split_consumer_constraints_own_rules(self.section)
+        normalized = _normalize(own_rules)
+        self.assertIn("`detail` rejects a line terminator", normalized)
+        self.assertIn("terminal-control code point after decoding", normalized)
+        self.assertIn("replaces every CR, LF and TAB in `detail`", normalized)
+        self.assertIn("normalization was skipped", normalized)
+
+    def test_resume_conditions_exemption_stated(self):
+        """task0001 AC-3 (FR1, FR2, FR9)."""
+        _assert_resume_conditions_exemption_stated(self, self.section)
+
     def test_five_carried_over_constraints_still_present_and_still_five(self):
         """FR14's five numbered carried-over constraints are unchanged --
         the new own-hardening-rules items use bullets, never renumbering
@@ -1937,14 +2022,24 @@ class TestSizeCollisionOutcomeMatcherNegativeProof(unittest.TestCase):
 
 
 # -- AC-8 (task0008): own-hardening-rules matcher negative proof -----------
+# Updated in place by task0001 (AC-5/FR8): the forged sample now carries
+# the new-style introductory sentence and both per-field bullets, but
+# still omits the duplicate-key and documented-domain shape defenses, so
+# it stays "otherwise well-formed but partial" under the new wording.
 
 FORGED_OWN_RULES_PARTIAL = (
     OWN_RULES_LABEL + ". The rules below are em-workflow's own hardening "
-    "obligations, NOT carried-over consumer behaviour.\n\n"
-    "- `detail` and `resume_conditions` each reject a line terminator or a "
-    "terminal-control code point after decoding. `## Escaping` does not "
-    "help here either: an escaped control character inside either value "
-    "is rejected exactly like a bare one.\n"
+    "obligations, stated here as defense in depth alongside the five "
+    "carried-over constraints above — they are NOT carried-over consumer "
+    "behaviour.\n\n"
+    "- `detail` rejects a line terminator or a terminal-control code "
+    "point after decoding. `## Escaping` does not help here either: an "
+    "escaped control character inside `detail` is rejected exactly like "
+    "a bare one.\n"
+    "- `resume_conditions` rejects only a terminal-control code point "
+    "other than CR (U+000D), LF (U+000A) or TAB (U+0009) after decoding "
+    "— a decoded CR, LF or TAB inside `resume_conditions` is NOT a "
+    "violation.\n"
     "- The top-level mapping's key sequence is exactly the eight keys of "
     "`## Result format`, in that order: a result with a missing, extra or "
     "reordered key is rejected.\n"
@@ -1975,6 +2070,83 @@ class TestOwnHardeningRulesMatcherNegativeProof(unittest.TestCase):
     def test_forged_partial_rules_missing_shape_checks_is_rejected(self):
         with self.assertRaises(AssertionError):
             _assert_own_hardening_rules_stated(self, FORGED_OWN_RULES_PARTIAL)
+
+
+# -- task0001 AC-1: own-rules preamble matcher negative proof --------------
+
+FORGED_PRE_CHANGE_PREAMBLE = (
+    OWN_RULES_LABEL + ". The rules below are em-workflow's own hardening "
+    "obligations, stated here as defense in depth alongside the five "
+    "carried-over constraints above — they are NOT carried-over consumer "
+    "behaviour, and this repository can verify nothing about how (or "
+    "whether) the external consumer enforces them. Each of the four "
+    "cannot fire while `## Escaping` is honoured: they are defense in "
+    "depth for the case an unescaped newline inside a value is followed "
+    "by a line that looks like another key.\n\n"
+    "- `detail` and `resume_conditions` each reject a line terminator or "
+    "a terminal-control code point after decoding, in the same form as "
+    "constraints 3 and 4 above.\n"
+)
+
+
+class TestOwnRulesPreambleMatcherNegativeProof(unittest.TestCase):
+    """FORGED_PRE_CHANGE_PREAMBLE is the real pre-change introductory
+    sentence, verbatim -- it already carries the own-hardening framing and
+    the carried-over-consumer-behaviour labelling, but still makes the
+    blanket "cannot fire" claim with its rule-count word."""
+
+    def test_forged_pre_change_preamble_is_otherwise_well_formed(self):
+        self.assertIn(OWN_RULES_LABEL, FORGED_PRE_CHANGE_PREAMBLE)
+        self.assertIn("own hardening obligations", FORGED_PRE_CHANGE_PREAMBLE)
+        self.assertIn(
+            "carried-over consumer behaviour", FORGED_PRE_CHANGE_PREAMBLE
+        )
+
+    def test_forged_pre_change_preamble_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_own_rules_preamble_stated(self, FORGED_PRE_CHANGE_PREAMBLE)
+
+
+# -- task0001 AC-3: resume_conditions exemption matcher negative proof -----
+
+FORGED_PRE_CHANGE_SHARED_BULLET = (
+    OWN_RULES_LABEL + ".\n\n"
+    "- `detail` and `resume_conditions` each reject a line terminator or "
+    "a terminal-control code point after decoding, in the same form as "
+    "constraints 3 and 4 above. `## Escaping` does not help here either: "
+    "an escaped control character inside either value is rejected "
+    "exactly like a bare one.\n"
+)
+
+
+class TestResumeConditionsExemptionMatcherNegativeProof(unittest.TestCase):
+    """FORGED_PRE_CHANGE_SHARED_BULLET is the real pre-change shared
+    bullet, verbatim, preceded by OWN_RULES_LABEL so the rejection is
+    attributable to the contradictory wording rather than to a missing
+    anchor (IMPLEMENTATION.md D5)."""
+
+    def test_carried_over_text_alone_does_not_satisfy_the_matcher(self):
+        """Non-vacuity: the carried-over numbered constraints legitimately
+        mention `resume_conditions` (constraint 2), so the matcher must
+        not be satisfiable by that text alone -- it must anchor on the
+        OWN_RULES_LABEL separator."""
+        section = _sections(_read(CONTRACT_PATH))["Consumer constraints"]
+        carried_over, _own = _split_consumer_constraints_own_rules(section)
+        self.assertIn("`resume_conditions`", carried_over)
+        self.assertNotIn(OWN_RULES_LABEL, carried_over)
+        with self.assertRaises(AssertionError):
+            _assert_resume_conditions_exemption_stated(self, carried_over)
+
+    def test_forged_pre_change_bullet_is_otherwise_well_formed(self):
+        self.assertIn(OWN_RULES_LABEL, FORGED_PRE_CHANGE_SHARED_BULLET)
+        self.assertIn("`detail`", FORGED_PRE_CHANGE_SHARED_BULLET)
+        self.assertIn("`resume_conditions`", FORGED_PRE_CHANGE_SHARED_BULLET)
+
+    def test_forged_pre_change_bullet_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            _assert_resume_conditions_exemption_stated(
+                self, FORGED_PRE_CHANGE_SHARED_BULLET
+            )
 
 
 class TestResponsibilityBoundary(unittest.TestCase):
