@@ -188,7 +188,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/resume-conditions-newline-rejection/task0001
   task0002:
     title: Bump the em-workflow plugin version in both registries
