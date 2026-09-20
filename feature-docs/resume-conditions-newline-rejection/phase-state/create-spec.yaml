@@ -1,0 +1,17 @@
+schema_version: 1
+feature: resume-conditions-newline-rejection
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 1e888f45df3da3d2f8c9e14899eba75b1a60d69b
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
