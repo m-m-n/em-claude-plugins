@@ -155,7 +155,7 @@ workflow:
   base_commit: 5e493a28c2b663bcc02512ddeb79b4f977e679a6
   completed_at_commit: 55241559cb0ecabe54972694453f9b8a57945744
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -211,10 +211,18 @@ tasks:
     status: merged
     branch: em-workflow/resume-conditions-newline-rejection/task0002
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: Split the shared own-rule bullet into a per-field rule
