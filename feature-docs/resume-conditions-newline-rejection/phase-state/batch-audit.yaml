@@ -62,3 +62,25 @@ records:
       be per-component numeric and must catch a stand-still at 0.1.84, a decrease, and a mismatch
       between the two manifests; and TS10 must be shown to fail on the old introductory sentence
       itself, not incidentally on a missing OWN_RULES_LABEL anchor.
+  - question_id: implement.deviation-decline.task0002
+    packet_id: null
+    answered_at: "2026-09-20T17:15:00+09:00"
+    source: batch-orchestrator-rule
+    answer_mode: select
+    selected_option_ids: [decline]
+    freeform: >-
+      task0002 reported one deviation: tests/test_codex_wrapper_fallback_removal_version_bump.py
+      (PLUGIN_SPECS["em-workflow"]["expected"] raised from 0.1.84 to 0.1.85).
+    normalized_answer: >-
+      Not auto-added to tasks.task0002.files; surfaced as an ordinary deviation and left to the
+      containment check.
+    resolution_note: >-
+      gate: no gate_id (implement wake-phase deviation auto-addition rule,
+      references/implement-phase.md Step I.2.b step 3); codex_consulted: false;
+      opus_escalation: false.
+      Missing evidence part: the identifier part. The report named no AC-n of task0002's own plan
+      and no requirement id already registered in workflow.yaml that would otherwise be dropped;
+      it cited only the edited module's own docstring convention. The other two parts were
+      satisfiable - the path passes the relative-path shape check and falls under no workflow
+      control path, and the failure mode was stated as an observable red test - but a deviation
+      failing any one part is not auto-added.

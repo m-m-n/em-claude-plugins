@@ -207,7 +207,7 @@ tasks:
     - NFR1
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/resume-conditions-newline-rejection/task0002
 review:
   status: pending
