@@ -119,16 +119,16 @@ EXPECTED_EM_REVIEW_ENTRY_KEYS = {
 
 DOTTED_NUMERIC_VERSION_RE = re.compile(r"^\d+(?:\.\d+)+$")
 
-# IMPLEMENTATION.md Shared Components, "Primary chains" -- copied here
-# verbatim per Test Notes (never read from references/reviewers.yaml,
-# which does not carry this feature's edit inside a task worktree).
+# The chain each perspective advertises in the README, pinned literally
+# here rather than read back from references/reviewers.yaml -- a
+# self-referential comparison would pass no matter what changed.
 PINNED_CHAINS = {
     "security": "codex → litellm `muse-spark`",
-    "performance": "litellm `muse-spark` → litellm `vertex-glm-5.2` → codex",
-    "spec": "litellm `muse-spark` → litellm `vertex-glm-5.2` → codex",
-    "architecture": "litellm `vertex-glm-5.2` → litellm `muse-spark` → codex",
-    "comprehensive": "codex → litellm `vertex-glm-5.2` → litellm `muse-spark`",
-    "license": "codex → litellm `vertex-glm-5.2` → litellm `muse-spark`",
+    "performance": "litellm `muse-spark` → codex",
+    "spec": "litellm `muse-spark` → codex",
+    "architecture": "litellm `muse-spark` → codex",
+    "comprehensive": "codex → litellm `muse-spark`",
+    "license": "codex → litellm `muse-spark`",
 }
 
 # Wording that described the pre-task composition -- a Claude reviewer per

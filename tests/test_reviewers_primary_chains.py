@@ -13,9 +13,8 @@ Claude + cross-model parallel comparison.
 - AC-2: every perspective has a non-empty `primary_chain`; each entry is
   either a codex entry with no `model`, or a litellm entry whose `model` is
   one of the litellm model names the header documents.
-- AC-3: the comprehensive and license chains are exactly the three-entry
-  chains IMPLEMENTATION.md's Shared Components table pins, in that order,
-  and the four pre-existing chains are unchanged in order and content.
+- AC-3: every perspective's chain is exactly the two-entry chain pinned
+  below, in that order.
 - AC-4: the `reviewers.yaml` header keeps the responsibility-split statement
   and the verbatim-`model` statement, states that ONE reviewer per selected
   perspective is dispatched from the front of the chain, and contains no
@@ -45,7 +44,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REVIEWERS_PATH = os.path.join(REPO_ROOT, "em-workflow", "references", "reviewers.yaml")
 REVIEW_RULES_PATH = os.path.join(REPO_ROOT, "em-workflow", "references", "review-rules.yaml")
 
-LITELLM_MODEL_NAMES = {"vertex-glm-5.2", "muse-spark"}
+LITELLM_MODEL_NAMES = {"muse-spark"}
 
 # Pinned per IMPLEMENTATION.md Shared Components ("Registry chain key" /
 # "Primary chains" rows) and this task's own plan table. `claude_skill` and
@@ -69,10 +68,8 @@ EXPECTED_REQUIRES_SPEC = {
     "license": "false",
 }
 
-# The four pre-existing chains plus the two this task adds (AC-3's table),
-# as they read after the Vertex model retirement (vertex-deepseek-v3.2 /
-# vertex-glm-5 retire on 2026-10-21; only vertex-glm-5.2 and muse-spark are
-# assigned now).
+# Every chain is two entries -- codex and muse-spark -- differing only in
+# which one leads. No Vertex model is assigned any more.
 EXPECTED_CHAINS = {
     "security": [
         {"harness": "codex"},
@@ -80,27 +77,22 @@ EXPECTED_CHAINS = {
     ],
     "performance": [
         {"harness": "litellm", "model": "muse-spark"},
-        {"harness": "litellm", "model": "vertex-glm-5.2"},
         {"harness": "codex"},
     ],
     "architecture": [
-        {"harness": "litellm", "model": "vertex-glm-5.2"},
         {"harness": "litellm", "model": "muse-spark"},
         {"harness": "codex"},
     ],
     "spec": [
         {"harness": "litellm", "model": "muse-spark"},
-        {"harness": "litellm", "model": "vertex-glm-5.2"},
         {"harness": "codex"},
     ],
     "comprehensive": [
         {"harness": "codex"},
-        {"harness": "litellm", "model": "vertex-glm-5.2"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "license": [
         {"harness": "codex"},
-        {"harness": "litellm", "model": "vertex-glm-5.2"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
 }
