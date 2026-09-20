@@ -1,14 +1,18 @@
 schema_version: 1
 feature: resume-conditions-newline-rejection
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 1e888f45df3da3d2f8c9e14899eba75b1a60d69b
-last_input_digest: null
-active_request_id: null
+last_input_digest: "sha256:8a7083ce73fdd39f32a9a9c8b166613f44a9366438bb8b1f3241bb9fe29cd978"
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: completed
+    input_digest: "sha256:8a7083ce73fdd39f32a9a9c8b166613f44a9366438bb8b1f3241bb9fe29cd978"
+    output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
