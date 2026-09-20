@@ -239,16 +239,22 @@ sources.
 below are em-workflow's own hardening obligations, stated here as defense
 in depth alongside the five carried-over constraints above — they are NOT
 carried-over consumer behaviour, and this repository can verify nothing
-about how (or whether) the external consumer enforces them. Each of the
-four cannot fire while `## Escaping` is honoured: they are defense in
-depth for the case an unescaped newline inside a value is followed by a
-line that looks like another key.
+about how (or whether) the external consumer enforces them.
 
-- `detail` and `resume_conditions` each reject a line terminator or a
-  terminal-control code point after decoding, in the same form as
-  constraints 3 and 4 above. `## Escaping` does not help here either: an
-  escaped control character inside either value is rejected exactly like
-  a bare one.
+- `detail` rejects a line terminator or a terminal-control code point
+  after decoding, in the same form as constraints 3 and 4 above:
+  `## Field values` already replaces every CR, LF and TAB in `detail`
+  with a single space before escaping, so a surviving one means the
+  normalization was skipped. `## Escaping` does not help here either: an
+  escaped control character inside `detail` is rejected exactly like a
+  bare one.
+- `resume_conditions` rejects only a terminal-control code point other
+  than CR (U+000D), LF (U+000A) or TAB (U+0009) after decoding — a
+  decoded CR, LF or TAB inside `resume_conditions` is NOT a violation,
+  because `## Field values` defines those as surviving as `## Escaping`'s
+  escapes rather than being collapsed. `## Escaping` does not help here
+  either: an escaped control character inside `resume_conditions`, other
+  than those three, is rejected exactly like a bare one.
 - The top-level mapping's key sequence is exactly the eight keys of
   `## Result format`, in that order: a result with a missing, extra or
   reordered key is rejected.
