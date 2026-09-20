@@ -89,7 +89,7 @@ EM_REVIEW_NAME = "em-review"
 EM_REVIEW_AUTHOR = {"name": "em"}
 EM_REVIEW_CATEGORY = "code-review"
 EM_REVIEW_SOURCE = "./em-review"
-EM_REVIEW_VERSION = "0.5.10"
+EM_REVIEW_VERSION = "0.5.11"
 
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 

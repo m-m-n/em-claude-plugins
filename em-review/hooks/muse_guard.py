@@ -238,23 +238,34 @@ def project_key(directory):
 #   deeper is not classified at all (fail open) rather than scanned
 #   indefinitely.
 # Stage 4 -- model-selection matching: only for a statement whose resolved
-#   command word is `codex` is the argument list scanned for a
-#   model-selection argument whose value is the contributor tier, across
-#   the three shapes in `_extract_model_flag_values` -- the flag as its
-#   own token with the value in the FOLLOWING token; a single token whose
-#   head up to the first `=` is the flag and whose tail is the value; and
-#   the short-form flag with the value attached directly to it. Because
-#   quoting was already consumed by stage 2's `shlex.split`, no separate
-#   per-quoting-style row is needed -- bare, single-quoted and
+#   command word selects a model is the argument list scanned for a
+#   model-selection argument whose value is the contributor tier. Two
+#   command words do:
+#     `codex` -- scanned across the three shapes in
+#       `_extract_model_flag_values`: the flag as its own token with the
+#       value in the FOLLOWING token; a single token whose head up to the
+#       first `=` is the flag and whose tail is the value; and the
+#       short-form flag with the value attached directly to it.
+#     `run_codex_exec.sh` -- the plugin's own Codex wrapper, which selects
+#       a model through `--litellm MODEL` and expands it to
+#       `-p litellm -m MODEL` itself. The tier is reachable through it
+#       without the word `codex` appearing anywhere in the command, so it
+#       is scanned too, under its own flag name only (two shapes, per
+#       `_extract_litellm_flag_values`; the flag has no short form).
+#   Because quoting was already consumed by stage 2's `shlex.split`, no
+#   separate per-quoting-style row is needed -- bare, single-quoted and
 #   double-quoted spellings all arrive as the identical token text. Every
 #   comparison against CONTRIBUTOR_TIER is EXACT string equality, never a
 #   prefix/suffix/substring test.
 #
-# The restriction to a resolved `codex` command word (stage 3) is what
+# The restriction to those two resolved command words (stage 3) is what
 # keeps a commit-message argument or a search-pattern argument from being
 # read as a model selection (`git commit -m muse-spark-contributor` and
 # `grep -m muse-spark-contributor` are never invocations under this rule),
-# and it is load-bearing for the no-misfire floor.
+# and it is load-bearing for the no-misfire floor. Each command word is
+# scanned for its OWN flag only: `codex --litellm ...` and
+# `run_codex_exec.sh -m ...` are not shapes either program accepts, so
+# neither is classified.
 #
 # Anything this classifier cannot parse or resolve is not an invocation
 # (fail open).
@@ -308,6 +319,14 @@ _SHELL_WORDS = frozenset({"bash", "sh", "zsh", "dash", "ksh"})
 _SHELL_DASH_C_RE = re.compile(r"^-[A-Za-z]*c$")
 
 _MODEL_FLAG_NAMES = ("-m", "--model")
+
+# The plugin's own Codex wrapper: it selects a model through `--litellm
+# MODEL`, expanding it to `-p litellm -m MODEL` on its own, so the tier is
+# reachable through it without `codex` or `-m` appearing in the command.
+# Matched against the resolved command word, which `_resolve_command`
+# reduces to a basename -- the callers spell it as a path.
+_CODEX_WRAPPER_WORD = "run_codex_exec.sh"
+_LITELLM_FLAG_NAME = "--litellm"
 
 # A command is nested at most this many levels deep -- a shell's
 # command-string argument, or a command-substitution body, each add one
@@ -551,6 +570,29 @@ def _has_contributor_model_flag(tokens):
     return any(value == CONTRIBUTOR_TIER for value in _extract_model_flag_values(tokens))
 
 
+def _extract_litellm_flag_values(tokens):
+    """Yields every candidate value `tokens` presents for the Codex
+    wrapper's `--litellm` model-selection argument, across the two shapes
+    it has: the flag as its own token with the value in the FOLLOWING
+    token, and a single token whose head up to the first `=` is the flag
+    and whose tail is the value. The flag has no short form, so there is no
+    attached-value shape to recognize.
+    """
+    n = len(tokens)
+    for i, tok in enumerate(tokens):
+        if tok == _LITELLM_FLAG_NAME and i + 1 < n:
+            yield tokens[i + 1]
+        head, sep, tail = tok.partition("=")
+        if sep and head == _LITELLM_FLAG_NAME:
+            yield tail
+
+
+def _has_contributor_litellm_flag(tokens):
+    return any(
+        value == CONTRIBUTOR_TIER for value in _extract_litellm_flag_values(tokens)
+    )
+
+
 def _shell_command_string_argument(tokens):
     for i, tok in enumerate(tokens):
         if _SHELL_DASH_C_RE.match(tok) and i + 1 < len(tokens):
@@ -586,6 +628,9 @@ def _classify_text(text, depth):
         command_word, rest = _resolve_command(tokens)
         if command_word == "codex":
             if _has_contributor_model_flag(rest):
+                return True
+        elif command_word == _CODEX_WRAPPER_WORD:
+            if _has_contributor_litellm_flag(rest):
                 return True
         elif command_word in _SHELL_WORDS:
             nested = _shell_command_string_argument(rest)

@@ -317,8 +317,8 @@ Walk rules:
 
 - Resume after the chain index R2 recorded; skip entries whose harness is
   unavailable (that costs no hop) and entries excluded by the table above.
-- **At most 2 fallback dispatches per perspective**, which walks a 3-entry
-  chain to its end. Exhausted chain, or no eligible entry — every entry has
+- **At most 2 fallback dispatches per perspective**. The walk also ends as
+  soon as the chain itself is exhausted, whichever comes first. Exhausted chain, or no eligible entry — every entry has
   proven unavailable: each returned a retryable skip, or was excluded as
   unavailable — the perspective receives exactly ONE Claude fallback
   dispatch, `Task(subagent_type="em-workflow:reviewer")`, issued after the

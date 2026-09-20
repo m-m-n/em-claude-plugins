@@ -89,15 +89,12 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 
 ### primary-reviewer チェーン表
 
-| 観点 | チェーン（1st → 2nd → 3rd） |
-|------|------------------------------|
-| security | codex → litellm `muse-spark` |
-| performance / spec | litellm `muse-spark` → litellm `vertex-glm-5.2` → codex |
-| architecture | litellm `vertex-glm-5.2` → litellm `muse-spark` → codex |
-| comprehensive | codex → litellm `vertex-glm-5.2` → litellm `muse-spark` |
-| license | codex → litellm `vertex-glm-5.2` → litellm `muse-spark` |
+| 観点 | チェーン（1st → 2nd） |
+|------|------------------------|
+| security / comprehensive / license | codex → litellm `muse-spark` |
+| performance / spec / architecture | litellm `muse-spark` → codex |
 
-R2b はスキップ理由が retryable なときだけチェーンを進める。`rate_limited` は次のエントリへ、`budget_exhausted` / `harness_unavailable` は**別ハーネス**の次エントリへ飛ぶ（litellm のエントリは仮想キー 1 本の月次予算を共有するため、モデルを変えても同じく落ちる）。フォールバックは 1 観点につき最大 2 ホップ。
+R2b はスキップ理由が retryable なときだけチェーンを進める。`rate_limited` は次のエントリへ、`budget_exhausted` / `harness_unavailable` は**別ハーネス**の次エントリへ飛ぶ。チェーンは 2 エントリなので、フォールバックは 1 観点につき 1 ホップで尽きる。
 
 ## マージ戦略（worktree 並列）
 

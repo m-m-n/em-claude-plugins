@@ -13,10 +13,9 @@
 # reach them; this registry owns WHICH MODEL EACH PERSPECTIVE GETS. The
 # `model` value below is handed to the reviewer verbatim — the reviewer never
 # picks one on its own. Valid litellm model names are defined by the
-# vertex-review plugin's `litellm-harness` skill:
-#   vertex-glm-5.2 | muse-spark
-#   (vertex-deepseek-v3.2 / vertex-glm-5 retire on Vertex on 2026-10-21 and are
-#   no longer assigned here.)
+# vertex-review plugin's `litellm-harness` skill; of those, this registry
+# assigns exactly one:
+#   muse-spark
 #
 # The review phase reads this file to drive fan-out:
 # - For each SELECTED perspective (per review-rules.yaml + discretion), launch
@@ -38,14 +37,12 @@
 # cross_validation: ordered fallback chain for this perspective (empty =
 #   Claude-only by design — comprehensive's value is breadth inside one
 #   context, which a second model can't add).
-#   security keeps codex in front (existing track record) and falls back to
-#   muse-spark, whose upstream is Meta rather than Vertex. The other
-#   perspectives split their first hop across the two LiteLLM upstreams —
-#   architecture on vertex-glm-5.2 (Vertex, Preview), performance / spec on
-#   muse-spark (Meta) — so a Vertex 429 streak or a Preview regression never
-#   takes out every perspective at once. Each then falls back to the other
-#   upstream, and to codex last — the only entry that survives a LiteLLM
-#   budget wipeout.
+#   Every non-empty chain holds the same two entries — codex and
+#   muse-spark — and differs only in which one leads. security leads with
+#   codex; performance, spec and architecture lead with muse-spark. The
+#   trailing entry is always the other harness, so a LiteLLM budget
+#   wipeout or a Codex rate-limit streak leaves every perspective with a
+#   reachable cross-model entry.
 #
 # Contributor-tier pre-dispatch criteria (muse-spark read-mapping): when
 # `muse-spark` is the chain entry the registry selected, reading it as the
@@ -86,13 +83,11 @@ perspectives:
     requires_spec: false
     cross_validation:
       - {harness: litellm, model: muse-spark}
-      - {harness: litellm, model: vertex-glm-5.2}
       - {harness: codex}
   - perspective: architecture
     claude_skill: review-architecture
     requires_spec: false
     cross_validation:
-      - {harness: litellm, model: vertex-glm-5.2}
       - {harness: litellm, model: muse-spark}
       - {harness: codex}
   - perspective: spec
@@ -100,7 +95,6 @@ perspectives:
     requires_spec: true
     cross_validation:
       - {harness: litellm, model: muse-spark}
-      - {harness: litellm, model: vertex-glm-5.2}
       - {harness: codex}
   - perspective: comprehensive
     claude_skill: review-comprehensive

@@ -373,9 +373,11 @@ When a question's `gate_id` has no entry in `references/batch-policies.yaml`
    Codex's text verbatim as the answer.
 6. For each question where it does not map when the consultation ends —
    whether because the five-turn ceiling was reached, the turn-3
-   trajectory judgement found it diverging, or the availability probe
-   reported the wrapper `unavailable` — the Opus escalation below runs
-   once for the whole packet, carrying every such still-unmapped question
+   trajectory judgement found it diverging, a non-zero wrapper exit hit
+   the last available entry of the consultation's harness chain, or the
+   availability probe found no entry of that chain available — the Opus
+   escalation below runs once for the whole packet, carrying every such
+   still-unmapped question
    together. For each question it decides, record the answer using the
    `source` value `references/phase-state.md`'s relaxed-route writer
    entry maps an escalation decision to (cited, not restated here),
@@ -410,7 +412,9 @@ When a question's `gate_id` has no entry in `references/batch-policies.yaml`
    inconsistency — abort.
 10. Record the decision basis in the answer's `resolution_note` and in the
     run report, whichever branch above was taken — including, when the
-    Opus escalation ran, whether it ran and its reasoning.
+    Opus escalation ran, whether it ran and its reasoning, and, when a
+    consultation turn ran, which entry of the consultation's harness chain
+    answered.
 
 **Audit obligation.** Every resolution taken through the relaxed route
 above — a mapped consultation answer, an escalation decision, or the
@@ -425,16 +429,46 @@ that names a "Codex consultation" without restating its mechanics (e.g.
 the non-packet gates in `references/batch-mode.md`, including its
 per-command approval fallback):
 
-1. **Availability probe.** Before the first turn:
-   `test -f "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" && command -v codex >/dev/null && echo available || echo unavailable`.
-   Unavailable → skip straight to the Opus escalation below, which runs in
-   Codex's place, without ever reaching Codex; if the escalation leaves a
-   question undecided too, that question falls through to step 6 of the
-   fallback sequence above (`on_unanswered`).
+1. **Availability probe.** The consultation has two harness entries, tried
+   in this order — `codex`, then `litellm` with the model `muse-spark` —
+   and one consultation runs entirely on the first of them that probes
+   available. The chain exists to reach a harness that answers at all,
+   never to place a second model beside an answer an entry already gave.
+   Before the first turn:
+   - `codex`:
+     `test -f "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" && command -v codex >/dev/null && echo available || echo unavailable`.
+   - `litellm`: the `codex` probe above must report `available` — this
+     harness IS the Codex CLI — and both `[ -n "${LITELLM_API_KEY:-}" ]`
+     and `[ -f "${CODEX_HOME:-$HOME/.codex}/litellm.config.toml" ]` must
+     hold. The `vertex-review` plugin is deliberately NOT part of this
+     probe: here the wrapper reaches the proxy itself and no reviewer agent
+     is dispatched, which is what makes this probe narrower than the one
+     `references/review-phase.md` Phase R0 runs for reviewer fan-out.
+     Whether this entry is read as the contributor tier is owned by
+     `references/reviewers.yaml`'s contributor-tier pre-dispatch criteria
+     (cited, not restated); the model name written here is never edited to
+     reach that tier.
+   No entry available → skip straight to the Opus escalation below, which
+   runs in Codex's place, without ever reaching Codex; if the escalation
+   leaves a question undecided too, that question falls through to step 6
+   of the fallback sequence above (`on_unanswered`).
 2. **Wrapper invocation.** Each turn calls the wrapper directly — never a
-   Task-dispatched agent — in read-only mode with the project root:
-   `"${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly -C "{project_root}" "$PROMPT"`.
+   Task-dispatched agent — in read-only mode with the project root, on the
+   entry step 1 selected:
+   `"${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly -C "{project_root}" "$PROMPT"`,
+   and for the `litellm` entry the same call with `--litellm muse-spark`
+   inserted before `-C`, which the wrapper expands to
+   `-p litellm -m muse-spark`.
    Run this Bash tool call with a timeout of 600000 milliseconds.
+   A turn whose wrapper call exits non-zero — including the wrapper's own
+   exit 124 (`CODEX_TIMEOUT`) — moves the consultation to the NEXT
+   available entry of the chain and continues it there. That advance is
+   decided on the exit code alone: the reply is never inspected to
+   classify why the launch failed, matching the wrapper's own contract
+   that nothing about a launch's output shapes what happens next. Turns
+   already spent still count against the ceiling below. A non-zero exit on
+   the last available entry ends the consultation, and whatever is still
+   unmapped goes to the Opus escalation exactly as the ceiling case does.
 3. **One turn per call.** The wrapper holds no conversation state across
    invocations — each call is a single request/response. To let Codex's
    suggestion improve across turns, the orchestrator includes a summary of
@@ -479,8 +513,10 @@ per-command approval fallback):
 
 The single per-packet escalation for whatever the Codex consultation above
 leaves unmapped when it ends — by the five-turn ceiling, by a diverging
-turn-3 trajectory judgement, or because the availability probe reported
-the wrapper `unavailable` and no consultation turn ran at all.
+turn-3 trajectory judgement, by a non-zero wrapper exit on the last
+available entry of its harness chain, or because the availability probe
+found no entry of that chain available and no consultation turn ran at
+all.
 
 1. **Dispatch.** Exactly one dispatch per packet, at Opus, carrying every
    question of that packet still unmapped when the consultation ended. It
