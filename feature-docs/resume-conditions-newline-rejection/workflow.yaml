@@ -188,7 +188,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/resume-conditions-newline-rejection/task0001
   task0002:
     title: Bump the em-workflow plugin version in both registries
     plan: tasks/task0002.md
@@ -206,7 +207,8 @@ tasks:
     - NFR1
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/resume-conditions-newline-rejection/task0002
 review:
   status: pending
   rounds_completed: 0
