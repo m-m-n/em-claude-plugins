@@ -1,0 +1,281 @@
+schema_version: 1
+feature: resume-conditions-newline-rejection
+created: '2026-09-20'
+base_branch: main
+goal: '--batch --once --pr https://www.notion.so/3e03509ec8ee81648021c2af88551368
+
+
+  Once the implementation is finished, push the integration branch to the remote and create a Pull Request against
+  base_branch with gh pr create. Keep the integration branch both locally and on the remote (do not auto-merge it
+  into base_branch).
+
+  Consult Codex on any unclear points and adopt the option judged to be comparatively better.
+
+  Record the content of that discussion in Notion.
+
+
+  --- Resolved Notion task (title + body), fetched at launch ---
+
+
+  # batch-terminal-line.md の自前拒否規則が resume_conditions の改行保持と衝突する
+
+
+  種別: バグ
+
+
+  ## 現象 (必須)
+
+  `em-workflow/references/batch-terminal-line.md` の `## Consumer constraints` にある
+
+  em-workflow 自身の拒否規則（"`detail` and `resume_conditions` each reject a line
+
+  terminator or a terminal-control code point after decoding"）が、同じ文書の
+
+  `## Field values` が `resume_conditions` について定める挙動と正面衝突している。
+
+  `## Field values` は `resume_conditions` について「Its value is NOT put through
+
+  `detail`''s normalization: any Markdown newlines, indentation and trailing spaces it
+
+  carries survive as `## Escaping`''s escapes rather than being collapsed」と定める。
+
+  つまり改行を含む `resume_conditions` は正常形。一方で自前拒否規則は decode 後に
+
+  line terminator を含む `resume_conditions` を拒否する。
+
+  結果として、複数行の停止復旧手順を持つ停止結果（= `state: stopped` の通常形）は
+
+  「正常形として生成されたのに自前規則で拒否される」状態になり、合法な出力が存在しない。
+
+  review round 2 の finding `527e10173b2e8e66` (high, spec)。batch review rework cap
+
+  到達により deferred。
+
+
+  ## 再現手順 (必須)
+
+  1. `em-workflow/references/batch-terminal-line.md` の `## Field values` の
+
+  `resume_conditions` の項を読む（改行は escape として残るのが期待される正常形）
+
+  1. 同文書の `## Consumer constraints` 末尾「em-workflow''s OWN emitter obligations
+
+  and rejection rules」の 1 つ目の箇条書きを読む（`resume_conditions` の line
+
+  terminator を decode 後に拒否）
+
+  1. 2 つの規定が同じ値に対して両立しないことを確認する
+
+
+  ## 期待する挙動 (必須)
+
+  `resume_conditions` については、CR / LF / TAB 以外の terminal-control code point
+
+  のみを拒否する。FR8 により Markdown の改行は `\n` エスケープとして残るのが期待される
+
+  正常形であり、違反ではない。`detail` は正規化で CR/LF/TAB が除去済みなので、残存は
+
+  正規化の飛ばしを意味するため従来どおり拒否してよい。
+
+  あわせて、同節の「Each of the four cannot fire while `## Escaping` is honoured」の
+
+  記述を実態に合わせて書き直す。
+
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+  - [ ] `tests/test_batch_stop_contract.py` の `_assert_own_hardening_rules_stated` の
+
+  期待文字列と `FORGED_OWN_RULES_PARTIAL` を更新する
+
+  - [ ] 「改行入り `resume_conditions` は拒否されない」ことを示す positive ケースを 1 本足す
+
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/references/batch-terminal-line.md` — `## Field values` の
+
+  `resume_conditions` 項、および `## Consumer constraints` の自前拒否規則
+
+  - `tests/test_batch_stop_contract.py` — `_assert_own_hardening_rules_stated`、
+
+  `FORGED_OWN_RULES_PARTIAL`
+
+
+  ## 実害・発生条件 (任意)
+
+  停止結果の通常形（複数行の復旧手順を持つ `state: stopped`）で発生する。SSOT の
+
+  自己矛盾であり、実装がどちらの規定に従うべきか決まらない。PR
+
+  https://github.com/m-m-n/em-claude-plugins/pull/38 の時点の内容。
+
+  '
+parent_branch: em-workflow/resume-conditions-newline-rejection/integration
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: markdown-python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: fbd9f87b98b2f56409fb1019033744b7c304c23b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Documentation-SSOT wording correction plus text-conformance tests in an existing module. No UI,
+    no new module or interface, no data model, no architectural boundary; the change surface is two known files
+    plus the two version manifests. Design-system candidates: 0.'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Split the shared own-rule bullet into a per-field rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: State the newline exemption explicitly
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Preserve `detail`'s rationale
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Rewrite the 'cannot fire' sentence
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Do not disturb the pinned sections
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Preserve the `## Field values` pinned literals
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Update the conformance matcher
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: Update the negative-proof sample
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: Add a positive case for the newline exemption
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 'Dependency constraint: standard-library unittest only'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 'Maintainability: raw text read through existing _normalize / _sections helpers'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 'Test rigour: negative proof plus non-vacuity guard per matcher'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 'Scope containment: documentation-and-test only'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Internal consistency of the document after the change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

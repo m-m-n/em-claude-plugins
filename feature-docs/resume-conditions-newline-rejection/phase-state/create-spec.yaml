@@ -1,11 +1,11 @@
 schema_version: 1
 feature: resume-conditions-newline-rejection
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 1e888f45df3da3d2f8c9e14899eba75b1a60d69b
 last_input_digest: "sha256:f782010c0328f7f67ff2b5f160dddbffa0d0e45b9d622e9d335d1cd3a32ed5b5"
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
