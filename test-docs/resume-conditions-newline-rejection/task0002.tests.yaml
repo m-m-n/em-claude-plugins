@@ -1,0 +1,119 @@
+task_id: task0002
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_manifest_name_is_em_workflow
+      - test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_manifest_has_a_version_key
+      - test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_version_is_on_the_0_1_x_line
+      - test_resume_conditions_newline_rejection_version_bump.TestPluginManifestVersion.test_version_is_past_baseline
+    red_confirmed: true
+    red_reason: >
+      Before the manifest was edited, running
+      `python3 -m unittest tests.test_resume_conditions_newline_rejection_version_bump -v`
+      failed test_version_is_past_baseline with
+      "AssertionError: (0, 1, 84) not greater than (0, 1, 84)" (the manifest
+      still read the pre-change value 0.1.84, equal to the pinned baseline).
+      test_manifest_name_is_em_workflow, test_manifest_has_a_version_key and
+      test_version_is_on_the_0_1_x_line already passed pre-bump (the name and
+      the 0.1.x line are untouched by this task) and are pure regression
+      guards for the rest of AC-1's claim.
+  AC-2:
+    tests:
+      - test_resume_conditions_newline_rejection_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_succeeds_and_has_a_version_key
+      - test_resume_conditions_newline_rejection_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_is_past_baseline
+      - test_resume_conditions_newline_rejection_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: >
+      Before the manifest was edited, test_em_workflow_entry_version_is_past_baseline
+      failed the same way as AC-1's version-past-baseline check:
+      "AssertionError: (0, 1, 84) not greater than (0, 1, 84)" (the
+      marketplace entry also still read 0.1.84). test_em_workflow_entry_version_matches_plugin_manifest
+      passed both before and after (both registries already agreed on
+      0.1.84 pre-bump, and agree on the new value post-bump), so equality
+      alone carries no red state of its own -- the genuine red for AC-2 is
+      carried by the past-baseline check. test_entry_lookup_succeeds_and_has_a_version_key
+      passed from the first run (the lookup is correct by construction).
+  AC-3:
+    tests:
+      - test_resume_conditions_newline_rejection_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+    red_confirmed: false
+    red_reason: >
+      This task never touches the em-review plugin or its marketplace
+      entry, so the guarded value has no observable change to go red
+      against -- a pure regression guard (tdd-testing skill's carve-out for
+      a criterion whose behavior genuinely pre-existed). The negative proof
+      (test_em_review_matcher_rejects_altered_identity_field) demonstrates
+      the matcher rejects each forged identity field and a malformed
+      version shape, and passed from the first run since the matcher is
+      correct by construction.
+  AC-4:
+    tests:
+      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_negative_proof_versions_parse_cleanly
+      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_fails_when_version_equals_baseline
+      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_fails_when_version_below_baseline
+      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_fails_when_versions_differ
+      - test_resume_conditions_newline_rejection_version_bump.TestValidationDetectsRegressions.test_entry_lookup_fails_on_a_missing_entry_name
+      - test_resume_conditions_newline_rejection_version_bump.TestVersionComparisonIsPerComponentNumeric.test_naive_string_comparison_gets_two_digit_patch_backwards
+      - test_resume_conditions_newline_rejection_version_bump.TestVersionComparisonIsPerComponentNumeric.test_version_tuple_orders_two_digit_patch_correctly
+      - test_resume_conditions_newline_rejection_version_bump.TestVersionComparisonIsPerComponentNumeric.test_assert_version_past_baseline_is_immune_to_the_string_trap
+    red_confirmed: false
+    red_reason: >
+      These are hermetic proofs against synthetic values, exercised via
+      assertRaises / direct assertions against the matcher functions
+      defined in this same module -- there is no separate "before the
+      matcher existed" stage to have observed red against (the matcher and
+      its proof are written together as one unit), and they passed from the
+      first run because each matcher is correct by construction. This
+      mirrors the repository's other version-bump modules' treatment of
+      their hermetic comparison-trap and negative-proof cases (e.g.
+      test_batch_structured_result_output_version_bump.py's AC-6 record).
+      Carried into the implementer report per tdd-testing's carve-out.
+  AC-5:
+    tests:
+      - test_resume_conditions_newline_rejection_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >
+      Discovery under `python3 -m unittest discover -s tests` and the
+      stdlib-only import check are structural properties confirmed once the
+      module exists, with no prior state to have been red against. The
+      full-suite outcome is command-level, not a single test: run before
+      any file was touched, `python3 -m unittest discover -s tests` failed
+      5 tests (recorded above as baseline_failures); run again after the
+      manifest bump and the test module, it failed the same 5 (recorded as
+      final_failures) -- final_failures is a subset of (in fact equal to)
+      baseline_failures, so no regression was introduced. One intermediate
+      regression was found and fixed during this task: bumping the version
+      caused tests.test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+      to fail, because that pre-existing module pins the "current released
+      value" as a literal that its own docstring documents must be updated
+      by whichever later feature bumps the plugin ("Later features that
+      bump a plugin update it here rather than leaving a rotting literal
+      behind"). Updated its `PLUGIN_SPECS["em-workflow"]["expected"]` literal
+      from "0.1.84" to "0.1.85" per that documented convention; re-ran the
+      full suite afterward and confirmed the failure was gone and no other
+      new failure appeared.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      Command-level, not unit-testable from inside this module (a suite
+      cannot assert its own exit code without recursion). Verified by
+      running `python3 em-workflow/scripts/check-plugin-invariants.py .`
+      from the worktree root both before touching any file (all 7 checks
+      PASS, exit 0) and after the manifest bump and test-module addition
+      (all 7 checks PASS, exit 0) -- the invariants script does not
+      reference either manifest's `version` field, so the bump does not
+      interact with any of its 7 checks.
