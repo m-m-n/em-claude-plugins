@@ -142,3 +142,37 @@ records:
       consumer constraints (FR5), not the OWN rules. Round 1's verdict is superseded: it rested
       on a factual premise about the document that round 2 corrected. This matches the spec
       perspective reviewer's independent conclusion for FR4.
+  - question_id: develop.once-vs-pr-precedence
+    packet_id: null
+    answered_at: "2026-09-20T17:35:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [honour_once_end_at_verify_boundary]
+    freeform: >-
+      The launch carried --batch --once --pr together with a prose instruction to push the
+      integration branch and open a PR once the implementation is finished. verify passed in this
+      turn, retrospect is still pending and Step C was not reached. Honour --once and end the
+      turn at the verify phase boundary, or override --once and run through to Step C to create
+      the PR now?
+    normalized_answer: >-
+      Honour --once. The turn ends at the verify phase boundary; no push and no PR in this run.
+      The PR is created by the next launch that reaches Step C, which must itself carry --pr.
+    resolution_note: >-
+      gate: no gate_id (orchestrator's own precedence judgment between a per-invocation flag and
+      the prose instruction); codex_consulted: true; opus_escalation: false.
+      Options offered to Codex: (A) honour --once strictly and end at the verify boundary,
+      (B) treat the prose instruction as overriding --once and continue through retrospect and
+      Step C, creating the PR in this run.
+      Codex chose A. Decisive point: skills/develop/SKILL.md's 引数処理 states for --pr that
+      "--once 併用時、Step C に到達せず途中のフェーズ境界で終わる起動では何も起こさない — PR を作るのは
+      Step C を実行する起動だけであり、その起動に --pr が付いている必要がある", which rules B out on
+      its own; stop condition 7 makes ending at a completed phase under --once the defined
+      behaviour rather than a shortfall. The prose instruction states a completion condition
+      ("once the implementation is finished, open a PR"), not an instruction to ignore --once,
+      and that condition is satisfiable across several --once launches, so A does not conflict
+      with it. Cost of the losing option: B breaks an explicit per-invocation contract and its
+      side effects (remote push, PR creation) are the least reversible ones available, whereas A
+      costs only one more launch.
+      Consequence recorded for the operator: relaunch
+      `/em-workflow:develop --batch --pr resume-conditions-newline-rejection` to run retrospect
+      and then Step C, which creates the PR. --pr is per-invocation and is not inherited.
