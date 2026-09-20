@@ -1,0 +1,19 @@
+feature: resume-conditions-newline-rejection
+collected_at: "2026-09-20T17:34:22+09:00"
+session_ids:
+- 01a0bdf3-3fb8-71d5-8452-c419935e59da
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0002
+    files:
+    - tests/test_codex_wrapper_fallback_removal_version_bump.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+- "review round 1 dropped one low/spec observation by the mechanical severity gate: the reworded resume_conditions OWN-rule bullet no longer carries the \"line terminator\" disjunct, so SPEC assumption A1's U+2028 / U+2029 rejection is not decidable from batch-terminal-line.md alone. `## Escaping` still forces those code points to \\u form on emission, so there is no runtime impact. Filed as a follow-up in the triage report rather than reworked."
+- "An exact-literal version pin in an unrelated per-feature regression module (tests/test_codex_wrapper_fallback_removal_version_bump.py, PLUGIN_SPECS[\"em-workflow\"][\"expected\"]) had to be raised by task0002's version bump. This file was not in the task's predicted files. Baseline-comparison pins (as used by the new module) avoid this per-bump maintenance; exact-literal pins do not."
+- "The launch carried --batch --once --pr plus a prose instruction to open a PR. --once won, so the PR is deferred to the launch that reaches Step C. A launch combining --once with --pr on a feature that is more than one phase away from Step C cannot produce a PR in that run."
