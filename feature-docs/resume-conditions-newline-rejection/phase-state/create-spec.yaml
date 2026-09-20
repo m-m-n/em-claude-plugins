@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 1e888f45df3da3d2f8c9e14899eba75b1a60d69b
-last_input_digest: "sha256:8a7083ce73fdd39f32a9a9c8b166613f44a9366438bb8b1f3241bb9fe29cd978"
+last_input_digest: "sha256:f782010c0328f7f67ff2b5f160dddbffa0d0e45b9d622e9d335d1cd3a32ed5b5"
 active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
@@ -13,7 +13,17 @@ worker_runs:
     status: completed
     input_digest: "sha256:8a7083ce73fdd39f32a9a9c8b166613f44a9366438bb8b1f3241bb9fe29cd978"
     output_digest: null
-artifacts: []
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: "sha256:f782010c0328f7f67ff2b5f160dddbffa0d0e45b9d622e9d335d1cd3a32ed5b5"
+    output_digest: null
+artifacts:
+  - path: feature-docs/resume-conditions-newline-rejection/REQUIREMENTS.md
+    sha256: "sha256:128347309d91b770f78976f4688e8cfa28e0abe781773b4d33f379728a4fae13"
+    produced_by: create-spec-run-0002
+  - path: feature-docs/resume-conditions-newline-rejection/SPEC.md
+    sha256: "sha256:2f4b4abc2b6517be70a44f71f835b751cabb9a1f47f3f0f5d5fe03dee39558e4"
+    produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
