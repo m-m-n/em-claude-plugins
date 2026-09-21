@@ -233,7 +233,7 @@ tasks:
     - FR16
     - FR18
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0006
   task0007:
     title: spec perspective absence rule on the develop-driven route
