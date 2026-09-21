@@ -178,14 +178,16 @@ def _marketplace_entry(data, name):
 
 def _assert_version_past_baseline(test, version):
     """Durable invariant (IMPLEMENTATION.md D4): the version has the shape
-    X.Y.Z, (major, minor) == (0, 1), and patch > BASELINE_PATCH. A fixed
-    literal is guaranteed to go stale on the next unrelated version bump,
-    per the precedent in tests/test_recycled_task_id_version_bump.py."""
+    X.Y.Z and is strictly greater than (0, 1, BASELINE_PATCH) under
+    per-component numeric comparison. A fixed literal, or a fixed
+    major.minor pin, is guaranteed to go stale on the next unrelated version
+    bump -- task-tier-reduction task0008 (NFR4) is exactly that next bump,
+    and it advances the minor component -- per the precedent in
+    tests/test_recycled_task_id_version_bump.py."""
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)$", version or "")
     test.assertIsNotNone(match, f"version {version!r} is not of the form X.Y.Z")
-    major, minor, patch = (int(g) for g in match.groups())
-    test.assertEqual((major, minor), (0, 1))
-    test.assertGreater(patch, BASELINE_PATCH)
+    parts = tuple(int(g) for g in match.groups())
+    test.assertGreater(parts, (0, 1, BASELINE_PATCH))
 
 
 def _assert_versions_agree(test, version_a, version_b):
