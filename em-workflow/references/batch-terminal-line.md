@@ -90,8 +90,8 @@ character, including non-BMP characters, is emitted unchanged.
   general rule: normal completion is `retrospect` (the `state` `completed`
   rule), while `step-c-abort` is `no-step` (the sentinel rule) — this
   asymmetry is intentional, not an omission.
-- `reason` — one of twelve documented values, or the reserved value
-  `none`. The twelve are the eleven stop reason codes listed below, plus
+- `reason` — one of thirteen documented values, or the reserved value
+  `none`. The thirteen are the twelve stop reason codes listed below, plus
   `context_budget_reached` — a value the consumer defines and reserves,
   that em-workflow never emits. `none` is reserved for the non-stop
   terminal states — `state` `completed` and `state` `phase_done` — and is
@@ -142,7 +142,7 @@ character, including non-BMP characters, is emitted unchanged.
 
 ## Stop reason codes
 
-Closed set of eleven stop reason codes:
+Closed set of twelve stop reason codes:
 
 | Code | Meaning | Applies to `state` |
 |---|---|---|
@@ -157,8 +157,9 @@ Closed set of eleven stop reason codes:
 | `completion_aborted` | Step C's completion processing aborted | `stopped` |
 | `feature_resolution_aborted` | Step A's feature-resolution failed and the batch run aborted | `stopped` |
 | `docs_commit_conflict_aborted` | A phase aborted after a second consecutive `commit-docs.sh` exit 4 | `stopped` |
+| `no_work_required` | The pre-run estimate reported that no work remains before any workflow step began | `stopped` |
 
-`context_budget_reached` is a twelfth, reserved value in the `reason`
+`context_budget_reached` is a thirteenth, reserved value in the `reason`
 domain (`## Field values`): the consumer defines it and em-workflow never
 emits it, so no row above binds it to a stop point (see `## Stop point
 coverage`).
@@ -188,6 +189,7 @@ this table only maps it to a reason code, it does not redefine it.
 | `step-c-abort` | `completion_aborted` | `skills/develop/SKILL.md` |
 | `step-a-abort` | `feature_resolution_aborted` | `skills/develop/SKILL.md` |
 | `docs-commit-conflict` | `docs_commit_conflict_aborted` | `references/phase-state.md` |
+| `no-work-required` | `no_work_required` | `skills/develop/SKILL.md` |
 
 Precedence rule: when a stop matches more than one row above, the
 phase-specific stop point takes precedence over the generic

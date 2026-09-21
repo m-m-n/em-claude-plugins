@@ -1,0 +1,174 @@
+task_id: task0004
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_no_work_required_stop.TestReasonCodeTableRow.test_new_row_present_with_stopped_state
+      - test_no_work_required_stop.TestReasonCodeTableRow.test_exactly_one_new_row_and_pre_existing_rows_unchanged
+      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_exactly_twelve_codes_same_names_and_states_in_order
+      - test_batch_stop_contract.TestStopReasonCodes.test_extracted_set_equals_the_twelve_fixed_codes
+    red_confirmed: true
+    red_reason: >-
+      Watched against the base-commit contract text (git show HEAD:...
+      temporarily restored): test_new_row_present_with_stopped_state raised
+      AssertionError (('no_work_required', 'stopped') not in the extracted
+      11-pair list); test_exactly_one_new_row_and_pre_existing_rows_unchanged
+      raised "Lists differ: [...11 pairs] != [...12 pairs]";
+      test_extracted_set_equals_the_twelve_fixed_codes raised a set-equality
+      AssertionError (REASON_CODES had 12 members, extracted table had 11).
+  AC-2:
+    tests:
+      - test_no_work_required_stop.TestSetSizeProseConsistent.test_new_word_form_size_prose_present
+      - test_no_work_required_stop.TestSetSizeProseConsistent.test_old_word_form_size_prose_is_gone
+      - test_batch_stop_contract.TestStopReasonCodes.test_section_stated_count_equals_table_row_count
+      - test_batch_stop_contract.TestStopReasonCodes.test_context_budget_reached_documented_as_thirteenth_never_emitted
+    red_confirmed: true
+    red_reason: >-
+      Watched against the base-commit contract text:
+      test_new_word_form_size_prose_present raised AssertionError ("Closed
+      set of twelve stop reason codes" not found -- text still said
+      "eleven"); test_old_word_form_size_prose_is_gone raised AssertionError
+      ("eleven stop reason codes" unexpectedly found);
+      test_section_stated_count_equals_table_row_count raised AssertionError
+      ("twelve" not in section text, and 11 != 12);
+      test_context_budget_reached_documented_as_thirteenth_never_emitted
+      raised AssertionError ("thirteenth" not found -- text still said
+      "twelfth").
+  AC-3:
+    tests:
+      - test_no_work_required_stop.TestCoverageTableRow.test_new_coverage_row_present_and_exact
+      - test_no_work_required_stop.TestCoverageTableRow.test_exactly_one_new_coverage_row_and_pre_existing_rows_unchanged
+      - test_no_work_required_stop.TestPrecedenceParagraphUnchanged.test_colliding_stop_points_unchanged
+      - test_batch_stop_contract.TestStopPointCoverage.test_bidirectional_coverage
+      - test_batch_stop_contract.TestStopPointCoverage.test_pairing_matches_expected_key_code_mapping
+    red_confirmed: true
+    red_reason: >-
+      Watched against the base-commit contract text:
+      test_new_coverage_row_present_and_exact errored with ValueError (anchor
+      "| `no-work-required` |" not found -- the row did not exist yet);
+      test_exactly_one_new_coverage_row_and_pre_existing_rows_unchanged
+      raised an 11-vs-12-row list-inequality AssertionError;
+      test_bidirectional_coverage and
+      test_pairing_matches_expected_key_code_mapping both raised
+      AssertionError from the 12-member STOP_POINT_KEYS/_KEY_CODE_PAIRS_IN_ORDER
+      not matching the document's 11 rows.
+      test_colliding_stop_points_unchanged is a regression-only check (the
+      precedence paragraph was never edited) and passed both before and
+      after; carried here for completeness, not as red-confirming evidence.
+  AC-4:
+    tests:
+      - test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_new_code_is_a_member_of_the_ssot_reason_domain
+      - test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_result_with_non_empty_resume_conditions_is_accepted
+      - test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_result_with_empty_resume_conditions_is_rejected
+      - test_no_work_required_stop.TestNoWorkRequiredResultSatisfiesTheContract.test_result_with_whitespace_only_resume_conditions_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Watched against the base-commit contract text:
+      test_new_code_is_a_member_of_the_ssot_reason_domain raised
+      AssertionError ('no_work_required' not in the SSOT-derived domain);
+      test_result_with_non_empty_resume_conditions_is_accepted raised
+      AssertionError (rejection_reasons() returned {'reason_outside_domain'}
+      instead of the empty set, since the code was not yet in the domain).
+      The empty/whitespace-resume_conditions rejection tests assert an
+      independent, code-agnostic invariant (resume_conditions must be
+      non-whitespace whenever state is stopped) that this module hardcodes
+      rather than derives from the document, so they held true even before
+      the contract edit -- carried here as part of AC-4's acceptance
+      evidence, not as red-confirming ones individually.
+  AC-5:
+    tests:
+      - test_no_work_required_stop.TestResponsibilityBoundaryByteIdentical.test_section_byte_identical_to_pre_change_text
+      - test_no_work_required_stop.TestResponsibilityBoundaryByteIdentical.test_negative_proof_a_modified_copy_is_detected
+    red_confirmed: false
+    red_reason: >-
+      The criterion is that this section is NEVER edited, so the positive
+      assertion (byte-identical to the pre-change text captured from `git
+      show HEAD:...`) necessarily passes both before and after this task's
+      edit -- there is no implementation to watch go from red to green here,
+      only a non-change to prove. The matcher's ability to detect a real
+      change is instead proven by
+      test_negative_proof_a_modified_copy_is_detected, which constructs a
+      deliberately altered copy and confirms it differs from the pinned
+      constant.
+  AC-6:
+    tests:
+      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_exactly_twelve_codes_same_names_and_states_in_order
+      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_added_code_is_detected
+      - test_failed_kind_batch_docs.TestStopReasonCodeTableUnchangedExceptMeaning.test_negative_proof_removed_code_is_detected
+      - test_batch_quiet_output_discipline.TestExceptions.test_stop_point_coverage_table_has_twelve_keys
+      - test_batch_quiet_output_discipline.TestContractDocumentUnchangedExceptOneSentence.test_stop_point_table_row_count_unchanged
+      - test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsThirteen.test_reason_codes_tuple_has_thirteen_members
+      - test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsThirteen.test_reason_codes_tuple_includes_no_work_required
+    red_confirmed: true
+    red_reason: >-
+      Watched against the edited contract text with these three files
+      temporarily reverted to HEAD (`git checkout HEAD -- ...`):
+      test_exactly_eleven_codes_same_names_and_states_in_order (pre-rename
+      name) raised a list-inequality AssertionError;
+      test_stop_point_coverage_table_has_eleven_keys and
+      test_stop_point_table_row_count_unchanged both raised
+      AssertionError (11 != 12, the coverage table already had the new
+      row). test_batch_stop_contract_skill_wiring.py's
+      TestOwnReasonCodeTupleIsThirteen tests pin a LOCAL literal tuple
+      (REASON_CODES) never cross-checked against the document -- the module's
+      own docstring states this ("used for absence checks only, never
+      asserted against the contract document itself"), so there is no
+      document-driven red state for them specifically; their correctness is
+      structural (13 == len(tuple), 'no_work_required' in tuple) and was
+      verified by inspection of the pre-edit 12-member tuple, which would
+      fail both checks.
+  AC-7:
+    tests:
+      - test_structured_result_conformance (whole module, regression, unedited)
+      - test_structured_result_consumer_constraints (whole module, regression, unedited)
+      - test_no_work_required_stop.TestSingleSourceDiscipline.test_code_literal_absent_from_batch_mode_doc
+      - test_no_work_required_stop.TestSingleSourceDiscipline.test_code_literal_absent_from_develop_skill
+      - test_no_work_required_stop.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      test_structured_result_conformance.py and
+      test_structured_result_consumer_constraints.py derive their reason-code
+      domain dynamically from the contract document (`_ssot_domains()` /
+      `_extract_reason_codes_from_ssot()`), so they were already GREEN
+      before this task's edit (the pre-change 11-code domain was internally
+      consistent) and stayed green after -- this is the intended regression
+      confirmation TS-3 calls for, not a red-to-green transition, so
+      red_confirmed is false for this half of AC-7 by design. The
+      single-source-discipline and stdlib-only checks in the new module are
+      structural self-checks over files this task never edits (batch-mode.md,
+      SKILL.md) or over the new module's own imports; they hold trivially
+      and have no meaningful red state to observe either.
+notes: >-
+  Deviation: tests/test_batch_stop_contract.py (outside expected_files) was
+  also updated. Running the whole suite after the contract-doc edit (per
+  the task plan's Test Notes instruction to do so) surfaced a fourth
+  pinned-cardinality module the plan did not name: REASON_CODES,
+  STOP_POINT_KEYS and _KEY_CODE_PAIRS_IN_ORDER in
+  tests/test_batch_stop_contract.py pin the reason-code/stop-point set
+  size independently of the three named modules. Per the task plan's Test
+  Notes ("anything else that appears is handled here rather than
+  deferred") and IMPLEMENTATION.md's Risk Assessment row for this exact
+  scenario, this was fixed in-scope rather than reported as a gap. All
+  150 of that module's tests pass after the update; none of its existing
+  negative proofs were weakened.
