@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Deterministic tier evaluator (em-workflow plugin, task0001, FR1/FR4/FR5/
-FR13/NFR1).
+"""Deterministic tier evaluator (em-workflow plugin, task0001/task0012,
+FR1/FR4/FR13/NFR1).
 
-Turns already-collected observations (Jev's score object plus the two tool
-availability booleans) into one of the three run tiers -- `full` / `reduced`
-/ `minimal` -- with zero model inference (NFR1) and zero invocation of its
-own: the orchestrator performs the Jev and Codex calls (task0003's job, not
-this script's) and hands the results here.
+Turns already-collected observations (Jev's score object(s) plus the two
+tool availability booleans) into one of the three run tiers -- `full` /
+`reduced` / `minimal` -- with zero model inference (NFR1) and zero
+invocation of its own: the orchestrator performs the Jev and Codex calls
+(task0003's job, not this script's) and hands the results here.
 
 CLI contract:
     decide-tier.py [rules-table-path]
   Reads exactly one JSON mapping on stdin, writes exactly one JSON mapping
   to stdout, and always exits 0 -- a missing, malformed or incomplete input
   yields the safest tier (`full`, removes nothing) with a `reason` naming
-  what was missing, never an interactive prompt and never a non-zero exit.
-  `rules-table-path` is optional and defaults to this plugin's own
-  references/tier-rules.yaml.
+  what was missing or invalid, never an interactive prompt and never a
+  non-zero exit. `rules-table-path` is optional and defaults to this
+  plugin's own references/tier-rules.yaml.
 
-Input shape:
+Input shape -- single reading (today's shape, still accepted):
     {
       "jev_available": true,
       "codex_available": true,
@@ -29,6 +29,19 @@ Input shape:
       }
     }
 
+Input shape -- two readings (task0012):
+    {
+      "jev_available": true,
+      "codex_available": true,
+      "readings": [
+        {"basis": "description_only", "score": {...}},
+        {"basis": "description_plus_code", "score": {...}}
+      ]
+    }
+  `readings` may carry one or two reading objects. When both are present
+  and evaluate to different tiers, the result is the tier that removes
+  nothing (task0012 AC-6).
+
 Output shape:
     {
       "tier": "minimal",
@@ -37,6 +50,22 @@ Output shape:
       "observed": {"jev_available": true, "codex_available": true,
                    "basis": "description_plus_code", "score": {...}}
     }
+  `observed` carries a `readings` list instead of a flat `basis`/`score`
+  pair when more than one reading was supplied. No non-finite value (NaN /
+  Infinity / -Infinity) can appear anywhere in the emitted bytes -- a
+  downstream strict JSON parser must be able to decode every byte this
+  script writes (task0012 AC-5).
+
+Row interpretation is data-driven (task0012): a threshold row is read for
+the threshold members it declares -- not for its `id` -- and the evaluator
+carries no numeric default for any of them. A row declaring no threshold
+member at all is the only unconditional fallthrough; a row declaring at
+least one member always has its declared comparisons evaluated, including
+a row whose `id` the evaluator does not otherwise recognize. Probability
+and clarity observations are accepted only when finite and within the
+closed unit interval [0, 1] -- an observation outside that set yields the
+tier that removes nothing with a reason naming the offending member,
+regardless of what any other declared member would have decided.
 
 PyYAML is a runtime dependency of the em-workflow plugin (IMPLEMENTATION.md
 Technology Stack), used here to parse references/tier-rules.yaml. It is NOT
@@ -47,6 +76,7 @@ themselves (NFR7).
 """
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -59,6 +89,38 @@ DEFAULT_RULES_PATH = SCRIPT_DIR.parent / "references" / "tier-rules.yaml"
 # unresolved condition on the decision path (IMPLEMENTATION.md Conventions,
 # "Fail-safe, never fail-open").
 SAFEST_TIER = "full"
+
+# Fields every threshold row carries that are NOT a threshold member -- the
+# row's own bookkeeping, not something to compare an observation against.
+# Any OTHER key on a row is a declared threshold member, recognized or not
+# (task0012 AC-1/AC-2: a row's threshold members are read structurally, not
+# by branching on the row's `id`).
+ROW_METADATA_KEYS = frozenset({"id", "order", "tier", "description"})
+
+# The fixed correspondence between a recognized threshold-member key (as it
+# appears in a rules-table row) and the raw observation(s) it constrains.
+# This vocabulary itself is not a "threshold numeric literal" or a "row
+# identifier literal" (task0012 AC-1) -- it is the structural knowledge of
+# which field in the score object a given member name refers to; the FLOOR
+# each member is compared against is always read from the row, never from
+# a default supplied here.
+THRESHOLD_MEMBERS = {
+    "p0_floor": {
+        "raw": ("p0",),
+        "compute": lambda raw: raw["p0"],
+        "label": "score.probabilities['0']",
+    },
+    "expectation_clear_floor": {
+        "raw": ("expectation_clear",),
+        "compute": lambda raw: raw["expectation_clear"],
+        "label": "score.expectation_clear",
+    },
+    "bucket_sum_floor": {
+        "raw": ("p0", "p1"),
+        "compute": lambda raw: raw["p0"] + raw["p1"],
+        "label": "score.probabilities['0'] + score.probabilities['1']",
+    },
+}
 
 
 def _load_rules(rules_path):
@@ -86,77 +148,181 @@ def _numeric(value):
     return value
 
 
-def _bucket(probabilities, key):
+def _raw_lookup(score, raw_name):
+    """Read a single raw observation out of `score` without validating it
+    -- presence, numeric-ness, finiteness and range are all judged by
+    `_classify_raw_observation`, not here."""
+    if not isinstance(score, dict):
+        return None
+    if raw_name == "expectation_clear":
+        return score.get("expectation_clear")
+    probabilities = score.get("probabilities")
     if not isinstance(probabilities, dict):
         return None
-    return _numeric(probabilities.get(key))
+    if raw_name == "p0":
+        return probabilities.get("0")
+    if raw_name == "p1":
+        return probabilities.get("1")
+    return None
+
+
+def _classify_raw_observation(raw_value):
+    """Classify one raw observation. Returns (status, numeric_value):
+    - "absent": the observation is missing (or explicitly null).
+    - "non_numeric": present but not a real number.
+    - "invalid_range": a real number, but non-finite or outside [0, 1] --
+      probability and clarity observations are accepted only within the
+      closed unit interval (task0012 AC-4).
+    - "valid": a finite real number within [0, 1].
+    """
+    if raw_value is None:
+        return ("absent", None)
+    numeric = _numeric(raw_value)
+    if numeric is None:
+        return ("non_numeric", None)
+    value = float(numeric)
+    if not math.isfinite(value) or value < 0.0 or value > 1.0:
+        return ("invalid_range", value)
+    return ("valid", value)
+
+
+def evaluate_row(row, score):
+    """Evaluate one threshold row against `score`, purely from the
+    threshold members the row itself declares (task0012 AC-1/AC-2).
+
+    Returns one of:
+      ("match", reason)    -- the row's tier is the decision.
+      ("no_match", None)   -- continue to the next row.
+      ("invalid", reason)  -- a declared member's observation was
+                              non-finite or out of range; the caller must
+                              stop and return SAFEST_TIER immediately,
+                              regardless of any other row (task0012 AC-4).
+    """
+    declared_keys = [key for key in row if key not in ROW_METADATA_KEYS]
+    if not declared_keys:
+        # The only row shape that may be returned without a comparison.
+        return ("match", "unconditional row: no threshold member declared")
+
+    comparisons = []
+    for member_key in declared_keys:
+        spec = THRESHOLD_MEMBERS.get(member_key)
+        if spec is None:
+            # An unrecognized (e.g. renamed) threshold member: the
+            # evaluator carries no correspondence and no numeric default
+            # for it, so this row can never be satisfied (task0012 AC-1).
+            return ("no_match", None)
+
+        floor = _numeric(row.get(member_key))
+        if floor is None:
+            # The rules table declares this member but its own floor value
+            # is missing/non-numeric -- the row cannot be evaluated.
+            return ("no_match", None)
+
+        raw_values = {}
+        for raw_name in spec["raw"]:
+            raw_value = _raw_lookup(score, raw_name)
+            status, numeric_value = _classify_raw_observation(raw_value)
+            if status == "invalid_range":
+                return (
+                    "invalid",
+                    f"{spec['label']}={numeric_value!r} is non-finite or "
+                    f"outside the closed unit interval [0, 1] "
+                    f"(declared member: {member_key})",
+                )
+            if status in ("absent", "non_numeric"):
+                return ("no_match", None)
+            raw_values[raw_name] = numeric_value
+
+        comparison_value = spec["compute"](raw_values)
+        comparisons.append((member_key, spec["label"], comparison_value, floor))
+        if comparison_value < floor:
+            return ("no_match", None)
+
+    reason = " and ".join(
+        f"{label}={value} >= {floor} ({member_key})"
+        for member_key, label, value, floor in comparisons
+    )
+    return ("match", reason)
 
 
 def evaluate_thresholds(rules, score):
     """Evaluate `threshold_rows` from `rules` against `score`, in file
-    order; the first row whose required members are present AND satisfied
-    wins. A row whose required member is absent (or non-numeric) does not
-    match and evaluation falls through to the next row -- never raises.
+    order; the first row whose declared members all match wins.
 
-    Returns (tier, row_id, reason). Falls back to (SAFEST_TIER, None, ...)
-    if the rule table carries no threshold_rows at all.
+    Returns (tier, row_id, reason, invalid). `invalid` is True when a
+    declared threshold member's observation was non-finite or outside
+    [0, 1] -- `tier` is already SAFEST_TIER in that case and `row_id` is
+    None (no rule-table row decided the result; the reason names the
+    offending observation instead).
     """
     threshold_rows = rules.get("threshold_rows") if isinstance(rules, dict) else None
     if not isinstance(threshold_rows, list) or not threshold_rows:
-        return (SAFEST_TIER, None, "rule table has no threshold_rows to evaluate")
-
-    probabilities = score.get("probabilities") if isinstance(score, dict) else None
-    expectation_clear = (
-        _numeric(score.get("expectation_clear")) if isinstance(score, dict) else None
-    )
-    p0 = _bucket(probabilities, "0")
-    p1 = _bucket(probabilities, "1")
+        return (SAFEST_TIER, None, "rule table has no threshold_rows to evaluate", False)
 
     for row in threshold_rows:
         if not isinstance(row, dict):
             continue
-        row_id = row.get("id")
-        tier = row.get("tier", row_id)
+        outcome, reason = evaluate_row(row, score)
+        if outcome == "invalid":
+            return (SAFEST_TIER, None, reason, True)
+        if outcome == "match":
+            row_id = row.get("id")
+            tier = row.get("tier", row_id)
+            return (tier, row_id, reason, False)
+        # "no_match": fall through to the next row.
 
-        if row_id == "minimal":
-            p0_floor = row.get("p0_floor", 0.80)
-            clarity_floor = row.get("expectation_clear_floor", 0.5)
-            if p0 is not None and expectation_clear is not None:
-                if p0 >= p0_floor and expectation_clear >= clarity_floor:
-                    return (
-                        tier,
-                        row_id,
-                        f"P(0)={p0} >= {p0_floor} and "
-                        f"expectation_clear={expectation_clear} >= {clarity_floor}",
-                    )
-            continue
+    return (
+        SAFEST_TIER,
+        None,
+        "no threshold row matched and no fallthrough row exists",
+        False,
+    )
 
-        if row_id == "reduced":
-            p0_floor = row.get("p0_floor", 0.40)
-            sum_floor = row.get("bucket_sum_floor", 0.85)
-            if p0 is not None and p1 is not None:
-                bucket_sum = p0 + p1
-                if p0 >= p0_floor and bucket_sum >= sum_floor:
-                    return (
-                        tier,
-                        row_id,
-                        f"P(0)={p0} >= {p0_floor} and "
-                        f"P(0)+P(1)={bucket_sum} >= {sum_floor}",
-                    )
-            continue
 
-        # `full`, or any future unconditional fallthrough row: matches
-        # whenever reached, since nothing above it matched.
-        return (
-            tier,
-            row_id,
-            "no higher-tier threshold row matched (fell through to the "
-            "removes-nothing row)",
-        )
+def _normalize_readings(payload):
+    """Return a list of one or two reading dicts (each carrying `basis`
+    and `score`), or None if the `readings` shape itself is malformed.
+    Accepts either the top-level `basis`/`score` pair (the pre-task0012
+    single-reading shape) or a `readings` list carrying one or two such
+    pairs (task0012 AC-6). A single reading via `readings` behaves
+    identically to the top-level shape -- there is no separate
+    availability-fallback shape to accept."""
+    readings_field = payload.get("readings")
+    if readings_field is not None:
+        if not isinstance(readings_field, list) or not (1 <= len(readings_field) <= 2):
+            return None
+        readings = []
+        for reading in readings_field:
+            if not isinstance(reading, dict):
+                return None
+            readings.append(reading)
+        return readings
+    return [{"basis": payload.get("basis"), "score": payload.get("score")}]
 
-    # Every row was a conditional row (minimal/reduced) and none matched,
-    # with no unconditional fallthrough row present in the table.
-    return (SAFEST_TIER, None, "no threshold row matched and no fallthrough row exists")
+
+def _build_observed(jev_available, codex_available, readings):
+    """Echo the observed input. A single reading keeps the flat
+    `basis`/`score` shape callers already depend on; more than one reading
+    is echoed as a `readings` list instead."""
+    if len(readings) == 1:
+        reading = readings[0]
+        return {
+            "jev_available": jev_available,
+            "codex_available": codex_available,
+            "basis": reading.get("basis") if isinstance(reading, dict) else None,
+            "score": reading.get("score") if isinstance(reading, dict) else None,
+        }
+    return {
+        "jev_available": jev_available,
+        "codex_available": codex_available,
+        "readings": [
+            {
+                "basis": reading.get("basis") if isinstance(reading, dict) else None,
+                "score": reading.get("score") if isinstance(reading, dict) else None,
+            }
+            for reading in readings
+        ],
+    }
 
 
 def decide(payload, rules):
@@ -184,12 +350,17 @@ def decide(payload, rules):
             payload,
         )
 
-    observed = {
-        "jev_available": jev_available,
-        "codex_available": codex_available,
-        "basis": payload.get("basis"),
-        "score": payload.get("score"),
-    }
+    readings = _normalize_readings(payload)
+    if readings is None:
+        return _safest_result(
+            "malformed 'readings': expected one or two reading objects",
+            "fallback_matrix:malformed_input",
+            {
+                "jev_available": jev_available,
+                "codex_available": codex_available,
+                "readings": payload.get("readings"),
+            },
+        )
 
     if not jev_available:
         # fallback_matrix: jev_unusable -- decides full regardless of
@@ -198,23 +369,89 @@ def decide(payload, rules):
             "judgement skill unusable (non-zero Jev exit status or "
             "explicitly reported unavailable)",
             "fallback_matrix:jev_unusable",
-            observed,
+            _build_observed(jev_available, codex_available, readings),
         )
 
-    score = payload.get("score")
-    if not isinstance(score, dict):
-        return _safest_result(
-            "missing or non-object 'score'", "fallback_matrix:malformed_input", observed
+    evaluations = []
+    for reading in readings:
+        score = reading.get("score") if isinstance(reading, dict) else None
+        if not isinstance(score, dict):
+            return _safest_result(
+                "missing or non-object 'score'",
+                "fallback_matrix:malformed_input",
+                _build_observed(jev_available, codex_available, readings),
+            )
+        tier, row_id, reason, invalid = evaluate_thresholds(rules, score)
+        evaluations.append(
+            {
+                "basis": reading.get("basis"),
+                "tier": tier,
+                "row_id": row_id,
+                "reason": reason,
+                "invalid": invalid,
+            }
         )
 
-    tier, row_id, reason = evaluate_thresholds(rules, score)
-    decided_by = f"threshold_rows:{row_id}" if row_id else "fallback_matrix:malformed_rules"
+    observed = _build_observed(jev_available, codex_available, readings)
+
+    distinct_tiers = {evaluation["tier"] for evaluation in evaluations}
+    if len(distinct_tiers) > 1:
+        # Two readings evaluated to different tiers -- fall to the tier
+        # that removes nothing (task0012 AC-6).
+        return {
+            "tier": SAFEST_TIER,
+            "decided_by": "fallback_matrix:readings_disagree",
+            "reason": "readings disagree: "
+            + ", ".join(f"{e['basis']}={e['tier']}" for e in evaluations),
+            "observed": observed,
+        }
+
+    chosen = evaluations[0]
+    if chosen["invalid"]:
+        decided_by = "fallback_matrix:invalid_observation"
+    elif chosen["row_id"]:
+        decided_by = f"threshold_rows:{chosen['row_id']}"
+    else:
+        decided_by = "fallback_matrix:malformed_rules"
+
     return {
-        "tier": tier,
+        "tier": chosen["tier"],
         "decided_by": decided_by,
-        "reason": reason,
+        "reason": chosen["reason"],
         "observed": observed,
     }
+
+
+def _finite_safe(value):
+    """Recursively replace non-finite floats (NaN / Infinity / -Infinity)
+    with their string representation, so the JSON encoding of `value` never
+    carries a bare non-finite token -- a downstream strict JSON parser must
+    be able to decode every byte this script writes (task0012 AC-5)."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return repr(value)
+    if isinstance(value, dict):
+        return {key: _finite_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_finite_safe(item) for item in value]
+    return value
+
+
+def _emit(result):
+    """Serialize `result` to stdout as one line of JSON, sanitized so no
+    non-finite token can reach the emitted bytes (task0012 AC-5)."""
+    safe_result = _finite_safe(result)
+    try:
+        print(json.dumps(safe_result, allow_nan=False))
+    except (TypeError, ValueError):  # pragma: no cover - defensive
+        print(
+            json.dumps(
+                _safest_result(
+                    "result could not be serialized safely",
+                    "fallback_matrix:error",
+                    None,
+                )
+            )
+        )
 
 
 def main(argv):
@@ -223,8 +460,7 @@ def main(argv):
     try:
         raw_stdin = sys.stdin.read()
     except Exception as exc:  # pragma: no cover - defensive, stdin itself broken
-        result = _safest_result(f"could not read stdin: {exc}", "fallback_matrix:error", None)
-        print(json.dumps(result))
+        _emit(_safest_result(f"could not read stdin: {exc}", "fallback_matrix:error", None))
         return 0
 
     try:
@@ -255,7 +491,7 @@ def main(argv):
             f"unexpected error: {exc}", "fallback_matrix:error", None
         )
 
-    print(json.dumps(result))
+    _emit(result)
     return 0
 
 
