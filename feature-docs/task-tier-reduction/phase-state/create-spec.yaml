@@ -1,15 +1,46 @@
 schema_version: 1
 feature: task-tier-reduction
 phase: create-spec
-status: initialized
+status: completed
 generation: 1
-base_revision: 6c4971e
-last_input_digest: null
+base_revision: 8f3bbab5b5b1de58639680f57c849f7d516e5b74
+last_input_digest: sha256:acbd8a76326206359f5e6face457b34b816dadf096d8fa6a030cffedfec277cd
 active_request_id: null
 packets: {}
-answers: {}
-worker_runs: []
-artifacts: []
+answers:
+  create-spec.tier-design-open-points:
+    packet_id: null
+    answered_at: "2026-09-21T18:50:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - q1_new_stop_reason_code
+      - q2_persist_in_phase_state
+      - q3_empty_requirements_plus_single_real_task
+      - q4_skipped_to_pending
+      - q5_single_task_worktree_keep_integration
+    freeform: "Codex 相談で 5 件の未確定点を判定。詳細は phase-state/batch-audit.yaml の同一 question_id のレコードを参照。"
+    normalized_answer: "Q1 stop reason code を 1 件追加 / Q2 phase-state へ即時保存して workflow.yaml 構築時に転記 / Q3 requirements 空 + TASK.md 参照の実タスク 1 件、あわせて spec_review: always の訂正 / Q4 skipped -> pending のみ / Q5 integration worktree は残し単一タスク worktree"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: completed
+    input_digest: sha256:9f97a1f805eaf1502be2ac2806d205f20d2fb4a2f45e194e62d4cf8d678ed4e2
+    output_digest: null
+  - request_id: create-spec-run-0002
+    status: completed
+    input_digest: sha256:1552ad9017b4ef5c2294d1a78c177d369481fcbed72fadf5d34f7b1bac3af8a5
+    output_digest: null
+  - request_id: create-spec-run-0003
+    status: completed
+    input_digest: sha256:acbd8a76326206359f5e6face457b34b816dadf096d8fa6a030cffedfec277cd
+    output_digest: null
+artifacts:
+  - path: feature-docs/task-tier-reduction/REQUIREMENTS.md
+    sha256: sha256:ed5190da5ab9c71dc37930fbf4d37b7181e7efcec559ae31393c0b3ce81a3c22
+    produced_by: create-spec-run-0003
+  - path: feature-docs/task-tier-reduction/SPEC.md
+    sha256: sha256:4bda83e223aa50ab7185c9dd4f4201544aba9f8b82152d1504ba60c6c4d53996
+    produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
