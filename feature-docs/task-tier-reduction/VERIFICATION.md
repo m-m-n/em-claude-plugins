@@ -7,8 +7,9 @@
 **IMPLEMENTATION.md**: `feature-docs/task-tier-reduction/IMPLEMENTATION.md`
 
 This document covers the INTEGRATED verification run after every task has
-merged into the integration branch. Task-level criteria live in the eight
-task plans under `feature-docs/task-tier-reduction/tasks/`.
+merged into the integration branch. Task-level criteria live in the thirteen
+task plans under `feature-docs/task-tier-reduction/tasks/` — the original
+eight, plus task0009 … task0013 synthesized from review round 1.
 
 ## Build Verification
 
@@ -53,6 +54,11 @@ task plans under `feature-docs/task-tier-reduction/tasks/`.
 | TS-21 | Both distribution manifests are parsed, and every module under `tests/` is scanned for a literal major/minor assertion | The manifests carry the same version string, strictly greater than the pre-change value under per-component numeric comparison with the minor component raised and the major unchanged; no module pins the major/minor pair against a literal; the other plugin's entry is unchanged | Unit |
 | TS-22 | The decision path and the stop path are scanned for user-facing gates | No gate identifier and no user-question call is introduced on either path; a batch run needs no new policy entry to pass through them | Integration |
 | TS-23 | Every test module added by this feature is inspected | Each is discovered by the suite command, lives under `tests/` with the `test_` prefix, and imports only standard-library modules | Unit |
+| TS-24 | The Step A bootstrap order is read across the develop skill and the create-spec phase protocol | The integration branch/worktree is secured after the no-work stop check and before the tier record is written and committed; the phase protocol reuses that worktree and names the single case in which it creates one itself; the two documents yield exactly one ordering | Integration |
+| TS-25 | A single-task patch whose entry's `plan` names a real two-section task document is validated the way the create-plan phase invokes the validator, against a feature directory holding that document | No error is reported; the files reconciliation and the Acceptance Criteria presence check are not applied; path containment, symlink rejection, existence and the size limit still are; an entry naming an ordinary task plan still fails on a file-set mismatch and on a missing Acceptance Criteria section | Integration |
+| TS-26 | The tier upgrade procedure is read for its re-entry preconditions | Both branches write and commit the re-entry/re-planning authorization record — with its origin pair taken from the trigger — before any step status is set; the `reduced`→`full` branch re-runs create-spec, then design, then create-plan; the requirements document is attributed to create-spec's subtraction and the implementation plan to create-plan's; the carve-out's tier-upgrade entry covers both re-entries and its stated count equals the number of transitions listed | Integration |
+| TS-27 | The evaluator is called with a rules table carrying an unrecognized row that declares thresholds, with a declared threshold member whose observation is absent or renamed, with non-finite and out-of-unit-interval observations, and with two readings resolving to different tiers | No case is adopted without its declared comparisons being evaluated; every malformed or out-of-range case and every disagreement yields the tier that removes nothing with a reason naming the offending member; the emitted result carries no non-finite token; the process exits 0 | Unit |
+| TS-28 | The tier-decision record and its two projections are read | One document owns the mapping from the persisted record's fields to the decision block's four sub-fields and to the retrospect signal, and the other two cite it; the subtraction list is a projection of the tier through the reduction table; every basis identifier resolves to a rules-file decision-basis value; the persisted record's path reads `feature-docs/{feature}/phase-state/tier.yaml` everywhere | Integration |
 
 **Note on TS-10.** SPEC's earlier threshold rows made TS-10's second case
 (first bucket 0.37, second bucket 0.59, expected `full`) yield `reduced`,
@@ -95,36 +101,36 @@ Resolved Questions.
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
 | FR1 | task0001 | TS-11 |
-| FR2 | task0002 | TS-12 |
+| FR2 | task0002, task0013 | TS-12 |
 | FR3 | task0002, task0005 | TS-5 |
-| FR4 | task0001 | TS-10 |
+| FR4 | task0001, task0012 | TS-10 |
 | FR5 | task0001, task0003 | TS-13 |
 | FR6 | task0003 | TS-13 |
 | FR7 | task0003, task0004 | TS-1, TS-2, TS-4 |
 | FR8 | task0004 | TS-14 |
-| FR9 | task0005 | TS-15 |
-| FR10 | task0005, task0006 | TS-15 |
+| FR9 | task0005, task0011 | TS-15 |
+| FR10 | task0005, task0006, task0010 | TS-15 |
 | FR11 | task0005 | TS-15 |
-| FR12 | task0002, task0005 | TS-8 |
-| FR13 | task0001, task0003 | TS-9 |
+| FR12 | task0002, task0005, task0011 | TS-8 |
+| FR13 | task0001, task0003, task0012 | TS-9, TS-27 |
 | FR14 | task0003 | TS-20 |
-| FR15 | task0003, task0006 | TS-8 |
-| FR16 | task0006 | TS-6 |
+| FR15 | task0003, task0006, task0009, task0013 | TS-8, TS-24, TS-28 |
+| FR16 | task0006, task0010 | TS-6 |
 | FR17 | task0007 | TS-7 |
-| FR18 | task0006 | TS-6 |
-| FR19 | task0005 | TS-16 |
-| FR20 | task0003 | TS-17 |
+| FR18 | task0006, task0010 | TS-6, TS-25 |
+| FR19 | task0005, task0011 | TS-16, TS-26 |
+| FR20 | task0003, task0013 | TS-17 |
 | FR21 | task0005 | TS-15 |
 | FR22 | task0004 | TS-1, TS-2, TS-3 |
 | FR23 | task0003 | TS-18 |
 | FR24 | task0008 | TS-19 |
-| NFR1 | task0001, task0003 | TS-13 |
+| NFR1 | task0001, task0003, task0012 | TS-13 |
 | NFR2 | task0005, task0007 | TS-7 |
-| NFR3 | task0003, task0004, task0005 | TS-3 |
+| NFR3 | task0003, task0004, task0005, task0009, task0013 | TS-3 |
 | NFR4 | task0008 | TS-21 |
 | NFR5 | task0001, task0003 | TS-13 |
-| NFR6 | task0003, task0004, task0005 | TS-22 |
-| NFR7 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008 | TS-23 |
+| NFR6 | task0003, task0004, task0005, task0009, task0011 | TS-22 |
+| NFR7 | task0001, task0002, task0003, task0004, task0005, task0006, task0007, task0008, task0009, task0010, task0011, task0012, task0013 | TS-23 |
 
 ## E2E Testing
 
@@ -178,8 +184,8 @@ this feature has no visual surface.
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS-1 … TS-23) | 23 | 23 | 0 | 0 |
+| Test scenarios (TS-1 … TS-28) | 28 | 28 | 0 | 0 |
 | Success criteria (AC-1 … AC-15) | 15 | 15 | 0 | 0 |
 | Static analysis | 1 | 1 | 0 | 0 |
 | Manual checks | 5 | 0 | 0 | 5 |
-| **Total** | **44** | **39** | **0** | **5** |
+| **Total** | **49** | **44** | **0** | **5** |

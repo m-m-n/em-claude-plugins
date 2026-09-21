@@ -83,8 +83,7 @@ workflow:
   status: completed
   completed_at_commit: c182a0378e21da37f1915223f86929891dc1a33b
 - id: implement
-  status: completed
-  completed_at_commit: 028125670ae315e27dede14b9f31d3cc63946370
+  status: pending
   base_commit: 6c4971e457301a44c3b48c0af74c41d46e325c20
 - id: review
   status: in_progress
@@ -304,6 +303,144 @@ tasks:
     - NFR7
     status: merged
     branch: em-workflow/task-tier-reduction/task0008
+  task0009:
+    title: secure the integration worktree before the tier record is persisted
+    plan: tasks/task0009.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_tier_worktree_bootstrap.py
+    skills: []
+    domains:
+    - config-infra
+    - external-io
+    complexity: medium
+    requirements:
+    - FR15
+    - NFR3
+    - NFR6
+    - NFR7
+    status: pending
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - 35594b89cf21eb82
+  task0010:
+    title: implement the task-document plan exemption in the validator
+    plan: tasks/task0010.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/phases/create-plan-phase.md
+    - tests/test_tier_task_document_plan.py
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR10
+    - FR16
+    - FR18
+    - NFR7
+    status: pending
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - 59d5d56c193ecdd2
+      - c3ce3a0bc8509e72
+  task0011:
+    title: make the tier upgrade a re-enterable, authorized transition
+    plan: tasks/task0011.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/workflow-patch.md
+    - tests/test_tier_reduction_develop_loop.py
+    - tests/test_tier_decision_step_a.py
+    - tests/test_tier_upgrade_authorization.py
+    skills: []
+    domains:
+    - config-infra
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR9
+    - FR12
+    - FR19
+    - NFR6
+    - NFR7
+    status: pending
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - 39d3658845d45023
+      - cef596106f7aed93
+      - adee3ab50facc310
+      - 7e5a97a85c17c20a
+      - 2faf06fbe459a0a5
+  task0012:
+    title: data-driven, fail-safe tier evaluation over two readings
+    plan: tasks/task0012.md
+    files:
+    - em-workflow/scripts/decide-tier.py
+    - em-workflow/references/tier-rules.yaml
+    - tests/test_tier_rules.py
+    - tests/test_tier_evaluator_contract.py
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR4
+    - FR13
+    - NFR1
+    - NFR7
+    status: pending
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - 67b0e3ed5b953874
+      - 908eb79639dd17d7
+      - 6c01bcf729ce8d46
+      - 5d7c0e9b00dd6b2e
+  task0013:
+    title: one owner for the tier-decision record and its two projections
+    plan: tasks/task0013.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/phase-state.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_tier_workflow_schema.py
+    - tests/test_tier_decision_record.py
+    skills: []
+    domains:
+    - config-infra
+    - data-persistence
+    - api-contract
+    complexity: high
+    requirements:
+    - FR2
+    - FR15
+    - FR20
+    - NFR3
+    - NFR7
+    status: pending
+    provenance:
+      source: review
+      review_round: 1
+      source_ids:
+      - 6c01bcf729ce8d46
+      - 5d7c0e9b00dd6b2e
+      - 7de4948f1297d2bc
 review:
   status: pending
   plan:
@@ -341,6 +478,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0002
+    - task0013
     tests:
     - TS-12
   FR3:
@@ -360,6 +498,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0012
     tests:
     - TS-10
   FR5:
@@ -409,6 +548,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0005
+    - task0011
     tests:
     - TS-15
   FR10:
@@ -419,6 +559,7 @@ requirements:
     tasks:
     - task0005
     - task0006
+    - task0010
     tests:
     - TS-15
   FR11:
@@ -438,6 +579,7 @@ requirements:
     tasks:
     - task0002
     - task0005
+    - task0011
     tests:
     - TS-8
   FR13:
@@ -448,8 +590,10 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0012
     tests:
     - TS-9
+    - TS-27
   FR14:
     title: スタンドアロン経路
     status: ok
@@ -467,8 +611,12 @@ requirements:
     tasks:
     - task0003
     - task0006
+    - task0009
+    - task0013
     tests:
     - TS-8
+    - TS-24
+    - TS-28
   FR16:
     title: minimal の requirements / tasks
     status: ok
@@ -476,6 +624,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0006
+    - task0010
     tests:
     - TS-6
   FR17:
@@ -494,8 +643,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0006
+    - task0010
     tests:
     - TS-6
+    - TS-25
   FR19:
     title: 昇格時の再走行手順
     status: ok
@@ -503,8 +654,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0005
+    - task0011
     tests:
     - TS-16
+    - TS-26
   FR20:
     title: retrospect への記録
     status: ok
@@ -512,6 +665,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0003
+    - task0013
     tests:
     - TS-17
   FR21:
@@ -560,6 +714,7 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0012
     tests:
     - TS-13
   NFR2:
@@ -581,6 +736,8 @@ requirements:
     - task0003
     - task0004
     - task0005
+    - task0009
+    - task0013
     tests:
     - TS-3
   NFR4:
@@ -611,6 +768,8 @@ requirements:
     - task0003
     - task0004
     - task0005
+    - task0009
+    - task0011
     tests:
     - TS-22
   NFR7:
@@ -627,10 +786,15 @@ requirements:
     - task0006
     - task0007
     - task0008
+    - task0009
+    - task0010
+    - task0011
+    - task0012
+    - task0013
     tests:
     - TS-23
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
