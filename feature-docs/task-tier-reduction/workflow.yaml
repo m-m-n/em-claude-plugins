@@ -87,7 +87,7 @@ workflow:
   completed_at_commit: 028125670ae315e27dede14b9f31d3cc63946370
   base_commit: 6c4971e457301a44c3b48c0af74c41d46e325c20
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -305,9 +305,17 @@ tasks:
     status: merged
     branch: em-workflow/task-tier-reduction/task0008
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
