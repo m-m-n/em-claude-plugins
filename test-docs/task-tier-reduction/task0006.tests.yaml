@@ -1,0 +1,92 @@
+task_id: task0006
+baseline_failures:
+  - test_em_workflow_manifest_and_entry_agree_on_the_current_version (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version)
+  - test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_baseline_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged)
+  - test_cross_validation_data_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged)
+  - test_rules_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged)
+  - test_computation_semantics_preserved_in_prose (test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose)
+  - test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)
+  - test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)
+final_failures:
+  - test_em_workflow_manifest_and_entry_agree_on_the_current_version (test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version)
+  - test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_baseline_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged)
+  - test_cross_validation_data_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged)
+  - test_rules_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged)
+  - test_computation_semantics_preserved_in_prose (test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose)
+  - test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)
+  - test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tier_phase_preconditions.TestTierTranscriptionStated.test_transcription_is_stated
+      - tests.test_tier_phase_preconditions.TestTierTranscriptionStated.test_persisted_record_is_cited_not_restated
+    red_confirmed: true
+    red_reason: "create-spec-phase.md had no tier-transcription wording; assertIn('the orchestrator reads that persisted tier record and writes ...') failed with the substring absent from the document."
+  AC-2:
+    tests:
+      - tests.test_tier_phase_preconditions.TestArtifactsPerTierStated.test_artifacts_per_tier_is_stated
+      - tests.test_tier_phase_preconditions.TestArtifactsPerTierStated.test_task_document_named_as_the_minimal_tier_replacement
+    red_confirmed: true
+    red_reason: "create-spec-phase.md had no artifacts-per-tier wording; assertIn(\"develop skill's reduction table\") failed with the phrase absent."
+  AC-3:
+    tests:
+      - tests.test_tier_phase_preconditions.TestTaskDocumentTemplate.test_template_file_exists
+      - tests.test_tier_phase_preconditions.TestTaskDocumentTemplate.test_exactly_two_sections_change_and_expected_result
+      - tests.test_tier_phase_preconditions.TestTaskDocumentTemplate.test_no_requirement_identifiers_scenarios_or_assumptions_block
+    red_confirmed: true
+    red_reason: "em-workflow/references/templates/task-document.md did not exist; setUpClass raised FileNotFoundError before any assertion ran."
+  AC-4:
+    tests:
+      - tests.test_tier_phase_preconditions.TestCreatePlanPreconditionsTierAware.test_preconditions_are_tier_aware
+    red_confirmed: true
+    red_reason: "create-plan-phase.md's Preconditions section had only the full-tier wording; assertIn('at the `reduced` tier REQUIREMENTS.md may be absent') failed."
+  AC-5:
+    tests:
+      - tests.test_tier_phase_preconditions.TestSingleTaskShapeStated.test_single_task_shape_is_stated
+      - tests.test_tier_phase_preconditions.TestSingleTaskShapeStated.test_task_completion_defined_by_merge
+    red_confirmed: true
+    red_reason: "create-plan-phase.md had no single-task-shape wording; assertIn('exactly one task entry') failed with the phrase absent."
+  AC-6:
+    tests:
+      - tests.test_tier_phase_preconditions.TestValidatorAcceptsMinimalShapePatch.test_empty_requirement_map_and_empty_requirement_list_pass
+      - tests.test_tier_phase_preconditions.TestValidatorAcceptsMinimalShapePatch.test_patch_missing_complexity_is_rejected
+    red_confirmed: false
+    red_reason: "AC-6 asserts an existing invariant of em-workflow/scripts/validate-worker-output.py, which this task's Out of Scope explicitly forbids changing. The positive case (empty requirements map + empty requirements list, exit 0) and the negative proof (missing complexity, exit 1 naming 'complexity') both passed on first run, before any implementation in this task touched the script -- there was no red state to observe because no code change was needed to satisfy this criterion. Verified directly by re-running this test file before any doc/template edit existed: it was already green (see notes)."
+  AC-7:
+    tests:
+      - tests/test_tier_phase_preconditions.py
+    red_confirmed: true
+    red_reason: "The module itself only exists once written; before that, 'python3 -m unittest discover -s tests' could not discover it. Once written (before doc/template implementation), 20 of 28 initial test methods failed (7 content-assertion failures + 1 setUpClass ERROR for the missing template file), confirming the module's own assertions were exercising real, then-missing content rather than being vacuously true."
+notes: >
+  AC-6's tests were green from the first run of the new test module (before
+  em-workflow/references/phases/create-spec-phase.md,
+  em-workflow/references/phases/create-plan-phase.md, or
+  em-workflow/references/templates/task-document.md were touched), because
+  AC-6 verifies an invariant of validate-worker-output.py that this task's
+  plan explicitly places Out of Scope ("Any change to the validator script.
+  If AC-6 turns out to need one, that is a plan deviation to report, not a
+  licence to edit it here."). No deviation was needed: the script already
+  accepts an empty `requirements` map/list unmodified, and already rejects
+  a task entry missing `complexity`. This matches the tdd-testing skill's
+  documented exception for a criterion whose behavior genuinely pre-existed.
+
+  A first attempt at AC-1/AC-2's wording used two new "## N." top-level
+  headings in create-spec-phase.md ("## 8a. Tier-driven artifact
+  selection", "## 11b. Tier transcription"). Running the full suite
+  surfaced two pre-existing regression guards outside this task's file set
+  (tests/test_create_spec_goal_persistence.py and
+  tests/test_create_spec_reentry_preservation.py, both from an earlier,
+  unrelated feature) that pin create-spec-phase.md's exact ordered "## "
+  heading list and forbid inserting a new one. The content was
+  re-authored as bold-led paragraphs folded into the existing "## 9. Spec
+  writer dispatch" and "## 11. workflow.yaml construction" sections
+  instead (matching that document's own established convention for
+  sub-topics, e.g. "**Partial update on re-entry**:"), which carries the
+  same information without adding a heading line. Full-suite re-run
+  confirmed exactly the 10 baseline failures remained, zero new.
