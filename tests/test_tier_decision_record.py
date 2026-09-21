@@ -212,7 +212,7 @@ class TestMappingTableSingleOwnership(unittest.TestCase):
         text = self.texts["skill"]
         idx = _heading_index(text, "### retrospect フェーズ")
         section = text[idx : idx + 4000]
-        self.assertIn("上記「tier 決定」手順・手順 7", section)
+        self.assertIn("上記「tier 決定」手順の永続化ステップ", section)
         # And it must NOT restate the file path itself here (that citation
         # lives in the tier-decision procedure, per the test above).
         self.assertNotIn("create-spec-phase.md", section)
