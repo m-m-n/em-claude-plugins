@@ -163,7 +163,7 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0003
   task0004:
     title: no-work stop reason code and its pinned assertions
