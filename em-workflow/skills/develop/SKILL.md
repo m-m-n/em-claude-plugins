@@ -571,7 +571,7 @@ I.2.c、引用のみでここでは繰り返さない）を通じて扱う。
 | tier | 削減する対象 |
 |------|-------------|
 | `full` | 削減なし |
-| `reduced` | REQUIREMENTS.md、design step。IMPLEMENTATION.md は複数タスクが同一ファイルを宣言しないときのみ削減する。複数タスクが同一ファイルを宣言する場合は IMPLEMENTATION.md を維持し、`## Shared Components` 節を含める（要件は `references/create-plan-phase.md` の Shared Components 節を引用、ここでは繰り返さない） |
+| `reduced` | REQUIREMENTS.md、design step。IMPLEMENTATION.md は複数タスクが同一ファイルを宣言しないときのみ削減する。複数タスクが同一ファイルを宣言する場合は IMPLEMENTATION.md を維持し、`## Shared Components` 節を含める（要件は `references/phases/create-plan-phase.md` の Shared Components 節を引用、ここでは繰り返さない） |
 | `minimal` | REQUIREMENTS.md、IMPLEMENTATION.md、design step に加えて、SPEC.md（`TASK.md` に置換 — 様式は `em-workflow/references/templates/task-document.md` を参照し、ここでは定義しない）、タスク分割、VERIFICATION.md、task レベルの並列性 |
 
 全 tier で維持されるもの: 既存のテストスイート全体、Step 0 の git-setup
@@ -647,19 +647,23 @@ create-spec の `status` を `needs_update` に設定し、design の `skipped`
 **再生成後の復帰先**: 上記の再生成手順（`minimal` / `reduced` いずれの
 昇格も含む）で create-spec・design・create-plan が完了したあと、
 completed の implement と failed の verify はこの再生成だけでは
-`pending` に戻らない。復帰先は rework 合成であり、
-`references/rework-task-synthesis.md` §8a が定める「昇格を先に完了して
-いること」を満たした状態で rework-planner を dispatch し、その
-`append_rework` パッチ（`references/workflow-patch.md` が定義する）で
-implement と verify を `pending` に戻す。この経路が発火する根拠は
-`phase-state/rework.yaml` の認可記録のうち `consumed` フィールドであり、
-`false` のまま残っている記録が rework 合成への再入場を許可する
-（`replan_authorized` は上記の再生成手順そのものの認可に既に使われて
-おり、ここでの根拠ではない）。rework-planner が `append_rework` を書いた
-時点でこの記録の `consumed` を `true` に更新し、以降の再入場では
-既に処理済みとして扱う。`--once` を挟んだ再開も同じ経路をたどる —
-`--once` はフェーズ境界の扱いを変えるだけで認可記録の参照先は変えない
-ため、再開時も `consumed: false` の記録を読んで同じ rework 合成の
+`pending` に戻らない。この昇格手順はあくまで rework 合成の**前段**で
+あり、昇格手順そのものが rework-planner を dispatch することは無い —
+dispatch は `references/rework-task-synthesis.md` §8a が唯一持つ入口
+（rework 合成の入口）に一本化する。昇格手順は、create-spec・design・
+create-plan の再実行が完了した時点で `phase-state/tier-upgrade.yaml`
+に昇格完了記録を書く（フィールド構成は `references/phase-state.md` の
+定義に従う。この記録の writer は昇格手順のみであり、`phase-state/
+rework.yaml` の `consumed` / `replan_authorized` とは別物で、これらを
+読み替えたり流用したりしない）。§8a の入口はこの昇格完了記録の有無を
+「昇格を先に完了していること」の判定条件として読み、条件を満たした
+状態で rework-planner を dispatch し、その `append_rework` パッチ
+（`references/workflow-patch.md` が定義する）で implement と verify を
+`pending` に戻す。この昇格完了記録を消費して処理済みに更新するのは
+§8a の入口側（rework-planner が `append_rework` を書いた時点）であり、
+昇格手順の内部では行わない。`--once` を挟んだ再開も同じ入口に一本化
+される — `--once` はフェーズ境界の扱いを変えるだけで、昇格完了記録が
+残っていれば再開時も §8a の入口が同じ記録を読んで同じ rework 合成の
 dispatch に戻る。
 
 | step | 実行方法 |
