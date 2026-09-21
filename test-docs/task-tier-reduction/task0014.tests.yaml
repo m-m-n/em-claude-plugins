@@ -1,0 +1,100 @@
+task_id: task0014
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_consults_twice_and_records_both_bases
+  - test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_unresolved_conditions_give_removes_nothing_tier
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests: [test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_consults_twice_and_records_both_bases]
+    red_confirmed: true
+    red_reason: >-
+      Ran before any edit (4a baseline): AssertionError: False is not true.
+      Item 4 read "1 回目は decision-basis `description_only`（タスク記述の
+      みを基準に）", splitting the required contiguous phrase
+      "1 回目はタスク記述のみを基準に" with the identifier and parenthesis.
+  AC-2:
+    tests: [test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_unresolved_conditions_give_removes_nothing_tier]
+    red_confirmed: true
+    red_reason: >-
+      Ran before any edit (4a baseline): AssertionError: False is not true.
+      Item 6 enumerated the three existing unresolved-availability cases
+      (judgement skill unusable / non-zero exit / two readings disagreeing)
+      but had no catch-all sentence containing
+      "フォールバック表が解決しないその他の条件".
+  AC-3:
+    tests:
+      - test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_no_threshold_value_restated
+      - test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_no_external_skill_sentence_reproduced_text_overlap
+      - test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_never_names_raw_codex_subcommand_as_invocation_route
+      - test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_names_readonly_codex_wrapper
+      - test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_names_judgement_skill_with_json_switches
+      - test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_named_external_skills_by_path_structurally
+    red_confirmed: false
+    red_reason: >-
+      Per the task plan's Test Notes, AC-3 is a regression-detection
+      criterion: these sibling assertions already existed and already
+      passed before this task touched the document (no threshold literal,
+      no external-skill sentence, no raw `codex exec`, and the two
+      invocation paths named by path were already true). Their job here is
+      to catch a wording change that breaks one of them, not to go red
+      first -- re-run after the edit confirmed all still pass (see
+      TestAC1PlacementAndInvocations / TestAC2AvailabilityAndThresholds
+      full-module run, all ok).
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified structurally via `git diff -- em-workflow/skills/develop/SKILL.md`
+      after implementation: the diff's two hunks touch only item 4 and item
+      6 inside the `### tier 決定` section, nothing else in the file. The
+      pre-existing TestRegionOwnershipRegression class in
+      test_tier_decision_step_a.py (anchors from the turn-ending conditions
+      list, Step B phase table, carve-out enumeration, Step C heading) was
+      run before and after and passed both times, corroborating that those
+      other regions were untouched. Not a red/green test in itself -- a
+      diff-scope check, per the task plan's own verification method for
+      this criterion.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified via `git diff -- tests/test_tier_decision_step_a.py`
+      returning empty (byte-identical) and via
+      `python3 -m unittest discover -s tests`, which after implementation
+      reports 9 failures -- exactly baseline_failures minus the two AC-1/AC-2
+      tests, with test_tier_decision_step_a.TestAC1PlacementAndInvocations.test_consults_twice_and_records_both_bases
+      and test_tier_decision_step_a.TestAC2AvailabilityAndThresholds.test_unresolved_conditions_give_removes_nothing_tier
+      both passing. This is a whole-suite property, not a single test that
+      could itself be observed red before the implementation existed.
+notes: >-
+  Deviation: implementing item 4's word-order fix (required by AC-1) broke
+  an anchor pinned verbatim in tests/test_tier_worktree_bootstrap.py
+  (task0009's region-ownership regression test, TWO_READINGS_ANCHOR), which
+  was not among the baseline failures and was not named in this task's Test
+  Notes. That module's own docstring states the anchor exists "so an
+  unrelated future edit by task0013 to those regions does not spuriously
+  fail this module once merged" -- i.e. it is meant to track the owning
+  region's current authorized content, not to freeze item 4's wording
+  forever. Updated TWO_READINGS_ANCHOR to the new item-4 text (same
+  reordering as the SKILL.md edit) so the regression guard's purpose
+  (detecting accidental cross-region edits) is preserved rather than
+  weakened. Full module re-run after the update: 34/34 pass, including the
+  previously-broken test_two_readings_step_unchanged.
