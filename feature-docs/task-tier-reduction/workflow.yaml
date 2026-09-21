@@ -1,0 +1,327 @@
+schema_version: 1
+feature: task-tier-reduction
+created: 2026-09-21
+base_branch: main
+goal: |
+  タスクの重さを判定してワークフローを軽減する
+
+  ## やりたいこと (必須)
+  タスクの重さを走行前に判定し、em-workflow の走行段を 3 段階（`full` / `reduced` / `minimal`）で軽減する。判定できないときは `full` を既定とする。
+  判定は Codex の事前調査と Jev（TypeSafe AI の System One モデル）の組み合わせで行い、Claude を使わない。
+
+  ## 背景・なぜ (必須)
+  1 行の修正でもフル走行が回り、Claude Code の週間枠を先に使い切っている。Codex の枠は余っている。判定自体を Claude にやらせると、軽減で浮かせた分を判定で食う。
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+  ### 判定の核
+  - [ ] `references/tier-rules.yaml` を新設し、Jev へ送る質問・閾値・Codex の出力スキーマを 1 箇所に集める
+  - [ ] `workflow.yaml` に `tier` と `tier_decision`（`by` / `confidence` / `at` / `reductions`）を追加し、`references/workflow-schema.md` に定義を書く
+  - [ ] `workflow[]` の `status: skipped` を `design` 以外の step にも許す（現状は design 以外に `skipped` があると YAML エラー扱いで停止する）
+  - [ ] 判定は Jev の `score` の `probabilities` を使う。`confidence` 単体で閾値を切らない
+  - [ ] 初期閾値: `P(0) >= 0.80` かつ `expectation_clear >= 0.5` で `minimal`、`P(0) + P(1) >= 0.85` で `reduced`、それ以外は `full`
+  ### Codex 事前調査
+  - [ ] 走行開始前に Codex（`run_codex_exec.sh` の `readonly`）でタスクの変更範囲を見積もる
+  - [ ] 出力は構造化スキーマで受ける。触るファイルと変更行数の概算、新規の関数・ファイル・依存の要否、既存テストの有無、他モジュールへの波及、`work_still_required`
+  - [ ] 見積もり結果を Jev の `state` に足して判定する
+  - [ ] `work_still_required: false` のときは走行を始めず、`references/batch-terminal-line.md` の terminal state（stop）で返す。stop-recovery に Codex の根拠を入れる
+  - [ ] Notion のステータス・本文は触らない。「中断」への遷移はディスパッチャの責務
+  ### 走行側の引き算
+  - [ ] `reduced` は `full` から REQUIREMENTS.md / IMPLEMENTATION.md / design を引く
+  - [ ] `minimal` は `reduced` からさらに SPEC.md（`TASK.md` に置き換え）/ `tasks/` の分割 / VERIFICATION.md / 並列 worktree を引く
+  - [ ] `TASK.md` は「変更点」と「期待結果」の 2 つだけを持つ
+  - [ ] `minimal` でも既存テストスイートは全部実行する。引くのは VERIFICATION.md という文書だけ
+  - [ ] 昇格のみ許す。review で critical が出た、verify が落ちた場合に tier を上げて再走行できる。下げるのは許さない
+  ### フォールバック
+  - [ ] Jev と Codex の両方が使えるときは記述 + 実コードで判定する
+  - [ ] Jev だけのときは記述ベースで判定し、割れたら `full` に倒す
+  - [ ] どちらも使えないときは `full`
+  - [ ] スタンドアロン（`workflow.yaml` 起点・Notion 不在）でも同じ規則で動く
+  ## スコープ外 (任意)
+  - 閾値の自動調整・学習。初期値は固定で、retrospect に判定と結果を残すところまで
+  - `tier` を人が手で指定する経路
+  - em-review 側への展開
+  ## 制約・前提 (任意)
+  - **security 観点は引けない。** `review-rules.yaml` の `baseline` に `security` が入っているため、`minimal` でも floor に乗る。tier 側で観点を引く分岐を作らない
+  - `minimal` は `tasks` メタデータと SPEC.md を作らないため、floor は自動的に `comprehensive + security` に落ちる。tier で review 段を制御しない
+  - Step 0 の git-setup（gitleaks pre-commit）は全段階で走る
+  - 判定の入り口は Step A（feature 決定の直後）。create-spec のコストを払う前に決める
+  - Jev の呼び出し方は `~/.claude/skills/jev`、モデルの特性と質問設計は公式スキル `typesafe:typesafe-ai` にある。どちらも実装側に書き写さない
+  - Jev は `--json-input` / `--json-output` で叩く。終了コードは 0 成功 / 1 その他 / 2 HTTP 401 / 75 HTTP 429 または 529
+  - Codex は `codex-harness:codex-cli` の `run_codex_exec.sh` 経由。`codex exec` を直接呼ばない
+  - 実測値（参考）: 記述のみだと `P(0)=0.37 / P(1)=0.59`、Codex の見積もりを足すと `P(0)=0.81` に確定した。state は +209 トークン、Codex は 66 秒
+parent_branch: em-workflow/task-tier-reduction/integration
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ""
+      test_command: "python3 -m unittest discover -s tests"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [REQUIREMENTS.md, SPEC.md]
+    status: completed
+    completed_at_commit: 8f3bbab5b5b1de58639680f57c849f7d516e5b74
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "em-workflow プラグインの文書・プロトコル変更のみで、UI 面・視覚要素を一切持たない。design-system 候補も 0 件。"
+  - id: create-plan
+    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+    status: pending
+  - id: implement
+    status: pending
+    base_commit: 6c4971e457301a44c3b48c0af74c41d46e325c20
+  - id: review
+    status: pending
+  - id: verify
+    status: pending
+    result: null
+    failed_items: []
+  - id: retrospect
+    status: pending
+
+tasks: {}
+
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+
+requirements:
+  FR1:
+    title: "tier-rules.yaml の新設"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-11]
+  FR2:
+    title: "workflow.yaml の tier / tier_decision"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: "design 以外の step への skipped 許可"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-5]
+  FR4:
+    title: "Jev 判定の入力と閾値"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-10]
+  FR5:
+    title: "Codex 事前調査"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: "見積もりの Jev state への合流"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: "work_still_required: false の停止表現"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-2, TS-4]
+  FR8:
+    title: "外部タスク管理サービスに触れない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: "reduced の引き算"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: "minimal の引き算"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: "minimal でもテストは全部走る"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR12:
+    title: "昇格のみ（降格禁止）"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  FR13:
+    title: "フォールバック"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-9]
+  FR14:
+    title: "スタンドアロン経路"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR15:
+    title: "tier 判定結果の永続化と転記"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-8]
+  FR16:
+    title: "minimal の requirements / tasks"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  FR17:
+    title: "develop 駆動経路の spec 観点除外条件"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+  FR18:
+    title: "create-plan 前提条件の tier 対応"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-6]
+  FR19:
+    title: "昇格時の再走行手順"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR20:
+    title: "retrospect への記録"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR21:
+    title: "並列 worktree を引くの範囲"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR22:
+    title: "既存の固定アサーションの更新"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-1, TS-2, TS-3]
+  FR23:
+    title: "gate_id 双方向チェックへの整合"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR24:
+    title: "minimal からの rework 経路の明示"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: "判定に Claude を使わない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: "security 観点は引けない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-7]
+  NFR3:
+    title: "SSOT 分割の維持"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: [TS-3]
+  NFR4:
+    title: "プラグイン version bump"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: "外部スキルの内容を複製しない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: "無人実行を止めない"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: "テストの依存制約"
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
