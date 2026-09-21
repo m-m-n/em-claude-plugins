@@ -35,6 +35,18 @@ parent_branch: em-workflow/{feature}/integration
                                    # workflow-owned integration branch; task branches
                                    # fork from & merge into it (see implement-phase.md
                                    # Branch & Worktree Model)
+tier: full                         # full | reduced | minimal; upgrade-only
+                                   # (see "## `tier` and `tier_decision`"
+                                   # below)
+tier_decision:                     # sibling record; exactly 4 sub-fields
+                                   # (see same section); written by the
+                                   # orchestrator in the same write that
+                                   # builds this file
+  by: {agent}                      # the agent that decided
+  confidence: {...}                # observed probability values, not a
+                                   # single scalar
+  at: {ISO-8601 timestamp}         # decision timestamp
+  reductions: [...]                # subtractions applied
 
 project:
   license: {SPDX id | none}        # root LICENSE file identified at create-spec
@@ -65,11 +77,13 @@ workflow:                          # fixed step sequence; orchestrator advances 
     completed_at_commit: {sha}     # set on completion
   - id: design                     # visual design decisions (conditional step)
     artifacts: [DESIGN.md, design/]
-    status: pending                # ONLY this step may also be `skipped`;
-                                   #   decided during create-spec (see
+    status: pending                # `skipped` is valid here (own
+                                   #   create-spec-decided case; see
                                    #   requirements-analyst's design-step
                                    #   recommendation, confirmed by the
-                                   #   orchestrator)
+                                   #   orchestrator) and, when a tier
+                                   #   subtracts a step, for any step (see
+                                   #   "## Status semantics" below)
     skipped_reason: null           # MANDATORY when status: skipped
   - id: create-plan
     artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
@@ -433,9 +447,16 @@ contract.
 
 - The orchestrator decides the next step by scanning `workflow[]` for the
   first entry whose `status` is neither `completed` nor `skipped`.
-- `skipped` is valid ONLY for the `design` step (with `skipped_reason` set).
-  The workflow is complete when every step is `completed`, except that
-  `design` may be `skipped`.
+- `skipped` is valid for any step that a tier subtracted, not only for
+  `design`; `skipped_reason` is MANDATORY whenever `status` is `skipped`,
+  in every case. A `skipped` step is passed over by the step-selection rule
+  above, exactly as before. The `design` step keeps its own named case,
+  independent of tier: a create-spec-decided skip (see
+  requirements-analyst's design-step recommendation, confirmed by the
+  orchestrator).
+- The workflow is complete when every step is `completed`, except that a
+  step a tier subtracted -- `design`'s own create-spec-decided case
+  included -- may instead be `skipped`.
 - `tasks.*.status` transitions: `pending → in_progress` (orchestrator, at
   dispatch) `→ merged` (orchestrator, after the implementer reports its
   merge-task.sh success) or `→ failed`. A `failed` task resolves ONLY by
@@ -451,3 +472,29 @@ contract.
   implement (`needs_rework: true`), or get an explicit user decision. In
   batch mode the "explicit user decision" arm is replaced by the capped
   auto-rework + auto-defer rule (references/batch-mode.md decision table).
+
+## `tier` and `tier_decision`
+
+`tier` is a top-level field holding one of three values: `full`, `reduced`,
+or `minimal`. Its write owner is the orchestrator, exactly like every other
+field of this file -- the single-writer rule stated in "## Write ownership"
+above is unchanged and is not restated here.
+
+`tier_decision` is a sibling mapping carrying exactly four sub-fields, no
+more and no fewer:
+
+- `by` -- the agent that decided.
+- `confidence` -- the observed probability values the decision was based
+  on, not a single confidence scalar. This shape exists so that nothing in
+  this schema invites a confidence-only threshold; the threshold rows and
+  the availability fallback matrix that decide the tier are owned by
+  `references/tier-rules.yaml` and are not restated here.
+- `at` -- the decision timestamp.
+- `reductions` -- the list of subtractions the decision applied.
+
+**Upgrade-only.** The `tier` value may be raised and never lowered. A
+re-transcription from persisted state -- `phase-state/{feature}/tier.yaml`
+before `workflow.yaml` exists, `workflow.yaml` itself once it does -- must
+not lower the value already recorded. The mechanism that performs a
+raise -- returning a `skipped` step to `pending` -- belongs to the develop
+skill (`skills/develop/SKILL.md`) and is cited here, not described.
