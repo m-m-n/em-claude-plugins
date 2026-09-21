@@ -86,14 +86,14 @@ def _parse_version(version):
 
 
 def _assert_version_past_baseline(test, version):
-    """The baseline matcher: durable invariant (major, minor) == (0, 1) and
-    patch > BASELINE_PATCH. A fixed literal would go stale on the very next
-    unrelated version bump."""
+    """The baseline matcher: durable invariant is a version strictly greater
+    than (0, 1, BASELINE_PATCH) under per-component numeric comparison. Never
+    a fixed major.minor pin -- that form goes stale on the next legitimate
+    minor bump (task-tier-reduction task0008, NFR4) -- and never a raw-string
+    comparison."""
     parts = _parse_version(version)
     test.assertIsNotNone(parts, f"version {version!r} is not of the form X.Y.Z")
-    major, minor, patch = parts
-    test.assertEqual((major, minor), (0, 1))
-    test.assertGreater(patch, BASELINE_PATCH)
+    test.assertGreater(parts, (0, 1, BASELINE_PATCH))
 
 
 def _assert_versions_equal(test, version_a, version_b):

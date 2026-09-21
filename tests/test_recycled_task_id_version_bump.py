@@ -55,14 +55,15 @@ def _marketplace_entry(data, name):
 
 
 def _assert_version_past_baseline(test, version):
-    """Durable invariant: (major, minor) == (0, 1) and patch > BASELINE_PATCH.
-    A fixed literal is guaranteed to go stale on the very next unrelated
-    version bump, per the pattern in tests/test_planner_designer_worktree_docs.py."""
+    """Durable invariant: version strictly greater than
+    (0, 1, BASELINE_PATCH) under per-component numeric comparison. Never a
+    fixed major.minor pin -- that form is guaranteed to go stale on the next
+    legitimate minor bump (task-tier-reduction task0008, NFR4) -- per the
+    pattern in tests/test_planner_designer_worktree_docs.py."""
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)$", version)
     test.assertIsNotNone(match, f"version {version!r} is not of the form X.Y.Z")
-    major, minor, patch = (int(g) for g in match.groups())
-    test.assertEqual((major, minor), (0, 1))
-    test.assertGreater(patch, BASELINE_PATCH)
+    parts = tuple(int(g) for g in match.groups())
+    test.assertGreater(parts, (0, 1, BASELINE_PATCH))
 
 
 def _bare_git_commit_or_add_lines(text):

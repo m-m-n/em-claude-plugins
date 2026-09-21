@@ -2140,7 +2140,18 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
     # only ever computed when a baseline IS supplied; the per-task loop below
     # turns a declared `new_scenarios` with no baseline into a hard error
     # instead of silently accepting it.
+    #
+    # task-tier-reduction/task0008 (AC-3, TS-19): a THIRD situation exists
+    # alongside "no baseline supplied" and "baseline supplied, document
+    # present" -- the most-reducing tier never produces VERIFICATION.md at
+    # all (references/rework-task-synthesis.md Section 8a), so the feature
+    # directory's own VERIFICATION.md can be absent even when a baseline
+    # directory WAS supplied. That absence must not fall through into
+    # `new_ids_in_doc` staying None and therefore silently skipping the
+    # check below (the pre-task0008 gap) -- `verification_doc_absent`
+    # records it explicitly so the per-task loop gives it its own outcome.
     new_ids_in_doc = None
+    verification_doc_absent = False
     if feature_dir is not None and baseline_dir is not None:
         vpath = feature_dir / "VERIFICATION.md"
         if vpath.is_file():
@@ -2148,6 +2159,8 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
             bpath = baseline_dir / "VERIFICATION.md"
             before_ids = extract_verification_scenario_ids(bpath.read_text(encoding="utf-8")) if bpath.is_file() else set()
             new_ids_in_doc = after_ids - before_ids
+        else:
+            verification_doc_absent = True
 
     tests_append_all = set()
     if workflow_patch is not None:
@@ -2181,6 +2194,24 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
                     f"{task_id}: new_scenarios is declared but no --baseline-dir was supplied; "
                     "the claim that these scenarios are new (rather than pre-existing) cannot be "
                     "verified against a VERIFICATION.md diff",
+                )
+            )
+        elif new_sc and verification_doc_absent:
+            # task-tier-reduction/task0008 (AC-3, TS-19): distinct from the
+            # no-baseline-directory case above -- a baseline WAS supplied,
+            # but there is no VERIFICATION.md in the feature directory to
+            # diff it against at all (the most-reducing tier never produces
+            # one; references/rework-task-synthesis.md Section 8a). Fail
+            # closed, the same as the no-baseline case, but name the case
+            # distinctly so the two are never confused when triaging a
+            # rejection.
+            errors.append(
+                err(
+                    "rework-index",
+                    f"{task_id}: new_scenarios is declared but no VERIFICATION.md exists in "
+                    "the feature directory to diff (the most-reducing tier never produces one "
+                    "until the tier is upgraded); the claim that these scenarios are new cannot "
+                    "be verified",
                 )
             )
         elif new_ids_in_doc is not None:

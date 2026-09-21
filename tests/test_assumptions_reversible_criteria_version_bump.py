@@ -96,19 +96,15 @@ def _assert_versions_agree(test, version_a, version_b):
 
 
 def _assert_patch_bump_over_baseline(test, version, baseline=BASELINE_VERSION):
-    """Property 2 (AC-3): `version` is strictly greater than `baseline` at
-    the patch component, with major and minor unchanged."""
-    major, minor, patch = _version_tuple(version)
-    base_major, base_minor, base_patch = _version_tuple(baseline)
-    test.assertEqual(
-        (major, minor),
-        (base_major, base_minor),
-        f"major.minor changed: {version!r} vs baseline {baseline!r}",
-    )
+    """Property 2 (AC-3, re-scoped by task-tier-reduction task0008 NFR4):
+    `version` is strictly greater than `baseline` under per-component
+    numeric comparison. Never a fixed major.minor pin -- that form goes
+    stale on the next legitimate minor bump, which is exactly what task0008
+    performs."""
     test.assertGreater(
-        patch,
-        base_patch,
-        f"patch component did not increase: {version!r} vs baseline {baseline!r}",
+        _version_tuple(version),
+        _version_tuple(baseline),
+        f"version did not advance past baseline: {version!r} vs baseline {baseline!r}",
     )
 
 
@@ -195,8 +191,8 @@ class TestPatchBumpMatcherNegativeProof(unittest.TestCase):
     """AC-5 property 2: `_assert_patch_bump_over_baseline` negative proof
     plus non-vacuity companion, including the Test Notes edge cases: a
     version equal to the baseline is rejected (strictly greater, not
-    greater-or-equal), and a minor or major bump is rejected even though
-    numerically greater, since AC-3 requires major.minor unchanged."""
+    greater-or-equal); a minor or major bump is accepted (task-tier-
+    reduction task0008, NFR4 -- the matcher no longer pins major.minor)."""
 
     def test_rejects_version_equal_to_baseline(self):
         with self.assertRaises(AssertionError):
@@ -206,13 +202,13 @@ class TestPatchBumpMatcherNegativeProof(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _assert_patch_bump_over_baseline(self, "0.1.10")
 
-    def test_rejects_minor_bump(self):
-        with self.assertRaises(AssertionError):
-            _assert_patch_bump_over_baseline(self, "0.2.0")
+    def test_accepts_minor_bump(self):
+        # task-tier-reduction/task0008 (NFR4): a minor bump is now a
+        # legitimate advance over the baseline.
+        _assert_patch_bump_over_baseline(self, "0.2.0")  # must not raise
 
-    def test_rejects_major_bump(self):
-        with self.assertRaises(AssertionError):
-            _assert_patch_bump_over_baseline(self, "1.1.65")
+    def test_accepts_major_bump(self):
+        _assert_patch_bump_over_baseline(self, "1.1.65")  # must not raise
 
     def test_rejects_malformed_version_shape(self):
         with self.assertRaises(AssertionError):

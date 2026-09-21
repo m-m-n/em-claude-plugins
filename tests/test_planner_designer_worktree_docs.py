@@ -209,24 +209,26 @@ class TestPluginJsonVersionBump(unittest.TestCase):
         except json.JSONDecodeError as exc:
             self.fail(f"plugin.json is not valid JSON: {exc}")
 
-    def test_version_bumped_exactly_one_patch_from_0_1_21(self):
+    def test_version_bumped_forward_of_0_1_21(self):
         # NOTE (taskstop-journal-failed-event task0003): this originally
         # asserted equality with the literal "0.1.22" -- the value task0005
         # bumped to at the time this test was written. That is unsound as a
         # standing assertion: every subsequent task in this repository also
-        # bumps the patch component (root CLAUDE.md convention), so a fixed
-        # literal is guaranteed to go stale on the very next unrelated bump
-        # (it already had, at 0.1.23, before this task touched anything).
-        # Assert the durable invariant task0005's AC-3 actually cared about
-        # instead: still on the 0.1.x line, and bumped forward of the
-        # pre-task0005 baseline (0.1.21).
-        major, minor, patch = (int(part) for part in self.data["version"].split("."))
-        self.assertEqual((major, minor), (0, 1))
+        # bumps the version (root CLAUDE.md convention), so a fixed literal
+        # is guaranteed to go stale on the very next unrelated bump (it
+        # already had, at 0.1.23, before this task touched anything).
+        # NOTE (task-tier-reduction task0008, NFR4): a further pin on
+        # (major, minor) == (0, 1) went stale the same way once a legitimate
+        # minor bump landed. Assert the durable invariant instead: the
+        # version strictly greater than the pre-task0005 baseline 0.1.21
+        # under per-component numeric comparison, regardless of which
+        # component advances.
+        parts = tuple(int(part) for part in self.data["version"].split("."))
         self.assertGreater(
-            patch,
-            21,
-            "version must be bumped forward (patch > 21) from the "
-            "pre-task0005 baseline 0.1.21",
+            parts,
+            (0, 1, 21),
+            "version must advance past the pre-task0005 baseline 0.1.21 "
+            "under per-component numeric comparison",
         )
 
     def test_description_reflects_branch_worktree_model(self):
