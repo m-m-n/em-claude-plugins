@@ -2068,6 +2068,26 @@ def _resolve_contained_relative_path(base_dir, rel_path):
     return current, None
 
 
+# task-tier-reduction/task0010 (AC-4): the task document's file name
+# (`references/templates/task-document.md`), matched by itself -- never a
+# tier value, which this call site has no channel to receive.
+TASK_DOCUMENT_FILE_NAME = "TASK.md"
+
+
+def _task_entry_plan_is_task_document(plan_rel):
+    """task-tier-reduction/task0010 (AC-1, AC-4, section 2a of
+    create-plan-phase.md, worded identically there): the exemption's
+    trigger is the plan value's final path segment equals the task
+    document's file name -- not the full path, so this decision uses only
+    data the phase document already fixes. Evaluated on the raw,
+    not-yet-validated `plan_rel` string; callers must reach this only AFTER
+    the path-safety, symlink and containment checks have already passed
+    (see `_validate_task_plans_against_patch`), so a patch-supplied path
+    can never use this exemption to skip containment."""
+    segments = path_segments(plan_rel)
+    return bool(segments) and segments[-1] == TASK_DOCUMENT_FILE_NAME
+
+
 def _validate_task_plans_against_patch(workflow_patch, feature_dir):
     errors = []
     entries = (workflow_patch.get("tasks_patch") or {}).get("entries") or {}
@@ -2097,6 +2117,13 @@ def _validate_task_plans_against_patch(workflow_patch, feature_dir):
                     f"{task_id}: plan file {plan_path} is {plan_size} bytes, exceeding the {MAX_PLAN_READ_BYTES} byte limit",
                 )
             )
+            continue
+        if _task_entry_plan_is_task_document(plan_rel):
+            # task-tier-reduction/task0010 (AC-1, AC-3): the task document
+            # carries only `## Change` and `## Expected Result` -- neither
+            # content check below applies to it. Every check above this
+            # point (path safety, symlink rejection, containment,
+            # existence, size) still ran unconditionally.
             continue
         plan_text = plan_path.read_text(encoding="utf-8")
         plan_files, parse_errors = extract_task_plan_files(plan_text)
