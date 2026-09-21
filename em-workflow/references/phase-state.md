@@ -539,6 +539,49 @@ retrospect phase (`skills/develop/SKILL.md`, retrospect フェーズ) reads its
 file is retained for the whole run rather than becoming moot at
 transcription the way `backfill.yaml` does.
 
+## tier upgrade completion record
+
+`feature-docs/{feature}/phase-state/tier-upgrade.yaml` holds the completion
+record `skills/develop/SKILL.md`'s tier-upgrade procedure writes once
+create-spec / design / create-plan re-execution under the upgraded tier has
+completed, following the same not-owned-by-one-phase exemption this document
+already grants `backfill.yaml` above (see "## File layout"). One file per
+feature.
+
+```yaml
+schema_version: 1
+feature: example-feature
+from_tier: reduced
+to_tier: full
+regenerated_at: "2026-01-30T12:30:00+09:00"
+consumed: false
+```
+
+Every field:
+
+| Field | Meaning |
+|---|---|
+| `schema_version` | Format version. Currently `1`. |
+| `feature` | Feature name, matches `feature-docs/{feature}/`. |
+| `from_tier` | The tier the run was upgraded from: `full` \| `reduced` \| `minimal`. |
+| `to_tier` | The tier the run was upgraded to: `full` \| `reduced` \| `minimal`. |
+| `regenerated_at` | When create-spec / design / create-plan re-execution under `to_tier` completed. |
+| `consumed` | Written `true` by `references/rework-task-synthesis.md` §8a, at the point its `append_rework` patch lands. |
+
+This is a **different record** from the `spec_change` row's `consumed` /
+`replan_authorized` flag pair above and must never be conflated with them:
+they are separate files with separate writers and readers.
+
+The tier-upgrade procedure is this record's **only writer**, writing it once
+after re-execution completes. `references/rework-task-synthesis.md` §8a is
+this record's **only reader**, and the only party that sets `consumed: true`,
+at the point its `append_rework` patch lands.
+
+Written and committed via `commit-docs.sh` under the same discipline "##
+tier decision persistence" above states for `tier.yaml` (no script change
+needed — see "## File layout" above, which already grants this file the
+same exemption).
+
 ## Legacy feature compatibility
 
 An existing `workflow.yaml` created before this phase-state model has no
