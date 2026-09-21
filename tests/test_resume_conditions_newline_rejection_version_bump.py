@@ -5,8 +5,12 @@ Covers task0002 Acceptance Criteria
 (feature-docs/resume-conditions-newline-rejection/tasks/task0002.md):
 
 - AC-1: `em-workflow/.claude-plugin/plugin.json` parses as JSON, its `name`
-  still reads `em-workflow`, and its `version` is on the `0.1.x` line with a
-  patch component strictly greater than `84`.
+  still reads `em-workflow`, and its `version` is strictly greater than
+  `0.1.84` under per-component numeric comparison. (Originally worded as
+  "on the 0.1.x line with patch > 84"; re-scoped by task-tier-reduction
+  task0008, NFR4, which is exactly the next legitimate minor bump that pin
+  would have rejected -- the durable property is the numeric advance, not
+  the fixed major.minor.)
 - AC-2: `.claude-plugin/marketplace.json` parses as JSON, and the
   `plugins[]` entry found by the name `em-workflow` carries a `version`
   equal, as a string, to the plugin manifest's.
@@ -141,10 +145,6 @@ class TestPluginManifestVersion(unittest.TestCase):
 
     def test_manifest_has_a_version_key(self):
         self.assertIn("version", self.data)
-
-    def test_version_is_on_the_0_1_x_line(self):
-        major, minor, _patch = _version_tuple(self.data.get("version"))
-        self.assertEqual((major, minor), (0, 1))
 
     def test_version_is_past_baseline(self):
         _assert_version_past_baseline(self, self.data.get("version"))

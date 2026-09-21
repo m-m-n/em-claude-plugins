@@ -86,16 +86,14 @@ def _parse_version(version):
 
 
 def _assert_version_past_baseline(test, version):
-    """major.minor pinned at BASELINE_MAJOR_MINOR, patch strictly greater
-    than BASELINE_PATCH. Never a fixed literal comparison of the whole
-    version string, so this keeps passing across future unrelated bumps
-    instead of going stale (and never a naive string comparison, which
-    would sort a two-digit patch backwards)."""
+    """Version strictly greater than BASELINE_MAJOR_MINOR + (BASELINE_PATCH,)
+    under per-component numeric comparison. Never a fixed major.minor pin --
+    that form goes stale on the next legitimate minor bump (task-tier-
+    reduction task0008, NFR4) -- and never a naive string comparison, which
+    would sort a two-digit patch backwards."""
     parts = _parse_version(version)
     test.assertIsNotNone(parts, f"version {version!r} is not of the form X.Y.Z")
-    major, minor, patch = parts
-    test.assertEqual((major, minor), BASELINE_MAJOR_MINOR)
-    test.assertGreater(patch, BASELINE_PATCH)
+    test.assertGreater(parts, BASELINE_MAJOR_MINOR + (BASELINE_PATCH,))
 
 
 def _assert_versions_equal(test, version_a, version_b):
