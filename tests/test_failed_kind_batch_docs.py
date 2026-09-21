@@ -21,12 +21,13 @@ Covers task0004 Acceptance Criteria
   restrictions on `stop-condition-3`'s meaning -- the existing
   phase-specific-row one and the new `failed_kind` one.
 - AC-5 (regression): the stop reason code table still contains exactly
-  eleven codes, with the same names and the same `state` column values;
-  the coverage table still maps `stop-condition-3` to
-  `step_needs_intervention` with the develop skill as its source; and the
-  precedence rule still names the same three phase-specific stop points.
-  A negative proof shows each matcher fires against a synthetic copy with
-  a code added, a code removed, or a mapping changed.
+  twelve codes (task-tier-reduction/task0004 adds `no_work_required`),
+  with the same names and the same `state` column values; the coverage
+  table still maps `stop-condition-3` to `step_needs_intervention` with the
+  develop skill as its source; and the precedence rule still names the
+  same three phase-specific stop points. A negative proof shows each
+  matcher fires against a synthetic copy with a code added, a code
+  removed, or a mapping changed.
 - AC-6 (NFR1): neither document enumerates the `failed_kind` values as a
   permitted set, glosses their meanings, or restates the missing-value
   read rule; both cite the owning document by repository-relative path
@@ -166,6 +167,8 @@ EXPECTED_REASON_CODE_STATE_PAIRS = [
     ("completion_aborted", "stopped"),
     ("feature_resolution_aborted", "stopped"),
     ("docs_commit_conflict_aborted", "stopped"),
+    # Added by task-tier-reduction/task0004: the pre-run no-work stop.
+    ("no_work_required", "stopped"),
 ]
 
 EXPECTED_COVERAGE_ROW = (
@@ -342,7 +345,7 @@ class TestPrecedenceParagraphStatesBothRestrictions(TerminalLineDocTestCase):
 
 
 class TestStopReasonCodeTableUnchangedExceptMeaning(TerminalLineDocTestCase):
-    def test_exactly_eleven_codes_same_names_and_states_in_order(self):
+    def test_exactly_twelve_codes_same_names_and_states_in_order(self):
         self.assertEqual(
             _reason_code_state_pairs(self.text), EXPECTED_REASON_CODE_STATE_PAIRS
         )
