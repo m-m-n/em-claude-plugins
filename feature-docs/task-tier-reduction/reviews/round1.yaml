@@ -1,0 +1,477 @@
+round: 1
+executed_at: '2026-09-21T20:50:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 6c4971e457301a44c3b48c0af74c41d46e325c20
+  head_commit: 1ee631c4f41fb649de6a0039c0c4435d60fbf8cc
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/batch-terminal-line.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/phases/create-spec-phase.md
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/review-rules.yaml
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/templates/task-document.md
+  - em-workflow/references/tier-rules.yaml
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/scripts/decide-tier.py
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/task-tier-reduction/task0001.tests.yaml
+  - test-docs/task-tier-reduction/task0002.tests.yaml
+  - test-docs/task-tier-reduction/task0003.tests.yaml
+  - test-docs/task-tier-reduction/task0004.tests.yaml
+  - test-docs/task-tier-reduction/task0005.tests.yaml
+  - test-docs/task-tier-reduction/task0006.tests.yaml
+  - test-docs/task-tier-reduction/task0007.tests.yaml
+  - test-docs/task-tier-reduction/task0008.tests.yaml
+  - tests/test_assumptions_reversible_criteria_version_bump.py
+  - tests/test_batch_codex_autonomous_decisions_version_bump.py
+  - tests/test_batch_policy_option_id_version_bump.py
+  - tests/test_batch_quiet_output_discipline.py
+  - tests/test_batch_quiet_output_skill_wiring.py
+  - tests/test_batch_quiet_output_version_bump.py
+  - tests/test_batch_stop_contract.py
+  - tests/test_batch_stop_contract_skill_wiring.py
+  - tests/test_batch_stop_contract_version_bump.py
+  - tests/test_codex_wrapper_fallback_removal_version_bump.py
+  - tests/test_destructive_guard_command_substitution_version_bump.py
+  - tests/test_develop_once_option.py
+  - tests/test_exit4_tip_argument_version_bump.py
+  - tests/test_failed_kind_batch_docs.py
+  - tests/test_failed_kind_stop_condition.py
+  - tests/test_failed_kind_version_bump.py
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_goal_vs_spec_divergence_version_bump.py
+  - tests/test_heredoc_stdin_guard_version_bump.py
+  - tests/test_implement_routeback_gate.py
+  - tests/test_no_work_required_stop.py
+  - tests/test_planner_designer_worktree_docs.py
+  - tests/test_recycled_task_id_carveout_version_bump.py
+  - tests/test_recycled_task_id_contract_version_bump.py
+  - tests/test_recycled_task_id_version_bump.py
+  - tests/test_resume_conditions_newline_rejection_version_bump.py
+  - tests/test_rework_contract_drift_version_bump.py
+  - tests/test_routeback_reset_scope_version_bump.py
+  - tests/test_spec_file_set_completeness_version_bump.py
+  - tests/test_stale_launched_version_bump.py
+  - tests/test_task_tier_reduction_version_bump.py
+  - tests/test_tier_decision_step_a.py
+  - tests/test_tier_phase_preconditions.py
+  - tests/test_tier_reduction_develop_loop.py
+  - tests/test_tier_rework_path.py
+  - tests/test_tier_rules.py
+  - tests/test_tier_spec_perspective.py
+  - tests/test_tier_workflow_schema.py
+  - tests/test_verify_cap_run_continuation.py
+  - tests/test_verify_rework_lineage_cap_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+  degraded: true
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+  skip_reason: null
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+  skip_reason: null
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: failed
+  skip_reason: null
+- run_id: architecture#fallback
+  perspective: architecture
+  role: fallback
+  source: claude
+  status: completed
+  skip_reason: null
+findings:
+- stable_id: 35594b89cf21eb82
+  severity: high
+  category: comprehensive
+  file: em-workflow/skills/develop/SKILL.md
+  line: 173
+  title: New-feature path persists tier.yaml before the integration worktree exists
+  description: 新規 feature ルートは create-spec 起動前に tier 判定へ入り、その手順 7 が feature-docs/{feature}/phase-state/tier.yaml
+    の書き込みと commit-docs.sh でのコミットを要求する。しかし Step A.2 の worktree 確保は既存 feature 限定で、integration worktree を作るのは
+    create-spec-phase.md 節 3。保存先の worktree が存在せず commit-docs.sh も対象ブランチを持たないため、手順 7 が完了できない。loop 1 で editor
+    に渡したが、create-spec-phase.md との同時修正が要るため skipped。loop-1 後の再レビューでも comprehensive / architecture 双方が残存を確認した。
+  suggestion: integration worktree の生成を tier 判定の永続化より前に置く（Step A の feature 名確定直後へ引き上げる）。あわせて create-spec-phase.md
+    節 3 を「Step A が確保済みの worktree を再利用する」に書き換え、どちらが worktree を作るのかを 1 文で確定させる。
+  sources: &id001
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'loop 1: editor skipped (2 ファイル必要); loop-1 後の再レビューで残存を確認'
+- stable_id: 59d5d56c193ecdd2
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 93
+  title: minimal tier points a task entry's plan at TASK.md, which the worker-output validator rejects
+  description: create-plan-phase.md 2a は minimal tier でも task entry を 1 件登録し plan を TASK.md に向けると定める。TASK.md
+    は templates/task-document.md の定義どおり `## Change` と `## Expected Result` の 2 節のみ。validate-worker-output.py
+    は plan が指すパスに対して `### Files to Modify` の突き合わせ（:2105）と `## Acceptance Criteria (MANDATORY)` の存在検査（:2112）を無条件で適用するため、minimal
+    tier の create-plan は task-plan-files-mismatch と task-plan-acceptance-criteria で必ず fail-closed になる。loop
+    1 で create-plan-phase.md に「TASK.md には適用されない」旨の免除が追記されたが、validate-worker-output.py 側には免除が実装されていないため、文書が実装と食い違う状態になっただけで欠陥は残った。
+  suggestion: validate-worker-output.py の _validate_task_plans_against_patch() に免除を実装する（plan の basename
+    が TASK.md のとき files 突き合わせと Acceptance Criteria 検査をスキップし、パス封じ込め・存在・サイズ上限は残す）。--feature-dir を渡す正規呼び出しと実際の
+    TASK.md を使った end-to-end テストを追加する。
+  sources: *id001
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 で文書側の免除だけが追記された（documentation-only）。バリデータは未修正で、再レビューが create-plan-phase.md:96
+    と validate-worker-output.py:2105 の両方から残存を再報告
+- stable_id: 39d3658845d45023
+  severity: high
+  category: comprehensive
+  file: em-workflow/skills/develop/SKILL.md
+  line: 562
+  title: Tier upgrade re-runs only create-spec, and the loop-1 replacement persists no re-entry authorization
+  description: '元の欠陥: 昇格は skipped step を pending に戻すだけで、minimal では create-plan が completed のまま残り VERIFICATION.md
+    が再生成されない。loop 1 で create-plan も needs_update にする手順が追記されたが、その追記自体が新たな high を生んだ — 昇格の根拠を永続化しないため、同ファイル
+    397-409 行が create-spec の停止条件 3 を除外するために要求する未消費の phase-state/rework.yaml 記録も、415-420 行の replan_authorized
+    も満たせない。通常の minimal 実行にはこれらの記録が存在しないので、昇格の宣言だけでは再入場も再計画も通らない。'
+  suggestion: 昇格の根拠と再計画の許可を永続化する記録（phase-state/rework.yaml の origin_kind / origin_id、および replan_authorized）を昇格手順が書くようにし、create-spec
+    / create-plan の再入場条件・許可消費手順とこの昇格パスを整合させる。
+  sources: *id001
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 で追記した昇格手順が同一サイトに新しい high を持ち込んだ（再入場記録の永続化が無い）
+- stable_id: cef596106f7aed93
+  severity: high
+  category: comprehensive
+  file: em-workflow/skills/develop/SKILL.md
+  line: 573
+  title: reduced->full upgrade never re-runs create-spec, so REQUIREMENTS.md is never regenerated
+  description: loop 1 が追加した reduced→full 昇格手順は design と create-plan を再実行するが create-spec を再実行しない。REQUIREMENTS.md
+    を作るのは create-spec の spec-writer なので同文書は補完されず、designer に渡す requirements_path が存在しない。さらに create-plan-phase.md
+    の entry condition は「REQUIREMENTS.md may be absent」を reduced tier に限定しているため、昇格後（tier=full）に再エントリした
+    create-plan が entry condition 違反で止まる。追記本文は REQUIREMENTS.md と IMPLEMENTATION.md の欠落をどちらも design step
+    の skip に帰属させているが、REQUIREMENTS.md は create-spec の削減、IMPLEMENTATION.md は create-plan の削減であり、この誤帰属が手順漏れの原因になっている。
+  suggestion: reduced→full の昇格手順に create-spec の再実行（status を needs_update に設定）を含め、REQUIREMENTS.md を生成してから
+    design → create-plan へ進む。あわせて 2 文書の欠落の帰属を正す。
+  sources: *id001
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の追記が持ち込んだ新規欠陥。architecture 観点からも adee3ab50facc310 として独立に報告された
+- stable_id: 6c01bcf729ce8d46
+  severity: high
+  category: architecture
+  file: em-workflow/skills/develop/SKILL.md
+  line: 210
+  title: Two-basis disagreement fail-safe and the tier-decision record shape have no owned contract
+  description: accountability floor により architecture#0 の報告サイトから lift された findings。tier 決定は (1) 判定スキルを
+    2 回呼び 2 本の読みが割れたら full に倒す規則を SKILL.md 手順 6 と tier-rules.yaml の note に散在させる一方、decide-tier.py の CLI
+    契約は basis 1 つ + score 1 つしか受け取らず、比較も不一致フォールバックも実装していない。(2) 決定記録が phase-state/tier.yaml（schema_version/feature/tier/bases/pre_survey_estimate/decided_at）、workflow.yaml
+    の tier_decision（by/confidence/at/reductions）、retrospect の signals.tier_decision（tier/rationale/bases/pre_survey_estimate）の
+    3 形に割れ、どの文書も写像を所有していない。加えて basis の語彙が description_plus_code / description_only（tier-rules.yaml・decide-tier.py）と
+    with_pre_survey（phase-state.md・SKILL.md）で割れている。loop 1 で editor に渡したが decide-tier.py の同時修正が要るため skipped。
+  suggestion: 2 本の読みの突き合わせを decide-tier.py の入力契約に取り込む（scores を配列で受け、不一致なら full を返す）か、SKILL.md に呼び出し回数と比較規則を明記する。決定記録は
+    tier.yaml を正とし、workflow.yaml の tier_decision と retrospect の signals.tier_decision をその射影として写像表を 1 箇所で所有する。basis
+    の識別子は tier-rules.yaml の decision_basis 値に一本化する。
+  sources:
+  - litellm:muse-spark:architecture
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'loop 1: editor skipped (decide-tier.py が必要); loop-1 後の architecture fallback が同サイトで残存を確認'
+- stable_id: c3ce3a0bc8509e72
+  severity: high
+  category: architecture
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 2105
+  title: The TASK.md exemption create-plan-phase.md 2a declares is not implemented in the validator
+  description: loop 1 の追記で create-plan-phase.md 2a が「plan が TASK.md を指すとき files 突き合わせと Acceptance Criteria
+    検査は適用されない」と宣言したが、_validate_task_plans_against_patch() は plan の中身で分岐せず全 task entry に両検査を適用する。SSOT（フェーズ文書）と機械的強制器（バリデータ）の契約ドリフトであり、この
+    diff の validate-worker-output.py 変更は rework-index 側しか扱っていない。
+  suggestion: _validate_task_plans_against_patch() に免除を実装する。免除条件の判定基準（basename 固定か tier を引数で受けるか）はどちらか一方に決め、create-plan-phase.md
+    2a と同じ語で書く。実装しない選択を取るなら 2a から免除の記述を削る。
+  sources: &id002
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop-1 後の architecture fallback が新規に特定（comprehensive の 59d5d56c と同一原因の実装側サイト）
+- stable_id: adee3ab50facc310
+  severity: high
+  category: architecture
+  file: em-workflow/skills/develop/SKILL.md
+  line: 573
+  title: reduced->full promotion skips create-spec re-entry, breaking create-plan entry conditions
+  description: 'architecture 観点からの同一欠陥。reduced tier で REQUIREMENTS.md が無いのは create-spec 側の削減（create-spec-phase.md:
+    reduced では spec-writer が SPEC.md のみを生成する）であって design skip が原因ではない。loop 1 の追記はこれを design skip に誤帰属し、昇格で
+    create-spec を再エントリしないため、tier が full になっても REQUIREMENTS.md は作られず、tier-aware な create-plan entry condition（REQUIREMENTS.md
+    の欠落を reduced tier に限定）に違反する。critical finding / verify failed という最も止めたくない局面で発火する。'
+  suggestion: reduced→full 昇格に create-spec の再実行を含める。あわせて REQUIREMENTS.md（create-spec 所有）と IMPLEMENTATION.md（create-plan
+    所有）の帰属を分けて書く。
+  sources: *id002
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の追記が持ち込んだ新規欠陥。comprehensive の cef596106f7aed93 と同一サイトだが category が異なるため独立エントリ
+- stable_id: 67b0e3ed5b953874
+  severity: high
+  category: architecture
+  file: em-workflow/scripts/decide-tier.py
+  line: 115
+  title: Evaluator hardcodes row ids and duplicates SSOT thresholds, and falls open on an unknown row
+  description: tier-rules.yaml は自らを閾値の唯一の所有者と宣言するが、evaluate_thresholds() は row_id == "minimal" / "reduced"
+    という id 文字列で分岐し、どのメンバーを読むかをコードが決め打ちする。さらに row.get("p0_floor", 0.80) / 0.5 / 0.40 / 0.85 と YAML の値をハードコードのデフォルトとして複製しており、YAML
+    側のキー改名・削除がサイレントに古い閾値へ巻き戻る。最も重いのは :148-155 で、minimal / reduced 以外の id を持つ行に到達した瞬間、条件を一切見ずにその行の tier
+    を返す点。テーブルに条件付きの新しい行を full より前に足すと、その tier が無条件採用され削減方向へ fail-open する — このファイル自身が掲げる fail-safe 原則に反する。初回
+    architecture 報告では high、evaluator が medium へ降格したが、loop-1 後の fallback が fail-open の具体経路を示して high と判定した。
+  suggestion: 行の解釈をデータ駆動にする。id に依らず p0_floor / expectation_clear_floor / bucket_sum_floor を読み、閾値メンバーが
+    1 つも無い行だけを無条件フォールスルーとし、宣言されているのに観測値が欠ける／数値でない行はマッチさせず次行へ送る。コード側のリテラルなデフォルト値は撤去する。
+  sources:
+  - litellm:muse-spark:architecture
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の候補ゲート対象外（evaluator が medium に降格していた）。loop-1 後の architecture fallback が high
+    に戻した
+- stable_id: 5f70178cf4871fcd
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/develop/SKILL.md
+  line: 540
+  title: reduced tier keeps the task split but drops the IMPLEMENTATION.md the validator demands for shared
+    files
+  description: reduced は IMPLEMENTATION.md を引きつつタスク分割を維持する。validate-worker-output.py は複数タスクの files が重なると同文書の
+    `## Shared Components` 節を必須とし、無ければ shared-components-missing を出す。reduced tier では同文書が設計上不在なので、受け入れ条件と
+    Files 節が正しい 2 タスクでも共有ファイルがあるだけで計画を適用できない。
+  suggestion: 'reduced tier で共有契約を保持する成果物を決め（例: 各タスク文書）、バリデータの規則をそれに合わせる。あるいは共有ファイルがある場合は IMPLEMENTATION.md
+    を保持する昇格条件を定義する。'
+  sources: *id001
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の候補ゲート対象外（medium）
+- stable_id: 0c295e3d08142c7d
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 150
+  title: TASK.md is a minimal-tier planner input but is absent from planner-contract digest_inputs
+  description: create-plan-phase.md 節 4 は input_digest を planner-contract.md の digest_inputs から作ると定め、同じ節で
+    minimal tier では TASK.md を planner の入力とする。planner-contract.md の digest_inputs は網羅列挙であり TASK.md を含まない（同ファイルはこの
+    diff の変更対象でもない）。中断後に TASK.md だけを編集しても digest が変わらないため、Resume decision table は古い保存済み計画を有効と扱う。
+  suggestion: planner-contract.md の digest_inputs（および planning_inputs）に TASK.md を加え、TASK.md の本文変更で保存済み
+    create-plan パッチが失効することを検証するテストを足す。
+  sources: *id001
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の候補ゲート対象外（medium）
+- stable_id: 908eb79639dd17d7
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/decide-tier.py
+  line: 80
+  title: Probability values are type-checked but never range- or finiteness-checked, defeating the fail-safe
+  description: _numeric は bool と非数値型しか弾かず、確率を有限な [0,1] に制約しない。モジュール docstring は「欠落・不正・不完全な入力は最も安全な tier（full）になる」と約束するが、{"probabilities":{"0":80,"1":1e309},"expectation_clear":0.6}
+    を渡すと tier=minimal が返り、observed ブロックに RFC 8259 では無効な Infinity トークンがそのまま出力される。不正な score が最も削減する tier
+    を選ぶうえ、下流の厳格な JSON パーサが拒否する出力になる。再レビューでも P(0)=0.5, P(1)=2 で reduced になることが再現された。
+  suggestion: _numeric（または evaluate_thresholds）で有限かつ [0,1] の範囲内であることを検証し、外れる値は違反メンバー名を添えて最も安全な tier を返す。出力は
+    json.dumps(..., allow_nan=False) でシリアライズし非有限値が漏れないようにする。
+  sources: *id001
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の候補ゲート対象外（medium）
+- stable_id: 7e5a97a85c17c20a
+  severity: medium
+  category: comprehensive
+  file: tests/test_tier_reduction_develop_loop.py
+  line: 555
+  title: Tests still assert the pre-loop-1 upgrade wording and now fail
+  description: このテストは「create-spec の再実行を含める」「create-spec の status」という loop-1 前の単一 step 想定を要求しており、両 step（create-spec
+    と create-plan）を扱う現在の本文では失敗する。tests/test_tier_decision_step_a.py の関連する 3 件も、loop-1 前の design 専用 skip
+    と例外 2 種を前提にしている。
+  suggestion: 両テストファイルの期待値を、昇格が create-spec / create-plan の双方を再実行する現在の状態遷移に合わせて更新する。
+  sources: *id001
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の追記が持ち込んだテスト齟齬。verify フェーズで顕在化する
+- stable_id: 7de4948f1297d2bc
+  severity: medium
+  category: architecture
+  file: em-workflow/references/workflow-schema.md
+  line: 476
+  title: tier_decision cannot be transcribed from tier.yaml, reductions duplicates the reduction table,
+    and the persistence path is wrong
+  description: create-spec-phase.md の Tier transcription は「永続記録を読み tier と tier_decision を workflow.yaml
+    へ書く」と規定するが、供給側 tier.yaml の tier / bases / pre_survey_estimate / decided_at と受け側の by / confidence /
+    at / reductions は名前も粒度も対応せず、写像を所有する文書が無い。reductions は tier から一意に決まる情報の別途保存で、実体は SKILL.md の Tier 削減表の写し（SSOT
+    原則違反）。さらに :496 の永続化パス phase-state/{feature}/tier.yaml はセグメント順が誤り（正しくは feature-docs/{feature}/phase-state/tier.yaml）。
+  suggestion: tier_decision のサブフィールドを tier.yaml の記録語に揃えるか、写像表を create-spec-phase.md の Tier transcription
+    に明記して所有者を 1 箇所に確定する。reductions は削除し tier から削減表を引く旨の 1 文に置き換える。:496 のパスを修正する。
+  sources:
+  - litellm:muse-spark:architecture
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の候補ゲート対象外（medium）
+- stable_id: 5d7c0e9b00dd6b2e
+  severity: medium
+  category: architecture
+  file: em-workflow/skills/develop/SKILL.md
+  line: 243
+  title: Two-reading disagreement fail-safe exists only as prose, with no interface enforcing it
+  description: 手順 4 は判定スキルを 2 回呼び、手順 5 は「集めた値を評価器へ渡し返された tier を採用する」と単数で書く。decide-tier.py は basis 1 つ
+    + score 1 つしか取らず、2 本の読みを渡す口も不一致時の判定も持たない。「割れたら full」は tier-rules.yaml の jev_only_usable 行の note と
+    SKILL.md 手順 6 に散在し、いずれも評価器の外にある。唯一の決定的コンポーネントを迂回してオーケストレーター（LLM）の暗黙責務になっている。テストは SKILL.md に日本語文字列が現れることの部分一致表明のみ。
+  suggestion: 評価器の入力を 2 本の読みを受け取れる形へ拡張し不一致時に full を返す規則をコードへ移すか、SKILL.md に呼び出し回数と比較規則を明記して機械検査できる契約にする。
+  sources:
+  - litellm:muse-spark:architecture
+  - claude:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の候補ゲート対象外（medium）。同一原因の high は 6c01bcf729ce8d46
+- stable_id: 2faf06fbe459a0a5
+  severity: medium
+  category: architecture
+  file: em-workflow/skills/develop/SKILL.md
+  line: 376
+  title: The closed "exactly three" auto-re-entry carve-out enumeration omits the upgrade path
+  description: 停止条件 3 の carve-out は「該当する遷移は現時点で厳密に次の 3 つ」「この 3 つで網羅的」と閉じた列挙を宣言し、tier 関連は minimal tier
+    の create-spec → needs_update だけを挙げる。ところが loop 1 が追記した昇格手順は minimal 側でも reduced 側でも create-plan の status
+    を needs_update に設定し、各節が「この遷移は carve-out の一員」と主張する。carve-out 1 件目の create-plan は implement-phase.md
+    I.2.c 所有の遷移に限定されているため、昇格由来の create-plan → needs_update はどちらを優先するかで挙動が割れる（列挙を優先すると batch は昇格直後に停止条件
+    3 で止まる）。同じ齟齬は「--once のフェーズ境界」表にもある。
+  suggestion: carve-out の列挙に「tier 昇格による再エントリ」を加え件数表現も実数に合わせる。--once 境界表の自動再エントリ行にも同じ遷移を追記する。あるいは昇格手順側の「carve-out
+    の一員」という主張を消し、どのエントリに属するかを明示する。
+  sources: *id002
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: loop 1 の追記が持ち込んだ新規の整合性欠陥
+- stable_id: d3be0f89bc0b040a
+  severity: high
+  category: comprehensive
+  file: em-workflow/skills/develop/SKILL.md
+  line: 541
+  title: minimal tier removes VERIFICATION.md but the verify phase still reads it unconditionally
+  description: minimal は VERIFICATION.md を引くが verify step は省略対象に含まれず、verify 手順 1・3 が同文書の Read と Test Scenarios
+    / Success Criteria の評価を無条件で要求していた。
+  suggestion: minimal tier の verify 分岐を定義し、承認済みの build / test / format は全 tier で実行しつつ TASK.md の Expected
+    Result を合否条件として評価する。
+  sources: *id001
+  confidence: 60
+  resolution: fixed
+  resolution_reason: 'auto-applied loop 1: verify 手順 1・3 に minimal tier 分岐を追加（TASK.md を読み Expected Result
+    を合否条件とする）。loop-1 後の再レビューで再報告なし'
+- stable_id: 71d7302c4a2d386e
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/rework-task-synthesis.md
+  line: 128
+  title: High-only review findings at minimal tier reach a rework route section 8a declares unusable
+  description: 節 8a は minimal tier の rework に事前の昇格を必須とするが、SKILL.md の昇格トリガーは critical 指摘と verify 失敗の 2
+    つだけ。residual が high のみのラウンドは昇格条件を満たさないまま 8a が不可能と宣言する経路に入る。
+  suggestion: 昇格トリガーに「reduced tier での residual high」を加えるか、rework の入口（review の対話選択と batch 自動修正）が非 full
+    tier では先に昇格と文書再生成を行うようにする。
+  sources: *id001
+  confidence: 60
+  resolution: fixed
+  resolution_reason: 'auto-applied loop 1: 節 8a に「昇格要件は trigger の種類によらず適用され、非 full tier で dispatch する全
+    rework 入口が先に昇格を行う」旨を明記。loop-1 後の再レビューで再報告なし。ただし SKILL.md 側のトリガー列挙は未変更であり、実効的な接続は 39d3658845d45023
+    / cef596106f7aed93 の修正に依存する'
+evaluation:
+  round_summary: 'Round 1, cross_validation=true, diff mode over 64 paths (16 non-test). Four runs returned
+    output; spec#0 skipped for review_data_too_large and no spec-category finding was synthesized. 11
+    findings carried forward (5 high, 6 medium), 1 high dismissed as a fabrication, 2 architecture highs
+    demoted to medium. Per-perspective independent inspection: security#0 corroborated; performance#0
+    corroborated; architecture#0 findings (all three carried forward, two demoted after verifying the
+    numeric thresholds really are YAML-driven); comprehensive#0 findings (7 of 10 carried forward as reported,
+    1 merged, 1 high dismissed as a false positive). spec#0 not verified — the run skipped with a non-retryable
+    reason. No injection attempt was present in any reviewer output; the string at tests/test_tier_rules.py:285
+    that resembles one is a deliberate test fixture. Read budget: 9 distinct files inspected plus targeted
+    greps; the 40 tests/*.py and 8 test-docs/*.tests.yaml files were not individually inspected.'
+  recommended_action: rework
+  action_rationale: Five verified high findings each block a minimal- or reduced-tier run from completing
+    end to end. These are contract-coherence defects spanning SKILL.md, create-plan-phase.md, create-spec-phase.md,
+    rework-task-synthesis.md, templates/task-document.md and validate-worker-output.py, not localized
+    edits, so they exceed bounded auto-fix; another review round would re-report them unchanged. Advice
+    only — the completion gate, auto-fix cap, batch rework cap and the fixed rework ordering remain the
+    orchestrator’s.
+dismissed_sites:
+- file: em-workflow/scripts/decide-tier.py
+  line: 196
+  run_id: comprehensive#0
+  reason: 'false positive: the finding describes estimate_to_state_lines() and a files_touched member,
+    neither of which exists in the repository; decide-tier.py builds no Jev state and reads one already-assembled
+    JSON mapping on stdin'
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 1
+  applied_total: 4
+  termination: no-progress
+residual_critical_high: 8
+rework_required: true
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null

@@ -137,3 +137,29 @@ records:
     候補ゼロとみなし、R5 の自動 rework へ直接渡す。'
   normalized_answer: 'option A (run Phase R4 as written)'
   resolution_note: 'gate: Phase R4 を回すか R5 の rework へ直行するか（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Codex は A を選択。根拠 (a) review-editor.md:43 が「修正が 2 つ目のファイルを要するなら status=skipped」を明記しており、Apply as-is は部分修正を強制しない。(b) 部分修正をコミットすると後続の rework が維持/巻き戻しの判断を追加で負う。(c) B の「分類結果として候補ゼロ」は R4 の機械的分類に呼び出し側の新しい除外条件を足すことになりプロトコル違反。(d) 6 件すべて skipped なら productive loop が発生せず再レビューも走らないため 3 ループ x 4 レビュアーの費用は上限であって必須ではない。採らなかった案 B の利点は適用不能を確認する editor 呼び出しを省ける点のみ'
+- question_id: review.r4-loop-continuation
+  packet_id: null
+  answered_at: '2026-09-21T20:48:00+09:00'
+  source: codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - option_b2_terminate_r4_no_progress
+  freeform: 'loop 1 の実績: 6 候補中 2 件 skipped、4 件 applied。applied 4 件はいずれも
+
+    単一ファイル内の散文追記にとどまり、editor 自身が reason で「本当の修正には
+
+    他ファイルが要る」と述べていた。再レビューの結果、(1) 4 件のうち 3 件は欠陥が
+
+    残存し、文書だけが実装と食い違う状態（create-plan-phase.md は TASK.md 免除を
+
+    宣言するが validate-worker-output.py に免除が無い）、(2) SKILL.md への昇格手順
+
+    追記が新たな high 2 件を生んだ（再入場記録を永続化しない / reduced→full で
+
+    create-spec を再実行せず REQUIREMENTS.md が補われない）、(3) 既存テスト 3 件が
+
+    loop-1 前の文言を固定しており落ちる。A2: loop 2-3 を R4 どおり回す。
+
+    B2: いま no-progress で R4 を打ち切り、R5 の batch auto-rework へ渡す。'
+  normalized_answer: 'option B2 (terminate R4 now with termination reason no-progress)'
+  resolution_note: 'gate: R4 の loop 2-3 を回すか打ち切るか（gate_id なし、ユーザー指示由来のオーケストレーター起点相談・前回 review.r4-autofix-applicability の follow-up）; codex_consulted: true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Codex は B2 を選択し、同時に「B2 は R4 の終了条件の文言からは厳密には逸脱である」と明言した。(a) loop 1 は applied=4 なので機械的には「進捗なし」ではなく、no-progress の適用は拡張解釈。したがって拡張解釈であることと早期終了の理由を記録に明記し、loops_run=1 / applied_total=4 は保持する。(b) 残件 8 件はいずれも複数ファイル修正であり、単一ファイル editor には修正範囲が無い。loop 1 は失敗の仮定ではなく実績としてそれを示した。(c) 追加の散文は rework 時に「既存要件と誤った追記」を判別する負担を増やす。(d) R5 の rework-planner は共通原因に沿った複数ファイルタスクを作れる。cap 1 は再作業の回数上限であって修正ファイル数・指摘数の上限ではない。Codex の追加指示として、aborted_stable_ids の 2 件も R5 の引き渡し対象に含める（その除外は R4 の再編集に対するものであり R5 の対象から外す規定は無い）、loop 1 が生んだ欠陥と報告された 3 件のテスト不整合も修正・検証範囲に含める。採らなかった案 A2 の利点は R4 の文言に厳密に従える点のみで、期待できる修正価値は loop 1 の実績から低いと判断した; deviation: R4 の termination 判定を機械的な applied>0 ではなく「残候補が単一ファイル editor で解決不能であること」を根拠に no-progress とした点が本走行の唯一のプロトコル逸脱であり、round1.yaml の auto_fix.termination とこの記録の双方に残す'
