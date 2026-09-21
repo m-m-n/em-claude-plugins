@@ -15,9 +15,10 @@
 # - A rule fires when ANY of its if_domains values appears in the UNION of
 #   all tasks' domains, or when if_complexity matches ANY task's complexity.
 # - require lists are unioned; duplicates collapse.
-# - spec_review: always → the spec perspective is unconditionally included
-#   (the SDD flow guarantees SPEC.md exists). In standalone /em-workflow:review
-#   without a SPEC.md, spec is dropped with a skip notice instead.
+# - spec_review: always → the spec perspective is included whenever the spec
+#   document is available (review-phase.md Phase R0's `spec_available` flag),
+#   on the develop-driven route the same as on the standalone one; absent, on
+#   either route, it is dropped with a skip notice instead.
 #
 # Cross-model validation (intensity axis, separate from perspective
 # selection): fires when ANY task has complexity: high. Its input is the
