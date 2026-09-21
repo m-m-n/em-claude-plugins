@@ -1,0 +1,155 @@
+task_id: task0001
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tier_rules.TestRulesFileStructure.test_parses_as_yaml
+      - tests.test_tier_rules.TestRulesFileStructure.test_all_four_named_groups_present
+      - tests.test_tier_rules.TestRulesFileStructure.test_group_presence_matcher_would_fail_on_a_forged_removal
+    red_confirmed: true
+    red_reason: >-
+      Observed twice before tier-rules.yaml existed. With neither new file
+      present, `python3 -m unittest tests.test_tier_rules` failed at module
+      import time with FileNotFoundError on
+      em-workflow/scripts/decide-tier.py (module-level
+      `dt = load_decide_tier_module()`), so no test in the file could even
+      be collected. With decide-tier.py restored but tier-rules.yaml still
+      absent, TestRulesFileStructure's setUpClass raised
+      "FileNotFoundError: ... em-workflow/references/tier-rules.yaml",
+      confirming this class's tests specifically depend on the rules file.
+  AC-2:
+    tests:
+      - tests.test_tier_rules.TestExternalSkillsNamedByPathNotReproduced.test_names_jev_skill_by_path
+      - tests.test_tier_rules.TestExternalSkillsNamedByPathNotReproduced.test_names_typesafe_skill_by_path
+      - tests.test_tier_rules.TestExternalSkillsNamedByPathNotReproduced.test_naming_matcher_would_fail_on_a_forged_copy_missing_it
+      - tests.test_tier_rules.TestExternalSkillsNamedByPathNotReproduced.test_names_readonly_wrapper_as_the_route
+      - tests.test_tier_rules.TestExternalSkillsNamedByPathNotReproduced.test_does_not_name_raw_subcommand_as_an_invocation_route
+      - tests.test_tier_rules.TestExternalSkillsNamedByPathNotReproduced.test_raw_subcommand_matcher_would_fail_on_a_forged_route
+      - tests.test_tier_rules.TestNoDuplicationOfExternalSkillContent.test_no_long_line_duplicated_from_jev_skill_doc
+      - tests.test_tier_rules.TestNoDuplicationOfExternalSkillContent.test_no_long_line_duplicated_from_typesafe_skill_doc
+    red_confirmed: true
+    red_reason: >-
+      With tier-rules.yaml absent (decide-tier.py restored), both classes'
+      setUpClass raised FileNotFoundError reading
+      em-workflow/references/tier-rules.yaml -- these tests could not pass
+      vacuously before the file existed. Once the file existed, both
+      non-duplication tests ran (not skipped) against the real
+      ~/.claude/skills/jev/SKILL.md and the glob-discovered typesafe-ai
+      SKILL.md and found no offending line, giving genuine coverage rather
+      than a skip.
+  AC-3:
+    tests:
+      - tests.test_tier_rules.TestThresholdRowEvaluation.test_ts10_high_probability_and_clear_expectation_is_minimal
+      - tests.test_tier_rules.TestThresholdRowEvaluation.test_ts10_low_first_bucket_carried_by_second_is_full
+      - tests.test_tier_rules.TestThresholdRowEvaluation.test_ts10_moderate_first_bucket_with_high_sum_is_reduced
+      - tests.test_tier_rules.TestThresholdRowEvaluation.test_edge_case_p0_and_clarity_exactly_at_the_minimal_floor
+      - tests.test_tier_rules.TestThresholdRowEvaluation.test_edge_case_p0_and_sum_exactly_at_the_reduced_floor
+      - tests.test_tier_rules.TestThresholdRowEvaluation.test_row_order_first_match_wins
+      - tests.test_tier_rules.TestThresholdRowEvaluation.test_a_score_meeting_neither_row_is_full_not_an_error
+      - tests.test_tier_rules.TestThresholdRowEvaluation.test_reversing_the_ts10_reduced_and_full_inputs_would_fail
+    red_confirmed: true
+    red_reason: >-
+      With tier-rules.yaml absent, TestThresholdRowEvaluation's setUpClass
+      (`dt._load_rules(TIER_RULES_PATH)`) raised FileNotFoundError; with
+      neither new file present, the whole module failed to import
+      (FileNotFoundError on decide-tier.py itself). Both observations
+      predate the evaluator's threshold logic existing at all.
+  AC-4:
+    tests:
+      - tests.test_tier_rules.TestConfidenceNeverThresholdedAlone.test_absent_from_rules_file
+      - tests.test_tier_rules.TestConfidenceNeverThresholdedAlone.test_absent_from_evaluator_source
+      - tests.test_tier_rules.TestConfidenceNeverThresholdedAlone.test_absence_matcher_fires_on_a_forged_copy_carrying_one
+    red_confirmed: true
+    red_reason: >-
+      With tier-rules.yaml absent, test_absent_from_rules_file and
+      test_absence_matcher_fires_on_a_forged_copy_carrying_one (which reads
+      the rules file to build its forged sample) both errored with
+      FileNotFoundError reading tier-rules.yaml. test_absent_from_evaluator_source
+      reads decide-tier.py, which was present in that run; it was also
+      observed red in the earlier run where decide-tier.py itself did not
+      exist yet (whole-module import failure).
+  AC-5:
+    tests:
+      - tests.test_tier_rules.TestFallbackMatrixUnusableCombinations.test_jev_exit_codes_documented_as_specified
+      - tests.test_tier_rules.TestFallbackMatrixUnusableCombinations.test_jev_exit_codes_matcher_would_fail_on_a_forged_usable_code
+      - tests.test_tier_rules.TestFallbackMatrixUnusableCombinations.test_jev_unusable_with_codex_available_yields_full
+      - tests.test_tier_rules.TestFallbackMatrixUnusableCombinations.test_jev_unusable_with_codex_unavailable_yields_full
+      - tests.test_tier_rules.TestFallbackMatrixUnusableCombinations.test_jev_unusable_overrides_an_otherwise_minimal_score
+      - tests.test_tier_rules.TestFallbackMatrixUnusableCombinations.test_jev_usable_codex_unavailable_still_evaluates_thresholds
+      - tests.test_tier_rules.TestFallbackMatrixUnusableCombinations.test_both_usable_evaluates_thresholds
+    red_confirmed: true
+    red_reason: >-
+      With tier-rules.yaml absent, TestFallbackMatrixUnusableCombinations's
+      setUpClass raised FileNotFoundError reading it (both
+      `dt._load_rules` and the raw-text read). With neither new file
+      present, the whole module failed to import instead.
+  AC-6:
+    tests:
+      - tests.test_tier_rules.TestDegradedInputUnitLevel.test_missing_jev_available_names_the_missing_field
+      - tests.test_tier_rules.TestDegradedInputUnitLevel.test_non_boolean_jev_available_is_treated_as_malformed
+      - tests.test_tier_rules.TestDegradedInputUnitLevel.test_missing_codex_available_names_the_missing_field
+      - tests.test_tier_rules.TestDegradedInputUnitLevel.test_missing_score_when_jev_available_names_the_missing_field
+      - tests.test_tier_rules.TestDegradedInputUnitLevel.test_score_with_missing_members_falls_through_to_full
+      - tests.test_tier_rules.TestDegradedInputUnitLevel.test_payload_not_an_object_yields_full
+      - tests.test_tier_rules.TestDegradedInputUnitLevel.test_missing_field_matcher_would_fail_on_a_complete_payload
+      - tests.test_tier_rules.TestDegradedInputCliLevel.test_empty_stdin_yields_full_with_zero_exit
+      - tests.test_tier_rules.TestDegradedInputCliLevel.test_malformed_json_yields_full_with_zero_exit
+      - tests.test_tier_rules.TestDegradedInputCliLevel.test_non_object_json_yields_full_with_zero_exit
+      - tests.test_tier_rules.TestDegradedInputCliLevel.test_well_formed_input_round_trips_through_the_cli
+      - tests.test_tier_rules.TestDegradedInputCliLevel.test_cli_never_blocks_waiting_for_more_input
+      - tests.test_tier_rules.TestDegradedInputCliLevel.test_custom_rule_table_path_argument_is_honoured
+      - tests.test_tier_rules.TestDegradedInputCliLevel.test_default_path_argument_matcher_would_fail_without_the_override
+    red_confirmed: true
+    red_reason: >-
+      TestDegradedInputUnitLevel's setUpClass depends on
+      `dt._load_rules(TIER_RULES_PATH)` and raised FileNotFoundError while
+      tier-rules.yaml was absent. At that same point,
+      test_well_formed_input_round_trips_through_the_cli (which expects a
+      normal `minimal` decision) FAILED with "'full' != 'minimal'": the CLI's
+      default rules-path load failed inside main()'s own try/except, so the
+      fail-safe path returned `full` instead of evaluating the score --
+      itself evidence the CLI's fallback behaviour, not its normal-path
+      behaviour, was all that existed at that point. With neither new file
+      present, the whole module failed to import instead, which is also
+      red for every test in this group including the ones that already
+      express a degraded/CLI-fail-safe expectation.
+  AC-7:
+    tests:
+      - tests.test_tier_rules.TestThisModuleImportsOnlyTheStandardLibrary.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      This test asserts a property of the test file's own source (its
+      import statements), which is true as soon as the file is written and
+      independent of whether tier-rules.yaml or decide-tier.py exist -- the
+      same "no red state to observe" situation as the analogous check in
+      tests/test_heredoc_stdin_guard.py's AC-7. It WAS swept into the
+      whole-module collection failure when decide-tier.py did not exist yet
+      (module-level `dt = load_decide_tier_module()` raised
+      FileNotFoundError before any test class was defined), but that
+      failure reason is unrelated to this test's own assertion, so it is
+      not treated as a genuine red observation of THIS criterion.
+      Discoverability under `python3 -m unittest discover -s tests` is
+      demonstrated directly by the final full-suite run (4882 tests, the
+      44 new ones from this module included, no new failures against the
+      10-test baseline) rather than by a dedicated test.
