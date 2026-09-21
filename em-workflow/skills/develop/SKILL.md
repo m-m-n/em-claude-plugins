@@ -571,7 +571,7 @@ I.2.c、引用のみでここでは繰り返さない）を通じて扱う。
 | tier | 削減する対象 |
 |------|-------------|
 | `full` | 削減なし |
-| `reduced` | REQUIREMENTS.md、IMPLEMENTATION.md、design step |
+| `reduced` | REQUIREMENTS.md、design step。IMPLEMENTATION.md は複数タスクが同一ファイルを宣言しないときのみ削減する。複数タスクが同一ファイルを宣言する場合は IMPLEMENTATION.md を維持し、`## Shared Components` 節を含める（要件は `references/create-plan-phase.md` の Shared Components 節を引用、ここでは繰り返さない） |
 | `minimal` | REQUIREMENTS.md、IMPLEMENTATION.md、design step に加えて、SPEC.md（`TASK.md` に置換 — 様式は `em-workflow/references/templates/task-document.md` を参照し、ここでは定義しない）、タスク分割、VERIFICATION.md、task レベルの並列性 |
 
 全 tier で維持されるもの: 既存のテストスイート全体、Step 0 の git-setup
