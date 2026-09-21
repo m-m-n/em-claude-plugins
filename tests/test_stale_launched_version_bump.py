@@ -67,16 +67,14 @@ def _parse_version(version):
 
 
 def _assert_patch_bump_over_baseline(test, version, baseline):
-    """`version` parses as three numeric components; major and minor are
-    unchanged from `baseline` and patch is strictly greater. Comparison is
-    always on parsed numeric components, never the raw string -- a naive
-    string comparison would sort a two-digit patch component backwards."""
+    """`version` parses as three numeric components and is strictly greater
+    than `baseline` under per-component numeric comparison. Never a fixed
+    major.minor pin -- that form goes stale on the next legitimate minor
+    bump (task-tier-reduction task0008, NFR4) -- and never the raw string,
+    which would sort a two-digit patch component backwards."""
     parts = _parse_version(version)
     test.assertIsNotNone(parts, f"version {version!r} is not of the form X.Y.Z")
-    major, minor, patch = parts
-    base_major, base_minor, base_patch = baseline
-    test.assertEqual((major, minor), (base_major, base_minor))
-    test.assertGreater(patch, base_patch)
+    test.assertGreater(parts, tuple(baseline))
 
 
 def _assert_versions_equal(test, version_a, version_b):
@@ -143,11 +141,12 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _assert_patch_bump_over_baseline(self, baseline_str, BASELINE)
 
-    def test_patch_bump_matcher_rejects_minor_or_major_drift(self):
-        with self.assertRaises(AssertionError):
-            _assert_patch_bump_over_baseline(self, "0.2.0", BASELINE)
-        with self.assertRaises(AssertionError):
-            _assert_patch_bump_over_baseline(self, "1.1.78", BASELINE)
+    def test_matcher_accepts_a_minor_or_major_advance_over_baseline(self):
+        # task-tier-reduction/task0008 (NFR4): a minor or major bump is now
+        # a legitimate advance over the baseline -- this matcher must not
+        # reject it merely because major.minor changed.
+        _assert_patch_bump_over_baseline(self, "0.2.0", BASELINE)  # must not raise
+        _assert_patch_bump_over_baseline(self, "1.1.78", BASELINE)  # must not raise
 
     def test_patch_bump_matcher_rejects_malformed_version_shape(self):
         with self.assertRaises(AssertionError):

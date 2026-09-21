@@ -1,0 +1,99 @@
+task_id: task0008
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_tier_rework_path.TestSynthesisDocStatesMostReducingTierRoute.test_section_8a_heading_present
+      - test_tier_rework_path.TestSynthesisDocStatesMostReducingTierRoute.test_states_document_never_produced_at_this_tier
+      - test_tier_rework_path.TestSynthesisDocStatesMostReducingTierRoute.test_names_both_routes
+      - test_tier_rework_path.TestSynthesisDocStatesMostReducingTierRoute.test_states_the_upgrade_route_is_the_one_that_can_succeed
+      - test_tier_rework_path.TestSynthesisDocStatesMostReducingTierRoute.test_states_direct_route_cannot_produce_a_valid_task
+      - test_tier_rework_path.TestSynthesisDocStatesMostReducingTierRoute.test_states_fail_closed_consequence
+      - test_tier_rework_path.TestSynthesisDocStatesMostReducingTierRoute.test_cites_reduction_table_and_upgrade_procedure_without_restating
+      - test_tier_rework_path.TestSynthesisDocStatesMostReducingTierRoute.test_validation_section_names_the_absent_document_outcome
+      - test_tier_rework_path.TestSynthesisDocRouteAssertionsCanFail.test_forged_text_without_route_statement_is_detected
+      - test_tier_rework_path.TestSynthesisDocRouteAssertionsCanFail.test_forged_text_is_otherwise_well_formed
+    red_confirmed: true
+    red_reason: "Confirmed via git stash of rework-task-synthesis.md (restoring the pre-edit doc): with no Section 8a, every TestSynthesisDocStatesMostReducingTierRoute assertion failed (heading-lookup ValueError / substring-not-found AssertionError against the unmodified text)."
+  AC-2:
+    tests:
+      - test_tier_rework_path.TestContractDocCitesSynthesisDoc.test_names_the_most_reducing_tier
+      - test_tier_rework_path.TestContractDocCitesSynthesisDoc.test_cites_section_8a_rather_than_restating_it
+      - test_tier_rework_path.TestContractDocCitesSynthesisDoc.test_states_new_scenarios_blocked_until_upgrade
+      - test_tier_rework_path.TestContractDocCitesSynthesisDoc.test_states_fail_closed_outcome_named_distinctly
+      - test_tier_rework_path.TestContractDocCitesSynthesisDoc.test_does_not_restate_the_reduction_table
+      - test_tier_rework_path.TestContractDocAssertionsCanFail.test_missing_citation_is_detected
+    red_confirmed: true
+    red_reason: "Confirmed via git stash of rework-planner-contract.md: the unmodified doc contained no mention of the most-reducing tier or Section 8a, so every TestContractDocCitesSynthesisDoc assertion failed against it."
+  AC-3:
+    tests:
+      - test_tier_rework_path.TestValidatorAbsentDocumentCase.test_new_scenarios_rejected_when_document_absent_with_baseline_supplied
+      - test_tier_rework_path.TestValidatorAbsentDocumentCase.test_absent_document_error_is_distinct_from_no_baseline_error
+      - test_tier_rework_path.TestValidatorAbsentDocumentCase.test_non_vacuity_when_document_is_present_the_check_does_not_fire
+      - test_tier_rework_path.TestValidatorAbsentDocumentCase.test_covered_by_existing_only_is_unaffected_by_document_absence
+    red_confirmed: true
+    red_reason: "Confirmed via git stash of validate-worker-output.py: against the unmodified _validate_rework_index, a declared new_scenarios claim with an absent VERIFICATION.md and a supplied baseline produced no error at all (neither the no-baseline branch nor a distinct absent-document branch fired), so both the rejection and the distinct-message assertions failed."
+  AC-4:
+    tests:
+      - test_tier_rework_path.TestTaskEntryValidationUnchangedForEmptyRequirements.test_empty_requirements_list_produces_no_requirements_error
+      - test_tier_rework_path.TestTaskEntryValidationUnchangedForEmptyRequirements.test_missing_requirements_key_also_produces_no_requirements_error
+      - test_tier_rework_path.TestTaskEntryValidationUnchangedForEmptyRequirements.test_non_list_requirements_is_still_rejected
+      - test_tier_rework_path.TestTaskEntryValidationUnchangedForEmptyRequirements.test_unknown_requirement_id_is_still_rejected_when_workflow_supplied
+      - test_tier_rework_path.TestTaskEntryValidationUnchangedForEmptyRequirements.test_known_requirement_id_is_accepted_when_workflow_supplied
+    red_confirmed: false
+    red_reason: "AC-4 proves task-entry validation is unchanged by this task, not new behavior. validate_task_entry's requirements handling is out of this task's scope and was never touched, so these cases already passed against the unmodified validator (confirmed via git stash: none of the five were among the failures produced by reverting my change). A red here would indicate the pre-existing behavior this AC guards was already broken, which is not the case."
+  AC-5:
+    tests:
+      - test_task_tier_reduction_version_bump.TestPluginManifestVersion.test_manifest_is_a_minor_bump_over_the_baseline
+      - test_task_tier_reduction_version_bump.TestPluginManifestVersion.test_name_field_unchanged
+      - test_task_tier_reduction_version_bump.TestMarketplaceEntryVersion.test_entry_lookup_is_non_vacuous
+      - test_task_tier_reduction_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_a_minor_bump_over_the_baseline
+      - test_task_tier_reduction_version_bump.TestMarketplaceEntryVersion.test_entry_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: "Confirmed via git stash of em-workflow/.claude-plugin/plugin.json and .claude-plugin/marketplace.json: with both manifests still at the pre-change baseline 0.1.86, test_manifest_is_a_minor_bump_over_the_baseline and test_entry_version_is_a_minor_bump_over_the_baseline both failed against BASELINE_VERSION = (0, 1, 86)."
+  AC-6:
+    tests:
+      - test_task_tier_reduction_version_bump.TestOtherPluginEntryUnchanged.test_em_review_entry_unchanged
+      - test_task_tier_reduction_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_altered_identity_field
+      - test_task_tier_reduction_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_rejects_missing_or_malformed_version
+      - test_task_tier_reduction_version_bump.TestValidationDetectsRegressions.test_em_review_matcher_accepts_forged_higher_version
+    red_confirmed: false
+    red_reason: "This task never writes to the em-review marketplace entry, so it was already unchanged and shape-valid before this task's edits -- there is no pre-implementation red state to observe (confirmed via git stash: this test was not among the three that failed pre-implementation). The negative-proof tests in TestValidationDetectsRegressions exercise the matcher's failure path directly against forged/altered data instead, and do genuinely raise against that synthetic input."
+  AC-7:
+    tests:
+      - test_tier_rework_path.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - test_task_tier_reduction_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - test_task_tier_reduction_version_bump.TestValidationDetectsRegressions.test_minor_component_comparison_is_numeric_not_lexicographic
+      - test_task_tier_reduction_version_bump.TestValidationDetectsRegressions.test_minor_bump_matcher_rejects_the_baseline_itself
+      - test_task_tier_reduction_version_bump.TestValidationDetectsRegressions.test_minor_bump_matcher_rejects_a_patch_only_bump
+      - test_task_tier_reduction_version_bump.TestValidationDetectsRegressions.test_minor_bump_matcher_rejects_a_major_bump
+    red_confirmed: false
+    red_reason: "These assert properties of the two new modules themselves (stdlib-only imports; the per-component-numeric comparison trap; matcher negative proofs against forged data) that exist only once the module is written -- there is no pre-implementation document/code state for them to fail against, the same situation as AC-7 in task0002's own test record. Confirmed instead by full-suite discovery: `python3 -m unittest discover -s tests` picked up and ran both new modules (4976 total tests vs. 4976 with the modules present and passing), and each negative-proof test demonstrably raises AssertionError when its matcher is called against the forged/malformed sample it is paired with."
+  AC-8:
+    tests:
+      - test_task_tier_reduction_version_bump.TestNoModuleUnderTestsPinsMajorMinorLiteral.test_no_module_pins_the_major_minor_pair
+      - test_task_tier_reduction_version_bump.TestNoModuleUnderTestsPinsMajorMinorLiteral.test_scan_is_non_vacuous
+      - test_task_tier_reduction_version_bump.TestNoModuleUnderTestsPinsMajorMinorLiteral.test_pattern_matcher_detects_a_forged_offender
+      - test_task_tier_reduction_version_bump.TestNoModuleUnderTestsPinsMajorMinorLiteral.test_pattern_matcher_does_not_flag_the_replacement_form
+    red_confirmed: true
+    red_reason: "Confirmed via git stash of the 22 rewritten tests/*.py modules: with the pre-edit files restored, test_no_module_pins_the_major_minor_pair failed because RETIRED_PATTERN matched literal `(major, minor) == (0, 1)`-style pins still present in several of them. The companion scan-is-non-vacuous / pattern-matcher tests exercise the regex itself against synthetic strings and are unaffected by repo state, so they were already green; the whole-suite run after the rewrite (python3 -m unittest discover -s tests, 4976 tests, 9 failures all pre-existing and unrelated) is the evidence for the 'whole suite is green' half of this AC."

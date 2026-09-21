@@ -99,12 +99,13 @@ def _version_tuple(version):
 
 
 def _assert_version_past_baseline(test, version, baseline_patch=BASELINE_PATCH):
-    """Durable invariant: (major, minor) == (0, 1) and patch > baseline_patch.
-    States the family plus a recorded baseline floor -- never a hard-coded
-    exact version (task0002.md, Design)."""
-    major, minor, patch = _version_tuple(version)
-    test.assertEqual((major, minor), (0, 1))
-    test.assertGreater(patch, baseline_patch)
+    """Durable invariant: version strictly greater than (0, 1, baseline_patch)
+    under per-component numeric comparison -- never a hard-coded exact
+    version (task0002.md, Design), and never a fixed major.minor pin, which
+    would go stale on the next legitimate minor bump (task-tier-reduction
+    task0008, NFR4)."""
+    parts = _version_tuple(version)
+    test.assertGreater(parts, (0, 1, baseline_patch))
 
 
 def _assert_versions_equal(test, version_a, version_b):
