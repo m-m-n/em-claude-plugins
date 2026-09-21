@@ -320,7 +320,7 @@ tasks:
     - NFR3
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0009
     provenance:
       source: review
@@ -405,7 +405,7 @@ tasks:
     - FR13
     - NFR1
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0012
     provenance:
       source: review
