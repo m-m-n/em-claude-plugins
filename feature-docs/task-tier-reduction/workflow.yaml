@@ -83,14 +83,14 @@ workflow:
   status: completed
   completed_at_commit: c182a0378e21da37f1915223f86929891dc1a33b
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 4fc8bdbc7b8fb0a3cbb15b92f5e365f17b5bc706
   base_commit: 6c4971e457301a44c3b48c0af74c41d46e325c20
 - id: review
   status: completed
   completed_at_commit: fee9d20
 - id: verify
-  status: failed
+  status: pending
   result: fail
   failed_items:
   - id: TS-13
@@ -463,6 +463,27 @@ tasks:
       - 6c01bcf729ce8d46
       - 5d7c0e9b00dd6b2e
       - 7de4948f1297d2bc
+  task0014:
+    title: restore the two pinned phrasings of the tier-decision procedure
+    plan: tasks/task0014.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    skills: []
+    domains:
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR6
+    - FR13
+    - NFR5
+    status: pending
+    notes: null
+    provenance:
+      source: verify
+      review_round: null
+      source_ids:
+      - TS-13
+      - TS-9
 review:
   status: completed
   plan:
@@ -540,6 +561,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0003
+    - task0014
     tests:
     - TS-13
   FR7:
@@ -613,6 +635,7 @@ requirements:
     - task0001
     - task0003
     - task0012
+    - task0014
     tests:
     - TS-9
     - TS-27
@@ -779,6 +802,7 @@ requirements:
     tasks:
     - task0001
     - task0003
+    - task0014
     tests:
     - TS-13
   NFR6:
