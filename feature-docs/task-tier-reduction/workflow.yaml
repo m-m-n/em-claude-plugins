@@ -134,7 +134,7 @@ tasks:
     - FR3
     - FR12
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0002
   task0003:
     title: Step A tier decision, persistence and the no-work stop
