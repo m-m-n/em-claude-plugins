@@ -351,7 +351,7 @@ class TestUpgradeOnlyRule(SchemaDocTestCase):
 
     def test_cites_persisted_state_locations(self):
         section = self._tier_section()
-        self.assertIn("phase-state/{feature}/tier.yaml", section)
+        self.assertIn("feature-docs/{feature}/phase-state/tier.yaml", section)
         self.assertIn("workflow.yaml", section)
 
     def test_cites_develop_skill_as_mechanism_owner(self):

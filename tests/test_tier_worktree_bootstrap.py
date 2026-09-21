@@ -506,13 +506,20 @@ class TestAC4MatchersCanFail(unittest.TestCase):
 
 TWO_READINGS_ANCHOR = (
     "4. **2 本の判定根拠**: 作業が残っている場合、判定スキルを同じ質問セットに\n"
-    "   対して 2 回呼ぶ — 1 回目はタスク記述のみを基準に、2 回目は 2. の\n"
-    "   Codex 見積もりをその state に合流させて。両方の読み取り結果を、それぞれの\n"
-    "   観測値とともに決定の根拠として記録する。"
+    "   対して 2 回呼ぶ — 1 回目は decision-basis `description_only`\n"
+    "   （タスク記述のみを基準に）、2 回目は decision-basis\n"
+    "   `description_plus_code`（2. の Codex 見積もりをその state に合流させ\n"
+    "   て）。この 2 つの識別子は `tier-rules.yaml` の `decision_basis` 値で\n"
+    "   あり、ここでは新しい識別子を作らない。両方の読み取り結果を、それぞれの\n"
+    "   basis ラベルと観測値とともに決定の根拠として記録する。"
 )
 EVALUATION_ANCHOR = (
-    "5. **評価**: 集めた値を評価器（IMPLEMENTATION.md Shared Components\n"
-    "   `scripts/decide-tier.py` 参照）へ渡し、返された tier を採用する。"
+    "5. **評価**: 集めた 2 本の読みを 1 回の呼び出しで評価器\n"
+    "   （IMPLEMENTATION.md Shared Components `scripts/decide-tier.py` 参照）へ\n"
+    "   渡す。評価器は各読みがそれぞれ決定する tier を比較し、両者が異なる\n"
+    "   tier に評価された場合は何も引かない tier（`full`）を返す — この\n"
+    "   不一致解決規則は評価器の入力契約が持ち、ここでは繰り返さない。返された\n"
+    "   tier を採用する。"
 )
 TRANSCRIPTION_ANCHOR = (
     "**Tier transcription**: Step A of `skills/develop/SKILL.md` makes the tier\n"
