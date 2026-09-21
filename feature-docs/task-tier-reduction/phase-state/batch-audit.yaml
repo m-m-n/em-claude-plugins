@@ -186,3 +186,27 @@ records:
   resolution_note: 'gate: なし（implement wake phase の deviation 判定、gate_id なし）;
     codex_consulted: false; opus escalation: not run; 判定根拠は implement-phase.md の
     Deviation auto-addition rule が要求する 3 パートのうち識別子が欠落している点のみ'
+- question_id: implement.deviation-declined
+  packet_id: null
+  answered_at: '2026-09-21T20:56:00+09:00'
+  source: batch-implement-wake-reconcile
+  answer_mode: orchestrator_decision
+  selected_option_ids: []
+  freeform: 'task0011 の完了報告が申告した deviation を、implement-phase.md の
+
+    Deviation auto-addition rule により declined と判定した。
+
+    '
+  normalized_answer: 'task_id: task0011; declined path: tests/test_gate_option_vocabulary.py
+    （同一 path についての 2 件の申告をまとめて 1 件として扱う）; missing evidence part:
+    「取りこぼされる受け入れ条件または要件の識別子」。報告は当該モジュール自身の
+    「refresh, don''t remove」慣習と過去 5 件の前例を根拠に挙げるだけで、この path を
+    declared change set に加えなければ落ちる AC-n（task0011 の計画に create-plan /
+    rework-planner が書いた既存の AC）または workflow.yaml に登録済みの要件 ID を
+    1 つも名指ししていない。よって tasks.task0011.files への append は行わない。
+    3 件目の申告（phase-state.md の spec_change 文言を既存テストが固定する部分文字列を
+    保つ形で書いた件）は path の追加を伴わないため、そもそも auto-addition rule の
+    対象外であり declined にも該当しない。'
+  resolution_note: 'gate: なし（implement wake phase の deviation 判定、gate_id なし）;
+    codex_consulted: false; opus escalation: not run; 判定根拠は implement-phase.md の
+    Deviation auto-addition rule が要求する 3 パートのうち識別子が欠落している点のみ'
