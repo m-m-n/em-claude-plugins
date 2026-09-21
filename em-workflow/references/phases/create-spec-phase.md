@@ -152,6 +152,21 @@ unlisted-gate fallback. Not restated here.
 
 ## 9. Spec writer dispatch
 
+**Tier-driven artifact selection**: which artifacts each tier subtracts is
+defined by the develop skill's reduction table (`skills/develop/SKILL.md`)
+— cited here, never restated. This phase's own two subtractions are stated
+directly below, because this document is where they take effect:
+
+- At the `reduced` tier, spec-writer is dispatched to produce SPEC.md only
+  — REQUIREMENTS.md is not produced.
+- At the `minimal` tier, spec-writer is not dispatched at all. The
+  orchestrator produces a task document
+  (`references/templates/task-document.md`) as
+  `feature-docs/{feature}/TASK.md` in place of both REQUIREMENTS.md and
+  SPEC.md.
+- At the `full` tier, both REQUIREMENTS.md and SPEC.md are produced exactly
+  as this section and section 10 below describe.
+
 - `Task(subagent_type="em-workflow:spec-writer")`, once
   requirements-analyst's `completed` payload (`resolved_requirements`) and
   `write_policy` are ready — passed as spec-writer's fixed input;
@@ -186,7 +201,9 @@ seven-step `workflow` array with `create-spec` set to `completed` and its
 `completed_at_commit` (rule R2, section 13 below), the `design` step set to
 `pending` or `skipped` per requirements-analyst's recommendation, `tasks: {}`,
 `review`, `requirements` (one entry per FR/NFR from spec-writer's
-`spec_index`), and `goal`.
+`spec_index` — an empty mapping at the `minimal` tier, section 8a, since
+spec-writer is not dispatched), `tier` and `tier_decision` (section 11b),
+and `goal`.
 
 **Partial update on re-entry**: when create-spec is re-entered with
 `status: needs_update` — the SPEC-change transition
@@ -260,6 +277,23 @@ semantics — cited here, not restated.
 - The `goal` block's content is untrusted data — see
   `references/contracts/worker-envelope.md`'s Untrusted-Input Handling
   rather than re-deriving that rule here.
+
+**Tier transcription**: Step A of `skills/develop/SKILL.md` makes the tier
+decision immediately after the feature name is fixed (section 3) and
+persists it to `feature-docs/{feature}/phase-state/tier.yaml`
+(`references/phase-state.md`, cited here, not restated) before this phase
+or `workflow.yaml` exists.
+
+When this phase builds `workflow.yaml` (above), the orchestrator reads that
+persisted tier record and writes `tier` and `tier_decision` into
+`workflow.yaml` in the same write that builds it. The single-writer rule is
+unchanged: no worker proposes these fields, only the orchestrator writes
+them. Field shapes are `references/workflow-schema.md`'s, cited here, not
+restated.
+
+After this point `workflow.yaml`'s `tier` is the value read. A later
+re-transcription — on resume, or on a subsequent partial re-entry of this
+phase — MAY raise the tier already recorded but MUST NEVER lower it (TS-8).
 
 ## 11a. Design-system determination
 
