@@ -374,9 +374,10 @@ create-plan フェーズの planner は、その step がエントリした時�
   設定し、develop のステートマシンが create-spec で再エントリすることを
   要求する遷移
 - tier 昇格による再エントリ — 下記「アップグレード手順」が、`minimal`
-  tier で TASK.md により `completed` となった create-spec を再実行する
-  ために create-spec を `needs_update` に設定し、develop のステート
-  マシンが create-spec で再エントリすることを要求する遷移
+  tier で TASK.md により、または `reduced` tier で design の skip に
+  伴い、`completed` となった create-spec および create-plan をそれぞれ
+  再実行するために `needs_update` に設定し、develop のステートマシンが
+  それぞれで再エントリすることを要求する遷移
 
 この列挙は、所有 SSOT 自身がフェーズの自動再エントリを明記している遷移
 だけが対象という構成上の理由でこの 3 つで網羅的であり、他の遷移はこの
@@ -555,6 +556,22 @@ integration worktree の維持とは独立した話である。
 - review で critical severity の finding が出たとき
 - verify が `failed` になったとき
 
+**認可記録の先行書き込み**: 下記の `minimal` / `reduced` いずれの追加
+手順も、create-spec または create-plan の `status` を書き換える**前**に、
+`phase-state/rework.yaml` の既存の認可記録（`references/phase-state.md`
+の `spec_change` — フィールドも語彙値も新規追加しない）を書いて
+`commit-docs.sh` でコミットする。`reason` にはトリガーとなった中断理由
+を、`origin_kind` / `origin_id` にはトリガーの由来（review の critical
+finding なら `review` とその finding の安定識別子、verify の `failed`
+なら `verify` とその失敗項目の識別子）を記録し、`recorded_at_commit`
+にはこの記録時点の commit を、`consumed` は `false`、
+`replan_authorized` は `true` で書く。この順序により、記録のコミットと
+status 変更の間で中断が起きても、残るのは再エントリを許可する記録で
+あり、エントリ条件が拒否する status ではない。この記録は rework の
+spec-change 遷移が書くものと同一の記録であり、
+`references/phase-state.md` はこの手順をその記録のもう一方の writer
+として明記する。
+
 降格の禁止: 昇格後に tier を元へ戻す操作は一切無く、`workflow.yaml`
 `tier` フィールドは単調増加のみを許す（`references/workflow-schema.md` が
 定義する upgrade-only rule を唯一の定義元とし、ここでは繰り返さない）。
@@ -562,24 +579,37 @@ integration worktree の維持とは独立した話である。
 `minimal` tier の追加手順: `minimal` tier では TASK.md の作成により
 create-spec と create-plan が既に `completed` に達している。この場合、
 `skipped` の step を `pending` に戻すだけでは SPEC.md も VERIFICATION.md
-も補われないため、昇格手順は追加で create-spec と create-plan の再実行を
-含める — 両 step の `status` を `needs_update` に設定し、develop の
-ステートマシンがそれぞれで再エントリして SPEC.md と VERIFICATION.md を
-作成する。create-plan の再実行は create-plan-phase.md の既定の再計画
-手順に従い、既にマージ済みの task は保持したまま新規追加分のみを計画する。
-この遷移は上記「停止条件 3 との優先関係」の自動再エントリ carve-out の
-一員であり、停止条件 3 の停止理由にはしない。
+も補われないため、昇格手順は上記の認可記録を先に書いたのち、create-spec
+の再実行を含める — create-spec の `status` を `needs_update` に設定し、
+develop のステートマシンが create-spec で再エントリして SPEC.md を作成
+する。create-plan も同様に再実行を含める — create-plan の `status` を
+`needs_update` に設定し、develop のステートマシンが create-plan で再
+エントリして VERIFICATION.md を作成する。create-plan の再実行は
+create-plan-phase.md の既定の再計画手順に従い、既にマージ済みの task は
+保持したまま新規追加分のみを計画する。この 2 つの needs_update 遷移は
+上記「停止条件 3 との優先関係」の自動再エントリ carve-out の一員であり、
+停止条件 3 の停止理由にはしない。
 
-`reduced` から `full` への追加手順: `reduced` tier では create-plan が
-既に `completed` に達しており、REQUIREMENTS.md と IMPLEMENTATION.md は
-design step の skip により未作成のままである。`skipped` の design step
-を `pending` に戻すだけでは、design の出力を前提とする create-plan の
-再計画が起きないため、昇格手順は追加で create-plan の再実行を含める —
-create-plan の `status` を `needs_update` に設定し、design の完了後に
-develop のステートマシンが create-plan で再エントリして
-REQUIREMENTS.md / IMPLEMENTATION.md を反映した計画を作成する。この
-再計画でも既にマージ済みの task は保持したまま新規追加分のみを計画する。
-この遷移も同じ carve-out の一員であり、停止条件 3 の停止理由にはしない。
+`reduced` から `full` への追加手順: `reduced` tier では create-spec と
+create-plan が既に `completed` に達している。要件定義書
+（REQUIREMENTS.md — create-spec の writer が作成する成果物）は
+create-spec 自身が `reduced` tier でその作成を省いたことにより未作成の
+ままであり、実装計画書（IMPLEMENTATION.md — create-plan の writer が
+作成する成果物）は create-plan 自身が `reduced` tier でその作成を省いた
+ことにより未作成のままである。design step の skip はこのいずれの不在の
+原因でもない。`skipped` の design step を `pending` に戻すだけでは、
+design の入力の一つである要件定義書（design_inputs の
+requirements_path）も、`full` tier で create-plan の precondition が
+要求する要件定義書の存在も満たされないため、昇格手順は上記の認可記録を
+先に書いたのち、create-spec・design・create-plan の順に再実行させる —
+create-spec の `status` を `needs_update` に設定し、design の `skipped`
+の step を `pending` に戻し、create-plan の `status` を `needs_update`
+に設定する。develop のステートマシンはこの順で再エントリし、create-spec
+の再実行がまず要件定義書を作成し、design がそれを入力として実行され、
+その完了後に create-plan が要件定義書と design の出力を反映した計画を
+再作成する。この再計画でも既にマージ済みの task は保持したまま新規追加
+分のみを計画する。create-spec と create-plan それぞれの needs_update
+遷移も同じ carve-out の一員であり、停止条件 3 の停止理由にはしない。
 
 | step | 実行方法 |
 |------|----------|
@@ -878,7 +908,7 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 | 通常の step | step の `status` が `completed`（`skipped`（design 自身の skip、または tier による skip）でも可）になり、コミット済み | 次の step |
 | `retrospect` | `retrospect` が `completed` に達し、コミット済み（Step C（完了処理）はここでは実行せず、独立した 1 フェーズとして次の起動に持ち越す） | Step C（完了処理） |
 | verify 失敗時の rework | rework パッチを適用し、`implement` と `verify` を `pending` に戻し、コミット済み | `implement` |
-| 自動再エントリ | ルーティングパッチを適用してコミット済み（implement I.2.c の `create-plan` → `needs_update`、または rework の spec-change 遷移による `create-spec` → `needs_update`） | 再エントリした step |
+| 自動再エントリ | ルーティングパッチを適用してコミット済み（implement I.2.c の `create-plan` → `needs_update`、rework の spec-change 遷移による `create-spec` → `needs_update`、またはアップグレード手順による `create-spec` → `needs_update` / `create-plan` → `needs_update`） | 再エントリした step |
 
 **非境界**: `--once` は implement フェーズの途中ではターンを終えない
 （in-flight の実装者がプロセス終了で失われるため）。停止条件 5 の待機ターン、
