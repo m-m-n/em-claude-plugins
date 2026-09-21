@@ -90,9 +90,23 @@ workflow:
   status: completed
   completed_at_commit: fee9d20
 - id: verify
-  status: in_progress
-  result: null
-  failed_items: []
+  status: failed
+  result: fail
+  failed_items:
+  - id: TS-13
+    category: spec
+    note: >-
+      em-workflow/skills/develop/SKILL.md の「### tier 決定」step 4 が
+      task0003 AC-1 の固定句「1 回目はタスク記述のみを基準に」を含まない
+      （現行は decision-basis 識別子を挟んだ表現）。
+      tests/test_tier_decision_step_a.py::TestAC1PlacementAndInvocations::test_consults_twice_and_records_both_bases が失敗。
+  - id: TS-9
+    category: spec
+    note: >-
+      同セクション step 6 に、task0003 AC-2 が要求する「フォールバック表が
+      解決しないその他の条件」を何も引かない tier に倒す包括条項が無く、
+      個別ケースの列挙にとどまる。
+      tests/test_tier_decision_step_a.py::TestAC2AvailabilityAndThresholds::test_unresolved_conditions_give_removes_nothing_tier が失敗。
 - id: retrospect
   status: pending
 tasks:
