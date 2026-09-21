@@ -1,0 +1,78 @@
+task_id: task0002
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_tier_workflow_schema.TestTierFieldDomain.test_states_three_value_domain_in_order
+      - test_tier_workflow_schema.TestDecisionBlockSubfieldsExactlyFour.test_subfields_exact_four_values_in_order
+      - test_tier_workflow_schema.TestDecisionBlockSubfieldsExactlyFour.test_negative_proof_extra_subfield_is_detected
+      - test_tier_workflow_schema.TestDecisionBlockSubfieldsExactlyFour.test_negative_proof_missing_subfield_is_detected
+    red_confirmed: true
+    red_reason: "ValueError: heading not found as its own line: '## `tier` and `tier_decision`' (section did not exist yet); test_states_three_value_domain_in_order and test_subfields_exact_four_values_in_order both raised/failed against the pre-edit document"
+  AC-2:
+    tests:
+      - test_tier_workflow_schema.TestFullStructureCarriesTierAndDecisionBlock.test_tier_key_present_as_a_top_level_sibling
+      - test_tier_workflow_schema.TestFullStructureCarriesTierAndDecisionBlock.test_tier_decision_key_present_as_a_top_level_sibling
+      - test_tier_workflow_schema.TestFullStructureCarriesTierAndDecisionBlock.test_tier_positioned_alongside_other_top_level_blocks
+    red_confirmed: true
+    red_reason: "AssertionError: Regex didn't match: '(?m)^tier:' / '(?m)^tier_decision:' not found in the pre-edit Full structure yaml fence"
+  AC-3:
+    tests:
+      - test_tier_workflow_schema.TestStatusSemanticsNoLongerRestrictedToDesign.test_old_restricted_sentence_is_gone
+      - test_tier_workflow_schema.TestStatusSemanticsNoLongerRestrictedToDesign.test_states_skipped_valid_for_any_tier_subtracted_step
+      - test_tier_workflow_schema.TestStatusSemanticsNoLongerRestrictedToDesign.test_states_skip_reason_mandatory_in_every_case
+      - test_tier_workflow_schema.TestStatusSemanticsNoLongerRestrictedToDesign.test_states_skipped_step_passed_over_by_step_selection
+      - test_tier_workflow_schema.TestStatusSemanticsNoLongerRestrictedToDesign.test_design_step_own_case_still_described
+    red_confirmed: true
+    red_reason: "test_old_restricted_sentence_is_gone failed (old sentence was still present verbatim); the other four errored (ValueError: '## `tier` and `tier_decision`' end-heading not found, since the new section did not exist yet to bound the status-semantics extraction)"
+  AC-4:
+    tests:
+      - test_tier_workflow_schema.TestCompletionRuleAllowsSkippedNonDesignSteps.test_old_design_only_completion_sentence_is_gone
+      - test_tier_workflow_schema.TestCompletionRuleAllowsSkippedNonDesignSteps.test_states_workflow_complete_with_tier_subtracted_step_skipped
+      - test_tier_workflow_schema.TestCompletionRuleAllowsSkippedNonDesignSteps.test_design_own_case_named_inside_the_completion_rule
+    red_confirmed: true
+    red_reason: "test_old_design_only_completion_sentence_is_gone failed (old design-only completion sentence was still present verbatim); the other two errored for the same missing-end-heading reason as AC-3"
+  AC-5:
+    tests:
+      - test_tier_workflow_schema.TestUpgradeOnlyRule.test_states_may_be_raised_and_never_lowered
+      - test_tier_workflow_schema.TestUpgradeOnlyRule.test_states_retranscription_must_not_lower
+      - test_tier_workflow_schema.TestUpgradeOnlyRule.test_cites_persisted_state_locations
+      - test_tier_workflow_schema.TestUpgradeOnlyRule.test_cites_develop_skill_as_mechanism_owner
+      - test_tier_workflow_schema.TestUpgradeOnlyRule.test_does_not_describe_the_mechanism_procedurally
+    red_confirmed: true
+    red_reason: "ValueError: heading not found as its own line: '## `tier` and `tier_decision`' -- the Upgrade-only paragraph did not exist yet"
+  AC-6:
+    tests:
+      - test_tier_workflow_schema.TestDecisionBlockNoThresholdNoConfidenceOnlyCriterion.test_cites_tier_rules_yaml_as_thresholds_owner
+      - test_tier_workflow_schema.TestDecisionBlockNoThresholdNoConfidenceOnlyCriterion.test_states_confidence_is_not_a_single_scalar
+      - test_tier_workflow_schema.TestDecisionBlockNoThresholdNoConfidenceOnlyCriterion.test_no_numeric_threshold_literal_present
+      - test_tier_workflow_schema.TestDecisionBlockNoThresholdNoConfidenceOnlyCriterion.test_no_probability_symbol_vocabulary_restated
+    red_confirmed: true
+    red_reason: "ValueError: heading not found as its own line: '## `tier` and `tier_decision`' -- the decision-block description did not exist yet to assert against"
+  AC-7:
+    tests:
+      - test_tier_workflow_schema.TestModuleIsStdlibOnlyAndDiscoverable.test_only_standard_library_imports
+      - test_tier_workflow_schema.TestModuleIsStdlibOnlyAndDiscoverable.test_module_file_name_matches_discovery_convention
+    red_confirmed: false
+    red_reason: "AC-7 verifies properties of this test module itself (stdlib-only imports, discoverability under `python3 -m unittest discover -s tests`), not a behavior of workflow-schema.md -- there is no pre-implementation document state for these to fail against. Confirmed instead by full-suite discovery: `python3 -m unittest discover -s tests` picked up and ran all 43 tests in this module (4881 total vs. 4838 baseline), and the AST-based stdlib-only check is itself exercised (and would fail) if a non-stdlib import were added."
