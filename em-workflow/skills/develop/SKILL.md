@@ -239,7 +239,9 @@ feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.y
    ある旨を明文で述べる。Codex 事前調査の根拠は同ガイダンスに含める。
    この停止点の名は `no-work-required`（ハイフン区切り）とする。対応する
    reason code の文字列は `references/batch-terminal-line.md` の所有物で
-   あり、このファイルには一切書かない。
+   あり、このファイルには一切書かない。統合ブランチ・worktree の確保は
+   下記 7. でこの停止より後にしか行われないため、no-work 停止はブランチも
+   worktree も作らずに走行を終える。
 4. **2 本の判定根拠**: 作業が残っている場合、判定スキルを同じ質問セットに
    対して 2 回呼ぶ — 1 回目はタスク記述のみを基準に、2 回目は 2. の
    Codex 見積もりをその state に合流させて。両方の読み取り結果を、それぞれの
@@ -252,9 +254,28 @@ feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.y
    扱う。判定スキルが使用不可、または Codex 事前調査が使用不可で 2 本の
    判定結果が割れた場合、あるいはフォールバック表が解決しないその他の条件は
    すべて、何も引かない tier（`full`）を採用する。
-7. **永続化**: 決定した直後、他の何よりも先に、
-   `feature-docs/{feature}/phase-state/tier.yaml` へ記録し、既存の
-   `commit-docs.sh` でコミットする（スクリプト変更は不要 —
+7. **統合 branch/worktree の確保**: `em-workflow/{feature}/integration`
+   ブランチと対応する worktree がまだ存在しなければ、ここで確保する
+   （新規 feature 分岐、および「ブートストラップ状態の判定」の
+   「存在しない」分岐の場合。既存 feature の通常再開では Step A.2 が
+   既に確保済みなので、ここでは再作成しない）。
+   - ブランチが存在しない場合: Step A.2 の再マテリアライズ手順と同じ
+     引数クォート形式で、ブランチと worktree を同時に作成する:
+     `git worktree add -b "em-workflow/{feature}/integration" "$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration"`
+   - ブランチは存在するが worktree が無い場合: Step A.2 と同じ
+     再マテリアライズコマンドを使う:
+     `git worktree add "$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration" "em-workflow/{feature}/integration"`
+   - 両方既に存在する場合はそのまま使う。
+   以降このワークフロー全体で「integration worktree」と言うときは、ここで
+   確保した（または既存の）worktree の絶対パス
+   `$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration` を指す。
+8. **永続化**: 決定した直後、他の何よりも先に、上記 7. で確保した
+   integration worktree の絶対パス配下の
+   `feature-docs/{feature}/phase-state/tier.yaml`
+   （すなわち
+   `$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration/feature-docs/{feature}/phase-state/tier.yaml`）
+   へ記録し、同じ worktree の絶対パスを対象にした既存の `commit-docs.sh`
+   でコミットする（スクリプト変更は不要 —
    `commit-docs.sh` は既に feature-docs ツリー全体をステージする）。
    フィールドの定義は `references/phase-state.md` の tier decision
    persistence 節参照。
