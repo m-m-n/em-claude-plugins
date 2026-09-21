@@ -331,3 +331,40 @@ records:
     auto-add しない。変更自体はタスクブランチにマージ済みで、containment check は
     従来どおり通常の deviation として扱う; codex_consulted: false;
     opus escalation: not run
+- question_id: develop.once-boundary-vs-pr
+  packet_id: null
+  answered_at: '2026-09-21T22:16:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - option_a_end_at_once_boundary
+  freeform: >-
+    起動引数が `--batch --once --pr task-tier-reduction` で、かつユーザーの
+    自由記述が「実装が終わったら integration ブランチを push して
+    base_branch 宛に PR を作る」と述べている。入場時の workflow.yaml は
+    retrospect 以外すべて completed（design は skipped、verify は
+    completed/pass）で、この起動は retrospect を実行して completed にした。
+    SKILL.md の `--once` フェーズ境界表は retrospect 境界で Step C を
+    実行せず次の起動へ持ち越すと定め、「`--pr` との関係」節は Step C に
+    到達しない起動では `--pr` が付いていても PR は作られないと明記する。
+    選択肢: (A) `--once` 境界でターンを終え Step C を実行しない /
+    (B) 自由記述を優先して同一ターンで Step C まで走り PR を作る。
+    gate_id を持たないオーケストレーター起点の相談で、ユーザー指示
+    「不明点は Codex に相談し、比較して良い方を採用」に基づく。
+  normalized_answer: >-
+    (A) を採用。Codex の判断: `--once` は実行境界を明示する制御指定であり、
+    自由記述は Step C 到達時の「完了方針」と読むのが自然。しかもその意図は
+    ユーザーが同時に渡した `--pr` フラグ自身が表現しており、`--once` を
+    無視せよという指示はどこにも無い。(B) を採ると、明文化された境界を
+    越えてリモートへの push・PR 作成・worktree 削除という外部変更を
+    無人で実行することになり、誤ったときの影響が大きく巻き戻しにくい。
+    (A) の誤りは PR 作成が次の起動まで遅れるだけで、状態は保持され
+    再開可能。したがって Step C は実行せず、`--once` 境界用の構造化
+    終了結果を返し、次回 `/em-workflow:develop --batch --pr
+    task-tier-reduction` で Step C を実行する。
+  resolution_note: >-
+    gate: develop の `--once` 境界と `--pr` の優先関係（gate_id なし、
+    ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true
+    （run_codex_exec.sh readonly、1 ターン）; harness entry: codex;
+    opus escalation: not run; 採らなかった案 (B) の利点は同一起動で PR まで
+    到達できる点のみで、SKILL.md の明文規定に反する。
