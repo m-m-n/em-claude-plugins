@@ -87,7 +87,8 @@ workflow:
   completed_at_commit: 4fc8bdbc7b8fb0a3cbb15b92f5e365f17b5bc706
   base_commit: 6c4971e457301a44c3b48c0af74c41d46e325c20
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: fee9d20
 - id: verify
   status: pending
   result: null
@@ -449,7 +450,7 @@ tasks:
       - 5d7c0e9b00dd6b2e
       - 7de4948f1297d2bc
 review:
-  status: pending
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -464,10 +465,10 @@ review:
     comprehensive: completed
     performance: completed
     architecture: completed
-    spec: skipped
-  rounds_completed: 1
-  residual_critical_high: 8
-  needs_rework: true
+    spec: completed
+  rounds_completed: 2
+  residual_critical_high: 3
+  needs_rework: false
 requirements:
   FR1:
     title: tier-rules.yaml の新設
