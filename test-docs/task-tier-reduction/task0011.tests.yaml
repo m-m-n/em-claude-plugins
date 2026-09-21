@@ -1,0 +1,86 @@
+task_id: task0011
+baseline_failures:
+  - "test_tier_decision_step_a (module-level ImportError: _section() raised ValueError -- STEP_C_START marker \"## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、cap 到達により verify が `failed` のまま残る場合のみ）\" not found in SKILL.md; the heading had already been generalized by a prior task's merge)"
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_tier_upgrade_authorization.TestAC1RecordPrecedesStatusWrites.test_minimal_branch_record_precedes_status_writes
+      - test_tier_upgrade_authorization.TestAC1RecordPrecedesStatusWrites.test_reduced_branch_record_precedes_status_writes
+      - test_tier_upgrade_authorization.TestRecordOrderingMatcherCanFail.test_matcher_detects_swapped_order
+      - test_tier_upgrade_authorization.TestAC1AuthRecordFields.test_no_auth_record_field_violation
+      - test_tier_upgrade_authorization.TestAC1AuthRecordFields.test_origin_pair_sourced_from_trigger
+      - test_tier_upgrade_authorization.TestAC1AuthRecordFields.test_same_record_as_rework_spec_change
+      - test_tier_upgrade_authorization.TestAuthRecordFieldsMatcherCanFail.test_matcher_detects_a_missing_field
+    red_confirmed: true
+    red_reason: "Written after the SKILL.md edit (documentation-conformance task; explored the existing upgrade section before drafting the fix), so confirmed red retroactively rather than watched live: extracted the pre-edit SKILL.md via `git show HEAD:em-workflow/skills/develop/SKILL.md` into a scratch file and re-ran every new matcher against it before finalizing. `_record_precedes_status_writes` returned False for both the `minimal` and `reduced` branch sections (the RECORD_MARKER \"上記の認可記録を先に書いたのち\" did not exist anywhere pre-edit, so the missing-marker short-circuit fired); `_auth_record_states_required_fields` reported all seven required fields/values missing against the pre-edit upgrade section (reason/origin_kind/origin_id/recorded_at_commit/consumed=false/replan_authorized=true/commit-docs.sh -- none stated). SkillDocTestCase.setUpClass itself raised ValueError against the pre-edit file (str.index could not find the AUTH_RECORD_LABEL \"**認可記録の先行書き込み**\", which this task's edit introduces), independently confirming the whole AC-1 test class could not have passed before the fix."
+  AC-2:
+    tests:
+      - test_tier_upgrade_authorization.TestAC2PhaseStateNamesTierUpgradeWriter.test_names_tier_upgrade_as_second_writer
+      - test_tier_upgrade_authorization.TestAC2PhaseStateNamesTierUpgradeWriter.test_still_names_rework_spec_change_transition
+      - test_tier_upgrade_authorization.TestAC2PhaseStateMatcherCanFail.test_matcher_detects_missing_tier_upgrade_mention
+      - test_tier_upgrade_authorization.TestAC2WorkflowPatchNamesTierUpgradeTransition.test_re_planning_path_names_tier_upgrade
+      - test_tier_upgrade_authorization.TestAC2WorkflowPatchNamesTierUpgradeTransition.test_still_names_spec_change_transition
+      - test_tier_upgrade_authorization.TestAC2WorkflowPatchMatcherCanFail.test_matcher_detects_missing_tier_upgrade_mention
+    red_confirmed: true
+    red_reason: "Same retroactive-verification method as AC-1 (git show HEAD: scratch copies, re-run before finalizing). `_phase_state_names_tier_upgrade_as_second_writer` FAILed (returned False) against the pre-edit phase-state.md spec_change row -- no mention of skills/develop/SKILL.md or a second writer. `_workflow_patch_names_tier_upgrade_as_re_planning_transition` FAILed (returned False) against the pre-edit workflow-patch.md Re-planning path bullet -- named only the SPEC-change transition. Editing phase-state.md's spec_change row and workflow-patch.md's Re-planning path bullet also broke two OTHER tasks' pre-existing regression guards not owned by this task -- test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical (a frozen-file SHA256 pin, refreshed per that module's own documented convention: 'refresh, don't remove') and test_spec_change_replan_authorization.TestPhaseStateDefinesBothFlagsInOnePlace.test_each_flags_writer_stated (a substring pin on the phrase 'written `true` by rework's spec-change transition', fixed by rewording to keep that exact phrase intact while adding the tier-upgrade procedure as an alternative writer). Both were watched failing after the AC-2 edit and confirmed green again after the fix -- recorded under deviations/notes in the implementer report, not listed as AC-2 tests since they guard unrelated invariants rather than proving this criterion."
+  AC-3:
+    tests:
+      - test_tier_upgrade_authorization.TestAC3ReducedFullOrdering.test_orders_create_spec_design_create_plan
+      - test_tier_upgrade_authorization.TestAC3ReducedFullOrdering.test_states_create_spec_produces_requirements_first
+      - test_tier_upgrade_authorization.TestReducedFullOrderingMatcherCanFail.test_matcher_detects_swapped_order
+    red_confirmed: true
+    red_reason: "Retroactive verification (git show HEAD: scratch copy): `_reduced_full_orders_create_spec_design_create_plan` returned False against the pre-edit `reduced` branch section (the create-spec status-setting marker did not exist there at all pre-edit -- only design and create-plan were re-entered). `_states_create_spec_produces_requirements_before_create_plan` also returned False (the pre-edit text never re-ran create-spec, so it could not state create-spec producing the requirements document)."
+  AC-4:
+    tests:
+      - test_tier_upgrade_authorization.TestAC4AttributionCorrected.test_no_sentence_attributes_absence_to_design_skip_whole_file
+      - test_tier_upgrade_authorization.TestAC4AttributionCorrected.test_documents_attributed_to_owning_steps
+      - test_tier_upgrade_authorization.TestAttributionMatcherCanFail.test_matcher_detects_old_attribution
+      - test_tier_upgrade_authorization.TestAttributionMatcherCanFail.test_positive_attribution_matcher_fails_on_forged_copy
+    red_confirmed: true
+    red_reason: "Retroactive verification (git show HEAD: scratch copy), matching the Test Notes' own prescribed negative proof (\"AC-4's negative proof is the current text, which attributes both documents to the design skip\"): `_no_sentence_attributes_requirements_absence_to_design_skip` returned False against the pre-edit whole file (the OLD_ATTRIBUTION_SENTENCE fixture -- 'REQUIREMENTS.md と IMPLEMENTATION.md は design step の skip により未作成のままである' -- was present verbatim). `_attributes_documents_to_their_owning_steps` also returned False against the pre-edit `reduced` branch section (neither the create-spec-owns-REQUIREMENTS.md nor the create-plan-owns-IMPLEMENTATION.md sentence existed yet)."
+  AC-5:
+    tests:
+      - test_tier_upgrade_authorization.TestAC5CarveOutConsistency.test_three_transitions_independently_counted_and_matching
+      - test_tier_upgrade_authorization.TestAC5CarveOutConsistency.test_tier_upgrade_bullet_covers_both_create_spec_and_create_plan
+      - test_tier_upgrade_authorization.TestCarveOutCountMatcherCanFail.test_matcher_detects_a_count_mismatch
+      - test_tier_upgrade_authorization.TestTierUpgradeBulletMatcherCanFail.test_matcher_detects_missing_create_plan_coverage
+      - test_tier_upgrade_authorization.TestAC5OnceTableRow.test_once_row_names_tier_upgrade_transition
+      - test_tier_upgrade_authorization.TestAC5OnceTableRow.test_once_row_still_names_the_other_two_transitions
+      - test_tier_upgrade_authorization.TestOnceTableRowMatcherCanFail.test_matcher_detects_missing_tier_upgrade_transition
+    red_confirmed: true
+    red_reason: "Retroactive verification (git show HEAD: scratch copy). `_tier_upgrade_bullet_covers_both_reentries` returned False against the pre-edit carve-out section (the tier-upgrade bullet named only create-spec, per the defect this task fixes). `_once_table_row_names_tier_upgrade_transition` returned False against the pre-edit --once table row (it named only implement I.2.c's and rework's spec-change transitions, not the tier-upgrade one -- confirming the AC-5 defect that this task's own plan identifies existed pre-edit, distinct from and in addition to the carve-out-bullet defect). One of the three AC-5 sub-checks did NOT go red->green: `_carve_out_counts_match(section, 3)` already returned True pre-edit (bullet count, intro count and exhaustiveness count were already 3/3/3 -- a prior task had already landed the count-of-3 while this task's defect was specifically the third bullet's content, not the count). That sub-check is a regression guard against a future miscount, not evidence of this task's own fix, and is carried into the implementer report's notes rather than claimed as a red this task observed."
+  AC-6:
+    tests:
+      - test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present
+      - test_tier_decision_step_a.TestRegionOwnershipRegression.test_carveout_enumeration_still_reads_three_transitions
+      - test_tier_decision_step_a.TestRegionOwnershipRegression.test_step_c_heading_unchanged
+      - test_tier_decision_step_a.TestRegionOwnershipRegression.test_turn_ending_conditions_list_unchanged
+    red_confirmed: true
+    red_reason: "Both watched directly, live, before any fix (this is the one AC pair with genuinely observed -- not retroactive -- reds, since 4a's baseline run is exactly this evidence): (1) tests/test_tier_decision_step_a.py failed to import at all in the 4a baseline run (unittest.loader._FailedTest ERROR, ValueError: substring not found for the module-level STEP_C_START constant, which still read the pre-round-1 single-step-skip wording '## Step C: 完了処理（全 step completed — design のみ skipped 可 ...)' against the already-generalized SKILL.md heading) -- fixed by updating STEP_C_START/STEP_C_HEADING/TURN_ENDING_CONDITIONS_ANCHOR/CARVEOUT_ANCHOR to the current text, after which all 68 tests in the module pass. (2) test_tier_reduction_develop_loop.py's test_minimal_tier_create_spec_re_execution_present FAILed in the same 4a baseline run (AssertionError on `_contains(self.section, \"create-spec の再実行を含める\")`, a pre-existing broken assertion unrelated to this task's own defects 1-3 but explicitly in this task's declared file scope to fix) -- fixed by phrasing the rewritten minimal-branch text so \"create-spec の再実行を含める\" and \"create-spec の `status` を `needs_update` に設定し\" both occur as intended contiguous substrings; all 47 tests in the module now pass."
+  AC-7:
+    tests:
+      - test_tier_upgrade_authorization.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - test_spec_change_replan_authorization.TestPhaseStateDefinesBothFlagsInOnePlace.test_each_flags_writer_stated
+    red_confirmed: true
+    red_reason: "AC-7 is primarily a suite-wide regression property (compare full-suite failures against the base commit), proven by the 4a-vs-4b full-suite diff (python3 -m unittest discover -s tests: 5122 tests at baseline with 10 FAILs + 1 import ERROR, 5227 tests after this task's changes -- the +105 delta is fully accounted for: +38 from the new test_tier_upgrade_authorization.py module, +67 from tests/test_tier_decision_step_a.py's 68 real tests now being collected instead of the single unittest.loader._FailedTest placeholder the import error contributed at baseline -- with exactly 9 failures after, a strict subset of the baseline's 10 FAIL entries, the import error and the one previously-broken assertion both fixed, zero new failures). Additionally, the two frozen/pinned tests above were genuinely watched failing live (not retroactively) mid-task, as a direct, observed consequence of this task's own AC-2 edit to phase-state.md/workflow-patch.md, then fixed and re-confirmed green in the same diff -- the clearest first-hand evidence that 'every new matcher paired with a negative proof' extends to not silently breaking existing ones."
