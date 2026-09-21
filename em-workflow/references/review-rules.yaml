@@ -10,7 +10,8 @@
 # a reason (audit trail; feeds rule-table growth via /em-workflow:retrospect).
 #
 # Evaluation semantics:
-# - baseline perspectives are always included.
+# - baseline perspectives are always included. security is one of them: it
+#   is selected on every run, at every granularity, and no rule removes it.
 # - A rule fires when ANY of its if_domains values appears in the UNION of
 #   all tasks' domains, or when if_complexity matches ANY task's complexity.
 # - require lists are unioned; duplicates collapse.
@@ -19,11 +20,9 @@
 #   without a SPEC.md, spec is dropped with a skip notice instead.
 #
 # Cross-model validation (intensity axis, separate from perspective
-# selection): fires when ANY task has complexity: high, OR the FINAL selected
-# set (floor + Layer 2 discretionary additions) includes security. Layer 1
-# computes a provisional value from this table; the orchestrator re-evaluates
-# it after Layer 2 (review-phase.md R1), so a discretionarily-added security
-# perspective also fires it. The flag is recorded in workflow.yaml
+# selection): fires when ANY task has complexity: high. Its input is the
+# tasks metadata alone, so Layer 1 settles the value and Layer 2 cannot
+# change it. The flag is recorded in workflow.yaml
 # review.plan.cross_validation and passed to the round evaluator as a
 # high-intensity marker; it no longer adds a second reviewer dispatch,
 # because every selected perspective already runs a non-Claude primary
@@ -38,13 +37,11 @@
 # deterministic; never encode diff-content conditions here (that is Layer 2's
 # job).
 
-baseline: [comprehensive]
+baseline: [comprehensive, security]
 
 rules:
-  - if_domains: [auth, input-handling]
-    require: [security]
   - if_domains: [data-persistence]
-    require: [security, performance]
+    require: [performance]
   - if_domains: [concurrency, external-io]
     require: [performance]
   - if_domains: [api-contract]
@@ -57,4 +54,3 @@ spec_review: always
 cross_validation:
   when_any:
     - complexity: high
-    - selected_perspective: security
