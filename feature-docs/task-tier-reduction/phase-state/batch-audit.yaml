@@ -119,3 +119,21 @@ records:
   freeform: 'tests/test_gate_option_vocabulary.py を tasks.task0008.files に自動追加しない'
   normalized_answer: 'declined'
   resolution_note: 'task_id: task0008; declined path: tests/test_gate_option_vocabulary.py; missing evidence part: the acceptance-criterion / requirement identifier — 報告は validate-worker-output.py の SHA-256 pin が自分の編集で壊れたことと、その class の refresh 慣習だけを述べており、落ちる AC-n も workflow.yaml 登録済みの要件 ID も名指ししていない。path shape と workflow control path の 2 つは満たしていたが、3 つのうち 1 つを欠くため自動追加しない。変更自体は統合ブランチにマージ済みで、通常の deviation として扱う'
+- question_id: review.r4-autofix-applicability
+  packet_id: null
+  answered_at: '2026-09-21T20:12:00+09:00'
+  source: codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - option_a_run_r4_as_written
+  freeform: 'Round 1 の high 6 件はいずれも 2-4 ファイルにまたがる契約整合性の欠陥で、
+
+    suggestion はすべて散文。Phase R4 の batch 規則では needs-judgment として
+
+    `Apply as-is` が自動選択され、単一ファイルしか触れない review-editor へ渡る。
+
+    A: R4 を規定どおり実行する。B: 単一ファイル編集者では原理的に満たせないため
+
+    候補ゼロとみなし、R5 の自動 rework へ直接渡す。'
+  normalized_answer: 'option A (run Phase R4 as written)'
+  resolution_note: 'gate: Phase R4 を回すか R5 の rework へ直行するか（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Codex は A を選択。根拠 (a) review-editor.md:43 が「修正が 2 つ目のファイルを要するなら status=skipped」を明記しており、Apply as-is は部分修正を強制しない。(b) 部分修正をコミットすると後続の rework が維持/巻き戻しの判断を追加で負う。(c) B の「分類結果として候補ゼロ」は R4 の機械的分類に呼び出し側の新しい除外条件を足すことになりプロトコル違反。(d) 6 件すべて skipped なら productive loop が発生せず再レビューも走らないため 3 ループ x 4 レビュアーの費用は上限であって必須ではない。採らなかった案 B の利点は適用不能を確認する editor 呼び出しを省ける点のみ'
