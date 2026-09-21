@@ -92,3 +92,12 @@ records:
     Q3 TS-11 が未実装の検査機構に帰属している → (a) 意図（tier-rules.yaml が実在し参照が解決する）を検証し、共有スクリプト check-plugin-invariants.py には手を入れない。採らなかった案 (b) は 同スクリプトへ汎用のパス存在検査を追加するもの。根拠: 汎用検査を足すと本機能と無関係な 既存の壊れた参照まで対象に入り、影響範囲が不必要に広がる。FR1 が必要とする保証は 直接検証で十分得られる。'
   normalized_answer: 'Q1: option (b); Q2: option (b); Q3: option (a)'
   resolution_note: 'gate: create-plan の計画時未確定点 3 件（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Q1 と Q2 は planner の当初判断 (a) を Codex の (b) で覆し、Q3 は planner と Codex が一致。採用にともない SPEC.md / REQUIREMENTS.md の FR4 閾値と TS-11 の文言、IMPLEMENTATION.md の Open Questions（Resolved Questions へ改稿）、tasks/task0001.md・tasks/task0008.md、VERIFICATION.md の TS-10 / TS-11 / TS-21 を更新した'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-21T19:27:40+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'tests/test_batch_stop_contract.py を tasks.task0004.files に自動追加しない'
+  normalized_answer: 'declined'
+  resolution_note: 'task_id: task0004; declined path: tests/test_batch_stop_contract.py; missing evidence part: the acceptance-criterion / requirement identifier — the deviation report cites the task plan の Test Notes と IMPLEMENTATION.md の Risk Assessment 行のみで、task0004 の AC-n も workflow.yaml 登録済みの要件 ID も名指ししていない。path shape と workflow control path の 2 つは満たしていたが、3 つのうち 1 つを欠くため自動追加しない。変更自体はタスクブランチにマージ済みで、containment check は従来どおり通常の deviation として扱う'
