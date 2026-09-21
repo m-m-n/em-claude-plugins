@@ -476,7 +476,8 @@ tasks:
     - FR6
     - FR13
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/task-tier-reduction/task0014
     notes: null
     provenance:
       source: verify
