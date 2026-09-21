@@ -116,7 +116,8 @@ tasks:
     - NFR1
     - NFR5
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/task-tier-reduction/task0001
   task0002:
     title: workflow.yaml schema for tier and non-design skipped
     plan: tasks/task0002.md
@@ -133,7 +134,8 @@ tasks:
     - FR3
     - FR12
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/task-tier-reduction/task0002
   task0003:
     title: Step A tier decision, persistence and the no-work stop
     plan: tasks/task0003.md
@@ -161,7 +163,8 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/task-tier-reduction/task0003
   task0004:
     title: no-work stop reason code and its pinned assertions
     plan: tasks/task0004.md
@@ -185,7 +188,8 @@ tasks:
     - NFR3
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/task-tier-reduction/task0004
   task0005:
     title: tier reductions, skipped discipline and upgrade in the develop loop
     plan: tasks/task0005.md
@@ -208,7 +212,8 @@ tasks:
     - NFR3
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/task-tier-reduction/task0005
   task0006:
     title: tier transcription, the task document, and tier-aware create-plan preconditions
     plan: tasks/task0006.md
@@ -228,7 +233,8 @@ tasks:
     - FR16
     - FR18
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/task-tier-reduction/task0006
   task0007:
     title: spec perspective absence rule on the develop-driven route
     plan: tasks/task0007.md
