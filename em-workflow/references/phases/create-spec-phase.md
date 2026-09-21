@@ -170,11 +170,13 @@ directly below, because this document is where they take effect:
 
 - At the `reduced` tier, spec-writer is dispatched to produce SPEC.md only
   — REQUIREMENTS.md is not produced.
-- At the `minimal` tier, spec-writer is not dispatched at all. The
-  orchestrator produces a task document
-  (`references/templates/task-document.md`) as
-  `feature-docs/{feature}/TASK.md` in place of both REQUIREMENTS.md and
-  SPEC.md.
+- At the `minimal` tier, spec-writer is not dispatched at all. **The
+  orchestrator itself** writes `feature-docs/{feature}/TASK.md` — the same
+  feature-docs location the other create-spec artifacts use — in place of
+  both REQUIREMENTS.md and SPEC.md, with the sections
+  `references/templates/task-document.md` requires (cited there, not
+  restated). This is the one path section 10's validation and section 13's
+  commit both refer back to.
 - At the `full` tier, both REQUIREMENTS.md and SPEC.md are produced exactly
   as this section and section 10 below describe.
 
@@ -208,9 +210,10 @@ cited here, not re-derived.
   `references/templates/requirements-document.md`'s mandatory sections are
   not checked.
 - **At the `minimal` tier**: spec-writer is not dispatched, so none of the
-  above applies. Instead, `feature-docs/{feature}/TASK.md` is checked
-  against `references/templates/task-document.md`'s mandatory sections:
-  `## Change` and `## Expected Result` must both be present.
+  above applies. Instead, the orchestrator's own
+  `feature-docs/{feature}/TASK.md` (section 9) is checked against
+  `references/templates/task-document.md`'s mandatory sections — cited
+  there, not restated here.
 - Scope verification (below) — applies at every tier.
 
 ## 11. workflow.yaml construction
@@ -389,8 +392,9 @@ execute it.
 ## 13. Completion
 
 1. Commit the artifacts (commit B): at the `full` tier, REQUIREMENTS.md and
-   SPEC.md; at the `reduced` tier, SPEC.md only; at the `minimal` tier,
-   TASK.md only.
+   SPEC.md; at the `reduced` tier, SPEC.md only; at the `minimal` tier, the
+   `feature-docs/{feature}/TASK.md` section 9 wrote and section 10
+   validated — the same path, nothing else.
 2. Write `workflow.yaml` with the `create-spec` step's `status: completed`
    and `completed_at_commit: B` (rule R2 — the HEAD immediately before this
    commit) and commit it (commit C).

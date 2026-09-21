@@ -93,6 +93,11 @@ skill's reduction table (`skills/develop/SKILL.md`) — cited here, never
 restated. Subtracting the task split is not subtracting the task record:
 `implementation-planner` still registers exactly one task entry, with
 `plan` pointing at the task document (`feature-docs/{feature}/TASK.md`).
+This registered `tasks.{T}.plan` value is authoritative for every
+downstream consumer: the implement phase resolves the plan document to
+read from `tasks.{T}.plan` in `workflow.yaml`, not from a fixed
+`tasks/{T}.md` convention, so at the `minimal` tier the path it reads is
+this `TASK.md` path.
 Because `TASK.md` carries only `## Change` and `## Expected Result`
 (`references/templates/task-document.md`), the task-plan checks that
 `validate-worker-output.py` applies to a task entry's `plan` document
