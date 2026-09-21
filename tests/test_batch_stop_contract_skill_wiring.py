@@ -284,8 +284,13 @@ FILE_END_MARKER = "$ARGUMENTS"
 
 IMPLEMENT_PHASE_PATH = PLUGIN_ROOT / "references" / "implement-phase.md"
 
+# task-tier-reduction/task0005 (FR3) generalized this heading so `skipped`
+# is admitted whether design's own skip or a tier's skip caused it, instead
+# of restricting the exception to design alone. Updated in place here (not
+# duplicated) to pin the new wording -- same established convention as the
+# sibling STEP_C_HEADING constants in this test suite.
 STEP_C_HEADING = (
-    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、cap 到達により verify が `failed` のまま残る場合のみ）"
+    "## Step C: 完了処理（全 step completed — `skipped` の step（design 自身の skip、または tier による skip）があっても可 — か、cap 到達により verify が `failed` のまま残る場合のみ）"
 )
 STOP_REPORT_HEADING = "## 停止時の報告（停止条件 2-4 のみ）"
 

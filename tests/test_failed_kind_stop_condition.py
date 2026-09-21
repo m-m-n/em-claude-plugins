@@ -70,9 +70,16 @@ SKILL_PATH = os.path.join(REPO_ROOT, "em-workflow", "skills", "develop", "SKILL.
 # --- section boundaries, taken verbatim from skills/develop/SKILL.md ------
 
 STEP_B_HEADING = "## Step B: 自走ループ"
+# task-tier-reduction/task0005 (FR3) generalized this heading so `skipped`
+# is admitted whether design's own skip or a tier's skip caused it, instead
+# of restricting the exception to design alone. Updated in place here (not
+# duplicated) to pin the new wording, mirroring test_develop_once_option.py's
+# and test_develop_skill_rewiring.py's module docstrings for the same
+# established convention.
 STEP_C_HEADING = (
-    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — "
-    "か、cap 到達により verify が `failed` のまま残る場合のみ）"
+    "## Step C: 完了処理（全 step completed — `skipped` の step（design "
+    "自身の skip、または tier による skip）があっても可 — か、cap 到達に"
+    "より verify が `failed` のまま残る場合のみ）"
 )
 
 STOP_CONDITION_3_START = "3. ある step の status が `failed` / `needs_update`"
@@ -107,9 +114,14 @@ VERIFY_CAP_EXCEPTION_ANCHOR = "**batch: verify の cap 到達に対する停止�
 # sentence legitimately cites both labels once, so a bare label-presence
 # check cannot distinguish the correctly-scoped block from the buggy
 # superset; these body markers never appear inside that citation).
+# task-tier-reduction/task0005 (FR19) added a third qualifying transition
+# (tier upgrade re-entry) to this enumeration, updating the count from "2"
+# to "3" inside this same exhaustiveness sentence. Updated in place here
+# (not duplicated) to keep pinning the sentence's body -- same established
+# convention as this module's other body-marker constants.
 PRECEDENCE_EXHAUSTIVENESS_SENTENCE = (
     "この列挙は、所有 SSOT 自身がフェーズの自動再エントリを"
-    "明記している遷移だけが対象という構成上の理由で網羅的で"
+    "明記している遷移だけが対象という構成上の理由でこの 3 つで網羅的で"
     "あり、他の遷移はこの除外の対象外。"
 )
 VERIFY_CAP_FIRST_BULLET = (
@@ -414,13 +426,12 @@ class TestAC7NeedsUpdateAndReviewVerifyUnaffected(SkillDocTestCase):
 
 class TestAC8ExistingBlocksUnchangedAndIndependenceDeclared(SkillDocTestCase):
     def test_precedence_block_exhaustiveness_declaration_present(self):
+        # task-tier-reduction/task0005 (FR19) added a third qualifying
+        # transition, updating the count from "2" to "3" inside this
+        # sentence -- updated in place here to match
+        # PRECEDENCE_EXHAUSTIVENESS_SENTENCE above.
         self.assertTrue(
-            _contains(
-                self.step_b_section,
-                "この列挙は、所有 SSOT 自身がフェーズの自動再エントリを"
-                "明記している遷移だけが対象という構成上の理由で網羅的で"
-                "あり、他の遷移はこの除外の対象外。",
-            )
+            _contains(self.step_b_section, PRECEDENCE_EXHAUSTIVENESS_SENTENCE)
         )
 
     def test_verify_cap_exception_four_bullets_present(self):
