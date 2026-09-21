@@ -1,0 +1,89 @@
+task_id: task0007
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_tier_spec_perspective.TestAC1SpecLocationStepAvailabilityFlag.test_absent_spec_sets_availability_flag_false_on_develop_route
+      - test_tier_spec_perspective.TestAC1SpecLocationStepAvailabilityFlag.test_integration_worktree_copy_stays_canonical
+      - test_tier_spec_perspective.TestAC1SpecLocationStepAvailabilityFlag.test_main_tree_never_resolved_from
+      - test_tier_spec_perspective.TestAC1SpecLocationStepAvailabilityFlag.test_old_must_exist_sdd_guarantee_claim_is_gone
+      - test_tier_spec_perspective.TestAC1SpecLocationStepAvailabilityFlag.test_negative_proof_old_wording_fails_the_new_checks
+    red_confirmed: true
+    red_reason: "test_absent_spec_sets_availability_flag_false_on_develop_route and test_old_must_exist_sdd_guarantee_claim_is_gone both failed pre-edit: AssertionError, 'absent ⇒ `spec_available = false`' not found in the develop-駆動 clause (it still read '(must exist; SDD guarantees it)'). test_integration_worktree_copy_stays_canonical and test_main_tree_never_resolved_from assert the two constraints AC-1 requires to survive unchanged and were already true pre-edit -- the negative-proof test reconstructs the literal pre-edit wording and confirms it already carried both phrases, so the new checks discriminate only on the flag statement."
+  AC-2:
+    tests:
+      - test_tier_spec_perspective.TestAC2FloorDescriptionDropsSpecOnBothRoutes.test_states_drop_with_skip_notice_when_unavailable
+      - test_tier_spec_perspective.TestAC2FloorDescriptionDropsSpecOnBothRoutes.test_applies_explicitly_to_the_develop_driven_route
+      - test_tier_spec_perspective.TestAC2FloorDescriptionDropsSpecOnBothRoutes.test_standalone_case_still_stated_unchanged
+      - test_tier_spec_perspective.TestAC2FloorDescriptionDropsSpecOnBothRoutes.test_non_vacuity_layer1_slice_excludes_layer2_body
+      - test_tier_spec_perspective.TestAC2FloorDescriptionDropsSpecOnBothRoutes.test_negative_proof_old_wording_lacked_the_develop_route_rule
+      - test_tier_spec_perspective.TestAC2FanOutSkipPhraseNotDuplicated.test_fan_out_skip_phrase_appears_exactly_once
+      - test_tier_spec_perspective.TestAC2FanOutSkipPhraseNotDuplicated.test_non_vacuity_phrase_is_actually_present
+      - test_tier_spec_perspective.TestAC2FanOutSkipPhraseNotDuplicated.test_negative_proof_a_duplicate_would_be_caught
+    red_confirmed: true
+    red_reason: "test_states_drop_with_skip_notice_when_unavailable and test_applies_explicitly_to_the_develop_driven_route both failed pre-edit: AssertionError, 'dropped with a skip notice' / 'On the develop-駆動 route too' not found in the pre-edit Layer 1 paragraph. test_standalone_case_still_stated_unchanged and the TestAC2FanOutSkipPhraseNotDuplicated tests (fan-out skip phrase occurs exactly once) were already true pre-edit -- AC-2 requires the standalone clause and the Phase R2 fan-out machinery to stay exactly as they were, which this task never touches."
+  AC-3:
+    tests:
+      - test_tier_spec_perspective.TestAC3ReviewRulesHeaderWidenedSymmetrically.test_no_longer_claims_unconditional_inclusion
+      - test_tier_spec_perspective.TestAC3ReviewRulesHeaderWidenedSymmetrically.test_no_longer_claims_sdd_flow_guarantees_spec_exists
+      - test_tier_spec_perspective.TestAC3ReviewRulesHeaderWidenedSymmetrically.test_no_longer_scopes_drop_behaviour_to_standalone_command_alone
+      - test_tier_spec_perspective.TestAC3ReviewRulesHeaderWidenedSymmetrically.test_new_symmetric_availability_wording_present
+      - test_tier_spec_perspective.TestAC3ReviewRulesHeaderWidenedSymmetrically.test_skip_notice_behaviour_still_named
+      - test_tier_spec_perspective.TestAC3ReviewRulesHeaderWidenedSymmetrically.test_non_vacuity_header_still_describes_baseline_and_layer_rules
+      - test_tier_spec_perspective.TestAC3ReviewRulesHeaderWidenedSymmetrically.test_negative_proof_old_wording_trips_the_removed_claim_checks
+    red_confirmed: true
+    red_reason: "test_no_longer_claims_unconditional_inclusion, test_no_longer_claims_sdd_flow_guarantees_spec_exists, test_no_longer_scopes_drop_behaviour_to_standalone_command_alone and test_new_symmetric_availability_wording_present all failed pre-edit against the original header comment (AssertionError: 'unconditionally included' / 'sdd flow guarantees' / the standalone-only scoping sentence were all still present; the new symmetric sentence was absent). test_skip_notice_behaviour_still_named and test_non_vacuity_header_still_describes_baseline_and_layer_rules were already true pre-edit, since AC-3 requires the skip-notice naming and the untouched baseline/require-list sentences to survive verbatim."
+  AC-4:
+    tests:
+      - test_tier_spec_perspective.TestAC4BaselineAndRuleRowsUnchanged.test_baseline_line_byte_identical_to_pre_change_value
+      - test_tier_spec_perspective.TestAC4BaselineAndRuleRowsUnchanged.test_baseline_still_contains_security
+      - test_tier_spec_perspective.TestAC4BaselineAndRuleRowsUnchanged.test_rules_block_byte_identical_to_pre_change_value
+      - test_tier_spec_perspective.TestAC4BaselineAndRuleRowsUnchanged.test_non_vacuity_pin_actually_has_four_rule_rows
+      - test_tier_spec_perspective.TestAC4BaselineAndRuleRowsUnchanged.test_negative_proof_security_removed_from_baseline_is_detected
+      - test_tier_spec_perspective.TestAC4BaselineAndRuleRowsUnchanged.test_negative_proof_reordered_rules_are_detected
+    red_confirmed: false
+    red_reason: "AC-4 asserts an invariant (the baseline list and rule rows are byte-identical to their pre-change value) -- this task never edits the `baseline:` line or the `rules:` block, so there is no red state to observe: the pinned values (captured by direct inspection of review-rules.yaml at task start) equal the file's content both before and after this task's edits by construction. The two negative-proof tests (security removed from the baseline, rules reordered) prove the equality checks can actually fail against a genuinely different value."
+  AC-5:
+    tests:
+      - test_tier_spec_perspective.TestAC5FloorExcludesSpecWhenUnavailable.test_floor_keeps_security_and_comprehensive_and_drops_spec
+      - test_tier_spec_perspective.TestAC5FloorExcludesSpecWhenUnavailable.test_holds_even_with_no_task_metadata_at_all
+      - test_tier_spec_perspective.TestAC5FloorExcludesSpecWhenUnavailable.test_negative_proof_spec_available_true_adds_spec_back
+      - test_tier_spec_perspective.TestAC5FloorExcludesSpecWhenUnavailable.test_non_vacuity_evaluator_actually_fires_a_domain_rule
+    red_confirmed: false
+    red_reason: "AC-5 evaluates review-rules.yaml's rule table (union semantics, per its own header) with spec_available=False, using a floor evaluator implemented locally in the test per task0007.md Test Notes ('no script performs this evaluation'). The rule table itself is untouched by this task, so the evaluated outcome (security/comprehensive present, spec absent) held before this task's edits exactly as it does after -- there is no red state to observe. The negative-proof test (spec_available=True re-adds `spec`) demonstrates the evaluator is actually sensitive to the flag rather than hard-coding the exclusion, and the non-vacuity test proves the rule engine fires a real rule beyond the baseline."
+  AC-6:
+    tests:
+      - test_tier_spec_perspective.TestAC6NoTierConditionInEitherFile.test_review_phase_carries_no_tier_vocabulary
+      - test_tier_spec_perspective.TestAC6NoTierConditionInEitherFile.test_review_rules_carries_no_tier_vocabulary
+      - test_tier_spec_perspective.TestAC6NoTierConditionInEitherFile.test_non_vacuity_existing_contributor_tier_wording_survives_untouched
+      - test_tier_spec_perspective.TestAC6NoTierConditionInEitherFile.test_negative_proof_fires_on_a_forged_bare_tier_condition
+      - test_tier_spec_perspective.TestAC6NoTierConditionInEitherFile.test_negative_proof_fires_on_a_forged_tier_label_reference
+      - test_tier_spec_perspective.TestAC6NoTierConditionInEitherFile.test_negative_proof_fires_on_a_forged_tier_decision_reference
+    red_confirmed: false
+    red_reason: "AC-6 is an absence check -- neither file has ever carried this feature's tier vocabulary, in this task's diff or before it, so the positive assertions were true both before and after this task's edits; there is no red state for a check that a condition was never added. The three negative-proof tests (a forged bare `tier` condition, a forged tier-label reference, a forged `tier_decision` reference) demonstrate the matcher actually fires on the vocabulary it scans for, and the non-vacuity test confirms the pre-existing, unrelated 'contributor tier' / 'Contributor-tier' wording (Phase R2's muse-spark read-mapping) is not itself a false-positive trigger."
+  AC-7:
+    tests:
+      - test_tier_spec_perspective.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "AC-7 verifies properties of this test module itself (stdlib-only imports, discovery under `python3 -m unittest discover -s tests`), not a behavior of the two target documents -- there is no pre-implementation document state for this to fail against. Confirmed instead by actually running `python3 -m unittest discover -s tests`, which picked up and ran all 38 tests of this module (4919 total vs. 4881 pre-module baseline, all passing) with zero regressions against the 10 pre-existing baseline failures; the negative-proof/non-vacuity pairing present on every other AC's matchers in this module is its own discharge of AC-7's 'pairs each matcher with a negative proof and a non-vacuity guard' requirement."
