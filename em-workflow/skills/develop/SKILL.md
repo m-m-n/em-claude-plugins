@@ -243,12 +243,13 @@ feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.y
    下記 7. でこの停止より後にしか行われないため、no-work 停止はブランチも
    worktree も作らずに走行を終える。
 4. **2 本の判定根拠**: 作業が残っている場合、判定スキルを同じ質問セットに
-   対して 2 回呼ぶ — 1 回目は decision-basis `description_only`
-   （タスク記述のみを基準に）、2 回目は decision-basis
-   `description_plus_code`（2. の Codex 見積もりをその state に合流させ
-   て）。この 2 つの識別子は `tier-rules.yaml` の `decision_basis` 値で
-   あり、ここでは新しい識別子を作らない。両方の読み取り結果を、それぞれの
-   basis ラベルと観測値とともに決定の根拠として記録する。
+   対して 2 回呼ぶ — 1 回目はタスク記述のみを基準に判定する
+   （decision-basis `description_only`）、2 回目は 2. の Codex 見積もりを
+   その state に合流させて判定する（decision-basis
+   `description_plus_code`）。この 2 つの識別子は `tier-rules.yaml` の
+   `decision_basis` 値であり、ここでは新しい識別子を作らない。両方の
+   読み取り結果を、それぞれの basis ラベルと観測値とともに決定の根拠と
+   して記録する。
 5. **評価**: 集めた 2 本の読みを 1 回の呼び出しで評価器
    （IMPLEMENTATION.md Shared Components `scripts/decide-tier.py` 参照）へ
    渡す。評価器は各読みがそれぞれ決定する tier を比較し、両者が異なる
@@ -261,6 +262,8 @@ feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.y
    扱う。判定スキルが使用不可、または Codex 事前調査が使用不可な場合は、
    すべて何も引かない tier（`full`）を採用する。2 本の判定結果が割れた
    場合の解決は手順 5 の評価器の入力契約に従う（ここでは繰り返さない）。
+   フォールバック表が解決しないその他の条件も、同様に何も引かない
+   tier（`full`）を採用する。
 7. **統合 branch/worktree の確保**: `em-workflow/{feature}/integration`
    ブランチと対応する worktree がまだ存在しなければ、ここで確保する
    （新規 feature 分岐、および「ブートストラップ状態の判定」の
