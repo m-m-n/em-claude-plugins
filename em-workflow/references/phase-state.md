@@ -15,9 +15,13 @@ feature-docs/{feature}/phase-state/
 ├── batch-audit.yaml         # present only in a `--batch` run that
 │                             # recorded one of these (see "Batch audit
 │                             # record file" below)
-└── backfill.yaml            # present only while a project.design_system
-                              # backfill's discovery result is unresolved
-                              # into workflow.yaml (see "Backfill discovery
+├── backfill.yaml            # present only while a project.design_system
+│                             # backfill's discovery result is unresolved
+│                             # into workflow.yaml (see "Backfill discovery
+│                             # persistence" below)
+└── tier.yaml                # holds the Step A tier decision for the whole
+                              # run, unlike backfill.yaml -- not deleted at
+                              # transcription (see "tier decision
                               # persistence" below)
 ```
 
@@ -25,7 +29,8 @@ One file per phase. These files are committed to the integration branch like
 every other feature-docs artifact. `commit-docs.sh`'s `ARTIFACT_PATHS`
 (`scripts/commit-docs.sh:147`) already stages the whole `feature-docs`
 directory, so **no script change is required** to persist them — this
-applies equally to `backfill.yaml`, which is not tied to any single phase.
+applies equally to `backfill.yaml` and `tier.yaml`, neither of which is tied
+to any single phase.
 
 ## Schema
 
@@ -486,6 +491,53 @@ immediate commit when it fires outside any phase step, stated above.
 source map and `references/implement-phase.md`'s wake "Batch mode"
 paragraph both read this file; it introduces no change to any per-phase
 phase-state file's schema.
+
+## tier decision persistence
+
+`feature-docs/{feature}/phase-state/tier.yaml` holds the tier decision
+`skills/develop/SKILL.md` Step A's tier-decision procedure makes, following
+the same not-owned-by-one-phase exemption this document already grants
+`backfill.yaml` above (see "## File layout"). One file per feature.
+
+```yaml
+schema_version: 1
+feature: example-feature
+tier: reduced
+bases:
+  - basis: description_only
+    probabilities: {...}
+    observed_at: "2026-01-30T12:00:00+09:00"
+  - basis: with_pre_survey
+    probabilities: {...}
+    observed_at: "2026-01-30T12:00:05+09:00"
+pre_survey_estimate: {...}
+decided_at: "2026-01-30T12:00:10+09:00"
+```
+
+Every field:
+
+| Field | Meaning |
+|---|---|
+| `schema_version` | Format version. Currently `1`. |
+| `feature` | Feature name, matches `feature-docs/{feature}/`. |
+| `tier` | The decided tier: `full` \| `reduced` \| `minimal`. |
+| `bases` | The two decision bases the tier-decision procedure records: one reading of the judgement skill on the task description alone (`basis: description_only`), one with the pre-survey estimate merged into its state (`basis: with_pre_survey`) — each carrying its own observed probability values and the time it was observed. |
+| `pre_survey_estimate` | The Codex readonly pre-survey's output, echoed verbatim; its member definitions belong to `references/tier-rules.yaml`, cited here, not restated. |
+| `decided_at` | When the tier itself was decided, after both bases were read. |
+
+Written immediately after the decision, before anything else, and committed
+via `commit-docs.sh` (no script change needed — see "## File layout" above,
+which already grants this file the same exemption). A resume that finds
+this file present reads it and reuses the recorded decision rather than
+re-running the tier-decision procedure.
+
+`workflow.yaml`'s `tier` / `tier_decision` (`references/workflow-schema.md`)
+becomes the authoritative tier value once create-spec transcribes this
+record into it, but `tier.yaml` itself is not deleted at that point: the
+retrospect phase (`skills/develop/SKILL.md`, retrospect フェーズ) reads its
+`bases` and `pre_survey_estimate` for its own tier-decision signal, so the
+file is retained for the whole run rather than becoming moot at
+transcription the way `backfill.yaml` does.
 
 ## Legacy feature compatibility
 
