@@ -32,6 +32,16 @@ question_set:
 #    (bucket index -> probability) and its `expectation_clear` member. The
 #    `confidence` member alone is never expressed as a threshold anywhere
 #    in this file or in scripts/decide-tier.py (AC-4).
+#
+#    scripts/decide-tier.py reads each row by the threshold members it
+#    declares (p0_floor, expectation_clear_floor, bucket_sum_floor), never
+#    by its `id`. A row declaring no threshold member at all is the only
+#    unconditional fallthrough; a row declaring at least one member always
+#    has its comparisons evaluated, including a row whose `id` the
+#    evaluator does not otherwise recognize. Every floor compared against
+#    is read from the row itself -- the evaluator carries no numeric
+#    default for any of them, so a renamed or removed member makes the row
+#    not match rather than reverting to a stale literal.
 # -----------------------------------------------------------------------
 threshold_rows:
   - id: minimal
@@ -98,7 +108,9 @@ fallback_matrix:
     action: evaluate_threshold_rows
     note: >-
       if the description-only reading and the description-plus-code
-      reading disagree, fall to the tier that removes nothing (full)
+      reading disagree, scripts/decide-tier.py resolves to the tier that
+      removes nothing (full) -- enforced by the evaluator's two-reading
+      input contract, not merely documented here
   - id: jev_unusable
     jev_usable: false
     codex_usable: any
