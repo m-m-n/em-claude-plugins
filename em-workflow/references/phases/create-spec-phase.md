@@ -50,23 +50,34 @@ This document does not restate the shapes it builds on — it cites them:
 
 ## 3. Bootstrap and durable-state boundary
 
-1. If the feature name is already unambiguous from the input, validate it
-   and secure the integration branch/worktree.
+The integration branch/worktree is already secured by the time this phase is
+entered: Step A of `skills/develop/SKILL.md` secures it as part of its
+tier-decision procedure and commits the persisted tier record into it before
+this phase is ever dispatched. This phase **reuses** that branch/worktree —
+it creates one itself only for a caller that did not come through Step A (no
+such caller exists in this plugin today; every dispatch of this phase is
+reached through Step A).
+
+1. If the feature name is already unambiguous from the input, validate it.
+   Reuse the integration branch/worktree Step A already secured; create one
+   only if this phase was entered by a caller that did not come through
+   Step A and no integration branch/worktree exists yet.
 2. If the feature name itself is undetermined, the orchestrator asks that
    alone first, before anything else (`gate_id: create-spec.feature-identity`).
-3. **Immediately after the feature name is fixed**, create the integration
-   worktree and initialize `feature-docs/{feature}/phase-state/create-spec.yaml`
-   (`references/phase-state.md`).
+3. **Immediately after the feature name is fixed**, initialize
+   `feature-docs/{feature}/phase-state/create-spec.yaml`
+   (`references/phase-state.md`) inside the reused (or, for the
+   not-through-Step-A case, newly created) integration worktree.
 4. From that point on, **every subsequent question and its answer is
    persisted** (`references/phase-state.md`, "Update, commit, and exit-4
    recovery") before the worker is re-dispatched.
 
-This moves worktree creation earlier than the previous monolithic agent,
-which created the worktree only after detailed clarification had already
-happened. Bringing worktree creation forward to immediately after the
-feature name is fixed means every answer given from that point on is
-persisted and the phase is resumable — nothing after step 3 depends on
-in-memory dialogue state.
+This moves phase-state initialization earlier than the previous monolithic
+agent, which initialized it only after detailed clarification had already
+happened. Bringing it forward to immediately after the feature name is
+fixed means every answer given from that point on is persisted and the
+phase is resumable — nothing after step 3 depends on in-memory dialogue
+state.
 
 ## 4. Reconcile on entry
 

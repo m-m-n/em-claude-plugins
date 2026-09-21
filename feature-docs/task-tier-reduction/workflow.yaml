@@ -320,7 +320,8 @@ tasks:
     - NFR3
     - NFR6
     - NFR7
-    status: pending
+    status: merged
+    branch: em-workflow/task-tier-reduction/task0009
     provenance:
       source: review
       review_round: 1
@@ -345,7 +346,8 @@ tasks:
     - FR16
     - FR18
     - NFR7
-    status: pending
+    status: merged
+    branch: em-workflow/task-tier-reduction/task0010
     provenance:
       source: review
       review_round: 1
@@ -373,7 +375,8 @@ tasks:
     - FR19
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/task-tier-reduction/task0011
     provenance:
       source: review
       review_round: 1
@@ -402,7 +405,8 @@ tasks:
     - FR13
     - NFR1
     - NFR7
-    status: pending
+    status: merged
+    branch: em-workflow/task-tier-reduction/task0012
     provenance:
       source: review
       review_round: 1
@@ -433,7 +437,8 @@ tasks:
     - FR20
     - NFR3
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/task-tier-reduction/task0013
     provenance:
       source: review
       review_round: 1

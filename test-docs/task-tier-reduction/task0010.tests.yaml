@@ -1,0 +1,64 @@
+task_id: task0010
+baseline_failures:
+  - "test_tier_decision_step_a (unittest.loader._FailedTest.test_tier_decision_step_a)"
+  - "test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)"
+  - "test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)"
+  - "test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)"
+  - "test_baseline_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged)"
+  - "test_cross_validation_data_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged)"
+  - "test_rules_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged)"
+  - "test_computation_semantics_preserved_in_prose (test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose)"
+  - "test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)"
+  - "test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)"
+  - "test_minimal_tier_create_spec_re_execution_present (test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present)"
+final_failures:
+  - "test_tier_decision_step_a (unittest.loader._FailedTest.test_tier_decision_step_a)"
+  - "test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)"
+  - "test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)"
+  - "test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)"
+  - "test_baseline_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged)"
+  - "test_cross_validation_data_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged)"
+  - "test_rules_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged)"
+  - "test_computation_semantics_preserved_in_prose (test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose)"
+  - "test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)"
+  - "test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)"
+  - "test_minimal_tier_create_spec_re_execution_present (test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present)"
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tier_task_document_plan.TestTaskDocumentExemption.test_task_document_plan_suppresses_files_mismatch_and_acceptance_criteria_errors
+    red_confirmed: true
+    red_reason: "AssertionError: [{'code': 'task-plan-files-mismatch', ...}, {'code': 'task-plan-acceptance-criteria', ...}] != [] -- both content errors were emitted before the exemption existed"
+  AC-2:
+    tests:
+      - tests.test_tier_task_document_plan.TestTaskDocumentExemption.test_absolute_task_document_plan_path_is_still_rejected
+      - tests.test_tier_task_document_plan.TestTaskDocumentExemption.test_parent_segment_task_document_plan_path_is_still_rejected
+      - tests.test_tier_task_document_plan.TestTaskDocumentExemption.test_symlink_escape_task_document_plan_path_is_still_rejected
+      - tests.test_tier_task_document_plan.TestTaskDocumentExemption.test_missing_task_document_plan_file_is_still_rejected
+      - tests.test_tier_task_document_plan.TestTaskDocumentExemption.test_oversized_task_document_plan_file_is_still_rejected
+    red_confirmed: false
+    red_reason: "These assert PRE-EXISTING rejection behaviour (path safety / symlink / containment / existence / size checks all predate this task and are untouched by it) -- they passed before any implementation change, by design: AC-2 is the proof that the exemption does not weaken them. Confirmed by direct inspection that each rejection code (task-plan-path / task-plan-missing / task-plan-too-large) and its triggering condition already existed in validate-worker-output.py prior to this task's edit, and that the new _task_entry_plan_is_task_document() check is reached only after all five of these checks in the existing control flow."
+  AC-3:
+    tests:
+      - tests.test_tier_task_document_plan.TestOrdinaryTaskPlanRegression.test_ordinary_plan_files_mismatch_still_reported
+      - tests.test_tier_task_document_plan.TestOrdinaryTaskPlanRegression.test_ordinary_plan_missing_acceptance_criteria_still_reported
+    red_confirmed: false
+    red_reason: "Same as AC-2: these are the negative-proof regression tests that the exemption is scoped to plan values whose final segment is TASK.md and does not leak to ordinary task plans. The behaviour under test is pre-existing and unchanged by this task; confirmed by inspection that the new exemption branch is gated on _task_entry_plan_is_task_document(plan_rel), which is False for 'tasks/task0001.md'."
+  AC-4:
+    tests:
+      - tests.test_tier_task_document_plan.TestExemptionTriggerWordingMatches.test_phase_doc_states_trigger_phrase
+      - tests.test_tier_task_document_plan.TestExemptionTriggerWordingMatches.test_validator_states_same_trigger_phrase
+      - tests.test_tier_task_document_plan.TestExemptionTriggerWordingMatches.test_pre_change_wording_does_not_satisfy_the_check
+    red_confirmed: true
+    red_reason: "test_phase_doc_states_trigger_phrase and test_validator_states_same_trigger_phrase both failed AssertionError (phrase not found in normalized text) before create-plan-phase.md section 2a and validate-worker-output.py were reworded to the shared trigger phrase; the negative-proof test (pre-change wording) passed from the start by design, since it must never contain the new phrase."
+  AC-5:
+    tests:
+      - tests.test_tier_task_document_plan.TestEndToEndCanonicalInvocation.test_single_task_patch_pointing_at_task_document_reports_no_error
+    red_confirmed: true
+    red_reason: "AssertionError: 1 != 0 (validator exit 1, task-plan-files-mismatch and task-plan-acceptance-criteria on stdout) before the exemption existed; exit 0 after"
+  AC-6:
+    tests: []
+    red_reason: "Structural property of tests/test_tier_task_document_plan.py itself (covers AC-1..AC-5, stdlib-only imports: importlib.util, json, os, re, subprocess, sys, tempfile, unittest, pathlib) -- verified by inspection of the module's own import block and docstring, not by a separate test."
+  AC-7:
+    tests: []
+    red_reason: "Verified by running python3 -m unittest discover -s tests before (baseline_failures, 5122 tests) and after (final_failures, 5134 tests, same 11 failing test ids) this task's change; no new failure, no existing validator error kind (code string) renamed or removed -- confirmed by reading every err(...) call site touched or added in _validate_task_plans_against_patch, none of which changed an existing code string."
