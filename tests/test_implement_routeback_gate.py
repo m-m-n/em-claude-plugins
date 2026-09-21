@@ -1903,19 +1903,21 @@ class TestPluginVersionBumpedInLockstep(unittest.TestCase):
 
     def test_shared_version_is_past_the_pre_task_baseline(self):
         # Durable form (repo convention, see
-        # tests/test_recycled_task_id_version_bump.py): major/minor fixed,
-        # patch strictly greater than the pre-task baseline, raised from 42
-        # to 47 by task0001 (routeback-admissibility-exits) Site F and from
-        # 47 to 48 by task0002 (routeback-admissibility-exits, rework round
-        # 1) Site F. Pinning a literal version would go red on the next
-        # unrelated bump.
+        # tests/test_recycled_task_id_version_bump.py): strictly greater than
+        # the pre-task baseline (0, 1, 48) under per-component numeric
+        # comparison, raised from 42 to 47 by task0001
+        # (routeback-admissibility-exits) Site F and from 47 to 48 by
+        # task0002 (routeback-admissibility-exits, rework round 1) Site F.
+        # Pinning a literal version -- or a fixed major/minor pair -- would
+        # go red on the next unrelated bump; task-tier-reduction task0008
+        # (NFR4) is exactly that next bump, and it advances the minor
+        # component.
         for version in (
             self.plugin_manifest["version"],
             self.marketplace_entry["version"],
         ):
-            major, minor, patch = (int(part) for part in version.split("."))
-            self.assertEqual((major, minor), (0, 1))
-            self.assertGreater(patch, 48)
+            parts = tuple(int(part) for part in version.split("."))
+            self.assertGreater(parts, (0, 1, 48))
 
 
 class TestExit4CarveOutStatedInAllThreeSSOTs(unittest.TestCase):
