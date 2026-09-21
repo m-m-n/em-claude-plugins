@@ -309,3 +309,25 @@ records:
     Opus エスカレーションなし。採らなかった選択肢: (B) テストのマッチャを
     現行文面に合わせて緩める、(C) 両者の折衷。(B)(C) は TS-9 が実際の
     意味欠落であるため受け入れ条件 AC-2 を満たさなくなる。
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-21T22:08:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: tests/test_tier_worktree_bootstrap.py を tasks.task0014.files に自動追加しない
+  normalized_answer: declined
+  resolution_note: >-
+    task_id: task0014; declined path: tests/test_tier_worktree_bootstrap.py;
+    missing evidence part: 「取りこぼされる受け入れ条件または要件の識別子」。
+    報告は当該モジュールの docstring が述べる「アンカーは task0013 の
+    所有領域の内容を追跡するものであり、正当な内容変更に追随してよい」という
+    モジュール自身の慣習を根拠に挙げるだけで、この path を declared change set に
+    加えなければ落ちる AC-n（task0014 の計画に rework-planner が書いた既存の AC）
+    または workflow.yaml に登録済みの要件 ID を 1 つも名指ししていない。
+    残る 2 パート（追加する path、path が無い場合の観測可能な失敗
+    = TWO_READINGS_ANCHOR の byte-verbatim 比較が落ちる）は満たしており、
+    path shape と workflow control path の検査も通るが、3 パート揃わないため
+    auto-add しない。変更自体はタスクブランチにマージ済みで、containment check は
+    従来どおり通常の deviation として扱う; codex_consulted: false;
+    opus escalation: not run
