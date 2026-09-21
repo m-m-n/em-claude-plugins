@@ -111,6 +111,32 @@ A rework task whose `covered_by_existing` AND `new_scenarios` are BOTH empty
 is FORBIDDEN — every rework task must be covered by an existing scenario, a
 new one, or both.
 
+### 8a. The most-reducing tier: no verification document exists
+
+At the most-reducing tier (`minimal`), `VERIFICATION.md` is one of the
+artifacts that tier's reduction table subtracts (`skills/develop/SKILL.md`'s
+reduction table, cited not restated) — it is never produced, so
+`verification_index` (Section 3) is empty and no scenario ID has ever been
+indexed.
+
+Two routes into rework exist in general: an UPGRADE, which recreates the
+missing documents before any rework planning happens, and a DIRECT rework
+without an upgrade. At this tier, the upgrade route is the one that can
+succeed: FR12/FR19's upgrade procedure (`skills/develop/SKILL.md`, cited not
+restated) is what recreates the missing planning documents, and only after
+that has happened does a baseline `VERIFICATION.md` exist for this
+synthesis to extend and for the validator to diff against. The direct route
+— synthesizing a rework task at this tier without first upgrading — cannot
+produce a valid task: with `verification_index` empty, `covered_by_existing`
+can never cite a real scenario, so every rework task would have to declare
+`new_scenarios` to satisfy the both-empty prohibition above, and a
+`new_scenarios` claim with no `VERIFICATION.md` to diff against is exactly
+the case Section 12's validation rule rejects — fail-closed, the same way an
+unverifiable claim is already rejected when a baseline is missing for any
+other reason. This document does not restate the upgrade procedure's
+mechanics; it states only the consequence for this synthesis: **coverage
+declaration at this tier requires the upgrade to have already happened.**
+
 ## 9. Related document updates
 
 | Document | Update condition |
@@ -256,6 +282,10 @@ Machine-checkable rules a validator applies against the synthesis output:
   `requirements_patch`'s `tests_append`.
 - No task has BOTH `covered_by_existing` and `new_scenarios` empty
   (Section 8).
+- A `new_scenarios` claim made while no `VERIFICATION.md` exists in the
+  current feature directory is rejected outright, fail-closed, distinctly
+  from a claim rejected merely because no baseline directory was supplied
+  (Section 8a).
 
 ## 13. Execution adapter
 
