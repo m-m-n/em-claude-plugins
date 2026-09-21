@@ -77,7 +77,11 @@ TIER_SECTION_START = "### tier 決定"
 STEP_A5_START = "## Step A.5"
 STEP_A_START = "## Step A: feature の決定"
 RETROSPECT_START = "### retrospect フェーズ"
-STEP_C_START = "## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、cap 到達により verify が `failed` のまま残る場合のみ）"
+STEP_C_START = (
+    "## Step C: 完了処理（全 step completed — `skipped` の step（design "
+    "自身の skip、または tier による skip）があっても可 — か、cap 到達に"
+    "より verify が `failed` のまま残る場合のみ）"
+)
 
 TIER_DECISION_PERSISTENCE_START = "## tier decision persistence"
 LEGACY_COMPAT_START = "## Legacy feature compatibility"
@@ -664,14 +668,16 @@ class TestAC6MatchersCanFail(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 TURN_ENDING_CONDITIONS_ANCHOR = (
-    "1. `workflow` 配列の全 step が `completed`、ただし design のみ `skipped` も\n"
-    "   可（完了処理まで済ませた後）"
+    "1. `workflow` 配列の全 step が `completed`、ただし `skipped` の step が\n"
+    "   あっても可（design 自身の判断による skip、または tier によるスキップの\n"
+    "   いずれも該当。完了処理まで済ませた後）"
 )
 STEP_B_PHASE_TABLE_ANCHOR = "| create-spec | `${CLAUDE_PLUGIN_ROOT}/references/phases/create-spec-phase.md` に従う"
-CARVEOUT_ANCHOR = "該当する遷移は現時点で厳密に次の 2 つで"
+CARVEOUT_ANCHOR = "該当する遷移は現時点で厳密に次の 3 つで"
 STEP_C_HEADING = (
-    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、"
-    "cap 到達により verify が `failed` のまま残る場合のみ）"
+    "## Step C: 完了処理（全 step completed — `skipped` の step（design "
+    "自身の skip、または tier による skip）があっても可 — か、cap 到達に"
+    "より verify が `failed` のまま残る場合のみ）"
 )
 
 
@@ -689,9 +695,10 @@ class TestRegionOwnershipRegression(unittest.TestCase):
     def test_step_b_phase_table_unchanged(self):
         self.assertIn(STEP_B_PHASE_TABLE_ANCHOR, SKILL_TEXT)
 
-    def test_carveout_enumeration_still_reads_two_transitions(self):
-        # task0005 (not this task) is the one that will later update this
-        # count to three; this task's own diff must leave it reading two.
+    def test_carveout_enumeration_still_reads_three_transitions(self):
+        # This task's own diff must leave the enumeration's own count
+        # (owned by task0005 / task0011, not this task) untouched at its
+        # current value.
         self.assertIn(CARVEOUT_ANCHOR, SKILL_TEXT)
 
     def test_step_c_heading_unchanged(self):
