@@ -93,6 +93,13 @@ skill's reduction table (`skills/develop/SKILL.md`) — cited here, never
 restated. Subtracting the task split is not subtracting the task record:
 `implementation-planner` still registers exactly one task entry, with
 `plan` pointing at the task document (`feature-docs/{feature}/TASK.md`).
+Because `TASK.md` carries only `## Change` and `## Expected Result`
+(`references/templates/task-document.md`), the task-plan checks that
+`validate-worker-output.py` applies to a task entry's `plan` document
+(`### Files to Modify` reconciliation, `## Acceptance Criteria
+(MANDATORY)` presence) do not apply when `plan` names `TASK.md`; those
+checks are scoped to per-task plan documents produced at tiers where the
+task split is not subtracted.
 
 That entry carries every mandatory field a task entry carries at any tier,
 including its `complexity` value, and its `requirements` list may be
