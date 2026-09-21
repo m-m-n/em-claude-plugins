@@ -302,6 +302,31 @@ unchanged: no worker proposes these fields, only the orchestrator writes
 them. Field shapes are `references/workflow-schema.md`'s, cited here, not
 restated.
 
+**Tier-decision record mapping.** This section is the single owner of the
+correspondence between the persisted tier record's fields
+(`references/phase-state.md`'s tier decision persistence schema), the four
+`tier_decision` sub-fields (`references/workflow-schema.md`), and the
+retrospect tier signal's members (`skills/develop/SKILL.md`'s retrospect
+フェーズ, `signals.tier_decision`). `references/workflow-schema.md` and
+`skills/develop/SKILL.md` cite this table by path; neither restates a row
+of it.
+
+| `phase-state/tier.yaml` field | `workflow.yaml` `tier_decision` sub-field | `signals.tier_decision` member |
+|---|---|---|
+| `tier` | not carried directly -- it is the sibling top-level `tier` field, not `tier_decision` itself | `tier` |
+| `bases` | `confidence` (verbatim: both basis readings' observed probability values) | `bases` (verbatim) |
+| `decided_at` | `at` | not carried separately -- retrospect's own `collected_at` records when retrospect itself ran, not when the tier was decided |
+| `pre_survey_estimate` | not carried -- `tier_decision` has no slot for it | `pre_survey_estimate` (verbatim) |
+| `schema_version`, `feature` | not carried -- bookkeeping only | not carried |
+| n/a -- fixed, never read from a persisted field | `by`: the orchestrator, the only agent Step A's tier-decision procedure ever dispatches as decider | not carried |
+| n/a -- derived from `tier` (row 1) | `reductions`: a projection of `tier` through `skills/develop/SKILL.md`'s Tier 削減表 (cited there, not restated) -- never a second enumeration of what a tier subtracts | not carried |
+| n/a -- the orchestrator's own summary of the decision, not a persisted field | not carried | `rationale`: a one-line summary of why the two readings agreed, or how a disagreement resolved |
+
+Every basis identifier this table's source and targets carry (`bases[].basis`
+in the persisted record, and wherever `signals.tier_decision.bases` echoes
+it) is one of `references/tier-rules.yaml`'s `decision_basis` values --
+cited there, not restated.
+
 After this point `workflow.yaml`'s `tier` is the value read. A later
 re-transcription — on resume, or on a subsequent partial re-entry of this
 phase — MAY raise the tier already recorded but MUST NEVER lower it (TS-8).
