@@ -86,7 +86,7 @@ workflow:
   status: pending
   base_commit: 6c4971e457301a44c3b48c0af74c41d46e325c20
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
