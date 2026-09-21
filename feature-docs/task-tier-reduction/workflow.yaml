@@ -188,7 +188,7 @@ tasks:
     - NFR3
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0004
   task0005:
     title: tier reductions, skipped discipline and upgrade in the develop loop
