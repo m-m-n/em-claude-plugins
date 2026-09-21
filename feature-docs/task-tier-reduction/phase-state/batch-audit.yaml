@@ -275,3 +275,37 @@ records:
     true（run_codex_exec.sh readonly、1 ターン、33,507 tokens）; opus escalation: not run; 選択: chain walk を 1
     段進めて codex ハーネスで performance#1 / architecture#1 を再 dispatch。spec 観点は同じ muse-spark エントリで完走したため walk
     不要。'
+- question_id: verify.fix-side-for-pinned-doc-phrases
+  packet_id: null
+  answered_at: '2026-09-21T21:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - amend_skill_md_both_items
+  freeform: >-
+    verify ラウンド 1 で新規に落ちた 2 件（TS-13 / TS-9、いずれも
+    tests/test_tier_decision_step_a.py）について、文書側を直すか
+    テスト側を緩めるかをユーザー指示「不明点は Codex に相談し、比較して
+    良い方を採用」に基づいて Codex へ相談した。gate_id を持たない
+    オーケストレーター起点の記録。
+  normalized_answer: >-
+    両件とも (A) em-workflow/skills/develop/SKILL.md の「### tier 決定」を
+    直す。tests/test_tier_decision_step_a.py は変更しない。
+    TS-13: 項目 4 は review round 2 の書き換えで decision-basis 識別子が
+    語順の間に割り込み、固定句「1 回目はタスク記述のみを基準に」が非連続に
+    なっただけ。語順を戻せば情報は一切失われない。
+    TS-9: 項目 6 は「判定スキル使用不可」「Codex 事前調査使用不可」
+    「2 本の判定結果が割れた」の 3 ケースしか列挙しておらず、
+    フォールバック表が解決しない未知・不正な状態に対する fail-closed 条項が
+    無い。task0003 AC-2 が要求する包括条項が実際に欠落しているため、
+    これは言い回しの不一致ではなく意味の欠落。テストを緩めるのは
+    「テストを弱めない」規律に反する。
+    付随指摘（今回の修正範囲外・別件として保留）: 項目 6 に残る
+    「Codex 事前調査が使用不可なら常に full」は tier-rules.yaml:104 の
+    jev_only_usable 行と整合しない可能性がある。これは review round 2 の
+    deferred finding e8d50499a74c30f9 と同一論点。
+  resolution_note: >-
+    Codex 相談あり（codex-harness second-opinion, run_codex_exec.sh readonly）。
+    Opus エスカレーションなし。採らなかった選択肢: (B) テストのマッチャを
+    現行文面に合わせて緩める、(C) 両者の折衷。(B)(C) は TS-9 が実際の
+    意味欠落であるため受け入れ条件 AC-2 を満たさなくなる。
