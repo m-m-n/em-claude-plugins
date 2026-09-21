@@ -1,0 +1,144 @@
+task_id: task0012
+baseline_failures:
+  - test_tier_decision_step_a (unittest.loader._FailedTest.test_tier_decision_step_a)
+  - test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)
+  - test_baseline_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged)
+  - test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)
+  - test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)
+  - test_computation_semantics_preserved_in_prose (test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose)
+  - test_cross_validation_data_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_minimal_tier_create_spec_re_execution_present (test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_rules_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged)
+final_failures:
+  - test_tier_decision_step_a (unittest.loader._FailedTest.test_tier_decision_step_a)
+  - test_argument_hint_line_includes_once_and_retains_existing_tokens (test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens)
+  - test_baseline_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged)
+  - test_batch_auto_select_wording_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present)
+  - test_batch_non_packet_gates_reference_present (test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present)
+  - test_computation_semantics_preserved_in_prose (test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose)
+  - test_cross_validation_data_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged)
+  - test_em_workflow_manifest_nonversion_content_unchanged (test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged)
+  - test_minimal_tier_create_spec_re_execution_present (test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present)
+  - test_no_develop_or_review_document_exceeds_its_pinned_budget (test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget)
+  - test_rules_block_unchanged (test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tier_evaluator_contract.TestNoHardcodedRowIdentifiersOrThresholdLiterals.test_no_get_call_supplies_a_numeric_default
+      - tests.test_tier_evaluator_contract.TestNoHardcodedRowIdentifiersOrThresholdLiterals.test_no_row_identifier_equality_branch
+      - tests.test_tier_evaluator_contract.TestRenamedThresholdMemberDoesNotMatch.test_renamed_member_row_never_matches_even_with_generous_score
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change decide-tier.py: the numeric-default regex
+      matched `.get("p0_floor", 0.80)` (test_no_get_call_supplies_a_numeric_default
+      failed, "is not None"), the row-id-equality regex matched
+      `row_id == "minimal"` (test_no_row_identifier_equality_branch failed,
+      "is not None"), and the renamed-member row matched via the stale
+      p0_floor=0.80 default, returning tier "minimal" instead of "full"
+      (test_renamed_member_row_never_matches_even_with_generous_score
+      failed: "'minimal' != 'full'").
+  AC-2:
+    tests:
+      - tests.test_tier_evaluator_contract.TestUnrecognizedRowIdentifierStillEvaluatesItsComparisons.test_unrecognized_row_matches_when_its_own_condition_holds
+      - tests.test_tier_evaluator_contract.TestUnrecognizedRowIdentifierStillEvaluatesItsComparisons.test_unrecognized_row_does_not_match_when_its_condition_fails
+      - tests.test_tier_evaluator_contract.TestUnrecognizedRowIdentifierStillEvaluatesItsComparisons.test_non_vacuity_the_two_cases_above_differ
+      - tests.test_tier_evaluator_contract.TestOnlyAMemberlessRowIsUnconditional.test_a_row_with_no_extra_field_beyond_metadata_is_unconditional
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change decide-tier.py: an unrecognized row id fell
+      into the unconditional-return branch regardless of whether p0_floor
+      was met, so a score that should NOT match (p0=0.30 vs floor 0.60)
+      still returned tier "hypothetical" instead of falling through to
+      "full" (test_unrecognized_row_does_not_match_when_its_condition_fails
+      failed: "'hypothetical' != 'full'"; the paired non-vacuity test also
+      failed since both cases returned the same tier).
+  AC-3:
+    tests:
+      - tests.test_tier_evaluator_contract.TestAbsentOrNonNumericMemberFallsThroughWithNoFallthroughRow.test_absent_p0_with_no_fallthrough_row_yields_safest_tier
+      - tests.test_tier_evaluator_contract.TestAbsentOrNonNumericMemberFallsThroughWithNoFallthroughRow.test_non_numeric_p0_with_no_fallthrough_row_yields_safest_tier
+      - tests.test_tier_evaluator_contract.TestAbsentOrNonNumericMemberFallsThroughWithNoFallthroughRow.test_non_vacuity_a_satisfying_score_still_matches_against_this_table
+    red_confirmed: false
+    red_reason: >-
+      This behaviour (absent/non-numeric member -> row does not match,
+      falls through; no unconditional row -> safest tier) already existed
+      unchanged in the pre-change evaluate_thresholds() fallthrough loop,
+      so these three assertions passed before any task0012 code was
+      written. task0012's change to this path is structural (declared
+      members are now read data-driven rather than via row-id branches);
+      the AC-1/AC-2 tests above are what actually exercise the new code
+      and were red beforehand. Carried forward per tdd-testing skill
+      guidance for a criterion whose behaviour genuinely pre-existed.
+  AC-4:
+    tests:
+      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_p0_above_one_yields_safest_tier_with_named_reason
+      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_p0_below_zero_yields_safest_tier
+      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_expectation_clear_nan_yields_safest_tier_not_minimal
+      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_expectation_clear_infinite_yields_safest_tier
+      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_p1_out_of_range_blocks_reduced_even_when_p0_alone_qualifies
+      - tests.test_tier_evaluator_contract.TestOutOfRangeAndNonFiniteObservations.test_non_vacuity_the_same_p0_in_range_reaches_minimal
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change decide-tier.py there was no range/finiteness
+      validation at all: p0=1.5 (out of range) still matched "minimal"
+      (test_p0_above_one_yields_safest_tier_with_named_reason failed:
+      "'minimal' != 'full'"), p0=-0.1 matched "full" via the ordinary
+      fallthrough rather than via a named-reason invalid-observation path
+      (test_p0_below_zero_yields_safest_tier failed on decided_by:
+      "'threshold_rows:full' != 'fallback_matrix:invalid_observation'"),
+      and expectation_clear=inf still matched "minimal"
+      (test_expectation_clear_infinite_yields_safest_tier failed:
+      "'minimal' != 'full'").
+  AC-5:
+    tests:
+      - tests.test_tier_evaluator_contract.TestNoNonFiniteTokenInEmittedResult.test_nan_probability_input_produces_strictly_parseable_output
+      - tests.test_tier_evaluator_contract.TestNoNonFiniteTokenInEmittedResult.test_infinite_expectation_clear_input_produces_strictly_parseable_output
+      - tests.test_tier_evaluator_contract.TestNoNonFiniteTokenInEmittedResult.test_non_vacuity_the_raw_output_of_the_nan_case_really_did_carry_a_bare_token_pre_sanitization
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change decide-tier.py, echoing an input probability
+      of NaN back through `observed.score` produced a bare `NaN` token in
+      the emitted JSON, which a strict parser (parse_constant raising)
+      rejected with "non-finite JSON token encountered: NaN"
+      (test_nan_probability_input_produces_strictly_parseable_output
+      errored on that ValueError); the same for an infinite
+      expectation_clear ("...encountered: Infinity").
+  AC-6:
+    tests:
+      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_two_readings_agreeing_use_that_tier
+      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_two_readings_disagreeing_yield_safest_tier
+      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_non_vacuity_two_readings_agreeing_on_full_is_not_flagged_as_disagreement
+      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_single_reading_via_readings_list_behaves_like_today
+      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_top_level_basis_score_single_reading_still_accepted
+      - tests.test_tier_evaluator_contract.TestTwoReadingContract.test_cli_accepts_two_readings_end_to_end
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change decide-tier.py, the `readings` field did not
+      exist in the input contract: a payload carrying `readings` instead
+      of top-level `basis`/`score` fell through decide()'s missing-'score'
+      path and always resolved to tier "full" with
+      decided_by "fallback_matrix:malformed_input"
+      (test_two_readings_agreeing_use_that_tier failed: "'full' !=
+      'minimal'"; test_two_readings_disagreeing_yield_safest_tier and
+      test_cli_accepts_two_readings_end_to_end failed on decided_by:
+      "'fallback_matrix:malformed_input' !=
+      'fallback_matrix:readings_disagree'").
+  AC-7:
+    tests:
+      - tests.test_tier_rules.TestThresholdRowEvaluation
+      - tests.test_tier_rules.TestFallbackMatrixUnusableCombinations
+      - tests.test_tier_rules.TestDegradedInputUnitLevel
+      - tests.test_tier_rules.TestDegradedInputCliLevel
+    red_confirmed: false
+    red_reason: >-
+      This is a non-regression criterion by definition: these are the
+      pre-existing task0001 behavioural tests, which were already green
+      before task0012's change and must stay green after it (regression
+      gate, not a new-behaviour red/green pair). Verified green both
+      before and after this task's implementation; `python3 -m unittest
+      discover -s tests` reports exactly the same 10 failures + 1 error
+      (all pre-existing, unrelated to em-workflow/scripts/decide-tier.py,
+      em-workflow/references/tier-rules.yaml or tests/test_tier_rules.py)
+      as the integration branch's base commit, with 30 new passing tests
+      added by tests/test_tier_evaluator_contract.py.
