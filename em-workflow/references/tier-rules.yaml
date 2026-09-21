@@ -1,0 +1,116 @@
+# tier-rules.yaml - Tier decision rules (em-workflow SSOT, FR1)
+#
+# The single place holding the Jev question set, the three threshold rows,
+# the Codex pre-survey output schema, and the availability fallback matrix.
+# Consumed by scripts/decide-tier.py, a deterministic evaluator that performs
+# no model inference (NFR1) and no invocation of its own (the orchestrator
+# collects the observations; this file and its evaluator only decide).
+#
+# This file references two external skills by path and reproduces no
+# sentence from either (NFR5):
+#   - ~/.claude/skills/jev       question wording + Jev invocation contract
+#   - typesafe:typesafe-ai      model-behaviour guidance behind Jev
+#
+# Scope: this file answers ONLY "which tier". What each tier removes from a
+# run is owned by skills/develop/SKILL.md, not here (IMPLEMENTATION.md D4).
+# The persisted decision record's shape belongs to task0003, not this file.
+
+# -----------------------------------------------------------------------
+# 1. question_set - what is sent to the external judgement skill
+# -----------------------------------------------------------------------
+question_set:
+  skill: "~/.claude/skills/jev"
+  invocation_flags: ["--json-input", "--json-output"]
+  question_design_reference: "typesafe:typesafe-ai"
+  # Question wording, the System One/Two model choice, and any
+  # model-behaviour guidance are owned by the two skills named above.
+  # Neither is reproduced here.
+
+# -----------------------------------------------------------------------
+# 2. threshold_rows - evaluated in this fixed order; the first match wins.
+#    Inputs come ONLY from the Jev score object's `probabilities` map
+#    (bucket index -> probability) and its `expectation_clear` member. The
+#    `confidence` member alone is never expressed as a threshold anywhere
+#    in this file or in scripts/decide-tier.py (AC-4).
+# -----------------------------------------------------------------------
+threshold_rows:
+  - id: minimal
+    order: 1
+    tier: minimal
+    p0_floor: 0.80
+    expectation_clear_floor: 0.5
+    description: >-
+      P(0) at or above 0.80 AND expectation_clear at or above 0.5 -> the
+      tier that removes the most.
+  - id: reduced
+    order: 2
+    tier: reduced
+    p0_floor: 0.40
+    bucket_sum_floor: 0.85
+    description: >-
+      P(0) at or above 0.40 AND P(0)+P(1) at or above 0.85 -> the middle
+      tier. The P(0) floor keeps a low first bucket carried by a high
+      second bucket out of this tier.
+  - id: full
+    order: 3
+    tier: full
+    description: >-
+      Otherwise -> the tier that removes nothing. Also reached when a row
+      above needed a member that was absent from the input: the row does
+      not match and evaluation falls through here (fail-safe, never
+      fail-open).
+
+# -----------------------------------------------------------------------
+# 3. codex_output_schema - the Codex pre-survey's invocation route and
+#    output contract
+# -----------------------------------------------------------------------
+codex_output_schema:
+  invocation:
+    route: "em-workflow/scripts/run_codex_exec.sh readonly"
+    forbidden: >-
+      the raw `codex exec` subcommand is never invoked directly for this
+      pre-survey -- always through run_codex_exec.sh
+  fields:
+    - files_expected
+    - changed_lines_approx
+    - new_functions_needed
+    - new_files_needed
+    - new_dependencies_needed
+    - covering_tests_exist
+    - spillover_modules
+    - work_still_required
+
+# -----------------------------------------------------------------------
+# 4. fallback_matrix - tool availability degrades the decision, it never
+#    crashes it (fail-safe, never fail-open). Any non-zero Jev exit status
+#    counts as "judgement skill unusable" with no per-status distinction.
+# -----------------------------------------------------------------------
+fallback_matrix:
+  - id: both_usable
+    jev_usable: true
+    codex_usable: true
+    decision_basis: description_plus_code
+    action: evaluate_threshold_rows
+  - id: jev_only_usable
+    jev_usable: true
+    codex_usable: false
+    decision_basis: description_only
+    action: evaluate_threshold_rows
+    note: >-
+      if the description-only reading and the description-plus-code
+      reading disagree, fall to the tier that removes nothing (full)
+  - id: jev_unusable
+    jev_usable: false
+    codex_usable: any
+    decision_basis: unavailable
+    action: full
+    reason: judgement skill unusable, regardless of Codex availability
+
+# Every documented Jev exit status, and whether it counts as usable. Any
+# status not listed here is still non-zero and therefore unusable -- this
+# table documents the known codes, it does not exhaustively enumerate them.
+jev_exit_codes:
+  0: usable
+  1: unusable
+  2: unusable   # HTTP 401
+  75: unusable  # HTTP 429 or HTTP 529
