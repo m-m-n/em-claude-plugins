@@ -90,7 +90,7 @@ workflow:
   status: completed
   completed_at_commit: fee9d20
 - id: verify
-  status: pending
+  status: in_progress
   result: null
   failed_items: []
 - id: retrospect
