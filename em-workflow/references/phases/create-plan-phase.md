@@ -40,8 +40,16 @@ This document does not restate the shapes it builds on — it cites them:
 - The `create-spec` step is `completed`.
 - The `design` step is `completed` or `skipped`.
 - REQUIREMENTS.md and SPEC.md exist; DESIGN.md is additionally required when
-  `design` is `completed`.
-- `workflow.yaml`'s `requirements` agree with SPEC.md's FR/NFR set.
+  `design` is `completed`. **Tier-aware** (section 2a; which artifacts each
+  tier subtracts is the develop skill's reduction table,
+  `skills/develop/SKILL.md`, cited here, never restated): at the `reduced`
+  tier REQUIREMENTS.md may be absent. At the `minimal` tier SPEC.md may be
+  absent too, with the task document (`feature-docs/{feature}/TASK.md`,
+  `references/templates/task-document.md`) named as the planner's input in
+  its place.
+- `workflow.yaml`'s `requirements` agree with SPEC.md's FR/NFR set. At the
+  `minimal` tier, with SPEC.md absent, an empty `requirements` map
+  (`requirements: {}`) is a legitimate state, not a mismatch (TS-6).
 - **The integration worktree must be clean before dispatch** — see
   `references/phases/create-spec-phase.md` ("Scope verification",
   design-input.md 5.11.3). Not clean → abort without dispatching, and
@@ -77,6 +85,20 @@ This document does not restate the shapes it builds on — it cites them:
     `design-system/tokens.html` present) and waits for the user to either
     delete the stale `tokens.html` or restore `tokens.yaml` before
     re-entering this phase.
+
+## 2a. The single-task shape at the most-reducing tier
+
+Which artifacts the `minimal` tier subtracts is defined by the develop
+skill's reduction table (`skills/develop/SKILL.md`) — cited here, never
+restated. Subtracting the task split is not subtracting the task record:
+`implementation-planner` still registers exactly one task entry, with
+`plan` pointing at the task document (`feature-docs/{feature}/TASK.md`).
+
+That entry carries every mandatory field a task entry carries at any tier,
+including its `complexity` value, and its `requirements` list may be
+empty — the entry still carries execution `status` and `branch`, and task
+completion is still defined by the merge into the integration branch, not
+by the absence of a task split.
 
 ## 3. Reconcile on entry
 
@@ -126,7 +148,8 @@ applied).
   `references/contracts/planner-contract.md`'s `digest_inputs`.
 - A `workflow.yaml` snapshot.
 - The source documents: SPEC.md, REQUIREMENTS.md, and DESIGN.md when
-  present.
+  present — the task document (`feature-docs/{feature}/TASK.md`) in their
+  place at the `minimal` tier (section 2a).
 - Prior answers already recorded in `phase-state/create-plan.yaml`.
 - `write_policy` for the artifacts it may write.
 - The registry paths it must consult:
