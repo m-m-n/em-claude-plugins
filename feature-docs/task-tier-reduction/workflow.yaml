@@ -101,7 +101,7 @@ workflow:
     no command configured (AS-8). Previous round's failed items TS-13 and
     TS-9 both resolved by task0014. No requirement is excluded.
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: tier decision rules and deterministic evaluator
