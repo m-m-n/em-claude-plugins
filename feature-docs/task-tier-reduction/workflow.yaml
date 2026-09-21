@@ -818,8 +818,10 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      TS-13: 1
+      TS-9: 1
   infra_resume:
     rounds: 0
     cap: 2
