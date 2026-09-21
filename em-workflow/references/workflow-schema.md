@@ -492,8 +492,13 @@ more and no fewer:
 - `at` -- the decision timestamp.
 - `reductions` -- the list of subtractions the decision applied.
 
+Which persisted-record field feeds each sub-field's value, and how the
+retrospect tier signal's members relate to them, is owned by
+`references/phases/create-spec-phase.md`'s Tier transcription section (its
+tier-decision record mapping table) -- cited here, not restated.
+
 **Upgrade-only.** The `tier` value may be raised and never lowered. A
-re-transcription from persisted state -- `phase-state/{feature}/tier.yaml`
+re-transcription from persisted state -- `feature-docs/{feature}/phase-state/tier.yaml`
 before `workflow.yaml` exists, `workflow.yaml` itself once it does -- must
 not lower the value already recorded. The mechanism that performs a
 raise -- returning a `skipped` step to `pending` -- belongs to the develop

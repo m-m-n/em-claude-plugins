@@ -1,0 +1,234 @@
+task_id: task0013
+# This is the REFRESHED baseline: the suite as it stood immediately after
+# the conflict-resolution parent-side adoption commit (SKILL.md reset to
+# the parent's version), before this task's changes were re-implemented on
+# top -- per worktree-task-workflow's conflict protocol, "re-run the suite
+# right after adopting the parent side and replace baseline_failures with
+# that result". It therefore includes both the original pre-existing
+# failures AND (temporarily) this task's own new test module failing
+# against the just-reverted SKILL.md -- both categories are listed in
+# `notes` below with their disposition.
+baseline_failures:
+  - "tests.test_tier_decision_step_a (module load error -- contended module owned by task0011 this round, per IMPLEMENTATION.md D3a)"
+  - "test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens"
+  - "test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget"
+  - "test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged"
+  - "test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged"
+  - "test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged"
+  - "test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged"
+  - "test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose"
+  - "test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present"
+  - "test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present"
+  - "test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present"
+  - "test_tier_decision_record.TestBasisVocabularyUnified.test_divergent_spelling_absent_from_the_whole_plugin_tree"
+  - "test_tier_decision_record.TestBasisVocabularyUnified.test_skill_procedure_uses_only_rules_file_values"
+  - "test_tier_decision_record.TestBasisVocabularyUnified.test_skill_retrospect_signal_uses_only_rules_file_values"
+  - "test_tier_decision_record.TestMappingTableSingleOwnership.test_skill_retrospect_signal_cross_references_the_citing_procedure_step"
+  - "test_tier_decision_record.TestMappingTableSingleOwnership.test_skill_tier_decision_procedure_cites_the_mapping_table_by_path"
+  - "test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_attributes_the_resolution_to_the_evaluators_input_contract"
+  - "test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_old_mixed_into_availability_fallback_phrasing_is_gone"
+  - "test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_disagreement_resolves_to_full"
+  - "test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_the_basis_each_invocation_corresponds_to"
+  - "test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_what_is_compared_between_the_two_readings"
+final_failures:
+  - "tests.test_tier_decision_step_a (module load error -- contended module owned by task0011 this round, per IMPLEMENTATION.md D3a)"
+  - "test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens"
+  - "test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget"
+  - "test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged"
+  - "test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged"
+  - "test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged"
+  - "test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged"
+  - "test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose"
+  - "test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present"
+  - "test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present"
+  - "test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present"
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_create_spec_phase_owns_the_mapping_table_heading
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_mapping_table_covers_every_persisted_record_field
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_mapping_table_accounts_for_subfields_with_no_direct_source
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_mapping_table_accounts_for_retrospect_only_rationale
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_unique_mapping_row_phrase_present_only_in_owning_document
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_workflow_schema_cites_the_mapping_table_by_path
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_skill_tier_decision_procedure_cites_the_mapping_table_by_path
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_skill_retrospect_signal_cross_references_the_citing_procedure_step
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_negative_proof_a_second_document_restating_a_row_is_detected
+      - tests.test_tier_decision_record.TestMappingTableSingleOwnership.test_non_vacuity_the_unique_phrase_would_be_found_if_present
+    red_confirmed: true
+    red_reason: >-
+      Before this task, em-workflow/references/phases/create-spec-phase.md
+      had no mapping table at all (no "**Tier-decision record mapping.**"
+      heading), so test_create_spec_phase_owns_the_mapping_table_heading and
+      every test that slices the section from it raised ValueError /
+      assertion failures. Confirmed directly against git HEAD's pre-change
+      copy of the four edited documents (extracted via `git show HEAD:...`
+      to a scratch directory, since no commit had been made yet): the
+      string "**Tier-decision record mapping.**" was absent from
+      create-spec-phase.md.
+  AC-2:
+    tests:
+      - tests.test_tier_decision_record.TestReductionsIsAProjectionNotAnEnumeration.test_tier_decision_still_carries_exactly_four_subfields_in_order
+      - tests.test_tier_decision_record.TestReductionsIsAProjectionNotAnEnumeration.test_mapping_table_defines_reductions_as_a_projection_of_tier
+      - tests.test_tier_decision_record.TestReductionsIsAProjectionNotAnEnumeration.test_reduction_table_enumeration_owned_solely_by_the_develop_skill
+      - tests.test_tier_decision_record.TestReductionsIsAProjectionNotAnEnumeration.test_negative_proof_extra_subfield_is_detected
+      - tests.test_tier_decision_record.TestReductionsIsAProjectionNotAnEnumeration.test_non_vacuity_enumeration_needle_would_be_found_if_duplicated
+    red_confirmed: true
+    red_reason: >-
+      test_mapping_table_defines_reductions_as_a_projection_of_tier depends
+      on the same not-yet-existing mapping table as AC-1 (ValueError before
+      the edit: "**Tier-decision record mapping.**" not found in
+      create-spec-phase.md's pre-change text). The exactly-four-subfields
+      and reduction-table-ownership assertions were already true pre-change
+      (task0002/task0005's prior work) and are carried here as regression
+      guards for this task's own module, not novel reds; the AC's genuinely
+      new claim -- that `reductions` is stated as a projection of `tier`
+      through skills/develop/SKILL.md's reduction table -- is what
+      test_mapping_table_defines_reductions_as_a_projection_of_tier proves
+      red-to-green.
+  AC-3:
+    tests:
+      - tests.test_tier_decision_record.TestBasisVocabularyUnified.test_tier_rules_yaml_declares_the_two_reading_basis_values
+      - tests.test_tier_decision_record.TestBasisVocabularyUnified.test_phase_state_persistence_section_uses_only_rules_file_values
+      - tests.test_tier_decision_record.TestBasisVocabularyUnified.test_skill_procedure_uses_only_rules_file_values
+      - tests.test_tier_decision_record.TestBasisVocabularyUnified.test_skill_retrospect_signal_uses_only_rules_file_values
+      - tests.test_tier_decision_record.TestBasisVocabularyUnified.test_divergent_spelling_absent_from_the_whole_plugin_tree
+      - tests.test_tier_decision_record.TestBasisVocabularyUnified.test_negative_proof_forged_sample_with_divergent_spelling_is_detected
+      - tests.test_tier_decision_record.TestBasisVocabularyUnified.test_non_vacuity_scan_actually_walks_plugin_files
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against git HEAD's pre-change text: phase-state.md and
+      SKILL.md both contained the literal string "with_pre_survey" (the
+      divergent spelling) instead of "description_plus_code" (tier-rules.yaml's
+      decision_basis value), so
+      test_phase_state_persistence_section_uses_only_rules_file_values,
+      test_skill_procedure_uses_only_rules_file_values,
+      test_skill_retrospect_signal_uses_only_rules_file_values and
+      test_divergent_spelling_absent_from_the_whole_plugin_tree would all
+      have failed their assertNotIn(DIVERGENT_BASIS, ...) / assertEqual([],
+      offenders) checks pre-change.
+  AC-4:
+    tests:
+      - tests.test_tier_decision_record.TestPersistedRecordPathConsistent.test_correct_path_appears_in_workflow_schema
+      - tests.test_tier_decision_record.TestPersistedRecordPathConsistent.test_correct_path_appears_in_create_spec_phase
+      - tests.test_tier_decision_record.TestPersistedRecordPathConsistent.test_correct_path_appears_in_phase_state
+      - tests.test_tier_decision_record.TestPersistedRecordPathConsistent.test_correct_path_appears_in_skill
+      - tests.test_tier_decision_record.TestPersistedRecordPathConsistent.test_wrong_order_path_absent_from_the_whole_plugin_tree
+      - tests.test_tier_decision_record.TestPersistedRecordPathConsistent.test_negative_proof_forged_sample_with_wrong_order_is_detected
+      - tests.test_tier_decision_record.TestPersistedRecordPathConsistent.test_non_vacuity_wrong_order_needle_is_not_a_substring_of_the_correct_path
+      - tests.test_tier_workflow_schema.TestUpgradeOnlyRule.test_cites_persisted_state_locations
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against git HEAD's pre-change text: workflow-schema.md's
+      Upgrade-only paragraph read "`phase-state/{feature}/tier.yaml`"
+      (segments in the wrong order) rather than
+      "`feature-docs/{feature}/phase-state/tier.yaml`", so both
+      test_correct_path_appears_in_workflow_schema and
+      test_wrong_order_path_absent_from_the_whole_plugin_tree would have
+      failed pre-change. tests.test_tier_workflow_schema's
+      test_cites_persisted_state_locations was an existing pinned
+      assertion on the old (wrong-order) path string; it was updated in
+      this task per the task plan's Test Notes and is included here as the
+      regression-guard half of AC-4, not a novel red.
+  AC-5:
+    tests:
+      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_two_invocations
+      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_the_basis_each_invocation_corresponds_to
+      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_what_is_compared_between_the_two_readings
+      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_states_disagreement_resolves_to_full
+      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_attributes_the_resolution_to_the_evaluators_input_contract
+      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_old_mixed_into_availability_fallback_phrasing_is_gone
+      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_non_vacuity_old_phrase_would_be_found_in_a_forged_pre_change_copy
+      - tests.test_tier_decision_record.TestTwoReadingProcedureAttributesToEvaluatorContract.test_negative_proof_synthetic_procedure_missing_attribution_is_detected
+    red_confirmed: true
+    red_reason: >-
+      Confirmed against git HEAD's pre-change text: SKILL.md step 6 (the
+      availability-fallback step) carried the sentence "判定スキルが使用
+      不可、または Codex 事前調査が使用不可で 2 本の判定結果が割れた場合、
+      あるいはフォールバック表が解決しないその他の条件は すべて、何も
+      引かない tier（`full`）を採用する。" -- the two-reading disagreement
+      rule folded into the availability paragraph with no mention of
+      "評価器の入力契約" (the evaluator's input contract) anywhere in the
+      tier-decision procedure. test_attributes_the_resolution_to_the_evaluators_input_contract
+      and test_old_mixed_into_availability_fallback_phrasing_is_gone would
+      both have failed pre-change (the phrase was present where the test
+      now asserts absence, and the attribution phrase was absent where the
+      test now asserts presence).
+  AC-6:
+    tests:
+      - tests.test_tier_decision_record.TestModuleIsStdlibOnlyAndDiscoverable.test_only_standard_library_imports
+      - tests.test_tier_decision_record.TestModuleIsStdlibOnlyAndDiscoverable.test_module_file_name_matches_discovery_convention
+    red_confirmed: false
+    red_reason: >-
+      AC-6 describes a structural property of this new test module itself
+      (every matcher paired with a negative proof and a non-vacuity guard;
+      stdlib-only imports) rather than a behavior of the product documents.
+      There is no red state to observe for "this test file has the shape
+      the plan requires" -- the module was written to satisfy it directly.
+      The AC's substance is verified by inspection of the test module's own
+      structure (every TestCase above pairs a positive assertion with a
+      test_negative_proof_* and a test_non_vacuity_* method) rather than by
+      a red-to-green transition of its own.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      AC-7 is the whole-suite verification gate, not a single behavior with
+      its own red state. Verified by running
+      `python3 -m unittest discover -s tests` before any change (baseline:
+      10 failures + 1 load error, recorded above) and after all changes
+      (final: the identical 10 failures + 1 load error, plus the new
+      test_tier_decision_record.py module's 43 tests and the updated
+      test_tier_workflow_schema.py all green) -- final_failures is exactly
+      equal to (a subset of) baseline_failures.
+notes: >-
+  Two issues were caught and fixed during implementation, before any merge
+  attempt and during the one conflict-resolution cycle respectively:
+
+  (1) Pre-merge: the first version of the SKILL.md retrospect-signal
+  citation named `references/phases/create-spec-phase.md` directly inside
+  the retrospect section, which made an existing pinned test
+  (tests/test_retrospect_verification_handoff.py's
+  TestCategoryDefinitionNotRedefined) fail -- that test forbids the
+  `failed_items[].category` vocabulary word "spec" anywhere in the
+  retrospect section, and "create-spec-phase.md" contains "spec" as an
+  isolated token (hyphens are non-word characters, so `\bspec\b` matches
+  inside "create-spec-phase"). Fixed by relocating the literal path
+  citation to the tier-decision procedure's persistence step (outside the
+  vocabulary-restricted retrospect section) and having the retrospect
+  paragraph cross-reference that step instead of repeating the path.
+
+  (2) During the merge conflict cycle (below): after adopting the parent's
+  SKILL.md wholesale and re-implementing this task's steps 4/5 rewrite on
+  top, task0009's own `tests/test_tier_worktree_bootstrap.py` (not in this
+  task's `expected_files`) failed two tests --
+  TestRegionOwnershipRegression.test_two_readings_step_unchanged and
+  .test_evaluation_step_unchanged. That module pins the *exact pre-task0013
+  text* of steps 4 and 5 as an anchor, with its own comment stating the
+  intent is only to prove task0009's own diff left task0013's region
+  untouched ("Pinned by anchor text so an unrelated future edit by
+  task0013 to those regions does not spuriously fail this module once
+  merged"). Since IMPLEMENTATION.md D3a explicitly assigns steps 4/5 to
+  task0013, and this task's own plan (AC-5) mandates rewriting exactly
+  that text, the two anchor constants (TWO_READINGS_ANCHOR,
+  EVALUATION_ANCHOR) were updated to the new step 4/5 text -- the minimal
+  change that keeps the anchors' stated intent (proving no *unrelated*
+  drift) truthful. This is a deviation: the file is outside
+  `expected_files` (it belongs to task0009).
+
+  Conflict-resolution summary: one conflict cycle. `git merge
+  em-workflow/task-tier-reduction/integration` conflicted only in
+  em-workflow/skills/develop/SKILL.md (task0009 and task0012 had merged in
+  the interim); em-workflow/references/phases/create-spec-phase.md and
+  every other touched file auto-merged cleanly. Adopted the parent's
+  SKILL.md wholesale, re-implemented this task's steps 4-6 rewrite and the
+  retrospect-signal fixes on top (renumbered by task0009's inserted
+  worktree-securing step: persistence is now step 8, not step 7 -- the
+  SKILL.md cross-reference and this task's own test were both updated to
+  name the step by its heading text, "永続化ステップ", rather than a
+  fragile ordinal, to survive any future renumbering), fixed the
+  test_tier_worktree_bootstrap.py region-ownership anchors above, then
+  re-ran the full suite: final failing test set is exactly the original
+  11-item baseline (test_tier_decision_step_a's load error plus the ten
+  pre-existing failures), a strict subset of the refreshed 21-item
+  baseline recorded above.

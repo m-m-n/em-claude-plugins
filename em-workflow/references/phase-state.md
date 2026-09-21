@@ -507,7 +507,7 @@ bases:
   - basis: description_only
     probabilities: {...}
     observed_at: "2026-01-30T12:00:00+09:00"
-  - basis: with_pre_survey
+  - basis: description_plus_code
     probabilities: {...}
     observed_at: "2026-01-30T12:00:05+09:00"
 pre_survey_estimate: {...}
@@ -521,7 +521,7 @@ Every field:
 | `schema_version` | Format version. Currently `1`. |
 | `feature` | Feature name, matches `feature-docs/{feature}/`. |
 | `tier` | The decided tier: `full` \| `reduced` \| `minimal`. |
-| `bases` | The two decision bases the tier-decision procedure records: one reading of the judgement skill on the task description alone (`basis: description_only`), one with the pre-survey estimate merged into its state (`basis: with_pre_survey`) — each carrying its own observed probability values and the time it was observed. |
+| `bases` | The two decision bases the tier-decision procedure records: one reading of the judgement skill on the task description alone (`basis: description_only`), one with the Codex pre-survey estimate merged into its state (`basis: description_plus_code`) — each carrying its own observed probability values and the time it was observed. Both identifiers are `references/tier-rules.yaml`'s `decision_basis` values (cited here, not restated); this document mints no basis identifier of its own. |
 | `pre_survey_estimate` | The Codex readonly pre-survey's output, echoed verbatim; its member definitions belong to `references/tier-rules.yaml`, cited here, not restated. |
 | `decided_at` | When the tier itself was decided, after both bases were read. |
 
