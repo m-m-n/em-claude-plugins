@@ -560,12 +560,26 @@ integration worktree の維持とは独立した話である。
 定義する upgrade-only rule を唯一の定義元とし、ここでは繰り返さない）。
 
 `minimal` tier の追加手順: `minimal` tier では TASK.md の作成により
-create-spec が既に `completed` に達している。この場合、`skipped` の step
-を `pending` に戻すだけでは SPEC.md が補われないため、昇格手順は追加で
-create-spec の再実行を含める — create-spec の `status` を `needs_update`
-に設定し、develop のステートマシンが create-spec で再エントリして
-SPEC.md を作成する。この遷移は上記「停止条件 3 との優先関係」の自動再
-エントリ carve-out の一員であり、停止条件 3 の停止理由にはしない。
+create-spec と create-plan が既に `completed` に達している。この場合、
+`skipped` の step を `pending` に戻すだけでは SPEC.md も VERIFICATION.md
+も補われないため、昇格手順は追加で create-spec と create-plan の再実行を
+含める — 両 step の `status` を `needs_update` に設定し、develop の
+ステートマシンがそれぞれで再エントリして SPEC.md と VERIFICATION.md を
+作成する。create-plan の再実行は create-plan-phase.md の既定の再計画
+手順に従い、既にマージ済みの task は保持したまま新規追加分のみを計画する。
+この遷移は上記「停止条件 3 との優先関係」の自動再エントリ carve-out の
+一員であり、停止条件 3 の停止理由にはしない。
+
+`reduced` から `full` への追加手順: `reduced` tier では create-plan が
+既に `completed` に達しており、REQUIREMENTS.md と IMPLEMENTATION.md は
+design step の skip により未作成のままである。`skipped` の design step
+を `pending` に戻すだけでは、design の出力を前提とする create-plan の
+再計画が起きないため、昇格手順は追加で create-plan の再実行を含める —
+create-plan の `status` を `needs_update` に設定し、design の完了後に
+develop のステートマシンが create-plan で再エントリして
+REQUIREMENTS.md / IMPLEMENTATION.md を反映した計画を作成する。この
+再計画でも既にマージ済みの task は保持したまま新規追加分のみを計画する。
+この遷移も同じ carve-out の一員であり、停止条件 3 の停止理由にはしない。
 
 | step | 実行方法 |
 |------|----------|
@@ -629,14 +643,19 @@ integration worktree（implement-phase.md の Branch & Worktree Model 参照）�
 workflow.yaml への書き込み・commit-docs.sh でのコミット・ゲート解決・
 verify step の status 遷移は対話時と変わらない）:
 
-1. `{integration worktree}/feature-docs/{feature}/VERIFICATION.md` を Read
+1. `minimal` tier では VERIFICATION.md が存在しないため、代わりに
+   `{integration worktree}/feature-docs/{feature}/TASK.md` を Read する。
+   それ以外の tier では
+   `{integration worktree}/feature-docs/{feature}/VERIFICATION.md` を Read
 2. workflow.yaml `project.components` の build / test / format コマンドを
    integration worktree で実行。コマンドは Step A.5 で承認済み —
    **承認された文字列を一字一句そのまま**実行する（cd 前置禁止。作業
    ディレクトリは事前に単独の cd で移動）。PreToolUse hook が機械的に
    allow/deny を強制する。deny されたら Step A.5 を再実行
    （`${CLAUDE_PLUGIN_ROOT}/references/command-execution-protocol.md` 参照）
-3. VERIFICATION.md の Test Scenarios / Success Criteria を評価し、E2E
+3. `minimal` tier では TASK.md の Expected Result を評価する（pass/fail の
+   判定基準は Expected Result への合致とする）。それ以外の tier では
+   VERIFICATION.md の Test Scenarios / Success Criteria を評価し、E2E
    コマンドがあれば同規律で実行。workflow.yaml で `status: excluded` の
    要件に紐づくシナリオは評価対象外とし、除外一覧（要件 ID +
    excluded_reason）としてレポートに明記する
