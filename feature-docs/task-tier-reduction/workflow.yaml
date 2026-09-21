@@ -250,7 +250,7 @@ tasks:
     - FR17
     - NFR2
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0007
   task0008:
     title: rework path without a verification document, and the version bump
