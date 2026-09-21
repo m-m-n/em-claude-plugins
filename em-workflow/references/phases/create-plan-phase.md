@@ -97,9 +97,13 @@ Because `TASK.md` carries only `## Change` and `## Expected Result`
 (`references/templates/task-document.md`), the task-plan checks that
 `validate-worker-output.py` applies to a task entry's `plan` document
 (`### Files to Modify` reconciliation, `## Acceptance Criteria
-(MANDATORY)` presence) do not apply when `plan` names `TASK.md`; those
-checks are scoped to per-task plan documents produced at tiers where the
-task split is not subtracted.
+(MANDATORY)` presence) do not apply when the plan value's final path
+segment equals the task document's file name, `TASK.md` —
+`validate-worker-output.py`'s own branch is expressed on that same
+criterion, not the full path, so this decision uses only data this
+document already fixes rather than a tier value passed into the script.
+Those checks are scoped to per-task plan documents produced at tiers where
+the task split is not subtracted.
 
 That entry carries every mandatory field a task entry carries at any tier,
 including its `complexity` value, and its `requirements` list may be
