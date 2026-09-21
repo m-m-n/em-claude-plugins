@@ -196,6 +196,11 @@ tasks:
     files:
     - em-workflow/skills/develop/SKILL.md
     - tests/test_tier_reduction_develop_loop.py
+    - tests/test_develop_once_option.py
+    - tests/test_batch_stop_contract_skill_wiring.py
+    - tests/test_batch_quiet_output_skill_wiring.py
+    - tests/test_verify_cap_run_continuation.py
+    - tests/test_failed_kind_stop_condition.py
     skills: []
     domains:
     - config-infra
@@ -212,7 +217,7 @@ tasks:
     - NFR3
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0005
   task0006:
     title: tier transcription, the task document, and tier-aware create-plan preconditions

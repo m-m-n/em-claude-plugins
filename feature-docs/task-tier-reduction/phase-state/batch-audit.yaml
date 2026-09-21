@@ -101,3 +101,12 @@ records:
   freeform: 'tests/test_batch_stop_contract.py を tasks.task0004.files に自動追加しない'
   normalized_answer: 'declined'
   resolution_note: 'task_id: task0004; declined path: tests/test_batch_stop_contract.py; missing evidence part: the acceptance-criterion / requirement identifier — the deviation report cites the task plan の Test Notes と IMPLEMENTATION.md の Risk Assessment 行のみで、task0004 の AC-n も workflow.yaml 登録済みの要件 ID も名指ししていない。path shape と workflow control path の 2 つは満たしていたが、3 つのうち 1 つを欠くため自動追加しない。変更自体はタスクブランチにマージ済みで、containment check は従来どおり通常の deviation として扱う'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-21T19:35:09+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'em-workflow/skills/develop/SKILL.md の同一ファイル内整合性修正を自動追加の根拠として認めない'
+  normalized_answer: 'declined'
+  resolution_note: 'task_id: task0005; declined deviation: em-workflow/skills/develop/SKILL.md 内の stop condition 1 言い換えの一般化; missing evidence part: the acceptance-criterion / requirement identifier — 報告自身が「タスク計画が literal に挙げた four places ではなく、既存テストにも新規テストにも pinned されていない、純粋な同一ファイル整合性修正」と述べており、落ちる AC-n も要件 ID も名指ししていない。なお当該パスは tasks.task0005.files に既に登録済みで、かつ em-workflow/** の workflow control path に当たるため、いずれにせよ自動追加の対象外。同一報告のもう 1 件（5 つの兄弟テストモジュール）は AC-3 / AC-6 と観測可能な失敗を名指ししており 3 要素を満たすため自動追加した'
