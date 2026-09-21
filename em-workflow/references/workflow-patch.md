@@ -81,8 +81,11 @@ neither is rejected:
   planning pass), permitted only when:
   - `tasks` is empty, OR every existing task's `status` is `pending`
 - **Re-planning path** — an explicit re-plan (e.g. the SPEC-change
-  transition): permitted regardless of task status, including existing
-  `merged` tasks. Either of two states satisfies this path:
+  transition, or `skills/develop/SKILL.md`'s tier-upgrade procedure —
+  the record it writes before setting `create-plan` to `needs_update` is
+  an authorized `spec_change` record on the same terms as the SPEC-change
+  transition's own): permitted regardless of task status, including
+  existing `merged` tasks. Either of two states satisfies this path:
   - the `create-plan` step is `needs_update`, OR
   - `create-plan` reads `pending` on a re-entry recognizable as having come
     through a `create-spec: needs_update` cycle — the signal is a

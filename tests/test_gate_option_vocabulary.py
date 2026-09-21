@@ -748,8 +748,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `base_workflow_blob` mismatch -- the "All nineteen rules" count
     # statement reverts to "All eighteen rules" in the same edit. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by task-tier-reduction/task0011 (review round 1
+    # rework): the Re-planning path's own bullet now names the
+    # tier-upgrade procedure (`skills/develop/SKILL.md`) as a second
+    # source of an explicit re-plan, alongside the SPEC-change transition
+    # -- the record it writes before setting `create-plan` to
+    # `needs_update` is an authorized `spec_change` record on the same
+    # terms as the SPEC-change transition's own. Same rationale: refresh,
+    # don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "ea6366ea7aa6296f21baec084c1d8c8205e043852f147bf0ea47142ffd882f67"
+        "4a4f075844b960655fe882c49e8b0a78f6b91e8c5370743e1280d0b6f39c0a7e"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
