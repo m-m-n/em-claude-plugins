@@ -301,7 +301,7 @@ tasks:
     - FR24
     - NFR4
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0008
 review:
   status: pending
