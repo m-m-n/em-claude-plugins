@@ -425,6 +425,7 @@ tasks:
     - em-workflow/references/phases/create-spec-phase.md
     - tests/test_tier_workflow_schema.py
     - tests/test_tier_decision_record.py
+    - tests/test_tier_worktree_bootstrap.py
     skills: []
     domains:
     - config-infra
@@ -437,7 +438,7 @@ tasks:
     - FR20
     - NFR3
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0013
     provenance:
       source: review
