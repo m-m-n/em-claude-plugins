@@ -131,6 +131,16 @@ baseline, newness cannot be established from the current document alone —
 the rework-planner itself wrote it, so its mere presence there proves
 nothing.
 
+**The most-reducing tier.** At that tier `VERIFICATION.md` does not exist —
+`references/rework-task-synthesis.md` Section 8a (cited, not restated) is
+the owning statement of which route into rework applies there and why. From
+this worker's side, the consequence is: the rework-planner cannot declare
+`new_scenarios` until the tier has been upgraded and a baseline
+`VERIFICATION.md` exists to extend; declaring `new_scenarios` while the
+feature directory's `VERIFICATION.md` is still absent is rejected by check 3
+fail-closed, with an error naming the absent-document case distinctly from
+the no-baseline-directory case.
+
 ## `payload.shared_contract_rationale`
 
 Whether `IMPLEMENTATION.md` needed extending is not mechanically checkable,
