@@ -78,47 +78,72 @@ records:
     前提が崩れる。
 
     '
-  resolution_note: 'gate: create-spec の tier 設計 5 件の未確定点（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex; turns: 1; opus escalation: not run; 5 件すべて Codex の提案がオーケストレーターの判断で採用可能と判定され、Q3 のみ列挙外の案を採用した'
+  resolution_note: 'gate: create-spec の tier 設計 5 件の未確定点（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted:
+    true; harness entry: codex; turns: 1; opus escalation: not run; 5 件すべて Codex の提案がオーケストレーターの判断で採用可能と判定され、Q3
+    のみ列挙外の案を採用した'
 - question_id: create-plan.planning-ambiguities
   packet_id: null
   answered_at: '2026-09-21T19:03:41+09:00'
   source: codex-consultation
   answer_mode: freeform
   selected_option_ids: []
-  freeform: 'Q1 FR4 の閾値表と TS-10 の矛盾 → (b) TS-10 を正とし FR4 を改訂。reduced の条件を `P(0) >= 0.40` かつ `P(0) + P(1) >= 0.85` にする。採らなかった案 (a) は FR4 を正とし TS-10 の 2 例目を reduced に書き換えるもの。根拠: 設計意図がフェイルセーフであり、P(0) が低いまま P(1) との合計だけが高いケースを軽い tier に落とすべきではない。0.40 は SPEC が挙げる 2 例 (0.37,0.59) と (0.50,0.40) を分ける最小の下限で、前者が full、後者が reduced となり TS-10 の 3 例すべてが書かれたまま成立する。
+  freeform: 'Q1 FR4 の閾値表と TS-10 の矛盾 → (b) TS-10 を正とし FR4 を改訂。reduced の条件を `P(0) >= 0.40` かつ `P(0) + P(1)
+    >= 0.85` にする。採らなかった案 (a) は FR4 を正とし TS-10 の 2 例目を reduced に書き換えるもの。根拠: 設計意図がフェイルセーフであり、P(0) が低いまま
+    P(1) との合計だけが高いケースを軽い tier に落とすべきではない。0.40 は SPEC が挙げる 2 例 (0.37,0.59) と (0.50,0.40) を分ける最小の下限で、前者が
+    full、後者が reduced となり TS-10 の 3 例すべてが書かれたまま成立する。
 
-    Q2 NFR4 の minor 指定と (major, minor) == (0, 1) 固定アサーションの衝突 → (b) NFR4 どおり 0.2.0 へ上げ、固定アサーションを持つ 22 モジュールを版非依存の表明に書き換える。採らなかった案 (a) は patch 上げ (0.1.87) で既存テストを温存するもの。根拠: NFR4 は 機能追加として minor を明示しており、(0, 1) の固定は将来の正当な minor 更新をすべて塞ぐため durable invariant として不適切。両マニフェスト一致・成分単位の単調増加という、NFR4 が本当に気にしている性質へ書き換える方が、仕様を無視して patch に落とすより一貫する。
+    Q2 NFR4 の minor 指定と (major, minor) == (0, 1) 固定アサーションの衝突 → (b) NFR4 どおり 0.2.0 へ上げ、固定アサーションを持つ 22 モジュールを版非依存の表明に書き換える。採らなかった案
+    (a) は patch 上げ (0.1.87) で既存テストを温存するもの。根拠: NFR4 は 機能追加として minor を明示しており、(0, 1) の固定は将来の正当な minor 更新をすべて塞ぐため
+    durable invariant として不適切。両マニフェスト一致・成分単位の単調増加という、NFR4 が本当に気にしている性質へ書き換える方が、仕様を無視して patch に落とすより一貫する。
 
-    Q3 TS-11 が未実装の検査機構に帰属している → (a) 意図（tier-rules.yaml が実在し参照が解決する）を検証し、共有スクリプト check-plugin-invariants.py には手を入れない。採らなかった案 (b) は 同スクリプトへ汎用のパス存在検査を追加するもの。根拠: 汎用検査を足すと本機能と無関係な 既存の壊れた参照まで対象に入り、影響範囲が不必要に広がる。FR1 が必要とする保証は 直接検証で十分得られる。'
+    Q3 TS-11 が未実装の検査機構に帰属している → (a) 意図（tier-rules.yaml が実在し参照が解決する）を検証し、共有スクリプト check-plugin-invariants.py
+    には手を入れない。採らなかった案 (b) は 同スクリプトへ汎用のパス存在検査を追加するもの。根拠: 汎用検査を足すと本機能と無関係な 既存の壊れた参照まで対象に入り、影響範囲が不必要に広がる。FR1
+    が必要とする保証は 直接検証で十分得られる。'
   normalized_answer: 'Q1: option (b); Q2: option (b); Q3: option (a)'
-  resolution_note: 'gate: create-plan の計画時未確定点 3 件（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Q1 と Q2 は planner の当初判断 (a) を Codex の (b) で覆し、Q3 は planner と Codex が一致。採用にともない SPEC.md / REQUIREMENTS.md の FR4 閾値と TS-11 の文言、IMPLEMENTATION.md の Open Questions（Resolved Questions へ改稿）、tasks/task0001.md・tasks/task0008.md、VERIFICATION.md の TS-10 / TS-11 / TS-21 を更新した'
+  resolution_note: 'gate: create-plan の計画時未確定点 3 件（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted:
+    true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Q1 と Q2 は planner
+    の当初判断 (a) を Codex の (b) で覆し、Q3 は planner と Codex が一致。採用にともない SPEC.md / REQUIREMENTS.md の FR4 閾値と TS-11
+    の文言、IMPLEMENTATION.md の Open Questions（Resolved Questions へ改稿）、tasks/task0001.md・tasks/task0008.md、VERIFICATION.md
+    の TS-10 / TS-11 / TS-21 を更新した'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-09-21T19:27:40+09:00'
   source: batch-safe-default
   answer_mode: freeform
   selected_option_ids: []
-  freeform: 'tests/test_batch_stop_contract.py を tasks.task0004.files に自動追加しない'
-  normalized_answer: 'declined'
-  resolution_note: 'task_id: task0004; declined path: tests/test_batch_stop_contract.py; missing evidence part: the acceptance-criterion / requirement identifier — the deviation report cites the task plan の Test Notes と IMPLEMENTATION.md の Risk Assessment 行のみで、task0004 の AC-n も workflow.yaml 登録済みの要件 ID も名指ししていない。path shape と workflow control path の 2 つは満たしていたが、3 つのうち 1 つを欠くため自動追加しない。変更自体はタスクブランチにマージ済みで、containment check は従来どおり通常の deviation として扱う'
+  freeform: tests/test_batch_stop_contract.py を tasks.task0004.files に自動追加しない
+  normalized_answer: declined
+  resolution_note: 'task_id: task0004; declined path: tests/test_batch_stop_contract.py; missing evidence
+    part: the acceptance-criterion / requirement identifier — the deviation report cites the task plan
+    の Test Notes と IMPLEMENTATION.md の Risk Assessment 行のみで、task0004 の AC-n も workflow.yaml 登録済みの要件 ID
+    も名指ししていない。path shape と workflow control path の 2 つは満たしていたが、3 つのうち 1 つを欠くため自動追加しない。変更自体はタスクブランチにマージ済みで、containment
+    check は従来どおり通常の deviation として扱う'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-09-21T19:35:09+09:00'
   source: batch-safe-default
   answer_mode: freeform
   selected_option_ids: []
-  freeform: 'em-workflow/skills/develop/SKILL.md の同一ファイル内整合性修正を自動追加の根拠として認めない'
-  normalized_answer: 'declined'
-  resolution_note: 'task_id: task0005; declined deviation: em-workflow/skills/develop/SKILL.md 内の stop condition 1 言い換えの一般化; missing evidence part: the acceptance-criterion / requirement identifier — 報告自身が「タスク計画が literal に挙げた four places ではなく、既存テストにも新規テストにも pinned されていない、純粋な同一ファイル整合性修正」と述べており、落ちる AC-n も要件 ID も名指ししていない。なお当該パスは tasks.task0005.files に既に登録済みで、かつ em-workflow/** の workflow control path に当たるため、いずれにせよ自動追加の対象外。同一報告のもう 1 件（5 つの兄弟テストモジュール）は AC-3 / AC-6 と観測可能な失敗を名指ししており 3 要素を満たすため自動追加した'
+  freeform: em-workflow/skills/develop/SKILL.md の同一ファイル内整合性修正を自動追加の根拠として認めない
+  normalized_answer: declined
+  resolution_note: 'task_id: task0005; declined deviation: em-workflow/skills/develop/SKILL.md 内の stop
+    condition 1 言い換えの一般化; missing evidence part: the acceptance-criterion / requirement identifier — 報告自身が「タスク計画が
+    literal に挙げた four places ではなく、既存テストにも新規テストにも pinned されていない、純粋な同一ファイル整合性修正」と述べており、落ちる AC-n も要件 ID も名指ししていない。なお当該パスは
+    tasks.task0005.files に既に登録済みで、かつ em-workflow/** の workflow control path に当たるため、いずれにせよ自動追加の対象外。同一報告のもう
+    1 件（5 つの兄弟テストモジュール）は AC-3 / AC-6 と観測可能な失敗を名指ししており 3 要素を満たすため自動追加した'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-09-21T19:52:54+09:00'
   source: batch-safe-default
   answer_mode: freeform
   selected_option_ids: []
-  freeform: 'tests/test_gate_option_vocabulary.py を tasks.task0008.files に自動追加しない'
-  normalized_answer: 'declined'
-  resolution_note: 'task_id: task0008; declined path: tests/test_gate_option_vocabulary.py; missing evidence part: the acceptance-criterion / requirement identifier — 報告は validate-worker-output.py の SHA-256 pin が自分の編集で壊れたことと、その class の refresh 慣習だけを述べており、落ちる AC-n も workflow.yaml 登録済みの要件 ID も名指ししていない。path shape と workflow control path の 2 つは満たしていたが、3 つのうち 1 つを欠くため自動追加しない。変更自体は統合ブランチにマージ済みで、通常の deviation として扱う'
+  freeform: tests/test_gate_option_vocabulary.py を tasks.task0008.files に自動追加しない
+  normalized_answer: declined
+  resolution_note: 'task_id: task0008; declined path: tests/test_gate_option_vocabulary.py; missing evidence
+    part: the acceptance-criterion / requirement identifier — 報告は validate-worker-output.py の SHA-256
+    pin が自分の編集で壊れたことと、その class の refresh 慣習だけを述べており、落ちる AC-n も workflow.yaml 登録済みの要件 ID も名指ししていない。path
+    shape と workflow control path の 2 つは満たしていたが、3 つのうち 1 つを欠くため自動追加しない。変更自体は統合ブランチにマージ済みで、通常の deviation
+    として扱う'
 - question_id: review.r4-autofix-applicability
   packet_id: null
   answered_at: '2026-09-21T20:12:00+09:00'
@@ -135,8 +160,13 @@ records:
     A: R4 を規定どおり実行する。B: 単一ファイル編集者では原理的に満たせないため
 
     候補ゼロとみなし、R5 の自動 rework へ直接渡す。'
-  normalized_answer: 'option A (run Phase R4 as written)'
-  resolution_note: 'gate: Phase R4 を回すか R5 の rework へ直行するか（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Codex は A を選択。根拠 (a) review-editor.md:43 が「修正が 2 つ目のファイルを要するなら status=skipped」を明記しており、Apply as-is は部分修正を強制しない。(b) 部分修正をコミットすると後続の rework が維持/巻き戻しの判断を追加で負う。(c) B の「分類結果として候補ゼロ」は R4 の機械的分類に呼び出し側の新しい除外条件を足すことになりプロトコル違反。(d) 6 件すべて skipped なら productive loop が発生せず再レビューも走らないため 3 ループ x 4 レビュアーの費用は上限であって必須ではない。採らなかった案 B の利点は適用不能を確認する editor 呼び出しを省ける点のみ'
+  normalized_answer: option A (run Phase R4 as written)
+  resolution_note: 'gate: Phase R4 を回すか R5 の rework へ直行するか（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted:
+    true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Codex は A を選択。根拠
+    (a) review-editor.md:43 が「修正が 2 つ目のファイルを要するなら status=skipped」を明記しており、Apply as-is は部分修正を強制しない。(b) 部分修正をコミットすると後続の
+    rework が維持/巻き戻しの判断を追加で負う。(c) B の「分類結果として候補ゼロ」は R4 の機械的分類に呼び出し側の新しい除外条件を足すことになりプロトコル違反。(d) 6 件すべて skipped
+    なら productive loop が発生せず再レビューも走らないため 3 ループ x 4 レビュアーの費用は上限であって必須ではない。採らなかった案 B の利点は適用不能を確認する editor
+    呼び出しを省ける点のみ'
 - question_id: review.r4-loop-continuation
   packet_id: null
   answered_at: '2026-09-21T20:48:00+09:00'
@@ -161,8 +191,17 @@ records:
     loop-1 前の文言を固定しており落ちる。A2: loop 2-3 を R4 どおり回す。
 
     B2: いま no-progress で R4 を打ち切り、R5 の batch auto-rework へ渡す。'
-  normalized_answer: 'option B2 (terminate R4 now with termination reason no-progress)'
-  resolution_note: 'gate: R4 の loop 2-3 を回すか打ち切るか（gate_id なし、ユーザー指示由来のオーケストレーター起点相談・前回 review.r4-autofix-applicability の follow-up）; codex_consulted: true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Codex は B2 を選択し、同時に「B2 は R4 の終了条件の文言からは厳密には逸脱である」と明言した。(a) loop 1 は applied=4 なので機械的には「進捗なし」ではなく、no-progress の適用は拡張解釈。したがって拡張解釈であることと早期終了の理由を記録に明記し、loops_run=1 / applied_total=4 は保持する。(b) 残件 8 件はいずれも複数ファイル修正であり、単一ファイル editor には修正範囲が無い。loop 1 は失敗の仮定ではなく実績としてそれを示した。(c) 追加の散文は rework 時に「既存要件と誤った追記」を判別する負担を増やす。(d) R5 の rework-planner は共通原因に沿った複数ファイルタスクを作れる。cap 1 は再作業の回数上限であって修正ファイル数・指摘数の上限ではない。Codex の追加指示として、aborted_stable_ids の 2 件も R5 の引き渡し対象に含める（その除外は R4 の再編集に対するものであり R5 の対象から外す規定は無い）、loop 1 が生んだ欠陥と報告された 3 件のテスト不整合も修正・検証範囲に含める。採らなかった案 A2 の利点は R4 の文言に厳密に従える点のみで、期待できる修正価値は loop 1 の実績から低いと判断した; deviation: R4 の termination 判定を機械的な applied>0 ではなく「残候補が単一ファイル editor で解決不能であること」を根拠に no-progress とした点が本走行の唯一のプロトコル逸脱であり、round1.yaml の auto_fix.termination とこの記録の双方に残す'
+  normalized_answer: option B2 (terminate R4 now with termination reason no-progress)
+  resolution_note: 'gate: R4 の loop 2-3 を回すか打ち切るか（gate_id なし、ユーザー指示由来のオーケストレーター起点相談・前回 review.r4-autofix-applicability
+    の follow-up）; codex_consulted: true; harness entry: codex (readonly sandbox); turns: 1; opus escalation:
+    not run; Codex は B2 を選択し、同時に「B2 は R4 の終了条件の文言からは厳密には逸脱である」と明言した。(a) loop 1 は applied=4 なので機械的には「進捗なし」ではなく、no-progress
+    の適用は拡張解釈。したがって拡張解釈であることと早期終了の理由を記録に明記し、loops_run=1 / applied_total=4 は保持する。(b) 残件 8 件はいずれも複数ファイル修正であり、単一ファイル
+    editor には修正範囲が無い。loop 1 は失敗の仮定ではなく実績としてそれを示した。(c) 追加の散文は rework 時に「既存要件と誤った追記」を判別する負担を増やす。(d) R5 の
+    rework-planner は共通原因に沿った複数ファイルタスクを作れる。cap 1 は再作業の回数上限であって修正ファイル数・指摘数の上限ではない。Codex の追加指示として、aborted_stable_ids
+    の 2 件も R5 の引き渡し対象に含める（その除外は R4 の再編集に対するものであり R5 の対象から外す規定は無い）、loop 1 が生んだ欠陥と報告された 3 件のテスト不整合も修正・検証範囲に含める。採らなかった案
+    A2 の利点は R4 の文言に厳密に従える点のみで、期待できる修正価値は loop 1 の実績から低いと判断した; deviation: R4 の termination 判定を機械的な applied>0
+    ではなく「残候補が単一ファイル editor で解決不能であること」を根拠に no-progress とした点が本走行の唯一のプロトコル逸脱であり、round1.yaml の auto_fix.termination
+    とこの記録の双方に残す'
 - question_id: implement.deviation-declined
   packet_id: null
   answered_at: '2026-09-21T20:46:00+09:00'
@@ -174,18 +213,13 @@ records:
     Deviation auto-addition rule により declined と判定した。
 
     '
-  normalized_answer: 'task_id: task0010; declined path: tests/test_gate_option_vocabulary.py;
-    missing evidence part: 「取りこぼされる受け入れ条件または要件の識別子」。報告は
-    当該ファイル内の SHA-256 pin 更新慣習（in-file convention）を根拠に挙げるだけで、
-    この path を declared change set に加えなければ落ちる AC-n（task0010 の計画に
-    create-plan / rework-planner が書いた既存の AC）または workflow.yaml に登録済みの
-    要件 ID を 1 つも名指ししていない。残る 2 パート（追加する path、path が無い場合の
-    観測可能な失敗）は満たしていたが、3 パート揃わないため auto-add しない。よって
-    tasks.task0010.files への append は行わず、通常の deviation として containment
-    check の扱いに委ねる。'
-  resolution_note: 'gate: なし（implement wake phase の deviation 判定、gate_id なし）;
-    codex_consulted: false; opus escalation: not run; 判定根拠は implement-phase.md の
-    Deviation auto-addition rule が要求する 3 パートのうち識別子が欠落している点のみ'
+  normalized_answer: 'task_id: task0010; declined path: tests/test_gate_option_vocabulary.py; missing
+    evidence part: 「取りこぼされる受け入れ条件または要件の識別子」。報告は 当該ファイル内の SHA-256 pin 更新慣習（in-file convention）を根拠に挙げるだけで、
+    この path を declared change set に加えなければ落ちる AC-n（task0010 の計画に create-plan / rework-planner が書いた既存の AC）または
+    workflow.yaml に登録済みの 要件 ID を 1 つも名指ししていない。残る 2 パート（追加する path、path が無い場合の 観測可能な失敗）は満たしていたが、3 パート揃わないため
+    auto-add しない。よって tasks.task0010.files への append は行わず、通常の deviation として containment check の扱いに委ねる。'
+  resolution_note: 'gate: なし（implement wake phase の deviation 判定、gate_id なし）; codex_consulted: false;
+    opus escalation: not run; 判定根拠は implement-phase.md の Deviation auto-addition rule が要求する 3 パートのうち識別子が欠落している点のみ'
 - question_id: implement.deviation-declined
   packet_id: null
   answered_at: '2026-09-21T20:56:00+09:00'
@@ -197,16 +231,47 @@ records:
     Deviation auto-addition rule により declined と判定した。
 
     '
-  normalized_answer: 'task_id: task0011; declined path: tests/test_gate_option_vocabulary.py
-    （同一 path についての 2 件の申告をまとめて 1 件として扱う）; missing evidence part:
-    「取りこぼされる受け入れ条件または要件の識別子」。報告は当該モジュール自身の
-    「refresh, don''t remove」慣習と過去 5 件の前例を根拠に挙げるだけで、この path を
-    declared change set に加えなければ落ちる AC-n（task0011 の計画に create-plan /
-    rework-planner が書いた既存の AC）または workflow.yaml に登録済みの要件 ID を
-    1 つも名指ししていない。よって tasks.task0011.files への append は行わない。
-    3 件目の申告（phase-state.md の spec_change 文言を既存テストが固定する部分文字列を
-    保つ形で書いた件）は path の追加を伴わないため、そもそも auto-addition rule の
-    対象外であり declined にも該当しない。'
-  resolution_note: 'gate: なし（implement wake phase の deviation 判定、gate_id なし）;
-    codex_consulted: false; opus escalation: not run; 判定根拠は implement-phase.md の
-    Deviation auto-addition rule が要求する 3 パートのうち識別子が欠落している点のみ'
+  normalized_answer: 'task_id: task0011; declined path: tests/test_gate_option_vocabulary.py （同一 path
+    についての 2 件の申告をまとめて 1 件として扱う）; missing evidence part: 「取りこぼされる受け入れ条件または要件の識別子」。報告は当該モジュール自身の 「refresh,
+    don''t remove」慣習と過去 5 件の前例を根拠に挙げるだけで、この path を declared change set に加えなければ落ちる AC-n（task0011 の計画に create-plan
+    / rework-planner が書いた既存の AC）または workflow.yaml に登録済みの要件 ID を 1 つも名指ししていない。よって tasks.task0011.files
+    への append は行わない。 3 件目の申告（phase-state.md の spec_change 文言を既存テストが固定する部分文字列を 保つ形で書いた件）は path の追加を伴わないため、そもそも
+    auto-addition rule の 対象外であり declined にも該当しない。'
+  resolution_note: 'gate: なし（implement wake phase の deviation 判定、gate_id なし）; codex_consulted: false;
+    opus escalation: not run; 判定根拠は implement-phase.md の Deviation auto-addition rule が要求する 3 パートのうち識別子が欠落している点のみ'
+- question_id: review.oversized-diff-skip
+  packet_id: null
+  answered_at: '2026-09-21T21:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: orchestrator_decision
+  selected_option_ids: []
+  freeform: 'review round 2 の fan-out で、litellm(muse-spark) を primary_chain の先頭に持つ performance / architecture
+    の 2 観点が skip_reason: review_data_too_large を返した（統合 diff が 654,086 文字 / 12,234 行）。review-phase.md Phase
+    R2b の retryable 表は rate_limited / budget_exhausted / harness_unavailable の 3 つだけを列挙しており、それ以外は「keep
+    the skip」と規定している。gate_id を持たないオーケストレーター起点の判断であり、ユーザー指示「不明点は Codex に相談し、比較して良い方を採用」に基づいてCodex に相談した。
+
+    '
+  normalized_answer: '提示した選択肢: (A) プロトコル通り skip を維持する / (B) 3 観点に Claude fallback を dispatch する / (C)
+    その他（対象 diff の絞り込み・前回未解決 high の引き継ぎ等）。
+
+    Codex の回答: (C) を推奨。理由は (A) は既知の問題が集計から消える懸念が残ること、(B) は現行の fallback 発動条件（chain 消尽 / malformed / harness
+    failure）の外にあること。加えて Codex は「R3b の指摘保持規則は今回報告された critical/high だけが対象で、前回分の自動引継ぎは規定されていない」「R5 でも未レビューという事実自体は完了を妨げない」と指摘し、round
+    1 の未解決 high 8 件を現 HEAD と照合して修正確認・理由のある却下・規定された受容／延期が確認できるまで残件として保持する規則が必要だと述べた。
+
+    採用した判断: (C) を採用したうえで、実現手段としては primary_chain の第 2 エントリ（codex ハーネス）へ walk を 1 段進めて performance / architecture
+    を再 dispatch する形をとった。review_data_too_large は「every entry would hit identically」な入力問題ではない — codex ハーネスは同じ
+    round の security / comprehensive で同じ 654KB の diff を完走しており、コンテキスト上限がハーネスごとに異なることが実証されている。よってこの skip
+    は harness 依存であり、chain walk を 1 段進めるのが妥当と判断した。併せて、round 1 の未解決 critical/high は round 2 で再報告されなかったものもround
+    記録から消さず、resolution を明示して残す。
+
+    採用しなかった選択肢: (A) は architecture 観点が round 1 で 8 件中 4 件の high を出しており、skip のままだと round 2 の residual が実態より小さく出て隠蔽になるため不採用。(B)
+    の Claude fallback は R2b の発動条件に該当しないため不採用。
+
+    Codex の主張のうち採用しなかった点: 「17 ファイルへの絞り込みは変更されたプロトコル文書を確認対象から落とす」という指摘は事実誤認。絞り込みの対象 17 件はプロトコル文書と scripts
+    そのものであり、落ちるのは tests/*.py と test-docs/*.yaml の 58 件。ただし結論（絞り込みに頼らない）は chain walk で満たされるため、実害はない。
+
+    '
+  resolution_note: 'gate: review.oversized-diff-skip（gate_id なし・R2b の retryable 判定）; codex_consulted:
+    true（run_codex_exec.sh readonly、1 ターン、33,507 tokens）; opus escalation: not run; 選択: chain walk を 1
+    段進めて codex ハーネスで performance#1 / architecture#1 を再 dispatch。spec 観点は同じ muse-spark エントリで完走したため walk
+    不要。'
