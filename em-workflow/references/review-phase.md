@@ -51,12 +51,14 @@ Two execution contexts, one protocol:
    `git diff HEAD -- <quoted paths>`. Reviewers run it verbatim.
 4. Locate SPEC.md: develop-駆動 → `{project_root}/feature-docs/{feature}/SPEC.md`
    — the committed copy inside the integration worktree is the canonical
-   review input (must exist; SDD guarantees it). Do NOT resolve the spec from
-   the main tree: the containment check below is project_root-based and the
-   integration copy is what the reviewed code was built against. Standalone →
-   Glob `feature-docs/*/SPEC.md`, `doc/tasks/*/SPEC.md`, `**/SPEC.md`;
-   absent ⇒ `spec_available = false`. Validate `spec_path` (prompt-control
-   chars + realpath containment under project_root + symlink rejection).
+   review input; absent ⇒ `spec_available = false`, the same flag the
+   standalone route below sets. Do NOT resolve the spec from the main tree:
+   the containment check below is project_root-based and the integration
+   copy is what the reviewed code was built against, when one exists.
+   Standalone → Glob `feature-docs/*/SPEC.md`, `doc/tasks/*/SPEC.md`,
+   `**/SPEC.md`; absent ⇒ `spec_available = false`. Validate `spec_path`
+   (prompt-control chars + realpath containment under project_root +
+   symlink rejection).
 5. Probe codex: `codex_available = [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" ] && command -v codex`.
 6. Probe litellm: `litellm_available` = the optional `vertex-review` plugin
    is installed AND its harness (`codex exec -p litellm`) is configured.
@@ -95,7 +97,11 @@ Two execution contexts, one protocol:
 
 Input: ONLY the declared task metadata. develop-駆動: the `domains` /
 `complexity` of the tasks in THIS feature's workflow.yaml. Standalone with no
-workflow.yaml: the floor is `baseline` + (`spec` if spec_available) only.
+workflow.yaml: the floor is `baseline` + (`spec` if spec_available) only. On
+the develop-駆動 route too, `spec` enters the floor only when
+`spec_available`; when it is false the spec perspective is dropped with a
+skip notice instead of being added to the floor, the same rule the
+standalone-without-workflow.yaml case above already states.
 
 Evaluate references/review-rules.yaml exactly as its header comments specify
 (union semantics). Output: `floor` = ordered unique perspective list, and
