@@ -241,23 +241,35 @@ feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.y
    reason code の文字列は `references/batch-terminal-line.md` の所有物で
    あり、このファイルには一切書かない。
 4. **2 本の判定根拠**: 作業が残っている場合、判定スキルを同じ質問セットに
-   対して 2 回呼ぶ — 1 回目はタスク記述のみを基準に、2 回目は 2. の
-   Codex 見積もりをその state に合流させて。両方の読み取り結果を、それぞれの
-   観測値とともに決定の根拠として記録する。
-5. **評価**: 集めた値を評価器（IMPLEMENTATION.md Shared Components
-   `scripts/decide-tier.py` 参照）へ渡し、返された tier を採用する。
+   対して 2 回呼ぶ — 1 回目は decision-basis `description_only`
+   （タスク記述のみを基準に）、2 回目は decision-basis
+   `description_plus_code`（2. の Codex 見積もりをその state に合流させ
+   て）。この 2 つの識別子は `tier-rules.yaml` の `decision_basis` 値で
+   あり、ここでは新しい識別子を作らない。両方の読み取り結果を、それぞれの
+   basis ラベルと観測値とともに決定の根拠として記録する。
+5. **評価**: 集めた 2 本の読みを 1 回の呼び出しで評価器
+   （IMPLEMENTATION.md Shared Components `scripts/decide-tier.py` 参照）へ
+   渡す。評価器は各読みがそれぞれ決定する tier を比較し、両者が異なる
+   tier に評価された場合は何も引かない tier（`full`）を返す — この
+   不一致解決規則は評価器の入力契約が持ち、ここでは繰り返さない。返された
+   tier を採用する。
 6. **可用性フォールバック**: 可用性は `tier-rules.yaml` のフォールバック表を
    そのまま適用して解決する（閾値の値・表の行はここに書き写さない）。判定
    スキルの終了ステータスが非 0 の場合はすべて「判定スキル使用不可」として
-   扱う。判定スキルが使用不可、または Codex 事前調査が使用不可で 2 本の
-   判定結果が割れた場合、あるいはフォールバック表が解決しないその他の条件は
-   すべて、何も引かない tier（`full`）を採用する。
+   扱う。判定スキルが使用不可、または Codex 事前調査が使用不可な場合は、
+   すべて何も引かない tier（`full`）を採用する。2 本の判定結果が割れた
+   場合の解決は手順 5 の評価器の入力契約に従う（ここでは繰り返さない）。
 7. **永続化**: 決定した直後、他の何よりも先に、
    `feature-docs/{feature}/phase-state/tier.yaml` へ記録し、既存の
    `commit-docs.sh` でコミットする（スクリプト変更は不要 —
    `commit-docs.sh` は既に feature-docs ツリー全体をステージする）。
    フィールドの定義は `references/phase-state.md` の tier decision
    persistence 節参照。
+
+この記録の各フィールドから、後で `workflow.yaml` の `tier_decision` と
+retrospect の `signals.tier_decision` へどう対応するかは
+`references/phases/create-spec-phase.md` の Tier transcription 節が持つ
+写像表を唯一の定義元とし、ここでは繰り返さない。
 
 この決定経路にも no-work 停止にも、新しい `gate_id` もユーザーへの質問も
 一切導入しない。
@@ -758,7 +770,7 @@ signals:
     bases:
       - basis: description_only
         probabilities: {...}
-      - basis: with_pre_survey
+      - basis: description_plus_code
         probabilities: {...}
     pre_survey_estimate: {...}
 follow_up_drafts:           # cap 到達時点で未解決の failed_items 全件（下記参照）
@@ -776,13 +788,13 @@ workflow.yaml に記録した `failed_items` の要素をそのまま写す。�
 定義元であり、ここでは再定義しない。ビルド・フォーマット・非 race 実行等の
 検証の証拠も、同じ要素から読み取れる。
 
-`signals.tier_decision` は Step A の「tier 決定」手順が記録した内容 —
-決定された tier、その根拠の要約、2 本の判定根拠それぞれが観測した確率値
-（`bases`）、Codex 事前調査の見積もり（`pre_survey_estimate`）— を
+`signals.tier_decision` の各メンバーの値は
 `feature-docs/{feature}/phase-state/tier.yaml`（`references/phase-state.md`
-の tier decision persistence 節）からそのまま写す。この記録は実測値を
-残すだけに留まる — 閾値のチューニングや自動学習はこのフィーチャの
-スコープ外であり、ここでは行わない。
+の tier decision persistence 節）由来であり、どの永続フィールドがどの
+メンバーへ写像されるかは上記「tier 決定」手順・手順 7 が引く写像表を
+唯一の定義元とし、ここでは繰り返さない。この記録は実測値を残すだけに
+留まる — 閾値のチューニングや自動学習はこのフィーチャのスコープ外であり、
+ここでは行わない。
 
 `follow_up_drafts` の生成母集団は、cap 到達時点で未解決の `failed_items`
 全件である（系譜 cap に触れた ID かどうかで絞り込まない）。cap 到達が
