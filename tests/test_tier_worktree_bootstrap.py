@@ -506,12 +506,13 @@ class TestAC4MatchersCanFail(unittest.TestCase):
 
 TWO_READINGS_ANCHOR = (
     "4. **2 本の判定根拠**: 作業が残っている場合、判定スキルを同じ質問セットに\n"
-    "   対して 2 回呼ぶ — 1 回目は decision-basis `description_only`\n"
-    "   （タスク記述のみを基準に）、2 回目は decision-basis\n"
-    "   `description_plus_code`（2. の Codex 見積もりをその state に合流させ\n"
-    "   て）。この 2 つの識別子は `tier-rules.yaml` の `decision_basis` 値で\n"
-    "   あり、ここでは新しい識別子を作らない。両方の読み取り結果を、それぞれの\n"
-    "   basis ラベルと観測値とともに決定の根拠として記録する。"
+    "   対して 2 回呼ぶ — 1 回目はタスク記述のみを基準に判定する\n"
+    "   （decision-basis `description_only`）、2 回目は 2. の Codex 見積もりを\n"
+    "   その state に合流させて判定する（decision-basis\n"
+    "   `description_plus_code`）。この 2 つの識別子は `tier-rules.yaml` の\n"
+    "   `decision_basis` 値であり、ここでは新しい識別子を作らない。両方の\n"
+    "   読み取り結果を、それぞれの basis ラベルと観測値とともに決定の根拠と\n"
+    "   して記録する。"
 )
 EVALUATION_ANCHOR = (
     "5. **評価**: 集めた 2 本の読みを 1 回の呼び出しで評価器\n"
