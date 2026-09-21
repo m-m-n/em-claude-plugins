@@ -1,0 +1,54 @@
+schema_version: 1
+feature: task-tier-reduction
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 9a77ba71a57d3889bb09983f1439771235fed971
+last_input_digest: sha256:079a5fc502c218cd1311b099c10046e4ea66bf07c75c5961255d19e9cfdcf8f3
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: cp-task-tier-reduction-001
+  status: completed
+  input_digest: sha256:079a5fc502c218cd1311b099c10046e4ea66bf07c75c5961255d19e9cfdcf8f3
+  output_digest: sha256:fefb062b6a81b30c2aa6802522ac42bbcdf138a49cc92b3c0240042ac0afefbf
+artifacts:
+- path: feature-docs/task-tier-reduction/IMPLEMENTATION.md
+  sha256: sha256:af4118f24ac07c794abbc52f406ba6ecbc880f9becb1b9e1ab88f4f69311ab60
+  produced_by: cp-task-tier-reduction-001
+- path: feature-docs/task-tier-reduction/VERIFICATION.md
+  sha256: sha256:7aee651336ffdf208aea3e1fd7067be428f0c6af72f0c8cb3360e171cb099d79
+  produced_by: cp-task-tier-reduction-001
+- path: feature-docs/task-tier-reduction/tasks/task0001.md
+  sha256: sha256:535be1dc52428bb77fa61dacca1394531bd0f8bfb17fc3cfb9ac4cd085bda18b
+  produced_by: cp-task-tier-reduction-001
+- path: feature-docs/task-tier-reduction/tasks/task0002.md
+  sha256: sha256:a833437af86088449d7cabfa848ea0ee0cf7990ee437ed922717eac0f8897843
+  produced_by: cp-task-tier-reduction-001
+- path: feature-docs/task-tier-reduction/tasks/task0003.md
+  sha256: sha256:d3911660aa7b84299c484e4639d0fa5ca6670e7a40ffd904c013ae54b0a159bc
+  produced_by: cp-task-tier-reduction-001
+- path: feature-docs/task-tier-reduction/tasks/task0004.md
+  sha256: sha256:bb596fbec561e859457394672328a03dcbb5fb78730c5a54502291899ee29056
+  produced_by: cp-task-tier-reduction-001
+- path: feature-docs/task-tier-reduction/tasks/task0005.md
+  sha256: sha256:aa9da30b79cbb40fc320ef731bf2c50734d7ccd942a7ec32e245632ed4b7f9c1
+  produced_by: cp-task-tier-reduction-001
+- path: feature-docs/task-tier-reduction/tasks/task0006.md
+  sha256: sha256:558309994f131382fb4d1569be7740f9905e63827bcbe235a732da3c9b72747c
+  produced_by: cp-task-tier-reduction-001
+- path: feature-docs/task-tier-reduction/tasks/task0007.md
+  sha256: sha256:3bf34e4a07c9787508e509eceea7b9498605477354bf7da1fab5f20d05bdb98a
+  produced_by: cp-task-tier-reduction-001
+- path: feature-docs/task-tier-reduction/tasks/task0008.md
+  sha256: sha256:5eebfa21b2018910d2688979fc12eddb7c84a8327e31ad369efb08a1cbdd89ae
+  produced_by: cp-task-tier-reduction-001
+patches:
+- patch_id: task-tier-reduction-p0001
+  status: applied
+  base_input_digest: sha256:079a5fc502c218cd1311b099c10046e4ea66bf07c75c5961255d19e9cfdcf8f3
+  base_workflow_blob: 7be1e11d0a8d3990cc0525d1d9643cf781958551
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

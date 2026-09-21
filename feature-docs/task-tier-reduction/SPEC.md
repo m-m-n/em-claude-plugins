@@ -23,7 +23,7 @@
 - **FR1 - tier-rules.yaml の新設:** `em-workflow/references/tier-rules.yaml` を新設し、Jev へ送る質問、閾値、Codex 出力スキーマを 1 箇所に集める。Jev スキル（`~/.claude/skills/jev`）と `typesafe:typesafe-ai` の内容は書き写さず参照に留める。
 - **FR2 - workflow.yaml の tier / tier_decision:** `workflow.yaml` に `tier` と `tier_decision`（`by` / `confidence` / `at` / `reductions`）を追加し、`references/workflow-schema.md` にフィールド定義を書く。書き手はオーケストレーター単独（既存の単一書き手規則を変えない）。
 - **FR3 - design 以外の step への skipped 許可:** `workflow[]` の `status: skipped` を design 以外の step にも許す。`references/workflow-schema.md` の Status semantics（`skipped` is valid ONLY for the `design` step）、`skills/develop/SKILL.md` の停止条件 1・Step B の status 規律（design 以外に skipped があれば YAML エラー扱いで停止）・Step C の入場条件・完了判定表を、tier による skip を認める形に改める。`skipped_reason` の必須性は維持する。
-- **FR4 - Jev 判定の入力と閾値:** 判定は Jev の `score` の `probabilities` を使い、`confidence` 単体で閾値を切らない。初期閾値は `P(0) >= 0.80` かつ `expectation_clear >= 0.5` で minimal、`P(0) + P(1) >= 0.85` で reduced、それ以外は full。Jev は `--json-input` / `--json-output` で呼ぶ。
+- **FR4 - Jev 判定の入力と閾値:** 判定は Jev の `score` の `probabilities` を使い、`confidence` 単体で閾値を切らない。初期閾値は `P(0) >= 0.80` かつ `expectation_clear >= 0.5` で minimal、`P(0) >= 0.40` かつ `P(0) + P(1) >= 0.85` で reduced、それ以外は full。Jev は `--json-input` / `--json-output` で呼ぶ。
 - **FR5 - Codex 事前調査:** 走行開始前に `codex-harness:codex-cli` の `run_codex_exec.sh`（`readonly`）で変更範囲を見積もる。`codex exec` は直接呼ばない。出力は構造化スキーマで受け、触るファイルと変更行数の概算、新規の関数・ファイル・依存の要否、既存テストの有無、他モジュールへの波及、`work_still_required` を含む。
 - **FR6 - 見積もりの Jev state への合流:** Codex の見積もり結果を Jev の `state` に足して判定する。記述のみの判定と、Codex 見積もりを足した判定の両方を `tier_decision` の根拠として残す。
 - **FR7 - work_still_required: false の停止表現:** `work_still_required: false` のときは走行を始めず、`references/batch-terminal-line.md` の構造化結果で終端する。同文書の閉じた stop reason code 集合に新コードを 1 件追加し（`no_work_required`）、`## Stop point coverage` 表にも対応する 1 行を追加する。報告は `state: "stopped"` / `step: "no-step"`（workflow.yaml step が未発効の停止点）とし、`resume_conditions` は空にできない規定があるため「再開不要である」旨を非空文字列で明記する。既存コードの流用はしない（`completed` は retrospect 到達を意味するため意味が歪む）。stop-recovery に Codex の根拠を入れる。外部コンシューマの受理語彙との歩調合わせは本フィーチャでは「新コードを文書化するところまで」がスコープ。
@@ -107,7 +107,7 @@ Step A: feature 決定
 | 条件 | 結果 |
 |------|------|
 | `P(0) >= 0.80` かつ `expectation_clear >= 0.5` | minimal |
-| `P(0) + P(1) >= 0.85` | reduced |
+| `P(0) >= 0.40` かつ `P(0) + P(1) >= 0.85` | reduced |
 | それ以外 | full |
 
 フォールバック（FR13）:
@@ -231,7 +231,7 @@ declared path that never materializes is not a violation.
 - [ ] TS-5 (FR3): design 以外の step に `skipped` を持つ workflow.yaml が YAML エラー扱いにならず、Step B の次 step 選択で正しくスキップされる。
 - [ ] TS-6 (FR16、FR18): `requirements: {}` と `requirements: []` を持つ単一タスクの workflow patch が `validate-worker-output.py` を通る。
 - [ ] TS-7 (FR17、NFR2): SPEC.md 不在の develop 駆動 review で floor から spec が落ち、security と comprehensive が残る。
-- [ ] TS-11 (FR1): `check-plugin-invariants.py` の stale-reference スキャンが `references/tier-rules.yaml` への参照を検出しない（パスが実在する）。
+- [ ] TS-11 (FR1): `references/tier-rules.yaml` が実在し、プラグイン内から同ファイルを指す参照がすべて解決する。
 
 ### E2E Tests
 

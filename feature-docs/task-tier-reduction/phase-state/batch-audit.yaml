@@ -1,49 +1,94 @@
 schema_version: 1
 feature: task-tier-reduction
 records:
-  - question_id: create-spec.tier-design-open-points
-    packet_id: null
-    answered_at: "2026-09-21T18:50:00+09:00"
-    source: batch-codex-consultation
-    answer_mode: select_or_freeform
-    selected_option_ids:
-      - q1_new_stop_reason_code
-      - q2_persist_in_phase_state
-      - q3_empty_requirements_plus_single_real_task
-      - q4_skipped_to_pending
-      - q5_single_task_worktree_keep_integration
-    freeform: |
-      Codex 相談（run_codex_exec.sh readonly、1 ターン、52,686 tokens）で 5 件の
-      未確定点を判定した。ユーザー指示「不明点は Codex に相談し、比較して良い方を採用」
-      に基づく相談であり、gate_id を持たないオーケストレーター起点の記録。
-    normalized_answer: |
-      Q1 `work_still_required: false` の停止表現 → (a) batch-terminal-line.md の
-      閉じた stop reason code に 1 件追加（`no_work_required`）。既存 11 コードに
-      「作業不要」の意味を持つものが無く、`completed` は retrospect 到達を意味する
-      ため流用は意味の歪みになる。state: stopped / step: no-step で報告し、
-      resume_conditions は空にできないため「再開不要」を明記する。
-      Q2 tier 判定結果の永続化 → (b) 判定直後に integration worktree の
-      phase-state へ保存してコミットし、create-spec の workflow.yaml 構築時に
-      転記する。workflow.yaml 未作成のまま中断・再開する経路が実在する
-      （SKILL.md Step A の「ブートストラップ状態の判定」）ため、メモリ保持は
-      再開で失われる。単一書き手規則は転記をオーケストレーターが行うことで保たれる。
-      構築後の正は workflow.yaml 側とし、再開時の再転記で降格させない。
-      Q3 minimal の requirements / tasks → 列挙外の案を採用。`requirements: {}` を
-      正当な状態として認めたうえで、`tasks` には TASK.md を参照する実タスクを 1 件
-      残す。`tasks` はレビュー属性だけでなく実行状態とブランチも持ち、タスク完了は
-      統合ブランチへのマージで定義されるため、`tasks/` 分割の省略とは分けて扱う。
-      さらに review-rules.yaml の `spec_review: always` は無条件に spec 観点を
-      含めるため、(a) の「floor が自然に comprehensive + security に落ちる」は成り
-      立たない。SPEC.md 不在時の spec 除外は現状スタンドアロン review にしか
-      規定が無いので、develop 駆動経路にも同じ除外条件を明記する必要がある。
-      Q4 昇格時の再走行 → (a) `skipped` を `pending` に戻すだけで新 status は
-      導入しない。実行順序規則が「最初の completed / skipped 以外」で動くため。
-      ただし TASK.md で completed になった create-spec は skipped 解除では
-      SPEC.md を補えないので、昇格手順に完了済み step の再実行と自動再入の
-      carve-out 更新を含める必要がある。
-      Q5 「並列 worktree を引く」 → (a) integration worktree は残し、implement を
-      単一タスク・単一タスク worktree で実行する。workflow.yaml と文書は
-      integration worktree にしか置かれず、verify / retrospect / Step C が
-      その配置を前提にしているため、integration worktree を引くと全フェーズの
-      前提が崩れる。
-    resolution_note: "gate: create-spec の tier 設計 5 件の未確定点（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex; turns: 1; opus escalation: not run; 5 件すべて Codex の提案がオーケストレーターの判断で採用可能と判定され、Q3 のみ列挙外の案を採用した"
+- question_id: create-spec.tier-design-open-points
+  packet_id: null
+  answered_at: '2026-09-21T18:50:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - q1_new_stop_reason_code
+  - q2_persist_in_phase_state
+  - q3_empty_requirements_plus_single_real_task
+  - q4_skipped_to_pending
+  - q5_single_task_worktree_keep_integration
+  freeform: 'Codex 相談（run_codex_exec.sh readonly、1 ターン、52,686 tokens）で 5 件の
+
+    未確定点を判定した。ユーザー指示「不明点は Codex に相談し、比較して良い方を採用」
+
+    に基づく相談であり、gate_id を持たないオーケストレーター起点の記録。
+
+    '
+  normalized_answer: 'Q1 `work_still_required: false` の停止表現 → (a) batch-terminal-line.md の
+
+    閉じた stop reason code に 1 件追加（`no_work_required`）。既存 11 コードに
+
+    「作業不要」の意味を持つものが無く、`completed` は retrospect 到達を意味する
+
+    ため流用は意味の歪みになる。state: stopped / step: no-step で報告し、
+
+    resume_conditions は空にできないため「再開不要」を明記する。
+
+    Q2 tier 判定結果の永続化 → (b) 判定直後に integration worktree の
+
+    phase-state へ保存してコミットし、create-spec の workflow.yaml 構築時に
+
+    転記する。workflow.yaml 未作成のまま中断・再開する経路が実在する
+
+    （SKILL.md Step A の「ブートストラップ状態の判定」）ため、メモリ保持は
+
+    再開で失われる。単一書き手規則は転記をオーケストレーターが行うことで保たれる。
+
+    構築後の正は workflow.yaml 側とし、再開時の再転記で降格させない。
+
+    Q3 minimal の requirements / tasks → 列挙外の案を採用。`requirements: {}` を
+
+    正当な状態として認めたうえで、`tasks` には TASK.md を参照する実タスクを 1 件
+
+    残す。`tasks` はレビュー属性だけでなく実行状態とブランチも持ち、タスク完了は
+
+    統合ブランチへのマージで定義されるため、`tasks/` 分割の省略とは分けて扱う。
+
+    さらに review-rules.yaml の `spec_review: always` は無条件に spec 観点を
+
+    含めるため、(a) の「floor が自然に comprehensive + security に落ちる」は成り
+
+    立たない。SPEC.md 不在時の spec 除外は現状スタンドアロン review にしか
+
+    規定が無いので、develop 駆動経路にも同じ除外条件を明記する必要がある。
+
+    Q4 昇格時の再走行 → (a) `skipped` を `pending` に戻すだけで新 status は
+
+    導入しない。実行順序規則が「最初の completed / skipped 以外」で動くため。
+
+    ただし TASK.md で completed になった create-spec は skipped 解除では
+
+    SPEC.md を補えないので、昇格手順に完了済み step の再実行と自動再入の
+
+    carve-out 更新を含める必要がある。
+
+    Q5 「並列 worktree を引く」 → (a) integration worktree は残し、implement を
+
+    単一タスク・単一タスク worktree で実行する。workflow.yaml と文書は
+
+    integration worktree にしか置かれず、verify / retrospect / Step C が
+
+    その配置を前提にしているため、integration worktree を引くと全フェーズの
+
+    前提が崩れる。
+
+    '
+  resolution_note: 'gate: create-spec の tier 設計 5 件の未確定点（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex; turns: 1; opus escalation: not run; 5 件すべて Codex の提案がオーケストレーターの判断で採用可能と判定され、Q3 のみ列挙外の案を採用した'
+- question_id: create-plan.planning-ambiguities
+  packet_id: null
+  answered_at: '2026-09-21T19:03:41+09:00'
+  source: codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'Q1 FR4 の閾値表と TS-10 の矛盾 → (b) TS-10 を正とし FR4 を改訂。reduced の条件を `P(0) >= 0.40` かつ `P(0) + P(1) >= 0.85` にする。採らなかった案 (a) は FR4 を正とし TS-10 の 2 例目を reduced に書き換えるもの。根拠: 設計意図がフェイルセーフであり、P(0) が低いまま P(1) との合計だけが高いケースを軽い tier に落とすべきではない。0.40 は SPEC が挙げる 2 例 (0.37,0.59) と (0.50,0.40) を分ける最小の下限で、前者が full、後者が reduced となり TS-10 の 3 例すべてが書かれたまま成立する。
+
+    Q2 NFR4 の minor 指定と (major, minor) == (0, 1) 固定アサーションの衝突 → (b) NFR4 どおり 0.2.0 へ上げ、固定アサーションを持つ 22 モジュールを版非依存の表明に書き換える。採らなかった案 (a) は patch 上げ (0.1.87) で既存テストを温存するもの。根拠: NFR4 は 機能追加として minor を明示しており、(0, 1) の固定は将来の正当な minor 更新をすべて塞ぐため durable invariant として不適切。両マニフェスト一致・成分単位の単調増加という、NFR4 が本当に気にしている性質へ書き換える方が、仕様を無視して patch に落とすより一貫する。
+
+    Q3 TS-11 が未実装の検査機構に帰属している → (a) 意図（tier-rules.yaml が実在し参照が解決する）を検証し、共有スクリプト check-plugin-invariants.py には手を入れない。採らなかった案 (b) は 同スクリプトへ汎用のパス存在検査を追加するもの。根拠: 汎用検査を足すと本機能と無関係な 既存の壊れた参照まで対象に入り、影響範囲が不必要に広がる。FR1 が必要とする保証は 直接検証で十分得られる。'
+  normalized_answer: 'Q1: option (b); Q2: option (b); Q3: option (a)'
+  resolution_note: 'gate: create-plan の計画時未確定点 3 件（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex (readonly sandbox); turns: 1; opus escalation: not run; Q1 と Q2 は planner の当初判断 (a) を Codex の (b) で覆し、Q3 は planner と Codex が一致。採用にともない SPEC.md / REQUIREMENTS.md の FR4 閾値と TS-11 の文言、IMPLEMENTATION.md の Open Questions（Resolved Questions へ改稿）、tasks/task0001.md・tasks/task0008.md、VERIFICATION.md の TS-10 / TS-11 / TS-21 を更新した'
