@@ -1,0 +1,95 @@
+task_id: task0005
+baseline_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_tier_reduction_develop_loop.TestReductionTableListsSubtractionsAndKept.test_no_reduction_table_violation
+      - test_tier_reduction_develop_loop.TestReductionTableListsSubtractionsAndKept.test_full_tier_states_no_subtraction
+      - test_tier_reduction_develop_loop.TestReductionTableListsSubtractionsAndKept.test_minimal_row_is_additive_over_reduced
+      - test_tier_reduction_develop_loop.TestReductionTableMatcherCanFail.test_matcher_detects_a_missing_subtraction_term
+    red_confirmed: true
+    red_reason: "TestReductionTableListsSubtractionsAndKept.setUpClass raised ValueError (str.index could not find '**Tier 削減表**' -- the label did not exist in SKILL.md before this task's edit), confirmed by re-running the module against the pre-implementation file with SKILL.md's edit temporarily reverted via git stash."
+  AC-2:
+    tests:
+      - test_tier_reduction_develop_loop.TestIntegrationWorktreeNeverSubtracted.test_whole_file_has_no_integration_worktree_subtraction
+      - test_tier_reduction_develop_loop.TestIntegrationWorktreeNeverSubtracted.test_integration_worktree_named_as_kept
+      - test_tier_reduction_develop_loop.TestIntegrationWorktreeNeverSubtracted.test_parallelism_stated_as_single_task_single_worktree
+      - test_tier_reduction_develop_loop.TestIntegrationWorktreeAbsenceMatcherCanFail.test_matcher_detects_a_forged_subtraction_sentence
+    red_confirmed: true
+    red_reason: "test_integration_worktree_named_as_kept and test_parallelism_stated_as_single_task_single_worktree both FAILed against the pre-implementation SKILL.md (neither sentence existed yet); test_whole_file_has_no_integration_worktree_subtraction passed vacuously before this task's edit (no subtraction sentence of any kind existed yet, so the absence check was trivially satisfied) -- its real proof is the dedicated negative-proof class TestIntegrationWorktreeAbsenceMatcherCanFail, which forges a subtraction sentence and confirms the matcher fires."
+  AC-3:
+    tests:
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInTurnEndCondition1.test_admits_skipped_step_generally
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInTurnEndCondition1.test_old_design_only_wording_absent
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInTurnEndCondition1.test_old_wording_absent_from_whole_file
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInStepBSentence.test_admits_skipped_step_generally_not_as_error
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInStepBSentence.test_skip_reason_still_mandatory
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInStepBSentence.test_old_error_wording_absent
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInStepBSentence.test_old_wording_absent_from_whole_file
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInStepCHeading.test_new_heading_present
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInStepCHeading.test_heading_names_both_design_and_tier
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInStepCHeading.test_old_design_only_wording_absent
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInPhaseBoundaryTable.test_row_admits_skipped_generally
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInPhaseBoundaryTable.test_old_design_only_wording_absent
+      - test_tier_reduction_develop_loop.TestSkippedOutsideDesignAdmittedInPhaseBoundaryTable.test_old_wording_absent_from_whole_file
+      - test_develop_once_option.TestOnceSectionCoversAllFourPhaseBoundaryKinds.test_ordinary_step_boundary_names_design_skipped_exception
+      - test_develop_once_option.TestStopCondition7AppendedWithoutAlteringExisting.test_items_1_to_6_immediately_followed_by_item_7_unchanged
+    red_confirmed: true
+    red_reason: "All four TestSkippedOutsideDesignAdmitted* place classes FAILed or ERRORed against the pre-implementation SKILL.md (assertIn on the new generalized wording not found, or the new STEP_C_HEADING constant not found by _section's str.index), confirmed by re-running the module with SKILL.md's edit temporarily reverted via git stash. The two sibling-module tests were watched failing against my in-progress SKILL.md edit before I updated their pinned constants in the same commit (AssertionError: literal 'design のみ `skipped`'/'`design` のみ `skipped`' not found in the rewritten text)."
+  AC-4:
+    tests:
+      - test_tier_reduction_develop_loop.TestNoWorkStopEntryAddedToTurnEndConditions.test_item_8_present_and_names_hyphenated_stop_point
+      - test_tier_reduction_develop_loop.TestNoWorkStopEntryAddedToTurnEndConditions.test_item_8_follows_item_7
+      - test_tier_reduction_develop_loop.TestNoWorkStopEntryAddedToTurnEndConditions.test_anchor_still_follows_item_8
+      - test_tier_reduction_develop_loop.TestNoWorkStopEntryAddedToTurnEndConditions.test_underscored_reason_code_absent_from_whole_file
+      - test_tier_reduction_develop_loop.TestNoWorkStopEntryMatcherCanFail.test_matcher_detects_the_underscored_literal
+    red_confirmed: true
+    red_reason: "test_item_8_present_and_names_hyphenated_stop_point FAILed (no '8. Step A' bullet existed); test_item_8_follows_item_7 and test_anchor_still_follows_item_8 ERRORed (text.index('8. Step A') raised ValueError, substring absent) against the pre-implementation SKILL.md, confirmed by re-running the module with SKILL.md's edit temporarily reverted via git stash. No pre-existing assertion pins the turn-ending conditions list's length (searched tests/test_develop_once_option.py, tests/test_develop_skill_rewiring.py, tests/test_verify_cap_run_continuation.py -- the only pinned lists were items 1-7's byte-for-byte content, not a count); none found, so none needed updating for the count itself (item 1's content pin did need updating for AC-3's rewrite, handled above)."
+  AC-5:
+    tests:
+      - test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_no_upgrade_procedure_violation
+      - test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_downgrade_forbidden_explicitly
+      - test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_no_new_status_value_sentence_present
+      - test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present
+      - test_tier_reduction_develop_loop.TestUpgradeProcedureMatcherCanFail.test_matcher_detects_a_missing_element
+    red_confirmed: true
+    red_reason: "TestUpgradeProcedureExpressedAsSkippedToPending.setUpClass raised ValueError (str.index could not find '**アップグレード手順**' -- the label did not exist in SKILL.md before this task's edit), confirmed by re-running the module against the pre-implementation file with SKILL.md's edit temporarily reverted via git stash."
+  AC-6:
+    tests:
+      - test_tier_reduction_develop_loop.TestCarveOutEnumeratesThreeTransitions.test_three_transitions_independently_counted_and_matching
+      - test_tier_reduction_develop_loop.TestCarveOutEnumeratesThreeTransitions.test_existing_two_transitions_still_present
+      - test_tier_reduction_develop_loop.TestCarveOutEnumeratesThreeTransitions.test_third_transition_names_tier_upgrade_and_owning_section
+      - test_tier_reduction_develop_loop.TestCarveOutEnumeratesThreeTransitions.test_exhaustiveness_sentence_still_declares_exhaustive
+      - test_tier_reduction_develop_loop.TestCarveOutCountMatcherCanFail.test_matcher_detects_a_count_mismatch
+      - test_failed_kind_stop_condition.TestAC8ExistingBlocksUnchangedAndIndependenceDeclared.test_precedence_block_exhaustiveness_declaration_present
+    red_confirmed: true
+    red_reason: "TestCarveOutEnumeratesThreeTransitions.setUpClass raised ValueError against the pre-implementation SKILL.md (str.index could not find the new STEP_C_HEADING string used as the Step B section's end marker), confirmed by re-running the module with SKILL.md's edit temporarily reverted via git stash -- the enumeration still read '次の 2 つ' at that point, so a count-match-against-3 assertion could not even reach the comparison. test_precedence_block_exhaustiveness_declaration_present in the sibling module was watched failing (old PRECEDENCE_EXHAUSTIVENESS_SENTENCE constant, pinning the '2'-count wording, no longer matched the rewritten '3'-count sentence) before I updated the constant in the same commit."
+  AC-7:
+    tests:
+      - test_tier_reduction_develop_loop.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - test_tier_reduction_develop_loop.TestNoGateIdOrReviewBranchIntroduced.test_tier_and_upgrade_section_names_no_gate_id
+      - test_tier_reduction_develop_loop.TestNoGateIdOrReviewBranchIntroduced.test_item_8_names_no_gate_id
+      - test_tier_reduction_develop_loop.TestNoGateIdOrReviewBranchIntroduced.test_tier_and_upgrade_section_does_not_mention_review_perspective_selection
+    red_confirmed: false
+    red_reason: "AC-7 is a property of this task's own deliverables (discoverability, stdlib-only imports, no gate_id/review-branch introduced) rather than a behavior change with a pre-existing wrong state to observe red against. TestNoGateIdOrReviewBranchIntroduced.setUpClass did ERROR against the pre-implementation file (TIER_TABLE_LABEL absent), which is red in the mechanical sense, but the criterion itself (no gate_id introduced) has no meaningful 'before' state to contrast -- the outcome is a conformance/absence check on content this task authored. Verified instead by direct inspection: the Tier 削減表 and アップグレード手順 sections, and item 8, contain no 'gate_id' or 'AskUserQuestion' substring (confirmed by test_tier_and_upgrade_section_names_no_gate_id / test_item_8_names_no_gate_id passing), and the whole suite (python3 -m unittest discover -s tests, 4885 tests) is discovered and green apart from the 10 pre-existing baseline failures, and this module's own imports are re/unittest/pathlib/ast only."

@@ -135,9 +135,20 @@ BATCH_CAP_EXCEPTION_LABEL = "**batch: verify の cap 到達に対する停止条
 # The Step C heading this task owns (IMPLEMENTATION.md Shared Components
 # "Step C 見出し文字列"): must be byte-for-byte identical in SKILL.md and
 # both sibling test modules' STEP_C_HEADING constants.
+#
+# task-tier-reduction/task0005 (FR3) generalized this heading so `skipped`
+# is admitted whether design's own skip or a tier's skip caused it, instead
+# of restricting the exception to design alone. Updated in place here (not
+# duplicated) to pin the new wording, and `_states_step_c_cap_continuation_
+# heading` below is adjusted accordingly (same established convention as
+# the sibling STEP_C_HEADING constants). OLD_STEP_C_HEADING stays untouched
+# -- it is the historical pre-task0002 wording used only as a negative-proof
+# fixture, and it already lacks "cap" so the matcher rejects it regardless
+# of the design/tier wording.
 NEW_STEP_C_HEADING = (
-    "## Step C: 完了処理（全 step completed — design のみ skipped 可 — "
-    "か、cap 到達により verify が `failed` のまま残る場合のみ）"
+    "## Step C: 完了処理（全 step completed — `skipped` の step（design "
+    "自身の skip、または tier による skip）があっても可 — か、cap 到達に"
+    "より verify が `failed` のまま残る場合のみ）"
 )
 OLD_STEP_C_HEADING = (
     "## Step C: 完了処理（全 step completed — design のみ skipped 可 — 時のみ）"
@@ -195,11 +206,15 @@ def _extract_step_c_heading_constant(test_module_text):
 
 def _states_step_c_cap_continuation_heading(heading):
     """TS6 matcher: true iff `heading` expresses BOTH Step C entry paths --
-    the pre-existing all-`completed`/`design`-`skipped` path AND the new
-    cap-reached-`failed` path."""
+    the pre-existing all-`completed`/`skipped` path (task-tier-reduction/
+    task0005 generalized this from "design のみ" to admitting either
+    design's own skip or a tier's skip, so the matcher now checks for both
+    "design" and "tier" rather than the old "design のみ" substring) AND
+    the cap-reached-`failed` path."""
     return (
         "全 step completed" in heading
-        and "design のみ" in heading
+        and "design" in heading
+        and "tier" in heading
         and "skipped" in heading
         and "cap" in heading
         and "`failed`" in heading

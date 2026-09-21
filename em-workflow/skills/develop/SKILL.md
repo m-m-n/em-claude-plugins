@@ -14,8 +14,8 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Task, AskUserQuestion
 
 あなたは **em-workflow オーケストレーター**。仕事は、ワークフロー
 (create-spec → design → create-plan → implement → review → verify →
-retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
-も可）」になるまで自走させること**。これ以外の責務はない。
+retrospect) を **workflow.yaml が「全 step completed（`skipped` の step
+があっても可）」になるまで自走させること**。これ以外の責務はない。
 
 この skill はメインセッションでインライン実行される。並列 `Task()` fan-out
 (implement / review フェーズ) はメインコンテキストからのみ発行できるため、
@@ -23,8 +23,9 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
 
 ### ターンを終わらせていい唯一の条件
 
-1. `workflow` 配列の全 step が `completed`、ただし design のみ `skipped` も
-   可（完了処理まで済ませた後）
+1. `workflow` 配列の全 step が `completed`、ただし `skipped` の step が
+   あっても可（design 自身の判断による skip、または tier によるスキップの
+   いずれも該当。完了処理まで済ませた後）
 2. ある step を 2 回連続で実行しても status が進まない（= スタック）
 3. ある step の status が `failed` / `needs_update`（= ユーザー介入が必要。
    ただし、フェーズプロトコルがそのフェーズの自動再エントリのために設定した
@@ -47,6 +48,9 @@ retrospect) を **workflow.yaml が「全 step completed（design のみ skipped
    （gitleaks 不在 / git リポジトリでない / guard 失敗）
 7. `--once` 指定時、1 フェーズが完了したとき（フェーズ境界の定義は下記
    「`--once` のフェーズ境界」参照）
+8. Step A の事前見積りが「対応すべき作業が無い」と判定し、ワークフローを
+   開始せず停止するとき（stop point `no-work-required`。判定手順は
+   Step A 参照）
 
 batch: 停止条件 5 の待機ターンは、(a)(b) いずれの形でも最後の assistant
 メッセージとして `${CLAUDE_PLUGIN_ROOT}/references/batch-mode.md` の
@@ -329,8 +333,10 @@ workflow.yaml を Read → `workflow[]` の最初の `status` が `completed` �
 
 以上を経て、step 実行前にその step を `in_progress` に更新し、フェーズ完了時に
 `completed`（+ `completed_at_commit`）へ更新するのはあなた（オーケストレーター）
-の責務（`skipped` は create-spec が設定する。design 以外の step に `skipped` が
-あったら YAML エラー扱いで停止）。`completed_at_commit` の規範的定義:
+の責務（`skipped` は create-spec が設定する。design 自身の判断による skip、
+または tier によるスキップのいずれも正常な状態として扱い、YAML エラー扱いには
+しない。`skipped_reason` は引き続き必須 — 定義は `references/workflow-schema.md`
+に譲る）。`completed_at_commit` の規範的定義:
 その step の `status` を `completed` へ更新するコミットを作る**直前の HEAD**
 （規則 R2。全 7 step に適用し、意味は変更しない）。
 
@@ -357,7 +363,7 @@ create-plan フェーズの planner は、その step がエントリした時�
 シーケンス（例外は create-plan のみ）に従う。フェーズはその `needs_update`
 を停止理由として扱わずに実行されるが、これは「保持したまま実行され」を
 理由に停止条件を回避する目的で `pending` に戻すことを認めるものではない。
-該当する遷移は現時点で厳密に次の 2 つで、
+該当する遷移は現時点で厳密に次の 3 つで、
 それぞれ所有ドキュメントを明記する:
 - create-plan の route back to planning —
   `references/implement-phase.md`（I.2.c）が create-plan を
@@ -367,9 +373,14 @@ create-plan フェーズの planner は、その step がエントリした時�
   Specification-change transition が create-spec を `needs_update` に
   設定し、develop のステートマシンが create-spec で再エントリすることを
   要求する遷移
+- tier 昇格による再エントリ — 下記「アップグレード手順」が、`minimal`
+  tier で TASK.md により `completed` となった create-spec を再実行する
+  ために create-spec を `needs_update` に設定し、develop のステート
+  マシンが create-spec で再エントリすることを要求する遷移
 
 この列挙は、所有 SSOT 自身がフェーズの自動再エントリを明記している遷移
-だけが対象という構成上の理由で網羅的であり、他の遷移はこの除外の対象外。
+だけが対象という構成上の理由でこの 3 つで網羅的であり、他の遷移はこの
+除外の対象外。
 
 **spec-change 遷移のゲート呼び出し（バッチのみ）**: バッチ実行でこの
 spec-change 遷移の question の `gate_id` が特定され、
@@ -519,6 +530,42 @@ I.2.c、引用のみでここでは繰り返さない）を通じて扱う。
 停止条件 3 のもう一方の発火条件（`needs_update`）、および `review` /
 `verify` step に対する挙動はこの block の対象外であり、一切変更しない
 （SPEC assumption A3）。
+
+**Tier 削減表**: tier は `full` を基準に、`reduced` と `minimal` が成果物と
+並列性を削減する。
+
+| tier | 削減する対象 |
+|------|-------------|
+| `full` | 削減なし |
+| `reduced` | REQUIREMENTS.md、IMPLEMENTATION.md、design step |
+| `minimal` | REQUIREMENTS.md、IMPLEMENTATION.md、design step に加えて、SPEC.md（`TASK.md` に置換 — 様式は `em-workflow/references/templates/task-document.md` を参照し、ここでは定義しない）、タスク分割、VERIFICATION.md、task レベルの並列性 |
+
+全 tier で維持されるもの: 既存のテストスイート全体、Step 0 の git-setup
+ゲート、integration worktree。integration worktree はどの tier でも削減しない —
+workflow.yaml と全 feature ドキュメントは integration worktree にのみ存在
+し、Step B 以降の全フェーズがその配置に依存するため。task レベルの並列性を
+削減するとは、単一の task を単一の task worktree で実行することを意味し、
+integration worktree の維持とは独立した話である。
+
+**アップグレード手順**: tier の変更は昇格のみを許し、降格は行わない。
+昇格は `skipped` の step を `pending` に戻すことで表現し、新しい status
+値は一切導入しない。
+
+トリガーは次の 2 つ:
+- review で critical severity の finding が出たとき
+- verify が `failed` になったとき
+
+降格の禁止: 昇格後に tier を元へ戻す操作は一切無く、`workflow.yaml`
+`tier` フィールドは単調増加のみを許す（`references/workflow-schema.md` が
+定義する upgrade-only rule を唯一の定義元とし、ここでは繰り返さない）。
+
+`minimal` tier の追加手順: `minimal` tier では TASK.md の作成により
+create-spec が既に `completed` に達している。この場合、`skipped` の step
+を `pending` に戻すだけでは SPEC.md が補われないため、昇格手順は追加で
+create-spec の再実行を含める — create-spec の `status` を `needs_update`
+に設定し、develop のステートマシンが create-spec で再エントリして
+SPEC.md を作成する。この遷移は上記「停止条件 3 との優先関係」の自動再
+エントリ carve-out の一員であり、停止条件 3 の停止理由にはしない。
 
 | step | 実行方法 |
 |------|----------|
@@ -734,7 +781,7 @@ Invariant 6 を参照し、ここでは再定義しない。`title` / `body` は
 `completed` にし、commit-docs.sh で
 `docs({feature}): retrospect signals` としてコミットする。
 
-## Step C: 完了処理（全 step completed — design のみ skipped 可 — か、cap 到達により verify が `failed` のまま残る場合のみ）
+## Step C: 完了処理（全 step completed — `skipped` の step（design 自身の skip、または tier による skip）があっても可 — か、cap 到達により verify が `failed` のまま残る場合のみ）
 
 workflow.yaml・レビュー記録・retrospect.yaml は Step B / verify /
 retrospect の各更新でその都度 integration worktree に commit-docs.sh
@@ -809,7 +856,7 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 
 | 境界 | ターンが終わる条件 | 次の起動が再開する位置 |
 |---|---|---|
-| 通常の step | step の `status` が `completed`（`design` のみ `skipped`）になり、コミット済み | 次の step |
+| 通常の step | step の `status` が `completed`（`skipped`（design 自身の skip、または tier による skip）でも可）になり、コミット済み | 次の step |
 | `retrospect` | `retrospect` が `completed` に達し、コミット済み（Step C（完了処理）はここでは実行せず、独立した 1 フェーズとして次の起動に持ち越す） | Step C（完了処理） |
 | verify 失敗時の rework | rework パッチを適用し、`implement` と `verify` を `pending` に戻し、コミット済み | `implement` |
 | 自動再エントリ | ルーティングパッチを適用してコミット済み（implement I.2.c の `create-plan` → `needs_update`、または rework の spec-change 遷移による `create-spec` → `needs_update`） | 再エントリした step |

@@ -131,7 +131,14 @@ CLOSING_LINE = '{step} が完了したよ。続きは /clear してから /em-wo
 # carve-out pointer untouched. That addition is reflected below so this
 # constant keeps guarding what it always guarded: nothing else was inserted
 # into or removed from the list, and item 7 still follows immediately.
-ITEMS_1_TO_6_VERBATIM = '1. `workflow` 配列の全 step が `completed`、ただし design のみ `skipped` も\n   可（完了処理まで済ませた後）\n2. ある step を 2 回連続で実行しても status が進まない（= スタック）\n3. ある step の status が `failed` / `needs_update`（= ユーザー介入が必要。\n   ただし、フェーズプロトコルがそのフェーズの自動再エントリのために設定した\n   `needs_update` の間はこの条件では停止しない — 詳細は Step B の\n   「**停止条件 3 との優先関係**」参照。`implement` step の `failed` は\n   `failed_kind` により発火条件が絞られる — 詳細は Step B の\n   「**batch: implement の failed_kind による自動再開**」参照）\n4. workflow.yaml の YAML parse エラー（= リカバリ不能）\n5. implement フェーズでバックグラウンド implementer の完了通知を待つとき\n   （= キューループが定める正常な待機。次の 2 形がある:\n   (a) 起動/補充した直後、(b) failed 発生後のドレイン中 — 新規投入は\n   止めて in-flight の完了通知だけを待ち、全て回収してからユーザー三択を\n   出す（batch: 三択の代わりにタスクごと 1 回だけ自動 retry、2 回目の\n   failed で中断 — `batch-mode.md` の Non-packet gates 表、\n   `implement.failed-task`）。通知で起こされたら reconcile\n   → 補充（ドレイン中は補充しない）→\n   また待つ。queue_stop_guard hook が「空きスロットがあるのに補充せず\n   終える」ターンだけを exit 2 で弾き、failed 存在時はブロックしない）\n6. Step 0 の git-setup ゲートが中断を報告したとき\n   （gitleaks 不在 / git リポジトリでない / guard 失敗）\n'
+#
+# task-tier-reduction/task0005 (FR3) later rewrote item 1's wording so a
+# `skipped` step is admitted whether it is design's own create-spec-decided
+# skip or a tier's skip, instead of restricting the exception to design
+# alone. Updated in place here (not duplicated) to pin the new wording --
+# same convention tests/test_develop_skill_rewiring.py's module docstring
+# already documents for this file's carve-out constant.
+ITEMS_1_TO_6_VERBATIM = '1. `workflow` 配列の全 step が `completed`、ただし `skipped` の step が\n   あっても可（design 自身の判断による skip、または tier によるスキップの\n   いずれも該当。完了処理まで済ませた後）\n2. ある step を 2 回連続で実行しても status が進まない（= スタック）\n3. ある step の status が `failed` / `needs_update`（= ユーザー介入が必要。\n   ただし、フェーズプロトコルがそのフェーズの自動再エントリのために設定した\n   `needs_update` の間はこの条件では停止しない — 詳細は Step B の\n   「**停止条件 3 との優先関係**」参照。`implement` step の `failed` は\n   `failed_kind` により発火条件が絞られる — 詳細は Step B の\n   「**batch: implement の failed_kind による自動再開**」参照）\n4. workflow.yaml の YAML parse エラー（= リカバリ不能）\n5. implement フェーズでバックグラウンド implementer の完了通知を待つとき\n   （= キューループが定める正常な待機。次の 2 形がある:\n   (a) 起動/補充した直後、(b) failed 発生後のドレイン中 — 新規投入は\n   止めて in-flight の完了通知だけを待ち、全て回収してからユーザー三択を\n   出す（batch: 三択の代わりにタスクごと 1 回だけ自動 retry、2 回目の\n   failed で中断 — `batch-mode.md` の Non-packet gates 表、\n   `implement.failed-task`）。通知で起こされたら reconcile\n   → 補充（ドレイン中は補充しない）→\n   また待つ。queue_stop_guard hook が「空きスロットがあるのに補充せず\n   終える」ターンだけを exit 2 で弾き、failed 存在時はブロックしない）\n6. Step 0 の git-setup ゲートが中断を報告したとき\n   （gitleaks 不在 / git リポジトリでない / guard 失敗）\n'
 
 ITEM_7_VERBATIM = '7. `--once` 指定時、1 フェーズが完了したとき（フェーズ境界の定義は下記\n   「`--once` のフェーズ境界」参照）'
 
@@ -330,9 +337,14 @@ class TestOnceSectionCoversAllFourPhaseBoundaryKinds(unittest.TestCase):
         )
 
     def test_ordinary_step_boundary_names_design_skipped_exception(self):
-        self.assertIn(
-            "`design` のみ `skipped`", self.section
-        )
+        # task-tier-reduction/task0005 (FR3): rewritten so the ordinary-step
+        # boundary row admits `skipped` regardless of whether design's own
+        # skip or a tier's skip caused it, instead of restricting the
+        # exception to design alone -- updated in place (not duplicated),
+        # same convention as the ITEMS_1_TO_6_VERBATIM update above.
+        self.assertIn("`skipped`", self.section)
+        self.assertIn("design 自身の skip", self.section)
+        self.assertIn("tier による skip", self.section)
 
     def test_retrospect_boundary_defers_step_c_to_next_launch(self):
         self.assertIn(
