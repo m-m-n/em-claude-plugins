@@ -136,6 +136,12 @@ unverifiable claim is already rejected when a baseline is missing for any
 other reason. This document does not restate the upgrade procedure's
 mechanics; it states only the consequence for this synthesis: **coverage
 declaration at this tier requires the upgrade to have already happened.**
+This holds regardless of which condition sent the round into rework —
+including residual high-severity (not only critical) findings, and a
+failed verify — since none of those conditions changes what
+`verification_index` contains. Any rework entry point that dispatches
+this synthesis at a reduced tier MUST have completed the upgrade route
+first; the trigger that caused rework does not substitute for it.
 
 ## 9. Related document updates
 
