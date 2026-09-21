@@ -305,8 +305,7 @@ tasks:
     status: merged
     branch: em-workflow/task-tier-reduction/task0008
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
   plan:
     floor:
     - comprehensive
@@ -316,9 +315,15 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+    security: completed
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: skipped
+  rounds_completed: 1
+  residual_critical_high: 8
+  needs_rework: true
 requirements:
   FR1:
     title: tier-rules.yaml の新設
