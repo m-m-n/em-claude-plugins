@@ -841,8 +841,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # questions). No accept/reject behaviour changes (D5).
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
     # Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by task-tier-reduction/task0008 (FR24, NFR4):
+    # `_validate_rework_index` gains a `verification_doc_absent` fail-closed
+    # branch -- when a task declares `new_scenarios` but the feature
+    # directory has no VERIFICATION.md to diff (the most-reducing tier
+    # never produces one until the tier is upgraded), the check now reports
+    # a distinct error naming that case instead of silently passing.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted.
+    # Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "71513b7b152815f88ed8485533b2633230faf4ee6fa49699d47f233d3df11f45"
+        "e8493f841eb91e70d7ab1126bde381e570c75c7b608675600c34f3c271519f7a"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

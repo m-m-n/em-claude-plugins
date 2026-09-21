@@ -201,15 +201,16 @@ def _assert_version_past_baseline(test, version):
     than three components fails with a controlled AssertionError (never an
     unhandled exception); a version with more than three components is
     normalized by using only its first three (major, minor, patch),
-    ignoring any trailing build-style components."""
+    ignoring any trailing build-style components. Never a fixed major.minor
+    pin -- that form goes stale on the next legitimate minor bump
+    (task-tier-reduction task0008, NFR4)."""
     components = _parse_version_components(version)
     test.assertIsNotNone(components, f"version {version!r} has non-numeric components")
     test.assertGreaterEqual(
         len(components), 3, f"version {version!r} has fewer than three components"
     )
     major, minor, patch = components[0], components[1], components[2]
-    test.assertEqual((major, minor), (0, 1))
-    test.assertGreater(patch, BASELINE_PATCH)
+    test.assertGreater((major, minor, patch), (0, 1, BASELINE_PATCH))
 
 
 def _assert_versions_equal(test, version_a, version_b):
