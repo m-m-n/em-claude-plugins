@@ -1,6 +1,6 @@
 ---
 name: review
-description: 単体レビューのエントリポイント（em-workflow）。SDD を通さない日常レビューを吸収します。workflow.yaml 不在時は baseline（comprehensive + SPEC.md があれば spec）+ 裁量層の追加観点で動作し、選択された各観点は primary_chain 先頭の利用可能な非 Claude レビュアー（Codex、および別途 vertex-review プラグインが導入済みなら LiteLLM 経由の Vertex AI / Muse）を 1 体だけ起動、チェーン全滅時のみ Claude 汎用レビュアーがフォールバックします。全観点確定後は Opus 評価者が 1 体、ラウンドを評価します。その上で bounded auto-fix（≤ 3 ループ、--report-only でスキップ）とレビュー記録の書き出しまで行います。コミットは一切しません
+description: 単体レビューのエントリポイント（em-workflow）。SDD を通さない日常レビューを吸収します。workflow.yaml 不在時は baseline（comprehensive + security + SPEC.md があれば spec）+ 裁量層の追加観点で動作し、選択された各観点は primary_chain 先頭の利用可能な非 Claude レビュアー（Codex、および別途 vertex-review プラグインが導入済みなら LiteLLM 経由の Vertex AI / Muse）を 1 体だけ起動、チェーン全滅時のみ Claude 汎用レビュアーがフォールバックします。全観点確定後は Opus 評価者が 1 体、ラウンドを評価します。その上で bounded auto-fix（≤ 3 ループ、--report-only でスキップ）とレビュー記録の書き出しまで行います。コミットは一切しません
 argument-hint: "[--report-only]"
 disable-model-invocation: true
 model: opus

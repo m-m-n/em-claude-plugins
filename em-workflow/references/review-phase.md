@@ -98,9 +98,8 @@ Input: ONLY the declared task metadata. develop-駆動: the `domains` /
 workflow.yaml: the floor is `baseline` + (`spec` if spec_available) only.
 
 Evaluate references/review-rules.yaml exactly as its header comments specify
-(union semantics). Output: `floor` = ordered unique perspective list, and a
-**provisional** `cross_validation` per the rules' `when_any` clause
-(finalized after Layer 2).
+(union semantics). Output: `floor` = ordered unique perspective list, and
+`cross_validation` per the rules' `when_any` clause.
 
 ### Layer 2 — discretionary additions (add-only)
 
@@ -122,18 +121,16 @@ perspective to the selected set. The `license` behaviour above is
 unchanged, and `vulnerability` is never in the mechanical floor either
 (review-rules.yaml has no manifest signal for it).
 
-After Layer 2 completes, **re-evaluate `cross_validation` against the
-FINAL selected set** (floor ∪ discretionary): it fires when ANY task has
-`complexity: high` OR the final set includes `security`. Firing no longer
-adds a second dispatch (IMPLEMENTATION.md D2): every selected perspective
-already runs exactly one primary reviewer (Phase R2). Instead it marks the
-round as high-intensity for the evaluator (Phase R3a's `cross_validation`
-input field) — the Layer-1 value is provisional only.
+`cross_validation` fires when ANY task has `complexity: high`. Its input is
+the tasks metadata alone, so Layer 1 settles it and Layer 2 cannot change
+it. Firing no longer adds a second dispatch (IMPLEMENTATION.md D2): every
+selected perspective already runs exactly one primary reviewer (Phase R2).
+Instead it marks the round as high-intensity for the evaluator (Phase R3a's
+`cross_validation` input field).
 
 Record the plan before fan-out — develop-駆動: into workflow.yaml
-`review.plan` (`floor` / `discretionary` / `cross_validation` — the
-post-Layer-2 final value); standalone: keep it in-context for the round
-record.
+`review.plan` (`floor` / `discretionary` / `cross_validation`); standalone:
+keep it in-context for the round record.
 
 ## Phase R2: Fan-out (ONE message, N Task calls)
 
@@ -388,9 +385,8 @@ R3b's evaluator-failure degradation).
 - `evaluation_contract_path` — resolved in Phase R0 alongside the other SSOT
   paths, under the same fail-closed rule.
 - `project_root`, `review_mode`, `changed_files`, `round`.
-- `cross_validation` — Phase R1's final post-Layer-2 value; it marks the
-  round high-intensity for the evaluator and no longer adds a dispatch of
-  its own.
+- `cross_validation` — Phase R1's value; it marks the round high-intensity
+  for the evaluator and no longer adds a dispatch of its own.
 - `round_context`.
 - `spec_path` — only when the spec perspective ran this round.
 - `lessons` — optional, same resolution rule as Phase R2.
