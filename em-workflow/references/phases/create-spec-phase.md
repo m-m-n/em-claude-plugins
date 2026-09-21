@@ -192,14 +192,26 @@ directly below, because this document is where they take effect:
 
 ## 10. Artifact validation
 
-- spec-writer's post-conditions (`references/contracts/spec-writer-contract.md`):
-  the FR/NFR ID pattern, `spec_index.requirements` agreement with SPEC.md,
-  every `tbd` requirement carrying a `tbd_reason`, and no invented
-  requirement or assumption.
-- The template's mandatory sections
+Which validation applies follows the same tier split section 9 states —
+cited here, not re-derived.
+
+- **At the `full` tier**: spec-writer's post-conditions
+  (`references/contracts/spec-writer-contract.md`): the FR/NFR ID pattern,
+  `spec_index.requirements` agreement with SPEC.md, every `tbd` requirement
+  carrying a `tbd_reason`, and no invented requirement or assumption. The
+  template's mandatory sections
   (`references/templates/requirements-document.md`,
   `references/templates/spec-document.md`).
-- Scope verification (below).
+- **At the `reduced` tier**: the same spec-writer post-conditions and the
+  same mandatory-sections check, but scoped to SPEC.md only —
+  REQUIREMENTS.md does not exist at this tier, so
+  `references/templates/requirements-document.md`'s mandatory sections are
+  not checked.
+- **At the `minimal` tier**: spec-writer is not dispatched, so none of the
+  above applies. Instead, `feature-docs/{feature}/TASK.md` is checked
+  against `references/templates/task-document.md`'s mandatory sections:
+  `## Change` and `## Expected Result` must both be present.
+- Scope verification (below) — applies at every tier.
 
 ## 11. workflow.yaml construction
 
@@ -376,7 +388,9 @@ execute it.
 
 ## 13. Completion
 
-1. Commit the artifacts (commit B: REQUIREMENTS.md, SPEC.md).
+1. Commit the artifacts (commit B): at the `full` tier, REQUIREMENTS.md and
+   SPEC.md; at the `reduced` tier, SPEC.md only; at the `minimal` tier,
+   TASK.md only.
 2. Write `workflow.yaml` with the `create-spec` step's `status: completed`
    and `completed_at_commit: B` (rule R2 — the HEAD immediately before this
    commit) and commit it (commit C).
@@ -397,7 +411,8 @@ hold:
 - Every requirement category is confirmed, recorded `tbd`, or explicitly
   excluded.
 - No already-answered question has been regenerated.
-- `spec-writer`'s artifacts pass validation (section 10).
+- The tier's artifacts pass validation (section 10): spec-writer's at the
+  `full` and `reduced` tiers, TASK.md at the `minimal` tier.
 
 ## Loop-stop conditions (progress fingerprint)
 

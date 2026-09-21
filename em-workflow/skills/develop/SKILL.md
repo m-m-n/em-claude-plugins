@@ -644,6 +644,24 @@ create-spec の `status` を `needs_update` に設定し、design の `skipped`
 分のみを計画する。create-spec と create-plan それぞれの needs_update
 遷移も同じ carve-out の一員であり、停止条件 3 の停止理由にはしない。
 
+**再生成後の復帰先**: 上記の再生成手順（`minimal` / `reduced` いずれの
+昇格も含む）で create-spec・design・create-plan が完了したあと、
+completed の implement と failed の verify はこの再生成だけでは
+`pending` に戻らない。復帰先は rework 合成であり、
+`references/rework-task-synthesis.md` §8a が定める「昇格を先に完了して
+いること」を満たした状態で rework-planner を dispatch し、その
+`append_rework` パッチ（`references/workflow-patch.md` が定義する）で
+implement と verify を `pending` に戻す。この経路が発火する根拠は
+`phase-state/rework.yaml` の認可記録のうち `consumed` フィールドであり、
+`false` のまま残っている記録が rework 合成への再入場を許可する
+（`replan_authorized` は上記の再生成手順そのものの認可に既に使われて
+おり、ここでの根拠ではない）。rework-planner が `append_rework` を書いた
+時点でこの記録の `consumed` を `true` に更新し、以降の再入場では
+既に処理済みとして扱う。`--once` を挟んだ再開も同じ経路をたどる —
+`--once` はフェーズ境界の扱いを変えるだけで認可記録の参照先は変えない
+ため、再開時も `consumed: false` の記録を読んで同じ rework 合成の
+dispatch に戻る。
+
 | step | 実行方法 |
 |------|----------|
 | create-spec | `${CLAUDE_PLUGIN_ROOT}/references/phases/create-spec-phase.md` に従う（対話フェーズ。batch: 同ファイルの Batch Mode セクションに従い、ユーザー対話の代わりにタスク記述 + Codex 相談で書き切る） |
