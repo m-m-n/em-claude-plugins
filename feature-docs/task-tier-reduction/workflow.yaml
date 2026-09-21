@@ -116,7 +116,7 @@ tasks:
     - NFR1
     - NFR5
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0001
   task0002:
     title: workflow.yaml schema for tier and non-design skipped
