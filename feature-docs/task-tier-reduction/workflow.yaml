@@ -50,7 +50,6 @@ goal: |
   - Codex は `codex-harness:codex-cli` の `run_codex_exec.sh` 経由。`codex exec` を直接呼ばない
   - 実測値（参考）: 記述のみだと `P(0)=0.37 / P(1)=0.59`、Codex の見積もりを足すと `P(0)=0.81` に確定した。state は +209 トークン、Codex は 66 秒
 parent_branch: em-workflow/task-tier-reduction/integration
-
 project:
   license: none
   design_system:
@@ -59,37 +58,237 @@ project:
   components:
     main:
       language: python
-      build_command: ""
-      test_command: "python3 -m unittest discover -s tests"
-      format_command: ""
-      e2e_test_command: ""
-
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
 workflow:
-  - id: create-spec
-    artifacts: [REQUIREMENTS.md, SPEC.md]
-    status: completed
-    completed_at_commit: 8f3bbab5b5b1de58639680f57c849f7d516e5b74
-  - id: design
-    artifacts: [DESIGN.md, design/]
-    status: skipped
-    skipped_reason: "em-workflow プラグインの文書・プロトコル変更のみで、UI 面・視覚要素を一切持たない。design-system 候補も 0 件。"
-  - id: create-plan
-    artifacts: [IMPLEMENTATION.md, VERIFICATION.md, tasks/]
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 8f3bbab5b5b1de58639680f57c849f7d516e5b74
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: em-workflow プラグインの文書・プロトコル変更のみで、UI 面・視覚要素を一切持たない。design-system 候補も 0 件。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 6c4971e457301a44c3b48c0af74c41d46e325c20
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks:
+  task0001:
+    title: tier decision rules and deterministic evaluator
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/tier-rules.yaml
+    - em-workflow/scripts/decide-tier.py
+    - tests/test_tier_rules.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - input-handling
+    - external-io
+    complexity: medium
+    requirements:
+    - FR1
+    - FR4
+    - FR5
+    - FR13
+    - NFR1
+    - NFR5
+    - NFR7
     status: pending
-  - id: implement
+  task0002:
+    title: workflow.yaml schema for tier and non-design skipped
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/workflow-schema.md
+    - tests/test_tier_workflow_schema.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR2
+    - FR3
+    - FR12
+    - NFR7
     status: pending
-    base_commit: 6c4971e457301a44c3b48c0af74c41d46e325c20
-  - id: review
+  task0003:
+    title: Step A tier decision, persistence and the no-work stop
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/phase-state.md
+    - tests/test_tier_decision_step_a.py
+    skills: []
+    domains:
+    - config-infra
+    - external-io
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR5
+    - FR6
+    - FR7
+    - FR13
+    - FR14
+    - FR15
+    - FR20
+    - FR23
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR6
+    - NFR7
     status: pending
-  - id: verify
+  task0004:
+    title: no-work stop reason code and its pinned assertions
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/batch-terminal-line.md
+    - tests/test_failed_kind_batch_docs.py
+    - tests/test_batch_quiet_output_discipline.py
+    - tests/test_batch_stop_contract_skill_wiring.py
+    - tests/test_structured_result_conformance.py
+    - tests/test_structured_result_consumer_constraints.py
+    - tests/test_no_work_required_stop.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR7
+    - FR8
+    - FR22
+    - NFR3
+    - NFR6
+    - NFR7
     status: pending
-    result: null
-    failed_items: []
-  - id: retrospect
+  task0005:
+    title: tier reductions, skipped discipline and upgrade in the develop loop
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_tier_reduction_develop_loop.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: high
+    requirements:
+    - FR3
+    - FR9
+    - FR10
+    - FR11
+    - FR12
+    - FR19
+    - FR21
+    - NFR2
+    - NFR3
+    - NFR6
+    - NFR7
     status: pending
-
-tasks: {}
-
+  task0006:
+    title: tier transcription, the task document, and tier-aware create-plan preconditions
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/references/phases/create-spec-phase.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/templates/task-document.md
+    - tests/test_tier_phase_preconditions.py
+    skills: []
+    domains:
+    - config-infra
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR10
+    - FR15
+    - FR16
+    - FR18
+    - NFR7
+    status: pending
+  task0007:
+    title: spec perspective absence rule on the develop-driven route
+    plan: tasks/task0007.md
+    files:
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/review-rules.yaml
+    - tests/test_tier_spec_perspective.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR17
+    - NFR2
+    - NFR7
+    status: pending
+  task0008:
+    title: rework path without a verification document, and the version bump
+    plan: tasks/task0008.md
+    files:
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_tier_rework_path.py
+    - tests/test_task_tier_reduction_version_bump.py
+    - tests/test_assumptions_reversible_criteria_version_bump.py
+    - tests/test_batch_codex_autonomous_decisions_version_bump.py
+    - tests/test_batch_policy_option_id_version_bump.py
+    - tests/test_batch_quiet_output_version_bump.py
+    - tests/test_batch_stop_contract_version_bump.py
+    - tests/test_codex_wrapper_fallback_removal_version_bump.py
+    - tests/test_destructive_guard_command_substitution_version_bump.py
+    - tests/test_exit4_tip_argument_version_bump.py
+    - tests/test_failed_kind_version_bump.py
+    - tests/test_goal_vs_spec_divergence_version_bump.py
+    - tests/test_heredoc_stdin_guard_version_bump.py
+    - tests/test_implement_routeback_gate.py
+    - tests/test_planner_designer_worktree_docs.py
+    - tests/test_recycled_task_id_carveout_version_bump.py
+    - tests/test_recycled_task_id_contract_version_bump.py
+    - tests/test_recycled_task_id_version_bump.py
+    - tests/test_resume_conditions_newline_rejection_version_bump.py
+    - tests/test_rework_contract_drift_version_bump.py
+    - tests/test_routeback_reset_scope_version_bump.py
+    - tests/test_spec_file_set_completeness_version_bump.py
+    - tests/test_stale_launched_version_bump.py
+    - tests/test_verify_rework_lineage_cap_version_bump.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR24
+    - NFR4
+    - NFR7
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -97,226 +296,311 @@ review:
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
-
 requirements:
   FR1:
-    title: "tier-rules.yaml の新設"
+    title: tier-rules.yaml の新設
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-11]
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   FR2:
-    title: "workflow.yaml の tier / tier_decision"
+    title: workflow.yaml の tier / tier_decision
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-12
   FR3:
-    title: "design 以外の step への skipped 許可"
+    title: design 以外の step への skipped 許可
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-5]
+    tasks:
+    - task0002
+    - task0005
+    tests:
+    - TS-5
   FR4:
-    title: "Jev 判定の入力と閾値"
+    title: Jev 判定の入力と閾値
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-10]
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   FR5:
-    title: "Codex 事前調査"
+    title: Codex 事前調査
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-13
   FR6:
-    title: "見積もりの Jev state への合流"
+    title: 見積もりの Jev state への合流
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-13
   FR7:
-    title: "work_still_required: false の停止表現"
+    title: 'work_still_required: false の停止表現'
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-1, TS-2, TS-4]
+    tasks:
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-4
   FR8:
-    title: "外部タスク管理サービスに触れない"
+    title: 外部タスク管理サービスに触れない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0004
+    tests:
+    - TS-14
   FR9:
-    title: "reduced の引き算"
+    title: reduced の引き算
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-15
   FR10:
-    title: "minimal の引き算"
+    title: minimal の引き算
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    - task0006
+    tests:
+    - TS-15
   FR11:
-    title: "minimal でもテストは全部走る"
+    title: minimal でもテストは全部走る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-15
   FR12:
-    title: "昇格のみ（降格禁止）"
+    title: 昇格のみ（降格禁止）
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-8]
+    tasks:
+    - task0002
+    - task0005
+    tests:
+    - TS-8
   FR13:
-    title: "フォールバック"
+    title: フォールバック
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-9]
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-9
   FR14:
-    title: "スタンドアロン経路"
+    title: スタンドアロン経路
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-20
   FR15:
-    title: "tier 判定結果の永続化と転記"
+    title: tier 判定結果の永続化と転記
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-8]
+    tasks:
+    - task0003
+    - task0006
+    tests:
+    - TS-8
   FR16:
-    title: "minimal の requirements / tasks"
+    title: minimal の requirements / tasks
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-6]
+    tasks:
+    - task0006
+    tests:
+    - TS-6
   FR17:
-    title: "develop 駆動経路の spec 観点除外条件"
+    title: develop 駆動経路の spec 観点除外条件
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-7]
+    tasks:
+    - task0007
+    tests:
+    - TS-7
   FR18:
-    title: "create-plan 前提条件の tier 対応"
+    title: create-plan 前提条件の tier 対応
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-6]
+    tasks:
+    - task0006
+    tests:
+    - TS-6
   FR19:
-    title: "昇格時の再走行手順"
+    title: 昇格時の再走行手順
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-16
   FR20:
-    title: "retrospect への記録"
+    title: retrospect への記録
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-17
   FR21:
-    title: "並列 worktree を引くの範囲"
+    title: 並列 worktree を引くの範囲
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-15
   FR22:
-    title: "既存の固定アサーションの更新"
+    title: 既存の固定アサーションの更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-1, TS-2, TS-3]
+    tasks:
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
   FR23:
-    title: "gate_id 双方向チェックへの整合"
+    title: gate_id 双方向チェックへの整合
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-18
   FR24:
-    title: "minimal からの rework 経路の明示"
+    title: minimal からの rework 経路の明示
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0008
+    tests:
+    - TS-19
   NFR1:
-    title: "判定に Claude を使わない"
+    title: 判定に Claude を使わない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-13
   NFR2:
-    title: "security 観点は引けない"
+    title: security 観点は引けない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-7]
+    tasks:
+    - task0005
+    - task0007
+    tests:
+    - TS-7
   NFR3:
-    title: "SSOT 分割の維持"
+    title: SSOT 分割の維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: [TS-3]
+    tasks:
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-3
   NFR4:
-    title: "プラグイン version bump"
+    title: プラグイン version bump
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0008
+    tests:
+    - TS-21
   NFR5:
-    title: "外部スキルの内容を複製しない"
+    title: 外部スキルの内容を複製しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-13
   NFR6:
-    title: "無人実行を止めない"
+    title: 無人実行を止めない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-22
   NFR7:
-    title: "テストの依存制約"
+    title: テストの依存制約
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
-
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    tests:
+    - TS-23
 batch:
   review_rework_count: 0
   verify_rework:

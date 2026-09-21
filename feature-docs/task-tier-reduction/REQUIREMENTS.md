@@ -102,7 +102,7 @@ status: draft
 
 #### FR4: Jev 判定の入力と閾値
 
-判定は Jev の `score` の `probabilities` を使い、`confidence` 単体で閾値を切らない。初期閾値は `P(0) >= 0.80` かつ `expectation_clear >= 0.5` で minimal、`P(0) + P(1) >= 0.85` で reduced、それ以外は full。Jev は `--json-input` / `--json-output` で呼ぶ。
+判定は Jev の `score` の `probabilities` を使い、`confidence` 単体で閾値を切らない。初期閾値は `P(0) >= 0.80` かつ `expectation_clear >= 0.5` で minimal、`P(0) >= 0.40` かつ `P(0) + P(1) >= 0.85` で reduced、それ以外は full。Jev は `--json-input` / `--json-output` で呼ぶ。
 
 #### FR5: Codex 事前調査
 
@@ -326,7 +326,7 @@ Jev の呼び出し方（`~/.claude/skills/jev`）とモデル特性・質問設
 - [ ] TS-8: workflow.yaml 未作成のまま中断 → 再開したとき phase-state の tier 判定が復元され、再転記で降格しない。
 - [ ] TS-9: Jev 非 0 終了 / Codex 不在の各組み合わせで tier が仕様どおり full に倒れる。
 - [ ] TS-10: 閾値関数が (P0=0.81, expectation_clear=0.6) → minimal、(P0=0.37, P1=0.59) → full、(P0=0.50, P1=0.40) → reduced を返す。
-- [ ] TS-11: `check-plugin-invariants.py` の stale-reference スキャンが `references/tier-rules.yaml` への参照を検出しない（パスが実在する）。
+- [ ] TS-11: `references/tier-rules.yaml` が実在し、プラグイン内から同ファイルを指す参照がすべて解決する。
 
 ## 13. 用語定義
 
