@@ -284,6 +284,34 @@ findings:
   resolution: unresolved
   resolution_reason: null
   lineage: "c02d662ffeb753a7（round 2 evaluation）→ 2050758c7c0010d2（loop 再報告）。3 ラウンドの loop を通して未修正"
+- stable_id: f41dd9035aa831ea
+  severity: high
+  category: spec
+  file: em-workflow/skills/develop/SKILL.md
+  line: 571
+  title: "reduced の IMPLEMENTATION.md 条件付き維持が FR9 に矛盾する"
+  description: |
+    SPEC.md FR9 と Tier Reduction Table は `reduced` が `full` から
+    REQUIREMENTS.md / IMPLEMENTATION.md / design を無条件に引くと定めている。
+    ところが loop 2 の auto-fix が書いた SKILL.md 削減表の `reduced` 行は
+    IMPLEMENTATION.md の削減を条件付きにした:「複数タスクが同一ファイルを
+    宣言しないときのみ削減する。宣言する場合は IMPLEMENTATION.md を維持し、
+    `## Shared Components` 節を含める」。`## Shared Components` は
+    create-plan-phase.md / validate-worker-output.py が実際に強制している
+    既存の節なので、これは文書上の言い換えではなく実質的な例外規定。
+    SPEC.md はこの例外を一切述べていない。
+    この指摘は round 2 の auto-fix loop 2 が自ら作り込んだ矛盾であり、
+    loop 3 の re-review で初めて検出された。
+  suggestion: |
+    FR9 の記述どおり `reduced` の IMPLEMENTATION.md 削減を無条件に戻すか、
+    SPEC.md の FR9 と Tier Reduction Table 側に「複数タスクが同一ファイルを
+    宣言する場合」の例外を明記してから、この SKILL.md の記述を残す。
+    どちらを採るかは仕様判断なので rework で扱う。
+  sources: [litellm:muse-spark:spec]
+  confidence: 60
+  resolution: deferred
+  resolution_reason: "batch mode: rework cap reached（category: spec のため auto-fix の候補ゲート対象外）"
+  lineage: "loop2 の 5b0e99c28d3871eb に対する修正が持ち込んだ新規の SPEC 矛盾。loop3 の spec re-review で検出"
 evaluation:
   round_summary: |
     round 2（cross_validation: true）の reviewer 出力 7 件を突き合わせ、
@@ -336,7 +364,7 @@ auto_fix:
     applied: 1
     commit: fee9d20
     sites: [b5977d34cb2520a1]
-residual_critical_high: 3
+residual_critical_high: 4
 rework_required: false
 triage_filing:
   executed: false

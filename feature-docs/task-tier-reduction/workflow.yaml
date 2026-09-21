@@ -467,7 +467,7 @@ review:
     architecture: completed
     spec: completed
   rounds_completed: 2
-  residual_critical_high: 3
+  residual_critical_high: 4
   needs_rework: false
 requirements:
   FR1:
