@@ -346,7 +346,7 @@ tasks:
     - FR16
     - FR18
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/task-tier-reduction/task0010
     provenance:
       source: review
