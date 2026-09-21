@@ -1,0 +1,125 @@
+feature: task-tier-reduction
+collected_at: "2026-09-21T22:14:00+09:00"
+session_ids:
+  - 01a0c418-8da1-752c-90b6-3cd6e7bbf83f
+signals:
+  review_critical_high:
+    # round 1
+    - stable_id: 35594b89cf21eb82
+      category: comprehensive
+      file: em-workflow/skills/develop/SKILL.md
+      title: New-feature path persists tier.yaml before the integration worktree exists
+      resolution: unresolved
+    - stable_id: 59d5d56c193ecdd2
+      category: comprehensive
+      file: em-workflow/references/phases/create-plan-phase.md
+      title: minimal tier points a task entry's plan at TASK.md, which the worker-output validator rejects
+      resolution: unresolved
+    - stable_id: 39d3658845d45023
+      category: comprehensive
+      file: em-workflow/skills/develop/SKILL.md
+      title: Tier upgrade re-runs only create-spec, and the loop-1 replacement persists no re-entry record
+      resolution: unresolved
+    - stable_id: cef596106f7aed93
+      category: comprehensive
+      file: em-workflow/skills/develop/SKILL.md
+      title: reduced->full upgrade never re-runs create-spec, so REQUIREMENTS.md is never regenerated
+      resolution: unresolved
+    - stable_id: 6c01bcf729ce8d46
+      category: architecture
+      file: em-workflow/references/tier-rules.yaml
+      title: Two-basis disagreement fail-safe and the tier-decision record shape have no owning SSOT
+      resolution: unresolved
+    - stable_id: c3ce3a0bc8509e72
+      category: architecture
+      file: em-workflow/scripts/validate-worker-output.py
+      title: The TASK.md exemption create-plan-phase.md 2a declares is not implemented in the validator
+      resolution: unresolved
+    - stable_id: adee3ab50facc310
+      category: architecture
+      file: em-workflow/skills/develop/SKILL.md
+      title: reduced->full promotion skips create-spec re-entry, breaking create-plan entry contract
+      resolution: unresolved
+    - stable_id: 67b0e3ed5b953874
+      category: architecture
+      file: em-workflow/scripts/decide-tier.py
+      title: Evaluator hardcodes row ids and duplicates SSOT thresholds, and falls open on an unknown row
+      resolution: unresolved
+    - stable_id: d3be0f89bc0b040a
+      category: comprehensive
+      file: em-workflow/skills/develop/SKILL.md
+      title: minimal tier removes VERIFICATION.md but the verify phase still reads it unconditionally
+      resolution: fixed
+    - stable_id: 71d7302c4a2d386e
+      category: comprehensive
+      file: em-workflow/references/review-phase.md
+      title: High-only review findings at minimal tier reach a rework route section 8a declares unreachable
+      resolution: fixed
+    # round 2
+    - stable_id: c03d511fd0839138
+      category: architecture
+      file: em-workflow/references/rework-task-synthesis.md
+      title: §8a に昇格完了記録の読み取り・消費手順が無い
+      resolution: deferred
+    - stable_id: c92f9bcb25d7e772
+      category: architecture
+      file: em-workflow/references/phases/create-plan-phase.md
+      title: 実装担当への受け渡しも tasks.{T}.plan に合わせる
+      resolution: deferred
+    - stable_id: e8d50499a74c30f9
+      category: spec
+      file: em-workflow/references/tier-rules.yaml
+      title: 可用性フォールバックが Codex 不可で full を強制し FR13 に矛盾する
+      resolution: deferred
+    - stable_id: f41dd9035aa831ea
+      category: spec
+      file: em-workflow/skills/develop/SKILL.md
+      title: reduced の IMPLEMENTATION.md 条件付き維持が FR9 に矛盾する
+      resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0004
+      files:
+        - tests/test_batch_stop_contract.py
+    - task: task0005
+      files:
+        - em-workflow/skills/develop/SKILL.md
+    - task: task0008
+      files:
+        - tests/test_gate_option_vocabulary.py
+    - task: task0010
+      files:
+        - tests/test_gate_option_vocabulary.py
+    - task: task0011
+      files:
+        - tests/test_gate_option_vocabulary.py
+    - task: task0014
+      files:
+        - tests/test_tier_worktree_bootstrap.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+follow_up_drafts: []
+lessons_candidates:
+  - |
+    review round 1 の auto-fix（Phase R4）で applied=4 を出したが、いずれも
+    単一ファイル内の散文追記にとどまり、3 件は欠陥が残ったまま文書だけが
+    実装と食い違う状態を作った。さらに SKILL.md への追記が新規 high を 2 件
+    生み、既存テスト 3 件を落とした。単一ファイル editor に複数ファイル契約
+    整合性の findings を渡すと、修正価値より汚染コストが上回る局面がある。
+  - |
+    review round 2 の fan-out で litellm(muse-spark) ハーネスが
+    review_data_too_large で 2 観点を skip した（統合 diff 654,086 文字 /
+    12,234 行）。同じ diff を codex ハーネスは完走しており、
+    review-phase.md Phase R2b の retryable 表にこの理由が無いことが
+    chain walk の可否判断を毎回オーケストレーターの解釈に委ねている。
+  - |
+    implement の deviation auto-addition rule で declined になった 6 件の
+    うち 4 件が「モジュール自身の in-file 慣習（SHA-256 pin の refresh、
+    アンカー追随）」を根拠にしており、AC / 要件 ID を名指しできていない。
+    pin 系テストの更新を declared change set に含める書き方が計画側に無い。
+  - |
+    verify round 1 の失敗 2 件（TS-13 / TS-9）はいずれも review round 2 の
+    auto-fix による文言の書き換えが、テストが固定している文字列を
+    壊したことに起因する。片方は語順の非連続化（情報欠落なし）、
+    もう片方は fail-closed 条項の実質的な欠落だった。
