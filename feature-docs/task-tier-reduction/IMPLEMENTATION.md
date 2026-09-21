@@ -36,9 +36,10 @@ above it, never the reverse):
 2. **Decision mechanism** — `scripts/decide-tier.py`: a deterministic
    evaluator over observed values. No inference, no network, no repository
    reads beyond its own rule table (NFR1).
-3. **State** — `phase-state/{feature}/tier.yaml` before `workflow.yaml`
-   exists, then `workflow.yaml`'s `tier` / `tier_decision` once create-spec has
-   built it. `workflow.yaml` wins from that point on (FR15).
+3. **State** — `feature-docs/{feature}/phase-state/tier.yaml` before
+   `workflow.yaml` exists, then `workflow.yaml`'s `tier` / `tier_decision`
+   once create-spec has built it. `workflow.yaml` wins from that point on
+   (FR15).
 4. **Consumers** — the develop orchestrator loop, the create-spec /
    create-plan phase protocols, the review phase, and the rework path. A
    consumer reads the tier; no consumer re-derives it.
@@ -48,8 +49,10 @@ above it, never the reverse):
 | Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
 |-----------|----------------|------------------------------|---------------|
 | `em-workflow/references/tier-rules.yaml` | Single place holding the Jev question set, the three threshold rows, the Codex output schema and the availability fallback matrix | Pre: none. Post: a consumer reads the rows it needs and never restates them in its own document; the file names the external skills by path and reproduces none of their text | task0001 (author), task0003, task0005 |
-| `em-workflow/scripts/decide-tier.py` | Deterministic tier evaluation | Pre: one JSON mapping on standard input carrying the two availability booleans, the Jev score object (its probability members and its clarity member) and the basis label; a rule-table path may be supplied as an argument, defaulting to the plugin's own `references/tier-rules.yaml`. Post: one JSON mapping on standard output carrying the decided tier, the rule row or fallback row that decided it, and an echo of the observed values; a missing, malformed or incomplete input yields the safest tier with a reason naming what was missing, never an error exit and never a prompt; exit status is non-zero only when no output could be produced at all | task0001 (author), task0003 (caller) |
-| `phase-state/{feature}/tier.yaml` | Holds the tier decision from the moment it is made until create-spec transcribes it | Pre: written immediately after the decision, before `workflow.yaml` exists, and committed by `commit-docs.sh` (which already stages the whole feature-docs tree, so no script change). Post: carries the schema version, the feature slug, the decided tier, and the two decision bases with their observed values and timestamps. A resume reads it; a re-transcription never lowers the tier already recorded in `workflow.yaml` | task0003 (writer), task0006 (reader) |
+| `em-workflow/scripts/decide-tier.py` | Deterministic tier evaluation | Pre: one JSON mapping on standard input carrying the two availability booleans and the decision readings — either one reading (its basis label plus its score object's probability members and clarity member) or both readings, each with its own basis label and score; a rule-table path may be supplied as an argument, defaulting to the plugin's own `references/tier-rules.yaml`. Post: one JSON mapping on standard output carrying the decided tier, the rule row or fallback row that decided it, and an echo of the observed values; two readings that evaluate to different tiers yield the safest tier; a missing, malformed, out-of-range or incomplete input yields the safest tier with a reason naming the offending member, never an error exit and never a prompt; no non-finite value can appear in the output; exit status is non-zero only when no output could be produced at all | task0001 (original author), task0003 (caller), task0012 (revises this contract), task0013 (cites it as the two-reading rule's enforcing interface) |
+| `feature-docs/{feature}/phase-state/tier.yaml` | Holds the tier decision from the moment it is made until create-spec transcribes it | Pre: written immediately after the decision — and after the integration worktree that holds it has been secured (D3b) — before `workflow.yaml` exists, and committed by `commit-docs.sh` (which already stages the whole feature-docs tree, so no script change). Post: carries the schema version, the feature slug, the decided tier, and the two decision bases with their observed values and timestamps. A resume reads it; a re-transcription never lowers the tier already recorded in `workflow.yaml` | task0003 (writer), task0006 (reader), task0009 (ordering), task0013 (record shape and vocabulary) |
+| Tier-decision record mapping | The one correspondence between the persisted tier record, `workflow.yaml`'s `tier_decision`, and the retrospect tier signal | Pre: none. Post: owned by the create-spec phase protocol's transcription section; every other document cites it by path and restates no row. `tier_decision` keeps exactly its four sub-fields; its subtraction list is a projection of the tier through the develop skill's reduction table, never a second copy of that table. Every basis identifier used in any of the three shapes is one of `references/tier-rules.yaml`'s decision-basis values | task0013 (owner), task0012 (owns the vocabulary's source file) |
+| Tier-upgrade authorization record | What makes an upgrade's create-spec and create-plan re-entries admissible | Pre: written and committed by the upgrade procedure before any step status is set. Post: it is the existing `phase-state/rework.yaml` authorization record, not a new one — interruption reason, the origin pair (`review` for a critical finding, `verify` for a failed item, with the finding's stable id or the failed item's id), the recorded-at commit, unconsumed, and re-planning authorized. No field and no vocabulary value is added to that record | task0011 (writer and document owner) |
 | `workflow.yaml` `tier` / `tier_decision` | Canonical tier once create-spec has built `workflow.yaml` | Pre: written only by the orchestrator, in the same write that builds `workflow.yaml` (single-writer rule unchanged). Post: `tier` holds one of the three tier labels; `tier_decision` holds exactly four sub-fields — the deciding agent, the confidence record, the decision timestamp, and the list of subtractions applied. Changes are upgrade-only | task0002 (definer), task0003, task0005, task0006 |
 | No-work terminal stop | The run ends before any workflow step when the Codex estimate reports that no work remains | Pre: the estimate's no-work member reads false-y. Post: the run emits the structured result with the stopped state, the no-step sentinel, and non-empty resume guidance stating that no resumption is needed; the stop point is named `no-work-required` and its reason code literal lives only in `references/batch-terminal-line.md` (NFR3/AS-6 — neither `skills/develop/SKILL.md` nor `references/batch-mode.md` may carry the code literal) | task0003 (trigger), task0004 (contract) |
 | Tier reduction table | Which artifacts each tier subtracts, and what every tier keeps | Pre: none. Post: owned by `skills/develop/SKILL.md`; every other document cites it rather than restating the subtraction list. `reduced` subtracts the requirements document, the implementation plan and the design step; `minimal` additionally subtracts the spec document (replaced by the task document), the task split, the verification document and task-level parallelism. Every tier keeps the full existing test suite, the Step 0 git-setup gate, the security review perspective, and the integration worktree | task0005 (owner), task0006 (citer) |
@@ -162,6 +165,41 @@ exactly one task pointing at the task document, with an empty requirement
 mapping permitted alongside it.
 Affected tasks: task0006 (the phase precondition and the validator scenario),
 task0005 (the reduction table's wording).
+
+### D3a — Section ownership across the review-round-1 rework tasks
+
+Three of the rework tasks edit `skills/develop/SKILL.md`, two edit
+`references/phases/create-spec-phase.md`, and two edit
+`references/phase-state.md`. Their regions are disjoint and this split is
+binding, extending D3 rather than replacing it:
+
+- **task0009 owns**: Step A's worktree-securing step, and the ordering of
+  the securing step relative to the no-work stop and the persistence step
+  inside the tier-decision procedure; in the create-spec phase protocol,
+  the bootstrap section's worktree ordering.
+- **task0011 owns**: the upgrade procedure (both tier branches), the
+  automatic-re-entry carve-out enumeration and the `--once` phase-boundary
+  table's automatic-re-entry row; in the phase-state document, the
+  authorization record's writer set.
+- **task0013 owns**: the tier-decision procedure's two-reading and
+  evaluation steps and the retrospect tier signal; in the create-spec phase
+  protocol, the transcription section; in the phase-state document, the
+  persisted tier record's basis vocabulary.
+
+Neither task edits another's region. Among the test modules, only
+`tests/test_tier_decision_step_a.py` is contended: it belongs to task0011
+for this round, and task0013 puts its assertions in its own new module.
+
+### D3b — The integration worktree is secured before the tier record, after the no-work stop
+
+The persisted tier record lives inside the integration worktree, so the
+worktree must exist before the record is written. Securing it is placed
+after the no-work stop check, so a run that ends because no work remains
+creates neither a branch nor a worktree. The create-spec phase protocol
+reuses what Step A secured and creates one only for a caller that did not
+come through Step A.
+Affected tasks: task0009 (owner), task0013 (the record whose write depends
+on it).
 
 ## Risk Assessment
 
