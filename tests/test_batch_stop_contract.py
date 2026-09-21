@@ -171,6 +171,28 @@ per task0001's design: the matcher's assertions are unchanged, and the
 forged sample still omits the duplicate-key and documented-domain shape
 defenses so it is rejected for those, never for the control-code-point
 wording.
+
+--- task-tier-reduction/task0004 additions ---
+
+Deviation (outside that task's `expected_files`, recorded in its
+implementer report per its own task plan's instruction: "the two
+dynamically-extracting modules are inside its declared file set so a
+surprise there is handled here rather than reported as a deviation" --
+this module is a THIRD, undeclared pinned-cardinality module the same
+risk names; task0004's plan directs fixing whatever the whole-suite run
+turns up). That task adds one reason code (`no_work_required`) and one
+stop point (`no-work-required`) to `batch-terminal-line.md`, raising
+`REASON_CODES` / `STOP_POINT_KEYS` from eleven to twelve members each and
+the documented `reason` domain (REASON_CODES plus the reserved
+`context_budget_reached`) from twelve to thirteen. Updated in place (not
+renamed, except where the test name itself states the old count):
+`REASON_CODES`, `STOP_POINT_KEYS`, `_KEY_CODE_PAIRS_IN_ORDER` (gains one
+pair), `REASON_DOMAIN_ALL` (renamed from `REASON_DOMAIN_TWELVE`, now
+count-agnostic), and `TestStopReasonCodes`'s count-pinning tests (renamed
+where the old count was in the name). Every matcher and negative proof in
+this module is otherwise unchanged in substance -- it is the CONSTANTS
+these tests compare the live document against that grow, not the
+checking logic.
 """
 
 import os
@@ -221,6 +243,10 @@ SC1_KEYS = [
 # stop-point keys, the no-step sentinel's stop points, the `state` and
 # `step` value domains, and the ordered key/code pairing. Re-declared here
 # unmodified from the pre-rewrite module.
+#
+# Extended by task-tier-reduction/task0004: `no_work_required` /
+# `no-work-required` join both sets (twelve members each); see that task's
+# docstring addendum near the end of this module.
 REASON_CODES = frozenset(
     {
         "step_stuck",
@@ -234,13 +260,14 @@ REASON_CODES = frozenset(
         "completion_aborted",
         "feature_resolution_aborted",
         "docs_commit_conflict_aborted",
+        "no_work_required",
     }
 )
 
-# FR15/D8: the twelfth, reserved `reason` value -- documented, never bound
-# to a stop point, never emitted by em-workflow.
+# FR15/D8: the thirteenth, reserved `reason` value -- documented, never
+# bound to a stop point, never emitted by em-workflow.
 CONTEXT_BUDGET_REACHED = "context_budget_reached"
-REASON_DOMAIN_TWELVE = REASON_CODES | {CONTEXT_BUDGET_REACHED}
+REASON_DOMAIN_ALL = REASON_CODES | {CONTEXT_BUDGET_REACHED}
 
 STOP_POINT_KEYS = frozenset(
     {
@@ -255,6 +282,7 @@ STOP_POINT_KEYS = frozenset(
         "step-c-abort",
         "step-a-abort",
         "docs-commit-conflict",
+        "no-work-required",
     }
 )
 
@@ -297,6 +325,7 @@ _KEY_CODE_PAIRS_IN_ORDER = [
     ("step-c-abort", "completion_aborted"),
     ("step-a-abort", "feature_resolution_aborted"),
     ("docs-commit-conflict", "docs_commit_conflict_aborted"),
+    ("no-work-required", "no_work_required"),
 ]
 
 # SC3 -- the canonical escaping mapping, as raw Markdown table cell text
@@ -562,7 +591,7 @@ def _assert_no_sc5_literals(test, text):
         for spelling in (f"step={value}", f"step: {value}", f'step: "{value}"'):
             test.assertNotIn(spelling, text, f"found forbidden literal: {spelling!r}")
     test.assertNotIn(SENTINEL, text)
-    for code in sorted(REASON_DOMAIN_TWELVE):
+    for code in sorted(REASON_DOMAIN_ALL):
         test.assertNotIn(code, text, f"found forbidden reason code literal: {code!r}")
     for spelling in ("reason=none", "reason: none", 'reason: "none"'):
         test.assertNotIn(spelling, text, f"found forbidden literal: {spelling!r}")
@@ -1319,29 +1348,32 @@ class TestStopReasonCodes(unittest.TestCase):
     def test_codes_are_well_formed(self):
         _assert_well_formed_code_list(self, self.codes)
 
-    def test_extracted_set_equals_the_eleven_fixed_codes(self):
+    def test_extracted_set_equals_the_twelve_fixed_codes(self):
+        # task-tier-reduction/task0004 adds `no_work_required`, making
+        # REASON_CODES twelve members (was eleven).
         self.assertEqual(set(self.codes), REASON_CODES)
 
     def test_section_stated_count_equals_table_row_count(self):
-        self.assertIn("eleven", self.section.lower())
-        self.assertEqual(len(self.codes), 11)
+        self.assertIn("twelve", self.section.lower())
+        self.assertEqual(len(self.codes), 12)
         self.assertEqual(len(self.codes), len(REASON_CODES))
 
-    def test_context_budget_reached_documented_as_twelfth_never_emitted(self):
-        """AC-4: the `reason` domain documents twelve values, with
+    def test_context_budget_reached_documented_as_thirteenth_never_emitted(self):
+        """AC-4: the `reason` domain documents thirteen values (task-tier-
+        reduction/task0004 raises this from twelve), with
         `context_budget_reached` marked never emitted, in this section's
         prose (companion to the same fact stated in `## Field values`)."""
         normalized = _normalize(self.section)
         self.assertIn(f"`{CONTEXT_BUDGET_REACHED}`", self.section)
-        self.assertIn("twelfth", normalized)
+        self.assertIn("thirteenth", normalized)
         self.assertIn("never emits it", normalized)
         # AC-4: absent from the coverage table (checked structurally in
         # TestStopPointCoverage.test_context_budget_reached_absent_from_coverage_table).
 
     def test_context_budget_reached_absent_as_table_row(self):
-        """The reason-code TABLE itself stays at exactly eleven rows --
+        """The reason-code TABLE itself stays at exactly twelve rows --
         context_budget_reached is documented in prose, never as a row (the
-        eleven-row regression guard above already proves the row count; this
+        twelve-row regression guard above already proves the row count; this
         proves the specific code is not one of them)."""
         self.assertNotIn(CONTEXT_BUDGET_REACHED, self.codes)
 
@@ -1729,9 +1761,10 @@ class TestStopPointCoverage(unittest.TestCase):
 
 class TestCoverageMatcherRejectsTwelfthCodeAsRow(unittest.TestCase):
     """AC-4 negative proof: a forged coverage table that adds
-    `context_budget_reached` as a twelfth row is rejected -- the matcher's
-    `expected_codes` set (REASON_CODES, eleven members) does not contain it,
-    so the "every bound code is a member of expected_codes" check fires."""
+    `context_budget_reached` as an extra row is rejected -- the matcher's
+    `expected_codes` set (REASON_CODES, twelve members as of task-tier-
+    reduction/task0004) does not contain it, so the "every bound code is a
+    member of expected_codes" check fires."""
 
     def test_forged_table_with_reserved_code_row_is_otherwise_well_formed(self):
         forged = _forged_coverage_table(

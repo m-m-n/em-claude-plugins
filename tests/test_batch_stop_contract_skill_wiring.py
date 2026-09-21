@@ -331,6 +331,8 @@ REASON_CODES = (
     "completion_aborted",
     "feature_resolution_aborted",
     "docs_commit_conflict_aborted",
+    # Added by task-tier-reduction/task0004: the pre-run no-work stop.
+    "no_work_required",
     "context_budget_reached",
 )
 FIELD_NAME_TOKENS = (
@@ -886,16 +888,18 @@ class TestReadInstructionMatcherCanFail(unittest.TestCase):
         )
 
 
-class TestOwnReasonCodeTupleIsTwelve(unittest.TestCase):
-    """AC-4/AC-6 (task0005/D9, extended by task0003/D8/SC5): this module's
-    own `REASON_CODES` tuple -- used for absence checks only, never asserted
-    against the contract document itself (D9/D5 cross-task safety) -- lists
-    all twelve codes: the original eleven plus the twelfth,
+class TestOwnReasonCodeTupleIsThirteen(unittest.TestCase):
+    """AC-4/AC-6 (task0005/D9, extended by task0003/D8/SC5, extended again by
+    task-tier-reduction/task0004): this module's own `REASON_CODES` tuple --
+    used for absence checks only, never asserted against the contract
+    document itself (D9/D5 cross-task safety) -- lists all thirteen codes:
+    the original eleven, plus `no_work_required` (task-tier-reduction/
+    task0004: the pre-run no-work stop), plus the reserved
     `context_budget_reached` (D8: reserved by the consumer, documented but
     never emitted by em-workflow)."""
 
-    def test_reason_codes_tuple_has_twelve_members(self):
-        self.assertEqual(len(REASON_CODES), 12)
+    def test_reason_codes_tuple_has_thirteen_members(self):
+        self.assertEqual(len(REASON_CODES), 13)
 
     def test_reason_codes_tuple_includes_the_two_rework_codes(self):
         self.assertIn("feature_resolution_aborted", REASON_CODES)
@@ -903,6 +907,9 @@ class TestOwnReasonCodeTupleIsTwelve(unittest.TestCase):
 
     def test_reason_codes_tuple_includes_context_budget_reached(self):
         self.assertIn("context_budget_reached", REASON_CODES)
+
+    def test_reason_codes_tuple_includes_no_work_required(self):
+        self.assertIn("no_work_required", REASON_CODES)
 
     def test_reason_codes_tuple_has_no_duplicates(self):
         self.assertEqual(len(REASON_CODES), len(set(REASON_CODES)))

@@ -154,9 +154,11 @@ TERMINAL_REASON_CODES = (
     "completion_aborted",
     "feature_resolution_aborted",
     "docs_commit_conflict_aborted",
+    # Added by task-tier-reduction/task0004: the pre-run no-work stop.
+    "no_work_required",
     # Added for task0002 (batch-structured-result-output): IMPLEMENTATION.md
-    # SC5's reason-code member of the forbidden-literal set is now twelve
-    # values (D8) -- the eleven above plus this reserved, never-emitted one.
+    # SC5's reason-code member of the forbidden-literal set is now thirteen
+    # values -- the twelve above plus this reserved, never-emitted one.
     "context_budget_reached",
 )
 TERMINAL_SENTINEL = "no-step"
@@ -770,12 +772,13 @@ class TestExceptions(unittest.TestCase):
         cls.normalized = _normalize(cls.section)
         cls.stop_point_keys = _extract_stop_point_keys(_read(CONTRACT_PATH))
 
-    def test_stop_point_coverage_table_has_eleven_keys(self):
+    def test_stop_point_coverage_table_has_twelve_keys(self):
         """Non-vacuity for the coverage read: the contract's stop-point
-        coverage table extracts to eleven keys, matching the real
-        document -- proves the set-level rule below actually ranges over
-        all eleven, per Test Notes."""
-        self.assertEqual(len(self.stop_point_keys), 11)
+        coverage table extracts to twelve keys (task-tier-reduction/task0004
+        adds `no-work-required`), matching the real document -- proves the
+        set-level rule below actually ranges over all twelve, per Test
+        Notes."""
+        self.assertEqual(len(self.stop_point_keys), 12)
 
     def test_stop_abort_exception_is_set_level_rule(self):
         _assert_stop_abort_exception_is_set_level(
@@ -873,8 +876,9 @@ class TestContractDocumentUnchangedExceptOneSentence(unittest.TestCase):
                 self.assertIn(code, self.text)
 
     def test_stop_point_table_row_count_unchanged(self):
+        # task-tier-reduction/task0004 adds one row (`no-work-required`).
         rows = _table_rows(self.sections["Stop point coverage"])
-        self.assertEqual(len(rows), 11)
+        self.assertEqual(len(rows), 12)
 
     def test_marker_prefix_literal_absent(self):
         self.assertNotIn(MARKER_PREFIX, self.text)
