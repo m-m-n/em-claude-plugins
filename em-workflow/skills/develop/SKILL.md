@@ -239,37 +239,46 @@ feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.y
    ある旨を明文で述べる。Codex 事前調査の根拠は同ガイダンスに含める。
    この停止点の名は `no-work-required`（ハイフン区切り）とする。対応する
    reason code の文字列は `references/batch-terminal-line.md` の所有物で
-   あり、このファイルには一切書かない。
+   あり、このファイルには一切書かない。統合ブランチ・worktree の確保は
+   下記 7. でこの停止より後にしか行われないため、no-work 停止はブランチも
+   worktree も作らずに走行を終える。
 4. **2 本の判定根拠**: 作業が残っている場合、判定スキルを同じ質問セットに
-   対して 2 回呼ぶ — 1 回目は decision-basis `description_only`
-   （タスク記述のみを基準に）、2 回目は decision-basis
-   `description_plus_code`（2. の Codex 見積もりをその state に合流させ
-   て）。この 2 つの識別子は `tier-rules.yaml` の `decision_basis` 値で
-   あり、ここでは新しい識別子を作らない。両方の読み取り結果を、それぞれの
-   basis ラベルと観測値とともに決定の根拠として記録する。
-5. **評価**: 集めた 2 本の読みを 1 回の呼び出しで評価器
-   （IMPLEMENTATION.md Shared Components `scripts/decide-tier.py` 参照）へ
-   渡す。評価器は各読みがそれぞれ決定する tier を比較し、両者が異なる
-   tier に評価された場合は何も引かない tier（`full`）を返す — この
-   不一致解決規則は評価器の入力契約が持ち、ここでは繰り返さない。返された
-   tier を採用する。
+   対して 2 回呼ぶ — 1 回目はタスク記述のみを基準に、2 回目は 2. の
+   Codex 見積もりをその state に合流させて。両方の読み取り結果を、それぞれの
+   観測値とともに決定の根拠として記録する。
+5. **評価**: 集めた値を評価器（IMPLEMENTATION.md Shared Components
+   `scripts/decide-tier.py` 参照）へ渡し、返された tier を採用する。
 6. **可用性フォールバック**: 可用性は `tier-rules.yaml` のフォールバック表を
    そのまま適用して解決する（閾値の値・表の行はここに書き写さない）。判定
    スキルの終了ステータスが非 0 の場合はすべて「判定スキル使用不可」として
-   扱う。判定スキルが使用不可、または Codex 事前調査が使用不可な場合は、
-   すべて何も引かない tier（`full`）を採用する。2 本の判定結果が割れた
-   場合の解決は手順 5 の評価器の入力契約に従う（ここでは繰り返さない）。
-7. **永続化**: 決定した直後、他の何よりも先に、
-   `feature-docs/{feature}/phase-state/tier.yaml` へ記録し、既存の
-   `commit-docs.sh` でコミットする（スクリプト変更は不要 —
+   扱う。判定スキルが使用不可、または Codex 事前調査が使用不可で 2 本の
+   判定結果が割れた場合、あるいはフォールバック表が解決しないその他の条件は
+   すべて、何も引かない tier（`full`）を採用する。
+7. **統合 branch/worktree の確保**: `em-workflow/{feature}/integration`
+   ブランチと対応する worktree がまだ存在しなければ、ここで確保する
+   （新規 feature 分岐、および「ブートストラップ状態の判定」の
+   「存在しない」分岐の場合。既存 feature の通常再開では Step A.2 が
+   既に確保済みなので、ここでは再作成しない）。
+   - ブランチが存在しない場合: Step A.2 の再マテリアライズ手順と同じ
+     引数クォート形式で、ブランチと worktree を同時に作成する:
+     `git worktree add -b "em-workflow/{feature}/integration" "$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration"`
+   - ブランチは存在するが worktree が無い場合: Step A.2 と同じ
+     再マテリアライズコマンドを使う:
+     `git worktree add "$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration" "em-workflow/{feature}/integration"`
+   - 両方既に存在する場合はそのまま使う。
+   以降このワークフロー全体で「integration worktree」と言うときは、ここで
+   確保した（または既存の）worktree の絶対パス
+   `$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration` を指す。
+8. **永続化**: 決定した直後、他の何よりも先に、上記 7. で確保した
+   integration worktree の絶対パス配下の
+   `feature-docs/{feature}/phase-state/tier.yaml`
+   （すなわち
+   `$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration/feature-docs/{feature}/phase-state/tier.yaml`）
+   へ記録し、同じ worktree の絶対パスを対象にした既存の `commit-docs.sh`
+   でコミットする（スクリプト変更は不要 —
    `commit-docs.sh` は既に feature-docs ツリー全体をステージする）。
    フィールドの定義は `references/phase-state.md` の tier decision
    persistence 節参照。
-
-この記録の各フィールドから、後で `workflow.yaml` の `tier_decision` と
-retrospect の `signals.tier_decision` へどう対応するかは
-`references/phases/create-spec-phase.md` の Tier transcription 節が持つ
-写像表を唯一の定義元とし、ここでは繰り返さない。
 
 この決定経路にも no-work 停止にも、新しい `gate_id` もユーザーへの質問も
 一切導入しない。
@@ -770,7 +779,7 @@ signals:
     bases:
       - basis: description_only
         probabilities: {...}
-      - basis: description_plus_code
+      - basis: with_pre_survey
         probabilities: {...}
     pre_survey_estimate: {...}
 follow_up_drafts:           # cap 到達時点で未解決の failed_items 全件（下記参照）
@@ -788,13 +797,13 @@ workflow.yaml に記録した `failed_items` の要素をそのまま写す。�
 定義元であり、ここでは再定義しない。ビルド・フォーマット・非 race 実行等の
 検証の証拠も、同じ要素から読み取れる。
 
-`signals.tier_decision` の各メンバーの値は
+`signals.tier_decision` は Step A の「tier 決定」手順が記録した内容 —
+決定された tier、その根拠の要約、2 本の判定根拠それぞれが観測した確率値
+（`bases`）、Codex 事前調査の見積もり（`pre_survey_estimate`）— を
 `feature-docs/{feature}/phase-state/tier.yaml`（`references/phase-state.md`
-の tier decision persistence 節）由来であり、どの永続フィールドがどの
-メンバーへ写像されるかは上記「tier 決定」手順・手順 7 が引く写像表を
-唯一の定義元とし、ここでは繰り返さない。この記録は実測値を残すだけに
-留まる — 閾値のチューニングや自動学習はこのフィーチャのスコープ外であり、
-ここでは行わない。
+の tier decision persistence 節）からそのまま写す。この記録は実測値を
+残すだけに留まる — 閾値のチューニングや自動学習はこのフィーチャの
+スコープ外であり、ここでは行わない。
 
 `follow_up_drafts` の生成母集団は、cap 到達時点で未解決の `failed_items`
 全件である（系譜 cap に触れた ID かどうかで絞り込まない）。cap 到達が

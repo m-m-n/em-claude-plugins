@@ -1,0 +1,80 @@
+task_id: task0009
+baseline_failures:
+  - test_tier_decision_step_a
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present
+final_failures:
+  - test_tier_decision_step_a
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_tier_reduction_develop_loop.TestUpgradeProcedureExpressedAsSkippedToPending.test_minimal_tier_create_spec_re_execution_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_tier_worktree_bootstrap.TestAC1Ordering.test_tier_section_exists
+      - test_tier_worktree_bootstrap.TestAC1Ordering.test_securing_step_present
+      - test_tier_worktree_bootstrap.TestAC1Ordering.test_securing_step_between_no_work_stop_and_persistence
+      - test_tier_worktree_bootstrap.TestAC1Ordering.test_both_routes_converge_into_the_shared_procedure
+      - test_tier_worktree_bootstrap.TestAC1Ordering.test_persistence_step_targets_worktree_absolute_path
+      - test_tier_worktree_bootstrap.TestAC1AC2MatchersCanFail.test_ordering_matcher_fails_on_pre_change_text
+      - test_tier_worktree_bootstrap.TestAC1AC2MatchersCanFail.test_ordering_matcher_fails_on_securing_after_persistence_forgery
+      - test_tier_worktree_bootstrap.TestAC1AC2MatchersCanFail.test_ordering_matcher_fails_on_securing_before_no_work_forgery
+      - test_tier_worktree_bootstrap.TestAC1AC2MatchersCanFail.test_real_current_text_is_nonvacuously_different_from_both_forgeries
+      - test_tier_worktree_bootstrap.TestAC1AC2RoutesAndPathMatchersCanFail.test_routes_converge_matcher_fails_on_forged_copy
+      - test_tier_worktree_bootstrap.TestAC1AC2RoutesAndPathMatchersCanFail.test_persistence_target_matcher_fails_on_forged_copy
+      - test_tier_worktree_bootstrap.TestAC1AC2RoutesAndPathMatchersCanFail.test_persistence_target_matcher_fails_when_path_missing
+    red_confirmed: true
+    red_reason: "Confirmed by git-stashing the SKILL.md/create-spec-phase.md edits and re-running the module against the unmodified docs: the module failed to even import (ValueError: substring not found in _split_current_steps, raised because the securing step's own heading marker '7. **統合 branch/worktree の確保**' did not exist anywhere in the pre-change text), which fails every test in the module for the right reason -- the securing step the AC requires literally did not exist yet."
+  AC-2:
+    tests:
+      - test_tier_worktree_bootstrap.TestAC2NoWorkStopCreatesNothing.test_securing_step_runs_after_no_work_stop
+      - test_tier_worktree_bootstrap.TestAC2NoWorkStopCreatesNothing.test_no_work_stop_states_no_branch_or_worktree_created
+      - test_tier_worktree_bootstrap.TestAC1AC2MatchersCanFail.test_no_work_stop_disclaimer_absent_from_pre_change_text
+      - test_tier_worktree_bootstrap.TestAC1AC2MatchersCanFail.test_securing_after_no_work_check_alone_also_fails_on_before_forgery
+    red_confirmed: true
+    red_reason: "Same git-stash red check as AC-1 (module-level import failure against the unmodified docs). The pre-change tier-decision procedure also never stated that a no-work stop creates neither a branch nor a worktree -- that sentence did not exist in the original text either (see PRE_CHANGE_TIER_STEPS, which the disclaimer matcher correctly rejects)."
+  AC-3:
+    tests:
+      - test_tier_worktree_bootstrap.TestAC3BootstrapReuse.test_section3_exists
+      - test_tier_worktree_bootstrap.TestAC3BootstrapReuse.test_states_worktree_already_secured_by_step_a
+      - test_tier_worktree_bootstrap.TestAC3BootstrapReuse.test_states_phase_reuses_it
+      - test_tier_worktree_bootstrap.TestAC3BootstrapReuse.test_names_single_creation_case
+      - test_tier_worktree_bootstrap.TestAC3BootstrapReuse.test_no_second_differently_worded_creation_case_exists
+      - test_tier_worktree_bootstrap.TestAC3MatchersCanFail.test_secured_by_step_a_matcher_fails_on_forged_copy
+      - test_tier_worktree_bootstrap.TestAC3MatchersCanFail.test_reuse_matcher_fails_on_forged_copy
+      - test_tier_worktree_bootstrap.TestAC3MatchersCanFail.test_single_case_matcher_fails_on_forged_copy
+      - test_tier_worktree_bootstrap.TestAC3MatchersCanFail.test_matchers_fail_on_the_actual_pre_change_section3
+    red_confirmed: true
+    red_reason: "Same git-stash red check: the whole module (including every AC-3 test) failed to import against the unmodified docs. Independently, test_matchers_fail_on_the_actual_pre_change_section3 pins the exact pre-change section 3 wording (unconditional 'validate it and secure ...' / 'create the integration worktree') and proves none of the three AC-3 matchers fire on it -- the reuse/secured-by-Step-A/single-case language this AC requires was not present in that wording."
+  AC-4:
+    tests:
+      - test_tier_worktree_bootstrap.TestAC4SingleOrdering.test_bootstrap_section_no_longer_claims_unconditional_creation
+      - test_tier_worktree_bootstrap.TestAC4SingleOrdering.test_tier_section_no_longer_claims_unconditional_creation_at_wrong_point
+      - test_tier_worktree_bootstrap.TestAC4MatchersCanFail.test_unconditional_claim_matcher_fires_on_the_actual_pre_change_text
+      - test_tier_worktree_bootstrap.TestAC4MatchersCanFail.test_real_bootstrap_section_is_nonvacuously_nonempty
+    red_confirmed: true
+    red_reason: "test_unconditional_claim_matcher_fires_on_the_actual_pre_change_text asserts the matcher detects the old unconditional creation phrasing on a pinned copy of the exact pre-change sentences -- watched failing (matcher returning a false 'no unconditional claim' verdict) before this rewording was written, since the pre-change section 3 contained both unconditional phrases verbatim. Same git-stash module-level red check applies to the module as a whole."
+  AC-5:
+    tests:
+      - test_tier_worktree_bootstrap.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: "AC-5 is a property of this test module itself (raw-text assertions, negative proofs paired with non-vacuity guards, stdlib-only imports) rather than of the application docs -- there is no pre-implementation state for it to fail against, since the module did not exist before this task (same situation as other tasks' module-hygiene AC in this feature, e.g. task0008's AC-7). Confirmed instead by inspection: every AC-1 through AC-4 matcher above has a paired Test*MatchersCanFail case, and each is exercised against either the real pre-change text or a constructed forgery."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "AC-6 is a whole-suite property, not a text assertion this module can encode. Verified operationally: python3 -m unittest discover -s tests reported 11 failing/erroring tests before this task's changes (baseline_failures above) and the identical 11 after (final_failures above), with 34 new passing tests from this module added on top (5122 -> 5156 total)."
