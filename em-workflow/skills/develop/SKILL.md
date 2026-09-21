@@ -165,6 +165,10 @@ feature-docs はもう main 作業ツリーを走査しない。feature の実�
        載っている。載っていなければ AskUserQuestion で尋ねる
      - batch: タスク記述引数を使う。タスク記述も無ければ中断報告
        （`batch-mode.md` の Non-packet gates 表）
+
+     タスク記述を確定したら、create-spec を実際に起動する前に、下記
+     「### tier 決定」の手順を実行する（no-work 停止に該当すればここで
+     走行を終える）。
 2. **worktree の確保**（既存 feature のときのみ）: `git worktree list` で
    `"$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration"` が
    存在するか確認する
@@ -185,13 +189,74 @@ feature-docs はもう main 作業ツリーを走査しない。feature の実�
    - **存在する**（通常の再開）: そのまま Step A.5 → Step B へ進む
    - **存在しない**（ブランチ + worktree だけが作られ、create-spec が
      workflow.yaml を書き切る前に中断された状態）: 新規 feature 扱いには
-     せず、この既存ブランチ/worktree に対して create-spec フェーズへ直接
-     再突入する（`references/phases/create-spec-phase.md` は既存ブランチの
-     検出・再利用ロジックを持つため、ここから二重にブランチが作られる
-     ことはない）。完了後は workflow.yaml が生成されているので、通常どおり
+     せず、create-spec フェーズへ実際に再突入する前に、下記「### tier
+     決定」の手順を実行する（no-work 停止に該当すればここで走行を終える。
+     `feature-docs/{feature}/phase-state/tier.yaml` に永続化済みの判定が
+     残っていれば、それを再利用し判定をやり直さない）。続けてこの既存
+     ブランチ/worktree に対して create-spec フェーズへ直接再突入する
+     （`references/phases/create-spec-phase.md` は既存ブランチの検出・
+     再利用ロジックを持つため、ここから二重にブランチが作られることは
+     ない）。完了後は workflow.yaml が生成されているので、通常どおり
      Step A.5 → Step B に合流する
 4. 以降の全ステップで workflow.yaml / feature-docs/ 配下のドキュメントを
    読み書きする対象は、この worktree 内の絶対パスになる（Step B 参照）
+
+### tier 決定
+
+feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.yaml` が
+構築される前に、次の手順で走行の tier（`full` / `reduced` / `minimal`）を
+決定する。上記「feature 名の決定」の新規 feature 分岐（create-spec を
+実際に起動する直前）と、「ブートストラップ状態の判定」の「存在しない」
+分岐（create-spec への再突入直前）の両方からここに合流する。
+`workflow.yaml` が既に存在する再開（「ブートストラップ状態の判定」の
+「存在する」分岐）は tier が既に確定済みのため、この手順を経由しない。
+`workflow.yaml` から起動するスタンドアロン経路（外部タスクサービスを
+介さない実行）でも、この規則は同一に適用される — サービスの有無で分岐
+する条件はどこにもない。
+
+1. **永続化済み判定の再利用**: worktree の
+   `feature-docs/{feature}/phase-state/tier.yaml` が既に存在するなら判定を
+   やり直さず、その内容をそのまま採用する（中断・再開の経路。フィールドの
+   定義は `references/phase-state.md` の tier decision persistence 節参照）。
+   存在しなければ次へ進む。
+2. **外部呼び出しは次の 2 つに限る**（他のいかなる呼び出しも tier 決定の
+   経路には現れない）:
+   - `${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh readonly` による
+     読み取り専用の Codex 事前調査。出力メンバーの定義は
+     `${CLAUDE_PLUGIN_ROOT}/references/tier-rules.yaml` を参照する（ここでは
+     個々のメンバー名を書き写さない）。
+   - `~/.claude/skills/jev` の判定スキルを `--json-input` / `--json-output`
+     で呼ぶ。送る質問セットの定義も同じく `tier-rules.yaml` を参照する。
+3. **no-work 停止**: 2. の Codex 事前調査が「作業が残っていない」旨を
+   報告した場合、判定を先へ進めず、いかなる workflow step も実行せずに
+   ここで走行を終える。結果は停止状態を持ち、workflow.yaml の step が
+   1 つも有効になっていないことを示す `references/batch-terminal-line.md`
+   定義のセンチネル値を持ち、再開ガイダンスは空にせず「再開は不要」で
+   ある旨を明文で述べる。Codex 事前調査の根拠は同ガイダンスに含める。
+   この停止点の名は `no-work-required`（ハイフン区切り）とする。対応する
+   reason code の文字列は `references/batch-terminal-line.md` の所有物で
+   あり、このファイルには一切書かない。
+4. **2 本の判定根拠**: 作業が残っている場合、判定スキルを同じ質問セットに
+   対して 2 回呼ぶ — 1 回目はタスク記述のみを基準に、2 回目は 2. の
+   Codex 見積もりをその state に合流させて。両方の読み取り結果を、それぞれの
+   観測値とともに決定の根拠として記録する。
+5. **評価**: 集めた値を評価器（IMPLEMENTATION.md Shared Components
+   `scripts/decide-tier.py` 参照）へ渡し、返された tier を採用する。
+6. **可用性フォールバック**: 可用性は `tier-rules.yaml` のフォールバック表を
+   そのまま適用して解決する（閾値の値・表の行はここに書き写さない）。判定
+   スキルの終了ステータスが非 0 の場合はすべて「判定スキル使用不可」として
+   扱う。判定スキルが使用不可、または Codex 事前調査が使用不可で 2 本の
+   判定結果が割れた場合、あるいはフォールバック表が解決しないその他の条件は
+   すべて、何も引かない tier（`full`）を採用する。
+7. **永続化**: 決定した直後、他の何よりも先に、
+   `feature-docs/{feature}/phase-state/tier.yaml` へ記録し、既存の
+   `commit-docs.sh` でコミットする（スクリプト変更は不要 —
+   `commit-docs.sh` は既に feature-docs ツリー全体をステージする）。
+   フィールドの定義は `references/phase-state.md` の tier decision
+   persistence 節参照。
+
+この決定経路にも no-work 停止にも、新しい `gate_id` もユーザーへの質問も
+一切導入しない。
 
 ## Step A.5: コマンド承認ゲート（workflow.yaml が存在するとき必ず）
 
@@ -621,6 +686,15 @@ signals:
     - {perspective, reason}
   declined_findings:         # resolution: declined の findings（誤検知候補）
     - {stable_id, category, resolution_reason}
+  tier_decision:              # Step A「tier 決定」が記録した内容
+    tier: reduced
+    rationale: "..."
+    bases:
+      - basis: description_only
+        probabilities: {...}
+      - basis: with_pre_survey
+        probabilities: {...}
+    pre_survey_estimate: {...}
 follow_up_drafts:           # cap 到達時点で未解決の failed_items 全件（下記参照）
   - origin_kind: verify
     origin_id: {failed item の ID}
@@ -635,6 +709,14 @@ workflow.yaml に記録した `failed_items` の要素をそのまま写す。�
 `references/workflow-schema.md` の `failed_items[].category` 節が唯一の
 定義元であり、ここでは再定義しない。ビルド・フォーマット・非 race 実行等の
 検証の証拠も、同じ要素から読み取れる。
+
+`signals.tier_decision` は Step A の「tier 決定」手順が記録した内容 —
+決定された tier、その根拠の要約、2 本の判定根拠それぞれが観測した確率値
+（`bases`）、Codex 事前調査の見積もり（`pre_survey_estimate`）— を
+`feature-docs/{feature}/phase-state/tier.yaml`（`references/phase-state.md`
+の tier decision persistence 節）からそのまま写す。この記録は実測値を
+残すだけに留まる — 閾値のチューニングや自動学習はこのフィーチャの
+スコープ外であり、ここでは行わない。
 
 `follow_up_drafts` の生成母集団は、cap 到達時点で未解決の `failed_items`
 全件である（系譜 cap に触れた ID かどうかで絞り込まない）。cap 到達が
