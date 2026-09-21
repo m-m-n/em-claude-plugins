@@ -1,0 +1,49 @@
+schema_version: 1
+feature: task-tier-reduction
+records:
+  - question_id: create-spec.tier-design-open-points
+    packet_id: null
+    answered_at: "2026-09-21T18:50:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+      - q1_new_stop_reason_code
+      - q2_persist_in_phase_state
+      - q3_empty_requirements_plus_single_real_task
+      - q4_skipped_to_pending
+      - q5_single_task_worktree_keep_integration
+    freeform: |
+      Codex 相談（run_codex_exec.sh readonly、1 ターン、52,686 tokens）で 5 件の
+      未確定点を判定した。ユーザー指示「不明点は Codex に相談し、比較して良い方を採用」
+      に基づく相談であり、gate_id を持たないオーケストレーター起点の記録。
+    normalized_answer: |
+      Q1 `work_still_required: false` の停止表現 → (a) batch-terminal-line.md の
+      閉じた stop reason code に 1 件追加（`no_work_required`）。既存 11 コードに
+      「作業不要」の意味を持つものが無く、`completed` は retrospect 到達を意味する
+      ため流用は意味の歪みになる。state: stopped / step: no-step で報告し、
+      resume_conditions は空にできないため「再開不要」を明記する。
+      Q2 tier 判定結果の永続化 → (b) 判定直後に integration worktree の
+      phase-state へ保存してコミットし、create-spec の workflow.yaml 構築時に
+      転記する。workflow.yaml 未作成のまま中断・再開する経路が実在する
+      （SKILL.md Step A の「ブートストラップ状態の判定」）ため、メモリ保持は
+      再開で失われる。単一書き手規則は転記をオーケストレーターが行うことで保たれる。
+      構築後の正は workflow.yaml 側とし、再開時の再転記で降格させない。
+      Q3 minimal の requirements / tasks → 列挙外の案を採用。`requirements: {}` を
+      正当な状態として認めたうえで、`tasks` には TASK.md を参照する実タスクを 1 件
+      残す。`tasks` はレビュー属性だけでなく実行状態とブランチも持ち、タスク完了は
+      統合ブランチへのマージで定義されるため、`tasks/` 分割の省略とは分けて扱う。
+      さらに review-rules.yaml の `spec_review: always` は無条件に spec 観点を
+      含めるため、(a) の「floor が自然に comprehensive + security に落ちる」は成り
+      立たない。SPEC.md 不在時の spec 除外は現状スタンドアロン review にしか
+      規定が無いので、develop 駆動経路にも同じ除外条件を明記する必要がある。
+      Q4 昇格時の再走行 → (a) `skipped` を `pending` に戻すだけで新 status は
+      導入しない。実行順序規則が「最初の completed / skipped 以外」で動くため。
+      ただし TASK.md で completed になった create-spec は skipped 解除では
+      SPEC.md を補えないので、昇格手順に完了済み step の再実行と自動再入の
+      carve-out 更新を含める必要がある。
+      Q5 「並列 worktree を引く」 → (a) integration worktree は残し、implement を
+      単一タスク・単一タスク worktree で実行する。workflow.yaml と文書は
+      integration worktree にしか置かれず、verify / retrospect / Step C が
+      その配置を前提にしているため、integration worktree を引くと全フェーズの
+      前提が崩れる。
+    resolution_note: "gate: create-spec の tier 設計 5 件の未確定点（gate_id なし、ユーザー指示由来のオーケストレーター起点相談）; codex_consulted: true; harness entry: codex; turns: 1; opus escalation: not run; 5 件すべて Codex の提案がオーケストレーターの判断で採用可能と判定され、Q3 のみ列挙外の案を採用した"
