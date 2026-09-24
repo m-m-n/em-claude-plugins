@@ -142,7 +142,12 @@ workflow:
   status: completed
   completed_at_commit: 658459029fc98ce52d508e7574921e18efe8cf06
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: 11172d636fd5a296bc2f5722df0b53da04e2e4df
+  result: pass
+  failed_items: []
+  excluded_scenarios: []
+  summary: 'TS-1..TS-7 pass; python3 -m unittest discover -s tests: 5654 tests, OK. build/format/e2e commands are empty (not applicable).'
 - id: retrospect
   status: pending
 tasks:
