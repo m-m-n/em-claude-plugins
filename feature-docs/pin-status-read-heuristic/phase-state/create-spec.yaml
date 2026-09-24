@@ -4,16 +4,39 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: ac2fc1ba8a9146fd0db22874c59830899adb2f2d
-last_input_digest: null
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:74bf4cb66c080965c5c2e241f399a8ba041cb1c4175375910a82c32400fadf2f
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
     gate_id: create-spec.feature-identity
     option_id: derive_from_task_description
-    resolution_note: "batch: feature 名をタスク記述（hook 分類 pin の per-task status 読み出し判定が識別子名ヒューリスティックに依存）から pin-status-read-heuristic と導出した"
-worker_runs: []
-artifacts: []
+    resolution_note: 'batch: feature 名をタスク記述（hook 分類 pin の per-task status 読み出し判定が識別子名ヒューリスティックに依存）から
+      pin-status-read-heuristic と導出した'
+  create-spec.observation-rule-design:
+    gate_id: null
+    source: batch-codex-consultation
+    resolution_note: Codex 相談で Q1 大文字小文字を区別 / Q2 全文照合 / Q3 呼び出し条件撤廃を採用（詳細は batch-audit.yaml）
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:750e833d6b99ee65b502158bf941792df04bd18667c5e1de95283562fcefde0d
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:750e833d6b99ee65b502158bf941792df04bd18667c5e1de95283562fcefde0d
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:74bf4cb66c080965c5c2e241f399a8ba041cb1c4175375910a82c32400fadf2f
+  output_digest: null
+artifacts:
+- path: feature-docs/pin-status-read-heuristic/REQUIREMENTS.md
+  sha256: sha256:cd7e3d729e724298fa2bcf668d77b0460c537c45812c145a4325fd618f3b2204
+  produced_by: create-spec-run-0003
+- path: feature-docs/pin-status-read-heuristic/SPEC.md
+  sha256: sha256:28ed8a0a1cbf125b50d21d3158a25869bfc00c5c62d1b809f52a5d184092bfda
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
