@@ -5,10 +5,16 @@ status: in_progress
 generation: 1
 base_revision: 485fe4fef3c1458ccafcead463e4cde86e072d5a
 last_input_digest: sha256:c937e8b24627d8d99b603fc267d56049f0b8dfb61ed4bf47a3e0ab3b14504291
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
-worker_runs: {}
+worker_runs:
+  create-spec-run-0001:
+    worker: requirements-analyst
+    status: completed
+    input_digest: sha256:c937e8b24627d8d99b603fc267d56049f0b8dfb61ed4bf47a3e0ab3b14504291
+    completed_at: '2026-09-24T23:03:22+09:00'
+    validated: true
 artifacts: {}
 patches: []
 progress_fingerprint: null
