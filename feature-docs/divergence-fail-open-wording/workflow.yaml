@@ -1,0 +1,293 @@
+schema_version: 1
+feature: divergence-fail-open-wording
+created: '2026-09-25'
+base_branch: main
+goal: '# em-workflow: implement-phase.md I.2.a の divergence 段落が fail-open 定義と矛盾し、I.2.b
+  の同型ルールを取りこぼしている
+
+
+  Notion: https://www.notion.so/3c03509ec8ee818fa135ef93bc6f3e89
+
+
+  ## 現象（必須）
+
+  `em-workflow/references/implement-phase.md` I.2.a に新設された unlaunched-definition divergence
+  段落に、同一文書内で矛盾する用語と、隣接する同型ルールの取りこぼしがある。
+
+  **(1) fail-open の用語矛盾**
+
+  divergence 段落は、`queue_stop_guard.py` が journal イベントの無いタスクを status 無参照で unlaunched
+  とみなし、結果として `status: merged` のタスクを launch list に載せ得る挙動を「deliberate, intended fail-open
+  behavior」「the hook is a fail-open net」として正当化している。
+
+  しかし同じ文書の Supporting cast セクションは fail-open を「on any unexpected state ... they exit
+  0 silently」「a hook wrongly blocking the session is worse than missing one violation」と定義している。divergence
+  段落が述べている挙動は exit 0 ではなく **exit 2 の誤 BLOCK**（既に merged のタスク名を出して turn 終了を阻む）であり、文書自身の定義では
+  fail-open ではなく、まさに fail-open 規約が防ごうとしている事象そのもの。
+
+  さらにこの文言は `tests/test_recycled_task_id_consistency.py` の `DIVERGENCE_DELIBERATE_PHRASE`
+  として固定されているため、以後のメンテナは「誤 BLOCK は規約通り」と読んで修正対象から外す。
+
+  **(2) I.2.b step 1 の同型ルール取りこぼし**
+
+  divergence 段落は status 無参照の no-event 分類を `queue_stop_guard.py` 固有の逸脱として提示している。しかし同じ文書の
+  I.2.b step 1 も、orchestrator 自身の reconcile ルールとして status 無参照で「no event → unlaunched」を規定している。逸脱はフック固有ではなく、分類層と選択層の差。
+
+  最終挙動としては I.2.b が I.2.a に再突入するため `status != merged` フィルタが選択時に効いて一致するが、読者が divergence
+  段落だけを読むと「orchestrator は常に `status != merged` を併用する」と解釈し、I.2.b の記述と衝突する。
+
+  ## 再現手順（必須）
+
+  1. `em-workflow/references/implement-phase.md` の I.2.a 末尾の divergence 段落を読む
+
+  2. 同じ文書の「Supporting cast: journal, hooks, resume」節の fail-open 定義（「on any unexpected
+  state ... they exit 0 silently」）と突き合わせる
+
+  3. 同じ文書の I.2.b step 1 の「no event → unlaunched」と突き合わせる
+
+  ## 期待する挙動（必須）
+
+  - divergence の正当化が、文書内の fail-open 定義と整合する語で書かれている。具体的には (a) 意図された根拠（初回 launch の取りこぼし検出）と
+  (b) 誤 BLOCK が consecutive-block cap (3) によって有界化されている事実を明示し、この挙動に `fail-open` という語を当てない
+
+  - divergence 段落が、I.2.b step 1 の reconcile も status 無参照で分類することに触れ、`status != merged`
+  は I.2.a の選択時フィルタとして効くと述べている（または I.2.b step 1 側に注記を足して、divergence 段落の主語を「I.2.a の選択条件」と明示する）
+
+  ## 完了の定義（必須）
+
+  - [ ] divergence 段落から、誤 BLOCK 挙動を fail-open と呼ぶ記述が消えている
+
+  - [ ] divergence 段落と I.2.b step 1 の関係が、どちらか一方を読んだだけで誤読しない形になっている
+
+  - [ ] `tests/test_recycled_task_id_consistency.py` の `DIVERGENCE_DELIBERATE_PHRASE`
+  が新しい文言に合わせて更新され、対となる negative proof も同時に更新されている
+
+  - [ ] `python3 -m unittest discover -s tests` が通る
+
+  ## 該当箇所（任意）
+
+  - `em-workflow/references/implement-phase.md` — I.2.a の divergence 段落（236-245 行付近）
+
+  - `em-workflow/references/implement-phase.md` — I.2.b step 1（341 行付近）
+
+  - `em-workflow/references/implement-phase.md` — Supporting cast の fail-open 定義（582-586
+  行付近）
+
+  - `tests/test_recycled_task_id_consistency.py` — `DIVERGENCE_DELIBERATE_PHRASE`
+
+  ## 実害・発生条件（任意）
+
+  `queue_stop_guard.py` の誤 BLOCK は journal が欠損・切り詰められたときに起きる。その際「規約通りの fail-open」と読めてしまうため、実際には有界化（cap
+  3）で凌いでいるだけの事象が調査対象から外れる。
+
+  recycled-task-id-carveout feature（PR [https://github.com/m-m-n/em-claude-plugins/pull/15](https://github.com/m-m-n/em-claude-plugins/pull/15)）のレビューで検出された
+  `8b579bf5c8547993`（architecture、medium、confidence 60）と `436df760545c569d`（comprehensive、medium、confidence
+  65）。severity が medium だったため、review フェーズの auto-fix ゲート（critical/high 限定）を通らず未対応のまま。
+
+  '
+parent_branch: em-workflow/divergence-fail-open-wording/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.09
+      '1': 0.15
+      '2': 0.76
+      '3': 0.0
+    expectation_clear: 0.94
+    confidence: 0.68
+    observed_at: '2026-09-25T00:32:38+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.01
+      '1': 0.02
+      '2': 0.95
+      '3': 0.02
+    expectation_clear: 0.93
+    confidence: 0.94
+    observed_at: '2026-09-25T00:34:26+09:00'
+  at: '2026-09-25T00:34:41+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: abbea174087fe7c707ae1723247dd187fa964109
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 変更対象はリファレンス文書（Markdown）、Python の unittest、version 番号の JSON だけで、UI
+    も視覚的な成果物も無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: b7e1af0b66e75f951a87350df545ab9f535e1966
+- id: implement
+  status: completed
+  completed_at_commit: 4ada1ade1962f6b3f569f4a5029b1fba87694318
+  base_commit: f6576f6ccdd36763c9231ec9825b031882fbee2c
+- id: review
+  status: completed
+  completed_at_commit: 75ea90bb8425ca00fd7c439f5708a87088d45894
+- id: verify
+  status: completed
+  completed_at_commit: 1b3c385e2c7a5a76c08cb8d9cb5dddf6ac5dac4c
+  result: pass
+  failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 5668 tests OK. TS-1..TS-7 pass; manual checks (FR2/FR3 wording, A7 scope, NFR1 untouched paths, A5 test-docs untouched, NFR3 imports, A8 verbatim 4999893 samples) confirmed.'
+- id: retrospect
+  status: completed
+  completed_at_commit: bedeae0b873c5c331d1ff43d7a2bfa15f36194c0
+tasks:
+  task0001:
+    title: Reword the divergence paragraph and I.2.b step 1, re-pin tests, bump em-workflow
+      to 0.2.8
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_recycled_task_id_consistency.py
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    status: merged
+    branch: em-workflow/divergence-fail-open-wording/task0001
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: false
+requirements:
+  FR1:
+    title: divergence の正当化を fail-open 以外の語で書き直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-7
+  FR2:
+    title: divergence 段落で I.2.b step 1 との関係を述べる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-7
+  FR3:
+    title: I.2.b step 1 に注記を足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-7
+  FR4:
+    title: 固定文言とテストを更新する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-5
+    - TS-7
+  FR5:
+    title: em-workflow の version を上げる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-7
+  NFR1:
+    title: 変更対象外の箇所
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+  NFR2:
+    title: 既存の固定句の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+  NFR3:
+    title: テストの import 制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
