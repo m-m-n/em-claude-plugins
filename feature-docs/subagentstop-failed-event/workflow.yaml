@@ -1,0 +1,231 @@
+schema_version: 1
+feature: subagentstop-failed-event
+created: '2026-09-24'
+base_branch: main
+goal: |+
+  # em-workflow: implementer 終了時に journal へ terminal event が書かれず launch guard が retry を塞ぐ
+
+  Notion: https://www.notion.so/3bf3509ec8ee81549abeef7372be9060
+
+  ## 現象（必須）
+  implementer サブエージェントが終了したのに `journal.jsonl` に terminal event
+  （`merged` / `failed`）が書かれず、`launched` が最後のイベントのまま残った。その状態で
+  オーケストレーターがそのタスクを再起動しようとすると、`queue_launch_guard.py` が
+  ```plain text
+  em-workflow queue guard: タスク task0003 はすでに実行中だよ（journal の最終イベントが launched）。二重起動になるから今は再起動しないで。
+  ```
+  で拒否する。オーケストレーターは journal を書いてはいけない（`implement-phase.md`
+  Supporting cast: "The orchestrator NEVER writes it"）ので、この状態から抜ける手段が無い。
+  実際に観測したジャーナル（feature `stopguard-worktree-paths`）:
+  ```plain text
+  {"event": "launched", "task": "task0001", "at": "2026-08-18T01:20:51+09:00"}
+  {"event": "launched", "task": "task0002", "at": "2026-08-18T01:20:55+09:00"}
+  {"event":"merged","task":"task0002","commit":"560b29e...","at":"2026-08-18T01:23:50+09:00"}
+  {"event":"merged","task":"task0001","commit":"f810941...","at":"2026-08-18T01:36:43+09:00"}
+  {"event": "launched", "task": "task0003", "at": "2026-08-18T01:59:10+09:00"}
+  ```
+  task0003 の implementer は 2 回終了しているが、`failed` は一度も書かれていない。
+  ## 再現手順（必須）
+  1. em-workflow の implement フェーズで implementer をバックグラウンド起動する
+  2. その implementer が merge に到達せずに終了する（マージしないまま完了報告を返す）
+  3. `journal.jsonl` を見る → `launched` が最後のまま、`failed` が無い
+  4. 同じ task id で `Task(subagent_type="em-workflow:implementer")` を再発行する
+  5. `queue_launch_guard.py` が二重起動として拒否する
+  ## 期待する挙動（必須）
+  merge に到達せずに終了した implementer に対して、`queue_failure_net.py`（SubagentStop）が
+  `failed` を追記する。これが `implement-phase.md` の "SubagentStop failure net" が宣言している
+  契約であり、`implement.failed-task` の retry（「kept worktree に fresh implementer を
+  dispatch する」）が成立するための前提でもある。
+  ## 完了の定義（必須）
+  - [ ] merge せずに終了した implementer に対して `failed` が 1 行だけ追記される
+  - [ ] 追記後は同じ task id の再起動が launch guard に通る
+  - [ ] 既存の冪等性（`queue_taskstop_net.py` と合わせて `failed` は最大 1 行）が保たれている
+  - [ ] 上記を再現するテストがある
+  - [ ] `python3 -m unittest discover -s tests` が通る
+  ## 該当箇所（任意）
+  - `em-workflow/hooks/queue_failure_net.py`（SubagentStop で `failed` を追記する側）
+  - `em-workflow/hooks/queue_taskstop_net.py`（TaskStop 経由の同等機構）
+  - `em-workflow/hooks/queue_launch_guard.py`（`launched` を最終イベントとして拒否する側）
+  - `em-workflow/references/implement-phase.md` の "Stale-`launched` caveat"
+  なぜ発火しなかったかは未診断。観測できたのは「終了したのに terminal event が無い」ことだけ。
+  この implementer は harness 上で再開可能な状態のまま完了通知を返しており、SubagentStop が
+  そもそも飛んでいない可能性がある。まず発火の有無から切り分けたい。
+  ## 実害・発生条件（任意）
+  `references/batch-mode.md` の `implement.failed-task` は「1 タスクにつき 1 回だけ自動 retry」を
+  定めているが、この状態ではその retry を規定どおり（fresh implementer の dispatch）に実行できない。
+  今回は同一エージェントを SendMessage で再開して代替したが、これはプロトコルが書いている
+  retry とは別物で、無人実行の停止要因になりうる。
+
+parent_branch: em-workflow/subagentstop-failed-event/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.01
+      '1': 0.47
+      '2': 0.52
+      '3': 0.0
+    expectation_clear: 0.92
+    confidence: 0.51
+    observed_at: '2026-09-24T22:58:09+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.74
+      '3': 0.26
+    expectation_clear: 0.85
+    confidence: 0.74
+    observed_at: '2026-09-24T22:58:10+09:00'
+  at: '2026-09-24T22:58:25+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 891e90e454ec1c6b3f5db59df7141a3b69e8489a
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: Hook and documentation change with no user interface or visual output.
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Implementer recognition by agent_type
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  FR2:
+    title: Assignment block found beyond the first user message
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  FR3:
+    title: Agent-index fallback when prompt text is unavailable
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  FR4:
+    title: Task-id parsing identical to the launch guard
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  FR5:
+    title: Atomic replay and append
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  FR6:
+    title: Invocation diagnostics
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  FR7:
+    title: Retry reachability after the net records failure
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  FR8:
+    title: Documentation update
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  FR9:
+    title: Plugin version bump
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  NFR1:
+    title: Fail-open exit
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  NFR2:
+    title: Standard library only
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  NFR3:
+    title: No new journal writer
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  NFR4:
+    title: Unchanged failed line and FAILED_REASON
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  NFR5:
+    title: Unchanged SubagentStop registration
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  NFR6:
+    title: Symlink refusal
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+  NFR7:
+    title: Test suite passes
+    status: ok
+    tasks: []
+    tests: []
+    tbd_reason: null
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
