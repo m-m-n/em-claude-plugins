@@ -14,12 +14,12 @@ Covers task0002 Acceptance Criteria
 - AC-3: the document carries the exemption registry as a three-column
   table, states it is the only source of exemptions and that an absent
   registry means zero exemptions, and holds zero rows -- said so in words.
-- AC-4: a hand-rolled registry validator (test-only, mirroring the
-  restricted-subset parsing convention in tests/test_batch_policies.py)
-  fails against synthetic exemption rows missing a reason, missing a
-  compensating guarantee, or naming a gate that is not an `action: select`
-  entry of batch-policies.yaml -- proven against synthetic documents, not
-  only asserted about the current (empty) registry.
+- AC-4: the registry validator, which lives in the shared helper
+  `tests/_gate_vocabulary.py`, fails against synthetic exemption rows
+  missing a reason, missing a compensating guarantee, or naming a gate
+  that is not an `action: select` entry of batch-policies.yaml -- proven
+  against synthetic documents, not only asserted about the current (empty)
+  registry.
 - AC-5: batch-policies.yaml's header comment and question-resolution.md's
   protocol-error step both point at the new document; no gate entry,
   option_id, action or resolution step changes; neither file gains the
@@ -40,6 +40,8 @@ Technology Stack).
 import os
 import re
 import unittest
+
+import _gate_vocabulary
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOC_PATH = os.path.join(
@@ -111,49 +113,17 @@ def _section(text, start_heading, end_heading=None):
     return text[start:end]
 
 
-def parse_exemption_table_rows(section_text):
-    """Parse the data rows of a Markdown pipe table inside
-    `section_text` (skips the header row and the `---` separator row).
-    Returns a list of 3-tuples of raw, stripped cell text. Raises
-    ValueError if a data row does not have exactly 3 cells -- a malformed
-    row fails loudly rather than being silently dropped, matching this
-    feature's error-handling policy for the verification layer
-    (IMPLEMENTATION.md Conventions)."""
-    table_lines = [
-        line for line in section_text.splitlines() if line.strip().startswith("|")
-    ]
-    if not table_lines:
-        raise ValueError("no Markdown table found in exemption registry section")
-    data_lines = table_lines[2:]  # skip header row + `---` separator row
-    rows = []
-    for line in data_lines:
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) != 3:
-            raise ValueError(f"exemption row does not have exactly 3 cells: {line!r}")
-        rows.append(tuple(cells))
-    return rows
-
-
-def validate_exemption_rows(rows, select_ids):
-    """Return a list of violation strings for `rows` (as returned by
-    parse_exemption_table_rows); an empty list means every row is
-    well-formed. A row is invalid if its gate_id is not an `action: select`
-    entry of batch-policies.yaml, if its reason cell is empty, or if its
-    compensating-guarantee cell is empty."""
-    violations = []
-    for gate_cell, reason_cell, guarantee_cell in rows:
-        gate_id = gate_cell.strip("`").strip()
-        if gate_id not in select_ids:
-            violations.append(
-                f"{gate_id!r} is not an `action: select` entry of batch-policies.yaml"
-            )
-        if not reason_cell:
-            violations.append(f"{gate_id!r} row is missing a reason")
-        if not guarantee_cell:
-            violations.append(
-                f"{gate_id!r} row is missing a compensating guarantee"
-            )
-    return violations
+def _registry_section_or_fail(text):
+    """The registry-section accessor: obtains the `## Exemption registry`
+    section through the shared extractor. Fails the test loudly (never
+    hands a no-section result to the parser) when the section is missing
+    from `text`."""
+    section = _gate_vocabulary.extract_exemption_registry_section(text)
+    if section is None:
+        raise AssertionError(
+            "`## Exemption registry` section is missing from the document"
+        )
+    return section
 
 
 class GateOptionVocabularyDocTestCase(unittest.TestCase):
@@ -282,7 +252,7 @@ class TestCanonicalDeclarationFormat(GateOptionVocabularyDocTestCase):
 
 class TestExemptionRegistryStructure(GateOptionVocabularyDocTestCase):
     def _registry_section(self):
-        return _section(self.text, "## Exemption registry", "## Scope")
+        return _registry_section_or_fail(self.text)
 
     def test_table_has_three_named_columns(self):
         section = self._registry_section()
@@ -306,7 +276,7 @@ class TestExemptionRegistryStructure(GateOptionVocabularyDocTestCase):
 
     def test_registry_holds_zero_rows(self):
         section = self._registry_section()
-        rows = parse_exemption_table_rows(section)
+        rows = _gate_vocabulary.parse_exemption_table_rows(section)
         self.assertEqual(rows, [])
 
     def test_states_zero_rows_in_words(self):
@@ -349,14 +319,14 @@ class TestExemptionRegistryValidatorAgainstSyntheticRows(GateOptionVocabularyDoc
             "mechanical check cannot reach this gate",
             "manual review at every merge",
         )
-        rows = parse_exemption_table_rows(section)
-        violations = validate_exemption_rows(rows, self.select_ids)
+        rows = _gate_vocabulary.parse_exemption_table_rows(section)
+        violations = _gate_vocabulary.validate_exemption_rows(rows, self.select_ids)
         self.assertEqual(violations, [])
 
     def test_row_missing_reason_is_flagged(self):
         section = self._row_section(self.valid_select_gate, "", "manual review")
-        rows = parse_exemption_table_rows(section)
-        violations = validate_exemption_rows(rows, self.select_ids)
+        rows = _gate_vocabulary.parse_exemption_table_rows(section)
+        violations = _gate_vocabulary.validate_exemption_rows(rows, self.select_ids)
         self.assertTrue(
             any("missing a reason" in v for v in violations),
             f"expected a missing-reason violation, got: {violations}",
@@ -364,8 +334,8 @@ class TestExemptionRegistryValidatorAgainstSyntheticRows(GateOptionVocabularyDoc
 
     def test_row_missing_guarantee_is_flagged(self):
         section = self._row_section(self.valid_select_gate, "some reason", "")
-        rows = parse_exemption_table_rows(section)
-        violations = validate_exemption_rows(rows, self.select_ids)
+        rows = _gate_vocabulary.parse_exemption_table_rows(section)
+        violations = _gate_vocabulary.validate_exemption_rows(rows, self.select_ids)
         self.assertTrue(
             any("missing a compensating guarantee" in v for v in violations),
             f"expected a missing-guarantee violation, got: {violations}",
@@ -375,8 +345,8 @@ class TestExemptionRegistryValidatorAgainstSyntheticRows(GateOptionVocabularyDoc
         section = self._row_section(
             self.non_select_gate, "some reason", "some guarantee"
         )
-        rows = parse_exemption_table_rows(section)
-        violations = validate_exemption_rows(rows, self.select_ids)
+        rows = _gate_vocabulary.parse_exemption_table_rows(section)
+        violations = _gate_vocabulary.validate_exemption_rows(rows, self.select_ids)
         self.assertTrue(
             any("not an `action: select` entry" in v for v in violations),
             f"expected a non-select-gate violation, got: {violations}",
@@ -386,9 +356,9 @@ class TestExemptionRegistryValidatorAgainstSyntheticRows(GateOptionVocabularyDoc
         # Non-vacuity: the empty real registry alone would trivially pass
         # `validate_exemption_rows([], ...) == []`, which the four tests
         # above prove is a meaningful check, not a vacuous one.
-        section = _section(self.text, "## Exemption registry", "## Scope")
-        rows = parse_exemption_table_rows(section)
-        violations = validate_exemption_rows(rows, self.select_ids)
+        section = _registry_section_or_fail(self.text)
+        rows = _gate_vocabulary.parse_exemption_table_rows(section)
+        violations = _gate_vocabulary.validate_exemption_rows(rows, self.select_ids)
         self.assertEqual(violations, [])
 
 

@@ -1,0 +1,224 @@
+task_id: task0001
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_gate_option_vocabulary.TestSharedHelperContract.test_helper_file_exists_with_a_name_unittest_discover_will_not_collect
+      - tests.test_gate_option_vocabulary.TestSharedHelperContract.test_helper_defines_no_testcase_subclass
+      - tests.test_gate_option_vocabulary.TestSharedHelperContract.test_helper_imports_only_standard_library_modules
+      - tests.test_gate_option_vocabulary.TestSharedHelperContract.test_helper_is_the_sole_definer_of_the_shared_names_among_test_modules
+      - tests.test_gate_option_vocabulary.TestSharedHelperContract.test_both_consumer_modules_import_the_helper_and_not_each_other
+      - tests.test_gate_option_vocabulary.TestSharedHelperStaticCheckDetectorsHermetic.test_function_definition_detector_flags_a_synthetic_duplicate
+      - tests.test_gate_option_vocabulary.TestSharedHelperStaticCheckDetectorsHermetic.test_function_definition_detector_is_silent_with_no_overlap
+      - tests.test_gate_option_vocabulary.TestSharedHelperStaticCheckDetectorsHermetic.test_import_name_detector_flags_a_synthetic_cross_module_import
+      - tests.test_gate_option_vocabulary.TestSharedHelperStaticCheckDetectorsHermetic.test_import_name_detector_flags_a_synthetic_from_import
+    red_confirmed: true
+    red_reason: >
+      tests/_gate_vocabulary.py did not exist at the pre-task commit
+      ("git show HEAD:tests/_gate_vocabulary.py" -> "fatal: path
+      ... exists on disk, but not in 'HEAD'"), so
+      test_helper_file_exists_with_a_name_unittest_discover_will_not_collect
+      and every other structural assertion about it would have failed to
+      even run. The sole-definer detector
+      (_modules_defining_any_of) was run against the actual pre-task
+      committed content of test_gate_option_vocabulary.py and
+      test_gate_option_vocabulary_doc.py (via `git show HEAD:...`, before
+      this task's edits removed the local definitions): it reported
+      {'test_gate_option_vocabulary.py': {'load_exempt_gate_ids'},
+      'test_gate_option_vocabulary_doc.py': {'validate_exemption_rows',
+      'parse_exemption_table_rows'}} -- exactly the violation AC-1 exists
+      to prevent, confirming the detector is exercised by a real prior
+      state, not a synthetic one. The two detector helper functions
+      (_modules_defining_any_of, _top_level_import_names) themselves did
+      not exist before this task either; their four non-vacuity companion
+      tests were additionally checked by deliberately stubbing
+      _modules_defining_any_of to always return {}, which made the
+      "flags a synthetic duplicate" assertion fail as expected, then
+      reverted.
+  AC-2:
+    tests:
+      - tests.test_gate_option_vocabulary.TestExemptionRegistrySectionExtractorHermetic.test_section_starts_after_the_heading_and_ends_before_next_level2_heading
+      - tests.test_gate_option_vocabulary.TestExemptionRegistrySectionExtractorHermetic.test_section_runs_to_end_of_text_when_no_next_heading
+      - tests.test_gate_option_vocabulary.TestExemptionRegistrySectionExtractorHermetic.test_document_without_the_heading_gives_the_no_section_result
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_level3_subheading_inside_registry_section_does_not_end_it
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_level3_exemption_registry_heading_is_not_a_section_start
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_midline_mention_of_the_heading_is_not_a_section_start
+    red_confirmed: true
+    red_reason: >
+      Verified by temporarily swapping tests/_gate_vocabulary.py for a
+      stand-in that reproduces the pre-task local loader's exact bug
+      (plain text.find("## Exemption registry") substring search, no
+      line-anchoring, no end-of-section trimming) and re-running this
+      class plus the loader regression class:
+      test_section_starts_after_the_heading_and_ends_before_next_level2_heading
+      and test_section_runs_to_end_of_text_when_no_next_heading failed
+      (the stand-in never trims at the next heading);
+      test_level3_exemption_registry_heading_is_not_a_section_start and
+      test_midline_mention_of_the_heading_is_not_a_section_start failed
+      (plain substring search matches "## Exemption registry" inside
+      "### Exemption registry" and mid-prose alike). Restored the correct
+      implementation and re-confirmed all green.
+      test_document_without_the_heading_gives_the_no_section_result and
+      test_level3_subheading_inside_registry_section_does_not_end_it did
+      NOT fail under the stand-in (both the buggy substring search and
+      the correct line-anchored version happen to agree on these two
+      particular inputs) -- carried to notes as an honest gap; their
+      correctness was verified by direct inspection of
+      extract_exemption_registry_section's line-anchored loop instead.
+  AC-3:
+    tests:
+      - tests.test_gate_option_vocabulary.TestExemptionRowParserHermetic.test_skips_header_and_separator_and_returns_one_tuple_per_data_row
+      - tests.test_gate_option_vocabulary.TestExemptionRowParserHermetic.test_data_row_with_wrong_cell_count_raises
+      - tests.test_gate_option_vocabulary.TestExemptionRowParserHermetic.test_section_with_no_pipe_table_line_raises
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryStructure.test_registry_holds_zero_rows
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryValidatorAgainstSyntheticRows.test_well_formed_row_has_no_violations
+    red_confirmed: true
+    red_reason: >
+      Verified by temporarily replacing parse_exemption_table_rows in
+      tests/_gate_vocabulary.py with a version that splits rows but never
+      raises ValueError, then running TestExemptionRowParserHermetic:
+      test_data_row_with_wrong_cell_count_raises and
+      test_section_with_no_pipe_table_line_raises both failed with
+      "ValueError not raised" (test_present_section_with_prose_but_no_table_raises
+      in the loader regression class failed the same way in the same
+      run). Restored the correct parser and re-confirmed all green.
+      test_skips_header_and_separator_and_returns_one_tuple_per_data_row
+      still passed under the row-splitting-only stand-in (it never
+      exercised the raise path), so its own red was not separately
+      observed -- carried to notes; it is a direct re-assertion of the
+      row-splitting logic that was moved verbatim from the pre-task local
+      doc-side parser (unchanged behaviour, only its location moved). The
+      two doc-side tests are pre-existing assertions, unchanged, now
+      routed through the shared helper -- not independently re-confirmed
+      red (see notes).
+  AC-4:
+    tests:
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryValidatorAgainstSyntheticRows.test_row_missing_reason_is_flagged
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryValidatorAgainstSyntheticRows.test_row_missing_guarantee_is_flagged
+      - tests.test_gate_option_vocabulary_doc.TestExemptionRegistryValidatorAgainstSyntheticRows.test_row_naming_a_non_select_gate_is_flagged
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_c1_row_missing_reason_raises_with_violation_substring
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_c2_row_missing_guarantee_raises_with_violation_substring
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_c3_row_naming_a_gate_outside_the_select_set_raises_with_violation_substring
+    red_confirmed: true
+    red_reason: >
+      The three loader-level tests (c1/c2/c3) were confirmed red in the
+      same whole-document-scan stand-in run used for AC-5's (a)/(b): the
+      stand-in's validate_exemption_rows always returns [] (the pre-task
+      local loader never validated at all), so load_exempt_gate_ids never
+      raised for any of the three malformed fixtures --
+      "AssertionError: ValueError not raised" for all three. Restored the
+      correct helper (whose validate_exemption_rows and
+      load_exempt_gate_ids raise-and-propagate as specified) and
+      re-confirmed all green, including the message-substring assertions.
+      The three doc-side TestExemptionRegistryValidatorAgainstSyntheticRows
+      tests are pre-existing assertions (unchanged), now calling
+      _gate_vocabulary.validate_exemption_rows instead of a local
+      function of identical logic -- not independently re-confirmed red
+      (see notes).
+  AC-5:
+    tests:
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_a_unrelated_vocabulary_table_before_zero_row_registry_gives_empty_set
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_b_table_in_scope_section_after_registry_is_not_counted
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_c1_row_missing_reason_raises_with_violation_substring
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_c2_row_missing_guarantee_raises_with_violation_substring
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_c3_row_naming_a_gate_outside_the_select_set_raises_with_violation_substring
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_c4_row_with_wrong_cell_count_raises
+      - tests.test_gate_option_vocabulary.TestExemptionLoaderHermeticRegression.test_d_valid_row_gives_exactly_its_gate_id
+      - tests.test_gate_option_vocabulary.TestExemptionRegistryDegrade.test_absent_file_yields_zero_exemptions
+    red_confirmed: true
+    red_reason: >
+      Verified against the same whole-document-scan stand-in described
+      under AC-2/AC-4 (reproducing the pre-task local loader's exact
+      bug): test_a and test_b both failed -- the stand-in returned
+      {'create-spec.feature-identity'} for case (a) instead of the
+      expected empty set, which is precisely the ticket's own
+      reproduction (Test Notes: "the old whole-document scan returns
+      create-spec.feature-identity for case (a)"); test_c1/c2/c3 failed
+      with "ValueError not raised" (no validation); test_c4 failed
+      because the stand-in's inline whole-document scan never checked
+      cell count. test_d_valid_row_gives_exactly_its_gate_id did NOT fail
+      under the stand-in (a lone valid row at the top of a document with
+      no other tables behaves the same under both implementations) --
+      carried to notes. test_absent_file_yields_zero_exemptions is an
+      absent-path check, true under both implementations by construction
+      (os.path.isfile short-circuits before either extractor or parser
+      runs) -- not independently red; verified correct by code
+      inspection instead.
+  AC-6:
+    tests:
+      - tests.test_gate_option_vocabulary.TestExemptionRegistryDegrade.test_present_file_parses_listed_gate_ids
+      - tests.test_gate_option_vocabulary.TestExemptionRegistryDegrade.test_present_but_zero_row_file_yields_zero_exemptions
+      - tests.test_gate_option_vocabulary.TestExemptionRegistryDegrade.test_real_repository_registry_is_present_with_zero_rows
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_issuing_site_map_matches_policy_select_gate_set
+      - tests.test_gate_option_vocabulary.TestRepositoryCorrespondence.test_every_select_gate_option_is_declared_at_every_issuing_site
+    red_confirmed: true
+    red_reason: >
+      test_present_file_parses_listed_gate_ids was confirmed red by
+      running the OLD (pre-task) fixture shape -- a level-1 "# Exemption
+      registry" heading -- through the NEW, correct
+      _gate_vocabulary.load_exempt_gate_ids: it returned set() instead of
+      the expected {'some.gate'}, because the shared extractor requires
+      the line-anchored level-2 "## Exemption registry" heading exactly.
+      This is why the task plan requires rewriting the fixture to the
+      level-2 heading, and confirms the rewrite is load-bearing, not
+      cosmetic. test_real_repository_registry_is_present_with_zero_rows
+      and test_issuing_site_map_matches_policy_select_gate_set assert
+      facts about the real repository tree (the registry file's presence,
+      and the map/policy key-set equality) that were already true before
+      this task touched anything -- not new behaviour, so not
+      independently red; test_every_select_gate_option_is_declared_at_every_issuing_site
+      and test_present_but_zero_row_file_yields_zero_exemptions were
+      re-verified correct by code inspection after the sweep call site
+      and the loader signature both changed (their assertions are
+      unchanged from before this task, only the call site now passes an
+      explicit select-id set).
+  AC-7:
+    tests: []
+    red_reason: >
+      Build/whole-suite check, not a single-behavior test: `python3 -m
+      unittest discover -s tests` was run before any change (baseline:
+      5450 tests, 9 pre-existing failures, none in this task's files) and
+      after every implementation step (final: 5477 tests, the same 9
+      pre-existing failures and zero new ones). `git diff --stat HEAD`
+      confirms exactly four files changed: the three Scope files plus
+      tests/test_assumptions_reversible_criterion.py (an out-of-scope
+      deviation, see the report's deviations field) -- nothing under
+      em-workflow/ changed, and neither em-workflow/.claude-plugin/plugin.json
+      nor .claude-plugin/marketplace.json is in the diff.
+      ISSUING_SITE_MAP's definition site
+      (tests/test_gate_option_vocabulary.py) was not moved, and
+      TestFrozenMachineReadSurface's five digest/line-pin tests all
+      passed in the final full-suite run with their pinned constants
+      untouched (visible in the diff: the class body's only additions
+      are the new setUpClass select_ids line and the sweep call-site
+      edit, both above the pinned-constants block).
+notes: >
+  Both invocations named in the task plan's Test Notes (SPEC A-6) were run
+  and both resolve the helper: `python3 -m unittest discover -s tests -p
+  "test_gate_option_vocabulary*.py"` and direct script execution
+  (`python3 tests/test_gate_option_vocabulary.py`, `python3
+  tests/test_gate_option_vocabulary_doc.py`). A third invocation style,
+  `python3 -m unittest tests.test_gate_option_vocabulary_doc` (dotted
+  package name), does NOT resolve the helper (ModuleNotFoundError) --
+  this is outside the two invocations SPEC A-6 requires and is not used
+  by this repository's test/README.md canonical command, so it is noted
+  here rather than worked around.

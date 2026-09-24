@@ -558,15 +558,28 @@ _YAML_EXCEPTION_MODULES = frozenset(
 )
 
 
+def _local_sibling_modules(tests_dir):
+    """Module (stem) names for every `.py` file directly under
+    `tests_dir`. A same-directory helper module imported by its top-level
+    name (e.g. `tests/_gate_vocabulary.py`, imported as `import
+    _gate_vocabulary` -- exemption-registry-section-scope/task0001,
+    IMPLEMENTATION.md "Import resolution") is local first-party code, not
+    a third-party test dependency, so it is excluded from the non-stdlib
+    check below the same way the stdlib itself is."""
+    return {p.stem for p in Path(tests_dir).glob("*.py")}
+
+
 class TestStandardLibraryOnlyImports(unittest.TestCase):
     """AC-7 / NFR4: every test module under `tests/` imports only
-    standard-library names, except D6's single named PyYAML exception for
-    task0004's two conformance modules."""
+    standard-library names or same-directory sibling modules, except D6's
+    single named PyYAML exception for task0004's two conformance modules."""
 
     def test_every_test_module_imports_only_stdlib(self):
+        local_modules = _local_sibling_modules(TESTS_DIR)
         violations = {}
         for path in sorted(TESTS_DIR.glob("*.py")):
             non_std = _non_stdlib_imports(_read(path), filename=str(path))
+            non_std = non_std - local_modules
             if path.name in _YAML_EXCEPTION_MODULES:
                 non_std = non_std - {"yaml"}
             if non_std:
@@ -579,6 +592,15 @@ class TestStandardLibraryOnlyImports(unittest.TestCase):
         non_std = _non_stdlib_imports("import yaml\n", filename="<forged>")
         self.assertNotIn("<forged>", _YAML_EXCEPTION_MODULES)
         self.assertEqual(non_std, {"yaml"})
+
+    def test_local_sibling_carve_out_does_not_widen_to_a_genuine_third_party_name(self):
+        # Negative proof: the carve-out only ever removes names that match
+        # an actual file present under tests/, so a fabricated third-party
+        # package name is still flagged.
+        local_modules = _local_sibling_modules(TESTS_DIR)
+        non_std = _non_stdlib_imports("import totally_not_a_real_package\n")
+        self.assertNotIn("totally_not_a_real_package", local_modules)
+        self.assertEqual(non_std - local_modules, {"totally_not_a_real_package"})
 
 
 if __name__ == "__main__":

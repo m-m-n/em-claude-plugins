@@ -37,10 +37,14 @@ Covers task0001 Acceptance Criteria
 The `## Gate option vocabulary` block format and the issuing-site map are
 this module's own pinned data (IMPLEMENTATION.md Shared Components: "Gate
 option vocabulary block", "Issuing-site map" -- both owned by this module,
-D2). The exemption registry (`references/gate-option-vocabulary.md`) is
-owned by a sibling task (D3); this module only consumes it, degrading to
-zero exemptions when the file is absent -- which it is, in this task's own
-worktree.
+D2). The exemption registry (`references/gate-option-vocabulary.md`) now
+exists with zero data rows: the section extractor, the row parser, the
+row validator and the exemption loader all live in the shared helper
+`tests/_gate_vocabulary.py` (exemption-registry-section-scope/task0001);
+this module only consumes the loader, passing it the `action: select`
+gate-id set it has already parsed from batch-policies.yaml, and degrades
+to zero exemptions when the registry file is absent, unreadable, or has
+no `## Exemption registry` section.
 
 Restricted-subset `gate_policies:` YAML parsing duplicates
 tests/test_batch_policies.py's hand-rolled parser rather than importing it
@@ -48,14 +52,20 @@ tests/test_batch_policies.py's hand-rolled parser rather than importing it
 dependency of the plugin, not a test dependency -- test/README.md).
 """
 
+import ast
 import hashlib
 import os
 import re
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+import _gate_vocabulary
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
+TESTS_DIR = REPO_ROOT / "tests"
+HELPER_PATH = TESTS_DIR / "_gate_vocabulary.py"
 POLICY_PATH = REPO_ROOT / "em-workflow" / "references" / "batch-policies.yaml"
 EXEMPTION_REGISTRY_PATH = (
     REPO_ROOT / "em-workflow" / "references" / "gate-option-vocabulary.md"
@@ -268,38 +278,6 @@ def gate_offers_option(text, gate_id, option_id, doc_label="<document>"):
     return option_id in options_for_gate(rows, gate_id)
 
 
-def load_exempt_gate_ids(registry_path):
-    """The exemption registry (IMPLEMENTATION.md D3): a single Markdown
-    table in `references/gate-option-vocabulary.md` with a gate-id column
-    first. A missing or unreadable registry degrades to zero exemptions --
-    never a check-skipping condition (D3's own words: the checker holds no
-    hardcoded exemption list, so an absent file must not be mistaken for
-    "everything is exempt")."""
-    registry_path = Path(registry_path)
-    if not registry_path.is_file():
-        return set()
-    try:
-        text = read_text(registry_path)
-    except OSError:
-        return set()
-
-    table_lines = [
-        ln for ln in text.splitlines() if TABLE_ROW_RE.match(ln.strip())
-    ]
-    if len(table_lines) < 2 or not SEPARATOR_ROW_RE.match(table_lines[1].strip()):
-        return set()
-
-    ids = set()
-    for raw in table_lines[2:]:
-        cells = [c.strip() for c in raw.strip().strip("|").split("|")]
-        if not cells:
-            continue
-        tokens = BACKTICK_RE.findall(cells[0])
-        if tokens:
-            ids.add(tokens[0])
-    return ids
-
-
 # A well-formed synthetic document reused across several hermetic tests.
 WELL_FORMED_DOC = """# Some Contract
 
@@ -501,24 +479,36 @@ class TestSyntheticDocumentTree(unittest.TestCase):
 
 
 class TestExemptionRegistryDegrade(unittest.TestCase):
-    """Hermetic: the absent-exemption-registry degrade (D3, Test Notes)."""
+    """Hermetic: the absent/present-but-empty exemption-registry degrade,
+    through the shared loader `_gate_vocabulary.load_exempt_gate_ids`
+    (D3, Test Notes, exemption-registry-section-scope/task0001)."""
 
     def test_absent_file_yields_zero_exemptions(self):
         with tempfile.TemporaryDirectory() as tmp:
             missing_path = Path(tmp) / "gate-option-vocabulary.md"
-            self.assertEqual(load_exempt_gate_ids(missing_path), set())
+            self.assertEqual(
+                _gate_vocabulary.load_exempt_gate_ids(
+                    missing_path, {"create-spec.feature-identity"}
+                ),
+                set(),
+            )
 
     def test_present_file_parses_listed_gate_ids(self):
         with tempfile.TemporaryDirectory() as tmp:
             registry_path = Path(tmp) / "gate-option-vocabulary.md"
             registry_path.write_text(
-                "# Exemption registry\n\n"
+                "## Exemption registry\n\n"
                 "| gate_id | reason | compensating guarantee |\n"
                 "|---|---|---|\n"
-                "| `some.gate` | cannot be checked mechanically | manual review each release |\n",
+                "| `create-spec.feature-identity` | cannot be checked mechanically | manual review each release |\n",
                 encoding="utf-8",
             )
-            self.assertEqual(load_exempt_gate_ids(registry_path), {"some.gate"})
+            self.assertEqual(
+                _gate_vocabulary.load_exempt_gate_ids(
+                    registry_path, {"create-spec.feature-identity"}
+                ),
+                {"create-spec.feature-identity"},
+            )
 
     def test_present_but_zero_row_file_yields_zero_exemptions(self):
         # D3: "at the end of this feature the registry holds zero rows" --
@@ -527,21 +517,388 @@ class TestExemptionRegistryDegrade(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             registry_path = Path(tmp) / "gate-option-vocabulary.md"
             registry_path.write_text(
-                "# Exemption registry\n\n"
+                "## Exemption registry\n\n"
                 "| gate_id | reason | compensating guarantee |\n"
                 "|---|---|---|\n",
                 encoding="utf-8",
             )
-            self.assertEqual(load_exempt_gate_ids(registry_path), set())
+            self.assertEqual(
+                _gate_vocabulary.load_exempt_gate_ids(
+                    registry_path, {"create-spec.feature-identity"}
+                ),
+                set(),
+            )
 
-    def test_real_repository_registry_is_absent_in_this_worktree(self):
-        # D3 cross-task safety: references/gate-option-vocabulary.md is
-        # owned by a sibling task and does not exist here. The correspond-
-        # ence sweep below (TestRepositoryCorrespondence) must still cover
-        # all eleven select gates unconditionally -- confirmed there, not
-        # here, since this task's own checker holds no exemption list of
-        # its own to fall back on.
-        self.assertEqual(load_exempt_gate_ids(EXEMPTION_REGISTRY_PATH), set())
+    def test_real_repository_registry_is_present_with_zero_rows(self):
+        # FR8, SPEC A-5: references/gate-option-vocabulary.md has merged in
+        # from exemption-registry-section-scope/task0001's sibling doc task
+        # and now exists, with its `## Exemption registry` table holding
+        # zero data rows. The correspondence sweep below
+        # (TestRepositoryCorrespondence) still covers all eleven select
+        # gates unconditionally -- confirmed there, not here.
+        self.assertTrue(EXEMPTION_REGISTRY_PATH.is_file())
+        policy = _parse_gate_policies(read_text(POLICY_PATH))
+        select_ids = {
+            gid for gid, attrs in policy.items() if attrs.get("action") == "select"
+        }
+        self.assertEqual(
+            _gate_vocabulary.load_exempt_gate_ids(EXEMPTION_REGISTRY_PATH, select_ids),
+            set(),
+        )
+
+
+def _write_doc_and_load(doc_text, select_ids, filename="gate-option-vocabulary.md"):
+    """Test helper: writes `doc_text` to a temp file and calls the shared
+    loader against it with `select_ids`. Returns the loader's result, or
+    lets the loader's ValueError propagate."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / filename
+        path.write_text(doc_text, encoding="utf-8")
+        return _gate_vocabulary.load_exempt_gate_ids(path, select_ids)
+
+
+class TestExemptionRegistrySectionExtractorHermetic(unittest.TestCase):
+    """AC-2 (FR1): the shared extractor's section boundaries, asserted
+    directly against `_gate_vocabulary.extract_exemption_registry_section`."""
+
+    def test_section_starts_after_the_heading_and_ends_before_next_level2_heading(self):
+        doc = (
+            "# Doc\n"
+            "## Exemption registry\n"
+            "body line 1\n"
+            "body line 2\n"
+            "## Scope\n"
+            "unrelated\n"
+        )
+        section = _gate_vocabulary.extract_exemption_registry_section(doc)
+        self.assertEqual(section, "body line 1\nbody line 2\n")
+
+    def test_section_runs_to_end_of_text_when_no_next_heading(self):
+        doc = "## Exemption registry\nonly body\n"
+        section = _gate_vocabulary.extract_exemption_registry_section(doc)
+        self.assertEqual(section, "only body\n")
+
+    def test_document_without_the_heading_gives_the_no_section_result(self):
+        self.assertIsNone(
+            _gate_vocabulary.extract_exemption_registry_section(
+                "# Doc\nno heading here\n"
+            )
+        )
+
+
+class TestExemptionRowParserHermetic(unittest.TestCase):
+    """AC-3 (FR2): the shared row parser, asserted directly against
+    `_gate_vocabulary.parse_exemption_table_rows`."""
+
+    def test_skips_header_and_separator_and_returns_one_tuple_per_data_row(self):
+        section = (
+            "\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            "| `gate.a` | reason a | guarantee a |\n"
+            "| `gate.b` | reason b | guarantee b |\n"
+        )
+        rows = _gate_vocabulary.parse_exemption_table_rows(section)
+        self.assertEqual(
+            rows,
+            [
+                ("`gate.a`", "reason a", "guarantee a"),
+                ("`gate.b`", "reason b", "guarantee b"),
+            ],
+        )
+
+    def test_data_row_with_wrong_cell_count_raises(self):
+        section = (
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            "| `gate.a` | reason a |\n"
+        )
+        with self.assertRaises(ValueError):
+            _gate_vocabulary.parse_exemption_table_rows(section)
+
+    def test_section_with_no_pipe_table_line_raises(self):
+        with self.assertRaises(ValueError):
+            _gate_vocabulary.parse_exemption_table_rows("\nJust prose, no table here.\n")
+
+
+class TestExemptionLoaderHermeticRegression(unittest.TestCase):
+    """AC-5 (FR5, FR6): `_gate_vocabulary.load_exempt_gate_ids` against
+    synthetic documents built in a temporary directory, with an explicit
+    select set (Test Notes; exemption-registry-section-scope/task0001,
+    the ticket's own reproduction case is (a))."""
+
+    def test_a_unrelated_vocabulary_table_before_zero_row_registry_gives_empty_set(self):
+        unrelated_gate = "create-spec.feature-identity"
+        doc = (
+            "## Gate option vocabulary\n\n"
+            "| gate_id | option_id | meaning |\n"
+            "|---|---|---|\n"
+            f"| `{unrelated_gate}` | `derive_from_task_description` | derive the feature name. |\n"
+            "\n"
+            "## Exemption registry\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+        )
+        # Non-vacuity precondition: the fixture really does hold a
+        # pipe-table line naming the unrelated gate, and that line sits
+        # outside the extractor's returned section.
+        pipe_line = next(
+            line
+            for line in doc.splitlines()
+            if unrelated_gate in line and line.strip().startswith("|")
+        )
+        section = _gate_vocabulary.extract_exemption_registry_section(doc)
+        self.assertIsNotNone(section)
+        self.assertNotIn(pipe_line, section)
+
+        self.assertEqual(
+            _write_doc_and_load(doc, {unrelated_gate}), set()
+        )
+
+    def test_b_table_in_scope_section_after_registry_is_not_counted(self):
+        exempt_gate = "create-plan.existing-files"
+        unrelated_gate = "create-spec.feature-identity"
+        doc = (
+            "## Exemption registry\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            f"| `{exempt_gate}` | cannot be checked mechanically | manual review each release |\n"
+            "\n"
+            "## Scope\n\n"
+            "| gate_id | option_id | meaning |\n"
+            "|---|---|---|\n"
+            f"| `{unrelated_gate}` | `derive_from_task_description` | derive the feature name. |\n"
+        )
+        # Non-vacuity precondition, same shape as case (a) above.
+        pipe_line = next(
+            line
+            for line in doc.splitlines()
+            if unrelated_gate in line and line.strip().startswith("|")
+        )
+        section = _gate_vocabulary.extract_exemption_registry_section(doc)
+        self.assertIsNotNone(section)
+        self.assertNotIn(pipe_line, section)
+
+        self.assertEqual(
+            _write_doc_and_load(doc, {exempt_gate, unrelated_gate}), {exempt_gate}
+        )
+
+    def test_c1_row_missing_reason_raises_with_violation_substring(self):
+        gate = "create-spec.feature-identity"
+        doc = (
+            "## Exemption registry\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            f"| `{gate}` |  | manual review each release |\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            _write_doc_and_load(doc, {gate})
+        self.assertIn("missing a reason", str(ctx.exception))
+
+    def test_c2_row_missing_guarantee_raises_with_violation_substring(self):
+        gate = "create-spec.feature-identity"
+        doc = (
+            "## Exemption registry\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            f"| `{gate}` | some reason |  |\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            _write_doc_and_load(doc, {gate})
+        self.assertIn("missing a compensating guarantee", str(ctx.exception))
+
+    def test_c3_row_naming_a_gate_outside_the_select_set_raises_with_violation_substring(self):
+        gate = "create-spec.feature-identity"
+        doc = (
+            "## Exemption registry\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            f"| `{gate}` | some reason | some guarantee |\n"
+        )
+        with self.assertRaises(ValueError) as ctx:
+            _write_doc_and_load(doc, set())  # empty select set: gate is "outside" it
+        self.assertIn("not an `action: select` entry", str(ctx.exception))
+
+    def test_c4_row_with_wrong_cell_count_raises(self):
+        doc = (
+            "## Exemption registry\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            "| `create-spec.feature-identity` | only one more cell |\n"
+        )
+        with self.assertRaises(ValueError):
+            _write_doc_and_load(doc, {"create-spec.feature-identity"})
+
+    def test_d_valid_row_gives_exactly_its_gate_id(self):
+        gate = "create-plan.existing-files"
+        doc = (
+            "## Exemption registry\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            f"| `{gate}` | cannot be checked mechanically | manual review each release |\n"
+        )
+        self.assertEqual(_write_doc_and_load(doc, {gate}), {gate})
+
+    def test_level3_subheading_inside_registry_section_does_not_end_it(self):
+        gate = "create-spec.feature-identity"
+        doc = (
+            "## Exemption registry\n\n"
+            "### Notes\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            f"| `{gate}` | cannot be checked mechanically | manual review each release |\n"
+        )
+        self.assertEqual(_write_doc_and_load(doc, {gate}), {gate})
+
+    def test_level3_exemption_registry_heading_is_not_a_section_start(self):
+        gate = "create-spec.feature-identity"
+        doc = (
+            "### Exemption registry\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            f"| `{gate}` | cannot be checked mechanically | manual review each release |\n"
+        )
+        self.assertEqual(_write_doc_and_load(doc, {gate}), set())
+
+    def test_midline_mention_of_the_heading_is_not_a_section_start(self):
+        gate = "create-spec.feature-identity"
+        doc = (
+            "Prose that talks about the ## Exemption registry heading "
+            "without starting one.\n\n"
+            "| gate_id | reason | compensating guarantee |\n"
+            "|---|---|---|\n"
+            f"| `{gate}` | cannot be checked mechanically | manual review each release |\n"
+        )
+        self.assertEqual(_write_doc_and_load(doc, {gate}), set())
+
+    def test_present_section_with_prose_but_no_table_raises(self):
+        doc = (
+            "## Exemption registry\n\n"
+            "This section has prose but never gets to a table.\n"
+        )
+        with self.assertRaises(ValueError):
+            _write_doc_and_load(doc, set())
+
+
+def _module_level_function_names(source):
+    """Returns the set of names bound by a module-level `def`/`async def`
+    in `source` (top-level only -- a `def` nested inside a class or
+    another function does not count)."""
+    tree = ast.parse(source)
+    return {
+        node.name
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+
+
+def _modules_defining_any_of(tests_dir, names):
+    """Returns {file_name: overlap_names} for every `test_*.py` file
+    directly under `tests_dir` whose module-level function definitions
+    overlap `names`."""
+    offenders = {}
+    for path in sorted(Path(tests_dir).glob("test_*.py")):
+        overlap = _module_level_function_names(path.read_text(encoding="utf-8")) & names
+        if overlap:
+            offenders[path.name] = overlap
+    return offenders
+
+
+def _top_level_import_names(source):
+    """Returns the set of top-level module names `source` imports, from
+    both `import x[.y]` and `from x[.y] import ...` statements."""
+    tree = ast.parse(source)
+    names = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                names.add(alias.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                names.add(node.module.split(".")[0])
+    return names
+
+
+class TestSharedHelperStaticCheckDetectorsHermetic(unittest.TestCase):
+    """Non-vacuity companions for TestSharedHelperContract below: prove the
+    two AST-based detector functions actually flag a synthetic violation
+    before trusting them against the real tests/ directory."""
+
+    def test_function_definition_detector_flags_a_synthetic_duplicate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            (tmp_path / "test_fake_one.py").write_text(
+                "def load_exempt_gate_ids(x):\n    return x\n", encoding="utf-8"
+            )
+            (tmp_path / "test_fake_two.py").write_text(
+                "def something_else():\n    pass\n", encoding="utf-8"
+            )
+            offenders = _modules_defining_any_of(tmp_path, {"load_exempt_gate_ids"})
+            self.assertEqual(set(offenders), {"test_fake_one.py"})
+
+    def test_function_definition_detector_is_silent_with_no_overlap(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            (tmp_path / "test_fake_one.py").write_text(
+                "def something_else():\n    pass\n", encoding="utf-8"
+            )
+            offenders = _modules_defining_any_of(tmp_path, {"load_exempt_gate_ids"})
+            self.assertEqual(offenders, {})
+
+    def test_import_name_detector_flags_a_synthetic_cross_module_import(self):
+        self.assertIn(
+            "test_gate_option_vocabulary_doc",
+            _top_level_import_names("import test_gate_option_vocabulary_doc\n"),
+        )
+
+    def test_import_name_detector_flags_a_synthetic_from_import(self):
+        self.assertIn(
+            "_gate_vocabulary",
+            _top_level_import_names(
+                "from _gate_vocabulary import load_exempt_gate_ids\n"
+            ),
+        )
+
+
+class TestSharedHelperContract(unittest.TestCase):
+    """AC-1 (FR4, NFR1, NFR5): the shared helper's structural contract."""
+
+    SHARED_NAMES = {
+        "extract_exemption_registry_section",
+        "parse_exemption_table_rows",
+        "validate_exemption_rows",
+        "load_exempt_gate_ids",
+    }
+
+    def test_helper_file_exists_with_a_name_unittest_discover_will_not_collect(self):
+        self.assertTrue(HELPER_PATH.is_file())
+        self.assertFalse(HELPER_PATH.name.startswith("test"))
+
+    def test_helper_defines_no_testcase_subclass(self):
+        tree = ast.parse(HELPER_PATH.read_text(encoding="utf-8"))
+        class_names = [node.name for node in tree.body if isinstance(node, ast.ClassDef)]
+        self.assertEqual(class_names, [])
+
+    def test_helper_imports_only_standard_library_modules(self):
+        stdlib_names = set(sys.stdlib_module_names)
+        imported = _top_level_import_names(HELPER_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(imported - stdlib_names, set())
+
+    def test_helper_is_the_sole_definer_of_the_shared_names_among_test_modules(self):
+        offenders = _modules_defining_any_of(TESTS_DIR, self.SHARED_NAMES)
+        self.assertEqual(offenders, {})
+
+    def test_both_consumer_modules_import_the_helper_and_not_each_other(self):
+        doc_side = _top_level_import_names(
+            (TESTS_DIR / "test_gate_option_vocabulary_doc.py").read_text(encoding="utf-8")
+        )
+        consumer_side = _top_level_import_names(
+            (TESTS_DIR / "test_gate_option_vocabulary.py").read_text(encoding="utf-8")
+        )
+        self.assertIn("_gate_vocabulary", doc_side)
+        self.assertIn("_gate_vocabulary", consumer_side)
+        self.assertNotIn("test_gate_option_vocabulary", doc_side)
+        self.assertNotIn("test_gate_option_vocabulary_doc", consumer_side)
 
 
 class TestDigestPinMechanismHermetic(unittest.TestCase):
@@ -570,6 +927,9 @@ class TestRepositoryCorrespondence(unittest.TestCase):
     def setUpClass(cls):
         cls.policy_text = read_text(POLICY_PATH)
         cls.policy = _parse_gate_policies(cls.policy_text)
+        cls.select_ids = {
+            gid for gid, attrs in cls.policy.items() if attrs.get("action") == "select"
+        }
         cls._doc_cache = {}
 
     def _rows_for(self, rel_path):
@@ -583,13 +943,12 @@ class TestRepositoryCorrespondence(unittest.TestCase):
     # -- AC-1 -----------------------------------------------------------
 
     def test_issuing_site_map_matches_policy_select_gate_set(self):
-        expected = {
-            gid for gid, attrs in self.policy.items() if attrs.get("action") == "select"
-        }
-        self.assertEqual(set(ISSUING_SITE_MAP.keys()), expected)
+        self.assertEqual(set(ISSUING_SITE_MAP.keys()), self.select_ids)
 
     def test_every_select_gate_option_is_declared_at_every_issuing_site(self):
-        exempt = load_exempt_gate_ids(EXEMPTION_REGISTRY_PATH)
+        exempt = _gate_vocabulary.load_exempt_gate_ids(
+            EXEMPTION_REGISTRY_PATH, self.select_ids
+        )
         offenders = []
         for gate_id, doc_paths in ISSUING_SITE_MAP.items():
             if gate_id in exempt:
