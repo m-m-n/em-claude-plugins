@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 9751eb29cc150f6bfba69a125af34101973d4669
 last_input_digest: sha256:d33fff328bdd27cddc101e316c18315901bc6d764308a679d56ca3cf756e771d
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -37,10 +37,16 @@ worker_runs:
   input_digest: sha256:d33fff328bdd27cddc101e316c18315901bc6d764308a679d56ca3cf756e771d
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:2a776c9b1fd5ef992b5ee4f9c0a13d9bb7f6124711c82e9cbe7f4e030bdcde07
   output_digest: null
-artifacts: []
+artifacts:
+- path: feature-docs/stop-reason-coverage/REQUIREMENTS.md
+  sha256: sha256:17065fa845e4dc37f5c009930f5130d0ff846e04a9cedc5ba24da1fa20f9b236
+  produced_by: create-spec-run-0003
+- path: feature-docs/stop-reason-coverage/SPEC.md
+  sha256: sha256:de28aa37091d214e5e7c3437400ced19120db90d20dd74d2b61a3e96dae295a2
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
