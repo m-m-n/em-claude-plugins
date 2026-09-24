@@ -1,7 +1,7 @@
 schema_version: 1
 feature: divergence-fail-open-wording
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: eaed38f317780bb9ef205fe01343caa2ebb36be3
 last_input_digest: sha256:bb070b7a63d9b976b190c38181de19b166e1e1b0f4ea506dc384ce852bda2522
