@@ -1,0 +1,32 @@
+feature: version-bump-entry-count-guard
+collected_at: "2026-09-25T07:20:00+09:00"
+session_ids: [01a0d57b-7484-7423-ad2e-9b99836349cc]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "HEADでも tests/test_recycled_task_id_contract_version_bump.py:68 の全件基準値と :168 の件数固定が残っているよ。基準値と全件対象の2テストを削除し、:154 の既存の em-workflow name/source 検証へ集約する修正を勧めるよ。説明文と test-docs/recycled-task-id-contract/task0002.tests.yaml:17 の対応付けも更新する、約40行の局所的な変更になるよ。なお tests/test_batch_policy_option_id_version_bump.py:139 にも別件の件数固定があり、今回の修正だけではプラグイン追加後の全体テスト成功までは保証できないよ"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.23, '1': 0.26, '2': 0.51, '3': 0.0}
+      - basis: description_plus_code
+        probabilities: {'0': 0.06, '1': 0.15, '2': 0.79, '3': 0.0}
+    pre_survey_estimate:
+      files_expected:
+        - tests/test_recycled_task_id_contract_version_bump.py
+        - test-docs/recycled-task-id-contract/task0002.tests.yaml
+      changed_lines_approx: 40
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査が tests/test_batch_policy_option_id_version_bump.py:139 にも別件のプラグイン件数固定があると報告している。本 feature のスコープ外のため未対応"
