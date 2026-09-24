@@ -10,3 +10,12 @@ records:
   freeform: "Q1 keep task0001 as one task; Q2 make A-2/A-4 real-environment checks required before merge; fix diagnostics-absence wording"
   normalized_answer: "Q1 keep task0001 as one task; Q2 make A-2/A-4 real-environment checks required before merge; fix diagnostics-absence wording"
   resolution_note: "gate: create-plan unclear points raised by planner warnings (orchestrator-opened, no worker packet). Q1 task0001 size: chosen = keep one task; not chosen = split. Key points: FR1-FR7 all change one hook's entry flow; splitting creates cross-worktree conflicts; the 3 tasks already have disjoint files. Q2 A-2/A-4 unverifiable in repo: chosen = keep manual checks but mark the first two manual checks in VERIFICATION.md as required before the integration branch is merged; not chosen = accept as purely optional manual follow-up. Key points: mock-input tests cannot prove real SubagentStop delivery or agent_id match; FR6 log alone cannot prove non-delivery. Defect fix adopted: SPEC.md FR6/FR8, IMPLEMENTATION.md SC2, task0001 docstring item, task0002 item 5 and AC-3 no longer claim a missing diagnostics line means the hook did not run, because the log write is skipped silently on failure; wording now says absence alone does not distinguish non-execution from a failed log write. codex_consulted: true; opus_escalation: false."
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: "2026-09-24T23:40:00+09:00"
+  source: orchestrator-rule
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: "declined: task0002 deviations .claude-plugin/marketplace.json, em-workflow/.claude-plugin/plugin.json"
+  normalized_answer: "declined"
+  resolution_note: "task_id: task0002. Deviation auto-addition declined for both paths. em-workflow/.claude-plugin/plugin.json falls under the workflow control path em-workflow/**; neither deviation names an existing AC-n or requirement id that would otherwise be dropped (the stated reason is the plugin-version-guard hook blocking the commit). Paths stay as ordinary deviations; the version was bumped 0.2.4 -> 0.2.5 on the integration branch."
