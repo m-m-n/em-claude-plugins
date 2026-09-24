@@ -1,0 +1,123 @@
+schema_version: 1
+feature: abort-docs-commit-precedence
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 2730a2ff4f335aa0cd4d0eff6b7f1cdcc405db0e
+last_input_digest: sha256:700d84341f372c85ddb2ab05dde77a52ce4687bad583fee2a519a5fb93d9a4bc
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-24T20:21:58+09:00'
+    questions:
+    - question_id: requirement.precedence-winner
+      status: answered
+    - question_id: edge-case.uncommitted-terminal-status-on-resume
+      status: answered
+    - question_id: requirement.rule-scope
+      status: answered
+    - question_id: requirement.placement
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.precedence-winner:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-24T20:21:58+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - docs_commit_conflict_wins
+    freeform: Codex 相談（run_codex_exec.sh readonly、1 ターン、codex エントリ）で推奨。オーケストレーターが各設問の
+      option_id に写像できると判断して採用。
+    normalized_answer: 'docs_commit_conflict_wins を採用。abort の terminal status commit
+      が exit-4 recovery を使い切って停止した場合の reason は docs_commit_conflict_aborted。優先関係（phase-specific
+      同士が同時該当したとき、その停止を直接引き起こした commit 失敗側の docs-commit-conflict が勝つ）を明記する。1 回目 exit
+      4 → 再試行成功の場合は従来どおり implement_task_failed。同一ランの Step B が未コミットの implement: failed
+      を読んで stop-condition-3 経路に入ることは無い（停止は終端）ことも明記する。13 コード / 14 行は不変。'
+  edge-case.uncommitted-terminal-status-on-resume:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-24T20:21:58+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - discard_and_rederive
+    freeform: Codex 相談（run_codex_exec.sh readonly、1 ターン、codex エントリ）で推奨。オーケストレーターが各設問の
+      option_id に写像できると判断して採用。
+    normalized_answer: 'discard_and_rederive を採用。条件: (1) 停止時、terminal status write（implement:
+      failed / failed_kind: decision）は integration worktree に未コミットで残り、ブランチには確定しないと明記する。(2)
+      NFR2「never carries uncommitted state across turns」にこの停止の名前付き例外を置く。(3) Step I.1
+      だけでは不十分 — develop は既存 worktree を再利用し Step A.5 で読み取り・コミット（commit-docs.sh）を行い、Step
+      B は worktree の workflow.yaml を直接読むため、残留書き込みの破棄は Step A.5 より前（develop の再開入口）で行う規定が必要（skills/develop/SKILL.md）。(4)
+      再導出はコミット済みのタスク状態・retry 消費記録・ジャーナルから行い、追加の自動 retry を与えない。(5) detail に停止した呼び出し箇所・対象タスク・未コミットであることを、resume_conditions
+      に破棄と再導出の手順を含める。(6) commit-docs.sh の exit 4 は既存の書き込みを消さないため、「aborts without writing
+      any status」の文言と「書いたがコミットできなかった」状態を区別する。'
+  requirement.rule-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-24T20:21:58+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - batch_abort_only
+    freeform: Codex 相談（run_codex_exec.sh readonly、1 ターン、codex エントリ）で推奨。オーケストレーターが各設問の
+      option_id に写像できると判断して採用。
+    normalized_answer: batch_abort_only を採用。対象は batch の 2 回目失敗 abort の terminal commit（implement-second-failure
+      × docs-commit-conflict）に限定する。他の exit-4 呼び出し箇所（baseline / launch / wake / I.3）は
+      docs_commit_conflict_aborted 単独のまま。
+  requirement.placement:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-24T20:21:58+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - batch_terminal_line_precedence
+    freeform: Codex 相談（run_codex_exec.sh readonly、1 ターン、codex エントリ）で推奨。オーケストレーターが各設問の
+      option_id に写像できると判断して採用。
+    normalized_answer: batch_terminal_line_precedence を採用。優先関係は batch-terminal-line.md
+      の「Precedence rule:」段落内（テストの抽出範囲内）に置き、既存の固定文言（a2）は維持する。implement-phase.md の I.2.c
+      batch 段落（4 テストがバイト固定）は変更しない。再開・NFR2 の定義は implement-phase.md の Branch & Worktree
+      Model の exit-4 箇所に置き、再開入口での破棄は skills/develop/SKILL.md に接続する。
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-24T20:21:58+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: batch-policies.yaml create-spec.design-step → decide_autonomously
+    normalized_answer: design step は analyst 推奨どおり skip（ドキュメントのみの変更で UI 無し）
+worker_runs:
+- request_id: create-spec-run-0001
+  status: invalid_input
+  input_digest: sha256:b616a12b949eddff8a2e2a027ebd2d6279ff04c8d6f2d618c4c9e5b956a28502
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: failed
+  input_digest: sha256:b616a12b949eddff8a2e2a027ebd2d6279ff04c8d6f2d618c4c9e5b956a28502
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: needs_user_input
+  input_digest: sha256:b616a12b949eddff8a2e2a027ebd2d6279ff04c8d6f2d618c4c9e5b956a28502
+  output_digest: null
+- request_id: create-spec-run-0004
+  status: completed
+  input_digest: sha256:700d84341f372c85ddb2ab05dde77a52ce4687bad583fee2a519a5fb93d9a4bc
+  output_digest: null
+- request_id: create-spec-run-0005
+  status: completed
+  input_digest: null
+  output_digest: null
+artifacts:
+- path: feature-docs/abort-docs-commit-precedence/REQUIREMENTS.md
+  sha256: sha256:0bd85bccc09a41deac98097474414a3ddaf53f6ba4955dd5dda710826460f45a
+  produced_by: create-spec-run-0005
+- path: feature-docs/abort-docs-commit-precedence/SPEC.md
+  sha256: sha256:d3bd4254c8437df35336358a93babebad4f05b3cf713db9929a9c76b50ca14e0
+  produced_by: create-spec-run-0005
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: create-spec-run-0002 failed validation (create-spec.design-step lacked
+  decide_autonomously); run-0003 re-emitted with corrected options and validated

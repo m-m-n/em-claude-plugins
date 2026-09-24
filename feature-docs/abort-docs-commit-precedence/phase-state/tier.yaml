@@ -1,0 +1,62 @@
+schema_version: 1
+feature: abort-docs-commit-precedence
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.0
+    '1': 0.11
+    '2': 0.88
+    '3': 0.01
+  expectation_clear: 0.91
+  confidence: 0.88
+  observed_at: '2026-09-24T20:11:57+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.02
+    '1': 0.08
+    '2': 0.89
+    '3': 0.01
+  expectation_clear: 0.91
+  confidence: 0.87
+  observed_at: '2026-09-24T20:11:57+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/batch-terminal-line.md
+  - em-workflow/references/implement-phase.md
+  - tests/test_batch_stop_contract.py
+  - tests/test_implement_routeback_gate.py
+  - tests/test_recycled_task_id_consistency.py
+  - tests/test_routeback_reset_scope_consistency.py
+  - tests/test_stale_launched_doc_contract.py
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 120
+  new_functions_needed: 3
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules:
+  - tests/test_batch_stop_contract.py
+  - tests/test_implement_routeback_gate.py
+  - tests/test_recycled_task_id_consistency.py
+  - tests/test_routeback_reset_scope_consistency.py
+  - tests/test_stale_launched_doc_contract.py
+  work_still_required: true
+  evidence: '現行 main（271781a）でも修正が残っているよ。em-workflow/references/batch-terminal-line.md:197
+    と :201 に競合する2行があり、:205 の優先規則は phase-specific > generic だけだよ。さらに :210 は「status
+    を書かずに停止」としていて、未コミットの書き込みが残る定義と整合させる必要があるよ。
+
+    推奨は docs-commit-conflict を implement-second-failure より優先し、reason を docs_commit_conflict_aborted
+    に確定することだよ。em-workflow/references/implement-phase.md:993 の batch 段落には、コミット成功時と復旧を使い切った場合を分け、後者では
+    status=failed・failed_kind=decision が未コミットで残ることを追記する想定だよ。同ファイル :40 の未コミット状態を持ち越さないという説明も整合させる必要があるよ。em-workflow/references/phase-state.md:258
+    は1回の再試行と再失敗時の中止を定義しているけれど、今回の優先関係や残留状態は定義していないよ。em-workflow/scripts/commit-docs.sh:143
+    はステージ処理より前に exit 4 を返すため、スクリプトの動作変更は不要と見込むよ。
+
+    関連テストはあるけれど、今回の同時該当を保証する回帰テストは追加が必要だよ。tests/test_batch_stop_contract.py:677 は「status
+    を書かない」という旧記述を固定しているよ。batch 段落の完全一致も tests/test_implement_routeback_gate.py:1871、tests/test_recycled_task_id_consistency.py:1063、tests/test_routeback_reset_scope_consistency.py:781、tests/test_stale_launched_doc_contract.py:365
+    が検証するため、段落修正に合わせた更新を見込んだよ。追加関数3件はテスト用で、本体の関数追加は不要だよ。
+
+    em-workflow/.claude-plugin/plugin.json:7 と .claude-plugin/marketplace.json:27
+    は両方0.2.1なので、修正と同じ変更で0.2.2へ揃えて上げる想定だよ。読み取り専用の関連テスト21件は通ったよ。全件テストは指定どおり実行しておらず、その完了条件は未確認だよ。ファイルは変更していないよ'
+decided_at: '2026-09-24T20:11:57+09:00'
