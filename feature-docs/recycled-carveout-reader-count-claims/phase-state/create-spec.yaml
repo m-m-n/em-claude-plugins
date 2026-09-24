@@ -1,0 +1,75 @@
+schema_version: 1
+feature: recycled-carveout-reader-count-claims
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 1ad90ef144a1238feb3211233e086aac29695daa
+last_input_digest: sha256:c28ac4d013f3802ef1e144b916b7892b87b798c64ce49d7d9309f185913df2e6
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-09-25T02:45:00+09:00'
+    questions:
+    - question_id: requirement.ts13-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.ts13-scope:
+    question_id: requirement.ts13-scope
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T02:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - scope_to_orphaned_constants
+    freeform: null
+    normalized_answer: 'Limit TS-13 Scenario/Expected Result and VERIFICATION.md manual
+      line 89 to HOOK_FILENAMES and JOURNAL_ONLY_HOOK_FILENAMES (the constants the
+      SPEC AC-6 ORCHESTRATOR_ONLY_SCOPE_PHRASE revision orphaned). Criterion: each
+      is either removed together with all its references (0 readers, no definition)
+      or has >= 2 reader sites; a reader site is a code reference outside the definition
+      line, comments and docstrings excluded.'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation).
+      Chosen = scope_to_orphaned_constants; not chosen = universal_with_explicit_exclusions.
+      Key points: matches AC-6 scope; HOOK_FILENAMES has 3 readers and JOURNAL_ONLY_HOOK_FILENAMES
+      is absent so criterion holds; option B needs a maintained exclusion list and
+      Codex found _PIN_PATH also single-reader beyond the 8 listed, so B as proposed
+      would not hold. codex_consulted: true; opus_escalation: false.'
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T02:50:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design: skipped (text-only edit to a verification document,
+      no user-visible surface)'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:3ed87a1499f3b1e39675fdcf2f91f9b8f4ea7d8050d5dc3cbd8be5cca1af549c
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:836d2cfb5eaeb5cd18a753ea7bcfae68cb6caa8aaa5aeebb39a5ac0067e29a0d
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:c28ac4d013f3802ef1e144b916b7892b87b798c64ce49d7d9309f185913df2e6
+  output_digest: null
+artifacts:
+- path: feature-docs/recycled-carveout-reader-count-claims/REQUIREMENTS.md
+  sha256: sha256:a3b54f8d473a20795fa8b801a408fdec82de4dc1e5740c6412ad2272e0173546
+  produced_by: create-spec-run-0003
+- path: feature-docs/recycled-carveout-reader-count-claims/SPEC.md
+  sha256: sha256:9bc938732b3beabfe38560932c8cd3300be36d3081727ee940fcea35f3a6f2d4
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
