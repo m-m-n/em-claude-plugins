@@ -1,0 +1,238 @@
+schema_version: 1
+feature: routeback-residual-connections
+created: 2026-09-24
+base_branch: main
+goal: |
+  # em-workflow: I.2.c / I.2.a に残った 3 件の未証明な接続を閉じる（PR #7 の rework task0003 残作業）
+
+  ## やりたいこと（必須）
+  PR #7 のレビュー / verify で残った 3 件の指摘を潰す。`em-workflow/references/implement-phase.md` の I.2.c / I.2.a で、単一導出元への統一に伴って未証明のまま残った接続を閉じる。
+  ## 背景・なぜ（必須）
+  PR https://github.com/m-m-n/em-claude-plugins/pull/7 （feature: routeback-reset-scope-consistency）の round 1 レビューで medium 6 件（実体 3 サイト）が検出され、verify の手動読み合わせ項目 MANUAL-1 / MANUAL-2 / MANUAL-3 が落ちた。rework タスク task0003 として計画済み（`feature-docs/routeback-reset-scope-consistency/tasks/task0003.md`、VERIFICATION.md に TS-10 / TS-11 / TS-12 追加、IMPLEMENTATION.md に D9 追加）だが、implementer がウォッチドッグに落とされ retry も guard で塞がれたため未実装のまま停止した。
+  残っている 3 件:
+  1. **MANUAL-3 / stable_id 69fc571959dc36a1・e3a4f2b026841bf6・477a18556a3587e3**（spec / architecture / comprehensive の 3 観点が独立検出）
+  `implement-phase.md:219` の `(the widened I.2.c gate above)` が方向誤り。I.2.c は 372 行目なので `below` が正しい。同じ段落の 2 文前は同じ対象を `below` で参照しており段落内で矛盾している。さらに I.2.a より上にある唯一のゲート記述（67 行目の exit-4 bullet）は PR #7 でまさに `in_progress` union rule に限定されたため、`merged` union の根拠として参照できない。加えて I.2.a carve-out ← I.2.c gate ← I.2.b step 1 reconciled state ← I.2.a carve-out という所有関係の閉路ができており、その打ち切り点が文書化されていない。
+  1. **MANUAL-1 / stable_id 0acedde04c24cb8d・5a9c94c87a6f7c4f**
+  write set の reset 対象集合だけが reconciled state に移った結果、直後の事後条件「no task is left `merged` or `in_progress` or `failed`」が「workflow.yaml で `failed` の集合 ⊆ reconciled state が `failed` の集合」という未記載の前提に依存する。ゲートが証明するのは workflow.yaml 側の `merged` / `in_progress` 不在と reconciled 側の `merged` / in-flight 不在だけ。journal 欠落時（workflow.yaml `status: failed` + journal イベント無し）に両者が乖離し、`em-workflow/references/workflow-patch.md` の `replace_all` permission condition（workflow.yaml status 基準）に違反して再計画が protocol error で詰む。あわせて reconciled-`merged` がゲートではハード阻止条件、cleanup ではフィルタ条件として二通りに書かれている。
+  1. **MANUAL-2 / stable_id cbe1e5e8ca5cf4df**
+  cleanup の「confirmed not merged」が実際の検証内容より強い。根拠は journal の last event と workflow.yaml status だけで、`git merge-base --is-ancestor` は「`merged` を主張したタスク」にしか適用されない。`em-workflow/scripts/merge-task.sh` は `git update-ref` の後で journal 追記を行い、追記失敗時は WARNING のまま exit 0 で続行する。update-ref 成功後・追記前に実装者が停止し report も欠落すると、再構成状態が `failed` になってゲートを通過し、マージ済みブランチが `git branch -D` される。PR #7 が塞ごうとした経路そのものの残余。
+  ## 受け入れ条件 / 完了の定義（必須）
+  - [ ] `implement-phase.md:219` の I.2.c 参照が正しい方向を指し、参照先が `merged` union を実際に定義している箇所である
+  - [ ] I.2.a carve-out / I.2.c gate / I.2.b reconciled state の相互参照の閉路について、打ち切り点が本文から読み取れる
+  - [ ] reset 対象集合と、その直後の事後条件・`replace_all` permission condition の接続が本文から検証できる
+  - [ ] cleanup の not-merged 主張が、実際に検証している内容と一致している（または不足分の残余状態が明記されている）
+  - [ ] 対応するドキュメント契約テスト（TS-10 / TS-11 / TS-12 相当）が `tests/` に追加されている
+  - [ ] `python3 -m unittest discover -s tests` が通る
+  ## スコープ外（任意）
+  ウォッチドッグ kill で journal が `launched` 固着する failure net の穴（別タスクで起票済み）。
+  ## 制約・前提（任意）
+  - 計画・設計判断は PR #7 のブランチに既にある。`feature-docs/routeback-reset-scope-consistency/tasks/task0003.md`（受け入れ条件 6 件）と `IMPLEMENTATION.md` の D9（RW-A1〜A3 の仮定）をそのまま使える
+  - 途中まで実装した worktree が残っている: `.claude/worktrees/em-workflow/routeback-reset-scope-consistency/task0003`（`implement-phase.md` と `tests/test_routeback_reset_scope_consistency.py` に未コミットの編集あり）。要否を判断して使うか捨てる
+  - `tests/test_recycled_task_id_consistency.py` と `tests/test_implement_routeback_gate.py` は編集禁止。I.2.c の順序制約・byte-identity リテラルをアサートしているため再ラップしない
+  - 既存の契約テストが `assertNotIn("append", i2c_section)` / `assertNotIn("rework", i2c_section)` を持つため、MANUAL-2 の残余状態を書く文で `append` / `rework` という語を使えない
+  - プラグイン配下を変更するので、同じ変更に含めて `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の version を bump する
+parent_branch: em-workflow/routeback-residual-connections/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.01
+      '1': 0.54
+      '2': 0.45
+    expectation_clear: 0.93
+    confidence: 0.32
+    observed_at: '2026-09-24T09:32:44+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.65
+      '2': 0.35
+    expectation_clear: 0.92
+    confidence: 0.48
+    observed_at: '2026-09-24T09:32:44+09:00'
+  at: '2026-09-24T09:33:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: b3c3601e32dd30e771140167b6618499761666b1
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: em-workflow のプロトコル文書とテストだけの変更で、UI・視覚要素を持たない。design-system 候補も 0
+    件。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: I.2.a forward reference to the I.2.c gate points below, at the conjunct
+      that blocks on a journal `merged`
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: The carve-out / gate / reconciled-state ownership chain has a stated termination
+      point
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR3:
+    title: The route-back reset target set covers both `failed` sources, connected
+      to the postcondition and `replace_all`
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR4:
+    title: Excluding reconciled-`merged` tasks from cleanup is stated as a consequence
+      of the gate
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR5:
+    title: The cleanup not-merged claim matches what is verified, and the residual
+      is recorded
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR6:
+    title: Document-contract tests equivalent to TS-10 / TS-11 / TS-12
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Plugin version bump
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR1:
+    title: Documentation-only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Edit-forbidden modules
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  NFR3:
+    title: Existing assertions
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  NFR4:
+    title: Forbidden substrings in I.2.c
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: I.2.c anchors
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: I.2.a anchors
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: No git command lines
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR8:
+    title: Cite, do not restate
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR9:
+    title: Test placement
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
