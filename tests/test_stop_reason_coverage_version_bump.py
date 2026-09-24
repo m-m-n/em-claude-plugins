@@ -126,7 +126,10 @@ class TestPluginManifestVersion(unittest.TestCase):
     def test_version_is_the_literal_bump_target(self):
         # AC-1's literal check: read directly, never pinned by the durable
         # baseline matcher above.
-        self.assertEqual(self.data.get("version"), "0.2.1")
+        # abort-docs-commit-precedence/task0001: bumped to 0.2.2, per
+        # tests/test_codex_wrapper_fallback_removal_version_bump.py's
+        # documented convention for later version bumps.
+        self.assertEqual(self.data.get("version"), "0.2.2")
 
     def test_name_field_reads_em_workflow(self):
         self.assertEqual(self.data.get("name"), "em-workflow")
@@ -150,7 +153,8 @@ class TestMarketplaceEntryVersion(unittest.TestCase):
         _assert_version_past_baseline(self, self.entry.get("version"))
 
     def test_entry_version_is_the_literal_bump_target(self):
-        self.assertEqual(self.entry.get("version"), "0.2.1")
+        # abort-docs-commit-precedence/task0001: bumped to 0.2.2.
+        self.assertEqual(self.entry.get("version"), "0.2.2")
 
     def test_entry_version_matches_plugin_manifest(self):
         _assert_versions_equal(self, self.entry.get("version"), self.manifest.get("version"))
