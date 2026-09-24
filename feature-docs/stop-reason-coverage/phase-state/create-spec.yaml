@@ -1,7 +1,7 @@
 schema_version: 1
 feature: stop-reason-coverage
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 9751eb29cc150f6bfba69a125af34101973d4669
 last_input_digest: sha256:d33fff328bdd27cddc101e316c18315901bc6d764308a679d56ca3cf756e771d
