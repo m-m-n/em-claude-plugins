@@ -1,0 +1,34 @@
+schema_version: 1
+feature: classification-table-escaped-pipe
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.41
+    '1': 0.58
+    '2': 0.01
+    '3': 0.0
+  expectation_clear: 0.9
+  confidence: 0.57
+  observed_at: '2026-09-25T06:35:44+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.92
+    '1': 0.07
+    '2': 0.01
+    '3': 0.0
+  expectation_clear: 0.8
+  confidence: 0.9
+  observed_at: '2026-09-25T06:35:45+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_hook_classification_pin.py
+  changed_lines_approx: 15
+  new_functions_needed: 1
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  rationale: HEAD d19dffcでは、tests/test_hook_classification_pin.py:163の単純分割は残っているけれど、:164で列数を検査し、:165で既にClassificationTableErrorを送出しているよ。実際の文書をメモリ上で再現例に書き換えても、行は黙って落ちず、問題の行を含む例外になったよ。既存のパーサ関連テスト13件は成功したけれど、:347の列数異常テストは1列の行だけで、\|を含むセルの挙動を固定するテストはないよ。期待する挙動のうち明示的な失敗は満たしているので、同ファイルに例外型と列数エラーのメッセージを確認するテストメソッドを1件追加する、約15行の変更を勧めるよ。利用側のtests/test_recycled_task_id_consistency.py:810は変更不要と見積もるよ。なお、同様の単純分割はtests/_gate_vocabulary.py:91にも存在するけれど、今回の変更対象には含めないよ。ファイルは変更していないよ
+decided_at: '2026-09-25T06:35:54+09:00'
