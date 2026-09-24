@@ -1,10 +1,14 @@
 task_id: task0001
 
-# Recorded before any edit (4a). All nine are pre-existing failures in
-# unrelated, concurrently-developing features/tasks (review-rules.yaml
-# wording, --once argument-hint line, muse-consent budget/version-bump
-# pins, step-c batch-auto-select Japanese wording) -- none touch
-# batch-terminal-line.md or its reason-code/coverage machinery.
+# Recorded before any edit (4a); refreshed after merging the parent in
+# during the conflict cycle (parent-side adoption pulled in task0003's
+# and task0004's work, growing the suite from 5346 to 5399 tests). The
+# failing NAME set is byte-identical before and after that merge -- all
+# nine are pre-existing failures in unrelated, concurrently-developing
+# features/tasks (review-rules.yaml wording, --once argument-hint line,
+# muse-consent budget/version-bump pins, step-c batch-auto-select
+# Japanese wording) -- none touch batch-terminal-line.md or its
+# reason-code/coverage machinery.
 baseline_failures:
   - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
   - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
@@ -16,9 +20,10 @@ baseline_failures:
   - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
   - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
 
-# Identical to baseline_failures: full-suite run after implementation
-# produced the exact same 9 failures and nothing else (verified subset
-# check both directions).
+# Identical to baseline_failures: full-suite run after implementation,
+# and again after the parent-side-adoption merge above, produced the
+# exact same 9 failures and nothing else (verified subset check both
+# directions each time).
 final_failures:
   - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
   - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
