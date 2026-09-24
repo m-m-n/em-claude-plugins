@@ -2,38 +2,61 @@ schema_version: 1
 feature: classification-table-escaped-pipe
 created: '2026-09-25'
 base_branch: main
-goal: |
-  # em-workflow: 分類テーブルのパーサが \| エスケープ非対応で、該当行を黙って落とす
+goal: '# em-workflow: 分類テーブルのパーサが \| エスケープ非対応で、該当行を黙って落とす
+
 
   Notion タスク: https://www.notion.so/3c03509ec8ee819da132c285f490754d （種別: バグ）
 
+
   ## 現象（必須）
+
   `tests/test_hook_classification_pin.py` の `parse_classification_table()` が、Markdown テーブルの行を `line.strip().strip("|").split("|")` で素朴に分割している。Markdown でセル内のパイプを表す標準的な `\|` エスケープを処理しないため、`\|` を含むセルがある行はカラム数が合わず、`len(cells) != 2` の分岐で黙ってスキップされる。
+
   行が落ちてもパーサはエラーを出さないため、分類テーブルから hook が 1 行消えたことに気付けない。気付けるのは `test_table_lists_exactly_the_four_queue_hooks` が「hook 名の集合が違う」で落ちたときだけで、そのメッセージからはパーサの限界が原因だと読み取れない。
 
+
   ## 再現手順（必須）
+
   1. `em-workflow/references/implement-phase.md` の hook classification table のいずれかの行の Classification セルを、``reads `tasks.{T}.status` \| `journal` `` のようにエスケープしたパイプを含む値に書き換える。
+
   2. `python3 -m unittest discover -s tests` を実行する。
+
   3. `parse_classification_table()` はその行を黙って捨て、返る rows が 3 行になる。パーサ自体はエラーを出さない。
 
+
   ## 期待する挙動（必須）
+
   `\|` エスケープを解釈して正しく 2 カラムに分割する。あるいは、区切り行（`---`）以外で 2 カラムにならない行に出会ったら明示的に `ClassificationTableError` を送出し、パーサの限界が原因であることが即座に分かるようにする。
 
+
   ## 完了の定義（必須）
+
   - [ ] 再現手順でパーサが行を黙って落とさない（正しく解釈するか、明示的に失敗する）
+
   - [ ] エスケープされたパイプを含むセルを持つテーブルに対する挙動を固定するテストがある
 
+
   ## 該当箇所（任意）
+
   `tests/test_hook_classification_pin.py` の `parse_classification_table()`（テーブル行の分割処理）
 
+
   ## 実害・発生条件（任意）
+
   現在の分類テーブルには `\|` を含むセルが無いので顕在化していない。将来テーブルの語彙を拡張したときに、テーブルの行が静かに欠落してカバレッジが縮む。同じ素朴分割は他のテストモジュールには無く、影響範囲はこの 1 箇所。
+
   由来: PR https://github.com/m-m-n/em-claude-plugins/pull/16 のレビュー finding `c5b9df953b1fa49f`（comprehensive、medium、confidence 65）。medium のため auto-fix ゲート（critical/high）に該当せず deferred とした。
 
+
   ## 追加指示（起動引数）
+
   - 実装完了後、integration ブランチを remote へ push し、gh pr create で base_branch 宛の PR を作る。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）。
+
   - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
+
   - その相談内容を Notion に記録する。
+
+  '
 parent_branch: em-workflow/classification-table-escaped-pipe/integration
 tier: full
 tier_decision:
@@ -89,7 +112,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 6a5c94e546e93d4cac38b77a5454a4de11a9637b
 - id: implement
   status: pending
 - id: review
@@ -100,7 +124,27 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Escaped-pipe unsupported notice in classification table parser
+    plan: tasks/task0001.md
+    files:
+    - tests/test_hook_classification_pin.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: low
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -110,50 +154,69 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
   FR2:
     title: 行の分割方式は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-6
   FR3:
     title: '`\|` を含む行の挙動を固定するテスト'
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR4:
     title: docstring に `\|` 非対応を明記する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   NFR1:
     title: 標準ライブラリのみ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
   NFR2:
     title: 変更範囲
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
   NFR3:
     title: 既存テストの維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-6
 batch:
   review_rework_count: 0
   verify_rework:
