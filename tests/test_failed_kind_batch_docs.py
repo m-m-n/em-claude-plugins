@@ -169,6 +169,8 @@ EXPECTED_REASON_CODE_STATE_PAIRS = [
     ("docs_commit_conflict_aborted", "stopped"),
     # Added by task-tier-reduction/task0004: the pre-run no-work stop.
     ("no_work_required", "stopped"),
+    # Added by stop-reason-coverage/task0001: the catch-all code.
+    ("unmapped_stop", "stopped"),
 ]
 
 EXPECTED_COVERAGE_ROW = (

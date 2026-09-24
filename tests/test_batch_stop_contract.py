@@ -247,6 +247,12 @@ SC1_KEYS = [
 # Extended by task-tier-reduction/task0004: `no_work_required` /
 # `no-work-required` join both sets (twelve members each); see that task's
 # docstring addendum near the end of this module.
+#
+# Extended again by stop-reason-coverage/task0001: `unmapped_stop` /
+# `unmapped-terminating-stop` (the catch-all code and coverage row) plus
+# `command-refusal` (a second coverage row bound to the existing
+# `gate_fail_closed` code) join the sets -- REASON_CODES: thirteen
+# members; STOP_POINT_KEYS: fourteen members.
 REASON_CODES = frozenset(
     {
         "step_stuck",
@@ -261,6 +267,7 @@ REASON_CODES = frozenset(
         "feature_resolution_aborted",
         "docs_commit_conflict_aborted",
         "no_work_required",
+        "unmapped_stop",
     }
 )
 
@@ -277,12 +284,14 @@ STOP_POINT_KEYS = frozenset(
         "stop-condition-6",
         "fail-closed-abort",
         "policy-option-unavailable",
+        "command-refusal",
         "implement-second-failure",
         "verify-rework-cap",
         "step-c-abort",
         "step-a-abort",
         "docs-commit-conflict",
         "no-work-required",
+        "unmapped-terminating-stop",
     }
 )
 
@@ -320,12 +329,17 @@ _KEY_CODE_PAIRS_IN_ORDER = [
     ("stop-condition-6", "git_setup_aborted"),
     ("fail-closed-abort", "gate_fail_closed"),
     ("policy-option-unavailable", "gate_option_unavailable"),
+    # Added by stop-reason-coverage/task0001: `gate_fail_closed`'s second
+    # coverage row, for the command-approval refusal-pattern hard fail.
+    ("command-refusal", "gate_fail_closed"),
     ("implement-second-failure", "implement_task_failed"),
     ("verify-rework-cap", "verify_rework_cap_reached"),
     ("step-c-abort", "completion_aborted"),
     ("step-a-abort", "feature_resolution_aborted"),
     ("docs-commit-conflict", "docs_commit_conflict_aborted"),
     ("no-work-required", "no_work_required"),
+    # Added by stop-reason-coverage/task0001: the catch-all row.
+    ("unmapped-terminating-stop", "unmapped_stop"),
 ]
 
 # SC3 -- the canonical escaping mapping, as raw Markdown table cell text
@@ -1348,33 +1362,33 @@ class TestStopReasonCodes(unittest.TestCase):
     def test_codes_are_well_formed(self):
         _assert_well_formed_code_list(self, self.codes)
 
-    def test_extracted_set_equals_the_twelve_fixed_codes(self):
-        # task-tier-reduction/task0004 adds `no_work_required`, making
-        # REASON_CODES twelve members (was eleven).
+    def test_extracted_set_equals_the_thirteen_fixed_codes(self):
+        # stop-reason-coverage/task0001 adds `unmapped_stop`, making
+        # REASON_CODES thirteen members (was twelve).
         self.assertEqual(set(self.codes), REASON_CODES)
 
     def test_section_stated_count_equals_table_row_count(self):
-        self.assertIn("twelve", self.section.lower())
-        self.assertEqual(len(self.codes), 12)
+        self.assertIn("thirteen", self.section.lower())
+        self.assertEqual(len(self.codes), 13)
         self.assertEqual(len(self.codes), len(REASON_CODES))
 
-    def test_context_budget_reached_documented_as_thirteenth_never_emitted(self):
-        """AC-4: the `reason` domain documents thirteen values (task-tier-
-        reduction/task0004 raises this from twelve), with
+    def test_context_budget_reached_documented_as_fourteenth_never_emitted(self):
+        """AC-4: the `reason` domain documents fourteen values (stop-
+        reason-coverage/task0001 raises this from thirteen), with
         `context_budget_reached` marked never emitted, in this section's
         prose (companion to the same fact stated in `## Field values`)."""
         normalized = _normalize(self.section)
         self.assertIn(f"`{CONTEXT_BUDGET_REACHED}`", self.section)
-        self.assertIn("thirteenth", normalized)
+        self.assertIn("fourteenth", normalized)
         self.assertIn("never emits it", normalized)
         # AC-4: absent from the coverage table (checked structurally in
         # TestStopPointCoverage.test_context_budget_reached_absent_from_coverage_table).
 
     def test_context_budget_reached_absent_as_table_row(self):
-        """The reason-code TABLE itself stays at exactly twelve rows --
+        """The reason-code TABLE itself stays at exactly thirteen rows --
         context_budget_reached is documented in prose, never as a row (the
-        twelve-row regression guard above already proves the row count; this
-        proves the specific code is not one of them)."""
+        thirteen-row regression guard above already proves the row count;
+        this proves the specific code is not one of them)."""
         self.assertNotIn(CONTEXT_BUDGET_REACHED, self.codes)
 
     def test_none_documented_as_reserved_for_non_stop_states(self):
@@ -1751,9 +1765,9 @@ class TestStopPointCoverage(unittest.TestCase):
         _assert_context_budget_reached_exception_stated(self, self.section)
 
     def test_context_budget_reached_absent_from_coverage_table(self):
-        """AC-4: a forged domain that adds the twelfth code as a coverage
+        """AC-4: a forged domain that adds the reserved code as a coverage
         row is rejected by the bidirectional-coverage matcher (its code-set
-        would then exceed REASON_CODES, the eleven-member set the matcher
+        would then exceed REASON_CODES, the thirteen-member set the matcher
         checks against)."""
         codes_seen = {code for _key, code in self.pairs}
         self.assertNotIn(CONTEXT_BUDGET_REACHED, codes_seen)
@@ -1762,8 +1776,8 @@ class TestStopPointCoverage(unittest.TestCase):
 class TestCoverageMatcherRejectsTwelfthCodeAsRow(unittest.TestCase):
     """AC-4 negative proof: a forged coverage table that adds
     `context_budget_reached` as an extra row is rejected -- the matcher's
-    `expected_codes` set (REASON_CODES, twelve members as of task-tier-
-    reduction/task0004) does not contain it, so the "every bound code is a
+    `expected_codes` set (REASON_CODES, thirteen members as of stop-reason-
+    coverage/task0001) does not contain it, so the "every bound code is a
     member of expected_codes" check fires."""
 
     def test_forged_table_with_reserved_code_row_is_otherwise_well_formed(self):
