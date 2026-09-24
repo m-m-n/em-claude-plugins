@@ -1,7 +1,7 @@
 schema_version: 1
 feature: exemption-registry-section-scope
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 3dfd31d1f89e39f10fb076d56c4c5a149d15ae06
 last_input_digest: sha256:cf91feea80df5289a00bef85fe55f0e0e47d54fca3e0226930ca388a3f6598ba
