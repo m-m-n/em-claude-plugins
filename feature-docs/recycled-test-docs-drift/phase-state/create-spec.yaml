@@ -1,7 +1,7 @@
 schema_version: 1
 feature: recycled-test-docs-drift
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 94ba9a1cde0a79fc3de453ed3d332db889d7252f
 last_input_digest: sha256:f364284015f60bfb3df89f224549c843f304e1c35b9191406424ea042aa3f961
@@ -102,7 +102,14 @@ worker_runs:
   status: completed
   input_digest: sha256:f364284015f60bfb3df89f224549c843f304e1c35b9191406424ea042aa3f961
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:1ab037b8d2d1b51c0adbbbbe75e38f33d0fe51ebb3378f082b331f81de7993f1
+  output_digest: null
+artifacts:
+- path: feature-docs/recycled-test-docs-drift/SPEC.md
+  sha256: sha256:056768dd96dca5ba78b71165e1826789e6f01af54fe8db62b20666325bf92d95
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

@@ -1,0 +1,220 @@
+schema_version: 1
+feature: recycled-test-docs-drift
+created: '2026-09-25'
+base_branch: main
+goal: '# em-workflow: recycled-task-id-contract の test-docs がスキーマ違反と記録陳腐化を抱えている
+
+
+  Notion: https://www.notion.so/3c03509ec8ee81bebdeeddebbafb4c1b  (種別: バグ)
+
+
+  ## 現象
+
+  feature `recycled-task-id-contract` の test-docs 2 ファイルが、`em-workflow/agents/implementer.md` が定めるスキーマと実態から外れている。
+
+
+  **必須フィールドの欠落**: `test-docs/recycled-task-id-contract/task0002.tests.yaml` の AC-4 だけが `red_confirmed`
+  を持たず、`tests: []` と `red_reason` のみ。同ファイルの AC-1/2/3/5 と task0001.tests.yaml の全エントリは持っている。implementer.md
+  は `tests: []` のビルド系 criterion を含め全 Acceptance Criterion エントリが `tests` / `red_confirmed` / `red_reason`
+  を持つと明記している。
+
+
+  **記録の陳腐化**: `test-docs/recycled-task-id-contract/task0001.tests.yaml` が review の auto-fix 後に更新されていない。
+
+  - AC-3 の `red_reason` が「All four hooks ...」という現在は存在しない文面を引用している（auto-fix で「The other three queue hooks
+  ...」に書き換わった）
+
+  - auto-fix が `tests/test_hook_classification_pin.py` に追加した非空虚性テストが、どの AC の `tests:` リストにも載っていない
+
+  - AC-7 の `red_reason` がテスト総数を旧件数のまま記録している
+
+
+  **観測していない red**: task0001.tests.yaml の AC-7 が `red_confirmed: true` としつつ、`red_reason` は「pre-edit の git
+  diff が空であること（実装前は自明に真）」と述べている。implementer.md の「観測していない red に true と書くな」に照らすと `false` + 理由が正しい形。
+
+
+  ## 再現手順
+
+  1. task0002.tests.yaml の AC-4 に `red_confirmed` が無いことを確認する。
+
+  2. task0001.tests.yaml の AC-3 の `red_reason` に「All four hooks」の引用があることを確認する。
+
+  3. `em-workflow/references/implement-phase.md` を `All four hooks` で grep し、0 件であることを確認する。
+
+
+  ## 期待する挙動
+
+  test-docs の記録が implementer.md のスキーマを満たし、かつ成果物の実態を説明している。後続フェーズ（verify / retrospect）がこの記録を根拠に判断しても誤らない。
+
+
+  ## 完了の定義
+
+  - [ ] task0002.tests.yaml の AC-4 に `red_confirmed: false` がある
+
+  - [ ] task0001.tests.yaml の AC-3 の引用が現在の文面と一致する
+
+  - [ ] auto-fix で追加されたテストが対応する AC の `tests:` に載っている
+
+  - [ ] task0001.tests.yaml の AC-7 のテスト総数と `red_confirmed` が実態に合っている
+
+
+  ## 該当箇所
+
+  `test-docs/recycled-task-id-contract/task0001.tests.yaml`、`test-docs/recycled-task-id-contract/task0002.tests.yaml`
+
+
+  ## 実害・発生条件
+
+  記録は成果物の一部として integration ブランチにコミット済みで、後続フェーズが失敗の帰属根拠として読む。review の auto-fix が実装を書き換えても test-docs は更新されないという構造的な穴でもあるので、個別修正に加えて「auto-fix
+  後に tests.yaml を追随させる責務が誰にあるか」を review-phase.md 側で決める余地がある。
+
+
+  由来: PR https://github.com/m-m-n/em-claude-plugins/pull/16 のレビュー finding `4d38d19e836bbffb` と `3c7e5b9a1d4f8026`（comprehensive、medium、confidence
+  65）。
+
+  '
+parent_branch: em-workflow/recycled-test-docs-drift/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.67
+      '1': 0.32
+      '2': 0.01
+    expectation_clear: 0.84
+    confidence: 0.47
+    observed_at: '2026-09-25T07:27:28+09:00'
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.77
+      '1': 0.23
+      '2': 0.0
+    expectation_clear: 0.82
+    confidence: 0.65
+    observed_at: '2026-09-25T07:30:07+09:00'
+  at: '2026-09-25T07:30:40+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 86294ad010f68e0be4c030ac6c23d205fb848f56
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない記録ファイル（YAML）の訂正だけのため。reduced tier でも design step は削減対象
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: 'task0002 AC-4 に red_confirmed: false を追加'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: task0001 AC-3 の引用を現在の文面に訂正
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 'auto-fix で追加された 3 テストを task0001 AC-6 の tests: に記載'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 追加した 3 テストの red を再観測して記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: task0001 AC-7 の件数と red_confirmed を実態に合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: task0001 notes との整合
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 変更範囲を 2 ファイルに限定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 新しいテストを追加しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 変更対象外のエントリを変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 記録ファイルの妥当性と suite 成功
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
