@@ -1,11 +1,11 @@
 schema_version: 1
 feature: routeback-residual-connections
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 1bc7a5472438971101e888aaa4206065a49b1989
-last_input_digest: sha256:ca16e77fe9ca5722c60663e5f78c3e5eaa17ed444b6d224a10f84b797462a200
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:f1725f123ccba25b471140f67d71417b72712c3f46467fb863bc7db1065dadd1
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -13,7 +13,17 @@ worker_runs:
   status: completed
   input_digest: sha256:ca16e77fe9ca5722c60663e5f78c3e5eaa17ed444b6d224a10f84b797462a200
   output_digest: sha256:8e6f1435ec13b136876e5323bd9a7f5db93aa42f24b0de0c351ec1b461deedef
-artifacts: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:f1725f123ccba25b471140f67d71417b72712c3f46467fb863bc7db1065dadd1
+  output_digest: null
+artifacts:
+- path: feature-docs/routeback-residual-connections/REQUIREMENTS.md
+  sha256: sha256:e2fcca4e956072d38c7a5d678174acabc6917134d0b4854e3f2d366b34fb0f62
+  produced_by: create-spec-run-0002
+- path: feature-docs/routeback-residual-connections/SPEC.md
+  sha256: sha256:10373ed69779091107228b69a887f2f1fbd0118c517ab4da53a065ee340c5979
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
