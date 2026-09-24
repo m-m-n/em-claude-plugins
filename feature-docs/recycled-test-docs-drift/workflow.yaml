@@ -168,7 +168,7 @@ tasks:
     status: merged
     branch: em-workflow/recycled-test-docs-drift/task0001
 review:
-  status: in_progress
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -176,6 +176,13 @@ review:
     - spec
     discretionary: []
     cross_validation: false
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: 'task0002 AC-4 に red_confirmed: false を追加'

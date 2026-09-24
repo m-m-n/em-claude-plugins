@@ -1,0 +1,81 @@
+round: 1
+executed_at: '2026-09-25T08:08:57+09:00'
+scope:
+  review_mode: diff
+  base_commit: bb1689ae1d7f9b025bf0664c5ac397778c491626
+  head_commit: 5784709882c01c9eaefc897c108ca64ce150d25a
+  changed_files:
+  - test-docs/recycled-task-id-contract/task0001.tests.yaml
+  - test-docs/recycled-task-id-contract/task0002.tests.yaml
+  - test-docs/recycled-test-docs-drift/task0001.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 996b4e5b33f9d6d7
+  severity: medium
+  category: comprehensive
+  file: test-docs/recycled-task-id-contract/task0001.tests.yaml
+  line: 152
+  title: notes が AC-6 の既存 4 件すべての red を再確認したと書いているけど、1 件は文書に依存しないので失敗しない
+  description: 書き直した notes（152-158 行）は AC-6 の既存 4 テストすべてで、implement-phase.md を base
+    に戻すと失敗を観測したと書いている。test_row_with_unresolvable_path_fails は合成した 1 行を compare_table_to_sources
+    に渡すだけで文書に依存しないため、文書を戻しても PASS する。失敗するのは parse_classification_table() を呼ぶ残り 3 件（ERROR）だけ。同ファイルの
+    AC-6 red_reason（85-95 行）とも食い違い、FR6 を満たしきれていない。test-docs/recycled-test-docs-drift/task0001.tests.yaml
+    の AC-6 red_reason も同じ誤りを引き継いでいる。
+  suggestion: notes の再確認範囲を AC-1〜AC-5 と、文書を戻すと ERROR になる AC-6 の 3 件に絞る。test_row_with_unresolvable_path_fails
+    は文書に依存せず green のままのテストとして分けて書く。test-docs/recycled-test-docs-drift/task0001.tests.yaml
+    の AC-6 red_reason にも同じ訂正を入れる。
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium は Phase R4 の auto-fix 対象外（critical/high のみ）。別タスクとして起票する
+evaluation:
+  round_summary: 3 ファイルとも YAML として読め、FR1〜FR5・NFR1 は満たす。FR6 は notes が AC-6 の既存 4 件すべてを再確認済みとしている点で満たしきれていない（comprehensive#0
+    の medium 指摘をコードで確認）。security は実行コードの無い記録 YAML のみで指摘なし。spec#0 は指摘 0 件、FR6 の食い違いは
+    comprehensive の finding にまとめた。low の 1 件（notes の「added in feature recycled-test-docs-drift」の帰属表現）は
+    R3b step 2 で除外。プロンプト注入の試みは無し。
+  recommended_action: auto_fix
+  action_rationale: critical / high の指摘はなく、残りは notes と AC-6 red_reason の文言修正だけ。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/sakura/src/my_projects/em-claude-plugins/tmp/sca-triage-recycled-test-docs-drift-20260924T230838Z.md
