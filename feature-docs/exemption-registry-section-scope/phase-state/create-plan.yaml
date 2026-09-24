@@ -1,0 +1,21 @@
+schema_version: 1
+feature: exemption-registry-section-scope
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 15e20edcd30cc34ce6572a32a1043f4ffdc62b18
+last_input_digest: sha256:98a976648acd3f8615bf01141bbfa0860c977f3b26509fcf4920cd591dfc8a0e
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:98a976648acd3f8615bf01141bbfa0860c977f3b26509fcf4920cd591dfc8a0e
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
