@@ -200,8 +200,19 @@ tasks:
     status: merged
     branch: em-workflow/abort-docs-commit-precedence/task0002
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: Phase-specific vs phase-specific precedence
