@@ -1,0 +1,33 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recycled_task_id_contract_version_bump.TestEmWorkflowEntryCheckInTestData.test_extra_plugin_entry_is_tolerated
+    red_confirmed: true
+    red_reason: "With _assert_em_workflow_entry_unchanged's body temporarily replaced by 'raise NotImplementedError(...)', this test errored with NotImplementedError instead of passing silently. Restoring the real body made it pass."
+  AC-2:
+    tests:
+      - tests.test_recycled_task_id_contract_version_bump.TestEmWorkflowEntryCheckInTestData.test_em_workflow_source_drift_raises
+    red_confirmed: true
+    red_reason: "With _assert_em_workflow_entry_unchanged's body temporarily replaced by 'raise NotImplementedError(...)', this test errored with NotImplementedError (uncaught by assertRaises(AssertionError)) instead of observing an AssertionError. Restoring the real body made it pass."
+  AC-3:
+    tests:
+      - tests.test_recycled_task_id_contract_version_bump.TestEmWorkflowEntryCheckInTestData.test_em_workflow_name_drift_raises
+    red_confirmed: true
+    red_reason: "With _assert_em_workflow_entry_unchanged's body temporarily replaced by 'raise NotImplementedError(...)', this test errored with NotImplementedError (uncaught by assertRaises(AssertionError)) instead of observing an AssertionError. Restoring the real body made it pass."
+  AC-4:
+    tests:
+      - tests.test_recycled_task_id_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_name_and_source_unchanged
+    red_confirmed: true
+    red_reason: "This retained test's assertions (name == 'em-workflow', source == './em-workflow') are unchanged; it passed before this task's edit and passes after, since it exercises real repository data that this task does not touch. Non-vacuousness for this exact test was directly confirmed the same way as AC-1/AC-2/AC-3: with the check's body temporarily stubbed to raise NotImplementedError, this test errored instead of passing; restoring the real body made it pass again. This is a refactor of the test's internals (delegating to the shared module-local check), not new observable behavior, so there is no independent pre-existing-criterion red state beyond that stub-based non-vacuousness proof."
+  AC-5:
+    tests: []
+    red_reason: "Verified by text search, not a permanent test (a test asserting the module lacks these identifiers would have to contain them itself). Before the edit, grep for MARKETPLACE_NAME_SOURCE_BASELINE|TestMarketplaceOtherFieldsUnchanged|test_entry_count_unchanged|test_every_entry_name_and_source_matches_baseline against tests/test_recycled_task_id_contract_version_bump.py found all four identifiers (module docstring's AC-3 bullet also read the old 'gains or loses no entry' / whole-array wording). After the edit, the same grep against the module found zero matches (exit code 1), and the module docstring's AC-3 bullet now states the em-workflow-entry-only scope."
+  AC-6:
+    tests: []
+    red_reason: "Verified by text search and a single-ID unittest run, not a permanent test. Before the edit, acceptance_tests.AC-3.tests in test-docs/recycled-task-id-contract/task0002.tests.yaml listed three IDs including two under the now-removed TestMarketplaceOtherFieldsUnchanged class, and its red_reason mentioned entry count. After the edit, AC-3.tests lists exactly one ID (the retained test), its red_reason no longer mentions entry count, a whole-file grep for the four removed identifiers finds nothing, the AC-4 red_reason's '10 tests'/'1462 tests' text is untouched, the file still parses as YAML (checked with python3's yaml.safe_load), and 'python3 -m unittest tests.test_recycled_task_id_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_name_and_source_unchanged' run alone passes (Ran 1 test ... OK)."
+  AC-7:
+    tests: []
+    red_reason: "Verified by full-suite run and by inspection, not a permanent test. Baseline (before any edit): 'python3 -m unittest discover -s tests' from the repository root ran 5654 tests, OK, 0 failures. After the edit: the same command ran 5655 tests, OK, 0 failures (net +1 matches -2 removed tests +3 new in-test-data tests). The module's imports are unchanged (json, re, unittest, pathlib only) and marketplace.json is still read via json.loads. 'git diff --stat' on the task branch touches only tests/test_recycled_task_id_contract_version_bump.py and test-docs/recycled-task-id-contract/task0002.tests.yaml (plus this per-task test record); 'git diff --stat -- em-workflow .claude-plugin' against the parent branch is empty."
