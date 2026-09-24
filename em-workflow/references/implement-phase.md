@@ -1123,7 +1123,29 @@ Stop-hook bullet below cite it as this classification's source.
   subagent stops; for em-workflow implementers whose task has no `merged`
   event yet, appends `failed` — turning a swallowed or crashed implementer
   into a visible, actionable state instead of a silent stall. Always exits 0
-  (never blocks the stop).
+  (never blocks the stop). Identification proceeds in this order: the agent
+  type (`em-workflow:implementer` or `implementer`; any other non-empty
+  type means the hook does nothing); then the assignment block, taken from
+  an inline prompt field or from the first transcript user message that
+  contains the `# Task assignment` header, with the task id and worktree
+  path taken only from the text after the header, parsed exactly as the
+  launch guard parses it; then, when no block is found, the agent-index
+  fallback by the payload's own agent id, resolved with the stop-tool
+  recorder's rules. Replay and append happen inside one exclusive-lock
+  critical section on the journal: `failed` is appended only when the
+  task's last event is neither `merged` nor `failed`, so together with the
+  stop-tool recorder at most one `failed` line ever results for a task.
+  Every invocation also appends one line to the diagnostics log at
+  `.claude/worktrees/em-workflow/subagent-stop-diagnostics.jsonl`,
+  recording one of the outcome codes `not-implementer-type`,
+  `no-prompt-text`, `no-assignment-block`, `invalid-identity`,
+  `index-unresolved`, `journal-dir-missing`, `already-terminal`,
+  `appended`, `error` — prompt text is never logged. This log is not a
+  journal, carries no task-status meaning, and adds no journal writer. A
+  missing diagnostics line alone does not distinguish a hook that did not
+  run from a hook that ran but could not write the log; a line that is
+  present separates a hook that fired but could not identify the task —
+  named by its outcome code — from a successful append.
 - **Stop-tool recorder** (`queue_taskstop_net.py`) — fires after the
   orchestrator's `TaskStop` tool call completes. A stop delivered through
   this tool does NOT reach the `SubagentStop` failure net above — this was
@@ -1167,6 +1189,9 @@ the gap for exactly a stop that delivers neither a subagent-stop nor a
 stop-tool event: the same I.2.b step 1 orphan-recovery attempt's extended
 same-session branch (cited there, not restated here) closes it too,
 still inside that one narrowly-scoped writer exception, adding no writer.
+Such a stop is also observable as a missing diagnostics line: no
+invocation ever runs to append one when no SubagentStop event is
+delivered at all.
 
 **Resume**: a `/em-workflow:develop` re-entry mid-implement rebuilds state
 from four sources, never from memory: workflow.yaml (`tasks.*.status`), the
