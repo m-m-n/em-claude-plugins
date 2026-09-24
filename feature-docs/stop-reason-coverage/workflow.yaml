@@ -176,7 +176,7 @@ tasks:
     - FR9
     - FR11
     - NFR1
-    status: in_progress
+    status: merged
     branch: em-workflow/stop-reason-coverage/task0003
   task0004:
     title: em-workflow version bump to 0.2.1
@@ -194,7 +194,7 @@ tasks:
     - FR10
     - NFR1
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/stop-reason-coverage/task0004
 review:
   status: pending

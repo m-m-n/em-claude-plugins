@@ -20,3 +20,12 @@ records:
     は今回の目的に過剰); key points: 現行の双方向テストは固定集合との一致検査で文書全体の停止を発見しない / catch-all なら今後の列挙漏れも規則で吸収
     / owner 文書を変更せず理由コードの管理元を一つに保てる; codex_consulted: true (codex entry, 1 turn);
     opus_escalation: not run'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-09-24T10:20:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined deviation tests/test_codex_wrapper_fallback_removal_version_bump.py'
+  normalized_answer: 'not auto-added to tasks.task0004.files'
+  resolution_note: 'task_id: task0004; declined path: tests/test_codex_wrapper_fallback_removal_version_bump.py; missing evidence part: identifier (no AC-n of task0004 plan or registered requirement id named); path and observable failure (test_em_workflow_manifest_and_entry_agree_on_the_current_version regresses) were given. Surfaces as an ordinary deviation for the containment check.'
