@@ -1,0 +1,15 @@
+schema_version: 1
+feature: recycled-test-docs-drift
+records:
+- question_id: create-spec.out-of-scope-follow-ups
+  packet_id: null
+  answered_at: '2026-09-25T07:44:51+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: filed
+  normalized_answer: 範囲外とした 2 件を notion-task-dispatch で別タスクとして起票した（ステータス未着手）
+  resolution_note: 'create-spec 回答 requirement.review-phase-scope=exclude / requirement.adjacent-defects-scope=criteria_only
+    に基づく起票。(1) review-phase.md の auto-fix 後 tests.yaml 追随責務: <notion-url>
+    (2) task0003.tests.yaml AC-6/7/8 と task0001 AC-6 の tests: 漏れ: <notion-url>
+    。重複チェックは unverified（判定フェーズ: duplicate-task-judge にファイル読み取りツールが無く判定不能）。後続の起動では再起票しない'
