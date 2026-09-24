@@ -111,7 +111,8 @@ tasks:
     - FR4
     - FR11
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/repo-suite-pinned-test-drift/task0001
   task0002:
     title: develop SKILL.md ピン留めテストの追随（argument-hint / Step C）
     plan: tasks/task0002.md
@@ -129,7 +130,8 @@ tasks:
     - FR3
     - NFR1
     - NFR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/repo-suite-pinned-test-drift/task0002
   task0003:
     title: em-workflow version リテラル固定の撤去（abort-terminal-commit-precedence / stop-reason-coverage）
     plan: tasks/task0003.md
@@ -147,7 +149,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/repo-suite-pinned-test-drift/task0003
   task0004:
     title: マニフェストのピン留め追随（codex-wrapper / batch-structured-result / muse-consent）
     plan: tasks/task0004.md
@@ -167,7 +170,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/repo-suite-pinned-test-drift/task0004
   task0005:
     title: review-rules.yaml ピン留めテストの追随
     plan: tasks/task0005.md
@@ -182,7 +186,8 @@ tasks:
     - FR10
     - NFR1
     - NFR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/repo-suite-pinned-test-drift/task0005
 review:
   status: pending
   rounds_completed: 0
