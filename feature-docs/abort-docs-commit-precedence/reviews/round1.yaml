@@ -1,0 +1,79 @@
+round: 1
+executed_at: "2026-09-24T21:23:29+09:00"
+scope:
+  review_mode: diff
+  base_commit: b29f14343f99f3c8ac72b12f295799109a646b38
+  head_commit: 372124ccdcf0f62983b6912067dca0c9f821efb0
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/references/batch-terminal-line.md
+  - em-workflow/references/implement-phase.md
+  - em-workflow/scripts/commit-docs.sh
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/abort-docs-commit-precedence/task0001.tests.yaml
+  - test-docs/abort-docs-commit-precedence/task0002.tests.yaml
+  - tests/test_abort_terminal_commit_precedence.py
+  - tests/test_abort_terminal_write_resume.py
+  - tests/test_codex_wrapper_fallback_removal_version_bump.py
+  - tests/test_stop_reason_coverage_version_bump.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 675fbef42bb2c387
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/implement-phase.md
+  line: 90
+  title: "「no other exit-4 call site leaves uncommitted state」は事実と合わないよ"
+  description: "新しい abort terminal-commit exception の箇条書きに『no other exit-4 call site leaves uncommitted state』とあるが誤り。commit-docs.sh は exit 4 のとき git の状態に触らず、直前の exit-4 recovery 箇条書きは I.1 baseline / I.2.a launch / I.2.b wake / I.2.c rejected-path / I.3 completion のどれでも状態遷移を再適用してから 1 回だけ再試行すると定めている。どの呼び出し箇所でも 2 回目の exit 4 のあとには再適用した書き込みが未コミットのまま integration worktree に残る。実害は小さめで、SKILL.md Step A の無条件 refresh が他の箇所で残った分も捨てる。"
+  suggestion: "誤った節を削るか、この例外が名前を付けて扱うのはこの停止だけであり、他の exit-4 呼び出し箇所の 2 回目の exit 4 で残る未コミット変更も同じ無条件の再開時 refresh（skills/develop/SKILL.md Step A）で捨てられる、と正しく書き直す。NFR2 で固定された exit-4 箇条書きの文言と I.2.c batch-mode 段落は変えない。"
+  sources: [codex:comprehensive]
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: "medium のため auto-fix 候補外"
+- stable_id: 0f4aa139a270d09d
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/develop/SKILL.md
+  line: 195
+  title: "再開時 refresh のコマンドが Step A 自身のクォート規則に反しているよ"
+  description: "新しく足した `git -C {integration worktree の絶対パス} reset --hard em-workflow/{feature}/integration` は絶対パスをクォートなしで埋め込んでいる。Step A 冒頭は $PROJECT_ROOT を参照し {project_root} を直接埋め込まないと定め、同じ手順 2. の再マテリアライズもクォート付きで書いている。空白を含むパスでは reset が失敗し、捨てるはずの未コミットの implement: failed が残って Step B に読まれる。reset 失敗時の扱いも書かれていない。"
+  suggestion: "-C の引数を \"$PROJECT_ROOT/.claude/worktrees/em-workflow/{feature}/integration\" にして Step A の既存規則に揃え、reset 成功時だけ Step A.5 に進み、失敗したら中断して報告すると明記する。"
+  sources: [codex:comprehensive]
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: "medium のため auto-fix 候補外"
+evaluation:
+  round_summary: "1 ラウンド目（cross_validation true）。medium 2 件、critical/high 0 件。指示差し込みの試みは無し。evaluator は 10 ファイルを自読（test_codex_wrapper_fallback_removal_version_bump.py と test-docs 2 件は未読、いずれもバージョン文字列更新かタスク記録）。comprehensive: 2 件とも独自に確認（1 件目の wake データ復元不能の補足は引き継がない — wake reconcile は journal から re-derive される）。security / performance / spec: corroborated。architecture: 1 件目と同じ契約ドリフトを検出、重複させず comprehensive 側に載せた。NFR3 のテストは evaluator では再実行していない。"
+  recommended_action: "auto_fix"
+  action_rationale: "2 件とも medium で文書中の 1 文の修正で済み、NFR2 固定文言やテストの一致条件に触れずに直せる。critical/high は無く rework は不要。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+gate_notes:
+- "evaluator の confidence は 0〜1 で返されたため 0〜100 に換算した（0.85 → 85、0.7 → 70）"
+- "vulnerability 観点は未選択で未解決の vulnerability finding が 0 件のため、triage filing は実行していない"
+- "evaluator の sources id comprehensive#0 を orchestrator 割当の source identity codex:comprehensive に写像した"
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
