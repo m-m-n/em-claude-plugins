@@ -1,0 +1,121 @@
+task_id: task0001
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_batch_structured_result_output_version_bump.TestEmReviewEntryUnchanged.test_em_review_entry_unchanged
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_review_manifest_and_entry_agree_on_the_current_version
+  - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_queue_failure_net.TestAgentTypeShortFormAccepted.test_agent_type_implementer_short_form_appends_failed
+      - test_queue_failure_net.TestLaunchedAppendsFailed.test_launched_last_event_via_agent_type_appends_failed
+      - test_queue_failure_net.TestLaunchedAppendsFailed.test_launched_last_event_via_transcript_prompt_appends_failed
+      - test_queue_failure_net.TestNonImplementerStopsIgnored.test_different_agent_type_appends_nothing_even_with_assignment_block
+    red_confirmed: true
+    red_reason: "test_agent_type_implementer_short_form_appends_failed failed under the pre-task hook: agent_type == 'implementer' (short form) was not accepted (only IMPLEMENTER_AGENT_TYPE == 'em-workflow:implementer' was), so the journal stayed at 1 line instead of 2."
+  AC-2:
+    tests:
+      - test_queue_failure_net.TestTranscriptScanSkipsNonHeaderMessages.test_second_user_message_with_header_is_used
+      - test_queue_failure_net.TestTranscriptScanSkipsNonHeaderMessages.test_inline_field_without_header_does_not_block_transcript_scan
+      - test_queue_failure_net.TestTranscriptScanSkipsNonHeaderMessages.test_inline_field_with_header_takes_precedence_over_transcript
+    red_confirmed: true
+    red_reason: "test_second_user_message_with_header_is_used and test_inline_field_without_header_does_not_block_transcript_scan both failed under the pre-task hook: its transcript reader returned only the FIRST user-role message unconditionally (no header-seeking scan) and its inline-field check used any non-empty field regardless of a header, so the pre-task hook never reached the second, header-bearing message. test_inline_field_with_header_takes_precedence_over_transcript happened to already pass under the pre-task hook (its unconditional inline-first rule coincides with the new header-aware rule whenever the inline field itself carries a header), so that one sub-case's red was not independently observed -- carried into the report's notes."
+  AC-3:
+    tests:
+      - test_queue_failure_net.TestAgentIndexFallback.test_resolves_via_agent_index_when_no_block_found
+      - test_queue_failure_net.TestAgentIndexRefusals.test_identifier_matching_two_tasks_appends_nothing
+      - test_queue_failure_net.TestAgentIndexRefusals.test_superseded_entry_of_relaunched_task_appends_nothing
+      - test_queue_failure_net.TestAgentIndexRefusals.test_worktree_path_outside_feature_directory_appends_nothing
+      - test_queue_failure_net.TestAgentIndexRefusals.test_oversized_candidate_list_appends_nothing
+      - test_queue_failure_net.TestAgentIndexRefusals.test_no_matching_entry_appends_nothing
+      - test_queue_failure_net_cross_hook.TestAgentIndexFallbackMatchesTaskStopRecorder.test_successful_match_produces_same_journal_change
+      - test_queue_failure_net_cross_hook.TestAgentIndexFallbackMatchesTaskStopRecorder.test_ambiguous_identifier_produces_same_journal_change
+      - test_queue_failure_net_cross_hook.TestAgentIndexFallbackMatchesTaskStopRecorder.test_stale_identifier_produces_same_journal_change
+      - test_queue_failure_net_cross_hook.TestAgentIndexFallbackMatchesTaskStopRecorder.test_worktree_outside_feature_directory_produces_same_journal_change
+      - test_queue_failure_net_cross_hook.TestAgentIndexFallbackMatchesTaskStopRecorder.test_oversized_candidate_list_produces_same_journal_change
+      - test_queue_failure_net_cross_hook.TestAgentIndexFallbackMatchesTaskStopRecorder.test_no_matching_entry_produces_same_journal_change
+    red_confirmed: true
+    red_reason: "test_resolves_via_agent_index_when_no_block_found and the cross-hook test_successful_match_produces_same_journal_change both failed under the pre-task hook (it never consulted agent_id at all, so the fallback never fired and no failed line was appended). The five TestAgentIndexRefusals fixtures were strengthened to also assert the diagnostics outcome index-unresolved (re-run against the pre-task hook to confirm: all five failed, since the pre-task hook never wrote a diagnostics line at all -- distinguishing 'the fallback ran and specifically refused' from 'the fallback never ran'). The five cross-hook refusal-parity sub-tests (ambiguous/stale/oversized/no-match/outside-feature) already passed under the pre-task hook by coincidence: both the pre-task failure net (silent no-op) and queue_taskstop_net.py (correct refusal) leave the journal unchanged, so 'same journal change' held vacuously before this task -- carried into the report's notes."
+  AC-4:
+    tests:
+      - test_queue_failure_net_cross_hook.TestOnlyPostHeaderTaskIsMarkedFailed.test_only_post_header_task_is_marked_failed
+      - test_queue_failure_net_cross_hook.TestParserParity.test_parser_returns_the_same_values_as_launch_guard
+      - test_queue_failure_net_cross_hook.TestFailureNetAndLaunchGuardAgreeOnTaskId.test_launch_guard_launches_the_same_task_this_hook_failed
+    red_confirmed: true
+    red_reason: "test_only_post_header_task_is_marked_failed failed under the pre-task hook (it appended nothing for this multi-task-id prompt shape). test_parser_returns_the_same_values_as_launch_guard errored under the pre-task hook: it had no function named extract_task_assignment at all (that name/contract is new in this task), so the comparison itself could not run. test_launch_guard_launches_the_same_task_this_hook_failed already passed under the pre-task hook for this simple single-header fixture (its find_task_assignment happened to parse it the same way) -- carried into the report's notes."
+  AC-5:
+    tests:
+      - test_queue_failure_net_cross_hook.TestConcurrentBothHooksLeaveExactlyOneFailedLine.test_concurrent_rounds_leave_exactly_one_failed_line
+      - test_queue_failure_net_cross_hook.TestSymlinkedJournalDuringFailureNetInvocation.test_failure_net_refuses_symlinked_journal
+    red_confirmed: false
+    red_reason: "Both tests already passed under the pre-task hook. The symlink refusal was already provided by the pre-task hook's own O_NOFOLLOW-guarded append (that property is not new to this task, only its placement inside a single replay+decide+append critical section is). The concurrency fixture drives the failure net through the agent_id/agent-index path, which the pre-task hook never consulted at all, so for that fixture it was a silent no-op and 'exactly one failed line' came entirely from queue_taskstop_net.py's own pre-existing correctness -- the new atomicity guarantee this task adds (replacing the pre-task hook's un-locked check + locked-but-unconditional append with one locked replay-decide-append section) is a race-window fix whose red is not reliably reproducible as a deterministic failure within a bounded number of rounds, so it was not observed. Both tests are kept as regression coverage for the new implementation; the race-window fix itself is verified by code inspection (review), not by an observed red."
+  AC-6:
+    tests:
+      - test_queue_failure_net.TestDiagnosticsOutcomes.test_outcome_appended
+      - test_queue_failure_net.TestDiagnosticsOutcomes.test_outcome_already_terminal
+      - test_queue_failure_net.TestDiagnosticsOutcomes.test_outcome_not_implementer_type
+      - test_queue_failure_net.TestDiagnosticsOutcomes.test_outcome_no_prompt_text
+      - test_queue_failure_net.TestDiagnosticsOutcomes.test_outcome_no_assignment_block
+      - test_queue_failure_net.TestDiagnosticsOutcomes.test_outcome_invalid_identity
+      - test_queue_failure_net.TestDiagnosticsOutcomes.test_outcome_index_unresolved
+      - test_queue_failure_net.TestDiagnosticsOutcomes.test_outcome_journal_dir_missing
+      - test_queue_failure_net.TestDiagnosticsOutcomes.test_outcome_error_via_journal_symlink
+      - test_queue_failure_net.TestDiagnosticsRootFallback.test_cwd_outside_any_root_falls_back_to_worktree_path_root
+      - test_queue_failure_net.TestDiagnosticsRootFallback.test_no_root_anywhere_creates_no_diagnostics_file
+    red_confirmed: true
+    red_reason: "All nine TestDiagnosticsOutcomes tests and test_cwd_outside_any_root_falls_back_to_worktree_path_root failed under the pre-task hook (it never wrote a diagnostics log at all, so no line was ever found). test_no_root_anywhere_creates_no_diagnostics_file already passed under the pre-task hook -- trivially true, since no diagnostics file was ever written for ANY fixture before this task -- carried into the report's notes."
+  AC-7:
+    tests:
+      - test_queue_failure_net.TestDiagnosticsObstruction.test_symlinked_diagnostics_log_path_is_refused
+      - test_queue_failure_net.TestDiagnosticsObstruction.test_directory_at_diagnostics_log_path_is_refused
+      - test_queue_failure_net.TestConcurrentDiagnosticsWrites.test_concurrent_invocations_produce_parseable_diagnostics_lines
+    red_confirmed: true
+    red_reason: "test_concurrent_invocations_produce_parseable_diagnostics_lines errored under the pre-task hook (the diagnostics log file did not exist at all, so opening it raised FileNotFoundError). The two obstruction tests already passed under the pre-task hook -- trivially true, since with no diagnostics feature at all there was nothing for the symlink/directory to obstruct -- carried into the report's notes."
+  AC-8:
+    tests:
+      - test_queue_failure_net_cross_hook.TestBothWritersLeaveExactlyOneFailedLineBothOrders.test_retry_after_failure_net_records_failure_is_allowed
+    red_confirmed: true
+    red_reason: "Failed under the pre-task hook: the fixture uses agent_type 'implementer' (short form), which the pre-task hook rejected (only the full 'em-workflow:implementer' form was accepted), so it never appended `failed` and the journal's last event stayed `launched` instead of ending with a new `launched` line after the retry."
+  AC-9:
+    tests:
+      - test_queue_failure_net.TestHooksJsonSubagentStopRegistration.test_registration_shape
+      - test_queue_failure_net.TestStdlibOnly.test_only_stdlib_imports
+      - test_queue_failure_net.TestFailOpen.test_exit_code_always_zero_across_edge_payloads
+    red_confirmed: false
+    red_reason: "AC-9 asserts preserved/already-satisfied properties: hooks.json's SubagentStop registration was not modified by this task (out of scope, D5) and already matched the required shape; stdlib-only imports held before and after; the fail-open edge-payload sweep held before and after. None of these were expected to go red -- they are regression-safety checks for properties this task must not break, verified passing both before (git-stashed pre-task hook) and after the implementation change."
+  AC-10:
+    tests:
+      - test_queue_failure_net.TestModuleDocstring.test_all_outcome_codes_named
+      - test_queue_failure_net.TestModuleDocstring.test_all_sources_named
+      - test_queue_failure_net.TestModuleDocstring.test_diagnostics_file_name_named
+    red_confirmed: true
+    red_reason: "All three failed under the pre-task hook's docstring (missing 8 of the 9 outcome codes, the 'agent-index' source, and the diagnostics file name entirely -- the pre-task docstring described the pre-rework single-source, no-diagnostics flow)."
