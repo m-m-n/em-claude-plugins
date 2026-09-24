@@ -1,0 +1,29 @@
+schema_version: 1
+feature: classification-table-escaped-pipe
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 6a959092eec021bbc22f7b44da3b5455f55b624a
+last_input_digest: sha256:aeabbdadd5f9d85fdc74b4a04f44b9b564ad454d0d186b3717eefd0b70a7b735
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:aeabbdadd5f9d85fdc74b4a04f44b9b564ad454d0d186b3717eefd0b70a7b735
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+  - tests/test_hook_classification_pin.py
+  - tests/test_recycled_task_id_consistency.py
+  - em-workflow/references/implement-phase.md
+  - tests/_gate_vocabulary.py
+  e2e: []
+  design_system_candidates: []
+  package_files: []
+last_error: null
