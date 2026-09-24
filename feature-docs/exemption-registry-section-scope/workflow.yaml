@@ -121,7 +121,26 @@ workflow:
   status: completed
   completed_at_commit: 37db56e02e180373722f6a5a6557c6022c0645ad
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: aed707d90ff490f2e51919b74466a4c47b03651a
+  result: pass
+  failed_items: []
+  note: >-
+    Test suite: 5477 tests, 9 failures, the same 9 test ids as the implement
+    base commit 4a75e04 (0 new failures vs base; none in modules this feature
+    touches: test_develop_once_option, test_reviewers_primary_chains x4,
+    test_step_c_verify_failed_default x2, test_muse_consent_version_bump,
+    test_muse_consent_no_new_questions). AC-5's literal "discover passes" is
+    therefore not met for pre-existing reasons outside this feature's scope
+    (NFR2 forbids em-workflow/ changes); pass-vs-base adopted after Codex
+    consultation (see batch-audit.yaml verify.pre-existing-failures).
+    Feature modules (test_gate_option_vocabulary*, test_assumptions_reversible_criterion)
+    all OK. TS-1..TS-9 covered by those tests; TS-6/TS-10/TS-11/TS-12/TS-13
+    static checks PASS (single helper tests/_gate_vocabulary.py, stdlib-only
+    imports, no em-workflow/ or marketplace.json change, version 0.2.1,
+    ISSUING_SITE_MAP stays in test_gate_option_vocabulary.py). Manual docstring
+    check: helper docstring states the three fail-safe degrade conditions and
+    that everything else raises.
 - id: retrospect
   status: pending
 tasks:

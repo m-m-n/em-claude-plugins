@@ -10,3 +10,12 @@ records:
     freeform: "decline files auto-addition: tests/test_assumptions_reversible_criterion.py"
     normalized_answer: "declined"
     resolution_note: "task_id: task0001; path: tests/test_assumptions_reversible_criterion.py; declined because the deviation names no acceptance-criterion (AC-n of tasks/task0001.md) or registered requirement id that would otherwise be dropped (evidence part 2 missing). Path shape check passed and path is not under a workflow control path. Stated reason: the required `import _gate_vocabulary` pattern tripped the pre-existing TestStandardLibraryOnlyImports guard; implementer added a local-sibling-module carve-out. Left to the containment check / review."
+  - question_id: verify.pre-existing-failures
+    packet_id: null
+    answered_at: "2026-09-24T20:50:00+09:00"
+    source: codex-consultation
+    answer_mode: select
+    selected_option_ids: [A]
+    freeform: null
+    normalized_answer: "pass-vs-base"
+    resolution_note: "Unlisted non-packet judgment in verify: discover run had 9 failures identical to base 4a75e04, all in unrelated doc-pinning modules. Options: A) pass with 0 new failures vs base, pre-existing failures filed as follow-up; B) fail on AC-5 literal and auto-rework (fix would need em-workflow/ changes that NFR2 forbids). Codex chose A: same 9 fail on base, feature tests and static checks pass, matches repo precedent (routeback-residual-connections), avoids out-of-scope/NFR2-violating rework; must state AC-5 literal is unmet and record base/9/0-new. Opus escalation not run."
