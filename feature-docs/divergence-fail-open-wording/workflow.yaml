@@ -151,7 +151,11 @@ workflow:
   status: completed
   completed_at_commit: 75ea90bb8425ca00fd7c439f5708a87088d45894
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: 1b3c385e2c7a5a76c08cb8d9cb5dddf6ac5dac4c
+  result: pass
+  failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 5668 tests OK. TS-1..TS-7 pass; manual checks (FR2/FR3 wording, A7 scope, NFR1 untouched paths, A5 test-docs untouched, NFR3 imports, A8 verbatim 4999893 samples) confirmed.'
 - id: retrospect
   status: pending
 tasks:
