@@ -49,7 +49,17 @@ worker_runs:
   status: completed
   input_digest: sha256:db02d8dac3831378225f2d9487b0ff5ea9159ed4211e561e572248e41caf9ae5
   output_digest: null
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:a15aefa80ef4bd680ea6da21de51473d48c5d12e88b73cf7900442afb11e1502
+  output_digest: null
+artifacts:
+- path: feature-docs/version-bump-entry-count-guard/REQUIREMENTS.md
+  sha256: sha256:e7292e0ed0fe2c3ac1a4581f96348270e2c4d9aaea41b9015dec38486b13f7d3
+  produced_by: create-spec-run-0003
+- path: feature-docs/version-bump-entry-count-guard/SPEC.md
+  sha256: sha256:ae824ec9a86222e2e749612dcb1b549cb6c536bf972d8897222b47c6bf2f15fe
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
