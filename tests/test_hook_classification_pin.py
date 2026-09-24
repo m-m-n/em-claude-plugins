@@ -34,14 +34,13 @@ pin stays a single test while its parts remain provable on their own:
    mentions the workflow state file only in its module docstring --
    explicitly disclaiming that it ever touches it there -- and a raw text
    search over the whole file would misclassify it as reading it. The
-   signal itself is the AND of two conditions, not a bare "workflow.yaml"
-   substring search (which alone cannot distinguish reading per-task status
-   from any other reason to touch the file, e.g. `bash_guard.py` extracting
-   `*_command` fields): "workflow.yaml" appears in the stripped source, AND
-   a defined-and-called function whose own name denotes deriving a per-task
-   status exists in the module. Raises `ClassificationTableError` if the
-   given path does not resolve to an existing file (table contract's
-   Consumer obligation).
+   signal is a case-sensitive substring co-occurrence over that stripped
+   text: True iff both "workflow.yaml" and lowercase "status" appear in it,
+   with no narrowing to string-literal nodes and no dependence on function
+   names, call relations or reachability -- an approximation by substring
+   co-occurrence, not a proof that per-task status is read. Raises
+   `ClassificationTableError` if the given path does not resolve to an
+   existing file (table contract's Consumer obligation).
 3. `compare_table_to_sources` -- the list of disagreements between each
    row's documented classification and the observation of its own source;
    an empty list iff documentation and implementation agree. Propagates
@@ -55,7 +54,6 @@ parser, one source of truth for the table's shape and vocabulary).
 """
 
 import ast
-import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -200,18 +198,6 @@ def _strip_docstrings(source):
     return ast.unparse(tree)
 
 
-# The observation rule's actual signal (not a bare substring search over
-# "workflow.yaml"): a defined-and-referenced name that itself denotes
-# extracting a PER-TASK status out of the parsed workflow state -- e.g.
-# `task_statuses_from_workflow`. A module can mention "workflow.yaml" (a
-# glob pattern, a docstring disclaimer, a *_command extraction unrelated to
-# task status -- see bash_guard.py) without ever deriving a per-task status
-# from it; this pattern requires BOTH "task" and "status" to co-occur in one
-# identifier, so it only fires on code that names the thing the table's
-# vocabulary is actually about.
-_TASK_STATUS_NAME_RE = re.compile(r"task[a-z_]*status|status[a-z_]*task", re.IGNORECASE)
-
-
 def reads_per_task_status(hook_path):
     """Observe one hook source directly: does it read `tasks.{T}.status`?
 
@@ -222,18 +208,18 @@ def reads_per_task_status(hook_path):
     disclaiming that it ever touches it there -- and a raw text search over
     the whole file would misclassify it.
 
-    The signal is NOT a bare `"workflow.yaml" in source` check (that only
-    proves the file references the workflow state file at all -- a module
-    can do that for an unrelated purpose, e.g. `bash_guard.py` extracts
-    `*_command` fields and never looks at any task's status). Instead this
-    walks the AST for a defined function whose own name denotes deriving a
-    PER-TASK status (matches `_TASK_STATUS_NAME_RE`: both "task" and
-    "status" co-occur in one identifier) that is also actually CALLED
-    somewhere in the module -- a merely-defined-but-dead helper proves
-    nothing was read. `workflow.yaml` must additionally appear in the
-    (docstring-stripped) executable source, so the two conditions are
-    ANDed: a per-task-status accessor is defined and invoked, AND the
-    module's executable code references the workflow state file.
+    The rule: True iff the stripped executable text contains both the
+    substring "workflow.yaml" and the case-sensitive substring "status" --
+    a plain substring co-occurrence over the whole text, not narrowed to
+    string-literal nodes. Function names, call relations and reachability
+    play no part; the same rule applies to every classification row.
+
+    This is an approximation by substring co-occurrence, not a proof that
+    per-task status is read -- it cannot distinguish a per-task status read
+    from a step-level one. For example, `queue_stop_guard.py` also reads
+    the workflow step's own status (`STEP_STATUS_RE`, `implement_in_
+    progress`), so removing only its per-task-status read
+    (`task_statuses_from_workflow`) would still leave it observed as True.
 
     Precondition: `hook_path` resolves to an existing file -- otherwise
     `ClassificationTableError` (table contract's Consumer obligation).
@@ -245,25 +231,7 @@ def reads_per_task_status(hook_path):
         )
     source = path.read_text(encoding="utf-8")
     stripped = _strip_docstrings(source)
-    if "workflow.yaml" not in stripped:
-        return False
-
-    tree = ast.parse(stripped)
-    task_status_fn_names = {
-        node.name
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and _TASK_STATUS_NAME_RE.search(node.name)
-    }
-    if not task_status_fn_names:
-        return False
-
-    called_names = {
-        node.func.id
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-    }
-    return bool(task_status_fn_names & called_names)
+    return "workflow.yaml" in stripped and "status" in stripped
 
 
 def compare_table_to_sources(rows):
@@ -424,9 +392,9 @@ class TestObserveHookSource(unittest.TestCase):
         # Real negative counter-example (finding 56b64fea7f61b999): this
         # hook's `declared_commands` reads workflow.yaml on purpose, but
         # only to extract *_command fields -- it never derives a per-task
-        # status. A bare `"workflow.yaml" in source` rule would misclassify
-        # it as reading status; the AND'd per-task-status-accessor signal
-        # correctly says False.
+        # status, and its executable text never contains the substring
+        # "status" at all. The case-sensitive co-occurrence rule correctly
+        # says False: "workflow.yaml" alone is not enough.
         path = REPO_ROOT / "em-workflow/hooks/bash_guard.py"
         self.assertIn("workflow.yaml", path.read_text(encoding="utf-8"))
         self.assertFalse(reads_per_task_status(path))
@@ -444,9 +412,9 @@ class TestObserveHookSource(unittest.TestCase):
 
     def test_bare_workflow_yaml_mention_without_status_accessor_is_false(self):
         # Non-triviality: a module that merely mentions "workflow.yaml" in
-        # executable code, with no per-task-status accessor defined or
-        # called, must NOT be classified as reading status. Pins down that
-        # the rule is the AND of both signals, not the workflow.yaml
+        # executable code, with no "status" substring anywhere in it, must
+        # NOT be classified as reading status. Pins down that the rule is
+        # the co-occurrence of both substrings, not the workflow.yaml
         # substring alone.
         source = (
             "import glob\n"
@@ -462,9 +430,11 @@ class TestObserveHookSource(unittest.TestCase):
         # recycled-task-id carve-out's status read removed (the
         # `task_statuses_from_workflow` definition and call site both
         # deleted, everything else -- including the "workflow.yaml"
-        # glob-pattern string -- left intact), must observe as False. This
-        # proves the rule tracks the actual status-reading carve-out, not
-        # merely the presence of the "workflow.yaml" string in the file.
+        # glob-pattern string -- left intact), must observe as False. Under
+        # the substring co-occurrence rule this is because that deleted
+        # function name was the only place the substring "status" occurred
+        # in the executable text; removing it leaves "workflow.yaml" alone,
+        # which is not sufficient.
         with_carveout = (
             "import glob\n"
             "import os\n"
@@ -500,13 +470,14 @@ class TestObserveHookSource(unittest.TestCase):
     ):
         # AC-5: proves the docstring-stripping step is load-bearing without
         # naming any hook. A source whose ONLY mention of the workflow
-        # state file lives in its module docstring, and which defines and
-        # calls a per-task-status accessor, must observe as NOT reading
-        # per-task status -- the docstring-stripping step removes that
-        # mention before the search runs, and the accessor's presence rules
-        # out the pair passing vacuously (Test Notes edge case). The same
-        # source with the mention moved into executable code, everything
-        # else unchanged, must observe as reading it.
+        # state file lives in its module docstring, and whose executable
+        # code already contains the substring "status", must observe as
+        # NOT reading per-task status -- the docstring-stripping step
+        # removes the "workflow.yaml" mention before the search runs, so
+        # the co-occurrence never holds despite "status" being present
+        # (Test Notes edge case: the pair does not pass vacuously). The
+        # same source with the mention moved into executable code,
+        # everything else unchanged, must observe as reading it.
         docstring_only = (
             '"""This module never touches workflow.yaml at runtime."""\n'
             "\n"
@@ -530,6 +501,185 @@ class TestObserveHookSource(unittest.TestCase):
             "    return task_status_from_state(state) == 'pending'\n"
         )
         self.assertTrue(self._write_and_observe(mention_in_code))
+
+
+class TestNameIndependentStatusObservation(unittest.TestCase):
+    """Regression tests (task0001 AC-2 to AC-5) for the name-independent
+    per-task-status observation rule: `reads_per_task_status` decides by
+    case-sensitive substring co-occurrence of "workflow.yaml" and "status"
+    over the docstring-stripped executable text alone -- independent of
+    function names, call relations or reachability. Every synthetic source
+    below is written to a temporary file created through the
+    standard-library temporary-file facility and removed in test cleanup;
+    nothing under `em-workflow/` is written.
+
+    Non-vacuity: in S1, S2 and S4 no function name contains "task" and
+    "status" together in one identifier (in either order), so each of
+    these three would have failed under the removed name/call heuristic;
+    S4 additionally fails that removed rule's "is called" condition, since
+    its helper is never invoked."""
+
+    S1_SOURCE = (
+        "import os\n"
+        "import re\n"
+        "\n"
+        "PENDING_RE = re.compile(r'^\\s+status:\\s*(\\S+)\\s*$')\n"
+        "\n"
+        "\n"
+        "def pending_from_workflow(root):\n"
+        "    workflow_yaml_path = os.path.join(root, 'workflow.yaml')\n"
+        "    with open(workflow_yaml_path, encoding='utf-8') as fh:\n"
+        "        lines = fh.readlines()\n"
+        "    return [\n"
+        "        PENDING_RE.match(line).group(1)\n"
+        "        for line in lines\n"
+        "        if PENDING_RE.match(line)\n"
+        "    ]\n"
+        "\n"
+        "\n"
+        "def evaluate(root):\n"
+        "    return pending_from_workflow(root)\n"
+    )
+
+    S2_SOURCE = (
+        "import os\n"
+        "import re\n"
+        "\n"
+        "TASK_KEY_RE = re.compile(r'^\\s+(task[0-9]+):\\s*$')\n"
+        "TASK_STATUS_RE = re.compile(r'^\\s+status:\\s*(\\S+)\\s*$')\n"
+        "\n"
+        "\n"
+        "def statuses_from_workflow(workflow_yaml_path):\n"
+        "    with open(workflow_yaml_path, encoding='utf-8') as fh:\n"
+        "        lines = fh.readlines()\n"
+        "    statuses = {}\n"
+        "    current_task = None\n"
+        "    for line in lines:\n"
+        "        key_match = TASK_KEY_RE.match(line)\n"
+        "        if key_match:\n"
+        "            current_task = key_match.group(1)\n"
+        "            continue\n"
+        "        status_match = TASK_STATUS_RE.match(line)\n"
+        "        if status_match and current_task is not None:\n"
+        "            statuses[current_task] = status_match.group(1)\n"
+        "    return statuses\n"
+        "\n"
+        "\n"
+        "def evaluate_feature(root):\n"
+        "    workflow_yaml_path = os.path.join(root, 'workflow.yaml')\n"
+        "    return statuses_from_workflow(workflow_yaml_path)\n"
+    )
+
+    S3_SOURCE = (
+        "import os\n"
+        "\n"
+        "STATUS = 'STATUS'\n"
+        "\n"
+        "\n"
+        "def build_path(root):\n"
+        "    return os.path.join(root, 'workflow.yaml')\n"
+        "\n"
+        "\n"
+        "def report(root):\n"
+        "    return {'path': build_path(root), STATUS: 'PENDING'}\n"
+    )
+
+    S4_SOURCE = (
+        "import os\n"
+        "import re\n"
+        "\n"
+        "STATUS_RE = re.compile(r'^\\s+status:\\s*(\\S+)\\s*$')\n"
+        "\n"
+        "\n"
+        "def status_from_line(line):\n"
+        "    match = STATUS_RE.match(line)\n"
+        "    return match.group(1) if match else None\n"
+        "\n"
+        "\n"
+        "def build_path(root):\n"
+        "    return os.path.join(root, 'workflow.yaml')\n"
+    )
+
+    def _write_source(self, source):
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".py", delete=False, encoding="utf-8"
+        ) as fh:
+            fh.write(source)
+            return Path(fh.name)
+
+    def test_s1_helper_reads_indented_status_key_without_task_status_name_is_true(
+        self,
+    ):
+        # AC-2 (FR4, FR5): `pending_from_workflow` builds the workflow.yaml
+        # path, opens it, and extracts status with a line-anchored regex
+        # for an indented status key; a second function calls it. Neither
+        # function name contains "task", so this would have failed under
+        # the removed name/call heuristic.
+        tmp_path = self._write_source(self.S1_SOURCE)
+        try:
+            self.assertTrue(reads_per_task_status(tmp_path))
+        finally:
+            tmp_path.unlink()
+
+    def test_s1_mismatched_classification_row_produces_one_disagreement(self):
+        # AC-2 (FR5): a documented row that classifies S1's absolute
+        # temporary-file path as NOT reading per-task status disagrees with
+        # the observed True, yielding exactly one mismatch tuple. The
+        # comparator joins the repository root with the row path, so an
+        # absolute path is used as is (same row shape as
+        # TestPinIsNotAVacuousCheck's inversion test).
+        tmp_path = self._write_source(self.S1_SOURCE)
+        try:
+            rows = [(str(tmp_path), DOES_NOT_READ_STATUS)]
+            disagreements = compare_table_to_sources(rows)
+            self.assertEqual(
+                disagreements,
+                [(str(tmp_path), DOES_NOT_READ_STATUS, READS_STATUS)],
+            )
+        finally:
+            tmp_path.unlink()
+
+    def test_s2_helper_renamed_off_the_task_status_pattern_is_still_true(self):
+        # AC-3 (FR6): modelled on queue_stop_guard.py's per-task status
+        # read, with the helper renamed from `task_statuses_from_workflow`
+        # to `statuses_from_workflow` -- no function name contains "task"
+        # any more, so this would have failed under the removed
+        # name-matching heuristic even though the behaviour is unchanged.
+        tmp_path = self._write_source(self.S2_SOURCE)
+        try:
+            self.assertTrue(reads_per_task_status(tmp_path))
+        finally:
+            tmp_path.unlink()
+
+    def test_s3_uppercase_only_status_is_false(self):
+        # AC-4 (FR7): precondition -- the stripped text contains
+        # "workflow.yaml" and does NOT contain lowercase "status" anywhere
+        # (identifiers, string literals, or otherwise); "STATUS" appears
+        # only in uppercase form. The False result below is therefore
+        # attributable to the case-sensitive match, not to a missing
+        # "workflow.yaml" mention.
+        stripped = _strip_docstrings(self.S3_SOURCE)
+        self.assertIn("workflow.yaml", stripped)
+        self.assertNotIn("status", stripped)
+
+        tmp_path = self._write_source(self.S3_SOURCE)
+        try:
+            self.assertFalse(reads_per_task_status(tmp_path))
+        finally:
+            tmp_path.unlink()
+
+    def test_s4_uncalled_status_helper_is_still_true(self):
+        # AC-5 (FR8): `status_from_line` reads status with a line-anchored
+        # regex for an indented status key but is never called. Its name
+        # contains no "task", and it is dead code, so this would have
+        # failed under the removed heuristic for two independent reasons
+        # (no matching name; and even a matching name would have failed
+        # the "is called" condition).
+        tmp_path = self._write_source(self.S4_SOURCE)
+        try:
+            self.assertTrue(reads_per_task_status(tmp_path))
+        finally:
+            tmp_path.unlink()
 
 
 class TestNonVacuityGuards(unittest.TestCase):
