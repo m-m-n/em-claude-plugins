@@ -1,0 +1,21 @@
+schema_version: 1
+feature: subagentstop-failed-event
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 22f2f10a117089b5ba8d6ed6e9e422f880420fab
+last_input_digest: sha256:ccf9c4ce91c8b88bbf45b8df93bac1aeefe7501b611864bc05661096cfe5e320
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:ccf9c4ce91c8b88bbf45b8df93bac1aeefe7501b611864bc05661096cfe5e320
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
