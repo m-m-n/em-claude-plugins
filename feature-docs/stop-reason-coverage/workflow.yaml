@@ -160,7 +160,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/stop-reason-coverage/task0002
   task0003:
     title: Literal-ownership guards for the new reason code
