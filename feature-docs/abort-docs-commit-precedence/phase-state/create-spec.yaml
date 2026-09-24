@@ -1,7 +1,7 @@
 schema_version: 1
 feature: abort-docs-commit-precedence
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 2730a2ff4f335aa0cd4d0eff6b7f1cdcc405db0e
 last_input_digest: sha256:700d84341f372c85ddb2ab05dde77a52ce4687bad583fee2a519a5fb93d9a4bc
