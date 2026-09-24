@@ -54,6 +54,21 @@ Matcher -> negative-proof inventory:
   TestReviewCapRegressionMatcherCanFail.test_matcher_rejects_text_missing_cap_markers
   (a forged paragraph with the cap markers replaced), non-vacuity guard is
   TestReviewCapRegressionMatcherCanFail.test_forged_text_is_well_formed_and_missing_markers.
+- `_has_batch_auto_select_phrase` (repo-suite-pinned-test-drift/task0002,
+  AC-4's batch auto-select wording pin, retargeted to the current SKILL.md
+  sentence): negative proof is
+  TestBatchAutoSelectMatcherCanFail.test_matcher_rejects_old_phrase_only_text
+  (a forged excerpt carrying only the phrase's pre-`--pr` wording),
+  non-vacuity guard is
+  TestBatchAutoSelectMatcherCanFail.test_forged_text_is_well_formed_and_differs_from_current_phrase.
+- `_has_non_packet_gates_reference` (repo-suite-pinned-test-drift/task0002,
+  FR3's Non-packet gates table reference, which wraps across SKILL.md's
+  lines 918-919): accept proof is
+  TestNonPacketGatesReferenceMatcherCanFail.test_matcher_accepts_wrapped_reference,
+  reject proofs are
+  TestNonPacketGatesReferenceMatcherCanFail.test_matcher_rejects_missing_reference
+  and
+  TestNonPacketGatesReferenceMatcherCanFail.test_matcher_rejects_reference_with_altered_word.
 """
 
 import ast
@@ -101,11 +116,20 @@ OLD_UNCONDITIONAL_DEFAULT_PHRASE = (
     "デフォルト（推奨表示）は「`{base_branch}` にマージ」（batch:"
 )
 
-# AC-4 regression: batch's auto-selection wording, unchanged by this task.
+# AC-4 regression: batch's auto-selection wording, unchanged by this task
+# (task0004). repo-suite-pinned-test-drift/task0002: a prior feature
+# (batch-pr-option) prefixed the sentence with the `--pr` 未指定なら
+# condition; this pin follows that current wording, still compared after
+# _strip_ws (D4).
 BATCH_AUTO_SELECT_PHRASE = (
-    "batch: 質問せず自動で「ブランチを残す」を選ぶ。マージ・push・"
-    "PR 作成のいずれも行わない"
+    "batch: `--pr` 未指定なら質問せず自動で「ブランチを残す」を選ぶ。"
+    "マージ・push・PR 作成のいずれも行わない"
 )
+
+# repo-suite-pinned-test-drift/task0002 (FR3): the Non-packet gates table
+# reference. Wraps across SKILL.md's lines 918-919 (D4), so it is matched
+# after _strip_ws on both sides, same as BATCH_AUTO_SELECT_PHRASE above.
+NON_PACKET_GATES_REFERENCE_PHRASE = "`batch-mode.md` の Non-packet gates 表"
 
 # AC-5: review-phase.md's Phase R5 batch paragraph boundaries and its three
 # cap-behaviour elements (FR10 non-change guard). Boundaries are markers no
@@ -184,6 +208,22 @@ def _has_review_cap_regression_markers(text):
         and REVIEW_DEFERRED_RESOLUTION in text
         and REVIEW_DEFERRED_REASON in text
     )
+
+
+def _has_batch_auto_select_phrase(text):
+    """AC-4 / NFR3 matcher (repo-suite-pinned-test-drift/task0002): true
+    iff `text` states the current batch auto-select sentence, compared
+    after _strip_ws on both sides so the hard-wrap in the source does not
+    break the match."""
+    return _strip_ws(BATCH_AUTO_SELECT_PHRASE) in _strip_ws(text)
+
+
+def _has_non_packet_gates_reference(text):
+    """FR3 / NFR3 matcher (repo-suite-pinned-test-drift/task0002): true iff
+    `text` carries the Non-packet gates table reference, compared after
+    _strip_ws on both sides so a wrap across a line break with leading
+    indentation (SKILL.md's lines 918-919, D4) does not break the match."""
+    return _strip_ws(NON_PACKET_GATES_REFERENCE_PHRASE) in _strip_ws(text)
 
 
 class TestStepCCompletionMethodChoicesRetained(unittest.TestCase):
@@ -281,13 +321,96 @@ class TestBatchAutoSelectRegressionUnchanged(unittest.TestCase):
         cls.section = _section(cls.text, STEP_1_LABEL, STEP_2_LABEL)
 
     def test_batch_auto_select_wording_present(self):
-        self.assertIn(
-            _strip_ws(BATCH_AUTO_SELECT_PHRASE), _strip_ws(self.section)
+        self.assertTrue(
+            _has_batch_auto_select_phrase(self.section),
+            "expected the current batch auto-select sentence to be present",
         )
 
     def test_batch_non_packet_gates_reference_present(self):
-        self.assertIn("`batch-mode.md` の Non-packet gates 表", self.section)
+        self.assertTrue(
+            _has_non_packet_gates_reference(self.section),
+            "expected the Non-packet gates table reference to be present",
+        )
         self.assertIn("`develop.completion`", self.section)
+
+
+class TestBatchAutoSelectMatcherCanFail(unittest.TestCase):
+    """AC-4 / NFR3: negative proof plus non-vacuity guard for
+    `_has_batch_auto_select_phrase` -- a forged excerpt carrying only the
+    pre-`--pr` wording this phrase held before repo-suite-pinned-test-drift/
+    task0002, not the current phrase."""
+
+    OLD_BATCH_AUTO_SELECT_PHRASE_ONLY_TEXT = (
+        "batch: 質問せず自動で「ブランチを残す」を選ぶ。マージ・push・"
+        "PR 作成のいずれも行わない"
+    )
+
+    def test_forged_text_is_well_formed_and_differs_from_current_phrase(self):
+        # Non-vacuity guard: the forged text is genuinely the old wording,
+        # distinct from the current phrase -- so the rejection below
+        # exercises the comparison, not a fixture defect.
+        self.assertNotEqual(
+            _strip_ws(self.OLD_BATCH_AUTO_SELECT_PHRASE_ONLY_TEXT),
+            _strip_ws(BATCH_AUTO_SELECT_PHRASE),
+        )
+
+    def test_matcher_rejects_old_phrase_only_text(self):
+        self.assertFalse(
+            _has_batch_auto_select_phrase(
+                self.OLD_BATCH_AUTO_SELECT_PHRASE_ONLY_TEXT
+            ),
+            "matcher failed to detect the missing `--pr` 未指定なら condition",
+        )
+
+
+class TestNonPacketGatesReferenceMatcherCanFail(unittest.TestCase):
+    """FR3 / NFR3: accept proof plus reject proofs for
+    `_has_non_packet_gates_reference` -- a wrapped occurrence (matching
+    SKILL.md's lines 918-919 line break with leading indentation) is
+    accepted; a missing reference and a reference with one word altered are
+    both rejected."""
+
+    WRAPPED_REFERENCE_TEXT = (
+        "...マージ・push・PR 作成のいずれも行わない — `batch-mode.md` の\n"
+        "   Non-packet gates 表、`develop.completion`）\n"
+    )
+    MISSING_REFERENCE_TEXT = (
+        "...マージ・push・PR 作成のいずれも行わない）\n"
+    )
+    ALTERED_WORD_TEXT = (
+        "...マージ・push・PR 作成のいずれも行わない — `batch-mode.md` の\n"
+        "   Non-packet gates 一覧、`develop.completion`）\n"
+    )
+
+    def test_forged_texts_are_well_formed(self):
+        # Non-vacuity guard: the wrapped text genuinely spans a line break
+        # with indentation between "の" and "Non-packet" (the same shape as
+        # the source), the missing-reference text carries no "Non-packet"
+        # occurrence at all, and the altered text swaps one word ("表" ->
+        # "一覧") while keeping the rest intact.
+        self.assertIn("`batch-mode.md` の\n", self.WRAPPED_REFERENCE_TEXT)
+        self.assertIn("   Non-packet gates 表", self.WRAPPED_REFERENCE_TEXT)
+        self.assertNotIn("Non-packet", self.MISSING_REFERENCE_TEXT)
+        self.assertIn("Non-packet gates 一覧", self.ALTERED_WORD_TEXT)
+        self.assertNotIn("Non-packet gates 表", self.ALTERED_WORD_TEXT)
+
+    def test_matcher_accepts_wrapped_reference(self):
+        self.assertTrue(
+            _has_non_packet_gates_reference(self.WRAPPED_REFERENCE_TEXT),
+            "matcher failed to accept a reference wrapped across a line "
+            "break with indentation",
+        )
+
+    def test_matcher_rejects_missing_reference(self):
+        self.assertFalse(
+            _has_non_packet_gates_reference(self.MISSING_REFERENCE_TEXT)
+        )
+
+    def test_matcher_rejects_reference_with_altered_word(self):
+        self.assertFalse(
+            _has_non_packet_gates_reference(self.ALTERED_WORD_TEXT),
+            "matcher failed to detect the altered word",
+        )
 
 
 class TestReviewPhaseCapNonRegression(unittest.TestCase):
