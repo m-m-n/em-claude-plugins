@@ -205,7 +205,7 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/subagentstop-failed-event/task0001
   task0002:
