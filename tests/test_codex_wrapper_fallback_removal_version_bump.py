@@ -55,7 +55,8 @@ PLUGIN_SPECS = {
         # value on the current line. Later features that bump em-workflow
         # again update this literal here, per this module's own convention
         # (see the class docstring below).
-        "expected": "0.2.0",
+        # routeback-residual-connections: bumped to 0.2.1.
+        "expected": "0.2.1",
     },
     "em-review": {
         "manifest_path": REPO_ROOT / "em-review" / ".claude-plugin" / "plugin.json",
