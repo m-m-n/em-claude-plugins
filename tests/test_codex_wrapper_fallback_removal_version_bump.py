@@ -57,7 +57,8 @@ PLUGIN_SPECS = {
         # (see the class docstring below).
         # routeback-residual-connections: bumped to 0.2.1.
         # stop-reason-coverage/task0004: bumped to the next patch value.
-        "expected": "0.2.1",
+        # abort-docs-commit-precedence/task0001: bumped to 0.2.2.
+        "expected": "0.2.2",
     },
     "em-review": {
         "manifest_path": REPO_ROOT / "em-review" / ".claude-plugin" / "plugin.json",
