@@ -144,7 +144,8 @@ workflow:
   completed_at_commit: 7582e674a6bbfe332e414f3d80846f42107b1734
   notes: 'TS-1..TS-4 inspection pass (lines 36/89 name only HOOK_FILENAMES and JOURNAL_ONLY_HOOK_FILENAMES; HOOK_FILENAMES has 3 reader sites, JOURNAL_ONLY_HOOK_FILENAMES absent; no reader claim in module; diff limited to lines 36/89 plus feature-docs/test-docs roots, line count 105 unchanged). TS-5: 5654 tests OK.'
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 4981b950fabc226a1756daac752b6148429fa06f
 tasks:
   task0001:
     title: Narrow TS-13 row and its manual item to the AC-6 constants
