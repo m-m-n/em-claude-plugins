@@ -1,0 +1,50 @@
+schema_version: 1
+feature: stop-reason-coverage
+tier: full
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.0
+    '1': 0.0
+    '2': 0.46
+    '3': 0.54
+  observed_at: '2026-09-24T09:34:47+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.0
+    '1': 0.0
+    '2': 0.4
+    '3': 0.6
+  observed_at: '2026-09-24T09:34:48+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/batch-terminal-line.md
+  - tests/test_batch_stop_contract.py
+  - tests/test_batch_stop_contract_skill_wiring.py
+  - tests/test_failed_kind_batch_docs.py
+  - tests/test_no_work_required_stop.py
+  - tests/test_develop_once_option.py
+  - tests/test_muse_consent_no_new_questions.py
+  - tests/test_muse_consent_version_bump.py
+  - tests/test_reviewers_primary_chains.py
+  - tests/test_step_c_verify_failed_default.py
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 280
+  new_functions_needed: 6
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules:
+  - tests/test_failed_kind_batch_docs.py
+  - tests/test_no_work_required_stop.py
+  - tests/test_develop_once_option.py
+  - tests/test_muse_consent_no_new_questions.py
+  - tests/test_muse_consent_version_bump.py
+  - tests/test_reviewers_primary_chains.py
+  - tests/test_step_c_verify_failed_default.py
+  work_still_required: true
+  evidence: 包括的な停止理由コードと補完規則を追加する案で見積もったよ。追加関数6個は回帰テスト用で、本体関数の追加は不要だよ。①網羅性は未達：coverage表に補完規則がなく（em-workflow/references/batch-terminal-line.md:175）、designerの停止（em-workflow/references/contracts/designer-contract.md:114、117、142）と未知schema_versionの停止（em-workflow/references/phase-state.md:701）が未対応だよ。②step補完も未達：no-stepの例示は3停止点に固定され（em-workflow/references/batch-terminal-line.md:81、tests/test_batch_stop_contract.py:289）、parseエラーとStep
+    A.5に明確な補完規則が必要だよ。③④優先規則も未達：全3停止点がfailedを残すとの断定と状態ベースの限定が残り（em-workflow/references/batch-terminal-line.md:197）、実際のexit-4再失敗時は中断だけを規定しているよ（em-workflow/references/phase-state.md:259）。同一ターンで通った経路による優先へ修正が必要だよ。⑤refusal
+    hard_failは存在するが（em-workflow/references/batch-policies.yaml:86）、gate_fail_closedへの明示的な対応付けがないよ（em-workflow/references/batch-terminal-line.md:153）。⑥指定の定数更新に加え、旧優先規則を固定するtests/test_failed_kind_batch_docs.py:308と、コード数・表を固定するtests/test_no_work_required_stop.py:202、258、297も変更が必要だよ。⑦関連371件と不変条件7項目は成功したけれど、別の115件では既存の9失敗を再現したよ。全件成功の条件には、その5テストファイルの修正も必要だよ（失敗一覧：test-docs/task-tier-reduction/task0014.tests.yaml:14）。全件実行は一時ファイルを作るため実施していないよ（tests/test_check_plugin_invariants.py:99）。⑧両versionは0.2.0で一致しているけれど、本修正に伴う更新は必要だよ（em-workflow/.claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:27）。ファイルは変更していないよ
+decided_at: '2026-09-24T09:35:08+09:00'
