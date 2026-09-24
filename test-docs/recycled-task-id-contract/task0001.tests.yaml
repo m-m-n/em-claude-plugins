@@ -36,9 +36,10 @@ acceptance_tests:
     red_confirmed: true
     red_reason: >-
       Same pre-edit-document swap: all three FAIL with AssertionError -- the
-      entire "All four hooks detect a task as unlaunched solely from the
-      absence ..." paragraph (FR4's divergence statement and its reason) did
-      not exist in the pre-task wording at all.
+      entire "The other three queue hooks detect a task as **unlaunched**
+      solely from the absence of any journal event for that task id"
+      paragraph (FR4's divergence statement and its reason) did not exist in
+      the pre-task wording at all.
   AC-4:
     tests:
       - test_hook_classification_pin.TestParseClassificationTable.test_parses_the_real_document_without_error
@@ -72,6 +73,9 @@ acceptance_tests:
       - test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_inverted_classification_produces_a_disagreement
       - test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_row_with_unresolvable_path_fails
       - test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_agreeing_table_produces_no_disagreements
+      - test_hook_classification_pin.TestObserveHookSource.test_bash_guard_reads_workflow_yaml_but_not_task_status
+      - test_hook_classification_pin.TestObserveHookSource.test_bare_workflow_yaml_mention_without_status_accessor_is_false
+      - test_hook_classification_pin.TestObserveHookSource.test_removing_the_status_carveout_flips_observation_to_false
     red_confirmed: true
     red_reason: >-
       Verified by the same pre-edit-document swap: test_agreeing_table_produces_no_disagreements
@@ -89,15 +93,46 @@ acceptance_tests:
       contained a table, so their own construction is independent of
       live-document state and was green from first write (they assert
       behavior of the parser/comparator functions directly, not the live
-      document).
+      document). The three test_bash_guard_reads_workflow_yaml_but_not_task_status
+      / test_bare_workflow_yaml_mention_without_status_accessor_is_false /
+      test_removing_the_status_carveout_flips_observation_to_false tests
+      were added by the review round 1 loop 1 auto-fix (commit 48386b9) and
+      their red was re-observed in feature recycled-test-docs-drift, not at
+      auto-fix time: in a working copy of
+      tests/test_hook_classification_pin.py, reads_per_task_status was
+      temporarily replaced with its pre-auto-fix definition from commit
+      48386b9^ (a bare "workflow.yaml" in docstring-stripped-source check,
+      without the AND'd per-task-status-accessor condition the auto-fix
+      added), and only these three tests were run against it. All three
+      FAIL: test_bash_guard_reads_workflow_yaml_but_not_task_status FAILS
+      with "AssertionError: True is not false" (bash_guard.py's source
+      contains "workflow.yaml" in executable code, so the pre-auto-fix rule
+      reports it as reading per-task status even though it never derives one);
+      test_bare_workflow_yaml_mention_without_status_accessor_is_false FAILS
+      with "AssertionError: True is not false" (the synthetic source's bare
+      "workflow.yaml" string literal alone satisfies the pre-auto-fix rule);
+      test_removing_the_status_carveout_flips_observation_to_false FAILS
+      with "AssertionError: True is not false", raised at its second
+      assertion (the without_carveout source, which still contains the
+      "workflow.yaml" glob-pattern string after the status accessor is
+      deleted, is still observed True by the pre-auto-fix rule where False
+      is expected); its first assertion (the with_carveout source, expected
+      True) also evaluates True under the pre-auto-fix rule and does not
+      raise. tests/test_hook_classification_pin.py was restored to its task
+      base afterward with no diff.
   AC-7:
     tests: []
-    red_confirmed: true
+    red_confirmed: false
     red_reason: >-
       Build/suite-wide criterion, not a single test. Verified directly: (1)
-      `python3 -m unittest discover -s tests` passes from the repository root
-      (1493 tests, 0 failures -- baseline was 1452 tests, 0 failures, so 41
-      new tests added, zero regressions); (2) `git status --short` /
+      `python3 -m unittest discover -s tests` passed from the repository
+      root at task0001 implementation time with 1493 tests, 0 failures --
+      baseline was 1452 tests, 0 failures, so 41 new tests added, zero
+      regressions; separately, after the review round 1 auto-fix was
+      applied, the same command run on the recycled-task-id-contract
+      feature's integration branch passed with 1506 tests, 0 failures --
+      that 1506 figure is a later, auto-fix-time count on that branch, not
+      task0001's own result and not the repository's current total; (2) `git status --short` /
       `git diff --stat` show only the three files in this task's scope
       changed (em-workflow/references/implement-phase.md,
       tests/test_recycled_task_id_consistency.py,
@@ -109,16 +144,26 @@ acceptance_tests:
       assertions in TestRecycledTaskIdRuleScopedToOrchestrator and the
       Stop-hook classification check derive hook names/classifications from
       `parse_classification_table()`, never as hardcoded literals (NFR4).
-      "Red" for this criterion is the pre-edit git diff being empty for these
-      files, which is inherently true before any implementation work started.
+      red_confirmed is false: the "red" previously claimed for this
+      criterion was the pre-edit git diff being empty for these files, which
+      is trivially true before any implementation work started and is not
+      an observed failure.
 notes: >-
-  Every Acceptance Criterion's red state was reconfirmed by temporarily
-  restoring em-workflow/references/implement-phase.md to its pre-task base
-  commit (b28a7166e8dce876075fc550ada7fdd7027211fa), re-running the affected
-  test modules to observe the expected failures, then restoring the
-  post-edit document and re-running the full suite to confirm it returned to
-  green (1493 passed). This was done retroactively because the document edit
-  and the new test module were authored together rather than strictly
+  AC-1 through AC-5's tests, and AC-6's four pre-existing tests, had their
+  red state reconfirmed by temporarily restoring
+  em-workflow/references/implement-phase.md to its pre-task base commit
+  (b28a7166e8dce876075fc550ada7fdd7027211fa), re-running the affected test
+  modules to observe the expected failures, then restoring the post-edit
+  document and re-running the full suite to confirm it returned to green
+  (1493 passed). This was done retroactively because the document edit and
+  the new test module were authored together rather than strictly
   test-first; the task plan's own Test Notes flag this exact site
   ("TDD-awkward: the document edit itself cannot be driven test-first
   without first choosing the exact post-change phrases") as expected.
+  AC-6's three tests added in feature recycled-test-docs-drift were
+  re-observed separately, against a temporarily reverted
+  reads_per_task_status rather than the restored document (see AC-6's own
+  red_reason). AC-7's red_confirmed is false, not reconfirmed: the state it
+  claims as "red" is a pre-implementation empty git diff, which is trivially
+  true rather than an observed failure (see AC-7's own red_reason). No claim
+  here extends to those two cases.
