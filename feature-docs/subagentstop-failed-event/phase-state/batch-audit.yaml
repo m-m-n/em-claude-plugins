@@ -19,3 +19,12 @@ records:
   freeform: "declined: task0002 deviations .claude-plugin/marketplace.json, em-workflow/.claude-plugin/plugin.json"
   normalized_answer: "declined"
   resolution_note: "task_id: task0002. Deviation auto-addition declined for both paths. em-workflow/.claude-plugin/plugin.json falls under the workflow control path em-workflow/**; neither deviation names an existing AC-n or requirement id that would otherwise be dropped (the stated reason is the plugin-version-guard hook blocking the commit). Paths stay as ordinary deviations; the version was bumped 0.2.4 -> 0.2.5 on the integration branch."
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: "2026-09-24T23:50:00+09:00"
+  source: orchestrator-rule
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: "declined: task0001 deviations .claude-plugin/marketplace.json, em-workflow/.claude-plugin/plugin.json"
+  normalized_answer: "declined"
+  resolution_note: "task_id: task0001. Deviation auto-addition declined for both paths. em-workflow/.claude-plugin/plugin.json falls under the workflow control path em-workflow/**; neither deviation names an existing AC-n or requirement id that would otherwise be dropped (the stated reason is the plugin-version-guard hook blocking the commit). Version bumped 0.2.5 -> 0.2.6 on the integration branch. The completion report was markdown rather than the JSON shape; merged status was accepted because the journal records merged and merge-base --is-ancestor confirmed the task branch is in the integration branch."
