@@ -1,0 +1,37 @@
+feature: pin-status-read-heuristic
+collected_at: "2026-09-25T03:15:00+09:00"
+session_ids:
+  - 01a0d49e-f152-7606-b007-4f76a5a0fbe2
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "指定HEADには未修正の判定が残っているよ。関数名の正規表現と定義・呼び出しの照合に依存している（tests/test_hook_classification_pin.py:212、251、266）。読み込むソースだけをメモリ上で差し替えて確認すると、pending_from_workflowによるstatus読み出しを追加しても観測はFalseで、既存pinは通過した。既存ヘルパの改名だけでは観測がFalseになり、不一致が1件発生した。見積もりは、提案されたdocstring除去後のworkflow.yamlとstatusのAND条件への置換、説明の更新、合成ソース・改名・分類不一致検出の回帰テスト3メソッド追加を想定している。"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.12, '1': 0.79, '2': 0.09, '3': 0.0}
+        expectation_clear: 0.91
+        confidence: 0.79
+      - basis: description_plus_code
+        probabilities: {'0': 0.01, '1': 0.78, '2': 0.21, '3': 0.0}
+        expectation_clear: 0.88
+        confidence: 0.78
+    pre_survey_estimate:
+      files_expected:
+        - tests/test_hook_classification_pin.py
+      changed_lines_approx: 110
+      new_functions_needed: 3
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の evaluator が medium 未満として持ち越し無しで記録: tests/test_hook_classification_pin.py 434-437 行のコメントは「削除した関数名だけが status を含んでいた」とするが、削除した呼び出し箇所のローカル変数 statuses にも含まれていた（テスト結論は不変）"
+  - "create-spec の Codex 相談で analyst 仮定 A2（status 照合の大文字小文字非区別）を覆し、区別する側を採った。根拠は実フックの読み取り対象が小文字 status であること"
