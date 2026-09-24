@@ -1,0 +1,41 @@
+schema_version: 1
+feature: recycled-test-docs-drift
+tier: reduced
+bases:
+- basis: description_only
+  probabilities:
+    '0': 0.67
+    '1': 0.32
+    '2': 0.01
+  expectation_clear: 0.84
+  confidence: 0.47
+  observed_at: '2026-09-25T07:27:28+09:00'
+- basis: description_plus_code
+  probabilities:
+    '0': 0.77
+    '1': 0.23
+    '2': 0.0
+  expectation_clear: 0.82
+  confidence: 0.65
+  observed_at: '2026-09-25T07:30:07+09:00'
+pre_survey_estimate:
+  files_expected:
+  - test-docs/recycled-task-id-contract/task0001.tests.yaml
+  - test-docs/recycled-task-id-contract/task0002.tests.yaml
+  changed_lines_approx: 35
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  rationale: 'HEAD d19dffcでも修正が必要だよ。task0002.tests.yaml:24 のAC-4には tests と red_reason
+    しかなく、red_confirmed: false の追加が必要だよ（以下、記録ファイルは test-docs/recycled-task-id-contract/
+    配下を指す）。task0001.tests.yaml:39 の引用は依然として「All four hooks」で、em-workflow/references/implement-phase.md:298
+    の「The other three queue hooks」に合わせる必要があるよ。自動修正48386b9が追加した3テストは tests/test_hook_classification_pin.py:423、:445、:459
+    に存在するけれど、task0001.tests.yaml:69 のAC-6には未登録だよ。ただし、task0003.tests.yaml:42～44には既に登録されているため、「どのACにも載っていない」という説明はHEADでは正確ではないよ。task0001側にも対応付けを追加すれば記録を揃えられるよ。task0001.tests.yaml:95
+    は red_confirmed: true のままで、:112 の根拠は失敗の観測ではないため、em-workflow/agents/implementer.md:133～140に従ってfalseと未観測の理由へ訂正する必要があるよ。同ファイル:99
+    の1493件と追加41件も更新対象だよ。履歴上は自動修正後1506件（feature-docs/recycled-task-id-contract/reviews/round1.yaml:143）、後続修正b098a60後1503件（task0003.tests.yaml:95～99）なので、対象コミットを明記して件数を訂正し、HEADの件数として扱うなら再計測が必要だよ。:115
+    の全ACで失敗を再確認したという説明と、:120 の1493件も併せて整合させる必要があるよ。2ファイルは自動修正以降HEADまで更新されていないよ。動作を確認する既存テストはあるけれど、今回直す記録の必須キーや対応付けを直接検査するテストは見つからなかったよ。再発防止として更新責務を定める場合は
+    em-workflow/references/review-phase.md:655 の編集範囲制約と:690 のコミット手順を踏まえた追加変更になるけれど、提示された完了条件には必須ではないため見積もりから除外したよ。ファイル変更とテスト実行は行っておらず、HEADのテスト総数は未測定だよ'
+decided_at: '2026-09-25T07:30:40+09:00'

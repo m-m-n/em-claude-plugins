@@ -21,6 +21,7 @@ acceptance_tests:
     red_reason: "This is a pure regression guard over fields this task never touches (the em-workflow entry's name/source values) -- it was green before the implementation existed because no code change affects it, and stayed green after. The version-only edit this task makes has no observable effect on it, so there is no red state to confirm; this is the tdd-testing skill's documented exception for a criterion with no observable pre/post difference."
   AC-4:
     tests: []
+    red_confirmed: false
     red_reason: "Structural/discovery criterion: verified by running 'python3 -m unittest discover -s tests' from the repository root and observing the new module's 10 tests collected and executed (see full-suite run: 1462 tests, up from the 1452-test baseline). Not independently red/green testable from inside the module."
   AC-5:
     tests:

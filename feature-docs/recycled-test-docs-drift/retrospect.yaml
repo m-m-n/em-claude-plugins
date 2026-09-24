@@ -1,0 +1,39 @@
+feature: recycled-test-docs-drift
+collected_at: "2026-09-25T08:14:00+09:00"
+session_ids:
+  - 01a0d59e-5aec-7166-ad8c-58addc85b20f.jsonl
+  - 01a0d5b1-8fc5-714a-b344-74bc546939af.jsonl
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "HEAD d19dffc でも 2 ファイルの記録訂正が必要（約 35 行、新規関数・ファイル・依存なし）。判定は 2 本とも tier 0 側が最大確率"
+    bases:
+      - basis: description_only
+        probabilities: {'0': 0.67, '1': 0.32, '2': 0.01}
+        expectation_clear: 0.84
+        confidence: 0.47
+      - basis: description_plus_code
+        probabilities: {'0': 0.77, '1': 0.23, '2': 0.0}
+        expectation_clear: 0.82
+        confidence: 0.65
+    pre_survey_estimate:
+      files_expected:
+        - test-docs/recycled-task-id-contract/task0001.tests.yaml
+        - test-docs/recycled-task-id-contract/task0002.tests.yaml
+      changed_lines_approx: 35
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round1 の medium finding 996b4e5b33f9d6d7（notes が AC-6 の文書非依存テストまで red 再確認済みと書いている）は auto-fix 対象外のまま unresolved で完了した。起票はしたが、記録訂正タスク自体の成果物に同種の過大記述が残った"
+  - "triage 起票時の重複判定が unverified（duplicate-task-judge が候補ファイルを読めなかった）"
+  - "review の auto-fix 後に tests.yaml を追随させる責務が未定義という構造的な穴は、今回のスコープ外として残っている"

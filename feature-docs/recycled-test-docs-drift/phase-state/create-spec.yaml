@@ -1,0 +1,117 @@
+schema_version: 1
+feature: recycled-test-docs-drift
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 94ba9a1cde0a79fc3de453ed3d332db889d7252f
+last_input_digest: sha256:f364284015f60bfb3df89f224549c843f304e1c35b9191406424ea042aa3f961
+active_request_id: null
+packets:
+  create-spec-q0001:
+    iteration: 1
+    questions:
+    - requirement.ac7-test-count
+    - requirement.autofix-tests-red
+    - requirement.review-phase-scope
+    - requirement.adjacent-defects-scope
+    - requirement.verification-method
+    - design-step.recommendation
+answers:
+  requirement.ac7-test-count:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T07:36:33+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - historical_plus_post_autofix
+    freeform: null
+    normalized_answer: AC-7 は task0001 実装時の 1493 件（1452+41）と review round 1 auto-fix 後の integration 1506
+      件を時点を明記して併記する。red_confirmed は false
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1, harness codex); mapped to an existing option_id. Codex の理由: 時点を分けて残せる。AC-7
+      は失敗の観測根拠が無いので false。採らなかった選択肢: remeasure_head（後続 feature の増減が混ざる）、drop_counts（実態の記録が失われる）。リスク: 時点を明記しないと
+      1506 を現在件数や task0001 単独の結果と誤認する'
+  requirement.autofix-tests-red:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T07:36:33+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - reobserve_red
+    freeform: null
+    normalized_answer: 'auto-fix で追加された 3 テストを AC-6 の tests: に載せ、reads_per_task_status を auto-fix 前の規則（48386b9^
+      の実装）に一時的に戻した作業コピーで 3 本の失敗を実測し、再観測であることと各失敗を red_reason に記録する。実測できなければ record_unobserved 相当として未観測と明記する'
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1, harness codex); mapped to an existing option_id. Codex の理由: 48386b9^
+      に旧規則が残り、3 テストはその誤判定を検出する構造なので再観測は実行可能。採らなかった選択肢: record_unobserved、flip_false（観測可能な red を捨てる）。リスク:
+      再観測を当時の観測と混同しないよう、再観測である旨を明記する必要がある'
+  requirement.review-phase-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T07:36:33+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - exclude
+    freeform: null
+    normalized_answer: review-phase.md の責務追記は今回の範囲外。別タスクとして起票する
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1, harness codex); mapped to an existing option_id. Codex の理由: 完了条件は
+      2 つの記録ファイルで満たせるので、規約変更と version bump は別タスクに分ける。採らなかった選択肢: include。リスク: 別タスク未対応の間は再発しうる'
+  requirement.adjacent-defects-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T07:36:33+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - criteria_only
+    freeform: null
+    normalized_answer: '完了の定義 4 項目のみ直す。task0003.tests.yaml AC-6/7/8 と task0001 AC-6 の tests: 漏れ（TestParseClassificationTableFailureModes
+      / TestNonVacuityGuards）は別タスクとして起票する'
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1, harness codex); mapped to an existing option_id. Codex の理由: 周辺項目は完了条件に含まれない。採らなかった選択肢:
+      include_adjacent。リスク: 引き継ぎ漏れで周辺の不正確な記録が残る'
+  requirement.verification-method:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T07:36:33+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - inspection_only
+    freeform: null
+    normalized_answer: 新しいテストは足さず、4 つの完了条件を grep / YAML 読み取りで直接照合し、既存 suite の成功を確認する
+    resolution_note: 'gate: create-spec.requirement-clarification; policy action: codex_consultation;
+      codex_consulted: true (turn 1, harness codex); mapped to an existing option_id. Codex の理由: 必須キー・引用・追加
+      3 件・件数と観測根拠の照合に既存テスト実行を合わせれば確認できる。採らなかった選択肢: add_schema_test（過去記録をテストで固定する価値が薄い）。リスク: suite 成功だけに頼ると記録誤りを見逃すので
+      4 条件を直接照合すること'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T07:36:33+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design ステップは skipped。requirements-analyst の推奨をそのまま採用
+    resolution_note: 'gate: create-spec.design-step; references/batch-policies.yaml -> option_id: decide_autonomously'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:b8b12ec3d0ddf1b0de251715249dfb7549fa2fd1bb55c23a36b0176b0b339a3b
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:f364284015f60bfb3df89f224549c843f304e1c35b9191406424ea042aa3f961
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:1ab037b8d2d1b51c0adbbbbe75e38f33d0fe51ebb3378f082b331f81de7993f1
+  output_digest: null
+artifacts:
+- path: feature-docs/recycled-test-docs-drift/SPEC.md
+  sha256: sha256:056768dd96dca5ba78b71165e1826789e6f01af54fe8db62b20666325bf92d95
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
