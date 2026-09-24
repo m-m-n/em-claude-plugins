@@ -28,3 +28,12 @@ records:
   freeform: "declined: task0001 deviations .claude-plugin/marketplace.json, em-workflow/.claude-plugin/plugin.json"
   normalized_answer: "declined"
   resolution_note: "task_id: task0001. Deviation auto-addition declined for both paths. em-workflow/.claude-plugin/plugin.json falls under the workflow control path em-workflow/**; neither deviation names an existing AC-n or requirement id that would otherwise be dropped (the stated reason is the plugin-version-guard hook blocking the commit). Version bumped 0.2.5 -> 0.2.6 on the integration branch. The completion report was markdown rather than the JSON shape; merged status was accepted because the journal records merged and merge-base --is-ancestor confirmed the task branch is in the integration branch."
+- question_id: verify.version-deviation
+  packet_id: null
+  answered_at: "2026-09-26T00:15:00+09:00"
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: "pass verify with the version deviation noted"
+  normalized_answer: "pass"
+  resolution_note: "gate: verify judgment on FR9/AC-7/TS-10 literal version 0.2.4 vs actual 0.2.6 (orchestrator-opened, no worker packet). Chosen = PASS with deviation noted; not chosen = FAIL (auto-rework to reset the version to 0.2.4). Key points: 0.2.6 results from task0002/task0001 each following the plugin version bump rule enforced by the hook, traceable in history; both files agree and exceed 0.2.3; resetting to 0.2.4 fixes no behavior and a rework commit would collide with the same bump rule again; feature tests all pass and the 16 suite failures equal main's set. The 0.2.4 literal in FR9/AC-7/TS-10 is unmet and is reported. codex_consulted: true; opus_escalation: false."
