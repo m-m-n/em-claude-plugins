@@ -1,0 +1,101 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_hook_classification_pin.TestNameIndependentStatusObservation.test_s1_helper_reads_indented_status_key_without_task_status_name_is_true
+      - tests.test_hook_classification_pin.TestNameIndependentStatusObservation.test_s2_helper_renamed_off_the_task_status_pattern_is_still_true
+      - tests.test_hook_classification_pin.TestNameIndependentStatusObservation.test_s4_uncalled_status_helper_is_still_true
+    red_confirmed: true
+    red_reason: >-
+      S1/S2/S4 (assertTrue) went red against the removed name/call rule
+      before this task's implementation existed: `AssertionError: False is
+      not true` (reads_per_task_status returned False because no defined
+      function name matched the old task+status identifier pattern). The
+      False-otherwise half of AC-1's rule is pinned by AC-4's S3 test
+      (recorded separately below, red_confirmed: false there because it is
+      green under both rules). The removal half of AC-1 (no
+      `_TASK_STATUS_NAME_RE` / `task_status_fn_names` / `called_names`, no
+      import left unused) is not a unit-testable property of the module
+      itself; per the task plan's Test Notes it is checked by source
+      inspection (grep confirms none of the three names remain, and
+      `ast`/`tempfile`/`unittest`/`Path` are all still referenced after
+      `re` was dropped).
+  AC-2:
+    tests:
+      - tests.test_hook_classification_pin.TestNameIndependentStatusObservation.test_s1_helper_reads_indented_status_key_without_task_status_name_is_true
+      - tests.test_hook_classification_pin.TestNameIndependentStatusObservation.test_s1_mismatched_classification_row_produces_one_disagreement
+    red_confirmed: true
+    red_reason: >-
+      Both S1 tests went red against the removed rule: the observation test
+      raised `AssertionError: False is not true` (no function name in S1
+      matched the old task+status pattern), and the comparator test failed
+      with `AssertionError: Lists differ: [] != [(...)]` (compare_table_to_
+      sources produced no disagreement because reads_per_task_status
+      already agreed with the tampered DOES_NOT_READ_STATUS row under the
+      old rule).
+  AC-3:
+    tests:
+      - tests.test_hook_classification_pin.TestNameIndependentStatusObservation.test_s2_helper_renamed_off_the_task_status_pattern_is_still_true
+    red_confirmed: true
+    red_reason: "assertion failed: AssertionError: False is not true (statuses_from_workflow does not match the removed task+status name pattern)"
+  AC-4:
+    tests:
+      - tests.test_hook_classification_pin.TestNameIndependentStatusObservation.test_s3_uppercase_only_status_is_false
+    red_confirmed: false
+    red_reason: >-
+      Green under both the removed and the new rule (task plan Test Notes:
+      "AC-4 is green under both rules; it pins the case-sensitivity
+      decision rather than reproducing the bug"). Under the removed rule
+      S3 also returns False because no function name matches the old
+      task+status pattern, so this test does not distinguish the two
+      rules on its own; its purpose is pinning the case-sensitive
+      "status" match going forward, which the test's own precondition
+      assertions (stripped text contains "workflow.yaml", does not contain
+      lowercase "status") make attributable.
+  AC-5:
+    tests:
+      - tests.test_hook_classification_pin.TestNameIndependentStatusObservation.test_s4_uncalled_status_helper_is_still_true
+    red_confirmed: true
+    red_reason: "assertion failed: AssertionError: False is not true (status_from_line's name does not match the removed task+status pattern, and it is never called, so the removed rule failed for two independent reasons)"
+  AC-6:
+    tests:
+      - tests.test_hook_classification_pin.TestHookClassificationPin.test_documented_classification_matches_observed_classification_for_every_row
+      - tests.test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_inverted_classification_produces_a_disagreement
+      - tests.test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_row_with_unresolvable_path_fails
+      - tests.test_hook_classification_pin.TestPinIsNotAVacuousCheck.test_agreeing_table_produces_no_disagreements
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_unresolvable_path_raises
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_raw_text_search_would_have_misclassified_queue_taskstop_net
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_bash_guard_reads_workflow_yaml_but_not_task_status
+    red_confirmed: false
+    red_reason: >-
+      Pre-existing tests (not newly written for this task); their expected
+      outcomes are unchanged by design (task plan: "Expected outcomes of
+      pre-existing tests are not changed"), so they were already green
+      before this task's implementation and remain green after. Verified:
+      `python3 -m unittest discover -s tests -p test_hook_classification_pin.py`
+      -> 31 tests, OK (TestHookClassificationPin has exactly one test
+      method); full-suite run `python3 -m unittest discover -s tests` ->
+      5659 tests, OK, no new failures vs. the 5654-test/0-failure baseline
+      recorded before any change.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verifiable only by reading the docstrings and comments (task plan
+      Test Notes: "AC-7 is checked by reading the docstrings and
+      comments"), not by a unit test. The `reads_per_task_status` docstring
+      now states both required points: the rule is "an approximation by
+      substring co-occurrence, not a proof that per-task status is read",
+      and that `queue_stop_guard.py`'s step-level status read
+      (STEP_STATUS_RE / implement_in_progress) would keep it observed True
+      even if only its per-task-status read (task_statuses_from_workflow)
+      were removed. Module docstring item 2 and the four pre-existing test
+      comments/docstrings that described the removed accessor-name/call
+      rule (test_bash_guard_reads_workflow_yaml_but_not_task_status,
+      test_bare_workflow_yaml_mention_without_status_accessor_is_false,
+      test_removing_the_status_carveout_flips_observation_to_false,
+      test_workflow_yaml_mention_moved_from_docstring_to_code_flips_observation)
+      were rewritten to describe the new rule; none of their assertions
+      changed.
