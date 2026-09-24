@@ -37,3 +37,12 @@ records:
     freeform: null
     normalized_answer: "Review-sourced batch auto-rework (implement completed->pending via append_rework) is not a --once phase boundary; continue into implement in the same launch and end the turn when implement completes"
     resolution_note: "gate: orchestrator interpretation (launch instruction: consult Codex on unclear points); options: (A) end the turn now as a boundary / (B) continue into implement; chosen: (B); not chosen: (A); key points: the SKILL.md boundary table is an exhaustive list of four kinds, review-sourced rework is neither the verify-sourced rework boundary nor a needs_update auto-reentry, and review returns to pending so the normal completed/skipped boundary does not apply either; (A) is only supported by symmetry with verify rework and would extend the listed boundaries by interpretation; risk: none beyond a longer launch; codex_consulted: true; opus_escalation: false"
+  - question_id: verify.ts6-preexisting-failures
+    packet_id: null
+    answered_at: "2026-09-24T11:12:00+09:00"
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids: [pass_zero_new_failures]
+    freeform: null
+    normalized_answer: "TS-6 recorded as pass on a 0-new-failures-vs-base basis; the 9 pre-existing failures are listed in the verify note and left to a separate follow-up task"
+    resolution_note: "gate: orchestrator interpretation (launch instruction: consult Codex on unclear points); options: (A) pass with 0 new failures vs base and the 9 pre-existing failures recorded + follow-up / (B) fail and auto-rework to fix the 9 unrelated failures inside this feature; chosen: (A); not chosen: (B); key points: the 9 failing test ids are identical at base 92c8d60 and HEAD, none of the failing modules or documents they read are in this feature's diff, all feature-owned checks and manual readings pass, (B) would widen scope and risk new defects, prior verifies in this repo used the same 0-new-failures basis; risk: TS-6's literal exit-0 criterion is not met, so the record must state that explicitly and not read as a full-green suite; codex_consulted: true; opus_escalation: false"
