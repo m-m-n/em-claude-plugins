@@ -4,11 +4,47 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: fed2e289f673c288f9f63a947c270a2a1675ccd7
-last_input_digest: null
+last_input_digest: sha256:2a464d6281db844512a62c5124e6ff95d6afe0a8fd3f0c5eab0dbe9160c64dad
 active_request_id: null
-packets: {}
-answers: {}
-worker_runs: []
+packets:
+  create-spec-q0001:
+    status: answered
+    question_ids:
+    - requirement.scope.other-count-guards
+    - design-step.recommendation
+answers:
+  requirement.scope.other-count-guards:
+    question_id: requirement.scope.other-count-guards
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T06:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - target_module_only
+    freeform: null
+    normalized_answer: 修正範囲は tests/test_recycled_task_id_contract_version_bump.py
+      と test-docs/recycled-task-id-contract/task0002.tests.yaml に限る。他 3 モジュール（batch_policy_option_id
+      / goal_vs_spec_divergence / rework_contract_drift）の件数固定は別タスクとして起票する
+    resolution_note: 'Codex 相談 1 ターンで target_module_only を推奨。根拠: 完了の定義が指定モジュールに限定、em-workflow
+      エントリの name/source 検査は既存テストで保持できる、batch_policy は件数に加え位置順比較もあり件数だけ外しても直らないため別設計が要る。オーケストレーター判断で採用し、record_as_assumption
+      に従い仮定として記録。リスク: 3 件目追加時に他 3 モジュールは引き続き落ちる'
+  design-step.recommendation:
+    question_id: design-step.recommendation
+    packet_id: create-spec-q0001
+    answered_at: '2026-09-25T06:52:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design step を skip する
+    resolution_note: batch-policies.yaml create-spec.design-step = decide_autonomously（analyst
+      の design_step_recommendation をそのまま採用）。推奨は skip
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:2a464d6281db844512a62c5124e6ff95d6afe0a8fd3f0c5eab0dbe9160c64dad
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
