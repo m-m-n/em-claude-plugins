@@ -1,0 +1,56 @@
+task_id: task0003
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsFourteen.test_reason_codes_tuple_has_fourteen_members
+      - test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsFourteen.test_reason_codes_tuple_includes_unmapped_stop
+      - test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsFourteen.test_reason_codes_tuple_includes_no_work_required
+      - test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsFourteen.test_reason_codes_tuple_includes_context_budget_reached
+      - test_batch_stop_contract_skill_wiring.TestOwnReasonCodeTupleIsFourteen.test_reason_codes_tuple_has_no_duplicates
+    red_confirmed: true
+    red_reason: "test_reason_codes_tuple_has_fourteen_members: AssertionError: 13 != 14. test_reason_codes_tuple_includes_unmapped_stop: AssertionError: 'unmapped_stop' not found in (...13-member tuple...). Both observed failing before REASON_CODES was widened."
+  AC-2:
+    tests:
+      - test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_skill_md
+      - test_batch_stop_contract_skill_wiring.TestStateValueGuardWholeFileScope.test_guard_raises_no_violation_over_whole_batch_mode_md
+      - test_batch_stop_contract_skill_wiring.TestImplementPhaseCitationUnchanged.test_restates_no_sc5_literal_over_the_whole_file
+    red_confirmed: false
+    red_reason: "These whole-file zero-violation tests already passed before REASON_CODES gained unmapped_stop: the matcher only checks tokens already in the tuple, and unmapped_stop does not yet occur in any of the three pointer documents (grep confirmed 0 hits) since the SSOT document defining it (task0001) has not merged into this worktree. Widening REASON_CODES therefore could not turn these green->red->green; they stayed green throughout, which is exactly what AC-2/AC-5 require (the pointer documents are unmodified). The non-vacuity proof that the widened matcher actually DETECTS unmapped_stop when present is AC-3's forged-excerpt test, which does go red->green."
+  AC-3:
+    tests:
+      - test_batch_stop_contract_skill_wiring.TestUnmappedStopWideningProof.test_forged_excerpt_is_well_formed_and_found
+      - test_batch_stop_contract_skill_wiring.TestUnmappedStopWideningProof.test_matcher_flags_unmapped_stop_restatement
+    red_confirmed: true
+    red_reason: "test_matcher_flags_unmapped_stop_restatement: AssertionError: [] is not true : matcher failed to detect the unmapped_stop restatement -- observed before REASON_CODES was widened; the non-vacuity companion test (well-formed excerpt) passed throughout since it does not depend on the tuple."
+  AC-4:
+    tests:
+      - test_develop_once_option.TestSc5ReasonCodesIncludesLatestCodes.test_includes_no_work_required
+      - test_develop_once_option.TestSc5ReasonCodesIncludesLatestCodes.test_includes_unmapped_stop
+      - test_develop_once_option.TestSc5ReasonCodesIncludesLatestCodes.test_reason_codes_have_no_duplicates
+    red_confirmed: true
+    red_reason: "test_includes_no_work_required / test_includes_unmapped_stop: AssertionError: '...' not found in (...12-member tuple...) -- both observed failing before SC5_REASON_CODES was widened. No pre-existing assertion in this module checks SC5_REASON_CODES against the contract document itself (verified by inspection: every use is either the local tuple definition or an absence-check via _find_sc5_literal_violations), so no deviation was needed for the Test Notes' 'unexpected contract assertion' risk."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "Non-test outcome: git diff confirms the only files touched by this task are tests/test_batch_stop_contract_skill_wiring.py and tests/test_develop_once_option.py (git status --porcelain shows exactly these two paths as modified); skills/develop/SKILL.md, references/batch-mode.md and references/implement-phase.md are untouched. Full-suite run (python3 -m unittest discover -s tests) ends with the same 9 failures as the 4a baseline (5352 tests total vs 5346 baseline, +6 new tests all passing), i.e. no regression."
+notes: "No deviations: only the two expected_files were touched. AC-2's tests were already green pre-change (the widened matcher's non-vacuity is carried by AC-3's dedicated forged-excerpt test instead), recorded as red_confirmed: false per the tdd-testing skill's guidance for criteria whose behavior genuinely pre-existed."
