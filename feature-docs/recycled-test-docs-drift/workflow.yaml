@@ -139,7 +139,7 @@ workflow:
   completed_at_commit: 8c24a9af6d6fc7ad5e28f8138a11fe0ca214cbd2
   base_commit: bb1689ae1d7f9b025bf0664c5ac397778c491626
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -168,7 +168,14 @@ tasks:
     status: merged
     branch: em-workflow/recycled-test-docs-drift/task0001
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: 'task0002 AC-4 に red_confirmed: false を追加'
