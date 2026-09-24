@@ -1,20 +1,33 @@
 schema_version: 1
 feature: exemption-registry-section-scope
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 15e20edcd30cc34ce6572a32a1043f4ffdc62b18
 last_input_digest: sha256:98a976648acd3f8615bf01141bbfa0860c977f3b26509fcf4920cd591dfc8a0e
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:98a976648acd3f8615bf01141bbfa0860c977f3b26509fcf4920cd591dfc8a0e
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:0db6ffcf4724a786253274897f591dd67212ba9f899667d3a9b6deb988a55d92
+artifacts:
+- path: feature-docs/exemption-registry-section-scope/IMPLEMENTATION.md
+  sha256: sha256:8f000a82319c5dec7e2cf181ae2489fa4e280d87aa61e828b70532e4ccb32839
+  produced_by: create-plan-run-0001
+- path: feature-docs/exemption-registry-section-scope/VERIFICATION.md
+  sha256: sha256:4483950566088b90a0080436d344645f52fe22a91cd9795134213299548f6250
+  produced_by: create-plan-run-0001
+- path: feature-docs/exemption-registry-section-scope/tasks/task0001.md
+  sha256: sha256:ec1e8a23db467957ed3b9dfe7a2fe3efc4461195f71975c3f00a5af93e867de9
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: pending
+  base_input_digest: sha256:98a976648acd3f8615bf01141bbfa0860c977f3b26509fcf4920cd591dfc8a0e
+  base_workflow_blob: 9ee47ea28521d4e016efbaffd4c82b87dd1ffed4
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
