@@ -302,10 +302,19 @@ any journal event for that task id — never from `tasks.{T}.status`.
 a `failed` + `pending` task as unlaunched. This is
 narrower than the orchestrator's own selection rule above, which
 additionally excludes any task whose `status` reads `merged`; the hooks
-carry no equivalent exclusion. This divergence is recorded, not fixed: the
-hooks are fail-open nets, not authorities (see 'Supporting cast: journal,
-hooks, resume' below), and the orchestrator protocol above together with
-the I.2.a resume guard remain the authoritative source of task state.
+carry no equivalent exclusion. This divergence is recorded, not fixed:
+treating a task with no journal event at all as unlaunched is what detects
+a missed first launch. As a result, `queue_stop_guard.py` can block the
+end of the turn (exit 2) naming a task whose workflow.yaml `status` reads
+`merged`; this false BLOCK is bounded by the consecutive-block cap (3),
+and once the cap is exceeded the hook emits a warning and lets the turn
+end. I.2.b step 1's reconcile also classifies a task with no journal
+event as unlaunched the same way, without consulting status for that
+no-event case; the `status != merged` exclusion takes effect as I.2.a's
+selection-time filter above instead, not inside I.2.b step 1's reconcile
+(I.2.b re-enters I.2.a here), and the orchestrator protocol above together
+with the I.2.a resume guard remain the authoritative source of task
+state.
 Tasks whose reconciled state is `failed` are NEVER selected here: a failure
 always routes through I.2.c's user decision first (FR1 — no automatic
 retry). Only after the user chooses "retry" is that task re-dispatched (on
@@ -463,7 +472,10 @@ orchestrator's own bookkeeping.
 Triggered whenever a launched implementer's `Task()` call returns.
 
 1. **Reconcile** — replay the journal (last-event-per-task rule: no event →
-   unlaunched; `launched` → in-flight; `merged` → merged; `failed` →
+   unlaunched — this no-event classification does not consult the
+   `workflow.yaml` status; the `status != merged` exclusion is applied by
+   I.2.a's selection condition, per the divergence discussion in I.2.a
+   above; `launched` → in-flight; `merged` → merged; `failed` →
    failed — except that a task whose journal last event is `failed` AND
    whose workflow.yaml `status` is `pending` is unlaunched instead, the
    recycled-task-id rule in I.2.a above; a `launched` last event is always
