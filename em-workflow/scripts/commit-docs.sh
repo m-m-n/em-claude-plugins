@@ -46,12 +46,14 @@
 #       MUST (1) re-capture the tip from the branch ref (e.g. `git
 #       rev-parse` against the branch — never the worktree's own `HEAD`),
 #       (2) refresh this worktree to that branch tip (e.g. `git reset
-#       --hard` to the branch name — safe per NFR2, this worktree never
-#       carries uncommitted state across turns), (3) re-apply the artifact
-#       edits this invocation was trying to commit, and (4) retry this
-#       script once. The protocol-side implementation of that loop (which
-#       caller performs steps 1-3, at which point in the orchestrator
-#       flow) is out of this script's scope.
+#       --hard` to the branch name — safe per NFR2 outside the abort
+#       terminal-commit exception that
+#       `em-workflow/references/implement-phase.md`'s Branch & Worktree
+#       Model defines), (3) re-apply the artifact edits this invocation
+#       was trying to commit, and (4) retry this script once. The
+#       protocol-side implementation of that loop (which caller performs
+#       steps 1-3, at which point in the orchestrator flow) is out of this
+#       script's scope.
 #
 # Non-artifact untracked/modified files (verify/build/test/format
 # byproducts) never cause exit 4 by themselves — staleness is decided

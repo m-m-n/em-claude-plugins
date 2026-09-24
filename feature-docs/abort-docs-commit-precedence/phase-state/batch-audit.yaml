@@ -1,0 +1,39 @@
+schema_version: 1
+feature: abort-docs-commit-precedence
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-24T21:06:36+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline auto-addition of tests/test_codex_wrapper_fallback_removal_version_bump.py"
+    normalized_answer: "decline auto-addition of tests/test_codex_wrapper_fallback_removal_version_bump.py"
+    resolution_note: "task_id: task0001; path: tests/test_codex_wrapper_fallback_removal_version_bump.py; declined: evidence part 2 missing (no AC-n of task0001's plan nor registered requirement id named) and part 3 not stated as a named test that cannot pass without the path (rationale was a version-literal pin convention). Path passes shape check and is outside workflow control paths. Change stays on the branch as an ordinary deviation for the containment check."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-24T21:06:36+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline auto-addition of tests/test_stop_reason_coverage_version_bump.py"
+    normalized_answer: "decline auto-addition of tests/test_stop_reason_coverage_version_bump.py"
+    resolution_note: "task_id: task0001; path: tests/test_stop_reason_coverage_version_bump.py; declined: evidence part 2 missing (no AC-n of task0001's plan nor registered requirement id named) and part 3 not stated as a named test that cannot pass without the path (rationale was a version-literal pin convention). Path passes shape check and is outside workflow control paths. Change stays on the branch as an ordinary deviation for the containment check."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-24T21:12:09+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline auto-addition of tests/test_codex_wrapper_fallback_removal_version_bump.py"
+    normalized_answer: "decline auto-addition of tests/test_codex_wrapper_fallback_removal_version_bump.py"
+    resolution_note: "task_id: task0002; path: tests/test_codex_wrapper_fallback_removal_version_bump.py; declined: evidence part 2 unresolved (AC-7/FR10 named, but the version bump itself is not dropped without the path — the path only keeps an unrelated pre-existing version-literal pin green, not an acceptance criterion of this task); task0002's own change to the path was superseded by task0001's identical change via parent-side adoption, leaving no net diff from task0002."
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-24T21:12:09+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline auto-addition of tests/test_stop_reason_coverage_version_bump.py"
+    normalized_answer: "decline auto-addition of tests/test_stop_reason_coverage_version_bump.py"
+    resolution_note: "task_id: task0002; path: tests/test_stop_reason_coverage_version_bump.py; declined: evidence part 2 unresolved (AC-7/FR10 named, but the version bump itself is not dropped without the path — the path only keeps an unrelated pre-existing version-literal pin green, not an acceptance criterion of this task); task0002's own change to the path was superseded by task0001's identical change via parent-side adoption, leaving no net diff from task0002."

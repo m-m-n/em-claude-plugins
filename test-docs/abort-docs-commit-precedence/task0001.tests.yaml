@@ -1,0 +1,126 @@
+task_id: task0001
+baseline_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+final_failures:
+  - test_develop_once_option.TestArgumentProcessingOnceOption.test_argument_hint_line_includes_once_and_retains_existing_tokens
+  - test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+  - test_muse_consent_version_bump.TestNoOtherFieldsChanged.test_em_workflow_manifest_nonversion_content_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_baseline_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_cross_validation_data_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesDataUnchanged.test_rules_block_unchanged
+  - test_reviewers_primary_chains.TestReviewRulesHeaderProse.test_computation_semantics_preserved_in_prose
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_auto_select_wording_present
+  - test_step_c_verify_failed_default.TestBatchAutoSelectRegressionUnchanged.test_batch_non_packet_gates_reference_present
+acceptance_tests:
+  AC-1:
+    tests:
+      - test_abort_terminal_commit_precedence.TestCollisionBindingStated.test_collision_binding_stated
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document (batch-terminal-line.md's paragraph
+      before this task's edit, verified by stashing the doc edit and
+      re-running), assertion failed: "'Step I.2.c abort-phase terminal
+      status commit' not found in <pre-change paragraph>". Also pinned by
+      TestNegativeProofs.test_collision_binding_matcher_rejects_pre_change_paragraph
+      against the frozen verbatim sample.
+  AC-2:
+    tests:
+      - test_abort_terminal_commit_precedence.TestTerminalStopAndRetryCarveoutStated.test_terminal_stop_and_retry_carveout_stated
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document: assertion failed: "'ends the run'
+      not found in <pre-change paragraph>". Also pinned by
+      TestNegativeProofs.test_terminal_stop_carveout_matcher_rejects_pre_change_paragraph.
+  AC-3:
+    tests:
+      - test_abort_terminal_commit_precedence.TestWrittenButUncommittedDistinctionStated.test_written_but_uncommitted_distinction_stated
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document: assertion failed: "'exists in the
+      integration worktree' not found in <pre-change paragraph>". Also
+      pinned by
+      TestNegativeProofs.test_written_but_uncommitted_matcher_rejects_pre_change_paragraph.
+  AC-4:
+    tests:
+      - test_abort_terminal_commit_precedence.TestScopeConfinedStated.test_scope_confined_stated
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change document: assertion failed: "'confined to
+      that one collision' not found in <pre-change paragraph>". Also
+      pinned by
+      TestNegativeProofs.test_scope_confined_matcher_rejects_pre_change_paragraph.
+      Regression half of this AC (existing 13-code/14-row pins in
+      test_batch_stop_contract.py / test_failed_kind_batch_docs.py) is a
+      pure pass-unchanged guard, verified by the full-suite run rather than
+      a dedicated red/green cycle.
+  AC-5:
+    tests:
+      - test_abort_terminal_commit_precedence.TestNfr2AnchorsPreserved.test_nfr2_anchors_preserved
+    red_confirmed: false
+    red_reason: >-
+      Pure regression guard: every NFR2 anchor phrase and the no-blank-line
+      invariant are pre-existing text/structure this task must NOT change,
+      so the matcher is designed to ACCEPT the pre-change paragraph too
+      (proved by
+      TestNegativeProofs.test_nfr2_anchors_matcher_accepts_pre_change_paragraph,
+      which asserts the matcher does NOT raise against the frozen
+      pre-change sample). There is no observable behavior change for this
+      criterion to go red against.
+  AC-6:
+    tests:
+      - test_abort_terminal_commit_precedence.TestNegativeProofs.test_collision_binding_matcher_rejects_pre_change_paragraph
+      - test_abort_terminal_commit_precedence.TestNegativeProofs.test_terminal_stop_carveout_matcher_rejects_pre_change_paragraph
+      - test_abort_terminal_commit_precedence.TestNegativeProofs.test_written_but_uncommitted_matcher_rejects_pre_change_paragraph
+      - test_abort_terminal_commit_precedence.TestNegativeProofs.test_scope_confined_matcher_rejects_pre_change_paragraph
+      - test_abort_terminal_commit_precedence.TestPreChangeSampleIsTheRealParagraph.test_sample_carries_an_nfr2_anchor
+      - test_abort_terminal_commit_precedence.TestPreChangeSampleIsTheRealParagraph.test_sample_carries_the_three_phase_specific_stop_points
+      - test_abort_terminal_commit_precedence.TestPreChangeSampleIsTheRealParagraph.test_sample_does_not_yet_state_the_collision_binding
+    red_confirmed: true
+    red_reason: >-
+      This AC's own verifiable outcome IS the negative-proof suite passing
+      (each new AC-1..AC-4 matcher raising AssertionError against the
+      verbatim pre-change sample, itself already proven non-vacuous). The
+      red observed for AC-1..AC-4 above against the REAL pre-change
+      document is the direct evidence this criterion demands; the frozen
+      PRE_CHANGE_PRECEDENCE_PARAGRAPH constant reproduces that same
+      failure deterministically for CI, and the non-vacuity tests confirm
+      the sample is genuinely the pre-change paragraph (carries an
+      existing NFR2 anchor and the three stop-point keys) rather than an
+      empty or unrelated string.
+  AC-7:
+    tests:
+      - test_abort_terminal_commit_precedence.TestVersionBump.test_plugin_manifest_version_is_0_2_2
+      - test_abort_terminal_commit_precedence.TestVersionBump.test_marketplace_em_workflow_entry_version_is_0_2_2
+      - test_plugin_version_parity (existing, unmodified -- past-baseline + registry-agreement, run as part of the full suite)
+      - test_codex_wrapper_fallback_removal_version_bump.TestSpecificVersionValues.test_em_workflow_manifest_and_entry_agree_on_the_current_version
+      - test_stop_reason_coverage_version_bump.TestPluginManifestVersion.test_version_is_the_literal_bump_target
+      - test_stop_reason_coverage_version_bump.TestMarketplaceEntryVersion.test_entry_version_is_the_literal_bump_target
+    red_confirmed: true
+    red_reason: >-
+      Before this task's manifest edit, both files read 0.2.1: the two new
+      TestVersionBump assertions above failed with "'0.2.1' != '0.2.2'"
+      (confirmed by stashing the manifest edits and re-running). The
+      version bump also flipped three pre-existing "current version
+      literal" checks red --
+      test_codex_wrapper_fallback_removal_version_bump.py's
+      PLUGIN_SPECS["em-workflow"]["expected"] and
+      test_stop_reason_coverage_version_bump.py's two literal pins -- each
+      of which documents (in prose or, for the former, in an explicit
+      commit-log comment: see git commit 9932dad, "Also updates the
+      pre-existing 'current version' literal in
+      tests/test_codex_wrapper_fallback_removal_version_bump.py ... per
+      that module's own documented convention for later version bumps")
+      that a later legitimate em-workflow version bump is expected to
+      update that literal in place. Updated both per that established,
+      previously-used convention (deviation: touches two existing test
+      modules outside expected_files -- see implementer report). No
+      script file is changed (`git diff --stat` shows only the two
+      manifests, the reference doc, and three test modules).
