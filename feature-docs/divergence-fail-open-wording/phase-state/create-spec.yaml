@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: eaed38f317780bb9ef205fe01343caa2ebb36be3
 last_input_digest: sha256:4e7b91d763c48dba0c4f980c0ab21357190db3d2d530f4cb865a99e99d52ed62
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,9 +14,9 @@ worker_runs:
   input_digest: sha256:4e7b91d763c48dba0c4f980c0ab21357190db3d2d530f4cb865a99e99d52ed62
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:4e7b91d763c48dba0c4f980c0ab21357190db3d2d530f4cb865a99e99d52ed62
-  output_digest: null
+  output_digest: sha256:bc095539d8cc52feab1d6ac4c11d0c0db9f537f771a6740c84f211cb66a291ce
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -34,5 +34,4 @@ resolved_input_cache:
     - tests/test_plugin_version_parity.py
     - em-workflow/.claude-plugin/plugin.json
     - .claude-plugin/marketplace.json
-last_error: 'create-spec-run-0001 invalid_input: orchestrator omitted task_description
-  text from the dispatch prompt; re-dispatched with the text'
+last_error: null
