@@ -155,15 +155,15 @@ tasks:
       - aef23290e7d97475
       review_round: 1
 review:
-  status: in_progress
+  status: completed
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
     cross_validation: true
-  rounds_completed: 1
+  rounds_completed: 2
   perspectives: [comprehensive, security, architecture, spec]
-  residual_critical_high: 1
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: I.2.a forward reference to the I.2.c gate points below, at the conjunct that blocks on a journal `merged`
