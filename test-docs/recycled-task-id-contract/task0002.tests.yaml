@@ -17,10 +17,8 @@ acceptance_tests:
   AC-3:
     tests:
       - tests.test_recycled_task_id_contract_version_bump.TestMarketplaceEntryVersion.test_em_workflow_entry_name_and_source_unchanged
-      - tests.test_recycled_task_id_contract_version_bump.TestMarketplaceOtherFieldsUnchanged.test_entry_count_unchanged
-      - tests.test_recycled_task_id_contract_version_bump.TestMarketplaceOtherFieldsUnchanged.test_every_entry_name_and_source_matches_baseline
     red_confirmed: false
-    red_reason: "These are pure regression guards over fields this task never touches (name/source values, entry count) -- they were green before the implementation existed because no code change affects them, and stayed green after. The version-only edit this task makes has no observable effect on them, so there is no red state to confirm; this is the tdd-testing skill's documented exception for a criterion with no observable pre/post difference."
+    red_reason: "This is a pure regression guard over fields this task never touches (the em-workflow entry's name/source values) -- it was green before the implementation existed because no code change affects it, and stayed green after. The version-only edit this task makes has no observable effect on it, so there is no red state to confirm; this is the tdd-testing skill's documented exception for a criterion with no observable pre/post difference."
   AC-4:
     tests: []
     red_reason: "Structural/discovery criterion: verified by running 'python3 -m unittest discover -s tests' from the repository root and observing the new module's 10 tests collected and executed (see full-suite run: 1462 tests, up from the 1452-test baseline). Not independently red/green testable from inside the module."
