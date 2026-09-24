@@ -52,16 +52,10 @@ PLUGIN_SPECS = {
         "manifest_path": REPO_ROOT / "em-workflow" / ".claude-plugin" / "plugin.json",
         "baseline": (0, 1, 76),
         # task-tier-reduction/task0008 (NFR4): bumped to the next minor
-        # value on the current line. Later features that bump em-workflow
-        # again update this literal here, per this module's own convention
-        # (see the class docstring below).
-        #
-        # stop-reason-coverage/task0001 (deviation, outside that task's own
-        # expected_files): the plugin-version-bump guard rejected a commit
-        # that changed em-workflow/ without a version bump, so that task
-        # applied 0.2.1 in both registries per IMPLEMENTATION.md's Risk
-        # Assessment mitigation, and updates this literal here per this
-        # module's own stated convention.
+        # value on the current line. stop-reason-coverage/task0004: bumped
+        # again to the next patch value. Later features that bump
+        # em-workflow again update this literal here, per this module's own
+        # convention (see the class docstring below).
         "expected": "0.2.1",
     },
     "em-review": {
