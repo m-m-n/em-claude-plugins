@@ -80,6 +80,8 @@ PRE_EXISTING_REASON_CODE_STATE_PAIRS = (
 
 EXPECTED_REASON_CODE_STATE_PAIRS = PRE_EXISTING_REASON_CODE_STATE_PAIRS + (
     (NEW_REASON_CODE, "stopped"),
+    # Added by stop-reason-coverage/task0001: the catch-all code.
+    ("unmapped_stop", "stopped"),
 )
 
 PRE_EXISTING_COVERAGE_ROWS = (
@@ -98,6 +100,18 @@ PRE_EXISTING_COVERAGE_ROWS = (
 
 EXPECTED_NEW_COVERAGE_ROW = (
     f"| `{NEW_STOP_POINT}` | `{NEW_REASON_CODE}` | `{NEW_STOP_POINT_SOURCE}` |"
+)
+
+# Added by stop-reason-coverage/task0001: a second coverage row for
+# `gate_fail_closed` (the command-approval refusal-pattern hard fail),
+# inserted directly after the `policy-option-unavailable` row, plus the
+# catch-all's own row, appended last.
+COMMAND_REFUSAL_COVERAGE_ROW = (
+    "| `command-refusal` | `gate_fail_closed` | `references/batch-policies.yaml` |"
+)
+UNMAPPED_TERMINATING_STOP_COVERAGE_ROW = (
+    "| `unmapped-terminating-stop` | `unmapped_stop` | "
+    "`references/batch-terminal-line.md` |"
 )
 
 PRECEDENCE_COLLIDING_STOP_POINTS = (
@@ -246,37 +260,41 @@ class TestSetSizeProseConsistent(unittest.TestCase):
         cls.text = _read(CONTRACT_PATH)
 
     def test_old_word_form_size_prose_is_gone(self):
-        self.assertNotIn("eleven stop reason codes", self.text)
-        self.assertNotIn("one of twelve documented values", self.text)
-        self.assertNotIn("The twelve are the eleven", self.text)
-        self.assertNotIn("a twelfth, reserved value", self.text)
+        # stop-reason-coverage/task0001 raises the counts one more step:
+        # what was the "new" wording (task-tier-reduction/task0004) is now
+        # the OLD wording this test rejects.
+        self.assertNotIn("twelve stop reason codes", self.text)
+        self.assertNotIn("one of thirteen documented values", self.text)
+        self.assertNotIn("The thirteen are the twelve", self.text)
+        self.assertNotIn("a thirteenth, reserved value", self.text)
 
     def test_old_digit_form_size_prose_is_gone(self):
-        self.assertNotIn("11 stop reason", self.text)
-        self.assertNotIn("12 documented values", self.text)
+        self.assertNotIn("12 stop reason", self.text)
+        self.assertNotIn("13 documented values", self.text)
 
     def test_new_word_form_size_prose_present(self):
-        self.assertIn("Closed set of twelve stop reason codes", self.text)
-        self.assertIn("one of thirteen documented values", self.text)
+        self.assertIn("Closed set of thirteen stop reason codes", self.text)
+        self.assertIn("one of fourteen documented values", self.text)
         self.assertIn(
-            "The thirteen are the twelve stop reason codes", self.text
+            "The fourteen are the thirteen stop reason codes", self.text
         )
-        self.assertIn("a thirteenth, reserved value", self.text)
+        self.assertIn("a fourteenth, reserved value", self.text)
 
     def test_negative_proof_old_prose_would_have_matched_the_absence_checks(self):
         # Non-vacuity for test_old_word_form_size_prose_is_gone: the OLD
         # wording these absence checks reject genuinely contains the
         # flagged substrings.
         old_sample = (
-            "Closed set of eleven stop reason codes:\n\n"
-            "one of twelve documented values, or the reserved value `none`. "
-            "The twelve are the eleven stop reason codes listed below.\n"
-            "`context_budget_reached` is a twelfth, reserved value"
+            "Closed set of twelve stop reason codes:\n\n"
+            "one of thirteen documented values, or the reserved value "
+            "`none`. The thirteen are the twelve stop reason codes listed "
+            "below.\n"
+            "`context_budget_reached` is a thirteenth, reserved value"
         )
-        self.assertIn("eleven stop reason codes", old_sample)
-        self.assertIn("one of twelve documented values", old_sample)
-        self.assertIn("The twelve are the eleven", old_sample)
-        self.assertIn("a twelfth, reserved value", old_sample)
+        self.assertIn("twelve stop reason codes", old_sample)
+        self.assertIn("one of thirteen documented values", old_sample)
+        self.assertIn("The thirteen are the twelve", old_sample)
+        self.assertIn("a thirteenth, reserved value", old_sample)
 
 
 # ---------------------------------------------------------------------------
@@ -295,9 +313,15 @@ class TestCoverageTableRow(unittest.TestCase):
         self.assertEqual(row, EXPECTED_NEW_COVERAGE_ROW)
 
     def test_exactly_one_new_coverage_row_and_pre_existing_rows_unchanged(self):
+        # stop-reason-coverage/task0001 inserts `command-refusal` directly
+        # after `policy-option-unavailable` (index 5 of the pre-existing
+        # rows) and appends `unmapped-terminating-stop` as the last row.
         self.assertEqual(
             _coverage_data_rows(self.text),
-            list(PRE_EXISTING_COVERAGE_ROWS) + [EXPECTED_NEW_COVERAGE_ROW],
+            list(PRE_EXISTING_COVERAGE_ROWS[:6])
+            + [COMMAND_REFUSAL_COVERAGE_ROW]
+            + list(PRE_EXISTING_COVERAGE_ROWS[6:])
+            + [EXPECTED_NEW_COVERAGE_ROW, UNMAPPED_TERMINATING_STOP_COVERAGE_ROW],
         )
 
     def test_negative_proof_removed_coverage_row_is_detected(self):

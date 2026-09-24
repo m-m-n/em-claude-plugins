@@ -55,7 +55,14 @@ PLUGIN_SPECS = {
         # value on the current line. Later features that bump em-workflow
         # again update this literal here, per this module's own convention
         # (see the class docstring below).
-        "expected": "0.2.0",
+        #
+        # stop-reason-coverage/task0001 (deviation, outside that task's own
+        # expected_files): the plugin-version-bump guard rejected a commit
+        # that changed em-workflow/ without a version bump, so that task
+        # applied 0.2.1 in both registries per IMPLEMENTATION.md's Risk
+        # Assessment mitigation, and updates this literal here per this
+        # module's own stated convention.
+        "expected": "0.2.1",
     },
     "em-review": {
         "manifest_path": REPO_ROOT / "em-review" / ".claude-plugin" / "plugin.json",
