@@ -1,0 +1,12 @@
+schema_version: 1
+feature: exemption-registry-section-scope
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-09-24T20:37:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline files auto-addition: tests/test_assumptions_reversible_criterion.py"
+    normalized_answer: "declined"
+    resolution_note: "task_id: task0001; path: tests/test_assumptions_reversible_criterion.py; declined because the deviation names no acceptance-criterion (AC-n of tasks/task0001.md) or registered requirement id that would otherwise be dropped (evidence part 2 missing). Path shape check passed and path is not under a workflow control path. Stated reason: the required `import _gate_vocabulary` pattern tripped the pre-existing TestStandardLibraryOnlyImports guard; implementer added a local-sibling-module carve-out. Left to the containment check / review."
