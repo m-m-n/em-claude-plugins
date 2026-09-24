@@ -108,6 +108,19 @@ else
   FULL_PROMPT="$PROMPT"
 fi
 
+# --- OpenTelemetry ---
+# --ignore-user-config also drops the user's [otel] section, so when
+# CODEX_OTLP_ENDPOINT is set the exporter is passed as -c overrides instead.
+# The value is used verbatim as the OTLP/HTTP logs URL (e.g.
+# http://127.0.0.1:4318/v1/logs); codex does not append /v1/logs itself.
+OTEL_FLAG=()
+if [[ -n "${CODEX_OTLP_ENDPOINT:-}" ]]; then
+  OTEL_FLAG=(
+    -c 'otel.environment="local"'
+    -c "otel.exporter={otlp-http={endpoint=\"${CODEX_OTLP_ENDPOINT}\",protocol=\"binary\"}}"
+  )
+fi
+
 # --- Execute ---
 # stdin is redirected from /dev/null so `codex exec` does not block reading
 # additional input when invoked under a parent that leaves stdin as an open
@@ -132,6 +145,7 @@ timeout "$TIMEOUT" codex exec \
   "${EFFORT_FLAG[@]}" \
   "${WORKDIR_FLAG[@]}" \
   "${SCHEMA_FLAG[@]}" \
+  "${OTEL_FLAG[@]}" \
   "$FULL_PROMPT" </dev/null 2>&1 || exit_code=$?
 
 if [[ $exit_code -eq 124 ]]; then
