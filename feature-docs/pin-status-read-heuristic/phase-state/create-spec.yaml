@@ -1,0 +1,21 @@
+schema_version: 1
+feature: pin-status-read-heuristic
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: ac2fc1ba8a9146fd0db22874c59830899adb2f2d
+last_input_digest: null
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    gate_id: create-spec.feature-identity
+    option_id: derive_from_task_description
+    resolution_note: "batch: feature 名をタスク記述（hook 分類 pin の per-task status 読み出し判定が識別子名ヒューリスティックに依存）から pin-status-read-heuristic と導出した"
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
